@@ -9,6 +9,7 @@ import {
 import { ChevronRight } from "lucide-react";
 import { useState, useEffect, useCallback } from "react";
 import VWISO42001ClauseDrawerDialog from "../../../components/Drawer/ClauseDrawerDialog";
+import Chip from "../../../components/Chip";
 import { Project } from "../../../../domain/types/Project";
 import { GetClausesByProjectFrameworkId } from "../../../../application/repository/clause_struct_iso.repository";
 import { GetSubClausesById } from "../../../../application/repository/subClause_iso.repository";
@@ -186,12 +187,7 @@ const ISO42001Clauses = ({
                 <Typography fontSize={13}>
                   {clause.clause_no + "." + (index + 1)} {subClause.title ?? "Untitled"}
                 </Typography>
-                <Stack sx={styles.statusBadge(subClause.status ?? "")}>
-                  {subClause.status
-                    ? subClause.status.charAt(0).toUpperCase() +
-                      subClause.status.slice(1).toLowerCase()
-                    : "Not started"}
-                </Stack>
+                <Chip label={subClause.status ?? "Not started"} />
               </Stack>
             ),
           )

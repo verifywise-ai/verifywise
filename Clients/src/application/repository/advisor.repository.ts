@@ -10,6 +10,17 @@ export interface AdvisorMessage {
   content: string;
   createdAt: string;
   chartData?: unknown;
+  /**
+   * Persisted AI SDK UIMessage tool parts (type: 'dynamic-tool') so the
+   * inline approval cards re-render after a page refresh. Without this,
+   * tool-call results (e.g. agent_register_model's confirmation_required
+   * payload) are dropped on persist and the cards disappear on reload.
+   *
+   * The shape is the AI SDK's own — typed as unknown[] here because the
+   * frontend rehydrator needs it cast back to UIMessage parts and the
+   * backend just stores it as JSONB.
+   */
+  toolParts?: unknown[];
 }
 
 /**

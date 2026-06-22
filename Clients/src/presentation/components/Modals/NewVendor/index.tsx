@@ -22,7 +22,7 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 import { HistorySidebar } from "../../Common/HistorySidebar";
 import { useEntityChangeHistory } from "../../../../application/hooks/useEntityChangeHistory";
 import { useQueryClient } from "@tanstack/react-query";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useFormValidation } from "../../../../application/hooks/useFormValidation";
 import dayjs, { Dayjs } from "dayjs";
 import Alert from "../../Alert";
@@ -33,6 +33,8 @@ import useUsers from "../../../../application/hooks/useUsers";
 import CustomizableToast from "../../Toast";
 import { logEngine } from "../../../../application/tools/log.engine";
 import StandardModal from "../StandardModal";
+import CustomFieldsSection, { type CustomFieldsSectionHandle } from "../../CustomFieldsSection";
+import { useRequiredCustomFieldsGate } from "../../CustomFieldsSection/RequiredCustomFieldsGate";
 import TabBar from "../../TabBar";
 import { EnhancedTooltip } from "../../EnhancedTooltip";
 import allowedRoles from "../../../../application/constants/permissions";
@@ -183,10 +185,14 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
   const createVendorMutation = useCreateVendor();
   const updateVendorMutation = useUpdateVendor();
 
+  // Used to flush locally-staged custom field values after a new vendor is created.
+  const customFieldsRef = useRef<CustomFieldsSectionHandle | null>(null);
+
   // Prefetch history data when modal opens in edit mode
   useEntityChangeHistory("vendor", existingVendor?.id);
 
   const isEditingDisabled = !allowedRoles.vendors.edit.includes(userRoleName);
+  const customFieldsGate = useRequiredCustomFieldsGate("vendor", existingVendor?.id ?? null);
 
   const formattedUsers = users?.map((user: User) => ({
     _id: user.id,
@@ -205,6 +211,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
   useEffect(() => {
     if (!isOpen) {
       setValues(initialState);
+      setActiveTab("details");
       resetErrors();
     }
   }, [isOpen, resetErrors]);
@@ -355,12 +362,31 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
       const response = await createVendorMutation.mutateAsync(vendorDetails);
 
       if (response.status === 201) {
+        const newVendorId = response.data?.data?.id as number | undefined;
+        let cfFlushFailed = false;
+        if (newVendorId && customFieldsRef.current?.hasPendingValues()) {
+          try {
+            await customFieldsRef.current.flush(newVendorId);
+          } catch (cfError) {
+            cfFlushFailed = true;
+            logEngine({
+              type: "error",
+              message: `Vendor created, but custom field values failed to save: ${(cfError as Error).message}`,
+            });
+          }
+        }
+
+        onSuccess();
+        if (cfFlushFailed) {
+          // The vendor is in the DB. Keep the modal open so the warning
+          // rendered by CustomFieldsSection stays visible; user can dismiss.
+          return;
+        }
         setAlert({
           variant: "success",
           body: "Vendor created successfully",
         });
         setTimeout(() => setAlert(null), 3000);
-        onSuccess();
         setIsOpen(false);
       } else {
         setAlert({
@@ -404,12 +430,29 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
       });
 
       if (response.status === 202) {
+        let cfFlushFailed = false;
+        if (customFieldsRef.current?.hasPendingValues()) {
+          try {
+            await customFieldsRef.current.flush(vendorId);
+          } catch (cfError) {
+            cfFlushFailed = true;
+            logEngine({
+              type: "error",
+              message: `Vendor updated, but custom field values failed to save: ${(cfError as Error).message}`,
+            });
+          }
+        }
+        onSuccess();
+        if (cfFlushFailed) {
+          // Keep modal open so the inline warning rendered by
+          // CustomFieldsSection stays visible.
+          return;
+        }
         setAlert({
           variant: "success",
           body: "Vendor updated successfully",
         });
         setTimeout(() => setAlert(null), 3000);
-        onSuccess();
         setIsOpen(false);
       } else {
         setAlert({
@@ -846,36 +889,51 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
             ? "Update vendor details including products/services provided, contact information, and review status."
             : "Use this form to register a new vendor. Include details about what they provide, who is responsible, and the outcome of your review. Provide enough details so your team can assess risks, responsibilities, and compliance requirements."
         }
-        onSubmit={activeTab === "details" ? handleSave : undefined}
+        onSubmit={
+          customFieldsGate.blocked ? undefined : activeTab === "activity" ? undefined : handleSave
+        }
         submitButtonText="Save"
-        isSubmitting={isSubmitting || isEditingDisabled}
+        isSubmitting={isSubmitting || isEditingDisabled || customFieldsGate.blocked}
         maxWidth="734px"
       >
-        {existingVendor ? (
-          <TabContext value={activeTab}>
-            <Box sx={{ marginBottom: 3 }}>
-              <TabBar
-                tabs={[
-                  { label: "Vendor details", value: "details", icon: "Store" },
-                  { label: "Activity", value: "activity", icon: "History" },
-                ]}
-                activeTab={activeTab}
-                onChange={(_, newValue) => setActiveTab(newValue)}
-              />
-            </Box>
-            {activeTab === "details" && vendorDetailsPanel}
-            {activeTab === "activity" && (
-              <HistorySidebar
-                inline
-                isOpen={true}
-                entityType="vendor"
-                entityId={existingVendor.id!}
-              />
-            )}
-          </TabContext>
-        ) : (
-          vendorDetailsPanel
-        )}
+        <TabContext value={activeTab}>
+          <Box sx={{ marginBottom: 3 }}>
+            <TabBar
+              tabs={
+                existingVendor
+                  ? [
+                      { label: "Vendor details", value: "details", icon: "Store" },
+                      { label: "Custom fields", value: "custom-fields", icon: "Settings" },
+                      { label: "Activity", value: "activity", icon: "History" },
+                    ]
+                  : [
+                      { label: "Vendor details", value: "details", icon: "Store" },
+                      { label: "Custom fields", value: "custom-fields", icon: "Settings" },
+                    ]
+              }
+              activeTab={activeTab}
+              onChange={(_, newValue) => setActiveTab(newValue)}
+            />
+          </Box>
+          <Box sx={{ display: activeTab === "details" ? "block" : "none" }}>
+            {vendorDetailsPanel}
+          </Box>
+          <Box sx={{ display: activeTab === "custom-fields" ? "block" : "none" }}>
+            <CustomFieldsSection
+              ref={customFieldsRef}
+              entityType="vendor"
+              entityId={existingVendor?.id ?? null}
+            />
+          </Box>
+          {activeTab === "activity" && existingVendor && (
+            <HistorySidebar
+              inline
+              isOpen={true}
+              entityType="vendor"
+              entityId={existingVendor.id!}
+            />
+          )}
+        </TabContext>
       </StandardModal>
     </Stack>
   );

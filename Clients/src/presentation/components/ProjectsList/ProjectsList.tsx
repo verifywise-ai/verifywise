@@ -18,10 +18,16 @@ import { FilterBy, FilterColumn } from "../Table/FilterBy";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import { ColumnSelector } from "../Table/ColumnSelector";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
+import CustomizableSkeleton from "../Skeletons";
 
 import { projectWrapperStyle, noProjectsTextStyle, vwhomeBodyProjectsGrid } from "./style";
 
-const ProjectList = ({ projects, newProjectButton, onProjectDeleted }: IProjectListProps) => {
+const ProjectList = ({
+  projects,
+  newProjectButton,
+  onProjectDeleted,
+  isLoading = false,
+}: IProjectListProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = usePersistedViewMode("projects-view-mode", "table");
 
@@ -223,6 +229,14 @@ const ProjectList = ({ projects, newProjectButton, onProjectDeleted }: IProjectL
 
   // Extracted render logic
   const renderProjects = () => {
+    if (isLoading) {
+      return (
+        <Stack spacing={2}>
+          <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
+        </Stack>
+      );
+    }
+
     if (!projects || projects.length === 0) {
       return viewMode === "table" ? (
         <ProjectTableView projects={[]} />
@@ -323,39 +337,35 @@ const ProjectList = ({ projects, newProjectButton, onProjectDeleted }: IProjectL
         }}
       >
         <Stack direction="row" spacing={2} alignItems="center" sx={{ flex: 1 }}>
-          {projects && projects.length > 0 && (
+          <FilterBy columns={projectFilterColumns} onFilterChange={handleProjectFilterChange} />
+
+          {viewMode === "table" && (
             <>
-              <FilterBy columns={projectFilterColumns} onFilterChange={handleProjectFilterChange} />
-
-              {viewMode === "table" && (
-                <>
-                  <GroupBy
-                    options={[
-                      { id: "risk_level", label: "Risk level" },
-                      { id: "role", label: "Role" },
-                      { id: "owner", label: "Owner" },
-                      { id: "status", label: "Status" },
-                    ]}
-                    onGroupChange={handleGroupChange}
-                  />
-                  <ColumnSelector
-                    columns={allColumns}
-                    visibleColumns={visibleColumns}
-                    onToggleColumn={toggleColumn}
-                    onResetToDefaults={resetToDefaults}
-                  />
-                </>
-              )}
-
-              <SearchBox
-                placeholder="Search use cases..."
-                value={searchTerm}
-                onChange={setSearchTerm}
-                inputProps={{ "aria-label": "Search use cases" }}
-                fullWidth={false}
+              <GroupBy
+                options={[
+                  { id: "risk_level", label: "Risk level" },
+                  { id: "role", label: "Role" },
+                  { id: "owner", label: "Owner" },
+                  { id: "status", label: "Status" },
+                ]}
+                onGroupChange={handleGroupChange}
+              />
+              <ColumnSelector
+                columns={allColumns}
+                visibleColumns={visibleColumns}
+                onToggleColumn={toggleColumn}
+                onResetToDefaults={resetToDefaults}
               />
             </>
           )}
+
+          <SearchBox
+            placeholder="Search use cases..."
+            value={searchTerm}
+            onChange={setSearchTerm}
+            inputProps={{ "aria-label": "Search use cases" }}
+            fullWidth={false}
+          />
         </Stack>
 
         <Box
@@ -365,18 +375,14 @@ const ProjectList = ({ projects, newProjectButton, onProjectDeleted }: IProjectL
             gap: "8px",
           }}
         >
-          {projects && projects.length > 0 && (
-            <ExportMenu
-              data={exportData}
-              columns={exportColumns}
-              filename="use-cases"
-              title="Use Cases"
-            />
-          )}
+          <ExportMenu
+            data={exportData}
+            columns={exportColumns}
+            filename="use-cases"
+            title="Use Cases"
+          />
           {newProjectButton as React.ReactNode}
-          {projects && projects.length > 0 && (
-            <ViewToggle viewMode={viewMode} onViewChange={setViewMode} />
-          )}
+          <ViewToggle viewMode={viewMode} onViewChange={setViewMode} />
         </Box>
       </Box>
 

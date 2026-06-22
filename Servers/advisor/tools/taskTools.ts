@@ -63,4 +63,199 @@ export const toolsDefinition: any[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "agent_create_task",
+      description:
+        "Create a new task in the task management system. Requires human confirmation before execution.",
+      parameters: {
+        type: "object",
+        properties: {
+          title: {
+            type: "string",
+            description: "The title of the task.",
+          },
+          description: {
+            type: "string",
+            description: "Detailed description of the task.",
+          },
+          status: {
+            type: "string",
+            enum: ["Open", "In Progress", "Completed"],
+            description: "Initial status. Defaults to 'Open'.",
+          },
+          priority: {
+            type: "string",
+            enum: ["Low", "Medium", "High"],
+            description: "Priority level. Defaults to 'Medium'.",
+          },
+          category: {
+            type: "string",
+            description: "Category to assign to the task.",
+          },
+          assigned_to: {
+            type: "number",
+            description: "User ID to assign the task to.",
+          },
+          due_date: {
+            type: "string",
+            description: "Due date in ISO 8601 format (e.g., '2026-04-30').",
+          },
+          project_id: {
+            type: "number",
+            description: "Project ID to link the task to.",
+          },
+        },
+        required: ["title"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "agent_update_task",
+      description:
+        "Update an existing task's fields. Requires human confirmation before execution.",
+      parameters: {
+        type: "object",
+        properties: {
+          task_id: {
+            type: "number",
+            description: "The ID of the task to update.",
+          },
+          title: {
+            type: "string",
+            description: "New title for the task.",
+          },
+          description: {
+            type: "string",
+            description: "New description for the task.",
+          },
+          status: {
+            type: "string",
+            enum: ["Open", "In Progress", "Completed"],
+            description: "New status for the task.",
+          },
+          priority: {
+            type: "string",
+            enum: ["Low", "Medium", "High"],
+            description: "New priority level.",
+          },
+          category: {
+            type: "string",
+            description: "New category for the task.",
+          },
+          due_date: {
+            type: "string",
+            description: "New due date in ISO 8601 format.",
+          },
+        },
+        required: ["task_id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "agent_assign_task",
+      description:
+        "Assign a task to a specific user. Requires human confirmation before execution.",
+      parameters: {
+        type: "object",
+        properties: {
+          task_id: {
+            type: "number",
+            description: "The ID of the task to assign.",
+          },
+          assigned_to: {
+            type: "number",
+            description: "The user ID to assign the task to.",
+          },
+        },
+        required: ["task_id", "assigned_to"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "agent_update_task_status",
+      description: "Update the status of a task. Requires human confirmation before execution.",
+      parameters: {
+        type: "object",
+        properties: {
+          task_id: {
+            type: "number",
+            description: "The ID of the task to update.",
+          },
+          status: {
+            type: "string",
+            enum: ["Open", "In Progress", "Completed"],
+            description: "The new status for the task.",
+          },
+        },
+        required: ["task_id", "status"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "agent_set_task_priority",
+      description:
+        "Set the priority level of a task. Requires human confirmation before execution.",
+      parameters: {
+        type: "object",
+        properties: {
+          task_id: {
+            type: "number",
+            description: "The ID of the task to update.",
+          },
+          priority: {
+            type: "string",
+            enum: ["Low", "Medium", "High"],
+            description: "The new priority level.",
+          },
+        },
+        required: ["task_id", "priority"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "agent_delete_task",
+      description:
+        "Delete (archive) a task. This is a soft delete that can be reversed. Requires human confirmation before execution.",
+      parameters: {
+        type: "object",
+        properties: {
+          task_id: {
+            type: "number",
+            description: "The ID of the task to delete.",
+          },
+        },
+        required: ["task_id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "agent_restore_task",
+      description:
+        "Restore a previously deleted (archived) task back to Open status. Requires human confirmation before execution.",
+      parameters: {
+        type: "object",
+        properties: {
+          task_id: {
+            type: "number",
+            description: "The ID of the task to restore.",
+          },
+        },
+        required: ["task_id"],
+      },
+    },
+  },
 ];

@@ -32,13 +32,18 @@ import {
   getFileMetadata,
   updateMetadata,
   listFilesWithMetadata,
-  getHighlighted,
   previewFile,
   getFileVersionHistory,
 } from "../controllers/fileManager.ctrl";
 import authenticateJWT from "../middleware/auth.middleware";
 import authorize from "../middleware/accessControl.middleware";
 import { fileOperationsLimiter } from "../middleware/rateLimit.middleware";
+import {
+  validateFileIdParam,
+  validateFileSearchQuery,
+  validatePaginationQuery,
+  validateUpdateFileMetadata,
+} from "../middleware/validators/fileManager.validator";
 import multer from "multer";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import * as path from "path";
@@ -140,7 +145,7 @@ router.post(
  * @returns {429} Too many requests - rate limit exceeded
  * @returns {500} Server error
  */
-router.get("/", fileOperationsLimiter, authenticateJWT, listFiles);
+router.get("/", fileOperationsLimiter, authenticateJWT, validatePaginationQuery, listFiles);
 
 /**
  * @route   GET /file-manager/search
@@ -153,29 +158,26 @@ router.get("/", fileOperationsLimiter, authenticateJWT, listFiles);
  * @returns {400} Validation error
  * @returns {500} Server error
  */
-router.get("/search", fileOperationsLimiter, authenticateJWT, searchFiles);
+router.get("/search", fileOperationsLimiter, authenticateJWT, validateFileSearchQuery, searchFiles);
 
 /**
  * @route   GET /file-manager/with-metadata
- * @desc    Get list of all files with full metadata (tags, status, version, etc.)
+ * @desc    Get list of all files with full metadata (tags, status, version, attention flags)
  * @access  All authenticated users
  * @query   page - Page number (optional)
  * @query   pageSize - Items per page (optional)
- * @returns {200} List of files with full metadata and pagination
+ * @query   daysUntilExpiry - Threshold for is_due_for_update flag (default 30, 1-365)
+ * @query   recentDays - Threshold for is_recently_modified flag (default 7, 1-365)
+ * @returns {200} List of files with metadata, attention flags, and pagination
  * @returns {500} Server error
  */
-router.get("/with-metadata", fileOperationsLimiter, authenticateJWT, listFilesWithMetadata);
-
-/**
- * @route   GET /file-manager/highlighted
- * @desc    Get highlighted files (due for update, pending approval, recently modified)
- * @access  All authenticated users
- * @query   daysUntilExpiry - Days before expiry to flag (default 30)
- * @query   recentDays - Days to consider as recent (default 7)
- * @returns {200} Categorized file IDs
- * @returns {500} Server error
- */
-router.get("/highlighted", fileOperationsLimiter, authenticateJWT, getHighlighted);
+router.get(
+  "/with-metadata",
+  fileOperationsLimiter,
+  authenticateJWT,
+  validatePaginationQuery,
+  listFilesWithMetadata,
+);
 
 /**
  * @route   GET /file-manager/:id
@@ -187,7 +189,7 @@ router.get("/highlighted", fileOperationsLimiter, authenticateJWT, getHighlighte
  * @returns {404} File not found
  * @returns {500} Server error
  */
-router.get("/:id", fileOperationsLimiter, authenticateJWT, downloadFile);
+router.get("/:id", fileOperationsLimiter, authenticateJWT, validateFileIdParam, downloadFile);
 
 /**
  * @route   GET /file-manager/:id/metadata
@@ -199,7 +201,13 @@ router.get("/:id", fileOperationsLimiter, authenticateJWT, downloadFile);
  * @returns {404} File not found
  * @returns {500} Server error
  */
-router.get("/:id/metadata", fileOperationsLimiter, authenticateJWT, getFileMetadata);
+router.get(
+  "/:id/metadata",
+  fileOperationsLimiter,
+  authenticateJWT,
+  validateFileIdParam,
+  getFileMetadata,
+);
 
 /**
  * @route   GET /file-manager/:id/versions
@@ -210,7 +218,13 @@ router.get("/:id/metadata", fileOperationsLimiter, authenticateJWT, getFileMetad
  * @returns {404} File not found
  * @returns {500} Server error
  */
-router.get("/:id/versions", fileOperationsLimiter, authenticateJWT, getFileVersionHistory);
+router.get(
+  "/:id/versions",
+  fileOperationsLimiter,
+  authenticateJWT,
+  validateFileIdParam,
+  getFileVersionHistory,
+);
 
 /**
  * @route   PATCH /file-manager/:id/metadata
@@ -229,6 +243,7 @@ router.patch(
   fileOperationsLimiter,
   authenticateJWT,
   authorize(["Admin", "Reviewer", "Editor"]),
+  validateUpdateFileMetadata,
   updateMetadata,
 );
 
@@ -243,7 +258,13 @@ router.patch(
  * @returns {413} File too large for preview
  * @returns {500} Server error
  */
-router.get("/:id/preview", fileOperationsLimiter, authenticateJWT, previewFile);
+router.get(
+  "/:id/preview",
+  fileOperationsLimiter,
+  authenticateJWT,
+  validateFileIdParam,
+  previewFile,
+);
 
 /**
  * @route   DELETE /file-manager/:id
@@ -260,6 +281,7 @@ router.delete(
   fileOperationsLimiter,
   authenticateJWT,
   authorize(["Admin", "Reviewer", "Editor"]),
+  validateFileIdParam,
   removeFile,
 );
 

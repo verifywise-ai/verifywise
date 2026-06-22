@@ -129,6 +129,29 @@ describe("tableExport", () => {
       const [, filenameArg] = (saveAs as any).mock.calls[0];
       expect(filenameArg).toBe("export.csv");
     });
+
+    it("sanitizes special characters in filename", () => {
+      exportToCSV([{ name: "A", note: "B" }] as any, columns as any, 'my:bad"file/name');
+
+      const [, filenameArg] = (saveAs as any).mock.calls[0];
+      expect(filenameArg).toBe("my_bad_file_name.csv");
+    });
+
+    it("handles empty data array (headers only)", async () => {
+      exportToCSV([], columns as any, "empty-export");
+
+      const [blobArg] = (saveAs as any).mock.calls[0];
+      const readBlobAsText = (blob: Blob): Promise<string> =>
+        new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result ?? ""));
+          reader.onerror = () => reject(reader.error);
+          reader.readAsText(blob);
+        });
+
+      const csvText = await readBlobAsText(blobArg);
+      expect(csvText).toBe("Name,Note");
+    });
   });
 
   describe("exportToExcel", () => {
@@ -183,6 +206,19 @@ describe("tableExport", () => {
       exportToExcel([{ name: "X", note: "Y" }] as any, columns as any);
 
       expect(writeFile).toHaveBeenCalledWith(expect.anything(), "export.xlsx");
+    });
+
+    it("sanitizes special characters in Excel filename", () => {
+      const writeFile = XLSX.writeFile as unknown as ReturnType<typeof vi.fn>;
+      const aoa_to_sheet = XLSX.utils.aoa_to_sheet as unknown as ReturnType<typeof vi.fn>;
+      const book_new = XLSX.utils.book_new as unknown as ReturnType<typeof vi.fn>;
+
+      aoa_to_sheet.mockReturnValue({});
+      book_new.mockReturnValue({});
+
+      exportToExcel([{ name: "A", note: "B" }] as any, columns as any, "bad<file?name");
+
+      expect(writeFile).toHaveBeenCalledWith(expect.anything(), "bad_file_name.xlsx");
     });
 
     it("exportToExcel: uses empty string for nullish values but keeps 0/false (covers ?? branches)", () => {
@@ -269,6 +305,14 @@ describe("tableExport", () => {
       );
 
       (jsPDFModule as any).default = Original;
+    });
+
+    it("sanitizes special characters in PDF filename", () => {
+      exportToPDF([{ name: "A", note: "B" }] as any, columns as any, "bad/name:file");
+
+      const instances = (jsPDFModule as any).__instances as any[];
+      const doc = instances[instances.length - 1];
+      expect(doc.save).toHaveBeenCalledWith("bad_name_file.pdf");
     });
 
     it("exportToPDF: converts nullish cell values to empty string (covers ?? branch)", () => {

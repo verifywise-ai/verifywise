@@ -5,6 +5,8 @@ export interface PageHeaderExtendedProps {
   title: string;
   description?: string;
   helpArticlePath?: string;
+  /** Banner rendered above the TipBox (e.g. deadline warnings). */
+  warningBanner?: ReactNode;
   tipBoxEntity?: string;
   summaryCards?: ReactNode;
   summaryCardsJoyrideId?: string;

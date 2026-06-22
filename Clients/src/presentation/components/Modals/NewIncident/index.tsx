@@ -259,7 +259,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
     setActiveTab("details");
   };
 
-  const handleSubmit = (e?: React.FormEvent) => {
+  const handleSaveIncident = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     if (validateAll(values)) {
       onSuccess?.(values);
@@ -341,7 +341,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
         {activeTab === "activity" && isEdit && incidentId ? (
           <HistorySidebar inline isOpen={true} entityType="incident" entityId={incidentId} />
         ) : (
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSaveIncident}>
             <Stack spacing={4} width="100%">
               {/* SECTION 1: INCIDENT INFORMATION */}
               <Stack spacing={4}>
@@ -766,7 +766,7 @@ const SideDrawerIncident: FC<SideDrawerIncidentProps> = ({
                     variant="contained"
                     text={isEdit ? "Update incident" : "Save incident"}
                     icon={<SaveIconSVGWhite />}
-                    onClick={handleSubmit as (event: unknown) => void}
+                    onClick={handleSaveIncident as (event: unknown) => void}
                     sx={{
                       backgroundColor: theme.palette.primary.main,
                       border: `1px solid ${theme.palette.primary.main}`,

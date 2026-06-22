@@ -21,17 +21,19 @@ test.describe("Authentication", () => {
 
   test("successful login redirects to dashboard", async ({ page }) => {
     await page.goto("/login");
+    await page.waitForLoadState("networkidle");
 
     await page.getByPlaceholder("name.surname@companyname.com").fill(TEST_EMAIL);
     await page.getByPlaceholder("Enter your password").fill(TEST_PASSWORD);
     await page.getByRole("button", { name: /sign in/i }).click();
 
-    // Should redirect to the dashboard
-    await expect(page).toHaveURL("/", { timeout: 15_000 });
+    // Super-admin users are redirected to /super-admin instead of /
+    await expect(page).toHaveURL(/\/(super-admin)?$/, { timeout: 15_000 });
   });
 
   test("shows error on invalid credentials", async ({ page }) => {
     await page.goto("/login");
+    await page.waitForLoadState("networkidle");
 
     await page.getByPlaceholder("name.surname@companyname.com").fill("bad@email.com");
     await page.getByPlaceholder("Enter your password").fill("wrongpassword");
@@ -55,7 +57,7 @@ test.describe("Authentication", () => {
 
   test("login page has no accessibility violations", async ({ page }) => {
     await page.goto("/login");
-    await page.waitForLoadState("domcontentloaded");
+    await page.waitForLoadState("networkidle");
 
     const results = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
@@ -68,10 +70,11 @@ test.describe("Authentication", () => {
   test("logout redirects to login page", async ({ page }) => {
     // Login first via UI
     await page.goto("/login");
+    await page.waitForLoadState("networkidle");
     await page.getByPlaceholder("name.surname@companyname.com").fill(TEST_EMAIL);
     await page.getByPlaceholder("Enter your password").fill(TEST_PASSWORD);
     await page.getByRole("button", { name: /sign in/i }).click();
-    await expect(page).toHaveURL("/", { timeout: 15_000 });
+    await expect(page).toHaveURL(/\/(super-admin)?$/, { timeout: 15_000 });
 
     // Dismiss "Welcome to VerifyWise" dialog if it appears.
     // Note: locator.isVisible() does NOT auto-wait, use expect with try/catch.
@@ -86,11 +89,11 @@ test.describe("Authentication", () => {
 
     // The sidebar footer has a MoreVertical icon button (no accessible name)
     // next to the user name/role. Find the IconButton sibling of the
-    // user-info stack containing the "Admin" role label.
-    const adminLabel = page.getByText("Admin", { exact: true });
-    await expect(adminLabel.first()).toBeVisible({ timeout: 10_000 });
+    // user-info stack containing the role label.
+    const roleLabel = page.getByText("Super Admin", { exact: true });
+    await expect(roleLabel.first()).toBeVisible({ timeout: 10_000 });
     // Walk up to the sidebar footer row and find the sibling button.
-    const moreBtn = adminLabel.first().locator("xpath=ancestor::*[.//button][1]//button");
+    const moreBtn = roleLabel.first().locator("xpath=ancestor::*[.//button][1]//button");
     await expect(moreBtn.first()).toBeVisible({ timeout: 5_000 });
     await moreBtn.first().click();
     await page.waitForTimeout(1000);

@@ -40,6 +40,10 @@ export interface FileMetadata {
   // Approval workflow
   approval_workflow_id?: number;
   approval_workflow_name?: string;
+  // Attention flags (returned by /file-manager/with-metadata)
+  is_due_for_update?: boolean;
+  is_pending_approval?: boolean;
+  is_recently_modified?: boolean;
 }
 
 // Input for updating file metadata
@@ -49,13 +53,6 @@ export interface UpdateFileMetadataInput {
   version?: string;
   expiry_date?: string | null;
   description?: string | null;
-}
-
-// Highlighted files response
-export interface HighlightedFilesResponse {
-  dueForUpdate: number[];
-  pendingApproval: number[];
-  recentlyModified: number[];
 }
 
 export interface FileManagerResponse {
@@ -277,26 +274,33 @@ export async function deleteQuestionEvidenceFiles({
 }
 
 /**
- * Get all files with full metadata (tags, status, version, etc.)
+ * Get all files with full metadata + attention flags.
  *
- * @param {object} options - Options for the request
+ * @param {object} options
  * @param {number} options.page - Page number
  * @param {number} options.pageSize - Items per page
+ * @param {number} options.daysUntilExpiry - Threshold for is_due_for_update flag (default 30)
+ * @param {number} options.recentDays - Threshold for is_recently_modified flag (default 7)
  * @param {AbortSignal} options.signal - Optional abort signal for cancellation
- * @returns {Promise<{ files: FileMetadata[], pagination: any }>} Files with full metadata
  */
 export async function getFilesWithMetadata({
   page,
   pageSize,
+  daysUntilExpiry,
+  recentDays,
   signal,
 }: {
   page?: number;
   pageSize?: number;
+  daysUntilExpiry?: number;
+  recentDays?: number;
   signal?: AbortSignal;
 } = {}): Promise<{ files: FileMetadata[]; pagination: any }> {
   const params = new URLSearchParams();
   if (page) params.append("page", String(page));
   if (pageSize) params.append("pageSize", String(pageSize));
+  if (daysUntilExpiry !== undefined) params.append("daysUntilExpiry", String(daysUntilExpiry));
+  if (recentDays !== undefined) params.append("recentDays", String(recentDays));
 
   const queryString = params.toString();
   const url = `/file-manager/with-metadata${queryString ? `?${queryString}` : ""}`;
@@ -326,6 +330,9 @@ export async function getFilesWithMetadata({
       file_group_id: f?.file_group_id,
       approval_workflow_id: f?.approval_workflow_id,
       approval_workflow_name: f?.approval_workflow_name,
+      is_due_for_update: Boolean(f?.is_due_for_update),
+      is_pending_approval: Boolean(f?.is_pending_approval),
+      is_recently_modified: Boolean(f?.is_recently_modified),
     })),
     pagination: data?.pagination,
   };
@@ -419,40 +426,6 @@ export async function updateFileMetadata({
 }
 
 /**
- * Get highlighted files (due for update, pending approval, recently modified)
- *
- * @param {object} options - Options for the request
- * @param {number} options.daysUntilExpiry - Days before expiry to flag (default 30)
- * @param {number} options.recentDays - Days to consider as recent (default 7)
- * @param {AbortSignal} options.signal - Optional abort signal for cancellation
- * @returns {Promise<HighlightedFilesResponse>} Categorized file IDs
- */
-export async function getHighlightedFiles({
-  daysUntilExpiry = 30,
-  recentDays = 7,
-  signal,
-}: {
-  daysUntilExpiry?: number;
-  recentDays?: number;
-  signal?: AbortSignal;
-} = {}): Promise<HighlightedFilesResponse> {
-  const params = new URLSearchParams();
-  params.append("daysUntilExpiry", String(daysUntilExpiry));
-  params.append("recentDays", String(recentDays));
-
-  const response = await apiServices.get<any>(`/file-manager/highlighted?${params.toString()}`, {
-    signal,
-  });
-  const data = response.data?.data || response.data;
-
-  return {
-    dueForUpdate: data?.dueForUpdate || [],
-    pendingApproval: data?.pendingApproval || [],
-    recentlyModified: data?.recentlyModified || [],
-  };
-}
-
-/**
  * Get file preview content
  *
  * @param {string} id - File ID
@@ -473,41 +446,77 @@ export async function getFilePreview({
   return response.data;
 }
 
+export interface FileVersionHistoryPage {
+  versions: FileMetadata[];
+  pagination: {
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+  };
+}
+
 /**
- * Get file version history (all files in the same group)
+ * Get a paginated page of file version history (all files in the same group).
  *
- * @param {string} id - File ID
- * @param {AbortSignal} signal - Optional abort signal for cancellation
- * @returns {Promise<FileMetadata[]>} Array of file versions
+ * @param {string}      id        - File ID
+ * @param {number}      [page]    - Page number (default 1, server-side)
+ * @param {number}      [pageSize] - Items per page (default 20, server-side)
+ * @param {AbortSignal} [signal]  - Optional abort signal for cancellation
+ * @returns {Promise<FileVersionHistoryPage>} Versions plus pagination metadata
  */
 export async function getFileVersionHistory({
   id,
+  page,
+  pageSize,
   signal,
 }: {
   id: string;
+  page?: number;
+  pageSize?: number;
   signal?: AbortSignal;
-}): Promise<FileMetadata[]> {
-  const response = await apiServices.get<any>(`/file-manager/${id}/versions`, { signal });
-  const data = response.data?.data || response.data;
-  const versions = data?.versions || [];
+}): Promise<FileVersionHistoryPage> {
+  const params = new URLSearchParams();
+  if (page !== undefined) params.set("page", String(page));
+  if (pageSize !== undefined) params.set("pageSize", String(pageSize));
+  const qs = params.toString();
+  const url = `/file-manager/${id}/versions${qs ? `?${qs}` : ""}`;
+  const response = await apiServices.get<any>(url, { signal });
 
-  return versions.map((f: any) => ({
-    id: String(f.id),
-    filename: f.filename,
-    size: f?.size,
-    mimetype: f?.mimetype,
-    upload_date: f?.upload_date,
-    uploaded_by: String(f?.uploaded_by),
-    uploader_name: f?.uploader_name,
-    uploader_surname: f?.uploader_surname,
-    source: f?.source,
-    tags: f?.tags || [],
-    review_status: f?.review_status,
-    version: f?.version,
-    expiry_date: f?.expiry_date,
-    description: f?.description,
-    file_group_id: f?.file_group_id,
-  }));
+  const data = response.data?.data || response.data;
+  const versions: any[] = data?.versions || [];
+  // Backend always returns a `pagination` envelope post-PR; old responses
+  // (or the no-group-id branch) may not, so default to a single-page shape.
+  const paginationRaw = data?.pagination;
+  const total = typeof paginationRaw?.total === "number" ? paginationRaw.total : versions.length;
+  const pageOut = typeof paginationRaw?.page === "number" ? paginationRaw.page : 1;
+  const pageSizeOut =
+    typeof paginationRaw?.pageSize === "number" ? paginationRaw.pageSize : versions.length || 20;
+  const totalPages =
+    typeof paginationRaw?.totalPages === "number"
+      ? paginationRaw.totalPages
+      : Math.max(1, Math.ceil(total / (pageSizeOut || 1)));
+
+  return {
+    versions: versions.map((f: any) => ({
+      id: String(f.id),
+      filename: f.filename,
+      size: f?.size,
+      mimetype: f?.mimetype,
+      upload_date: f?.upload_date,
+      uploaded_by: String(f?.uploaded_by),
+      uploader_name: f?.uploader_name,
+      uploader_surname: f?.uploader_surname,
+      source: f?.source,
+      tags: f?.tags || [],
+      review_status: f?.review_status,
+      version: f?.version,
+      expiry_date: f?.expiry_date,
+      description: f?.description,
+      file_group_id: f?.file_group_id,
+    })),
+    pagination: { total, page: pageOut, pageSize: pageSizeOut, totalPages },
+  };
 }
 
 // ============================================================================
@@ -615,33 +624,79 @@ export async function detachFileFromEntity(
  * @param {AbortSignal} signal - Optional abort signal for cancellation
  * @returns {Promise<FileMetadata[]>}
  */
+export interface EntityFilesPage {
+  files: FileMetadata[];
+  pagination: {
+    total: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+  };
+}
+
 export async function getEntityFiles(
   frameworkType: FrameworkType,
   entityType: EntityType,
   entityId: number,
-  signal?: AbortSignal,
-): Promise<FileMetadata[]> {
-  const response = await apiServices.get<any>(
-    `/files/entity/${frameworkType}/${entityType}/${entityId}`,
-    { signal },
-  );
-  const files = response.data || [];
-  return files.map((f: any) => ({
-    id: String(f.id),
-    filename: f.filename,
-    size: f?.size,
-    mimetype: f?.mimetype,
-    upload_date: f?.upload_date,
-    uploaded_by: String(f?.uploaded_by),
-    uploader_name: f?.uploader_name,
-    uploader_surname: f?.uploader_surname,
-    source: f?.source,
-    project_id: f?.project_id,
-    tags: f?.tags || [],
-    review_status: f?.review_status,
-    version: f?.version,
-    link_type: f?.link_type,
-  }));
+  signalOrOptions?: AbortSignal | { page?: number; pageSize?: number; signal?: AbortSignal },
+): Promise<EntityFilesPage> {
+  // Backwards-compatible call signatures:
+  //   getEntityFiles(ft, et, id)
+  //   getEntityFiles(ft, et, id, signal)
+  //   getEntityFiles(ft, et, id, { page, pageSize, signal })
+  let page: number | undefined;
+  let pageSize: number | undefined;
+  let signal: AbortSignal | undefined;
+  if (signalOrOptions instanceof AbortSignal) {
+    signal = signalOrOptions;
+  } else if (signalOrOptions && typeof signalOrOptions === "object") {
+    page = signalOrOptions.page;
+    pageSize = signalOrOptions.pageSize;
+    signal = signalOrOptions.signal;
+  }
+
+  const params = new URLSearchParams();
+  if (page !== undefined) params.set("page", String(page));
+  if (pageSize !== undefined) params.set("pageSize", String(pageSize));
+  const qs = params.toString();
+  const url = `/files/entity/${frameworkType}/${entityType}/${entityId}${qs ? `?${qs}` : ""}`;
+
+  const response = await apiServices.get<any>(url, { signal });
+  const body = response.data;
+
+  // Backend response is `{ files, pagination }` (new shape). Tolerate the
+  // pre-pagination raw-array shape for transitional clients.
+  const rawFiles: any[] = Array.isArray(body) ? body : body?.files || [];
+  const paginationRaw = Array.isArray(body) ? null : body?.pagination;
+
+  const total = typeof paginationRaw?.total === "number" ? paginationRaw.total : rawFiles.length;
+  const pageOut = typeof paginationRaw?.page === "number" ? paginationRaw.page : 1;
+  const pageSizeOut =
+    typeof paginationRaw?.pageSize === "number" ? paginationRaw.pageSize : rawFiles.length || 50;
+  const totalPages =
+    typeof paginationRaw?.totalPages === "number"
+      ? paginationRaw.totalPages
+      : Math.max(1, Math.ceil(total / (pageSizeOut || 1)));
+
+  return {
+    files: rawFiles.map((f: any) => ({
+      id: String(f.id),
+      filename: f.filename,
+      size: f?.size,
+      mimetype: f?.mimetype,
+      upload_date: f?.upload_date,
+      uploaded_by: String(f?.uploaded_by),
+      uploader_name: f?.uploader_name,
+      uploader_surname: f?.uploader_surname,
+      source: f?.source,
+      project_id: f?.project_id,
+      tags: f?.tags || [],
+      review_status: f?.review_status,
+      version: f?.version,
+      link_type: f?.link_type,
+    })),
+    pagination: { total, page: pageOut, pageSize: pageSizeOut, totalPages },
+  };
 }
 
 export type BulkFileTagMode = "set" | "add" | "remove";

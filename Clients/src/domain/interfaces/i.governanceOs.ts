@@ -3,6 +3,7 @@ export type MappingDirection = "forward" | "backward" | "bidirectional";
 
 export interface IGovernanceControlMapping {
   id: number;
+  organization_id: number;
   source_framework_id: number;
   source_control_type: string;
   source_control_identifier: string;
@@ -61,6 +62,7 @@ export interface IGovernanceCoverage {
   coverage_percentage: number;
   gap_details: { unmapped_controls: string[] };
   synergy_details: { multi_framework_controls: string[] };
+  calculation_methodology?: string;
 }
 
 export interface IRecommendationRequest {
@@ -90,13 +92,11 @@ export interface IUnifiedView {
   projectId: number;
 }
 
-export interface IGovernanceOsPageProps {
-  defaultTab?: string;
-}
-
 export interface IMappingCardProps {
   mapping: IGovernanceControlMapping;
   frameworkNames?: Record<number, string>;
+  onEdit?: (mapping: IGovernanceControlMapping) => void;
+  onDelete?: (mapping: IGovernanceControlMapping) => void;
 }
 
 export interface IScenarioCardProps {
@@ -105,8 +105,14 @@ export interface IScenarioCardProps {
   matchedRules?: string[];
   isSelected?: boolean;
   onSelect?: (scenario: IGovernanceScenario) => void;
+  onEdit?: (scenario: IGovernanceScenario) => void;
+  onDelete?: (scenario: IGovernanceScenario) => void;
+  onActivate?: (scenario: IGovernanceScenario) => void;
 }
 
 export interface ICoverageChartProps {
   coverage: IGovernanceCoverage[];
+  onCreateTaskForGap?: (frameworkName: string, controlId: string) => void;
+  onCreateTasksForGaps?: (frameworkName: string, controlIds: string[]) => void;
+  activeScenarioFrameworkId?: number | null;
 }

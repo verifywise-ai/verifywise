@@ -117,7 +117,7 @@ const AiOrNotScreening: React.FC<AiOrNotScreeningProps> = ({
     setActiveStep((prev) => prev - 1);
   }, []);
 
-  const handleSubmit = useCallback(() => {
+  const handleRunScreening = useCallback(() => {
     if (result) {
       handleClose();
       onComplete(result.isAi);
@@ -422,7 +422,7 @@ const AiOrNotScreening: React.FC<AiOrNotScreeningProps> = ({
       activeStep={activeStep}
       onNext={handleNext}
       onBack={handleBack}
-      onSubmit={handleSubmit}
+      onSubmit={handleRunScreening}
       canProceed={canProceed}
       submitButtonText={result?.isAi ? "Create use case" : "Proceed with caution"}
       maxWidth="680px"

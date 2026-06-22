@@ -21,16 +21,12 @@ declare module "express" {
      */
     tenantHash?: string;
     /**
-     * @deprecated Legacy tenant identifier - now set to organizationId (number)
-     * Will be removed once all queries are migrated to use organizationId directly.
-     * For new code, use organizationId instead.
-     */
-    tenantId?: number;
-    /**
      * True when the authenticated user is a SuperAdmin (role_id = 5).
      * Set by authenticateJWT middleware.
      */
     isSuperAdmin?: boolean;
+    /** Test bypass flag set by createTestApp({ bypassAuth: true }) for integration tests */
+    testBypassAuth?: boolean;
     /** Virtual key context, set by virtualKeyAuth middleware for /v1/* proxy routes */
     virtualKey?: {
       id: number;

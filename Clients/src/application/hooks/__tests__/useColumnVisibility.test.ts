@@ -78,18 +78,30 @@ describe("useColumnVisibility", () => {
       result.current.toggleColumn("role");
     });
 
-    const stored = JSON.parse(localStorage.getItem("verifywise:columns:test-persist")!);
+    const stored = JSON.parse(localStorage.getItem("verifywise_columns_test-persist")!);
     expect(stored).not.toContain("role");
   });
 
   it("restores from localStorage", () => {
-    localStorage.setItem("verifywise:columns:test-restore", JSON.stringify(["name", "status"]));
+    localStorage.setItem("verifywise_columns_test-restore", JSON.stringify(["name", "status"]));
 
     const { result } = renderHook(() => useColumnVisibility({ tableId: "test-restore", columns }));
 
     expect(result.current.isColumnVisible("name")).toBe(true);
     expect(result.current.isColumnVisible("status")).toBe(true);
     expect(result.current.isColumnVisible("email")).toBe(false);
+  });
+
+  it("migrates from the legacy colon-style key once", () => {
+    localStorage.setItem("verifywise:columns:test-legacy", JSON.stringify(["name", "status"]));
+
+    const { result } = renderHook(() => useColumnVisibility({ tableId: "test-legacy", columns }));
+
+    expect(result.current.isColumnVisible("status")).toBe(true);
+    expect(result.current.isColumnVisible("email")).toBe(false);
+    // Value migrated to the namespaced key; legacy key removed.
+    expect(localStorage.getItem("verifywise_columns_test-legacy")).not.toBeNull();
+    expect(localStorage.getItem("verifywise:columns:test-legacy")).toBeNull();
   });
 
   it("getVisibleColumnConfigs returns only visible configs", () => {

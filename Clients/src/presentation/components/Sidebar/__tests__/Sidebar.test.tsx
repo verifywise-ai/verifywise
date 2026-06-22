@@ -1,8 +1,7 @@
-import { screen } from "@testing-library/react";
+import { screen, fireEvent } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import Sidebar from "../index";
 
-// Mock dependencies
 vi.mock("../../../../application/hooks/useMultipleOnScreen", () => ({
   default: () => ({ refs: { current: [] }, allVisible: false }),
 }));
@@ -18,7 +17,6 @@ vi.mock("../../UserGuide", () => ({
   }),
 }));
 
-// Mock react-router hooks (v7 context issues with MemoryRouter in test environment)
 const mockNavigate = vi.fn();
 vi.mock("react-router", async () => {
   const actual = await vi.importActual("react-router");
@@ -30,6 +28,10 @@ vi.mock("react-router", async () => {
 });
 
 describe("Sidebar", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it("should render the Dashboard nav link", () => {
     renderWithProviders(<Sidebar />);
     expect(screen.getByText("Dashboard")).toBeInTheDocument();
@@ -74,5 +76,19 @@ describe("Sidebar", () => {
     expect(screen.getByText("INVENTORY")).toBeInTheDocument();
     expect(screen.getByText("ASSURANCE")).toBeInTheDocument();
     expect(screen.getByText("GOVERNANCE")).toBeInTheDocument();
+  });
+
+  it("should render Start here nav link", () => {
+    renderWithProviders(<Sidebar />);
+    expect(screen.getByText("Start here")).toBeInTheDocument();
+  });
+
+  it("should navigate when a nav item is clicked", () => {
+    renderWithProviders(<Sidebar />);
+
+    const dashboardItem = screen.getByText("Dashboard");
+    fireEvent.click(dashboardItem);
+
+    expect(mockNavigate).toHaveBeenCalledWith("/");
   });
 });

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, Suspense, useCallback, useEffect, useRef, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Box, Typography, TableCell, CircularProgress, Stack, Tooltip } from "@mui/material";
+import { Box, Typography, TableCell, Stack, Tooltip } from "@mui/material";
 import Alert from "../../../components/Alert";
 import { Eye as VisibilityIcon, EyeOff as VisibilityOffIcon } from "lucide-react";
 import { CirclePlus as AddCircleOutlineIcon } from "lucide-react";
@@ -28,6 +28,7 @@ import { TABLE_COLUMNS, WARNING_MESSAGES } from "./constants";
 import { AITrustCentreOverviewData } from "../../../../application/hooks/useAITrustCentreOverview";
 import { useTheme } from "@mui/material/styles";
 import AITrustCenterTable from "../../../components/Table/AITrustCenterTable";
+import CustomizableSkeleton from "../../../components/Skeletons";
 import {
   EditResourceFormValues,
   NewResourceFormValues,
@@ -571,33 +572,8 @@ const TrustCenterResources: React.FC = () => {
     [visibleColumns],
   );
 
-  // Show loading state
-  if (overviewLoading || resourcesLoading) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  // Show error state
-  if (overviewError || resourcesError) {
-    const errorMessage = overviewError?.message || resourcesError?.message || "An error occurred";
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <Typography color="error">{errorMessage}</Typography>
-      </Box>
-    );
-  }
-
-  // Ensure resources is available before rendering
-  if (!resources) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <Typography>No resources data available</Typography>
-      </Box>
-    );
-  }
+  const isTableLoading = overviewLoading || resourcesLoading;
+  const tableError = overviewError || resourcesError;
 
   return (
     <Box>
@@ -652,35 +628,43 @@ const TrustCenterResources: React.FC = () => {
         </Box>
 
         <Box sx={styles.tableWrapper}>
-          <GroupedTableView
-            groupedData={groupedResources}
-            ungroupedData={resources || []}
-            renderTable={(data, options) => (
-              <AITrustCenterTable
-                data={data}
-                columns={visibleTableColumns}
-                isLoading={resourcesLoading}
-                paginated={true}
-                disabled={!formData?.info?.resources_visible}
-                emptyStateText="No resources found. Add your first resource to get started."
-                renderRow={(resource, sortConfig) => (
-                  <ResourceTableRow
-                    key={resource.id}
-                    resource={resource}
-                    onDelete={handleDeleteResource}
-                    onEdit={handleEditResource}
-                    onMakeVisible={handleMakeVisible}
-                    onDownload={handleDownload}
-                    sortConfig={sortConfig}
-                    visibleColumnIds={visibleColumns}
-                  />
-                )}
-                tableId="resources-table"
-                hidePagination={options?.hidePagination}
-                flashRowId={flashRowId}
-              />
-            )}
-          />
+          {isTableLoading ? (
+            <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
+          ) : tableError ? (
+            <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+              <Typography color="error">{tableError?.message || "An error occurred"}</Typography>
+            </Box>
+          ) : (
+            <GroupedTableView
+              groupedData={groupedResources}
+              ungroupedData={resources || []}
+              renderTable={(data, options) => (
+                <AITrustCenterTable
+                  data={data}
+                  columns={visibleTableColumns}
+                  isLoading={resourcesLoading}
+                  paginated={true}
+                  disabled={!formData?.info?.resources_visible}
+                  emptyStateText="No resources found. Add your first resource to get started."
+                  renderRow={(resource, sortConfig) => (
+                    <ResourceTableRow
+                      key={resource.id}
+                      resource={resource}
+                      onDelete={handleDeleteResource}
+                      onEdit={handleEditResource}
+                      onMakeVisible={handleMakeVisible}
+                      onDownload={handleDownload}
+                      sortConfig={sortConfig}
+                      visibleColumnIds={visibleColumns}
+                    />
+                  )}
+                  tableId="resources-table"
+                  hidePagination={options?.hidePagination}
+                  flashRowId={flashRowId}
+                />
+              )}
+            />
+          )}
         </Box>
 
         {/* Add Resource Modal */}

@@ -228,7 +228,6 @@ const NewEvidenceHub: FC<NewEvidenceHubProps> = ({
   }, []);
 
   const handleUploadSuccess = (files: FileResponse[]) => {
-    console.log("[NewEvidenceHub.handleUploadSuccess] received files:", files);
     const mapped = files.map((file) => ({
       id: file.id,
       filename: file.filename,
@@ -237,18 +236,10 @@ const NewEvidenceHub: FC<NewEvidenceHubProps> = ({
       uploaded_by: file.uploaded_by,
       upload_date: file.upload_date,
     }));
-    console.log("[NewEvidenceHub.handleUploadSuccess] mapped into evidence_files shape:", mapped);
-    setValues((prev) => {
-      const next = {
-        ...prev,
-        evidence_files: [...prev.evidence_files, ...mapped],
-      };
-      console.log(
-        "[NewEvidenceHub.handleUploadSuccess] evidence_files after merge:",
-        next.evidence_files,
-      );
-      return next;
-    });
+    setValues((prev) => ({
+      ...prev,
+      evidence_files: [...prev.evidence_files, ...mapped],
+    }));
     setErrors((prev) => ({ ...prev, files: "" }));
     setIsUploadModalOpen(false);
   };
@@ -324,22 +315,15 @@ const NewEvidenceHub: FC<NewEvidenceHubProps> = ({
     setActiveStep((prev) => prev - 1);
   };
 
-  const handleSubmit = async () => {
+  const handleSaveEvidence = async () => {
     if (!validateCurrentStep()) return;
 
     setIsSubmitting(true);
     try {
-      console.log("[NewEvidenceHub.handleSubmit] submitting evidence values:", values);
-      console.log(
-        "[NewEvidenceHub.handleSubmit] evidence_files count:",
-        values.evidence_files?.length,
-        "files:",
-        values.evidence_files,
-      );
       if (onSuccess) onSuccess(values);
       setIsOpen(false);
     } catch (error) {
-      console.error("[NewEvidenceHub.handleSubmit] error:", error);
+      console.error("[NewEvidenceHub.handleSaveEvidence] error:", error);
       setIsSubmitting(false);
       if (onError) onError(error);
     }
@@ -634,7 +618,7 @@ const NewEvidenceHub: FC<NewEvidenceHubProps> = ({
       activeStep={activeStep}
       onNext={handleNext}
       onBack={handleBack}
-      onSubmit={handleSubmit}
+      onSubmit={handleSaveEvidence}
       canProceed={canProceed()}
       isSubmitting={isSubmitting}
       submitButtonText={isEdit ? "Update" : "Save"}

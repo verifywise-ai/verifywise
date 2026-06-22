@@ -1,0 +1,59 @@
+---
+- name: Update VerifyWise on all servers (images + compose + env)
+  hosts: verifywise
+  become: true
+  serial: 1  # one server at a time; remove for parallel
+
+  tasks:
+    - name: Read existing .env.prod from server
+      ansible.builtin.slurp:
+        src: "{{ install_dir }}/.env.prod"
+      register: existing_env
+
+    - name: Preserve existing secrets (don't regenerate on update)
+      ansible.builtin.set_fact:
+        db_password: "{{ existing_env.content | b64decode | regex_search('^DB_PASSWORD=(.*)$', '\\1', multiline=True) | first }}"
+        superadmin_password: "{{ existing_env.content | b64decode | regex_search('^SUPERADMIN_PASSWORD=(.*)$', '\\1', multiline=True) | first }}"
+        jwt_secret: "{{ existing_env.content | b64decode | regex_search('^JWT_SECRET=(.*)$', '\\1', multiline=True) | first }}"
+        refresh_token_secret: "{{ existing_env.content | b64decode | regex_search('^REFRESH_TOKEN_SECRET=(.*)$', '\\1', multiline=True) | first }}"
+        encryption_key: "{{ existing_env.content | b64decode | regex_search('^ENCRYPTION_KEY=(.*)$', '\\1', multiline=True) | first }}"
+        ai_gateway_internal_key: "{{ existing_env.content | b64decode | regex_search('^AI_GATEWAY_INTERNAL_KEY=(.*)$', '\\1', multiline=True) | first }}"
+
+    - name: Sync docker-compose files from local repo
+      ansible.builtin.copy:
+        src: "{{ playbook_dir }}/../{{ item }}"
+        dest: "{{ install_dir }}/{{ item }}"
+        mode: "0644"
+      loop:
+        - docker-compose.yml
+        - docker-compose.prod.yml
+
+    - name: Re-render .env.prod (fixed vars updated, secrets preserved)
+      ansible.builtin.template:
+        src: .env.j2
+        dest: "{{ install_dir }}/.env.prod"
+        mode: "0600"
+
+    - name: Pull latest images
+      ansible.builtin.command:
+        cmd: docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod pull
+        chdir: "{{ install_dir }}"
+      changed_when: true
+
+    - name: Recreate containers with new images / config
+      ansible.builtin.command:
+        cmd: docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod up -d
+        chdir: "{{ install_dir }}"
+      register: compose_up
+      changed_when: "'Recreated' in compose_up.stderr or 'Started' in compose_up.stderr"
+
+    - name: Wait for backend to respond on port {{ backend_port }}
+      ansible.builtin.wait_for:
+        host: 127.0.0.1
+        port: "{{ backend_port }}"
+        delay: 5
+        timeout: 120
+
+    - name: Prune unused images
+      ansible.builtin.command: docker image prune -f
+      changed_when: false

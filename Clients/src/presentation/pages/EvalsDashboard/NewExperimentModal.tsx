@@ -104,9 +104,66 @@ interface NewExperimentModalProps {
   }) => void;
   /** Project's use case - determines default metrics and datasets (required) */
   useCase: "chatbot" | "rag" | "agent";
+  /**
+   * Names of experiments that already exist in this project. Used to
+   * disambiguate the auto-generated experiment name with #2, #3, ... when
+   * the same model+dataset combination has been run before.
+   */
+  existingExperimentNames?: string[];
 }
 
 const steps = ["Model", "Dataset", "Scorer / Judge", "Metrics"];
+
+/**
+ * Strip noise from a model identifier so it reads cleanly as part of an
+ * experiment name:
+ *   "openai/gpt-4o-mini"            -> "gpt-4o-mini"
+ *   "mistralai/mistral-medium-3-5"  -> "mistral-medium-3-5"
+ *   "claude-3-5-sonnet-20241022"    -> "claude-3-5-sonnet"
+ */
+const shortenForExperimentName = (s?: string | null): string => {
+  if (!s) return "";
+  const dateless = s.replace(/-\d{8}$/, "").replace(/-\d{4}-\d{2}-\d{2}$/, "");
+  const slashIdx = dateless.lastIndexOf("/");
+  return slashIdx >= 0 ? dateless.slice(slashIdx + 1) : dateless;
+};
+
+/**
+ * Build the default name for a new experiment as `<model> × <dataset>`.
+ * If that exact name is already used in this project, append #2, #3, ...
+ * until we hit one that's free.
+ */
+const generateDefaultExperimentName = (
+  modelName: string,
+  datasetName: string,
+  existing: readonly string[],
+): string => {
+  const m = shortenForExperimentName(modelName) || "model";
+  const d = (datasetName || "dataset").trim() || "dataset";
+  const base = `${m} × ${d}`;
+  if (!existing.includes(base)) return base;
+  let n = 2;
+  while (existing.includes(`${base} #${n}`)) n++;
+  return `${base} #${n}`;
+};
+
+/**
+ * Derive a human-friendly dataset name from a preset filename like
+ * "chatbot/chatbot_coding_helper.json" -> "Chatbot Coding Helper".
+ */
+const datasetNameFromPresetPath = (path?: string | null): string => {
+  if (!path) return "";
+  const fileName =
+    path
+      .split("/")
+      .pop()
+      ?.replace(/\.json$/i, "") || "";
+  return fileName
+    .split("_")
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+};
 
 export default function NewExperimentModal({
   isOpen,
@@ -116,6 +173,7 @@ export default function NewExperimentModal({
   onSuccess,
   onStarted,
   useCase,
+  existingExperimentNames = [],
 }: NewExperimentModalProps) {
   const [activeStep, setActiveStep] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -201,6 +259,11 @@ export default function NewExperimentModal({
     Array<{ id: number; provider: string; model: string; version: string; status: string }>
   >([]);
   const [selectedModelInventoryId, setSelectedModelInventoryId] = useState<number | null>(null);
+
+  // Experiment name (editable by user). The placeholder always shows the
+  // current auto-suggested default (`<model> × <dataset>` with a #N suffix
+  // when needed); leaving this field blank uses that default on submit.
+  const [experimentName, setExperimentName] = useState("");
 
   // Configuration state - taskType initialized from project's useCase prop
   const [config, setConfig] = useState({
@@ -328,6 +391,31 @@ export default function NewExperimentModal({
   const isMultiTurnDataset =
     selectedUserDataset?.turnType === "multi-turn" ||
     (selectedPresetPath && selectedPresetPath.includes("multiturn"));
+
+  // ── Auto-generated experiment name ────────────────────────────────────────
+  // Mirrors the resolution logic in handleSubmit: a saved model selection
+  // wins, otherwise we fall back to whatever the user typed in the custom
+  // model field. Kept in sync via useMemo so the placeholder/default in the
+  // metrics step always reflects the latest model + dataset.
+  const resolvedModelName = useMemo(() => {
+    if (selectedSavedModelId) {
+      const saved = savedModels.find((m) => String(m.id) === String(selectedSavedModelId));
+      if (saved?.name) return saved.name;
+    }
+    return config.model.name;
+  }, [selectedSavedModelId, savedModels, config.model.name]);
+
+  const datasetDisplayName = useMemo(() => {
+    if (selectedUserDataset?.name) return selectedUserDataset.name;
+    if (selectedPresetPath) return datasetNameFromPresetPath(selectedPresetPath);
+    return "";
+  }, [selectedUserDataset, selectedPresetPath]);
+
+  const defaultExperimentName = useMemo(
+    () =>
+      generateDefaultExperimentName(resolvedModelName, datasetDisplayName, existingExperimentNames),
+    [resolvedModelName, datasetDisplayName, existingExperimentNames],
+  );
 
   // Update metric defaults when task type changes
   useEffect(() => {
@@ -710,17 +798,20 @@ export default function NewExperimentModal({
             modelPath: config.model.modelPath,
           };
 
-      // Create experiment name: model - DD/MM/YY
-      const now = new Date();
-      const dd = String(now.getDate()).padStart(2, "0");
-      const mm = String(now.getMonth() + 1).padStart(2, "0");
-      const yy = String(now.getFullYear()).slice(-2);
-      const dateTimeStr = `${dd}/${mm}/${yy}`;
+      // Experiment name: user-typed value wins, otherwise the auto-suggested
+      // `<model> × <dataset> [#N]` default that powers the placeholder.
       const experimentModelName = resolvedModel.name || modelName || "Unknown Model";
+      const resolvedExperimentName =
+        experimentName.trim() ||
+        generateDefaultExperimentName(
+          experimentModelName,
+          datasetDisplayName,
+          existingExperimentNames,
+        );
 
       const experimentConfig = {
         project_id: projectId,
-        name: `${experimentModelName} - ${dateTimeStr}`,
+        name: resolvedExperimentName,
         description: `Evaluating ${experimentModelName} with ${datasetPrompts.length} prompts`,
         model_inventory_id: selectedModelInventoryId || undefined,
         config: {
@@ -832,11 +923,8 @@ export default function NewExperimentModal({
         },
       };
 
-      console.log("Creating experiment:", experimentConfig);
-
       // Create experiment via API
       const response = await createExperiment(experimentConfig);
-      console.log("Experiment created:", response);
 
       // Optimistically notify parent so the table shows a pending row immediately
       if (onStarted && response?.experiment?.id) {
@@ -861,11 +949,7 @@ export default function NewExperimentModal({
           model: config.judgeLlm.model,
           endpointUrl: config.judgeLlm.endpointUrl || undefined,
         },
-      }).then((success) => {
-        if (success) {
-          console.log("Model preferences saved for next experiment");
-        }
-      });
+      }).catch(() => {});
 
       // Show success message
       setAlert({
@@ -918,6 +1002,7 @@ export default function NewExperimentModal({
     setUseCustomModelName(false);
     setUseCustomJudgeModelName(false);
     setSelectedModelInventoryId(null);
+    setExperimentName("");
     setConfig({
       taskType: useCase,
       model: {
@@ -3129,6 +3214,15 @@ export default function NewExperimentModal({
                 </Typography>
               </Box>
 
+              {/* Experiment name */}
+              <Field
+                label="Experiment name"
+                value={experimentName}
+                placeholder={defaultExperimentName}
+                onChange={(e) => setExperimentName(e.target.value)}
+                helperText="Leave blank to use the suggested name. We append #2, #3, ... for re-runs of the same model + dataset."
+              />
+
               {/* Estimated time display */}
               {datasetPrompts.length > 0 && (
                 <Box
@@ -3697,6 +3791,17 @@ export default function NewExperimentModal({
                 ))}
               </Box>
             )}
+
+            {/* Experiment name */}
+            <Box sx={{ mt: "16px" }}>
+              <Field
+                label="Experiment name"
+                value={experimentName}
+                placeholder={defaultExperimentName}
+                onChange={(e) => setExperimentName(e.target.value)}
+                helperText="Leave blank to use the suggested name. We append #2, #3, ... for re-runs of the same model + dataset."
+              />
+            </Box>
 
             {/* Estimated time display */}
             {datasetPrompts.length > 0 && (

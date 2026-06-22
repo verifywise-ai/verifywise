@@ -37,6 +37,7 @@ import VWSelect from "../../Inputs/Select";
 import { useBulkSelection } from "../../../../application/hooks/useBulkSelection";
 import { useBulkUpdateProjectRisks } from "../../../../application/hooks/useBulkUpdateProjectRisks";
 import useUsers from "../../../../application/hooks/useUsers";
+import { useCustomFieldDefinitions } from "../../../../application/hooks/useCustomFields";
 
 const PROJECT_RISK_CATEGORIES = [
   "Strategic risk",
@@ -204,10 +205,19 @@ const VWProjectRisksTable = ({
   canRunBulkActions = false,
   onBulkActionSuccess,
 }: IVWProjectRisksTable) => {
-  const filteredColumns = useMemo(
-    () => (visibleColumns ? columns.filter((col) => visibleColumns.has(col.id)) : columns),
-    [visibleColumns],
-  );
+  const { data: customFieldDefs = [] } = useCustomFieldDefinitions("project_risk");
+
+  const filteredColumns = useMemo(() => {
+    const base = visibleColumns ? columns.filter((col) => visibleColumns.has(col.id)) : columns;
+    const customCols = customFieldDefs.map((d) => ({
+      id: `cf_${d.id}`,
+      label: d.label.toUpperCase(),
+      sortable: false,
+    }));
+    const actionsIdx = base.findIndex((c) => c.id === "actions");
+    if (actionsIdx === -1) return [...base, ...customCols];
+    return [...base.slice(0, actionsIdx), ...customCols, ...base.slice(actionsIdx)];
+  }, [visibleColumns, customFieldDefs]);
   const theme = useTheme();
 
   // Initialize rowsPerPage from localStorage or default to 5
@@ -545,6 +555,7 @@ const VWProjectRisksTable = ({
               flashRow={flashRow}
               sortConfig={sortConfig}
               visibleColumns={visibleColumns}
+              customFieldDefs={customFieldDefs}
               selection={canRunBulkActions ? { isSelected, onToggle: toggleSelection } : undefined}
             />
           ) : (

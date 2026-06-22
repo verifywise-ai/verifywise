@@ -1,0 +1,1 @@
+/Users/halitozger/Desktop/verifywise/.claude/worktrees/practical-euler/docs/AI_IMPLEMENTATION_PLAN_PHASE0.md

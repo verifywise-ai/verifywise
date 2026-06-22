@@ -33,13 +33,16 @@ export interface ArenaTableProps {
   deleting?: string | null;
 }
 
+// BATTLE NAME body cell is left-aligned (default); every other body cell uses
+// textAlign: "center". StandardTableHead defaults to left when `align` is
+// omitted, so headers must match here or they drift off their column.
 const columns: StandardColumn[] = [
   { id: "name", label: "BATTLE NAME", sortable: true },
-  { id: "contestants", label: "CONTESTANTS", sortable: false },
-  { id: "dataset", label: "DATASET", sortable: true },
-  { id: "winner", label: "WINNER", sortable: true },
-  { id: "createdAt", label: "DATE", sortable: true },
-  { id: "actions", label: "ACTION", sortable: false },
+  { id: "contestants", label: "CONTESTANTS", sortable: false, align: "center" },
+  { id: "dataset", label: "DATASET", sortable: true, align: "center" },
+  { id: "winner", label: "WINNER", sortable: true, align: "center" },
+  { id: "createdAt", label: "DATE", sortable: true, align: "center" },
+  { id: "actions", label: "ACTION", sortable: false, align: "center" },
 ];
 
 const ArenaTable: React.FC<ArenaTableProps> = ({

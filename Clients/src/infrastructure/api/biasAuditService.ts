@@ -239,9 +239,7 @@ class BiasAuditService {
     formData.append("config_json", JSON.stringify(config));
     formData.append("org_id", config.orgId);
 
-    const res = await CustomAxios.post("/deepeval/bias-audits/run", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+    const res = await CustomAxios.post("/deepeval/bias-audits/run", formData);
     return res.data as { auditId: string; status: string };
   }
 
@@ -283,9 +281,7 @@ class BiasAuditService {
   async parseHeaders(dataset: File): Promise<string[]> {
     const formData = new FormData();
     formData.append("dataset", dataset);
-    const res = await CustomAxios.post("/deepeval/bias-audits/parse-headers", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+    const res = await CustomAxios.post("/deepeval/bias-audits/parse-headers", formData);
     return (res.data as { headers: string[] }).headers;
   }
 }

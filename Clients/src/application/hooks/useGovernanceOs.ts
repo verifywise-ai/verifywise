@@ -2,16 +2,23 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getAllMappings,
   getMappingsBetween,
+  createMapping,
+  updateMapping,
+  deleteMapping,
+  createBulkMappings,
   getAllScenarios,
-  getScenarioById,
   createScenario,
   updateScenario,
   deleteScenario,
+  activateScenario,
+  simulateScenario,
+  getActivationHistory,
+  deactivateScenario,
+  getScenarioProgress,
   getRecommendations,
   getCoverage,
   refreshCoverage,
   getUnifiedView,
-  getEligibility,
   getPreferences,
   updatePreferences,
 } from "../repository/governanceOs.repository";
@@ -33,12 +40,106 @@ export const governanceOsQueryKeys = {
   mappingsBetween: (sourceId: number, targetId: number) =>
     [...governanceOsQueryKeys.mappings(), "between", sourceId, targetId] as const,
   scenarios: () => [...governanceOsQueryKeys.all, "scenarios"] as const,
-  scenario: (id: number) => [...governanceOsQueryKeys.scenarios(), id] as const,
   coverage: (projectId: number) => [...governanceOsQueryKeys.all, "coverage", projectId] as const,
   unifiedView: (projectId: number) =>
     [...governanceOsQueryKeys.all, "unified-view", projectId] as const,
   preferences: () => [...governanceOsQueryKeys.all, "preferences"] as const,
-  eligibility: () => [...governanceOsQueryKeys.all, "eligibility"] as const,
+};
+
+export const useCreateMapping = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (body: Partial<IGovernanceControlMapping>) => createMapping({ body }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: governanceOsQueryKeys.mappings() });
+    },
+  });
+};
+
+export const useUpdateMapping = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: number; body: Partial<IGovernanceControlMapping> }) =>
+      updateMapping({ id, body }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: governanceOsQueryKeys.mappings() });
+    },
+  });
+};
+
+export const useDeleteMapping = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => deleteMapping({ id }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: governanceOsQueryKeys.mappings() });
+    },
+  });
+};
+
+export const useBulkCreateMappings = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (mappings: Partial<IGovernanceControlMapping>[]) =>
+      createBulkMappings({ body: { mappings } }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: governanceOsQueryKeys.mappings() });
+    },
+  });
+};
+
+export const useActivateScenario = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: number; body: any }) => activateScenario({ id, body }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: governanceOsQueryKeys.scenarios() });
+      queryClient.invalidateQueries({ queryKey: governanceOsQueryKeys.preferences() });
+    },
+  });
+};
+
+export const useSimulateScenario = () => {
+  return useMutation({
+    mutationFn: async (body: any) => {
+      const response = await simulateScenario({ body });
+      return response?.data ?? response;
+    },
+  });
+};
+
+export const useActivationHistory = () => {
+  return useQuery({
+    queryKey: [...governanceOsQueryKeys.all, "activations"],
+    queryFn: async () => {
+      const response = await getActivationHistory();
+      return response?.data?.activations || [];
+    },
+    staleTime: 2 * 60 * 1000,
+  });
+};
+
+export const useDeactivateScenario = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => deactivateScenario({ id }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...governanceOsQueryKeys.all, "activations"] });
+      queryClient.invalidateQueries({ queryKey: governanceOsQueryKeys.preferences() });
+    },
+  });
+};
+
+export const useScenarioProgress = (activationId: number) => {
+  return useQuery({
+    queryKey: [...governanceOsQueryKeys.all, "progress", activationId],
+    queryFn: async () => {
+      const response = await getScenarioProgress({ id: activationId });
+      return response?.data?.frameworks || [];
+    },
+    enabled: activationId > 0,
+    staleTime: 1 * 60 * 1000,
+  });
 };
 
 export const useMappings = (filters?: {
@@ -79,17 +180,6 @@ export const useScenarios = () => {
   });
 };
 
-export const useScenario = (id: number) => {
-  return useQuery<IGovernanceScenario>({
-    queryKey: governanceOsQueryKeys.scenario(id),
-    queryFn: async () => {
-      const response = await getScenarioById({ id });
-      return response?.data;
-    },
-    enabled: id > 0,
-  });
-};
-
 export const useCreateScenario = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -121,7 +211,7 @@ export const useDeleteScenario = () => {
   });
 };
 
-export const useRecommendations = () => {
+export const useGovernanceRecommendations = () => {
   return useMutation<IRecommendationResult[], Error, IRecommendationRequest>({
     mutationFn: (body: IRecommendationRequest) =>
       getRecommendations({ body }).then((r) => r?.data || []),
@@ -160,17 +250,6 @@ export const useUnifiedView = (projectId: number) => {
     },
     enabled: projectId > 0,
     staleTime: 5 * 60 * 1000,
-  });
-};
-
-export const useGovernanceOsEligibility = () => {
-  return useQuery<{ eligible: boolean; frameworkCount: number }>({
-    queryKey: governanceOsQueryKeys.eligibility(),
-    queryFn: async () => {
-      const response = await getEligibility();
-      return response?.data || { eligible: false, frameworkCount: 0 };
-    },
-    staleTime: 2 * 60 * 1000,
   });
 };
 

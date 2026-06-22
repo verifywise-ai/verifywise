@@ -27,6 +27,7 @@ import { useAuth } from "../../../application/hooks/useAuth";
 import { GroupBy } from "../../components/Table/GroupBy";
 import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
 import { GroupedTableView } from "../../components/Table/GroupedTableView";
+import CustomizableSkeleton from "../../components/Skeletons";
 import { FilterBy, FilterColumn } from "../../components/Table/FilterBy";
 import { ColumnSelector } from "../../components/Table/ColumnSelector";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
@@ -71,6 +72,7 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({
   policies: policyList,
   tags: _tags,
   fetchAll,
+  isLoading = false,
 }) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -635,7 +637,9 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({
 
           {/* Table / Empty state */}
           <Box sx={{ flex: 1, minWidth: 0 }}>
-            {filteredPolicies.length === 0 ? (
+            {isLoading ? (
+              <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
+            ) : filteredPolicies.length === 0 ? (
               <EmptyState
                 icon={FileText}
                 message={

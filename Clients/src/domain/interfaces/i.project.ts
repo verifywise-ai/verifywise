@@ -12,6 +12,7 @@ import { ProjectRiskMitigation } from "../types/ProjectRisk";
 export interface IProjectListProps {
   projects: Project[];
   newProjectButton?: unknown;
+  isLoading?: boolean;
   onFilterChange?: (filteredProjects: Project[], filters: any) => void;
   onProjectDeleted?: () => void;
 }

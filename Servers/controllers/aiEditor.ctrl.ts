@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { STATUS_CODE } from "../utils/statusCode.utils";
 import { streamText } from "ai";
 import { createAnthropic } from "@ai-sdk/anthropic";
 import { createOpenAI } from "@ai-sdk/openai";
@@ -45,21 +46,25 @@ export async function editorAICommand(req: Request, res: Response): Promise<void
     const organizationId = req.organizationId;
 
     if (!prompt) {
-      res.status(400).json({ error: req.t!("Prompt is required") });
+      res.status(400).json(STATUS_CODE[400](req.t!("Prompt is required")));
       return;
     }
 
     if (!organizationId) {
-      res.status(400).json({ error: req.t!("Organization context is required") });
+      res.status(400).json(STATUS_CODE[400](req.t!("Organization context is required")));
       return;
     }
 
     const clients = await getLLMKeysWithKeyQuery(organizationId);
 
     if (clients.length === 0) {
-      res.status(400).json({
-        error: req.t!("No LLM keys configured. Ask your admin to add one in Settings > LLM keys."),
-      });
+      res
+        .status(400)
+        .json(
+          STATUS_CODE[400](
+            req.t!("No LLM keys configured. Ask your admin to add one in Settings > LLM keys."),
+          ),
+        );
       return;
     }
 
@@ -82,7 +87,7 @@ export async function editorAICommand(req: Request, res: Response): Promise<void
   } catch (error) {
     logger.error("AI editor command failed:", error);
     if (!res.headersSent) {
-      res.status(500).json({ error: req.t!("AI editor command failed") });
+      res.status(500).json(STATUS_CODE[500](req.t!("AI editor command failed")));
     }
   }
 }

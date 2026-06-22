@@ -175,7 +175,7 @@ describe("vendor.repository", () => {
         statusText: "Created",
       };
 
-      const body = { name: "New Vendor", description: "Test" };
+      const body = { vendor_name: "New Vendor", vendor_provides: "Test" };
 
       vi.mocked(apiServices.post).mockResolvedValue(mockResponse);
 
@@ -196,7 +196,7 @@ describe("vendor.repository", () => {
 
       vi.mocked(apiServices.post).mockRejectedValue(mockError);
 
-      await expect(createNewVendor({ body: { name: "" } })).rejects.toThrow();
+      await expect(createNewVendor({ body: { vendor_name: "" } })).rejects.toThrow();
     });
 
     it("should throw error without response property for network errors", async () => {
@@ -204,7 +204,7 @@ describe("vendor.repository", () => {
 
       vi.mocked(apiServices.post).mockRejectedValue(networkError);
 
-      await expect(createNewVendor({ body: { name: "Test" } })).rejects.toThrow(
+      await expect(createNewVendor({ body: { vendor_name: "Test" } })).rejects.toThrow(
         "Connection refused",
       );
     });
@@ -218,7 +218,7 @@ describe("vendor.repository", () => {
         statusText: "OK",
       };
 
-      const body = { name: "Updated Vendor" };
+      const body = { vendor_name: "Updated Vendor" };
 
       vi.mocked(apiServices.patch).mockResolvedValue(mockResponse);
 
@@ -239,7 +239,7 @@ describe("vendor.repository", () => {
 
       vi.mocked(apiServices.patch).mockRejectedValue(mockError);
 
-      await expect(update({ id: 999, body: { name: "Test" } })).rejects.toThrow();
+      await expect(update({ id: 999, body: { vendor_name: "Test" } })).rejects.toThrow();
     });
 
     it("should throw error without response property for network errors", async () => {
@@ -247,7 +247,9 @@ describe("vendor.repository", () => {
 
       vi.mocked(apiServices.patch).mockRejectedValue(networkError);
 
-      await expect(update({ id: 1, body: { name: "Test" } })).rejects.toThrow("Network timeout");
+      await expect(update({ id: 1, body: { vendor_name: "Test" } })).rejects.toThrow(
+        "Network timeout",
+      );
     });
   });
 

@@ -209,3 +209,18 @@ export async function scheduleMcpGatewayCleanup() {
     },
   );
 }
+
+export async function scheduleAiTrustIndexSync() {
+  logger.info("Adding AI Trust Index weekly sync job to the queue...");
+  // Monday 06:00 UTC. jobId keyed weekly is set at runtime is not needed here;
+  // the handler self-guards via last_run_week. Repeatable add is idempotent by repeat key.
+  await automationQueue.add(
+    "ai_trust_index_sync",
+    {},
+    {
+      repeat: { pattern: "0 6 * * 1", tz: "UTC" },
+      removeOnComplete: true,
+      removeOnFail: false,
+    },
+  );
+}

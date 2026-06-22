@@ -1,10 +1,30 @@
 import { useState } from "react";
-import { Box, Typography, Stack, Chip, Button, IconButton } from "@mui/material";
-import { Check, Info } from "lucide-react";
-import VWTooltip from "../VWTooltip";
+import { Box, Typography, Stack, IconButton } from "@mui/material";
+import { useNavigate } from "react-router-dom";
+import {
+  Check,
+  Info,
+  Pencil,
+  Trash2,
+  Zap,
+  LayoutDashboard,
+  BarChart3,
+  GitCompareArrows,
+  ArrowRight,
+} from "lucide-react";
+import GovernanceTooltip from "./GovernanceTooltip";
 import StandardModal from "../Modals/StandardModal";
+import FrameworkChip from "./FrameworkChip";
+import { CustomizableButton } from "../button/customizable-button";
 import { IScenarioCardProps } from "../../../domain/interfaces/i.governanceOs";
-import { border as borderPalette, background, text, accent, brand } from "../../themes/palette";
+import {
+  border as borderPalette,
+  background,
+  text,
+  accent,
+  brand,
+  status,
+} from "../../themes/palette";
 
 const FRAMEWORK_NAMES: Record<number, string> = {
   1: "EU AI Act",
@@ -19,7 +39,11 @@ const ScenarioCard = ({
   matchedRules,
   isSelected,
   onSelect,
+  onEdit,
+  onDelete,
+  onActivate,
 }: IScenarioCardProps) => {
+  const navigate = useNavigate();
   const [detailOpen, setDetailOpen] = useState(false);
 
   const priorityOrder = scenario.priority_order as {
@@ -41,8 +65,8 @@ const ScenarioCard = ({
       <Box
         sx={{
           "border": `1px solid ${isSelected ? brand.primary : borderPalette.light}`,
-          "borderRadius": 2,
-          "p": 2.5,
+          "borderRadius": "4px",
+          "p": "16px",
           "background": isSelected ? background.accent : background.main,
           "transition": "all 0.2s ease",
           "&:hover": {
@@ -62,44 +86,101 @@ const ScenarioCard = ({
               </Typography>
             )}
           </Box>
-          <Stack direction="row" spacing={1} alignItems="center">
-            <VWTooltip
-              content="View details about what selecting this scenario means"
-              placement="top"
+          <Stack direction="row" gap="8px" alignItems="center">
+            <GovernanceTooltip
+              header="Scenario details"
+              description="View what selecting this scenario means for the project"
             >
-              <IconButton
-                size="small"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setDetailOpen(true);
-                }}
-                sx={{ "color": text.muted, "&:hover": { color: text.primary } }}
+              <span>
+                <IconButton
+                  size="small"
+                  disableRipple
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDetailOpen(true);
+                  }}
+                  sx={{ "color": text.muted, "&:hover": { color: text.primary } }}
+                >
+                  <Info size={16} />
+                </IconButton>
+              </span>
+            </GovernanceTooltip>
+            {onEdit && !scenario.is_builtin && (
+              <GovernanceTooltip
+                header="Edit scenario"
+                description="Modify this governance scenario"
               >
-                <Info size={16} />
-              </IconButton>
-            </VWTooltip>
-            {onSelect && (
-              <VWTooltip
-                header="Set as active governance strategy"
-                content={
-                  <p>
-                    Selecting this scenario sets it as your organization&apos;s active governance
-                    strategy. It defines which frameworks to prioritize (primary, secondary,
-                    supplementary) and guides compliance planning across all projects.
-                  </p>
-                }
+                <span>
+                  <IconButton
+                    size="small"
+                    disableRipple
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit(scenario);
+                    }}
+                    sx={{ "color": text.muted, "&:hover": { color: text.primary } }}
+                  >
+                    <Pencil size={14} />
+                  </IconButton>
+                </span>
+              </GovernanceTooltip>
+            )}
+            {onDelete && !scenario.is_builtin && (
+              <GovernanceTooltip
+                header="Delete scenario"
+                description="Remove this governance scenario permanently"
+              >
+                <span>
+                  <IconButton
+                    size="small"
+                    disableRipple
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete(scenario);
+                    }}
+                    sx={{ "color": text.muted, "&:hover": { color: status.error.text } }}
+                  >
+                    <Trash2 size={14} />
+                  </IconButton>
+                </span>
+              </GovernanceTooltip>
+            )}
+            {onActivate && (
+              <GovernanceTooltip
+                header="Activate scenario"
+                description="Create tasks across selected projects using this scenario"
                 placement="left"
               >
                 <span>
-                  <Button
+                  <CustomizableButton
+                    size="small"
+                    variant="contained"
+                    onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                      e.stopPropagation();
+                      onActivate(scenario);
+                    }}
+                    startIcon={<Zap size={14} />}
+                    text="Activate"
+                    sx={{}}
+                  />
+                </span>
+              </GovernanceTooltip>
+            )}
+            {onSelect && (
+              <GovernanceTooltip
+                header="Select scenario"
+                description="Set this scenario as the active governance strategy"
+                placement="left"
+              >
+                <span>
+                  <CustomizableButton
                     size="small"
                     variant="outlined"
                     onClick={() => onSelect(scenario)}
-                    disabled={isSelected}
+                    isDisabled={isSelected}
                     startIcon={isSelected ? <Check size={14} /> : undefined}
+                    text={isSelected ? "Selected" : "Select"}
                     sx={{
-                      "fontSize": 12,
-                      "textTransform": "none",
                       "borderColor": isSelected ? brand.primary : borderPalette.dark,
                       "color": isSelected ? brand.primary : text.secondary,
                       "&:hover": {
@@ -112,119 +193,119 @@ const ScenarioCard = ({
                         opacity: 0.8,
                       },
                     }}
-                  >
-                    {isSelected ? "Selected" : "Select"}
-                  </Button>
+                  />
                 </span>
-              </VWTooltip>
+              </GovernanceTooltip>
             )}
           </Stack>
         </Stack>
 
         {scenario.description && (
-          <Typography sx={{ fontSize: 13, color: text.accent, mt: 1 }}>
+          <Typography sx={{ fontSize: 13, color: text.accent, mt: "8px" }}>
             {scenario.description}
           </Typography>
         )}
 
         {priorityOrder && (
-          <Stack direction="row" spacing={1} sx={{ mt: 2 }} flexWrap="wrap" useFlexGap>
+          <Stack direction="row" gap="8px" sx={{ mt: "16px" }} flexWrap="wrap" useFlexGap>
             {priorityOrder.primary && (
-              <Chip
-                label={`Primary: ${FRAMEWORK_NAMES[priorityOrder.primary] || priorityOrder.primary}`}
+              <FrameworkChip
+                frameworkName={
+                  FRAMEWORK_NAMES[priorityOrder.primary] || String(priorityOrder.primary)
+                }
+                priority="primary"
                 size="small"
-                sx={{
-                  fontSize: 11,
-                  height: 22,
-                  backgroundColor: accent.primary.bg,
-                  color: accent.primary.text,
-                  border: `1px solid ${accent.primary.border}`,
-                }}
               />
             )}
             {priorityOrder.secondary?.map((id) => (
-              <Chip
+              <FrameworkChip
                 key={id}
-                label={`Secondary: ${FRAMEWORK_NAMES[id] || id}`}
+                frameworkName={FRAMEWORK_NAMES[id] || String(id)}
+                priority="secondary"
                 size="small"
-                sx={{
-                  fontSize: 11,
-                  height: 22,
-                  backgroundColor: accent.indigo.bg,
-                  color: accent.indigo.text,
-                  border: `1px solid ${accent.indigo.border}`,
-                }}
               />
             ))}
             {priorityOrder.supplementary?.map((id) => (
-              <Chip
+              <FrameworkChip
                 key={id}
-                label={`Supplementary: ${FRAMEWORK_NAMES[id] || id}`}
+                frameworkName={FRAMEWORK_NAMES[id] || String(id)}
+                priority="supplementary"
                 size="small"
-                sx={{
-                  fontSize: 11,
-                  height: 22,
-                  backgroundColor: background.hover,
-                  color: text.tertiary,
-                  border: `1px solid ${borderPalette.light}`,
-                }}
               />
             ))}
           </Stack>
         )}
 
-        <Stack direction="row" spacing={1} sx={{ mt: 1.5 }} flexWrap="wrap" useFlexGap>
+        <Stack direction="row" gap="8px" sx={{ mt: "12px" }} flexWrap="wrap" useFlexGap>
           {scenario.industry && (
-            <Chip
-              label={scenario.industry}
-              size="small"
+            <Box
+              component="span"
               sx={{
-                fontSize: 11,
+                display: "inline-flex",
+                alignItems: "center",
                 height: 22,
+                px: "8px",
+                borderRadius: "4px",
+                fontSize: 11,
+                fontWeight: 400,
+                textTransform: "capitalize",
                 backgroundColor: background.hover,
                 color: text.tertiary,
                 border: `1px solid ${borderPalette.light}`,
-                textTransform: "capitalize",
               }}
-            />
+            >
+              {scenario.industry}
+            </Box>
           )}
           {scenario.region && (
-            <Chip
-              label={scenario.region.toUpperCase()}
-              size="small"
+            <Box
+              component="span"
               sx={{
-                fontSize: 11,
+                display: "inline-flex",
+                alignItems: "center",
                 height: 22,
+                px: "8px",
+                borderRadius: "4px",
+                fontSize: 11,
+                fontWeight: 400,
                 backgroundColor: background.hover,
                 color: text.tertiary,
                 border: `1px solid ${borderPalette.light}`,
               }}
-            />
+            >
+              {scenario.region.toUpperCase()}
+            </Box>
           )}
           {scenario.use_case_type && (
-            <Chip
-              label={scenario.use_case_type.replace(/_/g, " ")}
-              size="small"
+            <Box
+              component="span"
               sx={{
-                fontSize: 11,
+                display: "inline-flex",
+                alignItems: "center",
                 height: 22,
+                px: "8px",
+                borderRadius: "4px",
+                fontSize: 11,
+                fontWeight: 400,
+                textTransform: "capitalize",
                 backgroundColor: background.hover,
                 color: text.tertiary,
                 border: `1px solid ${borderPalette.light}`,
-                textTransform: "capitalize",
               }}
-            />
+            >
+              {scenario.use_case_type.replace(/_/g, " ")}
+            </Box>
           )}
         </Stack>
 
         {matchedRules && matchedRules.length > 0 && (
-          <Typography sx={{ fontSize: 11, color: text.muted, mt: 1.5 }}>
+          <Typography sx={{ fontSize: 11, color: text.muted, mt: "12px" }}>
             Matched: {matchedRules.join(", ")}
           </Typography>
         )}
 
         {scenario.rationale && (
-          <Typography sx={{ fontSize: 12, color: text.accent, mt: 1 }}>
+          <Typography sx={{ fontSize: 12, color: text.accent, mt: "8px" }}>
             {scenario.rationale}
           </Typography>
         )}
@@ -239,9 +320,9 @@ const ScenarioCard = ({
         hideFooter
         fitContent
       >
-        <Stack spacing={6}>
+        <Stack gap="16px">
           {/* What is this scenario */}
-          <Stack spacing={2}>
+          <Stack gap="16px">
             <Typography sx={{ fontSize: 13, fontWeight: 600, color: text.primary }}>
               What is this scenario?
             </Typography>
@@ -252,7 +333,7 @@ const ScenarioCard = ({
           </Stack>
 
           {/* What happens when you select it */}
-          <Stack spacing={2}>
+          <Stack gap="16px">
             <Typography sx={{ fontSize: 13, fontWeight: 600, color: text.primary }}>
               What happens when you select this scenario?
             </Typography>
@@ -280,7 +361,7 @@ const ScenarioCard = ({
           </Stack>
 
           {/* Next steps after selecting */}
-          <Stack spacing={2}>
+          <Stack gap="16px">
             <Typography sx={{ fontSize: 13, fontWeight: 600, color: text.primary }}>
               Next steps after selecting this scenario
             </Typography>
@@ -317,11 +398,38 @@ const ScenarioCard = ({
                 reflect compliance progress based on the active scenario&apos;s priority order.
               </li>
             </Stack>
+
+            <Stack direction="row" gap="8px" flexWrap="wrap" useFlexGap>
+              <CustomizableButton
+                size="small"
+                variant="outlined"
+                startIcon={<LayoutDashboard size={14} />}
+                endIcon={<ArrowRight size={14} />}
+                onClick={() => navigate("/")}
+                text="Dashboard"
+              />
+              <CustomizableButton
+                size="small"
+                variant="outlined"
+                startIcon={<BarChart3 size={14} />}
+                endIcon={<ArrowRight size={14} />}
+                onClick={() => navigate("/governance/insights")}
+                text="Unified Insights"
+              />
+              <CustomizableButton
+                size="small"
+                variant="outlined"
+                startIcon={<GitCompareArrows size={14} />}
+                endIcon={<ArrowRight size={14} />}
+                onClick={() => navigate("/governance/framework-mapper")}
+                text="Framework Mapper"
+              />
+            </Stack>
           </Stack>
 
           {/* Framework priority breakdown */}
           {priorityOrder && (
-            <Stack spacing={2}>
+            <Stack gap="16px">
               <Typography sx={{ fontSize: 13, fontWeight: 600, color: text.primary }}>
                 Framework priority order
               </Typography>
@@ -329,19 +437,19 @@ const ScenarioCard = ({
               {primaryName && (
                 <Box
                   sx={{
-                    p: 2,
-                    borderRadius: 2,
+                    p: "16px",
+                    borderRadius: "4px",
                     border: `1px solid ${accent.primary.border}`,
                     background: accent.primary.bg,
                   }}
                 >
-                  <Typography sx={{ fontSize: 11, color: text.muted, mb: 0.5 }}>
+                  <Typography sx={{ fontSize: 11, color: text.muted, mb: "4px" }}>
                     Primary framework (highest priority)
                   </Typography>
                   <Typography sx={{ fontSize: 14, fontWeight: 600, color: accent.primary.text }}>
                     {primaryName}
                   </Typography>
-                  <Typography sx={{ fontSize: 12, color: text.accent, mt: 0.5 }}>
+                  <Typography sx={{ fontSize: 12, color: text.accent, mt: "4px" }}>
                     This is your main compliance target. Tasks and controls from this framework will
                     be prioritized above all others.
                   </Typography>
@@ -351,19 +459,19 @@ const ScenarioCard = ({
               {secondaryNames.length > 0 && (
                 <Box
                   sx={{
-                    p: 2,
-                    borderRadius: 2,
+                    p: "16px",
+                    borderRadius: "4px",
                     border: `1px solid ${accent.indigo.border}`,
                     background: accent.indigo.bg,
                   }}
                 >
-                  <Typography sx={{ fontSize: 11, color: text.muted, mb: 0.5 }}>
+                  <Typography sx={{ fontSize: 11, color: text.muted, mb: "4px" }}>
                     Secondary framework(s)
                   </Typography>
                   <Typography sx={{ fontSize: 14, fontWeight: 600, color: accent.indigo.text }}>
                     {secondaryNames.join(", ")}
                   </Typography>
-                  <Typography sx={{ fontSize: 12, color: text.accent, mt: 0.5 }}>
+                  <Typography sx={{ fontSize: 12, color: text.accent, mt: "4px" }}>
                     Supporting frameworks that complement your primary target. Work on these after
                     primary controls are in place.
                   </Typography>
@@ -373,19 +481,19 @@ const ScenarioCard = ({
               {supplementaryNames.length > 0 && (
                 <Box
                   sx={{
-                    p: 2,
-                    borderRadius: 2,
+                    p: "16px",
+                    borderRadius: "4px",
                     border: `1px solid ${borderPalette.light}`,
                     background: background.hover,
                   }}
                 >
-                  <Typography sx={{ fontSize: 11, color: text.muted, mb: 0.5 }}>
+                  <Typography sx={{ fontSize: 11, color: text.muted, mb: "4px" }}>
                     Supplementary framework(s)
                   </Typography>
                   <Typography sx={{ fontSize: 14, fontWeight: 600, color: text.tertiary }}>
                     {supplementaryNames.join(", ")}
                   </Typography>
-                  <Typography sx={{ fontSize: 12, color: text.accent, mt: 0.5 }}>
+                  <Typography sx={{ fontSize: 12, color: text.accent, mt: "4px" }}>
                     Nice-to-have frameworks that provide additional governance coverage. Address
                     these once primary and secondary are well-established.
                   </Typography>
@@ -396,14 +504,14 @@ const ScenarioCard = ({
 
           {/* Who is this for */}
           {(scenario.industry || scenario.region || scenario.use_case_type) && (
-            <Stack spacing={2}>
+            <Stack gap="16px">
               <Typography sx={{ fontSize: 13, fontWeight: 600, color: text.primary }}>
                 Best suited for
               </Typography>
-              <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
+              <Stack direction="row" gap="16px" flexWrap="wrap" useFlexGap>
                 {scenario.industry && (
                   <Box>
-                    <Typography sx={{ fontSize: 11, color: text.muted, mb: 0.5 }}>
+                    <Typography sx={{ fontSize: 11, color: text.muted, mb: "4px" }}>
                       Industry
                     </Typography>
                     <Typography
@@ -420,7 +528,7 @@ const ScenarioCard = ({
                 )}
                 {scenario.region && (
                   <Box>
-                    <Typography sx={{ fontSize: 11, color: text.muted, mb: 0.5 }}>
+                    <Typography sx={{ fontSize: 11, color: text.muted, mb: "4px" }}>
                       Region
                     </Typography>
                     <Typography sx={{ fontSize: 13, fontWeight: 500, color: text.primary }}>
@@ -430,7 +538,7 @@ const ScenarioCard = ({
                 )}
                 {scenario.use_case_type && (
                   <Box>
-                    <Typography sx={{ fontSize: 11, color: text.muted, mb: 0.5 }}>
+                    <Typography sx={{ fontSize: 11, color: text.muted, mb: "4px" }}>
                       Use case type
                     </Typography>
                     <Typography
@@ -451,7 +559,7 @@ const ScenarioCard = ({
 
           {/* Match score explanation */}
           {score !== undefined && (
-            <Stack spacing={2}>
+            <Stack gap="16px">
               <Typography sx={{ fontSize: 13, fontWeight: 600, color: text.primary }}>
                 Recommendation match
               </Typography>
@@ -467,7 +575,7 @@ const ScenarioCard = ({
 
           {/* Rationale */}
           {scenario.rationale && (
-            <Stack spacing={2}>
+            <Stack gap="16px">
               <Typography sx={{ fontSize: 13, fontWeight: 600, color: text.primary }}>
                 Rationale
               </Typography>

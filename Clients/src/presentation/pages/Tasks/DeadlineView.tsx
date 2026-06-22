@@ -279,6 +279,8 @@ const DeadlineView: React.FC<DeadlineViewProps> = ({
                 <IconButton
                   size="small"
                   sx={{ padding: 0 }}
+                  aria-label={isCollapsed ? `Expand ${group.label}` : `Collapse ${group.label}`}
+                  aria-expanded={!isCollapsed}
                   onClick={(e) => {
                     e.stopPropagation();
                     toggleSection(group.key);

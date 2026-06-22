@@ -9,7 +9,7 @@
 
 ## Overview
 
-This router manages assessment-related routes, providing endpoints for CRUD operations and answer management.
+This router manages assessment-related routes, providing endpoints for CRUD operations and answer retrieval.
 
 ## Dependencies
 
@@ -25,44 +25,44 @@ import authenticateJWT from "../middleware/auth.middleware";
 - **Get All Assessments**
   - Route: `/`
   - Handler: `getAllAssessments`
-  - Authentication: JWT (currently commented out)
+  - Authentication: JWT
 
 - **Get Assessment by ID**
   - Route: `/:id`
   - Handler: `getAssessmentById`
-  - Authentication: JWT (currently commented out)
+  - Authentication: JWT
+
+- **Get Assessment by Project ID**
+  - Route: `/project/byid/:id`
+  - Handler: `getAssessmentByProjectId`
+  - Authentication: JWT
+
+- **Get Answers**
+  - Route: `/getAnswers/:id`
+  - Handler: `getAnswers`
+  - Authentication: JWT
 
 ### POST Routes
 
 - **Create Assessment**
   - Route: `/`
   - Handler: `createAssessment`
-  - Authentication: JWT (currently commented out)
-
-- **Save Answers**
-  - Route: `/saveAnswers`
-  - Handler: `saveAnswers`
-  - Authentication: JWT (currently commented out)
+  - Authentication: JWT
 
 ### PUT Routes
 
 - **Update Assessment**
   - Route: `/:id`
   - Handler: `updateAssessmentById`
-  - Authentication: JWT (currently commented out)
-
-- **Update Answers**
-  - Route: `/updateAnswers/:id`
-  - Handler: `updateAnswers`
-  - Authentication: JWT (currently commented out)
+  - Authentication: JWT
 
 ### DELETE Routes
 
 - **Delete Assessment**
   - Route: `/:id`
   - Handler: `deleteAssessmentById`
-  - Authentication: JWT (currently commented out)
+  - Authentication: JWT
 
 ## Authentication
 
-All routes are configured to use JWT authentication middleware (`authenticateJWT`), though it is currently commented out in the implementation.
+All routes require JWT authentication via the `authenticateJWT` middleware.

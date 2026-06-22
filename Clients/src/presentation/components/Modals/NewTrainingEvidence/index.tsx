@@ -148,7 +148,7 @@ const NewTrainingEvidence: FC<NewTrainingEvidenceProps> = ({
     }));
   }, []);
 
-  const handleSubmit = useCallback(async () => {
+  const handleSaveTrainingEvidence = useCallback(async () => {
     const nextErrors: FormErrors = {};
     if (!values.evidence_name.trim()) nextErrors.evidence_name = "Evidence name is required";
     if (!values.evidence_type) nextErrors.evidence_type = "Evidence type is required";
@@ -199,7 +199,7 @@ const NewTrainingEvidence: FC<NewTrainingEvidenceProps> = ({
         onClose={handleClose}
         title={isEdit ? "Edit training evidence" : "Upload training evidence"}
         description="Upload certificates, attendance proofs, or other compliance evidence for this training."
-        onSubmit={handleSubmit}
+        onSubmit={handleSaveTrainingEvidence}
         submitButtonText={isEdit ? "Update evidence" : "Save evidence"}
         isSubmitting={isSubmitting}
         maxWidth="640px"

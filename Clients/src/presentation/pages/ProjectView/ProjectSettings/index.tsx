@@ -32,6 +32,10 @@ import { Save as SaveIcon, Trash2 as DeleteIcon } from "lucide-react";
 import CustomizableToast from "../../../components/Toast";
 import CustomizableSkeleton from "../../../components/Skeletons";
 import IntakeSubmissionCard from "../IntakeSubmissionCard";
+import CustomFieldsSection, {
+  type CustomFieldsSectionHandle,
+} from "../../../components/CustomFieldsSection";
+import { useRequiredCustomFieldsGate } from "../../../components/CustomFieldsSection/RequiredCustomFieldsGate";
 import useFrameworks from "../../../../application/hooks/useFrameworks";
 import { Framework } from "../../../../domain/types/Framework";
 import allowedRoles from "../../../../application/constants/permissions";
@@ -176,6 +180,7 @@ const ProjectSettings = React.memo(
     const [isFrameworkOperationInProgress, setIsFrameworkOperationInProgress] = useState(false);
     const [showCustomizableSkeleton, setShowCustomizableSkeleton] = useState<boolean>(false);
     const initialValuesRef = useRef<FormValues>({ ...initialState });
+    const customFieldsRef = useRef<CustomFieldsSectionHandle | null>(null);
     const isModified = useMemo(() => {
       if (!initialValuesRef.current.projectTitle) return false;
 
@@ -202,15 +207,27 @@ const ProjectSettings = React.memo(
       return basicFieldsModified || frameworksModified;
     }, [values, isFrameworkOperationInProgress]);
 
+    const customFieldsGate = useRequiredCustomFieldsGate(
+      "project",
+      parseInt(projectId, 10) || null,
+    );
+
     const isSaveDisabled = useMemo(() => {
       if (showCustomizableSkeleton) return true;
       if (isFrameworkOperationInProgress) return true;
       if (!isModified) return true;
+      if (customFieldsGate.blocked) return true;
 
       const hasErrors = Object.values(errors).some((error) => error && error.length > 0);
 
       return hasErrors;
-    }, [isModified, errors, showCustomizableSkeleton, isFrameworkOperationInProgress]);
+    }, [
+      isModified,
+      errors,
+      showCustomizableSkeleton,
+      isFrameworkOperationInProgress,
+      customFieldsGate.blocked,
+    ]);
 
     const [removedFramework, setRemovedFramework] = useState<boolean>(false);
 
@@ -641,12 +658,27 @@ const ProjectSettings = React.memo(
             framework_id: fw._id,
           })),
         },
-      }).then((response) => {
+      }).then(async (response) => {
         if (response.status === 202) {
           // Create new values reference and update both ref and form state
           const newValues = { ...values };
           initialValuesRef.current = newValues;
           setValues(newValues);
+
+          let cfFlushFailed = false;
+          const pid = Number(projectId);
+          if (Number.isFinite(pid) && pid > 0 && customFieldsRef.current?.hasPendingValues()) {
+            try {
+              await customFieldsRef.current.flush(pid);
+            } catch (cfError) {
+              cfFlushFailed = true;
+              console.error("Project saved, but custom field values failed to save:", cfError);
+            }
+          }
+          if (cfFlushFailed) {
+            setIsLoading(false);
+            return;
+          }
 
           setAlert({
             variant: "success",
@@ -1336,6 +1368,15 @@ const ProjectSettings = React.memo(
 
               {/* Intake Form Submission */}
               <IntakeSubmissionCard projectId={parseInt(projectId, 10) || 0} />
+
+              {/* Custom Fields */}
+              <Box sx={styles.card}>
+                <CustomFieldsSection
+                  ref={customFieldsRef}
+                  entityType="project"
+                  entityId={parseInt(projectId, 10) || null}
+                />
+              </Box>
 
               {/* Save Button Row */}
               <Stack sx={{ width: "100%" }}>

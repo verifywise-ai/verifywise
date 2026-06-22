@@ -35,22 +35,29 @@ def _internal_key() -> str:
 def to_litellm_model(provider: str, model: str) -> str:
     """
     Map eval provider + UI model id to a LiteLLM model string.
-    If the model already looks like a LiteLLM route (contains '/'), return as-is.
+
+    OpenRouter models must be resolved first because their names typically contain
+    a "/" (e.g. "meta-llama/llama-3.1-70b-instruct") which would otherwise trigger
+    the early-return and skip the required "openrouter/" prefix.
     """
     p = (provider or "").lower().strip()
     m = (model or "").strip()
     if not m:
         raise ValueError("model name is required")
+
+    # OpenRouter — must come before the "/" shortcut because OpenRouter slugs
+    # (e.g. "meta-llama/llama-3.1-70b-instruct") contain "/" but still need the
+    # "openrouter/" LiteLLM prefix to be routed correctly.
+    if p == "openrouter":
+        return m if m.startswith("openrouter/") else f"openrouter/{m}"
+
+    # For all other providers, a "/" means the caller already supplied a fully-
+    # qualified LiteLLM model string — pass it through unchanged.
     if "/" in m:
         return m
 
     if p in ("google", "gemini"):
-        if m.startswith("gemini/") or m.startswith("google/"):
-            return m
-        return f"gemini/{m}"
-
-    if p == "openrouter":
-        return m
+        return m if m.startswith("gemini/") or m.startswith("google/") else f"gemini/{m}"
 
     if p == "mistral" and not m.startswith("mistral/"):
         return f"mistral/{m}"

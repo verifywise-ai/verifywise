@@ -30,5 +30,17 @@ export enum ApprovalResult {
 export enum EntityType {
   USE_CASE = "use_case",
   FILE = "file",
+  RISK = "risk",
+  VENDOR = "vendor",
+  MODEL_INVENTORY = "model_inventory",
+  POLICY = "policy",
+  INCIDENT = "incident",
+  TASK = "task",
+  DATASET = "dataset",
+  TRAINING = "training",
+  EVIDENCE = "evidence",
   AI_ACTION = "ai_action",
+  AUTOMATION = "automation",
+  PMM_CONFIG = "pmm_config",
+  NOTE = "note",
 }

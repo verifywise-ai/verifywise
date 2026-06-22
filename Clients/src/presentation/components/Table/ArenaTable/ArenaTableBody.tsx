@@ -83,13 +83,13 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [rowToDelete, setRowToDelete] = useState<ArenaRow | null>(null);
 
-  const handleMenuOpen = (e: React.MouseEvent<HTMLElement>, row: ArenaRow) => {
+  const openArenaMenu = (e: React.MouseEvent<HTMLElement>, row: ArenaRow) => {
     e.stopPropagation();
     setMenuAnchorEl(e.currentTarget);
     setMenuRow(row);
   };
 
-  const handleMenuClose = () => {
+  const closeArenaMenu = () => {
     setMenuAnchorEl(null);
     setMenuRow(null);
   };
@@ -98,29 +98,29 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
     if (menuRow && onViewResults) {
       onViewResults(menuRow);
     }
-    handleMenuClose();
+    closeArenaMenu();
   };
 
   const handleDownloadClick = () => {
     if (menuRow && onDownload) {
       onDownload(menuRow);
     }
-    handleMenuClose();
+    closeArenaMenu();
   };
 
   const handleCopyClick = () => {
     if (menuRow && onCopy) {
       onCopy(menuRow);
     }
-    handleMenuClose();
+    closeArenaMenu();
   };
 
-  const handleDeleteClick = () => {
+  const deleteArenaRow = () => {
     if (menuRow) {
       setRowToDelete(menuRow);
       setDeleteConfirmOpen(true);
     }
-    handleMenuClose();
+    closeArenaMenu();
   };
 
   const handleConfirmDelete = () => {
@@ -282,7 +282,7 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
             ) : (
               <IconButton
                 disableRipple={theme.components?.MuiIconButton?.defaultProps?.disableRipple}
-                onClick={(e) => handleMenuOpen(e, row)}
+                onClick={(e) => openArenaMenu(e, row)}
                 sx={singleTheme.iconButtons}
               >
                 <MoreVertical size={18} />
@@ -296,7 +296,7 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
       <Popover
         open={Boolean(menuAnchorEl)}
         anchorEl={menuAnchorEl}
-        onClose={handleMenuClose}
+        onClose={closeArenaMenu}
         onClick={(e) => e.stopPropagation()}
         anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
         transformOrigin={{ horizontal: "right", vertical: "top" }}
@@ -385,7 +385,7 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
           {onDelete && (
             <CustomizableButton
               variant="outlined"
-              onClick={handleDeleteClick}
+              onClick={deleteArenaRow}
               startIcon={<Trash2 size={14} />}
               sx={{
                 "height": "34px",

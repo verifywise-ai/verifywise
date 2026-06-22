@@ -13,7 +13,6 @@ import { MitigationFormValues } from "../interface";
 import { useFormValidation } from "../../../../application/hooks/useFormValidation";
 import { checkStringValidation } from "../../../../application/validations/stringValidation";
 import selectValidation from "../../../../application/validations/selectValidation";
-import styles from "../styles.module.css";
 import useUsers from "../../../../application/hooks/useUsers";
 import { mitigationStatusItems, riskLevelItems, approvalStatusItems } from "../projectRiskValue";
 import { alertState } from "../../../../domain/interfaces/i.alert";
@@ -36,11 +35,6 @@ const LAYOUT = {
     return this.COMPACT_FIELD_WIDTH * 2 + this.HORIZONTAL_GAP; // 644px
   },
 } as const;
-
-// Constants
-const FORM_FIELD_WIDTH = LAYOUT.FIELD_WIDTH;
-const MIN_HEIGHT = 500;
-const MAX_HEIGHT = 500;
 
 import Select from "../../Inputs/Select";
 import Field from "../../Inputs/Field";
@@ -86,21 +80,18 @@ const MitigationSection: FC<MitigationSectionProps> = ({
   const { users, loading: usersLoading } = useUsers();
 
   // Dynamic layout based on compactMode - squeeze into 990px when sidebar is open
-  const fieldWidth = compactMode ? `${LAYOUT.COMPACT_FIELD_WIDTH}px` : `${FORM_FIELD_WIDTH}px`;
   const contentWidth = compactMode
     ? `${LAYOUT.COMPACT_CONTENT_WIDTH}px`
     : `${LAYOUT.TOTAL_CONTENT_WIDTH}px`;
-  const twoColumnWidth = compactMode
-    ? `${LAYOUT.COMPACT_TWO_COLUMN_WIDTH}px`
-    : `${LAYOUT.TWO_COLUMN_WIDTH}px`;
 
   const formRowStyles = {
     display: "flex",
     flexDirection: "row" as const,
     justifyContent: "flex-start",
-    flexWrap: "wrap" as const,
+    flexWrap: "nowrap" as const,
     gap: `${LAYOUT.HORIZONTAL_GAP}px`,
-    width: contentWidth,
+    width: "100%",
+    maxWidth: contentWidth,
   };
 
   const validators = useMemo(
@@ -170,10 +161,10 @@ const MitigationSection: FC<MitigationSectionProps> = ({
 
   const formFieldStyles = useMemo(
     () => ({
-      width: fieldWidth,
+      flex: 1,
       backgroundColor: theme.palette.background.main,
     }),
-    [theme.palette.background.main, fieldWidth],
+    [theme.palette.background.main],
   );
 
   const handleOnSelectChange = useCallback(
@@ -217,11 +208,7 @@ const MitigationSection: FC<MitigationSectionProps> = ({
   );
 
   return (
-    <Stack
-      sx={{
-        ...(disableInternalScroll ? {} : { minHeight: MIN_HEIGHT, maxHeight: MAX_HEIGHT }),
-      }}
-    >
+    <Stack>
       {alert && (
         <Alert
           variant={alert.variant}
@@ -231,20 +218,8 @@ const MitigationSection: FC<MitigationSectionProps> = ({
           onClick={() => setAlert(null)}
         />
       )}
-      <Stack
-        className={disableInternalScroll ? undefined : styles.popupBody}
-        sx={{
-          width: "100%",
-          ...(disableInternalScroll
-            ? {}
-            : {
-                maxHeight: "fit-content",
-                overflowY: "auto",
-                overflowX: "hidden",
-              }),
-        }}
-      >
-        <Stack sx={{ width: contentWidth }}>
+      <Stack sx={{ width: "100%", ...(disableInternalScroll ? {} : { p: "10px" }) }}>
+        <Stack sx={{ width: "100%", maxWidth: contentWidth }}>
           <Stack sx={{ gap: `${LAYOUT.VERTICAL_GAP}px` }}>
             {/* Row 1: Three columns */}
             <Stack sx={formRowStyles}>
@@ -285,7 +260,7 @@ const MitigationSection: FC<MitigationSectionProps> = ({
                   mitigationValues.deadline ? dayjs(mitigationValues.deadline) : dayjs(new Date())
                 }
                 handleDateChange={(e) => handleDateChange("deadline", e)}
-                sx={{ width: fieldWidth }}
+                sx={{ flex: 1 }}
                 isRequired
                 error={errors.deadline}
                 disabled={isEditingDisabled}
@@ -301,7 +276,7 @@ const MitigationSection: FC<MitigationSectionProps> = ({
                 rows={3}
                 value={mitigationValues.mitigationPlan}
                 onChange={handleOnTextFieldChange("mitigationPlan")}
-                sx={{ width: fieldWidth }}
+                sx={{ flex: 1 }}
                 isRequired
                 error={errors.mitigationPlan}
                 disabled={isEditingDisabled}
@@ -315,7 +290,7 @@ const MitigationSection: FC<MitigationSectionProps> = ({
                 rows={3}
                 value={mitigationValues.implementationStrategy}
                 onChange={handleOnTextFieldChange("implementationStrategy")}
-                sx={{ width: twoColumnWidth }}
+                sx={{ flex: 1 }}
                 isRequired
                 error={errors.implementationStrategy}
                 disabled={isEditingDisabled}
@@ -329,7 +304,8 @@ const MitigationSection: FC<MitigationSectionProps> = ({
           sx={{
             gap: `${LAYOUT.HORIZONTAL_GAP}px`,
             mt: `${LAYOUT.VERTICAL_GAP}px`,
-            width: contentWidth,
+            width: "100%",
+            maxWidth: contentWidth,
           }}
         >
           <Typography sx={{ fontSize: 16, fontWeight: 600 }}>
@@ -340,7 +316,7 @@ const MitigationSection: FC<MitigationSectionProps> = ({
             assigning these scores, the risk level will be determined based on your inputs.
           </Typography>
         </Stack>
-        <Stack sx={{ mt: `${LAYOUT.VERTICAL_GAP}px`, width: contentWidth }}>
+        <Stack sx={{ mt: `${LAYOUT.VERTICAL_GAP}px`, width: "100%", maxWidth: contentWidth }}>
           <RiskLevel
             likelihood={mitigationValues.likelihood}
             riskSeverity={mitigationValues.riskSeverity}
@@ -391,13 +367,13 @@ const MitigationSection: FC<MitigationSectionProps> = ({
                 : dayjs(new Date())
             }
             handleDateChange={(e) => handleDateChange("dateOfAssessment", e)}
-            sx={{ width: fieldWidth }}
+            sx={{ flex: 1 }}
             isRequired
             error={errors.dateOfAssessment}
             disabled={isEditingDisabled}
           />
         </Stack>
-        <Stack sx={{ mt: `${LAYOUT.VERTICAL_GAP}px`, width: contentWidth }}>
+        <Stack sx={{ mt: `${LAYOUT.VERTICAL_GAP}px`, width: "100%", maxWidth: contentWidth }}>
           <Field
             id="recommendations-input"
             label="Recommendations"

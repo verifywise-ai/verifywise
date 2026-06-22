@@ -235,7 +235,7 @@ const NewDataset: FC<NewDatasetProps> = ({
     onClose: handleClose,
   });
 
-  const handleSubmit = async (event?: React.FormEvent) => {
+  const handleSaveDataset = async (event?: React.FormEvent) => {
     if (event) event.preventDefault();
     if (validateAll(values)) {
       setIsSubmitting(true);
@@ -562,7 +562,7 @@ const NewDataset: FC<NewDatasetProps> = ({
           ? "Update dataset details, classification, and metadata"
           : "Register a new dataset with comprehensive metadata for AI governance"
       }
-      onSubmit={activeTab === "details" ? handleSubmit : undefined}
+      onSubmit={activeTab === "details" ? handleSaveDataset : undefined}
       submitButtonText={isEdit ? "Update dataset" : "Save"}
       isSubmitting={isButtonDisabled}
       maxWidth="760px"

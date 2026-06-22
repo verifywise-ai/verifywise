@@ -1,0 +1,10 @@
+# Test-only dependencies for the EvalServer / EvaluationModule unit tests.
+# Install with: pip install -r requirements-test.txt
+# These are intentionally separate from requirements.txt so production images
+# stay slim.
+
+pytest==8.4.2
+pytest-asyncio==0.25.3
+pytest-httpx==0.35.0
+respx==0.22.0
+httpx==0.28.1

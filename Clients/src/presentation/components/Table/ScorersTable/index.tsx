@@ -35,13 +35,16 @@ export interface ScorersTableProps {
   loading?: boolean;
 }
 
+// SCORER body cell is left-aligned (default); every other body cell uses
+// textAlign: "center". StandardTableHead defaults to left when `align` is
+// omitted, so headers must match here or they drift off their column.
 const columns: StandardColumn[] = [
   { id: "name", label: "SCORER", sortable: true },
-  { id: "model", label: "MODEL", sortable: true },
-  { id: "threshold", label: "THRESHOLD", sortable: true },
-  { id: "choiceScores", label: "# CHOICE SCORES", sortable: true },
-  { id: "createdAt", label: "LAST RUN", sortable: true },
-  { id: "actions", label: "ACTION", sortable: false },
+  { id: "model", label: "MODEL", sortable: true, align: "center" },
+  { id: "threshold", label: "THRESHOLD", sortable: true, align: "center" },
+  { id: "choiceScores", label: "# CHOICE SCORES", sortable: true, align: "center" },
+  { id: "createdAt", label: "LAST RUN", sortable: true, align: "center" },
+  { id: "actions", label: "ACTION", sortable: false, align: "center" },
 ];
 
 const getModelName = (scorer: ScorerRow): string => {

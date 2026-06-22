@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Box, Stack, Typography, Alert as MuiAlert } from "@mui/material";
 import { FlaskConical, AlertTriangle } from "lucide-react";
 import Chip from "../../components/Chip";
+import CustomizableSkeleton from "../../components/Skeletons";
 import { palette } from "../../themes/palette";
 import {
   getAllModelEvaluations,
@@ -92,11 +93,9 @@ export default function ModelEvaluationsTab() {
 
   if (loading) {
     return (
-      <Box sx={{ p: "24px", textAlign: "center" }}>
-        <Typography sx={{ fontSize: "13px", color: palette.text.secondary }}>
-          Loading evaluations...
-        </Typography>
-      </Box>
+      <Stack spacing={2} sx={{ p: "24px" }}>
+        <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
+      </Stack>
     );
   }
 

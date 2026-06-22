@@ -14,6 +14,7 @@ import {
 } from "@mui/material";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { EmptyState } from "../../components/EmptyState";
+import CustomizableSkeleton from "../../components/Skeletons";
 import singleTheme from "../../themes/v1SingleTheme";
 import IconButton from "../../components/IconButton";
 import TablePaginationActions from "../../components/TablePagination";
@@ -28,6 +29,8 @@ import { IModelRisk } from "../../../domain/interfaces/i.modelRisk";
 import { User } from "../../../domain/types/User";
 import { ModelRisksTableProps } from "../../../domain/interfaces/i.modelInventory";
 import { palette } from "../../themes/palette";
+import { useCustomFieldDefinitions } from "../../../application/hooks/useCustomFields";
+import { formatCustomFieldValue } from "../../components/CustomFieldsSection/formatCustomFieldValue";
 
 // LocalStorage key for sorting
 const MODEL_RISKS_SORTING_KEY = "verifywise_model_risks_sorting";
@@ -64,11 +67,25 @@ const ModelRisksTable: React.FC<ModelRisksTableProps> = ({
   const [rowsPerPage, setRowsPerPage] = useState(5);
   const cellStyle = singleTheme.tableStyles.primary.body.cell;
 
-  // Filter columns based on visibleColumns prop
+  const { data: customFieldDefs = [] } = useCustomFieldDefinitions("model_risk");
+
+  // Filter columns based on visibleColumns prop, then splice in custom field
+  // columns just before Actions so they render at the right edge of the table.
   const visibleTableColumns = useMemo(() => {
-    if (!visibleColumns || visibleColumns.size === 0) return titleOfTableColumns;
-    return titleOfTableColumns.filter((col) => visibleColumns.has(col.id));
-  }, [visibleColumns]);
+    const builtIns =
+      !visibleColumns || visibleColumns.size === 0
+        ? titleOfTableColumns
+        : titleOfTableColumns.filter((col) => visibleColumns.has(col.id));
+    if (customFieldDefs.length === 0) return builtIns;
+    const customCols = customFieldDefs.map((d) => ({
+      id: `cf_${d.id}`,
+      label: d.label,
+      sortable: false,
+    }));
+    const actionsIdx = builtIns.findIndex((c) => c.id === "actions");
+    if (actionsIdx === -1) return [...builtIns, ...customCols];
+    return [...builtIns.slice(0, actionsIdx), ...customCols, ...builtIns.slice(actionsIdx)];
+  }, [visibleColumns, customFieldDefs]);
 
   // Helper to check if a column is visible
   const isColVisible = useCallback(
@@ -430,6 +447,16 @@ const ModelRisksTable: React.FC<ModelRisksTableProps> = ({
                     {formatDate(row.target_date)}
                   </TableCell>
                 )}
+                {customFieldDefs.map((def) => {
+                  const match = (row as any).custom_fields?.find(
+                    (cf: { definition_id: number; value: unknown }) => cf.definition_id === def.id,
+                  );
+                  return (
+                    <TableCell key={`cf_${def.id}`} sx={getCellStyle(row)}>
+                      {formatCustomFieldValue(def, match?.value, users)}
+                    </TableCell>
+                  );
+                })}
                 <TableCell
                   sx={{
                     ...singleTheme.tableStyles.primary.body.cell,
@@ -464,27 +491,15 @@ const ModelRisksTable: React.FC<ModelRisksTableProps> = ({
       theme,
       isColVisible,
       visibleTableColumns,
+      customFieldDefs,
+      users,
     ],
   );
 
-  // Show loading state
   if (isLoading) {
     return (
-      <Stack
-        alignItems="center"
-        justifyContent="center"
-        sx={{
-          border: `1px solid ${palette.border.light}`,
-          borderRadius: "4px",
-          padding: theme.spacing(15, 5),
-          paddingBottom: theme.spacing(20),
-          gap: theme.spacing(10),
-          minHeight: 200,
-        }}
-      >
-        <Typography sx={{ fontSize: "13px", color: palette.text.tertiary }}>
-          Loading model risks...
-        </Typography>
+      <Stack spacing={2}>
+        <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
       </Stack>
     );
   }

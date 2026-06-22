@@ -1,0 +1,1 @@
+/Users/halitozger/Desktop/verifywise/.claude/worktrees/practical-euler/CodeRules/04-backend/database-patterns.md

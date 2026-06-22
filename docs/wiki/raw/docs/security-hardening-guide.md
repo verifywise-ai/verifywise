@@ -1,0 +1,1 @@
+/Users/halitozger/Desktop/verifywise/.claude/worktrees/practical-euler/docs/deployment/SECURITY_HARDENING_GUIDE.md

@@ -23,12 +23,12 @@ import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
 import NewExperimentModal from "./NewExperimentModal";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { useNavigate } from "react-router-dom";
-import EvaluationTable from "../../components/Table/EvaluationTable";
+import ExperimentTable from "../../components/Table/ExperimentTable";
 import PerformanceChart, {
   TIME_RANGE_OPTIONS,
   type TimeRange,
 } from "./components/PerformanceChart";
-import type { IEvaluationRow } from "../../types/interfaces/i.table";
+import type { IExperimentRow } from "../../types/interfaces/i.table";
 import SearchBox from "../../components/Search/SearchBox";
 import { FilterBy, type FilterColumn } from "../../components/Table/FilterBy";
 import { GroupBy } from "../../components/Table/GroupBy";
@@ -79,7 +79,6 @@ export default function ProjectExperiments({
   const navigate = useNavigate();
   const [experiments, setExperiments] = useState<ExperimentWithMetrics[]>([]);
   const [, setLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState(0);
   const [newEvalModalOpen, setNewEvalModalOpen] = useState(false);
   const [alert, setAlert] = useState<AlertState | null>(null);
   const [apiKeyWarning, setApiKeyWarning] = useState<{
@@ -237,7 +236,7 @@ export default function ProjectExperiments({
     }
   };
 
-  const handleViewExperiment = (row: IEvaluationRow) => {
+  const handleViewExperiment = (row: IExperimentRow) => {
     if (onViewExperiment) {
       onViewExperiment(row.id);
     } else {
@@ -295,7 +294,7 @@ export default function ProjectExperiments({
     }
   };
 
-  const handleRerunExperiment = async (row: IEvaluationRow) => {
+  const handleRerunExperiment = async (row: IExperimentRow) => {
     // Find the original experiment to get its config
     const originalExp = experiments.find((e) => e.id === row.id);
     if (!originalExp) {
@@ -355,7 +354,7 @@ export default function ProjectExperiments({
     }
   };
 
-  const handleDownloadExperiment = async (row: IEvaluationRow) => {
+  const handleDownloadExperiment = async (row: IExperimentRow) => {
     try {
       const experimentData = await getExperiment(row.id);
       const blob = new Blob([JSON.stringify(experimentData, null, 2)], {
@@ -377,7 +376,7 @@ export default function ProjectExperiments({
     }
   };
 
-  const handleCopyExperiment = async (row: IEvaluationRow) => {
+  const handleCopyExperiment = async (row: IExperimentRow) => {
     try {
       const experimentData = await getExperiment(row.id);
       await navigator.clipboard.writeText(JSON.stringify(experimentData, null, 2));
@@ -518,19 +517,7 @@ export default function ProjectExperiments({
     });
   }, [experiments, filterData, searchTerm]);
 
-  // Transform to table format
-  const tableColumns = [
-    "EXPERIMENT NAME",
-    "MODEL",
-    "JUDGE/SCORER",
-    "# PROMPTS",
-    "DATASET",
-    "LINKED MODEL",
-    "DATE",
-    "ACTION",
-  ];
-
-  const tableRows: IEvaluationRow[] = filteredExperiments.map((exp) => {
+  const tableRows: IExperimentRow[] = filteredExperiments.map((exp) => {
     // Get dataset name from config - try multiple sources
     let datasetName = "Dataset";
     const datasetConfig = exp.config?.dataset;
@@ -606,7 +593,7 @@ export default function ProjectExperiments({
   });
 
   // Define how to get the group key for each row
-  const getRowGroupKey = useCallback((row: IEvaluationRow, field: string): string => {
+  const getRowGroupKey = useCallback((row: IExperimentRow, field: string): string => {
     switch (field) {
       case "status":
         return row.status || "Unknown";
@@ -858,22 +845,13 @@ export default function ProjectExperiments({
           groupedData={groupedRows}
           ungroupedData={tableRows}
           renderTable={(data, options) => (
-            <EvaluationTable
-              columns={tableColumns}
+            <ExperimentTable
               rows={data}
-              removeModel={
-                canDeleteExperiment
-                  ? {
-                      onConfirm: handleDeleteExperiment,
-                    }
-                  : undefined
-              }
-              page={currentPage}
-              setCurrentPagingation={setCurrentPage}
-              onShowDetails={handleViewExperiment}
+              onRowClick={handleViewExperiment}
               onRerun={canCreateExperiment ? handleRerunExperiment : undefined}
               onDownload={handleDownloadExperiment}
               onCopy={handleCopyExperiment}
+              onDelete={canDeleteExperiment ? handleDeleteExperiment : undefined}
               hidePagination={options?.hidePagination}
             />
           )}
@@ -886,6 +864,9 @@ export default function ProjectExperiments({
         onClose={() => setNewEvalModalOpen(false)}
         projectId={projectId}
         orgId={orgId}
+        existingExperimentNames={experiments
+          .map((e) => e.name)
+          .filter((n): n is string => Boolean(n))}
         onSuccess={() => {
           setNewEvalModalOpen(false);
           loadExperiments();

@@ -277,4 +277,249 @@ describe("useDashboardMetrics", () => {
     expect(result.current.riskMetrics!.total).toBe(1);
     expect(mockGetAllEntities).toHaveBeenCalledWith({ routeUrl: "/projectRisks" });
   });
+
+  it("should fetch vendor risk metrics with distribution", async () => {
+    mockGetAllEntities.mockImplementation(async ({ routeUrl }: any) => {
+      if (routeUrl === "/vendorRisks/all") {
+        return {
+          data: [
+            { id: 1, risk_level: "Very high", vendor_name: "V1" },
+            { id: 2, risk_level: "High", vendor_name: "V2" },
+            { id: 3, risk_level: "Medium", vendor_name: "V3" },
+            { id: 4, risk_level: "Low", vendor_name: "V4" },
+            { id: 5, risk_level: "Very low", vendor_name: "V5" },
+            { id: 6, risk_level: "Unknown", vendor_name: "V6" },
+          ],
+        };
+      }
+      return { data: [] };
+    });
+
+    const { result } = renderHook(() => useDashboardMetrics());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.vendorRiskMetrics).not.toBeNull();
+    expect(result.current.vendorRiskMetrics!.total).toBe(6);
+    expect(result.current.vendorRiskMetrics!.distribution.veryHigh).toBe(1);
+    expect(result.current.vendorRiskMetrics!.distribution.high).toBe(1);
+    expect(result.current.vendorRiskMetrics!.distribution.medium).toBe(2);
+    expect(result.current.vendorRiskMetrics!.distribution.low).toBe(1);
+    expect(result.current.vendorRiskMetrics!.distribution.veryLow).toBe(1);
+  });
+
+  it("should fetch policy metrics and status distribution", async () => {
+    mockGetAllEntities.mockImplementation(async ({ routeUrl }: any) => {
+      if (routeUrl === "/policies") {
+        return {
+          data: {
+            data: [
+              { id: "1", title: "P1", status: "draft" },
+              { id: "2", title: "P2", status: "pending_review" },
+              { id: "3", title: "P3", status: "approved" },
+              { id: "4", title: "P4", status: "published" },
+              { id: "5", title: "P5", status: "archived" },
+              { id: "6", title: "P6", status: "deprecated" },
+            ],
+          },
+        };
+      }
+      return { data: [] };
+    });
+
+    const { result } = renderHook(() => useDashboardMetrics());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.policyMetrics).not.toBeNull();
+    expect(result.current.policyMetrics!.total).toBe(6);
+    expect(result.current.policyMetrics!.pendingReviewCount).toBe(1);
+    expect(result.current.policyStatusMetrics).not.toBeNull();
+    expect(result.current.policyStatusMetrics!.distribution.draft).toBe(1);
+    expect(result.current.policyStatusMetrics!.distribution.underReview).toBe(1);
+    expect(result.current.policyStatusMetrics!.distribution.approved).toBe(1);
+    expect(result.current.policyStatusMetrics!.distribution.published).toBe(1);
+    expect(result.current.policyStatusMetrics!.distribution.archived).toBe(1);
+    expect(result.current.policyStatusMetrics!.distribution.deprecated).toBe(1);
+  });
+
+  it("should fetch incident metrics and status distribution", async () => {
+    mockGetAllEntities.mockImplementation(async ({ routeUrl }: any) => {
+      if (routeUrl === "/ai-incident-managements") {
+        return {
+          data: [
+            { id: 1, status: "Open", severity: "High" },
+            { id: 2, status: "Investigating", severity: "Medium" },
+            { id: 3, status: "Mitigated", severity: "Low" },
+            { id: 4, status: "Closed", severity: "Low" },
+          ],
+        };
+      }
+      return { data: [] };
+    });
+
+    const { result } = renderHook(() => useDashboardMetrics());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.incidentMetrics).not.toBeNull();
+    expect(result.current.incidentMetrics!.total).toBe(4);
+    expect(result.current.incidentMetrics!.openCount).toBe(1);
+    expect(result.current.incidentStatusMetrics!.distribution.open).toBe(1);
+    expect(result.current.incidentStatusMetrics!.distribution.investigating).toBe(1);
+    expect(result.current.incidentStatusMetrics!.distribution.mitigated).toBe(1);
+    expect(result.current.incidentStatusMetrics!.distribution.closed).toBe(1);
+  });
+
+  it("should fetch model risk metrics with distribution", async () => {
+    mockGetAllEntities.mockImplementation(async ({ routeUrl }: any) => {
+      if (routeUrl === "/modelRisks") {
+        return {
+          data: [
+            { id: 1, risk_level: "Critical" },
+            { id: 2, risk_level: "High" },
+            { id: 3, risk_level: "Medium" },
+            { id: 4, risk_level: "Low" },
+          ],
+        };
+      }
+      return { data: [] };
+    });
+
+    const { result } = renderHook(() => useDashboardMetrics());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.modelRiskMetrics).not.toBeNull();
+    expect(result.current.modelRiskMetrics!.total).toBe(4);
+    expect(result.current.modelRiskMetrics!.distribution.critical).toBe(1);
+    expect(result.current.modelRiskMetrics!.distribution.high).toBe(1);
+    expect(result.current.modelRiskMetrics!.distribution.medium).toBe(1);
+    expect(result.current.modelRiskMetrics!.distribution.low).toBe(1);
+  });
+
+  it("should fetch training metrics with completion percentage", async () => {
+    mockGetAllEntities.mockImplementation(async ({ routeUrl }: any) => {
+      if (routeUrl === "/training") {
+        return {
+          data: [
+            { id: 1, status: "completed", numberOfPeople: 10 },
+            { id: 2, status: "in progress", numberOfPeople: 5 },
+            { id: 3, status: "planned", numberOfPeople: 3 },
+          ],
+        };
+      }
+      return { data: [] };
+    });
+
+    const { result } = renderHook(() => useDashboardMetrics());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.trainingMetrics).not.toBeNull();
+    expect(result.current.trainingMetrics!.total).toBe(3);
+    expect(result.current.trainingMetrics!.completionPercentage).toBe(33);
+    expect(result.current.trainingMetrics!.totalPeople).toBe(18);
+    expect(result.current.trainingMetrics!.distribution.completed).toBe(1);
+    expect(result.current.trainingMetrics!.distribution.inProgress).toBe(1);
+    expect(result.current.trainingMetrics!.distribution.planned).toBe(1);
+  });
+
+  it("should fetch model metrics (evidenceHub + lifecycle)", async () => {
+    mockGetAllEntities.mockImplementation(async ({ routeUrl }: any) => {
+      if (routeUrl === "/evidenceHub") {
+        return {
+          data: [
+            {
+              evidence_files: [{ id: 1 }],
+              mapped_model_ids: [1],
+            },
+          ],
+        };
+      }
+      if (routeUrl === "/modelInventory") {
+        return {
+          data: [
+            { id: 1, status: "Approved" },
+            { id: 2, status: "Pending" },
+            { id: 3, status: "Restricted" },
+            { id: 4, status: "Blocked" },
+          ],
+        };
+      }
+      return { data: [] };
+    });
+
+    const { result } = renderHook(() => useDashboardMetrics());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.evidenceHubMetrics).not.toBeNull();
+    expect(result.current.evidenceHubMetrics!.total).toBe(1);
+    expect(result.current.evidenceHubMetrics!.totalFiles).toBe(1);
+    expect(result.current.evidenceHubMetrics!.totalModels).toBe(4);
+    expect(result.current.modelLifecycleMetrics).not.toBeNull();
+    expect(result.current.modelLifecycleMetrics!.total).toBe(4);
+    expect(result.current.modelLifecycleMetrics!.distribution.approved).toBe(1);
+    expect(result.current.modelLifecycleMetrics!.distribution.pending).toBe(1);
+    expect(result.current.modelLifecycleMetrics!.distribution.restricted).toBe(1);
+    expect(result.current.modelLifecycleMetrics!.distribution.blocked).toBe(1);
+  });
+
+  it("should handle governance score fallback when API returns unexpected format", async () => {
+    mockGetAllEntities.mockImplementation(async ({ routeUrl }: any) => {
+      if (routeUrl === "/compliance/score") {
+        return { data: {} };
+      }
+      return { data: [] };
+    });
+
+    const { result } = renderHook(() => useDashboardMetrics());
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.governanceScoreMetrics).not.toBeNull();
+    expect(result.current.governanceScoreMetrics!.score).toBe(0);
+    expect(result.current.governanceScoreMetrics!.modules).toHaveLength(5);
+  });
+
+  it("should revalidate when cache is stale", async () => {
+    const staleTimestamp = Date.now() - 60 * 1000;
+    const cacheData: Record<string, any> = {};
+    const criticalKeys = [
+      "trainingMetrics",
+      "policyStatusMetrics",
+      "incidentStatusMetrics",
+      "evidenceHubMetrics",
+      "modelLifecycleMetrics",
+    ];
+    criticalKeys.forEach((key) => {
+      cacheData[key] = { data: { total: 1 }, timestamp: staleTimestamp };
+    });
+    localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
+
+    const { result } = renderHook(() => useDashboardMetrics());
+
+    await waitFor(() => {
+      // isRevalidating should become true then false as stale data is revalidated
+      expect(result.current.isRevalidating).toBe(false);
+    });
+
+    // Network calls should have been made since cache is stale
+    expect(mockGetAllEntities).toHaveBeenCalled();
+  });
 });

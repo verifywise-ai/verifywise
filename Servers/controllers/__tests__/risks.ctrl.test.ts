@@ -107,6 +107,7 @@ import {
   ValidationException,
   ForbiddenException,
 } from "../../domain.layer/exceptions/custom.exception";
+import { buildRisk, buildManyRisk } from "../../tests/factories/risk.factory";
 
 const mockGetAll = getAllRisksQuery as jest.MockedFunction<typeof getAllRisksQuery>;
 const mockGetById = getRiskByIdQuery as jest.MockedFunction<typeof getRiskByIdQuery>;
@@ -154,7 +155,7 @@ describe("risks.ctrl", () => {
 
   describe("getAllRisks", () => {
     it("should return 200 with risks when data exists", async () => {
-      const data = [{ id: 1, risk_name: "R1" }];
+      const data = buildManyRisk(1);
       mockGetAll.mockResolvedValue(data as any);
       const req = createReq();
       const res = createRes();
@@ -187,7 +188,7 @@ describe("risks.ctrl", () => {
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: [] }));
     });
     it("should return 200 with risks when data exists", async () => {
-      const data = [{ id: 1, risk_name: "R1" }];
+      const data = buildManyRisk(1);
       mockGetByProject.mockResolvedValue(data as any);
       const req = createReq({ params: { id: "1" } });
       const res = createRes();
@@ -212,7 +213,7 @@ describe("risks.ctrl", () => {
 
   describe("getRisksByFramework", () => {
     it("should return 200 with risks when data exists", async () => {
-      const data = [{ id: 1, risk_name: "R1" }];
+      const data = buildManyRisk(1);
       mockGetByFramework.mockResolvedValue(data as any);
       const req = createReq({ params: { id: "1" } });
       const res = createRes();
@@ -237,7 +238,7 @@ describe("risks.ctrl", () => {
 
   describe("getRiskById", () => {
     it("should return 200 when risk is found", async () => {
-      const risk = { id: 1, risk_name: "R1" };
+      const risk = buildRisk();
       mockGetById.mockResolvedValue(risk as any);
       const req = createReq({ params: { id: "1" } });
       const res = createRes();
@@ -263,7 +264,7 @@ describe("risks.ctrl", () => {
 
   describe("createRisk", () => {
     it("should return 201 when risk is created successfully", async () => {
-      const risk = { id: 1, risk_name: "R1", risk_owner: null, ale_estimate: null };
+      const risk = { ...buildRisk(), risk_owner: null, ale_estimate: null };
       mockCreateService.mockResolvedValue(risk as any);
       const req = createReq({ body: { risk_name: "R1", projects: [], frameworks: [] } });
       const res = createRes();
@@ -296,8 +297,8 @@ describe("risks.ctrl", () => {
       expect(res.status).toHaveBeenCalledWith(404);
     });
     it("should return 200 when risk is updated", async () => {
-      const existing = { id: 1, risk_name: "R1", risk_owner: null, event_frequency_min: null };
-      const updated = { id: 1, risk_name: "R2", risk_owner: null };
+      const existing = { ...buildRisk(), risk_owner: null, event_frequency_min: null };
+      const updated = { ...buildRisk({ risk_name: "R2" }), risk_owner: null };
       mockGetById.mockResolvedValue(existing as any);
       mockUpdate.mockResolvedValue(updated as any);
       const req = createReq({ params: { id: "1" }, body: { risk_name: "R2" } });
@@ -317,7 +318,7 @@ describe("risks.ctrl", () => {
 
   describe("deleteRiskById", () => {
     it("should return 200 when risk is deleted", async () => {
-      const risk = { id: 1, risk_name: "R1" };
+      const risk = buildRisk();
       mockDelete.mockResolvedValue(risk as any);
       const req = createReq({ params: { id: "1" } });
       const res = createRes();

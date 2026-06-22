@@ -370,7 +370,7 @@ export class ReportDataCollector {
 
         controls.forEach((control: any) => {
           progressMap[categoryName].total++;
-          if (control.status === "Compliant" || control.status === "Complete") {
+          if (control.status === "Done") {
             progressMap[categoryName].completed++;
           }
         });
@@ -597,9 +597,7 @@ export class ReportDataCollector {
       });
     });
 
-    const completedControls = allControls.filter(
-      (c) => c.status === "Compliant" || c.status === "Complete",
-    ).length;
+    const completedControls = allControls.filter((c) => c.status === "Done").length;
 
     return {
       overallProgress:

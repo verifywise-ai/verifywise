@@ -39,8 +39,12 @@ import { useAuth } from "../../../../application/hooks/useAuth";
 import useUsers from "../../../../application/hooks/useUsers";
 import { User } from "../../../../domain/types/User";
 import { FileData } from "../../../../domain/types/File";
-import { getFileById } from "../../../../application/repository/file.repository";
+import {
+  getFileById,
+  attachFilesToEntity,
+} from "../../../../application/repository/file.repository";
 import allowedRoles from "../../../../application/constants/permissions";
+import { FilePickerModal } from "../../FilePickerModal";
 import { RiskFormValues } from "../../../../domain/types/riskForm.types";
 
 // Type for risk objects
@@ -97,6 +101,7 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
   const [selectedRiskForView, setSelectedRiskForView] = useState<LinkedRisk | null>(null);
   const [riskFormData, setRiskFormData] = useState<RiskFormValues | undefined>(undefined);
   const onRiskSubmitRef = useRef<(() => void) | null>(null);
+  const prevSubcategoryIdRef = useRef<number | undefined>(undefined);
 
   const { userRoleName, userId } = useAuth();
   const { users } = useUsers();
@@ -114,15 +119,47 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
 
   // Load evidence files when subcategory changes
   useEffect(() => {
+    const currentId = subcategory?.id;
+    const prevId = prevSubcategoryIdRef.current;
+
     if (subcategory?.evidence_links) {
+      // Always use evidence_links when the prop provides it
       setEvidenceFiles(subcategory.evidence_links as unknown as FileData[]);
-    } else {
+    } else if (currentId !== prevId) {
+      // Only clear evidence files when the subcategory ID actually changed
+      // (prevents parent re-fetch from wiping files after save)
       setEvidenceFiles([]);
     }
+
+    prevSubcategoryIdRef.current = currentId;
+
     // Reset upload and deleted files
     setUploadFiles([]);
+    setPendingAttachFiles([]);
     setDeletedFiles([]);
   }, [subcategory]);
+
+  // Fetch full subcategory details (including evidence files) when drawer opens
+  useEffect(() => {
+    const fetchSubcategoryDetails = async () => {
+      if (open && subcategory?.id && !subcategory?.evidence_links) {
+        try {
+          const response = await getEntityById({
+            routeUrl: `/nist-ai-rmf/subcategories/byId/${subcategory.id}`,
+          });
+          if (response.data?.evidence_links) {
+            setEvidenceFiles(response.data.evidence_links as unknown as FileData[]);
+          }
+        } catch (error) {
+          if (process.env.NODE_ENV === "development") {
+            console.error("Error fetching subcategory details:", error);
+          }
+        }
+      }
+    };
+
+    fetchSubcategoryDetails();
+  }, [open, subcategory?.id]);
 
   // Fetch linked risks when subcategory changes
   useEffect(() => {
@@ -172,7 +209,9 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
   // File upload state
   const [evidenceFiles, setEvidenceFiles] = useState<FileData[]>([]);
   const [uploadFiles, setUploadFiles] = useState<FileData[]>([]);
+  const [pendingAttachFiles, setPendingAttachFiles] = useState<FileData[]>([]);
   const [deletedFiles, setDeletedFiles] = useState<string[]>([]);
+  const [showFilePicker, setShowFilePicker] = useState(false);
 
   const statusOptions = [
     { id: NISTAIRMFStatus.NOT_STARTED, name: "Not started" },
@@ -314,6 +353,23 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
     });
   };
 
+  const handleAttachExistingFiles = (selectedFiles: FileData[]) => {
+    if (selectedFiles.length === 0) return;
+    setPendingAttachFiles((prev) => [...prev, ...selectedFiles]);
+    handleAlert({
+      variant: "info",
+      body: `${selectedFiles.length} file(s) added to attach queue. Save to apply changes.`,
+    });
+  };
+
+  const handleRemovePendingAttach = (fileId: string) => {
+    setPendingAttachFiles((prev) => prev.filter((f) => f.id !== fileId));
+    handleAlert({
+      variant: "info",
+      body: "File removed from attach queue.",
+    });
+  };
+
   const handleEvidenceFileDownload = async (fileId: string, fileName: string) => {
     try {
       // Use /files/:id endpoint for evidence files (not file-manager)
@@ -404,7 +460,28 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
       });
 
       if (response.status === 200) {
-        const hasFiles = uploadFiles.length > 0 || deletedFiles.length > 0;
+        // Attach pending existing files after successful save
+        if (pendingAttachFiles.length > 0 && subcategory?.id) {
+          try {
+            const fileIds = pendingAttachFiles.map((f) =>
+              typeof f.id === "number" ? f.id : parseInt(String(f.id)),
+            );
+            await attachFilesToEntity({
+              file_ids: fileIds,
+              framework_type: "nist_ai_rmf",
+              entity_type: "subcategory",
+              entity_id: subcategory.id,
+              link_type: "evidence",
+            });
+          } catch (attachError) {
+            if (process.env.NODE_ENV === "development") {
+              console.error("Error attaching existing files:", attachError);
+            }
+          }
+        }
+
+        const hasFiles =
+          uploadFiles.length > 0 || deletedFiles.length > 0 || pendingAttachFiles.length > 0;
         setAlert({
           variant: "success",
           body: hasFiles
@@ -415,6 +492,7 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
 
         // Reset pending states after successful save
         setUploadFiles([]);
+        setPendingAttachFiles([]);
         setDeletedFiles([]);
         setSelectedRisks([]);
         setDeletedRisks([]);
@@ -788,6 +866,26 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
                         >
                           Add evidence files
                         </Button>
+                        <Button
+                          variant="contained"
+                          onClick={() => setShowFilePicker(true)}
+                          disabled={isEditingDisabled}
+                          sx={{
+                            "borderRadius": 2,
+                            "width": 165,
+                            "height": 25,
+                            "fontSize": 11,
+                            "border": "1px solid #4C7BF4",
+                            "backgroundColor": "#4C7BF4",
+                            "color": "white",
+                            "&:hover": {
+                              backgroundColor: "#3D62C3",
+                              border: "1px solid #3D62C3",
+                            },
+                          }}
+                        >
+                          Attach existing files
+                        </Button>
                         <Stack direction="row" spacing={2}>
                           <Typography
                             sx={{
@@ -809,6 +907,18 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
                               }}
                             >
                               {`+${uploadFiles.length} pending upload`}
+                            </Typography>
+                          )}
+                          {pendingAttachFiles.length > 0 && (
+                            <Typography
+                              sx={{
+                                fontSize: 11,
+                                color: "#4C7BF4",
+                                display: "flex",
+                                alignItems: "center",
+                              }}
+                            >
+                              {`+${pendingAttachFiles.length} pending attach`}
                             </Typography>
                           )}
                           {deletedFiles.length > 0 && (
@@ -1004,25 +1114,107 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
                       </Stack>
                     )}
 
-                    {evidenceFiles.length === 0 && uploadFiles.length === 0 && (
-                      <Box
-                        sx={{
-                          textAlign: "center",
-                          py: 4,
-                          color: "text.tertiary",
-                          border: `2px dashed ${theme.palette.border.dark}`,
-                          borderRadius: 1,
-                          backgroundColor: "background.accent",
-                        }}
-                      >
-                        <Typography variant="body2" sx={{ mb: 1 }}>
-                          No evidence files uploaded yet
+                    {/* Pending Attach Files */}
+                    {pendingAttachFiles.length > 0 && (
+                      <Stack spacing={1}>
+                        <Typography
+                          sx={{
+                            fontSize: 12,
+                            fontWeight: 600,
+                            color: "#4C7BF4",
+                          }}
+                        >
+                          Pending attach
                         </Typography>
-                        <Typography variant="caption" color={text.disabled}>
-                          Click "Add evidence files" to upload documentation for this subcategory
-                        </Typography>
-                      </Box>
+                        {pendingAttachFiles.map((file) => (
+                          <Box
+                            key={file.id}
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              padding: "10px 12px",
+                              border: "1px solid #93C5FD",
+                              borderRadius: "4px",
+                              backgroundColor: "#EFF6FF",
+                            }}
+                          >
+                            <Box
+                              sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 1.5,
+                                flex: 1,
+                                minWidth: 0,
+                              }}
+                            >
+                              <FileIcon size={18} color="#4C7BF4" />
+                              <Box sx={{ minWidth: 0, flex: 1 }}>
+                                <Typography
+                                  sx={{
+                                    fontSize: 13,
+                                    fontWeight: 500,
+                                    color: "#1E40AF",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                  }}
+                                >
+                                  {file.fileName}
+                                </Typography>
+                                {file.size && (
+                                  <Typography
+                                    sx={{
+                                      fontSize: 11,
+                                      color: "#3B82F6",
+                                    }}
+                                  >
+                                    {(file.size / 1024).toFixed(1)} KB
+                                  </Typography>
+                                )}
+                              </Box>
+                            </Box>
+                            <Tooltip title="Remove from queue">
+                              <IconButton
+                                size="small"
+                                onClick={() => handleRemovePendingAttach(String(file.id))}
+                                sx={{
+                                  "color": "#4C7BF4",
+                                  "&:hover": {
+                                    color: "status.error.main",
+                                    backgroundColor: "rgba(211, 47, 47, 0.08)",
+                                  },
+                                }}
+                              >
+                                <DeleteIcon size={16} />
+                              </IconButton>
+                            </Tooltip>
+                          </Box>
+                        ))}
+                      </Stack>
                     )}
+
+                    {evidenceFiles.length === 0 &&
+                      uploadFiles.length === 0 &&
+                      pendingAttachFiles.length === 0 && (
+                        <Box
+                          sx={{
+                            textAlign: "center",
+                            py: 4,
+                            color: "text.tertiary",
+                            border: `2px dashed ${theme.palette.border.dark}`,
+                            borderRadius: 1,
+                            backgroundColor: "background.accent",
+                          }}
+                        >
+                          <Typography variant="body2" sx={{ mb: 1 }}>
+                            No evidence files uploaded yet
+                          </Typography>
+                          <Typography variant="caption" color={text.disabled}>
+                            Click "Add evidence files" to upload documentation for this subcategory
+                          </Typography>
+                        </Box>
+                      )}
                   </Stack>
                 </TabPanel>
 
@@ -1290,6 +1482,19 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
           onSubmitRef={onRiskSubmitRef}
         />
       </StandardModal>
+
+      {/* File Picker Modal for attaching existing files */}
+      <FilePickerModal
+        open={showFilePicker}
+        onClose={() => setShowFilePicker(false)}
+        onSelect={handleAttachExistingFiles}
+        excludeFileIds={[
+          ...evidenceFiles.map((f) => String(f.id)),
+          ...pendingAttachFiles.map((f) => String(f.id)),
+        ]}
+        multiSelect={true}
+        title="Attach Existing Files as Evidence"
+      />
     </>
   );
 };

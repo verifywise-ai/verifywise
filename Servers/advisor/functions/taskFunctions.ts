@@ -424,10 +424,277 @@ const getTaskExecutiveSummary = async (
   }
 };
 
+// ── Write Tools (Human Confirmation Flow) ──────────────────────────────
+
+import { createWriteToolFn } from "../confirmation/createWriteTool";
+
+const agentCreateTask = createWriteToolFn({
+  toolName: "agent_create_task",
+  warningLevel: "warning",
+  descriptionFn: (params) =>
+    `Create task "${params.title}"${params.priority ? ` with ${params.priority} priority` : ""}${params.assigned_to ? ` assigned to user #${params.assigned_to}` : ""}`,
+  executeFn: async (params, organizationId) => {
+    const categories = params.category ? [params.category as string] : [];
+    const userId = (params._userId as number) || 0;
+
+    const result = await sequelize.transaction(async (transaction) => {
+      const taskData = {
+        title: params.title as string,
+        description: (params.description as string) || null,
+        creator_id: userId,
+        due_date: params.due_date ? new Date(params.due_date as string) : null,
+        priority: (params.priority as string) || TaskPriority.MEDIUM,
+        status: (params.status as string) || TaskStatus.OPEN,
+        categories,
+        is_demo: false,
+      };
+
+      const [created] = await sequelize.query(
+        `INSERT INTO tasks (organization_id, title, description, creator_id, due_date, priority, status, categories, is_demo)
+         VALUES (:organization_id, :title, :description, :creator_id, :due_date, :priority, :status, :categories, :is_demo)
+         RETURNING *`,
+        {
+          replacements: {
+            organization_id: organizationId,
+            title: taskData.title,
+            description: taskData.description,
+            creator_id: taskData.creator_id,
+            due_date: taskData.due_date,
+            priority: taskData.priority,
+            status: taskData.status,
+            categories: JSON.stringify(categories),
+            is_demo: false,
+          },
+          type: QueryTypes.SELECT,
+          transaction,
+        },
+      );
+
+      // Handle assignee
+      if (params.assigned_to) {
+        await sequelize.query(
+          `INSERT INTO task_assignees (organization_id, task_id, user_id) VALUES (:organization_id, :task_id, :user_id)`,
+          {
+            replacements: {
+              organization_id: organizationId,
+              task_id: (created as any).id,
+              user_id: params.assigned_to as number,
+            },
+            transaction,
+          },
+        );
+      }
+
+      return created;
+    });
+
+    return result;
+  },
+});
+
+const agentUpdateTask = createWriteToolFn({
+  toolName: "agent_update_task",
+  warningLevel: "warning",
+  descriptionFn: (params) => {
+    const fields = Object.keys(params).filter(
+      (k) => k !== "task_id" && k !== "_userId" && k !== "_organizationId",
+    );
+    return `Update task #${params.task_id} — fields: ${fields.join(", ")}`;
+  },
+  executeFn: async (params, organizationId) => {
+    const taskId = params.task_id as number;
+    const updateFields: string[] = [];
+    const replacements: Record<string, unknown> = { organizationId, id: taskId };
+
+    if (params.title !== undefined) {
+      updateFields.push("title = :title");
+      replacements.title = params.title;
+    }
+    if (params.description !== undefined) {
+      updateFields.push("description = :description");
+      replacements.description = params.description;
+    }
+    if (params.status !== undefined) {
+      updateFields.push("status = :status");
+      replacements.status = params.status;
+    }
+    if (params.priority !== undefined) {
+      updateFields.push("priority = :priority");
+      replacements.priority = params.priority;
+    }
+    if (params.category !== undefined) {
+      updateFields.push("categories = :categories");
+      replacements.categories = JSON.stringify([params.category]);
+    }
+    if (params.due_date !== undefined) {
+      updateFields.push("due_date = :due_date");
+      replacements.due_date = params.due_date;
+    }
+
+    if (updateFields.length === 0) {
+      throw new Error("No valid fields provided for update");
+    }
+
+    const [result] = await sequelize.query(
+      `UPDATE tasks SET ${updateFields.join(", ")} WHERE organization_id = :organizationId AND id = :id AND status != :deletedStatus RETURNING *`,
+      {
+        replacements: { ...replacements, deletedStatus: TaskStatus.DELETED },
+        type: QueryTypes.SELECT,
+      },
+    );
+
+    if (!result) {
+      throw new Error(`Task #${taskId} not found`);
+    }
+
+    return result;
+  },
+});
+
+const agentAssignTask = createWriteToolFn({
+  toolName: "agent_assign_task",
+  warningLevel: "info",
+  descriptionFn: (params) => `Assign task #${params.task_id} to user #${params.assigned_to}`,
+  executeFn: async (params, organizationId) => {
+    const taskId = params.task_id as number;
+    const userId = params.assigned_to as number;
+
+    // Verify task exists
+    const [task] = await sequelize.query(
+      `SELECT id FROM tasks WHERE organization_id = :organizationId AND id = :taskId AND status != :deletedStatus`,
+      {
+        replacements: { organizationId, taskId, deletedStatus: TaskStatus.DELETED },
+        type: QueryTypes.SELECT,
+      },
+    );
+    if (!task) {
+      throw new Error(`Task #${taskId} not found`);
+    }
+
+    // Remove existing assignment for this user if any, then insert
+    await sequelize.query(
+      `DELETE FROM task_assignees WHERE organization_id = :organizationId AND task_id = :taskId AND user_id = :userId`,
+      { replacements: { organizationId, taskId, userId } },
+    );
+    await sequelize.query(
+      `INSERT INTO task_assignees (organization_id, task_id, user_id) VALUES (:organizationId, :taskId, :userId)`,
+      { replacements: { organizationId, taskId, userId } },
+    );
+
+    return { task_id: taskId, assigned_to: userId, success: true };
+  },
+});
+
+const agentUpdateTaskStatus = createWriteToolFn({
+  toolName: "agent_update_task_status",
+  warningLevel: "warning",
+  descriptionFn: (params) => `Change status of task #${params.task_id} to "${params.status}"`,
+  executeFn: async (params, organizationId) => {
+    const taskId = params.task_id as number;
+    const status = params.status as string;
+
+    const [result] = await sequelize.query(
+      `UPDATE tasks SET status = :status WHERE organization_id = :organizationId AND id = :id AND status != :deletedStatus RETURNING *`,
+      {
+        replacements: { organizationId, id: taskId, status, deletedStatus: TaskStatus.DELETED },
+        type: QueryTypes.SELECT,
+      },
+    );
+
+    if (!result) {
+      throw new Error(`Task #${taskId} not found`);
+    }
+
+    return result;
+  },
+});
+
+const agentSetTaskPriority = createWriteToolFn({
+  toolName: "agent_set_task_priority",
+  warningLevel: "info",
+  descriptionFn: (params) => `Set priority of task #${params.task_id} to "${params.priority}"`,
+  executeFn: async (params, organizationId) => {
+    const taskId = params.task_id as number;
+    const priority = params.priority as string;
+
+    const [result] = await sequelize.query(
+      `UPDATE tasks SET priority = :priority WHERE organization_id = :organizationId AND id = :id AND status != :deletedStatus RETURNING *`,
+      {
+        replacements: { organizationId, id: taskId, priority, deletedStatus: TaskStatus.DELETED },
+        type: QueryTypes.SELECT,
+      },
+    );
+
+    if (!result) {
+      throw new Error(`Task #${taskId} not found`);
+    }
+
+    return result;
+  },
+});
+
+const agentDeleteTask = createWriteToolFn({
+  toolName: "agent_delete_task",
+  warningLevel: "danger",
+  descriptionFn: (params) => `Delete (archive) task #${params.task_id}`,
+  executeFn: async (params, organizationId) => {
+    const taskId = params.task_id as number;
+
+    const [result] = await sequelize.query(
+      `UPDATE tasks SET status = :deletedStatus WHERE organization_id = :organizationId AND id = :id AND status != :deletedStatus RETURNING *`,
+      {
+        replacements: { organizationId, id: taskId, deletedStatus: TaskStatus.DELETED },
+        type: QueryTypes.SELECT,
+      },
+    );
+
+    if (!result) {
+      throw new Error(`Task #${taskId} not found or already deleted`);
+    }
+
+    return { task_id: taskId, deleted: true };
+  },
+});
+
+const agentRestoreTask = createWriteToolFn({
+  toolName: "agent_restore_task",
+  warningLevel: "info",
+  descriptionFn: (params) => `Restore archived task #${params.task_id} back to Open status`,
+  executeFn: async (params, organizationId) => {
+    const taskId = params.task_id as number;
+
+    const [result] = await sequelize.query(
+      `UPDATE tasks SET status = :openStatus WHERE organization_id = :organizationId AND id = :id AND status = :deletedStatus RETURNING *`,
+      {
+        replacements: {
+          organizationId,
+          id: taskId,
+          openStatus: TaskStatus.OPEN,
+          deletedStatus: TaskStatus.DELETED,
+        },
+        type: QueryTypes.SELECT,
+      },
+    );
+
+    if (!result) {
+      throw new Error(`Task #${taskId} not found or is not archived`);
+    }
+
+    return result;
+  },
+});
+
 const availableTaskTools: Record<string, Function> = {
   fetch_tasks: fetchTasks,
   get_task_analytics: getTaskAnalytics,
   get_task_executive_summary: getTaskExecutiveSummary,
+  agent_create_task: agentCreateTask,
+  agent_update_task: agentUpdateTask,
+  agent_assign_task: agentAssignTask,
+  agent_update_task_status: agentUpdateTaskStatus,
+  agent_set_task_priority: agentSetTaskPriority,
+  agent_delete_task: agentDeleteTask,
+  agent_restore_task: agentRestoreTask,
 };
 
 export { availableTaskTools };

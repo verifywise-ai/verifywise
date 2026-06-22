@@ -1,4 +1,4 @@
-import { Button, IconButton, Stack, Typography, useTheme, Box } from "@mui/material";
+import { Button, Divider, IconButton, Stack, Typography, useTheme, Box } from "@mui/material";
 import React, { Suspense, useEffect, useState } from "react";
 import { X } from "lucide-react";
 import { ReactComponent as Background } from "../../../assets/imgs/background-grid.svg";
@@ -21,6 +21,13 @@ import { ENV_VARs } from "../../../../../env.vars";
 import { loginUser } from "../../../../application/repository/user.repository";
 import { getOrganizations } from "../../../../application/repository/superAdmin.repository";
 import { checkOrganizationExists } from "../../../../application/repository/organization.repository";
+import {
+  CheckSsoStatus,
+  GetSsoOrgs,
+} from "../../../../application/repository/ssoConfig.repository";
+import { useSsoFeatureEnabled } from "../../../../application/hooks/useSsoFeatureEnabled";
+import { MicrosoftSignIn } from "../../../components/MicrosoftSignIn";
+import Select from "../../../components/Inputs/Select";
 
 // Animated loading component specifically for login
 const LoginLoadingOverlay: React.FC = () => {
@@ -135,6 +142,16 @@ const Login: React.FC = () => {
     body: string;
   } | null>(null);
   const [showSetupBanner, setShowSetupBanner] = useState(false);
+  const ssoFeatureEnabled = useSsoFeatureEnabled();
+  const [ssoOrgs, setSsoOrgs] = useState<Array<{ id: number; name: string; ssoEnabled: boolean }>>(
+    [],
+  );
+  const [selectedSsoOrgId, setSelectedSsoOrgId] = useState<number | "">("");
+  const [ssoConfig, setSsoConfig] = useState<{
+    tenantId?: string;
+    clientId?: string;
+    organizationId?: number;
+  }>({});
 
   useEffect(() => {
     checkOrganizationExists()
@@ -143,6 +160,38 @@ const Login: React.FC = () => {
       })
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!ssoFeatureEnabled) return;
+    GetSsoOrgs("AzureAD")
+      .then((orgs) => {
+        setSsoOrgs(orgs || []);
+        const enabled = (orgs || []).filter((o) => o.ssoEnabled);
+        if (enabled.length === 1) setSelectedSsoOrgId(enabled[0].id);
+      })
+      .catch(() => {});
+  }, [ssoFeatureEnabled]);
+
+  useEffect(() => {
+    if (!ssoFeatureEnabled) return;
+    if (!selectedSsoOrgId) {
+      setSsoConfig({});
+      return;
+    }
+    CheckSsoStatus(Number(selectedSsoOrgId), "AzureAD")
+      .then((status) => {
+        if (status?.isEnabled && status?.hasConfig) {
+          setSsoConfig({
+            tenantId: status.tenantId,
+            clientId: status.clientId,
+            organizationId: status.organizationId,
+          });
+        } else {
+          setSsoConfig({});
+        }
+      })
+      .catch(() => setSsoConfig({}));
+  }, [selectedSsoOrgId, ssoFeatureEnabled]);
 
   // Handle changes in input fields
   const handleChange = (prop: keyof FormValues) => (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -415,6 +464,64 @@ const Login: React.FC = () => {
             >
               Sign in
             </Button>
+            {ssoFeatureEnabled && (
+              <>
+                {/* Divider with "or" */}
+                <Stack sx={{ position: "relative", my: 4 }}>
+                  <Divider />
+                  <Typography
+                    sx={{
+                      position: "absolute",
+                      top: "50%",
+                      left: "50%",
+                      transform: "translate(-50%, -50%)",
+                      backgroundColor: "#fff",
+                      px: 2,
+                      fontSize: 14,
+                      color: theme.palette.text.secondary,
+                      fontWeight: 500,
+                    }}
+                  >
+                    or
+                  </Typography>
+                </Stack>
+
+                {/* Organization Selection - Always show */}
+                <Select
+                  id="sso-organization"
+                  label="Organization"
+                  isRequired
+                  placeholder="Select your organization"
+                  value={selectedSsoOrgId}
+                  items={ssoOrgs.map((o) => ({
+                    _id: o.id,
+                    name: o.ssoEnabled ? o.name : `${o.name} (SSO not enabled)`,
+                  }))}
+                  onChange={(e: any) =>
+                    setSelectedSsoOrgId(e.target.value ? Number(e.target.value) : "")
+                  }
+                  getOptionValue={(option) => option._id}
+                  disabled={ssoOrgs.length === 0}
+                  sx={{ width: 360 }}
+                />
+
+                {/* Microsoft SSO Button - Show when organization is selected */}
+                {selectedSsoOrgId && (
+                  <MicrosoftSignIn
+                    isSubmitting={isSubmitting}
+                    setIsSubmitting={setIsSubmitting}
+                    tenantId={ssoConfig.tenantId}
+                    clientId={ssoConfig.clientId}
+                    organizationId={ssoConfig.organizationId ?? Number(selectedSsoOrgId)}
+                    text="Sign in with Microsoft"
+                    onError={(message) => {
+                      setAlert({ variant: "error", body: message });
+                      setTimeout(() => setAlert(null), 5000);
+                    }}
+                  />
+                )}
+              </>
+            )}
           </Stack>
         </Stack>
       </form>

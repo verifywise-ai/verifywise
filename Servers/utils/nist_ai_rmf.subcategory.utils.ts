@@ -1,4 +1,4 @@
-import { Transaction } from "sequelize";
+import { Transaction, QueryTypes } from "sequelize";
 import { sequelize } from "../database/db";
 import { NISTAIMRFSubcategoryModel } from "../domain.layer/frameworks/NIST-AI-RMF/nist_ai_rmf_subcategory.model";
 import { getEvidenceFilesForEntity } from "./files/evidenceFiles.utils";
@@ -67,7 +67,7 @@ export const getAllNISTAIRMFSubcategoriesBycategoryIdAndtitleQuery = async (
 };
 
 export const getNISTAIRMFSubcategoryByIdQuery = async (id: number, organizationId: number) => {
-  const subcategory = await sequelize.query(
+  const subcategory = (await sequelize.query(
     `SELECT s.*,
             ss.function,
             ss.subcategory_id as index,
@@ -79,12 +79,11 @@ export const getNISTAIRMFSubcategoryByIdQuery = async (id: number, organizationI
      WHERE s.organization_id = :organizationId AND s.id = :id`,
     {
       replacements: { organizationId, id },
-      mapToModel: true,
-      model: NISTAIMRFSubcategoryModel,
+      type: QueryTypes.SELECT,
     },
-  );
+  )) as any[];
 
-  if (!subcategory[0]) {
+  if (!subcategory || subcategory.length === 0) {
     return null;
   }
 
@@ -96,7 +95,7 @@ export const getNISTAIRMFSubcategoryByIdQuery = async (id: number, organizationI
     id,
     "evidence",
   );
-  (subcategory[0] as any).evidence_links = evidenceFiles;
+  subcategory[0].evidence_links = evidenceFiles;
 
   return subcategory[0];
 };

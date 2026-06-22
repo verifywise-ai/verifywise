@@ -353,8 +353,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
         onOpenChange(false);
       },
 
-      modal: (modalType: string) => {
-        console.log("Open modal:", modalType);
+      modal: (_modalType: string) => {
         onOpenChange(false);
       },
 
@@ -364,18 +363,16 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
             navigate("/settings", { state: { activeTab: params } });
             break;
           default:
-            console.log("Execute function:", funcName, params);
+            break;
         }
         onOpenChange(false);
       },
 
-      filter: (filterConfig: unknown) => {
-        console.log("Apply filter:", filterConfig);
+      filter: (_filterConfig: unknown) => {
         onOpenChange(false);
       },
 
-      export: (exportType: string) => {
-        console.log("Export:", exportType);
+      export: (_exportType: string) => {
         onOpenChange(false);
       },
     }),

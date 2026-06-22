@@ -13,11 +13,28 @@ const jsonParser = express.json({ limit: "50mb" });
 // Headers are now set directly in the proxyReq handler to ensure they're forwarded
 
 /**
+ * Build the LiteLLM model string from a (provider, model) pair.
+ *
+ * Mirrors the Python ``to_litellm_model`` helper in
+ * ``EvalServer/src/utils/gateway_litellm_client.py``. Exported so unit tests
+ * can guarantee parity between the Node proxy and the Python eval server.
+ */
+export const toLiteLLMModel = (prov: string, mdl: string): string => {
+  const p = (prov || "").toLowerCase();
+  if (p === "openrouter") return mdl.startsWith("openrouter/") ? mdl : `openrouter/${mdl}`;
+  if (p === "google" || p === "gemini") return mdl.startsWith("gemini/") ? mdl : `gemini/${mdl}`;
+  if (p === "anthropic" && !mdl.startsWith("anthropic/")) return `anthropic/${mdl}`;
+  if (p === "mistral" && !mdl.startsWith("mistral/")) return `mistral/${mdl}`;
+  if (p === "xai" && !mdl.startsWith("xai/")) return `xai/${mdl}`;
+  return mdl;
+};
+
+/**
  * Middleware to inject API keys for experiment creation and arena comparisons
  * Handles both custom scorers and standard judge LLM
  * This modifies req.body before the proxy forwards it
  */
-async function injectApiKeys(req: Request, _res: Response, next: NextFunction) {
+export async function injectApiKeys(req: Request, _res: Response, next: NextFunction) {
   // Only process POST requests to experiments, arena, or report endpoints
   const isExperiment = req.method === "POST" && req.url.includes("/experiments");
   const isArena = req.method === "POST" && req.url.includes("/arena/compare");
@@ -309,17 +326,6 @@ function deepEvalRoutes() {
         return;
       }
 
-      // Build the LiteLLM model string (same logic as gateway_litellm_client.py)
-      const toLiteLLMModel = (prov: string, mdl: string): string => {
-        const p = prov.toLowerCase();
-        if (p === "openrouter") return mdl.startsWith("openrouter/") ? mdl : `openrouter/${mdl}`;
-        if (p === "google" || p === "gemini")
-          return mdl.startsWith("gemini/") ? mdl : `gemini/${mdl}`;
-        if (p === "anthropic" && !mdl.startsWith("anthropic/")) return `anthropic/${mdl}`;
-        if (p === "mistral" && !mdl.startsWith("mistral/")) return `mistral/${mdl}`;
-        if (p === "xai" && !mdl.startsWith("xai/")) return `xai/${mdl}`;
-        return mdl;
-      };
       const litellmModel = toLiteLLMModel(normalizedProvider, model);
 
       try {
@@ -372,9 +378,6 @@ function deepEvalRoutes() {
       proxyReq: (proxyReq, req) => {
         // Forward custom headers to the proxy target
         const expressReq = req as Request;
-        if (expressReq.tenantId) {
-          proxyReq.setHeader("x-tenant-id", expressReq.tenantId);
-        }
         if (expressReq.organizationId) {
           proxyReq.setHeader("x-organization-id", expressReq.organizationId.toString());
         }

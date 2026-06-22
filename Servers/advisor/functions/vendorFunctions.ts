@@ -1,7 +1,19 @@
 import { IVendor } from "../../domain.layer/interfaces/i.vendor";
 import { IVendorRisk } from "../../domain.layer/interfaces/i.vendorRisk";
-import { getAllVendorsQuery } from "../../utils/vendor.utils";
-import { getAllVendorRisksAllProjectsQuery } from "../../utils/vendorRisk.utils";
+import {
+  getAllVendorsQuery,
+  createNewVendorQuery,
+  updateVendorByIdQuery,
+  deleteVendorByIdQuery,
+} from "../../utils/vendor.utils";
+import {
+  getAllVendorRisksAllProjectsQuery,
+  createNewVendorRiskQuery,
+  updateVendorRiskByIdQuery,
+  deleteVendorRiskByIdQuery,
+} from "../../utils/vendorRisk.utils";
+import { createWriteToolFn } from "../confirmation/createWriteTool";
+import { sequelize } from "../../database/db";
 import logger from "../../utils/logger/fileLogger";
 
 export interface FetchVendorsParams {
@@ -412,11 +424,237 @@ const getVendorExecutiveSummary = async (
   }
 };
 
+// ── Write Tools (Human Confirmation Flow) ──────────────────────────
+
+const agentCreateVendor = createWriteToolFn({
+  toolName: "agent_create_vendor",
+  warningLevel: "warning",
+  descriptionFn: (params) => `Create vendor "${params.vendor_name}"`,
+  executeFn: async (params, organizationId) => {
+    const transaction = await sequelize.transaction();
+    try {
+      const vendorData: Partial<IVendor> = {
+        vendor_name: params.vendor_name as string,
+        vendor_provides: (params.description as string) || "",
+        website: (params.website as string) || "",
+        vendor_contact_person: (params.contact_person as string) || "",
+        review_status: (params.review_status as IVendor["review_status"]) || "Not started",
+        data_sensitivity: params.data_sensitivity as IVendor["data_sensitivity"],
+        business_criticality: params.criticality_level as IVendor["business_criticality"],
+        assignee: (params.assignee as number) || (null as any),
+        projects: params.project_id ? [params.project_id as number] : [],
+      };
+      const result = await createNewVendorQuery(vendorData as IVendor, organizationId, transaction);
+      await transaction.commit();
+      return { id: result.id, vendor_name: result.vendor_name };
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  },
+});
+
+const agentUpdateVendor = createWriteToolFn({
+  toolName: "agent_update_vendor",
+  warningLevel: "warning",
+  descriptionFn: (params) =>
+    `Update vendor #${params.vendor_id}${params.vendor_name ? ` name to "${params.vendor_name}"` : ""}`,
+  executeFn: async (params, organizationId) => {
+    const transaction = await sequelize.transaction();
+    try {
+      const vendorData: Partial<IVendor> = {};
+      if (params.vendor_name !== undefined) vendorData.vendor_name = params.vendor_name as string;
+      if (params.description !== undefined)
+        vendorData.vendor_provides = params.description as string;
+      if (params.website !== undefined) vendorData.website = params.website as string;
+      if (params.contact_person !== undefined)
+        vendorData.vendor_contact_person = params.contact_person as string;
+      if (params.review_status !== undefined)
+        vendorData.review_status = params.review_status as IVendor["review_status"];
+      if (params.data_sensitivity !== undefined)
+        vendorData.data_sensitivity = params.data_sensitivity as IVendor["data_sensitivity"];
+      if (params.criticality_level !== undefined)
+        vendorData.business_criticality =
+          params.criticality_level as IVendor["business_criticality"];
+      if (params.risk_score !== undefined) vendorData.risk_score = params.risk_score as number;
+
+      const result = await updateVendorByIdQuery(
+        {
+          id: params.vendor_id as number,
+          vendor: vendorData,
+          userId: 0,
+          role: "Admin",
+          transaction,
+        },
+        organizationId,
+      );
+      await transaction.commit();
+      return { id: result.id, vendor_name: result.vendor_name };
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  },
+});
+
+const agentDeleteVendor = createWriteToolFn({
+  toolName: "agent_delete_vendor",
+  warningLevel: "danger",
+  descriptionFn: (params) =>
+    `Permanently delete vendor #${params.vendor_id} and all associated risks`,
+  executeFn: async (params, organizationId) => {
+    const transaction = await sequelize.transaction();
+    try {
+      const deleted = await deleteVendorByIdQuery(
+        params.vendor_id as number,
+        organizationId,
+        transaction,
+      );
+      await transaction.commit();
+      return { deleted, vendor_id: params.vendor_id };
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  },
+});
+
+const agentCreateVendorRisk = createWriteToolFn({
+  toolName: "agent_create_vendor_risk",
+  warningLevel: "warning",
+  descriptionFn: (params) => `Create risk "${params.risk_name}" for vendor #${params.vendor_id}`,
+  executeFn: async (params, organizationId) => {
+    const transaction = await sequelize.transaction();
+    try {
+      const riskData: Partial<IVendorRisk> = {
+        vendor_id: params.vendor_id as number,
+        risk_description:
+          (params.risk_name as string) +
+          (params.risk_description ? `: ${params.risk_description}` : ""),
+        impact_description: (params.risk_description as string) || "",
+        risk_severity: (params.severity as IVendorRisk["risk_severity"]) || "Moderate",
+        likelihood: (params.likelihood as IVendorRisk["likelihood"]) || "Possible",
+        action_plan: "",
+        action_owner: 0,
+        risk_level: "",
+      };
+      const result = await createNewVendorRiskQuery(
+        riskData as IVendorRisk,
+        organizationId,
+        transaction,
+      );
+      await transaction.commit();
+      return { id: result.id, vendor_id: result.vendor_id };
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  },
+});
+
+const agentUpdateVendorRisk = createWriteToolFn({
+  toolName: "agent_update_vendor_risk",
+  warningLevel: "warning",
+  descriptionFn: (params) => `Update vendor risk #${params.vendor_risk_id}`,
+  executeFn: async (params, organizationId) => {
+    const transaction = await sequelize.transaction();
+    try {
+      const riskData: Partial<IVendorRisk> = {};
+      if (params.risk_description !== undefined)
+        riskData.risk_description = params.risk_description as string;
+      if (params.impact_description !== undefined)
+        riskData.impact_description = params.impact_description as string;
+      if (params.severity !== undefined)
+        riskData.risk_severity = params.severity as IVendorRisk["risk_severity"];
+      if (params.likelihood !== undefined)
+        riskData.likelihood = params.likelihood as IVendorRisk["likelihood"];
+      if (params.action_plan !== undefined) riskData.action_plan = params.action_plan as string;
+      if (params.action_owner !== undefined) riskData.action_owner = params.action_owner as number;
+      if (params.risk_level !== undefined) riskData.risk_level = params.risk_level as string;
+
+      const result = await updateVendorRiskByIdQuery(
+        params.vendor_risk_id as number,
+        riskData as Partial<IVendorRisk>,
+        organizationId,
+        transaction,
+      );
+      await transaction.commit();
+      return { id: result?.id, vendor_id: result?.vendor_id };
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  },
+});
+
+const agentDeleteVendorRisk = createWriteToolFn({
+  toolName: "agent_delete_vendor_risk",
+  warningLevel: "danger",
+  descriptionFn: (params) => `Delete vendor risk #${params.vendor_risk_id}`,
+  executeFn: async (params, organizationId) => {
+    const transaction = await sequelize.transaction();
+    try {
+      const deleted = await deleteVendorRiskByIdQuery(
+        params.vendor_risk_id as number,
+        organizationId,
+        transaction,
+      );
+      await transaction.commit();
+      return { deleted, vendor_risk_id: params.vendor_risk_id };
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  },
+});
+
+const agentFlagVendorForReview = createWriteToolFn({
+  toolName: "agent_flag_vendor_for_review",
+  warningLevel: "warning",
+  descriptionFn: (params) =>
+    `Flag vendor #${params.vendor_id} for review${params.reason ? `: ${params.reason}` : ""}`,
+  executeFn: async (params, organizationId) => {
+    const transaction = await sequelize.transaction();
+    try {
+      const vendorData: Partial<IVendor> = {
+        review_status: "Requires follow-up",
+        review_result: (params.reason as string) || "Flagged for review by AI advisor",
+      };
+      const result = await updateVendorByIdQuery(
+        {
+          id: params.vendor_id as number,
+          vendor: vendorData,
+          userId: 0,
+          role: "Admin",
+          transaction,
+        },
+        organizationId,
+      );
+      await transaction.commit();
+      return {
+        id: result.id,
+        vendor_name: result.vendor_name,
+        review_status: result.review_status,
+      };
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  },
+});
+
 const availableVendorTools: any = {
   fetch_vendors: fetchVendors,
   fetch_vendor_risks: fetchVendorRisks,
   get_vendor_analytics: getVendorAnalytics,
   get_vendor_executive_summary: getVendorExecutiveSummary,
+  agent_create_vendor: agentCreateVendor,
+  agent_update_vendor: agentUpdateVendor,
+  agent_delete_vendor: agentDeleteVendor,
+  agent_create_vendor_risk: agentCreateVendorRisk,
+  agent_update_vendor_risk: agentUpdateVendorRisk,
+  agent_delete_vendor_risk: agentDeleteVendorRisk,
+  agent_flag_vendor_for_review: agentFlagVendorForReview,
 };
 
 export { availableVendorTools };

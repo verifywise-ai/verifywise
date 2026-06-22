@@ -5,11 +5,20 @@ import {
   getAllMappings,
   getMappingsBetween,
   getMappingsForControl,
+  createMapping,
+  updateMapping,
+  deleteMapping,
+  createBulkMappings,
   getAllScenarios,
   getScenarioById,
   createScenario,
   updateScenario,
   deleteScenario,
+  activateScenario,
+  simulateScenario,
+  getActivationHistory,
+  deactivateScenario,
+  getScenarioProgress,
   getRecommendations,
   getCoverage,
   refreshCoverage,
@@ -22,10 +31,14 @@ import {
 import authenticateJWT from "../middleware/auth.middleware";
 import authorize from "../middleware/accessControl.middleware";
 
-// Mappings (read-only, all authenticated users)
+// Mappings
 router.get("/mappings", authenticateJWT, getAllMappings);
 router.get("/mappings/between/:sourceId/:targetId", authenticateJWT, getMappingsBetween);
 router.get("/mappings/control/:controlType/:controlId", authenticateJWT, getMappingsForControl);
+router.post("/mappings", authenticateJWT, authorize(["Admin", "Editor"]), createMapping);
+router.put("/mappings/:id", authenticateJWT, authorize(["Admin", "Editor"]), updateMapping);
+router.delete("/mappings/:id", authenticateJWT, authorize(["Admin"]), deleteMapping);
+router.post("/mappings/bulk", authenticateJWT, authorize(["Admin", "Editor"]), createBulkMappings);
 
 // Scenarios
 router.get("/scenarios", authenticateJWT, getAllScenarios);
@@ -33,6 +46,23 @@ router.get("/scenarios/:id", authenticateJWT, getScenarioById);
 router.post("/scenarios", authenticateJWT, authorize(["Admin", "Editor"]), createScenario);
 router.put("/scenarios/:id", authenticateJWT, authorize(["Admin", "Editor"]), updateScenario);
 router.delete("/scenarios/:id", authenticateJWT, authorize(["Admin"]), deleteScenario);
+router.post(
+  "/scenarios/:id/activate",
+  authenticateJWT,
+  authorize(["Admin", "Editor"]),
+  activateScenario,
+);
+router.post("/scenarios/simulate", authenticateJWT, simulateScenario);
+
+// Activations
+router.get("/activations", authenticateJWT, getActivationHistory);
+router.post(
+  "/activations/:id/deactivate",
+  authenticateJWT,
+  authorize(["Admin", "Editor"]),
+  deactivateScenario,
+);
+router.get("/activations/:id/progress", authenticateJWT, getScenarioProgress);
 
 // Recommendations
 router.post("/recommend", authenticateJWT, getRecommendations);

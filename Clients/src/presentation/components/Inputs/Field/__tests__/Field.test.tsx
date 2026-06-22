@@ -108,4 +108,68 @@ describe("Field Component", () => {
     // No label element should exist
     expect(screen.queryByText("*")).not.toBeInTheDocument();
   });
+
+  it("renders multiline when type is description", () => {
+    renderWithProviders(<Field type="description" label="Desc" placeholder="Describe..." />);
+
+    const textarea = screen.getByPlaceholderText("Describe...");
+    expect(textarea.tagName.toLowerCase()).toBe("textarea");
+  });
+
+  it("renders multiline when rows > 1", () => {
+    renderWithProviders(<Field label="Bio" placeholder="Enter bio" rows={3} />);
+
+    const textarea = screen.getByPlaceholderText("Enter bio");
+    expect(textarea.tagName.toLowerCase()).toBe("textarea");
+  });
+
+  it("applies borderless class when borderless is true", () => {
+    const { container } = renderWithProviders(<Field label="Name" borderless />);
+
+    expect(container.querySelector(".field-borderless")).toBeInTheDocument();
+  });
+
+  it("calls onFocus when field is focused", async () => {
+    const handleFocus = vi.fn();
+    const user = userEvent.setup();
+
+    renderWithProviders(<Field label="Name" placeholder="Focus me" onFocus={handleFocus} />);
+
+    await user.click(screen.getByPlaceholderText("Focus me"));
+    expect(handleFocus).toHaveBeenCalled();
+  });
+
+  it("calls onBlur when field loses focus", async () => {
+    const handleBlur = vi.fn();
+    const user = userEvent.setup();
+
+    renderWithProviders(<Field label="Name" placeholder="Blur me" onBlur={handleBlur} />);
+
+    const input = screen.getByPlaceholderText("Blur me");
+    await user.click(input);
+    await user.tab();
+    expect(handleBlur).toHaveBeenCalled();
+  });
+
+  it("calls onKeyDown when a key is pressed", async () => {
+    const handleKeyDown = vi.fn();
+    const user = userEvent.setup();
+
+    renderWithProviders(<Field label="Name" placeholder="Key me" onKeyDown={handleKeyDown} />);
+
+    await user.type(screen.getByPlaceholderText("Key me"), "{Enter}");
+    expect(handleKeyDown).toHaveBeenCalled();
+  });
+
+  it("renders helper text when provided", () => {
+    renderWithProviders(<Field label="Name" helperText="This is a required field" />);
+
+    expect(screen.getByText("This is a required field")).toBeInTheDocument();
+  });
+
+  it("renders with autoFocus", () => {
+    renderWithProviders(<Field label="Name" placeholder="Auto focus" autoFocus />);
+
+    expect(screen.getByPlaceholderText("Auto focus")).toBeInTheDocument();
+  });
 });

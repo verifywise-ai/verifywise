@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { FC, useState, useCallback, useEffect, useMemo } from "react";
+import React, { FC, useState, useCallback, useEffect, useRef, useMemo } from "react";
 import { useTheme, Stack, Typography, Box } from "@mui/material";
 import Field from "../../Inputs/Field";
 import DatePicker from "../../Inputs/Datepicker";
@@ -11,6 +11,8 @@ import StandardModal from "../StandardModal";
 import TabBar from "../../TabBar";
 import { TabContext } from "@mui/lab";
 import { HistorySidebar } from "../../Common/HistorySidebar";
+import CustomFieldsSection, { type CustomFieldsSectionHandle } from "../../CustomFieldsSection";
+import { useRequiredCustomFieldsGate } from "../../CustomFieldsSection/RequiredCustomFieldsGate";
 import { ICreateTaskFormValues, ICreateTaskProps } from "../../../types/interfaces/i.task";
 import { useFormValidation } from "../../../../application/hooks/useFormValidation";
 import dayjs, { Dayjs } from "dayjs";
@@ -85,18 +87,21 @@ const CreateTask: FC<ICreateTaskProps> = ({
     useFormValidation<ICreateTaskFormValues>(validators);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [activeTab, setActiveTab] = useState("details");
+  const customFieldsRef = useRef<CustomFieldsSectionHandle | null>(null);
+  const customFieldsGate = useRequiredCustomFieldsGate("task", initialData?.id ?? null);
 
   useEffect(() => {
     if (!isOpen) {
       setValues(initialState);
       resetErrors();
       setIsSubmitting(false);
-    } else if (isOpen && mode === "edit" && initialData) {
+      setActiveTab("details");
+    } else if (isOpen && initialData) {
       setValues({
-        title: initialData.title,
+        title: initialData.title || "",
         description: initialData.description || "",
-        priority: initialData.priority,
-        status: initialData.status,
+        priority: initialData.priority || TaskPriority.MEDIUM,
+        status: initialData.status || TaskStatus.OPEN,
         due_date: initialData.due_date ? dayjs(initialData.due_date).format("YYYY-MM-DD") : "",
         assignees: (() => {
           if (!initialData.assignees || !users) return [];
@@ -222,19 +227,40 @@ const CreateTask: FC<ICreateTaskProps> = ({
     setActiveTab("details");
   };
 
-  const handleSubmit = async (event?: React.FormEvent) => {
+  const handleSaveTask = async (event?: React.FormEvent) => {
     if (event) event.preventDefault();
 
     if (validateAll(values)) {
       setIsSubmitting(true);
       try {
+        let cfFlushFailed = false;
         if (onSuccess) {
           // Convert assignees back to string array for API
           const formattedValues = {
             ...values,
             assignees: values.assignees.map((user) => String(user.id)),
           };
-          await onSuccess(formattedValues as any);
+          const result = await onSuccess(formattedValues as any);
+          // Parent's onSuccess returns the new entity id on create. In edit
+          // mode the id is already known.
+          const newId =
+            result && typeof result === "object" && "id" in result
+              ? (result as { id?: number }).id
+              : undefined;
+          const targetId = mode === "edit" ? initialData?.id : newId;
+          if (targetId && customFieldsRef.current?.hasPendingValues()) {
+            try {
+              await customFieldsRef.current.flush(targetId);
+            } catch (cfError) {
+              cfFlushFailed = true;
+              console.error("Task saved, but custom field values failed to save:", cfError);
+            }
+          }
+        }
+        if (cfFlushFailed) {
+          // Task is saved. Keep modal open so the inline warning from
+          // CustomFieldsSection stays visible.
+          return;
         }
         handleClose();
       } catch (error) {
@@ -468,31 +494,42 @@ const CreateTask: FC<ICreateTaskProps> = ({
           ? "Update task details and assign team members."
           : "Create a new task by filling in the following details."
       }
-      onSubmit={activeTab === "details" ? handleSubmit : undefined}
+      onSubmit={activeTab === "details" ? handleSaveTask : undefined}
       submitButtonText={isEditMode ? "Update task" : "Create task"}
-      isSubmitting={isSubmitting}
+      isSubmitting={isSubmitting || customFieldsGate.blocked}
       maxWidth="800px"
     >
-      {isEditMode && taskEntityId ? (
-        <TabContext value={activeTab}>
-          <Box sx={{ marginBottom: 3 }}>
-            <TabBar
-              tabs={[
-                { label: "Task details", value: "details", icon: "CheckSquare" },
-                { label: "Activity", value: "activity", icon: "History" },
-              ]}
-              activeTab={activeTab}
-              onChange={(_, newValue) => setActiveTab(newValue)}
-            />
-          </Box>
-          {activeTab === "details" && formContent}
-          {activeTab === "activity" && (
-            <HistorySidebar inline isOpen={true} entityType="task" entityId={taskEntityId} />
-          )}
-        </TabContext>
-      ) : (
-        formContent
-      )}
+      <TabContext value={activeTab}>
+        <Box sx={{ marginBottom: 3 }}>
+          <TabBar
+            tabs={
+              isEditMode && taskEntityId
+                ? [
+                    { label: "Task details", value: "details", icon: "CheckSquare" },
+                    { label: "Custom fields", value: "custom-fields", icon: "Settings" },
+                    { label: "Activity", value: "activity", icon: "History" },
+                  ]
+                : [
+                    { label: "Task details", value: "details", icon: "CheckSquare" },
+                    { label: "Custom fields", value: "custom-fields", icon: "Settings" },
+                  ]
+            }
+            activeTab={activeTab}
+            onChange={(_, newValue) => setActiveTab(newValue)}
+          />
+        </Box>
+        <Box sx={{ display: activeTab === "details" ? "block" : "none" }}>{formContent}</Box>
+        <Box sx={{ display: activeTab === "custom-fields" ? "block" : "none" }}>
+          <CustomFieldsSection
+            ref={customFieldsRef}
+            entityType="task"
+            entityId={taskEntityId ?? null}
+          />
+        </Box>
+        {activeTab === "activity" && isEditMode && taskEntityId && (
+          <HistorySidebar inline isOpen={true} entityType="task" entityId={taskEntityId} />
+        )}
+      </TabContext>
     </StandardModal>
   );
 };

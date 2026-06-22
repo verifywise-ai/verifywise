@@ -15,6 +15,7 @@ import {
   createNewUser,
 } from "../../../application/repository/entity.repository";
 import { createModelInventory } from "../../../application/repository/modelInventory.repository";
+import { onAiActionCompleted } from "../../../application/events/aiActionEvents";
 import { getShareLinksForResource } from "../../../application/repository/share.repository";
 import { useAuth } from "../../../application/hooks/useAuth";
 import { usePluginRegistry } from "../../../application/contexts/PluginRegistry.context";
@@ -129,6 +130,7 @@ type EvidenceHubColumn =
   | "uploaded_by"
   | "uploaded_on"
   | "expiry_date"
+  | "quality"
   | "actions";
 
 const EVIDENCE_HUB_COLUMNS: ColumnConfig<EvidenceHubColumn>[] = [
@@ -138,6 +140,7 @@ const EVIDENCE_HUB_COLUMNS: ColumnConfig<EvidenceHubColumn>[] = [
   { key: "uploaded_by", label: "Uploaded by", defaultVisible: true },
   { key: "uploaded_on", label: "Uploaded on", defaultVisible: true },
   { key: "expiry_date", label: "Expiry", defaultVisible: true },
+  { key: "quality", label: "AI Quality", defaultVisible: true },
   { key: "actions", label: "Actions", defaultVisible: true, alwaysVisible: true },
 ];
 
@@ -905,6 +908,55 @@ const ModelInventory: React.FC = () => {
     fetchEvidenceData();
   }, []);
 
+  // Refresh whenever an AI write action completes — both the dedicated
+  // Pending Approvals modal (RequestorApprovalModal dispatches via
+  // dispatchAiActionCompleted) and the inline chat approval cards
+  // (ConfirmationToolUI dispatches the same event after success). The
+  // approval UI is an in-page modal, so window.focus /
+  // visibilitychange listeners don't fire on click — we need an
+  // explicit dispatch hook.
+  //
+  // Scoped by tool_name so we only refetch when the action actually
+  // touches model_inventories or model_risks. We refresh both tables
+  // because some tools touch both (e.g. agent_register_model creates
+  // a model row that bumps the model count; agent_suggest_model_risk
+  // creates a model_risk row that bumps the model risks tab count).
+  useEffect(() => {
+    const MODEL_INVENTORY_TOOLS = new Set([
+      "agent_register_model",
+      "agent_update_model",
+      "agent_update_model_lifecycle_phase",
+      "agent_retire_model",
+      "agent_delete_model",
+      "agent_link_model_to_project",
+      "agent_unlink_model_from_use_case",
+      "agent_link_model_to_framework",
+      "agent_unlink_model_from_framework",
+    ]);
+    const MODEL_RISK_TOOLS = new Set([
+      "agent_create_model_risk",
+      "agent_suggest_model_risk",
+      "agent_update_model_risk",
+      "agent_change_model_risk_status",
+      "agent_delete_model_risk",
+      "agent_restore_model_risk",
+      "agent_attach_model_risk_to_model",
+      "agent_detach_model_risk_from_model",
+    ]);
+    return onAiActionCompleted((detail) => {
+      if (detail?.status !== "approved") return;
+      const tool = detail?.toolName;
+      if (!tool) return;
+      if (MODEL_INVENTORY_TOOLS.has(tool)) {
+        fetchModelInventoryData(false);
+        // Some inventory tools (delete, retire) can also affect risks.
+        fetchModelRisksData(false);
+      } else if (MODEL_RISK_TOOLS.has(tool)) {
+        fetchModelRisksData(false);
+      }
+    });
+  }, []);
+
   // Refetch model risks when filter changes
   useEffect(() => {
     fetchModelRisksData(true, modelRiskStatusFilter);
@@ -1373,6 +1425,14 @@ const ModelInventory: React.FC = () => {
       setFlashRowId(modelId);
       setTimeout(() => setFlashRowId(null), 3000);
     }
+
+    // Return the new id on create so NewModelInventory can flush staged
+    // custom field values against it. Update paths return undefined — the
+    // modal already has the id via initialData.
+    if (!selectedModelInventory && modelId) {
+      return { id: modelId };
+    }
+    return undefined;
   };
 
   const handleModelInventoryError = (error: any) => {
@@ -1751,21 +1811,12 @@ const ModelInventory: React.FC = () => {
 
   const handleEvidenceUploadModalSuccess = async (formData: EvidenceHubModel) => {
     try {
-      console.log("[ModelInventory.handleEvidenceUploadModalSuccess] formData received:", formData);
-      console.log(
-        "[ModelInventory.handleEvidenceUploadModalSuccess] evidence_files in payload:",
-        formData?.evidence_files,
-      );
       if (selectedEvidenceHub) {
         // Update existing Evidence
-        const updateRes = await updateEntityById({
+        await updateEntityById({
           routeUrl: `/evidenceHub/${selectedEvidenceHub.id}`,
           body: formData,
         });
-        console.log(
-          "[ModelInventory.handleEvidenceUploadModalSuccess] PATCH /evidenceHub response:",
-          updateRes,
-        );
 
         setEvidenceHubData((prev) =>
           prev.map((item) => (item.id === selectedEvidenceHub.id ? formData : item)),
@@ -1778,14 +1829,6 @@ const ModelInventory: React.FC = () => {
       } else {
         // Create new Evidence
         const response = await createEvidenceHub("/evidenceHub", formData);
-        console.log(
-          "[ModelInventory.handleEvidenceUploadModalSuccess] POST /evidenceHub response:",
-          response,
-        );
-        console.log(
-          "[ModelInventory.handleEvidenceUploadModalSuccess] response.data.evidence_files:",
-          (response as any)?.data?.evidence_files,
-        );
 
         if (response?.data) {
           setEvidenceHubData((prev) => [...prev, response.data]);
@@ -1816,29 +1859,34 @@ const ModelInventory: React.FC = () => {
 
   const handleModelRiskSuccess = async (formData: IModelRiskFormData) => {
     try {
+      let savedId: number | undefined;
       if (selectedModelRisk) {
         // Update existing model risk
         await updateEntityById({
           routeUrl: `/modelRisks/${selectedModelRisk.id}`,
           body: formData,
         });
+        savedId = selectedModelRisk.id ?? undefined;
         setAlert({
           variant: "success",
           body: "Model risk updated successfully!",
         });
       } else {
         // Create new model risk using apiServices
-        await createNewUser({
+        const response: any = await createNewUser({
           routeUrl: "/modelRisks",
           body: formData,
         });
+        savedId = response?.data?.id;
         setAlert({
           variant: "success",
           body: "New model risk added successfully!",
         });
       }
       await fetchModelRisksData();
-      handleCloseModelRiskModal();
+      // Return the id so NewModelRisk can flush staged custom field values
+      // against it. The modal closes itself once the flush completes.
+      return { id: savedId };
     } catch (error) {
       setAlert({
         variant: "error",
@@ -1846,6 +1894,8 @@ const ModelInventory: React.FC = () => {
           ? "Failed to update model risk. Please try again."
           : "Failed to add model risk. Please try again.",
       });
+      // Re-throw so the modal skips the flush + stays open for retry.
+      throw error;
     }
   };
 
@@ -2402,7 +2452,7 @@ const ModelInventory: React.FC = () => {
               renderTable={(data, options) => (
                 <EvidenceHubTable
                   key={tableKey}
-                  isLoading={isLoading}
+                  isLoading={isEvidenceLoading}
                   data={data}
                   onEdit={handleEditEvidence}
                   onDelete={handleDeleteEvidence}

@@ -9,6 +9,7 @@ import { VerifyWiseContext } from "../contexts/VerifyWise.context";
 import { useAuth } from "./useAuth";
 import { setOnboardingStatus as setReduxOnboardingStatus } from "../redux/auth/authSlice";
 import type { RootState } from "../redux/store";
+import { storageService } from "../../infrastructure/storage";
 
 const getStorageKey = (userId: number) => `verifywise_onboarding_${userId}`;
 
@@ -42,7 +43,7 @@ export const useOnboarding = () => {
     }
 
     const storageKey = getStorageKey(userId);
-    const savedState = localStorage.getItem(storageKey);
+    const parsed = storageService.getRaw<OnboardingState | null>(storageKey, null);
 
     // Determine isComplete from server-side status
     // Only show setup modal if:
@@ -50,17 +51,11 @@ export const useOnboarding = () => {
     // 2. User is the org creator
     const isCompleteFromServer = serverOnboardingStatus !== "pending" || !isOrgCreator;
 
-    if (savedState) {
-      try {
-        const parsed = JSON.parse(savedState);
-        // Override isComplete with server-side status
-        setState({ ...parsed, isComplete: isCompleteFromServer });
-      } catch (error) {
-        console.error("Failed to parse onboarding state:", error);
-        setState({ ...initialState, isComplete: isCompleteFromServer });
-      }
+    if (parsed) {
+      // Override isComplete with server-side status
+      setState({ ...parsed, isComplete: isCompleteFromServer });
     } else {
-      // First time for this user - initialize with server-side status
+      // First time for this user (or unreadable) — initialize with server-side status
       setState({ ...initialState, isComplete: isCompleteFromServer });
     }
     setIsLoading(false);
@@ -71,7 +66,7 @@ export const useOnboarding = () => {
     if (!userId) return;
 
     const storageKey = getStorageKey(userId);
-    localStorage.setItem(storageKey, JSON.stringify(state));
+    storageService.setRaw(storageKey, state);
 
     // Note: We removed cross-tab sync to prevent infinite loops
     // If cross-tab sync is needed, it should use the native storage event instead
@@ -196,7 +191,7 @@ export const useOnboarding = () => {
     setState(initialState);
     if (userId) {
       const storageKey = getStorageKey(userId);
-      localStorage.removeItem(storageKey);
+      storageService.remove(storageKey);
     }
   }, [userId]);
 

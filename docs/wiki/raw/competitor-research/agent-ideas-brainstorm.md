@@ -1,0 +1,1 @@
+/Users/halitozger/.claude/plans/agent-ideas-brainstorm.md

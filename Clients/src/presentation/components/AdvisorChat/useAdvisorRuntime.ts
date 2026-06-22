@@ -33,6 +33,12 @@ const createWelcomeUIMessage = (domain?: AdvisorDomain): ExtendedUIMessage => ({
 
 /**
  * Convert persisted AdvisorMessages to AI SDK UIMessage format.
+ *
+ * Rehydrates `toolParts` (AI SDK dynamic-tool parts persisted on the
+ * previous turn) so inline approval cards survive a page refresh. The
+ * text part (if any) is added first, then the tool parts in their
+ * original order — that matches how assistant turns typically come out
+ * of the SDK (intermediate tool results, then a closing text reply).
  */
 const convertToUIMessages = (
   messages: Array<{
@@ -40,6 +46,7 @@ const convertToUIMessages = (
     role: "user" | "assistant";
     content: string;
     createdAt: string;
+    toolParts?: unknown[];
   }>,
   domain?: AdvisorDomain,
 ): UIMessage[] => {
@@ -47,12 +54,49 @@ const convertToUIMessages = (
     return [createWelcomeUIMessage(domain)];
   }
 
-  return messages.map((msg) => ({
-    id: msg.id,
-    role: msg.role,
-    parts: [{ type: "text" as const, text: msg.content }],
-    createdAt: new Date(msg.createdAt),
-  }));
+  return messages.map((msg) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const parts: any[] = [];
+    if (msg.content && msg.content.length > 0) {
+      parts.push({ type: "text" as const, text: msg.content });
+    }
+    if (Array.isArray(msg.toolParts) && msg.toolParts.length > 0) {
+      parts.push(...msg.toolParts);
+    }
+    if (parts.length === 0) {
+      // Defensive fallback — never produce a UIMessage with empty parts.
+      parts.push({ type: "text" as const, text: "" });
+    }
+    return {
+      id: msg.id,
+      role: msg.role,
+      parts,
+      createdAt: new Date(msg.createdAt),
+    } as UIMessage;
+  });
+};
+
+/**
+ * Extract tool parts from a UIMessage so we can persist them.
+ *
+ * AI SDK v5+ emits two flavors of tool UI parts:
+ *   - `type: 'dynamic-tool'`  — for tools the client doesn't pre-declare
+ *   - `type: 'tool-<name>'`  — for statically streamed tools (the common
+ *     case with backend-defined tools). See `ai/dist/index.js`'s
+ *     `isToolUIPart` which OR's `isStaticToolUIPart` (`type.startsWith("tool-")`)
+ *     and `isDynamicToolUIPart` (`type === "dynamic-tool"`).
+ *
+ * Both flavors carry the toolCallId, state, input, and output that the
+ * renderer needs to redraw the approval card on rehydration. Filtering
+ * to only `dynamic-tool` was silently dropping the suggest_model_risk /
+ * register_model parts so the inline cards vanished on persist+rehydrate.
+ */
+const extractToolPartsFromUIMessage = (message: UIMessage): unknown[] => {
+  return (
+    message.parts?.filter(
+      (p: { type: string }) => p.type === "dynamic-tool" || p.type.startsWith("tool-"),
+    ) ?? []
+  );
 };
 
 /**
@@ -103,13 +147,15 @@ const extractTextFromUIMessage = (message: UIMessage): string => {
  * are not statically typed on the frontend.
  */
 const extractChartData = (message: UIMessage, text: string): unknown => {
-  // Strategy 1: Look for generate_chart dynamic tool invocation in parts
+  // Strategy 1: Look for the generate_chart tool invocation in parts. AI
+  // SDK emits two flavors: `dynamic-tool` (with toolName field) and
+  // `tool-<name>` (with toolName encoded in the type). Match either.
   const chartPart = message.parts?.find(
     (p: any) =>
-      p.type === "dynamic-tool" &&
-      p.toolName === "generate_chart" &&
       p.state === "output-available" &&
-      p.output,
+      p.output &&
+      ((p.type === "dynamic-tool" && p.toolName === "generate_chart") ||
+        p.type === "tool-generate_chart"),
   );
 
   if (chartPart) {
@@ -199,6 +245,7 @@ export const useAdvisorRuntime = (selectedLLMKeyId?: number, pageContext?: Advis
 
         if (msg.role === "assistant") {
           const chartData = extractChartData(msg, text);
+          const toolParts = extractToolPartsFromUIMessage(msg);
           const extMsg = msg as ExtendedUIMessage;
           void context.addMessage(domain, {
             id: msg.id,
@@ -208,6 +255,7 @@ export const useAdvisorRuntime = (selectedLLMKeyId?: number, pageContext?: Advis
               ? new Date(extMsg.createdAt).toISOString()
               : new Date().toISOString(),
             chartData: chartData || undefined,
+            toolParts: toolParts.length > 0 ? toolParts : undefined,
           });
         } else if (msg.role === "user") {
           const extMsg = msg as ExtendedUIMessage;
@@ -220,17 +268,31 @@ export const useAdvisorRuntime = (selectedLLMKeyId?: number, pageContext?: Advis
               : new Date().toISOString(),
           });
         }
-
-        persistedIdsRef.current.add(msg.id);
       }
     },
     [],
   );
 
+  // Surface errors that bypass the streaming protocol entirely — network
+  // failures, CORS issues, 5xx before the stream opens, etc. Errors that
+  // happen INSIDE the stream are already converted to user-visible text
+  // by the backend's `onError` in `streamAdvisorV2`. This hook catches
+  // the cases that don't reach that backend handler.
+  const onError = useCallback((error: unknown) => {
+    console.error("[advisor] chat runtime error:", error);
+    const message = error instanceof Error ? error.message : String(error);
+    // eslint-disable-next-line no-alert
+    alert(
+      `The AI advisor encountered an error: ${message}\n\n` +
+        `If this keeps happening, check your LLM key in Settings or try again in a moment.`,
+    );
+  }, []);
+
   const runtime = useChatRuntime({
     transport,
     messages: initialMessages,
     onFinish,
+    onError,
   });
 
   return runtime;

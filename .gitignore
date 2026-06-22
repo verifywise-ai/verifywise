@@ -1,11 +1,35 @@
-.env
-# *.override.yml
-.db_initialized
-.history
+# ============================================================
+# VerifyWise — .gitignore
+# ============================================================
 
-# Python
+# -------------------- Environment & Secrets --------------------
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.key
+*.pem
+*.cert
+*.p12
+*.pfx
+*.jks
+
+# -------------------- Dependencies --------------------
+node_modules/
+**/node_modules/
+
+# Yarn / PnP
+.pnp/
+.pnp.js
+.yarn/cache
+.yarn/unplugged
+.yarn/install-state.gz
+
+# -------------------- Python --------------------
+__pycache__/
 **/__pycache__/
 *.py[cod]
+*.pyo
 *$py.class
 *.so
 *.egg
@@ -13,6 +37,7 @@
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.graphify_python
 
 # Python virtual environments
 venv/
@@ -22,65 +47,108 @@ venv/
 env/
 ENV/
 
-.vscode/settings.json
+# -------------------- Build Outputs --------------------
+dist/
+build/
+**/dist/
+**/build/
+Clients/dist/
+Servers/dist/
+Servers/build/
+AIGateway/dist/
+EvalServer/dist/
+*.tsbuildinfo
 
-# Test coverage
+# -------------------- Logs --------------------
+*.log
+logs/
+express.log
+fastapi.log
+react.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# -------------------- Test & Coverage --------------------
 coverage/
 **/coverage/
 .nyc_output/
 htmlcov/
 .coverage
 .coverage.*
+*.lcov
 
+# -------------------- OS --------------------
 .DS_Store
-express.log
-fastapi.log
-react.log
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+._*
+
+# -------------------- IDE / Editor --------------------
 .idea/
-# CLAUDE.md
-.kombai
-.vscode
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+
+# -------------------- Claude Code / AI Tooling --------------------
+.claude/launch.json
+.claude/settings.local.json
+.claude/worktrees/
+.claude/todos/
+.claude/tasks/
+.claude/teams/
+.claude/scheduled-tasks/
+.omc/
+graphify-out/
+
+# AI agent temp files
 agent.md
 agent-output.md
+agent-plan.md
 plan.md
+.kombai
 
+# -------------------- Docker --------------------
+docker-compose.override.yml
+*.override.yml
 
-FILE_MANAGER_WORKFLOW.md
-SYSTEM_DESIGN_FILE_MANAGER.md
-SYSTEM_DESIGN_EMAIL_NOTIFICATION.md
-FILE_STORAGE_ARCHITECTURE.md
-Authentication_Authorization_Workflow_Documentation.md
-scripts/sync-docs-to-website.sh
+# -------------------- Database --------------------
+.db_initialized
+*.sqlite
+*.sqlite3
+*.db
+.history
 
-nulGateway/data/config.json
+# -------------------- Uploads & Generated --------------------
+Gateway/data/config.json
 Gateway/data/config.json.bak
-
-# Node modules
-node_modules/
-**/node_modules/
-
-# Build artifacts
-dist/
-build/
-**/dist/
-**/build/
-*.tsbuildinfo
-
-# Logs
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
 
 # EvalServer user uploads (keep directory structure, ignore uploaded files)
 EvaluationModule/data/uploads/*
 !EvaluationModule/data/uploads/.gitkeep
-nul
-agent-plan.md
-pdf-templates/
 
-# WebReel generated videos and screenshots
 videos/
 screenshots/
 .webreel/
+pdf-templates/
+
+# -------------------- Kubernetes Secrets --------------------
+kubernetes/*/secrets.env
+kubernetes/*/secrets.yaml
+
+# -------------------- Docs --------------------
 docs/api-docs/dist
+
+# -------------------- Misc --------------------
+nul
+*.tgz
+*.tar.gz
+*.zip
+.dfmt/
+ansible/inventory.ini

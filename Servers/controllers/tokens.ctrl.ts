@@ -6,7 +6,14 @@ import { logEvent } from "../utils/logger/dbLogger";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { generateApiToken } from "../utils/jwt.utils";
 import { getUserByIdQuery } from "../utils/user.utils";
-import { createApiTokenQuery, deleteApiTokenQuery, getApiTokensQuery } from "../utils/tokens.utils";
+import {
+  createApiTokenQuery,
+  deleteApiTokenQuery,
+  getApiTokensQuery,
+  hashApiToken,
+  revokeApiTokenQuery,
+} from "../utils/tokens.utils";
+import { getRoleNameById } from "../utils/roleMap";
 
 import { translateError } from "../utils/i18n.utils";
 export const createApiToken = async (req: Request, res: Response) => {
@@ -35,14 +42,23 @@ export const createApiToken = async (req: Request, res: Response) => {
     );
     logger.debug(`🔍 Fetched user: ${user.id}`);
 
-    // Generate API token with user-defined expiry
-    // Note: tenantId is no longer included in the token payload.
-    // The auth middleware reconstructs tenantHash from organizationId.
+    // The token inherits the creator's actual role (least privilege), not a
+    // hardcoded Admin. The auth middleware re-checks this role against the
+    // user's current role on every request, so the token cannot outlive a
+    // demotion. Role name is sourced from the cached live role map so newly
+    // added roles work without a code change.
+    const roleName = await getRoleNameById(user.role_id!);
+    if (!roleName) {
+      throw new ValidationException("Unable to resolve the creating user's role.");
+    }
+
+    // Generate API token with user-defined expiry.
+    // tenantHash is reconstructed from organizationId by the auth middleware.
     const apiToken = generateApiToken(
       {
         id: user.id!,
         email: user.email!,
-        roleName: "Admin",
+        roleName,
         organizationId: req.organizationId!,
       },
       expiryDays,
@@ -55,10 +71,12 @@ export const createApiToken = async (req: Request, res: Response) => {
     );
     logger.debug(`🔐 Generated API token for user: ${user.id}`);
 
+    // Only the SHA-256 hash of the token is persisted. The raw token is
+    // returned to the caller once, below, and never stored.
     const tokenResponse = await createApiTokenQuery(
       {
         name: name,
-        token: apiToken,
+        token: hashApiToken(apiToken),
         expires_at: new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000),
         created_by: req.userId!,
       },
@@ -74,7 +92,8 @@ export const createApiToken = async (req: Request, res: Response) => {
     logger.debug(`✅ Created API token: ${tokenResponse.id} for user: ${user.id}`);
 
     await transaction.commit();
-    return res.status(201).json(STATUS_CODE[201](tokenResponse));
+    // Return the raw token exactly once — it cannot be retrieved again.
+    return res.status(201).json(STATUS_CODE[201]({ ...tokenResponse, token: apiToken }));
   } catch (error) {
     await transaction.rollback();
     if (error instanceof ValidationException) {
@@ -173,6 +192,49 @@ export const deleteApiToken = async (req: Request, res: Response) => {
       req.organizationId!,
     );
     logger.error("❌ Error in deleteApiToken:", error);
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+};
+
+export const revokeApiToken = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  logger.debug(`🛠️ Revoking API token: ${id}`);
+  logStructured(
+    "processing",
+    `starting API token revocation for ${id}`,
+    "revokeApiToken",
+    "tokens.ctrl.ts",
+  );
+  try {
+    const success = await revokeApiTokenQuery(
+      parseInt(Array.isArray(id) ? id[0] : id),
+      req.organizationId!,
+    );
+    if (!success) {
+      logStructured(
+        "error",
+        `API token not found or already revoked: ${id}`,
+        "revokeApiToken",
+        "tokens.ctrl.ts",
+      );
+      return res
+        .status(404)
+        .json(STATUS_CODE[404]({ message: req.t!("API token not found or already revoked") }));
+    }
+    logStructured("successful", `revoked API token: ${id}`, "revokeApiToken", "tokens.ctrl.ts");
+    logger.debug(`✅ Revoked API token: ${id}`);
+    return res
+      .status(200)
+      .json(STATUS_CODE[200]({ message: req.t!("API token revoked successfully") }));
+  } catch (error) {
+    logStructured("error", `unexpected error: ${id}`, "revokeApiToken", "tokens.ctrl.ts");
+    await logEvent(
+      "Error",
+      `Unexpected error during API token revocation: ${(error as Error).message}`,
+      req.userId!,
+      req.organizationId!,
+    );
+    logger.error("❌ Error in revokeApiToken:", error);
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 };

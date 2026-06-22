@@ -151,14 +151,15 @@ export async function executeAiAction(
   organizationId: number,
   transaction: Transaction,
 ): Promise<void> {
+  logger.info(`[aiActionExecutor] START — approval_request_id=${requestId} org=${organizationId}`);
+
   const data = await loadEntityData(requestId, organizationId, transaction);
   if (!data) {
+    logger.error(`[aiActionExecutor] entity_data MISSING for request ${requestId}`);
     throw new Error(
       `[aiActionExecutor] approval_requests.entity_data is missing for request ${requestId}`,
     );
   }
-
-  logger.debug(`[aiActionExecutor] executing ${data.tool_name} for request ${requestId}`);
 
   // 1. Dispatch on tool_name via the registry. An unknown tool means
   //    either (a) the handler was removed without a migration path, or
@@ -167,6 +168,7 @@ export async function executeAiAction(
   if (!handler) {
     throw new Error(`[aiActionExecutor] unknown AI action tool: ${data.tool_name}`);
   }
+  logger.info(`[aiActionExecutor] handler resolved for tool_name=${data.tool_name}`);
 
   // 2. Re-validate the stored input at execute time. The LLM's input was
   //    validated when the approval was filed, but the schema may have
@@ -203,6 +205,9 @@ export async function executeAiAction(
   //    success or throw on failure; a throw rolls back the surrounding
   //    transaction, which is exactly what we want since the approval
   //    shouldn't land if the write didn't.
+  logger.info(
+    `[aiActionExecutor] calling handler.execute for tool=${data.tool_name} requesterId=${requesterId}`,
+  );
   const executeResult = await handler.execute({
     requesterId,
     organizationId,
@@ -210,6 +215,9 @@ export async function executeAiAction(
     inputParams: parsed.data,
     approvalRequestId: requestId,
   });
+  logger.info(
+    `[aiActionExecutor] handler.execute SUCCEEDED tool=${data.tool_name} entityId=${executeResult.entityId}`,
+  );
 
   // 5. Record the execution outcome on the approval row so the UI can
   //    surface it and so a later audit trail has a single place to look.

@@ -5,7 +5,6 @@ import {
   Stack,
   Typography,
   Chip as MuiChip,
-  Button,
   Card,
   CardContent,
   Divider,
@@ -30,6 +29,7 @@ import {
   Database as DatabaseIcon,
 } from "lucide-react";
 import { PageBreadcrumbs } from "../../../components/breadcrumbs/PageBreadcrumbs";
+import { CustomizableButton } from "../../../components/button/customizable-button";
 import { PageHeader } from "../../../components/Layout/PageHeader";
 import PluginSlot from "../../../components/PluginSlot";
 import { PLUGIN_SLOTS } from "../../../../domain/constants/pluginSlots";
@@ -51,11 +51,8 @@ import { BreadcrumbItem } from "../../../../domain/types/breadcrumbs.types";
 import { ENV_VARs } from "../../../../../env.vars";
 import { getConfigFields, ConfigField } from "./config-fields";
 import {
-  backButton,
   pluginIconPlaceholder,
   installedStatusChip,
-  installButton,
-  uninstallButton,
   formFieldLabel,
   testConnectionButton,
   saveConfigButton,
@@ -343,13 +340,12 @@ const PluginManagement: React.FC = () => {
           <Typography variant="h6" color="text.secondary">
             Plugin not found
           </Typography>
-          <Button
+          <CustomizableButton
             variant="outlined"
             onClick={() => navigate("/plugins/marketplace")}
             sx={{ mt: 2 }}
-          >
-            Go to Marketplace
-          </Button>
+            text="Go to Marketplace"
+          />
         </Box>
       </Stack>
     );
@@ -361,13 +357,11 @@ const PluginManagement: React.FC = () => {
 
       {/* Back Button */}
       <Box>
-        <Button
+        <CustomizableButton
           startIcon={<ArrowLeftIcon size={16} />}
           onClick={() => navigate("/plugins/my-plugins")}
-          sx={backButton}
-        >
-          Back to My Plugins
-        </Button>
+          text="Back to My Plugins"
+        />
       </Box>
 
       <PageHeader title={plugin.displayName} description={plugin.description} />
@@ -558,7 +552,7 @@ const PluginManagement: React.FC = () => {
                   plugin.installationStatus === PluginInstallationStatus.UNINSTALLED ||
                   plugin.installationStatus === PluginInstallationStatus.FAILED) && (
                   <Box sx={{ display: "flex", gap: 2 }}>
-                    <Button
+                    <CustomizableButton
                       variant="contained"
                       onClick={async () => {
                         try {
@@ -600,32 +594,31 @@ const PluginManagement: React.FC = () => {
                           });
                         }
                       }}
-                      disabled={installing === plugin.key}
-                      sx={installButton}
-                    >
-                      {installing === plugin.key
-                        ? "Installing..."
-                        : plugin.installationStatus === PluginInstallationStatus.FAILED
+                      loading={installing === plugin.key}
+                      isDisabled={installing === plugin.key}
+                      text={
+                        plugin.installationStatus === PluginInstallationStatus.FAILED
                           ? "Retry Installation"
-                          : "Install plugin"}
-                    </Button>
+                          : "Install plugin"
+                      }
+                    />
                   </Box>
                 )}
 
                 {/* Uninstall Button - Show when plugin is installed */}
                 {plugin.installationStatus === PluginInstallationStatus.INSTALLED && (
                   <Box sx={{ display: "flex", gap: 2 }}>
-                    <Button
+                    <CustomizableButton
                       variant="outlined"
                       color="error"
                       onClick={handleUninstallClick}
-                      disabled={uninstalling === plugin.installationId}
-                      sx={uninstallButton}
-                    >
-                      {uninstalling === plugin.installationId
-                        ? "Uninstalling..."
-                        : "Uninstall Plugin"}
-                    </Button>
+                      isDisabled={uninstalling === plugin.installationId}
+                      text={
+                        uninstalling === plugin.installationId
+                          ? "Uninstalling..."
+                          : "Uninstall Plugin"
+                      }
+                    />
                   </Box>
                 )}
               </Stack>
@@ -864,22 +857,20 @@ const PluginManagement: React.FC = () => {
                             <Box
                               sx={{ display: "flex", justifyContent: "flex-end", gap: 2, mt: 3 }}
                             >
-                              <Button
+                              <CustomizableButton
                                 variant="outlined"
                                 onClick={handleTestConnection}
-                                disabled={isTestingConnection || isSavingConfig}
+                                isDisabled={isTestingConnection || isSavingConfig}
                                 sx={testConnectionButton}
-                              >
-                                {isTestingConnection ? "Testing..." : "Test Connection"}
-                              </Button>
-                              <Button
+                                text={isTestingConnection ? "Testing..." : "Test Connection"}
+                              />
+                              <CustomizableButton
                                 variant="contained"
                                 onClick={handleSaveConfiguration}
-                                disabled={isSavingConfig || isTestingConnection}
+                                isDisabled={isSavingConfig || isTestingConnection}
                                 sx={saveConfigButton}
-                              >
-                                {isSavingConfig ? "Saving..." : "Save Configuration"}
-                              </Button>
+                                text={isSavingConfig ? "Saving..." : "Save Configuration"}
+                              />
                             </Box>
                           </>
                         )}

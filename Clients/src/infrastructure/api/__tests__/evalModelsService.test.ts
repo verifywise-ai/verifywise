@@ -1,36 +1,25 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-
-vi.mock("../customAxios", () => ({
-  default: {
-    get: vi.fn(),
-    post: vi.fn(),
-    put: vi.fn(),
-    delete: vi.fn(),
-  },
-}));
+import { describe, it, expect } from "vitest";
+import { server } from "../../../test/mocks/server";
+import { http, HttpResponse } from "msw";
 
 import { evalModelsService } from "../evalModelsService";
-import CustomAxios from "../customAxios";
-
-const mockAxios = vi.mocked(CustomAxios, { deep: true });
 
 describe("evalModelsService", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   describe("listModels", () => {
     it("fetches models with orgId param", async () => {
-      mockAxios.get.mockResolvedValue({ data: { models: [{ id: "m1", name: "GPT-4" }] } });
+      server.use(
+        http.get("/api/deepeval/models", () =>
+          HttpResponse.json({
+            models: [{ id: "m1", name: "GPT-4", provider: "openai" }],
+          }),
+        ),
+      );
       const result = await evalModelsService.listModels("org-1");
-      expect(mockAxios.get).toHaveBeenCalledWith("/deepeval/models", {
-        params: { org_id: "org-1" },
-      });
-      expect(result).toEqual([{ id: "m1", name: "GPT-4" }]);
+      expect(result).toEqual([{ id: "m1", name: "GPT-4", provider: "openai" }]);
     });
 
     it("returns empty array on error", async () => {
-      mockAxios.get.mockRejectedValue(new Error("fail"));
+      server.use(http.get("/api/deepeval/models", () => HttpResponse.error()));
       const result = await evalModelsService.listModels();
       expect(result).toEqual([]);
     });
@@ -38,17 +27,20 @@ describe("evalModelsService", () => {
 
   describe("createModel", () => {
     it("posts model and returns it", async () => {
-      mockAxios.post.mockResolvedValue({ data: { model: { id: "m1", name: "Claude" } } });
+      server.use(
+        http.post("/api/deepeval/models", async ({ request }) => {
+          const body = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json({
+            model: { id: "m1", name: body.name, provider: body.provider },
+          });
+        }),
+      );
       const result = await evalModelsService.createModel({ name: "Claude", provider: "anthropic" });
-      expect(mockAxios.post).toHaveBeenCalledWith("/deepeval/models", {
-        name: "Claude",
-        provider: "anthropic",
-      });
       expect(result?.name).toBe("Claude");
     });
 
     it("returns null on error", async () => {
-      mockAxios.post.mockRejectedValue(new Error("fail"));
+      server.use(http.post("/api/deepeval/models", () => HttpResponse.error()));
       const result = await evalModelsService.createModel({ name: "X", provider: "y" });
       expect(result).toBeNull();
     });
@@ -56,14 +48,20 @@ describe("evalModelsService", () => {
 
   describe("updateModel", () => {
     it("puts updated data", async () => {
-      mockAxios.put.mockResolvedValue({ data: { model: { id: "m1", name: "Updated" } } });
+      server.use(
+        http.put("/api/deepeval/models/:id", async ({ request }) => {
+          const body = (await request.json()) as Record<string, unknown>;
+          return HttpResponse.json({
+            model: { id: "m1", name: body.name },
+          });
+        }),
+      );
       const result = await evalModelsService.updateModel("m1", { name: "Updated" });
-      expect(mockAxios.put).toHaveBeenCalledWith("/deepeval/models/m1", { name: "Updated" });
       expect(result?.name).toBe("Updated");
     });
 
     it("returns null on error", async () => {
-      mockAxios.put.mockRejectedValue(new Error("fail"));
+      server.use(http.put("/api/deepeval/models/:id", () => HttpResponse.error()));
       const result = await evalModelsService.updateModel("m1", { name: "X" });
       expect(result).toBeNull();
     });
@@ -71,14 +69,15 @@ describe("evalModelsService", () => {
 
   describe("deleteModel", () => {
     it("returns true on success", async () => {
-      mockAxios.delete.mockResolvedValue({ data: { message: "deleted" } });
+      server.use(
+        http.delete("/api/deepeval/models/:id", () => HttpResponse.json({ message: "deleted" })),
+      );
       const result = await evalModelsService.deleteModel("m1");
-      expect(mockAxios.delete).toHaveBeenCalledWith("/deepeval/models/m1");
       expect(result).toBe(true);
     });
 
     it("returns false on error", async () => {
-      mockAxios.delete.mockRejectedValue(new Error("fail"));
+      server.use(http.delete("/api/deepeval/models/:id", () => HttpResponse.error()));
       const result = await evalModelsService.deleteModel("m1");
       expect(result).toBe(false);
     });

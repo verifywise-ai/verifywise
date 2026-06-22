@@ -16,6 +16,8 @@ import { useBulkSelection } from "../../../application/hooks/useBulkSelection";
 import { useBulkUpdatePolicies } from "../../../application/hooks/useBulkUpdatePolicies";
 import { POLICY_TAGS } from "../../../domain/models/Common/policy/policyManager.model";
 import { store } from "../../../application/redux/store";
+import { useCustomFieldDefinitions } from "../../../application/hooks/useCustomFields";
+import { formatCustomFieldValue } from "../CustomFieldsSection/formatCustomFieldValue";
 
 const tableHeaders = [
   { id: "title", name: "Title" },
@@ -50,11 +52,20 @@ const PolicyTable: React.FC<PolicyTableProps> = ({
     [visibleColumns],
   );
 
-  const visibleTableHeaders = useMemo(
-    () =>
-      tableHeaders.filter((col) => col.id === "title" || col.id === "actions" || isVisible(col.id)),
-    [isVisible],
-  );
+  const { data: customFieldDefs = [] } = useCustomFieldDefinitions("policy");
+
+  const visibleTableHeaders = useMemo(() => {
+    const builtIns = tableHeaders.filter(
+      (col) => col.id === "title" || col.id === "actions" || isVisible(col.id),
+    );
+    const customCols = customFieldDefs.map((d) => ({
+      id: `cf_${d.id}`,
+      name: d.label,
+    }));
+    const actionsIdx = builtIns.findIndex((c) => c.id === "actions");
+    if (actionsIdx === -1) return [...builtIns, ...customCols];
+    return [...builtIns.slice(0, actionsIdx), ...customCols, ...builtIns.slice(actionsIdx)];
+  }, [isVisible, customFieldDefs]);
 
   const { users } = useUsers();
 
@@ -434,6 +445,16 @@ const PolicyTable: React.FC<PolicyTableProps> = ({
                 {getUserNameById(policy.last_updated_by)}
               </TableCell>
             )}
+            {customFieldDefs.map((def) => {
+              const match = (policy as any).custom_fields?.find(
+                (cf: { definition_id: number; value: unknown }) => cf.definition_id === def.id,
+              );
+              return (
+                <TableCell key={`cf_${def.id}`} sx={cellStyle}>
+                  {formatCustomFieldValue(def, match?.value, users)}
+                </TableCell>
+              );
+            })}
             <TableCell
               sx={{
                 backgroundColor:

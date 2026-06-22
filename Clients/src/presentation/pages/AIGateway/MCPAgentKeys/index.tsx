@@ -12,7 +12,6 @@ import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtende
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import palette from "../../../themes/palette";
 import {
-  useCardSx,
   CODE_BLOCK_BG,
   CODE_BLOCK_TEXT,
   WARNING_BG,
@@ -20,6 +19,7 @@ import {
   WARNING_TEXT,
   KEY_DISPLAY_BG,
 } from "../shared";
+import MCPTable from "../MCPTable";
 import { displayFormattedDate } from "../../../tools/isoDateToString";
 import dayjs from "dayjs";
 
@@ -48,7 +48,6 @@ interface AgentKey {
 }
 
 export default function MCPAgentKeysPage() {
-  const cardSx = useCardSx();
   const [keys, setKeys] = useState<AgentKey[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -224,97 +223,90 @@ export default function MCPAgentKeysPage() {
       )}
 
       {!loading && keys.length > 0 && (
-        <Box sx={cardSx}>
-          <Stack gap="8px">
-            {keys.map((key) => {
+        <Box sx={{ px: 3, pb: 3 }}>
+          <MCPTable
+            id="mcp-agent-keys-table"
+            columns={[
+              { label: "Name", width: 200 },
+              { label: "Status", width: 110 },
+              { label: "Prefix", width: 140 },
+              { label: "Rate limit", width: 100 },
+              { label: "Tools", width: 160 },
+              { label: "Created", width: 200 },
+              { label: "", width: 60, align: "right" },
+            ]}
+            rows={keys}
+            rowKey={(key) => key.id}
+            renderRow={(key) => {
               const status = getStatusLabel(key);
-
-              return (
-                <Stack
-                  key={key.id}
-                  direction="row"
-                  justifyContent="space-between"
-                  alignItems="center"
-                  sx={{
-                    p: "12px 16px",
-                    border: `1px solid ${palette.border.dark}`,
-                    borderRadius: "4px",
-                  }}
+              return [
+                <Box>
+                  <Stack direction="row" alignItems="center" gap="8px">
+                    <KeyRound size={14} strokeWidth={1.5} color={palette.text.tertiary} />
+                    <Typography sx={{ fontSize: 13, fontWeight: 500 }}>{key.name}</Typography>
+                  </Stack>
+                  {key.description && (
+                    <Typography sx={{ fontSize: 12, color: palette.text.tertiary, mt: "2px" }}>
+                      {key.description}
+                    </Typography>
+                  )}
+                </Box>,
+                <Chip label={status} size="small" uppercase={false} />,
+                <Typography
+                  sx={{ fontSize: 12, color: palette.text.tertiary, fontFamily: "monospace" }}
                 >
-                  <Stack direction="row" alignItems="center" gap="12px" flex={1}>
-                    <KeyRound size={16} strokeWidth={1.5} color={palette.text.tertiary} />
-                    <Box flex={1}>
-                      <Stack direction="row" alignItems="center" gap="8px">
-                        <Typography sx={{ fontSize: 13, fontWeight: 500 }}>{key.name}</Typography>
-                        <Chip label={status} size="small" uppercase={false} />
-                      </Stack>
-                      <Stack direction="row" gap="12px" alignItems="center" mt="2px">
-                        <Typography
-                          sx={{
-                            fontSize: 12,
-                            color: palette.text.tertiary,
-                            fontFamily: "monospace",
-                          }}
-                        >
-                          {key.key_prefix}
-                        </Typography>
-                        {key.rate_limit_rpm && (
-                          <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
-                            {key.rate_limit_rpm} RPM
-                          </Typography>
-                        )}
-                        {key.allowed_tools?.length > 0 && (
-                          <Chip
-                            label={`${key.allowed_tools.length} allowed tool${key.allowed_tools.length !== 1 ? "s" : ""}`}
-                            size="small"
-                            uppercase={false}
-                          />
-                        )}
-                        {key.blocked_tools?.length > 0 && (
-                          <Chip
-                            label={`${key.blocked_tools.length} blocked tool${key.blocked_tools.length !== 1 ? "s" : ""}`}
-                            size="small"
-                            uppercase={false}
-                          />
-                        )}
-                        <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
-                          by {key.created_by_name} &middot; {displayFormattedDate(key.created_at)}
-                        </Typography>
-                      </Stack>
-                      {key.description && (
-                        <Typography sx={{ fontSize: 12, color: palette.text.tertiary, mt: "2px" }}>
-                          {key.description}
-                        </Typography>
-                      )}
-                    </Box>
-                  </Stack>
-
-                  <Stack direction="row" alignItems="center" gap="4px">
-                    {key.is_active && !key.revoked_at && (
-                      <IconButton
-                        size="small"
-                        onClick={() => setRevokeTarget(key)}
-                        sx={{ p: 0.5 }}
-                        aria-label="Revoke key"
-                      >
-                        <Ban size={14} strokeWidth={1.5} color={palette.text.tertiary} />
-                      </IconButton>
-                    )}
-                    {!key.is_active && (
-                      <IconButton
-                        size="small"
-                        onClick={() => handleDelete(key.id)}
-                        sx={{ p: 0.5 }}
-                        aria-label="Delete key"
-                      >
-                        <Trash2 size={14} strokeWidth={1.5} color={palette.text.tertiary} />
-                      </IconButton>
-                    )}
-                  </Stack>
-                </Stack>
-              );
-            })}
-          </Stack>
+                  {key.key_prefix}
+                </Typography>,
+                <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
+                  {key.rate_limit_rpm ? `${key.rate_limit_rpm} RPM` : "—"}
+                </Typography>,
+                <Stack direction="row" gap="6px" flexWrap="wrap">
+                  {key.allowed_tools?.length > 0 && (
+                    <Chip
+                      label={`${key.allowed_tools.length} allowed`}
+                      size="small"
+                      uppercase={false}
+                    />
+                  )}
+                  {key.blocked_tools?.length > 0 && (
+                    <Chip
+                      label={`${key.blocked_tools.length} blocked`}
+                      size="small"
+                      uppercase={false}
+                    />
+                  )}
+                  {!key.allowed_tools?.length && !key.blocked_tools?.length && (
+                    <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>All</Typography>
+                  )}
+                </Stack>,
+                <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
+                  by {key.created_by_name} &middot; {displayFormattedDate(key.created_at)}
+                </Typography>,
+                <Stack direction="row" alignItems="center" justifyContent="flex-end" gap="4px">
+                  {key.is_active && !key.revoked_at && (
+                    <IconButton
+                      size="small"
+                      onClick={() => setRevokeTarget(key)}
+                      sx={{ p: 0.5 }}
+                      aria-label="Revoke key"
+                    >
+                      <Ban size={14} strokeWidth={1.5} color={palette.text.tertiary} />
+                    </IconButton>
+                  )}
+                  {!key.is_active && (
+                    <IconButton
+                      size="small"
+                      onClick={() => handleDelete(key.id)}
+                      sx={{ p: 0.5 }}
+                      aria-label="Delete key"
+                    >
+                      <Trash2 size={14} strokeWidth={1.5} color={palette.text.tertiary} />
+                    </IconButton>
+                  )}
+                </Stack>,
+              ];
+            }}
+          />
         </Box>
       )}
 
@@ -345,15 +337,17 @@ export default function MCPAgentKeysPage() {
           />
           <Field
             label="Allowed tools"
-            placeholder="e.g., search, get_weather, run_query (comma-separated, leave empty for all)"
+            placeholder="e.g., search, get_weather, run_query"
             value={createForm.allowed_tools}
             onChange={(e) => setCreateForm((p) => ({ ...p, allowed_tools: e.target.value }))}
+            helperText="Allowlist for MCP server tools called through the proxy: if set, this key may call only these tools. Comma-separated; leave empty to allow all. (Does not apply to native tools like Bash/Edit/Write — govern those with guardrails.)"
           />
           <Field
             label="Blocked tools"
-            placeholder="e.g., delete_record, drop_table (comma-separated)"
+            placeholder="e.g., delete_record, drop_table"
             value={createForm.blocked_tools}
             onChange={(e) => setCreateForm((p) => ({ ...p, blocked_tools: e.target.value }))}
+            helperText="Denylist for MCP server tools called through the proxy: these are always denied, even if also in the allowlist. Comma-separated; leave empty to block none."
           />
           <Field
             label="Rate limit (requests per minute)"

@@ -21,6 +21,10 @@ import {
 import { ComponentVisible } from "./application/interfaces/ComponentVisible";
 import { AlertProps } from "./presentation/types/alert.types";
 import { setShowAlertCallback } from "./infrastructure/api/customAxios";
+import {
+  storageService,
+  type UserPreferences as StoredPreferences,
+} from "./infrastructure/storage";
 import Alert from "./presentation/components/Alert";
 import useUsers from "./application/hooks/useUsers";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
@@ -164,7 +168,7 @@ function App() {
 
   useEffect(() => {
     if (userPreferences) {
-      localStorage.setItem("verifywise_preferences", JSON.stringify(userPreferences));
+      storageService.set("preferences", userPreferences as StoredPreferences);
     }
   }, [userPreferences]);
 

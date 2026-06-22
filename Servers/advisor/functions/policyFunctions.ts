@@ -586,12 +586,211 @@ const getTemplateRecommendations = async (
   }
 };
 
+// ── Write Tools (Human Confirmation Flow) ──────────────────────────────
+
+import { createWriteToolFn } from "../confirmation/createWriteTool";
+import { sequelize } from "../../database/db";
+import { QueryTypes } from "sequelize";
+
+const agentCreatePolicy = createWriteToolFn({
+  toolName: "agent_create_policy",
+  warningLevel: "warning",
+  descriptionFn: (params) =>
+    `Create policy "${params.policy_name}"${params.tags ? ` with tags: ${(params.tags as string[]).join(", ")}` : ""}`,
+  executeFn: async (params, organizationId) => {
+    const userId = (params._userId as number) || 0;
+    const tags = (params.tags as string[]) || [];
+
+    const [result] = await sequelize.query(
+      `INSERT INTO policy_manager (
+        organization_id, title, content_html, status, tags, next_review_date, author_id, last_updated_by, last_updated_at, is_demo
+      ) VALUES (
+        :organization_id, :title, :content_html, :status, ARRAY[:tags], :next_review_date, :author_id, :last_updated_by, :last_updated_at, false
+      ) RETURNING *`,
+      {
+        replacements: {
+          organization_id: organizationId,
+          title: params.policy_name as string,
+          content_html: (params.description as string) || "",
+          status: (params.status as string) || "Draft",
+          tags,
+          next_review_date: params.review_date ? new Date(params.review_date as string) : null,
+          author_id: userId,
+          last_updated_by: userId,
+          last_updated_at: new Date(),
+        },
+        type: QueryTypes.SELECT,
+      },
+    );
+
+    return result;
+  },
+});
+
+const agentUpdatePolicy = createWriteToolFn({
+  toolName: "agent_update_policy",
+  warningLevel: "warning",
+  descriptionFn: (params) => {
+    const fields = Object.keys(params).filter(
+      (k) => k !== "policy_id" && k !== "_userId" && k !== "_organizationId",
+    );
+    return `Update policy #${params.policy_id} — fields: ${fields.join(", ")}`;
+  },
+  executeFn: async (params, organizationId) => {
+    const policyId = params.policy_id as number;
+    const userId = (params._userId as number) || 0;
+    const updateFields: string[] = [];
+    const replacements: Record<string, unknown> = {
+      organizationId,
+      id: policyId,
+      last_updated_by: userId,
+      last_updated_at: new Date(),
+    };
+
+    // Always update audit fields
+    updateFields.push("last_updated_by = :last_updated_by");
+    updateFields.push("last_updated_at = :last_updated_at");
+
+    if (params.policy_name !== undefined) {
+      updateFields.push("title = :title");
+      replacements.title = params.policy_name;
+    }
+    if (params.description !== undefined) {
+      updateFields.push("content_html = :content_html");
+      replacements.content_html = params.description;
+    }
+    if (params.status !== undefined) {
+      updateFields.push("status = :status");
+      replacements.status = params.status;
+    }
+    if (params.tags !== undefined) {
+      updateFields.push("tags = ARRAY[:tags]");
+      replacements.tags = params.tags as string[];
+    }
+    if (params.review_date !== undefined) {
+      updateFields.push("next_review_date = :next_review_date");
+      replacements.next_review_date = new Date(params.review_date as string);
+    }
+
+    const [result] = await sequelize.query(
+      `UPDATE policy_manager SET ${updateFields.join(", ")} WHERE organization_id = :organizationId AND id = :id RETURNING *`,
+      {
+        replacements,
+        type: QueryTypes.SELECT,
+      },
+    );
+
+    if (!result) {
+      throw new Error(`Policy #${policyId} not found`);
+    }
+
+    return result;
+  },
+});
+
+const agentSubmitPolicyForReview = createWriteToolFn({
+  toolName: "agent_submit_policy_for_review",
+  warningLevel: "warning",
+  descriptionFn: (params) => `Submit policy #${params.policy_id} for review`,
+  executeFn: async (params, organizationId) => {
+    const policyId = params.policy_id as number;
+    const userId = (params._userId as number) || 0;
+
+    const [result] = await sequelize.query(
+      `UPDATE policy_manager SET status = 'Under Review', last_updated_by = :userId, last_updated_at = :now
+       WHERE organization_id = :organizationId AND id = :id RETURNING *`,
+      {
+        replacements: {
+          organizationId,
+          id: policyId,
+          userId,
+          now: new Date(),
+        },
+        type: QueryTypes.SELECT,
+      },
+    );
+
+    if (!result) {
+      throw new Error(`Policy #${policyId} not found`);
+    }
+
+    return result;
+  },
+});
+
+const agentApprovePolicyReview = createWriteToolFn({
+  toolName: "agent_approve_policy_review",
+  warningLevel: "warning",
+  descriptionFn: (params) =>
+    `Approve policy #${params.policy_id} review${params.approval_notes ? ` with notes` : ""}`,
+  executeFn: async (params, organizationId) => {
+    const policyId = params.policy_id as number;
+    const userId = (params._userId as number) || 0;
+
+    const [result] = await sequelize.query(
+      `UPDATE policy_manager SET status = 'Approved', review_status = 'approved', reviewed_by = :userId, reviewed_at = :now, review_comment = :comment, last_updated_by = :userId, last_updated_at = :now
+       WHERE organization_id = :organizationId AND id = :id RETURNING *`,
+      {
+        replacements: {
+          organizationId,
+          id: policyId,
+          userId,
+          now: new Date(),
+          comment: (params.approval_notes as string) || null,
+        },
+        type: QueryTypes.SELECT,
+      },
+    );
+
+    if (!result) {
+      throw new Error(`Policy #${policyId} not found`);
+    }
+
+    return result;
+  },
+});
+
+const agentDeletePolicy = createWriteToolFn({
+  toolName: "agent_delete_policy",
+  warningLevel: "danger",
+  descriptionFn: (params) => `Delete policy #${params.policy_id}`,
+  executeFn: async (params, organizationId) => {
+    const policyId = params.policy_id as number;
+
+    // Delete reviewer mappings first
+    await sequelize.query(
+      `DELETE FROM policy_manager__assigned_reviewer_ids WHERE organization_id = :organizationId AND policy_manager_id = :policyId`,
+      { replacements: { organizationId, policyId } },
+    );
+
+    // Delete the policy
+    const result = await sequelize.query(
+      `DELETE FROM policy_manager WHERE organization_id = :organizationId AND id = :policyId RETURNING id`,
+      {
+        replacements: { organizationId, policyId },
+        type: QueryTypes.SELECT,
+      },
+    );
+
+    if (!result || result.length === 0) {
+      throw new Error(`Policy #${policyId} not found`);
+    }
+
+    return { policy_id: policyId, deleted: true };
+  },
+});
+
 const availablePolicyTools: Record<string, Function> = {
   fetch_policies: fetchPolicies,
   get_policy_analytics: getPolicyAnalytics,
   get_policy_executive_summary: getPolicyExecutiveSummary,
   search_policy_templates: searchPolicyTemplates,
   get_template_recommendations: getTemplateRecommendations,
+  agent_create_policy: agentCreatePolicy,
+  agent_update_policy: agentUpdatePolicy,
+  agent_submit_policy_for_review: agentSubmitPolicyForReview,
+  agent_approve_policy_review: agentApprovePolicyReview,
+  agent_delete_policy: agentDeletePolicy,
 };
 
 export { availablePolicyTools };

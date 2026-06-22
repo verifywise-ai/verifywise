@@ -57,7 +57,7 @@ export interface IAuditRiskTableBodyProps {
   setCheckedRows: (checkedRows: number[]) => void;
 }
 
-export interface IEvaluationRow {
+export interface IExperimentRow {
   id: string;
   name?: string;
   model: string;
@@ -69,32 +69,30 @@ export interface IEvaluationRow {
   status: "In Progress" | "Completed" | "Failed" | "Pending" | "Running" | "Available";
 }
 
-export interface IEvaluationTableBodyProps {
-  rows: IEvaluationRow[];
+export interface IExperimentTableBodyProps {
+  rows: IExperimentRow[];
   page: number;
   rowsPerPage: number;
-  onShowDetails: (model: IEvaluationRow) => void;
-  onRemoveModel?: {
-    onConfirm: (id: string) => void;
-  };
-  onRerun?: (model: IEvaluationRow) => void;
-  onDownload?: (model: IEvaluationRow) => void;
-  onCopy?: (model: IEvaluationRow) => void;
+  onRowClick: (experiment: IExperimentRow) => void;
+  onRerun?: (experiment: IExperimentRow) => void;
+  onDownload?: (experiment: IExperimentRow) => void;
+  onCopy?: (experiment: IExperimentRow) => void;
+  onDelete?: (id: string) => void;
+  /** When true, hides the LINKED MODEL column and the ACTION column. */
+  compact?: boolean;
 }
 
-export interface IEvaluationTableProps {
-  columns: string[];
-  rows: IEvaluationRow[];
-  removeModel?: {
-    onConfirm: (id: string) => void; // actually deletes
-  };
-  page: number;
-  setCurrentPagingation: (pageNo: number) => void;
-  onShowDetails: (model: IEvaluationRow) => void;
-  onRerun?: (model: IEvaluationRow) => void;
-  onDownload?: (model: IEvaluationRow) => void;
-  onCopy?: (model: IEvaluationRow) => void;
+export interface IExperimentTableProps {
+  rows: IExperimentRow[];
+  onRowClick: (experiment: IExperimentRow) => void;
+  onRerun?: (experiment: IExperimentRow) => void;
+  onDownload?: (experiment: IExperimentRow) => void;
+  onCopy?: (experiment: IExperimentRow) => void;
+  onDelete?: (id: string) => void;
+  loading?: boolean;
   hidePagination?: boolean;
+  /** When true, hides the LINKED MODEL column and the ACTION column. */
+  compact?: boolean;
 }
 
 export interface IEventsTableProps {

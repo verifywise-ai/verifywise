@@ -1,4 +1,4 @@
-import { Box, Divider, Stack, Typography, useTheme, Button } from "@mui/material";
+import { Box, Divider, Stack, Typography, useTheme } from "@mui/material";
 import { FC, useEffect, useState, useMemo } from "react";
 import { useFormValidation } from "../../../../application/hooks/useFormValidation";
 import StandardModal from "../StandardModal";
@@ -15,7 +15,6 @@ import {
   stepContainerStyle,
   stepTitleStyle,
   removeStepLinkContainer,
-  removeStepButtonStyle,
   verticalStepDividerStyle,
   stepFieldsContainer,
   conditionsSelectStyle,
@@ -226,13 +225,12 @@ const CreateNewApprovalWorkflow: FC<ICreateApprovalWorkflowProps> = ({
                 <Box sx={stepNumberStyle}>{stepIndex + 1}</Box>
                 <Typography sx={stepTitleStyle}>{"STEP " + (stepIndex + 1)}</Typography>
                 <Box sx={removeStepLinkContainer}>
-                  <Button
+                  <CustomizableButton
                     variant="text"
+                    color="error"
                     onClick={() => removeStep(stepIndex)}
-                    sx={removeStepButtonStyle(stepIndex === 0)}
-                  >
-                    Remove step
-                  </Button>
+                    text={"Remove step"}
+                  />
                 </Box>
               </Stack>
               <Stack direction="row" alignItems="flex-start">

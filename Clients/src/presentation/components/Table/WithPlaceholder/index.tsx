@@ -40,6 +40,8 @@ import { getRiskScoreColor } from "../../../../domain/utils/vendorScorecard.util
 import { VWLink } from "../../Link";
 import VendorLogo from "../../VendorLogo";
 import { text } from "../../../themes/palette";
+import { useCustomFieldDefinitions } from "../../../../application/hooks/useCustomFields";
+import { formatCustomFieldValue } from "../../CustomFieldsSection/formatCustomFieldValue";
 
 const VENDORS_ROWS_PER_PAGE_KEY = "verifywise_vendors_rows_per_page";
 const VENDORS_SORTING_KEY = "verifywise_vendors_sorting";
@@ -211,12 +213,28 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
     [visibleColumns],
   );
 
-  const visibleTableColumns = useMemo(
-    () =>
-      titleOfTableColumns.filter(
-        (col) => col.id === "vendor_name" || col.id === "actions" || isVisible(col.id),
-      ),
-    [isVisible],
+  const { data: customFieldDefs = [] } = useCustomFieldDefinitions("vendor");
+
+  const visibleTableColumns = useMemo(() => {
+    const builtIns = titleOfTableColumns.filter(
+      (col) => col.id === "vendor_name" || col.id === "actions" || isVisible(col.id),
+    );
+    // Insert custom field columns between the last built-in non-actions column
+    // (typically "review_date") and the "actions" column at the end.
+    const actionsIdx = builtIns.findIndex((c) => c.id === "actions");
+    const customCols = customFieldDefs.map((d) => ({
+      id: `cf_${d.id}`,
+      label: d.label,
+      sortable: false,
+    }));
+    if (actionsIdx === -1) return [...builtIns, ...customCols];
+    return [...builtIns.slice(0, actionsIdx), ...customCols, ...builtIns.slice(actionsIdx)];
+  }, [isVisible, customFieldDefs]);
+
+  const formatCfValue = useCallback(
+    (def: { field_type: string; label?: string }, raw: unknown) =>
+      formatCustomFieldValue(def, raw, users),
+    [users],
   );
 
   // Sorting handlers
@@ -499,6 +517,14 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
                       : "No review date"}
                   </TableCell>
                 )}
+                {customFieldDefs.map((def) => {
+                  const match = row.custom_fields?.find((cf) => cf.definition_id === def.id);
+                  return (
+                    <TableCell key={`cf_${def.id}`} sx={cellStyle}>
+                      {formatCfValue(def, match?.value)}
+                    </TableCell>
+                  );
+                })}
                 <TableCell
                   sx={{
                     ...singleTheme.tableStyles.primary.body.cell,
@@ -541,6 +567,8 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
       getVendorRiskCount,
       hidePagination,
       isVisible,
+      customFieldDefs,
+      formatCfValue,
     ],
   );
 

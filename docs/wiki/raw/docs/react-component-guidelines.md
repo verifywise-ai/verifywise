@@ -1,0 +1,1 @@
+/Users/halitozger/Desktop/verifywise/.claude/worktrees/practical-euler/CodeRules/03-react/component-guidelines.md

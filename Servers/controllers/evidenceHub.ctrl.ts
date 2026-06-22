@@ -10,6 +10,7 @@ import {
 } from "../utils/evidenceHub.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import logger, { logStructured } from "../utils/logger/fileLogger";
+import { sanitizeUserHtml } from "../utils/sanitizeUserHtml";
 import { translateError } from "../utils/i18n.utils";
 import {
   recordEvidenceAddedToModel,
@@ -27,7 +28,7 @@ export async function getAllEvidences(req: Request, res: Response) {
   logger.debug("🔍 Fetching all evidences");
 
   try {
-    const evidences = (await getAllEvidencesQuery(req.organizationId!)) as EvidenceHubModel[];
+    const evidences = await getAllEvidencesQuery(req.organizationId!);
 
     if (evidences && evidences.length > 0) {
       logStructured(
@@ -36,7 +37,7 @@ export async function getAllEvidences(req: Request, res: Response) {
         "getAllEvidences",
         "evidenceHub.controller.ts",
       );
-      return res.status(200).json(STATUS_CODE[200](evidences.map((e) => e.toSafeJSON())));
+      return res.status(200).json(STATUS_CODE[200](evidences));
     }
 
     logStructured(
@@ -71,11 +72,13 @@ export async function getEvidenceById(req: Request, res: Response) {
       "getEvidenceById",
       "evidenceHub.controller.ts",
     );
-    return res.status(400).json({
-      status: "error",
-      message: "Invalid evidence ID",
-      code: "INVALID_PARAMETER",
-    });
+    return res.status(400).json(
+      STATUS_CODE[400]({
+        status: "error",
+        message: "Invalid evidence ID",
+        code: "INVALID_PARAMETER",
+      }),
+    );
   }
 
   try {
@@ -121,6 +124,7 @@ export async function createNewEvidence(req: Request, res: Response) {
   try {
     const evidence = new EvidenceHubModel({
       ...req.body,
+      description: sanitizeUserHtml(req.body?.description),
       uploaded_at: new Date(),
       created_at: new Date(),
       updated_at: new Date(),
@@ -173,11 +177,13 @@ export async function createNewEvidence(req: Request, res: Response) {
 export async function updateEvidenceById(req: Request, res: Response) {
   const evidenceId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
   if (isNaN(evidenceId)) {
-    return res.status(400).json({
-      status: "error",
-      message: "Invalid evidence ID",
-      code: "INVALID_PARAMETER",
-    });
+    return res.status(400).json(
+      STATUS_CODE[400]({
+        status: "error",
+        message: "Invalid evidence ID",
+        code: "INVALID_PARAMETER",
+      }),
+    );
   }
 
   const transaction = await sequelize.transaction();
@@ -202,7 +208,13 @@ export async function updateEvidenceById(req: Request, res: Response) {
     // Track field changes for models that remain mapped
     const continuingModels = newMappedModels.filter((id: number) => oldMappedModels.includes(id));
 
-    Object.assign(existingEvidence, { ...req.body, updated_at: new Date() });
+    Object.assign(existingEvidence, {
+      ...req.body,
+      ...(req.body?.description !== undefined && {
+        description: sanitizeUserHtml(req.body.description),
+      }),
+      updated_at: new Date(),
+    });
     const updatedEvidence = await updateEvidenceByIdQuery(
       evidenceId,
       existingEvidence,
@@ -287,11 +299,13 @@ export async function updateEvidenceById(req: Request, res: Response) {
 export async function deleteEvidenceById(req: Request, res: Response) {
   const evidenceId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
   if (isNaN(evidenceId)) {
-    return res.status(400).json({
-      status: "error",
-      message: "Invalid evidence ID",
-      code: "INVALID_PARAMETER",
-    });
+    return res.status(400).json(
+      STATUS_CODE[400]({
+        status: "error",
+        message: "Invalid evidence ID",
+        code: "INVALID_PARAMETER",
+      }),
+    );
   }
 
   const transaction = await sequelize.transaction();

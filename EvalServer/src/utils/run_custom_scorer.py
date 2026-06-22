@@ -274,20 +274,52 @@ async def run_custom_scorer(
     scorer_id = scorer_config.get("id", "unknown")
     scorer_name = scorer_config.get("name", "Custom Scorer")
     config = scorer_config.get("config", {})
-    
-    # Get judge model settings - handle both object and string formats
-    judge_model_config = config.get("judgeModel", {})
-    if isinstance(judge_model_config, dict):
-        model_name = judge_model_config.get("name")
-        model_params = judge_model_config.get("params", {})
+
+    # Normalize judge-model shape. Scorers may be persisted in any of three shapes
+    # depending on which write path created them:
+    #   1. Nested (Scorers page / _upsert_judge_scorer):
+    #        config = {"provider": ..., "judgeModel": {"name", "provider", ...}, ...}
+    #   2. Legacy string (very old records):
+    #        config = {"judgeModel": "<model name>"}
+    #   3. Flat (older useModelPreferences.savePreferences output — see PR fix):
+    #        config = {"provider": ..., "model": ..., ...}  # no judgeModel key
+    # We merge them into one canonical nested dict, with nested values taking
+    # precedence over flat ones, so downstream code only has to deal with shape #1.
+    raw_judge_model = config.get("judgeModel")
+    if isinstance(raw_judge_model, dict):
+        judge_model_config: Dict[str, Any] = {
+            "name": raw_judge_model.get("name") or config.get("model"),
+            "provider": raw_judge_model.get("provider") or config.get("provider"),
+            "params": raw_judge_model.get("params") or config.get("modelParams") or {},
+            "endpointUrl": raw_judge_model.get("endpointUrl") or config.get("endpointUrl"),
+            "apiKey": raw_judge_model.get("apiKey") or config.get("apiKey"),
+        }
+    elif isinstance(raw_judge_model, str):
+        judge_model_config = {
+            "name": raw_judge_model,
+            "provider": config.get("provider"),
+            "params": config.get("modelParams") or {},
+            "endpointUrl": config.get("endpointUrl"),
+            "apiKey": config.get("apiKey"),
+        }
     else:
-        # Legacy: judgeModel is just a string
-        model_name = judge_model_config
-        model_params = {}
-    
+        judge_model_config = {
+            "name": config.get("model"),
+            "provider": config.get("provider"),
+            "params": config.get("modelParams") or {},
+            "endpointUrl": config.get("endpointUrl"),
+            "apiKey": config.get("apiKey"),
+        }
+
+    model_name = judge_model_config.get("name")
+    model_params = judge_model_config.get("params") or {}
+
     if not model_name:
-        raise ValueError(f"Scorer {scorer_name} has no judge model configured")
-    
+        raise ValueError(
+            f"Scorer {scorer_name} has no judge model configured "
+            "(checked config.judgeModel.name, config.judgeModel (str), and config.model)"
+        )
+
     # Get the provider from config (user explicitly selects provider + model)
     provider, endpoint_url, config_api_key = get_provider_from_config(judge_model_config)
     print(f"   🔍 Using provider: {provider} for model: {model_name}")

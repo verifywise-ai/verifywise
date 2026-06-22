@@ -44,8 +44,6 @@ const shadow = "0px 4px 24px -4px rgba(16, 24, 40, 0.08), 0px 3px 3px -3px rgba(
 >
   ...
 </Dialog>`,
-  skeletonShadow: `// SkeletonCard shadow (for empty states)
-boxShadow: "0 8px 30px rgba(0,0,0,.08)"`,
 };
 
 const ShadowsSection: React.FC = () => {
@@ -80,7 +78,7 @@ const ShadowsSection: React.FC = () => {
     {
       name: "Skeleton",
       value: "0 8px 30px rgba(0,0,0,.08)",
-      usage: "Empty state skeletons",
+      usage: "Elevated card stacks",
       css: "0 8px 30px rgba(0,0,0,.08)",
     },
   ];

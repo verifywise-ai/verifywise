@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import { getTokenPayload } from "../utils/jwt.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
-import { roleMap } from "./auth.middleware";
+import { hasRoleId } from "../utils/roleMap";
 import { checkPendingInvitationQuery } from "../utils/invitation.utils";
 
 const registerJWT = async (
@@ -42,6 +42,8 @@ const registerJWT = async (
         }),
       );
 
+    const roleIsKnown = await hasRoleId(Number(roleId));
+
     console.log("🔍 Registration validation:", {
       tokenRoleId: decoded.roleId,
       requestRoleId: roleId,
@@ -49,14 +51,14 @@ const registerJWT = async (
       requestOrgId: organizationId,
       roleIdMatch: Number(decoded.roleId) === Number(roleId),
       orgIdMatch: Number(decoded.organizationId) === Number(organizationId),
-      roleInMap: roleMap.has(Number(roleId)),
+      roleInMap: roleIsKnown,
     });
 
     // Convert both to numbers for comparison to handle string/number mismatches
     if (
       Number(decoded.roleId) !== Number(roleId) ||
       Number(decoded.organizationId) !== Number(organizationId) ||
-      !roleMap.has(Number(roleId))
+      !roleIsKnown
     ) {
       console.error("❌ Registration validation failed");
       return res.status(403).json({ message: req.t!("Role or Organization mismatch") });

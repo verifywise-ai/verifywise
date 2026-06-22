@@ -1,4 +1,4 @@
-import { useContext, useEffect, useState, useRef } from "react";
+import { useContext, useEffect, useState, useRef, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
 import { FrameworkTypeEnum } from "../../../components/Forms/ProjectForm/constants";
@@ -7,7 +7,6 @@ import PageTour from "../../../components/PageTour";
 import HomeSteps from "./HomeSteps";
 import useMultipleOnScreen from "../../../../application/hooks/useMultipleOnScreen";
 import { useDashboard } from "../../../../application/hooks/useDashboard";
-import { Project } from "../../../../domain/types/Project";
 import ProjectList from "../../../components/ProjectsList/ProjectsList";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import allowedRoles from "../../../../application/constants/permissions";
@@ -20,24 +19,17 @@ import { brand } from "../../../themes/palette";
 const Home = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const {
-    setDashboardValues,
-    componentsVisible,
-    changeComponentVisibility,
-    refreshUsers,
-    userRoleName,
-  } = useContext(VerifyWiseContext);
+  const { componentsVisible, changeComponentVisibility, refreshUsers, userRoleName } =
+    useContext(VerifyWiseContext);
   const [isProjectFormModalOpen, setIsProjectFormModalOpen] = useState<boolean>(false);
   const [isScreeningOpen, setIsScreeningOpen] = useState<boolean>(false);
   const [refreshProjectsFlag, setRefreshProjectsFlag] = useState<boolean>(false);
 
-  const [projects, setProjects] = useState<Project[]>([]);
-  const { dashboard, fetchDashboard } = useDashboard();
+  const { dashboard, isPending, fetchDashboard } = useDashboard();
 
-  useEffect(() => {
-    if (dashboard) {
-      setProjects(dashboard.projects_list.filter((p) => !p.is_organizational));
-    }
+  const projects = useMemo(() => {
+    if (!dashboard) return [];
+    return dashboard.projects_list.filter((p) => !p.is_organizational);
   }, [dashboard]);
 
   const [runHomeTour, setRunHomeTour] = useState(false);
@@ -58,14 +50,9 @@ const Home = () => {
   }, [componentsVisible]);
 
   useEffect(() => {
-    const fetchProgressData = async () => {
-      await refreshUsers();
-
-      await fetchDashboard();
-    };
-
-    fetchProgressData();
-  }, [setDashboardValues, fetchDashboard, refreshProjectsFlag]);
+    void refreshUsers();
+    void fetchDashboard();
+  }, [fetchDashboard, refreshProjectsFlag, refreshUsers]);
 
   const submitFormRef = useRef<(() => void) | undefined>(undefined);
 
@@ -94,6 +81,7 @@ const Home = () => {
       {/* Projects List */}
       <ProjectList
         projects={projects}
+        isLoading={isPending}
         onProjectDeleted={() => setRefreshProjectsFlag((prev) => !prev)}
         newProjectButton={
           <div data-joyride-id="new-project-button" ref={newProjectButtonRef}>

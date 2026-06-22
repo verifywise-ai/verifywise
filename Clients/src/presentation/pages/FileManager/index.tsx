@@ -18,7 +18,7 @@ import {
   UpdateFileMetadataInput,
 } from "../../../application/repository/file.repository";
 import { transformFilesData } from "../../../application/utils/fileTransform.utils";
-import { filesTableFrame, filesTablePlaceholder } from "./styles";
+import { filesTableFrame } from "./styles";
 import { FileModel } from "../../../domain/models/Common/file/file.model";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import FileManagerUploadModal from "../../components/Modals/FileManagerUpload";
@@ -935,13 +935,7 @@ const FileManager: React.FC = (): JSX.Element => {
             }}
           >
             {isLoading ? (
-              <Box sx={{ padding: "24px", textAlign: "center" }}>
-                <Typography sx={{ color: "text.icon" }}>Loading files...</Typography>
-                <CustomizableSkeleton
-                  variant="rectangular"
-                  sx={{ ...filesTablePlaceholder, marginTop: 2 }}
-                />
-              </Box>
+              <CustomizableSkeleton variant="rectangular" height={400} />
             ) : filesError ? (
               <Box
                 sx={{

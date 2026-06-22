@@ -1,6 +1,6 @@
 import { SxProps, Theme } from "@mui/material";
-import { commonStyles, flashAnimation, getStatusColor } from "../style";
-import { background, border as borderPalette } from "../../../themes/palette";
+import { commonStyles, flashAnimation } from "../style";
+import { border as borderPalette } from "../../../themes/palette";
 
 // Component styles
 export const styles = {
@@ -9,15 +9,6 @@ export const styles = {
   accordion: commonStyles.accordion,
   accordionSummary: commonStyles.accordionSummary,
   expandIcon: commonStyles.expandIcon,
-
-  statusBadge: (status: string) =>
-    ({
-      borderRadius: "4px",
-      padding: "5px",
-      backgroundColor: getStatusColor(status),
-      color: `${background.main}`,
-      height: "fit-content",
-    }) as SxProps<Theme>,
 
   loadingContainer: {
     padding: "16px",

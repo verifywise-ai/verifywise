@@ -227,3 +227,15 @@ export async function deleteUserProfilePhoto(
   const response = await apiServices.delete<DeleteResponse>(`/users/${userId}/profile-photo`);
   return response;
 }
+
+export async function loginUserWithMicrosoft({
+  code,
+  organizationId,
+  redirectUri,
+}: {
+  code: string;
+  organizationId: number;
+  redirectUri: string;
+}): Promise<any> {
+  return apiServices.post(`/users/login-microsoft`, { code, organizationId, redirectUri });
+}

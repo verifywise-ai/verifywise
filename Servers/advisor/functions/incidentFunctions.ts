@@ -4,8 +4,17 @@ import {
   Severity,
   IncidentType,
 } from "../../domain.layer/enums/ai-incident-management.enum";
-import { getAllIncidentsQuery } from "../../utils/incidentManagement.utils";
+import {
+  getAllIncidentsQuery,
+  getIncidentByIdQuery,
+  createNewIncidentQuery,
+  updateIncidentByIdQuery,
+  deleteIncidentByIdQuery,
+  archiveIncidentByIdQuery,
+} from "../../utils/incidentManagement.utils";
 import { AIIncidentManagementModel } from "../../domain.layer/models/incidentManagement/incidemtManagement.model";
+import { createWriteToolFn } from "../confirmation/createWriteTool";
+import { sequelize } from "../../database/db";
 import logger from "../../utils/logger/fileLogger";
 
 export interface FetchIncidentsParams {
@@ -42,19 +51,49 @@ const fetchIncidents = async (
       incidents = incidents.filter((i) => !i.archived);
     }
 
-    if (params.type) {
-      incidents = incidents.filter((i) => i.type === params.type);
+    // Case-insensitive severity mapping (LLM may send "high", "critical", etc.)
+    const severityMap: Record<string, string> = {
+      low: "Minor",
+      minor: "Minor",
+      medium: "Serious",
+      moderate: "Serious",
+      serious: "Serious",
+      high: "Serious",
+      critical: "Very serious",
+      "very serious": "Very serious",
+      major: "Very serious",
+    };
+    const statusMap: Record<string, string> = {
+      open: "Open",
+      investigating: "Investigating",
+      mitigated: "Mitigated",
+      closed: "Closed",
+      resolved: "Mitigated",
+    };
+
+    // Skip empty string filters (LLM sometimes sends "" as default)
+    const hasValue = (v: unknown) => v !== undefined && v !== null && v !== "";
+
+    if (hasValue(params.type)) {
+      incidents = incidents.filter(
+        (i) => i.type?.toLowerCase() === (params.type as string).toLowerCase(),
+      );
     }
-    if (params.severity) {
-      incidents = incidents.filter((i) => i.severity === params.severity);
+    if (hasValue(params.severity)) {
+      const mapped = severityMap[(params.severity as string).toLowerCase()] || params.severity;
+      incidents = incidents.filter((i) => i.severity === mapped);
     }
-    if (params.status) {
-      incidents = incidents.filter((i) => i.status === params.status);
+    if (hasValue(params.status)) {
+      const mapped = statusMap[(params.status as string).toLowerCase()] || params.status;
+      incidents = incidents.filter((i) => i.status === mapped);
     }
-    if (params.approval_status) {
-      incidents = incidents.filter((i) => i.approval_status === params.approval_status);
+    if (hasValue(params.approval_status)) {
+      incidents = incidents.filter(
+        (i) =>
+          i.approval_status?.toLowerCase() === (params.approval_status as string).toLowerCase(),
+      );
     }
-    if (params.ai_project) {
+    if (hasValue(params.ai_project)) {
       incidents = incidents.filter(
         (i) =>
           i.ai_project && i.ai_project.toLowerCase().includes(params.ai_project!.toLowerCase()),
@@ -411,10 +450,172 @@ const getIncidentExecutiveSummary = async (
   }
 };
 
+// ── Write Tools (Human Confirmation Flow) ──────────────────────────
+
+const agentCreateIncident = createWriteToolFn({
+  toolName: "agent_create_incident",
+  warningLevel: "warning",
+  descriptionFn: (params) =>
+    `Create incident "${params.title}"${params.severity ? ` (${params.severity})` : ""}`,
+  executeFn: async (params, organizationId) => {
+    const transaction = await sequelize.transaction();
+    try {
+      const incidentData = {
+        ai_project: (params.title as string) || "",
+        description: (params.description as string) || "",
+        type: (params.type as string) || "Malfunction",
+        severity: (params.severity as string) || "Minor",
+        status: "Open",
+        occurred_date: new Date(),
+        date_detected: new Date(),
+        reporter: "",
+        approval_status: "Pending",
+        approved_by: "",
+        categories_of_harm: [],
+        affected_persons_groups: "",
+        relationship_causality: "",
+        immediate_mitigations: "",
+        planned_corrective_actions: "",
+        model_system_version: "",
+        interim_report: false,
+        approval_date: null,
+        approval_notes: "",
+        archived: false,
+        is_demo: false,
+      } as unknown as AIIncidentManagementModel;
+
+      const result = await createNewIncidentQuery(incidentData, organizationId, transaction);
+      await transaction.commit();
+      return { id: result.id, ai_project: result.ai_project, status: result.status };
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  },
+});
+
+const agentUpdateIncident = createWriteToolFn({
+  toolName: "agent_update_incident",
+  warningLevel: "warning",
+  descriptionFn: (params) =>
+    `Update incident #${params.incident_id}${params.title ? ` title to "${params.title}"` : ""}`,
+  executeFn: async (params, organizationId) => {
+    const transaction = await sequelize.transaction();
+    try {
+      // Fetch existing incident to merge with updates
+      const existing = await getIncidentByIdQuery(params.incident_id as number, organizationId);
+      if (!existing) {
+        throw new Error(`Incident #${params.incident_id} not found`);
+      }
+
+      const incidentData = {
+        ...existing.dataValues,
+        ai_project: params.title !== undefined ? (params.title as string) : existing.ai_project,
+        description:
+          params.description !== undefined ? (params.description as string) : existing.description,
+        type: params.type !== undefined ? (params.type as string) : existing.type,
+        severity: params.severity !== undefined ? (params.severity as string) : existing.severity,
+        status: params.status !== undefined ? (params.status as string) : existing.status,
+      } as AIIncidentManagementModel;
+
+      const result = await updateIncidentByIdQuery(
+        params.incident_id as number,
+        incidentData,
+        organizationId,
+        transaction,
+      );
+      await transaction.commit();
+      return { id: result.id, ai_project: result.ai_project, status: result.status };
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  },
+});
+
+const agentUpdateIncidentStatus = createWriteToolFn({
+  toolName: "agent_update_incident_status",
+  warningLevel: "warning",
+  descriptionFn: (params) => `Update incident #${params.incident_id} status to "${params.status}"`,
+  executeFn: async (params, organizationId) => {
+    const transaction = await sequelize.transaction();
+    try {
+      const existing = await getIncidentByIdQuery(params.incident_id as number, organizationId);
+      if (!existing) {
+        throw new Error(`Incident #${params.incident_id} not found`);
+      }
+
+      const incidentData = {
+        ...existing.dataValues,
+        status: params.status as string,
+      } as AIIncidentManagementModel;
+
+      const result = await updateIncidentByIdQuery(
+        params.incident_id as number,
+        incidentData,
+        organizationId,
+        transaction,
+      );
+      await transaction.commit();
+      return { id: result.id, ai_project: result.ai_project, status: result.status };
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  },
+});
+
+const agentArchiveIncident = createWriteToolFn({
+  toolName: "agent_archive_incident",
+  warningLevel: "danger",
+  descriptionFn: (params) => `Archive incident #${params.incident_id}`,
+  executeFn: async (params, organizationId) => {
+    const transaction = await sequelize.transaction();
+    try {
+      const result = await archiveIncidentByIdQuery(
+        params.incident_id as number,
+        organizationId,
+        transaction,
+      );
+      await transaction.commit();
+      return { id: result.id, ai_project: result.ai_project, archived: true };
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  },
+});
+
+const agentDeleteIncident = createWriteToolFn({
+  toolName: "agent_delete_incident",
+  warningLevel: "danger",
+  descriptionFn: (params) => `Permanently delete incident #${params.incident_id}`,
+  executeFn: async (params, organizationId) => {
+    const transaction = await sequelize.transaction();
+    try {
+      const result = await deleteIncidentByIdQuery(
+        params.incident_id as number,
+        organizationId,
+        transaction,
+      );
+      await transaction.commit();
+      return { deleted: true, incident_id: params.incident_id, ai_project: result?.ai_project };
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  },
+});
+
 const availableIncidentTools: any = {
   fetch_incidents: fetchIncidents,
   get_incident_analytics: getIncidentAnalytics,
   get_incident_executive_summary: getIncidentExecutiveSummary,
+  agent_create_incident: agentCreateIncident,
+  agent_update_incident: agentUpdateIncident,
+  agent_update_incident_status: agentUpdateIncidentStatus,
+  agent_archive_incident: agentArchiveIncident,
+  agent_delete_incident: agentDeleteIncident,
 };
 
 export { availableIncidentTools };

@@ -94,6 +94,12 @@ export interface IVWProjectRisksTableRow {
     direction: "asc" | "desc" | null;
   };
   visibleColumns?: Set<string>;
+  /** Custom field definitions to render as extra columns. */
+  customFieldDefs?: Array<{
+    id: number;
+    label: string;
+    field_type: string;
+  }>;
   /** When provided, renders a leading checkbox cell on each row. */
   selection?: {
     isSelected: (id: number) => boolean;

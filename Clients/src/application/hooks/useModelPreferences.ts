@@ -56,9 +56,18 @@ export function useModelPreferences(projectId: string, orgId?: string | null) {
         deepEvalScorersService.list({ org_id: currentOrgId || undefined }),
       ]);
 
-      // Find the latest judge scorer (type: "llm" with judge config)
+      // Find the latest judge scorer (type: "llm" with judge config).
+      // Scorers may be persisted in either the flat shape ({provider, model}) used by
+      // this hook historically, or the nested shape ({judgeModel: {name, provider}})
+      // used by the Scorers page. Accept both so we don't lose the latest pick.
       const latestJudge = scorersRes.scorers
-        .filter((s) => s.type === "llm" && s.config?.provider && s.config?.model)
+        .filter((s) => {
+          if (s.type !== "llm") return false;
+          const cfg = s.config;
+          const provider = cfg?.judgeModel?.provider || cfg?.provider;
+          const model = cfg?.judgeModel?.name || cfg?.model;
+          return Boolean(provider && model);
+        })
         .sort((a, b) => {
           const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
           const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
@@ -80,12 +89,22 @@ export function useModelPreferences(projectId: string, orgId?: string | null) {
                 accessMethod: "",
                 endpointUrl: undefined,
               },
-          // Use latest judge from scorers, or default
+          // Use latest judge from scorers, or default. Read both shapes:
+          // nested config.judgeModel.{name,provider,endpointUrl} takes precedence
+          // (canonical / Scorers-page shape), with fall-through to the flat
+          // {provider, model, endpointUrl} historically written by this hook.
           judgeLlm: latestJudge
             ? {
-                provider: latestJudge.config?.provider || "openai",
-                model: latestJudge.config?.model || "gpt-4o",
-                endpointUrl: latestJudge.config?.endpointUrl || undefined,
+                provider:
+                  latestJudge.config?.judgeModel?.provider ||
+                  latestJudge.config?.provider ||
+                  "openai",
+                model:
+                  latestJudge.config?.judgeModel?.name || latestJudge.config?.model || "gpt-4o",
+                endpointUrl:
+                  latestJudge.config?.judgeModel?.endpointUrl ||
+                  latestJudge.config?.endpointUrl ||
+                  undefined,
               }
             : {
                 provider: "openai",
@@ -164,9 +183,19 @@ export function useModelPreferences(projectId: string, orgId?: string | null) {
         if (prefs.judgeLlm?.provider && prefs.judgeLlm?.model) {
           const scorersRes = await deepEvalScorersService.list({ org_id: currentOrgId });
           const judgeScorerName = `Judge: ${prefs.judgeLlm.model}`;
+          // Persist BOTH shapes:
+          //  - nested `judgeModel` is what EvalServer's run_custom_scorer reads at
+          //    runtime; omitting it causes "Scorer has no judge model configured".
+          //  - flat `provider` / `model` are kept for backward compatibility with
+          //    older reads elsewhere in the UI.
           const judgeConfig = {
             provider: prefs.judgeLlm.provider,
             model: prefs.judgeLlm.model,
+            judgeModel: {
+              name: prefs.judgeLlm.model,
+              provider: prefs.judgeLlm.provider,
+              ...(prefs.judgeLlm.endpointUrl ? { endpointUrl: prefs.judgeLlm.endpointUrl } : {}),
+            },
             ...(prefs.judgeLlm.endpointUrl ? { endpointUrl: prefs.judgeLlm.endpointUrl } : {}),
           };
 

@@ -64,7 +64,7 @@ export async function getConfigByProjectId(req: Request, res: Response): Promise
     functionName: "getConfigByProjectId",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   if (isNaN(projectId)) {
@@ -81,7 +81,7 @@ export async function getConfigByProjectId(req: Request, res: Response): Promise
         functionName: "getConfigByProjectId",
         fileName: FILE_NAME,
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(404).json(STATUS_CODE[404]({ message: req.t!("Config not found") }));
     }
@@ -92,7 +92,7 @@ export async function getConfigByProjectId(req: Request, res: Response): Promise
       functionName: "getConfigByProjectId",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(200).json(STATUS_CODE[200](config));
   } catch (error) {
@@ -103,7 +103,7 @@ export async function getConfigByProjectId(req: Request, res: Response): Promise
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -117,7 +117,7 @@ export async function createConfig(req: Request, res: Response): Promise<any> {
     functionName: "createConfig",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -165,7 +165,7 @@ export async function createConfig(req: Request, res: Response): Promise<any> {
       functionName: "createConfig",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(201).json(STATUS_CODE[201](completeConfig));
   } catch (error) {
@@ -177,7 +177,7 @@ export async function createConfig(req: Request, res: Response): Promise<any> {
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -194,7 +194,7 @@ export async function updateConfig(req: Request, res: Response): Promise<any> {
     functionName: "updateConfig",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   if (isNaN(configId)) {
@@ -212,7 +212,7 @@ export async function updateConfig(req: Request, res: Response): Promise<any> {
         functionName: "updateConfig",
         fileName: FILE_NAME,
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(404).json(STATUS_CODE[404]({ message: req.t!("Config not found") }));
     }
@@ -223,7 +223,7 @@ export async function updateConfig(req: Request, res: Response): Promise<any> {
       functionName: "updateConfig",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(200).json(STATUS_CODE[200](config));
   } catch (error) {
@@ -234,7 +234,7 @@ export async function updateConfig(req: Request, res: Response): Promise<any> {
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -251,7 +251,7 @@ export async function deleteConfig(req: Request, res: Response): Promise<any> {
     functionName: "deleteConfig",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   if (isNaN(configId)) {
@@ -268,7 +268,7 @@ export async function deleteConfig(req: Request, res: Response): Promise<any> {
         functionName: "deleteConfig",
         fileName: FILE_NAME,
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(404).json(STATUS_CODE[404]({ message: req.t!("Config not found") }));
     }
@@ -279,7 +279,7 @@ export async function deleteConfig(req: Request, res: Response): Promise<any> {
       functionName: "deleteConfig",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(200).json(STATUS_CODE[200]({ message: req.t!("Config deleted") }));
   } catch (error) {
@@ -290,7 +290,7 @@ export async function deleteConfig(req: Request, res: Response): Promise<any> {
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -313,7 +313,7 @@ export async function getQuestions(req: Request, res: Response): Promise<any> {
     functionName: "getQuestions",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -325,7 +325,7 @@ export async function getQuestions(req: Request, res: Response): Promise<any> {
       functionName: "getQuestions",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(200).json(STATUS_CODE[200](questions));
   } catch (error) {
@@ -336,7 +336,7 @@ export async function getQuestions(req: Request, res: Response): Promise<any> {
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -348,7 +348,7 @@ export async function addQuestion(req: Request, res: Response): Promise<any> {
     functionName: "addQuestion",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -380,7 +380,7 @@ export async function addQuestion(req: Request, res: Response): Promise<any> {
       functionName: "addQuestion",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(201).json(STATUS_CODE[201](question));
   } catch (error) {
@@ -391,7 +391,7 @@ export async function addQuestion(req: Request, res: Response): Promise<any> {
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -408,7 +408,7 @@ export async function updateQuestion(req: Request, res: Response): Promise<any> 
     functionName: "updateQuestion",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   if (isNaN(questionId)) {
@@ -442,7 +442,7 @@ export async function updateQuestion(req: Request, res: Response): Promise<any> 
       functionName: "updateQuestion",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(200).json(STATUS_CODE[200](question));
   } catch (error) {
@@ -453,7 +453,7 @@ export async function updateQuestion(req: Request, res: Response): Promise<any> 
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -470,7 +470,7 @@ export async function deleteQuestion(req: Request, res: Response): Promise<any> 
     functionName: "deleteQuestion",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   if (isNaN(questionId)) {
@@ -494,7 +494,7 @@ export async function deleteQuestion(req: Request, res: Response): Promise<any> 
       functionName: "deleteQuestion",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(200).json(STATUS_CODE[200]({ message: req.t!("Question deleted") }));
   } catch (error) {
@@ -505,7 +505,7 @@ export async function deleteQuestion(req: Request, res: Response): Promise<any> 
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -517,7 +517,7 @@ export async function reorderQuestions(req: Request, res: Response): Promise<any
     functionName: "reorderQuestions",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -550,7 +550,7 @@ export async function reorderQuestions(req: Request, res: Response): Promise<any
       functionName: "reorderQuestions",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(200).json(STATUS_CODE[200]({ message: req.t!("Questions reordered") }));
   } catch (error) {
@@ -561,7 +561,7 @@ export async function reorderQuestions(req: Request, res: Response): Promise<any
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -582,7 +582,7 @@ export async function getActiveCycle(req: Request, res: Response): Promise<any> 
     functionName: "getActiveCycle",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   if (isNaN(projectId)) {
@@ -599,7 +599,7 @@ export async function getActiveCycle(req: Request, res: Response): Promise<any> 
         functionName: "getActiveCycle",
         fileName: FILE_NAME,
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(404).json(
         STATUS_CODE[404]({
@@ -614,7 +614,7 @@ export async function getActiveCycle(req: Request, res: Response): Promise<any> 
       functionName: "getActiveCycle",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(200).json(STATUS_CODE[200](cycle));
   } catch (error) {
@@ -625,7 +625,7 @@ export async function getActiveCycle(req: Request, res: Response): Promise<any> 
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -642,7 +642,7 @@ export async function getCycleById(req: Request, res: Response): Promise<any> {
     functionName: "getCycleById",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   if (isNaN(cycleId)) {
@@ -662,7 +662,7 @@ export async function getCycleById(req: Request, res: Response): Promise<any> {
       functionName: "getCycleById",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(200).json(STATUS_CODE[200](cycle));
   } catch (error) {
@@ -673,7 +673,7 @@ export async function getCycleById(req: Request, res: Response): Promise<any> {
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -690,7 +690,7 @@ export async function getResponses(req: Request, res: Response): Promise<any> {
     functionName: "getResponses",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   if (isNaN(cycleId)) {
@@ -712,7 +712,7 @@ export async function getResponses(req: Request, res: Response): Promise<any> {
       functionName: "getResponses",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(200).json(STATUS_CODE[200](responses));
   } catch (error) {
@@ -723,7 +723,7 @@ export async function getResponses(req: Request, res: Response): Promise<any> {
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -740,7 +740,7 @@ export async function saveResponses(req: Request, res: Response): Promise<any> {
     functionName: "saveResponses",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   if (isNaN(cycleId)) {
@@ -779,7 +779,7 @@ export async function saveResponses(req: Request, res: Response): Promise<any> {
       functionName: "saveResponses",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(200).json(STATUS_CODE[200](savedResponses));
   } catch (error) {
@@ -790,7 +790,7 @@ export async function saveResponses(req: Request, res: Response): Promise<any> {
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -807,7 +807,7 @@ export async function submitCycle(req: Request, res: Response): Promise<any> {
     functionName: "submitCycle",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   if (isNaN(cycleId)) {
@@ -906,7 +906,7 @@ export async function submitCycle(req: Request, res: Response): Promise<any> {
       functionName: "submitCycle",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(200).json(
@@ -925,7 +925,7 @@ export async function submitCycle(req: Request, res: Response): Promise<any> {
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -942,7 +942,7 @@ export async function flagConcern(req: Request, res: Response): Promise<any> {
     functionName: "flagConcern",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   if (isNaN(cycleId)) {
@@ -979,7 +979,7 @@ export async function flagConcern(req: Request, res: Response): Promise<any> {
       functionName: "flagConcern",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(200).json(
       STATUS_CODE[200]({
@@ -994,7 +994,7 @@ export async function flagConcern(req: Request, res: Response): Promise<any> {
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -1010,7 +1010,7 @@ export async function getReports(req: Request, res: Response): Promise<any> {
     functionName: "getReports",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -1081,7 +1081,7 @@ export async function getReports(req: Request, res: Response): Promise<any> {
       functionName: "getReports",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(200).json(
       STATUS_CODE[200]({
@@ -1099,7 +1099,7 @@ export async function getReports(req: Request, res: Response): Promise<any> {
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -1116,7 +1116,7 @@ export async function downloadReport(req: Request, res: Response): Promise<any> 
     functionName: "downloadReport",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   if (isNaN(reportId)) {
@@ -1158,7 +1158,7 @@ export async function downloadReport(req: Request, res: Response): Promise<any> 
       functionName: "downloadReport",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     // Redirect to file download endpoint
@@ -1171,7 +1171,7 @@ export async function downloadReport(req: Request, res: Response): Promise<any> 
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -1192,7 +1192,7 @@ export async function reassignStakeholder(req: Request, res: Response): Promise<
     functionName: "reassignStakeholder",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   if (isNaN(cycleId)) {
@@ -1235,7 +1235,7 @@ export async function reassignStakeholder(req: Request, res: Response): Promise<
       functionName: "reassignStakeholder",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(200).json(
       STATUS_CODE[200]({
@@ -1250,7 +1250,7 @@ export async function reassignStakeholder(req: Request, res: Response): Promise<
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -1267,7 +1267,7 @@ export async function startNewCycle(req: Request, res: Response): Promise<any> {
     functionName: "startNewCycle",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   if (isNaN(projectId)) {
@@ -1333,7 +1333,7 @@ export async function startNewCycle(req: Request, res: Response): Promise<any> {
       functionName: "startNewCycle",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(201).json(STATUS_CODE[201](cycle));
   } catch (error) {
@@ -1345,7 +1345,7 @@ export async function startNewCycle(req: Request, res: Response): Promise<any> {
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }

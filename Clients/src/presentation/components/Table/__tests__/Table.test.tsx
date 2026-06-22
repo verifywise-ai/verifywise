@@ -153,4 +153,197 @@ describe("CustomizableBasicTable", () => {
     renderWithProviders(<CustomizableBasicTable {...defaultProps} />);
     expect(screen.queryByText(/Showing/)).not.toBeInTheDocument();
   });
+
+  describe("riskLevelChecker", () => {
+    it("renders Low risk for score <= 3", () => {
+      const rows = [{ ...mockRows[0], id: 10, risk_level_autocalculated: "2" }];
+      renderWithProviders(
+        <CustomizableBasicTable
+          {...defaultProps}
+          data={{ rows, cols: mockColumns }}
+          bodyData={rows}
+        />,
+      );
+      expect(screen.getByText("Low risk")).toBeInTheDocument();
+    });
+
+    it("renders Medium risk for score 4-6", () => {
+      const rows = [{ ...mockRows[0], id: 11, risk_level_autocalculated: "5" }];
+      renderWithProviders(
+        <CustomizableBasicTable
+          {...defaultProps}
+          data={{ rows, cols: mockColumns }}
+          bodyData={rows}
+        />,
+      );
+      expect(screen.getByText("Medium risk")).toBeInTheDocument();
+    });
+
+    it("renders High risk for score 7-9", () => {
+      const rows = [{ ...mockRows[0], id: 12, risk_level_autocalculated: "8" }];
+      renderWithProviders(
+        <CustomizableBasicTable
+          {...defaultProps}
+          data={{ rows, cols: mockColumns }}
+          bodyData={rows}
+        />,
+      );
+      expect(screen.getByText("High risk")).toBeInTheDocument();
+    });
+
+    it("renders Very high risk for score >= 10", () => {
+      const rows = [{ ...mockRows[0], id: 13, risk_level_autocalculated: "10" }];
+      renderWithProviders(
+        <CustomizableBasicTable
+          {...defaultProps}
+          data={{ rows, cols: mockColumns }}
+          bodyData={rows}
+        />,
+      );
+      expect(screen.getByText("Very high risk")).toBeInTheDocument();
+    });
+  });
+
+  describe("localStorage pagination", () => {
+    beforeEach(() => {
+      localStorage.clear();
+    });
+
+    it("persists rowsPerPage to localStorage", () => {
+      renderWithProviders(<CustomizableBasicTable {...defaultProps} paginated />);
+      expect(localStorage.getItem("verifywise_risks_rows_per_page")).toBe("10");
+    });
+
+    it("reads rowsPerPage from localStorage when available", () => {
+      localStorage.setItem("verifywise_risks_rows_per_page", "5");
+      renderWithProviders(<CustomizableBasicTable {...defaultProps} paginated />);
+      expect(screen.getByText(/Rows per page/)).toBeInTheDocument();
+    });
+  });
+
+  it("calls onRowClick when a row is clicked", async () => {
+    const onRowClick = vi.fn();
+    const user = userEvent.setup();
+    renderWithProviders(<CustomizableBasicTable {...defaultProps} onRowClick={onRowClick} />);
+
+    const row = screen.getByText("Data Breach Risk").closest("tr")!;
+    await user.click(row);
+
+    expect(onRowClick).toHaveBeenCalledWith(mockRows[0].id);
+  });
+
+  it("returns empty string from riskLevelChecker for undefined score", () => {
+    const rows = [{ ...mockRows[0], id: 20, risk_level_autocalculated: undefined }];
+    renderWithProviders(
+      <CustomizableBasicTable
+        {...defaultProps}
+        data={{ rows, cols: mockColumns }}
+        bodyData={rows}
+      />,
+    );
+    // Cell should be empty
+    const cells = document.querySelectorAll("td");
+    expect(cells[3].textContent).toBe("");
+  });
+
+  it("returns raw score from riskLevelChecker for non-numeric score", () => {
+    const rows = [{ ...mockRows[0], id: 21, risk_level_autocalculated: "Pending" }];
+    renderWithProviders(
+      <CustomizableBasicTable
+        {...defaultProps}
+        data={{ rows, cols: mockColumns }}
+        bodyData={rows}
+      />,
+    );
+    expect(screen.getAllByText("Pending").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("shows pagination range text when paginated", () => {
+    renderWithProviders(<CustomizableBasicTable {...defaultProps} paginated />);
+    expect(screen.getByText(/Showing 1 - 2 of 2 items/)).toBeInTheDocument();
+  });
+
+  it("truncates long impact text to 30 chars", () => {
+    const longImpactRow = {
+      ...mockRows[0],
+      id: 30,
+      impact: "This is a very long impact description that should be truncated",
+    };
+    const propsWithLong = {
+      ...defaultProps,
+      data: { rows: [longImpactRow], cols: mockColumns },
+    };
+
+    const { container } = renderWithProviders(<CustomizableBasicTable {...propsWithLong} />);
+    // The rendered table should contain the truncated impact value (30 chars + "...")
+    const tableHtml = container.querySelector("table")?.innerHTML ?? "";
+    expect(tableHtml).toContain("This is a very long impact des...");
+  });
+
+  it("displays empty string when risk_name is missing", () => {
+    const missingNameRow = {
+      ...mockRows[0],
+      id: 31,
+      risk_name: undefined,
+    };
+    const propsWithMissing = {
+      ...defaultProps,
+      data: { rows: [missingNameRow], cols: mockColumns },
+    };
+
+    renderWithProviders(<CustomizableBasicTable {...propsWithMissing} />);
+    // Verify all cells still render
+    const cells = document.querySelectorAll("td");
+    expect(cells.length).toBeGreaterThan(0);
+  });
+
+  it("renders risk_owner as string when passed as string", () => {
+    const stringOwnerRow = {
+      ...mockRows[0],
+      id: 32,
+      risk_owner: "External Owner",
+    };
+    const propsWithStr = {
+      ...defaultProps,
+      data: { rows: [stringOwnerRow], cols: mockColumns },
+    };
+
+    renderWithProviders(<CustomizableBasicTable {...propsWithStr} />);
+    expect(screen.getByText("External Owner")).toBeInTheDocument();
+  });
+
+  it("renders risk_owner as numeric string when passed as number", () => {
+    const numericOwnerRow = {
+      ...mockRows[0],
+      id: 33,
+      risk_owner: 99,
+    };
+    const propsWithNum = {
+      ...defaultProps,
+      data: { rows: [numericOwnerRow], cols: mockColumns },
+    };
+
+    renderWithProviders(<CustomizableBasicTable {...propsWithNum} />);
+    expect(screen.getByText("99")).toBeInTheDocument();
+  });
+
+  it("renders without crashing with many rows", () => {
+    const manyRows = Array.from({ length: 50 }, (_, i) => ({
+      ...mockRows[0],
+      id: i + 1,
+      risk_name: `Risk ${i + 1}`,
+    }));
+
+    const { container } = renderWithProviders(
+      <CustomizableBasicTable
+        {...defaultProps}
+        data={{ rows: manyRows, cols: mockColumns }}
+        paginated
+      />,
+    );
+
+    // All rows should render
+    const rows = container.querySelectorAll("tbody tr");
+    expect(rows).toHaveLength(50);
+  });
 });

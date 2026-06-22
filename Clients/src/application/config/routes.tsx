@@ -2,9 +2,10 @@ import { Suspense } from "react";
 import { Route, Navigate } from "react-router-dom";
 import { lazyRoute, LazyFallback } from "../utils/lazyRoute";
 
-// Eager imports — only the app shell and route guard
+// Eager imports — app shell, route guard, and Use cases page (mounts with layout for table skeleton UX)
 import Dashboard from "../../presentation/containers/Dashboard";
 import ProtectedRoute from "../../presentation/components/ProtectedRoute";
+import VWHome from "../../presentation/pages/Home/1.0Home";
 
 // ── Authentication routes ─────────────────────────────────────────────
 const Login = lazyRoute(() => import("../../presentation/pages/Authentication/Login"));
@@ -20,6 +21,9 @@ const SetNewPassword = lazyRoute(
 const ResetPasswordContinue = lazyRoute(
   () => import("../../presentation/pages/Authentication/ResetPasswordContinue"),
 );
+const MicrosoftCallback = lazyRoute(
+  () => import("../../presentation/pages/Authentication/MicrosoftCallback"),
+);
 const RegisterUser = lazyRoute(
   () => import("../../presentation/pages/Authentication/RegisterUser"),
 );
@@ -34,7 +38,6 @@ const IntegratedDashboard = lazyRoute(
   () => import("../../presentation/pages/DashboardOverview/IntegratedDashboard"),
 );
 const StartHere = lazyRoute(() => import("../../presentation/pages/StartHere"));
-const VWHome = lazyRoute(() => import("../../presentation/pages/Home/1.0Home"));
 const VWProjectView = lazyRoute(
   () => import("../../presentation/pages/ProjectView/V1.0ProjectView"),
 );
@@ -66,6 +69,7 @@ const DatasetEditorPage = lazyRoute(
 );
 const AgentDiscovery = lazyRoute(() => import("../../presentation/pages/AgentDiscovery"));
 const ModelInventory = lazyRoute(() => import("../../presentation/pages/ModelInventory"));
+const AIApps = lazyRoute(() => import("../../presentation/pages/AIApps"));
 const ModelLifecycleDetail = lazyRoute(
   () => import("../../presentation/pages/ModelInventory/ModelLifecycleDetail"),
 );
@@ -84,6 +88,19 @@ const RepositoriesPage = lazyRoute(
 const ScanDetailsPage = lazyRoute(
   () => import("../../presentation/pages/AIDetection/ScanDetailsPage"),
 );
+// ── AI Trust Index routes ─────────────────────────────────────────────
+const AITrustIndex = lazyRoute(() => import("../../presentation/pages/AITrustIndex"));
+const AITrustIndexBrowse = lazyRoute(() => import("../../presentation/pages/AITrustIndex/Browse"));
+const AITrustIndexTracked = lazyRoute(
+  () => import("../../presentation/pages/AITrustIndex/Tracked"),
+);
+const AITrustIndexSettings = lazyRoute(
+  () => import("../../presentation/pages/AITrustIndex/Settings"),
+);
+const AITrustIndexDetail = lazyRoute(
+  () => import("../../presentation/pages/AITrustIndex/AppDetail"),
+);
+
 const InsightsPage = lazyRoute(() => import("../../presentation/pages/ShadowAI/InsightsPage"));
 const UserActivityPage = lazyRoute(
   () => import("../../presentation/pages/ShadowAI/UserActivityPage"),
@@ -124,14 +141,41 @@ const MCPServersPage = lazyRoute(() => import("../../presentation/pages/AIGatewa
 const MCPToolCatalogPage = lazyRoute(
   () => import("../../presentation/pages/AIGateway/MCPToolCatalog"),
 );
+const MCPRunsPage = lazyRoute(() => import("../../presentation/pages/AIGateway/MCPRuns"));
 const MCPAuditLogPage = lazyRoute(() => import("../../presentation/pages/AIGateway/MCPAuditLog"));
 const MCPApprovalsPage = lazyRoute(() => import("../../presentation/pages/AIGateway/MCPApprovals"));
 const MCPGuardrailsPage = lazyRoute(
   () => import("../../presentation/pages/AIGateway/MCPGuardrails"),
 );
 
+/*
 // ── Governance OS routes ─────────────────────────────────────────────
 const GovernanceOS = lazyRoute(() => import("../../presentation/pages/GovernanceOS"));
+
+// ── Governance Intelligence module routes ─────────────────────────────
+const GovernanceHub = lazyRoute(() => import("../../presentation/pages/GovernanceOS/Hub"));
+const FrameworkMapperModule = lazyRoute(
+  () => import("../../presentation/pages/GovernanceOS/FrameworkMapperModule"),
+);
+const ScenarioBuilderModule = lazyRoute(
+  () => import("../../presentation/pages/GovernanceOS/ScenarioBuilderModule"),
+);
+const UnifiedInsightsModule = lazyRoute(
+  () => import("../../presentation/pages/GovernanceOS/UnifiedInsightsModule"),
+);
+const GovernanceSettings = lazyRoute(
+  () => import("../../presentation/pages/GovernanceOS/Settings"),
+);
+const EvidenceHub = lazyRoute(() => import("../../presentation/pages/GovernanceOS/EvidenceHub"));
+const KnowledgeGraph = lazyRoute(
+  () => import("../../presentation/pages/GovernanceOS/KnowledgeGraph"),
+);
+const RegulatoryRadar = lazyRoute(
+  () => import("../../presentation/pages/GovernanceOS/RegulatoryRadar"),
+);
+
+Governance OS routes are disabled while the module is not broadly released.
+*/
 
 // ── Remaining routes ──────────────────────────────────────────────────
 const Plugins = lazyRoute(() => import("../../presentation/pages/Plugins"));
@@ -324,14 +368,7 @@ export const createRoutes = (
         </Suspense>
       }
     />
-    <Route
-      path="/overview"
-      element={
-        <Suspense fallback={<LazyFallback />}>
-          <VWHome />
-        </Suspense>
-      }
-    />
+    <Route path="/overview" element={<VWHome />} />
     <Route
       path="/framework/:tab?"
       element={
@@ -340,6 +377,8 @@ export const createRoutes = (
         </Suspense>
       }
     />
+    {/*
+    Governance OS routes are disabled while the module is not broadly released.
     <Route
       path="/governance-os/:tab?"
       element={
@@ -348,6 +387,72 @@ export const createRoutes = (
         </Suspense>
       }
     />
+    <Route
+      path="/governance"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <GovernanceHub />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/governance/framework-mapper"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <FrameworkMapperModule />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/governance/scenarios"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <ScenarioBuilderModule />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/governance/insights"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <UnifiedInsightsModule />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/governance/settings"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <GovernanceSettings />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/governance/evidence"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <EvidenceHub />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/governance/knowledge-graph"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <KnowledgeGraph />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/governance/regulatory-radar"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <RegulatoryRadar />
+        </Suspense>
+      }
+    />
+    <Route path="/governance-os/*" element={<Navigate to="/governance" replace />} />
+    */}
     <Route
       path="/project-view"
       element={
@@ -476,6 +581,22 @@ export const createRoutes = (
       element={
         <Suspense fallback={<LazyFallback />}>
           <WatchTower />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/ai-apps"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <AIApps />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/ai-apps/:id"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <AIApps />
         </Suspense>
       }
     />
@@ -623,6 +744,46 @@ export const createRoutes = (
       element={
         <Suspense fallback={<LazyFallback />}>
           <ScanDetailsPage />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/ai-trust-index"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <AITrustIndex />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/ai-trust-index/browse"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <AITrustIndexBrowse />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/ai-trust-index/tracked"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <AITrustIndexTracked />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/ai-trust-index/settings"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <AITrustIndexSettings />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/ai-trust-index/:slug"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <AITrustIndexDetail />
         </Suspense>
       }
     />
@@ -818,6 +979,14 @@ export const createRoutes = (
       }
     />
     <Route
+      path="/ai-gateway/mcp/runs"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <MCPRunsPage />
+        </Suspense>
+      }
+    />
+    <Route
       path="/ai-gateway/mcp/audit"
       element={
         <Suspense fallback={<LazyFallback />}>
@@ -948,6 +1117,15 @@ export const createRoutes = (
     element={
       <Suspense fallback={<LazyFallback />}>
         <ProtectedRoute Component={Login} />
+      </Suspense>
+    }
+  />,
+  <Route
+    key="microsoft-callback"
+    path="/auth/microsoft/callback"
+    element={
+      <Suspense fallback={<LazyFallback />}>
+        <MicrosoftCallback />
       </Suspense>
     }
   />,

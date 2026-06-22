@@ -1,5 +1,6 @@
 import dayjs from "dayjs";
 import { UserDateFormat } from "../../domain/enums/userDateFormat.enum";
+import { storageService } from "../../infrastructure/storage";
 
 /**
  * Converts an ISO date string to a formatted date string.
@@ -36,16 +37,8 @@ export const displayFormattedDate = (isoDate: string | Date): string => {
     return String(dateStr);
   }
 
-  let dateFormat = UserDateFormat.DD_MM_YYYY_DASH;
-  try {
-    const preference = localStorage.getItem("verifywise_preferences");
-    if (preference) {
-      const parsed = JSON.parse(preference);
-      dateFormat = parsed.date_format || UserDateFormat.DD_MM_YYYY_DASH;
-    }
-  } catch (error) {
-    console.warn("Failed to read date format preference, using default:", error);
-  }
+  const preferences = storageService.get("preferences", {});
+  const dateFormat = (preferences.date_format as UserDateFormat) || UserDateFormat.DD_MM_YYYY_DASH;
 
   const formattedDate = dayjs(dateStr).format(dateFormat);
   return formattedDate;

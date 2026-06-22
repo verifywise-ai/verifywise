@@ -235,271 +235,285 @@ const SidebarShell: FC<SidebarShellProps> = ({
     const isActive = checkIsActive(item);
     const isDisabled = item.disabled;
 
-    return (
-      <Tooltip
-        key={item.id}
-        placement="right"
-        title={collapsed && showTooltip ? item.label : ""}
-        slotProps={{
-          popper: {
-            modifiers: [{ name: "offset", options: { offset: [0, -16] } }],
-          },
-        }}
-        disableInteractive
-      >
-        {isDisabled ? (
-          <span style={{ display: "inline-block" }}>
-            <ListItemButton
-              disableRipple={theme.components?.MuiListItemButton?.defaultProps?.disableRipple}
-              className={isActive ? "selected-path" : "unselected"}
-              onClick={() => handleItemClick(item)}
-              disabled={isDisabled}
-              sx={{
-                "height": "32px",
-                "gap": collapsed ? 0 : theme.spacing(4),
-                "borderRadius": theme.shape.borderRadius,
-                "px": theme.spacing(4),
-                "justifyContent": collapsed ? "center" : "flex-start",
-                "opacity": isDisabled ? 0.5 : 1,
-                "cursor": isDisabled ? "not-allowed" : "pointer",
-                "& .MuiListItemText-root": {
-                  display: collapsed ? "none" : "block",
-                },
-                "background":
-                  isActive && !isDisabled
-                    ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)"
-                    : "transparent",
-                "border": isActive && !isDisabled ? "1px solid #E8E8E8" : "1px solid transparent",
-                "&:hover": {
-                  background: isDisabled
-                    ? "transparent"
-                    : isActive
-                      ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)"
-                      : "#FAFAFA",
-                  border: isDisabled
-                    ? "1px solid transparent"
-                    : isActive
-                      ? "1px solid #E8E8E8"
-                      : "1px solid transparent",
-                },
-                "&:hover svg": isDisabled
-                  ? {}
-                  : {
-                      color: `${brand.primary} !important`,
-                      stroke: `${brand.primary} !important`,
-                    },
-                "&:hover svg path": isDisabled
-                  ? {}
-                  : {
-                      stroke: `${brand.primary} !important`,
-                    },
-                "&.Mui-disabled": {
-                  opacity: 0.5,
-                },
-              }}
-            >
-              <ListItemIcon
-                sx={{
-                  "minWidth": 0,
-                  "display": "flex",
-                  "alignItems": "center",
-                  "justifyContent": "center",
-                  "width": "16px",
-                  "mr": 0,
-                  "& svg": {
-                    color: isDisabled
-                      ? `${theme.palette.text.disabled} !important`
-                      : isActive
-                        ? `${brand.primary} !important`
-                        : `${theme.palette.text.tertiary} !important`,
-                    stroke: isDisabled
-                      ? `${theme.palette.text.disabled} !important`
-                      : isActive
-                        ? `${brand.primary} !important`
-                        : `${theme.palette.text.tertiary} !important`,
-                    transition: "color 0.2s ease, stroke 0.2s ease",
-                  },
-                  "& svg path": {
-                    stroke: isDisabled
-                      ? `${theme.palette.text.disabled} !important`
-                      : isActive
-                        ? `${brand.primary} !important`
-                        : `${theme.palette.text.tertiary} !important`,
-                  },
-                }}
-              >
-                {item.icon}
-              </ListItemIcon>
-              {!delayedCollapsed && (
-                <ListItemText
-                  sx={{
-                    "& .MuiListItemText-primary": {
-                      fontSize: "13px",
-                      fontWeight: isActive ? 600 : 400,
-                      color: isDisabled
-                        ? theme.palette.text.disabled
-                        : isActive
-                          ? theme.palette.text.primary
-                          : theme.palette.text.secondary,
-                    },
-                  }}
-                >
-                  {item.label}
-                </ListItemText>
-              )}
-              {!collapsed && item.count !== undefined && item.count > 0 && !isDisabled && (
-                <Chip
-                  label={item.count > 99 ? "99+" : item.count}
-                  size="small"
-                  sx={{
-                    "height": "18px",
-                    "fontSize": "10px",
-                    "fontWeight": 500,
-                    "backgroundColor": isActive ? "#f8fafc" : "#e2e8f0",
-                    "color": "#475569",
-                    "borderRadius": "9px",
-                    "minWidth": "18px",
-                    "maxWidth": "36px",
-                    "& .MuiChip-label": {
-                      px: "6px",
-                      py: 0,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap",
-                    },
-                    "ml": "auto",
-                  }}
-                />
-              )}
-            </ListItemButton>
-          </span>
-        ) : (
-          <ListItemButton
-            disableRipple={theme.components?.MuiListItemButton?.defaultProps?.disableRipple}
-            className={isActive ? "selected-path" : "unselected"}
-            onClick={() => handleItemClick(item)}
-            disabled={isDisabled}
-            sx={{
-              "height": "32px",
-              "gap": collapsed ? 0 : theme.spacing(4),
-              "borderRadius": theme.shape.borderRadius,
-              "px": theme.spacing(4),
-              "justifyContent": collapsed ? "center" : "flex-start",
-              "opacity": isDisabled ? 0.5 : 1,
-              "cursor": isDisabled ? "not-allowed" : "pointer",
-              "& .MuiListItemText-root": {
-                display: collapsed ? "none" : "block",
-              },
-              "background":
-                isActive && !isDisabled
+    const tooltipSlotProps = {
+      popper: {
+        modifiers: [{ name: "offset", options: { offset: [0, -16] } }],
+      },
+    };
+
+    const menuItemContent = isDisabled ? (
+      <span style={{ display: "inline-block" }}>
+        <ListItemButton
+          disableRipple={theme.components?.MuiListItemButton?.defaultProps?.disableRipple}
+          className={isActive ? "selected-path" : "unselected"}
+          onClick={() => handleItemClick(item)}
+          disabled={isDisabled}
+          aria-label={item.label}
+          sx={{
+            "height": "32px",
+            "gap": collapsed ? 0 : theme.spacing(4),
+            "borderRadius": theme.shape.borderRadius,
+            "px": theme.spacing(4),
+            "justifyContent": collapsed ? "center" : "flex-start",
+            "opacity": isDisabled ? 0.5 : 1,
+            "cursor": isDisabled ? "not-allowed" : "pointer",
+            "& .MuiListItemText-root": {
+              display: collapsed ? "none" : "block",
+            },
+            "background":
+              isActive && !isDisabled
+                ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)"
+                : "transparent",
+            "border": isActive && !isDisabled ? "1px solid #E8E8E8" : "1px solid transparent",
+            "&:hover": {
+              background: isDisabled
+                ? "transparent"
+                : isActive
                   ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)"
-                  : "transparent",
-              "border": isActive && !isDisabled ? "1px solid #E8E8E8" : "1px solid transparent",
-              "&:hover": {
-                background: isDisabled
-                  ? "transparent"
+                  : "#FAFAFA",
+              border: isDisabled
+                ? "1px solid transparent"
+                : isActive
+                  ? "1px solid #E8E8E8"
+                  : "1px solid transparent",
+            },
+            "&:hover svg": isDisabled
+              ? {}
+              : {
+                  color: `${brand.primary} !important`,
+                  stroke: `${brand.primary} !important`,
+                },
+            "&:hover svg path": isDisabled
+              ? {}
+              : {
+                  stroke: `${brand.primary} !important`,
+                },
+            "&.Mui-disabled": {
+              opacity: 0.5,
+            },
+          }}
+        >
+          <ListItemIcon
+            sx={{
+              "minWidth": 0,
+              "display": "flex",
+              "alignItems": "center",
+              "justifyContent": "center",
+              "width": "16px",
+              "mr": 0,
+              "& svg": {
+                color: isDisabled
+                  ? `${theme.palette.text.disabled} !important`
                   : isActive
-                    ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)"
-                    : "#FAFAFA",
-                border: isDisabled
-                  ? "1px solid transparent"
+                    ? `${brand.primary} !important`
+                    : `${theme.palette.text.tertiary} !important`,
+                stroke: isDisabled
+                  ? `${theme.palette.text.disabled} !important`
                   : isActive
-                    ? "1px solid #E8E8E8"
-                    : "1px solid transparent",
+                    ? `${brand.primary} !important`
+                    : `${theme.palette.text.tertiary} !important`,
+                transition: "color 0.2s ease, stroke 0.2s ease",
               },
-              "&:hover svg": isDisabled
-                ? {}
-                : {
-                    color: `${brand.primary} !important`,
-                    stroke: `${brand.primary} !important`,
-                    animation: "icon-shake 400ms ease-in-out",
-                  },
-              "&:hover svg path": isDisabled
-                ? {}
-                : {
-                    stroke: `${brand.primary} !important`,
-                  },
-              "&.Mui-disabled": {
-                opacity: 0.5,
+              "& svg path": {
+                stroke: isDisabled
+                  ? `${theme.palette.text.disabled} !important`
+                  : isActive
+                    ? `${brand.primary} !important`
+                    : `${theme.palette.text.tertiary} !important`,
               },
             }}
           >
-            <ListItemIcon
+            {item.icon}
+          </ListItemIcon>
+          {!collapsed && (
+            <ListItemText
               sx={{
-                "minWidth": 0,
-                "display": "flex",
-                "alignItems": "center",
-                "justifyContent": "center",
-                "width": "16px",
-                "mr": 0,
-                "& svg": {
+                "& .MuiListItemText-primary": {
+                  fontSize: "13px",
+                  fontWeight: isActive ? 600 : 400,
                   color: isDisabled
-                    ? `${theme.palette.text.disabled} !important`
+                    ? theme.palette.text.disabled
                     : isActive
-                      ? `${brand.primary} !important`
-                      : `${theme.palette.text.tertiary} !important`,
-                  stroke: isDisabled
-                    ? `${theme.palette.text.disabled} !important`
-                    : isActive
-                      ? `${brand.primary} !important`
-                      : `${theme.palette.text.tertiary} !important`,
-                  transition: "color 0.2s ease, stroke 0.2s ease",
-                },
-                "& svg path": {
-                  stroke: isDisabled
-                    ? `${theme.palette.text.disabled} !important`
-                    : isActive
-                      ? `${brand.primary} !important`
-                      : `${theme.palette.text.tertiary} !important`,
+                      ? theme.palette.text.primary
+                      : theme.palette.text.secondary,
                 },
               }}
             >
-              {item.icon}
-            </ListItemIcon>
-            {!delayedCollapsed && (
-              <ListItemText
-                sx={{
-                  "& .MuiListItemText-primary": {
-                    fontSize: "13px",
-                    fontWeight: isActive ? 600 : 400,
-                    color: isDisabled
-                      ? theme.palette.text.disabled
-                      : isActive
-                        ? theme.palette.text.primary
-                        : theme.palette.text.secondary,
-                  },
-                }}
-              >
-                {item.label}
-              </ListItemText>
-            )}
-            {!collapsed && item.count !== undefined && item.count > 0 && !isDisabled && (
-              <Chip
-                label={item.count > 99 ? "99+" : item.count}
-                size="small"
-                sx={{
-                  "height": "18px",
-                  "fontSize": "10px",
-                  "fontWeight": 500,
-                  "backgroundColor": isActive ? "#f8fafc" : "#e2e8f0",
-                  "color": "#475569",
-                  "borderRadius": "9px",
-                  "minWidth": "18px",
-                  "maxWidth": "36px",
-                  "& .MuiChip-label": {
-                    px: "6px",
-                    py: 0,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  },
-                  "ml": "auto",
-                }}
-              />
-            )}
-          </ListItemButton>
+              {item.label}
+            </ListItemText>
+          )}
+          {!collapsed && item.count !== undefined && item.count > 0 && !isDisabled && (
+            <Chip
+              label={item.count > 99 ? "99+" : item.count}
+              size="small"
+              sx={{
+                "height": "18px",
+                "fontSize": "10px",
+                "fontWeight": 500,
+                "backgroundColor": isActive ? "#f8fafc" : "#e2e8f0",
+                "color": "#475569",
+                "borderRadius": "9px",
+                "minWidth": "18px",
+                "maxWidth": "36px",
+                "& .MuiChip-label": {
+                  px: "6px",
+                  py: 0,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                },
+                "ml": "auto",
+              }}
+            />
+          )}
+        </ListItemButton>
+      </span>
+    ) : (
+      <ListItemButton
+        disableRipple={theme.components?.MuiListItemButton?.defaultProps?.disableRipple}
+        className={isActive ? "selected-path" : "unselected"}
+        onClick={() => handleItemClick(item)}
+        disabled={isDisabled}
+        aria-label={item.label}
+        sx={{
+          "height": "32px",
+          "gap": collapsed ? 0 : theme.spacing(4),
+          "borderRadius": theme.shape.borderRadius,
+          "px": theme.spacing(4),
+          "justifyContent": collapsed ? "center" : "flex-start",
+          "opacity": isDisabled ? 0.5 : 1,
+          "cursor": isDisabled ? "not-allowed" : "pointer",
+          "& .MuiListItemText-root": {
+            display: collapsed ? "none" : "block",
+          },
+          "background":
+            isActive && !isDisabled
+              ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)"
+              : "transparent",
+          "border": isActive && !isDisabled ? "1px solid #E8E8E8" : "1px solid transparent",
+          "&:hover": {
+            background: isDisabled
+              ? "transparent"
+              : isActive
+                ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)"
+                : "#FAFAFA",
+            border: isDisabled
+              ? "1px solid transparent"
+              : isActive
+                ? "1px solid #E8E8E8"
+                : "1px solid transparent",
+          },
+          "&:hover svg": isDisabled
+            ? {}
+            : {
+                color: `${brand.primary} !important`,
+                stroke: `${brand.primary} !important`,
+                animation: "icon-shake 400ms ease-in-out",
+              },
+          "&:hover svg path": isDisabled
+            ? {}
+            : {
+                stroke: `${brand.primary} !important`,
+              },
+          "&.Mui-disabled": {
+            opacity: 0.5,
+          },
+        }}
+      >
+        <ListItemIcon
+          sx={{
+            "minWidth": 0,
+            "display": "flex",
+            "alignItems": "center",
+            "justifyContent": "center",
+            "width": "16px",
+            "mr": 0,
+            "& svg": {
+              color: isDisabled
+                ? `${theme.palette.text.disabled} !important`
+                : isActive
+                  ? `${brand.primary} !important`
+                  : `${theme.palette.text.tertiary} !important`,
+              stroke: isDisabled
+                ? `${theme.palette.text.disabled} !important`
+                : isActive
+                  ? `${brand.primary} !important`
+                  : `${theme.palette.text.tertiary} !important`,
+              transition: "color 0.2s ease, stroke 0.2s ease",
+            },
+            "& svg path": {
+              stroke: isDisabled
+                ? `${theme.palette.text.disabled} !important`
+                : isActive
+                  ? `${brand.primary} !important`
+                  : `${theme.palette.text.tertiary} !important`,
+            },
+          }}
+        >
+          {item.icon}
+        </ListItemIcon>
+        {!collapsed && (
+          <ListItemText
+            sx={{
+              "& .MuiListItemText-primary": {
+                fontSize: "13px",
+                fontWeight: isActive ? 600 : 400,
+                color: isDisabled
+                  ? theme.palette.text.disabled
+                  : isActive
+                    ? theme.palette.text.primary
+                    : theme.palette.text.secondary,
+              },
+            }}
+          >
+            {item.label}
+          </ListItemText>
         )}
-      </Tooltip>
+        {!collapsed && item.count !== undefined && item.count > 0 && !isDisabled && (
+          <Chip
+            label={item.count > 99 ? "99+" : item.count}
+            size="small"
+            sx={{
+              "height": "18px",
+              "fontSize": "10px",
+              "fontWeight": 500,
+              "backgroundColor": isActive ? "#f8fafc" : "#e2e8f0",
+              "color": "#475569",
+              "borderRadius": "9px",
+              "minWidth": "18px",
+              "maxWidth": "36px",
+              "& .MuiChip-label": {
+                px: "6px",
+                py: 0,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              },
+              "ml": "auto",
+            }}
+          />
+        )}
+      </ListItemButton>
+    );
+
+    if (collapsed && showTooltip) {
+      return (
+        <Tooltip
+          key={item.id}
+          placement="right"
+          title={item.label}
+          slotProps={tooltipSlotProps}
+          disableInteractive
+        >
+          {menuItemContent}
+        </Tooltip>
+      );
+    }
+
+    return (
+      <Box key={item.id} component="span" sx={{ display: "block" }}>
+        {menuItemContent}
+      </Box>
     );
   };
 
@@ -559,6 +573,7 @@ const SidebarShell: FC<SidebarShellProps> = ({
                 <Tooltip title="Spread some love!">
                   <IconButton
                     onClick={handleHeartClick}
+                    aria-label="Spread some love"
                     sx={{
                       "position": "absolute",
                       "top": "-16px",
@@ -628,6 +643,7 @@ const SidebarShell: FC<SidebarShellProps> = ({
           {/* Sidebar Toggle Button */}
           <IconButton
             disableRipple={theme.components?.MuiListItemButton?.defaultProps?.disableRipple}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
             sx={{
               "position": "absolute",
               "right": delayedCollapsed ? "50%" : 0,
@@ -644,7 +660,6 @@ const SidebarShell: FC<SidebarShellProps> = ({
                 "opacity": 0.9,
                 "& path": { stroke: theme.palette.text.tertiary },
               },
-              "&:focus": { outline: "none" },
               "&:hover": { backgroundColor: "#F9F9F9" },
               "&:hover svg path": { stroke: brand.primary },
             }}
@@ -946,7 +961,21 @@ const SidebarShell: FC<SidebarShellProps> = ({
                     <ChevronDown size={14} color="#a0a0a0" />
                   ))}
               </Box>
-              {!isGroupCollapsed && group.items.map((item) => renderMenuItem(item))}
+              {!isGroupCollapsed &&
+                group.items.map((item) => (
+                  <Box key={item.id}>
+                    {renderMenuItem(item)}
+                    {item.dividerAfter && !collapsed && (
+                      <Box
+                        sx={{
+                          my: 1.5,
+                          mx: theme.spacing(4),
+                          borderTop: `1px solid ${borderPalette.light}`,
+                        }}
+                      />
+                    )}
+                  </Box>
+                ))}
             </Box>
           );
         })}

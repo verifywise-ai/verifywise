@@ -1,0 +1,33 @@
+<mjml>
+  <mj-body background-color="#f4f6f8">
+    <mj-section background-color="#13715B" padding="20px">
+      <mj-column>
+        <mj-text color="#ffffff" font-size="18px" font-weight="600">AI Trust Index — weekly update</mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-section background-color="#ffffff" padding="24px">
+      <mj-column>
+        <mj-text font-size="14px" color="#344054">
+          Changes were detected in AI apps your organization tracks.
+        </mj-text>
+        {{changedSection}}
+        {{removedSection}}
+        <mj-button background-color="#13715B" href="{{moduleUrl}}" align="left" border-radius="4px">
+          Open AI Trust Index
+        </mj-button>
+        <mj-text font-size="13px" color="#475467" padding-top="8px">
+          Or jump straight to your <a href="{{trackedUrl}}" style="color:#13715B;">tracked apps</a>.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-section padding="12px">
+      <mj-column>
+        <mj-text font-size="11px" color="#98a2b3" align="center">
+          You receive this because you are a configured recipient for AI Trust Index alerts.
+          An administrator can manage recipients in
+          <a href="{{settingsUrl}}" style="color:#98a2b3;text-decoration:underline;">AI Trust Index settings</a>.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

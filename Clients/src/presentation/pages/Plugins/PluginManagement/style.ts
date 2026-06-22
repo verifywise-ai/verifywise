@@ -38,30 +38,6 @@ export const installedStatusChip: SxProps<Theme> = {
   fontWeight: 500,
 };
 
-// Install button
-export const installButton: SxProps<Theme> = {
-  "backgroundColor": `${brand.primary}`,
-  "textTransform": "none",
-  "fontSize": "13px",
-  "fontWeight": 500,
-  "&:hover": {
-    backgroundColor: `${brand.primaryHover}`,
-  },
-};
-
-// Uninstall button
-export const uninstallButton: SxProps<Theme> = {
-  "textTransform": "none",
-  "fontSize": "13px",
-  "fontWeight": 500,
-  "borderColor": "#dc2626",
-  "color": "#dc2626",
-  "&:hover": {
-    backgroundColor: "rgba(220, 38, 38, 0.04)",
-    borderColor: "#dc2626",
-  },
-};
-
 // Form field label
 export const formFieldLabel: SxProps<Theme> = {
   mb: 0.75,

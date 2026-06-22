@@ -21,13 +21,13 @@ export function isValidSQLIdentifier(value: string): boolean {
  * Tenant hashes are exactly 10 alphanumeric characters produced by getTenantHash
  *
  * @deprecated Use isValidOrganizationId instead for shared-schema multi-tenancy
- * @param tenantId - The tenant ID to validate
+ * @param hash - The tenant hash to validate
  * @returns true if valid tenant hash format
  */
-export function isValidTenantHash(tenantId: string): boolean {
+export function isValidTenantHash(hash: string): boolean {
   // getTenantHash produces exactly 10 alphanumeric characters
   // from base64 hash with special chars removed
-  return /^[a-zA-Z0-9]{10}$/.test(tenantId);
+  return /^[a-zA-Z0-9]{10}$/.test(hash);
 }
 
 /**

@@ -1,0 +1,68 @@
+name: EvalServer & EvaluationModule Checks
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    branches: ['master', 'develop']
+    paths:
+      - 'EvalServer/**'
+      - 'EvaluationModule/**'
+      - '.github/workflows/evalserver-checks.yml'
+  push:
+    branches: ['master', 'develop']
+    paths:
+      - 'EvalServer/**'
+      - 'EvaluationModule/**'
+      - '.github/workflows/evalserver-checks.yml'
+
+jobs:
+  python-tests:
+    name: Python Tests (pytest)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: |
+            EvalServer/requirements.txt
+            EvalServer/requirements-test.txt
+            EvaluationModule/requirements.txt
+
+      - name: Install EvalServer runtime + test dependencies
+        working-directory: EvalServer
+        run: |
+          python -m pip install --upgrade pip
+          # Test deps are minimal and fast — install them first
+          pip install -r requirements-test.txt
+          # Runtime deps are heavy (torch, transformers, ...) but the test files
+          # import EvalServer source modules that require them.
+          pip install -r requirements.txt
+
+      - name: Install EvaluationModule runtime dependencies
+        working-directory: EvaluationModule
+        run: pip install -r requirements.txt
+
+      - name: Run EvalServer tests (excluding integration smoke tests)
+        working-directory: EvalServer
+        env:
+          DB_USER: test
+          DB_PASSWORD: test
+          DB_HOST: localhost
+          DB_PORT: '5432'
+          DB_NAME: verifywise_test
+        run: |
+          python -m pytest tests/ -v \
+            --ignore=tests/test_integration_openrouter.py \
+            -m "not integration"
+
+      - name: Run EvaluationModule tests
+        working-directory: EvaluationModule
+        run: |
+          python -m pytest tests/ -v -m "not integration"

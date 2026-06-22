@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { Box, Typography, Stack, Chip } from "@mui/material";
-import { ArrowRight, Info } from "lucide-react";
+import { Box, Typography, Stack, IconButton } from "@mui/material";
+import { ArrowRight, Info, Pencil, Trash2 } from "lucide-react";
 import MappingStrengthBadge from "./MappingStrengthBadge";
+import GovernanceTooltip from "./GovernanceTooltip";
 import StandardModal from "../Modals/StandardModal";
 import { IMappingCardProps } from "../../../domain/interfaces/i.governanceOs";
-import { border as borderPalette, background, text } from "../../themes/palette";
+import { border as borderPalette, background, text, accent, status } from "../../themes/palette";
 
 const FRAMEWORK_NAMES: Record<number, string> = {
   1: "EU AI Act",
@@ -22,7 +23,7 @@ const STRENGTH_DESCRIPTIONS: Record<string, string> = {
     "These controls cover similar governance topics but from different angles. Understanding one helps inform the other, but they are not interchangeable.",
 };
 
-const MappingCard = ({ mapping, frameworkNames }: IMappingCardProps) => {
+const MappingCard = ({ mapping, frameworkNames, onEdit, onDelete }: IMappingCardProps) => {
   const names = frameworkNames || FRAMEWORK_NAMES;
   const [detailOpen, setDetailOpen] = useState(false);
 
@@ -37,8 +38,8 @@ const MappingCard = ({ mapping, frameworkNames }: IMappingCardProps) => {
         onClick={() => setDetailOpen(true)}
         sx={{
           "border": `1px solid ${borderPalette.light}`,
-          "borderRadius": 2,
-          "p": 2,
+          "borderRadius": "4px",
+          "p": "16px",
           "background": background.main,
           "cursor": "pointer",
           "transition": "all 0.2s ease",
@@ -48,7 +49,7 @@ const MappingCard = ({ mapping, frameworkNames }: IMappingCardProps) => {
           },
         }}
       >
-        <Stack direction="row" alignItems="center" spacing={2} flexWrap="wrap" useFlexGap>
+        <Stack direction="row" alignItems="center" gap="16px" flexWrap="wrap" useFlexGap>
           <Box sx={{ minWidth: 140 }}>
             <Typography sx={{ fontSize: 11, color: text.muted }}>{sourceName}</Typography>
             <Typography sx={{ fontSize: 13, fontWeight: 600, color: text.primary }}>
@@ -68,17 +69,23 @@ const MappingCard = ({ mapping, frameworkNames }: IMappingCardProps) => {
           <MappingStrengthBadge strength={mapping.mapping_strength} />
 
           {mapping.domain_tag && (
-            <Chip
-              label={mapping.domain_tag.replace(/_/g, " ")}
-              size="small"
+            <Box
+              component="span"
               sx={{
-                fontSize: 11,
+                display: "inline-flex",
+                alignItems: "center",
                 height: 22,
+                px: "8px",
+                borderRadius: "4px",
+                fontSize: 11,
                 textTransform: "capitalize",
-                backgroundColor: "#E6F0EC",
-                color: "#13715B",
+                backgroundColor: accent.primary.bg,
+                color: accent.primary.text,
+                border: `1px solid ${accent.primary.border}`,
               }}
-            />
+            >
+              {mapping.domain_tag.replace(/_/g, " ")}
+            </Box>
           )}
 
           {mapping.confidence_score !== undefined && (
@@ -87,7 +94,53 @@ const MappingCard = ({ mapping, frameworkNames }: IMappingCardProps) => {
             </Typography>
           )}
 
-          <Info size={14} color={text.muted} style={{ marginLeft: "auto" }} />
+          <Stack direction="row" gap="4px" alignItems="center" sx={{ ml: "auto" }}>
+            {onEdit && (
+              <GovernanceTooltip header="Edit mapping" description="Modify this control mapping">
+                <span>
+                  <IconButton
+                    size="small"
+                    disableRipple
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit(mapping);
+                    }}
+                    sx={{ "color": text.muted, "&:hover": { color: text.primary } }}
+                  >
+                    <Pencil size={14} />
+                  </IconButton>
+                </span>
+              </GovernanceTooltip>
+            )}
+            {onDelete && (
+              <GovernanceTooltip
+                header="Delete mapping"
+                description="Remove this control mapping permanently"
+              >
+                <span>
+                  <IconButton
+                    size="small"
+                    disableRipple
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete(mapping);
+                    }}
+                    sx={{ "color": text.muted, "&:hover": { color: status.error.text } }}
+                  >
+                    <Trash2 size={14} />
+                  </IconButton>
+                </span>
+              </GovernanceTooltip>
+            )}
+            <GovernanceTooltip
+              header="Mapping details"
+              description="View the full rationale and metadata for this mapping"
+            >
+              <span>
+                <Info size={14} color={text.muted} />
+              </span>
+            </GovernanceTooltip>
+          </Stack>
         </Stack>
 
         {mapping.rationale && (
@@ -105,18 +158,18 @@ const MappingCard = ({ mapping, frameworkNames }: IMappingCardProps) => {
         description={`${sourceName} \u2192 ${targetName}`}
         hideFooter
       >
-        <Stack spacing={6}>
+        <Stack gap="16px">
           {/* Source and Target */}
-          <Stack spacing={3}>
+          <Stack gap="16px">
             <Typography sx={{ fontSize: 13, fontWeight: 600, color: text.primary }}>
               Mapping relationship
             </Typography>
-            <Stack direction="row" spacing={3} alignItems="flex-start">
+            <Stack direction="row" gap="16px" alignItems="flex-start">
               <Box
                 sx={{
                   flex: 1,
-                  p: 2,
-                  borderRadius: 2,
+                  p: "16px",
+                  borderRadius: "4px",
                   border: `1px solid ${borderPalette.light}`,
                   background: background.accent,
                 }}
@@ -137,8 +190,8 @@ const MappingCard = ({ mapping, frameworkNames }: IMappingCardProps) => {
               <Box
                 sx={{
                   flex: 1,
-                  p: 2,
-                  borderRadius: 2,
+                  p: "16px",
+                  borderRadius: "4px",
                   border: `1px solid ${borderPalette.light}`,
                   background: background.accent,
                 }}
@@ -157,8 +210,8 @@ const MappingCard = ({ mapping, frameworkNames }: IMappingCardProps) => {
           </Stack>
 
           {/* Mapping Strength Explanation */}
-          <Stack spacing={2}>
-            <Stack direction="row" spacing={1} alignItems="center">
+          <Stack gap="16px">
+            <Stack direction="row" gap="8px" alignItems="center">
               <Typography sx={{ fontSize: 13, fontWeight: 600, color: text.primary }}>
                 Mapping strength
               </Typography>
@@ -171,7 +224,7 @@ const MappingCard = ({ mapping, frameworkNames }: IMappingCardProps) => {
           </Stack>
 
           {/* What this means */}
-          <Stack spacing={2}>
+          <Stack gap="16px">
             <Typography sx={{ fontSize: 13, fontWeight: 600, color: text.primary }}>
               What this means for you
             </Typography>
@@ -186,27 +239,33 @@ const MappingCard = ({ mapping, frameworkNames }: IMappingCardProps) => {
 
           {/* Domain & Confidence */}
           {(mapping.domain_tag || mapping.confidence_score !== undefined) && (
-            <Stack spacing={2}>
+            <Stack gap="16px">
               <Typography sx={{ fontSize: 13, fontWeight: 600, color: text.primary }}>
                 Additional details
               </Typography>
-              <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
+              <Stack direction="row" gap="16px" flexWrap="wrap" useFlexGap>
                 {mapping.domain_tag && (
                   <Box>
                     <Typography sx={{ fontSize: 11, color: text.muted, mb: 0.5 }}>
                       Governance domain
                     </Typography>
-                    <Chip
-                      label={mapping.domain_tag.replace(/_/g, " ")}
-                      size="small"
+                    <Box
+                      component="span"
                       sx={{
-                        fontSize: 12,
+                        display: "inline-flex",
+                        alignItems: "center",
                         height: 24,
+                        px: "10px",
+                        borderRadius: "4px",
+                        fontSize: 12,
                         textTransform: "capitalize",
-                        backgroundColor: "#E6F0EC",
-                        color: "#13715B",
+                        backgroundColor: accent.primary.bg,
+                        color: accent.primary.text,
+                        border: `1px solid ${accent.primary.border}`,
                       }}
-                    />
+                    >
+                      {mapping.domain_tag.replace(/_/g, " ")}
+                    </Box>
                   </Box>
                 )}
                 {mapping.confidence_score !== undefined && (
@@ -225,7 +284,7 @@ const MappingCard = ({ mapping, frameworkNames }: IMappingCardProps) => {
 
           {/* Rationale */}
           {mapping.rationale && (
-            <Stack spacing={2}>
+            <Stack gap="16px">
               <Typography sx={{ fontSize: 13, fontWeight: 600, color: text.primary }}>
                 Rationale
               </Typography>

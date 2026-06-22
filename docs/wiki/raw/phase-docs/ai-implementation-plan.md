@@ -1,0 +1,1 @@
+/Users/halitozger/Desktop/verifywise/.claude/worktrees/practical-euler/AI Implementation Plan.md

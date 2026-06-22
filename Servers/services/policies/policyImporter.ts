@@ -8,7 +8,7 @@
  */
 
 import mammoth from "mammoth";
-import sanitizeHtml from "sanitize-html";
+import { sanitizeUserHtml } from "../../utils/sanitizeUserHtml";
 
 /** Maximum permitted upload size (must match multer limit in policy.route.ts). */
 export const DOCX_MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB
@@ -64,25 +64,7 @@ export async function convertDocxToHtml(buffer: Buffer): Promise<DocxImportResul
   html = html.replace(/\s+class="[^"]*"/g, "");
 
   // Server-side sanitization — only allow safe URI schemes (no data: URIs)
-  html = sanitizeHtml(html, {
-    allowedTags: sanitizeHtml.defaults.allowedTags.concat([
-      "h1",
-      "h2",
-      "h3",
-      "img",
-      "sup",
-      "sub",
-      "u",
-      "s",
-    ]),
-    allowedAttributes: {
-      ...sanitizeHtml.defaults.allowedAttributes,
-      img: ["src", "alt", "width", "height"],
-      a: ["href", "target", "rel"],
-    },
-    // Explicitly exclude "data:" to prevent XSS via data URIs
-    allowedSchemes: ["http", "https", "blob"],
-  });
+  html = sanitizeUserHtml(html);
 
   const warnings = result.messages.filter((m) => m.type === "warning").map((m) => m.message);
 

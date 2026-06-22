@@ -7,6 +7,12 @@ export interface IAdvisorMessage {
   content: string;
   createdAt: string; // ISO timestamp
   chartData?: unknown; // Optional chart data for assistant messages
+  /**
+   * AI SDK UIMessage tool parts (type: 'dynamic-tool'). Persisted so
+   * inline approval cards re-render on page refresh. Stored verbatim
+   * as JSONB; backend never inspects the shape.
+   */
+  toolParts?: unknown[];
 }
 
 /**

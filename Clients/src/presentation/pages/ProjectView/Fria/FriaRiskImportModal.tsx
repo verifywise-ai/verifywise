@@ -71,13 +71,36 @@ const FriaRiskImportModal = ({
     );
   };
 
+  // Normalize 5-level project risk values to FRIA's 3-level scale
+  const normalizeLikelihood = (value?: string): string => {
+    const map: Record<string, string> = {
+      "Rare": "Low",
+      "Unlikely": "Low",
+      "Possible": "Medium",
+      "Likely": "High",
+      "Almost Certain": "High",
+    };
+    return map[value || ""] || value || "Medium";
+  };
+
+  const normalizeSeverity = (value?: string): string => {
+    const map: Record<string, string> = {
+      Negligible: "Low",
+      Minor: "Low",
+      Moderate: "Medium",
+      Major: "High",
+      Catastrophic: "High",
+    };
+    return map[value || ""] || value || "Medium";
+  };
+
   const handleImport = () => {
     const selected = risks
       .filter((r) => selectedIds.includes(r.id))
       .map((r) => ({
         risk_description: r.risk_name || r.risk_description || "Imported risk",
-        likelihood: r.likelihood || "Medium",
-        severity: r.severity || r.final_risk_level || "Medium",
+        likelihood: normalizeLikelihood(r.likelihood),
+        severity: normalizeSeverity(r.severity || r.final_risk_level),
         linked_project_risk_id: r.id,
       }));
     onImport(selected);

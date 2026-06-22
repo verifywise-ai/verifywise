@@ -12,7 +12,8 @@ export type IconName =
   | 'FlaskConical'
   | 'ScanSearch'
   | 'EyeOff'
-  | 'Router';
+  | 'Router'
+  | 'Gauge';
 
 export interface Article {
   id: string;
@@ -96,6 +97,12 @@ export const collections: Collection[] = [
         title: 'Managing model inventory',
         description: 'Register and track all AI models across your organization.',
         keywords: ['model', 'inventory', 'register', 'ai', 'catalog'],
+      },
+      {
+        id: 'ai-apps',
+        title: 'Managing the AI apps inventory',
+        description: 'Track the AI applications your teams use, with owners, approvals, policies, and risk.',
+        keywords: ['ai app', 'application', 'inventory', 'shadow ai', 'approval', 'governance'],
       },
       {
         id: 'model-lifecycle',
@@ -627,8 +634,8 @@ export const collections: Collection[] = [
       },
       {
         id: 'mcp-overview',
-        title: 'MCP Gateway overview',
-        description: 'Understand what the MCP Gateway does, how it works, and why you need it for agent governance.',
+        title: 'Agent Control overview',
+        description: 'Understand what Agent Control does, how it works, and why you need it for agent governance.',
         keywords: ['mcp', 'gateway', 'overview', 'agent', 'tool', 'proxy', 'model context protocol', 'json-rpc'],
       },
       {
@@ -654,6 +661,12 @@ export const collections: Collection[] = [
         title: 'MCP audit log',
         description: 'Review tool invocation history with stats, charts, filters and pagination.',
         keywords: ['mcp', 'audit', 'log', 'history', 'tool call', 'latency', 'error rate', 'compliance', 'record-keeping'],
+      },
+      {
+        id: 'mcp-runs',
+        title: 'Runs',
+        description: 'Reconstruct a full agent turn — model calls and tool calls correlated into one run.',
+        keywords: ['mcp', 'runs', 'run', 'agent run', 'correlation', 'agent_run_id', 'session', 'conversation', 'tool call', 'model call', 'timeline', 'x-vw-agent-run-id'],
       },
       {
         id: 'mcp-approvals',
@@ -705,6 +718,120 @@ export const collections: Collection[] = [
         title: 'Super admin panel',
         description: 'Manage all organizations and users across the entire VerifyWise installation (super admin only).',
         keywords: ['super admin', 'organizations', 'users', 'invite', 'global', 'system admin'],
+      },
+    ],
+  },
+  {
+    id: 'developers',
+    title: 'Developer guide',
+    description: 'Build on VerifyWise. The guide covers Agent Control (connect any terminal agent and govern its tool calls) and the platform REST API for reading and writing your governance data. More developer topics are coming.',
+    icon: 'Plug',
+    articleCount: 12,
+    articles: [
+      {
+        id: 'overview',
+        title: 'Developer guide',
+        description: 'What the developer guide covers today and what is coming.',
+        keywords: ['developer', 'guide', 'overview', 'index', 'agent control', 'api', 'integration', 'getting started'],
+      },
+      {
+        id: 'agent-control-overview',
+        title: 'Agent Control: how it works',
+        description: 'What Agent Control governs and the two ways to connect an agent.',
+        keywords: ['developer', 'agent control', 'overview', 'integration', 'hook', 'mcp', 'tool call', 'agent key'],
+      },
+      {
+        id: 'connect-your-agent',
+        title: 'Connect your agent',
+        description: 'Get a tool call governed in about 5 minutes with the bundled hook, for Claude Code or Cursor.',
+        keywords: ['developer', 'quickstart', 'connect', 'hook', 'setup', 'agent key', 'claude code', 'cursor', 'integration'],
+      },
+      {
+        id: 'connect-any-agent',
+        title: 'Connect any agent',
+        description: 'The generic contract and the MCP proxy path for any terminal agent, plus bring-your-own.',
+        keywords: ['developer', 'generic', 'any agent', 'cursor', 'codex', 'aider', 'gemini cli', 'mcp proxy', 'hook contract', 'terminal agent', 'integration'],
+      },
+      {
+        id: 'governing-tool-calls',
+        title: 'Governing tool calls',
+        description: 'The four decisions, approval polling, run correlation and fail-modes.',
+        keywords: ['developer', 'decision', 'allow', 'deny', 'approval', 'rate limit', 'run correlation', 'x-vw-agent-run-id', 'fail mode'],
+      },
+      {
+        id: 'agent-control-api',
+        title: 'API reference',
+        description: 'Endpoints, headers, auth and error codes for the tool-call hook.',
+        keywords: ['developer', 'api', 'reference', 'endpoint', 'hook', 'curl', 'json-rpc', 'authentication', 'agent key'],
+      },
+      {
+        id: 'platform-rest-api',
+        title: 'Platform REST API',
+        description: 'Authenticate with a token and read or write your governance data over REST.',
+        keywords: ['developer', 'api', 'rest', 'platform', 'token', 'bearer', 'authentication', 'endpoint', 'swagger', 'openapi', 'pagination', 'integration', 'curl'],
+      },
+      {
+        id: 'working-with-resources',
+        title: 'Working with resources',
+        description: 'The CRUD pattern for projects, risks, vendors and other resources, with the few places they differ.',
+        keywords: ['developer', 'api', 'rest', 'crud', 'create', 'update', 'delete', 'list', 'resources', 'projects', 'risks', 'vendors', 'patch', 'put', 'filter', 'curl', 'integration'],
+      },
+      {
+        id: 'bulk-import-datasets',
+        title: 'Bulk importing datasets',
+        description: 'Upload a CSV or spreadsheet to register a dataset through the API.',
+        keywords: ['developer', 'api', 'dataset', 'bulk', 'upload', 'import', 'csv', 'xlsx', 'multipart', 'file', 'plugin', 'metadata', 'integration'],
+      },
+      {
+        id: 'automations-api',
+        title: 'Automations API',
+        description: 'Create and manage automations programmatically, with the list of triggers and actions.',
+        keywords: ['developer', 'api', 'automation', 'trigger', 'action', 'rule', 'email', 'event', 'crud', 'integration'],
+      },
+      {
+        id: 'compliance-and-reports',
+        title: 'Compliance, reports and exports',
+        description: 'Fetch compliance progress, generate reports and use the document export endpoints.',
+        keywords: ['developer', 'api', 'compliance', 'progress', 'report', 'export', 'pdf', 'docx', 'csv', 'grc', 'assessment', 'framework', 'integration'],
+      },
+      {
+        id: 'inbound-integrations',
+        title: 'Inbound integrations',
+        description: 'Create incidents from another system and submit public intake forms.',
+        keywords: ['developer', 'api', 'incident', 'intake', 'form', 'public', 'submission', 'webhook', 'integration', 'monitoring'],
+      },
+    ],
+  },
+  {
+    id: 'ai-trust-index',
+    title: 'AI Trust Index',
+    description: 'Browse independent privacy and transparency scores for AI apps, track the tools your organisation uses, and receive weekly change digests when scores or policies update.',
+    icon: 'Gauge',
+    articleCount: 4,
+    articles: [
+      {
+        id: 'dashboard',
+        title: 'AI Trust Index overview',
+        description: 'How the index works, what scores and grades mean, and how to navigate the module.',
+        keywords: ['ai trust index', 'overview', 'score', 'grade', 'privacy', 'transparency', 'feed', 'weekly', 'digest', 'dealbreaker'],
+      },
+      {
+        id: 'browse',
+        title: 'Browsing and tracking apps',
+        description: 'Search and filter the full app catalog, view details, and track apps individually or in bulk.',
+        keywords: ['browse', 'search', 'filter', 'catalog', 'track', 'bulk', 'grade', 'score', 'category', 'app detail', 'highlights', 'dealbreaker', 'policy url'],
+      },
+      {
+        id: 'tracked',
+        title: 'Your tracked apps',
+        description: 'Manage your organisation\'s tracking list and understand "no longer in index" notices.',
+        keywords: ['tracked', 'watch list', 'no longer in index', 'removed', 'untrack', 'digest', 'material change', 'email', 'notification'],
+      },
+      {
+        id: 'settings',
+        title: 'Configuring email recipients',
+        description: 'Choose which users and email addresses receive the weekly AI Trust Index change digest.',
+        keywords: ['settings', 'recipients', 'email', 'digest', 'admin', 'configure', 'notify', 'weekly', 'user', 'external'],
       },
     ],
   },

@@ -92,15 +92,24 @@ import { ApprovalStepApproversModel } from "../domain.layer/models/approvalWorkf
 import { ApprovalWorkflowModel } from "../domain.layer/models/approvalWorkflow/approvalWorkflow.model";
 import { ApprovalWorkflowStepModel } from "../domain.layer/models/approvalWorkflow/approvalWorkflowStep.model";
 import { DatasetModel } from "../domain.layer/models/dataset/dataset.model";
+import { AiActionApprovalModel } from "../domain.layer/models/aiApproval/aiActionApproval.model";
+import { AiApprovalRuleModel } from "../domain.layer/models/aiApproval/aiApprovalRule.model";
+import { AiAppModel } from "../domain.layer/models/aiApp/aiApp.model";
 import { GovernanceControlMappingModel } from "../domain.layer/models/governanceOs/governanceControlMapping.model";
 import { GovernanceScenarioModel } from "../domain.layer/models/governanceOs/governanceScenario.model";
 import { GovernanceScenarioRuleModel } from "../domain.layer/models/governanceOs/governanceScenarioRule.model";
 import { GovernanceOrgPreferencesModel } from "../domain.layer/models/governanceOs/governanceOrgPreferences.model";
 import { GovernanceCoverageCacheModel } from "../domain.layer/models/governanceOs/governanceCoverageCache.model";
+import { GovernanceScenarioActivationModel } from "../domain.layer/models/governanceOs/governanceScenarioActivation.model";
 
 dotenv.config();
 
-const conf = dbConfig.development;
+if (process.env.NODE_ENV === "test") {
+  dotenv.config({ path: ".env.test", override: true });
+}
+
+const env = process.env.NODE_ENV || "development";
+const conf = (dbConfig as Record<string, any>)[env] || dbConfig.development;
 
 const sequelize = new Sequelize(conf.database!, conf.username!, conf.password, {
   host: conf.host!,
@@ -206,11 +215,15 @@ const sequelize = new Sequelize(conf.database!, conf.username!, conf.password, {
     ApprovalWorkflowModel,
     ApprovalWorkflowStepModel,
     DatasetModel,
+    AiActionApprovalModel,
+    AiApprovalRuleModel,
+    AiAppModel,
     GovernanceControlMappingModel,
     GovernanceScenarioModel,
     GovernanceScenarioRuleModel,
     GovernanceOrgPreferencesModel,
     GovernanceCoverageCacheModel,
+    GovernanceScenarioActivationModel,
   ],
 }) as Sequelize;
 

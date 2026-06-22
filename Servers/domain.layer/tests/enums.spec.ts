@@ -83,7 +83,23 @@ describe("Domain Enums", () => {
     });
 
     it("EntityType should have expected values", () => {
-      verifyEnum(EntityType, ["USE_CASE", "FILE", "AI_ACTION"]);
+      verifyEnum(EntityType, [
+        "USE_CASE",
+        "FILE",
+        "RISK",
+        "VENDOR",
+        "MODEL_INVENTORY",
+        "POLICY",
+        "INCIDENT",
+        "TASK",
+        "DATASET",
+        "TRAINING",
+        "EVIDENCE",
+        "AI_ACTION",
+        "AUTOMATION",
+        "PMM_CONFIG",
+        "NOTE",
+      ]);
       expect(EntityType.USE_CASE).toBe("use_case");
     });
   });

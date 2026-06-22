@@ -44,6 +44,7 @@ import { NotificationEntityType } from "../domain.layer/interfaces/i.notificatio
 import logger from "../utils/logger/fileLogger";
 import { translateError } from "../utils/i18n.utils";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
+import { sanitizeUserHtml } from "../utils/sanitizeUserHtml";
 
 export class PolicyController {
   // Get all policies
@@ -80,6 +81,9 @@ export class PolicyController {
       const userId = req.userId!;
       const policyData = {
         ...req.body,
+        ...(req.body?.content_html !== undefined && {
+          content_html: sanitizeUserHtml(req.body.content_html),
+        }),
         author_id: userId,
         last_updated_by: userId,
       } as IPolicy;
@@ -127,6 +131,9 @@ export class PolicyController {
 
       const policyData = {
         ...req.body,
+        ...(req.body?.content_html !== undefined && {
+          content_html: sanitizeUserHtml(req.body.content_html),
+        }),
         last_updated_by: userId,
       } as Partial<IPolicy>;
 

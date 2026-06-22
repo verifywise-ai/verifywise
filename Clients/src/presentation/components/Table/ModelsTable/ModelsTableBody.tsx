@@ -183,22 +183,22 @@ const ModelsTableBody: React.FC<ModelsTableBodyProps> = ({
   const [menuAnchorEl, setMenuAnchorEl] = useState<null | HTMLElement>(null);
   const [menuRow, setMenuRow] = useState<ModelRow | null>(null);
 
-  const handleMenuOpen = (e: React.MouseEvent<HTMLElement>, row: ModelRow) => {
+  const openModelMenu = (e: React.MouseEvent<HTMLElement>, row: ModelRow) => {
     e.stopPropagation();
     setMenuAnchorEl(e.currentTarget);
     setMenuRow(row);
   };
 
-  const handleMenuClose = () => {
+  const closeModelMenu = () => {
     setMenuAnchorEl(null);
     setMenuRow(null);
   };
 
-  const handleDeleteClick = () => {
+  const deleteModelRow = () => {
     if (menuRow && onDelete) {
       onDelete(menuRow);
     }
-    handleMenuClose();
+    closeModelMenu();
   };
 
   return (
@@ -305,7 +305,7 @@ const ModelsTableBody: React.FC<ModelsTableBodyProps> = ({
             >
               <IconButton
                 size="small"
-                onClick={(e) => handleMenuOpen(e, model)}
+                onClick={(e) => openModelMenu(e, model)}
                 sx={{
                   "color": `${text.icon}`,
                   "padding": "6px",
@@ -325,7 +325,7 @@ const ModelsTableBody: React.FC<ModelsTableBodyProps> = ({
       <Popover
         open={Boolean(menuAnchorEl)}
         anchorEl={menuAnchorEl}
-        onClose={handleMenuClose}
+        onClose={closeModelMenu}
         onClick={(e) => e.stopPropagation()}
         anchorOrigin={{ horizontal: "right", vertical: "bottom" }}
         transformOrigin={{ horizontal: "right", vertical: "top" }}
@@ -345,7 +345,7 @@ const ModelsTableBody: React.FC<ModelsTableBodyProps> = ({
           {onDelete && (
             <CustomizableButton
               variant="outlined"
-              onClick={handleDeleteClick}
+              onClick={deleteModelRow}
               startIcon={<Trash2 size={14} />}
               sx={{
                 "height": "34px",

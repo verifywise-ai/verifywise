@@ -6,21 +6,29 @@ import { GovernanceScenarioRuleModel } from "../domain.layer/models/governanceOs
 import { GovernanceOrgPreferencesModel } from "../domain.layer/models/governanceOs/governanceOrgPreferences.model";
 import { GovernanceCoverageCacheModel } from "../domain.layer/models/governanceOs/governanceCoverageCache.model";
 import {
+  IGovernanceControlMappingAttributes,
   IGovernanceScenarioAttributes,
   IGovernanceOrgPreferencesAttributes,
 } from "../domain.layer/interfaces/i.governanceOs";
+import { createNewTaskQuery } from "./task.utils";
+import { ITask } from "../domain.layer/interfaces/i.task";
+import { TaskPriority } from "../domain.layer/enums/task-priority.enum";
+import { TaskStatus } from "../domain.layer/enums/task-status.enum";
 
 // ============================================
 // MAPPINGS
 // ============================================
 
-export const getAllMappingsQuery = async (filters?: {
-  frameworkId?: number;
-  strength?: string;
-  domain?: string;
-}): Promise<GovernanceControlMappingModel[]> => {
-  let where = "WHERE 1=1";
-  const replacements: Record<string, unknown> = {};
+export const getAllMappingsQuery = async (
+  organizationId: number,
+  filters?: {
+    frameworkId?: number;
+    strength?: string;
+    domain?: string;
+  },
+): Promise<GovernanceControlMappingModel[]> => {
+  let where = "WHERE organization_id = :organizationId";
+  const replacements: Record<string, unknown> = { organizationId };
 
   if (filters?.frameworkId) {
     where += " AND (source_framework_id = :frameworkId OR target_framework_id = :frameworkId)";
@@ -46,16 +54,18 @@ export const getAllMappingsQuery = async (filters?: {
 };
 
 export const getMappingsBetweenFrameworksQuery = async (
+  organizationId: number,
   sourceId: number,
   targetId: number,
 ): Promise<GovernanceControlMappingModel[]> => {
   return sequelize.query(
     `SELECT * FROM governance_control_mappings
-     WHERE (source_framework_id = :sourceId AND target_framework_id = :targetId)
-        OR (source_framework_id = :targetId AND target_framework_id = :sourceId AND mapping_direction = 'bidirectional')
+     WHERE organization_id = :organizationId
+       AND ((source_framework_id = :sourceId AND target_framework_id = :targetId)
+        OR (source_framework_id = :targetId AND target_framework_id = :sourceId AND mapping_direction = 'bidirectional'))
      ORDER BY domain_tag, mapping_strength`,
     {
-      replacements: { sourceId, targetId },
+      replacements: { organizationId, sourceId, targetId },
       mapToModel: true,
       model: GovernanceControlMappingModel,
     },
@@ -63,20 +73,154 @@ export const getMappingsBetweenFrameworksQuery = async (
 };
 
 export const getMappingsForControlQuery = async (
+  organizationId: number,
   controlType: string,
   controlId: number,
 ): Promise<GovernanceControlMappingModel[]> => {
   return sequelize.query(
     `SELECT * FROM governance_control_mappings
-     WHERE (source_control_type = :controlType AND source_control_id = :controlId)
-        OR (target_control_type = :controlType AND target_control_id = :controlId)
+     WHERE organization_id = :organizationId
+       AND ((source_control_type = :controlType AND source_control_id = :controlId)
+        OR (target_control_type = :controlType AND target_control_id = :controlId))
      ORDER BY mapping_strength DESC, confidence_score DESC`,
     {
-      replacements: { controlType, controlId },
+      replacements: { organizationId, controlType, controlId },
       mapToModel: true,
       model: GovernanceControlMappingModel,
     },
   );
+};
+
+export const createMappingQuery = async (
+  organizationId: number,
+  data: Partial<IGovernanceControlMappingAttributes>,
+): Promise<GovernanceControlMappingModel> => {
+  const [results] = await sequelize.query(
+    `INSERT INTO governance_control_mappings
+      (organization_id, source_framework_id, source_control_type, source_control_identifier, source_control_id,
+       target_framework_id, target_control_type, target_control_identifier, target_control_id,
+       mapping_strength, mapping_direction, domain_tag, rationale, confidence_score)
+     VALUES
+      (:organization_id, :source_framework_id, :source_control_type, :source_control_identifier, :source_control_id,
+       :target_framework_id, :target_control_type, :target_control_identifier, :target_control_id,
+       :mapping_strength, :mapping_direction, :domain_tag, :rationale, :confidence_score)
+     RETURNING *`,
+    {
+      replacements: {
+        organization_id: organizationId,
+        source_framework_id: data.source_framework_id,
+        source_control_type: data.source_control_type || "clause",
+        source_control_identifier: data.source_control_identifier || "",
+        source_control_id: data.source_control_id || null,
+        target_framework_id: data.target_framework_id,
+        target_control_type: data.target_control_type || "clause",
+        target_control_identifier: data.target_control_identifier || "",
+        target_control_id: data.target_control_id || null,
+        mapping_strength: data.mapping_strength || "related",
+        mapping_direction: data.mapping_direction || "bidirectional",
+        domain_tag: data.domain_tag || null,
+        rationale: data.rationale || null,
+        confidence_score: data.confidence_score ?? 0.8,
+      },
+    },
+  );
+  return (results as any[])[0] as GovernanceControlMappingModel;
+};
+
+export const updateMappingQuery = async (
+  organizationId: number,
+  id: number,
+  data: Partial<IGovernanceControlMappingAttributes>,
+): Promise<GovernanceControlMappingModel | null> => {
+  const setClauses: string[] = [];
+  const replacements: Record<string, unknown> = { id, organizationId };
+
+  if (data.mapping_strength !== undefined) {
+    setClauses.push("mapping_strength = :mapping_strength");
+    replacements.mapping_strength = data.mapping_strength;
+  }
+  if (data.mapping_direction !== undefined) {
+    setClauses.push("mapping_direction = :mapping_direction");
+    replacements.mapping_direction = data.mapping_direction;
+  }
+  if (data.domain_tag !== undefined) {
+    setClauses.push("domain_tag = :domain_tag");
+    replacements.domain_tag = data.domain_tag;
+  }
+  if (data.rationale !== undefined) {
+    setClauses.push("rationale = :rationale");
+    replacements.rationale = data.rationale;
+  }
+  if (data.confidence_score !== undefined) {
+    setClauses.push("confidence_score = :confidence_score");
+    replacements.confidence_score = data.confidence_score;
+  }
+
+  if (setClauses.length === 0) return null;
+
+  setClauses.push("updated_at = NOW()");
+
+  const [results] = await sequelize.query(
+    `UPDATE governance_control_mappings SET ${setClauses.join(", ")}
+     WHERE id = :id AND organization_id = :organizationId
+     RETURNING *`,
+    { replacements },
+  );
+  return ((results as any[])[0] as GovernanceControlMappingModel) || null;
+};
+
+export const deleteMappingQuery = async (organizationId: number, id: number): Promise<boolean> => {
+  const [, metadata] = await sequelize.query(
+    `DELETE FROM governance_control_mappings WHERE id = :id AND organization_id = :organizationId`,
+    { replacements: { id, organizationId } },
+  );
+  return (metadata as any).rowCount > 0;
+};
+
+export const createBulkMappingsQuery = async (
+  organizationId: number,
+  mappings: Partial<IGovernanceControlMappingAttributes>[],
+): Promise<number> => {
+  if (mappings.length === 0) return 0;
+
+  const values = mappings
+    .map(
+      (_, i) =>
+        `(:organization_id_${i}, :source_framework_id_${i}, :source_control_type_${i}, :source_control_identifier_${i}, :source_control_id_${i},
+      :target_framework_id_${i}, :target_control_type_${i}, :target_control_identifier_${i}, :target_control_id_${i},
+      :mapping_strength_${i}, :mapping_direction_${i}, :domain_tag_${i}, :rationale_${i}, :confidence_score_${i})`,
+    )
+    .join(", ");
+
+  const replacements: Record<string, unknown> = {};
+  mappings.forEach((m, i) => {
+    replacements[`organization_id_${i}`] = organizationId;
+    replacements[`source_framework_id_${i}`] = m.source_framework_id;
+    replacements[`source_control_type_${i}`] = m.source_control_type || "clause";
+    replacements[`source_control_identifier_${i}`] = m.source_control_identifier || "";
+    replacements[`source_control_id_${i}`] = m.source_control_id || null;
+    replacements[`target_framework_id_${i}`] = m.target_framework_id;
+    replacements[`target_control_type_${i}`] = m.target_control_type || "clause";
+    replacements[`target_control_identifier_${i}`] = m.target_control_identifier || "";
+    replacements[`target_control_id_${i}`] = m.target_control_id || null;
+    replacements[`mapping_strength_${i}`] = m.mapping_strength || "related";
+    replacements[`mapping_direction_${i}`] = m.mapping_direction || "bidirectional";
+    replacements[`domain_tag_${i}`] = m.domain_tag || null;
+    replacements[`rationale_${i}`] = m.rationale || null;
+    replacements[`confidence_score_${i}`] = m.confidence_score ?? 0.8;
+  });
+
+  const [results] = await sequelize.query(
+    `INSERT INTO governance_control_mappings
+      (organization_id, source_framework_id, source_control_type, source_control_identifier, source_control_id,
+       target_framework_id, target_control_type, target_control_identifier, target_control_id,
+       mapping_strength, mapping_direction, domain_tag, rationale, confidence_score)
+     VALUES ${values}
+     RETURNING *`,
+    { replacements },
+  );
+
+  return (results as any[]).length;
 };
 
 // ============================================
@@ -223,6 +367,313 @@ export const deleteScenarioQuery = async (id: number, organizationId: number): P
   return (metadata as any).rowCount > 0;
 };
 
+export const createScenarioActivationQuery = async ({
+  organizationId,
+  scenarioId,
+  activatedBy,
+  priorityOrder,
+  projectIds,
+  ownerAssignments,
+}: {
+  organizationId: number;
+  scenarioId: number;
+  activatedBy: number;
+  priorityOrder: { primary?: number; secondary?: number[]; supplementary?: number[] };
+  projectIds?: number[];
+  ownerAssignments?: Record<number, number>;
+}): Promise<{ activationId: number; tasksCreated: number }> => {
+  const transaction = await sequelize.transaction();
+
+  try {
+    // Get projects that have the relevant frameworks assigned
+    const frameworkIds = [
+      priorityOrder.primary,
+      ...(priorityOrder.secondary || []),
+      ...(priorityOrder.supplementary || []),
+    ].filter(Boolean) as number[];
+
+    if (frameworkIds.length === 0) {
+      throw new Error("Scenario has no frameworks assigned. Cannot activate.");
+    }
+
+    const projectQuery =
+      projectIds && projectIds.length > 0
+        ? `SELECT p.id, p.project_title, p.owner
+         FROM projects p
+         WHERE p.organization_id = :organizationId AND p.id = ANY(ARRAY[:projectIds]::INTEGER[])`
+        : `SELECT DISTINCT p.id, p.project_title, p.owner
+         FROM projects p
+         JOIN projects_frameworks pf ON pf.project_id = p.id
+         WHERE p.organization_id = :organizationId
+           AND pf.framework_id = ANY(ARRAY[:frameworkIds]::INTEGER[])`;
+
+    const [projects] = await sequelize.query(projectQuery, {
+      replacements: { organizationId, projectIds: projectIds || [], frameworkIds },
+      transaction,
+    });
+
+    if ((projects as any[]).length === 0) {
+      throw new Error(
+        "No eligible projects found for activation. Ensure projects have the required frameworks assigned.",
+      );
+    }
+
+    let tasksCreated = 0;
+
+    const createTaskForFramework = async (
+      _projectId: number,
+      projectTitle: string,
+      frameworkId: number,
+      priority: string,
+      daysUntilDue: number,
+      defaultOwnerId: number,
+    ) => {
+      const assigneeUserId = ownerAssignments?.[frameworkId] || defaultOwnerId;
+      const frameworkName =
+        frameworkId === 1
+          ? "EU AI Act"
+          : frameworkId === 2
+            ? "ISO 42001"
+            : frameworkId === 3
+              ? "ISO 27001"
+              : frameworkId === 4
+                ? "NIST AI RMF"
+                : `Framework ${frameworkId}`;
+
+      const dueDate = new Date();
+      dueDate.setDate(dueDate.getDate() + daysUntilDue);
+
+      const taskData: ITask = {
+        title: `Implement ${frameworkName} controls — ${projectTitle}`,
+        description: `This task was auto-generated by activating a governance scenario. Priority: ${priority}. Please review the framework controls and link evidence as you complete them.`,
+        creator_id: activatedBy,
+        organization_id: organizationId,
+        due_date: dueDate,
+        priority:
+          priority === "primary"
+            ? TaskPriority.HIGH
+            : priority === "secondary"
+              ? TaskPriority.MEDIUM
+              : TaskPriority.LOW,
+        status: TaskStatus.OPEN,
+        categories: ["governance", frameworkName.toLowerCase().replace(/\s+/g, "-")],
+      };
+
+      await createNewTaskQuery(
+        taskData,
+        organizationId,
+        transaction,
+        assigneeUserId > 0 ? [{ user_id: assigneeUserId }] : undefined,
+      );
+      tasksCreated++;
+    };
+
+    for (const project of projects as any[]) {
+      const projectId = project.id as number;
+      const projectTitle = (project.project_title as string) || "Untitled Project";
+      const defaultOwnerId = (project.owner as number) || 0;
+
+      if (priorityOrder.primary) {
+        await createTaskForFramework(
+          projectId,
+          projectTitle,
+          priorityOrder.primary,
+          "primary",
+          14,
+          defaultOwnerId,
+        );
+      }
+      for (const fwId of priorityOrder.secondary || []) {
+        await createTaskForFramework(
+          projectId,
+          projectTitle,
+          fwId,
+          "secondary",
+          30,
+          defaultOwnerId,
+        );
+      }
+      for (const fwId of priorityOrder.supplementary || []) {
+        await createTaskForFramework(
+          projectId,
+          projectTitle,
+          fwId,
+          "supplementary",
+          60,
+          defaultOwnerId,
+        );
+      }
+    }
+
+    const [activationResult] = await sequelize.query(
+      `INSERT INTO governance_scenario_activations
+        (organization_id, scenario_id, activated_by, tasks_created, frameworks_assigned, status)
+       VALUES
+        (:organizationId, :scenarioId, :activatedBy, :tasksCreated, :frameworksAssigned, 'active')
+       RETURNING *`,
+      {
+        replacements: {
+          organizationId,
+          scenarioId,
+          activatedBy,
+          tasksCreated,
+          frameworksAssigned: frameworkIds.length * (projects as any[]).length,
+        },
+        transaction,
+      },
+    );
+
+    await transaction.commit();
+
+    return {
+      activationId: (activationResult as any[])[0]?.id as number,
+      tasksCreated,
+    };
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
+  }
+};
+
+// ============================================
+// ACTIVATION TRACKING
+// ============================================
+
+export const getActivationHistoryQuery = async (
+  organizationId: number,
+): Promise<
+  {
+    id: number;
+    scenario_id: number;
+    scenario_name: string;
+    activated_by: number;
+    activated_at: Date;
+    tasks_created: number;
+    frameworks_assigned: number;
+    status: string;
+  }[]
+> => {
+  const results = await sequelize.query(
+    `SELECT
+       a.id,
+       a.scenario_id,
+       s.name as scenario_name,
+       a.activated_by,
+       a.activated_at,
+       a.tasks_created,
+       a.frameworks_assigned,
+       a.status
+     FROM governance_scenario_activations a
+     JOIN governance_scenarios s ON s.id = a.scenario_id
+     WHERE a.organization_id = :organizationId
+     ORDER BY a.activated_at DESC
+     LIMIT 50`,
+    {
+      replacements: { organizationId },
+    },
+  );
+  return results[0] as any[];
+};
+
+export const deactivateScenarioQuery = async (
+  activationId: number,
+  organizationId: number,
+): Promise<{ id: number; status: string; deactivated_at: Date } | null> => {
+  const [results] = await sequelize.query(
+    `UPDATE governance_scenario_activations
+     SET status = 'inactive', deactivated_at = NOW()
+     WHERE id = :activationId AND organization_id = :organizationId
+     RETURNING id, status, deactivated_at`,
+    {
+      replacements: { activationId, organizationId },
+    },
+  );
+  const row = (results as any[])[0];
+  if (!row) return null;
+  return {
+    id: row.id as number,
+    status: row.status as string,
+    deactivated_at: row.deactivated_at as Date,
+  };
+};
+
+const FRAMEWORK_SLUGS: Record<number, string> = {
+  1: "eu-ai-act",
+  2: "iso-42001",
+  3: "iso-27001",
+  4: "nist-ai-rmf",
+};
+
+export const getTaskProgressByFrameworkQuery = async (
+  activationId: number,
+  organizationId: number,
+): Promise<
+  {
+    frameworkId: number;
+    frameworkName: string;
+    totalTasks: number;
+    completedTasks: number;
+    inProgressTasks: number;
+    openTasks: number;
+  }[]
+> => {
+  // Get activation timestamp
+  const [activationResult] = await sequelize.query(
+    `SELECT activated_at FROM governance_scenario_activations
+     WHERE id = :activationId AND organization_id = :organizationId`,
+    {
+      replacements: { activationId, organizationId },
+    },
+  );
+  const activatedAt = (activationResult as any[])[0]?.activated_at;
+  if (!activatedAt) return [];
+
+  // Single query for all framework slugs to avoid N+1.
+  const slugs = Object.values(FRAMEWORK_SLUGS);
+  const [taskResults] = await sequelize.query(
+    `SELECT
+       jsonb_array_elements_text(categories) as category,
+       COUNT(*) FILTER (WHERE status = 'Completed') as completed,
+       COUNT(*) FILTER (WHERE status = 'In progress') as in_progress,
+       COUNT(*) FILTER (WHERE status = 'Open') as open,
+       COUNT(*) as total
+     FROM tasks
+     WHERE organization_id = :organizationId
+       AND categories::jsonb ? 'governance'
+       AND jsonb_array_elements_text(categories) IN (:slugs)
+       AND created_at >= :activatedAt
+     GROUP BY jsonb_array_elements_text(categories)`,
+    {
+      replacements: { organizationId, slugs, activatedAt },
+    },
+  );
+
+  const progress: ReturnType<typeof getTaskProgressByFrameworkQuery> extends Promise<infer T>
+    ? T
+    : never = [];
+
+  for (const row of taskResults as any[]) {
+    const slug = row.category as string;
+    const fwId = Object.entries(FRAMEWORK_SLUGS).find(([, s]) => s === slug)?.[0];
+    if (!fwId) continue;
+    const total = parseInt(row?.total || "0", 10);
+    if (total > 0) {
+      const id = Number(fwId);
+      progress.push({
+        frameworkId: id,
+        frameworkName:
+          id === 1 ? "EU AI Act" : id === 2 ? "ISO 42001" : id === 3 ? "ISO 27001" : "NIST AI RMF",
+        totalTasks: total,
+        completedTasks: parseInt(row?.completed || "0", 10),
+        inProgressTasks: parseInt(row?.in_progress || "0", 10),
+        openTasks: parseInt(row?.open || "0", 10),
+      });
+    }
+  }
+
+  return progress;
+};
+
 // ============================================
 // PREFERENCES
 // ============================================
@@ -285,9 +736,10 @@ export const getCoverageCacheQuery = async (
   projectId: number,
 ): Promise<GovernanceCoverageCacheModel[]> => {
   return sequelize.query(
-    `SELECT * FROM governance_coverage_cache
-     WHERE organization_id = :organizationId AND project_id = :projectId
-     ORDER BY framework_id`,
+    `SELECT c.*, f.name as framework_name FROM governance_coverage_cache c
+     JOIN frameworks f ON f.id = c.framework_id
+     WHERE c.organization_id = :organizationId AND c.project_id = :projectId
+     ORDER BY c.framework_id`,
     {
       replacements: { organizationId, projectId },
       mapToModel: true,
@@ -306,20 +758,22 @@ export const upsertCoverageCacheQuery = async (
     coverage_percentage: number;
     gap_details?: Record<string, unknown>;
     synergy_details?: Record<string, unknown>;
+    calculation_methodology?: string;
   },
   transaction: Transaction | null = null,
 ): Promise<void> => {
   await sequelize.query(
     `INSERT INTO governance_coverage_cache
-      (organization_id, project_id, framework_id, total_controls, mapped_controls, coverage_percentage, gap_details, synergy_details, computed_at)
+      (organization_id, project_id, framework_id, total_controls, mapped_controls, coverage_percentage, gap_details, synergy_details, calculation_methodology, computed_at)
      VALUES
-      (:organization_id, :project_id, :framework_id, :total_controls, :mapped_controls, :coverage_percentage, :gap_details, :synergy_details, NOW())
+      (:organization_id, :project_id, :framework_id, :total_controls, :mapped_controls, :coverage_percentage, :gap_details, :synergy_details, :calculation_methodology, NOW())
      ON CONFLICT (organization_id, project_id, framework_id) DO UPDATE SET
       total_controls = EXCLUDED.total_controls,
       mapped_controls = EXCLUDED.mapped_controls,
       coverage_percentage = EXCLUDED.coverage_percentage,
       gap_details = EXCLUDED.gap_details,
       synergy_details = EXCLUDED.synergy_details,
+      calculation_methodology = EXCLUDED.calculation_methodology,
       computed_at = NOW()`,
     {
       replacements: {
@@ -331,29 +785,47 @@ export const upsertCoverageCacheQuery = async (
         coverage_percentage: data.coverage_percentage,
         gap_details: data.gap_details ? JSON.stringify(data.gap_details) : null,
         synergy_details: data.synergy_details ? JSON.stringify(data.synergy_details) : null,
+        calculation_methodology: data.calculation_methodology || null,
       },
       ...(transaction && { transaction }),
     },
   );
 };
 
+export const deleteCoverageCacheQuery = async (
+  organizationId: number,
+  projectId?: number,
+): Promise<void> => {
+  const where = projectId
+    ? "organization_id = :organizationId AND project_id = :projectId"
+    : "organization_id = :organizationId";
+  await sequelize.query(`DELETE FROM governance_coverage_cache WHERE ${where}`, {
+    replacements: { organizationId, projectId },
+  });
+};
+
 // ============================================
 // AGGREGATION (for unified view)
 // ============================================
 
-export const getMappingStatsQuery = async (): Promise<{
+export const getMappingStatsQuery = async (
+  organizationId: number,
+): Promise<{
   total: number;
   byDomain: Record<string, number>;
   byStrength: Record<string, number>;
 }> => {
   const [totalResult] = await sequelize.query(
-    `SELECT COUNT(*) as total FROM governance_control_mappings`,
+    `SELECT COUNT(*) as total FROM governance_control_mappings WHERE organization_id = :organizationId`,
+    { replacements: { organizationId } },
   );
   const [domainResult] = await sequelize.query(
-    `SELECT domain_tag, COUNT(*) as count FROM governance_control_mappings GROUP BY domain_tag ORDER BY count DESC`,
+    `SELECT domain_tag, COUNT(*) as count FROM governance_control_mappings WHERE organization_id = :organizationId GROUP BY domain_tag ORDER BY count DESC`,
+    { replacements: { organizationId } },
   );
   const [strengthResult] = await sequelize.query(
-    `SELECT mapping_strength, COUNT(*) as count FROM governance_control_mappings GROUP BY mapping_strength`,
+    `SELECT mapping_strength, COUNT(*) as count FROM governance_control_mappings WHERE organization_id = :organizationId GROUP BY mapping_strength`,
+    { replacements: { organizationId } },
   );
 
   const byDomain: Record<string, number> = {};

@@ -883,10 +883,13 @@ export async function getUsersByIds(
 ): Promise<Array<{ id: number; name: string; email: string }>> {
   if (!userIds || userIds.length === 0) return [];
 
-  const result = await sequelize.query(`SELECT id, name, email FROM users WHERE id = ANY(:ids)`, {
-    replacements: { ids: userIds },
-    type: QueryTypes.SELECT,
-  });
+  const result = await sequelize.query(
+    `SELECT id, name, email FROM users WHERE id = ANY(ARRAY[:ids]::INTEGER[])`,
+    {
+      replacements: { ids: userIds },
+      type: QueryTypes.SELECT,
+    },
+  );
 
   return result as Array<{ id: number; name: string; email: string }>;
 }

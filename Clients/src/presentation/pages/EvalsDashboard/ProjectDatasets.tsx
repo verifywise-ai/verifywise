@@ -3348,6 +3348,43 @@ export function ProjectDatasets({ projectId, orgId }: ProjectDatasetsProps) {
         title="Choose dataset format"
         description="Select the type and format for your new dataset"
         maxWidth="520px"
+        submitButtonText="Create Dataset"
+        onSubmit={() => {
+          setCreateTypeSelectionOpen(false);
+
+          // Initialize with appropriate format based on selection
+          if (newDatasetTurnType === "single-turn") {
+            const singleTurnPrompt: SingleTurnPrompt = {
+              id: "prompt_1",
+              category: "general",
+              prompt: "",
+              expected_output: "",
+              difficulty: "medium",
+              ...(newDatasetUseCase === "rag" ? { retrieval_context: [] } : {}),
+            };
+            setEditablePrompts([singleTurnPrompt]);
+          } else {
+            const multiTurnConversation: MultiTurnConversation = {
+              id: "conversation_1",
+              scenario: "",
+              expected_outcome: "",
+              turns: [{ role: "user", content: "" }],
+              ...(newDatasetUseCase === "rag" ? { context: [] } : {}),
+            };
+            setEditablePrompts([multiTurnConversation]);
+          }
+
+          setEditDatasetName("");
+          setEditingDataset({
+            key: "new",
+            name: "New Dataset",
+            path: "",
+            use_case: newDatasetUseCase,
+            datasetType: newDatasetUseCase,
+            turnType: newDatasetTurnType,
+          });
+          setEditorOpen(true);
+        }}
       >
         <Stack spacing="20px">
           {/* Use Case Selection */}
@@ -3471,56 +3508,6 @@ export function ProjectDatasets({ projectId, orgId }: ProjectDatasetsProps) {
                   : "Conversations with scenario, multiple turns (user/assistant), and expected outcome"}
             </Typography>
           </Box>
-
-          {/* Action Buttons */}
-          <Stack direction="row" spacing={2} justifyContent="flex-end">
-            <CustomizableButton
-              variant="text"
-              text="Cancel"
-              onClick={() => setCreateTypeSelectionOpen(false)}
-              sx={{ color: palette.text.tertiary }}
-            />
-            <CustomizableButton
-              variant="contained"
-              text="Create Dataset"
-              onClick={() => {
-                setCreateTypeSelectionOpen(false);
-
-                // Initialize with appropriate format based on selection
-                if (newDatasetTurnType === "single-turn") {
-                  const singleTurnPrompt: SingleTurnPrompt = {
-                    id: "prompt_1",
-                    category: "general",
-                    prompt: "",
-                    expected_output: "",
-                    difficulty: "medium",
-                    ...(newDatasetUseCase === "rag" ? { retrieval_context: [] } : {}),
-                  };
-                  setEditablePrompts([singleTurnPrompt]);
-                } else {
-                  const multiTurnConversation: MultiTurnConversation = {
-                    id: "conversation_1",
-                    scenario: "",
-                    expected_outcome: "",
-                    turns: [{ role: "user", content: "" }],
-                    ...(newDatasetUseCase === "rag" ? { context: [] } : {}),
-                  };
-                  setEditablePrompts([multiTurnConversation]);
-                }
-
-                setEditDatasetName("");
-                setEditingDataset({
-                  key: "new",
-                  name: "New Dataset",
-                  path: "",
-                  use_case: newDatasetUseCase,
-                  datasetType: newDatasetUseCase,
-                  turnType: newDatasetTurnType,
-                });
-                setEditorOpen(true);
-              }}
-            />
-          </Stack>
         </Stack>
       </ModalStandard>
     </Stack>

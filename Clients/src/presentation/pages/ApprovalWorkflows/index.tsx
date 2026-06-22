@@ -205,6 +205,32 @@ const ApprovalWorkflows: React.FC = () => {
         return "use_case";
       case 2:
         return "file";
+      case 3:
+        return "risk";
+      case 4:
+        return "vendor";
+      case 5:
+        return "model_inventory";
+      case 6:
+        return "policy";
+      case 7:
+        return "incident";
+      case 8:
+        return "task";
+      case 9:
+        return "dataset";
+      case 10:
+        return "training";
+      case 11:
+        return "evidence";
+      case 12:
+        return "ai_action";
+      case 13:
+        return "automation";
+      case 14:
+        return "pmm_config";
+      case 15:
+        return "note";
       default:
         return "use_case";
     }

@@ -136,18 +136,6 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
 
   const previewType = file ? getPreviewType(file.mimetype) : "unsupported";
 
-  // Debug logging
-  useEffect(() => {
-    if (file) {
-      console.log("[FilePreviewPanel] File data:", {
-        id: file.id,
-        filename: file.filename,
-        mimetype: file.mimetype,
-        previewType,
-      });
-    }
-  }, [file, previewType]);
-
   // Load preview when file changes - uses the dedicated preview endpoint
   // which has XSS protections and MIME allowlisting
   useEffect(() => {

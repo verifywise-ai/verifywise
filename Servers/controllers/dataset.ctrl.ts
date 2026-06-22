@@ -20,6 +20,7 @@ import {
 } from "../utils/datasetChangeHistory.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import logger, { logStructured } from "../utils/logger/fileLogger";
+import { logRollbackFailure } from "../utils/logger/logHelper";
 import { ValidationError } from "../utils/validations/validation.utils";
 import { translateError } from "../utils/i18n.utils";
 import {
@@ -62,11 +63,13 @@ export async function getDatasetById(req: Request, res: Response) {
       "getDatasetById",
       "dataset.ctrl.ts",
     );
-    return res.status(400).json({
-      status: "error",
-      message: idValidation.message || "Invalid dataset ID",
-      code: idValidation.code || "INVALID_PARAMETER",
-    });
+    return res.status(400).json(
+      STATUS_CODE[400]({
+        status: "error",
+        message: idValidation.message || "Invalid dataset ID",
+        code: idValidation.code || "INVALID_PARAMETER",
+      }),
+    );
   }
 
   logStructured(
@@ -193,15 +196,17 @@ export async function createNewDataset(req: Request, res: Response) {
       "createNewDataset",
       "dataset.ctrl.ts",
     );
-    return res.status(400).json({
-      status: "error",
-      message: "Dataset creation validation failed",
-      errors: validationErrors.map((err: ValidationError) => ({
-        field: err.field,
-        message: err.message,
-        code: err.code,
-      })),
-    });
+    return res.status(400).json(
+      STATUS_CODE[400]({
+        status: "error",
+        message: "Dataset creation validation failed",
+        errors: validationErrors.map((err: ValidationError) => ({
+          field: err.field,
+          message: err.message,
+          code: err.code,
+        })),
+      }),
+    );
   }
 
   const {
@@ -282,7 +287,14 @@ export async function createNewDataset(req: Request, res: Response) {
       try {
         await transaction.rollback();
       } catch (rollbackError) {
-        console.warn("Transaction rollback failed:", rollbackError);
+        await logRollbackFailure({
+          req,
+          functionName: "createNewDataset",
+          fileName: "dataset.ctrl.ts",
+          eventType: "Create",
+          originalError: error,
+          rollbackError,
+        });
       }
     }
 
@@ -304,11 +316,13 @@ export async function updateDatasetById(req: Request, res: Response) {
       "updateDatasetById",
       "dataset.ctrl.ts",
     );
-    return res.status(400).json({
-      status: "error",
-      message: idValidation.message || "Invalid dataset ID",
-      code: idValidation.code || "INVALID_PARAMETER",
-    });
+    return res.status(400).json(
+      STATUS_CODE[400]({
+        status: "error",
+        message: idValidation.message || "Invalid dataset ID",
+        code: idValidation.code || "INVALID_PARAMETER",
+      }),
+    );
   }
 
   const {
@@ -364,15 +378,17 @@ export async function updateDatasetById(req: Request, res: Response) {
         "updateDatasetById",
         "dataset.ctrl.ts",
       );
-      return res.status(400).json({
-        status: "error",
-        message: "Dataset update validation failed",
-        errors: validationErrors.map((err: ValidationError) => ({
-          field: err.field,
-          message: err.message,
-          code: err.code,
-        })),
-      });
+      return res.status(400).json(
+        STATUS_CODE[400]({
+          status: "error",
+          message: "Dataset update validation failed",
+          errors: validationErrors.map((err: ValidationError) => ({
+            field: err.field,
+            message: err.message,
+            code: err.code,
+          })),
+        }),
+      );
     }
 
     // Track changes before updating
@@ -455,7 +471,14 @@ export async function updateDatasetById(req: Request, res: Response) {
       try {
         await transaction.rollback();
       } catch (rollbackError) {
-        console.warn("Transaction rollback failed:", rollbackError);
+        await logRollbackFailure({
+          req,
+          functionName: "updateDatasetById",
+          fileName: "dataset.ctrl.ts",
+          eventType: "Update",
+          originalError: error,
+          rollbackError,
+        });
       }
     }
 
@@ -477,11 +500,13 @@ export async function deleteDatasetById(req: Request, res: Response) {
       "deleteDatasetById",
       "dataset.ctrl.ts",
     );
-    return res.status(400).json({
-      status: "error",
-      message: idValidation.message || "Invalid dataset ID",
-      code: idValidation.code || "INVALID_PARAMETER",
-    });
+    return res.status(400).json(
+      STATUS_CODE[400]({
+        status: "error",
+        message: idValidation.message || "Invalid dataset ID",
+        code: idValidation.code || "INVALID_PARAMETER",
+      }),
+    );
   }
 
   logStructured("processing", "starting deleteDatasetById", "deleteDatasetById", "dataset.ctrl.ts");
@@ -518,7 +543,14 @@ export async function deleteDatasetById(req: Request, res: Response) {
       try {
         await transaction.rollback();
       } catch (rollbackError) {
-        console.warn("Transaction rollback failed:", rollbackError);
+        await logRollbackFailure({
+          req,
+          functionName: "deleteDatasetById",
+          fileName: "dataset.ctrl.ts",
+          eventType: "Delete",
+          originalError: error,
+          rollbackError,
+        });
       }
     }
 
@@ -540,11 +572,13 @@ export async function getDatasetHistory(req: Request, res: Response) {
       "getDatasetHistory",
       "dataset.ctrl.ts",
     );
-    return res.status(400).json({
-      status: "error",
-      message: idValidation.message || "Invalid dataset ID",
-      code: idValidation.code || "INVALID_PARAMETER",
-    });
+    return res.status(400).json(
+      STATUS_CODE[400]({
+        status: "error",
+        message: idValidation.message || "Invalid dataset ID",
+        code: idValidation.code || "INVALID_PARAMETER",
+      }),
+    );
   }
 
   logStructured(

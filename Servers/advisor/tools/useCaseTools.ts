@@ -54,4 +54,151 @@ export const toolsDefinition: any[] = [
       },
     },
   },
+  {
+    type: "function",
+    function: {
+      name: "agent_create_use_case",
+      description:
+        "Create a new use case (project) in the system. Requires human confirmation before execution.",
+      parameters: {
+        type: "object",
+        properties: {
+          name: {
+            type: "string",
+            description: "The title/name of the use case.",
+          },
+          description: {
+            type: "string",
+            description: "Description of the use case.",
+          },
+          status: {
+            type: "string",
+            enum: ["Draft", "In Progress", "Active", "Completed", "Archived"],
+            description: "Initial status for the use case. Defaults to 'Draft'.",
+          },
+          risk_classification: {
+            type: "string",
+            enum: ["High risk", "Limited risk", "Minimal risk", "Unacceptable risk"],
+            description: "EU AI Act risk classification level.",
+          },
+          industry: {
+            type: "string",
+            description: "Target industry for the use case.",
+          },
+        },
+        required: ["name"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "agent_update_use_case",
+      description:
+        "Update an existing use case (project). Requires human confirmation before execution.",
+      parameters: {
+        type: "object",
+        properties: {
+          use_case_id: {
+            type: "number",
+            description: "The ID of the use case to update.",
+          },
+          name: {
+            type: "string",
+            description: "New title/name for the use case.",
+          },
+          description: {
+            type: "string",
+            description: "New description for the use case.",
+          },
+          status: {
+            type: "string",
+            enum: ["Draft", "In Progress", "Active", "Completed", "Archived"],
+            description: "New status for the use case.",
+          },
+          risk_classification: {
+            type: "string",
+            enum: ["High risk", "Limited risk", "Minimal risk", "Unacceptable risk"],
+            description: "New EU AI Act risk classification level.",
+          },
+          industry: {
+            type: "string",
+            description: "New target industry for the use case.",
+          },
+          goal: {
+            type: "string",
+            description: "New goal for the use case.",
+          },
+        },
+        required: ["use_case_id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "agent_update_use_case_status",
+      description:
+        "Update only the status of an existing use case. Requires human confirmation before execution.",
+      parameters: {
+        type: "object",
+        properties: {
+          use_case_id: {
+            type: "number",
+            description: "The ID of the use case to update.",
+          },
+          status: {
+            type: "string",
+            enum: ["Draft", "In Progress", "Active", "Completed", "Archived"],
+            description: "New status for the use case.",
+          },
+        },
+        required: ["use_case_id", "status"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "agent_add_member_to_use_case",
+      description:
+        "Add a team member to a use case (project). Requires human confirmation before execution.",
+      parameters: {
+        type: "object",
+        properties: {
+          use_case_id: {
+            type: "number",
+            description: "The ID of the use case to add the member to.",
+          },
+          user_id: {
+            type: "number",
+            description: "The ID of the user to add as a member.",
+          },
+          role: {
+            type: "string",
+            description: "Optional role description for the member within this use case.",
+          },
+        },
+        required: ["use_case_id", "user_id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "agent_delete_use_case",
+      description:
+        "Permanently delete a use case (project) and all associated data. This action is irreversible. Requires human confirmation before execution.",
+      parameters: {
+        type: "object",
+        properties: {
+          use_case_id: {
+            type: "number",
+            description: "The ID of the use case to delete.",
+          },
+        },
+        required: ["use_case_id"],
+      },
+    },
+  },
 ];

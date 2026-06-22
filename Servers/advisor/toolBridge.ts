@@ -6,17 +6,25 @@ import logger from "../utils/logger/fileLogger";
 /**
  * Convert a JSON Schema type definition to a Zod schema.
  * Handles the subset of JSON Schema used in our OpenAI-format tool definitions.
+ *
+ * NOTE: We intentionally do NOT use z.enum() for string fields. LLMs (especially
+ * GPT-4o-mini) tend to auto-fill enum-typed fields with the first value, even when
+ * marked optional. Instead, we include the valid values in the description so the
+ * LLM uses them when relevant but doesn't default-fill them.
  */
 function jsonSchemaToZod(schema: Record<string, unknown>): ZodTypeAny {
   const type = schema.type as string;
 
   if (type === "string") {
     let base = z.string();
-    if (Array.isArray(schema.enum)) {
-      return z.enum(schema.enum as [string, ...string[]]);
+    let description = (schema.description as string) || "";
+    if (Array.isArray(schema.enum) && schema.enum.length > 0) {
+      // Merge enum values into description instead of using z.enum
+      const enumHint = `Valid values: ${(schema.enum as string[]).join(", ")}. Only include if user explicitly asks.`;
+      description = description ? `${description} ${enumHint}` : enumHint;
     }
-    if (schema.description) {
-      base = base.describe(schema.description as string);
+    if (description) {
+      base = base.describe(description);
     }
     return base;
   }
@@ -126,7 +134,27 @@ export function bridgeTools(
       inputSchema: zodSchema as z.ZodObject<Record<string, ZodTypeAny>>,
       execute: async (params: Record<string, unknown>) => {
         try {
-          const result = await fn(params, tenant, userId);
+          // Strip LLM-generated default values (empty strings, zero for IDs, false for flags)
+          // LLMs tend to auto-fill optional fields with type defaults which causes filtering issues.
+          const cleaned: Record<string, unknown> = {};
+          for (const [key, value] of Object.entries(params)) {
+            if (value === "" || value === null || value === undefined) continue;
+            // Strip `archived: false` — implicit default, skip entirely
+            if (key === "archived" && value === false) continue;
+            // Strip `projectId: 0`, `id: 0` — invalid IDs, likely auto-fill
+            if ((key === "projectId" || key === "project_id" || key.endsWith("_id")) && value === 0)
+              continue;
+            cleaned[key] = value;
+          }
+
+          // Inject userId for write tools that need it (confirmation flow)
+          const enrichedParams = userId !== undefined ? { ...cleaned, _userId: userId } : cleaned;
+          logger.info(`[toolBridge] Calling "${name}" with params: ${JSON.stringify(cleaned)}`);
+          const result = await fn(enrichedParams, tenant, userId);
+          const resultSize = Array.isArray(result) ? result.length : typeof result;
+          logger.info(
+            `[toolBridge] Tool "${name}" returned: ${resultSize} ${Array.isArray(result) ? "items" : ""}`,
+          );
           return result;
         } catch (error) {
           logger.error(`[toolBridge] Error executing tool "${name}":`, error);

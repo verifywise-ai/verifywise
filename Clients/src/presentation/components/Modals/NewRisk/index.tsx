@@ -16,7 +16,7 @@ import TabContext from "@mui/lab/TabContext";
 import { Autocomplete, Box, Stack, TextField, Typography, Divider } from "@mui/material";
 import Field from "../../Inputs/Field";
 import Select from "../../Inputs/Select";
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import Alert from "../../Alert";
 import { checkStringValidation } from "../../../../application/validations/stringValidation";
 import useUsers from "../../../../application/hooks/useUsers";
@@ -35,6 +35,8 @@ import {
 } from "../../../../application/hooks/useVendorRiskMutations";
 import { useAuth } from "../../../../application/hooks/useAuth";
 import { HistorySidebar } from "../../Common/HistorySidebar";
+import CustomFieldsSection, { type CustomFieldsSectionHandle } from "../../CustomFieldsSection";
+import { useRequiredCustomFieldsGate } from "../../CustomFieldsSection/RequiredCustomFieldsGate";
 import { useVendorRiskChangeHistory } from "../../../../application/hooks/useVendorRiskChangeHistory";
 import { VendorModel } from "../../../../domain/models/Common/vendor/vendor.model";
 import { ExistingRisk } from "../../../../domain/interfaces/i.vendor";
@@ -127,6 +129,8 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
     body: string;
   } | null>(null);
   const [activeTab, setActiveTab] = useState("details");
+  const customFieldsRef = useRef<CustomFieldsSectionHandle | null>(null);
+  const customFieldsGate = useRequiredCustomFieldsGate("vendor_risk", existingRisk?.id ?? null);
   const [selectedFrameworks, setSelectedFrameworks] = useState<number[]>([]);
 
   const { allFrameworks: frameworks, loading: frameworksLoading } = useFrameworks({
@@ -154,6 +158,7 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
       setValues(initialState);
       setErrors({} as FormErrors);
       setSelectedFrameworks([]);
+      setActiveTab("details");
     }
   }, [isOpen]);
 
@@ -311,12 +316,30 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
       const response = await createVendorRiskMutation.mutateAsync(riskDetails);
 
       if (response.status === 201) {
+        const newRiskId = response.data?.data?.id as number | undefined;
+        let cfFlushFailed = false;
+        if (newRiskId && customFieldsRef.current?.hasPendingValues()) {
+          try {
+            await customFieldsRef.current.flush(newRiskId);
+          } catch (cfError) {
+            cfFlushFailed = true;
+            logEngine({
+              type: "error",
+              message: `Vendor risk created, but custom field values failed to save: ${(cfError as Error).message}`,
+            });
+          }
+        }
+        onSuccess();
+        if (cfFlushFailed) {
+          // Risk is created. Keep modal open so the inline warning from
+          // CustomFieldsSection stays visible.
+          return;
+        }
         setAlert({
           variant: "success",
           body: "Vendor-Risk created successfully",
         });
         setTimeout(() => setAlert(null), 3000);
-        onSuccess();
         setIsOpen();
       } else {
         setAlert({
@@ -360,12 +383,27 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
       });
 
       if (response.status === 202) {
+        let cfFlushFailed = false;
+        if (customFieldsRef.current?.hasPendingValues()) {
+          try {
+            await customFieldsRef.current.flush(riskId);
+          } catch (cfError) {
+            cfFlushFailed = true;
+            logEngine({
+              type: "error",
+              message: `Vendor risk updated, but custom field values failed to save: ${(cfError as Error).message}`,
+            });
+          }
+        }
+        onSuccess();
+        if (cfFlushFailed) {
+          return;
+        }
         setAlert({
           variant: "success",
           body: "Vendor-Risk updated successfully",
         });
         setTimeout(() => setAlert(null), 3000);
-        onSuccess();
         setIsOpen();
       } else {
         setAlert({
@@ -599,36 +637,47 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
             ? "Update risk details including description, impact assessment, and mitigation plan."
             : "Document and assess a potential risk associated with your vendor. Provide details of the risk, its impact, and your mitigation plan."
         }
-        onSubmit={activeTab === "details" ? handleSave : undefined}
+        onSubmit={customFieldsGate.blocked || activeTab === "activity" ? undefined : handleSave}
         submitButtonText="Save"
-        isSubmitting={isSubmitting || isEditingDisabled}
+        isSubmitting={isSubmitting || isEditingDisabled || customFieldsGate.blocked}
         maxWidth="1000px"
       >
-        {existingRisk?.id ? (
-          <TabContext value={activeTab}>
-            <Box sx={{ marginBottom: 3 }}>
-              <TabBar
-                tabs={[
-                  { label: "Risk details", value: "details", icon: "ShieldAlert" },
-                  { label: "Activity", value: "activity", icon: "History" },
-                ]}
-                activeTab={activeTab}
-                onChange={(_, newValue) => setActiveTab(newValue)}
-              />
-            </Box>
-            {activeTab === "details" && risksPanel}
-            {activeTab === "activity" && (
-              <HistorySidebar
-                inline
-                isOpen={true}
-                entityType="vendor_risk"
-                entityId={existingRisk.id}
-              />
-            )}
-          </TabContext>
-        ) : (
-          risksPanel
-        )}
+        <TabContext value={activeTab}>
+          <Box sx={{ marginBottom: 3 }}>
+            <TabBar
+              tabs={
+                existingRisk?.id
+                  ? [
+                      { label: "Risk details", value: "details", icon: "ShieldAlert" },
+                      { label: "Custom fields", value: "custom-fields", icon: "Settings" },
+                      { label: "Activity", value: "activity", icon: "History" },
+                    ]
+                  : [
+                      { label: "Risk details", value: "details", icon: "ShieldAlert" },
+                      { label: "Custom fields", value: "custom-fields", icon: "Settings" },
+                    ]
+              }
+              activeTab={activeTab}
+              onChange={(_, newValue) => setActiveTab(newValue)}
+            />
+          </Box>
+          <Box sx={{ display: activeTab === "details" ? "block" : "none" }}>{risksPanel}</Box>
+          <Box sx={{ display: activeTab === "custom-fields" ? "block" : "none" }}>
+            <CustomFieldsSection
+              ref={customFieldsRef}
+              entityType="vendor_risk"
+              entityId={existingRisk?.id ?? null}
+            />
+          </Box>
+          {activeTab === "activity" && existingRisk?.id && (
+            <HistorySidebar
+              inline
+              isOpen={true}
+              entityType="vendor_risk"
+              entityId={existingRisk.id}
+            />
+          )}
+        </TabContext>
       </StandardModal>
     </Stack>
   );

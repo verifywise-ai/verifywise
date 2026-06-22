@@ -10,6 +10,10 @@ import {
 } from "./automation/modelInventory.automation.utils";
 import { IModelInventoryProjectFramework } from "../domain.layer/interfaces/i.modelInventoryProjectFramework";
 import { recordSnapshotIfChanged } from "./history/modelInventoryHistory.utils";
+import {
+  deleteAllCustomFieldValuesForEntityQuery,
+  fetchCustomFieldsForEntities,
+} from "./customField.utils";
 
 export const getAllModelInventoriesQuery = async (organizationId: number) => {
   const modelInventories = await sequelize.query(
@@ -19,6 +23,14 @@ export const getAllModelInventoriesQuery = async (organizationId: number) => {
       mapToModel: true,
       model: ModelInventoryModel,
     },
+  );
+  const modelIds = (modelInventories as ModelInventoryModel[])
+    .map((m) => m.id)
+    .filter((id): id is number => typeof id === "number");
+  const customFieldsByModel = await fetchCustomFieldsForEntities(
+    "model_inventory",
+    modelIds,
+    organizationId,
   );
   for (const model of modelInventories) {
     (model.dataValues as any).projects = [];
@@ -36,6 +48,7 @@ export const getAllModelInventoriesQuery = async (organizationId: number) => {
         (model.dataValues as any).projects.push(pf.project_id);
       }
     }
+    (model.dataValues as any).custom_fields = customFieldsByModel.get(model.id!) ?? [];
   }
   return modelInventories;
 };
@@ -480,6 +493,13 @@ export const deleteModelInventoryByIdQuery = async (
         },
       );
     }
+
+    await deleteAllCustomFieldValuesForEntityQuery(
+      "model_inventory",
+      id,
+      organizationId,
+      transaction,
+    );
 
     const result = (await sequelize.query(
       `DELETE FROM model_inventories WHERE organization_id = :organization_id AND id = :id RETURNING *`,

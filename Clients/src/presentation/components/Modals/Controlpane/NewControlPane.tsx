@@ -840,17 +840,6 @@ const NewControlPane = ({
         }
       });
 
-      // Debug logging
-      console.log("Files to upload:", {
-        evidence: Object.values(subcontrolFormData).map((d) => d.uploadEvidenceFiles.length),
-        feedback: Object.values(subcontrolFormData).map((d) => d.uploadFeedbackFiles.length),
-      });
-      console.log("Files to attach:", {
-        evidence: attachedEvidenceFiles,
-        feedback: attachedFeedbackFiles,
-      });
-      console.log("Files to delete:", allDeletedFileIds);
-
       formData.append("delete", JSON.stringify(allDeletedFileIds));
 
       // Add attached file IDs (for linking existing files from File Manager)

@@ -36,17 +36,19 @@ export async function fileDeleteRisk(
     };
   }
 
-  const parsed = AgentDeleteRiskSchema.safeParse(params);
+  // Strip the bridge-injected `_userId` (and `_organizationId`) before
+  // strict-parsing — see toolBridge.ts which always appends `_userId`.
+  const { _userId: _u, _organizationId: _o, ...userParams } = params as Record<string, unknown>;
+  void _u;
+  void _o;
+  const parsed = AgentDeleteRiskSchema.safeParse(userParams);
   if (!parsed.success) {
-    return {
-      status: "validation_failed",
-      errors: parsed.error.issues.map((i) => ({
-        path: i.path.join("."),
-        message: i.message,
-      })),
-      message:
-        "The proposed risk deletion failed validation. Re-check the tool's parameter schema and try again.",
-    };
+    const errorList = parsed.error.issues
+      .map((i) => `- ${i.path.join(".") || "(root)"}: ${i.message}`)
+      .join("\n");
+    throw new Error(
+      `agent_delete_risk validation failed. You MUST tell the user verbatim that the following fields had invalid values and ask them for corrected values for each one before retrying. DO NOT call this tool again until every error below is addressed:\n${errorList}`,
+    );
   }
 
   const currentRisk = await getRiskByIdQuery(parsed.data.risk_id, organizationId, false);

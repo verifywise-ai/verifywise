@@ -51,6 +51,11 @@ export async function getApprovalRequestById({
   return response.data;
 }
 
+// Note: the cross-page refresh event for AI write actions is the
+// `aiAction:completed` CustomEvent dispatched by RequestorApprovalModal
+// (where it has access to the entity_type and tool name). See
+// `application/events/aiActionEvents.ts`.
+
 export async function approveRequest({
   id,
   body,

@@ -16,6 +16,14 @@ import {
   ShadowAiDepartmentActivity,
 } from "../domain.layer/interfaces/i.shadowAi";
 
+// Hard caps on row counts for aggregate dashboards. These are defensive
+// upper bounds — real-world cardinality is much lower (departments ~50,
+// tools per user ~20, trend buckets bounded by period). The cap protects
+// against runaway memory if the underlying data ever explodes.
+const MAX_DEPARTMENTS = 200;
+const MAX_TREND_POINTS = 731; // ~2 years of daily data
+const MAX_USER_TOOL_DETAIL_ROWS = 200;
+
 /**
  * Get summary stats for the insights dashboard.
  */
@@ -146,8 +154,9 @@ export async function getUsersByDepartmentQuery(
      WHERE organization_id = :organizationId
        AND event_timestamp > NOW() - INTERVAL '1 day' * :periodDays
      GROUP BY department
-     ORDER BY user_count DESC`,
-    { replacements: { organizationId, periodDays } },
+     ORDER BY user_count DESC, department ASC
+     LIMIT :maxDepartments`,
+    { replacements: { organizationId, periodDays, maxDepartments: MAX_DEPARTMENTS } },
   );
 
   return (rows as any[]).map((r) => ({
@@ -196,8 +205,11 @@ export async function getTrendQuery(
        ON pe.detected_tool_id = ntd.id
        AND ntd.detected_date = DATE(pe.event_timestamp)
      GROUP BY TO_CHAR(pe.event_timestamp, :dateFormat)
-     ORDER BY date ASC`,
-    { replacements: { organizationId, periodDays, dateFormat } },
+     ORDER BY date ASC
+     LIMIT :maxTrendPoints`,
+    {
+      replacements: { organizationId, periodDays, dateFormat, maxTrendPoints: MAX_TREND_POINTS },
+    },
   );
 
   return (rows as any[]).map((r) => ({
@@ -233,11 +245,14 @@ export async function getUserActivityQuery(
     replacements.department = options.department;
   }
 
+  // ORDER BY needs a deterministic tiebreaker so pagination doesn't shift
+  // when rows share the primary sort key. user_email is unique per row here
+  // (we GROUP BY user_email), so it's a safe final tiebreaker.
   const SORT_MAP: Record<string, string> = {
-    risk: "risk_score DESC",
+    risk: "risk_score DESC, user_email ASC",
     email: "user_email ASC",
   };
-  const sortColumn = SORT_MAP[options?.sort || ""] || "total_prompts DESC";
+  const sortColumn = SORT_MAP[options?.sort || ""] || "total_prompts DESC, user_email ASC";
 
   const [rows] = await sequelize.query(
     `SELECT
@@ -304,8 +319,9 @@ export async function getDepartmentActivityQuery(
      WHERE e.organization_id = :organizationId
        AND e.event_timestamp > NOW() - INTERVAL '30 days'
      GROUP BY COALESCE(e.department, 'Unknown'), t2.name
-     ORDER BY total_prompts DESC`,
-    { replacements: { organizationId } },
+     ORDER BY total_prompts DESC, department ASC
+     LIMIT :maxDepartments`,
+    { replacements: { organizationId, maxDepartments: MAX_DEPARTMENTS } },
   );
 
   return (rows as any[]).map((r) => ({
@@ -342,8 +358,11 @@ export async function getUserDetailQuery(
        AND e.user_email = :userEmail
        AND e.event_timestamp > NOW() - INTERVAL '1 day' * :periodDays
      GROUP BY t.name
-     ORDER BY event_count DESC`,
-    { replacements: { organizationId, userEmail, periodDays } },
+     ORDER BY event_count DESC, tool_name ASC
+     LIMIT :maxRows`,
+    {
+      replacements: { organizationId, userEmail, periodDays, maxRows: MAX_USER_TOOL_DETAIL_ROWS },
+    },
   );
 
   return rows as any[];

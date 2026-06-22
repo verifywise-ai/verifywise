@@ -30,6 +30,7 @@ import {
   Link2,
 } from "lucide-react";
 import EmptyStateTip from "../EmptyState/EmptyStateTip";
+import { TableEmptyStateLayout } from "../Table/TableEmptyStateLayout";
 import { IProjectTableViewProps } from "../../../domain/interfaces/i.project";
 import { Project } from "../../../domain/types/Project";
 import { deleteProject } from "../../../application/repository/project.repository";
@@ -38,6 +39,9 @@ import Alert from "../Alert";
 import allowedRoles from "../../../application/constants/permissions";
 import { useAuth } from "../../../application/hooks/useAuth";
 import { text } from "../../themes/palette";
+import useUsers from "../../../application/hooks/useUsers";
+import { useCustomFieldDefinitions } from "../../../application/hooks/useCustomFields";
+import { formatCustomFieldValue } from "../CustomFieldsSection/formatCustomFieldValue";
 
 const SelectorVertical = (props: React.SVGAttributes<SVGSVGElement>) => (
   <ChevronsUpDown size={16} {...props} />
@@ -185,14 +189,26 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
     localStorage.setItem(PROJECT_SORTING_KEY, JSON.stringify(sortConfig));
   }, [sortConfig]);
 
-  // Filter columns based on visibility
+  const { users } = useUsers();
+  const { data: customFieldDefs = [] } = useCustomFieldDefinitions("project");
+
+  // Filter columns based on visibility, then append custom field columns
+  // before the actions column.
   const visibleColumnsArray = useMemo(() => {
-    if (!visibleColumns || visibleColumns.size === 0) {
-      // If no visibility set provided, show all columns
-      return columns;
-    }
-    return columns.filter((col) => visibleColumns.has(col.id));
-  }, [visibleColumns]);
+    const filtered =
+      !visibleColumns || visibleColumns.size === 0
+        ? columns
+        : columns.filter((col) => visibleColumns.has(col.id));
+    const customCols = customFieldDefs.map((d) => ({
+      id: `cf_${d.id}`,
+      label: d.label,
+      minWidth: 140,
+      sortable: false,
+    }));
+    const actionsIdx = filtered.findIndex((c) => c.id === "actions");
+    if (actionsIdx === -1) return [...filtered, ...customCols];
+    return [...filtered.slice(0, actionsIdx), ...customCols, ...filtered.slice(actionsIdx)];
+  }, [visibleColumns, customFieldDefs]);
 
   // Helper to check if column is visible (defaults to true if no visibility set)
   const isColumnVisible = useCallback(
@@ -372,45 +388,36 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
 
   if (!projects || projects.length === 0) {
     return (
-      <TableContainer>
-        <Table sx={singleTheme.tableStyles.primary.frame}>
+      <TableEmptyStateLayout
+        header={
           <SortableTableHeader
             columns={visibleColumnsArray}
             sortConfig={sortConfig}
             onSort={handleSort}
           />
-          <TableBody>
-            <TableRow>
-              <TableCell
-                colSpan={visibleColumnsArray.length}
-                align="center"
-                sx={{ border: "none", p: 0 }}
-              >
-                <EmptyState
-                  icon={Briefcase}
-                  message="No use cases yet. A use case describes how an AI system is applied within your organization."
-                >
-                  <EmptyStateTip
-                    icon={PlusCircle}
-                    title="Create a use case"
-                    description="Define the AI system, its purpose, the data it processes, and the people it affects. This forms the basis for risk and compliance tracking."
-                  />
-                  <EmptyStateTip
-                    icon={Target}
-                    title="Scope and classify"
-                    description="Each use case can be classified by risk level (high, limited, minimal) to determine which compliance controls apply."
-                  />
-                  <EmptyStateTip
-                    icon={Link2}
-                    title="Link to governance artifacts"
-                    description="Connect use cases to risks, policies, models, and evidence. This creates full traceability from business need to compliance proof."
-                  />
-                </EmptyState>
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </TableContainer>
+        }
+      >
+        <EmptyState
+          icon={Briefcase}
+          message="No use cases yet. A use case describes how an AI system is applied within your organization."
+        >
+          <EmptyStateTip
+            icon={PlusCircle}
+            title="Create a use case"
+            description="Define the AI system, its purpose, the data it processes, and the people it affects. This forms the basis for risk and compliance tracking."
+          />
+          <EmptyStateTip
+            icon={Target}
+            title="Scope and classify"
+            description="Each use case can be classified by risk level (high, limited, minimal) to determine which compliance controls apply."
+          />
+          <EmptyStateTip
+            icon={Link2}
+            title="Link to governance artifacts"
+            description="Connect use cases to risks, policies, models, and evidence. This creates full traceability from business need to compliance proof."
+          />
+        </EmptyState>
+      </TableEmptyStateLayout>
     );
   }
 
@@ -536,6 +543,23 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
                     {formatDate(project.last_updated)}
                   </TableCell>
                 )}
+
+                {customFieldDefs.map((def) => {
+                  const match = (project as any).custom_fields?.find(
+                    (cf: { definition_id: number; value: unknown }) => cf.definition_id === def.id,
+                  );
+                  return (
+                    <TableCell
+                      key={`cf_${def.id}`}
+                      sx={{
+                        ...singleTheme.tableStyles.primary.body.cell,
+                        fontSize: "13px",
+                      }}
+                    >
+                      {formatCustomFieldValue(def, match?.value, users)}
+                    </TableCell>
+                  );
+                })}
 
                 {isColumnVisible("actions") && (
                   <TableCell

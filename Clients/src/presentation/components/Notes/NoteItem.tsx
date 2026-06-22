@@ -91,22 +91,22 @@ const NoteItem: React.FC<NoteItemProps> = ({ note, onEdit, onDelete, canEdit, ca
     };
   }, [note.author_id, fetchProfilePhotoAsBlobUrl]);
 
-  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+  const openNoteMenu = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);
   };
 
-  const handleMenuClose = () => {
+  const closeNoteMenu = () => {
     setAnchorEl(null);
   };
 
   const handleEdit = () => {
     onEdit(note.id, note.content);
-    handleMenuClose();
+    closeNoteMenu();
   };
 
-  const handleDeleteClick = () => {
+  const deleteNote = () => {
     setIsDeleteModalOpen(true);
-    handleMenuClose();
+    closeNoteMenu();
   };
 
   const handleConfirmDelete = () => {
@@ -245,7 +245,7 @@ const NoteItem: React.FC<NoteItemProps> = ({ note, onEdit, onDelete, canEdit, ca
             <Box sx={{ ml: theme.spacing(1.5) }}>
               <IconButton
                 size="small"
-                onClick={handleMenuOpen}
+                onClick={openNoteMenu}
                 sx={{
                   "color": theme.palette.text.secondary,
                   "padding": theme.spacing(1),
@@ -260,7 +260,7 @@ const NoteItem: React.FC<NoteItemProps> = ({ note, onEdit, onDelete, canEdit, ca
               <Menu
                 anchorEl={anchorEl}
                 open={Boolean(anchorEl)}
-                onClose={handleMenuClose}
+                onClose={closeNoteMenu}
                 anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
                 transformOrigin={{ vertical: "top", horizontal: "right" }}
               >
@@ -275,7 +275,7 @@ const NoteItem: React.FC<NoteItemProps> = ({ note, onEdit, onDelete, canEdit, ca
                 )}
                 {canDelete && (
                   <MenuItem
-                    onClick={handleDeleteClick}
+                    onClick={deleteNote}
                     sx={{ color: theme.palette.error.main, fontSize: 13 }}
                   >
                     <DeleteIcon size={16} style={{ marginRight: 8 }} />

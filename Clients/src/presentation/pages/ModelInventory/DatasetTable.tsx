@@ -10,12 +10,11 @@ import {
   TableRow,
   useTheme,
   Stack,
-  Typography,
   TableFooter,
   Tooltip,
-  Box,
 } from "@mui/material";
 import TablePaginationActions from "../../components/TablePagination";
+import CustomizableSkeleton from "../../components/Skeletons";
 import "../../components/Table/index.css";
 import singleTheme from "../../themes/v1SingleTheme";
 import CustomIconButton from "../../components/IconButton";
@@ -40,7 +39,6 @@ import {
 import {
   tableRowHoverStyle,
   tableRowDeletingStyle,
-  loadingContainerStyle,
   tableFooterRowStyle,
   showingTextCellStyle,
   paginationMenuProps,
@@ -257,9 +255,9 @@ const DatasetTable: React.FC<DatasetTableProps> = ({
 
   if (isLoading) {
     return (
-      <Box sx={loadingContainerStyle}>
-        <Typography>Loading datasets...</Typography>
-      </Box>
+      <Stack spacing={2}>
+        <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
+      </Stack>
     );
   }
 

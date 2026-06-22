@@ -48,25 +48,25 @@ const PluginCard: React.FC<PluginCardProps> = ({
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const menuOpen = Boolean(anchorEl);
 
-  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>) => {
+  const openPluginMenu = (event: React.MouseEvent<HTMLElement>) => {
     event.stopPropagation();
     setAnchorEl(event.currentTarget);
   };
 
-  const handleMenuClose = (event?: React.MouseEvent) => {
+  const closePluginMenu = (event?: React.MouseEvent) => {
     if (event) event.stopPropagation();
     setAnchorEl(null);
   };
 
   const handleManageClick = (event: React.MouseEvent) => {
     event.stopPropagation();
-    handleMenuClose();
+    closePluginMenu();
     if (onManage) onManage(plugin);
   };
 
   const handleUninstallClick = (event: React.MouseEvent) => {
     event.stopPropagation();
-    handleMenuClose();
+    closePluginMenu();
     setIsDeleteModalOpen(true);
   };
 
@@ -319,7 +319,7 @@ const PluginCard: React.FC<PluginCardProps> = ({
             <>
               <IconButton
                 size="small"
-                onClick={handleMenuOpen}
+                onClick={openPluginMenu}
                 sx={{
                   "color": "brand.primary",
                   "opacity": isHovered ? 1 : 0.7,
@@ -334,7 +334,7 @@ const PluginCard: React.FC<PluginCardProps> = ({
               <Menu
                 anchorEl={anchorEl}
                 open={menuOpen}
-                onClose={() => handleMenuClose()}
+                onClose={() => closePluginMenu()}
                 onClick={(e) => e.stopPropagation()}
                 PaperProps={{
                   sx: {

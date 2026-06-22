@@ -133,12 +133,55 @@ This is for local developer convenience only — never enable on shared environm
 3. **Utils** (`utils/{entity}.utils.ts`) — Raw SQL via `sequelize.query()` with unqualified table names and `:replacements` (including `organization_id` for tenant isolation)
 4. **Model** (`domain.layer/models/{entity}/`) — Sequelize-typescript decorators
 
-**Don't forget:** Register new routes in `index.ts`:
+**Don't forget:** Register new routes in `app.ts`:
 
 ```typescript
 import entityRoutes from "./routes/entity.route";
 app.use("/api/entities", entityRoutes);
 ```
+
+---
+
+## API Documentation Workflow
+
+The Express route layer is the single source of truth for the API surface.
+`Servers/swagger.yaml` and `docs/api-docs/src/config/endpoints.ts` are generated
+from the route files and must never be edited by hand.
+
+### Adding or changing an endpoint
+
+1. Edit the route file (`Servers/routes/{entity}.route.ts`).
+2. If the endpoint requires authentication, apply `authenticateJWT` (or mount the
+   router with `router.use(authenticateJWT)`). The generator automatically emits
+   `security: [bearerAuth: []]` for protected operations.
+3. Regenerate the OpenAPI spec and frontend endpoint registry:
+
+   ```bash
+   cd Servers
+   npm run generate:swagger
+   npm run generate:endpoints
+   ```
+
+4. Verify there is no drift:
+
+   ```bash
+   npm run check:api-drift
+   ```
+
+5. Commit both the route changes and the regenerated `swagger.yaml` /
+   `endpoints.ts` files.
+
+### Swagger UI
+
+Swagger UI is served at `/api/docs` in **non-production environments only**. In
+production the `/api/docs` route is not mounted, reducing information disclosure
+risk while keeping the generated spec available for the frontend build pipeline.
+
+### CI enforcement
+
+The `api-docs-drift` CI job regenerates the spec and registry, runs
+`npm run check:api-drift`, and fails if the committed generated files are out of
+sync with the route layer.
 
 ---
 

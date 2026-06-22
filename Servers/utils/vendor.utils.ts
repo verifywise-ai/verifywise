@@ -12,6 +12,10 @@ import {
   buildVendorUpdateReplacements,
 } from "./automation/vendor.automation.utils";
 import { replaceTemplateVariables } from "./automation/automation.utils";
+import {
+  deleteAllCustomFieldValuesForEntityQuery,
+  fetchCustomFieldsForEntities,
+} from "./customField.utils";
 
 export const getAllVendorsQuery = async (organizationId: number): Promise<IVendor[]> => {
   const vendors = await sequelize.query(
@@ -22,6 +26,16 @@ export const getAllVendorsQuery = async (organizationId: number): Promise<IVendo
       model: VendorModel,
     },
   );
+
+  const vendorIds = (vendors as VendorModel[])
+    .map((v) => v.id)
+    .filter((id): id is number => typeof id === "number");
+  const customFieldsByVendor = await fetchCustomFieldsForEntities(
+    "vendor",
+    vendorIds,
+    organizationId,
+  );
+
   const vendorsWithDetails = [];
   for (let vendor of vendors as VendorModel[]) {
     const projects = await sequelize.query(
@@ -47,6 +61,7 @@ export const getAllVendorsQuery = async (organizationId: number): Promise<IVendo
       updated_at: (vendor.updatedAt ?? vendor.updated_at)?.toISOString(),
       projects: projects.map((p) => p.project_id),
       reviewer_name: reviewer_name[0].length > 0 ? reviewer_name[0][0].full_name : "",
+      custom_fields: customFieldsByVendor.get(vendor.id!) ?? [],
     });
   }
   return vendorsWithDetails;
@@ -471,6 +486,7 @@ export const deleteVendorByIdQuery = async (
   transaction: Transaction,
 ): Promise<Boolean> => {
   await deleteVendorRisksForVendorQuery(id, organizationId, transaction);
+  await deleteAllCustomFieldValuesForEntityQuery("vendor", id, organizationId, transaction);
   await updateProjectUpdatedByIdQuery(id, "vendors", organizationId, transaction);
   await sequelize.query(
     `DELETE FROM vendors_projects WHERE organization_id = :organizationId AND vendor_id = :id`,

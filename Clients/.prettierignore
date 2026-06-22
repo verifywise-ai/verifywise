@@ -10,3 +10,4 @@ package-lock.json
 .env
 .env.*
 public
+src/graphify-out

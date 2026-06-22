@@ -24,12 +24,8 @@ import ConfirmationModal from "../../../components/Dialogs/ConfirmationModal";
 import { useModalKeyHandling } from "../../../../application/hooks/useModalKeyHandling";
 import { PluginSlot } from "../../../components/PluginSlot";
 import { PLUGIN_SLOTS } from "../../../../domain/constants/pluginSlots";
-import { useSmartPrompt } from "../../../../application/hooks/useSmartPrompt";
-import {
-  useGovernancePreferences,
-  useUpdatePreferences,
-} from "../../../../application/hooks/useGovernanceOs";
-import { useAuth } from "../../../../application/hooks/useAuth";
+// Governance OS prompt imports removed while the module is not broadly released.
+// The module remains reachable by direct URL for authorized users.
 
 interface AddFrameworkModalProps {
   open: boolean;
@@ -51,11 +47,6 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
   const [frameworkToRemove, setFrameworkToRemove] = useState<Framework | null>(null);
   const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
   const [customFrameworkCount, setCustomFrameworkCount] = useState(0);
-  const { showPrompt } = useSmartPrompt();
-  const { data: governancePrefs } = useGovernancePreferences();
-  const updatePreferences = useUpdatePreferences();
-  const { userRoleName } = useAuth();
-  const isAdmin = userRoleName === "Admin";
 
   // Listen for custom framework count changes from plugins (event-based communication)
   useEffect(() => {
@@ -93,35 +84,8 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
         showToast("success", "Framework added successfully");
         if (onFrameworksChanged) onFrameworksChanged("add");
 
-        // Trigger Governance OS enable prompt if this add crosses the threshold
-        const currentFrameworkCount = project.framework?.length || 0;
-        const willBeEligible = currentFrameworkCount + 1 >= 2;
-        const isEnabled = governancePrefs?.is_enabled ?? false;
-        const dontAskAgain = governancePrefs?.dont_ask_governance_os ?? false;
-
-        if (willBeEligible && !isEnabled && !dontAskAgain && isAdmin) {
-          showPrompt({
-            type: "governance-os-enable",
-            title: "Enable Governance OS?",
-            message:
-              "You now have multiple frameworks assigned. Enable Governance OS to explore cross-framework mappings, get smart recommendations, and analyze coverage across all your frameworks.",
-            primaryAction: {
-              label: "Enable",
-              onClick: () => {
-                updatePreferences.mutate({ is_enabled: true });
-              },
-            },
-            secondaryAction: {
-              label: "Not now",
-              onClick: () => {},
-            },
-            dontAskAgainKey: "governance-os-enable",
-            onDontAskAgain: () => {
-              updatePreferences.mutate({ dont_ask_governance_os: true });
-            },
-            autoDismissMs: 15000,
-          });
-        }
+        // Governance OS enable prompt is disabled while the module is not broadly
+        // released. The module remains reachable by direct URL for authorized users.
       } else {
         showToast("error", "Failed to add framework. Please try again.");
       }

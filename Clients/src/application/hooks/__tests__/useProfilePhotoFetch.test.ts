@@ -1,53 +1,58 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook } from "@testing-library/react";
+import { useProfilePhotoFetch } from "../useProfilePhotoFetch";
 
 vi.mock("../../repository/user.repository", () => ({
   getUserProfilePhoto: vi.fn(),
 }));
 
-import { useProfilePhotoFetch } from "../useProfilePhotoFetch";
 import { getUserProfilePhoto } from "../../repository/user.repository";
 
-const mockGetPhoto = vi.mocked(getUserProfilePhoto);
+const mockGetUserProfilePhoto = vi.mocked(getUserProfilePhoto);
 
 describe("useProfilePhotoFetch", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    global.URL.createObjectURL = vi.fn().mockReturnValue("blob:mock-url");
-    global.URL.revokeObjectURL = vi.fn();
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:photo-url");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    global.Image = class {
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      src = "";
+      constructor() {
+        setTimeout(() => this.onload?.(), 0);
+      }
+    } as any;
   });
 
-  it("returns fetchProfilePhotoAsBlobUrl function", () => {
-    const { result } = renderHook(() => useProfilePhotoFetch());
-    expect(typeof result.current.fetchProfilePhotoAsBlobUrl).toBe("function");
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
-  it("returns null when no photo content", async () => {
-    mockGetPhoto.mockResolvedValue({ data: { photo: null } } as any);
-
+  it("returns null when photo data is empty", async () => {
+    mockGetUserProfilePhoto.mockResolvedValue({ data: { photo: null } } as any);
     const { result } = renderHook(() => useProfilePhotoFetch());
     const url = await result.current.fetchProfilePhotoAsBlobUrl(1);
-
     expect(url).toBeNull();
   });
 
-  it("returns null on error", async () => {
-    mockGetPhoto.mockRejectedValue(new Error("Network error"));
-
+  it("handles error from repository", async () => {
+    mockGetUserProfilePhoto.mockRejectedValue(new Error("Network error"));
     const { result } = renderHook(() => useProfilePhotoFetch());
     const url = await result.current.fetchProfilePhotoAsBlobUrl(1);
-
     expect(url).toBeNull();
   });
 
-  it("returns null when content has no usable data", async () => {
-    mockGetPhoto.mockResolvedValue({
-      data: { photo: { content: "invalid", type: "image/png" } },
+  it("processes photo with ArrayBuffer content", async () => {
+    mockGetUserProfilePhoto.mockResolvedValue({
+      data: {
+        photo: {
+          content: new ArrayBuffer(8),
+          type: "image/png",
+        },
+      },
     } as any);
-
     const { result } = renderHook(() => useProfilePhotoFetch());
     const url = await result.current.fetchProfilePhotoAsBlobUrl(1);
-
-    expect(url).toBeNull();
+    expect(url).toBe("blob:photo-url");
   });
 });

@@ -395,8 +395,8 @@ async def _finalize_spend(
                     VALUES
                         (:org_id, :endpoint_id, :user_id, :provider, :model,
                          :prompt_tokens, :completion_tokens, :total_tokens,
-                         :cost_usd, :latency_ms, :status_code, :metadata::jsonb,
-                         :request_messages::jsonb, :response_text, :error_message)
+                         :cost_usd, :latency_ms, :status_code, CAST(:metadata AS jsonb),
+                         CAST(:request_messages AS jsonb), :response_text, :error_message)
                 """),
                 {
                     "org_id": organization_id,

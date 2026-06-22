@@ -4,7 +4,6 @@ export interface MockRequestOverrides {
   userId?: number;
   organizationId?: number;
   role?: string;
-  tenantId?: string;
   body?: any;
   params?: any;
   query?: any;
@@ -19,7 +18,6 @@ export function createMockReq(
     userId: 1,
     organizationId: 1,
     role: "Admin",
-    tenantId: "a1b2c3d4e5",
     body: {},
     params: {},
     query: {},

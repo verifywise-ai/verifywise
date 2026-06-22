@@ -6,6 +6,7 @@ import remarkGfm from "remark-gfm";
 
 import { Bot, Copy, Check } from "lucide-react";
 import { ChartRenderer } from "./ChartRenderer";
+import ConfirmationToolUI from "./ConfirmationToolUI";
 import VWAvatar from "../Avatar/VWAvatar";
 import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
 import { useProfilePhotoFetch } from "../../../application/hooks/useProfilePhotoFetch";
@@ -81,6 +82,20 @@ const createMarkdownStyles = (theme: Theme) => {
       whiteSpace: "nowrap" as const,
     } as React.CSSProperties,
   };
+};
+
+/**
+ * Plain-text renderer for user messages. The user is providing input,
+ * not authoring markdown — rendering their `- foo` lines through
+ * react-markdown turns them into a <ul> with default browser list
+ * spacing (huge vertical gaps between items). The user bubble already
+ * has `whiteSpace: 'pre-wrap'` set, so a plain text node preserves
+ * their newlines and dashes verbatim.
+ */
+const UserMessageText: FC = () => {
+  const data = useMessagePartText();
+  if (!data.text) return null;
+  return <>{data.text}</>;
 };
 
 const MessageText: FC = () => {
@@ -162,7 +177,59 @@ const GenerateChartToolUI: FC<{ result?: unknown }> = ({ result }) => {
  * Fallback tool UI for non-chart tools (e.g. fetch_risks, get_risk_analytics).
  * These run server-side and their results are consumed by the LLM, not shown to the user.
  */
-const DefaultToolFallback: FC = () => null;
+const DefaultToolFallback: FC<{ result?: unknown }> = ({ result }) => {
+  if (result && typeof result === "object" && (result as any).confirmation_required === true) {
+    return <ConfirmationToolUI result={result} />;
+  }
+  return null;
+};
+
+/**
+ * Decides whether the assistant turn currently has anything the renderer
+ * will actually paint inside the bubble. Only three things qualify:
+ *
+ *   1. A text/reasoning part with non-empty text.
+ *   2. A tool-call to `generate_chart` with a settled result (ChartRenderer).
+ *   3. A tool-call whose result is `{ confirmation_required: true, ... }`
+ *      (ConfirmationToolUI — the inline approval card).
+ *
+ * Read tools (list_projects, list_users, fetch_*, get_*_analytics, etc.)
+ * have settled results that the LLM consumes but DefaultToolFallback
+ * returns null for — they paint nothing. Counting them as "visible" was
+ * causing the empty-bubble window: the moment list_projects returned, the
+ * bubble appeared but stayed empty for the whole ~20-update agent_register_model
+ * input-streaming phase. Now the bubble only appears once a paint-worthy
+ * part exists, so the thinking indicator stays through the read-tool gap.
+ *
+ * Mirrors the runtime's converted shape (see node_modules/@assistant-ui/
+ * react-ai-sdk/dist/ui/utils/convertMessage.js): tool parts are converted
+ * to `type: 'tool-call'` with `result` set only when state is
+ * output-available / output-error / output-denied.
+ */
+const useAssistantTurnHasVisibleOutput = (): boolean => {
+  return useAuiState(({ message }) => {
+    const content = message.content as unknown as
+      | ReadonlyArray<Record<string, unknown>>
+      | undefined;
+    if (!content || content.length === 0) return false;
+    for (const part of content) {
+      if (part.type === "text" || part.type === "reasoning") {
+        const text = part.text as string | undefined;
+        if (typeof text === "string" && text.length > 0) return true;
+        continue;
+      }
+      if (part.type === "tool-call") {
+        if (part.result === undefined) continue;
+        if (part.toolName === "generate_chart") return true;
+        const result = part.result as Record<string, unknown> | undefined;
+        if (result && result.confirmation_required === true) return true;
+        // Other tool results (read tools, errors, etc.) render nothing in
+        // the bubble — skip them.
+      }
+    }
+    return false;
+  });
+};
 
 const MessageTimestamp: FC = () => {
   const theme = useTheme();
@@ -360,6 +427,68 @@ const ThinkingIndicator: FC = () => {
   );
 };
 
+/**
+ * Switches between the thinking indicator and the bubble for an assistant
+ * turn, using `useAssistantTurnHasVisibleOutput` instead of assistant-ui's
+ * `hasContent` predicate. See that hook's comment for why — short version:
+ * `hasContent` flips true on the first in-flight tool part and produces
+ * an empty bubble that reads as a stuck UI.
+ */
+const AssistantBody: FC<{
+  bubbleRef: React.RefObject<HTMLDivElement | null>;
+  theme: Theme;
+}> = ({ bubbleRef, theme }) => {
+  const hasVisibleOutput = useAssistantTurnHasVisibleOutput();
+  // The turn is still working if status is `running` OR `requires-action`.
+  // assistant-ui's MessageStatus flips to `requires-action` while AI SDK is
+  // executing tool calls between LLM steps — that's exactly the in-flight
+  // gap where we want the thinking indicator to stay up. See
+  // node_modules/@assistant-ui/core/dist/types/message.d.ts → MessageStatus.
+  const isWorking = useAuiState(({ message }) => {
+    const t = message.status?.type;
+    return t === "running" || t === "requires-action";
+  });
+
+  if (!hasVisibleOutput && isWorking) {
+    return <ThinkingIndicator />;
+  }
+
+  return (
+    <Stack gap={0.75} sx={{ flex: 1, minWidth: 0 }}>
+      <Box
+        ref={bubbleRef}
+        sx={{
+          backgroundColor: theme.palette.background.fill ?? theme.palette.grey[100],
+          border: `1px solid ${theme.palette.border?.light ?? theme.palette.divider}`,
+          color: theme.palette.text.primary,
+          padding: "10px 14px",
+          borderRadius: 3,
+          borderTopLeftRadius: 1,
+          fontSize: theme.typography.body2.fontSize,
+          lineHeight: 1.7,
+          wordBreak: "break-word",
+        }}
+      >
+        <MessagePrimitive.Content
+          components={{
+            Text: MessageText,
+            tools: {
+              by_name: {
+                generate_chart: GenerateChartToolUI,
+              },
+              Fallback: DefaultToolFallback,
+            },
+          }}
+        />
+      </Box>
+      <Stack direction="row" alignItems="center" justifyContent="space-between">
+        <MessageTimestamp />
+        <CopyButton bubbleRef={bubbleRef} />
+      </Stack>
+    </Stack>
+  );
+};
+
 const DEFAULT_USER: User = {
   id: 1,
   name: "",
@@ -436,7 +565,7 @@ const CustomMessageComponent: FC = () => {
               whiteSpace: "pre-wrap",
             }}
           >
-            <MessagePrimitive.Content components={{ Text: MessageText }} />
+            <MessagePrimitive.Content components={{ Text: UserMessageText }} />
           </Box>
           <VWAvatar
             user={userAvatar}
@@ -469,44 +598,7 @@ const CustomMessageComponent: FC = () => {
             <Bot size={14} />
           </Avatar>
 
-          <MessagePrimitive.If hasContent={false}>
-            <ThinkingIndicator />
-          </MessagePrimitive.If>
-
-          <MessagePrimitive.If hasContent>
-            <Stack gap={0.75} sx={{ flex: 1, minWidth: 0 }}>
-              <Box
-                ref={bubbleRef}
-                sx={{
-                  backgroundColor: theme.palette.background.fill ?? theme.palette.grey[100],
-                  border: `1px solid ${theme.palette.border?.light ?? theme.palette.divider}`,
-                  color: theme.palette.text.primary,
-                  padding: "10px 14px",
-                  borderRadius: 3,
-                  borderTopLeftRadius: 1,
-                  fontSize: theme.typography.body2.fontSize,
-                  lineHeight: 1.7,
-                  wordBreak: "break-word",
-                }}
-              >
-                <MessagePrimitive.Content
-                  components={{
-                    Text: MessageText,
-                    tools: {
-                      by_name: {
-                        generate_chart: GenerateChartToolUI,
-                      },
-                      Fallback: DefaultToolFallback,
-                    },
-                  }}
-                />
-              </Box>
-              <Stack direction="row" alignItems="center" justifyContent="space-between">
-                <MessageTimestamp />
-                <CopyButton bubbleRef={bubbleRef} />
-              </Stack>
-            </Stack>
-          </MessagePrimitive.If>
+          <AssistantBody bubbleRef={bubbleRef} theme={theme} />
         </Stack>
       </MessagePrimitive.If>
     </MessagePrimitive.Root>

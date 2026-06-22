@@ -66,6 +66,14 @@ const LABEL_TO_VARIANT: Record<string, ChipVariant> = {
   "minor": "minor",
   "negligible": "negligible",
 
+  // ISO clause/annex statuses
+  "awaiting review": "info",
+  "awaiting approval": "info",
+  "implemented": "success",
+  "done": "success",
+  "audited": "success",
+  "needs rework": "warning",
+
   // Status
   "approved": "success",
   "completed": "success",

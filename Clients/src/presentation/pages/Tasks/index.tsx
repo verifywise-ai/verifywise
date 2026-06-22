@@ -8,7 +8,9 @@ import { SearchBox } from "../../components/Search";
 import TasksTable from "../../components/Table/TasksTable";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
+import DeadlineWarningBox from "../../components/DeadlineWarningBox";
 import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
+import { storageService } from "../../../infrastructure/storage";
 import { ITask, TaskSummary } from "../../../domain/interfaces/i.task";
 import {
   getAllTasks,
@@ -47,6 +49,7 @@ import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
 import { displayFormattedDate } from "../../tools/isoDateToString";
 import Alert from "../../components/Alert";
+import CustomizableSkeleton from "../../components/Skeletons";
 import TabBar from "../../components/TabBar";
 import DeadlineView from "./DeadlineView";
 import { toggleLabelStyle, toggleContainerStyle } from "./style";
@@ -105,15 +108,14 @@ const Tasks: React.FC = () => {
   // Card filter state for status filtering
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
 
-  // Tab state - persisted to localStorage
-  const [activeTab, setActiveTab] = useState<string>(() => {
-    const saved = localStorage.getItem("verifywise_tasks_view_tab");
-    return saved || "list";
-  });
+  // Tab state - persisted via StorageService
+  const [activeTab, setActiveTab] = useState<string>(() =>
+    storageService.get("tasksViewTab", "list"),
+  );
 
-  // Save tab preference to localStorage
+  // Save tab preference
   useEffect(() => {
-    localStorage.setItem("verifywise_tasks_view_tab", activeTab);
+    storageService.set("tasksViewTab", activeTab);
   }, [activeTab]);
 
   const { userRoleName, userId } = useContext(VerifyWiseContext);
@@ -179,13 +181,20 @@ const Tasks: React.FC = () => {
     fetchTasks();
   }, [includeArchived, refreshKey]);
 
-  // Listen for AI action approvals (e.g. agent_create_task). When an
-  // approval is granted in the RequestorApprovalModal, the executor runs
-  // inside the approve transaction so the new task row already exists by
-  // the time the event fires — bumping refreshKey is enough to pull it in.
+  // Listen for AI action approvals for any task-lifecycle tool. Covers
+  // create, update, and delete — all trigger a table refresh.
   useEffect(() => {
+    const TASK_TOOL_NAMES = new Set([
+      "agent_create_task",
+      "agent_update_task",
+      "agent_delete_task",
+    ]);
     return onAiActionCompleted((detail) => {
-      if (detail?.status === "approved" && detail?.toolName === "agent_create_task") {
+      if (
+        detail?.status === "approved" &&
+        detail?.toolName &&
+        TASK_TOOL_NAMES.has(detail.toolName)
+      ) {
         setRefreshKey((k) => k + 1);
       }
     });
@@ -395,7 +404,11 @@ const Tasks: React.FC = () => {
           body: "Your new task has been added.",
         });
         setTimeout(() => setAlert(null), 4000);
+
+        // Return the new id so CreateTask can flush staged custom field values.
+        return { id: newTaskId as number };
       }
+      return undefined;
     } catch (error) {
       console.error("Error creating task:", error);
       setAlert({
@@ -404,6 +417,7 @@ const Tasks: React.FC = () => {
         body: "Failed to create the task. Please try again.",
       });
       setTimeout(() => setAlert(null), 4000);
+      return undefined;
     }
   };
 
@@ -767,6 +781,7 @@ const Tasks: React.FC = () => {
           : "Showing tasks you created or are assigned to. You can create and manage your tasks here."
       }
       helpArticlePath="ai-governance/task-management"
+      warningBanner={<DeadlineWarningBox />}
       tipBoxEntity="tasks"
       summaryCards={
         <TaskSummaryCards
@@ -939,9 +954,9 @@ const Tasks: React.FC = () => {
       {/* Content Area */}
       <Box>
         {isLoading && (
-          <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
-            <Typography>Loading tasks...</Typography>
-          </Box>
+          <Stack spacing={2}>
+            <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
+          </Stack>
         )}
 
         {error && (

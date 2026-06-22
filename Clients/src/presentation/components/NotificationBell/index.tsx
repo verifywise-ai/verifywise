@@ -324,7 +324,14 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ sx }) => {
         placement="bottom"
         maxWidth={200}
       >
-        <IconButton size="small" onClick={handleOpen} sx={{ ...baseStyles, ...sx }}>
+        <IconButton
+          size="small"
+          onClick={handleOpen}
+          aria-label={unreadCount > 0 ? `Notifications, ${unreadCount} unread` : "Notifications"}
+          aria-haspopup="dialog"
+          aria-expanded={open}
+          sx={{ ...baseStyles, ...sx }}
+        >
           <Badge
             badgeContent={unreadCount}
             max={99}
@@ -412,6 +419,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ sx }) => {
                 <IconButton
                   size="small"
                   onClick={handleMarkAllAsRead}
+                  aria-label="Mark all notifications as read"
                   sx={{
                     "width": "28px",
                     "height": "28px",
@@ -428,6 +436,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ sx }) => {
             <IconButton
               size="small"
               onClick={handleClose}
+              aria-label="Close notifications"
               sx={{
                 "width": "28px",
                 "height": "28px",

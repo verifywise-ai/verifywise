@@ -1,6 +1,6 @@
 import { FC, memo } from "react";
 import { Stack, Tooltip, Box, Typography, useTheme } from "@mui/material";
-import { Shield, FlaskConical, ScanSearch, Eye, Router, Crown } from "lucide-react";
+import { Shield, FlaskConical, ScanSearch, Eye, Router, Crown, Gauge } from "lucide-react";
 import { AppModule } from "../../../application/redux/ui/uiSlice";
 import "./index.css";
 
@@ -48,6 +48,12 @@ const modules: ModuleItem[] = [
     icon: <Router size={16} strokeWidth={1.5} />,
     label: "AI Gateway",
     description: "Proxy, monitor, and control LLM API usage across providers",
+  },
+  {
+    id: "ai-trust-index",
+    icon: <Gauge size={16} strokeWidth={1.5} />,
+    label: "AI Trust Index",
+    description: "Browse AI app risk scores and track the apps you use",
   },
 ];
 

@@ -166,6 +166,10 @@ const NAVIGATION_COMMANDS: Command[] = [
     icon: AlertCircle,
     action: { type: "navigate", payload: "/ai-incident-managements" },
   },
+  // Governance OS navigation commands are intentionally disabled from the
+  // command palette while the module is not broadly released. The module remains
+  // reachable by direct URL (e.g. /governance or /governance-os) so it can still
+  // be activated and used by authorized users who know the route.
 ];
 
 // Quick action commands - will be implemented later

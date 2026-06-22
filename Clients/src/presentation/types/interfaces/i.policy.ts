@@ -66,6 +66,7 @@ export interface PolicyManagerProps {
   policies: PolicyManagerModel[];
   tags: string[];
   fetchAll: () => void;
+  isLoading?: boolean;
 }
 
 /**
@@ -74,4 +75,5 @@ export interface PolicyManagerProps {
 export interface PolicyTemplatesProps {
   tags: string[];
   fetchAll: () => void;
+  isLoading?: boolean;
 }

@@ -1,5 +1,8 @@
 import { getAllDatasetsQuery } from "../../utils/dataset.utils";
 import logger from "../../utils/logger/fileLogger";
+import { createWriteToolFn } from "../confirmation/createWriteTool";
+import { sequelize } from "../../database/db";
+import { QueryTypes } from "sequelize";
 
 export interface FetchDatasetsParams {
   type?: string;
@@ -179,10 +182,191 @@ const getDatasetExecutiveSummary = async (
   }
 };
 
+// --- Write tools (Human Confirmation Flow) ---
+
+const agentRegisterDataset = createWriteToolFn({
+  toolName: "agent_register_dataset",
+  warningLevel: "warning",
+  descriptionFn: (params) =>
+    `Register dataset "${params.name}"${params.classification ? ` (${params.classification})` : ""}${params.pii_flag ? " — contains PII" : ""}`,
+  executeFn: async (params, organizationId) => {
+    const transaction = await sequelize.transaction();
+    try {
+      const now = new Date();
+      const result = await sequelize.query(
+        `INSERT INTO datasets (
+          organization_id, name, description, type, classification,
+          contains_pii, status, created_at, updated_at
+        ) VALUES (
+          :organization_id, :name, :description, :type, :classification,
+          :contains_pii, :status, :created_at, :updated_at
+        ) RETURNING *`,
+        {
+          replacements: {
+            organization_id: organizationId,
+            name: params.name as string,
+            description: (params.description as string) || null,
+            type: (params.type as string) || null,
+            classification: (params.classification as string) || null,
+            contains_pii: params.pii_flag === true,
+            status: "Active",
+            created_at: now,
+            updated_at: now,
+          },
+          transaction,
+        },
+      );
+      const created = (result as any)[0]?.[0] || (result as any)[0];
+
+      // Link to model if provided
+      if (params.model_id) {
+        await sequelize.query(
+          `INSERT INTO dataset_model_inventories (organization_id, dataset_id, model_inventory_id, relationship_type, created_at)
+           VALUES (:organization_id, :dataset_id, :model_inventory_id, 'trained_on', NOW())`,
+          {
+            replacements: {
+              organization_id: organizationId,
+              dataset_id: created.id,
+              model_inventory_id: params.model_id,
+            },
+            transaction,
+          },
+        );
+      }
+
+      await transaction.commit();
+      return { success: true, dataset: created };
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  },
+});
+
+const agentUpdateDataset = createWriteToolFn({
+  toolName: "agent_update_dataset",
+  warningLevel: "warning",
+  descriptionFn: (params) =>
+    `Update dataset #${params.dataset_id}${params.name ? ` — rename to "${params.name}"` : ""}`,
+  executeFn: async (params, organizationId) => {
+    const fields: Record<string, { column: string; value: unknown }> = {
+      name: { column: "name", value: params.name },
+      description: { column: "description", value: params.description },
+      type: { column: "type", value: params.type },
+      classification: { column: "classification", value: params.classification },
+      pii_flag: { column: "contains_pii", value: params.pii_flag },
+      status: { column: "status", value: params.status },
+    };
+
+    const setClauses: string[] = [];
+    const replacements: Record<string, unknown> = {
+      organizationId,
+      id: params.dataset_id,
+      updated_at: new Date(),
+    };
+
+    for (const [key, { column, value }] of Object.entries(fields)) {
+      if (value !== undefined && value !== null) {
+        setClauses.push(`${column} = :${key}`);
+        replacements[key] = value;
+      }
+    }
+
+    if (setClauses.length === 0) {
+      return { success: false, message: "No fields to update" };
+    }
+
+    setClauses.push("updated_at = :updated_at");
+
+    const result = await sequelize.query(
+      `UPDATE datasets SET ${setClauses.join(", ")} WHERE organization_id = :organizationId AND id = :id RETURNING *`,
+      { replacements },
+    );
+    const updated = (result as any)[0]?.[0] || (result as any)[0];
+    return { success: true, dataset: updated };
+  },
+});
+
+const agentLinkDatasetToModel = createWriteToolFn({
+  toolName: "agent_link_dataset_to_model",
+  warningLevel: "warning",
+  descriptionFn: (params) => `Link dataset #${params.dataset_id} to model #${params.model_id}`,
+  executeFn: async (params, organizationId) => {
+    // Check if link already exists
+    const existing = await sequelize.query(
+      `SELECT id FROM dataset_model_inventories WHERE organization_id = :organizationId AND dataset_id = :dataset_id AND model_inventory_id = :model_id`,
+      {
+        replacements: {
+          organizationId,
+          dataset_id: params.dataset_id,
+          model_id: params.model_id,
+        },
+        type: QueryTypes.SELECT,
+      },
+    );
+
+    if ((existing as any[]).length > 0) {
+      return { success: false, message: "Dataset is already linked to this model" };
+    }
+
+    await sequelize.query(
+      `INSERT INTO dataset_model_inventories (organization_id, dataset_id, model_inventory_id, relationship_type, created_at)
+       VALUES (:organization_id, :dataset_id, :model_inventory_id, 'trained_on', NOW())`,
+      {
+        replacements: {
+          organization_id: organizationId,
+          dataset_id: params.dataset_id,
+          model_inventory_id: params.model_id,
+        },
+      },
+    );
+    return {
+      success: true,
+      message: `Dataset #${params.dataset_id} linked to model #${params.model_id}`,
+    };
+  },
+});
+
+const agentDeleteDataset = createWriteToolFn({
+  toolName: "agent_delete_dataset",
+  warningLevel: "danger",
+  descriptionFn: (params) =>
+    `Permanently delete dataset #${params.dataset_id} and all associations`,
+  executeFn: async (params, organizationId) => {
+    const transaction = await sequelize.transaction();
+    try {
+      // Delete associations first
+      await sequelize.query(
+        `DELETE FROM dataset_model_inventories WHERE organization_id = :organizationId AND dataset_id = :id`,
+        { replacements: { organizationId, id: params.dataset_id }, transaction },
+      );
+      await sequelize.query(
+        `DELETE FROM dataset_projects WHERE organization_id = :organizationId AND dataset_id = :id`,
+        { replacements: { organizationId, id: params.dataset_id }, transaction },
+      );
+
+      const result = await sequelize.query(
+        `DELETE FROM datasets WHERE organization_id = :organizationId AND id = :id RETURNING id, name`,
+        { replacements: { organizationId, id: params.dataset_id }, transaction },
+      );
+      await transaction.commit();
+      const deleted = (result as any)[0]?.[0] || (result as any)[0];
+      return { success: true, deleted_dataset: deleted };
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  },
+});
+
 const availableDatasetTools: Record<string, Function> = {
   fetch_datasets: fetchDatasets,
   get_dataset_analytics: getDatasetAnalytics,
   get_dataset_executive_summary: getDatasetExecutiveSummary,
+  agent_register_dataset: agentRegisterDataset,
+  agent_update_dataset: agentUpdateDataset,
+  agent_link_dataset_to_model: agentLinkDatasetToModel,
+  agent_delete_dataset: agentDeleteDataset,
 };
 
 export { availableDatasetTools };

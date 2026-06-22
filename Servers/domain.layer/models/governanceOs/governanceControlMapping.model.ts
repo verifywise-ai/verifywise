@@ -26,6 +26,12 @@ export class GovernanceControlMappingModel
     type: DataType.INTEGER,
     allowNull: false,
   })
+  organization_id!: number;
+
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: false,
+  })
   source_framework_id!: number;
 
   @Column({

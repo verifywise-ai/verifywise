@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 import httpx
-from fastapi import HTTPException
+from fastapi import Request, HTTPException
 from sqlalchemy import text
 
 from config import settings
@@ -57,6 +57,18 @@ async def authenticate_agent_key(bearer_token: str) -> dict:
         if row["expires_at"] and row["expires_at"] < datetime.now(timezone.utc):
             raise ValueError("Agent key has expired")
         return dict(row)
+
+
+async def extract_agent_key(request: Request) -> dict:
+    """Authenticate an sk-mcp-* bearer token from a request. Raises 401 on failure."""
+    auth = request.headers.get("authorization", "")
+    if not auth.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing Authorization: Bearer <agent-key>")
+    token = auth[7:].strip()
+    try:
+        return await authenticate_agent_key(token)
+    except ValueError as e:
+        raise HTTPException(status_code=401, detail=str(e))
 
 
 # ─── Tool ACL Enforcement ──────────────────────────────────────────────────

@@ -14,7 +14,6 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   Box,
-  Button,
   CircularProgress,
   Divider,
   Drawer,
@@ -27,12 +26,14 @@ import {
 } from "@mui/material";
 import { TabContext, TabPanel } from "@mui/lab";
 import {
-  X as CloseIcon,
+  X,
   Save as SaveIcon,
   Download as DownloadIcon,
   Trash2 as DeleteIcon,
   Eye as ViewIcon,
   FileText as FileIcon,
+  UploadIcon,
+  PaperclipIcon,
 } from "lucide-react";
 import dayjs, { Dayjs } from "dayjs";
 
@@ -311,8 +312,9 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
     if (subclause?.id) {
       try {
         const response = await getEntityFiles("iso_42001", "subclause", subclause.id);
-        if (response && Array.isArray(response)) {
-          linkedFiles = response.map((file: any) => ({
+        const responseFiles = response?.files ?? [];
+        if (responseFiles.length > 0) {
+          linkedFiles = responseFiles.map((file: any) => ({
             id: file.id?.toString() || file.file_id?.toString() || "",
             fileName: file.filename || file.fileName || file.file_name || "",
             size: file.size || 0,
@@ -727,15 +729,15 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
                   : "Clause")}{" "}
               {subclause?.title}
             </Typography>
-            <Button
+            <CustomizableButton
+              variant="text"
+              iconOnly
+              ariaLabel="Close"
+              size="medium"
               onClick={onClose}
-              sx={{
-                minWidth: "0",
-                padding: "5px",
-              }}
             >
-              <CloseIcon size={20} color={theme.palette.other.icon} />
-            </Button>
+              <X size={20} />
+            </CustomizableButton>
           </Stack>
 
           <Divider />
@@ -952,43 +954,22 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
                   />
 
                   <Stack direction="row" spacing={2} alignItems="center">
-                    <Button
-                      variant="contained"
-                      component="label"
-                      htmlFor="evidence-file-input"
-                      disabled={isEditingDisabled}
-                      sx={{
-                        borderRadius: 2,
-                        width: 155,
-                        height: 25,
-                        fontSize: 11,
-                        border: `1px solid ${theme.palette.border.dark}`,
-                        backgroundColor: "background.main",
-                        color: "text.secondary",
-                      }}
-                    >
-                      Upload new files
-                    </Button>
-                    <Button
-                      variant="contained"
+                    <CustomizableButton
+                      variant="outlined"
+                      onClick={() => document.getElementById("evidence-file-input")?.click()}
+                      isDisabled={isEditingDisabled}
+                      text="Upload new files"
+                      size="small"
+                      icon={<UploadIcon size={14} />}
+                    />
+                    <CustomizableButton
+                      variant="outlined"
                       onClick={() => setShowFilePicker(true)}
-                      disabled={isEditingDisabled}
-                      sx={{
-                        "borderRadius": 2,
-                        "width": 165,
-                        "height": 25,
-                        "fontSize": 11,
-                        "border": "1px solid #4C7BF4",
-                        "backgroundColor": "#4C7BF4",
-                        "color": "white",
-                        "&:hover": {
-                          backgroundColor: "#3D62C3",
-                          border: "1px solid #3D62C3",
-                        },
-                      }}
-                    >
-                      Attach existing files
-                    </Button>
+                      isDisabled={isEditingDisabled}
+                      text="Attach existing files"
+                      size="small"
+                      icon={<PaperclipIcon size={14} />}
+                    />
 
                     <Stack direction="row" spacing={2}>
                       <Typography sx={{ fontSize: 11, color: "text.secondary" }}>
@@ -1275,22 +1256,13 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
                 </Typography>
 
                 <Stack direction="row" spacing={2} alignItems="center">
-                  <Button
-                    variant="contained"
-                    sx={{
-                      borderRadius: 2,
-                      width: 155,
-                      height: 25,
-                      fontSize: 11,
-                      border: `1px solid ${theme.palette.border.dark}`,
-                      backgroundColor: "background.main",
-                      color: "text.secondary",
-                    }}
+                  <CustomizableButton
+                    variant="outlined"
                     onClick={() => setIsLinkedRisksModalOpen(true)}
-                    disabled={isEditingDisabled}
-                  >
-                    Add/remove risks
-                  </Button>
+                    isDisabled={isEditingDisabled}
+                    text="Add/remove risks"
+                    size="small"
+                  />
 
                   <Stack direction="row" spacing={2}>
                     <Typography sx={{ fontSize: 11, color: "text.secondary" }}>

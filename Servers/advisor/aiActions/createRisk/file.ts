@@ -48,17 +48,26 @@ export async function fileCreateRisk(
   }
 
   // 1. Strict schema validation — rejects unknown keys and enum drift.
-  const parsed = AgentCreateRiskSchema.safeParse(params);
+  // Strip the bridge-injected `_userId` (and `_organizationId`) before
+  // strict-parsing — see toolBridge.ts which always appends `_userId`.
+  const { _userId: _u, _organizationId: _o, ...userParams } = params as Record<string, unknown>;
+  void _u;
+  void _o;
+  const parsed = AgentCreateRiskSchema.safeParse(userParams);
   if (!parsed.success) {
-    return {
-      status: "validation_failed",
-      errors: parsed.error.issues.map((i) => ({
-        path: i.path.join("."),
-        message: i.message,
-      })),
-      message:
-        "The proposed risk payload failed validation. Re-check the tool's parameter schema and try again.",
-    };
+    const errors = parsed.error.issues.map((i) => ({
+      path: i.path.join("."),
+      message: i.message,
+    }));
+    const errorList = errors.map((e) => `- ${e.path}: ${e.message}`).join("\n");
+    // Throw so the LLM treats this as a hard failure and surfaces it to
+    // the user. Returning a soft `validation_failed` object had a habit of
+    // being silently summarized away — the bland message did not force the
+    // model to relay specifics, so the user never saw which fields were
+    // bad and the risk silently disappeared from the conversation.
+    throw new Error(
+      `agent_create_risk validation failed. You MUST tell the user verbatim that the following fields had invalid values and ask them for corrected values for each one before retrying. DO NOT call this tool again until every error below is addressed:\n${errorList}`,
+    );
   }
 
   // 2. Open a transaction so workflow lazy-creation + approval-request

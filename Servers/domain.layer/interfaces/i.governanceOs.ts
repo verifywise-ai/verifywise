@@ -13,6 +13,7 @@ export type ControlType =
 
 export interface IGovernanceControlMappingAttributes {
   id?: number;
+  organization_id: number;
   source_framework_id: number;
   source_control_type: ControlType;
   source_control_identifier: string;
@@ -78,6 +79,7 @@ export interface IGovernanceCoverageCacheAttributes {
   coverage_percentage: number;
   gap_details?: Record<string, unknown>;
   synergy_details?: Record<string, unknown>;
+  calculation_methodology?: string;
   computed_at?: Date;
 }
 
@@ -89,6 +91,20 @@ export interface IRecommendationRequest {
   deploymentScale?: string;
   purpose?: string;
   useCaseType?: string;
+}
+
+export interface IGovernanceScenarioActivationAttributes {
+  id?: number;
+  organization_id: number;
+  scenario_id: number;
+  activated_by?: number;
+  activated_at?: Date;
+  deactivated_at?: Date;
+  tasks_created?: number;
+  frameworks_assigned?: number;
+  status?: string;
+  created_at?: Date;
+  updated_at?: Date;
 }
 
 export interface IRecommendationResult {

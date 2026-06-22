@@ -23,6 +23,9 @@ vi.mock("lucide-react", () => {
     Layers: Icon,
     Flag: Icon,
     AlertCircle: Icon,
+    LayoutDashboard: Icon,
+    GitCompareArrows: Icon,
+    Compass: Icon,
   };
 });
 

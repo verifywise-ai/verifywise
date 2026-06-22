@@ -39,35 +39,29 @@ export async function getMappingsBetween({
   return response.data;
 }
 
-export async function getMappingsForControl({
-  controlType,
-  controlId,
-  signal,
-}: {
-  controlType: string;
-  controlId: number;
-  signal?: AbortSignal;
-}): Promise<any> {
-  const response = await apiServices.get(`${BASE}/mappings/control/${controlType}/${controlId}`, {
-    signal,
-  });
+export async function createMapping({ body }: { body: any }): Promise<any> {
+  const response = await apiServices.post(`${BASE}/mappings`, body);
+  return response.data;
+}
+
+export async function updateMapping({ id, body }: { id: number; body: any }): Promise<any> {
+  const response = await apiServices.put(`${BASE}/mappings/${id}`, body);
+  return response.data;
+}
+
+export async function deleteMapping({ id }: { id: number }): Promise<any> {
+  const response = await apiServices.delete(`${BASE}/mappings/${id}`);
+  return response.data;
+}
+
+export async function createBulkMappings({ body }: { body: { mappings: any[] } }): Promise<any> {
+  const response = await apiServices.post(`${BASE}/mappings/bulk`, body);
   return response.data;
 }
 
 // Scenarios
 export async function getAllScenarios({ signal }: { signal?: AbortSignal } = {}): Promise<any> {
   const response = await apiServices.get(`${BASE}/scenarios`, { signal });
-  return response.data;
-}
-
-export async function getScenarioById({
-  id,
-  signal,
-}: {
-  id: number;
-  signal?: AbortSignal;
-}): Promise<any> {
-  const response = await apiServices.get(`${BASE}/scenarios/${id}`, { signal });
   return response.data;
 }
 
@@ -83,6 +77,40 @@ export async function updateScenario({ id, body }: { id: number; body: any }): P
 
 export async function deleteScenario({ id }: { id: number }): Promise<any> {
   const response = await apiServices.delete(`${BASE}/scenarios/${id}`);
+  return response.data;
+}
+
+export async function activateScenario({ id, body }: { id: number; body: any }): Promise<any> {
+  const response = await apiServices.post(`${BASE}/scenarios/${id}/activate`, body);
+  return response.data;
+}
+
+export async function simulateScenario({ body }: { body: any }): Promise<any> {
+  const response = await apiServices.post(`${BASE}/scenarios/simulate`, body);
+  return response.data;
+}
+
+// Activations
+export async function getActivationHistory({
+  signal,
+}: { signal?: AbortSignal } = {}): Promise<any> {
+  const response = await apiServices.get(`${BASE}/activations`, { signal });
+  return response.data;
+}
+
+export async function deactivateScenario({ id }: { id: number }): Promise<any> {
+  const response = await apiServices.post(`${BASE}/activations/${id}/deactivate`, {});
+  return response.data;
+}
+
+export async function getScenarioProgress({
+  id,
+  signal,
+}: {
+  id: number;
+  signal?: AbortSignal;
+}): Promise<any> {
+  const response = await apiServices.get(`${BASE}/activations/${id}/progress`, { signal });
   return response.data;
 }
 
@@ -118,12 +146,6 @@ export async function getUnifiedView({
   signal?: AbortSignal;
 }): Promise<any> {
   const response = await apiServices.get(`${BASE}/unified-view/${projectId}`, { signal });
-  return response.data;
-}
-
-// Eligibility
-export async function getEligibility({ signal }: { signal?: AbortSignal } = {}): Promise<any> {
-  const response = await apiServices.get(`${BASE}/eligibility`, { signal });
   return response.data;
 }
 

@@ -6,12 +6,12 @@ import {
   TableContainer,
   TableRow,
   Stack,
-  Typography,
   Tooltip,
 } from "@mui/material";
 import { AlertTriangle, FileWarning, ClipboardList, Bell } from "lucide-react";
 import { EmptyState } from "../../components/EmptyState";
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
+import CustomizableSkeleton from "../../components/Skeletons";
 import Chip from "../../components/Chip";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
@@ -19,7 +19,7 @@ import { displayFormattedDate } from "../../tools/isoDateToString";
 import { singleTheme } from "../../themes";
 import { AIIncidentManagementModel } from "../../../domain/models/Common/incidentManagement/incidentManagement.model";
 import { IncidentTableProps } from "../../types/interfaces/i.table";
-import { incidentRowHover, incidentLoadingContainer, incidentTableRowDeletingStyle } from "./style";
+import { incidentRowHover, incidentTableRowDeletingStyle } from "./style";
 import CustomIconButton from "../../components/IconButton";
 import { useStandardTable } from "../../../application/hooks/useStandardTable";
 import type { StandardColumn } from "../../../domain/types/standardTable";
@@ -295,8 +295,8 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
 
   if (isLoading) {
     return (
-      <Stack alignItems="center" justifyContent="center" sx={incidentLoadingContainer()}>
-        <Typography>Loading...</Typography>
+      <Stack spacing={2}>
+        <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
       </Stack>
     );
   }

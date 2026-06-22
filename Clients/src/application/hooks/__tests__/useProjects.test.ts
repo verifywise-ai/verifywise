@@ -70,12 +70,39 @@ describe("useProjects", () => {
 
     expect(result.current.data).toEqual([]);
   });
+
+  it("returns empty array when response itself is null", async () => {
+    mockGetAllProjects.mockResolvedValue(null);
+
+    const { result } = renderHook(() => useProjects(), { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    expect(result.current.data).toEqual([]);
+  });
+
+  it("returns empty approvedProjects when data is undefined", async () => {
+    mockGetAllProjects.mockResolvedValue({ data: undefined });
+
+    const { result } = renderHook(() => useProjects(), { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    expect(result.current.data).toEqual([]);
+    expect(result.current.approvedProjects).toEqual([]);
+  });
 });
 
 describe("projectQueryKeys", () => {
   it("generates correct query keys", () => {
     expect(projectQueryKeys.all).toEqual(["projects"]);
+    expect(projectQueryKeys.lists()).toEqual(["projects", "list"]);
     expect(projectQueryKeys.list()).toEqual(["projects", "list"]);
+    expect(projectQueryKeys.details()).toEqual(["projects", "detail"]);
     expect(projectQueryKeys.detail("5")).toEqual(["projects", "detail", "5"]);
   });
 });

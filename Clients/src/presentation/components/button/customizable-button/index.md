@@ -37,6 +37,7 @@ The CustomizableButton component is designed to provide a consistent, accessible
 - ✅ Material-UI Button extension with custom styling
 - ✅ Loading state with spinner indicators
 - ✅ Icon positioning (start, end, or custom)
+- ✅ Icon-only mode for compact actions (close, toolbar)
 - ✅ Theme-based color variants
 - ✅ Full accessibility support
 - ✅ Keyboard navigation
@@ -89,6 +90,29 @@ function MyComponent() {
 }
 ```
 
+### Icon-Only Button
+
+Use `iconOnly` for compact square buttons (close, toolbar actions). `ariaLabel` is required.
+
+```tsx
+import { CustomizableButton } from "./components/button/customizable-button";
+import { X as CloseIcon } from "lucide-react";
+
+function MyComponent() {
+  return (
+    <CustomizableButton
+      iconOnly
+      variant="text"
+      size="small"
+      ariaLabel="Close dialog"
+      onClick={handleClose}
+    >
+      <CloseIcon size={20} />
+    </CustomizableButton>
+  );
+}
+```
+
 ### Loading Button
 
 ```tsx
@@ -118,29 +142,30 @@ function MyComponent() {
 
 ### CustomizableButtonProps
 
-| Prop               | Type                                                                      | Default       | Description                                    |
-| ------------------ | ------------------------------------------------------------------------- | ------------- | ---------------------------------------------- |
-| `variant`          | `"contained" \| "outlined" \| "text"`                                     | `"contained"` | The visual style variant of the button         |
-| `size`             | `"small" \| "medium" \| "large"`                                          | `"medium"`    | The size of the button                         |
-| `isDisabled`       | `boolean`                                                                 | `false`       | Whether the button is disabled                 |
-| `isLink`           | `boolean`                                                                 | `false`       | Whether to style the button as a link          |
-| `color`            | `"primary" \| "secondary" \| "success" \| "warning" \| "error" \| "info"` | `"primary"`   | The color theme of the button                  |
-| `onClick`          | `(event: React.MouseEvent<HTMLButtonElement>) => void`                    | `undefined`   | Click event handler                            |
-| `sx`               | `SxProps<Theme>`                                                          | `undefined`   | Custom styles using MUI's sx prop              |
-| `text`             | `string`                                                                  | `undefined`   | Button text content (deprecated: use children) |
-| `icon`             | `React.ReactNode`                                                         | `undefined`   | Icon element (deprecated: use startIcon)       |
-| `startIcon`        | `React.ReactNode`                                                         | `undefined`   | Icon to display at the start                   |
-| `endIcon`          | `React.ReactNode`                                                         | `undefined`   | Icon to display at the end                     |
-| `children`         | `React.ReactNode`                                                         | `undefined`   | Button content                                 |
-| `loading`          | `boolean`                                                                 | `false`       | Loading state with spinner                     |
-| `loadingIndicator` | `React.ReactNode`                                                         | `undefined`   | Custom loading indicator                       |
-| `ariaLabel`        | `string`                                                                  | `undefined`   | ARIA label for accessibility                   |
-| `ariaDescribedBy`  | `string`                                                                  | `undefined`   | ARIA described by reference                    |
-| `testId`           | `string`                                                                  | `undefined`   | Test identifier for automation                 |
-| `type`             | `"button" \| "submit" \| "reset"`                                         | `"button"`    | HTML button type                               |
-| `fullWidth`        | `boolean`                                                                 | `false`       | Whether button takes full width                |
-| `className`        | `string`                                                                  | `undefined`   | Custom CSS class name                          |
-| `title`            | `string`                                                                  | `undefined`   | Tooltip text                                   |
+| Prop               | Type                                                                      | Default       | Description                                         |
+| ------------------ | ------------------------------------------------------------------------- | ------------- | --------------------------------------------------- |
+| `variant`          | `"contained" \| "outlined" \| "text"`                                     | `"contained"` | The visual style variant of the button              |
+| `size`             | `"small" \| "medium" \| "large"`                                          | `"medium"`    | The size of the button                              |
+| `isDisabled`       | `boolean`                                                                 | `false`       | Whether the button is disabled                      |
+| `isLink`           | `boolean`                                                                 | `false`       | Whether to style the button as a link               |
+| `color`            | `"primary" \| "secondary" \| "success" \| "warning" \| "error" \| "info"` | `"primary"`   | The color theme of the button                       |
+| `onClick`          | `(event: React.MouseEvent<HTMLButtonElement>) => void`                    | `undefined`   | Click event handler                                 |
+| `sx`               | `SxProps<Theme>`                                                          | `undefined`   | Custom styles using MUI's sx prop                   |
+| `text`             | `string`                                                                  | `undefined`   | Button text content (deprecated: use children)      |
+| `icon`             | `React.ReactNode`                                                         | `undefined`   | Icon element (deprecated: use startIcon)            |
+| `startIcon`        | `React.ReactNode`                                                         | `undefined`   | Icon to display at the start                        |
+| `endIcon`          | `React.ReactNode`                                                         | `undefined`   | Icon to display at the end                          |
+| `children`         | `React.ReactNode`                                                         | `undefined`   | Button content                                      |
+| `iconOnly`         | `boolean`                                                                 | `false`       | Compact square icon-only mode; requires `ariaLabel` |
+| `loading`          | `boolean`                                                                 | `false`       | Loading state with spinner                          |
+| `loadingIndicator` | `React.ReactNode`                                                         | `undefined`   | Custom loading indicator                            |
+| `ariaLabel`        | `string`                                                                  | `undefined`   | ARIA label for accessibility                        |
+| `ariaDescribedBy`  | `string`                                                                  | `undefined`   | ARIA described by reference                         |
+| `testId`           | `string`                                                                  | `undefined`   | Test identifier for automation                      |
+| `type`             | `"button" \| "submit" \| "reset"`                                         | `"button"`    | HTML button type                                    |
+| `fullWidth`        | `boolean`                                                                 | `false`       | Whether button takes full width                     |
+| `className`        | `string`                                                                  | `undefined`   | Custom CSS class name                               |
+| `title`            | `string`                                                                  | `undefined`   | Tooltip text                                        |
 
 ### Inherited Props
 

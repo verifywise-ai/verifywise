@@ -14,35 +14,23 @@ const initialState = {
   activeOrganizationId: null as number | null,
 };
 
-export const register = createAsyncThunk("user/register", async (form, thunkApi) => {
-  console.log(form);
-  console.log(thunkApi);
-});
+export const register = createAsyncThunk("user/register", async (_form, _thunkApi) => {});
 
-export const login = createAsyncThunk("user/login", async (form, thunkApi) => {
-  console.log(form);
-  console.log(thunkApi);
-});
+export const login = createAsyncThunk("user/login", async (_form, _thunkApi) => {});
 
-export const update = createAsyncThunk("user/update", async (form, thunkApi) => {
-  console.log(form);
-  console.log(thunkApi);
-});
+export const update = createAsyncThunk("user/update", async (_form, _thunkApi) => {});
 
-export const remove = createAsyncThunk("user/delete", async (form, thunkApi) => {
-  console.log(form);
-  console.log(thunkApi);
-});
+export const remove = createAsyncThunk("user/delete", async (_form, _thunkApi) => {});
 
-export const forgotPassword = createAsyncThunk("user/forgotPassword", async (form, thunkApi) => {
-  console.log(form);
-  console.log(thunkApi);
-});
+export const forgotPassword = createAsyncThunk(
+  "user/forgotPassword",
+  async (_form, _thunkApi) => {},
+);
 
-export const setNewPassword = createAsyncThunk("user/setNewPassword", async (form, thunkApi) => {
-  console.log(form);
-  console.log(thunkApi);
-});
+export const setNewPassword = createAsyncThunk(
+  "user/setNewPassword",
+  async (_form, _thunkApi) => {},
+);
 
 const handleAuthFulfilled = (state: any, action: any) => {
   state.isLoading = false;

@@ -1,0 +1,1 @@
+/Users/halitozger/.claude/plans/tamam-ozaman-pahse-4-kind-flame.md

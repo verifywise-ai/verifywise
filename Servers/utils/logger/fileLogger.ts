@@ -14,8 +14,8 @@ const logFormat = printf(({ level, message, timestamp }) => {
  * Create a tenant-specific rotating file transport
  * Uses UTC timezone to ensure consistent date-based file naming across different server timezones
  */
-function createTenantRotatingFileTransport(tenantId: string): DailyRotateFile {
-  const tenantLogDir = ensureTenantLogDirectory(tenantId);
+function createTenantRotatingFileTransport(tenant: string): DailyRotateFile {
+  const tenantLogDir = ensureTenantLogDirectory(tenant);
 
   return new DailyRotateFile({
     filename: path.join(tenantLogDir, "app-%DATE%.log"),
@@ -49,11 +49,11 @@ const tenantLoggerCache = new Map<string, ReturnType<typeof createLogger>>();
 /**
  * Get or create a tenant-specific logger
  */
-function getTenantLogger(tenantId: string = "default") {
-  const cached = tenantLoggerCache.get(tenantId);
+function getTenantLogger(tenant: string = "default") {
+  const cached = tenantLoggerCache.get(tenant);
   if (cached) return cached;
 
-  const fileTransport = createTenantRotatingFileTransport(tenantId);
+  const fileTransport = createTenantRotatingFileTransport(tenant);
 
   const tenantLogger = createLogger({
     level: isDev ? "debug" : "info",
@@ -61,7 +61,7 @@ function getTenantLogger(tenantId: string = "default") {
     transports: isDev ? [consoleTransport, fileTransport] : [fileTransport],
   });
 
-  tenantLoggerCache.set(tenantId, tenantLogger);
+  tenantLoggerCache.set(tenant, tenantLogger);
   return tenantLogger;
 }
 
@@ -79,9 +79,9 @@ export function logStructured(
   const timestamp = new Date().toISOString();
   const line = `${logId++}, ${timestamp}, ${state}, ${description}, ${functionName}, ${fileName}`;
 
-  // Get the tenant ID from context, fallback to 'default'
-  const tenantId = getTenantIdForLogging();
-  const tenantLogger = getTenantLogger(tenantId);
+  // Resolve the tenant scope from request context; falls back to 'default' when unset.
+  const tenant = getTenantIdForLogging();
+  const tenantLogger = getTenantLogger(tenant);
 
   tenantLogger.info(line);
 }
@@ -91,6 +91,6 @@ export function logStructured(
  * This can be used for non-structured logging throughout the application
  */
 export function getTenantAwareLogger() {
-  const tenantId = getTenantIdForLogging();
-  return getTenantLogger(tenantId);
+  const tenant = getTenantIdForLogging();
+  return getTenantLogger(tenant);
 }

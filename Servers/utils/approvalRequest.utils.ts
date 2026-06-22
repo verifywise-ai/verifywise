@@ -218,6 +218,25 @@ export const getApprovalRequestByIdQuery = async (
       f.uploaded_time as file_uploaded_time,
       file_uploader.name as file_uploader_name,
       file_uploader.surname as file_uploader_surname,
+      -- AI Action fields (entity_type = 'ai_action')
+      aia.tool_name as ai_tool_name,
+      aia.risk_level as ai_risk_level,
+      aia.state as ai_state,
+      aia.action_type as ai_action_type,
+      aia.input_params as ai_input_params,
+      -- Risk fields (entity_type = 'risk')
+      r.risk_name,
+      r.severity as risk_severity,
+      -- Vendor fields (entity_type = 'vendor')
+      v.vendor_name,
+      -- Policy fields (entity_type = 'policy')
+      pol.title as policy_title,
+      pol.content_html as policy_content,
+      pol.status as policy_status,
+      -- Incident fields (entity_type = 'incident')
+      inc.ai_project as incident_title,
+      inc.severity as incident_severity,
+      inc.status as incident_status,
       -- Common fields
       requester_user.name as requester_name,
       requester_user.surname as requester_surname,
@@ -226,6 +245,11 @@ export const getApprovalRequestByIdQuery = async (
      FROM approval_requests ar
      LEFT JOIN projects p ON ar.entity_id = p.id AND ar.entity_type = 'use_case' AND ar.organization_id = p.organization_id
      LEFT JOIN files f ON ar.entity_id = f.id AND ar.entity_type = 'file' AND ar.organization_id = f.organization_id
+     LEFT JOIN ai_action_approvals aia ON (ar.entity_data->>'ai_approval_id')::uuid = aia.id AND ar.entity_type = 'ai_action'
+     LEFT JOIN risks r ON ar.entity_id = r.id AND ar.entity_type = 'risk' AND ar.organization_id = r.organization_id
+     LEFT JOIN vendors v ON ar.entity_id = v.id AND ar.entity_type = 'vendor' AND ar.organization_id = v.organization_id
+     LEFT JOIN policy_manager pol ON ar.entity_id = pol.id AND ar.entity_type = 'policy' AND ar.organization_id = pol.organization_id
+     LEFT JOIN ai_incident_managements inc ON ar.entity_id = inc.id AND ar.entity_type = 'incident' AND ar.organization_id = inc.organization_id
      LEFT JOIN users owner_user ON p.owner = owner_user.id
      LEFT JOIN users file_uploader ON f.uploaded_by = file_uploader.id
      LEFT JOIN users requester_user ON ar.requested_by = requester_user.id
@@ -648,7 +672,20 @@ export const processApprovalQuery = async (
       // executor throws, the transaction rolls back and the approval state
       // change is reverted — the approver will see an error.
       if (entityType === "ai_action") {
+        // eslint-disable-next-line no-console
+        console.log(
+          `[processApprovalQuery] ai_action branch — invoking executeAiAction(requestId=${requestId}, org=${organizationId})`,
+        );
         await executeAiAction(requestId, organizationId, transaction);
+        // eslint-disable-next-line no-console
+        console.log(
+          `[processApprovalQuery] executeAiAction returned for requestId=${requestId} — transaction will commit on outer return`,
+        );
+      } else {
+        // eslint-disable-next-line no-console
+        console.log(
+          `[processApprovalQuery] entityType=${entityType} (not ai_action) — no executor dispatched for requestId=${requestId}`,
+        );
       }
 
       // Return notification info after all processing is done

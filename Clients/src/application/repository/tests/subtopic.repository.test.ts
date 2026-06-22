@@ -87,7 +87,7 @@ describe("Test Subtopic Repository", () => {
 
   describe("createSubtopic", () => {
     it("should call post and return full response", async () => {
-      const body = { name: "New Subtopic" };
+      const body = { title: "New Subtopic" };
       const mockResponse = {
         status: 201,
         statusText: "Created",
@@ -106,7 +106,7 @@ describe("Test Subtopic Repository", () => {
   describe("updateSubtopic", () => {
     it("should call patch and return full response", async () => {
       const id = 11;
-      const body = { name: "Updated Subtopic" };
+      const body = { title: "Updated Subtopic" };
       const mockResponse = {
         status: 200,
         statusText: "OK",

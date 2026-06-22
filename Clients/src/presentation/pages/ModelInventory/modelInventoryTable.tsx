@@ -5,7 +5,6 @@ import {
   TableCell,
   TableContainer,
   TableRow,
-  useTheme,
   Stack,
   Typography,
   Tooltip,
@@ -20,6 +19,7 @@ import allowedRoles from "../../../application/constants/permissions";
 import { useAuth } from "../../../application/hooks/useAuth";
 import { Cpu, Layers, BarChart3, Link2 } from "lucide-react";
 import { EmptyState } from "../../components/EmptyState";
+import CustomizableSkeleton from "../../components/Skeletons";
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import {
   ModelInventoryTableProps,
@@ -27,7 +27,7 @@ import {
 } from "../../../domain/interfaces/i.modelInventory";
 import { getAllEntities } from "../../../application/repository/entity.repository";
 import { User } from "../../../domain/types/User";
-import { tableRowHoverStyle, tableRowDeletingStyle, loadingContainerStyle } from "./style";
+import { tableRowHoverStyle, tableRowDeletingStyle } from "./style";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import { displayFormattedDate } from "../../tools/isoDateToString";
@@ -40,6 +40,8 @@ import { useStandardTable } from "../../../application/hooks/useStandardTable";
 import type { StandardColumn } from "../../../domain/types/standardTable";
 import StandardTableHead from "../../components/Table/StandardTableHead";
 import StandardTablePagination from "../../components/Table/StandardTablePagination";
+import { useCustomFieldDefinitions } from "../../../application/hooks/useCustomFields";
+import { formatCustomFieldValue } from "../../components/CustomFieldsSection/formatCustomFieldValue";
 
 dayjs.extend(utc);
 
@@ -91,7 +93,6 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
   flashRowId,
   visibleColumns,
 }) => {
-  const theme = useTheme();
   const { userRoleName } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
 
@@ -118,11 +119,24 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
     }
   };
 
-  // Filter TABLE_COLUMNS based on visibleColumns
+  const { data: customFieldDefs = [] } = useCustomFieldDefinitions("model_inventory");
+
+  // Filter TABLE_COLUMNS based on visibleColumns + append custom field columns
+  // before the actions column.
   const visibleTableColumns = useMemo(() => {
-    if (!visibleColumns || visibleColumns.size === 0) return TABLE_COLUMNS;
-    return TABLE_COLUMNS.filter((col) => visibleColumns.has(col.id));
-  }, [visibleColumns]);
+    const filtered =
+      !visibleColumns || visibleColumns.size === 0
+        ? TABLE_COLUMNS
+        : TABLE_COLUMNS.filter((col) => visibleColumns.has(col.id));
+    const customCols: StandardColumn[] = customFieldDefs.map((d) => ({
+      id: `cf_${d.id}`,
+      label: d.label.toUpperCase(),
+      sortable: false,
+    }));
+    const actionsIdx = filtered.findIndex((c) => c.id === "actions");
+    if (actionsIdx === -1) return [...filtered, ...customCols];
+    return [...filtered.slice(0, actionsIdx), ...customCols, ...filtered.slice(actionsIdx)];
+  }, [visibleColumns, customFieldDefs]);
 
   // Helper to check if a column is visible
   const isColVisible = useCallback(
@@ -424,6 +438,16 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
                     />
                   </TableCell>
                 )}
+                {customFieldDefs.map((def) => {
+                  const match = (modelInventory as any).custom_fields?.find(
+                    (cf: { definition_id: number; value: unknown }) => cf.definition_id === def.id,
+                  );
+                  return (
+                    <TableCell key={`cf_${def.id}`} sx={singleTheme.tableStyles.primary.body.cell}>
+                      {formatCustomFieldValue(def, match?.value, users as any)}
+                    </TableCell>
+                  );
+                })}
                 <TableCell
                   sx={{
                     ...singleTheme.tableStyles.primary.body.cell,
@@ -507,8 +531,8 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
 
   if (isLoading) {
     return (
-      <Stack alignItems="center" justifyContent="center" sx={loadingContainerStyle(theme)}>
-        <Typography>Loading...</Typography>
+      <Stack spacing={2}>
+        <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
       </Stack>
     );
   }

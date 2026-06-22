@@ -4,13 +4,13 @@ import { Wrench, Pencil, ShieldAlert, ShieldCheck, AlertTriangle } from "lucide-
 import Toggle from "../../../components/Inputs/Toggle";
 import { EmptyState } from "../../../components/EmptyState";
 import EmptyStateTip from "../../../components/EmptyState/EmptyStateTip";
-import Chip from "../../../components/Chip";
 import Select from "../../../components/Inputs/Select";
 import StandardModal from "../../../components/Modals/StandardModal";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import palette from "../../../themes/palette";
 import { useCardSx } from "../shared";
+import MCPTable from "../MCPTable";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -209,53 +209,58 @@ export default function MCPToolCatalogPage() {
     );
   };
 
-  const renderToolRow = (tool: MCPTool) => (
-    <Stack
-      key={tool.id}
-      direction="row"
-      justifyContent="space-between"
-      alignItems="center"
-      sx={{
-        "p": "12px 16px",
-        "border": `1px solid ${palette.border.dark}`,
-        "borderRadius": "4px",
-        "cursor": "pointer",
-        "&:hover": { bgcolor: "action.hover" },
-      }}
-      onClick={() => openEditModal(tool)}
-    >
-      <Stack gap="4px" flex={1} minWidth={0}>
+  const renderToolTable = (serverTools: MCPTool[]) => (
+    <MCPTable
+      id={`mcp-tools-table-${serverTools[0]?.server_id ?? "x"}`}
+      columns={[
+        { label: "Tool", width: 220 },
+        { label: "Risk", width: 90 },
+        { label: "Description" },
+        { label: "Approval", width: 110, align: "center" },
+        { label: "", width: 50, align: "right" },
+      ]}
+      rows={serverTools}
+      rowKey={(tool) => tool.id}
+      onRowClick={(tool) => openEditModal(tool)}
+      renderRow={(tool) => [
         <Stack direction="row" alignItems="center" gap="8px">
           <Wrench size={14} strokeWidth={1.5} color={palette.text.tertiary} />
           <Typography sx={{ fontSize: 13, fontWeight: 500 }}>{tool.tool_name}</Typography>
-          {renderRiskBadge(tool.risk_level)}
-          {tool.requires_approval && (
-            <Chip label="Approval required" size="small" variant="warning" />
-          )}
-        </Stack>
-        {tool.description && (
-          <Typography sx={{ fontSize: 12, color: palette.text.tertiary, ml: "22px" }}>
-            {tool.description}
-          </Typography>
-        )}
-      </Stack>
-      <Stack direction="row" alignItems="center" gap="8px" onClick={(e) => e.stopPropagation()}>
-        <Typography sx={{ fontSize: 11, color: palette.text.disabled }}>Approval</Typography>
-        <Toggle
-          checked={tool.requires_approval}
-          onChange={() => handleToggleApproval(tool)}
-          size="small"
-        />
-        <IconButton size="small" onClick={() => openEditModal(tool)} sx={{ p: 0.5 }}>
-          <Pencil size={14} strokeWidth={1.5} color={palette.text.tertiary} />
-        </IconButton>
-      </Stack>
-    </Stack>
+        </Stack>,
+        renderRiskBadge(tool.risk_level),
+        <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
+          {tool.description || "—"}
+        </Typography>,
+        <Box
+          sx={{ display: "flex", justifyContent: "center" }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Toggle
+            checked={tool.requires_approval}
+            onChange={() => handleToggleApproval(tool)}
+            size="small"
+          />
+        </Box>,
+        <Box
+          sx={{ display: "flex", justifyContent: "flex-end" }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <IconButton
+            size="small"
+            onClick={() => openEditModal(tool)}
+            sx={{ p: 0.5 }}
+            aria-label="Edit tool"
+          >
+            <Pencil size={14} strokeWidth={1.5} color={palette.text.tertiary} />
+          </IconButton>
+        </Box>,
+      ]}
+    />
   );
 
   return (
     <PageHeaderExtended
-      title="MCP Tool Catalog"
+      title="MCP Tools"
       description="View and manage all discovered MCP tools across your servers."
       tipBoxEntity="ai-gateway-mcp-tools"
       helpArticlePath="ai-gateway/mcp-tools"
@@ -308,7 +313,7 @@ export default function MCPToolCatalogPage() {
           <EmptyStateTip
             icon={AlertTriangle}
             title="Approval workflows"
-            description="Enable approval requirements on sensitive tools to ensure human review before the AI agent can execute them."
+            description="Require approval on sensitive tools so a person reviews them before the agent runs them."
           />
         </EmptyState>
       ) : filteredTools.length === 0 ? (
@@ -332,7 +337,7 @@ export default function MCPToolCatalogPage() {
                   ({serverTools.length} tool{serverTools.length !== 1 ? "s" : ""})
                 </Typography>
               </Typography>
-              <Stack gap="8px">{serverTools.map(renderToolRow)}</Stack>
+              {renderToolTable(serverTools)}
             </Box>
           ))}
         </Stack>
@@ -420,8 +425,8 @@ export default function MCPToolCatalogPage() {
                 style={{ flexShrink: 0, marginTop: 2 }}
               />
               <Typography sx={{ fontSize: 12, color: "#93370D", lineHeight: 1.5 }}>
-                This tool is marked as high risk. Consider enabling approval to ensure human review
-                before execution.
+                This tool is marked as high risk. Consider requiring approval so a person reviews it
+                before it runs.
               </Typography>
             </Stack>
           )}

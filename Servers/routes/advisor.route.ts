@@ -10,28 +10,66 @@ import {
   createConversation,
   updateConversation,
   deleteConversation,
+  getMemorySummary,
+  deleteMyMemory,
+  adminClearAgentMemory,
+  adminListAgentMessages,
 } from "../controllers/advisor.ctrl";
+import {
+  validateAdminAgentParam,
+  validateConversationParams,
+  validateDomainParam,
+  validateMemoryQuery,
+  validateRunAdvisor,
+  validateStreamAdvisorV2,
+  validateUpdateConversation,
+} from "../middleware/validators/advisor.validator";
 
 // Run advisor query
-router.post("/", authenticateJWT, runAdvisor);
+router.post("/", authenticateJWT, validateRunAdvisor, runAdvisor);
 
 // Streaming advisor query (legacy SSE protocol)
-router.post("/stream", authenticateJWT, streamAdvisor);
+router.post("/stream", authenticateJWT, validateRunAdvisor, streamAdvisor);
 
 // AI SDK streaming endpoint (native UI message stream protocol for useChat)
-router.post("/chat", authenticateJWT, streamAdvisorV2);
+router.post("/chat", authenticateJWT, validateStreamAdvisorV2, streamAdvisorV2);
 
 // Conversation persistence endpoints (multi-conversation per domain)
-//
-// GET    /advisor/conversations/:domain           — list all chats in a domain
-// POST   /advisor/conversations/:domain           — create a new empty chat
-// GET    /advisor/conversations/:domain/:id       — fetch one chat + messages
-// PUT    /advisor/conversations/:domain/:id       — replace messages in a chat
-// DELETE /advisor/conversations/:domain/:id       — delete a chat
-router.get("/conversations/:domain", authenticateJWT, listConversations);
-router.post("/conversations/:domain", authenticateJWT, createConversation);
-router.get("/conversations/:domain/:id", authenticateJWT, getConversationById);
-router.put("/conversations/:domain/:id", authenticateJWT, updateConversation);
-router.delete("/conversations/:domain/:id", authenticateJWT, deleteConversation);
+router.get("/conversations/:domain", authenticateJWT, validateDomainParam, listConversations);
+router.post("/conversations/:domain", authenticateJWT, validateDomainParam, createConversation);
+router.get(
+  "/conversations/:domain/:id",
+  authenticateJWT,
+  validateConversationParams,
+  getConversationById,
+);
+router.put(
+  "/conversations/:domain/:id",
+  authenticateJWT,
+  validateUpdateConversation,
+  updateConversation,
+);
+router.delete(
+  "/conversations/:domain/:id",
+  authenticateJWT,
+  validateConversationParams,
+  deleteConversation,
+);
+
+// Agent memory — inspection + GDPR right-to-erasure
+router.get("/memory", authenticateJWT, getMemorySummary);
+router.delete("/memory", authenticateJWT, validateMemoryQuery, deleteMyMemory);
+router.get(
+  "/memory/admin/agent/:agentName",
+  authenticateJWT,
+  validateAdminAgentParam,
+  adminListAgentMessages,
+);
+router.delete(
+  "/memory/admin/agent/:agentName",
+  authenticateJWT,
+  validateAdminAgentParam,
+  adminClearAgentMemory,
+);
 
 export default router;

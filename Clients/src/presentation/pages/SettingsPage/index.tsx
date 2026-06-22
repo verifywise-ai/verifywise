@@ -12,6 +12,10 @@ import allowedRoles from "../../../application/constants/permissions";
 import { useAuth } from "../../../application/hooks/useAuth";
 import ApiKeys from "./ApiKeys";
 import AuditLedger from "./AuditLedger";
+import EntraIdConfig from "./EntraIdConfig";
+import { useSsoFeatureEnabled } from "../../../application/hooks/useSsoFeatureEnabled";
+import CustomFieldsTab from "./CustomFields";
+import AIApprovalRules from "./AIApprovalRules";
 import TabBar, { TabItem } from "../../components/TabBar";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import { usePluginRegistry } from "../../../application/contexts/PluginRegistry.context";
@@ -28,10 +32,14 @@ const BUILT_IN_TABS = [
   "features",
   "apikeys",
   "audit-ledger",
+  "sso",
+  "custom-fields",
+  "ai-approval-rules",
 ];
 
 export default function ProfilePage() {
   const { userRoleName, isSuperAdmin } = useAuth();
+  const ssoFeatureEnabled = useSsoFeatureEnabled();
   const location = useLocation();
   const navigate = useNavigate();
   const isTeamManagementDisabled =
@@ -41,6 +49,9 @@ export default function ProfilePage() {
     !isSuperAdmin && !allowedRoles.features?.manage?.includes(userRoleName);
   // Audit ledger: Admin-only (or super admin)
   const isAuditLedgerDisabled = !isSuperAdmin && userRoleName !== "Admin";
+  // Custom fields: strictly Admin role only (not SuperAdmin) — defining
+  // per-org custom fields is an org admin's concern, not a system-level one.
+  const isCustomFieldsDisabled = userRoleName !== "Admin";
 
   // Get plugin tabs dynamically from the plugin registry
   const { getPluginTabs, installedPlugins, isLoading: pluginsLoading } = usePluginRegistry();
@@ -56,8 +67,11 @@ export default function ProfilePage() {
     if (isSuperAdmin) {
       tabs = tabs.filter((t) => !["profile", "password", "preferences"].includes(t));
     }
+    if (!ssoFeatureEnabled) {
+      tabs = tabs.filter((t) => t !== "sso");
+    }
     return [...tabs, ...pluginTabs.map((t) => t.value)];
-  }, [pluginTabs, isSuperAdmin]);
+  }, [pluginTabs, isSuperAdmin, ssoFeatureEnabled]);
 
   // keep state synced with URL
   useEffect(() => {
@@ -189,6 +203,38 @@ export default function ProfilePage() {
                   },
                 ]
               : []),
+            ...(ssoFeatureEnabled
+              ? [
+                  {
+                    label: "SSO",
+                    value: "sso",
+                    icon: "Shield" as TabItem["icon"],
+                    tooltip: "Configure Microsoft Entra ID single sign-on",
+                  },
+                ]
+              : []),
+            ...(!isCustomFieldsDisabled
+              ? [
+                  {
+                    label: "Custom fields",
+                    value: "custom-fields",
+                    icon: "Settings" as TabItem["icon"],
+                    tooltip:
+                      "Define organization-specific fields on entities like Vendors, Policies, etc.",
+                  },
+                ]
+              : []),
+            ...(!isAuditLedgerDisabled
+              ? [
+                  {
+                    label: "AI Approval Rules",
+                    value: "ai-approval-rules",
+                    icon: "Shield" as TabItem["icon"],
+                    tooltip:
+                      "Configure auto-approve, require-approval, and auto-reject rules for AI operations",
+                  },
+                ]
+              : []),
             // Dynamically add plugin tabs
             ...pluginTabs.map((tab) => ({
               label: tab.label,
@@ -198,6 +244,7 @@ export default function ProfilePage() {
           ]}
           activeTab={activeTab}
           onChange={handleTabChange}
+          scrollable
         />
 
         {!isSuperAdmin && (
@@ -235,6 +282,22 @@ export default function ProfilePage() {
         {!isAuditLedgerDisabled && (
           <TabPanel sx={{ p: 0 }} value="audit-ledger">
             <AuditLedger />
+          </TabPanel>
+        )}
+
+        {ssoFeatureEnabled && (
+          <TabPanel sx={{ p: 0 }} value="sso">
+            <EntraIdConfig />
+          </TabPanel>
+        )}
+        {!isCustomFieldsDisabled && (
+          <TabPanel sx={{ p: 0 }} value="custom-fields">
+            <CustomFieldsTab />
+          </TabPanel>
+        )}
+        {!isAuditLedgerDisabled && (
+          <TabPanel sx={{ p: 0 }} value="ai-approval-rules">
+            <AIApprovalRules />
           </TabPanel>
         )}
 

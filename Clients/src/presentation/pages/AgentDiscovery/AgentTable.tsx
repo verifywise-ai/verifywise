@@ -28,6 +28,7 @@ import {
 import IconButton from "../../components/IconButton";
 import { ReactComponent as SelectorVertical } from "../../assets/icons/selector-vertical.svg";
 import { EmptyState } from "../../components/EmptyState";
+import CustomizableSkeleton from "../../components/Skeletons";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import { getInstalledPlugins } from "../../../application/repository/plugin.repository";
@@ -179,7 +180,11 @@ const AgentTable: React.FC<AgentTableProps> = ({
   }, [page, rowsPerPage, sortedData.length]);
 
   if (isLoading) {
-    return <EmptyState icon={Bot} message="Loading agents..." />;
+    return (
+      <Stack spacing={2}>
+        <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
+      </Stack>
+    );
   }
 
   if (!sortedData || sortedData.length === 0) {

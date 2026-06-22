@@ -43,25 +43,6 @@ export const getFrameworkTabStyle =
     width: "142px",
   });
 
-export const addButtonStyle: SxProps<Theme> = (theme) => ({
-  "backgroundColor": theme.palette.primary.main,
-  "border": `1px solid ${theme.palette.primary.main}`,
-  "color": "background.main",
-  "fontFamily": theme.typography.fontFamily,
-  "fontSize": theme.typography.fontSize,
-  "fontWeight": 400,
-  "textTransform": "none",
-  "borderRadius": theme.spacing(1),
-  "boxShadow": "none",
-  "&:hover": {
-    backgroundColor: theme.palette.primary.dark || brand.primaryDark,
-    boxShadow: "none",
-  },
-  "&:focus": {
-    outline: "none",
-  },
-});
-
 export const tabListStyle: SxProps<Theme> = {
   "minHeight": "20px",
   "& .MuiTabs-flexContainer": {

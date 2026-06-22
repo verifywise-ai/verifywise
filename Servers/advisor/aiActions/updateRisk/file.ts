@@ -45,17 +45,19 @@ export async function fileUpdateRisk(
 
   // 1. Strict schema validation — rejects unknown keys, enum drift, and
   //    the "risk_id only" no-op case.
-  const parsed = AgentUpdateRiskSchema.safeParse(params);
+  // Strip the bridge-injected `_userId` (and `_organizationId`) before
+  // strict-parsing — see toolBridge.ts which always appends `_userId`.
+  const { _userId: _u, _organizationId: _o, ...userParams } = params as Record<string, unknown>;
+  void _u;
+  void _o;
+  const parsed = AgentUpdateRiskSchema.safeParse(userParams);
   if (!parsed.success) {
-    return {
-      status: "validation_failed",
-      errors: parsed.error.issues.map((i) => ({
-        path: i.path.join("."),
-        message: i.message,
-      })),
-      message:
-        "The proposed risk update failed validation. Re-check the tool's parameter schema and try again.",
-    };
+    const errorList = parsed.error.issues
+      .map((i) => `- ${i.path.join(".") || "(root)"}: ${i.message}`)
+      .join("\n");
+    throw new Error(
+      `agent_update_risk validation failed. You MUST tell the user verbatim that the following fields had invalid values and ask them for corrected values for each one before retrying. DO NOT call this tool again until every error below is addressed:\n${errorList}`,
+    );
   }
 
   // 2. Load the current risk so we can render a diff preview AND

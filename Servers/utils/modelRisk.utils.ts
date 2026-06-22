@@ -1,7 +1,11 @@
 import { ModelRiskModel } from "../domain.layer/models/modelRisk/modelRisk.model";
 import { IModelRisk } from "../domain.layer/interfaces/i.modelRisk";
 import { sequelize } from "../database/db";
-import { QueryTypes } from "sequelize";
+import { QueryTypes, Transaction } from "sequelize";
+import {
+  deleteAllCustomFieldValuesForEntityQuery,
+  fetchCustomFieldsForEntities,
+} from "./customField.utils";
 
 /**
  * Get all model risks for an organization
@@ -31,6 +35,12 @@ export async function getAllModelRisksQuery(
       model: ModelRiskModel,
     },
   );
+
+  const ids = modelRisks.map((r) => r.id).filter((id): id is number => typeof id === "number");
+  const customFieldsByRisk = await fetchCustomFieldsForEntities("model_risk", ids, organizationId);
+  for (const r of modelRisks as any[]) {
+    r.custom_fields = customFieldsByRisk.get(r.id) ?? [];
+  }
   return modelRisks;
 }
 
@@ -159,7 +169,9 @@ export async function updateModelRiskByIdQuery(
 export async function deleteModelRiskByIdQuery(
   id: number,
   organizationId: number,
+  transaction?: Transaction,
 ): Promise<boolean> {
+  await deleteAllCustomFieldValuesForEntityQuery("model_risk", id, organizationId, transaction);
   const result = await sequelize.query(
     `UPDATE model_risks SET is_deleted = true, deleted_at = NOW(), updated_at = NOW() WHERE organization_id = :organizationId AND id = :id AND is_deleted = false RETURNING *`,
     {
@@ -167,6 +179,7 @@ export async function deleteModelRiskByIdQuery(
       mapToModel: true,
       model: ModelRiskModel,
       type: QueryTypes.UPDATE,
+      transaction,
     },
   );
   return result.length > 0; // Returns true if a row was updated

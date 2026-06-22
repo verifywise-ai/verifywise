@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useContext, useCallback } from "react";
-import { Box, Button, Tab, Alert } from "@mui/material";
+import { Box, Tab, Alert } from "@mui/material";
 import TabList from "@mui/lab/TabList";
 import TabPanel from "@mui/lab/TabPanel";
 import TabContext from "@mui/lab/TabContext";
@@ -18,7 +18,8 @@ import { PluginSlot } from "../../../components/PluginSlot";
 import { PLUGIN_SLOTS } from "../../../../domain/constants/pluginSlots";
 import { usePluginRegistry } from "../../../../application/contexts/PluginRegistry.context";
 
-import { containerStyle, headerContainerStyle, addButtonStyle, tabListStyle } from "./styles";
+import { containerStyle, headerContainerStyle, tabListStyle } from "./styles";
+import { CustomizableButton } from "../../../components/button/customizable-button";
 import allowedRoles from "../../../../application/constants/permissions";
 import { TabFilterBar } from "../../../components/FrameworkFilter/TabFilterBar";
 import { useSearchParams } from "react-router-dom";
@@ -219,14 +220,12 @@ const ProjectFrameworks = ({
             This use case doesn't have any compliance frameworks yet. Add a framework to start
             tracking controls and assessments.
           </Box>
-          <Button
+          <CustomizableButton
             variant="contained"
-            sx={addButtonStyle}
             onClick={() => setIsModalOpen(true)}
-            disabled={isManagingFrameworksDisabled}
-          >
-            Add Framework
-          </Button>
+            isDisabled={isManagingFrameworksDisabled}
+            text="Add Framework"
+          />
         </Box>
       );
     }
@@ -328,9 +327,7 @@ const ProjectFrameworks = ({
         <Alert severity="error" sx={{ mb: 2 }}>
           {error}
         </Alert>
-        <Button onClick={refreshFilteredFrameworks} variant="contained">
-          Retry
-        </Button>
+        <CustomizableButton variant="contained" onClick={refreshFilteredFrameworks} text="Retry" />
       </Box>
     );
   }
@@ -341,14 +338,12 @@ const ProjectFrameworks = ({
 
   // Render the "Manage frameworks" button
   const renderManageButton = () => (
-    <Button
+    <CustomizableButton
       variant="contained"
-      sx={addButtonStyle}
       onClick={() => setIsModalOpen(true)}
-      disabled={isManagingFrameworksDisabled}
-    >
-      Manage frameworks/regulations
-    </Button>
+      isDisabled={isManagingFrameworksDisabled}
+      text="Manage frameworks/regulations"
+    />
   );
 
   return (
@@ -461,14 +456,12 @@ const ProjectFrameworks = ({
             This use case doesn't have any compliance frameworks yet. Add a framework to start
             tracking controls and assessments.
           </Box>
-          <Button
+          <CustomizableButton
             variant="contained"
-            sx={addButtonStyle}
             onClick={() => setIsModalOpen(true)}
-            disabled={isManagingFrameworksDisabled}
-          >
-            Add Framework
-          </Button>
+            isDisabled={isManagingFrameworksDisabled}
+            text="Add Framework"
+          />
         </Box>
       )}
     </Box>

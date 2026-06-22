@@ -74,8 +74,8 @@
  * @see NewRisk - Example implementation
  */
 
-import React from "react";
-import { Modal, Stack, Box, Typography } from "@mui/material";
+import React, { useId } from "react";
+import { Modal, Stack, Box, Typography, IconButton } from "@mui/material";
 import { X as CloseIcon } from "lucide-react";
 import { CustomizableButton } from "../../button/customizable-button";
 import { brand } from "../../../themes/palette";
@@ -156,6 +156,9 @@ const StandardModal: React.FC<StandardModalProps> = ({
   fitContent = false,
   hideSubmitButton = false,
 }) => {
+  const titleId = useId();
+  const descriptionId = useId();
+
   return (
     <Modal
       open={isOpen}
@@ -164,6 +167,8 @@ const StandardModal: React.FC<StandardModalProps> = ({
           onClose();
         }
       }}
+      aria-labelledby={titleId}
+      aria-describedby={descriptionId}
       sx={{
         display: "flex",
         alignItems: "center",
@@ -174,17 +179,14 @@ const StandardModal: React.FC<StandardModalProps> = ({
     >
       <Stack
         sx={{
-          "width": maxWidth,
-          "minWidth": `min(600px, ${maxWidth})`,
-          "maxWidth": "calc(100vw - 48px)",
-          "maxHeight": "calc(100vh - 48px)",
-          "backgroundColor": "background.main",
-          "borderRadius": "8px",
-          "overflow": "hidden",
-          "transition": "max-width 300ms cubic-bezier(0.4, 0, 0.2, 1)",
-          "&:focus": {
-            outline: "none",
-          },
+          width: maxWidth,
+          minWidth: `min(600px, ${maxWidth})`,
+          maxWidth: "calc(100vw - 48px)",
+          maxHeight: "calc(100vh - 48px)",
+          backgroundColor: "background.main",
+          borderRadius: "8px",
+          overflow: "hidden",
+          transition: "max-width 300ms cubic-bezier(0.4, 0, 0.2, 1)",
         }}
       >
         {/* Header Section with Background */}
@@ -201,21 +203,27 @@ const StandardModal: React.FC<StandardModalProps> = ({
           <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
             <Stack spacing={0.5}>
               <Typography
+                id={titleId}
+                component="h2"
                 sx={{
                   fontSize: 15,
                   fontWeight: 600,
                   color: "#101828",
                   lineHeight: "28px",
+                  margin: 0,
                 }}
               >
                 {title}
               </Typography>
               <Typography
+                id={descriptionId}
+                component="p"
                 sx={{
                   fontSize: 13,
                   fontWeight: 400,
                   color: "text.tertiary",
                   lineHeight: "20px",
+                  margin: 0,
                 }}
               >
                 {description}
@@ -224,20 +232,13 @@ const StandardModal: React.FC<StandardModalProps> = ({
             <Stack direction="row" spacing={1} alignItems="center">
               {headerActions}
               {showCancelButton && (
-                <Box
-                  component="span"
-                  role="button"
-                  tabIndex={0}
+                <IconButton
+                  size="small"
                   onClick={(e) => {
                     e.stopPropagation();
                     onClose();
                   }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      onClose();
-                    }
-                  }}
+                  aria-label="Close dialog"
                   sx={{
                     "cursor": "pointer",
                     "color": "text.muted",
@@ -251,7 +252,7 @@ const StandardModal: React.FC<StandardModalProps> = ({
                   }}
                 >
                   <CloseIcon size={20} />
-                </Box>
+                </IconButton>
               )}
             </Stack>
           </Stack>

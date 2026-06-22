@@ -32,4 +32,15 @@ describe("EmptyState", () => {
     renderWithProviders(<EmptyState imageAlt="No results" />);
     expect(screen.getByRole("status")).toHaveAttribute("aria-label", "No results");
   });
+
+  it("renders with border by default", () => {
+    renderWithProviders(<EmptyState />);
+    expect(screen.getByRole("status")).toHaveStyle({ borderRadius: "4px" });
+  });
+
+  it("omits border when showBorder is false", () => {
+    renderWithProviders(<EmptyState showBorder={false} />);
+    const status = screen.getByRole("status");
+    expect(status).not.toHaveStyle({ border: expect.stringContaining("dashed") });
+  });
 });

@@ -15,6 +15,7 @@ import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/us
 import { GroupBy } from "../../components/Table/GroupBy";
 import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
 import { GroupedTableView } from "../../components/Table/GroupedTableView";
+import CustomizableSkeleton from "../../components/Skeletons";
 import CustomizablePolicyTable from "../../components/Table/PolicyTable";
 import singleTheme from "../../themes/v1SingleTheme";
 
@@ -41,7 +42,11 @@ const POLICY_TEMPLATE_TABLE_COLUMNS: ColumnConfig<PolicyTemplateColumnKey>[] = [
   } as ColumnConfig<"actions">, // Add actions column config
 ];
 
-const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({ tags: _tags, fetchAll: _fetchAll }) => {
+const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({
+  tags: _tags,
+  fetchAll: _fetchAll,
+  isLoading = false,
+}) => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const hasProcessedUrlParam = useRef(false);
@@ -217,7 +222,9 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({ tags: _tags, fetchAll
       </Stack>
 
       {/* Table */}
-      {filteredPolicyTemplates.length === 0 ? (
+      {isLoading ? (
+        <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
+      ) : filteredPolicyTemplates.length === 0 ? (
         <EmptyState icon={FileText} message="No policy templates found.">
           <EmptyStateTip
             icon={Copy}

@@ -1,4 +1,11 @@
-import { getAllEvidencesQuery } from "../../utils/evidenceHub.utils";
+import {
+  getAllEvidencesQuery,
+  createNewEvidenceQuery,
+  updateEvidenceByIdQuery,
+  deleteEvidenceByIdQuery,
+} from "../../utils/evidenceHub.utils";
+import { createWriteToolFn } from "../confirmation/createWriteTool";
+import { sequelize } from "../../database/db";
 import logger from "../../utils/logger/fileLogger";
 
 export interface FetchEvidenceParams {
@@ -175,10 +182,96 @@ const getEvidenceExecutiveSummary = async (
   }
 };
 
+// --- Write Tools (Human Confirmation Flow) ---
+
+const agentCreateEvidence = createWriteToolFn({
+  toolName: "agent_create_evidence",
+  warningLevel: "warning",
+  descriptionFn: (params) => `Create evidence "${params.name}" of type "${params.type}"`,
+  executeFn: async (params, organizationId) => {
+    const transaction = await sequelize.transaction();
+    try {
+      const evidenceData: any = {
+        evidence_name: params.name,
+        evidence_type: params.type,
+        description: params.description || "",
+        expiry_date: params.expiry_date || null,
+        mapped_model_ids: params.model_id ? [params.model_id] : [],
+      };
+      const result = await createNewEvidenceQuery(evidenceData, organizationId, transaction);
+      await transaction.commit();
+      return {
+        id: result.id,
+        evidence_name: result.evidence_name,
+        message: "Evidence created successfully",
+      };
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  },
+});
+
+const agentUpdateEvidence = createWriteToolFn({
+  toolName: "agent_update_evidence",
+  warningLevel: "warning",
+  descriptionFn: (params) => {
+    const fields = Object.keys(params).filter((k) => k !== "evidence_id");
+    return `Update evidence #${params.evidence_id} — fields: ${fields.join(", ")}`;
+  },
+  executeFn: async (params, organizationId) => {
+    const transaction = await sequelize.transaction();
+    try {
+      const evidenceId = params.evidence_id as number;
+      const updateData: any = {};
+      if (params.name !== undefined) updateData.evidence_name = params.name;
+      if (params.type !== undefined) updateData.evidence_type = params.type;
+      if (params.description !== undefined) updateData.description = params.description;
+      if (params.expiry_date !== undefined) updateData.expiry_date = params.expiry_date || null;
+
+      await updateEvidenceByIdQuery(evidenceId, updateData, organizationId, transaction);
+      await transaction.commit();
+      return {
+        id: evidenceId,
+        updated: true,
+        message: "Evidence updated successfully",
+      };
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  },
+});
+
+const agentDeleteEvidence = createWriteToolFn({
+  toolName: "agent_delete_evidence",
+  warningLevel: "danger",
+  descriptionFn: (params) => `Delete evidence #${params.evidence_id}`,
+  executeFn: async (params, organizationId) => {
+    const transaction = await sequelize.transaction();
+    try {
+      const evidenceId = params.evidence_id as number;
+      await deleteEvidenceByIdQuery(evidenceId, organizationId, transaction);
+      await transaction.commit();
+      return {
+        id: evidenceId,
+        deleted: true,
+        message: "Evidence deleted successfully",
+      };
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  },
+});
+
 const availableEvidenceTools: Record<string, Function> = {
   fetch_evidence: fetchEvidence,
   get_evidence_analytics: getEvidenceAnalytics,
   get_evidence_executive_summary: getEvidenceExecutiveSummary,
+  agent_create_evidence: agentCreateEvidence,
+  agent_update_evidence: agentUpdateEvidence,
+  agent_delete_evidence: agentDeleteEvidence,
 };
 
 export { availableEvidenceTools };

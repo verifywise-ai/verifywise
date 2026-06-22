@@ -10,11 +10,11 @@ export const mcpServersContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Servers page is where you register the backend MCP servers that your AI agents will call through the gateway. Each server exposes one or more tools (database queries, search, file operations, etc.) that agents can discover and invoke.',
+      text: 'The Servers page is where you register the backend MCP servers that your agents call through the gateway. Each server exposes one or more tools (database queries, search, file operations and so on) that agents can discover and invoke.',
     },
     {
       type: 'paragraph',
-      text: 'You\'ll find it at **AI Gateway > MCP Gateway > Servers**.',
+      text: 'You\'ll find it at **AI Gateway > Agent Control > MCP Servers**.',
     },
     {
       type: 'heading',
@@ -30,10 +30,10 @@ export const mcpServersContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { bold: 'Server name', text: 'The display name you gave the server.' },
-        { bold: 'Health status', text: 'A color-coded chip: green for "Healthy", red for "Unhealthy", or gray for "Unknown".' },
+        { bold: 'Health status', text: 'A color-coded chip: green for "Healthy", red for "Unhealthy" or gray for "Unknown".' },
         { bold: 'Tool count', text: 'How many tools have been discovered on this server.' },
         { bold: 'URL', text: 'The server\'s endpoint URL.' },
-        { bold: 'Auth type', text: 'Shows "no auth", "bearer", or "api_key".' },
+        { bold: 'Auth type', text: 'Shows "no auth", "bearer" or "api_key".' },
         { bold: 'Slug', text: 'The URL-safe identifier, shown as a path segment (e.g., /my-server).' },
         { bold: 'Created by', text: 'The user who registered the server and the date.' },
       ],
@@ -64,7 +64,7 @@ export const mcpServersContent: ArticleContent = {
         { field: 'Slug', required: 'Yes', description: 'Auto-generated from the name. Lowercase letters, digits and hyphens only. Must start with a letter or digit. Can\'t be changed after creation.' },
         { field: 'URL', required: 'Yes', description: 'The full URL of the MCP server (e.g., https://mcp-server.example.com).' },
         { field: 'Description', required: 'No', description: 'A short note about what this server does (e.g., "Exposes search and retrieval tools").' },
-        { field: 'Authentication', required: 'No', description: 'How the gateway authenticates with this server. Options: None (default), Bearer token, or API key.' },
+        { field: 'Authentication', required: 'No', description: 'How the gateway authenticates with this server. Options: None (default), Bearer token or API key.' },
       ],
     },
     {
@@ -89,7 +89,7 @@ export const mcpServersContent: ArticleContent = {
       type: 'callout',
       variant: 'warning',
       title: 'Auth credentials are stored encrypted',
-      text: 'Bearer tokens and API keys are encrypted at rest. They\'re only decrypted when the gateway forwards a request to the server. You won\'t see the full credential after saving.',
+      text: 'Bearer tokens and API keys are encrypted at rest, and only decrypted when the gateway forwards a request to the server. You won\'t see the full credential after saving.',
     },
     {
       type: 'heading',
@@ -125,7 +125,7 @@ export const mcpServersContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'This is useful during maintenance windows or when you need to quickly cut off access to a server without deleting it.',
+      text: 'This helps during maintenance windows, or when you need to quickly cut off access to a server without deleting it.',
     },
     {
       type: 'heading',
@@ -233,7 +233,7 @@ export const mcpServersContent: ArticleContent = {
         {
           collectionId: 'ai-gateway',
           articleId: 'mcp-tools',
-          title: 'Tool catalog',
+          title: 'MCP Tools',
           description: 'View and manage discovered tools across your servers.',
         },
         {
@@ -245,7 +245,7 @@ export const mcpServersContent: ArticleContent = {
         {
           collectionId: 'ai-gateway',
           articleId: 'mcp-overview',
-          title: 'MCP Gateway overview',
+          title: 'Agent Control overview',
           description: 'Understand how the gateway proxies agent-to-server communication.',
         },
       ],

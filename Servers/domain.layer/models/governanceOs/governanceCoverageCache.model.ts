@@ -69,6 +69,12 @@ export class GovernanceCoverageCacheModel
   synergy_details?: Record<string, unknown>;
 
   @Column({
+    type: DataType.TEXT,
+    allowNull: true,
+  })
+  calculation_methodology?: string;
+
+  @Column({
     type: DataType.DATE,
     allowNull: true,
     defaultValue: DataType.NOW,

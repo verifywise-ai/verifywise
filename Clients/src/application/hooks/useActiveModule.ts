@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { AppModule, setActiveModule } from "../redux/ui/uiSlice";
 import { RootState } from "../redux/store";
+import { storageService } from "../../infrastructure/storage";
 
 const STORAGE_KEY = "verifywise_active_module";
 
@@ -32,6 +33,9 @@ export function useActiveModule() {
     if (pathname.startsWith("/ai-gateway")) {
       return "ai-gateway";
     }
+    if (pathname.startsWith("/ai-trust-index")) {
+      return "ai-trust-index";
+    }
     if (pathname.startsWith("/super-admin")) {
       return "super-admin";
     }
@@ -43,7 +47,7 @@ export function useActiveModule() {
     const detectedModule = getModuleFromPath(location.pathname);
     if (detectedModule !== activeModule) {
       dispatch(setActiveModule(detectedModule));
-      localStorage.setItem(STORAGE_KEY, detectedModule);
+      storageService.setRaw(STORAGE_KEY, detectedModule, { raw: true });
     }
   }, [location.pathname, activeModule, dispatch, getModuleFromPath]);
 
@@ -53,7 +57,7 @@ export function useActiveModule() {
       if (module === activeModule) return;
 
       dispatch(setActiveModule(module));
-      localStorage.setItem(STORAGE_KEY, module);
+      storageService.setRaw(STORAGE_KEY, module, { raw: true });
 
       // Navigate to default route for the module
       switch (module) {
@@ -69,6 +73,9 @@ export function useActiveModule() {
         case "ai-gateway":
           navigate("/ai-gateway/dashboard");
           break;
+        case "ai-trust-index":
+          navigate("/ai-trust-index/browse");
+          break;
         case "super-admin":
           navigate("/super-admin");
           break;
@@ -83,10 +90,18 @@ export function useActiveModule() {
 
   // Initialize from localStorage on mount
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY) as AppModule | null;
+    const stored = storageService.getRaw<AppModule | null>(STORAGE_KEY, null, { raw: true });
     if (
       stored &&
-      ["main", "evals", "ai-detection", "shadow-ai", "ai-gateway", "super-admin"].includes(stored)
+      [
+        "main",
+        "evals",
+        "ai-detection",
+        "shadow-ai",
+        "ai-gateway",
+        "ai-trust-index",
+        "super-admin",
+      ].includes(stored)
     ) {
       // Only set if URL doesn't already indicate a different module
       const urlModule = getModuleFromPath(location.pathname);

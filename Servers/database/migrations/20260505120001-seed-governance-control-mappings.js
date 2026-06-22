@@ -95,13 +95,14 @@ module.exports = {
           (1, 'control_category', 'Art.16-27', 4, 'category', 'GOVERN-2', 'direct', 'bidirectional', 'accountability', 'GOVERN-2 establishes accountability structures for AI', 'NIST Crosswalk 2024', 0.88),
           (2, 'clause', 'Clause 5', 3, 'clause', 'Clause 5', 'direct', 'bidirectional', 'accountability', 'Annex SL harmonized leadership clause', 'ISO 42001 Annex SL', 0.95),
           (2, 'clause', 'Clause 5', 4, 'category', 'GOVERN-2', 'direct', 'bidirectional', 'accountability', 'Both address AI governance accountability', 'NIST Crosswalk 2024', 0.87),
-          (3, 'clause', 'Clause 5', 4, 'category', 'GOVERN-2', 'partial', 'bidirectional', 'accountability', 'NIST GOVERN-2 is AI-specific accountability', 'NIST Crosswalk 2024', 0.72);
+          (3, 'clause', 'Clause 5', 4, 'category', 'GOVERN-2', 'partial', 'bidirectional', 'accountability', 'NIST GOVERN-2 is AI-specific accountability', 'NIST Crosswalk 2024', 0.72)
+      ON CONFLICT DO NOTHING;
       `,
         { transaction },
       );
 
       // ========================================
-      // BUILT-IN SCENARIOS (8 scenarios)
+      // BUILT-IN SCENARIOS (10 scenarios)
       // ========================================
       await queryInterface.sequelize.query(
         `
@@ -117,7 +118,8 @@ module.exports = {
           (NULL, 'Global Enterprise AI', 'Large enterprises with global AI deployments', 'technology', 'high_risk_ai', 'global', ARRAY[2,1,4,3], '{"primary": 2, "secondary": [1, 4], "supplementary": [3]}', 'ISO 42001 as universal foundation. EU AI Act for EU operations. NIST for US operations. ISO 27001 for security baseline.', TRUE),
           (NULL, 'Limited-Risk AI', 'Organizations deploying limited-risk AI with transparency obligations only', 'technology', 'limited_risk', 'eu', ARRAY[1,2], '{"primary": 1, "secondary": [2], "supplementary": []}', 'EU AI Act transparency requirements only. ISO 42001 for voluntary best practices.', TRUE),
           (NULL, 'US Healthcare AI', 'US healthcare organizations deploying AI systems', 'healthcare', 'high_risk_ai', 'us', ARRAY[4,3,2], '{"primary": 4, "secondary": [3], "supplementary": [2]}', 'NIST AI RMF primary for US context. ISO 27001 for HIPAA alignment. ISO 42001 for comprehensive AI management.', TRUE),
-          (NULL, 'APAC AI Governance', 'Organizations in Asia-Pacific seeking AI governance alignment', 'technology', 'high_risk_ai', 'apac', ARRAY[2,4], '{"primary": 2, "secondary": [4], "supplementary": []}', 'ISO 42001 widely recognized in APAC. NIST AI RMF supplements with practical guidance.', TRUE);
+          (NULL, 'APAC AI Governance', 'Organizations in Asia-Pacific seeking AI governance alignment', 'technology', 'high_risk_ai', 'apac', ARRAY[2,4], '{"primary": 2, "secondary": [4], "supplementary": []}', 'ISO 42001 widely recognized in APAC. NIST AI RMF supplements with practical guidance.', TRUE)
+      ON CONFLICT DO NOTHING;
       `,
         { transaction },
       );
@@ -170,7 +172,8 @@ module.exports = {
 
           -- APAC AI Governance (scenario 10)
           ((SELECT id FROM verifywise.governance_scenarios WHERE name = 'APAC AI Governance'), 'region', 'equals', 'apac', 0.90),
-          ((SELECT id FROM verifywise.governance_scenarios WHERE name = 'APAC AI Governance'), 'industry', 'equals', 'technology', 0.50);
+          ((SELECT id FROM verifywise.governance_scenarios WHERE name = 'APAC AI Governance'), 'industry', 'equals', 'technology', 0.50)
+      ON CONFLICT DO NOTHING;
       `,
         { transaction },
       );
@@ -185,6 +188,12 @@ module.exports = {
   async down(queryInterface) {
     const transaction = await queryInterface.sequelize.transaction();
     try {
+      // Clean up activations that reference built-in scenarios first (if table exists)
+      await queryInterface.sequelize.query(
+        `DELETE FROM verifywise.governance_scenario_activations
+         WHERE scenario_id IN (SELECT id FROM verifywise.governance_scenarios WHERE is_builtin = TRUE);`,
+        { transaction },
+      );
       await queryInterface.sequelize.query(`DELETE FROM verifywise.governance_scenario_rules;`, {
         transaction,
       });

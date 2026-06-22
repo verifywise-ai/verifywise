@@ -222,7 +222,7 @@ const NewTraining: FC<NewTrainingProps> = ({
 
   // Submit: With error boundary (Defensive Programming)
   // Await the onSuccess callback and only close modal on success
-  const handleSubmit = useCallback(
+  const handleSaveTraining = useCallback(
     async (event?: React.FormEvent) => {
       if (event) event.preventDefault();
 
@@ -385,7 +385,7 @@ const NewTraining: FC<NewTrainingProps> = ({
       onClose={handleClose}
       title={isEdit ? "Edit training" : "New training"}
       description="Record and manage your organization's AI literacy and compliance trainings. Enter training details such as name, provider, duration, department, participants, and status to keep a clear history of all AI-related education initiatives."
-      onSubmit={activeTab === "details" ? handleSubmit : undefined}
+      onSubmit={activeTab === "details" ? handleSaveTraining : undefined}
       hideSubmitButton={activeTab !== "details"}
       submitButtonText={isEdit ? "Update training" : "Create training"}
       maxWidth="680px"

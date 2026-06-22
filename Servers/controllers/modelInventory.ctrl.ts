@@ -20,6 +20,7 @@ import {
 } from "../utils/modelInventoryChangeHistory.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import logger, { logStructured } from "../utils/logger/fileLogger";
+import { logRollbackFailure } from "../utils/logger/logHelper";
 
 import { translateError } from "../utils/i18n.utils";
 // Helper function to get user name
@@ -332,8 +333,14 @@ export async function createNewModelInventory(req: Request, res: Response) {
       try {
         await transaction.rollback();
       } catch (rollbackError) {
-        // Transaction might already be committed, ignore rollback errors
-        console.warn("Transaction rollback failed:", rollbackError);
+        await logRollbackFailure({
+          req,
+          functionName: "createNewModelInventory",
+          fileName: "modelInventory.ctrl.ts",
+          eventType: "Create",
+          originalError: error,
+          rollbackError,
+        });
       }
     }
 
@@ -521,8 +528,14 @@ export async function updateModelInventoryById(req: Request, res: Response) {
       try {
         await transaction.rollback();
       } catch (rollbackError) {
-        // Transaction might already be committed, ignore rollback errors
-        console.warn("Transaction rollback failed:", rollbackError);
+        await logRollbackFailure({
+          req,
+          functionName: "updateModelInventoryById",
+          fileName: "modelInventory.ctrl.ts",
+          eventType: "Update",
+          originalError: error,
+          rollbackError,
+        });
       }
     }
 
@@ -602,8 +615,14 @@ export async function deleteModelInventoryById(req: Request, res: Response) {
       try {
         await transaction.rollback();
       } catch (rollbackError) {
-        // Transaction might already be committed, ignore rollback errors
-        console.warn("Transaction rollback failed:", rollbackError);
+        await logRollbackFailure({
+          req,
+          functionName: "deleteModelInventoryById",
+          fileName: "modelInventory.ctrl.ts",
+          eventType: "Delete",
+          originalError: error,
+          rollbackError,
+        });
       }
     }
 

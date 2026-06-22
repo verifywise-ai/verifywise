@@ -126,8 +126,12 @@ const light = createTheme({
           "borderRadius": 4,
           "boxShadow": "none",
           "textTransform": "none",
-          "&:focus": {
+          "&:focus:not(:focus-visible)": {
             outline: "none",
+          },
+          "&:focus-visible": {
+            outline: `2px solid ${brand.primary}`,
+            outlineOffset: 1,
           },
           "&:hover": {
             boxShadow: "none",
@@ -143,6 +147,13 @@ const light = createTheme({
         root: {
           "padding": 4,
           "transition": "none",
+          "&:focus:not(:focus-visible)": {
+            outline: "none",
+          },
+          "&:focus-visible": {
+            outline: `2px solid ${brand.primary}`,
+            outlineOffset: 1,
+          },
           "&:hover": {
             backgroundColor: background.fill,
           },

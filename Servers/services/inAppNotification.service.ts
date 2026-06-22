@@ -765,20 +765,72 @@ export const notifyApprovalComplete = async (
     totalSteps: number;
   },
   baseUrl: string,
+  /**
+   * Optional entity_type from the approval_requests row so the title /
+   * message / action_url can match the actual artifact (model, risk,
+   * AI action, etc.) instead of always saying "Use case fully approved".
+   * Falls back to the use-case wording for backward compat with callers
+   * that don't pass it.
+   */
+  entityType?: string,
 ): Promise<void> => {
   const requester = await getUserById(requesterId);
+
+  // Map approval_requests.entity_type → user-facing label + action url.
+  // Keep this as a small flat map; if more entity types start using the
+  // approval workflow, just add a row here.
+  const labelFor = (
+    et?: string,
+  ): { label: string; entity: NotificationEntityType; url: string } => {
+    switch (et) {
+      case "ai_action":
+        return {
+          label: "AI action",
+          entity: NotificationEntityType.AI_ACTION,
+          url: `/approval-requests/${useCase.id}`,
+        };
+      case "model_inventory":
+      case "model":
+        return {
+          label: "Model",
+          entity: NotificationEntityType.MODEL,
+          url: `/model-inventory`,
+        };
+      case "risk":
+        return {
+          label: "Risk",
+          entity: NotificationEntityType.RISK,
+          url: `/risk-management`,
+        };
+      case "vendor":
+        return {
+          label: "Vendor",
+          entity: NotificationEntityType.VENDOR,
+          url: `/vendors`,
+        };
+      case "use_case":
+      default:
+        return {
+          label: "Use case",
+          entity: NotificationEntityType.USE_CASE,
+          url: `/use-cases/${useCase.id}`,
+        };
+    }
+  };
+
+  const { label, entity, url } = labelFor(entityType);
 
   await sendInAppNotification(
     organizationId,
     {
       user_id: requesterId,
       type: NotificationType.APPROVAL_COMPLETE,
-      title: "Use case fully approved",
-      message: `Your use case "${useCase.name}" has been fully approved`,
-      entity_type: NotificationEntityType.USE_CASE,
+      title: `${label} fully approved`,
+      message: `Your ${label.toLowerCase()} "${useCase.name}" has been fully approved`,
+      entity_type: entity,
       entity_id: useCase.id,
       entity_name: useCase.name,
-      action_url: buildEntityUrl(NotificationEntityType.USE_CASE, useCase.id),
+      action_url: url,
     },
     true,
     {
@@ -788,7 +840,7 @@ export const notifyApprovalComplete = async (
         requester_name: requester ? `${requester.name}` : "User",
         use_case_name: useCase.name,
         total_steps: String(useCase.totalSteps),
-        use_case_url: `${baseUrl}${buildEntityUrl(NotificationEntityType.USE_CASE, useCase.id)}`,
+        use_case_url: `${baseUrl}${url}`,
       },
     },
   );
@@ -1134,7 +1186,7 @@ function buildEntityContextHtml(context?: AssignmentEntityContext): string {
 /**
  * Notify a user when they are assigned to an entity
  *
- * @param organizationId - Tenant ID for multi-tenancy
+ * @param organizationId - Organization ID for multi-tenancy
  * @param assigneeId - User ID being assigned
  * @param assignment - Assignment details including entity info and role
  * @param assignerName - Name of the person making the assignment

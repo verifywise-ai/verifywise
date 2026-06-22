@@ -6,9 +6,10 @@
  * a timeline of metadata changes from the change history system.
  */
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Box,
+  Button,
   Drawer,
   IconButton,
   Typography,
@@ -58,6 +59,8 @@ const formatRelativeTime = (date: string): string => {
   return target.format("MMM D, YYYY");
 };
 
+const VERSIONS_PAGE_SIZE = 20;
+
 export const FileVersionHistoryDrawer: React.FC<FileVersionHistoryDrawerProps> = ({
   isOpen,
   onClose,
@@ -65,7 +68,12 @@ export const FileVersionHistoryDrawer: React.FC<FileVersionHistoryDrawerProps> =
 }) => {
   const [versions, setVersions] = useState<FileMetadata[]>([]);
   const [loadingVersions, setLoadingVersions] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [versionsError, setVersionsError] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+  const [totalVersions, setTotalVersions] = useState(0);
+
+  const hasMore = versions.length < totalVersions;
 
   const numericFileId = useMemo(() => {
     if (!fileId) return undefined;
@@ -103,28 +111,37 @@ export const FileVersionHistoryDrawer: React.FC<FileVersionHistoryDrawerProps> =
     });
   }, [history]);
 
-  // Fetch version history when drawer opens
+  // Reset + fetch first page when drawer opens or fileId changes.
   useEffect(() => {
     if (!isOpen || !fileId) {
       setVersions([]);
       setVersionsError(null);
+      setPage(1);
+      setTotalVersions(0);
       return;
     }
 
     let cancelled = false;
 
-    const fetchVersions = async () => {
+    const fetchFirstPage = async () => {
       setLoadingVersions(true);
       setVersionsError(null);
       try {
-        const result = await getFileVersionHistory({ id: String(fileId) });
+        const result = await getFileVersionHistory({
+          id: String(fileId),
+          page: 1,
+          pageSize: VERSIONS_PAGE_SIZE,
+        });
         if (!cancelled) {
-          setVersions(result);
+          setVersions(result.versions);
+          setTotalVersions(result.pagination.total);
+          setPage(1);
         }
       } catch {
         if (!cancelled) {
           setVersionsError("Could not load version history");
           setVersions([]);
+          setTotalVersions(0);
         }
       } finally {
         if (!cancelled) {
@@ -133,12 +150,32 @@ export const FileVersionHistoryDrawer: React.FC<FileVersionHistoryDrawerProps> =
       }
     };
 
-    fetchVersions();
+    fetchFirstPage();
 
     return () => {
       cancelled = true;
     };
   }, [isOpen, fileId]);
+
+  const loadMore = useCallback(async () => {
+    if (!fileId || loadingMore || !hasMore) return;
+    setLoadingMore(true);
+    try {
+      const nextPage = page + 1;
+      const result = await getFileVersionHistory({
+        id: String(fileId),
+        page: nextPage,
+        pageSize: VERSIONS_PAGE_SIZE,
+      });
+      setVersions((prev) => [...prev, ...result.versions]);
+      setTotalVersions(result.pagination.total);
+      setPage(nextPage);
+    } catch {
+      setVersionsError("Could not load more versions");
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [fileId, page, hasMore, loadingMore]);
 
   const currentFile = useMemo(() => {
     return versions.find((v) => String(v.id) === String(fileId));
@@ -354,6 +391,22 @@ export const FileVersionHistoryDrawer: React.FC<FileVersionHistoryDrawerProps> =
               );
             })}
           </Stack>
+        )}
+
+        {hasMore && (
+          <Box sx={{ mt: 1.5, display: "flex", justifyContent: "center" }}>
+            <Button
+              variant="text"
+              size="small"
+              onClick={loadMore}
+              disabled={loadingMore}
+              sx={{ fontSize: 12, textTransform: "none" }}
+            >
+              {loadingMore
+                ? "Loading…"
+                : `Load more (${totalVersions - versions.length} remaining)`}
+            </Button>
+          </Box>
         )}
 
         <Divider sx={{ my: 2 }} />

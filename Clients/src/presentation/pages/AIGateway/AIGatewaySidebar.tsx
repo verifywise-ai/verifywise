@@ -20,6 +20,7 @@ import {
   ClipboardList,
   CheckCircle,
   Shield,
+  GitBranch,
 } from "lucide-react";
 import SidebarShell, {
   SidebarMenuItem,
@@ -95,31 +96,21 @@ export default function AIGatewaySidebar({
 
   const mcpGroups: SidebarMenuGroup[] = [
     {
-      name: "MCP Gateway",
-      collapsible: true,
-      defaultCollapsed: true,
+      name: "Agent Control",
+      collapsible: false,
+      defaultCollapsed: false,
+      // Order: monitor (Activity) → act (Approvals, Guardrails) → divider →
+      // configure (Agent keys, MCP servers, MCP tools).
       items: [
         {
-          id: "mcp-agent-keys",
-          label: "Agent Keys",
-          value: "mcp/agent-keys",
-          icon: <KeyRound size={16} strokeWidth={1.5} />,
-        },
-        {
-          id: "mcp-servers",
-          label: "Servers",
-          value: "mcp/servers",
-          icon: <Server size={16} strokeWidth={1.5} />,
-        },
-        {
-          id: "mcp-tools",
-          label: "Tools",
-          value: "mcp/tools",
-          icon: <Wrench size={16} strokeWidth={1.5} />,
+          id: "mcp-runs",
+          label: "Runs",
+          value: "mcp/runs",
+          icon: <GitBranch size={16} strokeWidth={1.5} />,
         },
         {
           id: "mcp-audit",
-          label: "Audit Log",
+          label: "Activity",
           value: "mcp/audit",
           icon: <ClipboardList size={16} strokeWidth={1.5} />,
         },
@@ -134,6 +125,25 @@ export default function AIGatewaySidebar({
           label: "Guardrails",
           value: "mcp/guardrails",
           icon: <Shield size={16} strokeWidth={1.5} />,
+          dividerAfter: true,
+        },
+        {
+          id: "mcp-agent-keys",
+          label: "Agent keys",
+          value: "mcp/agent-keys",
+          icon: <KeyRound size={16} strokeWidth={1.5} />,
+        },
+        {
+          id: "mcp-servers",
+          label: "MCP servers",
+          value: "mcp/servers",
+          icon: <Server size={16} strokeWidth={1.5} />,
+        },
+        {
+          id: "mcp-tools",
+          label: "MCP tools",
+          value: "mcp/tools",
+          icon: <Wrench size={16} strokeWidth={1.5} />,
         },
       ],
     },

@@ -3,14 +3,54 @@ import {
   getAllRisksQuery,
   getRisksByProjectQuery,
   getRisksByFrameworkQuery,
+  createRiskQuery,
+  updateRiskByIdQuery,
+  deleteRiskByIdQuery,
 } from "../../utils/risk.utils";
 import { getTimeseriesForTimeframe } from "../../utils/history/riskHistory.utils";
+import { createWriteToolFn } from "../confirmation/createWriteTool";
+import { sequelize } from "../../database/db";
 import logger from "../../utils/logger/fileLogger";
 
-// NOTE: write tools (agent_create_risk) used to live in this file. They
-// have moved to `advisor/aiActions/createRisk/` and are wired into the
-// LLM tool surface via the AI Actions registry. This file only holds
-// read-only risk tools now.
+const VALID_RISK_CATEGORIES = [
+  "Strategic risk",
+  "Operational risk",
+  "Compliance risk",
+  "Financial risk",
+  "Cybersecurity risk",
+  "Reputational risk",
+  "Legal risk",
+  "Technological risk",
+  "Third-party/vendor risk",
+  "Environmental risk",
+  "Human resources risk",
+  "Geopolitical risk",
+  "Fraud risk",
+  "Data privacy risk",
+  "Health and safety risk",
+];
+
+function validateRiskCategory(category: string): string {
+  // Exact match
+  if (VALID_RISK_CATEGORIES.includes(category)) return category;
+  // Case-insensitive match
+  const lower = category.toLowerCase();
+  const found = VALID_RISK_CATEGORIES.find((c) => c.toLowerCase() === lower);
+  if (found) return found;
+  // Partial match
+  const partial = VALID_RISK_CATEGORIES.find(
+    (c) => c.toLowerCase().includes(lower) || lower.includes(c.toLowerCase()),
+  );
+  if (partial) return partial;
+  // Default fallback
+  return "Operational risk";
+}
+
+// NOTE: agent_create_risk / agent_update_risk / agent_delete_risk also exist
+// in `advisor/aiActions/createRisk/` registry (upstream refactor). The
+// in-file versions below are kept for backward-compat with the legacy
+// confirmation flow. The registry-based versions take precedence when both
+// are wired up.
 
 export interface FetchRisksParams {
   projectId?: number;
@@ -365,11 +405,206 @@ const getRiskHistoryTimeseries = async (
   }
 };
 
+// --- Write Tools (Human Confirmation Flow) ---
+
+const agentCreateRisk = createWriteToolFn({
+  toolName: "agent_create_risk",
+  warningLevel: "warning",
+  descriptionFn: (params) =>
+    `Create risk "${params.risk_name}" in project #${params.project_id}${params.severity ? ` with severity ${params.severity}` : ""}`,
+  executeFn: async (params, organizationId) => {
+    const transaction = await sequelize.transaction();
+    try {
+      const riskData: any = {
+        risk_name: params.risk_name,
+        risk_description: params.risk_description || "",
+        severity: params.severity || "Moderate",
+        likelihood: params.likelihood || "Possible",
+        impact: params.impact || "",
+        risk_category: params.category ? [validateRiskCategory(params.category as string)] : [],
+        risk_owner:
+          params.risk_owner && Number(params.risk_owner) ? Number(params.risk_owner) : null,
+        mitigation_status: "Not Started",
+        risk_level_autocalculated: "Medium risk",
+        ai_lifecycle_phase: "Problem definition & planning",
+        review_notes: "",
+        current_risk_level: "Medium risk",
+        mitigation_plan: "",
+        implementation_strategy: "",
+        mitigation_evidence_document: "",
+        likelihood_mitigation: "Possible",
+        risk_severity: "Moderate",
+        final_risk_level: "",
+        risk_approval: null,
+        approval_status: "",
+        date_of_assessment: new Date(),
+        deadline: params.deadline || null,
+        assessment_mapping: "",
+        controls_mapping: "",
+        is_demo: false,
+        projects: [params.project_id],
+        frameworks: [],
+      };
+      const result = await createRiskQuery(riskData, organizationId, transaction);
+      await transaction.commit();
+      return { id: result.id, risk_name: result.risk_name, message: "Risk created successfully" };
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  },
+});
+
+const agentUpdateRisk = createWriteToolFn({
+  toolName: "agent_update_risk",
+  warningLevel: "warning",
+  descriptionFn: (params) => {
+    const fields = Object.keys(params).filter((k) => k !== "risk_id");
+    return `Update risk #${params.risk_id} — fields: ${fields.join(", ")}`;
+  },
+  executeFn: async (params, organizationId) => {
+    const transaction = await sequelize.transaction();
+    try {
+      const riskId = params.risk_id as number;
+      const updateData: any = {};
+      if (params.risk_name !== undefined) updateData.risk_name = params.risk_name;
+      if (params.risk_description !== undefined)
+        updateData.risk_description = params.risk_description;
+      if (params.severity !== undefined) updateData.severity = params.severity;
+      if (params.likelihood !== undefined) updateData.likelihood = params.likelihood;
+      if (params.impact !== undefined) updateData.impact = params.impact;
+      if (params.category !== undefined) updateData.risk_category = [params.category];
+      if (params.risk_owner !== undefined) updateData.risk_owner = params.risk_owner;
+      if (params.mitigation_status !== undefined)
+        updateData.mitigation_status = params.mitigation_status;
+      if (params.mitigation_plan !== undefined) updateData.mitigation_plan = params.mitigation_plan;
+
+      await updateRiskByIdQuery(riskId, updateData, organizationId, transaction);
+      await transaction.commit();
+      return { id: riskId, updated: true, message: "Risk updated successfully" };
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  },
+});
+
+const agentDeleteRisk = createWriteToolFn({
+  toolName: "agent_delete_risk",
+  warningLevel: "danger",
+  descriptionFn: (params) => `Delete risk #${params.risk_id}`,
+  executeFn: async (params, organizationId) => {
+    const transaction = await sequelize.transaction();
+    try {
+      const riskId = params.risk_id as number;
+      await deleteRiskByIdQuery(riskId, organizationId, transaction);
+      await transaction.commit();
+      return { id: riskId, deleted: true, message: "Risk deleted successfully" };
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
+  },
+});
+
+const agentAssignRiskOwner = createWriteToolFn({
+  toolName: "agent_assign_risk_owner",
+  warningLevel: "info",
+  descriptionFn: (params) =>
+    `Assign user #${params.owner_user_id} as owner of risk #${params.risk_id}`,
+  executeFn: async (params, organizationId) => {
+    const riskId = params.risk_id as number;
+    const ownerUserId = params.owner_user_id as number;
+    await sequelize.query(
+      `UPDATE risks SET risk_owner = :owner_user_id, updated_at = NOW() WHERE id = :risk_id AND organization_id = :organization_id AND is_deleted = false`,
+      {
+        replacements: {
+          owner_user_id: ownerUserId,
+          risk_id: riskId,
+          organization_id: organizationId,
+        },
+      },
+    );
+    return { id: riskId, risk_owner: ownerUserId, message: "Risk owner assigned successfully" };
+  },
+});
+
+const agentChangeRiskStatus = createWriteToolFn({
+  toolName: "agent_change_risk_status",
+  warningLevel: "warning",
+  descriptionFn: (params) => `Change status of risk #${params.risk_id} to "${params.status}"`,
+  executeFn: async (params, organizationId) => {
+    const riskId = params.risk_id as number;
+    const status = params.status as string;
+    await sequelize.query(
+      `UPDATE risks SET mitigation_status = :status, updated_at = NOW() WHERE id = :risk_id AND organization_id = :organization_id AND is_deleted = false`,
+      {
+        replacements: { status, risk_id: riskId, organization_id: organizationId },
+      },
+    );
+    return { id: riskId, mitigation_status: status, message: "Risk status updated successfully" };
+  },
+});
+
+const agentBulkUpdateRiskStatus = createWriteToolFn({
+  toolName: "agent_bulk_update_risk_status",
+  warningLevel: "warning",
+  descriptionFn: (params) => {
+    const ids = params.risk_ids as number[];
+    return `Update status of ${ids.length} risk(s) [${ids.join(", ")}] to "${params.status}"`;
+  },
+  executeFn: async (params, organizationId) => {
+    const riskIds = params.risk_ids as number[];
+    const status = params.status as string;
+    await sequelize.query(
+      `UPDATE risks SET mitigation_status = :status, updated_at = NOW() WHERE id = ANY(ARRAY[:risk_ids]::int[]) AND organization_id = :organization_id AND is_deleted = false`,
+      {
+        replacements: { status, risk_ids: riskIds, organization_id: organizationId },
+      },
+    );
+    return {
+      updated_ids: riskIds,
+      mitigation_status: status,
+      message: `${riskIds.length} risk(s) updated successfully`,
+    };
+  },
+});
+
+const agentLinkRiskToProject = createWriteToolFn({
+  toolName: "agent_link_risk_to_project",
+  warningLevel: "warning",
+  descriptionFn: (params) => `Link risk #${params.risk_id} to project #${params.project_id}`,
+  executeFn: async (params, organizationId) => {
+    const riskId = params.risk_id as number;
+    const projectId = params.project_id as number;
+    await sequelize.query(
+      `INSERT INTO risks_projects_frameworks (organization_id, risk_id, project_id)
+       VALUES (:organization_id, :risk_id, :project_id)
+       ON CONFLICT DO NOTHING`,
+      {
+        replacements: { organization_id: organizationId, risk_id: riskId, project_id: projectId },
+      },
+    );
+    return {
+      risk_id: riskId,
+      project_id: projectId,
+      message: "Risk linked to project successfully",
+    };
+  },
+});
+
 const availableRiskTools: any = {
   fetch_risks: fetchRisks,
   get_risk_analytics: getRiskAnalytics,
   get_executive_summary: getExecutiveSummary,
   get_risk_history_timeseries: getRiskHistoryTimeseries,
+  agent_create_risk: agentCreateRisk,
+  agent_update_risk: agentUpdateRisk,
+  agent_delete_risk: agentDeleteRisk,
+  agent_assign_risk_owner: agentAssignRiskOwner,
+  agent_change_risk_status: agentChangeRiskStatus,
+  agent_bulk_update_risk_status: agentBulkUpdateRiskStatus,
+  agent_link_risk_to_project: agentLinkRiskToProject,
 };
 
 export { availableRiskTools };

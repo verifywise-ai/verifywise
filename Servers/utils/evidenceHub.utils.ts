@@ -1,5 +1,5 @@
 import { sequelize } from "../database/db";
-import { Transaction } from "sequelize";
+import { Transaction, QueryTypes } from "sequelize";
 import { EvidenceHubModel } from "../domain.layer/models/evidenceHub/evidenceHub.model";
 import {
   getEvidenceFilesForEntity,
@@ -8,35 +8,117 @@ import {
   deleteFileEntityLink,
 } from "./files/evidenceFiles.utils";
 
-// Get all evidences
+// Helper to normalize a date value to an ISO string or null
+const toISO = (d: any): string | null => {
+  if (!d) return null;
+  const date = d instanceof Date ? d : new Date(d);
+  return isNaN(date.getTime()) ? null : date.toISOString();
+};
+
+// Get all evidences (includes evidence_hub records + NIST AI RMF virtual records)
 export const getAllEvidencesQuery = async (organizationId: number) => {
-  const evidences = await sequelize.query(
+  // 1. Fetch evidence_hub records as plain objects
+  const evidenceHubRecords = (await sequelize.query(
     `SELECT * FROM evidence_hub WHERE organization_id = :organizationId ORDER BY created_at DESC, id ASC`,
     {
       replacements: { organizationId },
-      mapToModel: true,
-      model: EvidenceHubModel,
+      type: QueryTypes.SELECT,
     },
-  );
+  )) as any[];
 
-  // Batch fetch evidence files from file_entity_links
-  const evidenceIds = evidences.map((e) => e.id!);
-  let filesMap = new Map<number, any[]>();
-  if (evidenceIds.length > 0) {
-    filesMap = await getEvidenceFilesForEntities(
+  // 2. Fetch NIST AI RMF subcategories that have evidence files
+  const nistRecords = (await sequelize.query(
+    `SELECT
+      s.id AS entity_id,
+      ss.subcategory_id AS index,
+      ss.description,
+      s.reviewer,
+      s.owner,
+      MIN(fel.created_at) AS created_at
+    FROM nist_ai_rmf_subcategories s
+    JOIN nist_ai_rmf_subcategories_struct ss ON s.subcategory_meta_id = ss.id
+    JOIN file_entity_links fel ON fel.entity_id = s.id
+      AND fel.framework_type = 'nist_ai_rmf'
+      AND fel.entity_type = 'subcategory'
+      AND fel.link_type = 'evidence'
+      AND fel.organization_id = s.organization_id
+    WHERE s.organization_id = :organizationId
+    GROUP BY s.id, ss.subcategory_id, ss.description, s.reviewer, s.owner
+    ORDER BY MIN(fel.created_at) DESC, s.id ASC`,
+    {
+      replacements: { organizationId },
+      type: QueryTypes.SELECT,
+    },
+  )) as any[];
+
+  // 3. Batch fetch evidence files for evidence_hub records
+  const evidenceHubIds = evidenceHubRecords.map((e) => e.id);
+  let evidenceHubFilesMap = new Map<number, any[]>();
+  if (evidenceHubIds.length > 0) {
+    evidenceHubFilesMap = await getEvidenceFilesForEntities(
       organizationId,
       "evidence_hub",
       "evidence",
-      evidenceIds,
+      evidenceHubIds,
     );
   }
 
-  // Attach evidence_files to each evidence for backward compatibility
-  for (const evidence of evidences) {
-    (evidence as any).evidence_files = filesMap.get(evidence.id!) || [];
+  // 4. Batch fetch evidence files for NIST records
+  const nistEntityIds = nistRecords.map((r) => r.entity_id);
+  let nistFilesMap = new Map<number, any[]>();
+  if (nistEntityIds.length > 0) {
+    nistFilesMap = await getEvidenceFilesForEntities(
+      organizationId,
+      "nist_ai_rmf",
+      "subcategory",
+      nistEntityIds,
+    );
   }
 
-  return evidences;
+  // 5. Build unified result set
+  const results: any[] = [];
+
+  // Add evidence_hub records
+  for (const record of evidenceHubRecords) {
+    results.push({
+      id: record.id,
+      evidence_name: record.evidence_name,
+      evidence_type: record.evidence_type,
+      description: record.description,
+      expiry_date: toISO(record.expiry_date),
+      mapped_model_ids: record.mapped_model_ids,
+      mapped_training_ids: record.mapped_training_ids,
+      tags: record.tags,
+      framework_ids: record.framework_ids,
+      reviewer_id: record.reviewer_id,
+      retention_policy: record.retention_policy,
+      created_at: toISO(record.created_at),
+      updated_at: toISO(record.updated_at),
+      evidence_files: evidenceHubFilesMap.get(record.id) || [],
+    });
+  }
+
+  // Add NIST AI RMF virtual records
+  for (const record of nistRecords) {
+    results.push({
+      id: -record.entity_id, // negative ID to avoid collisions with evidence_hub
+      evidence_name: `${record.index}: ${record.description}`,
+      evidence_type: "NIST AI RMF",
+      description: record.description,
+      expiry_date: null,
+      mapped_model_ids: null,
+      mapped_training_ids: null,
+      tags: [],
+      framework_ids: ["nist_ai_rmf"],
+      reviewer_id: record.reviewer,
+      retention_policy: null,
+      created_at: toISO(record.created_at),
+      updated_at: toISO(record.created_at),
+      evidence_files: nistFilesMap.get(record.entity_id) || [],
+    });
+  }
+
+  return results;
 };
 
 // Get evidence by ID

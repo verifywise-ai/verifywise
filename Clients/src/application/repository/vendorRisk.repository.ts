@@ -1,4 +1,5 @@
 import { apiServices } from "../../infrastructure/api/networkServices";
+import { VendorRiskModel } from "../../domain/models/Common/vendorRisk/vendorRisk.model";
 
 export async function getAllVendorRisks({
   signal,
@@ -56,12 +57,18 @@ export async function getVendorRiskById({
   return response.data;
 }
 
-export async function createVendorRisk({ body }: { body: any }): Promise<any> {
+export async function createVendorRisk({ body }: { body: Partial<VendorRiskModel> }): Promise<any> {
   const response = await apiServices.post("/vendorRisks", body);
   return response;
 }
 
-export async function updateVendorRisk({ id, body }: { id: number; body: any }): Promise<any> {
+export async function updateVendorRisk({
+  id,
+  body,
+}: {
+  id: number;
+  body: Partial<VendorRiskModel>;
+}): Promise<any> {
   const response = await apiServices.patch(`/vendorRisks/${id}`, body);
   return response;
 }

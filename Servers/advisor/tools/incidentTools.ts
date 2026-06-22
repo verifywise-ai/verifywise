@@ -4,53 +4,38 @@ export const toolsDefinition: any[] = [
     function: {
       name: "fetch_incidents",
       description:
-        "Retrieve and filter AI incidents from the incident management system. Use this tool to search for specific incidents based on type, severity, status, approval status, or AI project. Returns an array of incident objects matching the specified criteria.",
+        "Retrieve AI incidents. CRITICAL: Pass ONLY filters the user explicitly mentioned. For 'show all/list incidents' use empty params {}. Never include default/example values. Do not pass type, severity, status unless user explicitly asks for that specific value. Passing unmatched filters returns 0 results.",
       parameters: {
         type: "object",
         properties: {
           type: {
             type: "string",
-            enum: [
-              "Malfunction",
-              "Unexpected behavior",
-              "Model drift",
-              "Misuse",
-              "Data corruption",
-              "Security breach",
-              "Performance degradation",
-            ],
-            description: "Filter by incident type.",
+            description:
+              "ONLY include if user explicitly asks for this type. Valid values: Malfunction, Unexpected behavior, Model drift, Misuse, Data corruption, Security breach, Performance degradation. Omit this field entirely to get all types.",
           },
           severity: {
             type: "string",
-            enum: ["Minor", "Serious", "Very serious"],
             description:
-              "Filter by incident severity. 'Minor' has limited impact, 'Serious' has significant impact, 'Very serious' has critical impact.",
+              "ONLY include if user explicitly asks for this severity. Valid values: Minor, Serious, Very serious. Omit this field entirely to get all severities.",
           },
           status: {
             type: "string",
-            enum: ["Open", "Investigating", "Mitigated", "Closed"],
             description:
-              "Filter by incident status. 'Open' is newly reported, 'Investigating' is being analyzed, 'Mitigated' has been addressed, 'Closed' is fully resolved.",
+              "ONLY include if user explicitly asks for this status. Valid values: Open, Investigating, Mitigated, Closed. Omit this field entirely to get all statuses.",
           },
           approval_status: {
             type: "string",
-            enum: ["Approved", "Rejected", "Pending", "Not required"],
-            description: "Filter by approval status for incident reports.",
+            description:
+              "ONLY include if user explicitly asks. Valid values: Approved, Rejected, Pending, Not required.",
           },
           ai_project: {
             type: "string",
-            description: "Filter by AI project name. Supports partial matching.",
-          },
-          archived: {
-            type: "boolean",
             description:
-              "Filter by archived status. true = archived incidents, false = active incidents.",
+              "Filter by AI project name. Supports partial matching. Only include if user names a project.",
           },
           limit: {
             type: "number",
-            description:
-              "Maximum number of incidents to return. Default is to return all matching incidents.",
+            description: "Maximum number of incidents to return.",
           },
         },
         required: [],
@@ -90,6 +75,159 @@ export const toolsDefinition: any[] = [
           },
         },
         required: [],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "agent_create_incident",
+      description:
+        "Create a new AI incident report. Requires human confirmation before execution. Use this when the user asks to report or log a new incident.",
+      parameters: {
+        type: "object",
+        properties: {
+          title: {
+            type: "string",
+            description:
+              "Title or short description of the incident, used as the AI project identifier.",
+          },
+          description: {
+            type: "string",
+            description: "Detailed description of the incident.",
+          },
+          type: {
+            type: "string",
+            enum: [
+              "Malfunction",
+              "Unexpected behavior",
+              "Model drift",
+              "Misuse",
+              "Data corruption",
+              "Security breach",
+              "Performance degradation",
+            ],
+            description: "Type of incident.",
+          },
+          severity: {
+            type: "string",
+            enum: ["Minor", "Serious", "Very serious"],
+            description: "Severity level of the incident.",
+          },
+          project_id: {
+            type: "number",
+            description: "Associated AI project ID.",
+          },
+        },
+        required: ["title"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "agent_update_incident",
+      description:
+        "Update an existing AI incident's details. Requires human confirmation before execution. Use this when the user asks to modify incident information.",
+      parameters: {
+        type: "object",
+        properties: {
+          incident_id: {
+            type: "number",
+            description: "ID of the incident to update.",
+          },
+          title: {
+            type: "string",
+            description: "Updated title/AI project name.",
+          },
+          description: {
+            type: "string",
+            description: "Updated description.",
+          },
+          type: {
+            type: "string",
+            enum: [
+              "Malfunction",
+              "Unexpected behavior",
+              "Model drift",
+              "Misuse",
+              "Data corruption",
+              "Security breach",
+              "Performance degradation",
+            ],
+            description: "Updated incident type.",
+          },
+          severity: {
+            type: "string",
+            enum: ["Minor", "Serious", "Very serious"],
+            description: "Updated severity level.",
+          },
+          status: {
+            type: "string",
+            enum: ["Open", "Investigating", "Mitigated", "Closed"],
+            description: "Updated status.",
+          },
+        },
+        required: ["incident_id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "agent_update_incident_status",
+      description:
+        "Update only the status of an AI incident. Requires human confirmation before execution. Use this when the user asks to change an incident's status (e.g., move to investigating, mitigate, close).",
+      parameters: {
+        type: "object",
+        properties: {
+          incident_id: {
+            type: "number",
+            description: "ID of the incident to update.",
+          },
+          status: {
+            type: "string",
+            enum: ["Open", "Investigating", "Mitigated", "Closed"],
+            description: "New status for the incident.",
+          },
+        },
+        required: ["incident_id", "status"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "agent_archive_incident",
+      description:
+        "Archive an AI incident. This removes it from the active view but preserves the data. Requires human confirmation before execution.",
+      parameters: {
+        type: "object",
+        properties: {
+          incident_id: {
+            type: "number",
+            description: "ID of the incident to archive.",
+          },
+        },
+        required: ["incident_id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
+      name: "agent_delete_incident",
+      description:
+        "Permanently delete an AI incident. This is irreversible. Requires human confirmation before execution.",
+      parameters: {
+        type: "object",
+        properties: {
+          incident_id: {
+            type: "number",
+            description: "ID of the incident to delete.",
+          },
+        },
+        required: ["incident_id"],
       },
     },
   },

@@ -19,12 +19,29 @@ import {
   File,
   HardDrive,
   Bot,
+  Shield,
+  AlertTriangle,
   Wrench,
 } from "lucide-react";
 import dayjs from "dayjs";
 
 // Supported entity types
-export type EntityTypeKey = "use_case" | "file" | "ai_action";
+export type EntityTypeKey =
+  | "use_case"
+  | "file"
+  | "ai_action"
+  | "risk"
+  | "vendor"
+  | "policy"
+  | "incident"
+  | "dataset"
+  | "model_inventory"
+  | "training"
+  | "evidence"
+  | "task"
+  | "automation"
+  | "pmm_config"
+  | "note";
 
 // Detail field configuration
 export interface DetailFieldConfig {
@@ -109,9 +126,88 @@ export const ENTITY_TYPE_CONFIGS: Record<EntityTypeKey, EntityTypeConfig> = {
     fields: [
       { key: "aiToolName", label: "Tool", icon: <Wrench size={14} /> },
       { key: "aiPreview", label: "Proposed action", icon: <Bot size={14} /> },
+      { key: "aiDescription", label: "Description", icon: <FileText size={14} /> },
+      { key: "aiActionType", label: "Action type", icon: <FileText size={14} /> },
+      { key: "aiRiskLevel", label: "Risk level", icon: <Shield size={14} /> },
+      { key: "aiState", label: "State", icon: <AlertTriangle size={14} /> },
       { key: "aiInputParamsJson", label: "Parameters", icon: <FileText size={14} /> },
       { key: "aiRequestedVia", label: "Requested via", icon: <FileText size={14} /> },
     ],
+  },
+  risk: {
+    title: "Risk Details",
+    deletedMessage: "The risk associated with this request has been deleted.",
+    noDataMessage: "No additional risk details available",
+    fields: [
+      { key: "riskName", label: "Risk name", icon: <AlertTriangle size={14} /> },
+      { key: "riskSeverity", label: "Severity", icon: <Shield size={14} /> },
+    ],
+  },
+  vendor: {
+    title: "Vendor Details",
+    deletedMessage: "The vendor associated with this request has been deleted.",
+    noDataMessage: "No additional vendor details available",
+    fields: [{ key: "vendorName", label: "Vendor name", icon: <Briefcase size={14} /> }],
+  },
+  policy: {
+    title: "Policy Details",
+    deletedMessage: "The policy associated with this request has been deleted.",
+    noDataMessage: "No additional policy details available",
+    fields: [{ key: "policyContent", label: "Content", icon: <FileText size={14} /> }],
+  },
+  incident: {
+    title: "Incident Details",
+    deletedMessage: "The incident associated with this request has been deleted.",
+    noDataMessage: "No additional incident details available",
+    fields: [{ key: "incidentTitle", label: "Title", icon: <AlertTriangle size={14} /> }],
+  },
+  dataset: {
+    title: "Dataset Details",
+    deletedMessage: "The dataset associated with this request has been deleted.",
+    noDataMessage: "No additional dataset details available",
+    fields: [],
+  },
+  model_inventory: {
+    title: "Model Details",
+    deletedMessage: "The model associated with this request has been deleted.",
+    noDataMessage: "No additional model details available",
+    fields: [],
+  },
+  training: {
+    title: "Training Details",
+    deletedMessage: "The training record associated with this request has been deleted.",
+    noDataMessage: "No additional training details available",
+    fields: [],
+  },
+  evidence: {
+    title: "Evidence Details",
+    deletedMessage: "The evidence associated with this request has been deleted.",
+    noDataMessage: "No additional evidence details available",
+    fields: [],
+  },
+  task: {
+    title: "Task Details",
+    deletedMessage: "The task associated with this request has been deleted.",
+    noDataMessage: "No additional task details available",
+    fields: [],
+  },
+  automation: {
+    title: "Automation Details",
+    deletedMessage: "The automation associated with this request has been deleted.",
+    noDataMessage: "No additional automation details available",
+    fields: [],
+  },
+  pmm_config: {
+    title: "PMM Config Details",
+    deletedMessage: "The PMM config associated with this request has been deleted.",
+    noDataMessage: "No additional PMM config details available",
+    fields: [],
+  },
+  note: {
+    title: "Note Details",
+    deletedMessage: "The note associated with this request has been deleted.",
+    noDataMessage: "No additional note details available",
+    fields: [],
   },
 };
 
@@ -179,8 +275,9 @@ export function extractEntityDetails(requestData: any): Record<string, any> {
       };
 
     case "ai_action": {
-      // AI action payloads live entirely inside entity_data (JSONB).
-      // Postgres returns JSONB as a parsed object, but guard for string.
+      // AI action payloads live in entity_data (JSONB). Postgres returns
+      // JSONB as a parsed object, but guard for string. Falls back to
+      // dedicated columns (ai_tool_name etc.) when populated.
       const raw = requestData.entity_data;
       const payload =
         typeof raw === "string"
@@ -192,20 +289,56 @@ export function extractEntityDetails(requestData: any): Record<string, any> {
               }
             })()
           : raw || {};
-      const toolName = payload.tool_name as string | undefined;
+      const toolName =
+        (requestData.ai_tool_name as string | undefined) ||
+        (payload.tool_name as string | undefined);
       return {
         ...baseDetails,
-        // Use preview as the primary identifier so isEntityDeleted works
-        entityName: payload.preview || toolName || "AI action",
+        // Use preview/tool name as primary identifier for deletion check
+        entityName: payload.preview || toolName || requestData.request_name || "AI action",
         aiToolName: toolName,
         aiPreview: payload.preview,
+        aiActionType: requestData.ai_action_type || payload.action_type,
+        aiRiskLevel: requestData.ai_risk_level || payload.risk_level,
+        aiState: requestData.ai_state,
+        aiDescription: payload.description,
         aiRequestedVia: payload.requested_via,
-        aiInputParamsJson: payload.input_params
-          ? JSON.stringify(payload.input_params, null, 2)
-          : undefined,
+        aiInputParamsJson:
+          requestData.ai_input_params || payload.input_params
+            ? JSON.stringify(requestData.ai_input_params || payload.input_params, null, 2)
+            : undefined,
         aiResult: payload.result,
       };
     }
+
+    case "risk":
+      return {
+        ...baseDetails,
+        entityName: requestData.risk_name || requestData.request_name,
+        riskName: requestData.risk_name,
+        riskSeverity: requestData.risk_severity,
+      };
+
+    case "vendor":
+      return {
+        ...baseDetails,
+        entityName: requestData.vendor_name || requestData.request_name,
+        vendorName: requestData.vendor_name,
+      };
+
+    case "policy":
+      return {
+        ...baseDetails,
+        entityName: requestData.request_name,
+        policyContent: requestData.policy_content,
+      };
+
+    case "incident":
+      return {
+        ...baseDetails,
+        entityName: requestData.incident_title || requestData.request_name,
+        incidentTitle: requestData.incident_title,
+      };
 
     case "use_case":
     default:
