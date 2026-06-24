@@ -37,7 +37,7 @@ describe("ForgotPassword Page", () => {
     expect(container).toBeTruthy();
   });
 
-  it("trims the email and navigates only after the reset request resolves", async () => {
+  it("trims the email before sending the reset request", async () => {
     (sendPasswordResetEmail as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
       status: 200,
     });
@@ -61,7 +61,11 @@ describe("ForgotPassword Page", () => {
     });
   });
 
-  it("does not navigate when the reset request fails", async () => {
+  // Anti-enumeration: the confirmation screen must look identical whether or not
+  // an account exists. A failed request (e.g. existing account + SMTP error,
+  // which the backend surfaces as 500) must navigate exactly like success, so an
+  // attacker cannot distinguish registered from unregistered addresses.
+  it("navigates to the confirmation screen even when the reset request fails", async () => {
     (sendPasswordResetEmail as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
       new Error("network error"),
     );
@@ -74,8 +78,9 @@ describe("ForgotPassword Page", () => {
     fireEvent.click(screen.getByRole("button", { name: /reset password/i }));
 
     await waitFor(() => {
-      expect(sendPasswordResetEmail).toHaveBeenCalled();
+      expect(mockNavigate).toHaveBeenCalledWith("/reset-password", {
+        state: { email: "user@example.com" },
+      });
     });
-    expect(mockNavigate).not.toHaveBeenCalled();
   });
 });

@@ -361,6 +361,25 @@ describe("user.ctrl", () => {
       await resetPassword(req, res);
       expect(res.status).toHaveBeenCalledWith(202);
     });
+    it("updates by the stored email, not the raw request email", async () => {
+      // Stored email is canonical "a@b.com"; the request types a different
+      // case/whitespace variant. The case-sensitive UPDATE must target the
+      // stored value, or it would match zero rows and silently no-op.
+      const userMock = mockUser(buildUser({ email: "a@b.com", password_hash: "old" }));
+      mockGetByEmail.mockResolvedValue(userMock as any);
+      const UserModel = require("../../domain.layer/models/user/user.model").UserModel;
+      UserModel.createNewUser.mockResolvedValueOnce({
+        ...userMock,
+        updatePassword: jest.fn().mockResolvedValue(undefined),
+        password_hash: "newhash",
+      });
+      const resetMock = resetPasswordQuery as jest.MockedFunction<typeof resetPasswordQuery>;
+      resetMock.mockResolvedValue(mockUser(buildUser()) as any);
+      const req = createReq({ body: { email: "  A@B.COM  ", newPassword: "newpass" } });
+      const res = createRes();
+      await resetPassword(req, res);
+      expect(resetMock).toHaveBeenCalledWith("a@b.com", expect.anything(), expect.anything());
+    });
     it("should return 500 when user is not found (null access before check)", async () => {
       mockGetByEmail.mockResolvedValue(null as any);
       const req = createReq({ body: { email: "a@b.com", newPassword: "newpass" } });
