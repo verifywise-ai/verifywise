@@ -43,6 +43,7 @@ export const getAllFrameworkByIdQuery = async (
     },
   );
   const framework = result[0];
+  if (!framework) return null;
   const frameworkProjects = await sequelize.query(
     `SELECT * FROM projects_frameworks WHERE organization_id = :organizationId AND framework_id = :frameworkId`,
     {
