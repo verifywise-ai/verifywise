@@ -530,7 +530,7 @@ export class ReportDataCollector {
         // For organizational reports, get ALL vendor risks
         vendorRisksQuery = `
           SELECT vr.*, v.vendor_name as vendor_name, u.name as owner_name, u.surname as owner_surname
-          FROM vendor_risks vr
+          FROM vendorrisks vr
           JOIN vendors v ON vr.vendor_id = v.id AND v.organization_id = vr.organization_id
           LEFT JOIN users u ON vr.action_owner = u.id
           WHERE vr.organization_id = :organizationId
@@ -541,7 +541,7 @@ export class ReportDataCollector {
         // For use case reports, filter by project
         vendorRisksQuery = `
           SELECT vr.*, v.vendor_name as vendor_name, u.name as owner_name, u.surname as owner_surname
-          FROM vendor_risks vr
+          FROM vendorrisks vr
           JOIN vendors v ON vr.vendor_id = v.id AND v.organization_id = vr.organization_id
           LEFT JOIN users u ON vr.action_owner = u.id
           JOIN vendors_projects vp ON v.id = vp.vendor_id AND vp.organization_id = v.organization_id
@@ -740,7 +740,7 @@ export class ReportDataCollector {
         modelsQuery = `
           SELECT mi.*, u.name as owner_name, u.surname as owner_surname
           FROM model_inventories mi
-          JOIN model_inventory_projects mip ON mi.id = mip.model_id AND mip.organization_id = mi.organization_id
+          JOIN model_inventories_projects_frameworks mip ON mi.id = mip.model_inventory_id AND mip.organization_id = mi.organization_id
           LEFT JOIN users u ON mi.owner = u.id
           WHERE mi.organization_id = :organizationId AND mip.project_id = :projectId
           ORDER BY mi.name ASC
@@ -798,7 +798,7 @@ export class ReportDataCollector {
           SELECT mr.*, mi.name as model_name
           FROM model_risks mr
           JOIN model_inventories mi ON mr.model_id = mi.id AND mi.organization_id = mr.organization_id
-          JOIN model_inventory_projects mip ON mi.id = mip.model_id AND mip.organization_id = mi.organization_id
+          JOIN model_inventories_projects_frameworks mip ON mi.id = mip.model_inventory_id AND mip.organization_id = mi.organization_id
           WHERE mr.organization_id = :organizationId AND mip.project_id = :projectId
           ORDER BY mr.id ASC
         `;
@@ -832,9 +832,9 @@ export class ReportDataCollector {
   private async collectTrainingRegistry(): Promise<TrainingRegistrySectionData> {
     try {
       const trainingQuery = `
-        SELECT tr.*, u.name as assignee_name, u.surname as assignee_surname
-        FROM training_registrar tr
-        LEFT JOIN users u ON tr.assignee = u.id
+        SELECT tr.*, NULL::timestamp without time zone as completion_date,
+               NULL::varchar as assignee_name, NULL::varchar as assignee_surname
+        FROM trainingregistar tr
         WHERE tr.organization_id = :organizationId
         ORDER BY tr.id ASC
       `;
@@ -870,9 +870,10 @@ export class ReportDataCollector {
   private async collectPolicyManager(): Promise<PolicyManagerSectionData> {
     try {
       const policiesQuery = `
-        SELECT p.*, u.name as owner_name, u.surname as owner_surname
-        FROM policies p
-        LEFT JOIN users u ON p.owner = u.id
+        SELECT p.*, p.next_review_date as review_date, NULL::varchar as version,
+               u.name as owner_name, u.surname as owner_surname
+        FROM policy_manager p
+        LEFT JOIN users u ON p.policy_owner_id = u.id
         WHERE p.organization_id = :organizationId
         ORDER BY p.title ASC
       `;
