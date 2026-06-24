@@ -17,6 +17,16 @@ const statusColor = (status: string): "success" | "error" | "warning" | "default
   return "default";
 };
 
+// delivery_status is a JSONB object ({storage,emailLink,attachment}); summarize to a string
+// so React never tries to render a raw object (which crashes the whole tree).
+const formatDelivery = (d: any): string => {
+  if (!d || typeof d !== "object") return d ?? "—";
+  const parts = ["storage", "emailLink", "attachment"]
+    .filter((k) => d[k]?.enabled)
+    .map((k) => `${k}: ${d[k].status}`);
+  return parts.length ? parts.join(", ") : "—";
+};
+
 export default function ArchiveTab() {
   const { data: runs = [], isLoading } = useReportRuns();
 
@@ -52,7 +62,7 @@ export default function ArchiveTab() {
             <TableCell>
               <Chip size="small" label={r.status ?? "unknown"} color={statusColor(r.status)} />
             </TableCell>
-            <TableCell>{r.delivery_status ?? "—"}</TableCell>
+            <TableCell>{formatDelivery(r.delivery_status)}</TableCell>
           </TableRow>
         ))}
       </TableBody>
