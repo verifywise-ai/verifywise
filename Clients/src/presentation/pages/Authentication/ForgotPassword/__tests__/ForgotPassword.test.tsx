@@ -1,4 +1,6 @@
+import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
+import { sendPasswordResetEmail } from "../../../../../application/repository/auth.repository";
 import ForgotPassword from "../index";
 
 // Mock SVG background
@@ -33,5 +35,47 @@ describe("ForgotPassword Page", () => {
     });
 
     expect(container).toBeTruthy();
+  });
+
+  it("trims the email and navigates only after the reset request resolves", async () => {
+    (sendPasswordResetEmail as ReturnType<typeof vi.fn>).mockResolvedValueOnce({
+      status: 200,
+    });
+
+    renderWithProviders(<ForgotPassword />, { route: "/forgot-password" });
+
+    fireEvent.change(screen.getByPlaceholderText("Enter your email"), {
+      target: { value: "  user@example.com  " },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /reset password/i }));
+
+    await waitFor(() => {
+      expect(sendPasswordResetEmail).toHaveBeenCalledWith({
+        to: "user@example.com",
+        email: "user@example.com",
+        name: "user@example.com",
+      });
+    });
+    expect(mockNavigate).toHaveBeenCalledWith("/reset-password", {
+      state: { email: "user@example.com" },
+    });
+  });
+
+  it("does not navigate when the reset request fails", async () => {
+    (sendPasswordResetEmail as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
+      new Error("network error"),
+    );
+
+    renderWithProviders(<ForgotPassword />, { route: "/forgot-password" });
+
+    fireEvent.change(screen.getByPlaceholderText("Enter your email"), {
+      target: { value: "user@example.com" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: /reset password/i }));
+
+    await waitFor(() => {
+      expect(sendPasswordResetEmail).toHaveBeenCalled();
+    });
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 });

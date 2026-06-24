@@ -41,17 +41,25 @@ const ForgotPassword: React.FC = () => {
   };
 
   // Handle form submission
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setIsSubmitting(true);
+    // Trim so a pasted address with stray whitespace still matches the stored
+    // value and passes the backend's strict address validation.
+    const email = values.email.trim();
     try {
       const formData = {
-        to: values.email,
-        email: values.email,
-        name: values.email,
+        to: email,
+        email,
+        name: email,
       };
-      sendPasswordResetEmail(formData);
-      navigate("/reset-password", { state: { email: values.email } });
+      // Await the request so a real failure (network/500/validation) blocks
+      // navigation and surfaces the error, instead of silently navigating to the
+      // reset page as if the email had been sent. The backend deliberately
+      // returns success even when no account matches (anti-enumeration), so a
+      // resolved response still routes the user forward.
+      await sendPasswordResetEmail(formData);
+      navigate("/reset-password", { state: { email } });
     } catch (_error) {
       handleAlert({
         variant: "error",
