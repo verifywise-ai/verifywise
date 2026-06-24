@@ -39,3 +39,9 @@ export async function getRuns(params?: { scheduledReportId?: number }): Promise<
   const qs = params?.scheduledReportId ? `?scheduledReportId=${params.scheduledReportId}` : "";
   return extract(await apiServices.get(`/reporting/runs${qs}`));
 }
+
+// Org-scoped report file download (NOT file-manager, which has its own RBAC and 403s here).
+export async function downloadReportRun(id: number): Promise<Blob> {
+  const r: any = await apiServices.get(`/reporting/runs/${id}/download`, { responseType: "blob" });
+  return r.data as Blob;
+}

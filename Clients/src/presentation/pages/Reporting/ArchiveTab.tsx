@@ -7,8 +7,10 @@ import {
   TableRow,
   Chip,
   Typography,
+  Button,
 } from "@mui/material";
 import { useReportRuns } from "../../../application/hooks/useReporting";
+import { downloadReportRun } from "../../../application/repository/reporting.repository";
 
 const statusColor = (status: string): "success" | "error" | "warning" | "default" => {
   if (status === "completed" || status === "success") return "success";
@@ -48,6 +50,7 @@ export default function ArchiveTab() {
           <TableCell>Run at</TableCell>
           <TableCell>Status</TableCell>
           <TableCell>Delivery</TableCell>
+          <TableCell>File</TableCell>
         </TableRow>
       </TableHead>
       <TableBody>
@@ -63,6 +66,28 @@ export default function ArchiveTab() {
               <Chip size="small" label={r.status ?? "unknown"} color={statusColor(r.status)} />
             </TableCell>
             <TableCell>{formatDelivery(r.delivery_status)}</TableCell>
+            <TableCell>
+              {r.file_id ? (
+                <Button
+                  size="small"
+                  onClick={async () => {
+                    const blob = await downloadReportRun(r.id);
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = r.output_filename ?? `report-${r.id}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    a.remove();
+                    URL.revokeObjectURL(url);
+                  }}
+                >
+                  Download
+                </Button>
+              ) : (
+                "—"
+              )}
+            </TableCell>
           </TableRow>
         ))}
       </TableBody>
