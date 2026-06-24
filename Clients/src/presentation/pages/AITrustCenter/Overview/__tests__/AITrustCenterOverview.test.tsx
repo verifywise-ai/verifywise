@@ -81,11 +81,11 @@ describe("AITrustCenterOverview", () => {
     mockMutateAsync.mockResolvedValue({});
   });
 
-  it("renders loading spinner while data is loading", () => {
+  it("renders loading skeleton while data is loading", () => {
     mockQueryLoading = true;
     mockQueryData = null;
     renderWithProviders(<AITrustCenterOverview />);
-    expect(screen.getByRole("progressbar")).toBeInTheDocument();
+    expect(document.querySelector(".MuiSkeleton-root")).toBeInTheDocument();
     expect(screen.queryByText("Introduction")).not.toBeInTheDocument();
   });
 

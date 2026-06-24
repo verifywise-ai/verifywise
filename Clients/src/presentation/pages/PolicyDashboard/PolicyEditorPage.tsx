@@ -1331,6 +1331,7 @@ export default function PolicyEditorPage() {
 
   // ── Save ──────────────────────────────────────────────────────────
   const save = async () => {
+    if (customFieldsGate.blocked) return;
     setServerErrors({});
     resetErrors();
     if (!validateAll(formData)) {
@@ -1966,6 +1967,7 @@ export default function PolicyEditorPage() {
               ref={customFieldsRef}
               entityType="policy"
               entityId={isNew ? null : (policy?.id ?? null)}
+              onPendingChange={customFieldsGate.onPendingChange}
             />
           </Stack>
 

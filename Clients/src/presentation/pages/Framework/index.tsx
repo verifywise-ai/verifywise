@@ -17,6 +17,7 @@ import {
   Pencil as EditIconGrey,
   ChevronDown as WhiteDownArrowIcon,
 } from "lucide-react";
+import CustomizableSkeleton from "../../components/Skeletons";
 import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
 import { usePluginRegistry } from "../../../application/contexts/PluginRegistry.context";
 import useMultipleOnScreen from "../../../application/hooks/useMultipleOnScreen";
@@ -511,13 +512,7 @@ const Framework = () => {
 
   const renderFrameworkContent = () => {
     if (loading) {
-      return (
-        <Box sx={{ textAlign: "center", py: 8 }}>
-          <Typography variant="body1" color="text.secondary">
-            Loading framework information...
-          </Typography>
-        </Box>
-      );
+      return <CustomizableSkeleton variant="rectangular" width="100%" height={400} />;
     }
 
     if (error) {

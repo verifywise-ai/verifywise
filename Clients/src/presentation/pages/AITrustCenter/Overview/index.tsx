@@ -1,13 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { Suspense } from "react";
-import {
-  Box,
-  Typography,
-  Stack,
-  FormControlLabel,
-  useTheme,
-  CircularProgress,
-} from "@mui/material";
+import { Box, Typography, Stack, FormControlLabel, useTheme } from "@mui/material";
+import CustomizableSkeleton from "../../../components/Skeletons";
 import Alert from "../../../components/Alert";
 import Toggle from "../../../components/Inputs/Toggle";
 import ToggleCard from "../../../components/Inputs/ToggleCard";
@@ -200,11 +194,7 @@ const AITrustCenterOverview: React.FC = () => {
   };
 
   if (loading || !localFormData) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress />
-      </Box>
-    );
+    return <CustomizableSkeleton variant="rectangular" width="100%" height={400} />;
   }
 
   return (

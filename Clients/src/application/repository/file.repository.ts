@@ -27,6 +27,22 @@ export interface FileMetadata {
   sub_id?: number;
   meta_id?: number;
   is_evidence?: boolean;
+  // Multi-link projections — one entry per row in file_entity_links for this file.
+  entity_links?: Array<{
+    framework_type: string;
+    entity_type: string;
+    entity_id: number;
+    project_id: number | null;
+    link_type: string | null;
+    group_label: string | null;
+    parent_id: number | null;
+    sub_id: number | null;
+    meta_id: number | null;
+    is_evidence: boolean;
+    mapped_model_ids?: number[];
+    mapped_training_ids?: number[];
+  }>;
+  link_groups?: string[];
   // New metadata fields
   tags?: string[];
   review_status?: ReviewStatus;
@@ -134,6 +150,10 @@ export async function getUserFilesMetaData({
     sub_id: f?.sub_id,
     meta_id: f?.meta_id,
     is_evidence: f?.is_evidence,
+    // Per-link projections (from /files endpoint) used to render the File
+    // Manager Source column when a file is attached in multiple places.
+    entity_links: f?.entity_links ?? [],
+    link_groups: f?.link_groups ?? [],
     // Metadata fields (may not be present in all responses)
     tags: f?.tags || [],
     review_status: f?.review_status,
@@ -319,6 +339,17 @@ export async function getFilesWithMetadata({
       uploader_name: f?.uploader_name,
       uploader_surname: f?.uploader_surname,
       source: f?.source,
+      // Carry the multi-link payload so the File Manager Source column can
+      // render the tooltip + popover for files attached in multiple places.
+      entity_links: f?.entity_links ?? [],
+      link_groups: f?.link_groups ?? [],
+      // Hierarchy fields backfilled by attachLinkProjections (first link) so
+      // single-link click navigation still works without consulting entity_links.
+      parent_id: f?.parent_id,
+      sub_id: f?.sub_id,
+      meta_id: f?.meta_id,
+      is_evidence: f?.is_evidence,
+      project_id: f?.project_id,
       tags: f?.tags || [],
       review_status: f?.review_status,
       version: f?.version,

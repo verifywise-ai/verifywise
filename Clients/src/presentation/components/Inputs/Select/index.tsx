@@ -97,11 +97,6 @@ function Select({
         )
       : sx;
 
-  if (import.meta.env?.DEV) {
-    // eslint-disable-next-line no-console
-    console.debug("[Select] layout", { label, id, extractedLayoutProps });
-  }
-
   const renderValue = (value: unknown) => {
     const selected = value as string | number;
     const selectedItem = items.find(

@@ -32,18 +32,6 @@ const modules: ModuleItem[] = [
     description: "Evaluate LLM quality, performance and reliability over time",
   },
   {
-    id: "ai-detection",
-    icon: <ScanSearch size={16} strokeWidth={1.5} />,
-    label: "AI Detection",
-    description: "Scan repositories to detect AI/ML libraries and frameworks",
-  },
-  {
-    id: "shadow-ai",
-    icon: <Eye size={16} strokeWidth={1.5} />,
-    label: "Shadow AI",
-    description: "Detect and govern unauthorized AI tool usage across your organization",
-  },
-  {
     id: "ai-gateway",
     icon: <Router size={16} strokeWidth={1.5} />,
     label: "AI Gateway",
@@ -54,6 +42,18 @@ const modules: ModuleItem[] = [
     icon: <Gauge size={16} strokeWidth={1.5} />,
     label: "AI Trust Index",
     description: "Browse AI app risk scores and track the apps you use",
+  },
+  {
+    id: "shadow-ai",
+    icon: <Eye size={16} strokeWidth={1.5} />,
+    label: "Shadow AI",
+    description: "Detect and govern unauthorized AI tool usage across your organization",
+  },
+  {
+    id: "ai-detection",
+    icon: <ScanSearch size={16} strokeWidth={1.5} />,
+    label: "AI Detection",
+    description: "Scan repositories to detect AI/ML libraries and frameworks",
   },
 ];
 

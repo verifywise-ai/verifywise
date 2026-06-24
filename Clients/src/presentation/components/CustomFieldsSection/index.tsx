@@ -46,10 +46,17 @@ export interface CustomFieldsSectionHandle {
 interface CustomFieldsSectionProps {
   entityType: CustomFieldEntityType;
   entityId: number | null;
+  /**
+   * Called whenever the set of definitionIds with a non-empty staged value
+   * changes. Wire to `useRequiredCustomFieldsGate().onPendingChange` so the
+   * parent Save button unblocks as the user types — see the gate docs for
+   * the deadlock this prevents.
+   */
+  onPendingChange?: (pendingDefinitionIds: ReadonlySet<number>) => void;
 }
 
 const CustomFieldsSection = forwardRef<CustomFieldsSectionHandle, CustomFieldsSectionProps>(
-  ({ entityType, entityId }, ref) => {
+  ({ entityType, entityId, onPendingChange }, ref) => {
     const theme = useTheme();
     const queryClient = useQueryClient();
     const isCreateMode = entityId === null || entityId <= 0;
@@ -68,6 +75,23 @@ const CustomFieldsSection = forwardRef<CustomFieldsSectionHandle, CustomFieldsSe
     const [clearedDefs, setClearedDefs] = useState<Set<number>>(() => new Set());
     // Set when the most recent flush() call failed.
     const [flushError, setFlushError] = useState<string | null>(null);
+
+    // Report locally-staged "covered" definition ids so the parent's required-
+    // fields gate can unblock Save without waiting for the server round-trip.
+    // A definition is considered covered when it has a non-empty staged value
+    // and isn't simultaneously marked for clearing.
+    useEffect(() => {
+      if (!onPendingChange) return;
+      const ids = new Set<number>();
+      for (const [defId, value] of stagedValues) {
+        if (clearedDefs.has(defId)) continue;
+        if (value === null || value === undefined) continue;
+        if (typeof value === "string" && value.trim() === "") continue;
+        if (Array.isArray(value) && value.length === 0) continue;
+        ids.add(defId);
+      }
+      onPendingChange(ids);
+    }, [stagedValues, clearedDefs, onPendingChange]);
 
     useImperativeHandle(
       ref,

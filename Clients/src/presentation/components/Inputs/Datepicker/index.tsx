@@ -51,11 +51,6 @@ function DatePicker({
         )
       : sx;
 
-  if (import.meta.env?.DEV) {
-    // eslint-disable-next-line no-console
-    console.debug("[DatePicker] layout", { label, extractedLayoutProps });
-  }
-
   return (
     <Stack gap={theme.spacing(2)} sx={extractedLayoutProps}>
       {label && (

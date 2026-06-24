@@ -73,6 +73,40 @@ check_and_download_compose_files() {
     # fi
 }
 
+# Secrets that must be set (non-empty) before any container starts.
+# Keep in sync with the blanked values in .env.dev / .env.prod.
+REQUIRED_SECRETS="DB_PASSWORD SUPERADMIN_PASSWORD JWT_SECRET REFRESH_TOKEN_SECRET ENCRYPTION_ALGORITHM ENCRYPTION_PASSWORD AI_GATEWAY_INTERNAL_KEY"
+
+# Function to verify all required secrets are set before starting Docker
+check_required_secrets() {
+    ENV_FILE=$1
+    if [ ! -f "$ENV_FILE" ]; then
+        echo "Error: $ENV_FILE file not found"
+        exit 1
+    fi
+
+    MISSING=""
+    for KEY in $REQUIRED_SECRETS; do
+        # Last assignment for KEY, stripped of inline comment, surrounding whitespace and quotes
+        VALUE=$(grep -E "^[[:space:]]*${KEY}=" "$ENV_FILE" | tail -n1 \
+            | sed -E "s/^[[:space:]]*${KEY}=//; s/[[:space:]]+#.*$//; s/^[[:space:]]+//; s/[[:space:]]+$//; s/^[\"']//; s/[\"']$//")
+        if [ -z "$VALUE" ]; then
+            MISSING="$MISSING $KEY"
+        fi
+    done
+
+    if [ -n "$MISSING" ]; then
+        echo "Error: the following required secrets are not set in $ENV_FILE:"
+        for KEY in $MISSING; do
+            echo "  - $KEY"
+        done
+        echo ""
+        echo "Set them (see the comments in $ENV_FILE for how to generate each value) and re-run."
+        echo "Aborting: no Docker services were started."
+        exit 1
+    fi
+}
+
 # Function to read environment variables from .env file
 load_env() {
     ENV_FILE=$1
@@ -112,6 +146,13 @@ main() {
 
     # Check and download Docker Compose files if needed
     check_and_download_compose_files
+
+    # Verify required secrets are set BEFORE starting any container
+    if [ $ENVIRONMENT == "dev" ]; then
+        check_required_secrets .env.dev
+    else
+        check_required_secrets .env.prod
+    fi
 
     # Start Docker Compose
     echo "Starting Docker Compose..."

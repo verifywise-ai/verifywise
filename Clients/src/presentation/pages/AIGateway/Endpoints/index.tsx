@@ -25,6 +25,7 @@ import { apiServices } from "../../../../infrastructure/api/networkServices";
 import palette from "../../../themes/palette";
 import { useCardSx, ProviderIcon, useGatewayModels, slugify } from "../shared";
 import { displayFormattedDate } from "../../../tools/isoDateToString";
+import { SHOW_AI_GATEWAY_PROMPTS } from "../../../../application/config/featureFlags";
 
 interface EndpointForm {
   display_name: string;
@@ -73,6 +74,9 @@ export default function EndpointsPage() {
   const [formError, setFormError] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; name: string } | null>(null);
 
+  // Prompts is gated behind SHOW_AI_GATEWAY_PROMPTS. When the flag is off the
+  // list stays empty, so the prompt-template picker and bound-prompt chip
+  // render nothing.
   const [prompts, setPrompts] = useState<any[]>([]);
   const [form, setForm] = useState<EndpointForm>({ ...EMPTY_FORM });
   const { providerItems, getModelsForProvider } = useGatewayModels();
@@ -83,7 +87,9 @@ export default function EndpointsPage() {
         apiServices.get<Record<string, any>>("/ai-gateway/endpoints"),
         apiServices.get<Record<string, any>>("/ai-gateway/keys"),
         apiServices.get<Record<string, any>>("/ai-gateway/guardrails").catch(() => null),
-        apiServices.get<Record<string, any>>("/ai-gateway/prompts").catch(() => null),
+        SHOW_AI_GATEWAY_PROMPTS
+          ? apiServices.get<Record<string, any>>("/ai-gateway/prompts").catch(() => null)
+          : Promise.resolve(null),
       ]);
       setEndpoints(endpointsRes?.data?.endpoints || []);
       setApiKeys(keysRes?.data?.data || []);

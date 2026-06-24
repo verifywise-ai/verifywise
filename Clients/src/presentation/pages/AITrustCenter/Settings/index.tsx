@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useRef } from "react";
 import { Box, Stack, Typography, Button as MUIButton, CircularProgress } from "@mui/material";
+import CustomizableSkeleton from "../../../components/Skeletons";
 import Alert from "../../../components/Alert";
 import { handleAlert } from "../../../../application/tools/alertUtils";
 import { AlertProps } from "../../../types/alert.types";
@@ -339,18 +340,7 @@ const AITrustCenterSettings: React.FC = () => {
 
   // Show loading state while data is being fetched
   if (loading || !formData) {
-    return (
-      <Box
-        sx={{
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          height: "200px",
-        }}
-      >
-        <CircularProgress />
-      </Box>
-    );
+    return <CustomizableSkeleton variant="rectangular" width="100%" height={400} />;
   }
 
   // Show error state if there's an error

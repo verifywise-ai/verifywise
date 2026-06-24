@@ -83,7 +83,9 @@ import { guardrailsContent as aiGatewayGuardrailsContent } from './ai-gateway/gu
 import { aiGatewaySettingsContent } from './ai-gateway/settings';
 import { virtualKeysContent as aiGatewayVirtualKeysContent } from './ai-gateway/virtual-keys';
 import { logsContent as aiGatewayLogsContent } from './ai-gateway/logs';
-import { promptsContent as aiGatewayPromptsContent } from './ai-gateway/prompts';
+// Prompts is hidden behind SHOW_AI_GATEWAY_PROMPTS in the app; its content is
+// unregistered here while the feature is hidden (see userGuideConfig.ts).
+// import { promptsContent as aiGatewayPromptsContent } from './ai-gateway/prompts';
 import { aiGatewayModelsContent } from './ai-gateway/models';
 import { mcpOverviewContent } from './ai-gateway/mcp-overview';
 import { mcpServersContent } from './ai-gateway/mcp-servers';
@@ -210,7 +212,8 @@ export const articleContentMap: Record<string, ArticleContent> = {
   'ai-gateway/settings': aiGatewaySettingsContent,
   'ai-gateway/virtual-keys': aiGatewayVirtualKeysContent,
   'ai-gateway/logs': aiGatewayLogsContent,
-  'ai-gateway/prompts': aiGatewayPromptsContent,
+  // Prompts feature hidden from the UI.
+  // 'ai-gateway/prompts': aiGatewayPromptsContent,
   'ai-gateway/models': aiGatewayModelsContent,
   // Agent Control
   'ai-gateway/mcp-overview': mcpOverviewContent,

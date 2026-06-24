@@ -58,7 +58,10 @@ export interface UseRiskFormReturn {
   riskValidateRef: React.MutableRefObject<((values: RiskFormValues) => boolean) | null>;
   mitigateValidateRef: React.MutableRefObject<((values: MitigationFormValues) => boolean) | null>;
   customFieldsRef: React.MutableRefObject<CustomFieldsSectionHandle | null>;
-  customFieldsGate: { blocked: boolean };
+  customFieldsGate: {
+    blocked: boolean;
+    onPendingChange: (ids: ReadonlySet<number>) => void;
+  };
   riskFormSubmitHandler: () => Promise<void>;
   users: import("../../../../domain/types/User").User[] | undefined;
   usersLoading: boolean;

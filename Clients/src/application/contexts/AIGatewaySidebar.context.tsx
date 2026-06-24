@@ -7,6 +7,7 @@
 
 import { createContext, useContext, useState, useEffect, ReactNode, FC } from "react";
 import { apiServices } from "../../infrastructure/api/networkServices";
+import { SHOW_AI_GATEWAY_PROMPTS } from "../config/featureFlags";
 
 interface AIGatewaySidebarContextType {
   activeTab: string;
@@ -31,9 +32,13 @@ export const AIGatewaySidebarProvider: FC<{ children: ReactNode }> = ({ children
     let cancelled = false;
     const load = async () => {
       try {
+        // Prompts is gated behind SHOW_AI_GATEWAY_PROMPTS — when off, its badge
+        // count is not fetched and stays at 0.
         const [endpointsRes, promptsRes, vkeysRes] = await Promise.all([
           apiServices.get<Record<string, any>>("/ai-gateway/endpoints").catch(() => null),
-          apiServices.get<Record<string, any>>("/ai-gateway/prompts").catch(() => null),
+          SHOW_AI_GATEWAY_PROMPTS
+            ? apiServices.get<Record<string, any>>("/ai-gateway/prompts").catch(() => null)
+            : Promise.resolve(null),
           apiServices.get<Record<string, any>>("/ai-gateway/virtual-keys").catch(() => null),
         ]);
         if (cancelled) return;

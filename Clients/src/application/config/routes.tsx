@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { Route, Navigate } from "react-router-dom";
 import { lazyRoute, LazyFallback } from "../utils/lazyRoute";
+import { SHOW_AI_GATEWAY_PROMPTS } from "./featureFlags";
 
 // Eager imports — app shell, route guard, and Use cases page (mounts with layout for table skeleton UX)
 import Dashboard from "../../presentation/containers/Dashboard";
@@ -917,22 +918,27 @@ export const createRoutes = (
         </Suspense>
       }
     />
-    <Route
-      path="/ai-gateway/prompts"
-      element={
-        <Suspense fallback={<LazyFallback />}>
-          <AIGatewayPromptsPage />
-        </Suspense>
-      }
-    />
-    <Route
-      path="/ai-gateway/prompts/:id"
-      element={
-        <Suspense fallback={<LazyFallback />}>
-          <AIGatewayPromptEditorPage />
-        </Suspense>
-      }
-    />
+    {/* Prompts routes are gated behind SHOW_AI_GATEWAY_PROMPTS. */}
+    {SHOW_AI_GATEWAY_PROMPTS && (
+      <Route
+        path="/ai-gateway/prompts"
+        element={
+          <Suspense fallback={<LazyFallback />}>
+            <AIGatewayPromptsPage />
+          </Suspense>
+        }
+      />
+    )}
+    {SHOW_AI_GATEWAY_PROMPTS && (
+      <Route
+        path="/ai-gateway/prompts/:id"
+        element={
+          <Suspense fallback={<LazyFallback />}>
+            <AIGatewayPromptEditorPage />
+          </Suspense>
+        }
+      />
+    )}
     <Route
       path="/ai-gateway/virtual-keys"
       element={

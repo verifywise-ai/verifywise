@@ -5331,6 +5331,8 @@ export const translations: Record<string, Record<string, string>> = {
     "AI Chatbot for Customer Support": "KI-Chatbot für den Kundensupport",
     "AI Gateway": "AI Gateway",
     "AI Gateway, Policy Radar, and CI/CD scanning": "AI Gateway, Policy Radar und CI/CD-Scanning",
+    "AI Trust Index, AI Apps inventory, and Agent Control":
+      "AI Trust Index, AI Apps inventory und Agent Control",
     "EU AI Act control workflow, clearable selects, and AI advisor fix":
       "EU-KI-Verordnungs-Kontroll-Workflow, löschbare Auswahlfelder und KI-Berater-Fix",
     "Training evidence uploads, governance score helper, and policy ownership":
@@ -13961,6 +13963,8 @@ export const translations: Record<string, Record<string, string>> = {
     "AI Chatbot for Customer Support": "Chatbot IA pour le support client",
     "AI Gateway": "AI Gateway",
     "AI Gateway, Policy Radar, and CI/CD scanning": "AI Gateway, Policy Radar et analyse CI/CD",
+    "AI Trust Index, AI Apps inventory, and Agent Control":
+      "AI Trust Index, AI Apps inventory et Agent Control",
     "EU AI Act control workflow, clearable selects, and AI advisor fix":
       "Workflow des contrôles du Règlement IA de l'UE, sélections effaçables et correctif de l'assistant IA",
     "Training evidence uploads, governance score helper, and policy ownership":
@@ -20583,6 +20587,8 @@ export const translations: Record<string, Record<string, string>> = {
     "AI Chatbot for Customer Support": "Chatbot de IA para atención al cliente",
     "AI Gateway": "AI Gateway",
     "AI Gateway, Policy Radar, and CI/CD scanning": "AI Gateway, Policy Radar y análisis de CI/CD",
+    "AI Trust Index, AI Apps inventory, and Agent Control":
+      "AI Trust Index, AI Apps inventory y Agent Control",
     "AI Lifecycle Risk Management": "Gestión de riesgos del ciclo de vida de la IA",
     "AI Literacy and Responsible AI Training": "Alfabetización en IA y formación en IA responsable",
     "AI Management System": "Sistema de gestión de IA",

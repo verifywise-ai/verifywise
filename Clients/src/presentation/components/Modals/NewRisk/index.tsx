@@ -191,6 +191,7 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
   }, [existingRisk, isOpen]);
 
   const handleSave = () => {
+    if (customFieldsGate.blocked) return;
     if (validateForm()) {
       handleOnSave();
     }
@@ -637,7 +638,7 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
             ? "Update risk details including description, impact assessment, and mitigation plan."
             : "Document and assess a potential risk associated with your vendor. Provide details of the risk, its impact, and your mitigation plan."
         }
-        onSubmit={customFieldsGate.blocked || activeTab === "activity" ? undefined : handleSave}
+        onSubmit={activeTab === "activity" ? undefined : handleSave}
         submitButtonText="Save"
         isSubmitting={isSubmitting || isEditingDisabled || customFieldsGate.blocked}
         maxWidth="1000px"
@@ -667,6 +668,7 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
               ref={customFieldsRef}
               entityType="vendor_risk"
               entityId={existingRisk?.id ?? null}
+              onPendingChange={customFieldsGate.onPendingChange}
             />
           </Box>
           {activeTab === "activity" && existingRisk?.id && (

@@ -620,12 +620,16 @@ export const collections: Collection[] = [
         description: 'View, filter, and inspect every request that flows through the AI Gateway.',
         keywords: ['logs', 'request', 'response', 'audit', 'filter', 'search', 'status', 'error', 'auto-refresh', 'conversation'],
       },
-      {
-        id: 'prompts',
-        title: 'Prompts',
-        description: 'Create versioned prompt templates with variables, test them with streaming responses, and bind them to endpoints.',
-        keywords: ['prompt', 'template', 'variable', 'version', 'publish', 'draft', 'system prompt', 'message', 'test', 'editor'],
-      },
+      // Prompts is hidden in the app behind the SHOW_AI_GATEWAY_PROMPTS flag
+      // (Clients/src/application/config/featureFlags.ts). This shared package
+      // cannot import that flag, so the article stays unregistered here while
+      // the feature is hidden. Restore both together to bring it back.
+      // {
+      //   id: 'prompts',
+      //   title: 'Prompts',
+      //   description: 'Create versioned prompt templates with variables, test them with streaming responses, and bind them to endpoints.',
+      //   keywords: ['prompt', 'template', 'variable', 'version', 'publish', 'draft', 'system prompt', 'message', 'test', 'editor'],
+      // },
       {
         id: 'models',
         title: 'Models',

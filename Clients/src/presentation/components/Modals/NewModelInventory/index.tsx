@@ -445,6 +445,7 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
 
   const handleSaveModelInventory = async (event?: React.FormEvent) => {
     if (event) event.preventDefault();
+    if (customFieldsGate.blocked) return;
     if (validateAll(values)) {
       setIsSubmitting(true);
       try {
@@ -1026,6 +1027,7 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
               ref={customFieldsRef}
               entityType="model_inventory"
               entityId={isEdit ? ((selectedModelInventoryId as number) ?? null) : null}
+              onPendingChange={customFieldsGate.onPendingChange}
             />
           </Box>
           {activeTab === "activity" && isEdit && (

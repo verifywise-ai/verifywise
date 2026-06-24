@@ -271,6 +271,10 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
    * Opens the confirmation modal if form validation passes
    */
   const handleSave = () => {
+    // Belt-and-braces: the Save button is also disabled via isSubmitting, but
+    // bail here too in case the modal submits through some other path (Enter
+    // key, programmatic trigger) while required custom fields are still empty.
+    if (customFieldsGate.blocked) return;
     if (validateAll(values)) {
       handleOnSave();
     }
@@ -889,9 +893,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
             ? "Update vendor details including products/services provided, contact information, and review status."
             : "Use this form to register a new vendor. Include details about what they provide, who is responsible, and the outcome of your review. Provide enough details so your team can assess risks, responsibilities, and compliance requirements."
         }
-        onSubmit={
-          customFieldsGate.blocked ? undefined : activeTab === "activity" ? undefined : handleSave
-        }
+        onSubmit={activeTab === "activity" ? undefined : handleSave}
         submitButtonText="Save"
         isSubmitting={isSubmitting || isEditingDisabled || customFieldsGate.blocked}
         maxWidth="734px"
@@ -923,6 +925,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
               ref={customFieldsRef}
               entityType="vendor"
               entityId={existingVendor?.id ?? null}
+              onPendingChange={customFieldsGate.onPendingChange}
             />
           </Box>
           {activeTab === "activity" && existingVendor && (

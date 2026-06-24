@@ -9,10 +9,12 @@ on:
     branches: ['master', 'develop']
     paths:
       - 'Clients/**'
+      - '.github/workflows/frontend-checks.yml'
   push:
     branches: ['master', 'develop']
     paths:
       - 'Clients/**'
+      - '.github/workflows/frontend-checks.yml'
 
 jobs:
   security-audit:
@@ -29,6 +31,8 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: Clients/package-lock.json
 
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
@@ -47,8 +51,8 @@ jobs:
           path: audit-results.json
           retention-days: 30
 
-  unit-and-component-tests:
-    name: Unit & Component Tests
+  lint-and-typecheck:
+    name: Lint, Types & i18n
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -61,6 +65,8 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: Clients/package-lock.json
 
       - name: Install dependencies
         run: npm ci --legacy-peer-deps
@@ -71,14 +77,64 @@ jobs:
       - name: TypeScript type check
         run: npm run typecheck
 
-      - name: Run tests with coverage
-        run: npx vitest run --coverage
-
       - name: i18n audit (catch dictionary drift)
         run: npm run i18n:audit:strict
 
+  unit-and-component-tests:
+    name: Unit & Component Tests (shard ${{ matrix.shard }}/4)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    defaults:
+      run:
+        working-directory: Clients
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: Clients/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Run tests (shard ${{ matrix.shard }}/4)
+        run: npx vitest run --shard=${{ matrix.shard }}/4
+
+  # Coverage is the slowest path, so it runs as its own job only on push to a
+  # protected branch (not on every PR). Pull requests rely on the sharded
+  # test matrix above for pass/fail.
+  coverage:
+    name: Coverage
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Clients
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+          cache: 'npm'
+          cache-dependency-path: Clients/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Run tests with coverage
+        run: npx vitest run --coverage
+
       - name: Upload coverage report
-        if: always()
         uses: actions/upload-artifact@v7
         with:
           name: frontend-coverage-report
