@@ -4,7 +4,7 @@ export interface DeadlineThresholds {
 }
 
 export const DEADLINE_CONFIG: DeadlineThresholds = {
-  dueSoonDays: 7,
+  dueSoonDays: 14,
 };
 
 /** Snooze durations (in milliseconds) offered in the banner's snooze menu. */
@@ -21,7 +21,7 @@ export interface SnoozeOption {
 
 /** Options rendered in the snooze dropdown, in display order. */
 export const SNOOZE_OPTIONS: SnoozeOption[] = [
-  { label: "1 hour", durationMs: SNOOZE_DURATIONS.ONE_HOUR },
-  { label: "24 hours", durationMs: SNOOZE_DURATIONS.ONE_DAY },
-  { label: "1 week", durationMs: SNOOZE_DURATIONS.ONE_WEEK },
+  { label: "Snooze for 1 hour", durationMs: SNOOZE_DURATIONS.ONE_HOUR },
+  { label: "Snooze for 24 hours", durationMs: SNOOZE_DURATIONS.ONE_DAY },
+  { label: "Snooze for 1 week", durationMs: SNOOZE_DURATIONS.ONE_WEEK },
 ];

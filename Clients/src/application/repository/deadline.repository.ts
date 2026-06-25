@@ -1,4 +1,6 @@
 import { apiServices } from "../../infrastructure/api/networkServices";
+import { ApiSuccessEnvelope } from "../../infrastructure/api/api.types";
+import { DEADLINE_CONFIG } from "../config/deadlineConfig";
 
 export interface DeadlineSummary {
   overdue: number;
@@ -9,13 +11,18 @@ export interface DeadlineSummary {
 /**
  * Retrieves the deadline summary (overdue + due-soon task counts) for the
  * current organization. Org scoping is handled server-side via the auth token.
- *
- * @param {number} [days] - Optional due-soon window in days (defaults to backend's 7).
- * @returns {Promise<{ data: DeadlineSummary }>} The wrapped summary payload.
- * @throws Will throw an error if the request fails.
  */
-export async function getDeadlineSummary(days?: number): Promise<{ data: DeadlineSummary }> {
-  const query = typeof days === "number" ? `?days=${days}` : "";
-  const response = await apiServices.get(`/deadlines/summary${query}`);
-  return response.data as { data: DeadlineSummary };
+export async function getDeadlineSummary(days?: number): Promise<DeadlineSummary> {
+  const params = typeof days === "number" ? { days } : undefined;
+  const response = await apiServices.get<ApiSuccessEnvelope<DeadlineSummary>>(
+    "/deadlines/summary",
+    params ?? {},
+  );
+  const summary = response.data.data;
+
+  return {
+    overdue: summary?.overdue ?? 0,
+    dueSoon: summary?.dueSoon ?? 0,
+    dueSoonDays: summary?.dueSoonDays ?? DEADLINE_CONFIG.dueSoonDays,
+  };
 }

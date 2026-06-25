@@ -22,13 +22,10 @@ const useDeadlineWarnings = (): UseDeadlineWarningsResult => {
 
   const { data, isLoading, error } = useQuery({
     queryKey: DEADLINE_WARNINGS_QUERY_KEY,
-    queryFn: async (): Promise<DeadlineSummary> => {
-      const response = await getDeadlineSummary(DEADLINE_CONFIG.dueSoonDays);
-      return response.data;
-    },
+    queryFn: (): Promise<DeadlineSummary> => getDeadlineSummary(DEADLINE_CONFIG.dueSoonDays),
     enabled: !!userId,
-    staleTime: 5 * 60 * 1000, // fresh for 5 minutes
-    gcTime: 10 * 60 * 1000, // cached for 10 minutes
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   return {
