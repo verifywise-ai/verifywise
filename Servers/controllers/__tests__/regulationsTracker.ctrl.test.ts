@@ -1,7 +1,7 @@
 // jest.mock calls must precede all imports (hoisted by Jest).
 jest.mock("../../utils/regulationsTracker.utils", () => ({
-  listCountries: jest.fn().mockResolvedValue([{ slug: "eu", name: "European Union", region: "Europe" }]),
-  getCountryRow: jest.fn().mockResolvedValue({ slug: "eu", data: { name: "European Union" } }),
+  listCountries: jest.fn().mockResolvedValue([{ slug: "eu", name: "European Union", region: "Europe", is_tracked: false }]),
+  getCountryRow: jest.fn().mockResolvedValue({ slug: "eu", data: { name: "European Union", slug: "eu" }, is_tracked: false }),
   listTracked: jest.fn().mockResolvedValue([{ country_slug: "eu", name: "European Union" }]),
   trackCountry: jest.fn().mockResolvedValue({ tracked: true }),
   trackCountriesBulk: jest.fn().mockResolvedValue({ tracked: 2 }),
@@ -79,7 +79,7 @@ describe("getCountries", () => {
     const req: any = { userId: 1, organizationId: 7, query: { region: "Europe", q: "gdpr" } };
     const res = mockRes();
     await getCountries(req, res);
-    expect(listCountries).toHaveBeenCalledWith({ region: "Europe", q: "gdpr" });
+    expect(listCountries).toHaveBeenCalledWith(7, { region: "Europe", q: "gdpr" });
   });
 });
 
@@ -92,7 +92,7 @@ describe("getCountryDetail", () => {
     const res = mockRes();
     await getCountryDetail(req, res);
     expect(res.status).toHaveBeenCalledWith(200);
-    expect(getCountryRow).toHaveBeenCalledWith("eu");
+    expect(getCountryRow).toHaveBeenCalledWith("eu", 7);
   });
 
   it("returns 404 when the country slug is unknown", async () => {

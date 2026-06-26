@@ -159,29 +159,37 @@ export async function upsertFeedTx(
 // CRUD: country catalogue
 // ---------------------------------------------------------------------------
 
-export async function listCountries(filters: { region?: string; q?: string } = {}) {
-  const where: string[] = ["is_active = TRUE"];
-  const repl: Record<string, unknown> = {};
+export async function listCountries(organizationId: number, filters: { region?: string; q?: string } = {}) {
+  const where: string[] = ["c.is_active = TRUE"];
+  const repl: Record<string, unknown> = { organizationId };
   if (filters.region) {
-    where.push("region = :region");
+    where.push("c.region = :region");
     repl.region = filters.region;
   }
   if (filters.q) {
-    where.push("name ILIKE :q");
+    where.push("c.name ILIKE :q");
     repl.q = `%${filters.q}%`;
   }
   return sequelize.query(
-    `SELECT slug, name, region, regulation_count, hash, last_changed_at
-     FROM regulation_countries WHERE ${where.join(" AND ")} ORDER BY name ASC;`,
+    `SELECT c.slug, c.name, c.region, c.regulation_count, c.hash, c.last_changed_at,
+            (t.id IS NOT NULL) AS is_tracked
+     FROM regulation_countries c
+     LEFT JOIN regulation_tracked_countries t
+       ON t.country_slug = c.slug AND t.organization_id = :organizationId
+     WHERE ${where.join(" AND ")} ORDER BY c.name ASC;`,
     { replacements: repl, type: QueryTypes.SELECT },
   );
 }
 
-export async function getCountryRow(slug: string) {
+export async function getCountryRow(slug: string, organizationId: number) {
   const rows = (await sequelize.query(
-    `SELECT slug, name, region, regulation_count, data, hash, is_active, last_changed_at
-     FROM regulation_countries WHERE slug = :slug;`,
-    { replacements: { slug: normalizeSlug(slug) }, type: QueryTypes.SELECT },
+    `SELECT c.slug, c.name, c.region, c.regulation_count, c.data, c.hash, c.is_active, c.last_changed_at,
+            (t.id IS NOT NULL) AS is_tracked
+     FROM regulation_countries c
+     LEFT JOIN regulation_tracked_countries t
+       ON t.country_slug = c.slug AND t.organization_id = :organizationId
+     WHERE c.slug = :slug;`,
+    { replacements: { slug: normalizeSlug(slug), organizationId }, type: QueryTypes.SELECT },
   )) as any[];
   return rows[0] ?? null;
 }

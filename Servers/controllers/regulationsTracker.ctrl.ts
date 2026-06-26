@@ -32,7 +32,7 @@ export async function getCountries(req: Request, res: Response): Promise<any> {
   });
   try {
     const qStr = (v: unknown): string | undefined => (typeof v === "string" ? v : undefined);
-    const data = await listCountries({
+    const data = await listCountries(req.organizationId!, {
       region: qStr(req.query.region),
       q: qStr(req.query.q),
     });
@@ -73,7 +73,7 @@ export async function getCountryDetail(req: Request, res: Response): Promise<any
   });
   try {
     const slug = req.params.slug as string;
-    const local = await getCountryRow(slug);
+    const local = await getCountryRow(slug, req.organizationId!);
     if (!local) return res.status(404).json(STATUS_CODE[404]("country not found"));
     try {
       const live = await fetchCountryDetail(slug);
@@ -85,7 +85,7 @@ export async function getCountryDetail(req: Request, res: Response): Promise<any
         userId: req.userId!,
         organizationId: req.organizationId!,
       });
-      return res.status(200).json(STATUS_CODE[200]({ ...(live as object), stale: false }));
+      return res.status(200).json(STATUS_CODE[200]({ ...(live as object), stale: false, is_tracked: local.is_tracked }));
     } catch {
       await logSuccess({
         eventType: "Read",
@@ -95,7 +95,7 @@ export async function getCountryDetail(req: Request, res: Response): Promise<any
         userId: req.userId!,
         organizationId: req.organizationId!,
       });
-      return res.status(200).json(STATUS_CODE[200]({ country: local.data, stale: true }));
+      return res.status(200).json(STATUS_CODE[200]({ ...local.data, stale: true, is_tracked: local.is_tracked }));
     }
   } catch (error) {
     await logFailure({
