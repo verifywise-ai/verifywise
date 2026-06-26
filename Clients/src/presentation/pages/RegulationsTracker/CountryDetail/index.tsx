@@ -39,17 +39,20 @@ const STALE_BANNER_ICON_COLOR = "#B45309";
 const STALE_BANNER_TEXT_COLOR = "#92400E";
 
 interface Regulation {
-  id?: string | number;
   name: string;
+  type?: string;
   status?: string;
-  effective_date?: string;
-  description?: string;
-  url?: string;
+  effectiveDate?: string;
+  scope?: string;
+  obligations?: string[];
+  maxPenalty?: string;
+  industryTags?: string[];
+  sourceUrl?: string;
+  lastVerified?: string;
 }
 
 interface TimelineEvent {
   date: string;
-  title: string;
   description?: string;
 }
 
@@ -73,6 +76,9 @@ interface CountryDetailData {
   iso2?: string;
   /** Unicode flag emoji from the feed (e.g. "🇪🇺"); falls back to a globe icon. */
   flag?: string;
+  oneLiner?: string;
+  executiveSummary?: string;
+  practicalTakeaway?: string;
   is_tracked?: boolean;
   stale?: boolean;
   regulations?: Regulation[];
@@ -284,13 +290,58 @@ export default function CountryDetail() {
       )}
 
       <Stack gap="16px">
+        {/* Overview: narrative summary fields from the feed */}
+        {(country.oneLiner || country.executiveSummary || country.practicalTakeaway) && (
+          <SectionCard title="Overview">
+            <Stack gap="12px">
+              {country.oneLiner && (
+                <Typography sx={{ fontSize: "14px", fontWeight: 500, lineHeight: 1.5 }}>
+                  {country.oneLiner}
+                </Typography>
+              )}
+              {country.executiveSummary && (
+                <Typography
+                  sx={{ fontSize: "13px", color: theme.palette.text.secondary, lineHeight: 1.6 }}
+                >
+                  {country.executiveSummary}
+                </Typography>
+              )}
+              {country.practicalTakeaway && (
+                <Box
+                  sx={{
+                    borderLeft: `3px solid ${palette.brand.primary}`,
+                    pl: "12px",
+                    py: "4px",
+                  }}
+                >
+                  <Typography
+                    sx={{ fontSize: "12px", fontWeight: 600, color: palette.text.secondary }}
+                  >
+                    Practical takeaway
+                  </Typography>
+                  <Typography
+                    sx={{
+                      fontSize: "13px",
+                      color: theme.palette.text.secondary,
+                      mt: "2px",
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    {country.practicalTakeaway}
+                  </Typography>
+                </Box>
+              )}
+            </Stack>
+          </SectionCard>
+        )}
+
         {/* Regulations list */}
         {country.regulations && country.regulations.length > 0 && (
           <SectionCard title="Regulations">
             <Stack gap="12px">
               {country.regulations.map((reg, i) => (
                 <Box
-                  key={reg.id ?? `${reg.name}-${i}`}
+                  key={`${reg.name}-${i}`}
                   sx={{
                     border: `1px solid ${palette.border.light}`,
                     borderRadius: "4px",
@@ -306,6 +357,7 @@ export default function CountryDetail() {
                       <Chip
                         label={reg.status}
                         variant={
+                          reg.status.toLowerCase().includes("in-force") ||
                           reg.status.toLowerCase().includes("in force") ||
                           reg.status.toLowerCase().includes("active")
                             ? "success"
@@ -318,12 +370,21 @@ export default function CountryDetail() {
                       />
                     )}
                   </Stack>
-                  {reg.effective_date && (
-                    <Typography sx={{ fontSize: "12px", color: palette.text.tertiary, mt: "4px" }}>
-                      Effective: {reg.effective_date}
-                    </Typography>
-                  )}
-                  {reg.description && (
+
+                  <Stack direction="row" gap="12px" flexWrap="wrap" sx={{ mt: "4px" }}>
+                    {reg.type && (
+                      <Typography sx={{ fontSize: "12px", color: palette.text.tertiary }}>
+                        Type: {reg.type}
+                      </Typography>
+                    )}
+                    {reg.effectiveDate && (
+                      <Typography sx={{ fontSize: "12px", color: palette.text.tertiary }}>
+                        Effective: {reg.effectiveDate}
+                      </Typography>
+                    )}
+                  </Stack>
+
+                  {reg.scope && (
                     <Typography
                       sx={{
                         fontSize: "13px",
@@ -332,13 +393,63 @@ export default function CountryDetail() {
                         lineHeight: 1.5,
                       }}
                     >
-                      {reg.description}
+                      {reg.scope}
                     </Typography>
                   )}
-                  {reg.url && (
+
+                  {reg.obligations && reg.obligations.length > 0 && (
+                    <Box sx={{ mt: "8px" }}>
+                      <Typography
+                        sx={{ fontSize: "12px", fontWeight: 600, color: palette.text.secondary }}
+                      >
+                        Key obligations
+                      </Typography>
+                      <Box component="ul" sx={{ m: "4px 0 0", pl: "18px" }}>
+                        {reg.obligations.map((ob, j) => (
+                          <Typography
+                            key={j}
+                            component="li"
+                            sx={{
+                              fontSize: "13px",
+                              color: theme.palette.text.secondary,
+                              lineHeight: 1.5,
+                            }}
+                          >
+                            {ob}
+                          </Typography>
+                        ))}
+                      </Box>
+                    </Box>
+                  )}
+
+                  {reg.maxPenalty && (
+                    <Typography
+                      sx={{
+                        fontSize: "13px",
+                        color: theme.palette.text.secondary,
+                        mt: "8px",
+                        lineHeight: 1.5,
+                      }}
+                    >
+                      <Box component="span" sx={{ fontWeight: 600 }}>
+                        Max penalty:
+                      </Box>{" "}
+                      {reg.maxPenalty}
+                    </Typography>
+                  )}
+
+                  {reg.industryTags && reg.industryTags.length > 0 && (
+                    <Stack direction="row" gap="6px" flexWrap="wrap" sx={{ mt: "8px" }}>
+                      {reg.industryTags.map((tag, j) => (
+                        <Chip key={j} label={tag} variant="default" uppercase={false} />
+                      ))}
+                    </Stack>
+                  )}
+
+                  {reg.sourceUrl && (
                     <Box sx={{ mt: "8px" }}>
                       <a
-                        href={reg.url}
+                        href={reg.sourceUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                         style={{
@@ -377,14 +488,11 @@ export default function CountryDetail() {
                     }}
                   />
                   <Box>
-                    <Stack direction="row" alignItems="center" gap="8px">
-                      <Typography sx={{ fontSize: "12px", color: palette.text.tertiary }}>
-                        {event.date}
-                      </Typography>
-                      <Typography sx={{ fontSize: "13px", fontWeight: 500 }}>
-                        {event.title}
-                      </Typography>
-                    </Stack>
+                    <Typography
+                      sx={{ fontSize: "12px", fontWeight: 600, color: palette.text.tertiary }}
+                    >
+                      {event.date}
+                    </Typography>
                     {event.description && (
                       <Typography
                         sx={{
