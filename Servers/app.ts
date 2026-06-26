@@ -109,6 +109,7 @@ import { sequelize } from "./database/db";
 import redisClient from "./database/redis";
 import ssoConfigRoutes from "./routes/ssoConfig.route";
 import aiTrustIndexRoutes from "./routes/aiTrustIndex.route";
+import regulationsTrackerRoutes from "./routes/regulationsTracker.route";
 
 const swaggerDoc = YAML.load("./swagger.yaml");
 
@@ -315,6 +316,7 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
   app.use("/v1", virtualKeyProxyRoutes());
   app.use("/api/ssoConfig", ssoConfigRoutes);
   app.use("/api/ai-trust-index", aiTrustIndexRoutes);
+  app.use("/api/regulations-tracker", regulationsTrackerRoutes);
 
   return app;
 }
