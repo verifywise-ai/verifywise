@@ -312,8 +312,9 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
     if (subclause?.id) {
       try {
         const response = await getEntityFiles("iso_42001", "subclause", subclause.id);
-        if (response && Array.isArray(response)) {
-          linkedFiles = response.map((file: any) => ({
+        const responseFiles = response?.files ?? [];
+        if (responseFiles.length > 0) {
+          linkedFiles = responseFiles.map((file: any) => ({
             id: file.id?.toString() || file.file_id?.toString() || "",
             fileName: file.filename || file.fileName || file.file_name || "",
             size: file.size || 0,

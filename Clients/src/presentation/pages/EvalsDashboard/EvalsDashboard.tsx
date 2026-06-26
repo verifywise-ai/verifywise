@@ -63,6 +63,7 @@ import {
 import type { LLMProvider } from "../../../infrastructure/api/evaluationLlmApiKeysService";
 import { evalModelsService } from "../../../infrastructure/api/evalModelsService";
 import { Plus as PlusIcon, Trash2 as DeleteIcon } from "lucide-react";
+import { displayFormattedDate } from "../../tools/isoDateToString";
 import { Collapse, IconButton, CircularProgress } from "@mui/material";
 import VWChip from "../../components/Chip";
 import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
@@ -566,11 +567,7 @@ export default function EvalsDashboard() {
   // Format date for display
   const formatKeyDate = (dateStr: string): string => {
     try {
-      return new Date(dateStr).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      });
+      return displayFormattedDate(dateStr);
     } catch {
       return "-";
     }

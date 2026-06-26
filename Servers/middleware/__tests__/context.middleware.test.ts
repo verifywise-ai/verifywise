@@ -31,23 +31,19 @@ describe("context.middleware", () => {
     jest.clearAllMocks();
   });
 
-  it("should store userId, tenantId, and organizationId in asyncLocalStorage", () => {
-    const req = createMockReq({ userId: 42, tenantId: "abc123", organizationId: 10 }) as Request;
+  it("should store userId and organizationId in asyncLocalStorage", () => {
+    const req = createMockReq({ userId: 42, organizationId: 10 }) as Request;
     const res = createMockRes();
 
     contextMiddleware(req, res as Response, next);
 
-    expect(mockRun).toHaveBeenCalledWith(
-      { userId: 42, tenantId: "abc123", organizationId: 10 },
-      expect.any(Function),
-    );
+    expect(mockRun).toHaveBeenCalledWith({ userId: 42, organizationId: 10 }, expect.any(Function));
     expect(next).toHaveBeenCalled();
   });
 
   it("should set userId to undefined when not a number", () => {
     const req = createMockReq({
       userId: "not-a-number" as unknown as number,
-      tenantId: "abc",
     }) as Request;
     const res = createMockRes();
 

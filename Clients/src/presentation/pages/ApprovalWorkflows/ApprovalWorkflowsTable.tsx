@@ -25,6 +25,7 @@ import { ApprovalWorkflowTableProps } from "src/presentation/types/interfaces/i.
 import { useStandardTable } from "../../../application/hooks/useStandardTable";
 import StandardTableHead from "../../components/Table/StandardTableHead";
 import StandardTablePagination from "../../components/Table/StandardTablePagination";
+import CustomizableSkeleton from "../../components/Skeletons";
 
 const cellStyle = singleTheme.tableStyles.primary.body.cell;
 
@@ -61,6 +62,7 @@ function workflowSortComparator(
 
 const ApprovalWorkflowsTable: React.FC<ApprovalWorkflowTableProps> = ({
   data,
+  isLoading = false,
   onEdit,
   onArchive,
   archivedId,
@@ -96,6 +98,10 @@ const ApprovalWorkflowsTable: React.FC<ApprovalWorkflowTableProps> = ({
     defaultSortDirection: null,
     sortComparator: workflowSortComparator,
   });
+
+  if (isLoading) {
+    return <CustomizableSkeleton variant="rectangular" width="100%" height={400} />;
+  }
 
   if (!sortedRows || sortedRows.length === 0) {
     return (

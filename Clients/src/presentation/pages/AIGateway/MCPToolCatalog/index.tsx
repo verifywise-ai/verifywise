@@ -1,16 +1,26 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Box, Typography, Stack, IconButton } from "@mui/material";
-import { Wrench, Pencil, ShieldAlert, ShieldCheck, AlertTriangle } from "lucide-react";
+import {
+  Wrench,
+  Pencil,
+  ShieldAlert,
+  ShieldCheck,
+  AlertTriangle,
+  RotateCcw,
+  SearchX,
+} from "lucide-react";
 import Toggle from "../../../components/Inputs/Toggle";
 import { EmptyState } from "../../../components/EmptyState";
 import EmptyStateTip from "../../../components/EmptyState/EmptyStateTip";
 import Select from "../../../components/Inputs/Select";
 import StandardModal from "../../../components/Modals/StandardModal";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
+import { CustomizableButton } from "../../../components/button/customizable-button";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import palette from "../../../themes/palette";
 import { useCardSx } from "../shared";
 import MCPTable from "../MCPTable";
+import CustomizableSkeleton from "../../../components/Skeletons";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -56,6 +66,7 @@ export default function MCPToolCatalogPage() {
   const [tools, setTools] = useState<MCPTool[]>([]);
   const [servers, setServers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Filters
   const [filterServer, setFilterServer] = useState("");
@@ -69,6 +80,8 @@ export default function MCPToolCatalogPage() {
   const [form, setForm] = useState<EditForm>({ ...EMPTY_FORM });
 
   const loadData = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
     try {
       const [toolsRes, serversRes] = await Promise.all([
         apiServices.get<Record<string, any>>("/ai-gateway/mcp/tools"),
@@ -77,7 +90,7 @@ export default function MCPToolCatalogPage() {
       setTools(toolsRes?.data?.tools || []);
       setServers(serversRes?.data?.servers || []);
     } catch {
-      // Silently handle
+      setLoadError("Failed to load MCP tools. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -294,11 +307,16 @@ export default function MCPToolCatalogPage() {
       )}
 
       {loading ? (
-        <Box sx={cardSx}>
-          <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
-            Loading tools...
-          </Typography>
-        </Box>
+        <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
+      ) : loadError ? (
+        <EmptyState icon={AlertTriangle} message={loadError}>
+          <CustomizableButton
+            variant="outlined"
+            text="Retry"
+            icon={<RotateCcw size={16} />}
+            onClick={loadData}
+          />
+        </EmptyState>
       ) : tools.length === 0 ? (
         <EmptyState
           icon={Wrench}
@@ -317,13 +335,11 @@ export default function MCPToolCatalogPage() {
           />
         </EmptyState>
       ) : filteredTools.length === 0 ? (
-        <Box sx={cardSx}>
-          <Typography
-            sx={{ fontSize: 13, color: palette.text.tertiary, textAlign: "center", py: "16px" }}
-          >
-            No tools match the selected filters.
-          </Typography>
-        </Box>
+        <EmptyState
+          icon={SearchX}
+          message="No tools match the selected filters."
+          showBorder={false}
+        />
       ) : (
         <Stack gap="16px">
           {Object.entries(groupedTools).map(([serverName, serverTools]) => (

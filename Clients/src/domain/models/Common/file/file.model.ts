@@ -1,3 +1,19 @@
+export interface FileEntityLinkProjection {
+  framework_type: string;
+  entity_type: string;
+  entity_id: number;
+  project_id: number | null;
+  link_type: string | null;
+  group_label: string | null;
+  parent_id: number | null;
+  sub_id: number | null;
+  meta_id: number | null;
+  is_evidence: boolean;
+  // Only present for evidence_hub/evidence links.
+  mapped_model_ids?: number[];
+  mapped_training_ids?: number[];
+}
+
 export class FileModel {
   id!: string;
   fileName!: string;
@@ -19,6 +35,8 @@ export class FileModel {
   reviewStatus?: string;
   fileGroupId?: string;
   tags?: string[];
+  entityLinks?: FileEntityLinkProjection[];
+  linkGroups?: string[];
 
   constructor(data: FileModel) {
     this.id = data.id;
@@ -41,6 +59,8 @@ export class FileModel {
     this.reviewStatus = data.reviewStatus;
     this.fileGroupId = data.fileGroupId;
     this.tags = data.tags;
+    this.entityLinks = data.entityLinks;
+    this.linkGroups = data.linkGroups;
   }
 
   static createNewFile(data: Partial<FileModel>): FileModel {
@@ -76,6 +96,8 @@ export class FileModel {
       reviewStatus: apiData.reviewStatus,
       fileGroupId: apiData.fileGroupId,
       tags: apiData.tags,
+      entityLinks: apiData.entityLinks,
+      linkGroups: apiData.linkGroups,
     } as FileModel);
   }
 

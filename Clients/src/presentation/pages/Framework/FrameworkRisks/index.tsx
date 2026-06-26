@@ -69,6 +69,7 @@ const FrameworkRisks = ({
       title="Framework risks"
       headerContent={frameworkToggle}
       refreshTrigger={selectedFramework}
+      emptyMessage="No framework risks yet"
     />
   );
 };

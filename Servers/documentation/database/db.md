@@ -26,9 +26,9 @@ The database connection pool is configured using environment variables with fall
 ```typescript
 const pool = new Pool({
   host: process.env.DB_HOST || "localhost",
-  user: process.env.DB_USER || "postgres",
+  user: process.env.DB_USER,
   port: Number(process.env.DB_PORT) || 5432,
-  password: process.env.DB_PASSWORD || "1377",
+  password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME || "verifywise",
 });
 ```
@@ -51,7 +51,7 @@ pool.query("SELECT * FROM users", (err, res) => {
 ## Environment Variables
 
 - `DB_HOST`: Database host (default: "localhost")
-- `DB_USER`: Database user (default: "postgres")
+- `DB_USER`: Database user (required)
 - `DB_PORT`: Database port (default: 5432)
-- `DB_PASSWORD`: Database password (default: "1377")
+- `DB_PASSWORD`: Database password (required)
 - `DB_NAME`: Database name (default: "verifywise")

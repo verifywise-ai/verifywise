@@ -18,7 +18,6 @@ const testPayload = {
   id: 1,
   email: "user@example.com",
   roleName: "Admin",
-  tenantId: "a1b2c3d4e5",
   organizationId: 10,
 };
 

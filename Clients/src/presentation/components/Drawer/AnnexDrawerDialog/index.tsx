@@ -368,8 +368,9 @@ const VWISO42001AnnexDrawerDialog = ({
     if (categoryId) {
       try {
         const response = await getEntityFiles("iso_42001", "annex_category", categoryId);
-        if (response && Array.isArray(response)) {
-          linkedFiles = response.map((file: any) => ({
+        const responseFiles = response?.files ?? [];
+        if (responseFiles.length > 0) {
+          linkedFiles = responseFiles.map((file: any) => ({
             id: file.id?.toString() || file.file_id?.toString() || "",
             fileName: file.filename || file.fileName || file.file_name || "",
             size: file.size || 0,

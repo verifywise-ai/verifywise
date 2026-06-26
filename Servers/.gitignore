@@ -25,6 +25,7 @@ dist-ssr
 *.sw?
 
 .env
+.env.test
 # *.dev
 *.prod
 

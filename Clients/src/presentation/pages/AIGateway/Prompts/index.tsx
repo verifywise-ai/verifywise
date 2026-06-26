@@ -13,7 +13,15 @@ import {
   TableRow,
   TablePagination,
 } from "@mui/material";
-import { CirclePlus, Trash2, BookOpen, FileText, Link } from "lucide-react";
+import {
+  CirclePlus,
+  Trash2,
+  BookOpen,
+  FileText,
+  Link,
+  AlertTriangle,
+  RotateCcw,
+} from "lucide-react";
 import { EmptyState } from "../../../components/EmptyState";
 import EmptyStateTip from "../../../components/EmptyState/EmptyStateTip";
 import { CustomizableButton } from "../../../components/button/customizable-button";
@@ -30,6 +38,7 @@ import {
 } from "../../../../application/utils/paginationStorage";
 import { slugify, ProviderIcon, getLabelVariant } from "../shared";
 import singleTheme from "../../../themes/v1SingleTheme";
+import CustomizableSkeleton from "../../../components/Skeletons";
 
 interface Prompt {
   id: number;
@@ -50,6 +59,7 @@ export default function PromptsPage() {
   const navigate = useNavigate();
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(() =>
     getPaginationRowCount("aiGatewayPrompts", 10),
@@ -63,6 +73,8 @@ export default function PromptsPage() {
   const [form, setForm] = useState({ name: "", slug: "", description: "" });
 
   const loadData = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
     try {
       const res = await apiServices.get<Record<string, any>>("/ai-gateway/prompts");
       const promptList: Prompt[] = res?.data?.prompts || res?.data?.data || [];
@@ -79,7 +91,7 @@ export default function PromptsPage() {
       }
       setPrompts(promptList);
     } catch {
-      /* silently handle */
+      setLoadError("Failed to load prompts. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -206,7 +218,29 @@ export default function PromptsPage() {
         helpArticlePath="ai-gateway/prompts"
         actionButton={actionButton}
       >
-        <Box />
+        <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
+      </PageHeaderExtended>
+    );
+  }
+
+  if (loadError) {
+    return (
+      <PageHeaderExtended
+        title="Prompts"
+        description="Create versioned prompt templates with variables and bind them to endpoints."
+        tipBoxEntity="ai-gateway-prompts"
+        helpArticlePath="ai-gateway/prompts"
+        actionButton={actionButton}
+      >
+        <EmptyState icon={AlertTriangle} message={loadError}>
+          <CustomizableButton
+            variant="outlined"
+            text="Retry"
+            icon={<RotateCcw size={16} />}
+            onClick={loadData}
+          />
+        </EmptyState>
+        {createModal}
       </PageHeaderExtended>
     );
   }

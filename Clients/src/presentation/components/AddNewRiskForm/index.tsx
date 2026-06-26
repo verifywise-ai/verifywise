@@ -195,6 +195,7 @@ const AddNewRiskForm: FC<AddNewRiskFormProps> = (props) => {
             ref={customFieldsRef}
             entityType="project_risk"
             entityId={popupStatus === "edit" ? (entityId ?? null) : null}
+            onPendingChange={customFieldsGate.onPendingChange}
           />
         </TabPanel>
         {popupStatus === "edit" && entityId && (

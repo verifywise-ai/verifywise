@@ -49,6 +49,9 @@ import {
   KeyRound,
   BookOpen,
   GitBranch,
+  Gauge,
+  Compass,
+  Star,
 } from "lucide-react";
 
 /**
@@ -128,6 +131,12 @@ export const routeMapping: Record<string, string> = {
   "/ai-detection/scans": "Scan history",
   "/ai-detection/repositories": "Repositories",
   "/ai-detection/settings": "Settings",
+
+  // AI Trust Index
+  "/ai-trust-index": "AI Trust Index",
+  "/ai-trust-index/browse": "Browse",
+  "/ai-trust-index/tracked": "Tracked",
+  "/ai-trust-index/settings": "Settings",
 
   // AI Gateway
   "/ai-gateway": "AI gateway",
@@ -292,6 +301,12 @@ export const routeIconMapping: Record<string, () => React.ReactNode> = {
     React.createElement(FolderGit2, { size: 14, strokeWidth: 1.5 }),
   "/ai-detection/settings": () => React.createElement(Settings, { size: 14, strokeWidth: 1.5 }),
 
+  // AI Trust Index
+  "/ai-trust-index": () => React.createElement(Gauge, { size: 14, strokeWidth: 1.5 }),
+  "/ai-trust-index/browse": () => React.createElement(Compass, { size: 14, strokeWidth: 1.5 }),
+  "/ai-trust-index/tracked": () => React.createElement(Star, { size: 14, strokeWidth: 1.5 }),
+  "/ai-trust-index/settings": () => React.createElement(Settings, { size: 14, strokeWidth: 1.5 }),
+
   // Intake forms
   "/intake-forms": () => React.createElement(ClipboardList, { size: 14, strokeWidth: 1.5 }),
   "/intake-forms/submissions": () => React.createElement(Inbox, { size: 14, strokeWidth: 1.5 }),
@@ -416,6 +431,14 @@ export const dynamicRoutePatterns = [
     label: "AI app details",
     description: "Detailed view of a specific AI app",
     icon: () => React.createElement(Bot, { size: 14, strokeWidth: 1.5 }),
+  },
+  {
+    // Only consulted when there's no exact routeMapping hit, so the explicit
+    // /ai-trust-index/browse|tracked|settings entries take precedence.
+    pattern: /\/ai-trust-index\/[^/]+$/,
+    label: "App details",
+    description: "Full assessment for a specific AI Trust Index app",
+    icon: () => React.createElement(Gauge, { size: 14, strokeWidth: 1.5 }),
   },
   {
     pattern: /\/super-admin\/organizations\/\d+\/users/,

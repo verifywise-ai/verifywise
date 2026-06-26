@@ -43,14 +43,15 @@ export async function createTask(req: Request, res: Response): Promise<any> {
     functionName: "createTask",
     fileName: "task.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   const transaction = await sequelize.transaction();
   try {
     const { userId } = req;
     if (!userId) {
-      return res.status(401).json({ message: req.t!("Unauthorized") });
+      await transaction.rollback();
+      return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
 
     const {
@@ -105,7 +106,7 @@ export async function createTask(req: Request, res: Response): Promise<any> {
       functionName: "createTask",
       fileName: "task.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     // Send notifications to assigned users (async, don't block response)
@@ -158,7 +159,7 @@ export async function createTask(req: Request, res: Response): Promise<any> {
             fileName: "task.ctrl.ts",
             error: notifyError as Error,
             userId: req.userId!,
-            tenantId: req.organizationId!,
+            organizationId: req.organizationId!,
           });
         }
       })();
@@ -176,7 +177,7 @@ export async function createTask(req: Request, res: Response): Promise<any> {
         fileName: "task.ctrl.ts",
         error: error as Error,
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
     }
@@ -189,7 +190,7 @@ export async function createTask(req: Request, res: Response): Promise<any> {
         fileName: "task.ctrl.ts",
         error: error as Error,
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
     }
@@ -201,7 +202,7 @@ export async function createTask(req: Request, res: Response): Promise<any> {
       fileName: "task.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
@@ -214,13 +215,13 @@ export async function getAllTasks(req: Request, res: Response): Promise<any> {
     functionName: "getAllTasks",
     fileName: "task.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
     const { userId, role } = req;
     if (!userId || !role) {
-      return res.status(401).json({ message: req.t!("Unauthorized") });
+      return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
 
     // Extract query parameters for filters, sorting, and pagination
@@ -289,7 +290,7 @@ export async function getAllTasks(req: Request, res: Response): Promise<any> {
       functionName: "getAllTasks",
       fileName: "task.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(200).json(
@@ -306,7 +307,7 @@ export async function getAllTasks(req: Request, res: Response): Promise<any> {
       fileName: "task.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
@@ -321,13 +322,13 @@ export async function getTaskById(req: Request, res: Response): Promise<any> {
     functionName: "getTaskById",
     fileName: "task.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
     const { userId, role } = req;
     if (!userId || !role) {
-      return res.status(401).json({ message: req.t!("Unauthorized") });
+      return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
 
     const task = await getTaskByIdQuery(taskId, { userId, role }, req.organizationId!);
@@ -346,7 +347,7 @@ export async function getTaskById(req: Request, res: Response): Promise<any> {
         functionName: "getTaskById",
         fileName: "task.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
 
       return res.status(200).json(STATUS_CODE[200](taskResponse));
@@ -358,7 +359,7 @@ export async function getTaskById(req: Request, res: Response): Promise<any> {
       functionName: "getTaskById",
       fileName: "task.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(404).json(STATUS_CODE[404]({}));
@@ -370,7 +371,7 @@ export async function getTaskById(req: Request, res: Response): Promise<any> {
       fileName: "task.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
@@ -402,14 +403,15 @@ export async function updateTask(req: Request, res: Response): Promise<any> {
     functionName: "updateTask",
     fileName: "task.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   const transaction = await sequelize.transaction();
   try {
     const { userId, role } = req;
     if (!userId || !role) {
-      return res.status(401).json({ message: req.t!("Unauthorized") });
+      await transaction.rollback();
+      return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
 
     const updateData: Partial<ITask> = {};
@@ -467,7 +469,7 @@ export async function updateTask(req: Request, res: Response): Promise<any> {
       functionName: "updateTask",
       fileName: "task.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     // Add assignees to response (manually from dataValues)
@@ -567,7 +569,7 @@ export async function updateTask(req: Request, res: Response): Promise<any> {
           fileName: "task.ctrl.ts",
           error: notifyError as Error,
           userId: req.userId!,
-          tenantId: req.organizationId!,
+          organizationId: req.organizationId!,
         });
       }
     })();
@@ -584,7 +586,7 @@ export async function updateTask(req: Request, res: Response): Promise<any> {
         fileName: "task.ctrl.ts",
         error: error as Error,
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
     }
@@ -597,7 +599,7 @@ export async function updateTask(req: Request, res: Response): Promise<any> {
         fileName: "task.ctrl.ts",
         error: error as Error,
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
     }
@@ -609,7 +611,7 @@ export async function updateTask(req: Request, res: Response): Promise<any> {
       fileName: "task.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     const statusCode = (error as Error).message.includes("not found")
@@ -630,14 +632,15 @@ export async function deleteTask(req: Request, res: Response): Promise<any> {
     functionName: "deleteTask",
     fileName: "task.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   const transaction = await sequelize.transaction();
   try {
     const { userId, role } = req;
     if (!userId || !role) {
-      return res.status(401).json({ message: req.t!("Unauthorized") });
+      await transaction.rollback();
+      return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
 
     const deleted = await deleteTaskByIdQuery({
@@ -662,7 +665,7 @@ export async function deleteTask(req: Request, res: Response): Promise<any> {
         functionName: "deleteTask",
         fileName: "task.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
 
       return res
@@ -676,7 +679,7 @@ export async function deleteTask(req: Request, res: Response): Promise<any> {
       functionName: "deleteTask",
       fileName: "task.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(404).json(STATUS_CODE[404]({}));
@@ -690,7 +693,7 @@ export async function deleteTask(req: Request, res: Response): Promise<any> {
       fileName: "task.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     const statusCode = (error as Error).message.includes("not found")
@@ -711,14 +714,15 @@ export async function restoreTask(req: Request, res: Response): Promise<any> {
     functionName: "restoreTask",
     fileName: "task.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   const transaction = await sequelize.transaction();
   try {
     const { userId, role } = req;
     if (!userId || !role) {
-      return res.status(401).json({ message: req.t!("Unauthorized") });
+      await transaction.rollback();
+      return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
 
     const restoredTask = await restoreTaskByIdQuery({
@@ -738,7 +742,7 @@ export async function restoreTask(req: Request, res: Response): Promise<any> {
         functionName: "restoreTask",
         fileName: "task.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
 
       // Add assignees to response
@@ -756,7 +760,7 @@ export async function restoreTask(req: Request, res: Response): Promise<any> {
       functionName: "restoreTask",
       fileName: "task.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(404).json(STATUS_CODE[404]({}));
@@ -771,7 +775,7 @@ export async function restoreTask(req: Request, res: Response): Promise<any> {
         fileName: "task.ctrl.ts",
         error: error as Error,
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
     }
@@ -784,7 +788,7 @@ export async function restoreTask(req: Request, res: Response): Promise<any> {
         fileName: "task.ctrl.ts",
         error: error as Error,
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
     }
@@ -797,7 +801,7 @@ export async function restoreTask(req: Request, res: Response): Promise<any> {
         fileName: "task.ctrl.ts",
         error: error as Error,
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
     }
@@ -809,7 +813,7 @@ export async function restoreTask(req: Request, res: Response): Promise<any> {
       fileName: "task.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     const statusCode = (error as Error).message.includes("not found")
@@ -830,14 +834,15 @@ export async function hardDeleteTask(req: Request, res: Response): Promise<any> 
     functionName: "hardDeleteTask",
     fileName: "task.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   const transaction = await sequelize.transaction();
   try {
     const { userId, role } = req;
     if (!userId || !role) {
-      return res.status(401).json({ message: req.t!("Unauthorized") });
+      await transaction.rollback();
+      return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
 
     const deleted = await hardDeleteTaskByIdQuery({
@@ -857,7 +862,7 @@ export async function hardDeleteTask(req: Request, res: Response): Promise<any> 
         functionName: "hardDeleteTask",
         fileName: "task.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
 
       return res
@@ -871,7 +876,7 @@ export async function hardDeleteTask(req: Request, res: Response): Promise<any> 
       functionName: "hardDeleteTask",
       fileName: "task.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(404).json(STATUS_CODE[404]({}));
@@ -886,7 +891,7 @@ export async function hardDeleteTask(req: Request, res: Response): Promise<any> 
         fileName: "task.ctrl.ts",
         error: error as Error,
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
     }
@@ -899,7 +904,7 @@ export async function hardDeleteTask(req: Request, res: Response): Promise<any> 
         fileName: "task.ctrl.ts",
         error: error as Error,
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
     }
@@ -912,7 +917,7 @@ export async function hardDeleteTask(req: Request, res: Response): Promise<any> 
         fileName: "task.ctrl.ts",
         error: error as Error,
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
     }
@@ -924,7 +929,7 @@ export async function hardDeleteTask(req: Request, res: Response): Promise<any> 
       fileName: "task.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     const statusCode = (error as Error).message.includes("not found")

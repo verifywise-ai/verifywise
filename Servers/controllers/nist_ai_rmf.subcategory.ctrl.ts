@@ -206,7 +206,7 @@ export async function getNISTAIRMFSubcategoryRisks(req: Request, res: Response):
     functionName: "getNISTAIRMFSubcategoryRisks",
     fileName: "nist_ai_rmf.subcategory.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
   logger.debug(`🔍 Fetching risks for NIST AI RMF subcategory ${subcategoryId}`);
 
@@ -219,7 +219,7 @@ export async function getNISTAIRMFSubcategoryRisks(req: Request, res: Response):
       functionName: "getNISTAIRMFSubcategoryRisks",
       fileName: "nist_ai_rmf.subcategory.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(200).json({
@@ -240,7 +240,7 @@ export async function getNISTAIRMFSubcategoryRisks(req: Request, res: Response):
       fileName: "nist_ai_rmf.subcategory.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -258,7 +258,7 @@ export async function updateNISTAIRMFSubcategoryById(
     functionName: "updateNISTAIRMFSubcategoryById",
     fileName: "nist_ai_rmf.subcategory.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
   logger.debug(`💾 Updating NIST AI RMF subcategory by id ${subcategoryId}`);
 
@@ -434,7 +434,7 @@ export async function updateNISTAIRMFSubcategoryById(
       functionName: "updateNISTAIRMFSubcategoryById",
       fileName: "nist_ai_rmf.subcategory.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(200).json(STATUS_CODE[200](updatedSubcategory));
   } catch (error) {
@@ -452,7 +452,7 @@ export async function updateNISTAIRMFSubcategoryById(
       fileName: "nist_ai_rmf.subcategory.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -468,7 +468,7 @@ export async function updateNISTAIRMFSubcategoryStatus(req: Request, res: Respon
     functionName: "updateNISTAIRMFSubcategoryStatus",
     fileName: "nist_ai_rmf.subcategory.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
   logger.debug(
     `🔄 Updating NIST AI RMF subcategory status: ID ${subcategoryId}, status: ${status}`,
@@ -485,7 +485,7 @@ export async function updateNISTAIRMFSubcategoryStatus(req: Request, res: Respon
         fileName: "nist_ai_rmf.subcategory.ctrl.ts",
         error: new Error("Status is required"),
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(400).json(STATUS_CODE[400](req.t!("Status is required")));
     }
@@ -516,7 +516,7 @@ export async function updateNISTAIRMFSubcategoryStatus(req: Request, res: Respon
       functionName: "updateNISTAIRMFSubcategoryStatus",
       fileName: "nist_ai_rmf.subcategory.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(200).json(STATUS_CODE[200](updatedSubcategory));
   } catch (error) {
@@ -534,7 +534,7 @@ export async function updateNISTAIRMFSubcategoryStatus(req: Request, res: Respon
       fileName: "nist_ai_rmf.subcategory.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     // Handle validation errors differently
@@ -555,7 +555,7 @@ export async function getNISTAIRMFProgress(req: Request, res: Response): Promise
     functionName: "getNISTAIRMFProgress",
     fileName: "nist_ai_rmf.subcategory.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
   logger.debug("📊 Calculating NIST AI RMF progress");
 
@@ -568,7 +568,7 @@ export async function getNISTAIRMFProgress(req: Request, res: Response): Promise
       functionName: "getNISTAIRMFProgress",
       fileName: "nist_ai_rmf.subcategory.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(200).json(STATUS_CODE[200](progress));
@@ -586,7 +586,7 @@ export async function getNISTAIRMFProgress(req: Request, res: Response): Promise
       fileName: "nist_ai_rmf.subcategory.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -601,7 +601,7 @@ export async function getNISTAIRMFAssignments(req: Request, res: Response): Prom
     functionName: "getNISTAIRMFAssignments",
     fileName: "nist_ai_rmf.subcategory.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
   logger.debug("📊 Calculating NIST AI RMF assignments");
 
@@ -614,7 +614,7 @@ export async function getNISTAIRMFAssignments(req: Request, res: Response): Prom
       functionName: "getNISTAIRMFAssignments",
       fileName: "nist_ai_rmf.subcategory.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(200).json(STATUS_CODE[200](assignments));
@@ -632,7 +632,7 @@ export async function getNISTAIRMFAssignments(req: Request, res: Response): Prom
       fileName: "nist_ai_rmf.subcategory.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -647,7 +647,7 @@ export async function getNISTAIRMFAssignmentsByFunction(req: Request, res: Respo
     functionName: "getNISTAIRMFAssignmentsByFunction",
     fileName: "nist_ai_rmf.subcategory.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
   logger.debug("📊 Calculating NIST AI RMF assignments by function");
 
@@ -660,7 +660,7 @@ export async function getNISTAIRMFAssignmentsByFunction(req: Request, res: Respo
       functionName: "getNISTAIRMFAssignmentsByFunction",
       fileName: "nist_ai_rmf.subcategory.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(200).json(STATUS_CODE[200](assignments));
@@ -678,7 +678,7 @@ export async function getNISTAIRMFAssignmentsByFunction(req: Request, res: Respo
       fileName: "nist_ai_rmf.subcategory.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -693,7 +693,7 @@ export async function getNISTAIRMFProgressByFunction(req: Request, res: Response
     functionName: "getNISTAIRMFProgressByFunction",
     fileName: "nist_ai_rmf.subcategory.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
   logger.debug("📊 Calculating NIST AI RMF progress by function");
 
@@ -706,7 +706,7 @@ export async function getNISTAIRMFProgressByFunction(req: Request, res: Response
       functionName: "getNISTAIRMFProgressByFunction",
       fileName: "nist_ai_rmf.subcategory.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(200).json(STATUS_CODE[200](progress));
@@ -724,7 +724,7 @@ export async function getNISTAIRMFProgressByFunction(req: Request, res: Response
       fileName: "nist_ai_rmf.subcategory.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -739,7 +739,7 @@ export async function getNISTAIRMFStatusBreakdown(req: Request, res: Response): 
     functionName: "getNISTAIRMFStatusBreakdown",
     fileName: "nist_ai_rmf.subcategory.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
   logger.debug("📊 Calculating NIST AI RMF status breakdown");
 
@@ -752,7 +752,7 @@ export async function getNISTAIRMFStatusBreakdown(req: Request, res: Response): 
       functionName: "getNISTAIRMFStatusBreakdown",
       fileName: "nist_ai_rmf.subcategory.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(200).json(STATUS_CODE[200](statusBreakdown));
@@ -770,7 +770,7 @@ export async function getNISTAIRMFStatusBreakdown(req: Request, res: Response): 
       fileName: "nist_ai_rmf.subcategory.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -785,7 +785,7 @@ export async function getNISTAIRMFOverview(req: Request, res: Response): Promise
     functionName: "getNISTAIRMFOverview",
     fileName: "nist_ai_rmf.subcategory.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
   logger.debug("📊 Fetching NIST AI RMF dashboard overview");
 
@@ -798,7 +798,7 @@ export async function getNISTAIRMFOverview(req: Request, res: Response): Promise
       functionName: "getNISTAIRMFOverview",
       fileName: "nist_ai_rmf.subcategory.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(200).json(STATUS_CODE[200](overview));
@@ -816,7 +816,7 @@ export async function getNISTAIRMFOverview(req: Request, res: Response): Promise
       fileName: "nist_ai_rmf.subcategory.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }

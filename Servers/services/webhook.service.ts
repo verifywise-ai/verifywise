@@ -178,6 +178,5 @@ function buildWebhookServiceContext(
     userId: repo.created_by,
     role: "Admin",
     organizationId: repo.organization_id,
-    tenantId: repo.organization_id.toString(),
   };
 }

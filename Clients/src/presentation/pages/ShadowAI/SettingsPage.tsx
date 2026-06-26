@@ -48,6 +48,9 @@ import Select from "../../components/Inputs/Select";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import { useUserGuideSidebarContext } from "../../components/UserGuide";
 import { palette } from "../../themes/palette";
+import { displayFormattedDate } from "../../tools/isoDateToString";
+
+const numberFormatter = new Intl.NumberFormat("en-US");
 
 const sectionTitleSx = {
   fontWeight: 600,
@@ -330,10 +333,10 @@ function ApiKeysSection() {
                       <Chip label={k.is_active ? "Active" : "Revoked"} size="small" />
                     </TableCell>
                     <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                      {k.created_at ? new Date(k.created_at).toLocaleDateString() : "—"}
+                      {k.created_at ? displayFormattedDate(k.created_at) : "—"}
                     </TableCell>
                     <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                      {k.last_used_at ? new Date(k.last_used_at).toLocaleDateString() : "Never"}
+                      {k.last_used_at ? displayFormattedDate(k.last_used_at) : "Never"}
                     </TableCell>
                     <TableCell align="right" sx={singleTheme.tableStyles.primary.body.cell}>
                       {k.is_active ? (
@@ -596,7 +599,7 @@ function SyslogConfigSection() {
                       <Chip label={c.is_active ? "Active" : "Inactive"} size="small" />
                     </TableCell>
                     <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                      {c.created_at ? new Date(c.created_at).toLocaleDateString() : "—"}
+                      {c.created_at ? displayFormattedDate(c.created_at) : "—"}
                     </TableCell>
                     <TableCell align="right" sx={singleTheme.tableStyles.primary.body.cell}>
                       <Stack direction="row" gap="4px" justifyContent="flex-end">
@@ -1073,7 +1076,7 @@ function RateLimitSection({
 
         {settings && currentValue > 0 && (
           <Typography sx={{ fontSize: 12, color: palette.text.disabled }}>
-            Currently limited to {currentValue.toLocaleString()} events/hour
+            Currently limited to {numberFormatter.format(currentValue)} events/hour
           </Typography>
         )}
         {settings && currentValue === 0 && (

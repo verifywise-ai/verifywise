@@ -368,7 +368,7 @@ export const updateShareLink = async (req: Request, res: Response) => {
     functionName: "updateShareLink",
     fileName: "shareLink.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -397,7 +397,7 @@ export const updateShareLink = async (req: Request, res: Response) => {
       functionName: "updateShareLink",
       fileName: "shareLink.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     // Check if user owns this share link
@@ -462,7 +462,7 @@ export const updateShareLink = async (req: Request, res: Response) => {
       functionName: "updateShareLink",
       fileName: "shareLink.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     logStructured(
       "successful",
@@ -780,7 +780,7 @@ export const getSharedDataByToken = async (req: Request, res: Response) => {
       functionName: "getSharedDataByToken",
       fileName: "shareLink.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     logProcessing({
@@ -788,7 +788,7 @@ export const getSharedDataByToken = async (req: Request, res: Response) => {
       functionName: "getSharedDataByToken",
       fileName: "shareLink.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     logProcessing({
@@ -798,7 +798,7 @@ export const getSharedDataByToken = async (req: Request, res: Response) => {
       functionName: "getSharedDataByToken",
       fileName: "shareLink.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     // If shareAllFields is false, filter fields shown
@@ -811,7 +811,7 @@ export const getSharedDataByToken = async (req: Request, res: Response) => {
         functionName: "getSharedDataByToken",
         fileName: "shareLink.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       filteredData = resourceData;
     } else {
@@ -821,7 +821,7 @@ export const getSharedDataByToken = async (req: Request, res: Response) => {
         functionName: "getSharedDataByToken",
         fileName: "shareLink.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       const getEssentialFields = (record: any, resourceType: string) => {
         // Resource-specific essential fields
@@ -888,7 +888,7 @@ export const getSharedDataByToken = async (req: Request, res: Response) => {
       functionName: "getSharedDataByToken",
       fileName: "shareLink.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     logProcessing({
@@ -900,7 +900,7 @@ export const getSharedDataByToken = async (req: Request, res: Response) => {
       functionName: "getSharedDataByToken",
       fileName: "shareLink.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     // Post-process: For models, consolidate provider_model and replace approver ID
@@ -955,7 +955,7 @@ export const getSharedDataByToken = async (req: Request, res: Response) => {
         functionName: "getSharedDataByToken",
         fileName: "shareLink.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
     }
 

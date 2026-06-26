@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { GetRequestParams, RequestParams } from "../../domain/interfaces/i.requestParams";
 import { apiServices } from "../../infrastructure/api/networkServices";
+import { getDeduped } from "../../infrastructure/api/inflightGet";
 
 /**
  * Creates a new user by sending a POST request to the specified route URL with the provided body.
@@ -105,7 +106,9 @@ export async function getAllEntities({
   params,
 }: RequestParams & { params?: Record<string, any> }): Promise<any> {
   try {
-    const response = await apiServices.get(routeUrl, { params });
+    // Deduped: list fetches (e.g. /projects) are requested by several dashboard
+    // consumers at mount. Concurrent identical GETs share one in-flight request.
+    const response = await getDeduped(routeUrl, { params });
     return response.data;
   } catch (error) {
     console.error("Error getting all users:", error);

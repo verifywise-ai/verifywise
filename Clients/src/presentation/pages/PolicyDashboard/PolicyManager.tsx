@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import { Box, Stack, Fade, Tooltip, IconButton } from "@mui/material";
 import {
   CirclePlus as AddCircleOutlineIcon,
@@ -20,6 +21,7 @@ import Alert from "../../components/Alert";
 import { AlertProps } from "../../types/alert.types";
 import { PolicyManagerModel } from "../../../domain/models/Common/policy/policyManager.model";
 import { PolicyManagerProps } from "../../types/interfaces/i.policy";
+import { usePolicies, policyQueryKeys } from "../../../application/hooks/usePolicies";
 import PolicyStatusCard from "./PolicyStatusCard";
 import { ExportMenu } from "../../components/Table/ExportMenu";
 import useUsers from "../../../application/hooks/useUsers";
@@ -68,26 +70,18 @@ const POLICY_TABLE_COLUMNS: ColumnConfig<PolicyColumnKey>[] = [
   { key: "actions", label: "Actions", defaultVisible: true, alwaysVisible: true },
 ];
 
-const PolicyManager: React.FC<PolicyManagerProps> = ({
-  policies: policyList,
-  tags: _tags,
-  fetchAll,
-  isLoading = false,
-}) => {
+const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [policies, setPolicies] = useState<PolicyManagerModel[]>([]);
+  const { data: policies = [], isLoading } = usePolicies();
   const [flashRowId, setFlashRowId] = useState<number | null>(null);
   const { userRoleName } = useAuth();
   const canRunBulkActions = !!userRoleName && ["Admin", "Editor"].includes(userRoleName);
 
   const [showLinkedObjectModal, setLinkedObjectsModalOpen] = useState(false);
   const [policyId, setSelectedPolicyId] = useState<number | null>(null);
-
-  useEffect(() => {
-    setPolicies(policyList);
-  }, [policyList]);
 
   // Folder sidebar state
   const [folderSidebarOpen, setFolderSidebarOpen] = useState(false);
@@ -159,7 +153,6 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({
         setFlashRowId(location.state.flashRowId);
         setTimeout(() => setFlashRowId(null), 3000);
       }
-      fetchAll();
       handleAlert({
         variant: "success",
         body: location.state.successMessage,
@@ -169,7 +162,7 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({
       // Clear state so it doesn't trigger again
       navigate(location.pathname, { replace: true, state: {} });
     }
-  }, [location.state, navigate, location.pathname, fetchAll]);
+  }, [location.state, navigate, location.pathname]);
 
   const handleOpen = useCallback(
     (id?: number) => {
@@ -198,7 +191,7 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({
   const handleDelete = async (id: number) => {
     try {
       await deletePolicy(id);
-      setPolicies((prev) => prev.filter((policy) => policy.id !== id));
+      queryClient.invalidateQueries({ queryKey: policyQueryKeys.lists() });
 
       // Show success alert using VerifyWise standard pattern
       handleAlert({
@@ -685,7 +678,6 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({
                     visibleColumns={visibleColumns}
                     canRunBulkActions={canRunBulkActions}
                     onBulkActionSuccess={(action, count) => {
-                      fetchAll();
                       handleAlert({
                         variant: "success",
                         title:

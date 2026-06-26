@@ -40,7 +40,7 @@ ENV VITE_APP_VERSION=$VITE_APP_VERSION
 RUN npm run build
 
 # Step 9: Use a lightweight web server for production
-FROM nginx:1.31.1-alpine
+FROM nginx:1.31.2-alpine
 
 # Step 10: Copy the build output to NGINX's default public directory
 COPY --from=build /app/src/dist /usr/share/nginx/html

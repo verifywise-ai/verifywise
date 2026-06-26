@@ -44,6 +44,7 @@ import {
   agentPagination,
 } from "./style";
 import { AgentTableProps } from "src/domain/interfaces/i.agentDiscovery";
+import { displayFormattedDate } from "../../tools/isoDateToString";
 
 const cellStyle = singleTheme.tableStyles.primary.body.cell;
 
@@ -166,11 +167,7 @@ const AgentTable: React.FC<AgentTableProps> = ({
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "—";
-    return new Date(dateStr).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+    return displayFormattedDate(dateStr);
   };
 
   const getRange = useMemo(() => {

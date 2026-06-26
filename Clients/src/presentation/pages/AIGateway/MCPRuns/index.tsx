@@ -1,12 +1,14 @@
 import { useEffect, useState, useCallback } from "react";
 import { Box, Stack, Typography } from "@mui/material";
-import { Activity } from "lucide-react";
+import { Activity, AlertTriangle, RotateCcw } from "lucide-react";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
 import MCPTable, { MCPTableColumn } from "../MCPTable";
 import { EmptyState } from "../../../components/EmptyState";
 import RunDetailDrawer from "./RunDetailDrawer";
 import palette from "../../../themes/palette";
+import { CustomizableButton } from "../../../components/button/customizable-button";
+import CustomizableSkeleton from "../../../components/Skeletons";
 
 interface RunRow {
   agent_run_id: string;
@@ -34,15 +36,19 @@ const COLUMNS: MCPTableColumn[] = [
 export default function MCPRuns() {
   const [rows, setRows] = useState<RunRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const res = await apiServices.get<Record<string, any>>(
         `/ai-gateway/mcp/runs?limit=${RUNS_LIMIT}&offset=0`,
       );
       setRows(res?.data?.data ?? []);
+    } catch {
+      setLoadError("Failed to load agent runs. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -59,7 +65,18 @@ export default function MCPRuns() {
       helpArticlePath="ai-gateway/mcp-runs"
     >
       <Box sx={{ px: 3, pt: 2 }}>
-        {!loading && rows.length === 0 ? (
+        {loading ? (
+          <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
+        ) : loadError ? (
+          <EmptyState icon={AlertTriangle} message={loadError}>
+            <CustomizableButton
+              variant="outlined"
+              text="Retry"
+              icon={<RotateCcw size={16} />}
+              onClick={load}
+            />
+          </EmptyState>
+        ) : rows.length === 0 ? (
           <EmptyState icon={Activity} message="No agent runs yet" showBorder>
             <Typography variant="body2">
               Runs appear when an agent sends the same run id (header <code>x-vw-agent-run-id</code>{" "}

@@ -21,7 +21,7 @@ interface EmptyStateProps {
   showHalo?: boolean;
   /**
    * Whether to show border around the empty state container
-   * @default false for table cells, true for standalone containers
+   * @default true — dashed border is the standard empty state look
    */
   showBorder?: boolean;
   /**
@@ -42,7 +42,7 @@ interface EmptyStateProps {
 export const EmptyState: FC<EmptyStateProps> = ({
   message = "There is currently no data in this table.",
   imageAlt = "No data available",
-  showBorder = false,
+  showBorder = true,
   icon = Inbox,
   children,
 }) => {

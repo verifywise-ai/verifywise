@@ -7,24 +7,26 @@ jest.mock("../../utils/jwt.utils", () => ({
 jest.mock("../../utils/invitation.utils", () => ({
   checkPendingInvitationQuery: jest.fn(),
 }));
-jest.mock("../auth.middleware", () => ({
-  roleMap: new Map([
-    [1, "Admin"],
-    [2, "Reviewer"],
-    [3, "Editor"],
-    [4, "Auditor"],
-    [5, "SuperAdmin"],
-  ]),
+// register.middleware now sources its role membership check from the cached
+// roles table via ../utils/roleMap. The real implementation hits the DB, so
+// stub the lookups here — otherwise CI (no DB) throws inside the try/catch
+// and every downstream test sees a 500 instead of the expected status.
+jest.mock("../../utils/roleMap", () => ({
+  hasRoleId: jest.fn(),
+  getRoleNameById: jest.fn(),
+  invalidateRoleMapCache: jest.fn(),
 }));
 
 import registerJWT from "../register.middleware";
 import { getTokenPayload } from "../../utils/jwt.utils";
 import { checkPendingInvitationQuery } from "../../utils/invitation.utils";
+import { hasRoleId } from "../../utils/roleMap";
 
 const mockGetTokenPayload = getTokenPayload as jest.MockedFunction<typeof getTokenPayload>;
 const mockCheckPendingInvitation = checkPendingInvitationQuery as jest.MockedFunction<
   typeof checkPendingInvitationQuery
 >;
+const mockHasRoleId = hasRoleId as jest.MockedFunction<typeof hasRoleId>;
 
 function createMockReq(token?: string, body?: Record<string, unknown>): Partial<Request> {
   return {
@@ -47,6 +49,9 @@ describe("registerJWT middleware", () => {
   beforeEach(() => {
     next = jest.fn();
     jest.clearAllMocks();
+    // Default to "role exists" so each test only exercises the branch it
+    // names. Tests that need an unknown role can override per-case.
+    mockHasRoleId.mockResolvedValue(true);
   });
 
   it("should return 400 when no token is provided", async () => {

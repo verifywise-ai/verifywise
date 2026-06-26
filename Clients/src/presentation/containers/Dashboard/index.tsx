@@ -8,6 +8,7 @@ import { EvalsSidebarProvider } from "../../../application/contexts/EvalsSidebar
 import { AIDetectionSidebarProvider } from "../../../application/contexts/AIDetectionSidebar.context";
 import { ShadowAISidebarProvider } from "../../../application/contexts/ShadowAISidebar.context";
 import { AIGatewaySidebarProvider } from "../../../application/contexts/AIGatewaySidebar.context";
+import { AITrustIndexSidebarProvider } from "../../../application/contexts/AITrustIndexSidebar.context";
 import DemoAppBanner from "../../components/DemoBanner/DemoAppBanner";
 import { getAllProjects } from "../../../application/repository/project.repository";
 import {
@@ -145,7 +146,7 @@ const Dashboard: FC<DashboardProps> = ({ reloadTrigger }) => {
         // Refresh dashboard and projects data
         await Promise.all([
           fetchDashboard(),
-          getAllProjects().then((projectsResponse) => {
+          getAllProjects({ forceFresh: true }).then((projectsResponse) => {
             if (projectsResponse?.data) {
               setProjects(projectsResponse.data);
               setDashboardValues((prevValues: any) => ({
@@ -233,7 +234,7 @@ const Dashboard: FC<DashboardProps> = ({ reloadTrigger }) => {
         // Refresh dashboard and projects data
         await Promise.all([
           fetchDashboard(),
-          getAllProjects().then((projectsResponse) => {
+          getAllProjects({ forceFresh: true }).then((projectsResponse) => {
             if (projectsResponse?.data) {
               setProjects(projectsResponse.data);
               setDashboardValues((prevValues: any) => ({
@@ -298,104 +299,106 @@ const Dashboard: FC<DashboardProps> = ({ reloadTrigger }) => {
       <AIDetectionSidebarProvider>
         <ShadowAISidebarProvider>
           <AIGatewaySidebarProvider>
-            <Stack
-              maxWidth="100%"
-              className="home-layout"
-              flexDirection="row"
-              gap={0}
-              sx={{ backgroundColor: "#FCFCFD", height: "100vh", overflow: "hidden" }}
-            >
-              <AppSwitcher
-                activeModule={activeModule}
-                onModuleChange={setActiveModule}
-                isSuperAdmin={isSuperAdmin}
-              />
-              <ContextSidebar
-                activeModule={activeModule}
-                onOpenCreateDemoData={() => setOpenDemoDataModal(true)}
-                onOpenDeleteDemoData={() => setOpenDeleteDemoDataModal(true)}
-                onDismissDemoDataButton={() => {
-                  localStorage.setItem("hideDemoDataButton", "true");
-                  setShowDemoDataButton(false);
-                }}
-                showDemoDataButton={showDemoDataButton}
-                hasDemoData={hasDemoData}
-                isAdmin={isAdmin}
-              />
+            <AITrustIndexSidebarProvider>
               <Stack
-                className="main-content-area"
-                sx={{
-                  flex: 1,
-                  minWidth: 0,
-                  height: "100vh",
-                  display: "flex",
-                  flexDirection: "column",
-                  overflow: "hidden",
-                  position: "relative",
-                }}
+                maxWidth="100%"
+                className="home-layout"
+                flexDirection="row"
+                gap={0}
+                sx={{ backgroundColor: "#FCFCFD", height: "100vh", overflow: "hidden" }}
               >
-                <ReadOnlyBanner />
-                <>
-                  <DemoAppBanner />
-                  {alertState && (
-                    <Alert
-                      variant={alertState.variant}
-                      title={alertState.title}
-                      body={alertState.body}
-                      isToast={true}
-                      onClick={() => setAlertState(undefined)}
-                    />
-                  )}
-                  {showToastNotification && <CustomizableToast title={toastMessage} />}
-                  <Box
-                    className="scrollable-content"
-                    sx={{
-                      flex: 1,
-                      minHeight: 0,
-                      overflowY: "auto",
-                      overflowX: "hidden",
-                      padding: "24px 8px 24px 24px",
-                    }}
-                  >
-                    <Outlet />
-                  </Box>
-                </>
+                <AppSwitcher
+                  activeModule={activeModule}
+                  onModuleChange={setActiveModule}
+                  isSuperAdmin={isSuperAdmin}
+                />
+                <ContextSidebar
+                  activeModule={activeModule}
+                  onOpenCreateDemoData={() => setOpenDemoDataModal(true)}
+                  onOpenDeleteDemoData={() => setOpenDeleteDemoDataModal(true)}
+                  onDismissDemoDataButton={() => {
+                    localStorage.setItem("hideDemoDataButton", "true");
+                    setShowDemoDataButton(false);
+                  }}
+                  showDemoDataButton={showDemoDataButton}
+                  hasDemoData={hasDemoData}
+                  isAdmin={isAdmin}
+                />
+                <Stack
+                  className="main-content-area"
+                  sx={{
+                    flex: 1,
+                    minWidth: 0,
+                    height: "100vh",
+                    display: "flex",
+                    flexDirection: "column",
+                    overflow: "hidden",
+                    position: "relative",
+                  }}
+                >
+                  <ReadOnlyBanner />
+                  <>
+                    <DemoAppBanner />
+                    {alertState && (
+                      <Alert
+                        variant={alertState.variant}
+                        title={alertState.title}
+                        body={alertState.body}
+                        isToast={true}
+                        onClick={() => setAlertState(undefined)}
+                      />
+                    )}
+                    {showToastNotification && <CustomizableToast title={toastMessage} />}
+                    <Box
+                      className="scrollable-content"
+                      sx={{
+                        flex: 1,
+                        minHeight: 0,
+                        overflowY: "auto",
+                        overflowX: "hidden",
+                        padding: "24px 8px 24px 24px",
+                      }}
+                    >
+                      <Outlet />
+                    </Box>
+                  </>
+                </Stack>
+
+                {/* Demo Data Modals */}
+                <StandardModal
+                  isOpen={openDemoDataModal}
+                  onClose={() => setOpenDemoDataModal(false)}
+                  title="Create demo data"
+                  description="Generate sample data to explore VerifyWise features"
+                  submitButtonText="Create demo data"
+                  onSubmit={handleCreateDemoData}
+                  isSubmitting={showToastNotification}
+                  maxWidth="480px"
+                >
+                  <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                    This will generate sample projects, risks, vendors, and policies to help you
+                    explore VerifyWise. You can remove this demo data at any time.
+                  </Typography>
+                </StandardModal>
+
+                <StandardModal
+                  isOpen={openDeleteDemoDataModal}
+                  onClose={() => setOpenDeleteDemoDataModal(false)}
+                  title="Delete demo data"
+                  description="Remove all demo data from your workspace"
+                  submitButtonText="Delete demo data"
+                  onSubmit={handleDeleteDemoData}
+                  isSubmitting={showToastNotification}
+                  submitButtonColor={status.error.text}
+                  maxWidth="480px"
+                >
+                  <Typography variant="body2" sx={{ color: "text.secondary" }}>
+                    This will remove all sample projects, risks, vendors, and policies that were
+                    generated as demo data. Your real data will remain untouched.
+                  </Typography>
+                </StandardModal>
               </Stack>
-
-              {/* Demo Data Modals */}
-              <StandardModal
-                isOpen={openDemoDataModal}
-                onClose={() => setOpenDemoDataModal(false)}
-                title="Create demo data"
-                description="Generate sample data to explore VerifyWise features"
-                submitButtonText="Create demo data"
-                onSubmit={handleCreateDemoData}
-                isSubmitting={showToastNotification}
-                maxWidth="480px"
-              >
-                <Typography variant="body2" sx={{ color: "text.secondary" }}>
-                  This will generate sample projects, risks, vendors, and policies to help you
-                  explore VerifyWise. You can remove this demo data at any time.
-                </Typography>
-              </StandardModal>
-
-              <StandardModal
-                isOpen={openDeleteDemoDataModal}
-                onClose={() => setOpenDeleteDemoDataModal(false)}
-                title="Delete demo data"
-                description="Remove all demo data from your workspace"
-                submitButtonText="Delete demo data"
-                onSubmit={handleDeleteDemoData}
-                isSubmitting={showToastNotification}
-                submitButtonColor={status.error.text}
-                maxWidth="480px"
-              >
-                <Typography variant="body2" sx={{ color: "text.secondary" }}>
-                  This will remove all sample projects, risks, vendors, and policies that were
-                  generated as demo data. Your real data will remain untouched.
-                </Typography>
-              </StandardModal>
-            </Stack>
+            </AITrustIndexSidebarProvider>
           </AIGatewaySidebarProvider>
         </ShadowAISidebarProvider>
       </AIDetectionSidebarProvider>

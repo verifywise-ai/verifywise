@@ -23,6 +23,7 @@ import {
   FileMetadata,
 } from "../../../application/repository/file.repository";
 import { FileData } from "../../../domain/types/File";
+import { displayFormattedDate } from "../../tools/isoDateToString";
 
 interface FilePickerModalProps {
   open: boolean;
@@ -52,12 +53,7 @@ const formatFileSize = (bytes?: number): string => {
 
 const formatDate = (dateStr?: string): string => {
   if (!dateStr) return "";
-  const date = new Date(dateStr);
-  return date.toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+  return displayFormattedDate(dateStr);
 };
 
 export const FilePickerModal: FC<FilePickerModalProps> = ({

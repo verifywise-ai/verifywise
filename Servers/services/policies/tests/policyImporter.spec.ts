@@ -10,25 +10,20 @@ jest.mock("mammoth", () => ({
   convertToHtml: jest.fn(),
 }));
 
-jest.mock("sanitize-html", () => {
-  const fn = jest.fn((html: string, _options: any) => html);
-  (fn as any).defaults = {
-    allowedTags: ["p", "div", "span", "a", "b", "i", "strong", "em"],
-    allowedAttributes: {
-      a: ["href"],
-    },
-  };
-  return fn;
-});
+// Mock the shared sanitizer module to assert it's called with the converted
+// HTML. Real sanitize-html behavior is covered by utils/__tests__/sanitizeUserHtml.test.ts.
+jest.mock("../../../utils/sanitizeUserHtml", () => ({
+  sanitizeUserHtml: jest.fn((html: unknown) => html),
+}));
 
 import mammoth from "mammoth";
-import sanitizeHtml from "sanitize-html";
+import { sanitizeUserHtml } from "../../../utils/sanitizeUserHtml";
 import { convertDocxToHtml, DOCX_MAX_FILE_SIZE_BYTES, DOCX_ALLOWED_MIMES } from "../policyImporter";
 
 const mockConvertToHtml = mammoth.convertToHtml as jest.MockedFunction<
   typeof mammoth.convertToHtml
 >;
-const mockSanitizeHtml = sanitizeHtml as jest.MockedFunction<typeof sanitizeHtml>;
+const mockSanitizeUserHtml = sanitizeUserHtml as jest.MockedFunction<typeof sanitizeUserHtml>;
 
 describe("policyImporter", () => {
   beforeEach(() => {
@@ -102,7 +97,7 @@ describe("policyImporter", () => {
       expect(result.warnings).toEqual(["Unrecognized element"]);
     });
 
-    it("should call sanitizeHtml with allowed tags and schemes", async () => {
+    it("should pass converted HTML through the shared sanitizeUserHtml utility", async () => {
       mockConvertToHtml.mockResolvedValue({
         value: "<p>safe</p>",
         messages: [],
@@ -110,13 +105,7 @@ describe("policyImporter", () => {
 
       await convertDocxToHtml(Buffer.from("fake"));
 
-      expect(mockSanitizeHtml).toHaveBeenCalledWith(
-        expect.any(String),
-        expect.objectContaining({
-          allowedTags: expect.arrayContaining(["h1", "h2", "h3", "img"]),
-          allowedSchemes: ["http", "https", "blob"],
-        }),
-      );
+      expect(mockSanitizeUserHtml).toHaveBeenCalledWith(expect.stringContaining("<p>safe</p>"));
     });
 
     it("should pass the buffer to mammoth correctly", async () => {

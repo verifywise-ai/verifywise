@@ -13,7 +13,7 @@ import {
   hashApiToken,
   revokeApiTokenQuery,
 } from "../utils/tokens.utils";
-import { roleMap } from "../middleware/auth.middleware";
+import { getRoleNameById } from "../utils/roleMap";
 
 import { translateError } from "../utils/i18n.utils";
 export const createApiToken = async (req: Request, res: Response) => {
@@ -45,15 +45,15 @@ export const createApiToken = async (req: Request, res: Response) => {
     // The token inherits the creator's actual role (least privilege), not a
     // hardcoded Admin. The auth middleware re-checks this role against the
     // user's current role on every request, so the token cannot outlive a
-    // demotion.
-    const roleName = roleMap.get(user.role_id!);
+    // demotion. Role name is sourced from the cached live role map so newly
+    // added roles work without a code change.
+    const roleName = await getRoleNameById(user.role_id!);
     if (!roleName) {
       throw new ValidationException("Unable to resolve the creating user's role.");
     }
 
     // Generate API token with user-defined expiry.
-    // Note: tenantId is no longer included in the token payload.
-    // The auth middleware reconstructs tenantHash from organizationId.
+    // tenantHash is reconstructed from organizationId by the auth middleware.
     const apiToken = generateApiToken(
       {
         id: user.id!,

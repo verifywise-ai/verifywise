@@ -73,8 +73,6 @@ export interface PluginRouteContext {
   // Authentication
   organizationId: number;
   userId: number;
-  /** @deprecated Use organizationId instead. Kept for backward compatibility during migration. */
-  tenantId?: string;
 
   // Request details
   method: string; // HTTP method (GET, POST, PUT, PATCH, DELETE)
@@ -357,7 +355,6 @@ export class PluginService {
       const installations = await getInstalledPlugins(organizationId);
       const results: any[] = [];
       // Pass organizationId for shared-schema queries
-      // Note: tenantId is deprecated but kept for backward compatibility with existing plugins
 
       for (const installation of installations) {
         if (installation.status !== "installed") continue;

@@ -104,7 +104,7 @@ export interface ControllerResult<T> {
  * // Basic usage with static success message
  * export const getVendorById = controllerWrapper(
  *   async (req) => {
- *     const vendor = await getVendorByIdQuery(req.params.id, req.tenantId!);
+ *     const vendor = await getVendorByIdQuery(req.params.id, req.organizationId!);
  *     if (!vendor) {
  *       throw new NotFoundException("Vendor not found", "vendor", req.params.id);
  *     }
@@ -122,7 +122,7 @@ export interface ControllerResult<T> {
  * // Usage with dynamic success message
  * export const getAllVendors = controllerWrapper(
  *   async (req) => {
- *     const vendors = await getAllVendorsQuery(req.tenantId!);
+ *     const vendors = await getAllVendorsQuery(req.organizationId!);
  *     return { status: vendors?.length ? 200 : 204, data: vendors };
  *   },
  *   {
@@ -137,7 +137,7 @@ export interface ControllerResult<T> {
  * // Create operation with 201 status
  * export const createVendor = controllerWrapper(
  *   async (req) => {
- *     const vendor = await createVendorQuery(req.body, req.tenantId!);
+ *     const vendor = await createVendorQuery(req.body, req.organizationId!);
  *     return { status: 201, data: vendor };
  *   },
  *   {
@@ -168,7 +168,7 @@ export function controllerWrapper<T>(
       functionName,
       fileName,
       userId: req.userId!,
-      tenantId: req.tenantId!,
+      organizationId: req.organizationId!,
     });
 
     try {
@@ -186,7 +186,7 @@ export function controllerWrapper<T>(
         functionName,
         fileName,
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        organizationId: req.organizationId!,
       });
 
       return res.status(result.status).json(STATUS_CODE[result.status](result.data));
@@ -200,7 +200,7 @@ export function controllerWrapper<T>(
         fileName,
         error: err,
         userId: req.userId!,
-        tenantId: req.tenantId!,
+        organizationId: req.organizationId!,
       });
 
       // Handle custom exceptions with their defined status codes

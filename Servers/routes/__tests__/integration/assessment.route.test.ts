@@ -13,6 +13,15 @@ jest.mock("../../../controllers/assessment.ctrl", () => ({
   getAssessmentByProjectId: jest.fn((_req: any, res: any) =>
     res.status(200).json({ id: 1, projectId: 1 }),
   ),
+  createAssessment: jest.fn((_req: any, res: any) =>
+    res.status(201).json({ id: 1, name: "Assessment A" }),
+  ),
+  updateAssessmentById: jest.fn((_req: any, res: any) =>
+    res.status(200).json({ id: 1, name: "Assessment A" }),
+  ),
+  deleteAssessmentById: jest.fn((_req: any, res: any) =>
+    res.status(200).json({ id: 1, name: "Assessment A" }),
+  ),
 }));
 
 jest.mock("../../../middleware/auth.middleware", () =>

@@ -24,27 +24,57 @@ import {
 
 import authenticateJWT from "../middleware/auth.middleware";
 import { validateId } from "../domain.layer/validations/id.valid";
+import {
+  validateAITrustHashParam,
+  validateAITrustHashWithIdParam,
+  validateCreateAITrustResource,
+  validateCreateAITrustSubprocessor,
+  validateUpdateAITrustOverview,
+  validateUpdateAITrustResource,
+  validateUpdateAITrustSubprocessor,
+} from "../middleware/validators/aiTrustCentre.validator";
 
 router.get("/overview", authenticateJWT, getAITrustCentreOverview);
 router.get("/resources", authenticateJWT, getAITrustCentreResources);
 router.get("/subprocessors", authenticateJWT, getAITrustCentreSubprocessors);
-router.get("/:hash", validateVisibility, getAITrustCentrePublicPage);
-router.get("/:hash/logo", validateVisibility, getCompanyLogo);
-router.get("/:hash/resources/:id", validateVisibility, getAITrustCentrePublicResource);
+router.get("/:hash", validateAITrustHashParam, validateVisibility, getAITrustCentrePublicPage);
+router.get("/:hash/logo", validateAITrustHashParam, validateVisibility, getCompanyLogo);
+router.get(
+  "/:hash/resources/:id",
+  validateAITrustHashWithIdParam,
+  validateVisibility,
+  getAITrustCentrePublicResource,
+);
 
-router.post("/resources", authenticateJWT, upload.single("file"), createAITrustResource);
-router.post("/subprocessors", authenticateJWT, createAITrustSubprocessor);
+router.post(
+  "/resources",
+  authenticateJWT,
+  upload.single("file"),
+  validateCreateAITrustResource,
+  createAITrustResource,
+);
+router.post(
+  "/subprocessors",
+  authenticateJWT,
+  validateCreateAITrustSubprocessor,
+  createAITrustSubprocessor,
+);
 router.post("/logo", authenticateJWT, upload.single("logo"), uploadCompanyLogo);
 
-router.put("/overview", authenticateJWT, updateAITrustOverview);
+router.put("/overview", authenticateJWT, validateUpdateAITrustOverview, updateAITrustOverview);
 router.put(
   "/resources/:id",
   authenticateJWT,
-  validateId("id"),
   upload.single("file"),
+  validateUpdateAITrustResource,
   updateAITrustResource,
 );
-router.put("/subprocessors/:id", authenticateJWT, validateId("id"), updateAITrustSubprocessor);
+router.put(
+  "/subprocessors/:id",
+  authenticateJWT,
+  validateUpdateAITrustSubprocessor,
+  updateAITrustSubprocessor,
+);
 
 router.delete("/logo", authenticateJWT, deleteCompanyLogo);
 router.delete("/resources/:id", authenticateJWT, validateId("id"), deleteAITrustResource);

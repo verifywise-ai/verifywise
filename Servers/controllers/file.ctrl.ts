@@ -34,15 +34,15 @@ export async function getFileContentById(req: Request, res: Response): Promise<a
 
   // Validate fileId is a valid number
   if (isNaN(fileId)) {
-    return res.status(400).json({ message: req.t!("Invalid file ID") });
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid file ID")));
   }
 
   // Validate authentication - these should be set by authenticateJWT middleware
   if (!req.userId) {
-    return res.status(401).json({ message: req.t!("Unauthenticated") });
+    return res.status(401).json(STATUS_CODE[401](req.t!("Unauthenticated")));
   }
   if (!req.organizationId) {
-    return res.status(400).json({ message: req.t!("Missing tenant") });
+    return res.status(400).json(STATUS_CODE[400](req.t!("Missing tenant")));
   }
 
   const userId = req.userId;
@@ -53,7 +53,7 @@ export async function getFileContentById(req: Request, res: Response): Promise<a
     functionName: "getFileContentById",
     fileName: "file.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -68,9 +68,9 @@ export async function getFileContentById(req: Request, res: Response): Promise<a
         fileName: "file.ctrl.ts",
         error: new Error(`User ${userId} with role '${role}' denied access to file ${fileId}`),
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
-      return res.status(403).json({ message: req.t!("Access denied") });
+      return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
     }
 
     const file = await getFileById(fileId, req.organizationId!);
@@ -81,7 +81,7 @@ export async function getFileContentById(req: Request, res: Response): Promise<a
         functionName: "getFileContentById",
         fileName: "file.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
 
       res.setHeader("Content-Type", file.type);
@@ -95,7 +95,7 @@ export async function getFileContentById(req: Request, res: Response): Promise<a
       functionName: "getFileContentById",
       fileName: "file.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(404).json(STATUS_CODE[404]({}));
@@ -107,7 +107,7 @@ export async function getFileContentById(req: Request, res: Response): Promise<a
       fileName: "file.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
@@ -122,7 +122,7 @@ export async function getFileMetaByProjectId(req: Request, res: Response): Promi
     functionName: "getFileMetaByProjectId",
     fileName: "file.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -133,7 +133,7 @@ export async function getFileMetaByProjectId(req: Request, res: Response): Promi
       functionName: "getFileMetaByProjectId",
       fileName: "file.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     if (files && files.length > 0) {
@@ -148,7 +148,7 @@ export async function getFileMetaByProjectId(req: Request, res: Response): Promi
       fileName: "file.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
@@ -171,7 +171,7 @@ export const getUserFilesMetaData = async (req: Request, res: Response) => {
     functionName: "getUserFilesMetaData",
     fileName: "file.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -193,7 +193,7 @@ export const getUserFilesMetaData = async (req: Request, res: Response) => {
       functionName: "getUserFilesMetaData",
       fileName: "file.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(200).send(files);
@@ -205,10 +205,10 @@ export const getUserFilesMetaData = async (req: Request, res: Response) => {
       fileName: "file.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
-    return res.status(500).json({ error: req.t!("Internal server error") });
+    return res.status(500).json(STATUS_CODE[500](req.t!("Internal server error")));
   }
 };
 
@@ -220,7 +220,7 @@ export async function postFileContent(req: RequestWithFile, res: Response): Prom
     functionName: "postFileContent",
     fileName: "file.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -274,7 +274,7 @@ export async function postFileContent(req: RequestWithFile, res: Response): Prom
       functionName: "postFileContent",
       fileName: "file.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(201).json(STATUS_CODE[201](question.evidence_files));
@@ -288,7 +288,7 @@ export async function postFileContent(req: RequestWithFile, res: Response): Prom
       fileName: "file.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
@@ -307,16 +307,20 @@ export async function attachFileToEntity(req: Request, res: Response): Promise<a
 
   // Validate required fields
   if (!file_id || !framework_type || !entity_type || !entity_id) {
-    return res.status(400).json({
-      message: req.t!("Missing required fields: file_id, framework_type, entity_type, entity_id"),
-    });
+    return res
+      .status(400)
+      .json(
+        STATUS_CODE[400](
+          req.t!("Missing required fields: file_id, framework_type, entity_type, entity_id"),
+        ),
+      );
   }
 
   if (!req.userId) {
-    return res.status(401).json({ message: req.t!("Unauthenticated") });
+    return res.status(401).json(STATUS_CODE[401](req.t!("Unauthenticated")));
   }
   if (!req.organizationId) {
-    return res.status(400).json({ message: req.t!("Missing tenant") });
+    return res.status(400).json(STATUS_CODE[400](req.t!("Missing tenant")));
   }
 
   logProcessing({
@@ -324,7 +328,7 @@ export async function attachFileToEntity(req: Request, res: Response): Promise<a
     functionName: "attachFileToEntity",
     fileName: "file.ctrl.ts",
     userId: req.userId,
-    tenantId: req.organizationId,
+    organizationId: req.organizationId,
   });
 
   try {
@@ -347,7 +351,7 @@ export async function attachFileToEntity(req: Request, res: Response): Promise<a
       functionName: "attachFileToEntity",
       fileName: "file.ctrl.ts",
       userId: req.userId,
-      tenantId: req.organizationId,
+      organizationId: req.organizationId,
     });
 
     if (link) {
@@ -364,7 +368,7 @@ export async function attachFileToEntity(req: Request, res: Response): Promise<a
       fileName: "file.ctrl.ts",
       error: error as Error,
       userId: req.userId,
-      tenantId: req.organizationId,
+      organizationId: req.organizationId,
     });
 
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
@@ -382,16 +386,20 @@ export async function detachFileFromEntity(req: Request, res: Response): Promise
 
   // Validate required fields
   if (!file_id || !framework_type || !entity_type || !entity_id) {
-    return res.status(400).json({
-      message: req.t!("Missing required fields: file_id, framework_type, entity_type, entity_id"),
-    });
+    return res
+      .status(400)
+      .json(
+        STATUS_CODE[400](
+          req.t!("Missing required fields: file_id, framework_type, entity_type, entity_id"),
+        ),
+      );
   }
 
   if (!req.userId) {
-    return res.status(401).json({ message: req.t!("Unauthenticated") });
+    return res.status(401).json(STATUS_CODE[401](req.t!("Unauthenticated")));
   }
   if (!req.organizationId) {
-    return res.status(400).json({ message: req.t!("Missing tenant") });
+    return res.status(400).json(STATUS_CODE[400](req.t!("Missing tenant")));
   }
 
   logProcessing({
@@ -399,7 +407,7 @@ export async function detachFileFromEntity(req: Request, res: Response): Promise
     functionName: "detachFileFromEntity",
     fileName: "file.ctrl.ts",
     userId: req.userId,
-    tenantId: req.organizationId,
+    organizationId: req.organizationId,
   });
 
   try {
@@ -417,13 +425,13 @@ export async function detachFileFromEntity(req: Request, res: Response): Promise
       functionName: "detachFileFromEntity",
       fileName: "file.ctrl.ts",
       userId: req.userId,
-      tenantId: req.organizationId,
+      organizationId: req.organizationId,
     });
 
     if (deleted) {
       return res.status(200).json({ message: req.t!("File detached successfully") });
     } else {
-      return res.status(404).json({ message: req.t!("File link not found") });
+      return res.status(404).json(STATUS_CODE[404](req.t!("File link not found")));
     }
   } catch (error) {
     await logFailure({
@@ -433,7 +441,7 @@ export async function detachFileFromEntity(req: Request, res: Response): Promise
       fileName: "file.ctrl.ts",
       error: error as Error,
       userId: req.userId,
-      tenantId: req.organizationId,
+      organizationId: req.organizationId,
     });
 
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
@@ -451,21 +459,21 @@ export async function attachFilesToEntity(req: Request, res: Response): Promise<
 
   // Validate required fields
   if (!file_ids || !Array.isArray(file_ids) || file_ids.length === 0) {
-    return res.status(400).json({
-      message: req.t!("Missing or invalid file_ids array"),
-    });
+    return res.status(400).json(STATUS_CODE[400](req.t!("Missing or invalid file_ids array")));
   }
   if (!framework_type || !entity_type || !entity_id) {
-    return res.status(400).json({
-      message: req.t!("Missing required fields: framework_type, entity_type, entity_id"),
-    });
+    return res
+      .status(400)
+      .json(
+        STATUS_CODE[400](req.t!("Missing required fields: framework_type, entity_type, entity_id")),
+      );
   }
 
   if (!req.userId) {
-    return res.status(401).json({ message: req.t!("Unauthenticated") });
+    return res.status(401).json(STATUS_CODE[401](req.t!("Unauthenticated")));
   }
   if (!req.organizationId) {
-    return res.status(400).json({ message: req.t!("Missing tenant") });
+    return res.status(400).json(STATUS_CODE[400](req.t!("Missing tenant")));
   }
 
   logProcessing({
@@ -473,7 +481,7 @@ export async function attachFilesToEntity(req: Request, res: Response): Promise<
     functionName: "attachFilesToEntity",
     fileName: "file.ctrl.ts",
     userId: req.userId,
-    tenantId: req.organizationId,
+    organizationId: req.organizationId,
   });
 
   try {
@@ -514,7 +522,7 @@ export async function attachFilesToEntity(req: Request, res: Response): Promise<
       functionName: "attachFilesToEntity",
       fileName: "file.ctrl.ts",
       userId: req.userId,
-      tenantId: req.organizationId,
+      organizationId: req.organizationId,
     });
 
     return res.status(200).json({
@@ -529,7 +537,7 @@ export async function attachFilesToEntity(req: Request, res: Response): Promise<
       fileName: "file.ctrl.ts",
       error: error as Error,
       userId: req.userId,
-      tenantId: req.organizationId,
+      organizationId: req.organizationId,
     });
 
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
@@ -546,16 +554,18 @@ export async function getEntityFiles(req: Request, res: Response): Promise<any> 
 
   // Validate required params
   if (!framework_type || !entity_type || !entity_id) {
-    return res.status(400).json({
-      message: req.t!("Missing required params: framework_type, entity_type, entity_id"),
-    });
+    return res
+      .status(400)
+      .json(
+        STATUS_CODE[400](req.t!("Missing required params: framework_type, entity_type, entity_id")),
+      );
   }
 
   if (!req.userId) {
-    return res.status(401).json({ message: req.t!("Unauthenticated") });
+    return res.status(401).json(STATUS_CODE[401](req.t!("Unauthenticated")));
   }
   if (!req.organizationId) {
-    return res.status(400).json({ message: req.t!("Missing tenant") });
+    return res.status(400).json(STATUS_CODE[400](req.t!("Missing tenant")));
   }
 
   logProcessing({
@@ -563,28 +573,51 @@ export async function getEntityFiles(req: Request, res: Response): Promise<any> 
     functionName: "getEntityFiles",
     fileName: "file.ctrl.ts",
     userId: req.userId,
-    tenantId: req.organizationId,
+    organizationId: req.organizationId,
   });
+
+  // Pagination — page defaults to 1, pageSize defaults to 50 (entity evidence
+  // lists are typically small; default kept generous so a single fetch usually
+  // returns everything without needing Load More).
+  const rawPage = req.query.page
+    ? Number(Array.isArray(req.query.page) ? req.query.page[0] : req.query.page)
+    : 1;
+  const rawPageSize = req.query.pageSize
+    ? Number(Array.isArray(req.query.pageSize) ? req.query.pageSize[0] : req.query.pageSize)
+    : 50;
+  const page = Number.isSafeInteger(rawPage) && rawPage > 0 ? rawPage : 1;
+  const pageSize =
+    Number.isSafeInteger(rawPageSize) && rawPageSize > 0 && rawPageSize <= 200 ? rawPageSize : 50;
+  const offset = (page - 1) * pageSize;
 
   try {
     const entityIdStr = Array.isArray(entity_id) ? entity_id[0] : entity_id;
-    const files = await getFilesWithMetadataForEntity(
+    const { files, total } = await getFilesWithMetadataForEntity(
       framework_type as FrameworkType,
       entity_type as EntityType,
       parseInt(entityIdStr, 10),
       req.organizationId!,
+      { limit: pageSize, offset },
     );
 
     await logSuccess({
       eventType: "Read",
-      description: `Retrieved ${files.length} files for ${framework_type}/${entity_type}/${entity_id}`,
+      description: `Retrieved ${files.length} of ${total} files for ${framework_type}/${entity_type}/${entity_id}`,
       functionName: "getEntityFiles",
       fileName: "file.ctrl.ts",
       userId: req.userId,
-      tenantId: req.organizationId,
+      organizationId: req.organizationId,
     });
 
-    return res.status(200).json(files);
+    return res.status(200).json({
+      files,
+      pagination: {
+        total,
+        page,
+        pageSize,
+        totalPages: Math.max(1, Math.ceil(total / pageSize)),
+      },
+    });
   } catch (error) {
     await logFailure({
       eventType: "Read",
@@ -593,7 +626,7 @@ export async function getEntityFiles(req: Request, res: Response): Promise<any> 
       fileName: "file.ctrl.ts",
       error: error as Error,
       userId: req.userId,
-      tenantId: req.organizationId,
+      organizationId: req.organizationId,
     });
 
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));

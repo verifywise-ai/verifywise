@@ -5,7 +5,7 @@
   "scripts": {
     "test": "jest --testPathIgnorePatterns='/tests/integration/|/helpers/' --detectOpenHandles --forceExit",
     "test:watch": "jest --watch",
-    "test:integration": "NODE_ENV=test jest --config jest.config.js --globalSetup='<rootDir>/tests/integration/globalSetup.js' --testMatch='**/tests/integration/**/*.test.ts' --runInBand",
+    "test:integration": "jest --config jest.config.js --globalSetup=\"<rootDir>/tests/integration/globalSetup.js\" --testMatch=\"**/tests/integration/**/*.test.ts\" --runInBand",
     "build": "tsc",
     "start": "npm run migrate-db && node dist/index.js",
     "postbuild": "node scripts/copyFiles.js",
@@ -15,6 +15,9 @@
     "watch": "tsc-watch --noClear --onSuccess \"npm-run-all postbuild start\"",
     "reset-db": "ts-node scripts/resetDatabase.ts",
     "generate-dbml": "node scripts/generateDbml.js",
+    "generate:swagger": "ts-node scripts/generateSwagger.ts",
+    "generate:endpoints": "ts-node scripts/generateEndpointsTs.ts",
+    "check:api-drift": "ts-node scripts/checkApiDrift.ts",
     "migrate:shared-schema": "ts-node scripts/migrateToSharedSchema.ts",
     "i18n:extract": "node scripts/extract-i18n-keys.mjs",
     "i18n:translate": "node scripts/translate-with-glossary.mjs",

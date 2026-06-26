@@ -16,6 +16,7 @@ import {
   ScanSearch,
   EyeOff,
   Router,
+  Gauge,
   LucideIcon,
 } from "lucide-react";
 import {
@@ -40,6 +41,7 @@ const iconMap: Record<IconName, LucideIcon> = {
   ScanSearch,
   EyeOff,
   Router,
+  Gauge,
 };
 import { colors, typography, spacing, border } from "./styles/theme";
 import "./UserGuideLanding.css";

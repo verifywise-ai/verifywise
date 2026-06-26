@@ -43,6 +43,7 @@ import { FileMetadata } from "../../../application/repository/file.repository";
 import { User } from "../../../domain/types/User";
 
 import Alert from "../../../presentation/components/Alert";
+import { displayFormattedDate } from "../../tools/isoDateToString";
 
 // Types (Type Safety)
 type AlertVariant = "success" | "info" | "warning" | "error";
@@ -849,7 +850,7 @@ const Training: React.FC = () => {
       mapped_trainings: e.mapped_training_ids?.length
         ? e.mapped_training_ids.map((id) => trainingNameById.get(id) || `Training ${id}`).join(", ")
         : "-",
-      expiry_date: e.expiry_date ? new Date(e.expiry_date as any).toLocaleDateString() : "-",
+      expiry_date: e.expiry_date ? displayFormattedDate(e.expiry_date as any) : "-",
     }));
   }, [filteredEvidence, trainingNameById]);
 

@@ -188,6 +188,17 @@ const KNOWN_DEMO_STRINGS = new Set([
   "Usage example",
   "With retrieval context",
   "VerifyWise", // brand name, doesn't translate
+  // AI Trust Index — English content mirrored verbatim from the public website
+  // feed/rubric (verifywise.ai/ai-trust-index.json). This surface displays the
+  // upstream assessment in English by design; these labels are not translated.
+  "Training-data use",
+  "Data-subject rights",
+  "Retention and deletion",
+  "Third-party sharing",
+  "Sensitive data and children",
+  "Security and accountability",
+  "Grade scale",
+  "What the policy is silent or vague on",
 ]);
 
 function isNoise(s) {

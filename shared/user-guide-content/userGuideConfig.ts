@@ -12,7 +12,8 @@ export type IconName =
   | 'FlaskConical'
   | 'ScanSearch'
   | 'EyeOff'
-  | 'Router';
+  | 'Router'
+  | 'Gauge';
 
 export interface Article {
   id: string;
@@ -619,12 +620,16 @@ export const collections: Collection[] = [
         description: 'View, filter, and inspect every request that flows through the AI Gateway.',
         keywords: ['logs', 'request', 'response', 'audit', 'filter', 'search', 'status', 'error', 'auto-refresh', 'conversation'],
       },
-      {
-        id: 'prompts',
-        title: 'Prompts',
-        description: 'Create versioned prompt templates with variables, test them with streaming responses, and bind them to endpoints.',
-        keywords: ['prompt', 'template', 'variable', 'version', 'publish', 'draft', 'system prompt', 'message', 'test', 'editor'],
-      },
+      // Prompts is hidden in the app behind the SHOW_AI_GATEWAY_PROMPTS flag
+      // (Clients/src/application/config/featureFlags.ts). This shared package
+      // cannot import that flag, so the article stays unregistered here while
+      // the feature is hidden. Restore both together to bring it back.
+      // {
+      //   id: 'prompts',
+      //   title: 'Prompts',
+      //   description: 'Create versioned prompt templates with variables, test them with streaming responses, and bind them to endpoints.',
+      //   keywords: ['prompt', 'template', 'variable', 'version', 'publish', 'draft', 'system prompt', 'message', 'test', 'editor'],
+      // },
       {
         id: 'models',
         title: 'Models',
@@ -798,6 +803,39 @@ export const collections: Collection[] = [
         title: 'Inbound integrations',
         description: 'Create incidents from another system and submit public intake forms.',
         keywords: ['developer', 'api', 'incident', 'intake', 'form', 'public', 'submission', 'webhook', 'integration', 'monitoring'],
+      },
+    ],
+  },
+  {
+    id: 'ai-trust-index',
+    title: 'AI Trust Index',
+    description: 'Browse independent privacy and transparency scores for AI apps, track the tools your organisation uses, and receive weekly change digests when scores or policies update.',
+    icon: 'Gauge',
+    articleCount: 4,
+    articles: [
+      {
+        id: 'dashboard',
+        title: 'AI Trust Index overview',
+        description: 'How the index works, what scores and grades mean, and how to navigate the module.',
+        keywords: ['ai trust index', 'overview', 'score', 'grade', 'privacy', 'transparency', 'feed', 'weekly', 'digest', 'dealbreaker'],
+      },
+      {
+        id: 'browse',
+        title: 'Browsing and tracking apps',
+        description: 'Search and filter the full app catalog, view details, and track apps individually or in bulk.',
+        keywords: ['browse', 'search', 'filter', 'catalog', 'track', 'bulk', 'grade', 'score', 'category', 'app detail', 'highlights', 'dealbreaker', 'policy url'],
+      },
+      {
+        id: 'tracked',
+        title: 'Your tracked apps',
+        description: 'Manage your organisation\'s tracking list and understand "no longer in index" notices.',
+        keywords: ['tracked', 'watch list', 'no longer in index', 'removed', 'untrack', 'digest', 'material change', 'email', 'notification'],
+      },
+      {
+        id: 'settings',
+        title: 'Configuring email recipients',
+        description: 'Choose which users and email addresses receive the weekly AI Trust Index change digest.',
+        keywords: ['settings', 'recipients', 'email', 'digest', 'admin', 'configure', 'notify', 'weekly', 'user', 'external'],
       },
     ],
   },

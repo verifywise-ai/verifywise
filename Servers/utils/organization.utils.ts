@@ -140,14 +140,14 @@ export const createOrganizationQuery = async (
   const createdOrg = result[0];
 
   // Generate and set tenant_id based on the organization ID
-  const tenantId = generateTenantId(createdOrg.id!);
-  await sequelize.query(`UPDATE organizations SET tenant_id = :tenantId WHERE id = :id`, {
-    replacements: { tenantId, id: createdOrg.id },
+  const tenantHash = generateTenantId(createdOrg.id!);
+  await sequelize.query(`UPDATE organizations SET tenant_id = :tenantHash WHERE id = :id`, {
+    replacements: { tenantHash, id: createdOrg.id },
     transaction,
   });
 
   // Return organization with tenant_id
-  createdOrg.tenant_id = tenantId;
+  createdOrg.tenant_id = tenantHash;
   return createdOrg;
 };
 

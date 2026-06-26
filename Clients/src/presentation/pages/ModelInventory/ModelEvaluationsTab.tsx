@@ -9,6 +9,7 @@ import {
   type ModelEvaluation,
   type ModelEvaluationsResponse,
 } from "../../../application/repository/modelEvaluations.repository";
+import { displayFormattedDate } from "../../tools/isoDateToString";
 
 const statusColorMap: Record<string, string> = {
   completed: "#4caf50",
@@ -178,15 +179,7 @@ export default function ModelEvaluationsTab() {
                     )}
                   </Stack>
                 </td>
-                <td>
-                  {e.created_at
-                    ? new Date(e.created_at).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })
-                    : "—"}
-                </td>
+                <td>{e.created_at ? displayFormattedDate(e.created_at) : "—"}</td>
               </tr>
             ))}
           </tbody>

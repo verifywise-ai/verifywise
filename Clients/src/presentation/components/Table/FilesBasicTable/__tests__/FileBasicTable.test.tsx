@@ -582,15 +582,31 @@ describe("FileBasicTable", () => {
     expect(screen.getAllByTestId(/download-file-/).length).toBeGreaterThanOrEqual(1);
   });
 
-  it("redirects on row click for Assessment tracker group", () => {
-    const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
+  it("opens informational dropdown on source click for Assessment tracker group", async () => {
+    const user = userEvent.setup();
     const linkedFile = createFileModel({
       id: "20",
       fileName: "assessment-file.pdf",
       source: "Assessment tracker group",
       projectId: "10",
       parentId: 3,
+      subId: 5,
       metaId: 7,
+      entityLinks: [
+        {
+          framework_type: "eu_ai_act",
+          entity_type: "assessment",
+          entity_id: 7,
+          project_id: 10,
+          link_type: "evidence",
+          group_label: "Assessment tracker group",
+          parent_id: 3,
+          sub_id: 5,
+          meta_id: 7,
+          is_evidence: true,
+        },
+      ],
+      linkGroups: ["Assessment tracker group"],
     });
     renderWithProviders(
       <FileBasicTable
@@ -599,14 +615,15 @@ describe("FileBasicTable", () => {
         bodyData={[linkedFile]}
       />,
     );
-    const sourceCell = screen.getByText("Controls tracker group");
-    sourceCell.click();
-    expect(openSpy).toHaveBeenCalled();
-    openSpy.mockRestore();
+    await user.click(screen.getByText("Controls tracker group"));
+    // Dropdown surfaces the source IDs instead of navigating.
+    expect(
+      await screen.findByText("Topic ID: 3 · Subtopic ID: 5 · Question ID: 7"),
+    ).toBeInTheDocument();
   });
 
-  it("redirects on row click for Compliance tracker group", () => {
-    const openSpy = vi.spyOn(window, "open").mockImplementation(() => null);
+  it("opens informational dropdown on source click for Compliance tracker group", async () => {
+    const user = userEvent.setup();
     const linkedFile = createFileModel({
       id: "21",
       fileName: "compliance-file.pdf",
@@ -615,6 +632,21 @@ describe("FileBasicTable", () => {
       parentId: 3,
       metaId: 7,
       isEvidence: true,
+      entityLinks: [
+        {
+          framework_type: "eu_ai_act",
+          entity_type: "subcontrol",
+          entity_id: 7,
+          project_id: 10,
+          link_type: "evidence",
+          group_label: "Compliance tracker group",
+          parent_id: 3,
+          sub_id: null,
+          meta_id: 7,
+          is_evidence: true,
+        },
+      ],
+      linkGroups: ["Compliance tracker group"],
     });
     renderWithProviders(
       <FileBasicTable
@@ -623,10 +655,8 @@ describe("FileBasicTable", () => {
         bodyData={[linkedFile]}
       />,
     );
-    const sourceCell = screen.getByText("Requirements tracker group");
-    sourceCell.click();
-    expect(openSpy).toHaveBeenCalled();
-    openSpy.mockRestore();
+    await user.click(screen.getByText("Requirements tracker group"));
+    expect(await screen.findByText("Control ID: 3 · Subcontrol ID: 7")).toBeInTheDocument();
   });
 
   it("persists pagination row count to localStorage", () => {

@@ -60,13 +60,24 @@ describe("validateId", () => {
   });
 
   it("should return 400 with errors when validation fails", () => {
-    const errors = [{ msg: "id must be a positive integer" }];
-    mockValidationResult.mockReturnValue({ isEmpty: () => false, array: () => errors });
+    const rawErrors = [{ msg: "id must be a positive integer", path: "id", location: "params" }];
+    mockValidationResult.mockReturnValue({ isEmpty: () => false, array: () => rawErrors });
     const middleware = validateId();
     const handler = middleware[1] as any;
     handler(mockReq, mockRes, mockNext);
     expect(mockRes.status).toHaveBeenCalledWith(400);
-    expect(mockRes.json).toHaveBeenCalledWith({ errors });
+    expect(mockRes.json).toHaveBeenCalledWith({
+      message: "Bad Request",
+      data: {
+        errors: [
+          {
+            field: "id",
+            message: "id must be a positive integer",
+            location: "params",
+          },
+        ],
+      },
+    });
     expect(mockNext).not.toHaveBeenCalled();
   });
 });

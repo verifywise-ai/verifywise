@@ -16,7 +16,6 @@
  * Multi-Tenancy:
  * Uses shared-schema multi-tenancy with organization_id for tenant isolation.
  * All tenant data is in the public schema with organization_id column.
- * tenantId is set to organizationId string for backward compatibility during migration.
  *
  * Features:
  * - Bearer token extraction from Authorization header
@@ -34,27 +33,13 @@ import { getTokenPayload } from "../utils/jwt.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { doesUserBelongsToOrganizationQuery, getUserByIdQuery } from "../utils/user.utils";
 import { asyncLocalStorage } from "../utils/context/context";
+import { getTenantHash } from "../tools/getTenantHash";
+import { getRoleNameById } from "../utils/roleMap";
 import {
   getActiveApiTokenByHashQuery,
   hashApiToken,
   touchApiTokenLastUsedQuery,
 } from "../utils/tokens.utils";
-
-/**
- * Role ID to role name mapping for validation
- *
- * Maps database role IDs to their corresponding role names.
- * Used to validate that token role matches current user role in database.
- *
- * @constant
- */
-export const roleMap = new Map([
-  [1, "Admin"],
-  [2, "Reviewer"],
-  [3, "Editor"],
-  [4, "Auditor"],
-  [5, "SuperAdmin"],
-]);
 
 /**
  * Express middleware for JWT authentication and authorization
@@ -89,7 +74,7 @@ export const roleMap = new Map([
  * // Protect a route with authentication
  * app.get('/api/protected', authenticateJWT, (req, res) => {
  *   console.log(`User ${req.userId} from org ${req.organizationId}`);
- *   // req.userId, req.role, req.tenantId, req.organizationId available
+ *   // req.userId, req.role, req.organizationId, req.tenantHash available
  * });
  *
  * @example
@@ -111,7 +96,6 @@ const authenticateJWT = async (
     return asyncLocalStorage.run(
       {
         userId: req.userId ?? 1,
-        tenantId: req.organizationId ?? 1,
         organizationId: req.organizationId ?? 1,
       },
       () => {
@@ -176,9 +160,12 @@ const authenticateJWT = async (
       apiTokenRowId = tokenRow.id;
     }
 
-    // Validate role hasn't changed since token was issued
+    // Validate role hasn't changed since token was issued. The expected role
+    // name is sourced live from the roles table (cached, TTL 60s, invalidated
+    // on role CRUD) so adding/renaming a role doesn't need a code change.
     const user = await getUserByIdQuery(decoded.id);
-    if (decoded.roleName !== roleMap.get(user.role_id)) {
+    const expectedRoleName = await getRoleNameById(user.role_id);
+    if (decoded.roleName !== expectedRoleName) {
       return res.status(403).json({ message: req.t!("Not allowed to access") });
     }
 
@@ -196,8 +183,6 @@ const authenticateJWT = async (
         const orgId = parseInt(headerOrgId as string, 10);
         if (!isNaN(orgId) && orgId > 0) {
           req.organizationId = orgId;
-          req.tenantId = orgId;
-          const { getTenantHash } = require("../tools/getTenantHash");
           req.tenantHash = getTenantHash(orgId);
         }
       }
@@ -215,12 +200,9 @@ const authenticateJWT = async (
       req.userId = decoded.id;
       req.role = decoded.roleName;
       req.organizationId = decoded.organizationId;
-      // tenantId is set to organizationId for backward compatibility during migration
-      // TODO: Remove tenantId once all usages are migrated to use organizationId
-      req.tenantId = decoded.organizationId;
-      // tenantHash is the schema name derived from organizationId
-      // Use for schema-qualified queries: FROM "${tenantHash}".table_name
-      const { getTenantHash } = require("../tools/getTenantHash");
+      // tenantHash is the cache-key seed derived from organizationId.
+      // It is NOT a schema name; the shared-schema design uses
+      // unqualified table names + the search_path.
       req.tenantHash = getTenantHash(decoded.organizationId);
     }
 
@@ -255,7 +237,6 @@ const authenticateJWT = async (
     asyncLocalStorage.run(
       {
         userId: decoded.id,
-        tenantId: req.organizationId ?? 0,
         organizationId: req.organizationId ?? 0,
       },
       () => {

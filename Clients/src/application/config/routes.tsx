@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import { Route, Navigate } from "react-router-dom";
 import { lazyRoute, LazyFallback } from "../utils/lazyRoute";
+import { SHOW_AI_GATEWAY_PROMPTS } from "./featureFlags";
 
 // Eager imports — app shell, route guard, and Use cases page (mounts with layout for table skeleton UX)
 import Dashboard from "../../presentation/containers/Dashboard";
@@ -88,6 +89,19 @@ const RepositoriesPage = lazyRoute(
 const ScanDetailsPage = lazyRoute(
   () => import("../../presentation/pages/AIDetection/ScanDetailsPage"),
 );
+// ── AI Trust Index routes ─────────────────────────────────────────────
+const AITrustIndex = lazyRoute(() => import("../../presentation/pages/AITrustIndex"));
+const AITrustIndexBrowse = lazyRoute(() => import("../../presentation/pages/AITrustIndex/Browse"));
+const AITrustIndexTracked = lazyRoute(
+  () => import("../../presentation/pages/AITrustIndex/Tracked"),
+);
+const AITrustIndexSettings = lazyRoute(
+  () => import("../../presentation/pages/AITrustIndex/Settings"),
+);
+const AITrustIndexDetail = lazyRoute(
+  () => import("../../presentation/pages/AITrustIndex/AppDetail"),
+);
+
 const InsightsPage = lazyRoute(() => import("../../presentation/pages/ShadowAI/InsightsPage"));
 const UserActivityPage = lazyRoute(
   () => import("../../presentation/pages/ShadowAI/UserActivityPage"),
@@ -734,6 +748,46 @@ export const createRoutes = (
         </Suspense>
       }
     />
+    <Route
+      path="/ai-trust-index"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <AITrustIndex />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/ai-trust-index/browse"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <AITrustIndexBrowse />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/ai-trust-index/tracked"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <AITrustIndexTracked />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/ai-trust-index/settings"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <AITrustIndexSettings />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/ai-trust-index/:slug"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <AITrustIndexDetail />
+        </Suspense>
+      }
+    />
     <Route path="/shadow-ai" element={<Navigate to="/shadow-ai/insights" replace />} />
     <Route
       path="/shadow-ai/insights"
@@ -864,22 +918,27 @@ export const createRoutes = (
         </Suspense>
       }
     />
-    <Route
-      path="/ai-gateway/prompts"
-      element={
-        <Suspense fallback={<LazyFallback />}>
-          <AIGatewayPromptsPage />
-        </Suspense>
-      }
-    />
-    <Route
-      path="/ai-gateway/prompts/:id"
-      element={
-        <Suspense fallback={<LazyFallback />}>
-          <AIGatewayPromptEditorPage />
-        </Suspense>
-      }
-    />
+    {/* Prompts routes are gated behind SHOW_AI_GATEWAY_PROMPTS. */}
+    {SHOW_AI_GATEWAY_PROMPTS && (
+      <Route
+        path="/ai-gateway/prompts"
+        element={
+          <Suspense fallback={<LazyFallback />}>
+            <AIGatewayPromptsPage />
+          </Suspense>
+        }
+      />
+    )}
+    {SHOW_AI_GATEWAY_PROMPTS && (
+      <Route
+        path="/ai-gateway/prompts/:id"
+        element={
+          <Suspense fallback={<LazyFallback />}>
+            <AIGatewayPromptEditorPage />
+          </Suspense>
+        }
+      />
+    )}
     <Route
       path="/ai-gateway/virtual-keys"
       element={

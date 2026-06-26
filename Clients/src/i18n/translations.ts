@@ -25,6 +25,18 @@ export type Lang = "en" | "de" | "fr" | "es";
 
 export const translations: Record<string, Record<string, string>> = {
   de: {
+    // Settings — help text
+    "Enabled — risks include monetary estimates based on the FAIR model: annual loss expectancy, residual risk after controls, and return on mitigation investment.":
+      "Aktiviert — Risiken enthalten monetäre Schätzungen auf Basis des FAIR-Modells: erwarteter Jahresverlust, Restrisiko nach Maßnahmen und Rendite der Risikominderung.",
+    "Disabled — risks use qualitative scoring only, based on severity and likelihood.":
+      "Deaktiviert — Risiken verwenden nur eine qualitative Bewertung auf Basis von Schweregrad und Eintrittswahrscheinlichkeit.",
+    "Invite people and set each member's role. Admins manage the whole workspace and its settings. Editors can create and edit governance records. Reviewers can review and approve or reject. Auditors have read-only access.":
+      "Laden Sie Personen ein und legen Sie die Rolle jedes Mitglieds fest. Admins verwalten den gesamten Arbeitsbereich und seine Einstellungen. Editoren können Governance-Datensätze erstellen und bearbeiten. Reviewer können prüfen und genehmigen oder ablehnen. Auditoren haben nur Lesezugriff.",
+    // AI Trust Index
+    "App details": "App-Details",
+    "Changes are saved automatically.": "Änderungen werden automatisch gespeichert.",
+    "Full assessment for a specific AI Trust Index app":
+      "Vollständige Bewertung einer bestimmten AI-Trust-Index-App",
     // AI Apps (MO-362)
     "AI app": "KI-App",
     "AI app deleted successfully": "KI-App erfolgreich gelöscht",
@@ -784,10 +796,12 @@ export const translations: Record<string, Record<string, string>> = {
     "SOC2 Type I": "SOC 2 Typ I",
     "SOC2 Type II": "SOC 2 Typ II",
     "AI regulation in the Middle East": "KI-Regulierung im Nahen Osten",
-    "US AI regulations 2026": "KI-Regulierungen in den USA 2026",
-    "EU AI Act omnibus: what changed": "EU-KI-Verordnung Omnibus: Was sich geändert hat",
-    "VerifyWise YouTube channel launched": "VerifyWise YouTube-Kanal gestartet",
-    "Why LLM evaluations matter": "Warum LLM-Evaluierungen wichtig sind",
+    "We graded 205 AI apps on data transparency":
+      "Wir haben 205 KI-Apps zur Datentransparenz bewertet",
+    "OSFI Guideline E-23: AI model risk rules": "OSFI-Leitlinie E-23: Regeln für KI-Modellrisiken",
+    "What we found running GRS across 15 AI models":
+      "Was wir bei der Anwendung von GRS auf 15 KI-Modelle herausfanden",
+    "AI governance salaries 2026": "Gehälter im Bereich KI-Governance 2026",
     "Clauses": "Klauseln",
     "Annexes": "Anhänge",
     "AI models mapped to this framework": "Diesem Rahmenwerk zugeordnete KI-Modelle",
@@ -914,6 +928,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Error loading controls": "Fehler beim Laden der Kontrollen",
     "Error restoring task": "Fehler beim Wiederherstellen der Aufgabe",
     "Error updating task": "Fehler beim Aktualisieren der Aufgabe",
+    "Error updating task priority": "Fehler beim Aktualisieren der Aufgabenpriorität",
+    "Error updating task status": "Fehler beim Aktualisieren des Aufgabenstatus",
     "Cannot update training without ID": "Schulung kann ohne ID nicht aktualisiert werden",
     "Please select a project to view assessments":
       "Wählen Sie ein Projekt, um Bewertungen anzuzeigen",
@@ -4785,6 +4801,7 @@ export const translations: Record<string, Record<string, string>> = {
       "Keine Ordner verfügbar. Erstellen Sie zuerst einen Ordner.",
     "No folders yet": "Noch keine Ordner",
     "No framework plugins available.": "Keine Rahmenwerk-Plugins verfügbar.",
+    "No framework risks yet": "Noch keine Rahmenwerksrisiken",
     "No frameworks available. Please contact support if this issue persists.":
       "Keine Rahmenwerke verfügbar. Bitte wenden Sie sich an den Support, falls das Problem bestehen bleibt.",
     "No frameworks enabled for this organization.":
@@ -5326,6 +5343,8 @@ export const translations: Record<string, Record<string, string>> = {
     "AI Chatbot for Customer Support": "KI-Chatbot für den Kundensupport",
     "AI Gateway": "AI Gateway",
     "AI Gateway, Policy Radar, and CI/CD scanning": "AI Gateway, Policy Radar und CI/CD-Scanning",
+    "AI Trust Index, AI Apps inventory, and Agent Control":
+      "AI Trust Index, AI Apps inventory und Agent Control",
     "EU AI Act control workflow, clearable selects, and AI advisor fix":
       "EU-KI-Verordnungs-Kontroll-Workflow, löschbare Auswahlfelder und KI-Berater-Fix",
     "Training evidence uploads, governance score helper, and policy ownership":
@@ -5866,7 +5885,7 @@ export const translations: Record<string, Record<string, string>> = {
       "Datensatz, Bewertermodell, aktivierte Metriken und Schwellenwerte",
     "Datasets Used Documentation": "Dokumentation der verwendeten Datensätze",
     "Date picker": "Datumsauswahl",
-    "David Pinkney": "David Pinkney",
+    "Dr. Gorkem Cetin": "Dr. Gorkem Cetin",
     "Day of Month (for Monthly)": "Tag des Monats (für Monatlich)",
     "Day of Week (for Weekly)": "Wochentag (für Wöchentlich)",
     "Days Before Review Date": "Tage vor Überprüfungsdatum",
@@ -6303,6 +6322,10 @@ export const translations: Record<string, Record<string, string>> = {
       "Aktualisieren des Status fehlgeschlagen. Bitte erneut versuchen.",
     "Failed to update the task. Please try again.":
       "Aktualisieren der Aufgabe fehlgeschlagen. Bitte erneut versuchen.",
+    "Failed to update the task priority. Please try again.":
+      "Aktualisieren der Aufgabenpriorität fehlgeschlagen. Bitte erneut versuchen.",
+    "Failed to update the task status. Please try again.":
+      "Aktualisieren des Aufgabenstatus fehlgeschlagen. Bitte erneut versuchen.",
     "Failed to update the vendor risk. Please try again.":
       "Aktualisieren des Anbieterrisikos fehlgeschlagen. Bitte erneut versuchen.",
     "Failed to upload": "Hochladen fehlgeschlagen",
@@ -8636,9 +8659,91 @@ export const translations: Record<string, Record<string, string>> = {
     "Run estimate": "Schätzung ausführen",
     "Total leaf-level controls from the selected framework inventories":
       "Gesamtzahl der Blattkontrollen aus den ausgewählten Framework-Inventaren",
+    // AI Trust Index
+    "AI Trust Index": "KI-Vertrauensindex",
+    "AI Trust Index notification settings.":
+      "Benachrichtigungseinstellungen für den KI-Vertrauensindex.",
+    "AI applications your organization is tracking. We":
+      "KI-Anwendungen, die Ihre Organisation verfolgt. Wir",
+    "Choose who receives a notification when a tracked app":
+      "Wählen Sie, wer eine Benachrichtigung erhält, wenn eine verfolgte App",
+    "We couldn": "Wir konnten",
+    "You": "Sie",
+    "AI applications your organization is tracking. We'll notify recipients when a tracked app's assessment changes materially.":
+      "KI-Anwendungen, die Ihre Organisation verfolgt. Wir benachrichtigen Empfänger, wenn sich die Bewertung einer verfolgten App wesentlich ändert.",
+    "Additional emails": "Weitere E-Mail-Adressen",
+    "All categories": "Alle Kategorien",
+    "All grades": "Alle Bewertungen",
+    "Best score first": "Beste Bewertung zuerst",
+    "Tracked first": "Verfolgte zuerst",
+    "Worst score first": "Schlechteste Bewertung zuerst",
+    "Dealbreaker flag": "Ausschlusskriterium",
+    "Back to Browse": "Zurück zur Übersicht",
+    "Browse": "Durchsuchen",
+    "Browse AI app risk scores and track the apps you use":
+      "KI-App-Risikobewertungen durchsuchen und genutzte Apps verfolgen",
+    "Browse independently assessed AI applications and track the ones that matter to your organization.":
+      "Unabhängig bewertete KI-Anwendungen durchsuchen und die für Ihre Organisation relevanten verfolgen.",
+    "Choose who receives a notification when a tracked app's assessment changes materially. If no recipients are set, organization admins are notified by default.":
+      "Wählen Sie, wer eine Benachrichtigung erhält, wenn sich die Bewertung einer verfolgten App wesentlich ändert. Wenn keine Empfänger festgelegt sind, werden standardmäßig Organisationsadministratoren benachrichtigt.",
+    "Dealbreaker flags": "Ausschlusskriterien",
+    "Highest score": "Höchste Punktzahl",
+    "Highlights": "Highlights",
+    "Modalities": "Modalitäten",
+    "No apps match your filters.": "Keine Apps entsprechen Ihren Filtern.",
+    "No longer in index": "Nicht mehr im Index",
+    "Only administrators can change AI Trust Index notification settings.":
+      "Nur Administratoren können die Benachrichtigungseinstellungen des KI-Vertrauensindex ändern.",
+    "Policy details": "Richtliniendetails",
+    "Policy last updated": "Richtlinie zuletzt aktualisiert",
+    "Processes biometrics": "Verarbeitet biometrische Daten",
+    "Search apps or vendors": "Apps oder Anbieter suchen",
+    "Select team members": "Teammitglieder auswählen",
+    "Tracked": "Verfolgt",
+    "Tracked apps": "Verfolgte Apps",
+    "Trust score:": "Vertrauenswert:",
+    "Type an email and press Enter": "E-Mail eingeben und Enter drücken",
+    "Untrack": "Nicht mehr verfolgen",
+    "View policy": "Richtlinie anzeigen",
+    "We couldn't find this app in the AI Trust Index.":
+      "Diese App wurde im KI-Vertrauensindex nicht gefunden.",
+    "We couldn't load the AI Trust Index right now. Please try again later.":
+      "Der KI-Vertrauensindex konnte momentan nicht geladen werden. Bitte versuchen Sie es später erneut.",
+    "We couldn't load your tracked apps right now. Please try again later.":
+      "Ihre verfolgten Apps konnten momentan nicht geladen werden. Bitte versuchen Sie es später erneut.",
+    "You're not tracking any apps yet. Track apps from the Browse tab to monitor changes to their privacy and transparency assessments.":
+      'Sie verfolgen noch keine Apps. Fügen Sie Apps über die Registerkarte "Durchsuchen" hinzu, um Änderungen an ihren Datenschutz- und Transparenzbewertungen zu überwachen.',
+    "Find apps in Browse": "Apps in der Übersicht finden",
+    "Open the Browse tab to explore the full catalogue, then track the apps your teams use with the Track button on each card.":
+      'Öffnen Sie die Registerkarte "Durchsuchen", um den vollständigen Katalog zu erkunden, und verfolgen Sie die von Ihren Teams genutzten Apps über die Schaltfläche "Verfolgen" auf jeder Karte.',
+    "Get notified when assessments change": "Benachrichtigung bei Änderungen der Bewertungen",
+    "Tracked apps are included in the weekly change digest, so configured recipients hear about score, grade, or policy changes.":
+      "Verfolgte Apps sind in der wöchentlichen Änderungsübersicht enthalten, sodass konfigurierte Empfänger über Änderungen an Punktzahl, Note oder Richtlinie informiert werden.",
+    // AI Gateway empty/error states
+    "Click Save draft to create your first version.":
+      "Klicken Sie auf Entwurf speichern, um Ihre erste Version zu erstellen.",
+    "Could not load this run.": "Dieser Lauf konnte nicht geladen werden.",
+    "Create your first version": "Erstellen Sie Ihre erste Version",
+    "Error loading AI Trust Center settings. Please try again.":
+      "Fehler beim Laden der AI Trust Center-Einstellungen. Bitte versuchen Sie es erneut.",
+    "Failed to load invocation details.": "Aufrufdetails konnten nicht geladen werden.",
+    "Refresh": "Aktualisieren",
+    "Select a log to view details.": "Wählen Sie ein Protokoll aus, um Details anzuzeigen.",
   },
 
   fr: {
+    // Settings — help text
+    "Enabled — risks include monetary estimates based on the FAIR model: annual loss expectancy, residual risk after controls, and return on mitigation investment.":
+      "Activé — les risques incluent des estimations monétaires basées sur le modèle FAIR : perte annuelle attendue, risque résiduel après contrôles et retour sur l'investissement de mitigation.",
+    "Disabled — risks use qualitative scoring only, based on severity and likelihood.":
+      "Désactivé — les risques utilisent uniquement une notation qualitative, basée sur la gravité et la probabilité.",
+    "Invite people and set each member's role. Admins manage the whole workspace and its settings. Editors can create and edit governance records. Reviewers can review and approve or reject. Auditors have read-only access.":
+      "Invitez des personnes et définissez le rôle de chaque membre. Les administrateurs gèrent l'ensemble de l'espace de travail et ses paramètres. Les éditeurs peuvent créer et modifier les enregistrements de gouvernance. Les relecteurs peuvent examiner et approuver ou rejeter. Les auditeurs disposent d'un accès en lecture seule.",
+    // AI Trust Index
+    "App details": "Détails de l'application",
+    "Changes are saved automatically.": "Les modifications sont enregistrées automatiquement.",
+    "Full assessment for a specific AI Trust Index app":
+      "Évaluation complète d'une application spécifique de l'AI Trust Index",
     // AI Apps (MO-362)
     "AI app": "Application IA",
     "AI app deleted successfully": "Application IA supprimée avec succès",
@@ -9672,10 +9777,13 @@ export const translations: Record<string, Record<string, string>> = {
     "SOC2 Type I": "SOC 2 Type I",
     "SOC2 Type II": "SOC 2 Type II",
     "AI regulation in the Middle East": "Réglementation IA au Moyen-Orient",
-    "US AI regulations 2026": "Réglementations IA aux États-Unis en 2026",
-    "EU AI Act omnibus: what changed": "Règlement IA de l'UE — omnibus : ce qui a changé",
-    "VerifyWise YouTube channel launched": "Lancement de la chaîne YouTube VerifyWise",
-    "Why LLM evaluations matter": "Pourquoi les évaluations LLM sont importantes",
+    "We graded 205 AI apps on data transparency":
+      "Nous avons évalué 205 applications d'IA sur la transparence des données",
+    "OSFI Guideline E-23: AI model risk rules":
+      "Ligne directrice E-23 du BSIF : règles sur le risque des modèles d'IA",
+    "What we found running GRS across 15 AI models":
+      "Ce que nous avons constaté en appliquant le GRS à 15 modèles d'IA",
+    "AI governance salaries 2026": "Salaires en gouvernance de l'IA 2026",
     "AI models mapped to this framework": "Modèles IA rattachés à ce référentiel",
     "Organizational Frameworks": "Référentiels organisationnels",
     "Organizational policies": "Politiques organisationnelles",
@@ -9765,6 +9873,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Error loading controls": "Erreur lors du chargement des contrôles",
     "Error restoring task": "Erreur lors de la restauration de la tâche",
     "Error updating task": "Erreur lors de la mise à jour de la tâche",
+    "Error updating task priority": "Erreur lors de la mise à jour de la priorité de la tâche",
+    "Error updating task status": "Erreur lors de la mise à jour du statut de la tâche",
     "Cannot update training without ID": "Impossible de mettre à jour une formation sans ID",
     "Please select a project to view assessments":
       "Sélectionnez un projet pour voir les évaluations",
@@ -13350,6 +13460,7 @@ export const translations: Record<string, Record<string, string>> = {
       "Aucun dossier disponible. Créez d'abord un dossier.",
     "No folders yet": "Pas encore de dossiers",
     "No framework plugins available.": "Aucun plugin de référentiel disponible.",
+    "No framework risks yet": "Pas encore de risques du référentiel",
     "No frameworks available. Please contact support if this issue persists.":
       "Aucun référentiel disponible. Veuillez contacter le support si le problème persiste.",
     "No frameworks enabled for this organization.":
@@ -13891,6 +14002,8 @@ export const translations: Record<string, Record<string, string>> = {
     "AI Chatbot for Customer Support": "Chatbot IA pour le support client",
     "AI Gateway": "AI Gateway",
     "AI Gateway, Policy Radar, and CI/CD scanning": "AI Gateway, Policy Radar et analyse CI/CD",
+    "AI Trust Index, AI Apps inventory, and Agent Control":
+      "AI Trust Index, AI Apps inventory et Agent Control",
     "EU AI Act control workflow, clearable selects, and AI advisor fix":
       "Workflow des contrôles du Règlement IA de l'UE, sélections effaçables et correctif de l'assistant IA",
     "Training evidence uploads, governance score helper, and policy ownership":
@@ -14427,7 +14540,7 @@ export const translations: Record<string, Record<string, string>> = {
       "Jeu de données, modèle juge, métriques activées et seuils",
     "Datasets Used Documentation": "Documentation des jeux de données utilisés",
     "Date picker": "Sélecteur de date",
-    "David Pinkney": "David Pinkney",
+    "Dr. Gorkem Cetin": "Dr. Gorkem Cetin",
     "Day of Month (for Monthly)": "Jour du mois (pour mensuel)",
     "Day of Week (for Weekly)": "Jour de la semaine (pour hebdomadaire)",
     "Days Before Review Date": "Jours avant la date d'examen",
@@ -14865,6 +14978,10 @@ export const translations: Record<string, Record<string, string>> = {
       "Échec de la mise à jour du statut. Veuillez réessayer.",
     "Failed to update the task. Please try again.":
       "Échec de la mise à jour de la tâche. Veuillez réessayer.",
+    "Failed to update the task priority. Please try again.":
+      "Échec de la mise à jour de la priorité de la tâche. Veuillez réessayer.",
+    "Failed to update the task status. Please try again.":
+      "Échec de la mise à jour du statut de la tâche. Veuillez réessayer.",
     "Failed to update the vendor risk. Please try again.":
       "Échec de la mise à jour du risque fournisseur. Veuillez réessayer.",
     "Failed to upload": "Échec du téléversement",
@@ -17204,8 +17321,90 @@ export const translations: Record<string, Record<string, string>> = {
     "Run estimate": "Lancer l'estimation",
     "Total leaf-level controls from the selected framework inventories":
       "Total des contrôles feuille des inventaires de cadres sélectionnés",
+    // AI Trust Index
+    "AI Trust Index": "Index de confiance IA",
+    "AI Trust Index notification settings.":
+      "Paramètres de notification de l'index de confiance IA.",
+    "AI applications your organization is tracking. We":
+      "Applications IA que votre organisation suit. Nous",
+    "Choose who receives a notification when a tracked app":
+      "Choisissez qui reçoit une notification lorsqu'une application suivie",
+    "We couldn": "Nous n'avons pas pu",
+    "You": "Vous",
+    "AI applications your organization is tracking. We'll notify recipients when a tracked app's assessment changes materially.":
+      "Applications IA que votre organisation suit. Nous notifierons les destinataires lorsque l'évaluation d'une application suivie change de manière significative.",
+    "Additional emails": "E-mails supplémentaires",
+    "All categories": "Toutes les catégories",
+    "All grades": "Toutes les notes",
+    "Best score first": "Meilleur score d'abord",
+    "Tracked first": "Suivies d'abord",
+    "Worst score first": "Pire score d'abord",
+    "Dealbreaker flag": "Critère rédhibitoire",
+    "Back to Browse": "Retour à la navigation",
+    "Browse": "Parcourir",
+    "Browse AI app risk scores and track the apps you use":
+      "Parcourir les scores de risque des applications IA et suivre les applications utilisées",
+    "Browse independently assessed AI applications and track the ones that matter to your organization.":
+      "Parcourir les applications IA évaluées indépendamment et suivre celles qui comptent pour votre organisation.",
+    "Choose who receives a notification when a tracked app's assessment changes materially. If no recipients are set, organization admins are notified by default.":
+      "Choisissez qui reçoit une notification lorsque l'évaluation d'une application suivie change de manière significative. Si aucun destinataire n'est défini, les administrateurs de l'organisation sont notifiés par défaut.",
+    "Dealbreaker flags": "Indicateurs rédhibitoires",
+    "Highest score": "Score le plus élevé",
+    "Highlights": "Points clés",
+    "Modalities": "Modalités",
+    "No apps match your filters.": "Aucune application ne correspond à vos filtres.",
+    "No longer in index": "Plus dans l'index",
+    "Only administrators can change AI Trust Index notification settings.":
+      "Seuls les administrateurs peuvent modifier les paramètres de notification de l'index de confiance IA.",
+    "Policy details": "Détails de la politique",
+    "Policy last updated": "Politique mise à jour le",
+    "Processes biometrics": "Traite des données biométriques",
+    "Search apps or vendors": "Rechercher des applications ou des fournisseurs",
+    "Select team members": "Sélectionner des membres de l'équipe",
+    "Tracked": "Suivis",
+    "Tracked apps": "Applications suivies",
+    "Trust score:": "Score de confiance :",
+    "Type an email and press Enter": "Saisissez un e-mail et appuyez sur Entrée",
+    "Untrack": "Ne plus suivre",
+    "View policy": "Voir la politique",
+    "We couldn't find this app in the AI Trust Index.":
+      "Cette application est introuvable dans l'index de confiance IA.",
+    "We couldn't load the AI Trust Index right now. Please try again later.":
+      "L'index de confiance IA n'a pas pu être chargé pour l'instant. Veuillez réessayer ultérieurement.",
+    "We couldn't load your tracked apps right now. Please try again later.":
+      "Vos applications suivies n'ont pas pu être chargées pour l'instant. Veuillez réessayer ultérieurement.",
+    "You're not tracking any apps yet. Track apps from the Browse tab to monitor changes to their privacy and transparency assessments.":
+      "Vous ne suivez encore aucune application. Ajoutez des applications depuis l'onglet Parcourir pour surveiller les modifications de leurs évaluations de confidentialité et de transparence.",
+    "Find apps in Browse": "Trouver des applications dans Parcourir",
+    "Open the Browse tab to explore the full catalogue, then track the apps your teams use with the Track button on each card.":
+      "Ouvrez l'onglet Parcourir pour explorer le catalogue complet, puis suivez les applications utilisées par vos équipes à l'aide du bouton Suivre sur chaque carte.",
+    "Get notified when assessments change": "Être averti lorsque les évaluations changent",
+    "Tracked apps are included in the weekly change digest, so configured recipients hear about score, grade, or policy changes.":
+      "Les applications suivies sont incluses dans le récapitulatif hebdomadaire des modifications, afin que les destinataires configurés soient informés des changements de score, de note ou de politique.",
+    // AI Gateway empty/error states
+    "Click Save draft to create your first version.":
+      "Cliquez sur Enregistrer le brouillon pour créer votre première version.",
+    "Could not load this run.": "Impossible de charger cette exécution.",
+    "Create your first version": "Créer votre première version",
+    "Error loading AI Trust Center settings. Please try again.":
+      "Erreur lors du chargement des paramètres du AI Trust Center. Veuillez réessayer.",
+    "Failed to load invocation details.": "Échec du chargement des détails de l'invocation.",
+    "Refresh": "Actualiser",
+    "Select a log to view details.": "Sélectionnez un journal pour voir les détails.",
   },
   es: {
+    // Settings — help text
+    "Enabled — risks include monetary estimates based on the FAIR model: annual loss expectancy, residual risk after controls, and return on mitigation investment.":
+      "Activado — los riesgos incluyen estimaciones monetarias basadas en el modelo FAIR: pérdida anual esperada, riesgo residual tras los controles y retorno de la inversión en mitigación.",
+    "Disabled — risks use qualitative scoring only, based on severity and likelihood.":
+      "Desactivado — los riesgos usan solo una puntuación cualitativa, basada en la gravedad y la probabilidad.",
+    "Invite people and set each member's role. Admins manage the whole workspace and its settings. Editors can create and edit governance records. Reviewers can review and approve or reject. Auditors have read-only access.":
+      "Invita a personas y asigna el rol de cada miembro. Los administradores gestionan todo el espacio de trabajo y su configuración. Los editores pueden crear y editar registros de gobernanza. Los revisores pueden revisar y aprobar o rechazar. Los auditores tienen acceso de solo lectura.",
+    // AI Trust Index
+    "App details": "Detalles de la aplicación",
+    "Changes are saved automatically.": "Los cambios se guardan automáticamente.",
+    "Full assessment for a specific AI Trust Index app":
+      "Evaluación completa de una aplicación específica del AI Trust Index",
     // AI Apps (MO-362)
     "AI app": "Aplicación de IA",
     "AI app deleted successfully": "Aplicación de IA eliminada correctamente",
@@ -17733,10 +17932,13 @@ export const translations: Record<string, Record<string, string>> = {
     "SOC2 Type I": "SOC2 Type I",
     "SOC2 Type II": "SOC2 Type II",
     "AI regulation in the Middle East": "Regulación de la IA en Oriente Medio",
-    "US AI regulations 2026": "Regulaciones de IA en EE. UU. 2026",
-    "EU AI Act omnibus: what changed": "Ómnibus de la EU AI Act: qué ha cambiado",
-    "VerifyWise YouTube channel launched": "Lanzado el canal de YouTube de VerifyWise",
-    "Why LLM evaluations matter": "Por qué importan las evaluaciones de LLM",
+    "We graded 205 AI apps on data transparency":
+      "Evaluamos 205 aplicaciones de IA en transparencia de datos",
+    "OSFI Guideline E-23: AI model risk rules":
+      "Directriz E-23 del OSFI: reglas de riesgo de modelos de IA",
+    "What we found running GRS across 15 AI models":
+      "Lo que encontramos al aplicar GRS a 15 modelos de IA",
+    "AI governance salaries 2026": "Salarios en gobernanza de IA 2026",
     "Clauses": "Cláusulas",
     "Annexes": "Anexos",
     "AI models mapped to this framework": "Modelos de IA mapeados a este marco",
@@ -17833,6 +18035,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Error loading controls": "Error al cargar los controles",
     "Error restoring task": "Error al restaurar la tarea",
     "Error updating task": "Error al actualizar la tarea",
+    "Error updating task priority": "Error al actualizar la prioridad de la tarea",
+    "Error updating task status": "Error al actualizar el estado de la tarea",
     "Cannot update training without ID": "No se puede actualizar la formación sin un ID",
     "Welcome to VerifyWise": "Te damos la bienvenida a VerifyWise",
     "Welcome": "Bienvenido",
@@ -20160,6 +20364,7 @@ export const translations: Record<string, Record<string, string>> = {
     "No feedback files attached yet": "Aún no hay archivos de comentarios adjuntos",
     "No folders yet": "Aún no hay carpetas",
     "No framework plugins available.": "No hay complementos de marcos disponibles.",
+    "No framework risks yet": "Aún no hay riesgos del marco",
     "No frameworks installed": "No hay marcos instalados",
     "No local providers configured yet": "Aún no hay proveedores locales configurados",
     "No log data available.": "No hay datos de registro disponibles.",
@@ -20448,6 +20653,8 @@ export const translations: Record<string, Record<string, string>> = {
     "AI Chatbot for Customer Support": "Chatbot de IA para atención al cliente",
     "AI Gateway": "AI Gateway",
     "AI Gateway, Policy Radar, and CI/CD scanning": "AI Gateway, Policy Radar y análisis de CI/CD",
+    "AI Trust Index, AI Apps inventory, and Agent Control":
+      "AI Trust Index, AI Apps inventory y Agent Control",
     "AI Lifecycle Risk Management": "Gestión de riesgos del ciclo de vida de la IA",
     "AI Literacy and Responsible AI Training": "Alfabetización en IA y formación en IA responsable",
     "AI Management System": "Sistema de gestión de IA",
@@ -20717,7 +20924,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Dataset updated successfully!": "¡Conjunto de datos actualizado correctamente!",
     "Datasets Used Documentation": "Documentación de los conjuntos de datos utilizados",
     "Date picker": "Selector de fecha",
-    "David Pinkney": "David Pinkney",
+    "Dr. Gorkem Cetin": "Dr. Gorkem Cetin",
     "Day of Month (for Monthly)": "Día del mes (para mensual)",
     "Day of Week (for Weekly)": "Día de la semana (para semanal)",
     "Days Before Review Date": "Días antes de la fecha de revisión",
@@ -24197,6 +24404,10 @@ export const translations: Record<string, Record<string, string>> = {
       "No se pudo actualizar el estado. Inténtelo de nuevo.",
     "Failed to update the task. Please try again.":
       "No se pudo actualizar la tarea. Inténtelo de nuevo.",
+    "Failed to update the task priority. Please try again.":
+      "No se pudo actualizar la prioridad de la tarea. Inténtelo de nuevo.",
+    "Failed to update the task status. Please try again.":
+      "No se pudo actualizar el estado de la tarea. Inténtelo de nuevo.",
     "Failed to update the vendor risk. Please try again.":
       "No se pudo actualizar el riesgo del proveedor. Inténtelo de nuevo.",
     "File marked for deletion. Please save to apply changes.":
@@ -25689,5 +25900,75 @@ export const translations: Record<string, Record<string, string>> = {
     "Run estimate": "Ejecutar estimación",
     "Total leaf-level controls from the selected framework inventories":
       "Total de controles de nivel hoja de los inventarios de marcos seleccionados",
+    // AI Trust Index
+    "AI Trust Index": "Índice de confianza de IA",
+    "AI Trust Index notification settings.":
+      "Configuración de notificaciones del índice de confianza de IA.",
+    "AI applications your organization is tracking. We":
+      "Aplicaciones de IA que su organización está siguiendo. Le",
+    "Choose who receives a notification when a tracked app":
+      "Elija quién recibe una notificación cuando una aplicación seguida",
+    "We couldn": "No pudimos",
+    "You": "Usted",
+    "AI applications your organization is tracking. We'll notify recipients when a tracked app's assessment changes materially.":
+      "Aplicaciones de IA que su organización está siguiendo. Notificaremos a los destinatarios cuando la evaluación de una aplicación seguida cambie de forma significativa.",
+    "Additional emails": "Correos electrónicos adicionales",
+    "All categories": "Todas las categorías",
+    "All grades": "Todas las calificaciones",
+    "Best score first": "Mejor puntuación primero",
+    "Tracked first": "Seguidas primero",
+    "Worst score first": "Peor puntuación primero",
+    "Dealbreaker flag": "Factor decisivo",
+    "Back to Browse": "Volver a Explorar",
+    "Browse": "Explorar",
+    "Browse AI app risk scores and track the apps you use":
+      "Explorar las puntuaciones de riesgo de las aplicaciones de IA y seguir las que utiliza",
+    "Browse independently assessed AI applications and track the ones that matter to your organization.":
+      "Explorar aplicaciones de IA evaluadas de forma independiente y seguir las que importan a su organización.",
+    "Choose who receives a notification when a tracked app's assessment changes materially. If no recipients are set, organization admins are notified by default.":
+      "Elija quién recibe una notificación cuando la evaluación de una aplicación seguida cambie de forma significativa. Si no se establecen destinatarios, se notifica a los administradores de la organización de forma predeterminada.",
+    "Dealbreaker flags": "Indicadores decisivos",
+    "Highest score": "Puntuación más alta",
+    "Highlights": "Aspectos destacados",
+    "Modalities": "Modalidades",
+    "No apps match your filters.": "Ninguna aplicación coincide con sus filtros.",
+    "No longer in index": "Ya no está en el índice",
+    "Only administrators can change AI Trust Index notification settings.":
+      "Solo los administradores pueden cambiar la configuración de notificaciones del índice de confianza de IA.",
+    "Policy details": "Detalles de la política",
+    "Policy last updated": "Política actualizada por última vez",
+    "Processes biometrics": "Procesa datos biométricos",
+    "Search apps or vendors": "Buscar aplicaciones o proveedores",
+    "Select team members": "Seleccionar miembros del equipo",
+    "Tracked": "Seguidas",
+    "Tracked apps": "Aplicaciones seguidas",
+    "Trust score:": "Puntuación de confianza:",
+    "Type an email and press Enter": "Escriba un correo electrónico y pulse Intro",
+    "Untrack": "Dejar de seguir",
+    "View policy": "Ver política",
+    "We couldn't find this app in the AI Trust Index.":
+      "No se encontró esta aplicación en el índice de confianza de IA.",
+    "We couldn't load the AI Trust Index right now. Please try again later.":
+      "No se pudo cargar el índice de confianza de IA en este momento. Inténtelo de nuevo más tarde.",
+    "We couldn't load your tracked apps right now. Please try again later.":
+      "No se pudieron cargar las aplicaciones seguidas en este momento. Inténtelo de nuevo más tarde.",
+    "You're not tracking any apps yet. Track apps from the Browse tab to monitor changes to their privacy and transparency assessments.":
+      "Aún no está siguiendo ninguna aplicación. Añada aplicaciones desde la pestaña Explorar para supervisar los cambios en sus evaluaciones de privacidad y transparencia.",
+    "Find apps in Browse": "Buscar aplicaciones en Explorar",
+    "Open the Browse tab to explore the full catalogue, then track the apps your teams use with the Track button on each card.":
+      "Abra la pestaña Explorar para ver el catálogo completo y, a continuación, siga las aplicaciones que usan sus equipos con el botón Seguir de cada tarjeta.",
+    "Get notified when assessments change": "Reciba avisos cuando cambien las evaluaciones",
+    "Tracked apps are included in the weekly change digest, so configured recipients hear about score, grade, or policy changes.":
+      "Las aplicaciones seguidas se incluyen en el resumen semanal de cambios, de modo que los destinatarios configurados se enteran de los cambios de puntuación, calificación o política.",
+    // AI Gateway empty/error states
+    "Click Save draft to create your first version.":
+      "Haga clic en Guardar borrador para crear su primera versión.",
+    "Could not load this run.": "No se pudo cargar esta ejecución.",
+    "Create your first version": "Crear su primera versión",
+    "Error loading AI Trust Center settings. Please try again.":
+      "Error al cargar la configuración de AI Trust Center. Inténtelo de nuevo.",
+    "Failed to load invocation details.": "No se pudieron cargar los detalles de la invocación.",
+    "Refresh": "Actualizar",
+    "Select a log to view details.": "Seleccione un registro para ver los detalles.",
   },
 };

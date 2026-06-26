@@ -11,6 +11,7 @@ import {
   LinearProgress,
 } from "@mui/material";
 import Chip from "../../Chip";
+import { displayFormattedDate } from "../../../tools/isoDateToString";
 
 export interface UseCaseRow {
   id: number;
@@ -40,7 +41,7 @@ const defaultFormatDate = (dateString: string): string => {
   if (diffDays === 1) return "Yesterday";
   if (diffDays < 7) return `${diffDays} days ago`;
   if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
-  return date.toLocaleDateString();
+  return displayFormattedDate(date);
 };
 
 const headerCellStyle = {

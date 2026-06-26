@@ -15,26 +15,61 @@ import { QueryTypes, Transaction } from "sequelize";
 import { FileModel, FileSource } from "../domain.layer/models/file/file.model";
 import { ProjectModel } from "../domain.layer/models/project/project.model";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
+import { FILE_GROUP_LABEL_CASE_SQL } from "../utils/files/fileGroupLabel.sql";
+import {
+  attachLinkProjections,
+  FileEntityLinkProjection,
+} from "../utils/files/attachLinkProjections";
 import sanitizeFilename from "sanitize-filename";
 
 // Re-export FileSource for backward compatibility
 export { FileSource };
+
+/**
+ * Shared SQL fragment that aggregates a file's links from `file_entity_links`
+ * into the File Manager's "Source" representation.
+ *
+ * Maps each link's (framework_type, entity_type) to the group label the
+ * original upload paths write into `files.source` (see controllers/iso27001,
+ * iso42001, eu, nist_ai_rmf). When the file has:
+ *   - 0 links  -> source resolves to the legacy `f.source` column
+ *   - 1 group  -> source is that group's label (matches legacy upload value)
+ *   - N groups -> source is the string "N groups"
+ *
+ * Always exposes the distinct labels as a `link_groups` array so the UI can
+ * expand the aggregated cell.
+ *
+ * The LATERAL is bounded by the outer query's LIMIT, so it runs at most
+ * `limit` times per request.
+ */
+const FILE_LINK_GROUPS_JOIN_SQL = `
+    LEFT JOIN LATERAL (
+      SELECT
+        COUNT(DISTINCT label) AS group_count,
+        MIN(label) AS first_label,
+        COALESCE(array_agg(DISTINCT label ORDER BY label), ARRAY[]::text[]) AS labels
+      FROM (
+        SELECT ${FILE_GROUP_LABEL_CASE_SQL} AS label
+        FROM file_entity_links fel
+        WHERE fel.organization_id = f.organization_id AND fel.file_id = f.id
+      ) labels
+      WHERE label IS NOT NULL
+    ) fg ON true`;
+
+/** Goes in the SELECT list to project the resolved source string. */
+const FILE_LINK_GROUPS_SOURCE_EXPR_SQL = `
+      CASE
+        WHEN fg.group_count = 1 THEN fg.first_label
+        WHEN fg.group_count > 1 THEN fg.group_count::text || ' groups'
+        ELSE f.source
+      END AS source,
+      COALESCE(fg.labels, ARRAY[]::text[]) AS link_groups`;
 
 export interface UploadedFile {
   originalname: string;
   buffer: Buffer;
   mimetype: string;
   size?: number;
-}
-
-export interface FileMetadata {
-  id: number;
-  filename: string;
-  project_id?: number;
-  uploaded_time?: string;
-  source?: string;
-  uploader_name?: string;
-  uploader_surname?: string;
 }
 
 export type ReviewStatus =
@@ -56,6 +91,15 @@ export interface OrganizationFileMetadata {
   project_id?: number | null;
   model_id?: number;
   source?: string;
+  // Distinct group labels this file is linked to via file_entity_links.
+  // Empty when the file isn't attached to any entity. Used by the UI to
+  // expand the aggregated "N groups" cell into the actual list.
+  link_groups?: string[];
+  // Per-link projections — one entry per row in file_entity_links for this
+  // file, with the entity hierarchy needed to deep-link into each attachment.
+  // Populated by attachLinkProjections so the UI can render a popover when a
+  // file is attached in multiple places.
+  entity_links?: FileEntityLinkProjection[];
   uploader_name?: string;
   uploader_surname?: string;
   // New metadata fields
@@ -71,6 +115,10 @@ export interface OrganizationFileMetadata {
   // Approval workflow support
   approval_workflow_id?: number;
   approval_workflow_name?: string;
+  // Attention flags (computed by getOrganizationFilesWithMetadata)
+  is_due_for_update?: boolean;
+  is_pending_approval?: boolean;
+  is_recently_modified?: boolean;
 }
 
 export interface UpdateFileMetadataInput {
@@ -100,6 +148,25 @@ export interface FileAccessLog {
 // ============================================================================
 // Validation Helpers
 // ============================================================================
+
+/**
+ * Hard upper bound on rows returned by any list query in this repo.
+ * Per-call pagination defaults live in the validation utils used by
+ * controllers; this constant is a defensive ceiling for any call site
+ * that omits or over-shoots a limit.
+ */
+const REPO_HARD_MAX_LIMIT = 1000;
+
+/**
+ * Clamp an optional caller-provided limit to a safe upper bound.
+ * Returns the hard cap when the caller passed nothing.
+ */
+function clampListLimit(limit?: number): number {
+  if (limit === undefined || limit === null || !Number.isFinite(limit) || limit <= 0) {
+    return REPO_HARD_MAX_LIMIT;
+  }
+  return Math.min(Math.floor(limit), REPO_HARD_MAX_LIMIT);
+}
 
 /**
  * Validates organization ID to prevent SQL injection
@@ -247,41 +314,6 @@ export async function deleteProjectFileById(
   });
 
   return result.length > 0;
-}
-
-/**
- * Gets file metadata for a project
- *
- * @param projectId - The project ID to get files for
- * @param organizationId - Organization ID for tenant isolation
- * @returns Array of file metadata with uploader information
- */
-export async function getProjectFileMetadata(
-  projectId: number,
-  organizationId: number,
-): Promise<FileMetadata[]> {
-  validateOrganizationId(organizationId);
-
-  const query = `
-    SELECT
-      f.id,
-      f.filename,
-      f.project_id,
-      f.uploaded_time,
-      f.source,
-      u.name AS uploader_name,
-      u.surname AS uploader_surname
-    FROM files f
-    JOIN users u ON f.uploaded_by = u.id
-    WHERE f.organization_id = :organizationId AND project_id = :project_id
-    ORDER BY uploaded_time DESC, id ASC`;
-
-  const result = await sequelize.query(query, {
-    replacements: { organizationId, project_id: projectId },
-    type: QueryTypes.SELECT,
-  });
-
-  return result as FileMetadata[];
 }
 
 // ============================================================================
@@ -497,6 +529,7 @@ export async function getOrganizationFiles(
 
   // Show all files regardless of approval status - UI handles display
   // Use organization_id for tenant isolation (org_id may be NULL on migrated files)
+  // Source/link_groups resolved from file_entity_links — see FILE_LINK_GROUPS_*.
   let query = `
     SELECT
       f.id,
@@ -506,23 +539,22 @@ export async function getOrganizationFiles(
       f.uploaded_time AS upload_date,
       f.uploaded_by,
       f.org_id,
-      f.model_id,
-      f.source,
+      f.model_id,${FILE_LINK_GROUPS_SOURCE_EXPR_SQL},
       f.review_status,
       f.approval_workflow_id,
       u.name AS uploader_name,
       u.surname AS uploader_surname
     FROM files f
-    JOIN users u ON f.uploaded_by = u.id
+    JOIN users u ON f.uploaded_by = u.id${FILE_LINK_GROUPS_JOIN_SQL}
     WHERE f.organization_id = :organizationId
       AND (f.source IS NULL OR f.source != 'policy_editor')
-    ORDER BY f.uploaded_time DESC`;
+    ORDER BY f.uploaded_time DESC, f.id DESC
+    LIMIT :limit`;
 
-  if (limit !== undefined) query += ` LIMIT :limit`;
   if (offset !== undefined) query += ` OFFSET :offset`;
 
   const files = await sequelize.query(query, {
-    replacements: { organizationId, limit, offset },
+    replacements: { organizationId, limit: clampListLimit(limit), offset },
     type: QueryTypes.SELECT,
   });
 
@@ -540,7 +572,10 @@ export async function getOrganizationFiles(
   const countRow = countResult[0] as { count: string } | undefined;
   const total = countRow ? parseInt(countRow.count, 10) : 0;
 
-  return { files: files as OrganizationFileMetadata[], total };
+  const typedFiles = files as OrganizationFileMetadata[];
+  await attachLinkProjections(organizationId, typedFiles as any);
+
+  return { files: typedFiles, total };
 }
 
 // ============================================================================
@@ -609,13 +644,13 @@ export async function getFileAccessLogs(
     FROM file_access_logs fal
     JOIN users u ON fal.accessed_by = u.id
     WHERE fal.organization_id = :organizationId AND fal.file_id = :fileId
-    ORDER BY fal.access_date DESC`;
+    ORDER BY fal.access_date DESC, fal.id DESC
+    LIMIT :limit`;
 
-  if (limit !== undefined) query += ` LIMIT :limit`;
   if (offset !== undefined) query += ` OFFSET :offset`;
 
   const logs = await sequelize.query(query, {
-    replacements: { organizationId, fileId, limit, offset },
+    replacements: { organizationId, fileId, limit: clampListLimit(limit), offset },
     type: QueryTypes.SELECT,
   });
 
@@ -683,61 +718,20 @@ export async function searchFilesByContent(
       AND (f.source IS NULL OR f.source != 'policy_editor')
       AND f.content_search IS NOT NULL
       AND f.content_search @@ plainto_tsquery('english', :q)
-    ORDER BY ts_rank(f.content_search, plainto_tsquery('english', :q)) DESC, f.uploaded_time DESC
+    ORDER BY ts_rank(f.content_search, plainto_tsquery('english', :q)) DESC, f.uploaded_time DESC, f.id DESC
+    LIMIT :limit
   `;
 
-  if (limit !== undefined) {
-    query += ` LIMIT :limit`;
-  }
   if (offset !== undefined) {
     query += ` OFFSET :offset`;
   }
 
   const files = await sequelize.query(query, {
-    replacements: { organizationId, q: queryText, limit, offset },
+    replacements: { organizationId, q: queryText, limit: clampListLimit(limit), offset },
     type: QueryTypes.SELECT,
   });
 
   return { files: files as FileSearchResult[] };
-}
-
-/**
- * Gets files associated with a specific model ID
- *
- * @param modelId - The model ID to get files for
- * @param organizationId - Organization ID for tenant isolation
- * @returns Array of files associated with the model
- */
-export async function getFilesByModelId(
-  modelId: number,
-  organizationId: number,
-): Promise<OrganizationFileMetadata[]> {
-  validateOrganizationId(organizationId);
-
-  const query = `
-    SELECT
-      f.id,
-      f.filename,
-      f.size,
-      f.type AS mimetype,
-      f.uploaded_time AS upload_date,
-      f.uploaded_by,
-      f.org_id,
-      f.model_id,
-      f.source,
-      u.name AS uploader_name,
-      u.surname AS uploader_surname
-    FROM files f
-    JOIN users u ON f.uploaded_by = u.id
-    WHERE f.organization_id = :organizationId AND f.model_id = :modelId
-    ORDER BY f.uploaded_time DESC`;
-
-  const files = await sequelize.query(query, {
-    replacements: { organizationId, modelId },
-    type: QueryTypes.SELECT,
-  });
-
-  return files as OrganizationFileMetadata[];
 }
 
 // ============================================================================
@@ -826,6 +820,7 @@ export async function getFileWithMetadata(
 ): Promise<OrganizationFileMetadata | null> {
   validateOrganizationId(organizationId);
 
+  // Source/link_groups resolved from file_entity_links — see FILE_LINK_GROUPS_*.
   const query = `
     SELECT
       f.id,
@@ -836,8 +831,7 @@ export async function getFileWithMetadata(
       f.uploaded_by,
       f.org_id,
       f.project_id,
-      f.model_id,
-      f.source,
+      f.model_id,${FILE_LINK_GROUPS_SOURCE_EXPR_SQL},
       f.tags,
       f.review_status,
       f.version,
@@ -854,7 +848,7 @@ export async function getFileWithMetadata(
     FROM files f
     JOIN users u ON f.uploaded_by = u.id
     LEFT JOIN users m ON f.last_modified_by = m.id
-    LEFT JOIN approval_workflows aw ON aw.organization_id = f.organization_id AND f.approval_workflow_id = aw.id
+    LEFT JOIN approval_workflows aw ON aw.organization_id = f.organization_id AND f.approval_workflow_id = aw.id${FILE_LINK_GROUPS_JOIN_SQL}
     WHERE f.organization_id = :organizationId AND f.id = :fileId`;
 
   const result = await sequelize.query(query, {
@@ -865,23 +859,35 @@ export async function getFileWithMetadata(
   return (result[0] as OrganizationFileMetadata) || null;
 }
 
+export interface OrganizationFilesListOptions extends PaginationOptions {
+  /** Days before expiry to flag a file as "due for update" (default 30, clamped 1-365) */
+  daysUntilExpiry?: number;
+  /** Days to consider as "recently modified" (default 7, clamped 1-365) */
+  recentDays?: number;
+}
+
 /**
- * Gets organization files with full metadata for file manager view
+ * Gets organization files with full metadata for file manager view.
  *
- * @param orgId - Organization ID to get files for
- * @param organizationId - Organization ID for tenant isolation
- * @param options - Pagination options (limit and offset)
- * @returns Object containing files array with metadata and total count
+ * Each row carries three attention-flag booleans computed in SQL:
+ * - is_due_for_update      — expiry_date is set and within :daysUntilExpiry days (or past)
+ * - is_pending_approval    — review_status = 'pending_review'
+ * - is_recently_modified   — updated_at within :recentDays days
  */
 export async function getOrganizationFilesWithMetadata(
   organizationId: number,
-  options: PaginationOptions = {},
+  options: OrganizationFilesListOptions = {},
 ): Promise<{ files: OrganizationFileMetadata[]; total: number }> {
   validateOrganizationId(organizationId);
 
-  const { limit, offset } = options;
+  const { limit, offset, daysUntilExpiry, recentDays } = options;
 
-  // Use organization_id for tenant isolation (org_id may be NULL on migrated files)
+  // Clamp threshold inputs (defensive — same bounds the old helper enforced).
+  const safeDaysUntilExpiry = Math.max(1, Math.min(365, Math.floor(Number(daysUntilExpiry) || 30)));
+  const safeRecentDays = Math.max(1, Math.min(365, Math.floor(Number(recentDays) || 7)));
+
+  // Use organization_id for tenant isolation (org_id may be NULL on migrated files).
+  // Source/link_groups are derived from file_entity_links — see FILE_LINK_GROUPS_*.
   let query = `
     SELECT
       f.id,
@@ -891,8 +897,7 @@ export async function getOrganizationFilesWithMetadata(
       f.uploaded_time AS upload_date,
       f.uploaded_by,
       f.org_id,
-      f.model_id,
-      f.source,
+      f.model_id,${FILE_LINK_GROUPS_SOURCE_EXPR_SQL},
       f.tags,
       f.review_status,
       f.version,
@@ -905,20 +910,39 @@ export async function getOrganizationFilesWithMetadata(
       u.name AS uploader_name,
       u.surname AS uploader_surname,
       m.name AS last_modifier_name,
-      m.surname AS last_modifier_surname
+      m.surname AS last_modifier_surname,
+      (
+        f.project_id IS NULL
+        AND f.expiry_date IS NOT NULL
+        AND f.expiry_date <= CURRENT_DATE + (:daysUntilExpiry || ' days')::INTERVAL
+      ) AS is_due_for_update,
+      (
+        f.project_id IS NULL
+        AND f.review_status = 'pending_review'
+      ) AS is_pending_approval,
+      (
+        f.project_id IS NULL
+        AND f.updated_at >= CURRENT_DATE - (:recentDays || ' days')::INTERVAL
+      ) AS is_recently_modified
     FROM files f
     JOIN users u ON f.uploaded_by = u.id
     LEFT JOIN users m ON f.last_modified_by = m.id
-    LEFT JOIN approval_workflows aw ON aw.organization_id = f.organization_id AND f.approval_workflow_id = aw.id
+    LEFT JOIN approval_workflows aw ON aw.organization_id = f.organization_id AND f.approval_workflow_id = aw.id${FILE_LINK_GROUPS_JOIN_SQL}
     WHERE f.organization_id = :organizationId
       AND (f.source IS NULL OR f.source != 'policy_editor')
-    ORDER BY f.uploaded_time DESC`;
+    ORDER BY f.uploaded_time DESC, f.id DESC
+    LIMIT :limit`;
 
-  if (limit !== undefined) query += ` LIMIT :limit`;
   if (offset !== undefined) query += ` OFFSET :offset`;
 
   const files = await sequelize.query(query, {
-    replacements: { organizationId, limit, offset },
+    replacements: {
+      organizationId,
+      limit: clampListLimit(limit),
+      offset,
+      daysUntilExpiry: safeDaysUntilExpiry,
+      recentDays: safeRecentDays,
+    },
     type: QueryTypes.SELECT,
   });
 
@@ -936,79 +960,10 @@ export async function getOrganizationFilesWithMetadata(
   const countRow = countResult[0] as { count: string } | undefined;
   const total = countRow ? parseInt(countRow.count, 10) : 0;
 
-  return { files: files as OrganizationFileMetadata[], total };
-}
+  const typedFiles = files as OrganizationFileMetadata[];
+  await attachLinkProjections(organizationId, typedFiles as any);
 
-/**
- * Gets files that need attention (due for update, pending approval, recently modified)
- *
- * @param orgId - Organization ID to get files for
- * @param organizationId - Organization ID for tenant isolation
- * @param daysUntilExpiry - Number of days before expiry to flag as "due for update"
- * @param recentDays - Number of days to consider as "recently modified"
- * @returns Object containing categorized file IDs
- */
-export async function getHighlightedFiles(
-  organizationId: number,
-  daysUntilExpiry: number = 30,
-  recentDays: number = 7,
-): Promise<{
-  dueForUpdate: number[];
-  pendingApproval: number[];
-  recentlyModified: number[];
-}> {
-  validateOrganizationId(organizationId);
-
-  // Validate numeric inputs to prevent SQL injection - must be positive integers within reasonable bounds
-  const safeDaysUntilExpiry = Math.max(1, Math.min(365, Math.floor(Number(daysUntilExpiry) || 30)));
-  const safeRecentDays = Math.max(1, Math.min(365, Math.floor(Number(recentDays) || 7)));
-
-  // Files due for update (expiry_date within X days or passed)
-  // Using INTERVAL with integer cast for safe parameterization
-  const dueQuery = `
-    SELECT id FROM files
-    WHERE organization_id = :organizationId
-      AND project_id IS NULL
-      AND expiry_date IS NOT NULL
-      AND expiry_date <= CURRENT_DATE + (:daysUntilExpiry || ' days')::INTERVAL
-    ORDER BY expiry_date ASC`;
-
-  const dueResult = await sequelize.query(dueQuery, {
-    replacements: { organizationId, daysUntilExpiry: safeDaysUntilExpiry },
-    type: QueryTypes.SELECT,
-  });
-
-  // Files pending approval
-  const pendingQuery = `
-    SELECT id FROM files
-    WHERE organization_id = :organizationId
-      AND project_id IS NULL
-      AND review_status = 'pending_review'
-    ORDER BY uploaded_time DESC`;
-
-  const pendingResult = await sequelize.query(pendingQuery, {
-    replacements: { organizationId },
-    type: QueryTypes.SELECT,
-  });
-
-  // Recently modified files
-  const recentQuery = `
-    SELECT id FROM files
-    WHERE organization_id = :organizationId
-      AND project_id IS NULL
-      AND updated_at >= CURRENT_DATE - (:recentDays || ' days')::INTERVAL
-    ORDER BY updated_at DESC`;
-
-  const recentResult = await sequelize.query(recentQuery, {
-    replacements: { organizationId, recentDays: safeRecentDays },
-    type: QueryTypes.SELECT,
-  });
-
-  return {
-    dueForUpdate: (dueResult as { id: number }[]).map((r) => r.id),
-    pendingApproval: (pendingResult as { id: number }[]).map((r) => r.id),
-    recentlyModified: (recentResult as { id: number }[]).map((r) => r.id),
-  };
+  return { files: typedFiles, total };
 }
 
 /**
@@ -1089,24 +1044,33 @@ export async function getFilePreview(
 // ============================================================================
 
 /**
- * Gets all file versions in the same file group, ordered by upload time descending
+ * Gets a paginated page of file versions in the same file group, ordered by
+ * upload time descending with `f.id DESC` as deterministic tiebreaker.
  *
  * @param fileGroupId - The file group UUID to query
  * @param organizationId - Organization ID for tenant isolation
- * @returns Array of file records in the same version group
+ * @param options - Pagination options (limit defaults to {@link REPO_HARD_MAX_LIMIT})
+ * @returns Page of file records plus total count
  */
 export async function getFileVersionHistory(
   fileGroupId: string,
   organizationId: number,
-): Promise<OrganizationFileMetadata[]> {
+  options: PaginationOptions = {},
+): Promise<{ versions: OrganizationFileMetadata[]; total: number }> {
   validateOrganizationId(organizationId);
 
   // Validate UUID format
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(fileGroupId)) {
-    return [];
+    return { versions: [], total: 0 };
   }
 
-  const query = `
+  const { limit, offset } = options;
+  const replacements: Record<string, unknown> = {
+    organizationId,
+    fileGroupId,
+    limit: clampListLimit(limit),
+  };
+  let query = `
     SELECT
       f.id,
       f.filename,
@@ -1129,14 +1093,28 @@ export async function getFileVersionHistory(
     FROM files f
     JOIN users u ON f.uploaded_by = u.id
     WHERE f.organization_id = :organizationId AND f.file_group_id = :fileGroupId
-    ORDER BY f.uploaded_time DESC`;
+    ORDER BY f.uploaded_time DESC, f.id DESC
+    LIMIT :limit`;
 
-  const result = await sequelize.query(query, {
-    replacements: { organizationId, fileGroupId },
-    type: QueryTypes.SELECT,
-  });
+  if (offset !== undefined) {
+    query += ` OFFSET :offset`;
+    replacements.offset = offset;
+  }
 
-  return result as OrganizationFileMetadata[];
+  const [versions, countResult] = await Promise.all([
+    sequelize.query(query, { replacements, type: QueryTypes.SELECT }),
+    sequelize.query(
+      `SELECT COUNT(*) as count
+       FROM files
+       WHERE organization_id = :organizationId AND file_group_id = :fileGroupId`,
+      { replacements: { organizationId, fileGroupId }, type: QueryTypes.SELECT },
+    ),
+  ]);
+
+  const countRow = countResult[0] as { count: string } | undefined;
+  const total = countRow ? parseInt(countRow.count, 10) : 0;
+
+  return { versions: versions as OrganizationFileMetadata[], total };
 }
 
 // ============================================================================
@@ -1173,54 +1151,6 @@ export async function updateFileReviewStatus(
   });
 
   return Array.isArray(result) && result.length > 0;
-}
-
-/**
- * Gets files pending approval for a specific workflow
- *
- * @param workflowId - The approval workflow ID
- * @param organizationId - Organization ID for tenant isolation
- * @returns Array of files pending approval for this workflow
- */
-export async function getFilesPendingApproval(
-  workflowId: number,
-  organizationId: number,
-): Promise<OrganizationFileMetadata[]> {
-  validateOrganizationId(organizationId);
-
-  const query = `
-    SELECT
-      f.id,
-      f.filename,
-      f.size,
-      f.type AS mimetype,
-      f.uploaded_time AS upload_date,
-      f.uploaded_by,
-      f.org_id,
-      f.model_id,
-      f.source,
-      f.tags,
-      f.review_status,
-      f.version,
-      f.expiry_date,
-      f.last_modified_by,
-      f.description,
-      f.file_group_id,
-      f.approval_workflow_id,
-      u.name AS uploader_name,
-      u.surname AS uploader_surname
-    FROM files f
-    JOIN users u ON f.uploaded_by = u.id
-    WHERE f.organization_id = :organizationId AND f.approval_workflow_id = :workflowId
-      AND f.review_status = 'pending_review'
-    ORDER BY f.uploaded_time DESC`;
-
-  const result = await sequelize.query(query, {
-    replacements: { organizationId, workflowId },
-    type: QueryTypes.SELECT,
-  });
-
-  return result as OrganizationFileMetadata[];
 }
 
 // ============================================================================
@@ -1330,33 +1260,6 @@ export async function deleteFileEntityLink(
 }
 
 /**
- * Gets all entity links for a specific file
- *
- * @param fileId - The file ID
- * @param organizationId - Organization ID for tenant isolation
- * @returns Array of file entity links
- */
-export async function getFileEntityLinks(
-  fileId: number,
-  organizationId: number,
-): Promise<FileEntityLink[]> {
-  validateOrganizationId(organizationId);
-
-  const query = `
-    SELECT id, file_id, framework_type, entity_type, entity_id, project_id, link_type, created_by, created_at
-    FROM file_entity_links
-    WHERE organization_id = :organizationId AND file_id = :fileId
-    ORDER BY created_at DESC`;
-
-  const result = await sequelize.query(query, {
-    replacements: { organizationId, fileId },
-    type: QueryTypes.SELECT,
-  });
-
-  return result as FileEntityLink[];
-}
-
-/**
  * Gets all files linked to a specific entity
  *
  * @param frameworkType - The framework type
@@ -1380,10 +1283,17 @@ export async function getFilesForEntity(
       AND framework_type = :frameworkType
       AND entity_type = :entityType
       AND entity_id = :entityId
-    ORDER BY created_at DESC`;
+    ORDER BY created_at DESC, id DESC
+    LIMIT :limit`;
 
   const result = await sequelize.query(query, {
-    replacements: { organizationId, frameworkType, entityType, entityId },
+    replacements: {
+      organizationId,
+      frameworkType,
+      entityType,
+      entityId,
+      limit: REPO_HARD_MAX_LIMIT,
+    },
     type: QueryTypes.SELECT,
   });
 
@@ -1391,23 +1301,33 @@ export async function getFilesForEntity(
 }
 
 /**
- * Gets files linked to an entity with full file metadata
+ * Gets a paginated page of files linked to an entity, with full file metadata.
+ * Returns the page plus a total count so callers can render pagination UI.
  *
- * @param frameworkType - The framework type
- * @param entityType - The entity type
- * @param entityId - The entity ID
+ * @param frameworkType  - The framework type
+ * @param entityType     - The entity type
+ * @param entityId       - The entity ID
  * @param organizationId - Organization ID for tenant isolation
- * @returns Array of file metadata for linked files
+ * @param options        - Pagination options (limit defaults to {@link REPO_HARD_MAX_LIMIT})
  */
 export async function getFilesWithMetadataForEntity(
   frameworkType: FrameworkType,
   entityType: EntityType,
   entityId: number,
   organizationId: number,
-): Promise<OrganizationFileMetadata[]> {
+  options: PaginationOptions = {},
+): Promise<{ files: OrganizationFileMetadata[]; total: number }> {
   validateOrganizationId(organizationId);
 
-  const query = `
+  const { limit, offset } = options;
+  const replacements: Record<string, unknown> = {
+    organizationId,
+    frameworkType,
+    entityType,
+    entityId,
+    limit: clampListLimit(limit),
+  };
+  let query = `
     SELECT
       f.id,
       f.filename,
@@ -1431,14 +1351,34 @@ export async function getFilesWithMetadataForEntity(
       AND fel.framework_type = :frameworkType
       AND fel.entity_type = :entityType
       AND fel.entity_id = :entityId
-    ORDER BY fel.created_at DESC`;
+    ORDER BY fel.created_at DESC, fel.id DESC
+    LIMIT :limit`;
 
-  const result = await sequelize.query(query, {
-    replacements: { organizationId, frameworkType, entityType, entityId },
-    type: QueryTypes.SELECT,
-  });
+  if (offset !== undefined) {
+    query += ` OFFSET :offset`;
+    replacements.offset = offset;
+  }
 
-  return result as OrganizationFileMetadata[];
+  const [files, countResult] = await Promise.all([
+    sequelize.query(query, { replacements, type: QueryTypes.SELECT }),
+    sequelize.query(
+      `SELECT COUNT(*) as count
+       FROM file_entity_links
+       WHERE organization_id = :organizationId
+         AND framework_type = :frameworkType
+         AND entity_type = :entityType
+         AND entity_id = :entityId`,
+      {
+        replacements: { organizationId, frameworkType, entityType, entityId },
+        type: QueryTypes.SELECT,
+      },
+    ),
+  ]);
+
+  const countRow = countResult[0] as { count: string } | undefined;
+  const total = countRow ? parseInt(countRow.count, 10) : 0;
+
+  return { files: files as OrganizationFileMetadata[], total };
 }
 
 /**

@@ -53,9 +53,9 @@ import {
   ApprovalStepStatus,
 } from "../../../../domain/enums/aiApprovalWorkflow.enum";
 import StepDetailsModal from "./StepDetailsModal";
-import dayjs from "dayjs";
 import DualButtonModal from "../../Dialogs/ConfirmationModal";
 import Field from "../../Inputs/Field";
+import { displayFormattedDateTime } from "../../../tools/isoDateToString";
 import {
   IMenuItemExtended,
   IRequestorApprovalProps,
@@ -749,7 +749,7 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
                         <DetailField
                           icon={<Calendar size={14} />}
                           label="Created"
-                          value={dayjs(requestDetails.dateCreated).format("YYYY-MM-DD, HH:mm")}
+                          value={displayFormattedDateTime(requestDetails.dateCreated)}
                         />
                       )}
                     </Stack>
@@ -793,7 +793,7 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
                               <Typography sx={stepTitleStyle}>{step.title}</Typography>
                               {step.status === ApprovalStepStatus.Completed && step.date && (
                                 <Typography sx={stepDateStyle}>
-                                  {dayjs(step.date).format("MMM DD, YYYY HH:mm")}
+                                  {displayFormattedDateTime(step.date)}
                                 </Typography>
                               )}
                             </Stack>

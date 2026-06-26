@@ -590,6 +590,7 @@ const ProjectSettings = React.memo(
 
     function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
       event.preventDefault();
+      if (customFieldsGate.blocked) return;
       if (validateForm()) {
         handleSaveConfirm();
       } else {
@@ -1375,6 +1376,7 @@ const ProjectSettings = React.memo(
                   ref={customFieldsRef}
                   entityType="project"
                   entityId={parseInt(projectId, 10) || null}
+                  onPendingChange={customFieldsGate.onPendingChange}
                 />
               </Box>
 

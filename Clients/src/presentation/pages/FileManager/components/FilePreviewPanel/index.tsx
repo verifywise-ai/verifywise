@@ -43,6 +43,7 @@ import {
 } from "../../../../../application/utils/officePreview.utils";
 import { useIsAdmin } from "../../../../../application/hooks/useIsAdmin";
 import { status } from "../../../../themes/palette";
+import { displayFormattedDate } from "../../../../tools/isoDateToString";
 
 interface FilePreviewPanelProps {
   isOpen: boolean;
@@ -101,12 +102,7 @@ const formatFileSize = (bytes?: number): string => {
 
 const formatDate = (dateStr?: string): string => {
   if (!dateStr) return "Unknown date";
-  const date = new Date(dateStr);
-  return date.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  return displayFormattedDate(dateStr);
 };
 
 /**

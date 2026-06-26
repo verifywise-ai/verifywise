@@ -12,10 +12,10 @@ const mockGetNumberOfApiTokensQuery = getNumberOfApiTokensQuery as jest.MockedFu
   typeof getNumberOfApiTokensQuery
 >;
 
-function createMockReq(role?: string, tenantId?: number): Partial<Request> {
+function createMockReq(role?: string, organizationId?: number): Partial<Request> {
   return {
     role,
-    tenantId,
+    organizationId,
     t: (key: string) => key,
   } as Partial<Request>;
 }

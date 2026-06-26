@@ -26,6 +26,7 @@ import SidebarShell, {
   SidebarMenuItem,
   SidebarMenuGroup,
 } from "../../components/Sidebar/SidebarShell";
+import { SHOW_AI_GATEWAY_PROMPTS } from "../../../application/config/featureFlags";
 
 interface AIGatewaySidebarProps {
   activeTab: string;
@@ -67,13 +68,19 @@ export default function AIGatewaySidebar({
       value: "guardrails",
       icon: <ShieldCheck size={16} strokeWidth={1.5} />,
     },
-    {
-      id: "prompts",
-      label: "Prompts",
-      value: "prompts",
-      icon: <BookOpen size={16} strokeWidth={1.5} />,
-      count: promptsCount,
-    },
+    // Prompts is gated behind SHOW_AI_GATEWAY_PROMPTS — hidden from the UI
+    // while the page, routes, and backend remain in place.
+    ...(SHOW_AI_GATEWAY_PROMPTS
+      ? [
+          {
+            id: "prompts",
+            label: "Prompts",
+            value: "prompts",
+            icon: <BookOpen size={16} strokeWidth={1.5} />,
+            count: promptsCount,
+          },
+        ]
+      : []),
     {
       id: "models",
       label: "Models",

@@ -118,7 +118,6 @@ function createReq(overrides?: Record<string, any>): any {
     userId: 1,
     organizationId: 1,
     role: "Admin",
-    tenantId: "t1",
     t: (k: string) => k,
     body: {},
     params: {},

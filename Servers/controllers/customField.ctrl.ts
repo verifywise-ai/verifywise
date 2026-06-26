@@ -48,7 +48,7 @@ export async function listCustomFieldDefinitions(req: Request, res: Response): P
     functionName: "listCustomFieldDefinitions",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -59,7 +59,7 @@ export async function listCustomFieldDefinitions(req: Request, res: Response): P
       functionName: "listCustomFieldDefinitions",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(200).json(STATUS_CODE[200](defs));
   } catch (error) {
@@ -70,7 +70,7 @@ export async function listCustomFieldDefinitions(req: Request, res: Response): P
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return respondWithError(req, res, error);
   }
@@ -84,7 +84,7 @@ export async function getCustomFieldDefinitionById(req: Request, res: Response):
     functionName: "getCustomFieldDefinitionById",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -98,7 +98,7 @@ export async function getCustomFieldDefinitionById(req: Request, res: Response):
       functionName: "getCustomFieldDefinitionById",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(200).json(STATUS_CODE[200](def));
   } catch (error) {
@@ -109,7 +109,7 @@ export async function getCustomFieldDefinitionById(req: Request, res: Response):
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return respondWithError(req, res, error);
   }
@@ -121,7 +121,7 @@ export async function createCustomFieldDefinition(req: Request, res: Response): 
     functionName: "createCustomFieldDefinition",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -132,7 +132,7 @@ export async function createCustomFieldDefinition(req: Request, res: Response): 
       functionName: "createCustomFieldDefinition",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(201).json(STATUS_CODE[201](def));
   } catch (error) {
@@ -143,7 +143,7 @@ export async function createCustomFieldDefinition(req: Request, res: Response): 
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return respondWithError(req, res, error);
   }
@@ -157,7 +157,7 @@ export async function updateCustomFieldDefinition(req: Request, res: Response): 
     functionName: "updateCustomFieldDefinition",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -168,7 +168,7 @@ export async function updateCustomFieldDefinition(req: Request, res: Response): 
       functionName: "updateCustomFieldDefinition",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(200).json(STATUS_CODE[200](def));
   } catch (error) {
@@ -179,7 +179,7 @@ export async function updateCustomFieldDefinition(req: Request, res: Response): 
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return respondWithError(req, res, error);
   }
@@ -193,7 +193,7 @@ export async function deleteCustomFieldDefinition(req: Request, res: Response): 
     functionName: "deleteCustomFieldDefinition",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -207,7 +207,7 @@ export async function deleteCustomFieldDefinition(req: Request, res: Response): 
       functionName: "deleteCustomFieldDefinition",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(202).json(STATUS_CODE[202]({ id }));
   } catch (error) {
@@ -218,7 +218,7 @@ export async function deleteCustomFieldDefinition(req: Request, res: Response): 
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return respondWithError(req, res, error);
   }
@@ -235,7 +235,7 @@ export async function getCustomFieldValuesForEntity(req: Request, res: Response)
     functionName: "getCustomFieldValuesForEntity",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -250,7 +250,7 @@ export async function getCustomFieldValuesForEntity(req: Request, res: Response)
       functionName: "getCustomFieldValuesForEntity",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(200).json(STATUS_CODE[200](values));
   } catch (error) {
@@ -261,7 +261,7 @@ export async function getCustomFieldValuesForEntity(req: Request, res: Response)
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return respondWithError(req, res, error);
   }
@@ -286,7 +286,7 @@ export async function getMissingRequiredCustomFields(req: Request, res: Response
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return respondWithError(req, res, error);
   }
@@ -300,7 +300,7 @@ export async function setCustomFieldValue(req: Request, res: Response): Promise<
     functionName: "setCustomFieldValue",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -312,7 +312,7 @@ export async function setCustomFieldValue(req: Request, res: Response): Promise<
       functionName: "setCustomFieldValue",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(200).json(STATUS_CODE[200](row));
   } catch (error) {
@@ -324,7 +324,7 @@ export async function setCustomFieldValue(req: Request, res: Response): Promise<
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return respondWithError(req, res, error);
   }
@@ -340,7 +340,7 @@ export async function deleteCustomFieldValue(req: Request, res: Response): Promi
     functionName: "deleteCustomFieldValue",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -360,7 +360,7 @@ export async function deleteCustomFieldValue(req: Request, res: Response): Promi
       functionName: "deleteCustomFieldValue",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(202).json(STATUS_CODE[202]({ definitionId, entityId }));
   } catch (error) {
@@ -372,7 +372,7 @@ export async function deleteCustomFieldValue(req: Request, res: Response): Promi
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return respondWithError(req, res, error);
   }

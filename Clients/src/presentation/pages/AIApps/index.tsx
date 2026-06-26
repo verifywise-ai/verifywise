@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Stack, Box, Skeleton, Typography } from "@mui/material";
+import { Stack, Box, Typography } from "@mui/material";
+import CustomizableSkeleton from "../../components/Skeletons";
 import { Plus, Bot, ShieldCheck, ScanSearch, ClipboardCheck } from "lucide-react";
 
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
@@ -155,7 +156,7 @@ export default function AIApps() {
         </Box>
 
         {isLoading ? (
-          <Skeleton variant="rectangular" height={300} sx={{ borderRadius: "4px" }} />
+          <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
         ) : error ? (
           <EmptyState message="Failed to load AI apps. Please try again." showBorder />
         ) : filteredApps.length === 0 ? (

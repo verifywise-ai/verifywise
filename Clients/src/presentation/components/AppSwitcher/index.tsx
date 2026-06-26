@@ -1,6 +1,6 @@
 import { FC, memo } from "react";
 import { Stack, Tooltip, Box, Typography, useTheme } from "@mui/material";
-import { Shield, FlaskConical, ScanSearch, Eye, Router, Crown } from "lucide-react";
+import { Shield, FlaskConical, ScanSearch, Eye, Router, Crown, Gauge } from "lucide-react";
 import { AppModule } from "../../../application/redux/ui/uiSlice";
 import "./index.css";
 
@@ -32,10 +32,16 @@ const modules: ModuleItem[] = [
     description: "Evaluate LLM quality, performance and reliability over time",
   },
   {
-    id: "ai-detection",
-    icon: <ScanSearch size={16} strokeWidth={1.5} />,
-    label: "AI Detection",
-    description: "Scan repositories to detect AI/ML libraries and frameworks",
+    id: "ai-gateway",
+    icon: <Router size={16} strokeWidth={1.5} />,
+    label: "AI Gateway",
+    description: "Proxy, monitor, and control LLM API usage across providers",
+  },
+  {
+    id: "ai-trust-index",
+    icon: <Gauge size={16} strokeWidth={1.5} />,
+    label: "AI Trust Index",
+    description: "Browse AI app risk scores and track the apps you use",
   },
   {
     id: "shadow-ai",
@@ -44,10 +50,10 @@ const modules: ModuleItem[] = [
     description: "Detect and govern unauthorized AI tool usage across your organization",
   },
   {
-    id: "ai-gateway",
-    icon: <Router size={16} strokeWidth={1.5} />,
-    label: "AI Gateway",
-    description: "Proxy, monitor, and control LLM API usage across providers",
+    id: "ai-detection",
+    icon: <ScanSearch size={16} strokeWidth={1.5} />,
+    label: "AI Detection",
+    description: "Scan repositories to detect AI/ML libraries and frameworks",
   },
 ];
 

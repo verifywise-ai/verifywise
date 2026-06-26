@@ -20,25 +20,34 @@ const toRequestConfig = (config: RequestParams): AxiosRequestConfig => ({
   responseType: config.responseType as ResponseType | undefined,
 });
 
-// Utility function to handle errors
+/**
+ * Pull the best human-readable message out of an axios error response.
+ *
+ * Priority (matches the backend STATUS_CODE envelope and legacy raw shapes):
+ *   1. data.data (string)             — single-field STATUS_CODE[NNN]("msg")
+ *   2. data.data.message              — multi-field STATUS_CODE[NNN]({ message, ... })
+ *   3. data.data.error                — multi-field STATUS_CODE[NNN]({ error, ... })
+ *   4. data.message                   — legacy raw { message: "msg" } or HTTP phrase
+ *   5. data.error                     — legacy raw { error: "msg" }
+ */
+const extractErrorMessage = (data: ApiErrorEnvelope | undefined, fallback: string): string => {
+  if (data == null) return fallback;
+  if (typeof data.data === "string") return data.data;
+  if (data.data && typeof data.data === "object") {
+    const inner = data.data as { message?: unknown; error?: unknown };
+    if (typeof inner.message === "string") return inner.message;
+    if (typeof inner.error === "string") return inner.error;
+  }
+  if (typeof data.message === "string") return data.message;
+  if (typeof data.error === "string") return data.error;
+  return fallback;
+};
+
 const handleError = (error: unknown): CustomException => {
   try {
     if (axios.isAxiosError(error)) {
       const responseData = error.response?.data as ApiErrorEnvelope | undefined;
-      // Extract the most specific error message available
-      let errorMessage = error.message; // fallback
-
-      if (typeof responseData?.data === "string") {
-        // Validation errors from STATUS_CODE[400] put the specific message in data.data
-        errorMessage = responseData.data;
-      } else if (responseData?.message) {
-        // Standard error format with message
-        errorMessage = responseData.message;
-      } else if (responseData?.error) {
-        // Alternative error format
-        errorMessage = responseData.error;
-      }
-
+      const errorMessage = extractErrorMessage(responseData, error.message);
       return new CustomException(errorMessage, error.response?.status, error.response?.data);
     } else {
       const message = error instanceof Error ? error.message : "An unknown error occurred";
