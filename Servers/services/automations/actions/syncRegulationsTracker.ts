@@ -131,27 +131,24 @@ export async function syncRegulationsTracker(deps?: { feed?: unknown }): Promise
     const affected = await getAffectedOrgsBySlugs(changedSlugs);
     const byOrg = new Map<
       number,
-      { changed: DigestItem[]; removed: DigestItem[]; slugs: string[] }
+      { changed: DigestItem[]; removed: DigestItem[] }
     >();
     for (const row of affected) {
       const bucket = byOrg.get(row.organization_id) ?? {
         changed: [],
         removed: [],
-        slugs: [],
       };
       const name = row.name ?? row.country_slug;
-      bucket.slugs.push(row.country_slug);
       if (newlyRemoved.includes(row.country_slug)) {
-        const ch = changeBySlug.get(row.country_slug);
-        bucket.removed.push({ name, detail: ch?.detail ?? undefined });
+        bucket.removed.push({ name });
       } else {
         const ch = changeBySlug.get(row.country_slug);
-        bucket.changed.push({ name, detail: ch?.detail ?? undefined });
+        bucket.changed.push({ name, detail: ch ? ch.lines.join(", ") : undefined });
       }
       byOrg.set(row.organization_id, bucket);
     }
 
-    for (const [orgId, { changed: ch, removed: rm, slugs }] of byOrg) {
+    for (const [orgId, { changed: ch, removed: rm }] of byOrg) {
       // In-app: always to admins ∪ configured recipients.
       const userIds = await resolveInAppUserIds(orgId);
       if (userIds.length) {
@@ -176,9 +173,6 @@ export async function syncRegulationsTracker(deps?: { feed?: unknown }): Promise
             orgId,
           );
         }
-        // Log the first slug for debugging; entity_id in the DB is numeric so
-        // we do not store the string slug there.
-        void slugs;
         orgsNotified++;
       }
       // Email: configured recipients only, no fallback.
