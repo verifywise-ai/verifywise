@@ -21,6 +21,7 @@ import { PageBreadcrumbs } from "../../../components/breadcrumbs/PageBreadcrumbs
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import { EmptyState } from "../../../components/EmptyState";
 import Chip from "../../../components/Chip";
+import { VWLink } from "../../../components/Link";
 import { palette } from "../../../themes/palette";
 import {
   useCountryDetail,
@@ -448,18 +449,9 @@ export default function CountryDetail() {
 
                   {reg.sourceUrl && (
                     <Box sx={{ mt: "8px" }}>
-                      <a
-                        href={reg.sourceUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          fontSize: "13px",
-                          color: palette.brand.primary,
-                          textDecoration: "none",
-                        }}
-                      >
+                      <VWLink url={reg.sourceUrl} openInNewTab alwaysShowIcon>
                         View source
-                      </a>
+                      </VWLink>
                     </Box>
                   )}
                 </Box>
@@ -472,7 +464,8 @@ export default function CountryDetail() {
         {country.timeline && country.timeline.length > 0 && (
           <SectionCard title="Timeline">
             <Stack gap="8px">
-              {country.timeline.map((event, i) => (
+              {/* Newest first: the feed lists timeline events chronologically. */}
+              {[...country.timeline].reverse().map((event, i) => (
                 <Box
                   key={`${event.date}-${i}`}
                   sx={{ display: "flex", gap: "12px", alignItems: "flex-start" }}

@@ -15,6 +15,8 @@ export interface IVWLinkCoreProps {
   showUnderline?: boolean;
   /** If true, shows icon on hover for URL links (default: true) */
   showIcon?: boolean;
+  /** If true, the external-link icon is always visible (not only on hover) for URL links (default: false) */
+  alwaysShowIcon?: boolean;
   /** Custom class name */
   className?: string;
   /** ARIA label for accessibility */

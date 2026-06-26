@@ -12,6 +12,7 @@ import { AlertTriangle, Landmark } from "lucide-react";
 import { EmptyState } from "../../../components/EmptyState";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
 import Chip from "../../../components/Chip";
+import { VWLink } from "../../../components/Link";
 import { palette } from "../../../themes/palette";
 import { useFrameworks } from "../../../../application/hooks/useRegulationsTracker";
 
@@ -116,18 +117,9 @@ export default function Frameworks() {
               )}
               {f.sourceUrl && (
                 <Box sx={{ mt: "8px" }}>
-                  <a
-                    href={f.sourceUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      fontSize: "13px",
-                      color: palette.brand.primary,
-                      textDecoration: "none",
-                    }}
-                  >
+                  <VWLink url={f.sourceUrl} openInNewTab alwaysShowIcon>
                     View source
-                  </a>
+                  </VWLink>
                 </Box>
               )}
             </Box>

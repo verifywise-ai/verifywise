@@ -50,6 +50,7 @@ export const VWLink = memo(function VWLink({
   openInNewTab = false,
   showUnderline = true,
   showIcon = true,
+  alwaysShowIcon = false,
   sx,
   className,
   ariaLabel,
@@ -124,7 +125,7 @@ export const VWLink = memo(function VWLink({
       >
         {children}
       </Link>
-      {url && isHovered && showIcon && (
+      {url && showIcon && (isHovered || alwaysShowIcon) && (
         <ExternalLink
           size={14}
           style={{
