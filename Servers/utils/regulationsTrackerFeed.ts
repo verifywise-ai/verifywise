@@ -1,5 +1,5 @@
 import axios from "axios";
-import { IManifest, IManifestCountry } from "../domain.layer/interfaces/i.regulationsTracker";
+import { IManifestCountry } from "../domain.layer/interfaces/i.regulationsTracker";
 
 export const FEED_ORIGIN = "https://verifywise.ai";
 export const MANIFEST_URL = `${FEED_ORIGIN}/api/regulations`;
