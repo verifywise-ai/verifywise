@@ -115,6 +115,13 @@ export default function Frameworks() {
                   </Box>
                 </Box>
               )}
+              {f.namedDocuments && f.namedDocuments.length > 0 && (
+                <Stack direction="row" gap="6px" flexWrap="wrap" sx={{ mt: "8px" }}>
+                  {f.namedDocuments.map((doc, j) => (
+                    <Chip key={j} label={doc} variant="default" uppercase={false} />
+                  ))}
+                </Stack>
+              )}
               {f.sourceUrl && (
                 <Box sx={{ mt: "8px" }}>
                   <VWLink url={f.sourceUrl} openInNewTab alwaysShowIcon>

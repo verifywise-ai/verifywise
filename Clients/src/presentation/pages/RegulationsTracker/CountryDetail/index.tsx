@@ -44,6 +44,7 @@ interface Regulation {
   type?: string;
   status?: string;
   effectiveDate?: string;
+  dateConfidence?: string;
   scope?: string;
   obligations?: string[];
   maxPenalty?: string;
@@ -381,6 +382,14 @@ export default function CountryDetail() {
                     {reg.effectiveDate && (
                       <Typography sx={{ fontSize: "12px", color: palette.text.tertiary }}>
                         Effective: {reg.effectiveDate}
+                        {reg.dateConfidence && reg.dateConfidence !== "exact"
+                          ? ` (${reg.dateConfidence})`
+                          : ""}
+                      </Typography>
+                    )}
+                    {reg.lastVerified && (
+                      <Typography sx={{ fontSize: "12px", color: palette.text.tertiary }}>
+                        Last verified: {reg.lastVerified}
                       </Typography>
                     )}
                   </Stack>
