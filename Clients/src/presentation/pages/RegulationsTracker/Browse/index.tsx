@@ -9,8 +9,8 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Box, Stack, TablePagination, CircularProgress, Typography } from "@mui/material";
-import { SearchX, AlertTriangle, Globe } from "lucide-react";
+import { Box, Stack, TablePagination, CircularProgress } from "@mui/material";
+import { SearchX, AlertTriangle } from "lucide-react";
 import { SearchBox } from "../../../components/Search";
 import { CustomSelect } from "../../../components/CustomSelect";
 import { CustomizableButton } from "../../../components/button/customizable-button";
@@ -26,16 +26,9 @@ import {
 } from "../../../../application/hooks/useRegulationsTracker";
 import { useRegulationsTrackerSidebarContextSafe } from "../../../../application/contexts/RegulationsTrackerSidebar.context";
 import { useTrackerAlert } from "../useTrackerAlert";
+import { CountryRow, CountryRowCard } from "../CountryRowCard";
 
 const PAGE_SIZE = 24;
-
-interface CountryRow {
-  slug: string;
-  name: string;
-  region?: string;
-  iso2?: string;
-  is_tracked?: boolean;
-}
 
 export default function Browse() {
   const navigate = useNavigate();
@@ -58,6 +51,10 @@ export default function Browse() {
   }, [searchInput]);
 
   const { data, isLoading, isError } = useCountries({ region, q: search });
+  // Unfiltered fetch used only to build the stable region dropdown — so selecting a region
+  // never removes other regions from the list (fix: region options were previously derived
+  // from the filtered result, which collapsed to a single option after region selection).
+  const { data: allData } = useCountries({});
 
   const trackCountry = useTrackCountry();
   const untrackCountry = useUntrackCountry();
@@ -70,18 +67,21 @@ export default function Browse() {
 
   const total = rows.length;
 
-  // Build region options from the full dataset.
+  // Build region options from the UNFILTERED country list so the dropdown always shows all
+  // regions regardless of the active region/search filter.
   const regionOptions = useMemo(() => {
-    const regions = Array.from(new Set(rows.map((r) => r.region).filter(Boolean))) as string[];
+    const allRows: CountryRow[] = Array.isArray(allData?.data) ? allData.data : [];
+    const allTotal = allRows.length;
+    const regions = Array.from(new Set(allRows.map((r) => r.region).filter(Boolean))) as string[];
     regions.sort();
     return [
-      { value: "", label: total ? `All regions (${total})` : "All regions" },
+      { value: "", label: allTotal ? `All regions (${allTotal})` : "All regions" },
       ...regions.map((r) => ({
         value: r,
         label: r,
       })),
     ];
-  }, [rows, total]);
+  }, [allData]);
 
   const pagedRows = useMemo(
     () => rows.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE),
@@ -229,75 +229,41 @@ export default function Browse() {
             {pagedRows.map((row) => {
               const isSelected = selected.includes(row.slug);
               return (
-                <Box
+                <CountryRowCard
                   key={row.slug}
-                  sx={{
-                    "display": "flex",
-                    "alignItems": "center",
-                    "gap": "12px",
-                    "border": `1px solid ${palette.border.dark}`,
-                    "borderRadius": "4px",
-                    "p": "10px 12px",
-                    "backgroundColor": palette.background.main,
-                    "cursor": "pointer",
-                    "&:hover": { backgroundColor: palette.background.accent },
-                  }}
+                  row={row}
                   onClick={() => navigate(`/regulations-tracker/${row.slug}`)}
-                >
-                  {/* Select checkbox (stop propagation so click doesn't open detail) */}
-                  <Box
-                    component="input"
-                    type="checkbox"
-                    aria-label={`Select ${row.name}`}
-                    checked={isSelected}
-                    disabled={row.is_tracked}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                      e.stopPropagation();
-                      toggleRow(row.slug);
-                    }}
-                    onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                    sx={{
-                      cursor: row.is_tracked ? "default" : "pointer",
-                      width: 16,
-                      height: 16,
-                      flexShrink: 0,
-                      accentColor: palette.brand.primary,
-                    }}
-                  />
-
-                  {/* Flag / icon */}
-                  <Globe size={16} strokeWidth={1.5} color={palette.text.tertiary} />
-
-                  {/* Country name + region */}
-                  <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography
-                      sx={{ fontSize: "14px", fontWeight: 500, color: palette.text.primary }}
-                    >
-                      {row.name}
-                    </Typography>
-                    {row.region && (
-                      <Typography sx={{ fontSize: "12px", color: palette.text.tertiary }}>
-                        {row.region}
-                      </Typography>
-                    )}
-                  </Box>
-
-                  {/* Track / Untrack button */}
-                  <CustomizableButton
-                    text={row.is_tracked ? "Untrack" : "Track"}
-                    variant="outlined"
-                    size="small"
-                    onClick={(e: React.MouseEvent) => {
-                      e.stopPropagation();
-                      handleToggleTrack(row);
-                    }}
-                    isDisabled={
-                      (trackCountry.isPending && trackCountry.variables === row.slug) ||
-                      (untrackCountry.isPending && untrackCountry.variables === row.slug)
-                    }
-                    sx={{ flexShrink: 0 }}
-                  />
-                </Box>
+                  actionLabel={row.is_tracked ? "Untrack" : "Track"}
+                  onAction={(e) => {
+                    e.stopPropagation();
+                    handleToggleTrack(row);
+                  }}
+                  actionDisabled={
+                    (trackCountry.isPending && trackCountry.variables === row.slug) ||
+                    (untrackCountry.isPending && untrackCountry.variables === row.slug)
+                  }
+                  checkbox={
+                    <Box
+                      component="input"
+                      type="checkbox"
+                      aria-label={`Select ${row.name}`}
+                      checked={isSelected}
+                      disabled={row.is_tracked}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        e.stopPropagation();
+                        toggleRow(row.slug);
+                      }}
+                      onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                      sx={{
+                        cursor: row.is_tracked ? "default" : "pointer",
+                        width: 16,
+                        height: 16,
+                        flexShrink: 0,
+                        accentColor: palette.brand.primary,
+                      }}
+                    />
+                  }
+                />
               );
             })}
           </Stack>

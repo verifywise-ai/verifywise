@@ -78,17 +78,22 @@ export async function upsertFeedTx(
     )) as any[];
     wasFirstSeed = !metaRows[0]?.seeded_at;
 
+    // Prefetch all existing slugs + hashes in a single query to avoid N+1 SELECTs.
+    const normalizedSlugs = countries.map((c) => normalizeSlug(c.slug));
+    const prefetchRows = (await sequelize.query(
+      `SELECT slug, hash FROM regulation_countries WHERE slug = ANY(ARRAY[:slugs]::varchar[]);`,
+      { replacements: { slugs: normalizedSlugs }, type: QueryTypes.SELECT, transaction },
+    )) as { slug: string; hash: string }[];
+    const existingMap = new Map<string, string>(prefetchRows.map((r) => [r.slug, r.hash]));
+
     const upsertedSlugs: string[] = [];
     for (const c of countries) {
       const slug = normalizeSlug(c.slug);
       upsertedSlugs.push(slug);
-      const existing = (await sequelize.query(
-        `SELECT hash FROM regulation_countries WHERE slug = :slug;`,
-        { replacements: { slug }, type: QueryTypes.SELECT, transaction },
-      )) as any[];
+      const existingHash = existingMap.get(slug);
 
-      if (existing.length) {
-        const hashMoved = existing[0].hash !== c.hash;
+      if (existingHash !== undefined) {
+        const hashMoved = existingHash !== c.hash;
         if (hashMoved) {
           const lc = c.history?.lastChange ?? null;
           const lines = (lc?.changes ?? []).map(renderChangeLine);

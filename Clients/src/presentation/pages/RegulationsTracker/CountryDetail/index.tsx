@@ -461,8 +461,59 @@ export default function CountryDetail() {
           </Box>
         )}
 
-        {/* Empty state when no regulations data yet */}
-        {(!country.regulations || country.regulations.length === 0) &&
+        {/* Stale summary card: shown when data is stale AND no regulation/timeline detail is
+            available (i.e. the feed returned a manifest-only summary). Shows what IS known
+            (regulation count, last change history from the manifest) rather than a blank empty state. */}
+        {country.stale &&
+          (!country.regulations || country.regulations.length === 0) &&
+          (!country.timeline || country.timeline.length === 0) &&
+          (!country.change_history || country.change_history.length === 0) && (
+            <SectionCard title="Last known summary">
+              <Stack gap="8px">
+                {(country as any).regulationCount != null && (
+                  <Typography sx={{ fontSize: "13px", color: palette.text.secondary }}>
+                    Regulation count (at last snapshot):{" "}
+                    <strong>{(country as any).regulationCount}</strong>
+                  </Typography>
+                )}
+                {(country as any).history?.lastChange?.changes?.length > 0 && (
+                  <Box>
+                    <Typography
+                      sx={{
+                        fontSize: "13px",
+                        fontWeight: 500,
+                        mb: "4px",
+                        color: palette.text.secondary,
+                      }}
+                    >
+                      Last recorded changes
+                    </Typography>
+                    <Stack gap="4px">
+                      {(country as any).history.lastChange.changes.map(
+                        (ch: Record<string, unknown>, i: number) => (
+                          <Typography
+                            key={i}
+                            sx={{ fontSize: "13px", color: palette.text.tertiary }}
+                          >
+                            • {String(ch.field ?? "")}: {String(ch.from ?? "")} →{" "}
+                            {String(ch.to ?? ch.value ?? "")}
+                          </Typography>
+                        ),
+                      )}
+                    </Stack>
+                  </Box>
+                )}
+                <Typography sx={{ fontSize: "12px", color: palette.text.muted, mt: "4px" }}>
+                  Live regulation details are temporarily unavailable. The information above
+                  reflects the last available snapshot from the feed.
+                </Typography>
+              </Stack>
+            </SectionCard>
+          )}
+
+        {/* Empty state when no regulations data yet and data is NOT stale (live fetch returned empty) */}
+        {!country.stale &&
+          (!country.regulations || country.regulations.length === 0) &&
           (!country.timeline || country.timeline.length === 0) &&
           (!country.change_history || country.change_history.length === 0) && (
             <EmptyState

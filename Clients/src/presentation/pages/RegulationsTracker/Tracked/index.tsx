@@ -9,9 +9,8 @@
 
 import { useMemo, useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Box, Stack, TablePagination, CircularProgress, Typography } from "@mui/material";
-import { Star, Compass, Bell, AlertTriangle, Globe } from "lucide-react";
-import { CustomizableButton } from "../../../components/button/customizable-button";
+import { Box, Stack, TablePagination, CircularProgress } from "@mui/material";
+import { Star, Compass, Bell, AlertTriangle } from "lucide-react";
 import { CustomSelect } from "../../../components/CustomSelect";
 import { EmptyState } from "../../../components/EmptyState";
 import EmptyStateTip from "../../../components/EmptyState/EmptyStateTip";
@@ -21,16 +20,9 @@ import { palette } from "../../../themes/palette";
 import { useTracked, useUntrackCountry } from "../../../../application/hooks/useRegulationsTracker";
 import { useRegulationsTrackerSidebarContextSafe } from "../../../../application/contexts/RegulationsTrackerSidebar.context";
 import { useTrackerAlert } from "../useTrackerAlert";
+import { CountryRow, CountryRowCard } from "../CountryRowCard";
 
 const ROWS_PER_PAGE_OPTIONS = [12, 24, 48];
-
-interface CountryRow {
-  slug: string;
-  name: string;
-  region?: string;
-  iso2?: string;
-  is_tracked?: boolean;
-}
 
 function sortValue(row: CountryRow, key: string): string {
   switch (key) {
@@ -193,48 +185,14 @@ export default function Tracked() {
 
           <Stack gap="2px">
             {pagedRows.map((row) => (
-              <Box
+              <CountryRowCard
                 key={row.slug}
-                sx={{
-                  "display": "flex",
-                  "alignItems": "center",
-                  "gap": "12px",
-                  "border": `1px solid ${palette.border.dark}`,
-                  "borderRadius": "4px",
-                  "p": "10px 12px",
-                  "backgroundColor": palette.background.main,
-                  "cursor": "pointer",
-                  "&:hover": { backgroundColor: palette.background.accent },
-                }}
+                row={row}
                 onClick={() => navigate(`/regulations-tracker/${row.slug}`)}
-              >
-                <Globe size={16} strokeWidth={1.5} color={palette.text.tertiary} />
-
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography
-                    sx={{ fontSize: "14px", fontWeight: 500, color: palette.text.primary }}
-                  >
-                    {row.name}
-                  </Typography>
-                  {row.region && (
-                    <Typography sx={{ fontSize: "12px", color: palette.text.tertiary }}>
-                      {row.region}
-                    </Typography>
-                  )}
-                </Box>
-
-                <CustomizableButton
-                  text="Untrack"
-                  variant="outlined"
-                  size="small"
-                  onClick={(e: React.MouseEvent) => {
-                    e.stopPropagation();
-                    handleUntrack(row);
-                  }}
-                  isDisabled={untrackCountry.isPending && untrackCountry.variables === row.slug}
-                  sx={{ flexShrink: 0 }}
-                />
-              </Box>
+                actionLabel="Untrack"
+                onAction={() => handleUntrack(row)}
+                actionDisabled={untrackCountry.isPending && untrackCountry.variables === row.slug}
+              />
             ))}
           </Stack>
 

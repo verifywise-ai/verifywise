@@ -8738,6 +8738,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Data may be outdated": "Daten möglicherweise veraltet",
     "Disclaimer": "Haftungsausschluss",
     "Regulations": "Regulierungen",
+    "Last known summary": "Letzte bekannte Zusammenfassung",
+    "Last recorded changes": "Zuletzt aufgezeichnete Änderungen",
     "No regulation data is available for this country yet. Check back later as the feed is updated regularly.":
       "Für dieses Land sind noch keine Regulierungsdaten verfügbar. Schauen Sie später wieder vorbei, da der Feed regelmäßig aktualisiert wird.",
   },
@@ -17410,6 +17412,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Data may be outdated": "Les données peuvent être obsolètes",
     "Disclaimer": "Avertissement",
     "Regulations": "Réglementations",
+    "Last known summary": "Dernier résumé connu",
+    "Last recorded changes": "Dernières modifications enregistrées",
     "No regulation data is available for this country yet. Check back later as the feed is updated regularly.":
       "Aucune donnée réglementaire n'est encore disponible pour ce pays. Revenez plus tard, car le flux est mis à jour régulièrement.",
   },
@@ -25999,6 +26003,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Data may be outdated": "Los datos pueden estar desactualizados",
     "Disclaimer": "Aviso legal",
     "Regulations": "Regulaciones",
+    "Last known summary": "Último resumen conocido",
+    "Last recorded changes": "Últimos cambios registrados",
     "No regulation data is available for this country yet. Check back later as the feed is updated regularly.":
       "Aún no hay datos de regulación disponibles para este país. Vuelva más tarde, ya que el feed se actualiza regularmente.",
   },
