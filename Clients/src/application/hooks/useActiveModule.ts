@@ -36,6 +36,9 @@ export function useActiveModule() {
     if (pathname.startsWith("/ai-trust-index")) {
       return "ai-trust-index";
     }
+    if (pathname.startsWith("/regulations-tracker")) {
+      return "regulations-tracker";
+    }
     if (pathname.startsWith("/super-admin")) {
       return "super-admin";
     }
@@ -76,6 +79,9 @@ export function useActiveModule() {
         case "ai-trust-index":
           navigate("/ai-trust-index/browse");
           break;
+        case "regulations-tracker":
+          navigate("/regulations-tracker/browse");
+          break;
         case "super-admin":
           navigate("/super-admin");
           break;
@@ -100,6 +106,7 @@ export function useActiveModule() {
         "shadow-ai",
         "ai-gateway",
         "ai-trust-index",
+        "regulations-tracker",
         "super-admin",
       ].includes(stored)
     ) {

@@ -1,6 +1,6 @@
 import { FC, memo } from "react";
 import { Stack, Tooltip, Box, Typography, useTheme } from "@mui/material";
-import { Shield, FlaskConical, ScanSearch, Eye, Router, Crown, Gauge } from "lucide-react";
+import { Shield, FlaskConical, ScanSearch, Eye, Router, Crown, Gauge, Scale } from "lucide-react";
 import { AppModule } from "../../../application/redux/ui/uiSlice";
 import "./index.css";
 
@@ -42,6 +42,12 @@ const modules: ModuleItem[] = [
     icon: <Gauge size={16} strokeWidth={1.5} />,
     label: "AI Trust Index",
     description: "Browse AI app risk scores and track the apps you use",
+  },
+  {
+    id: "regulations-tracker",
+    icon: <Scale size={16} strokeWidth={1.5} />,
+    label: "Regulations tracker",
+    description: "Track AI regulations and compliance requirements across jurisdictions",
   },
   {
     id: "shadow-ai",

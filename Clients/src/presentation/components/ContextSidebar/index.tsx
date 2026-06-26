@@ -5,6 +5,7 @@ import { useAIDetectionSidebarContextSafe } from "../../../application/contexts/
 import { useShadowAISidebarContextSafe } from "../../../application/contexts/ShadowAISidebar.context";
 import { useAIGatewaySidebarContextSafe } from "../../../application/contexts/AIGatewaySidebar.context";
 import { useAITrustIndexSidebarContextSafe } from "../../../application/contexts/AITrustIndexSidebar.context";
+import { useRegulationsTrackerSidebarContextSafe } from "../../../application/contexts/RegulationsTrackerSidebar.context";
 import Sidebar from "../Sidebar";
 import SuperAdminSidebar from "../SuperAdminSidebar";
 import EvalsSidebar from "../../pages/EvalsDashboard/EvalsSidebar";
@@ -12,6 +13,7 @@ import AIDetectionSidebar from "../../pages/AIDetection/AIDetectionSidebar";
 import ShadowAISidebar from "../../pages/ShadowAI/ShadowAISidebar";
 import AIGatewaySidebar from "../../pages/AIGateway/AIGatewaySidebar";
 import AITrustIndexSidebar from "../../pages/AITrustIndex/AITrustIndexSidebar";
+import RegulationsTrackerSidebar from "../../pages/RegulationsTracker/RegulationsTrackerSidebar";
 
 interface ContextSidebarProps {
   activeModule: AppModule;
@@ -45,6 +47,7 @@ export function ContextSidebar({
   const shadowAiSidebarContext = useShadowAISidebarContextSafe();
   const aiGatewaySidebarContext = useAIGatewaySidebarContextSafe();
   const aiTrustIndexSidebarContext = useAITrustIndexSidebarContextSafe();
+  const regulationsTrackerSidebarContext = useRegulationsTrackerSidebarContextSafe();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -219,6 +222,26 @@ export function ContextSidebar({
           activeTab={trustIndexTab}
           onTabChange={handleTrustIndexTabChange}
           trackedCount={aiTrustIndexSidebarContext?.trackedCount ?? 0}
+          isAdmin={isAdmin}
+        />
+      );
+    }
+    case "regulations-tracker": {
+      const regulationsTrackerTab = location.pathname.includes("/regulations-tracker/tracked")
+        ? "tracked"
+        : location.pathname.includes("/regulations-tracker/settings")
+          ? "settings"
+          : "browse";
+
+      const handleRegulationsTrackerTabChange = (newTab: string) => {
+        navigate(`/regulations-tracker/${newTab}`);
+      };
+
+      return (
+        <RegulationsTrackerSidebar
+          activeTab={regulationsTrackerTab}
+          onTabChange={handleRegulationsTrackerTabChange}
+          trackedCount={regulationsTrackerSidebarContext?.trackedCount ?? 0}
           isAdmin={isAdmin}
         />
       );

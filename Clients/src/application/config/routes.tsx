@@ -101,6 +101,22 @@ const AITrustIndexSettings = lazyRoute(
 const AITrustIndexDetail = lazyRoute(
   () => import("../../presentation/pages/AITrustIndex/AppDetail"),
 );
+// ── Regulations Tracker routes ────────────────────────────────────────
+const RegulationsTracker = lazyRoute(
+  () => import("../../presentation/pages/RegulationsTracker"),
+);
+const RegulationsTrackerBrowse = lazyRoute(
+  () => import("../../presentation/pages/RegulationsTracker/Browse"),
+);
+const RegulationsTrackerTracked = lazyRoute(
+  () => import("../../presentation/pages/RegulationsTracker/Tracked"),
+);
+const RegulationsTrackerSettings = lazyRoute(
+  () => import("../../presentation/pages/RegulationsTracker/Settings"),
+);
+const RegulationsTrackerCountryDetail = lazyRoute(
+  () => import("../../presentation/pages/RegulationsTracker/CountryDetail"),
+);
 
 const InsightsPage = lazyRoute(() => import("../../presentation/pages/ShadowAI/InsightsPage"));
 const UserActivityPage = lazyRoute(
@@ -785,6 +801,46 @@ export const createRoutes = (
       element={
         <Suspense fallback={<LazyFallback />}>
           <AITrustIndexDetail />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/regulations-tracker"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <RegulationsTracker />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/regulations-tracker/browse"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <RegulationsTrackerBrowse />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/regulations-tracker/tracked"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <RegulationsTrackerTracked />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/regulations-tracker/settings"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <RegulationsTrackerSettings />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/regulations-tracker/:slug"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <RegulationsTrackerCountryDetail />
         </Suspense>
       }
     />

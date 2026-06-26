@@ -9,6 +9,7 @@ import { AIDetectionSidebarProvider } from "../../../application/contexts/AIDete
 import { ShadowAISidebarProvider } from "../../../application/contexts/ShadowAISidebar.context";
 import { AIGatewaySidebarProvider } from "../../../application/contexts/AIGatewaySidebar.context";
 import { AITrustIndexSidebarProvider } from "../../../application/contexts/AITrustIndexSidebar.context";
+import { RegulationsTrackerSidebarProvider } from "../../../application/contexts/RegulationsTrackerSidebar.context";
 import DemoAppBanner from "../../components/DemoBanner/DemoAppBanner";
 import { getAllProjects } from "../../../application/repository/project.repository";
 import {
@@ -300,6 +301,7 @@ const Dashboard: FC<DashboardProps> = ({ reloadTrigger }) => {
         <ShadowAISidebarProvider>
           <AIGatewaySidebarProvider>
             <AITrustIndexSidebarProvider>
+              <RegulationsTrackerSidebarProvider>
               <Stack
                 maxWidth="100%"
                 className="home-layout"
@@ -398,6 +400,7 @@ const Dashboard: FC<DashboardProps> = ({ reloadTrigger }) => {
                   </Typography>
                 </StandardModal>
               </Stack>
+              </RegulationsTrackerSidebarProvider>
             </AITrustIndexSidebarProvider>
           </AIGatewaySidebarProvider>
         </ShadowAISidebarProvider>
