@@ -244,13 +244,23 @@ export default function Browse() {
                   }
                   checkbox={
                     row.is_tracked ? (
-                      <CheckSquare
-                        size={16}
-                        strokeWidth={2}
-                        color={palette.status.success.text}
-                        aria-label={`${row.name} is tracked`}
-                        style={{ flexShrink: 0 }}
-                      />
+                      <Box
+                        sx={{
+                          width: 16,
+                          height: 16,
+                          flexShrink: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <CheckSquare
+                          size={16}
+                          strokeWidth={2}
+                          color={palette.status.success.text}
+                          aria-label={`${row.name} is tracked`}
+                        />
+                      </Box>
                     ) : (
                       <Box
                         component="input"
