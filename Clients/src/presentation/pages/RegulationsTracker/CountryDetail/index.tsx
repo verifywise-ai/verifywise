@@ -71,6 +71,8 @@ interface CountryDetailData {
   name: string;
   region?: string;
   iso2?: string;
+  /** Unicode flag emoji from the feed (e.g. "🇪🇺"); falls back to a globe icon. */
+  flag?: string;
   is_tracked?: boolean;
   stale?: boolean;
   regulations?: Regulation[];
@@ -207,7 +209,13 @@ export default function CountryDetail() {
             backgroundColor: palette.background.accent,
           }}
         >
-          <Globe size={24} strokeWidth={1.5} color={palette.text.tertiary} />
+          {country.flag ? (
+            <Box component="span" aria-hidden sx={{ fontSize: "28px", lineHeight: 1 }}>
+              {country.flag}
+            </Box>
+          ) : (
+            <Globe size={24} strokeWidth={1.5} color={palette.text.tertiary} />
+          )}
         </Box>
 
         <Box sx={{ flex: 1, minWidth: 0 }}>

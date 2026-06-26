@@ -199,6 +199,7 @@ export async function listCountries(organizationId: number, filters: { region?: 
   }
   return sequelize.query(
     `SELECT c.slug, c.name, c.region, c.regulation_count, c.hash, c.last_changed_at,
+            c.data->>'flag' AS flag,
             (t.id IS NOT NULL) AS is_tracked
      FROM regulation_countries c
      LEFT JOIN regulation_tracked_countries t
@@ -227,7 +228,9 @@ export async function getCountryRow(slug: string, organizationId: number) {
 
 export async function listTracked(organizationId: number) {
   return sequelize.query(
-    `SELECT t.country_slug, t.created_at, c.name, c.region, c.regulation_count, c.is_active, c.last_changed_at
+    `SELECT t.country_slug, t.country_slug AS slug, t.created_at,
+            c.name, c.region, c.regulation_count, c.is_active, c.last_changed_at,
+            c.data->>'flag' AS flag
      FROM regulation_tracked_countries t
      LEFT JOIN regulation_countries c ON c.slug = t.country_slug
      WHERE t.organization_id = :organizationId ORDER BY c.name ASC;`,

@@ -10,7 +10,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Box, Stack, TablePagination, CircularProgress } from "@mui/material";
-import { SearchX, AlertTriangle } from "lucide-react";
+import { SearchX, AlertTriangle, CheckSquare } from "lucide-react";
 import { SearchBox } from "../../../components/Search";
 import { CustomSelect } from "../../../components/CustomSelect";
 import { CustomizableButton } from "../../../components/button/customizable-button";
@@ -225,7 +225,7 @@ export default function Browse() {
       {!isLoading && !isError && pagedRows.length > 0 && (
         <>
           {/* Country rows */}
-          <Stack gap="2px">
+          <Stack gap="8px">
             {pagedRows.map((row) => {
               const isSelected = selected.includes(row.slug);
               return (
@@ -243,25 +243,34 @@ export default function Browse() {
                     (untrackCountry.isPending && untrackCountry.variables === row.slug)
                   }
                   checkbox={
-                    <Box
-                      component="input"
-                      type="checkbox"
-                      aria-label={`Select ${row.name}`}
-                      checked={isSelected}
-                      disabled={row.is_tracked}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-                        e.stopPropagation();
-                        toggleRow(row.slug);
-                      }}
-                      onClick={(e: React.MouseEvent) => e.stopPropagation()}
-                      sx={{
-                        cursor: row.is_tracked ? "default" : "pointer",
-                        width: 16,
-                        height: 16,
-                        flexShrink: 0,
-                        accentColor: palette.brand.primary,
-                      }}
-                    />
+                    row.is_tracked ? (
+                      <CheckSquare
+                        size={16}
+                        strokeWidth={2}
+                        color={palette.status.success.text}
+                        aria-label={`${row.name} is tracked`}
+                        style={{ flexShrink: 0 }}
+                      />
+                    ) : (
+                      <Box
+                        component="input"
+                        type="checkbox"
+                        aria-label={`Select ${row.name}`}
+                        checked={isSelected}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                          e.stopPropagation();
+                          toggleRow(row.slug);
+                        }}
+                        onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                        sx={{
+                          cursor: "pointer",
+                          width: 16,
+                          height: 16,
+                          flexShrink: 0,
+                          accentColor: palette.brand.primary,
+                        }}
+                      />
+                    )
                   }
                 />
               );

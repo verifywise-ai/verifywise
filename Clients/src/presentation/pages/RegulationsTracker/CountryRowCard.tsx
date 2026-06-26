@@ -20,6 +20,8 @@ export interface CountryRow {
   name: string;
   region?: string;
   iso2?: string;
+  /** Unicode flag emoji from the feed (e.g. "🇪🇺"); falls back to a globe icon. */
+  flag?: string;
   is_tracked?: boolean;
 }
 
@@ -68,7 +70,23 @@ export function CountryRowCard({
     >
       {checkbox}
 
-      <Globe size={16} strokeWidth={1.5} color={palette.text.tertiary} />
+      {row.flag ? (
+        <Box
+          component="span"
+          aria-hidden
+          sx={{
+            fontSize: "18px",
+            lineHeight: 1,
+            flexShrink: 0,
+            width: "20px",
+            textAlign: "center",
+          }}
+        >
+          {row.flag}
+        </Box>
+      ) : (
+        <Globe size={16} strokeWidth={1.5} color={palette.text.tertiary} />
+      )}
 
       <Box sx={{ flex: 1, minWidth: 0 }}>
         <Typography sx={{ fontSize: "14px", fontWeight: 500, color: palette.text.primary }}>

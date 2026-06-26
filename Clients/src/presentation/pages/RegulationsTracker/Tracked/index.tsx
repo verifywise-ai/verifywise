@@ -183,7 +183,7 @@ export default function Tracked() {
             />
           </Stack>
 
-          <Stack gap="2px">
+          <Stack gap="8px">
             {pagedRows.map((row) => (
               <CountryRowCard
                 key={row.slug}
