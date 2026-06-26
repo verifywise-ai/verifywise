@@ -9,7 +9,9 @@ export const ABSOLUTE_FLOOR = 20;
 const REQUIRED_KEYS: (keyof IManifestCountry)[] = ["slug", "name", "region", "hash"];
 
 function hasRequired(c: any): c is IManifestCountry {
-  return c && typeof c === "object" && REQUIRED_KEYS.every((k) => c[k] !== undefined && c[k] !== null);
+  return (
+    c && typeof c === "object" && REQUIRED_KEYS.every((k) => c[k] !== undefined && c[k] !== null)
+  );
 }
 
 function normalizeSlug(s: string): string {
@@ -17,7 +19,13 @@ function normalizeSlug(s: string): string {
 }
 
 export type ValidateResult =
-  | { ok: true; countries: IManifestCountry[]; presentSlugs: string[]; rawCount: number; generatedAt: string }
+  | {
+      ok: true;
+      countries: IManifestCountry[];
+      presentSlugs: string[];
+      rawCount: number;
+      generatedAt: string;
+    }
   | { ok: false; reason: string };
 
 export function validateManifest(raw: unknown, lastGoodCount: number | null): ValidateResult {
@@ -28,7 +36,10 @@ export function validateManifest(raw: unknown, lastGoodCount: number | null): Va
   if (!Array.isArray(f.countries)) return { ok: false, reason: "countries is not an array" };
   const counts = (f.counts as Record<string, unknown>) ?? {};
   if (typeof counts.countries === "number" && counts.countries !== f.countries.length)
-    return { ok: false, reason: `counts.countries (${counts.countries}) != length (${f.countries.length})` };
+    return {
+      ok: false,
+      reason: `counts.countries (${counts.countries}) != length (${f.countries.length})`,
+    };
 
   // Filter to valid entries first, then gate on the VALID count so a feed with many
   // malformed entries doesn't pass the floor/50%-drop guards while silently losing data.
@@ -38,7 +49,10 @@ export function validateManifest(raw: unknown, lastGoodCount: number | null): Va
   if (validCount < ABSOLUTE_FLOOR)
     return { ok: false, reason: `below absolute floor (${validCount} valid < ${ABSOLUTE_FLOOR})` };
   if (lastGoodCount != null && validCount < lastGoodCount * 0.5)
-    return { ok: false, reason: `below 50% of last good count (${validCount} valid < ${lastGoodCount})` };
+    return {
+      ok: false,
+      reason: `below 50% of last good count (${validCount} valid < ${lastGoodCount})`,
+    };
 
   const presentSlugs = (f.countries as unknown[])
     .map((c) =>

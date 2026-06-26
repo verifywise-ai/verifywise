@@ -13,6 +13,7 @@ import {
   getStoredHashes,
   upsertFeedTx,
   setGlobalFeeds,
+  recordRunStatus,
   getAffectedOrgsBySlugs,
   resolveEmailRecipients,
   resolveInAppUserIds,
@@ -21,11 +22,13 @@ import {
   CountryChange,
 } from "../../../utils/regulationsTracker.utils";
 import { createNotificationQuery } from "../../../utils/notification.utils";
-import { NotificationType, NotificationEntityType } from "../../../domain.layer/interfaces/i.notification";
+import {
+  NotificationType,
+  NotificationEntityType,
+} from "../../../domain.layer/interfaces/i.notification";
 import { sendAutomationEmail } from "../../emailService";
 import { compileMjmlToHtml } from "../../../tools/mjmlCompiler";
 import logger from "../../../utils/logger/fileLogger";
-
 
 const FRONTEND = process.env.FRONTEND_URL ?? "http://localhost:5173";
 const MODULE_URL = FRONTEND + "/regulations-tracker/browse";
@@ -86,6 +89,7 @@ export async function syncRegulationsTracker(deps?: { feed?: unknown }): Promise
     raw = deps?.feed ?? (await fetchManifest());
   } catch (e) {
     logger.error(`[regulations-tracker] feed fetch failed: ${(e as Error).message}`);
+    await recordRunStatus("fetch failed").catch(() => undefined);
     return {
       fetched: 0,
       changed: 0,
@@ -99,6 +103,7 @@ export async function syncRegulationsTracker(deps?: { feed?: unknown }): Promise
   const validated = validateManifest(raw, meta.last_good_count ?? null);
   if (!validated.ok) {
     logger.error(`[regulations-tracker] feed rejected: ${validated.reason}`);
+    await recordRunStatus(`rejected: ${validated.reason}`).catch(() => undefined);
     return {
       fetched: 0,
       changed: 0,
@@ -164,6 +169,7 @@ export async function syncRegulationsTracker(deps?: { feed?: unknown }): Promise
     logger.info(
       `[regulations-tracker] first seed (${validated.countries.length}); notifications suppressed`,
     );
+    await recordRunStatus(`ok: first seed (${validated.countries.length})`).catch(() => undefined);
     return {
       fetched: validated.countries.length,
       changed: 0,
@@ -180,52 +186,68 @@ export async function syncRegulationsTracker(deps?: { feed?: unknown }): Promise
 
   if (changedSlugs.length) {
     const affected = await getAffectedOrgsBySlugs(changedSlugs);
-    const byOrg = new Map<
-      number,
-      { changed: DigestItem[]; removed: DigestItem[] }
-    >();
+    // Per-org buckets carry each affected country's slug + name + (for changed
+    // countries) the human change lines, so we can both build the email digest
+    // and emit one deep-linked in-app notification per country.
+    interface OrgCountry {
+      slug: string;
+      name: string;
+      removed: boolean;
+      lines: string[];
+    }
+    const byOrg = new Map<number, OrgCountry[]>();
     for (const row of affected) {
-      const bucket = byOrg.get(row.organization_id) ?? {
-        changed: [],
-        removed: [],
-      };
+      const list = byOrg.get(row.organization_id) ?? [];
       const name = row.name ?? row.country_slug;
-      if (newlyRemoved.includes(row.country_slug)) {
-        bucket.removed.push({ name });
-      } else {
-        const ch = changeBySlug.get(row.country_slug);
-        bucket.changed.push({ name, detail: ch ? ch.lines.join(", ") : undefined });
-      }
-      byOrg.set(row.organization_id, bucket);
+      const removed = newlyRemoved.includes(row.country_slug);
+      const ch = changeBySlug.get(row.country_slug);
+      list.push({ slug: row.country_slug, name, removed, lines: ch?.lines ?? [] });
+      byOrg.set(row.organization_id, list);
     }
 
-    for (const [orgId, { changed: ch, removed: rm }] of byOrg) {
-      // In-app: always to admins ∪ configured recipients.
+    for (const [orgId, countries] of byOrg) {
+      const changedItems: DigestItem[] = countries
+        .filter((c) => !c.removed)
+        .map((c) => ({ name: c.name, detail: c.lines.length ? c.lines.join(", ") : undefined }));
+      const removedItems: DigestItem[] = countries
+        .filter((c) => c.removed)
+        .map((c) => ({ name: c.name }));
+
+      // In-app: always to admins ∪ configured recipients. One deep-linked
+      // notification per affected country so the message names what changed and
+      // links straight to that country's page.
       const userIds = await resolveInAppUserIds(orgId);
       if (userIds.length) {
-        const title = "AI regulations updated";
-        const message = [
-          ...ch.map((i) => i.name),
-          ...rm.map((i) => `${i.name} (removed)`),
-        ].join(", ");
-        for (const uid of userIds) {
-          await createNotificationQuery(
-            {
-              user_id: uid,
-              type: NotificationType.REGULATIONS_TRACKER,
-              title,
-              message,
-              entity_type: NotificationEntityType.REGULATION_COUNTRY,
-            },
-            orgId,
-          );
+        for (const c of countries) {
+          const title = c.removed
+            ? `${c.name} removed from the regulations feed`
+            : `AI regulations updated: ${c.name}`;
+          const message = c.removed
+            ? `${c.name} is no longer in the regulations feed.`
+            : c.lines.length
+              ? c.lines.join("; ")
+              : "Regulations were updated — open to see the details.";
+          for (const uid of userIds) {
+            await createNotificationQuery(
+              {
+                user_id: uid,
+                type: NotificationType.REGULATIONS_TRACKER,
+                title,
+                message,
+                entity_type: NotificationEntityType.REGULATION_COUNTRY,
+                entity_name: c.name,
+                action_url: `/regulations-tracker/${c.slug}`,
+              },
+              orgId,
+            );
+          }
         }
         orgsNotified++;
       }
       // Email: configured recipients only, no fallback.
       const emails = await resolveEmailRecipients(orgId);
       if (emails.length) {
-        const html = await renderDigest(ch, rm);
+        const html = await renderDigest(changedItems, removedItems);
         await sendAutomationEmail(emails, "Global AI regulations — weekly update", html, undefined);
         orgsEmailed++;
       }
@@ -234,6 +256,9 @@ export async function syncRegulationsTracker(deps?: { feed?: unknown }): Promise
 
   logger.info(
     `[regulations-tracker] done: fetched=${validated.countries.length} changed=${changed.length} removed=${newlyRemoved.length} emailed=${orgsEmailed} notified=${orgsNotified}`,
+  );
+  await recordRunStatus(`ok: ${changed.length} changed, ${newlyRemoved.length} removed`).catch(
+    () => undefined,
   );
   return {
     fetched: validated.countries.length,

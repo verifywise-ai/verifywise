@@ -12,6 +12,7 @@ import {
   upsertSettings,
   getGlobalFeed,
   setGlobalFeeds,
+  getMetaQuery,
 } from "../utils/regulationsTracker.utils";
 import {
   fetchCountryDetail,
@@ -119,7 +120,9 @@ export async function getCountryDetail(req: Request, res: Response): Promise<any
       });
       // local.data already holds the full detail (regulations/timeline/meta) seeded
       // and refreshed by the weekly sync, so this renders complete content offline.
-      return res.status(200).json(STATUS_CODE[200]({ ...local.data, stale: true, is_tracked: local.is_tracked }));
+      return res
+        .status(200)
+        .json(STATUS_CODE[200]({ ...local.data, stale: true, is_tracked: local.is_tracked }));
     }
   } catch (error) {
     await logFailure({
@@ -311,7 +314,15 @@ export async function getSettingsCtrl(req: Request, res: Response): Promise<any>
     organizationId: req.organizationId!,
   });
   try {
-    const data = await getSettings(req.organizationId!);
+    const settings = await getSettings(req.organizationId!);
+    // Merge in global run observability (last sync time + outcome) so the
+    // Settings page can show when the catalogue was last checked.
+    const meta = await getMetaQuery();
+    const data = {
+      ...settings,
+      last_run_at: meta.last_run_at,
+      last_run_status: meta.last_run_status,
+    };
     await logSuccess({
       eventType: "Read",
       description: "fetched regulation tracker settings",
@@ -414,9 +425,7 @@ export async function getHorizon(req: Request, res: Response): Promise<any> {
       return res.status(200).json(STATUS_CODE[200]({ items: live.changes ?? [], stale: false }));
     } catch {
       const stored = (await getGlobalFeed("horizon")) as { changes?: unknown[] } | null;
-      return res
-        .status(200)
-        .json(STATUS_CODE[200]({ items: stored?.changes ?? [], stale: true }));
+      return res.status(200).json(STATUS_CODE[200]({ items: stored?.changes ?? [], stale: true }));
     }
   } catch (error) {
     await logFailure({
@@ -494,9 +503,7 @@ export async function getFrameworks(req: Request, res: Response): Promise<any> {
       if (Array.isArray(live.frameworks)) {
         await setGlobalFeeds({ frameworks: live.frameworks }).catch(() => undefined);
       }
-      return res
-        .status(200)
-        .json(STATUS_CODE[200]({ items: live.frameworks ?? [], stale: false }));
+      return res.status(200).json(STATUS_CODE[200]({ items: live.frameworks ?? [], stale: false }));
     } catch {
       const stored = (await getGlobalFeed("frameworks")) as unknown[] | null;
       return res.status(200).json(STATUS_CODE[200]({ items: stored ?? [], stale: true }));

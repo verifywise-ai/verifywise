@@ -1,7 +1,10 @@
 import { QueryTypes } from "sequelize";
 import { sequelize } from "../database/db";
 import logger from "./logger/fileLogger";
-import { IManifestCountry, RegulationChange } from "../domain.layer/interfaces/i.regulationsTracker";
+import {
+  IManifestCountry,
+  RegulationChange,
+} from "../domain.layer/interfaces/i.regulationsTracker";
 
 export function renderChangeLine(c: RegulationChange): string {
   switch (c.field) {
@@ -45,12 +48,35 @@ export async function getMetaQuery(): Promise<{
   seeded_at: Date | null;
   last_good_count: number | null;
   last_run_week: string | null;
+  last_run_at: Date | null;
+  last_run_status: string | null;
 }> {
   const rows = (await sequelize.query(
-    `SELECT seeded_at, last_good_count, last_run_week FROM regulation_tracker_meta WHERE id = 1;`,
+    `SELECT seeded_at, last_good_count, last_run_week, last_run_at, last_run_status
+     FROM regulation_tracker_meta WHERE id = 1;`,
     { type: QueryTypes.SELECT },
   )) as any[];
-  return rows[0] ?? { seeded_at: null, last_good_count: null, last_run_week: null };
+  return (
+    rows[0] ?? {
+      seeded_at: null,
+      last_good_count: null,
+      last_run_week: null,
+      last_run_at: null,
+      last_run_status: null,
+    }
+  );
+}
+
+// Stamps the most recent sync attempt's time + outcome on the meta singleton.
+// Called at every exit point of the weekly job (skip / fail / success) so the
+// app can surface freshness and failures.
+export async function recordRunStatus(status: string): Promise<void> {
+  await sequelize.query(
+    `UPDATE regulation_tracker_meta
+       SET last_run_at = NOW(), last_run_status = :status
+     WHERE id = 1;`,
+    { replacements: { status: status.slice(0, 120) } },
+  );
 }
 
 export interface CountryChange {
@@ -99,10 +125,9 @@ export async function setGlobalFeeds(feeds: {
     repl.frameworks = JSON.stringify(feeds.frameworks);
   }
   if (!sets.length) return;
-  await sequelize.query(
-    `UPDATE regulation_tracker_meta SET ${sets.join(", ")} WHERE id = 1;`,
-    { replacements: repl },
-  );
+  await sequelize.query(`UPDATE regulation_tracker_meta SET ${sets.join(", ")} WHERE id = 1;`, {
+    replacements: repl,
+  });
 }
 
 // Returns a map of normalized slug -> stored hash for the given slugs. Used by
@@ -179,8 +204,12 @@ export async function upsertFeedTx(
            WHERE slug = :slug;`,
           {
             replacements: {
-              slug, name: c.name, region: c.region ?? null,
-              rc: c.regulationCount ?? null, data: JSON.stringify(storedData), hash: c.hash,
+              slug,
+              name: c.name,
+              region: c.region ?? null,
+              rc: c.regulationCount ?? null,
+              data: JSON.stringify(storedData),
+              hash: c.hash,
             },
             transaction,
           },
@@ -192,8 +221,12 @@ export async function upsertFeedTx(
            VALUES (:slug, :name, :region, :rc, :data::jsonb, :hash, TRUE, NOW(), NOW());`,
           {
             replacements: {
-              slug, name: c.name, region: c.region ?? null,
-              rc: c.regulationCount ?? null, data: JSON.stringify(storedData), hash: c.hash,
+              slug,
+              name: c.name,
+              region: c.region ?? null,
+              rc: c.regulationCount ?? null,
+              data: JSON.stringify(storedData),
+              hash: c.hash,
             },
             transaction,
           },
@@ -218,11 +251,16 @@ export async function upsertFeedTx(
          SET last_good_count = :count, last_run_week = :week
              ${wasFirstSeed ? ", seeded_at = NOW()" : ""}
        WHERE id = 1;`,
-      { replacements: { count: rawCount ?? countries.length, week: currentIsoWeek(new Date()) }, transaction },
+      {
+        replacements: { count: rawCount ?? countries.length, week: currentIsoWeek(new Date()) },
+        transaction,
+      },
     );
   });
 
-  logger.info(`[regulationsTracker] upsertFeedTx complete: changed=${changed.length}, removed=${newlyRemoved.length}, firstSeed=${wasFirstSeed}`);
+  logger.info(
+    `[regulationsTracker] upsertFeedTx complete: changed=${changed.length}, removed=${newlyRemoved.length}, firstSeed=${wasFirstSeed}`,
+  );
 
   return { changed, newlyRemoved, wasFirstSeed };
 }
@@ -231,7 +269,10 @@ export async function upsertFeedTx(
 // CRUD: country catalogue
 // ---------------------------------------------------------------------------
 
-export async function listCountries(organizationId: number, filters: { region?: string; q?: string } = {}) {
+export async function listCountries(
+  organizationId: number,
+  filters: { region?: string; q?: string } = {},
+) {
   const where: string[] = ["c.is_active = TRUE"];
   const repl: Record<string, unknown> = { organizationId };
   if (filters.region) {
@@ -316,8 +357,15 @@ export async function getSettings(organizationId: number) {
     `SELECT recipient_user_ids, recipient_emails, updated_by, updated_at
      FROM regulation_tracker_settings WHERE organization_id = :organizationId;`,
     { replacements: { organizationId }, type: QueryTypes.SELECT },
-  )) as { recipient_user_ids: number[] | null; recipient_emails: string[] | null; updated_by: number | null; updated_at: Date | null }[];
-  return rows[0] ?? { recipient_user_ids: [], recipient_emails: [], updated_by: null, updated_at: null };
+  )) as {
+    recipient_user_ids: number[] | null;
+    recipient_emails: string[] | null;
+    updated_by: number | null;
+    updated_at: Date | null;
+  }[];
+  return (
+    rows[0] ?? { recipient_user_ids: [], recipient_emails: [], updated_by: null, updated_at: null }
+  );
 }
 
 export async function upsertSettings(
@@ -383,7 +431,9 @@ export async function resolveEmailRecipients(organizationId: number): Promise<st
     new Set([...userEmails, ...freeText].map((e) => e.trim().toLowerCase()).filter(Boolean)),
   );
   if (!recipients.length) {
-    logger.info(`[regulations-tracker] org ${organizationId} changed but no email recipients configured; skipped`);
+    logger.info(
+      `[regulations-tracker] org ${organizationId} changed but no email recipients configured; skipped`,
+    );
   }
   return recipients;
 }

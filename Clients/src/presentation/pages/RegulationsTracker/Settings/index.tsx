@@ -154,7 +154,18 @@ export default function Settings() {
               {settingsData?.data?.last_run_at && (
                 <Box component="span" sx={{ color: palette.text.tertiary }}>
                   {" "}
-                  Last checked: {settingsData.data.last_run_at}.
+                  Last checked:{" "}
+                  {new Date(settingsData.data.last_run_at).toLocaleDateString(undefined, {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                  })}
+                  {typeof settingsData.data.last_run_status === "string" &&
+                  settingsData.data.last_run_status.startsWith("ok")
+                    ? "."
+                    : settingsData.data.last_run_status
+                      ? ` (${settingsData.data.last_run_status}).`
+                      : "."}
                 </Box>
               )}
             </Typography>

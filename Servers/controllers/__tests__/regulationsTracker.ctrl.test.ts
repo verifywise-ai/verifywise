@@ -1,17 +1,47 @@
 // jest.mock calls must precede all imports (hoisted by Jest).
 jest.mock("../../utils/regulationsTracker.utils", () => ({
-  listCountries: jest.fn().mockResolvedValue([{ slug: "eu", name: "European Union", region: "Europe", is_tracked: false }]),
-  getCountryRow: jest.fn().mockResolvedValue({ slug: "eu", data: { name: "European Union", slug: "eu" }, is_tracked: false }),
+  listCountries: jest
+    .fn()
+    .mockResolvedValue([
+      { slug: "eu", name: "European Union", region: "Europe", is_tracked: false },
+    ]),
+  getCountryRow: jest.fn().mockResolvedValue({
+    slug: "eu",
+    data: { name: "European Union", slug: "eu" },
+    is_tracked: false,
+  }),
   listTracked: jest.fn().mockResolvedValue([{ country_slug: "eu", name: "European Union" }]),
   trackCountry: jest.fn().mockResolvedValue({ tracked: true }),
   trackCountriesBulk: jest.fn().mockResolvedValue({ tracked: 2 }),
   untrackCountry: jest.fn().mockResolvedValue({ untracked: true }),
-  getSettings: jest.fn().mockResolvedValue({ recipient_user_ids: [], recipient_emails: [], updated_by: null, updated_at: null }),
-  upsertSettings: jest.fn().mockResolvedValue({ recipient_user_ids: [1], recipient_emails: ["dpo@acme.com"], updated_by: 1, updated_at: new Date() }),
+  getSettings: jest.fn().mockResolvedValue({
+    recipient_user_ids: [],
+    recipient_emails: [],
+    updated_by: null,
+    updated_at: null,
+  }),
+  upsertSettings: jest.fn().mockResolvedValue({
+    recipient_user_ids: [1],
+    recipient_emails: ["dpo@acme.com"],
+    updated_by: 1,
+    updated_at: new Date(),
+  }),
+  getMetaQuery: jest.fn().mockResolvedValue({
+    seeded_at: new Date(),
+    last_good_count: 60,
+    last_run_week: "2026-W26",
+    last_run_at: new Date(),
+    last_run_status: "ok: 0 changed, 0 removed",
+  }),
+  getGlobalFeed: jest.fn().mockResolvedValue(null),
+  setGlobalFeeds: jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock("../../utils/regulationsTrackerFeed", () => ({
   fetchCountryDetail: jest.fn().mockResolvedValue({ name: "European Union", regulations: [] }),
+  fetchHorizon: jest.fn().mockResolvedValue({ changes: [] }),
+  fetchDeadlines: jest.fn().mockResolvedValue({ deadlines: [], unscheduled: [] }),
+  fetchSnapshot: jest.fn().mockResolvedValue({ frameworks: [] }),
 }));
 
 jest.mock("../../utils/logger/logHelper", () => ({
@@ -71,7 +101,7 @@ describe("getCountries", () => {
       expect.objectContaining({
         message: "OK",
         data: expect.arrayContaining([expect.objectContaining({ slug: "eu" })]),
-      })
+      }),
     );
   });
 
@@ -134,8 +164,8 @@ describe("getTracked", () => {
 
   it("org A cannot see org B's tracked list", async () => {
     (listTracked as jest.Mock)
-      .mockResolvedValueOnce([{ country_slug: "eu" }])   // org A
-      .mockResolvedValueOnce([{ country_slug: "us" }]);   // org B
+      .mockResolvedValueOnce([{ country_slug: "eu" }]) // org A
+      .mockResolvedValueOnce([{ country_slug: "us" }]); // org B
 
     const reqA: any = { userId: 1, organizationId: 1 };
     const reqB: any = { userId: 2, organizationId: 2 };
@@ -206,7 +236,12 @@ describe("trackCountryCtrl", () => {
 // ---------------------------------------------------------------------------
 describe("trackBulkCtrl", () => {
   it("returns 403 for a non-admin role", async () => {
-    const req: any = { role: "Reviewer", userId: 1, organizationId: 7, body: { slugs: ["eu", "us"] } };
+    const req: any = {
+      role: "Reviewer",
+      userId: 1,
+      organizationId: 7,
+      body: { slugs: ["eu", "us"] },
+    };
     const res = mockRes();
     await trackBulkCtrl(req, res);
     expect(res.status).toHaveBeenCalledWith(403);
@@ -251,7 +286,12 @@ describe("untrackCountryCtrl", () => {
   it("is idempotent: returns 200 even when the country was never tracked", async () => {
     // untrackCountry is a DELETE that resolves regardless (no-op if not tracked)
     (untrackCountry as jest.Mock).mockResolvedValueOnce({ untracked: true });
-    const req: any = { role: "Admin", userId: 1, organizationId: 7, params: { slug: "never-tracked" } };
+    const req: any = {
+      role: "Admin",
+      userId: 1,
+      organizationId: 7,
+      params: { slug: "never-tracked" },
+    };
     const res = mockRes();
     await untrackCountryCtrl(req, res);
     expect(res.status).toHaveBeenCalledWith(200);
@@ -275,6 +315,17 @@ describe("getSettingsCtrl", () => {
     const res = mockRes();
     await getSettingsCtrl(req, res);
     expect(res.status).toHaveBeenCalledWith(200);
+  });
+
+  it("merges global run status (last_run_at + last_run_status) into the settings payload", async () => {
+    const req: any = { userId: 1, organizationId: 7 };
+    const res = mockRes();
+    await getSettingsCtrl(req, res);
+    const payload = (res.json as jest.Mock).mock.calls[0][0];
+    expect(payload.data).toEqual(
+      expect.objectContaining({ last_run_status: "ok: 0 changed, 0 removed" }),
+    );
+    expect(payload.data.last_run_at).toBeTruthy();
   });
 });
 
