@@ -41,6 +41,13 @@ import {
 } from "../../utils/regulationsTracker.utils";
 
 // ---------------------------------------------------------------------------
+// Global mock reset — prevents call counts from accumulating across tests
+// ---------------------------------------------------------------------------
+beforeEach(() => {
+  jest.clearAllMocks();
+});
+
+// ---------------------------------------------------------------------------
 // Helper: minimal mock Response (mirrors aiTrustIndex.ctrl.test.ts pattern)
 // ---------------------------------------------------------------------------
 function mockRes() {
@@ -60,6 +67,12 @@ describe("getCountries", () => {
     await getCountries(req, res);
     expect(res.status).toHaveBeenCalledWith(200);
     expect(listCountries).toHaveBeenCalled();
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: "OK",
+        data: expect.arrayContaining([expect.objectContaining({ slug: "eu" })]),
+      })
+    );
   });
 
   it("passes region and q query params to the util", async () => {
@@ -120,7 +133,6 @@ describe("getTracked", () => {
   });
 
   it("org A cannot see org B's tracked list", async () => {
-    (listTracked as jest.Mock).mockClear();
     (listTracked as jest.Mock)
       .mockResolvedValueOnce([{ country_slug: "eu" }])   // org A
       .mockResolvedValueOnce([{ country_slug: "us" }]);   // org B
@@ -156,6 +168,7 @@ describe("trackCountryCtrl", () => {
     const res = mockRes();
     await trackCountryCtrl(req, res);
     expect(res.status).toHaveBeenCalledWith(403);
+    expect(trackCountry).not.toHaveBeenCalled();
   });
 
   it("returns 400 when slug is missing", async () => {
