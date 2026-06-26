@@ -8703,6 +8703,43 @@ export const translations: Record<string, Record<string, string>> = {
     "Get notified when assessments change": "Benachrichtigung bei Änderungen der Bewertungen",
     "Tracked apps are included in the weekly change digest, so configured recipients hear about score, grade, or policy changes.":
       "Verfolgte Apps sind in der wöchentlichen Änderungsübersicht enthalten, sodass konfigurierte Empfänger über Änderungen an Punktzahl, Note oder Richtlinie informiert werden.",
+    // Regulations Tracker
+    "Regulations tracker":
+      "Regulierungsverfolger",
+    "Browse the catalogue of countries and jurisdictions. Track the ones relevant to your organization to receive updates when their AI regulations change.":
+      "Durchsuchen Sie den Katalog der Länder und Jurisdiktionen. Verfolgen Sie die für Ihre Organisation relevanten, um Updates zu erhalten, wenn sich deren KI-Regulierungen ändern.",
+    "Search countries or jurisdictions": "Länder oder Jurisdiktionen suchen",
+    "No countries match your filters.": "Keine Länder entsprechen Ihren Filtern.",
+    "Select all on page": "Alle auf der Seite auswählen",
+    "View source": "Quelle anzeigen",
+    "Tracked countries":
+      "Verfolgte Länder",
+    "Countries and jurisdictions your organization is tracking. You":
+      "Länder und Jurisdiktionen, die Ihre Organisation verfolgt. Sie",
+    "Countries and jurisdictions your organization is tracking. You'll be notified when their AI regulations change.":
+      "Länder und Jurisdiktionen, die Ihre Organisation verfolgt. Sie werden benachrichtigt, wenn sich deren KI-Regulierungen ändern.",
+    "Find countries in Browse": "Länder in der Übersicht finden",
+    "Open the Browse tab to explore the full catalogue, then track the countries relevant to your organization.":
+      "Öffnen Sie die Registerkarte Durchsuchen, um den vollständigen Katalog zu erkunden, und verfolgen Sie die für Ihre Organisation relevanten Länder.",
+    "Get notified when regulations change": "Benachrichtigung bei Regulierungsänderungen",
+    "Tracked countries are monitored for regulatory updates. Configured recipients are notified when changes are detected.":
+      "Verfolgte Länder werden auf regulatorische Aktualisierungen überwacht. Konfigurierte Empfänger werden bei erkannten Änderungen benachrichtigt.",
+    "Regulations Tracker notification settings.":
+      "Benachrichtigungseinstellungen für den Regulierungsverfolger.",
+    "Only administrators can change Regulations Tracker notification settings.":
+      "Nur Administratoren können die Benachrichtigungseinstellungen des Regulierungsverfolgers ändern.",
+    "Choose who receives a notification when a tracked country":
+      "Wählen Sie, wer eine Benachrichtigung erhält, wenn ein verfolgtes Land",
+    "Choose who receives a notification when a tracked country's regulations change. If no recipients are set, no digest is sent.":
+      "Wählen Sie, wer eine Benachrichtigung erhält, wenn sich die Regulierungen eines verfolgten Landes ändern. Wenn keine Empfänger festgelegt sind, wird kein Digest gesendet.",
+    "Back to browse": "Zurück zur Übersicht",
+    "We couldn't find this country in the regulations catalogue.":
+      "Dieses Land wurde im Regulierungskatalog nicht gefunden.",
+    "Data may be outdated": "Daten möglicherweise veraltet",
+    "Disclaimer": "Haftungsausschluss",
+    "Regulations": "Regulierungen",
+    "No regulation data is available for this country yet. Check back later as the feed is updated regularly.":
+      "Für dieses Land sind noch keine Regulierungsdaten verfügbar. Schauen Sie später wieder vorbei, da der Feed regelmäßig aktualisiert wird.",
   },
 
   fr: {
@@ -17338,6 +17375,41 @@ export const translations: Record<string, Record<string, string>> = {
     "Get notified when assessments change": "Être averti lorsque les évaluations changent",
     "Tracked apps are included in the weekly change digest, so configured recipients hear about score, grade, or policy changes.":
       "Les applications suivies sont incluses dans le récapitulatif hebdomadaire des modifications, afin que les destinataires configurés soient informés des changements de score, de note ou de politique.",
+    // Regulations Tracker
+    "Regulations tracker": "Suivi des réglementations",
+    "Browse the catalogue of countries and jurisdictions. Track the ones relevant to your organization to receive updates when their AI regulations change.":
+      "Parcourez le catalogue des pays et juridictions. Suivez ceux pertinents pour votre organisation afin de recevoir des mises à jour lorsque leurs réglementations IA changent.",
+    "Search countries or jurisdictions": "Rechercher des pays ou des juridictions",
+    "No countries match your filters.": "Aucun pays ne correspond à vos filtres.",
+    "Select all on page": "Tout sélectionner sur la page",
+    "View source": "Voir la source",
+    "Tracked countries": "Pays suivis",
+    "Countries and jurisdictions your organization is tracking. You":
+      "Pays et juridictions que votre organisation suit. Vous",
+    "Countries and jurisdictions your organization is tracking. You'll be notified when their AI regulations change.":
+      "Pays et juridictions que votre organisation suit. Vous serez notifié lorsque leurs réglementations IA changeront.",
+    "Find countries in Browse": "Trouver des pays dans Parcourir",
+    "Open the Browse tab to explore the full catalogue, then track the countries relevant to your organization.":
+      "Ouvrez l'onglet Parcourir pour explorer le catalogue complet, puis suivez les pays pertinents pour votre organisation.",
+    "Get notified when regulations change": "Être averti lorsque les réglementations changent",
+    "Tracked countries are monitored for regulatory updates. Configured recipients are notified when changes are detected.":
+      "Les pays suivis sont surveillés pour détecter les mises à jour réglementaires. Les destinataires configurés sont notifiés lorsque des changements sont détectés.",
+    "Regulations Tracker notification settings.":
+      "Paramètres de notification du suivi des réglementations.",
+    "Only administrators can change Regulations Tracker notification settings.":
+      "Seuls les administrateurs peuvent modifier les paramètres de notification du suivi des réglementations.",
+    "Choose who receives a notification when a tracked country":
+      "Choisissez qui reçoit une notification lorsqu'un pays suivi",
+    "Choose who receives a notification when a tracked country's regulations change. If no recipients are set, no digest is sent.":
+      "Choisissez qui reçoit une notification lorsque les réglementations d'un pays suivi changent. Si aucun destinataire n'est défini, aucun récapitulatif n'est envoyé.",
+    "Back to browse": "Retour à la navigation",
+    "We couldn't find this country in the regulations catalogue.":
+      "Ce pays est introuvable dans le catalogue des réglementations.",
+    "Data may be outdated": "Les données peuvent être obsolètes",
+    "Disclaimer": "Avertissement",
+    "Regulations": "Réglementations",
+    "No regulation data is available for this country yet. Check back later as the feed is updated regularly.":
+      "Aucune donnée réglementaire n'est encore disponible pour ce pays. Revenez plus tard, car le flux est mis à jour régulièrement.",
   },
   es: {
     // AI Trust Index
@@ -25890,5 +25962,40 @@ export const translations: Record<string, Record<string, string>> = {
     "Get notified when assessments change": "Reciba avisos cuando cambien las evaluaciones",
     "Tracked apps are included in the weekly change digest, so configured recipients hear about score, grade, or policy changes.":
       "Las aplicaciones seguidas se incluyen en el resumen semanal de cambios, de modo que los destinatarios configurados se enteran de los cambios de puntuación, calificación o política.",
+    // Regulations Tracker
+    "Regulations tracker": "Rastreador de regulaciones",
+    "Browse the catalogue of countries and jurisdictions. Track the ones relevant to your organization to receive updates when their AI regulations change.":
+      "Explore el catálogo de países y jurisdicciones. Siga los relevantes para su organización para recibir actualizaciones cuando cambien sus regulaciones de IA.",
+    "Search countries or jurisdictions": "Buscar países o jurisdicciones",
+    "No countries match your filters.": "Ningún país coincide con sus filtros.",
+    "Select all on page": "Seleccionar todo en la página",
+    "View source": "Ver fuente",
+    "Tracked countries": "Países seguidos",
+    "Countries and jurisdictions your organization is tracking. You":
+      "Países y jurisdicciones que su organización está siguiendo. Se",
+    "Countries and jurisdictions your organization is tracking. You'll be notified when their AI regulations change.":
+      "Países y jurisdicciones que su organización está siguiendo. Se le notificará cuando cambien sus regulaciones de IA.",
+    "Find countries in Browse": "Buscar países en Explorar",
+    "Open the Browse tab to explore the full catalogue, then track the countries relevant to your organization.":
+      "Abra la pestaña Explorar para ver el catálogo completo y, a continuación, siga los países relevantes para su organización.",
+    "Get notified when regulations change": "Reciba avisos cuando cambien las regulaciones",
+    "Tracked countries are monitored for regulatory updates. Configured recipients are notified when changes are detected.":
+      "Los países seguidos se monitorizan para detectar actualizaciones regulatorias. Los destinatarios configurados son notificados cuando se detectan cambios.",
+    "Regulations Tracker notification settings.":
+      "Configuración de notificaciones del rastreador de regulaciones.",
+    "Only administrators can change Regulations Tracker notification settings.":
+      "Solo los administradores pueden cambiar la configuración de notificaciones del rastreador de regulaciones.",
+    "Choose who receives a notification when a tracked country":
+      "Elija quién recibe una notificación cuando un país seguido",
+    "Choose who receives a notification when a tracked country's regulations change. If no recipients are set, no digest is sent.":
+      "Elija quién recibe una notificación cuando cambien las regulaciones de un país seguido. Si no se establecen destinatarios, no se envía ningún resumen.",
+    "Back to browse": "Volver a explorar",
+    "We couldn't find this country in the regulations catalogue.":
+      "No se encontró este país en el catálogo de regulaciones.",
+    "Data may be outdated": "Los datos pueden estar desactualizados",
+    "Disclaimer": "Aviso legal",
+    "Regulations": "Regulaciones",
+    "No regulation data is available for this country yet. Check back later as the feed is updated regularly.":
+      "Aún no hay datos de regulación disponibles para este país. Vuelva más tarde, ya que el feed se actualiza regularmente.",
   },
 };
