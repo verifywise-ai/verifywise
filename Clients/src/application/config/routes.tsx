@@ -115,6 +115,15 @@ const RegulationsTrackerSettings = lazyRoute(
 const RegulationsTrackerCountryDetail = lazyRoute(
   () => import("../../presentation/pages/RegulationsTracker/CountryDetail"),
 );
+const RegulationsTrackerHorizon = lazyRoute(
+  () => import("../../presentation/pages/RegulationsTracker/Horizon"),
+);
+const RegulationsTrackerDeadlines = lazyRoute(
+  () => import("../../presentation/pages/RegulationsTracker/Deadlines"),
+);
+const RegulationsTrackerFrameworks = lazyRoute(
+  () => import("../../presentation/pages/RegulationsTracker/Frameworks"),
+);
 
 const InsightsPage = lazyRoute(() => import("../../presentation/pages/ShadowAI/InsightsPage"));
 const UserActivityPage = lazyRoute(
@@ -831,6 +840,30 @@ export const createRoutes = (
       element={
         <Suspense fallback={<LazyFallback />}>
           <RegulationsTrackerSettings />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/regulations-tracker/horizon"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <RegulationsTrackerHorizon />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/regulations-tracker/deadlines"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <RegulationsTrackerDeadlines />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/regulations-tracker/frameworks"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <RegulationsTrackerFrameworks />
         </Suspense>
       }
     />

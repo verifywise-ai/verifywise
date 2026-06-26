@@ -45,3 +45,15 @@ export async function updateSettings(body: {
 }): Promise<any> {
   return (await apiServices.put(`${BASE}/settings`, body)).data;
 }
+
+export async function getHorizon(): Promise<any> {
+  return (await apiServices.get(`${BASE}/horizon`)).data;
+}
+
+export async function getDeadlines(): Promise<any> {
+  return (await apiServices.get(`${BASE}/deadlines`)).data;
+}
+
+export async function getFrameworks(): Promise<any> {
+  return (await apiServices.get(`${BASE}/frameworks`)).data;
+}

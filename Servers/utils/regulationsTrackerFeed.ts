@@ -74,3 +74,36 @@ export async function fetchCountryDetail(
   if (res.status !== 200) throw new Error(`country detail HTTP ${res.status}`);
   return res.data;
 }
+
+// ---------------------------------------------------------------------------
+// Global, non-tenant feeds (changelog / deadlines / international frameworks).
+// Each returns the raw feed object; callers extract the array(s) they need.
+// ---------------------------------------------------------------------------
+
+async function fetchJson(
+  url: string,
+  deps?: { get?: (url: string) => Promise<{ status: number; data: unknown }> },
+): Promise<unknown> {
+  const get = deps?.get ?? ((u: string) => axios.get(u, { timeout: 15000 }));
+  const res = await get(url);
+  if (res.status !== 200) throw new Error(`feed HTTP ${res.status} for ${url}`);
+  return res.data;
+}
+
+export function fetchHorizon(deps?: {
+  get?: (url: string) => Promise<{ status: number; data: unknown }>;
+}): Promise<unknown> {
+  return fetchJson(`${FEED_ORIGIN}/api/regulations/horizon`, deps);
+}
+
+export function fetchDeadlines(deps?: {
+  get?: (url: string) => Promise<{ status: number; data: unknown }>;
+}): Promise<unknown> {
+  return fetchJson(`${FEED_ORIGIN}/api/regulations/deadlines`, deps);
+}
+
+export function fetchSnapshot(deps?: {
+  get?: (url: string) => Promise<{ status: number; data: unknown }>;
+}): Promise<unknown> {
+  return fetchJson(`${FEED_ORIGIN}/api/regulations/snapshot`, deps);
+}

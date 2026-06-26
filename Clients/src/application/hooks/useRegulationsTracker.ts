@@ -9,6 +9,9 @@ import {
   untrackCountry,
   getSettings,
   updateSettings,
+  getHorizon,
+  getDeadlines,
+  getFrameworks,
 } from "../repository/regulationsTracker.repository";
 
 const KEY = "regulations-tracker";
@@ -96,5 +99,29 @@ export function useUpdateSettings() {
     mutationFn: (body: { recipient_user_ids: number[]; recipient_emails: string[] }) =>
       updateSettings(body),
     onSuccess: () => qc.invalidateQueries({ queryKey: [KEY, "settings"] }),
+  });
+}
+
+export function useHorizon() {
+  return useQuery({
+    queryKey: [KEY, "horizon"],
+    queryFn: getHorizon,
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useDeadlines() {
+  return useQuery({
+    queryKey: [KEY, "deadlines"],
+    queryFn: getDeadlines,
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useFrameworks() {
+  return useQuery({
+    queryKey: [KEY, "frameworks"],
+    queryFn: getFrameworks,
+    placeholderData: keepPreviousData,
   });
 }

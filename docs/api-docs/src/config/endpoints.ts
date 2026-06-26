@@ -7775,6 +7775,39 @@ export const regulationsTrackerEndpoints: Endpoint[] = [
     ],
     tag: "Regulations Tracker",
   },
+  {
+    method: 'GET',
+    path: '/regulations-tracker/horizon',
+    summary: "Get Horizon",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Regulations Tracker",
+  },
+  {
+    method: 'GET',
+    path: '/regulations-tracker/deadlines',
+    summary: "Get Deadlines",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Regulations Tracker",
+  },
+  {
+    method: 'GET',
+    path: '/regulations-tracker/frameworks',
+    summary: "Get Frameworks",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Regulations Tracker",
+  },
 ];
 
 // Reporting endpoints

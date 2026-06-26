@@ -10,8 +10,15 @@ import {
   untrackCountry,
   getSettings,
   upsertSettings,
+  getGlobalFeed,
+  setGlobalFeeds,
 } from "../utils/regulationsTracker.utils";
-import { fetchCountryDetail } from "../utils/regulationsTrackerFeed";
+import {
+  fetchCountryDetail,
+  fetchHorizon,
+  fetchDeadlines,
+  fetchSnapshot,
+} from "../utils/regulationsTrackerFeed";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const isAdmin = (role?: string) => role === "Admin" || role === "SuperAdmin";
@@ -375,6 +382,129 @@ export async function updateSettingsCtrl(req: Request, res: Response): Promise<a
     await logFailure({
       eventType: "Update",
       description: "update regulation tracker settings failed",
+      functionName: fn,
+      fileName: file,
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Global feeds: changelog (horizon), deadlines, international frameworks.
+// Each tries the live feed first and falls back to the stored snapshot so the
+// page renders offline. Returns { items, stale } (frameworks uses { items });
+// deadlines returns { deadlines, unscheduled, stale }.
+// ---------------------------------------------------------------------------
+
+export async function getHorizon(req: Request, res: Response): Promise<any> {
+  const fn = "getHorizon";
+  logProcessing({
+    description: "regulations changelog (horizon)",
+    functionName: fn,
+    fileName: file,
+    userId: req.userId!,
+    organizationId: req.organizationId!,
+  });
+  try {
+    try {
+      const live = (await fetchHorizon()) as { changes?: unknown[] };
+      return res.status(200).json(STATUS_CODE[200]({ items: live.changes ?? [], stale: false }));
+    } catch {
+      const stored = (await getGlobalFeed("horizon")) as { changes?: unknown[] } | null;
+      return res
+        .status(200)
+        .json(STATUS_CODE[200]({ items: stored?.changes ?? [], stale: true }));
+    }
+  } catch (error) {
+    await logFailure({
+      eventType: "Read",
+      description: "horizon fetch failed",
+      functionName: fn,
+      fileName: file,
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+  }
+}
+
+export async function getDeadlines(req: Request, res: Response): Promise<any> {
+  const fn = "getDeadlines";
+  logProcessing({
+    description: "regulations deadlines",
+    functionName: fn,
+    fileName: file,
+    userId: req.userId!,
+    organizationId: req.organizationId!,
+  });
+  try {
+    try {
+      const live = (await fetchDeadlines()) as { deadlines?: unknown[]; unscheduled?: unknown[] };
+      return res.status(200).json(
+        STATUS_CODE[200]({
+          deadlines: live.deadlines ?? [],
+          unscheduled: live.unscheduled ?? [],
+          stale: false,
+        }),
+      );
+    } catch {
+      const stored = (await getGlobalFeed("deadlines")) as {
+        deadlines?: unknown[];
+        unscheduled?: unknown[];
+      } | null;
+      return res.status(200).json(
+        STATUS_CODE[200]({
+          deadlines: stored?.deadlines ?? [],
+          unscheduled: stored?.unscheduled ?? [],
+          stale: true,
+        }),
+      );
+    }
+  } catch (error) {
+    await logFailure({
+      eventType: "Read",
+      description: "deadlines fetch failed",
+      functionName: fn,
+      fileName: file,
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+  }
+}
+
+export async function getFrameworks(req: Request, res: Response): Promise<any> {
+  const fn = "getFrameworks";
+  logProcessing({
+    description: "international AI frameworks",
+    functionName: fn,
+    fileName: file,
+    userId: req.userId!,
+    organizationId: req.organizationId!,
+  });
+  try {
+    try {
+      const live = (await fetchSnapshot()) as { frameworks?: unknown[] };
+      // Opportunistically refresh the cached copy so the stale fallback stays warm.
+      if (Array.isArray(live.frameworks)) {
+        await setGlobalFeeds({ frameworks: live.frameworks }).catch(() => undefined);
+      }
+      return res
+        .status(200)
+        .json(STATUS_CODE[200]({ items: live.frameworks ?? [], stale: false }));
+    } catch {
+      const stored = (await getGlobalFeed("frameworks")) as unknown[] | null;
+      return res.status(200).json(STATUS_CODE[200]({ items: stored ?? [], stale: true }));
+    }
+  } catch (error) {
+    await logFailure({
+      eventType: "Read",
+      description: "frameworks fetch failed",
       functionName: fn,
       fileName: file,
       error: error as Error,

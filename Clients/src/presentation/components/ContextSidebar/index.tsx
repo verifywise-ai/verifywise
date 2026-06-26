@@ -231,7 +231,13 @@ export function ContextSidebar({
         ? "tracked"
         : location.pathname.includes("/regulations-tracker/settings")
           ? "settings"
-          : "browse";
+          : location.pathname.includes("/regulations-tracker/horizon")
+            ? "horizon"
+            : location.pathname.includes("/regulations-tracker/deadlines")
+              ? "deadlines"
+              : location.pathname.includes("/regulations-tracker/frameworks")
+                ? "frameworks"
+                : "browse";
 
       const handleRegulationsTrackerTabChange = (newTab: string) => {
         navigate(`/regulations-tracker/${newTab}`);

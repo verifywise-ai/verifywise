@@ -22872,6 +22872,48 @@ paths:
       security:
         -
           bearerAuth: []
+  /regulations-tracker/horizon:
+    get:
+      summary: 'Get Horizon'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Regulations Tracker'
+      operationId: getHorizon
+      security:
+        -
+          bearerAuth: []
+  /regulations-tracker/deadlines:
+    get:
+      summary: 'Get Deadlines'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Regulations Tracker'
+      operationId: getDeadlines
+      security:
+        -
+          bearerAuth: []
+  /regulations-tracker/frameworks:
+    get:
+      summary: 'Get Frameworks'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Regulations Tracker'
+      operationId: getFrameworks
+      security:
+        -
+          bearerAuth: []
   /health:
     get:
       tags:

@@ -1,10 +1,18 @@
 import { promises as fs } from "fs";
 import path from "path";
-import { fetchManifest, validateManifest, fetchCountryDetail } from "../../../utils/regulationsTrackerFeed";
+import {
+  fetchManifest,
+  validateManifest,
+  fetchCountryDetail,
+  fetchHorizon,
+  fetchDeadlines,
+  fetchSnapshot,
+} from "../../../utils/regulationsTrackerFeed";
 import {
   getMetaQuery,
   getStoredHashes,
   upsertFeedTx,
+  setGlobalFeeds,
   getAffectedOrgsBySlugs,
   resolveEmailRecipients,
   resolveInAppUserIds,
@@ -133,6 +141,24 @@ export async function syncRegulationsTracker(deps?: { feed?: unknown }): Promise
     validated.rawCount,
     detailBySlug,
   );
+
+  // Refresh the three global, non-tenant feeds (changelog / deadlines /
+  // frameworks) cached on the meta singleton. Best-effort: a failure here must
+  // not abort the country sync or notifications.
+  try {
+    const [horizon, deadlines, snapshot] = await Promise.all([
+      fetchHorizon().catch(() => undefined),
+      fetchDeadlines().catch(() => undefined),
+      fetchSnapshot().catch(() => undefined),
+    ]);
+    await setGlobalFeeds({
+      horizon,
+      deadlines,
+      frameworks: (snapshot as { frameworks?: unknown[] } | undefined)?.frameworks,
+    });
+  } catch (e) {
+    logger.warn(`[regulations-tracker] global feed refresh failed: ${(e as Error).message}`);
+  }
 
   if (wasFirstSeed) {
     logger.info(

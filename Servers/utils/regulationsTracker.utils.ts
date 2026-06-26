@@ -60,6 +60,51 @@ export interface CountryChange {
   unstructured: boolean;
 }
 
+// ---------------------------------------------------------------------------
+// Global feeds (changelog / deadlines / frameworks) cached on the meta singleton
+// ---------------------------------------------------------------------------
+
+export type GlobalFeedColumn = "horizon" | "deadlines" | "frameworks";
+
+// Returns the cached JSONB for one global feed column (parsed object/array), or
+// null if never stored. Column name is from a fixed union — never user input —
+// so the interpolation is safe.
+export async function getGlobalFeed(column: GlobalFeedColumn): Promise<unknown> {
+  const rows = (await sequelize.query(
+    `SELECT ${column} AS v FROM regulation_tracker_meta WHERE id = 1;`,
+    { type: QueryTypes.SELECT },
+  )) as { v: unknown }[];
+  return rows[0]?.v ?? null;
+}
+
+// Persists the three global feed blobs on the meta singleton in one update.
+// Pass undefined for a feed to leave it unchanged.
+export async function setGlobalFeeds(feeds: {
+  horizon?: unknown;
+  deadlines?: unknown;
+  frameworks?: unknown;
+}): Promise<void> {
+  const sets: string[] = [];
+  const repl: Record<string, unknown> = {};
+  if (feeds.horizon !== undefined) {
+    sets.push("horizon = :horizon::jsonb");
+    repl.horizon = JSON.stringify(feeds.horizon);
+  }
+  if (feeds.deadlines !== undefined) {
+    sets.push("deadlines = :deadlines::jsonb");
+    repl.deadlines = JSON.stringify(feeds.deadlines);
+  }
+  if (feeds.frameworks !== undefined) {
+    sets.push("frameworks = :frameworks::jsonb");
+    repl.frameworks = JSON.stringify(feeds.frameworks);
+  }
+  if (!sets.length) return;
+  await sequelize.query(
+    `UPDATE regulation_tracker_meta SET ${sets.join(", ")} WHERE id = 1;`,
+    { replacements: repl },
+  );
+}
+
 // Returns a map of normalized slug -> stored hash for the given slugs. Used by
 // the weekly sync to decide which countries' full detail needs re-fetching
 // (new or hash-changed) before upserting.

@@ -8,7 +8,7 @@
  */
 
 import { useCallback } from "react";
-import { Compass, Star, Settings } from "lucide-react";
+import { Compass, Star, Settings, History, CalendarClock, Landmark } from "lucide-react";
 import SidebarShell, { SidebarMenuItem } from "../../components/Sidebar/SidebarShell";
 import { useUserGuideSidebarContext } from "../../components/UserGuide";
 
@@ -42,6 +42,27 @@ export default function RegulationsTrackerSidebar({
       value: "tracked",
       icon: <Star size={16} strokeWidth={1.5} />,
       count: trackedCount,
+      disabled: false,
+    },
+    {
+      id: "horizon",
+      label: "Horizon",
+      value: "horizon",
+      icon: <History size={16} strokeWidth={1.5} />,
+      disabled: false,
+    },
+    {
+      id: "deadlines",
+      label: "Deadlines",
+      value: "deadlines",
+      icon: <CalendarClock size={16} strokeWidth={1.5} />,
+      disabled: false,
+    },
+    {
+      id: "frameworks",
+      label: "Frameworks",
+      value: "frameworks",
+      icon: <Landmark size={16} strokeWidth={1.5} />,
       disabled: false,
     },
     ...(isAdmin
