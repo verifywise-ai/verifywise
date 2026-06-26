@@ -32,6 +32,11 @@ interface EmptyStateProps {
    * Optional content below the message (typically EmptyStateTip components)
    */
   children?: ReactNode;
+  /**
+   * Fill the parent container and center content vertically and horizontally.
+   * Use in modals or panels with a fixed height.
+   */
+  fillContainer?: boolean;
 }
 
 /**
@@ -45,20 +50,28 @@ export const EmptyState: FC<EmptyStateProps> = ({
   showBorder = true,
   icon = Inbox,
   children,
+  fillContainer = false,
 }) => {
   const theme = useTheme();
 
   return (
     <Stack
       alignItems="center"
+      justifyContent={fillContainer ? "center" : undefined}
       sx={{
+        width: "100%",
+        ...(fillContainer && { height: "100%" }),
         ...(showBorder && {
           border: `1px dashed ${theme.palette.border.dark}`,
           borderRadius: "4px",
           backgroundColor: theme.palette.background.main,
         }),
-        pt: "48px",
-        pb: children ? 0 : 12,
+        ...(fillContainer
+          ? { py: children ? 0 : 12 }
+          : {
+              pt: "48px",
+              pb: children ? 0 : 12,
+            }),
       }}
       role="status"
       aria-label={imageAlt}
