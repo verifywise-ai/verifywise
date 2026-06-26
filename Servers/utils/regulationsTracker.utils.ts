@@ -154,3 +154,167 @@ export async function upsertFeedTx(
 
   return { changed, newlyRemoved, wasFirstSeed };
 }
+
+// ---------------------------------------------------------------------------
+// CRUD: country catalogue
+// ---------------------------------------------------------------------------
+
+export async function listCountries(filters: { region?: string; q?: string } = {}) {
+  const where: string[] = ["is_active = TRUE"];
+  const repl: Record<string, unknown> = {};
+  if (filters.region) {
+    where.push("region = :region");
+    repl.region = filters.region;
+  }
+  if (filters.q) {
+    where.push("name ILIKE :q");
+    repl.q = `%${filters.q}%`;
+  }
+  return sequelize.query(
+    `SELECT slug, name, region, regulation_count, hash, last_changed_at
+     FROM regulation_countries WHERE ${where.join(" AND ")} ORDER BY name ASC;`,
+    { replacements: repl, type: QueryTypes.SELECT },
+  );
+}
+
+export async function getCountryRow(slug: string) {
+  const rows = (await sequelize.query(
+    `SELECT slug, name, region, regulation_count, data, hash, is_active, last_changed_at
+     FROM regulation_countries WHERE slug = :slug;`,
+    { replacements: { slug: normalizeSlug(slug) }, type: QueryTypes.SELECT },
+  )) as any[];
+  return rows[0] ?? null;
+}
+
+// ---------------------------------------------------------------------------
+// CRUD: tracked countries (per-org)
+// ---------------------------------------------------------------------------
+
+export async function listTracked(organizationId: number) {
+  return sequelize.query(
+    `SELECT t.country_slug, t.created_at, c.name, c.region, c.regulation_count, c.is_active, c.last_changed_at
+     FROM regulation_tracked_countries t
+     LEFT JOIN regulation_countries c ON c.slug = t.country_slug
+     WHERE t.organization_id = :organizationId ORDER BY c.name ASC;`,
+    { replacements: { organizationId }, type: QueryTypes.SELECT },
+  );
+}
+
+export async function trackCountry(organizationId: number, slug: string, userId: number) {
+  await sequelize.query(
+    `INSERT INTO regulation_tracked_countries (organization_id, country_slug, tracked_by, created_at)
+     VALUES (:organizationId, :slug, :userId, NOW())
+     ON CONFLICT (organization_id, country_slug) DO NOTHING;`,
+    { replacements: { organizationId, slug: normalizeSlug(slug), userId } },
+  );
+  return { tracked: true };
+}
+
+export async function trackCountriesBulk(organizationId: number, slugs: string[], userId: number) {
+  for (const s of slugs) await trackCountry(organizationId, s, userId);
+  return { tracked: slugs.length };
+}
+
+export async function untrackCountry(organizationId: number, slug: string) {
+  await sequelize.query(
+    `DELETE FROM regulation_tracked_countries
+     WHERE organization_id = :organizationId AND country_slug = :slug;`,
+    { replacements: { organizationId, slug: normalizeSlug(slug) } },
+  );
+  return { untracked: true };
+}
+
+// ---------------------------------------------------------------------------
+// CRUD: notification settings (per-org)
+// ---------------------------------------------------------------------------
+
+export async function getSettings(organizationId: number) {
+  const rows = (await sequelize.query(
+    `SELECT recipient_user_ids, recipient_emails, updated_by, updated_at
+     FROM regulation_tracker_settings WHERE organization_id = :organizationId;`,
+    { replacements: { organizationId }, type: QueryTypes.SELECT },
+  )) as { recipient_user_ids: number[] | null; recipient_emails: string[] | null; updated_by: number | null; updated_at: Date | null }[];
+  return rows[0] ?? { recipient_user_ids: [], recipient_emails: [], updated_by: null, updated_at: null };
+}
+
+export async function upsertSettings(
+  organizationId: number,
+  userIds: number[],
+  emails: string[],
+  userId: number,
+) {
+  await sequelize.query(
+    `INSERT INTO regulation_tracker_settings
+       (organization_id, recipient_user_ids, recipient_emails, updated_by, updated_at)
+     VALUES (:organizationId, :userIds::jsonb, :emails::jsonb, :userId, NOW())
+     ON CONFLICT (organization_id) DO UPDATE SET
+       recipient_user_ids = :userIds::jsonb, recipient_emails = :emails::jsonb,
+       updated_by = :userId, updated_at = NOW();`,
+    {
+      replacements: {
+        organizationId,
+        userId,
+        userIds: JSON.stringify(userIds ?? []),
+        emails: JSON.stringify(emails ?? []),
+      },
+    },
+  );
+  return getSettings(organizationId);
+}
+
+// ---------------------------------------------------------------------------
+// Query: orgs tracking any of the given slugs (used by the weekly job)
+// ---------------------------------------------------------------------------
+
+export async function getAffectedOrgsBySlugs(
+  slugs: string[],
+): Promise<{ organization_id: number; country_slug: string; name: string | null }[]> {
+  if (!slugs.length) return [];
+  return (await sequelize.query(
+    `SELECT DISTINCT t.organization_id, t.country_slug, c.name
+     FROM regulation_tracked_countries t
+     LEFT JOIN regulation_countries c ON c.slug = t.country_slug
+     WHERE t.country_slug = ANY(ARRAY[:slugs]::varchar[]);`,
+    { replacements: { slugs }, type: QueryTypes.SELECT },
+  )) as { organization_id: number; country_slug: string; name: string | null }[];
+}
+
+// ---------------------------------------------------------------------------
+// Recipient resolution
+// ---------------------------------------------------------------------------
+
+// EMAIL recipients: configured only, NO admin fallback (matches AI Trust Index pattern).
+export async function resolveEmailRecipients(organizationId: number): Promise<string[]> {
+  const s = await getSettings(organizationId);
+  const userIds: number[] = s.recipient_user_ids ?? [];
+  const freeText: string[] = s.recipient_emails ?? [];
+  let userEmails: string[] = [];
+  if (userIds.length) {
+    const rows = (await sequelize.query(
+      `SELECT email FROM users WHERE organization_id = :organizationId AND id = ANY(ARRAY[:ids]::int[]);`,
+      { replacements: { organizationId, ids: userIds }, type: QueryTypes.SELECT },
+    )) as { email: string }[];
+    userEmails = rows.map((r) => r.email);
+  }
+  const recipients = Array.from(
+    new Set([...userEmails, ...freeText].map((e) => e.trim().toLowerCase()).filter(Boolean)),
+  );
+  if (!recipients.length) {
+    logger.info(`[regulations-tracker] org ${organizationId} changed but no email recipients configured; skipped`);
+  }
+  return recipients;
+}
+
+// IN-APP recipients: org Admins ∪ configured recipient_user_ids (deduped).
+// Uses JOIN roles r ON r.id = u.role_id — confirmed pattern from invitation.utils.ts / user.utils.ts.
+export async function resolveInAppUserIds(organizationId: number): Promise<number[]> {
+  const s = await getSettings(organizationId);
+  const configured: number[] = s.recipient_user_ids ?? [];
+  const admins = (await sequelize.query(
+    `SELECT u.id FROM users u
+     JOIN roles r ON r.id = u.role_id
+     WHERE u.organization_id = :organizationId AND r.name IN ('Admin', 'SuperAdmin');`,
+    { replacements: { organizationId }, type: QueryTypes.SELECT },
+  )) as { id: number }[];
+  return Array.from(new Set([...admins.map((a) => a.id), ...configured]));
+}
