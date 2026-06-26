@@ -10,9 +10,7 @@
         <mj-text font-size="14px" color="#344054">
           Regulations changed for countries your organization tracks.
         </mj-text>
-        <mj-text font-size="13px" font-weight="600" color="#344054" padding-bottom="4px">Changed</mj-text>
         {{changedSection}}
-        <mj-text font-size="13px" font-weight="600" color="#344054" padding-top="16px" padding-bottom="4px">No longer in the feed</mj-text>
         {{removedSection}}
         <mj-button background-color="#13715B" href="{{moduleUrl}}" align="left" border-radius="4px">
           Browse

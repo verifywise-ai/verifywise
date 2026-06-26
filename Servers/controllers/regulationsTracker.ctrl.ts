@@ -76,7 +76,9 @@ export async function getCountryDetail(req: Request, res: Response): Promise<any
     const local = await getCountryRow(slug, req.organizationId!);
     if (!local) return res.status(404).json(STATUS_CODE[404]("country not found"));
     try {
-      const live = await fetchCountryDetail(slug);
+      // Use the canonical stored slug (normalized) rather than the raw URL param to
+      // avoid a false stale fallback when the URL slug has different casing/whitespace.
+      const live = await fetchCountryDetail(local.slug);
       await logSuccess({
         eventType: "Read",
         description: "fetched live country detail",
@@ -204,7 +206,10 @@ export async function trackBulkCtrl(req: Request, res: Response): Promise<any> {
   try {
     if (!isAdmin(req.role)) return res.status(403).json(STATUS_CODE[403]("Admin access required"));
     const slugs: unknown = req.body?.slugs;
-    if (!Array.isArray(slugs)) return res.status(400).json(STATUS_CODE[400]("slugs must be an array"));
+    if (!Array.isArray(slugs) || slugs.length === 0)
+      return res.status(400).json(STATUS_CODE[400]("slugs must be a non-empty array"));
+    if (slugs.length > 200)
+      return res.status(400).json(STATUS_CODE[400]("too many slugs (max 200)"));
     const badSlug = (slugs as unknown[]).find((s) => typeof s !== "string" || !s.trim());
     if (badSlug !== undefined)
       return res.status(400).json(STATUS_CODE[400](`Invalid slug: ${String(badSlug)}`));

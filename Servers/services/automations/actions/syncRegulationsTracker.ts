@@ -158,14 +158,10 @@ export async function syncRegulationsTracker(deps?: { feed?: unknown }): Promise
           await createNotificationQuery(
             {
               user_id: uid,
-              // "regulations_tracker" is a new type not yet in the enum;
-              // cast through unknown so the enum can be extended later without
-              // a breaking change to this job.
-              type: "regulations_tracker" as unknown as NotificationType,
+              type: NotificationType.REGULATIONS_TRACKER,
               title,
               message,
-              // "regulation_country" is a new entity type; same cast pattern.
-              entity_type: "regulation_country" as unknown as NotificationEntityType,
+              entity_type: NotificationEntityType.REGULATION_COUNTRY,
             },
             orgId,
           );

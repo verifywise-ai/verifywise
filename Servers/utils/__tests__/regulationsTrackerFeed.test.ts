@@ -18,14 +18,19 @@ describe("validateManifest", () => {
     const r = validateManifest(manifest(30, { feedVersion: 2 }), null);
     expect(r.ok).toBe(false);
   });
-  it("rejects below absolute floor", () => {
+
+  it("rejects when valid count is below absolute floor", () => {
+    // ABSOLUTE_FLOOR - 1 valid entries → rejected (gates on valid count now)
     const r = validateManifest(manifest(ABSOLUTE_FLOOR - 1), null);
     expect(r.ok).toBe(false);
   });
-  it("rejects below 50% of last good count", () => {
+
+  it("rejects when valid count is below 50% of last good count", () => {
+    // 30 valid entries against lastGoodCount 100 → 30 < 50 → rejected
     const r = validateManifest(manifest(30), 100);
     expect(r.ok).toBe(false);
   });
+
   it("accepts a healthy feed and returns presentSlugs + rawCount", () => {
     const r = validateManifest(manifest(30), 40);
     expect(r.ok).toBe(true);
@@ -35,6 +40,7 @@ describe("validateManifest", () => {
       expect(r.rawCount).toBe(30);
     }
   });
+
   it("keeps a present-but-malformed country in presentSlugs but not in valid countries", () => {
     const m = manifest(25);
     (m.countries as any[]).push({ slug: "broken" }); // missing hash/name
@@ -44,6 +50,33 @@ describe("validateManifest", () => {
     if (r.ok) {
       expect(r.presentSlugs).toContain("broken");
       expect(r.countries.find((c) => c.slug === "broken")).toBeUndefined();
+    }
+  });
+
+  it("rejects a feed with healthy rawCount but >50% malformed entries (gates on valid count)", () => {
+    // 60 raw entries: 25 valid (above ABSOLUTE_FLOOR=20) + 35 malformed.
+    // lastGoodCount = 60 → need valid >= 30 to pass 50% gate; 25 < 30 → rejected on 50% gate.
+    const m = manifest(25); // 25 valid entries
+    const malformed = Array.from({ length: 35 }, (_, i) => ({ slug: `bad-${i}` })); // missing hash/name/region
+    (m.countries as any[]).push(...malformed);
+    m.counts.countries = m.countries.length; // 60 raw entries
+    const r = validateManifest(m, 60);
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.reason).toMatch(/below 50%/);
+    }
+  });
+
+  it("rejects a feed whose valid count is below the absolute floor even if rawCount is above it", () => {
+    // 30 raw entries but only ABSOLUTE_FLOOR - 1 valid → should reject
+    const m = manifest(ABSOLUTE_FLOOR - 1); // valid entries
+    const malformed = Array.from({ length: 30 - (ABSOLUTE_FLOOR - 1) }, (_, i) => ({ slug: `bad-${i}` }));
+    (m.countries as any[]).push(...malformed);
+    m.counts.countries = m.countries.length;
+    const r = validateManifest(m, null);
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.reason).toMatch(/absolute floor/);
     }
   });
 });

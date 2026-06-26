@@ -58,6 +58,9 @@ export enum NotificationType {
   ASSIGNMENT_MEMBER = "assignment_member",
   ASSIGNMENT_ASSIGNEE = "assignment_assignee",
   ASSIGNMENT_ACTION_OWNER = "assignment_action_owner",
+
+  // Regulations Tracker notifications
+  REGULATIONS_TRACKER = "regulations_tracker",
 }
 
 /**
@@ -80,6 +83,7 @@ export enum NotificationEntityType {
   SHADOW_AI_TOOL = "shadow_ai_tool",
   AI_GATEWAY = "ai_gateway",
   AI_ACTION = "ai_action",
+  REGULATION_COUNTRY = "regulation_country",
 }
 
 /**

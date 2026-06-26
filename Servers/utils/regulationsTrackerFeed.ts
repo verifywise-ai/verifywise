@@ -29,12 +29,17 @@ export function validateManifest(raw: unknown, lastGoodCount: number | null): Va
   const counts = (f.counts as Record<string, unknown>) ?? {};
   if (typeof counts.countries === "number" && counts.countries !== f.countries.length)
     return { ok: false, reason: `counts.countries (${counts.countries}) != length (${f.countries.length})` };
-  if (f.countries.length < ABSOLUTE_FLOOR)
-    return { ok: false, reason: `below absolute floor (${f.countries.length})` };
-  if (lastGoodCount != null && f.countries.length < lastGoodCount * 0.5)
-    return { ok: false, reason: `below 50% of last good count (${f.countries.length} < ${lastGoodCount})` };
 
+  // Filter to valid entries first, then gate on the VALID count so a feed with many
+  // malformed entries doesn't pass the floor/50%-drop guards while silently losing data.
   const countries = (f.countries as unknown[]).filter(hasRequired) as IManifestCountry[];
+  const validCount = countries.length;
+
+  if (validCount < ABSOLUTE_FLOOR)
+    return { ok: false, reason: `below absolute floor (${validCount} valid < ${ABSOLUTE_FLOOR})` };
+  if (lastGoodCount != null && validCount < lastGoodCount * 0.5)
+    return { ok: false, reason: `below 50% of last good count (${validCount} valid < ${lastGoodCount})` };
+
   const presentSlugs = (f.countries as unknown[])
     .map((c) =>
       c && typeof c === "object" && typeof (c as Record<string, unknown>).slug === "string"
