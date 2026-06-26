@@ -1,0 +1,36 @@
+<mjml>
+  <mj-body background-color="#f4f6f8">
+    <mj-section background-color="#13715B" padding="20px">
+      <mj-column>
+        <mj-text color="#ffffff" font-size="18px" font-weight="600">Global AI regulations — weekly update</mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-section background-color="#ffffff" padding="24px">
+      <mj-column>
+        <mj-text font-size="14px" color="#344054">
+          Regulations changed for countries your organization tracks.
+        </mj-text>
+        <mj-text font-size="13px" font-weight="600" color="#344054" padding-bottom="4px">Changed</mj-text>
+        {{changedSection}}
+        <mj-text font-size="13px" font-weight="600" color="#344054" padding-top="16px" padding-bottom="4px">No longer in the feed</mj-text>
+        {{removedSection}}
+        <mj-button background-color="#13715B" href="{{moduleUrl}}" align="left" border-radius="4px">
+          Browse
+        </mj-button>
+        <mj-text font-size="13px" color="#475467" padding-top="8px">
+          Or jump straight to <a href="{{trackedUrl}}" style="color:#13715B;">tracked</a> regulations
+          or manage your <a href="{{settingsUrl}}" style="color:#13715B;">settings</a>.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-section padding="12px">
+      <mj-column>
+        <mj-text font-size="11px" color="#98a2b3" align="center">
+          You receive this because you are a configured recipient for Regulations Tracker alerts.
+          An administrator can manage recipients in
+          <a href="{{settingsUrl}}" style="color:#98a2b3;text-decoration:underline;">Regulations Tracker settings</a>.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>
