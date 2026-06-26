@@ -8706,6 +8706,33 @@ export const translations: Record<string, Record<string, string>> = {
     "Track AI regulations and compliance requirements across jurisdictions":
       "Verfolgen Sie KI-Vorschriften und Compliance-Anforderungen über Rechtsräume hinweg",
     // Regulations Tracker
+    "Horizon": "Horizont",
+    "A dated changelog of AI-regulation changes across all tracked jurisdictions, newest first.":
+      "Ein datiertes Änderungsprotokoll der KI-Regulierungen für alle verfolgten Jurisdiktionen, neueste zuerst.",
+    "Deadlines": "Fristen",
+    "Upcoming effective-date milestones for AI regulations, soonest first, plus regulations with no scheduled date yet.":
+      "Bevorstehende Inkrafttreten-Meilensteine für KI-Regulierungen, früheste zuerst, plus Regulierungen ohne geplantes Datum.",
+    "International frameworks": "Internationale Rahmenwerke",
+    "Cross-border AI governance frameworks and principles that complement national regulations.":
+      "Grenzüberschreitende KI-Governance-Rahmenwerke und -Grundsätze, die nationale Regulierungen ergänzen.",
+    "Key obligations": "Wesentliche Pflichten",
+    "Key principles": "Wesentliche Grundsätze",
+    "Max penalty:": "Höchststrafe:",
+    "Practical takeaway": "Praktisches Fazit",
+    "Scheduled": "Geplant",
+    "Not yet scheduled": "Noch nicht geplant",
+    "No regulation changes have been recorded yet.":
+      "Es wurden noch keine Regulierungsänderungen erfasst.",
+    "No upcoming regulation deadlines are recorded yet.":
+      "Es sind noch keine bevorstehenden Regulierungsfristen erfasst.",
+    "No international frameworks are recorded yet.":
+      "Es sind noch keine internationalen Rahmenwerke erfasst.",
+    "Showing the last known changelog; live data is temporarily unavailable.":
+      "Das letzte bekannte Änderungsprotokoll wird angezeigt; Live-Daten sind vorübergehend nicht verfügbar.",
+    "Showing the last known deadlines; live data is temporarily unavailable.":
+      "Die letzten bekannten Fristen werden angezeigt; Live-Daten sind vorübergehend nicht verfügbar.",
+    "Showing the last known frameworks; live data is temporarily unavailable.":
+      "Die letzten bekannten Rahmenwerke werden angezeigt; Live-Daten sind vorübergehend nicht verfügbar.",
     "Regulations tracker": "Regulierungsverfolger",
     "Browse the catalogue of countries and jurisdictions. Track the ones relevant to your organization to receive updates when their AI regulations change.":
       "Durchsuchen Sie den Katalog der Länder und Jurisdiktionen. Verfolgen Sie die für Ihre Organisation relevanten, um Updates zu erhalten, wenn sich deren KI-Regulierungen ändern.",
@@ -17380,6 +17407,33 @@ export const translations: Record<string, Record<string, string>> = {
     "Track AI regulations and compliance requirements across jurisdictions":
       "Suivez les réglementations sur l'IA et les exigences de conformité dans toutes les juridictions",
     // Regulations Tracker
+    "Horizon": "Horizon",
+    "A dated changelog of AI-regulation changes across all tracked jurisdictions, newest first.":
+      "Un journal daté des modifications des réglementations IA pour toutes les juridictions suivies, du plus récent au plus ancien.",
+    "Deadlines": "Échéances",
+    "Upcoming effective-date milestones for AI regulations, soonest first, plus regulations with no scheduled date yet.":
+      "Prochaines échéances d'entrée en vigueur des réglementations IA, les plus proches en premier, plus les réglementations sans date prévue.",
+    "International frameworks": "Cadres internationaux",
+    "Cross-border AI governance frameworks and principles that complement national regulations.":
+      "Cadres et principes transfrontaliers de gouvernance de l'IA qui complètent les réglementations nationales.",
+    "Key obligations": "Obligations clés",
+    "Key principles": "Principes clés",
+    "Max penalty:": "Pénalité maximale :",
+    "Practical takeaway": "Conclusion pratique",
+    "Scheduled": "Planifié",
+    "Not yet scheduled": "Pas encore planifié",
+    "No regulation changes have been recorded yet.":
+      "Aucune modification réglementaire n'a encore été enregistrée.",
+    "No upcoming regulation deadlines are recorded yet.":
+      "Aucune échéance réglementaire à venir n'est encore enregistrée.",
+    "No international frameworks are recorded yet.":
+      "Aucun cadre international n'est encore enregistré.",
+    "Showing the last known changelog; live data is temporarily unavailable.":
+      "Affichage du dernier journal connu ; les données en direct sont temporairement indisponibles.",
+    "Showing the last known deadlines; live data is temporarily unavailable.":
+      "Affichage des dernières échéances connues ; les données en direct sont temporairement indisponibles.",
+    "Showing the last known frameworks; live data is temporarily unavailable.":
+      "Affichage des derniers cadres connus ; les données en direct sont temporairement indisponibles.",
     "Regulations tracker": "Suivi des réglementations",
     "Browse the catalogue of countries and jurisdictions. Track the ones relevant to your organization to receive updates when their AI regulations change.":
       "Parcourez le catalogue des pays et juridictions. Suivez ceux pertinents pour votre organisation afin de recevoir des mises à jour lorsque leurs réglementations IA changent.",
@@ -25971,6 +26025,33 @@ export const translations: Record<string, Record<string, string>> = {
     "Track AI regulations and compliance requirements across jurisdictions":
       "Realice seguimiento de las regulaciones de IA y los requisitos de cumplimiento en todas las jurisdicciones",
     // Regulations Tracker
+    "Horizon": "Horizonte",
+    "A dated changelog of AI-regulation changes across all tracked jurisdictions, newest first.":
+      "Un registro fechado de cambios en las regulaciones de IA de todas las jurisdicciones supervisadas, el más reciente primero.",
+    "Deadlines": "Plazos",
+    "Upcoming effective-date milestones for AI regulations, soonest first, plus regulations with no scheduled date yet.":
+      "Próximos hitos de entrada en vigor de las regulaciones de IA, los más cercanos primero, más regulaciones sin fecha programada aún.",
+    "International frameworks": "Marcos internacionales",
+    "Cross-border AI governance frameworks and principles that complement national regulations.":
+      "Marcos y principios transfronterizos de gobernanza de IA que complementan las regulaciones nacionales.",
+    "Key obligations": "Obligaciones clave",
+    "Key principles": "Principios clave",
+    "Max penalty:": "Sanción máxima:",
+    "Practical takeaway": "Conclusión práctica",
+    "Scheduled": "Programado",
+    "Not yet scheduled": "Aún no programado",
+    "No regulation changes have been recorded yet.":
+      "Todavía no se han registrado cambios regulatorios.",
+    "No upcoming regulation deadlines are recorded yet.":
+      "Todavía no se han registrado plazos regulatorios próximos.",
+    "No international frameworks are recorded yet.":
+      "Todavía no se han registrado marcos internacionales.",
+    "Showing the last known changelog; live data is temporarily unavailable.":
+      "Mostrando el último registro de cambios conocido; los datos en tiempo real no están disponibles temporalmente.",
+    "Showing the last known deadlines; live data is temporarily unavailable.":
+      "Mostrando los últimos plazos conocidos; los datos en tiempo real no están disponibles temporalmente.",
+    "Showing the last known frameworks; live data is temporarily unavailable.":
+      "Mostrando los últimos marcos conocidos; los datos en tiempo real no están disponibles temporalmente.",
     "Regulations tracker": "Rastreador de regulaciones",
     "Browse the catalogue of countries and jurisdictions. Track the ones relevant to your organization to receive updates when their AI regulations change.":
       "Explore el catálogo de países y jurisdicciones. Siga los relevantes para su organización para recibir actualizaciones cuando cambien sus regulaciones de IA.",
