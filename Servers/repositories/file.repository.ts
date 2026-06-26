@@ -773,6 +773,7 @@ export async function getFileWithMetadata(
       f.uploaded_time AS upload_date,
       f.uploaded_by,
       f.org_id,
+      f.organization_id,
       f.project_id,
       f.model_id,
       f.source,
