@@ -1,8 +1,9 @@
 import { promises as fs } from "fs";
 import path from "path";
-import { fetchManifest, validateManifest } from "../../../utils/regulationsTrackerFeed";
+import { fetchManifest, validateManifest, fetchCountryDetail } from "../../../utils/regulationsTrackerFeed";
 import {
   getMetaQuery,
+  getStoredHashes,
   upsertFeedTx,
   getAffectedOrgsBySlugs,
   resolveEmailRecipients,
@@ -100,10 +101,37 @@ export async function syncRegulationsTracker(deps?: { feed?: unknown }): Promise
     };
   }
 
+  // Fetch full per-country detail (regulations/timeline/meta) for countries that
+  // are new or whose hash moved, so the catalog stores complete content (the
+  // detail page renders from our DB without a per-request external call). Stored
+  // as data = { ...country, meta }, matching the live-fetch shape in the detail
+  // controller. A per-country fetch failure is non-fatal — that country falls
+  // back to its manifest summary for this run.
+  const norm = (s: string) => s.trim().toLowerCase();
+  const storedHashes = await getStoredHashes(validated.countries.map((c) => c.slug));
+  const staleForDetail = validated.countries.filter(
+    (c) => storedHashes.get(norm(c.slug)) !== c.hash,
+  );
+  const detailBySlug = new Map<string, unknown>();
+  for (const c of staleForDetail) {
+    try {
+      const d = (await fetchCountryDetail(c.slug)) as {
+        country?: Record<string, unknown>;
+        meta?: Record<string, unknown>;
+      };
+      if (d.country) detailBySlug.set(norm(c.slug), { ...d.country, meta: d.meta ?? null });
+    } catch (e) {
+      logger.warn(
+        `[regulations-tracker] detail fetch failed for ${c.slug}: ${(e as Error).message}; storing summary`,
+      );
+    }
+  }
+
   const { changed, newlyRemoved, wasFirstSeed } = await upsertFeedTx(
     validated.countries,
     validated.presentSlugs,
     validated.rawCount,
+    detailBySlug,
   );
 
   if (wasFirstSeed) {

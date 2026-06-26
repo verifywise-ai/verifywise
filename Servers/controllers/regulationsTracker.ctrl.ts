@@ -78,7 +78,10 @@ export async function getCountryDetail(req: Request, res: Response): Promise<any
     try {
       // Use the canonical stored slug (normalized) rather than the raw URL param to
       // avoid a false stale fallback when the URL slug has different casing/whitespace.
-      const live = await fetchCountryDetail(local.slug);
+      const live = (await fetchCountryDetail(local.slug)) as {
+        country?: Record<string, unknown>;
+        meta?: Record<string, unknown>;
+      };
       await logSuccess({
         eventType: "Read",
         description: "fetched live country detail",
@@ -87,16 +90,28 @@ export async function getCountryDetail(req: Request, res: Response): Promise<any
         userId: req.userId!,
         organizationId: req.organizationId!,
       });
-      return res.status(200).json(STATUS_CODE[200]({ ...(live as object), stale: false, is_tracked: local.is_tracked }));
+      // The live feed nests detail under `country` with `meta` alongside; the client
+      // reads regulations/timeline/meta at the root, so flatten to one shape that
+      // matches the stale (DB) path exactly.
+      return res.status(200).json(
+        STATUS_CODE[200]({
+          ...(live.country ?? {}),
+          meta: live.meta ?? null,
+          stale: false,
+          is_tracked: local.is_tracked,
+        }),
+      );
     } catch {
       await logSuccess({
         eventType: "Read",
-        description: "returned stale country detail",
+        description: "returned stored country detail",
         functionName: fn,
         fileName: file,
         userId: req.userId!,
         organizationId: req.organizationId!,
       });
+      // local.data already holds the full detail (regulations/timeline/meta) seeded
+      // and refreshed by the weekly sync, so this renders complete content offline.
       return res.status(200).json(STATUS_CODE[200]({ ...local.data, stale: true, is_tracked: local.is_tracked }));
     }
   } catch (error) {

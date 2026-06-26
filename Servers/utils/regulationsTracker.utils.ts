@@ -60,10 +60,29 @@ export interface CountryChange {
   unstructured: boolean;
 }
 
+// Returns a map of normalized slug -> stored hash for the given slugs. Used by
+// the weekly sync to decide which countries' full detail needs re-fetching
+// (new or hash-changed) before upserting.
+export async function getStoredHashes(slugs: string[]): Promise<Map<string, string>> {
+  if (!slugs.length) return new Map();
+  const normalized = slugs.map(normalizeSlug);
+  const rows = (await sequelize.query(
+    `SELECT slug, hash FROM regulation_countries WHERE slug = ANY(ARRAY[:slugs]::varchar[]);`,
+    { replacements: { slugs: normalized }, type: QueryTypes.SELECT },
+  )) as { slug: string; hash: string }[];
+  return new Map(rows.map((r) => [r.slug, r.hash]));
+}
+
 export async function upsertFeedTx(
   countries: IManifestCountry[],
   presentSlugs?: string[],
   rawCount?: number,
+  // Optional full per-country detail (regulations/timeline/meta), keyed by
+  // normalized slug. When present for a slug, the row's `data` stores the full
+  // detail so the detail page renders complete content from our DB; otherwise it
+  // falls back to the manifest summary entry. Lets a fresh install / sync mirror
+  // the website's full data instead of summary-only.
+  detailBySlug?: Map<string, unknown>,
 ): Promise<{ changed: CountryChange[]; newlyRemoved: string[]; wasFirstSeed: boolean }> {
   if (!countries.length) return { changed: [], newlyRemoved: [], wasFirstSeed: false };
 
@@ -91,6 +110,9 @@ export async function upsertFeedTx(
       const slug = normalizeSlug(c.slug);
       upsertedSlugs.push(slug);
       const existingHash = existingMap.get(slug);
+      // Prefer the full detail object (regulations/timeline/meta) when the caller
+      // supplied it; otherwise store the manifest summary entry.
+      const storedData = detailBySlug?.get(slug) ?? c;
 
       if (existingHash !== undefined) {
         const hashMoved = existingHash !== c.hash;
@@ -113,7 +135,7 @@ export async function upsertFeedTx(
           {
             replacements: {
               slug, name: c.name, region: c.region ?? null,
-              rc: c.regulationCount ?? null, data: JSON.stringify(c), hash: c.hash,
+              rc: c.regulationCount ?? null, data: JSON.stringify(storedData), hash: c.hash,
             },
             transaction,
           },
@@ -126,7 +148,7 @@ export async function upsertFeedTx(
           {
             replacements: {
               slug, name: c.name, region: c.region ?? null,
-              rc: c.regulationCount ?? null, data: JSON.stringify(c), hash: c.hash,
+              rc: c.regulationCount ?? null, data: JSON.stringify(storedData), hash: c.hash,
             },
             transaction,
           },
