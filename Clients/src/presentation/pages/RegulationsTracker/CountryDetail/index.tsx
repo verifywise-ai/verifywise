@@ -30,6 +30,14 @@ import {
 import { useRegulationsTrackerSidebarContextSafe } from "../../../../application/contexts/RegulationsTrackerSidebar.context";
 import { useTrackerAlert } from "../useTrackerAlert";
 
+// Amber/warning colors for the stale-data banner.
+// palette.status.warning uses a slightly different hue (#FFF8E1/#795548),
+// so we keep the original designer values as named consts rather than
+// substituting a mismatched token (same approach as AITrustIndex/AppDetail).
+const STALE_BANNER_BG = "#FFFBEA";
+const STALE_BANNER_ICON_COLOR = "#B45309";
+const STALE_BANNER_TEXT_COLOR = "#92400E";
+
 interface Regulation {
   id?: string | number;
   name: string;
@@ -127,7 +135,7 @@ export default function CountryDetail() {
 
   if (isLoading) {
     return (
-      <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
+      <Box sx={{ display: "flex", justifyContent: "center", py: "64px" }}>
         <CircularProgress size={24} sx={{ color: palette.brand.primary }} />
       </Box>
     );
@@ -249,13 +257,18 @@ export default function CountryDetail() {
             gap: "8px",
             border: `1px solid ${palette.border.dark}`,
             borderRadius: "4px",
-            backgroundColor: "#FFFBEA",
+            backgroundColor: STALE_BANNER_BG,
             p: "12px 16px",
             mb: "16px",
           }}
         >
-          <AlertTriangle size={16} strokeWidth={1.5} color="#B45309" style={{ flexShrink: 0, marginTop: 2 }} />
-          <Typography sx={{ fontSize: "13px", color: "#92400E", lineHeight: 1.5 }}>
+          <AlertTriangle
+            size={16}
+            strokeWidth={1.5}
+            color={STALE_BANNER_ICON_COLOR}
+            style={{ flexShrink: 0, marginTop: 2 }}
+          />
+          <Typography sx={{ fontSize: "13px", color: STALE_BANNER_TEXT_COLOR, lineHeight: 1.5 }}>
             This data may be outdated. The feed has not been refreshed recently for this country.
             Information below reflects the last available snapshot.
           </Typography>
@@ -278,9 +291,7 @@ export default function CountryDetail() {
                   }}
                 >
                   <Stack direction="row" alignItems="flex-start" gap="8px" flexWrap="wrap">
-                    <Typography
-                      sx={{ fontSize: "14px", fontWeight: 600, flex: 1, minWidth: 0 }}
-                    >
+                    <Typography sx={{ fontSize: "14px", fontWeight: 600, flex: 1, minWidth: 0 }}>
                       {reg.name}
                     </Typography>
                     {reg.status && (
@@ -403,9 +414,7 @@ export default function CountryDetail() {
                     <Typography sx={{ fontSize: "12px", color: palette.text.tertiary }}>
                       {entry.date}
                     </Typography>
-                    {entry.type && (
-                      <Chip label={entry.type} variant="info" uppercase={false} />
-                    )}
+                    {entry.type && <Chip label={entry.type} variant="info" uppercase={false} />}
                   </Stack>
                   <Typography
                     sx={{
@@ -446,9 +455,7 @@ export default function CountryDetail() {
               Disclaimer
             </Typography>
             {/* Verbatim feed content — do NOT translate or paraphrase */}
-            <Typography
-              sx={{ fontSize: "13px", color: palette.text.secondary, lineHeight: 1.6 }}
-            >
+            <Typography sx={{ fontSize: "13px", color: palette.text.secondary, lineHeight: 1.6 }}>
               {disclaimer}
             </Typography>
           </Box>

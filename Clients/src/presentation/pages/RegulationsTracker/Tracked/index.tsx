@@ -18,10 +18,7 @@ import EmptyStateTip from "../../../components/EmptyState/EmptyStateTip";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
 import TablePaginationActions from "../../../components/TablePagination";
 import { palette } from "../../../themes/palette";
-import {
-  useTracked,
-  useUntrackCountry,
-} from "../../../../application/hooks/useRegulationsTracker";
+import { useTracked, useUntrackCountry } from "../../../../application/hooks/useRegulationsTracker";
 import { useRegulationsTrackerSidebarContextSafe } from "../../../../application/contexts/RegulationsTrackerSidebar.context";
 import { useTrackerAlert } from "../useTrackerAlert";
 
@@ -139,7 +136,7 @@ export default function Tracked() {
       {AlertSlot}
 
       {isLoading && (
-        <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
+        <Box sx={{ display: "flex", justifyContent: "center", py: "48px" }}>
           <CircularProgress size={24} sx={{ color: palette.brand.primary }} />
         </Box>
       )}
@@ -199,14 +196,14 @@ export default function Tracked() {
               <Box
                 key={row.slug}
                 sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "12px",
-                  border: `1px solid ${palette.border.dark}`,
-                  borderRadius: "4px",
-                  p: "10px 12px",
-                  backgroundColor: palette.background.main,
-                  cursor: "pointer",
+                  "display": "flex",
+                  "alignItems": "center",
+                  "gap": "12px",
+                  "border": `1px solid ${palette.border.dark}`,
+                  "borderRadius": "4px",
+                  "p": "10px 12px",
+                  "backgroundColor": palette.background.main,
+                  "cursor": "pointer",
                   "&:hover": { backgroundColor: palette.background.accent },
                 }}
                 onClick={() => navigate(`/regulations-tracker/${row.slug}`)}
@@ -234,9 +231,7 @@ export default function Tracked() {
                     e.stopPropagation();
                     handleUntrack(row);
                   }}
-                  isDisabled={
-                    untrackCountry.isPending && untrackCountry.variables === row.slug
-                  }
+                  isDisabled={untrackCountry.isPending && untrackCountry.variables === row.slug}
                   sx={{ flexShrink: 0 }}
                 />
               </Box>

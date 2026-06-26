@@ -205,7 +205,7 @@ export default function Browse() {
       </Stack>
 
       {isLoading && (
-        <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
+        <Box sx={{ display: "flex", justifyContent: "center", py: "48px" }}>
           <CircularProgress size={24} sx={{ color: palette.brand.primary }} />
         </Box>
       )}
@@ -232,14 +232,14 @@ export default function Browse() {
                 <Box
                   key={row.slug}
                   sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "12px",
-                    border: `1px solid ${palette.border.dark}`,
-                    borderRadius: "4px",
-                    p: "10px 12px",
-                    backgroundColor: palette.background.main,
-                    cursor: "pointer",
+                    "display": "flex",
+                    "alignItems": "center",
+                    "gap": "12px",
+                    "border": `1px solid ${palette.border.dark}`,
+                    "borderRadius": "4px",
+                    "p": "10px 12px",
+                    "backgroundColor": palette.background.main,
+                    "cursor": "pointer",
                     "&:hover": { backgroundColor: palette.background.accent },
                   }}
                   onClick={() => navigate(`/regulations-tracker/${row.slug}`)}

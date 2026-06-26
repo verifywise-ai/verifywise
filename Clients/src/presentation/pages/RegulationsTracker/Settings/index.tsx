@@ -134,7 +134,7 @@ export default function Settings() {
     >
       {AlertSlot}
       {settingsLoading ? (
-        <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
+        <Box sx={{ display: "flex", justifyContent: "center", py: "48px" }}>
           <CircularProgress size={24} sx={{ color: palette.brand.primary }} />
         </Box>
       ) : (
