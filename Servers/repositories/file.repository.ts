@@ -43,6 +43,7 @@ export interface OrganizationFileMetadata {
   upload_date?: string;
   uploaded_by?: number;
   org_id?: number;
+  organization_id?: number;
   project_id?: number | null;
   model_id?: number;
   source?: string;
