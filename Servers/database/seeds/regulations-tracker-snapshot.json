@@ -1,0 +1,1326 @@
+{
+  "feedVersion": 1,
+  "generatedAt": "2026-06-26T13:37:34.603Z",
+  "countries": [
+    {
+      "slug": "european-union",
+      "name": "European Union",
+      "region": "europe",
+      "regulationCount": 6,
+      "hash": "sha256-8267827fab245c6bf91a79185262ab7d566d1d353daa5234083c4a77edce7a81",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-8267827fab245c6bf91a79185262ab7d566d1d353daa5234083c4a77edce7a81",
+            "regulationCount": 6
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/european-union"
+    },
+    {
+      "slug": "united-states",
+      "name": "United States",
+      "region": "north-america",
+      "regulationCount": 10,
+      "hash": "sha256-ab4d31f90a86ef91120d8e6d7c3030003e33969606513b01adb93a8d72ed019a",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-ab4d31f90a86ef91120d8e6d7c3030003e33969606513b01adb93a8d72ed019a",
+            "regulationCount": 10
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/united-states"
+    },
+    {
+      "slug": "united-kingdom",
+      "name": "United Kingdom",
+      "region": "europe",
+      "regulationCount": 5,
+      "hash": "sha256-e434a1c5760c33a83e5afcad0eae488d1e4af2f0c108af7baa6df7be9b6f5468",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-e434a1c5760c33a83e5afcad0eae488d1e4af2f0c108af7baa6df7be9b6f5468",
+            "regulationCount": 5
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/united-kingdom"
+    },
+    {
+      "slug": "china",
+      "name": "China",
+      "region": "asia",
+      "regulationCount": 6,
+      "hash": "sha256-d3406b58e2c63574f575eb90f670b47449f1cb8b1637ac186168dfdd7a9db548",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-d3406b58e2c63574f575eb90f670b47449f1cb8b1637ac186168dfdd7a9db548",
+            "regulationCount": 6
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/china"
+    },
+    {
+      "slug": "australia",
+      "name": "Australia",
+      "region": "oceania",
+      "regulationCount": 5,
+      "hash": "sha256-7cea5a1182a1411b519d2e90e3d5872569dbb2798ae7be66c0608bc118b07416",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-7cea5a1182a1411b519d2e90e3d5872569dbb2798ae7be66c0608bc118b07416",
+            "regulationCount": 5
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/australia"
+    },
+    {
+      "slug": "france",
+      "name": "France",
+      "region": "europe",
+      "regulationCount": 4,
+      "hash": "sha256-17f4c874b24dcc9b377319c4a79cc36628e37920ff05ba4beac9e34f1f310a31",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-17f4c874b24dcc9b377319c4a79cc36628e37920ff05ba4beac9e34f1f310a31",
+            "regulationCount": 4
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/france"
+    },
+    {
+      "slug": "italy",
+      "name": "Italy",
+      "region": "europe",
+      "regulationCount": 4,
+      "hash": "sha256-87142eec75c2ba6b6f8fb9a383cb5874843914c80d1a7e9ff85052d1af6f5925",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-87142eec75c2ba6b6f8fb9a383cb5874843914c80d1a7e9ff85052d1af6f5925",
+            "regulationCount": 4
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/italy"
+    },
+    {
+      "slug": "germany",
+      "name": "Germany",
+      "region": "europe",
+      "regulationCount": 5,
+      "hash": "sha256-3e854def71b83ca326dfcd902b97a6ed3de62deb91ea5268f0ee1dcf77e39e3a",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-3e854def71b83ca326dfcd902b97a6ed3de62deb91ea5268f0ee1dcf77e39e3a",
+            "regulationCount": 5
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/germany"
+    },
+    {
+      "slug": "sweden",
+      "name": "Sweden",
+      "region": "europe",
+      "regulationCount": 4,
+      "hash": "sha256-7fc2cc92296cf8edd0a4143693738cd05da71accb0a93dddd74fd6a8c20fe9e2",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-7fc2cc92296cf8edd0a4143693738cd05da71accb0a93dddd74fd6a8c20fe9e2",
+            "regulationCount": 4
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/sweden"
+    },
+    {
+      "slug": "canada",
+      "name": "Canada",
+      "region": "north-america",
+      "regulationCount": 5,
+      "hash": "sha256-e88a8dae638b31c9b38294c02b60163300347213a7709691f153dab1d0b54ba9",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-e88a8dae638b31c9b38294c02b60163300347213a7709691f153dab1d0b54ba9",
+            "regulationCount": 5
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/canada"
+    },
+    {
+      "slug": "india",
+      "name": "India",
+      "region": "asia",
+      "regulationCount": 4,
+      "hash": "sha256-b3acab824e4267b89db66751b062d315cb398d6979e42fea49965a7dd787a55d",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-b3acab824e4267b89db66751b062d315cb398d6979e42fea49965a7dd787a55d",
+            "regulationCount": 4
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/india"
+    },
+    {
+      "slug": "japan",
+      "name": "Japan",
+      "region": "asia",
+      "regulationCount": 4,
+      "hash": "sha256-7c5fdea263b9a9915adea352bce5becefdb2604553090c70b276c6017b919f05",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-7c5fdea263b9a9915adea352bce5becefdb2604553090c70b276c6017b919f05",
+            "regulationCount": 4
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/japan"
+    },
+    {
+      "slug": "singapore",
+      "name": "Singapore",
+      "region": "asia",
+      "regulationCount": 5,
+      "hash": "sha256-d4f55537147885e627e2a9fdb9ee9822cac8e5d69cec1aa3ab48e0076875035a",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-d4f55537147885e627e2a9fdb9ee9822cac8e5d69cec1aa3ab48e0076875035a",
+            "regulationCount": 5
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/singapore"
+    },
+    {
+      "slug": "south-korea",
+      "name": "South Korea",
+      "region": "asia",
+      "regulationCount": 3,
+      "hash": "sha256-59502445694a442de87dd0be24103ea157bd710fed91051aa93fc6c915f3f571",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-59502445694a442de87dd0be24103ea157bd710fed91051aa93fc6c915f3f571",
+            "regulationCount": 3
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/south-korea"
+    },
+    {
+      "slug": "israel",
+      "name": "Israel",
+      "region": "asia",
+      "regulationCount": 3,
+      "hash": "sha256-181565bc7408a16a5800613270999ad692c99b42d9da0ebf68fbf4c4c1e31df8",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-181565bc7408a16a5800613270999ad692c99b42d9da0ebf68fbf4c4c1e31df8",
+            "regulationCount": 3
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/israel"
+    },
+    {
+      "slug": "malaysia",
+      "name": "Malaysia",
+      "region": "asia",
+      "regulationCount": 3,
+      "hash": "sha256-4e5fefda771583513de49550a1d1fe7fd275210bf8311f9fa2d5dcf341691db9",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-4e5fefda771583513de49550a1d1fe7fd275210bf8311f9fa2d5dcf341691db9",
+            "regulationCount": 3
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/malaysia"
+    },
+    {
+      "slug": "indonesia",
+      "name": "Indonesia",
+      "region": "asia",
+      "regulationCount": 3,
+      "hash": "sha256-595162004f936e7c1c78566c0bd36e85fdfa80f225c8cb371e3538e9afc6e434",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-595162004f936e7c1c78566c0bd36e85fdfa80f225c8cb371e3538e9afc6e434",
+            "regulationCount": 3
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/indonesia"
+    },
+    {
+      "slug": "bangladesh",
+      "name": "Bangladesh",
+      "region": "asia",
+      "regulationCount": 2,
+      "hash": "sha256-c79629a9a81b678d0c8504c8cf8f59833612a81ca4405b3591d238e5e0d86343",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-c79629a9a81b678d0c8504c8cf8f59833612a81ca4405b3591d238e5e0d86343",
+            "regulationCount": 2
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/bangladesh"
+    },
+    {
+      "slug": "taiwan",
+      "name": "Taiwan",
+      "region": "asia",
+      "regulationCount": 3,
+      "hash": "sha256-cb63f4a668aa984eb137ea0967507ffe0e9915e60f93381e88207be0f660001e",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-cb63f4a668aa984eb137ea0967507ffe0e9915e60f93381e88207be0f660001e",
+            "regulationCount": 3
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/taiwan"
+    },
+    {
+      "slug": "thailand",
+      "name": "Thailand",
+      "region": "asia",
+      "regulationCount": 3,
+      "hash": "sha256-2af8b568bf2a45e118596e4fa2615f936521f963bbd22fba246c7466eb9c2b39",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-2af8b568bf2a45e118596e4fa2615f936521f963bbd22fba246c7466eb9c2b39",
+            "regulationCount": 3
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/thailand"
+    },
+    {
+      "slug": "vietnam",
+      "name": "Vietnam",
+      "region": "asia",
+      "regulationCount": 3,
+      "hash": "sha256-94450606fae14414ecbfe44da74ba6655b4c2a65305c94412b0085d316580510",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-94450606fae14414ecbfe44da74ba6655b4c2a65305c94412b0085d316580510",
+            "regulationCount": 3
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/vietnam"
+    },
+    {
+      "slug": "saudi-arabia",
+      "name": "Saudi Arabia",
+      "region": "asia",
+      "regulationCount": 3,
+      "hash": "sha256-551e161cda54280f18cdc78445c7fa158d4531cdd995e986d0828678387b0ee1",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-551e161cda54280f18cdc78445c7fa158d4531cdd995e986d0828678387b0ee1",
+            "regulationCount": 3
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/saudi-arabia"
+    },
+    {
+      "slug": "united-arab-emirates",
+      "name": "United Arab Emirates",
+      "region": "asia",
+      "regulationCount": 4,
+      "hash": "sha256-b59f65796ac13acd2e25b3d5e43e3cf8040e01d0bceaff8e6313dab44784b68a",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-b59f65796ac13acd2e25b3d5e43e3cf8040e01d0bceaff8e6313dab44784b68a",
+            "regulationCount": 4
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/united-arab-emirates"
+    },
+    {
+      "slug": "brazil",
+      "name": "Brazil",
+      "region": "south-america",
+      "regulationCount": 3,
+      "hash": "sha256-9592d43a2f595cdbdb66fc23e4da0943fc4e1515f3f9c586e3cec2f846f073ea",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-9592d43a2f595cdbdb66fc23e4da0943fc4e1515f3f9c586e3cec2f846f073ea",
+            "regulationCount": 3
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/brazil"
+    },
+    {
+      "slug": "argentina",
+      "name": "Argentina",
+      "region": "south-america",
+      "regulationCount": 2,
+      "hash": "sha256-5b11a6109f58eb5854449d97932197b0f87197d9d99bc07273177e6fb455e625",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-5b11a6109f58eb5854449d97932197b0f87197d9d99bc07273177e6fb455e625",
+            "regulationCount": 2
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/argentina"
+    },
+    {
+      "slug": "chile",
+      "name": "Chile",
+      "region": "south-america",
+      "regulationCount": 4,
+      "hash": "sha256-19eaa1410316b1575f44dcb79ea94e732dfba0cc03812cee482ba490a6c1ebe5",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-19eaa1410316b1575f44dcb79ea94e732dfba0cc03812cee482ba490a6c1ebe5",
+            "regulationCount": 4
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/chile"
+    },
+    {
+      "slug": "colombia",
+      "name": "Colombia",
+      "region": "south-america",
+      "regulationCount": 3,
+      "hash": "sha256-f9cbff35a5ed66e0ce1033771217c426db7a0c82fe5905b21d87053c55eaafe9",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-f9cbff35a5ed66e0ce1033771217c426db7a0c82fe5905b21d87053c55eaafe9",
+            "regulationCount": 3
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/colombia"
+    },
+    {
+      "slug": "peru",
+      "name": "Peru",
+      "region": "south-america",
+      "regulationCount": 3,
+      "hash": "sha256-1f9206b958c6b7599dc9fb5a0b7fc428815f5739416d974d77ea1e3fcdc5bae3",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-1f9206b958c6b7599dc9fb5a0b7fc428815f5739416d974d77ea1e3fcdc5bae3",
+            "regulationCount": 3
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/peru"
+    },
+    {
+      "slug": "nigeria",
+      "name": "Nigeria",
+      "region": "africa",
+      "regulationCount": 3,
+      "hash": "sha256-9bb19a8f24e05f7fb304cccd45822028fbd3423cb54e65313c33ad83cf2d943b",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-9bb19a8f24e05f7fb304cccd45822028fbd3423cb54e65313c33ad83cf2d943b",
+            "regulationCount": 3
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/nigeria"
+    },
+    {
+      "slug": "egypt",
+      "name": "Egypt",
+      "region": "africa",
+      "regulationCount": 3,
+      "hash": "sha256-a938b6cda9cab5728cf2afb6ff4287a4208b17293c5bcf56e92fbfcda52e6c9b",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-a938b6cda9cab5728cf2afb6ff4287a4208b17293c5bcf56e92fbfcda52e6c9b",
+            "regulationCount": 3
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/egypt"
+    },
+    {
+      "slug": "mauritius",
+      "name": "Mauritius",
+      "region": "africa",
+      "regulationCount": 3,
+      "hash": "sha256-83e760993d0357c5c72d475e0b5f2ea1e38d862a57b29d55a2cdbf5b5b23d584",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-83e760993d0357c5c72d475e0b5f2ea1e38d862a57b29d55a2cdbf5b5b23d584",
+            "regulationCount": 3
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/mauritius"
+    },
+    {
+      "slug": "new-zealand",
+      "name": "New Zealand",
+      "region": "oceania",
+      "regulationCount": 4,
+      "hash": "sha256-d2649c6dfe39bb57393ac42e577f91031cf4b4cd36eb475a93c7fd5e57b088e1",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-d2649c6dfe39bb57393ac42e577f91031cf4b4cd36eb475a93c7fd5e57b088e1",
+            "regulationCount": 4
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/new-zealand"
+    },
+    {
+      "slug": "spain",
+      "name": "Spain",
+      "region": "europe",
+      "regulationCount": 3,
+      "hash": "sha256-a68200c1d1c2edba8586471a7f70849abd08c6047a51bcbf6440d8138c6c328a",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-a68200c1d1c2edba8586471a7f70849abd08c6047a51bcbf6440d8138c6c328a",
+            "regulationCount": 3
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/spain"
+    },
+    {
+      "slug": "switzerland",
+      "name": "Switzerland",
+      "region": "europe",
+      "regulationCount": 4,
+      "hash": "sha256-09739ca651f597dac4187c004bdce1c5260b8be876b66dcee1b27dcd5cb4228c",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-09739ca651f597dac4187c004bdce1c5260b8be876b66dcee1b27dcd5cb4228c",
+            "regulationCount": 4
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/switzerland"
+    },
+    {
+      "slug": "turkey",
+      "name": "Turkey",
+      "region": "europe",
+      "regulationCount": 3,
+      "hash": "sha256-89bf5f4e0fe4f115db881e9adb08b6cbf5d41ba0619133345feb7e29088cbf1b",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-89bf5f4e0fe4f115db881e9adb08b6cbf5d41ba0619133345feb7e29088cbf1b",
+            "regulationCount": 3
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/turkey"
+    },
+    {
+      "slug": "rwanda",
+      "name": "Rwanda",
+      "region": "africa",
+      "regulationCount": 2,
+      "hash": "sha256-9451648a5039e21da3b67db528d245874b4e57e11d4e1342a49025dcea30ca0f",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-9451648a5039e21da3b67db528d245874b4e57e11d4e1342a49025dcea30ca0f",
+            "regulationCount": 2
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/rwanda"
+    },
+    {
+      "slug": "south-africa",
+      "name": "South Africa",
+      "region": "africa",
+      "regulationCount": 2,
+      "hash": "sha256-5d3d7de8dab2ce7eef38c4bc1c164eae30c0eec75b5b2d60a4e39157b8b5f829",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-5d3d7de8dab2ce7eef38c4bc1c164eae30c0eec75b5b2d60a4e39157b8b5f829",
+            "regulationCount": 2
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/south-africa"
+    },
+    {
+      "slug": "philippines",
+      "name": "Philippines",
+      "region": "asia",
+      "regulationCount": 2,
+      "hash": "sha256-2a953b45493fbd2201550df95e209c65680c7dc93cfc8c2ccbbb2cf7573eecb9",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-2a953b45493fbd2201550df95e209c65680c7dc93cfc8c2ccbbb2cf7573eecb9",
+            "regulationCount": 2
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/philippines"
+    },
+    {
+      "slug": "netherlands",
+      "name": "Netherlands",
+      "region": "europe",
+      "regulationCount": 3,
+      "hash": "sha256-711c8cb12734d87393e1ba7d9bc290af56bc0f9d32566efc447fe33769496e6f",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-711c8cb12734d87393e1ba7d9bc290af56bc0f9d32566efc447fe33769496e6f",
+            "regulationCount": 3
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/netherlands"
+    },
+    {
+      "slug": "ireland",
+      "name": "Ireland",
+      "region": "europe",
+      "regulationCount": 3,
+      "hash": "sha256-3909d137d214b76928a81cf24a9e0102385f30c0042b9eec01694acbf0a5e066",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-3909d137d214b76928a81cf24a9e0102385f30c0042b9eec01694acbf0a5e066",
+            "regulationCount": 3
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/ireland"
+    },
+    {
+      "slug": "norway",
+      "name": "Norway",
+      "region": "europe",
+      "regulationCount": 3,
+      "hash": "sha256-c3dbe360c31dc7bee21a8f19b25ee06636ad7120085af5d96ca7c33d5d235cc2",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-c3dbe360c31dc7bee21a8f19b25ee06636ad7120085af5d96ca7c33d5d235cc2",
+            "regulationCount": 3
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/norway"
+    },
+    {
+      "slug": "mexico",
+      "name": "Mexico",
+      "region": "north-america",
+      "regulationCount": 3,
+      "hash": "sha256-f2a9e007a64c83876f45ec095233956e8030401d3621947b907439da5cb47982",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-f2a9e007a64c83876f45ec095233956e8030401d3621947b907439da5cb47982",
+            "regulationCount": 3
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/mexico"
+    },
+    {
+      "slug": "ukraine",
+      "name": "Ukraine",
+      "region": "europe",
+      "regulationCount": 3,
+      "hash": "sha256-82d775811b5db68dc6c3e63e90c12d5cb014d5469584183647847b9a277e6703",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-82d775811b5db68dc6c3e63e90c12d5cb014d5469584183647847b9a277e6703",
+            "regulationCount": 3
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/ukraine"
+    },
+    {
+      "slug": "poland",
+      "name": "Poland",
+      "region": "europe",
+      "regulationCount": 3,
+      "hash": "sha256-558c18f80ac538ab47d79a9464461099483faa753934a865b9ea3cb4fb99a7b0",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-558c18f80ac538ab47d79a9464461099483faa753934a865b9ea3cb4fb99a7b0",
+            "regulationCount": 3
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/poland"
+    },
+    {
+      "slug": "kenya",
+      "name": "Kenya",
+      "region": "africa",
+      "regulationCount": 2,
+      "hash": "sha256-766ea35411615695ce418baec53ca4dee7fcaefb0ade976864f6d7089ee090ee",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-766ea35411615695ce418baec53ca4dee7fcaefb0ade976864f6d7089ee090ee",
+            "regulationCount": 2
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/kenya"
+    },
+    {
+      "slug": "qatar",
+      "name": "Qatar",
+      "region": "asia",
+      "regulationCount": 3,
+      "hash": "sha256-1ee1c9bbc5a8d6b08154d08922b603e5dd8be513d4873a02acfb1ebe23504de0",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-1ee1c9bbc5a8d6b08154d08922b603e5dd8be513d4873a02acfb1ebe23504de0",
+            "regulationCount": 3
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/qatar"
+    },
+    {
+      "slug": "kazakhstan",
+      "name": "Kazakhstan",
+      "region": "asia",
+      "regulationCount": 3,
+      "hash": "sha256-00a9f86a7e149a21308461e74d8af493512da9a3d61568ee4c32b8e4a0dcc790",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-00a9f86a7e149a21308461e74d8af493512da9a3d61568ee4c32b8e4a0dcc790",
+            "regulationCount": 3
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/kazakhstan"
+    },
+    {
+      "slug": "pakistan",
+      "name": "Pakistan",
+      "region": "asia",
+      "regulationCount": 3,
+      "hash": "sha256-5314f2655a5da6d16b132d67db0a231077cb1e7e65140d256d1e69400de93a23",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-5314f2655a5da6d16b132d67db0a231077cb1e7e65140d256d1e69400de93a23",
+            "regulationCount": 3
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/pakistan"
+    },
+    {
+      "slug": "bahrain",
+      "name": "Bahrain",
+      "region": "asia",
+      "regulationCount": 2,
+      "hash": "sha256-217e9a662a9ebdd33f9bf2aa727c3c41f90a893dc00443e0b89b15e5c4c32568",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-217e9a662a9ebdd33f9bf2aa727c3c41f90a893dc00443e0b89b15e5c4c32568",
+            "regulationCount": 2
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/bahrain"
+    },
+    {
+      "slug": "sri-lanka",
+      "name": "Sri Lanka",
+      "region": "asia",
+      "regulationCount": 2,
+      "hash": "sha256-4b4a31a2d46fe1ecd452a4db4cd8173a0a24831884985157514ec3e41d89d3cf",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-4b4a31a2d46fe1ecd452a4db4cd8173a0a24831884985157514ec3e41d89d3cf",
+            "regulationCount": 2
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/sri-lanka"
+    },
+    {
+      "slug": "uruguay",
+      "name": "Uruguay",
+      "region": "south-america",
+      "regulationCount": 2,
+      "hash": "sha256-324db80457fb884d2f4df0a7eed24b368c65b5eb0c9df55b54518d0ba0c4cfd7",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-324db80457fb884d2f4df0a7eed24b368c65b5eb0c9df55b54518d0ba0c4cfd7",
+            "regulationCount": 2
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/uruguay"
+    },
+    {
+      "slug": "morocco",
+      "name": "Morocco",
+      "region": "africa",
+      "regulationCount": 2,
+      "hash": "sha256-5d6b7ebbd98de4a81b83c729785309402ac17a4f7ae2670b3538f0755c769b7e",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-5d6b7ebbd98de4a81b83c729785309402ac17a4f7ae2670b3538f0755c769b7e",
+            "regulationCount": 2
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/morocco"
+    },
+    {
+      "slug": "jordan",
+      "name": "Jordan",
+      "region": "asia",
+      "regulationCount": 2,
+      "hash": "sha256-4c032bf6799d1beb78512f256e5fb36eaba24217d711dca943ba54bdc4e8c02b",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-4c032bf6799d1beb78512f256e5fb36eaba24217d711dca943ba54bdc4e8c02b",
+            "regulationCount": 2
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/jordan"
+    },
+    {
+      "slug": "oman",
+      "name": "Oman",
+      "region": "asia",
+      "regulationCount": 2,
+      "hash": "sha256-5d16a29456470033a7d9110f99aa6b79b0f27b84a7f60befb5880cf613a6cad8",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-5d16a29456470033a7d9110f99aa6b79b0f27b84a7f60befb5880cf613a6cad8",
+            "regulationCount": 2
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/oman"
+    },
+    {
+      "slug": "costa-rica",
+      "name": "Costa Rica",
+      "region": "north-america",
+      "regulationCount": 2,
+      "hash": "sha256-04c71ea9f8b249a8a24cbd8e9ae422e0f8fbdd6ee2a95332a050e58010f6d9ec",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-04c71ea9f8b249a8a24cbd8e9ae422e0f8fbdd6ee2a95332a050e58010f6d9ec",
+            "regulationCount": 2
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/costa-rica"
+    },
+    {
+      "slug": "ecuador",
+      "name": "Ecuador",
+      "region": "south-america",
+      "regulationCount": 2,
+      "hash": "sha256-828e69d01e4006ee75687c810738d740ee1d8d33d3d46fdf6ed5a9072a4d16be",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-828e69d01e4006ee75687c810738d740ee1d8d33d3d46fdf6ed5a9072a4d16be",
+            "regulationCount": 2
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/ecuador"
+    },
+    {
+      "slug": "tunisia",
+      "name": "Tunisia",
+      "region": "africa",
+      "regulationCount": 2,
+      "hash": "sha256-724393ffe5e5668c63bf13d0d6d0ecc6103baf2e24e46ae9b5d1795891153cfd",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-724393ffe5e5668c63bf13d0d6d0ecc6103baf2e24e46ae9b5d1795891153cfd",
+            "regulationCount": 2
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/tunisia"
+    },
+    {
+      "slug": "kuwait",
+      "name": "Kuwait",
+      "region": "asia",
+      "regulationCount": 2,
+      "hash": "sha256-cabdaff17a913d03fe40c386b0cad7c2193202677ebc799f0cf1dc1e88e43128",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-cabdaff17a913d03fe40c386b0cad7c2193202677ebc799f0cf1dc1e88e43128",
+            "regulationCount": 2
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/kuwait"
+    },
+    {
+      "slug": "ghana",
+      "name": "Ghana",
+      "region": "africa",
+      "regulationCount": 2,
+      "hash": "sha256-5c44ba67003a2027ef15a5253a3e9a8d7b42a9d0375732bfa6fac730b370d9aa",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-5c44ba67003a2027ef15a5253a3e9a8d7b42a9d0375732bfa6fac730b370d9aa",
+            "regulationCount": 2
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/ghana"
+    },
+    {
+      "slug": "georgia",
+      "name": "Georgia",
+      "region": "europe",
+      "regulationCount": 1,
+      "hash": "sha256-d3a9e34167861bbdb118b09cbfde8090db0c05386b40ddfabbca5ac5629f8f55",
+      "history": {
+        "firstAssessed": "2026-06-25",
+        "lastChanged": "2026-06-25",
+        "lastChecked": "2026-06-25",
+        "assessmentCount": 1,
+        "hashHistory": [
+          {
+            "date": "2026-06-25",
+            "hash": "sha256-d3a9e34167861bbdb118b09cbfde8090db0c05386b40ddfabbca5ac5629f8f55",
+            "regulationCount": 1
+          }
+        ],
+        "lastChange": null
+      },
+      "url": "/api/regulations/country/georgia"
+    }
+  ]
+}
