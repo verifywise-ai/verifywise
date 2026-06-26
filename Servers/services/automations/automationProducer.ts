@@ -224,3 +224,17 @@ export async function scheduleAiTrustIndexSync() {
     },
   );
 }
+
+export async function scheduleRegulationsTrackerSync() {
+  logger.info("Adding Regulations Tracker weekly sync job to the queue...");
+  // Monday 06:00 UTC. The handler self-guards via last_run_week. Repeatable add is idempotent by repeat key.
+  await automationQueue.add(
+    "regulations_tracker_sync",
+    {},
+    {
+      repeat: { pattern: "0 6 * * 1", tz: "UTC" }, // Mondays 06:00 UTC
+      removeOnComplete: true,
+      removeOnFail: false,
+    },
+  );
+}

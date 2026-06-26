@@ -17,9 +17,6 @@ import { sendAutomationEmail } from "../../emailService";
 import { compileMjmlToHtml } from "../../../tools/mjmlCompiler";
 import logger from "../../../utils/logger/fileLogger";
 
-// Suppress unused-import warning — CountryChange is used as a generic type parameter below.
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-type _CountryChange = CountryChange;
 
 const FRONTEND = process.env.FRONTEND_URL ?? "http://localhost:5173";
 const MODULE_URL = FRONTEND + "/regulations-tracker/browse";

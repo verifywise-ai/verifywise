@@ -14,6 +14,7 @@ import {
   scheduleAiGatewayCacheCleanup,
   scheduleMcpGatewayCleanup,
   scheduleAiTrustIndexSync,
+  scheduleRegulationsTrackerSync,
 } from "../services/automations/automationProducer";
 
 export async function addAllJobs(): Promise<void> {
@@ -29,6 +30,7 @@ export async function addAllJobs(): Promise<void> {
   await scheduleAiGatewayCacheCleanup();
   await scheduleMcpGatewayCleanup();
   await scheduleAiTrustIndexSync(); // MUST be last — earlier schedulers obliterate the queue
+  await scheduleRegulationsTrackerSync();
 }
 
 if (require.main === module) {
