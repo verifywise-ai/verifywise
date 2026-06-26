@@ -8,15 +8,7 @@
  * @module contexts/RegulationsTrackerSidebar.context
  */
 
-import {
-  createContext,
-  useContext,
-  useState,
-  useEffect,
-  useCallback,
-  ReactNode,
-  FC,
-} from "react";
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode, FC } from "react";
 import { getTracked } from "../repository/regulationsTracker.repository";
 
 interface RegulationsTrackerSidebarContextType {
@@ -25,8 +17,9 @@ interface RegulationsTrackerSidebarContextType {
   refreshTrackedCount: () => void;
 }
 
-const RegulationsTrackerSidebarContext =
-  createContext<RegulationsTrackerSidebarContextType | null>(null);
+const RegulationsTrackerSidebarContext = createContext<RegulationsTrackerSidebarContextType | null>(
+  null,
+);
 
 export const RegulationsTrackerSidebarProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const [trackedCount, setTrackedCount] = useState(0);

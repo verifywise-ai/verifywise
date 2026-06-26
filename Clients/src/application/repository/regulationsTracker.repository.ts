@@ -3,9 +3,7 @@ import { apiServices } from "../../infrastructure/api/networkServices";
 
 const BASE = "/regulations-tracker";
 
-export async function getCountries(
-  params: { region?: string; q?: string } = {},
-): Promise<any> {
+export async function getCountries(params: { region?: string; q?: string } = {}): Promise<any> {
   const qs = new URLSearchParams();
   Object.entries(params).forEach(([k, v]) => {
     if (v !== undefined && v !== "") qs.set(k, String(v));
@@ -16,9 +14,7 @@ export async function getCountries(
 }
 
 export async function getCountryDetail(slug: string): Promise<any> {
-  const response = await apiServices.get(
-    `${BASE}/countries/${encodeURIComponent(slug)}`,
-  );
+  const response = await apiServices.get(`${BASE}/countries/${encodeURIComponent(slug)}`);
   return response.data;
 }
 
@@ -36,9 +32,7 @@ export async function trackBulk(slugs: string[]): Promise<any> {
 }
 
 export async function untrackCountry(slug: string): Promise<any> {
-  return (
-    await apiServices.delete(`${BASE}/tracked/${encodeURIComponent(slug)}`)
-  ).data;
+  return (await apiServices.delete(`${BASE}/tracked/${encodeURIComponent(slug)}`)).data;
 }
 
 export async function getSettings(): Promise<any> {
