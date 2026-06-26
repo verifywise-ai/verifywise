@@ -101,6 +101,10 @@ import { GovernanceScenarioRuleModel } from "../domain.layer/models/governanceOs
 import { GovernanceOrgPreferencesModel } from "../domain.layer/models/governanceOs/governanceOrgPreferences.model";
 import { GovernanceCoverageCacheModel } from "../domain.layer/models/governanceOs/governanceCoverageCache.model";
 import { GovernanceScenarioActivationModel } from "../domain.layer/models/governanceOs/governanceScenarioActivation.model";
+import { RegulationCountryModel } from "../domain.layer/models/regulationsTracker/regulationCountry.model";
+import { RegulationTrackedCountryModel } from "../domain.layer/models/regulationsTracker/regulationTrackedCountry.model";
+import { RegulationTrackerSettingsModel } from "../domain.layer/models/regulationsTracker/regulationTrackerSettings.model";
+import { RegulationTrackerMetaModel } from "../domain.layer/models/regulationsTracker/regulationTrackerMeta.model";
 
 dotenv.config();
 
@@ -224,6 +228,10 @@ const sequelize = new Sequelize(conf.database!, conf.username!, conf.password, {
     GovernanceOrgPreferencesModel,
     GovernanceCoverageCacheModel,
     GovernanceScenarioActivationModel,
+    RegulationCountryModel,
+    RegulationTrackedCountryModel,
+    RegulationTrackerSettingsModel,
+    RegulationTrackerMetaModel,
   ],
 }) as Sequelize;
 
