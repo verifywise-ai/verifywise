@@ -102,9 +102,7 @@ const AITrustIndexDetail = lazyRoute(
   () => import("../../presentation/pages/AITrustIndex/AppDetail"),
 );
 // ── Regulations Tracker routes ────────────────────────────────────────
-const RegulationsTracker = lazyRoute(
-  () => import("../../presentation/pages/RegulationsTracker"),
-);
+const RegulationsTracker = lazyRoute(() => import("../../presentation/pages/RegulationsTracker"));
 const RegulationsTrackerBrowse = lazyRoute(
   () => import("../../presentation/pages/RegulationsTracker/Browse"),
 );

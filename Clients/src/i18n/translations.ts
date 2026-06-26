@@ -8703,17 +8703,17 @@ export const translations: Record<string, Record<string, string>> = {
     "Get notified when assessments change": "Benachrichtigung bei Änderungen der Bewertungen",
     "Tracked apps are included in the weekly change digest, so configured recipients hear about score, grade, or policy changes.":
       "Verfolgte Apps sind in der wöchentlichen Änderungsübersicht enthalten, sodass konfigurierte Empfänger über Änderungen an Punktzahl, Note oder Richtlinie informiert werden.",
+    "Track AI regulations and compliance requirements across jurisdictions":
+      "Verfolgen Sie KI-Vorschriften und Compliance-Anforderungen über Rechtsräume hinweg",
     // Regulations Tracker
-    "Regulations tracker":
-      "Regulierungsverfolger",
+    "Regulations tracker": "Regulierungsverfolger",
     "Browse the catalogue of countries and jurisdictions. Track the ones relevant to your organization to receive updates when their AI regulations change.":
       "Durchsuchen Sie den Katalog der Länder und Jurisdiktionen. Verfolgen Sie die für Ihre Organisation relevanten, um Updates zu erhalten, wenn sich deren KI-Regulierungen ändern.",
     "Search countries or jurisdictions": "Länder oder Jurisdiktionen suchen",
     "No countries match your filters.": "Keine Länder entsprechen Ihren Filtern.",
     "Select all on page": "Alle auf der Seite auswählen",
     "View source": "Quelle anzeigen",
-    "Tracked countries":
-      "Verfolgte Länder",
+    "Tracked countries": "Verfolgte Länder",
     "Countries and jurisdictions your organization is tracking. You":
       "Länder und Jurisdiktionen, die Ihre Organisation verfolgt. Sie",
     "Countries and jurisdictions your organization is tracking. You'll be notified when their AI regulations change.":
@@ -17375,6 +17375,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Get notified when assessments change": "Être averti lorsque les évaluations changent",
     "Tracked apps are included in the weekly change digest, so configured recipients hear about score, grade, or policy changes.":
       "Les applications suivies sont incluses dans le récapitulatif hebdomadaire des modifications, afin que les destinataires configurés soient informés des changements de score, de note ou de politique.",
+    "Track AI regulations and compliance requirements across jurisdictions":
+      "Suivez les réglementations sur l'IA et les exigences de conformité dans toutes les juridictions",
     // Regulations Tracker
     "Regulations tracker": "Suivi des réglementations",
     "Browse the catalogue of countries and jurisdictions. Track the ones relevant to your organization to receive updates when their AI regulations change.":
@@ -25962,6 +25964,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Get notified when assessments change": "Reciba avisos cuando cambien las evaluaciones",
     "Tracked apps are included in the weekly change digest, so configured recipients hear about score, grade, or policy changes.":
       "Las aplicaciones seguidas se incluyen en el resumen semanal de cambios, de modo que los destinatarios configurados se enteran de los cambios de puntuación, calificación o política.",
+    "Track AI regulations and compliance requirements across jurisdictions":
+      "Realice seguimiento de las regulaciones de IA y los requisitos de cumplimiento en todas las jurisdicciones",
     // Regulations Tracker
     "Regulations tracker": "Rastreador de regulaciones",
     "Browse the catalogue of countries and jurisdictions. Track the ones relevant to your organization to receive updates when their AI regulations change.":
