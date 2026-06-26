@@ -3,7 +3,6 @@ import { AssistantRuntimeProvider } from "@assistant-ui/react";
 import { useAdvisorRuntime } from "./useAdvisorRuntime";
 import { CustomThread } from "./CustomThread";
 import { AdvisorHeader } from "./AdvisorHeader";
-import CommandPanel from "./CommandPanel";
 import { AdvisorDomain } from "./advisorConfig";
 import { useAdvisorConversationSafe } from "../../../application/contexts/AdvisorConversation.context";
 import { useEffect, useRef, useMemo, memo } from "react";
@@ -214,7 +213,6 @@ const AdvisorChat = ({
   return (
     <Paper elevation={0} sx={paperStyles}>
       <AdvisorHeader pageContext={pageContext} />
-      <CommandPanel selectedLLMKeyId={selectedLLMKeyId} />
       <AdvisorChatInner
         key={innerKey}
         selectedLLMKeyId={selectedLLMKeyId}
