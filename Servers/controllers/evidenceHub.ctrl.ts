@@ -193,6 +193,7 @@ export async function updateEvidenceById(req: Request, res: Response) {
       req.organizationId!,
     )) as EvidenceHubModel;
     if (!existingEvidence) {
+      await transaction.rollback();
       return res.status(404).json(STATUS_CODE[404](req.t!("Evidence not found")));
     }
 
@@ -315,6 +316,7 @@ export async function deleteEvidenceById(req: Request, res: Response) {
       req.organizationId!,
     )) as EvidenceHubModel;
     if (!existingEvidence) {
+      await transaction.rollback();
       return res.status(404).json(STATUS_CODE[404](req.t!("Evidence not found")));
     }
 

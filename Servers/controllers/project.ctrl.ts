@@ -507,6 +507,7 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
     const existingProject = await getProjectByIdQuery(projectId, req.organizationId!);
 
     if (!existingProject) {
+      await transaction.rollback();
       await logSuccess({
         eventType: "Update",
         description: `Project not found for update: ID ${projectId}`,
@@ -804,6 +805,7 @@ export async function deleteProjectById(req: Request, res: Response): Promise<an
       return res.status(202).json(STATUS_CODE[202](deletedProject));
     }
 
+    await transaction.rollback();
     await logSuccess({
       eventType: "Delete",
       description: `Project not found for deletion: ID ${projectId}`,

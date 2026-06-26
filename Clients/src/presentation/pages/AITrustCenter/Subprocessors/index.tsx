@@ -1,14 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, Suspense, useCallback, useEffect, useRef, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Box, Typography, TableCell, Stack } from "@mui/material";
+import { Box, Typography, TableCell, Stack, Alert as MuiAlert } from "@mui/material";
 import Toggle from "../../../components/Inputs/Toggle";
 import IconButtonComponent from "../../../components/IconButton";
 import { useStyles } from "./styles";
 import Field from "../../../components/Inputs/Field";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import StandardModal from "../../../components/Modals/StandardModal";
-import { CirclePlus as AddCircleOutlineIcon } from "lucide-react";
+import { CirclePlus as AddCircleOutlineIcon, RotateCcw, Users } from "lucide-react";
 import { useTheme } from "@mui/material/styles";
 import AITrustCenterTable from "../../../components/Table/AITrustCenterTable";
 import CustomizableSkeleton from "../../../components/Skeletons";
@@ -186,12 +186,14 @@ const AITrustCenterSubprocessors: React.FC = () => {
     data: overviewData,
     isLoading: overviewLoading,
     error: overviewError,
+    refetch: refetchOverview,
   } = useAITrustCentreOverviewQuery();
   const updateOverviewMutation = useAITrustCentreOverviewMutation();
   const {
     data: subprocessors,
     isLoading: subprocessorsLoading,
     error: subprocessorsError,
+    refetch: refetchSubprocessors,
   } = useAITrustCentreSubprocessorsQuery();
   const createSubprocessorMutation = useCreateAITrustCentreSubprocessorMutation();
   const updateSubprocessorMutation = useUpdateAITrustCentreSubprocessorMutation();
@@ -564,9 +566,20 @@ const AITrustCenterSubprocessors: React.FC = () => {
           {isTableLoading ? (
             <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
           ) : tableError ? (
-            <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
-              <Typography color="error">{tableError?.message || "An error occurred"}</Typography>
-            </Box>
+            <Stack alignItems="center" spacing={2} sx={{ py: 4 }}>
+              <MuiAlert severity="error" sx={{ width: "100%", maxWidth: 600 }}>
+                {tableError?.message || "An error occurred loading subprocessors."}
+              </MuiAlert>
+              <CustomizableButton
+                variant="outlined"
+                text="Retry"
+                icon={<RotateCcw size={16} />}
+                onClick={() => {
+                  refetchOverview();
+                  refetchSubprocessors();
+                }}
+              />
+            </Stack>
           ) : (
             <GroupedTableView
               groupedData={groupedSubprocessors}
@@ -579,6 +592,7 @@ const AITrustCenterSubprocessors: React.FC = () => {
                   paginated={true}
                   disabled={!formData?.info?.subprocessor_visible}
                   emptyStateText="No subprocessors found. Add your first subprocessor to get started."
+                  emptyStateIcon={Users}
                   renderRow={(subprocessor, sortConfig) => (
                     <SubprocessorTableRow
                       key={subprocessor.id}
@@ -687,7 +701,7 @@ const AITrustCenterSubprocessors: React.FC = () => {
       </Box>
 
       {alert && (
-        <Suspense fallback={<div>Loading...</div>}>
+        <Suspense fallback={<></>}>
           <Alert
             variant={alert.variant}
             title={alert.title}
@@ -700,7 +714,7 @@ const AITrustCenterSubprocessors: React.FC = () => {
 
       {/* Error notification for add subprocessor */}
       {addSubprocessorError && (
-        <Suspense fallback={<div>Loading...</div>}>
+        <Suspense fallback={<></>}>
           <Alert
             variant="error"
             body={addSubprocessorError}
@@ -712,7 +726,7 @@ const AITrustCenterSubprocessors: React.FC = () => {
 
       {/* Error notification for delete subprocessor */}
       {deleteSubprocessorError && (
-        <Suspense fallback={<div>Loading...</div>}>
+        <Suspense fallback={<></>}>
           <Alert
             variant="error"
             body={deleteSubprocessorError}
@@ -724,7 +738,7 @@ const AITrustCenterSubprocessors: React.FC = () => {
 
       {/* Error notification for edit subprocessor */}
       {editSubprocessorError && (
-        <Suspense fallback={<div>Loading...</div>}>
+        <Suspense fallback={<></>}>
           <Alert
             variant="error"
             body={editSubprocessorError}

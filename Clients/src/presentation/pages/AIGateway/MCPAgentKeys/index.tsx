@@ -1,6 +1,17 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Box, Typography, Stack, IconButton } from "@mui/material";
-import { CirclePlus, KeyRound, Trash2, Ban, Copy, Check, Shield, Wrench } from "lucide-react";
+import {
+  CirclePlus,
+  KeyRound,
+  Trash2,
+  Ban,
+  Copy,
+  Check,
+  Shield,
+  Wrench,
+  AlertTriangle,
+  RotateCcw,
+} from "lucide-react";
 import { EmptyState } from "../../../components/EmptyState";
 import EmptyStateTip from "../../../components/EmptyState/EmptyStateTip";
 import { CustomizableButton } from "../../../components/button/customizable-button";
@@ -21,6 +32,7 @@ import {
 } from "../shared";
 import MCPTable from "../MCPTable";
 import { displayFormattedDate } from "../../../tools/isoDateToString";
+import CustomizableSkeleton from "../../../components/Skeletons";
 import dayjs from "dayjs";
 
 interface CreateAgentKeyPayload {
@@ -50,6 +62,7 @@ interface AgentKey {
 export default function MCPAgentKeysPage() {
   const [keys, setKeys] = useState<AgentKey[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Create modal
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -81,11 +94,13 @@ export default function MCPAgentKeysPage() {
   }, []);
 
   const loadData = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
     try {
       const res = await apiServices.get<Record<string, any>>("/ai-gateway/mcp/agent-keys");
       setKeys(res?.data?.data || []);
     } catch {
-      // Silently handle
+      setLoadError("Failed to load agent keys. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -203,26 +218,39 @@ export default function MCPAgentKeysPage() {
 
   const content = (
     <>
-      {!loading && keys.length === 0 && (
-        <EmptyState
-          icon={KeyRound}
-          message="Issue scoped API keys for AI agents to authenticate with MCP servers through the gateway."
-          showBorder
-        >
-          <EmptyStateTip
-            icon={Shield}
-            title="Tool-level access control"
-            description="Each agent key can restrict which MCP tools the agent is allowed or blocked from calling. Combine with rate limits for fine-grained governance."
-          />
-          <EmptyStateTip
-            icon={Wrench}
-            title="Per-key rate limits and expiry"
-            description="Set requests-per-minute limits and expiration dates on each key. When an agent key is revoked, all requests using it are rejected immediately."
+      {loading ? (
+        <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
+      ) : loadError ? (
+        <EmptyState icon={AlertTriangle} message={loadError}>
+          <CustomizableButton
+            variant="outlined"
+            text="Retry"
+            icon={<RotateCcw size={16} />}
+            onClick={loadData}
           />
         </EmptyState>
+      ) : (
+        keys.length === 0 && (
+          <EmptyState
+            icon={KeyRound}
+            message="Issue scoped API keys for AI agents to authenticate with MCP servers through the gateway."
+            showBorder
+          >
+            <EmptyStateTip
+              icon={Shield}
+              title="Tool-level access control"
+              description="Each agent key can restrict which MCP tools the agent is allowed or blocked from calling. Combine with rate limits for fine-grained governance."
+            />
+            <EmptyStateTip
+              icon={Wrench}
+              title="Per-key rate limits and expiry"
+              description="Set requests-per-minute limits and expiration dates on each key. When an agent key is revoked, all requests using it are rejected immediately."
+            />
+          </EmptyState>
+        )
       )}
 
-      {!loading && keys.length > 0 && (
+      {keys.length > 0 && (
         <Box sx={{ px: 3, pb: 3 }}>
           <MCPTable
             id="mcp-agent-keys-table"

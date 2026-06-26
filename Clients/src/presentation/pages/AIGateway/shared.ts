@@ -110,7 +110,7 @@ export const TOP_PROVIDERS = [
  * Hook: fetch models from the AI Gateway (LiteLLM registry) and provide
  * provider → model cascading data for Select components.
  *
- * Returns { providers, modelsByProvider, getModelsForProvider, loading }
+ * Returns { providers, modelsByProvider, getModelsForProvider, loading, error, reload }
  */
 export function useGatewayModels() {
   const [providers, setProviders] = useState<string[]>([]);
@@ -118,41 +118,44 @@ export function useGatewayModels() {
     Record<string, { id: string; mode: string }[]>
   >({});
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const load = useCallback(async (signal?: AbortSignal) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await apiServices.get<Record<string, any>>("/ai-gateway/providers", { signal });
+      const data = res?.data?.data;
+      if (!signal?.aborted && data) {
+        // Filter to chat-capable providers, sort alphabetically
+        const allProviders: string[] = (data.providers || []).sort();
+        const allModels: Record<string, { id: string; provider: string; mode: string }[]> =
+          data.models || {};
+
+        // Only keep providers that have chat models
+        const filtered: Record<string, { id: string; mode: string }[]> = {};
+        for (const p of allProviders) {
+          const models = (allModels[p] || [])
+            .filter((m: any) => m.mode === "chat" || m.mode === "completion")
+            .sort((a: any, b: any) => a.id.localeCompare(b.id));
+          if (models.length > 0) filtered[p] = models;
+        }
+
+        setProviders(Object.keys(filtered).sort());
+        setModelsByProvider(filtered);
+      }
+    } catch {
+      if (!signal?.aborted) setError("Unable to load AI Gateway providers.");
+    } finally {
+      if (!signal?.aborted) setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await apiServices.get<Record<string, any>>("/ai-gateway/providers");
-        const data = res?.data?.data;
-        if (!cancelled && data) {
-          // Filter to chat-capable providers, sort alphabetically
-          const allProviders: string[] = (data.providers || []).sort();
-          const allModels: Record<string, { id: string; provider: string; mode: string }[]> =
-            data.models || {};
-
-          // Only keep providers that have chat models
-          const filtered: Record<string, { id: string; mode: string }[]> = {};
-          for (const p of allProviders) {
-            const models = (allModels[p] || [])
-              .filter((m: any) => m.mode === "chat" || m.mode === "completion")
-              .sort((a: any, b: any) => a.id.localeCompare(b.id));
-            if (models.length > 0) filtered[p] = models;
-          }
-
-          setProviders(Object.keys(filtered).sort());
-          setModelsByProvider(filtered);
-        }
-      } catch {
-        // Gateway unavailable — providers stay empty
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    const ctrl = new AbortController();
+    load(ctrl.signal);
+    return () => ctrl.abort();
+  }, [load]);
 
   /** Get Select-compatible items for a given provider (memoized) */
   const getModelsForProvider = useCallback(
@@ -167,7 +170,15 @@ export function useGatewayModels() {
   /** Get Select-compatible provider items (memoized) */
   const providerItems = useMemo(() => providers.map((p) => ({ _id: p, name: p })), [providers]);
 
-  return { providers, providerItems, modelsByProvider, getModelsForProvider, loading };
+  return {
+    providers,
+    providerItems,
+    modelsByProvider,
+    getModelsForProvider,
+    loading,
+    error,
+    reload: load,
+  };
 }
 
 /** Convert a display name to a URL-safe slug */

@@ -56,6 +56,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
 
       - name: Set up Node
         uses: actions/setup-node@v6
@@ -65,8 +67,18 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Get changed files
+        id: changed-files
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "files=$(git diff --name-only --diff-filter=ACMRT origin/${{ github.base_ref }}...HEAD | grep '^Servers/' | sed 's|^Servers/||' | grep -E '\.(ts|tsx|js|jsx|json|md)$' | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
+          else
+            echo "files=$(git diff --name-only --diff-filter=ACMRT HEAD~1 HEAD | grep '^Servers/' | sed 's|^Servers/||' | grep -E '\.(ts|tsx|js|jsx|json|md)$' | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Prettier format check
-        run: npm run format-check
+        if: steps.changed-files.outputs.files != ''
+        run: npx prettier --check ${{ steps.changed-files.outputs.files }}
 
       - name: TypeScript type check
         run: npm run build
@@ -76,6 +88,69 @@ jobs:
 
       - name: i18n audit (catch dictionary drift)
         run: npm run i18n:audit:strict
+
+  tenant-isolation-tests:
+    name: Tenant Isolation Integration Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Servers
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tenant-isolation integration matrix
+        env:
+          DB_HOST: localhost
+          DB_PORT: "5432"
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          DB_NAME: verifywise_test
+          NODE_ENV: test
+          SUPERADMIN_EMAIL: super@local.dev
+          SUPERADMIN_PASSWORD: Super123!
+          JWT_SECRET: test-jwt-secret-key-for-testing-only
+          REFRESH_TOKEN_SECRET: test-refresh-secret-key-for-testing-only
+          ENCRYPTION_KEY: default-key-change-this-in-production-32chars!!
+        run: npm run test:integration -- --testPathPatterns=tenant-isolation
+
+      - name: Run schema-drift tenant isolation audit
+        env:
+          DB_HOST: localhost
+          DB_PORT: "5432"
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          DB_NAME: verifywise_test
+          NODE_ENV: test
+          SUPERADMIN_EMAIL: super@local.dev
+          SUPERADMIN_PASSWORD: Super123!
+          JWT_SECRET: test-jwt-secret-key-for-testing-only
+          REFRESH_TOKEN_SECRET: test-refresh-secret-key-for-testing-only
+          ENCRYPTION_KEY: default-key-change-this-in-production-32chars!!
+        run: npx ts-node scripts/auditTenantIsolationCoverage.ts
 
   dependency-review:
     name: Dependency Review

@@ -23,6 +23,13 @@ import { PluginSlot } from "../../components/PluginSlot";
 import { PLUGIN_SLOTS } from "../../../domain/constants/pluginSlots";
 
 // Built-in tabs (defined outside component to avoid recreation on each render)
+// Feature flag: the AI Approval Rules tab governs the in-platform AI agent /
+// advisor write-operation approval engine. It is hidden from end users for now,
+// alongside the AI Agent dashboard tabs (see SHOW_AI_AGENT_DASHBOARD_TABS in
+// IntegratedDashboard). The tab, its component, and the backend stay in the
+// codebase so the work is not lost; flip this to true to surface it again.
+const SHOW_AI_APPROVAL_RULES = false;
+
 const BUILT_IN_TABS = [
   "profile",
   "password",
@@ -34,7 +41,7 @@ const BUILT_IN_TABS = [
   "audit-ledger",
   "sso",
   "custom-fields",
-  "ai-approval-rules",
+  ...(SHOW_AI_APPROVAL_RULES ? ["ai-approval-rules"] : []),
 ];
 
 export default function ProfilePage() {
@@ -224,7 +231,7 @@ export default function ProfilePage() {
                   },
                 ]
               : []),
-            ...(!isAuditLedgerDisabled
+            ...(SHOW_AI_APPROVAL_RULES && !isAuditLedgerDisabled
               ? [
                   {
                     label: "AI Approval Rules",
@@ -295,7 +302,7 @@ export default function ProfilePage() {
             <CustomFieldsTab />
           </TabPanel>
         )}
-        {!isAuditLedgerDisabled && (
+        {SHOW_AI_APPROVAL_RULES && !isAuditLedgerDisabled && (
           <TabPanel sx={{ p: 0 }} value="ai-approval-rules">
             <AIApprovalRules />
           </TabPanel>

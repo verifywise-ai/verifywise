@@ -20,6 +20,8 @@ import {
   RefreshCw,
   ChevronsUpDown,
   KeyRound,
+  AlertTriangle,
+  RotateCcw,
 } from "lucide-react";
 import { Tooltip as MuiTooltip } from "@mui/material";
 import { CustomizableButton } from "../../../components/button/customizable-button";
@@ -35,6 +37,7 @@ import { apiServices } from "../../../../infrastructure/api/networkServices";
 import { getPaginationRowCount, setPaginationRowCount } from "../../../../application/utils/paginationStorage";
 import palette from "../../../themes/palette";
 import { sectionTitleSx, useCardSx, formatEntityType } from "../shared";
+import CustomizableSkeleton from "../../../components/Skeletons";
 import {
   displayFormattedDate,
   displayFormattedDateTime,
@@ -172,16 +175,18 @@ export default function LogsPage() {
     getPaginationRowCount("aiGatewayGuardrailLogs", GR_DEFAULT_PAGE_SIZE)
   );
   const [grLoading, setGrLoading] = useState(false);
+  const [grError, setGrError] = useState<string | null>(null);
 
   const loadGuardrailLogs = useCallback(async () => {
     setGrLoading(true);
+    setGrError(null);
     try {
       const res = await apiServices.get<Record<string, any>>(`/ai-gateway/guardrails/logs?limit=${grRowsPerPage}&offset=${grPage * grRowsPerPage}`);
       const data = res?.data || {};
       setGrLogs(data.logs || data?.data?.logs || []);
       setGrTotal(data.total || data.logs?.length || 0);
     } catch {
-      // Silently handle
+      setGrError("Failed to load guardrail logs. Please try again.");
     } finally {
       setGrLoading(false);
     }
@@ -195,6 +200,7 @@ export default function LogsPage() {
   const [total, setTotal] = useState(0);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [logsError, setLogsError] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(() =>
     getPaginationRowCount("aiGatewayLogs", 25)
@@ -235,6 +241,7 @@ export default function LogsPage() {
   const loadLogs = useCallback(
     async (p: number, rpp: number) => {
       setLoading(true);
+      setLogsError(null);
       try {
         const qs = buildQuery(p, rpp);
         const res = await apiServices.get<Record<string, any>>(`/ai-gateway/spend/logs?${qs}`);
@@ -242,7 +249,7 @@ export default function LogsPage() {
         setLogs(data.rows || []);
         setTotal(data.total || 0);
       } catch {
-        // Silently handle
+        setLogsError("Failed to load request logs. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -317,8 +324,9 @@ export default function LogsPage() {
             </Typography>
           </Stack>
           <CustomizableButton
-            text={(activeLogTab === "requests" ? loading : grLoading) ? "Loading..." : "Refresh"}
+            text="Refresh"
             icon={<RefreshCw size={14} strokeWidth={1.5} />}
+            loading={activeLogTab === "requests" ? loading : grLoading}
             onClick={() => activeLogTab === "requests" ? loadLogs(page, rowsPerPage) : loadGuardrailLogs()}
           />
         </Stack>
@@ -375,7 +383,18 @@ export default function LogsPage() {
         </Stack>
       </Box>
 
-      {!loading && logs.length === 0 && total === 0 && (
+      {logsError ? (
+        <EmptyState icon={AlertTriangle} message={logsError}>
+          <CustomizableButton
+            variant="outlined"
+            text="Retry"
+            icon={<RotateCcw size={16} />}
+            onClick={() => loadLogs(page, rowsPerPage)}
+          />
+        </EmptyState>
+      ) : loading && logs.length === 0 && total === 0 ? (
+        <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
+      ) : !loading && logs.length === 0 && total === 0 ? (
         <EmptyState
           icon={FileText}
           message="No request logs yet. Send requests through the gateway to see detailed logs here."
@@ -387,7 +406,7 @@ export default function LogsPage() {
             description="Each log entry shows the complete prompt sent to the LLM, the model's response, cost, tokens, latency, and any metadata tags attached to the request."
           />
         </EmptyState>
-      )}
+      ) : null}
 
       {hasLogs && (
         <Box sx={cardSx}>
@@ -732,9 +751,22 @@ export default function LogsPage() {
               </Typography>
 
               {grLoading ? (
-                <Typography sx={{ fontSize: 13, color: palette.text.tertiary, py: "16px" }}>Loading...</Typography>
+                <CustomizableSkeleton variant="rectangular" width="100%" height={200} />
+              ) : grError ? (
+                <EmptyState icon={AlertTriangle} message={grError}>
+                  <CustomizableButton
+                    variant="outlined"
+                    text="Retry"
+                    icon={<RotateCcw size={16} />}
+                    onClick={loadGuardrailLogs}
+                  />
+                </EmptyState>
               ) : grLogs.length === 0 ? (
-                <Typography sx={{ fontSize: 13, color: palette.text.tertiary, py: "16px" }}>No guardrail detections in this period.</Typography>
+                <EmptyState
+                  icon={FileText}
+                  message="No guardrail detections in this period."
+                  showBorder={false}
+                />
               ) : (
                 <Stack>
                   {/* Header */}

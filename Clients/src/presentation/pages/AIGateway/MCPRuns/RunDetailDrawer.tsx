@@ -1,8 +1,12 @@
-import { useEffect, useState } from "react";
-import { Drawer, Box, Stack, Typography, Divider, CircularProgress } from "@mui/material";
+import { useCallback, useEffect, useState } from "react";
+import { Drawer, Box, Stack, Typography, Divider } from "@mui/material";
+import { AlertTriangle, RotateCcw } from "lucide-react";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import Chip from "../../../components/Chip";
+import { CustomizableButton } from "../../../components/button/customizable-button";
+import { EmptyState } from "../../../components/EmptyState";
 import palette from "../../../themes/palette";
+import CustomizableSkeleton from "../../../components/Skeletons";
 import { displayFormattedTime } from "../../../tools/isoDateToString";
 
 interface RunEntry {
@@ -27,26 +31,28 @@ export default function RunDetailDrawer({ runId, onClose }: RunDetailDrawerProps
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
-  useEffect(() => {
+  const loadRun = useCallback(async () => {
     let cancelled = false;
-    (async () => {
-      setLoading(true);
-      setError(false);
-      try {
-        const res = await apiServices.get<Record<string, any>>(
-          `/ai-gateway/mcp/runs/${encodeURIComponent(runId)}`,
-        );
-        if (!cancelled) setEntries(res?.data?.data?.entries ?? []);
-      } catch {
-        if (!cancelled) setError(true);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
+    setLoading(true);
+    setError(false);
+    try {
+      const res = await apiServices.get<Record<string, any>>(
+        `/ai-gateway/mcp/runs/${encodeURIComponent(runId)}`,
+      );
+      if (!cancelled) setEntries(res?.data?.data?.entries ?? []);
+    } catch {
+      if (!cancelled) setError(true);
+    } finally {
+      if (!cancelled) setLoading(false);
+    }
     return () => {
       cancelled = true;
     };
   }, [runId]);
+
+  useEffect(() => {
+    loadRun();
+  }, [loadRun]);
 
   const codeBlockSx = { whiteSpace: "pre-wrap" as const, fontSize: "12px", m: 0 };
 
@@ -56,13 +62,16 @@ export default function RunDetailDrawer({ runId, onClose }: RunDetailDrawerProps
         Run {runId.slice(0, 12)}…
       </Typography>
       {loading ? (
-        <Stack alignItems="center" sx={{ py: "32px" }}>
-          <CircularProgress size={24} />
-        </Stack>
+        <CustomizableSkeleton variant="rectangular" width="100%" height={200} />
       ) : error ? (
-        <Typography sx={{ fontSize: "13px", color: palette.text.tertiary }}>
-          Couldn't load this run.
-        </Typography>
+        <EmptyState icon={AlertTriangle} message="Could not load this run.">
+          <CustomizableButton
+            variant="outlined"
+            text="Retry"
+            icon={<RotateCcw size={16} />}
+            onClick={loadRun}
+          />
+        </EmptyState>
       ) : (
         <Stack sx={{ gap: "12px" }}>
           {entries.map((e, i) => (

@@ -5,7 +5,7 @@
   "scripts": {
     "test": "jest --testPathIgnorePatterns='/tests/integration/|/helpers/' --detectOpenHandles --forceExit",
     "test:watch": "jest --watch",
-    "test:integration": "NODE_ENV=test jest --config jest.config.js --globalSetup='<rootDir>/tests/integration/globalSetup.js' --testMatch='**/tests/integration/**/*.test.ts' --runInBand",
+    "test:integration": "jest --config jest.config.js --globalSetup=\"<rootDir>/tests/integration/globalSetup.js\" --testMatch=\"**/tests/integration/**/*.test.ts\" --runInBand",
     "build": "tsc",
     "start": "npm run migrate-db && node dist/index.js",
     "postbuild": "node scripts/copyFiles.js",

@@ -38,6 +38,7 @@ const AITrustCenterTable = <T extends { id: number }>({
   isLoading = false,
   paginated = true,
   emptyStateText = "No data found. Add your first item to get started.",
+  emptyStateIcon = FileText,
   renderRow,
   onRowClick,
   tableId = "ai-trust-center-table",
@@ -305,10 +306,10 @@ const AITrustCenterTable = <T extends { id: number }>({
   const emptyState = useMemo(
     () => (
       <TableEmptyStateLayout header={tableHeader}>
-        <EmptyState icon={FileText} message={emptyStateText} />
+        <EmptyState icon={emptyStateIcon} message={emptyStateText} />
       </TableEmptyStateLayout>
     ),
-    [tableHeader, emptyStateText],
+    [tableHeader, emptyStateIcon, emptyStateText],
   );
 
   if (isLoading) {

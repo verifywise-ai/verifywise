@@ -9,7 +9,8 @@ import { useStyles } from "./styles";
 import Field from "../../../components/Inputs/Field";
 import { ButtonToggle } from "../../../components/button-toggle";
 import { CustomizableButton } from "../../../components/button/customizable-button";
-import { Save as SaveIcon } from "lucide-react";
+import { Save as SaveIcon, AlertTriangle, RotateCcw } from "lucide-react";
+import { EmptyState } from "../../../components/EmptyState";
 import ConfirmationModal from "../../../components/Dialogs/ConfirmationModal";
 import {
   useAITrustCentreOverviewQuery,
@@ -27,7 +28,12 @@ import { brand, text, background } from "../../../themes/palette";
 const AITrustCenterSettings: React.FC = () => {
   const styles = useStyles();
   const { fetchLogoAsBlobUrl } = useLogoFetch();
-  const { data: overviewData, isLoading: loading, error } = useAITrustCentreOverviewQuery();
+  const {
+    data: overviewData,
+    isLoading: loading,
+    error,
+    refetch,
+  } = useAITrustCentreOverviewQuery();
   const updateOverviewMutation = useAITrustCentreOverviewMutation();
   const [alert, setAlert] = React.useState<AlertProps | null>(null);
   const [hasUnsavedChanges, setHasUnsavedChanges] = React.useState(false);
@@ -351,10 +357,20 @@ const AITrustCenterSettings: React.FC = () => {
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          height: "200px",
+          py: 8,
         }}
       >
-        <Typography color="error">Error loading AI Trust Center settings</Typography>
+        <EmptyState
+          icon={AlertTriangle}
+          message="Error loading AI Trust Center settings. Please try again."
+        >
+          <CustomizableButton
+            variant="contained"
+            text="Retry"
+            icon={<RotateCcw size={16} />}
+            onClick={() => refetch()}
+          />
+        </EmptyState>
       </Box>
     );
   }
