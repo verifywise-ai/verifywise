@@ -13,6 +13,7 @@ import { Box, Stack, Typography, CircularProgress } from "@mui/material";
 import ChipInput from "../../../components/Inputs/ChipInput";
 import AutoCompleteField from "../../../components/Inputs/Autocomplete";
 import { Lock, RefreshCw } from "lucide-react";
+import Toggle from "../../../components/Inputs/Toggle";
 import { EmptyState } from "../../../components/EmptyState";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
 import { CustomizableButton } from "../../../components/button/customizable-button";
@@ -43,6 +44,7 @@ export default function Settings() {
 
   const [recipientUserIds, setRecipientUserIds] = useState<number[]>([]);
   const [recipientEmails, setRecipientEmails] = useState<string[]>([]);
+  const [impactEnabled, setImpactEnabled] = useState<boolean>(true);
   const [justSaved, setJustSaved] = useState(false);
 
   useEffect(() => {
@@ -70,6 +72,9 @@ export default function Settings() {
           ? prev
           : nextEmails,
       );
+      if (settingsData.data.impact_enabled !== undefined) {
+        setImpactEnabled(settingsData.data.impact_enabled);
+      }
     }
   }, [settingsData]);
 
@@ -83,7 +88,11 @@ export default function Settings() {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       updateSettings.mutate(
-        { recipient_user_ids: recipientUserIds, recipient_emails: recipientEmails },
+        {
+          recipient_user_ids: recipientUserIds,
+          recipient_emails: recipientEmails,
+          impact_enabled: impactEnabled,
+        },
         {
           onSuccess: () => setJustSaved(true),
           onError: () => showError("We couldn't save your recipient changes. Please try again."),
@@ -95,7 +104,7 @@ export default function Settings() {
     };
     // updateSettings is stable from React Query; intentionally excluded.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [recipientUserIds, recipientEmails, isAdmin]);
+  }, [recipientUserIds, recipientEmails, impactEnabled, isAdmin]);
 
   const userOptions: UserOption[] = useMemo(
     () =>
@@ -220,6 +229,57 @@ export default function Settings() {
             onChange={setRecipientEmails}
             placeholder="Type an email and press Enter"
           />
+
+          {/* Impact analysis toggle */}
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              mt: "4px",
+            }}
+          >
+            <Typography sx={{ fontSize: "13px", color: palette.text.primary }}>
+              Analyse how regulation changes affect my organisation
+            </Typography>
+            <Toggle checked={impactEnabled} onChange={(_e, checked) => setImpactEnabled(checked)} />
+          </Box>
+
+          {/* LLM key status */}
+          {!settingsData?.data?.has_llm_key && (
+            <Box
+              sx={{
+                border: `1px solid ${palette.border.dark}`,
+                borderRadius: "4px",
+                backgroundColor: palette.background.accent,
+                p: "10px 14px",
+                fontSize: "13px",
+                color: palette.text.secondary,
+              }}
+            >
+              Configure an LLM key to enable impact analysis.{" "}
+              <Box
+                component="a"
+                href="/settings/apikeys"
+                sx={{ color: palette.brand.primary, textDecoration: "underline" }}
+              >
+                Configure key
+              </Box>
+            </Box>
+          )}
+          {settingsData?.data?.has_llm_key && (
+            <Typography sx={{ fontSize: "13px", color: palette.brand.primary }}>
+              Impact analysis: active
+            </Typography>
+          )}
+
+          {/* Last impact run */}
+          <Typography sx={{ fontSize: "13px", color: palette.text.tertiary }}>
+            {settingsData?.data?.last_impact_run_at
+              ? "Impact analysis last ran: " +
+                new Date(settingsData.data.last_impact_run_at).toLocaleString()
+              : "Impact analysis has not run yet."}
+          </Typography>
 
           <Stack direction="row" alignItems="center" gap="8px" sx={{ minHeight: 16 }}>
             <Typography sx={{ fontSize: "12px", color: palette.text.tertiary }}>

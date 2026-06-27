@@ -99,8 +99,11 @@ export function useSettings() {
 export function useUpdateSettings() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (body: { recipient_user_ids: number[]; recipient_emails: string[] }) =>
-      updateSettings(body),
+    mutationFn: (body: {
+      recipient_user_ids: number[];
+      recipient_emails: string[];
+      impact_enabled?: boolean;
+    }) => updateSettings(body),
     onSuccess: () => qc.invalidateQueries({ queryKey: [KEY, "settings"] }),
   });
 }

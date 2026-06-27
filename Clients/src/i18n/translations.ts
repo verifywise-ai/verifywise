@@ -8774,6 +8774,14 @@ export const translations: Record<string, Record<string, string>> = {
     "This analysis predates the latest change.":
       "Diese Analyse stammt aus der Zeit vor der letzten Änderung.",
     "Re-analyse": "Neu analysieren",
+    "Analyse how regulation changes affect my organisation":
+      "Analysieren Sie, wie Regulierungsänderungen Ihre Organisation beeinflussen",
+    "Configure an LLM key to enable impact analysis.":
+      "Konfigurieren Sie einen LLM-Schlüssel, um die Auswirkungsanalyse zu aktivieren.",
+    "Configure key": "Schlüssel konfigurieren",
+    "Impact analysis: active": "Auswirkungsanalyse: aktiv",
+    "Impact analysis last ran: ": "Auswirkungsanalyse zuletzt ausgeführt: ",
+    "Impact analysis has not run yet.": "Die Auswirkungsanalyse wurde noch nicht ausgeführt.",
   },
 
   fr: {
@@ -17479,6 +17487,14 @@ export const translations: Record<string, Record<string, string>> = {
     "This analysis predates the latest change.":
       "Cette analyse est antérieure au dernier changement.",
     "Re-analyse": "Réanalyser",
+    "Analyse how regulation changes affect my organisation":
+      "Analysez comment les changements réglementaires affectent votre organisation",
+    "Configure an LLM key to enable impact analysis.":
+      "Configurez une clé LLM pour activer l'analyse d'impact.",
+    "Configure key": "Configurer la clé",
+    "Impact analysis: active": "Analyse d'impact : active",
+    "Impact analysis last ran: ": "Dernière exécution de l'analyse d'impact : ",
+    "Impact analysis has not run yet.": "L'analyse d'impact n'a pas encore été exécutée.",
   },
   es: {
     // AI Trust Index
@@ -26100,5 +26116,13 @@ export const translations: Record<string, Record<string, string>> = {
     "How this change affects your organisation": "Cómo afecta este cambio a su organización",
     "This analysis predates the latest change.": "Este análisis es anterior al último cambio.",
     "Re-analyse": "Volver a analizar",
+    "Analyse how regulation changes affect my organisation":
+      "Analice cómo los cambios regulatorios afectan a su organización",
+    "Configure an LLM key to enable impact analysis.":
+      "Configure una clave LLM para habilitar el análisis de impacto.",
+    "Configure key": "Configurar clave",
+    "Impact analysis: active": "Análisis de impacto: activo",
+    "Impact analysis last ran: ": "Último análisis de impacto ejecutado: ",
+    "Impact analysis has not run yet.": "El análisis de impacto aún no se ha ejecutado.",
   },
 };
