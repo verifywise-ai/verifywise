@@ -23,6 +23,7 @@ interface Deadline {
   dateConfidence?: string;
   countrySlug: string;
   countryName: string;
+  countryFlag?: string;
   regulationName: string;
   status?: string;
   type?: string;
@@ -32,6 +33,7 @@ interface Deadline {
 interface Unscheduled {
   countrySlug: string;
   countryName: string;
+  countryFlag?: string;
   regulationName: string;
   effectiveDateRaw?: string;
   status?: string;
@@ -113,8 +115,24 @@ export default function Deadlines() {
                       </Typography>
                       {d.status && <Chip label={d.status} variant="default" uppercase={false} />}
                       <Typography
-                        sx={{ fontSize: "12px", color: palette.text.tertiary, ml: "auto" }}
+                        sx={{
+                          fontSize: "12px",
+                          color: palette.text.tertiary,
+                          ml: "auto",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "4px",
+                        }}
                       >
+                        {d.countryFlag && (
+                          <Box
+                            component="span"
+                            aria-hidden
+                            sx={{ fontSize: "14px", lineHeight: 1 }}
+                          >
+                            {d.countryFlag}
+                          </Box>
+                        )}
                         {d.countryName}
                       </Typography>
                     </Stack>
@@ -148,8 +166,24 @@ export default function Deadlines() {
                       </Typography>
                       {u.status && <Chip label={u.status} variant="default" uppercase={false} />}
                       <Typography
-                        sx={{ fontSize: "12px", color: palette.text.tertiary, ml: "auto" }}
+                        sx={{
+                          fontSize: "12px",
+                          color: palette.text.tertiary,
+                          ml: "auto",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "4px",
+                        }}
                       >
+                        {u.countryFlag && (
+                          <Box
+                            component="span"
+                            aria-hidden
+                            sx={{ fontSize: "14px", lineHeight: 1 }}
+                          >
+                            {u.countryFlag}
+                          </Box>
+                        )}
                         {u.countryName}
                       </Typography>
                     </Stack>

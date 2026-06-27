@@ -1,4 +1,6 @@
 import { Request, Response } from "express";
+import { QueryTypes } from "sequelize";
+import { sequelize } from "../database/db";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
 import logger from "../utils/logger/fileLogger";
@@ -472,6 +474,36 @@ export async function getHorizon(req: Request, res: Response): Promise<any> {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Enriches a deadlines array with countryFlag from the regulation_countries
+// catalog. One batched query for all distinct slugs; best-effort (never throws).
+// ---------------------------------------------------------------------------
+async function enrichWithFlags(items: unknown[]): Promise<unknown[]> {
+  if (!items.length) return items;
+  try {
+    const slugs = [
+      ...new Set(
+        items
+          .map((i) => (i as Record<string, unknown>).countrySlug)
+          .filter((s) => typeof s === "string"),
+      ),
+    ] as string[];
+    if (!slugs.length) return items;
+    const rows = (await sequelize.query(
+      `SELECT slug, data->>'flag' AS flag FROM regulation_countries WHERE slug = ANY(:slugs)`,
+      { replacements: { slugs }, type: QueryTypes.SELECT },
+    )) as { slug: string; flag: string | null }[];
+    const flagMap = new Map(rows.map((r) => [r.slug, r.flag ?? undefined]));
+    return items.map((item) => {
+      const it = item as Record<string, unknown>;
+      const flag = flagMap.get(it.countrySlug as string);
+      return flag !== undefined ? { ...it, countryFlag: flag } : it;
+    });
+  } catch {
+    return items;
+  }
+}
+
 export async function getDeadlines(req: Request, res: Response): Promise<any> {
   const fn = "getDeadlines";
   logProcessing({
@@ -484,10 +516,12 @@ export async function getDeadlines(req: Request, res: Response): Promise<any> {
   try {
     try {
       const live = (await fetchDeadlines()) as { deadlines?: unknown[]; unscheduled?: unknown[] };
+      const deadlines = await enrichWithFlags(live.deadlines ?? []);
+      const unscheduled = await enrichWithFlags(live.unscheduled ?? []);
       return res.status(200).json(
         STATUS_CODE[200]({
-          deadlines: live.deadlines ?? [],
-          unscheduled: live.unscheduled ?? [],
+          deadlines,
+          unscheduled,
           stale: false,
         }),
       );
@@ -496,10 +530,12 @@ export async function getDeadlines(req: Request, res: Response): Promise<any> {
         deadlines?: unknown[];
         unscheduled?: unknown[];
       } | null;
+      const deadlines = await enrichWithFlags(stored?.deadlines ?? []);
+      const unscheduled = await enrichWithFlags(stored?.unscheduled ?? []);
       return res.status(200).json(
         STATUS_CODE[200]({
-          deadlines: stored?.deadlines ?? [],
-          unscheduled: stored?.unscheduled ?? [],
+          deadlines,
+          unscheduled,
           stale: true,
         }),
       );
