@@ -8719,6 +8719,11 @@ export const translations: Record<string, Record<string, string>> = {
     "Key principles": "Wesentliche Grundsätze",
     "Max penalty:": "Höchststrafe:",
     "Practical takeaway": "Praktisches Fazit",
+    "Next 12 months": "Nächste 12 Monate",
+    "Effective dates for the coming year. Months closer to today are highlighted.":
+      "Gültigkeitsdaten für das kommende Jahr. Monate näher an heute sind hervorgehoben.",
+    "No effective dates in the next 12 months.":
+      "Keine Gültigkeitsdaten in den nächsten 12 Monaten.",
     "Scheduled": "Geplant",
     "Not yet scheduled": "Noch nicht geplant",
     "No regulation changes have been recorded yet.":
@@ -17435,6 +17440,11 @@ export const translations: Record<string, Record<string, string>> = {
     "Key principles": "Principes clés",
     "Max penalty:": "Pénalité maximale :",
     "Practical takeaway": "Conclusion pratique",
+    "Next 12 months": "12 prochains mois",
+    "Effective dates for the coming year. Months closer to today are highlighted.":
+      "Dates d'entrée en vigueur pour l'année à venir. Les mois les plus proches d'aujourd'hui sont mis en évidence.",
+    "No effective dates in the next 12 months.":
+      "Aucune date d'entrée en vigueur dans les 12 prochains mois.",
     "Scheduled": "Planifié",
     "Not yet scheduled": "Pas encore planifié",
     "No regulation changes have been recorded yet.":
@@ -26067,6 +26077,11 @@ export const translations: Record<string, Record<string, string>> = {
     "Key principles": "Principios clave",
     "Max penalty:": "Sanción máxima:",
     "Practical takeaway": "Conclusión práctica",
+    "Next 12 months": "Próximos 12 meses",
+    "Effective dates for the coming year. Months closer to today are highlighted.":
+      "Fechas de entrada en vigor para el próximo año. Los meses más cercanos a hoy están resaltados.",
+    "No effective dates in the next 12 months.":
+      "No hay fechas de entrada en vigor en los próximos 12 meses.",
     "Scheduled": "Programado",
     "Not yet scheduled": "Aún no programado",
     "No regulation changes have been recorded yet.":

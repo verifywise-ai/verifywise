@@ -8,6 +8,7 @@
  * @module pages/RegulationsTracker/Deadlines
  */
 
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Box, Stack, Typography, CircularProgress } from "@mui/material";
 import { AlertTriangle, CalendarClock } from "lucide-react";
 import { EmptyState } from "../../../components/EmptyState";
@@ -39,17 +40,252 @@ interface Unscheduled {
   status?: string;
 }
 
-function Row({ children }: { children: React.ReactNode }) {
+function Row({
+  children,
+  id,
+  highlighted,
+}: {
+  children: React.ReactNode;
+  id?: string;
+  highlighted?: boolean;
+}) {
+  return (
+    <Box
+      id={id}
+      sx={{
+        border: highlighted
+          ? `2px solid ${palette.brand.primary}`
+          : `1px solid ${palette.border.dark}`,
+        borderRadius: "4px",
+        p: "12px",
+        backgroundColor: palette.background.main,
+        transition: "border-color 0.3s ease",
+      }}
+    >
+      {children}
+    </Box>
+  );
+}
+
+/** Build the 12-month window starting from the current month.
+ *  Returns an array of "YYYY-MM" strings.
+ */
+function buildMonthWindow(): string[] {
+  const now = new Date();
+  const months: string[] = [];
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() + i, 1);
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    months.push(`${yyyy}-${mm}`);
+  }
+  return months;
+}
+
+const SHORT_MONTH_NAMES = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
+function MonthLabel({ yearMonth, isFirst }: { yearMonth: string; isFirst: boolean }) {
+  const [yyyy, mm] = yearMonth.split("-");
+  const monthIdx = parseInt(mm, 10) - 1;
+  const label = SHORT_MONTH_NAMES[monthIdx];
+  const showYear = isFirst || monthIdx === 0; // first column OR January
+
+  return (
+    <Box sx={{ textAlign: "center", pt: "4px" }}>
+      <Typography component="span" sx={{ fontSize: "11px", color: palette.text.tertiary }}>
+        {label}
+      </Typography>
+      {showYear && (
+        <Typography component="span" sx={{ fontSize: "9px", color: palette.text.muted, ml: "2px" }}>
+          '{String(yyyy).slice(2)}
+        </Typography>
+      )}
+    </Box>
+  );
+}
+
+interface RunwayProps {
+  deadlines: Deadline[];
+  onMarkerClick: (id: string) => void;
+}
+
+function RunwayCalendar({ deadlines, onMarkerClick }: RunwayProps) {
+  const months = buildMonthWindow();
+  const windowSet = new Set(months);
+
+  // Bucket deadlines by YYYY-MM using safe substring parse (avoids TZ drift)
+  const byMonth = new Map<string, Deadline[]>();
+  for (const d of deadlines) {
+    if (!d.effectiveDateISO) continue;
+    const ym = d.effectiveDateISO.slice(0, 7); // "YYYY-MM"
+    if (!windowSet.has(ym)) continue;
+    if (!byMonth.has(ym)) byMonth.set(ym, []);
+    byMonth.get(ym)!.push(d);
+  }
+
+  const hasAnyInWindow = byMonth.size > 0;
+
+  const prefersReducedMotion =
+    typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const handleClick = useCallback(
+    (d: Deadline, idx: number) => {
+      const id = `deadline-${d.countrySlug}-${idx}`;
+      onMarkerClick(id);
+      const el = document.getElementById(id);
+      if (el) {
+        el.scrollIntoView({
+          behavior: prefersReducedMotion ? "auto" : "smooth",
+          block: "center",
+        });
+      }
+    },
+    [onMarkerClick, prefersReducedMotion],
+  );
+
   return (
     <Box
       sx={{
         border: `1px solid ${palette.border.dark}`,
         borderRadius: "4px",
-        p: "12px",
         backgroundColor: palette.background.main,
+        p: "16px",
+        mb: "8px",
       }}
     >
-      {children}
+      <Typography sx={{ fontSize: "15px", fontWeight: 600, mb: "4px" }}>Next 12 months</Typography>
+      <Typography sx={{ fontSize: "12px", color: palette.text.tertiary, mb: "12px" }}>
+        Effective dates for the coming year. Months closer to today are highlighted.
+      </Typography>
+
+      {!hasAnyInWindow && (
+        <Typography
+          sx={{
+            fontSize: "12px",
+            color: palette.text.muted,
+            textAlign: "center",
+            py: "12px",
+          }}
+        >
+          No effective dates in the next 12 months.
+        </Typography>
+      )}
+
+      <Box sx={{ overflowX: "auto" }}>
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: "repeat(12, 1fr)",
+            gap: "4px",
+            minWidth: "720px",
+          }}
+        >
+          {months.map((ym, colIdx) => {
+            const monthsFromNow = colIdx; // 0 = current month
+            const isCurrentMonth = colIdx === 0;
+            const isUrgent = monthsFromNow <= 2;
+            const colDeadlines = byMonth.get(ym) ?? [];
+
+            return (
+              <Box
+                key={ym}
+                sx={{
+                  borderRadius: "4px",
+                  backgroundColor: isUrgent ? "rgba(19,113,91,0.06)" : "transparent",
+                  borderLeft: isCurrentMonth ? `2px solid ${palette.brand.primary}` : "none",
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  minHeight: "72px",
+                  px: "4px",
+                  py: "6px",
+                }}
+              >
+                {/* Markers stack */}
+                <Stack
+                  gap="3px"
+                  alignItems="center"
+                  sx={{ flex: 1, justifyContent: "flex-end", width: "100%" }}
+                >
+                  {colDeadlines.map((d, mIdx) => {
+                    // Find the global index of this deadline in the sorted deadlines array
+                    // so the id matches the Row id assigned below
+                    const globalIdx = deadlines.findIndex(
+                      (x) =>
+                        x.countrySlug === d.countrySlug &&
+                        x.regulationName === d.regulationName &&
+                        x.effectiveDateISO === d.effectiveDateISO,
+                    );
+                    const stableIdx = globalIdx >= 0 ? globalIdx : mIdx;
+                    const ariaLabel = `${d.regulationName} — ${d.effectiveDateRaw || ym} (${d.countryName})`;
+
+                    return (
+                      <Box
+                        key={`${d.countrySlug}-${mIdx}`}
+                        component="button"
+                        onClick={() => handleClick(d, stableIdx)}
+                        title={ariaLabel}
+                        aria-label={ariaLabel}
+                        sx={{
+                          "background": "transparent",
+                          "border": "none",
+                          "cursor": "pointer",
+                          "p": "0",
+                          "display": "flex",
+                          "alignItems": "center",
+                          "justifyContent": "center",
+                          "width": "22px",
+                          "height": "22px",
+                          "borderRadius": "50%",
+                          "&:focus-visible": {
+                            outline: `2px solid ${palette.brand.primary}`,
+                            outlineOffset: "2px",
+                          },
+                        }}
+                      >
+                        {d.countryFlag ? (
+                          <Box
+                            component="span"
+                            aria-hidden
+                            sx={{ fontSize: "14px", lineHeight: 1 }}
+                          >
+                            {d.countryFlag}
+                          </Box>
+                        ) : (
+                          <Box
+                            sx={{
+                              width: "8px",
+                              height: "8px",
+                              borderRadius: "50%",
+                              backgroundColor: palette.brand.primary,
+                            }}
+                          />
+                        )}
+                      </Box>
+                    );
+                  })}
+                </Stack>
+
+                {/* Month label at the bottom */}
+                <MonthLabel yearMonth={ym} isFirst={colIdx === 0} />
+              </Box>
+            );
+          })}
+        </Box>
+      </Box>
     </Box>
   );
 }
@@ -62,6 +298,22 @@ export default function Deadlines() {
     : [];
   const stale = data?.data?.stale === true;
   const isEmpty = !isLoading && deadlines.length === 0 && unscheduled.length === 0;
+
+  // Highlighted row state for click-to-jump
+  const [highlightedId, setHighlightedId] = useState<string | null>(null);
+  const highlightTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleMarkerClick = useCallback((id: string) => {
+    if (highlightTimer.current) clearTimeout(highlightTimer.current);
+    setHighlightedId(id);
+    highlightTimer.current = setTimeout(() => setHighlightedId(null), 1500);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (highlightTimer.current) clearTimeout(highlightTimer.current);
+    };
+  }, []);
 
   return (
     <PageHeaderExtended
@@ -99,55 +351,65 @@ export default function Deadlines() {
             </Typography>
           )}
 
+          {/* ── Next-12-months runway calendar ── */}
+          <RunwayCalendar deadlines={deadlines} onMarkerClick={handleMarkerClick} />
+
           {deadlines.length > 0 && (
             <Box>
               <Typography sx={{ fontSize: "15px", fontWeight: 600, mb: "8px" }}>
                 Scheduled
               </Typography>
               <Stack gap="8px">
-                {deadlines.map((d, i) => (
-                  <Row key={`${d.countrySlug}-${d.regulationName}-${i}`}>
-                    <Stack direction="row" alignItems="center" gap="8px" flexWrap="wrap">
-                      <Typography
-                        sx={{ fontSize: "13px", fontWeight: 600, color: palette.brand.primary }}
-                      >
-                        {d.effectiveDateRaw || d.effectiveDateISO}
+                {deadlines.map((d, i) => {
+                  const rowId = `deadline-${d.countrySlug}-${i}`;
+                  return (
+                    <Row
+                      key={`${d.countrySlug}-${d.regulationName}-${i}`}
+                      id={rowId}
+                      highlighted={highlightedId === rowId}
+                    >
+                      <Stack direction="row" alignItems="center" gap="8px" flexWrap="wrap">
+                        <Typography
+                          sx={{ fontSize: "13px", fontWeight: 600, color: palette.brand.primary }}
+                        >
+                          {d.effectiveDateRaw || d.effectiveDateISO}
+                        </Typography>
+                        {d.status && <Chip label={d.status} variant="default" uppercase={false} />}
+                        <Typography
+                          sx={{
+                            fontSize: "12px",
+                            color: palette.text.tertiary,
+                            ml: "auto",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "4px",
+                          }}
+                        >
+                          {d.countryFlag && (
+                            <Box
+                              component="span"
+                              aria-hidden
+                              sx={{ fontSize: "14px", lineHeight: 1 }}
+                            >
+                              {d.countryFlag}
+                            </Box>
+                          )}
+                          {d.countryName}
+                        </Typography>
+                      </Stack>
+                      <Typography sx={{ fontSize: "14px", fontWeight: 500, mt: "4px" }}>
+                        {d.regulationName}
                       </Typography>
-                      {d.status && <Chip label={d.status} variant="default" uppercase={false} />}
-                      <Typography
-                        sx={{
-                          fontSize: "12px",
-                          color: palette.text.tertiary,
-                          ml: "auto",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "4px",
-                        }}
-                      >
-                        {d.countryFlag && (
-                          <Box
-                            component="span"
-                            aria-hidden
-                            sx={{ fontSize: "14px", lineHeight: 1 }}
-                          >
-                            {d.countryFlag}
-                          </Box>
-                        )}
-                        {d.countryName}
-                      </Typography>
-                    </Stack>
-                    <Typography sx={{ fontSize: "14px", fontWeight: 500, mt: "4px" }}>
-                      {d.regulationName}
-                    </Typography>
-                    {d.sourceUrl && (
-                      <Box sx={{ mt: "6px" }}>
-                        <VWLink url={d.sourceUrl} openInNewTab alwaysShowIcon>
-                          View source
-                        </VWLink>
-                      </Box>
-                    )}
-                  </Row>
-                ))}
+                      {d.sourceUrl && (
+                        <Box sx={{ mt: "6px" }}>
+                          <VWLink url={d.sourceUrl} openInNewTab alwaysShowIcon>
+                            View source
+                          </VWLink>
+                        </Box>
+                      )}
+                    </Row>
+                  );
+                })}
               </Stack>
             </Box>
           )}
