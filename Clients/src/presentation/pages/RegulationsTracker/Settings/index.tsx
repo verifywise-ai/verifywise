@@ -236,14 +236,41 @@ export default function Settings() {
           <Box
             sx={{
               display: "flex",
-              alignItems: "center",
+              alignItems: "flex-start",
               justifyContent: "space-between",
+              gap: "16px",
               mt: "4px",
             }}
           >
-            <Typography sx={{ fontSize: "13px", color: palette.text.primary }}>
-              Analyse how regulation changes affect my organisation
-            </Typography>
+            <Box sx={{ flex: 1 }}>
+              <Typography sx={{ fontSize: "13px", color: palette.text.primary }}>
+                Analyse how regulation changes affect my organisation
+              </Typography>
+              <Stack gap="8px" sx={{ mt: "6px" }}>
+                <Typography
+                  sx={{ fontSize: "13px", color: palette.text.secondary, lineHeight: 1.6 }}
+                >
+                  Turn this on to see how each regulation change affects your organisation. When a
+                  country you track updates its regulations, VerifyWise looks at your AI systems,
+                  controls, policies, vendors, and assessments, then flags the ones that may be
+                  impacted. You get a short summary in the change notification and on the country
+                  page.
+                </Typography>
+                <Typography
+                  sx={{ fontSize: "13px", color: palette.text.secondary, lineHeight: 1.6 }}
+                >
+                  The analysis runs during the weekly check using your organisation&apos;s LLM key,
+                  so each run uses LLM credits. It sends the updated regulation text and the names
+                  and descriptions of your possibly-relevant entities to your LLM provider.
+                </Typography>
+                <Typography
+                  sx={{ fontSize: "13px", color: palette.text.secondary, lineHeight: 1.6 }}
+                >
+                  If you leave this off, you still get regulation-change notifications, without the
+                  impact summary.
+                </Typography>
+              </Stack>
+            </Box>
             <Toggle
               disabled={!isAdmin}
               checked={impactEnabled}
