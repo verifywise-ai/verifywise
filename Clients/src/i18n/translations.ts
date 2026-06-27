@@ -8769,6 +8769,11 @@ export const translations: Record<string, Record<string, string>> = {
     "Last recorded changes": "Zuletzt aufgezeichnete Änderungen",
     "No regulation data is available for this country yet. Check back later as the feed is updated regularly.":
       "Für dieses Land sind noch keine Regulierungsdaten verfügbar. Schauen Sie später wieder vorbei, da der Feed regelmäßig aktualisiert wird.",
+    "How this change affects your organisation":
+      "Wie sich diese Änderung auf Ihre Organisation auswirkt",
+    "This analysis predates the latest change.":
+      "Diese Analyse stammt aus der Zeit vor der letzten Änderung.",
+    "Re-analyse": "Neu analysieren",
   },
 
   fr: {
@@ -17470,6 +17475,10 @@ export const translations: Record<string, Record<string, string>> = {
     "Last recorded changes": "Dernières modifications enregistrées",
     "No regulation data is available for this country yet. Check back later as the feed is updated regularly.":
       "Aucune donnée réglementaire n'est encore disponible pour ce pays. Revenez plus tard, car le flux est mis à jour régulièrement.",
+    "How this change affects your organisation": "Comment ce changement affecte votre organisation",
+    "This analysis predates the latest change.":
+      "Cette analyse est antérieure au dernier changement.",
+    "Re-analyse": "Réanalyser",
   },
   es: {
     // AI Trust Index
@@ -26088,5 +26097,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Last recorded changes": "Últimos cambios registrados",
     "No regulation data is available for this country yet. Check back later as the feed is updated regularly.":
       "Aún no hay datos de regulación disponibles para este país. Vuelva más tarde, ya que el feed se actualiza regularmente.",
+    "How this change affects your organisation": "Cómo afecta este cambio a su organización",
+    "This analysis predates the latest change.": "Este análisis es anterior al último cambio.",
+    "Re-analyse": "Volver a analizar",
   },
 };

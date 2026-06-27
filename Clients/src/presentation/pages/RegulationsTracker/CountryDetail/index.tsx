@@ -25,6 +25,8 @@ import { VWLink } from "../../../components/Link";
 import { palette } from "../../../themes/palette";
 import {
   useCountryDetail,
+  useImpactAnalysis,
+  useRefreshImpactAnalysis,
   useTrackCountry,
   useUntrackCountry,
 } from "../../../../application/hooks/useRegulationsTracker";
@@ -115,6 +117,10 @@ export default function CountryDetail() {
   const trackCountry = useTrackCountry();
   const untrackCountry = useUntrackCountry();
   const { showError, AlertSlot } = useTrackerAlert();
+
+  const { data: impactRes } = useImpactAnalysis(slug);
+  const refreshImpact = useRefreshImpactAnalysis();
+  const impact = impactRes?.data ?? null;
 
   const country: CountryDetailData | null = data?.data ?? null;
 
@@ -577,6 +583,88 @@ export default function CountryDetail() {
               {disclaimer}
             </Typography>
           </Box>
+        )}
+
+        {/* Impact analysis panel: shown only when the API has run an analysis (status === "ok").
+            Renders five groups (systems / controls / policies / vendors / assessments).
+            A stale banner with a Re-analyse action is shown when impact.stale is true.
+            If no analysis exists (no API key, org not set up) the panel is omitted entirely. */}
+        {impact?.status === "ok" && impact.result && (
+          <SectionCard title="How this change affects your organisation">
+            {impact.stale && (
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: "8px",
+                  border: `1px solid ${palette.border.dark}`,
+                  borderRadius: "4px",
+                  backgroundColor: STALE_BANNER_BG,
+                  p: "10px 14px",
+                  mb: "12px",
+                }}
+              >
+                <AlertTriangle
+                  size={16}
+                  strokeWidth={1.5}
+                  color={STALE_BANNER_ICON_COLOR}
+                  style={{ flexShrink: 0, marginTop: 2 }}
+                />
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography
+                    sx={{ fontSize: "13px", color: STALE_BANNER_TEXT_COLOR, lineHeight: 1.5 }}
+                  >
+                    This analysis predates the latest change.
+                  </Typography>
+                </Box>
+                <CustomizableButton
+                  text="Re-analyse"
+                  variant="text"
+                  onClick={() => refreshImpact.mutate(slug)}
+                  isDisabled={refreshImpact.isPending}
+                  sx={{ height: 28, fontSize: "13px", flexShrink: 0, p: "0 8px" }}
+                />
+              </Box>
+            )}
+            {(
+              [
+                ["systems", "AI systems"],
+                ["controls", "Controls to review"],
+                ["policies", "Policies that may be outdated"],
+                ["vendors", "Vendors impacted"],
+                ["assessments", "Assessments to update"],
+              ] as const
+            ).map(([key, label]) =>
+              (impact.result as Record<string, { id: number; name: string; why: string }[]>)[key]
+                ?.length ? (
+                <Box key={key} sx={{ mb: "8px" }}>
+                  <Typography sx={{ fontSize: "13px", fontWeight: 500, mb: "4px" }}>
+                    {
+                      (
+                        impact.result as Record<string, { id: number; name: string; why: string }[]>
+                      )[key].length
+                    }{" "}
+                    {label}
+                  </Typography>
+                  <Stack sx={{ pl: "12px", gap: "4px" }}>
+                    {(impact.result as Record<string, { id: number; name: string; why: string }[]>)[
+                      key
+                    ].map((e) => (
+                      <Typography
+                        key={e.id}
+                        sx={{ fontSize: "13px", color: palette.text.secondary, lineHeight: 1.5 }}
+                      >
+                        <Box component="span" sx={{ fontWeight: 600 }}>
+                          {e.name}
+                        </Box>{" "}
+                        — {e.why}
+                      </Typography>
+                    ))}
+                  </Stack>
+                </Box>
+              ) : null,
+            )}
+          </SectionCard>
         )}
 
         {/* Stale summary card: shown when data is stale AND no regulation/timeline detail is
