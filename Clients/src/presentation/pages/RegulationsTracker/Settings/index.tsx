@@ -290,7 +290,7 @@ export default function Settings() {
                 color: palette.text.secondary,
               }}
             >
-              Configure an LLM key to enable impact analysis.{" "}
+              Impact analysis needs an LLM key.{" "}
               <Box
                 component="span"
                 onClick={() => navigate("/settings/apikeys")}
@@ -300,13 +300,27 @@ export default function Settings() {
                   cursor: "pointer",
                 }}
               >
-                Configure key
-              </Box>
+                Add an LLM key
+              </Box>{" "}
+              to turn this on.
             </Box>
           )}
           {settingsData?.data?.has_llm_key && (
             <Typography sx={{ fontSize: "13px", color: palette.brand.primary }}>
-              Impact analysis: active
+              {settingsData.data.llm_key_provider
+                ? `Impact analysis will use your ${settingsData.data.llm_key_provider} key${settingsData.data.llm_key_model ? ` (${settingsData.data.llm_key_model})` : ""}.`
+                : "Impact analysis is active."}{" "}
+              <Box
+                component="span"
+                onClick={() => navigate("/settings/apikeys")}
+                sx={{
+                  color: palette.brand.primary,
+                  textDecoration: "underline",
+                  cursor: "pointer",
+                }}
+              >
+                Manage keys
+              </Box>
             </Typography>
           )}
 

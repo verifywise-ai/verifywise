@@ -8779,6 +8779,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Configure an LLM key to enable impact analysis.":
       "Konfigurieren Sie einen LLM-Schlüssel, um die Auswirkungsanalyse zu aktivieren.",
     "Configure key": "Schlüssel konfigurieren",
+    "Add an LLM key": "LLM-Schlüssel hinzufügen",
+    "Manage keys": "Schlüssel verwalten",
     "Impact analysis: active": "Auswirkungsanalyse: aktiv",
     "Impact analysis last ran: ": "Auswirkungsanalyse zuletzt ausgeführt: ",
     "Impact analysis has not run yet.": "Die Auswirkungsanalyse wurde noch nicht ausgeführt.",
@@ -17492,6 +17494,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Configure an LLM key to enable impact analysis.":
       "Configurez une clé LLM pour activer l'analyse d'impact.",
     "Configure key": "Configurer la clé",
+    "Add an LLM key": "Ajouter une clé LLM",
+    "Manage keys": "Gérer les clés",
     "Impact analysis: active": "Analyse d'impact : active",
     "Impact analysis last ran: ": "Dernière exécution de l'analyse d'impact : ",
     "Impact analysis has not run yet.": "L'analyse d'impact n'a pas encore été exécutée.",
@@ -26121,6 +26125,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Configure an LLM key to enable impact analysis.":
       "Configure una clave LLM para habilitar el análisis de impacto.",
     "Configure key": "Configurar clave",
+    "Add an LLM key": "Añadir una clave LLM",
+    "Manage keys": "Gestionar claves",
     "Impact analysis: active": "Análisis de impacto: activo",
     "Impact analysis last ran: ": "Último análisis de impacto ejecutado: ",
     "Impact analysis has not run yet.": "El análisis de impacto aún no se ha ejecutado.",

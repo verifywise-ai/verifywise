@@ -342,8 +342,15 @@ export async function getSettingsCtrl(req: Request, res: Response): Promise<any>
     // Settings page can show when the catalogue was last checked.
     const meta = await getMetaQuery();
     let has_llm_key = false;
+    let llm_key_provider: string | null = null;
+    let llm_key_model: string | null = null;
     try {
-      has_llm_key = (await getLLMKeysWithKeyQuery(req.organizationId!)).length > 0;
+      const keys = await getLLMKeysWithKeyQuery(req.organizationId!);
+      has_llm_key = keys.length > 0;
+      if (has_llm_key) {
+        llm_key_provider = keys[0].name ?? null;
+        llm_key_model = keys[0].model ?? null;
+      }
     } catch {
       has_llm_key = false;
     }
@@ -352,6 +359,8 @@ export async function getSettingsCtrl(req: Request, res: Response): Promise<any>
       last_run_at: meta.last_run_at,
       last_run_status: meta.last_run_status,
       has_llm_key,
+      llm_key_provider,
+      llm_key_model,
     };
     await logSuccess({
       eventType: "Read",
