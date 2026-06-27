@@ -175,6 +175,7 @@ Read the relevant file BEFORE implementing changes in that area:
 | Agent Control (AI Gateway native tool-call hook, file-write gating, approval, result capture, run correlation, multi-agent wiring) | `docs/technical/domains/agent-control.md` |
 | Agent Control integrator/developer docs (connect an agent, Claude Code + Cursor, generic contract, API ref) | `shared/user-guide-content/content/developers/` |
 | AI Trust Index | `docs/technical/domains/ai-trust-index.md` |
+| Regulations Tracker (global AI-regulations feed: weekly sync, per-country tracking, Horizon/Deadlines/Frameworks, notifications) | `docs/technical/domains/regulations-tracker.md` |
 | AI Detection | `docs/technical/domains/ai-detection.md` |
 | Risk management | `docs/technical/domains/risk-management.md` |
 | Vendors | `docs/technical/domains/vendors.md` |
