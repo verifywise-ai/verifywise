@@ -227,7 +227,7 @@ export const SYSTEM_PROMPTS: Record<EntityType, string> = {
 };
 
 export function buildUserPrompt(
-  type: EntityType,
+  _type: EntityType,
   ctx: RegulationContext,
   candidates: Candidate[],
 ): string {

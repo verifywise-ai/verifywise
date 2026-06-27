@@ -19,12 +19,16 @@ jest.mock("../../utils/regulationsTracker.utils", () => ({
     recipient_emails: [],
     updated_by: null,
     updated_at: null,
+    impact_enabled: true,
+    last_impact_run_at: null,
   }),
   upsertSettings: jest.fn().mockResolvedValue({
     recipient_user_ids: [1],
     recipient_emails: ["dpo@acme.com"],
     updated_by: 1,
     updated_at: new Date(),
+    impact_enabled: true,
+    last_impact_run_at: null,
   }),
   getMetaQuery: jest.fn().mockResolvedValue({
     seeded_at: new Date(),
@@ -35,6 +39,11 @@ jest.mock("../../utils/regulationsTracker.utils", () => ({
   }),
   getGlobalFeed: jest.fn().mockResolvedValue(null),
   setGlobalFeeds: jest.fn().mockResolvedValue(undefined),
+  setLastImpactRunAt: jest.fn().mockResolvedValue(undefined),
+}));
+
+jest.mock("../../utils/llmKey.utils", () => ({
+  getLLMKeysWithKeyQuery: jest.fn().mockResolvedValue([]),
 }));
 
 jest.mock("../../utils/regulationsTrackerFeed", () => ({
@@ -73,7 +82,10 @@ import {
   untrackCountry,
   getCountryRow,
   upsertSettings,
+  getSettings,
+  getMetaQuery,
 } from "../../utils/regulationsTracker.utils";
+import { getLLMKeysWithKeyQuery } from "../../utils/llmKey.utils";
 
 // ---------------------------------------------------------------------------
 // Global mock reset — prevents call counts from accumulating across tests
@@ -404,7 +416,7 @@ describe("updateSettingsCtrl", () => {
     const res = mockRes();
     await updateSettingsCtrl(req, res);
     expect(res.status).toHaveBeenCalledWith(200);
-    expect(upsertSettings).toHaveBeenCalledWith(7, [2], ["dpo@acme.com"], 1);
+    expect(upsertSettings).toHaveBeenCalledWith(7, [2], ["dpo@acme.com"], 1, undefined);
   });
 });
 
@@ -417,5 +429,56 @@ describe("triggerSync", () => {
     const res = mockRes();
     await triggerSync(req, res);
     expect(res.status).toHaveBeenCalledWith(403);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/regulations-tracker/settings — impact fields + has_llm_key
+// ---------------------------------------------------------------------------
+describe("getSettingsCtrl with impact fields", () => {
+  it("includes has_llm_key=true when the org has a key", async () => {
+    (getSettings as jest.Mock).mockResolvedValue({
+      recipient_user_ids: [], recipient_emails: [], updated_by: null, updated_at: null,
+      impact_enabled: true, last_impact_run_at: null,
+    });
+    (getMetaQuery as jest.Mock).mockResolvedValue({ last_run_at: null, last_run_status: null });
+    (getLLMKeysWithKeyQuery as jest.Mock).mockResolvedValue([{ key: "k" }]);
+    const req: any = { organizationId: 7, role: "Admin" };
+    const res = mockRes();
+    await getSettingsCtrl(req, res);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ has_llm_key: true, impact_enabled: true }) }),
+    );
+  });
+
+  it("has_llm_key=false when the org has no key", async () => {
+    (getSettings as jest.Mock).mockResolvedValue({
+      recipient_user_ids: [], recipient_emails: [], updated_by: null, updated_at: null,
+      impact_enabled: true, last_impact_run_at: null,
+    });
+    (getMetaQuery as jest.Mock).mockResolvedValue({ last_run_at: null, last_run_status: null });
+    (getLLMKeysWithKeyQuery as jest.Mock).mockResolvedValue([]);
+    const req: any = { organizationId: 7, role: "Admin" };
+    const res = mockRes();
+    await getSettingsCtrl(req, res);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ has_llm_key: false }) }),
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PUT /api/regulations-tracker/settings — impact_enabled passthrough
+// ---------------------------------------------------------------------------
+describe("updateSettingsCtrl with impact_enabled", () => {
+  it("passes impact_enabled through to upsertSettings", async () => {
+    (upsertSettings as jest.Mock).mockResolvedValue({});
+    const req: any = {
+      organizationId: 7, userId: 1, role: "Admin",
+      body: { recipient_user_ids: [], recipient_emails: [], impact_enabled: false },
+    };
+    const res = mockRes();
+    await updateSettingsCtrl(req, res);
+    expect(upsertSettings).toHaveBeenCalledWith(7, [], [], 1, false);
   });
 });

@@ -403,7 +403,8 @@ export async function untrackCountry(organizationId: number, slug: string) {
 
 export async function getSettings(organizationId: number) {
   const rows = (await sequelize.query(
-    `SELECT recipient_user_ids, recipient_emails, updated_by, updated_at
+    `SELECT recipient_user_ids, recipient_emails, updated_by, updated_at,
+            impact_enabled, last_impact_run_at
      FROM regulation_tracker_settings WHERE organization_id = :organizationId;`,
     { replacements: { organizationId }, type: QueryTypes.SELECT },
   )) as {
@@ -411,9 +412,14 @@ export async function getSettings(organizationId: number) {
     recipient_emails: string[] | null;
     updated_by: number | null;
     updated_at: Date | null;
+    impact_enabled: boolean | null;
+    last_impact_run_at: Date | null;
   }[];
   return (
-    rows[0] ?? { recipient_user_ids: [], recipient_emails: [], updated_by: null, updated_at: null }
+    rows[0] ?? {
+      recipient_user_ids: [], recipient_emails: [], updated_by: null, updated_at: null,
+      impact_enabled: true, last_impact_run_at: null,
+    }
   );
 }
 
@@ -422,24 +428,36 @@ export async function upsertSettings(
   userIds: number[],
   emails: string[],
   userId: number,
+  impactEnabled?: boolean,
 ) {
   await sequelize.query(
     `INSERT INTO regulation_tracker_settings
-       (organization_id, recipient_user_ids, recipient_emails, updated_by, updated_at)
-     VALUES (:organizationId, :userIds::jsonb, :emails::jsonb, :userId, NOW())
+       (organization_id, recipient_user_ids, recipient_emails, updated_by, updated_at, impact_enabled)
+     VALUES (:organizationId, :userIds::jsonb, :emails::jsonb, :userId, NOW(), COALESCE(:impactEnabled, true))
      ON CONFLICT (organization_id) DO UPDATE SET
        recipient_user_ids = :userIds::jsonb, recipient_emails = :emails::jsonb,
-       updated_by = :userId, updated_at = NOW();`,
+       updated_by = :userId, updated_at = NOW(),
+       impact_enabled = COALESCE(:impactEnabled, regulation_tracker_settings.impact_enabled);`,
     {
       replacements: {
         organizationId,
         userId,
         userIds: JSON.stringify(userIds ?? []),
         emails: JSON.stringify(emails ?? []),
+        impactEnabled: impactEnabled === undefined ? null : impactEnabled,
       },
     },
   );
   return getSettings(organizationId);
+}
+
+export async function setLastImpactRunAt(organizationId: number): Promise<void> {
+  await sequelize.query(
+    `INSERT INTO regulation_tracker_settings (organization_id, last_impact_run_at, updated_at)
+     VALUES (:organizationId, NOW(), NOW())
+     ON CONFLICT (organization_id) DO UPDATE SET last_impact_run_at = NOW();`,
+    { replacements: { organizationId } },
+  );
 }
 
 // ---------------------------------------------------------------------------

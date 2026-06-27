@@ -21,6 +21,7 @@ import {
   fetchDeadlines,
   fetchSnapshot,
 } from "../utils/regulationsTrackerFeed";
+import { getLLMKeysWithKeyQuery } from "../utils/llmKey.utils";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const isAdmin = (role?: string) => role === "Admin" || role === "SuperAdmin";
@@ -336,10 +337,17 @@ export async function getSettingsCtrl(req: Request, res: Response): Promise<any>
     // Merge in global run observability (last sync time + outcome) so the
     // Settings page can show when the catalogue was last checked.
     const meta = await getMetaQuery();
+    let has_llm_key = false;
+    try {
+      has_llm_key = (await getLLMKeysWithKeyQuery(req.organizationId!)).length > 0;
+    } catch {
+      has_llm_key = false;
+    }
     const data = {
       ...settings,
       last_run_at: meta.last_run_at,
       last_run_status: meta.last_run_status,
+      has_llm_key,
     };
     await logSuccess({
       eventType: "Read",
@@ -392,11 +400,15 @@ export async function updateSettingsCtrl(req: Request, res: Response): Promise<a
     );
     if (badEmail !== undefined)
       return res.status(400).json(STATUS_CODE[400](`Invalid email: ${String(badEmail)}`));
+    const impactEnabledRaw = req.body?.impact_enabled;
+    const impactEnabled =
+      typeof impactEnabledRaw === "boolean" ? impactEnabledRaw : undefined;
     const result = await upsertSettings(
       req.organizationId!,
       recipientUserIds as number[],
       recipientEmails as string[],
       req.userId!,
+      impactEnabled,
     );
     await logSuccess({
       eventType: "Update",
