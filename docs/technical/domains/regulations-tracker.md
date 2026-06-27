@@ -1,6 +1,6 @@
 # Regulations Tracker — technical reference
 
-> **Status:** Built on branch `feat/regulations-tracker` (not yet merged to `develop`). Last updated 2026-06-27.
+> **Status:** Built on branch `feat/regulations-tracker` (not yet merged to `develop`). Last updated 2026-06-27. Impact analysis section added 2026-06-27.
 > Mirrors the AI Trust Index module pattern. Two `/code-review` passes completed; PR pending.
 
 The Regulations Tracker is a standalone sidebar module that gives every organisation a window into
@@ -158,7 +158,92 @@ titles/descriptions/empty-states ARE translated (de/fr/es).
 
 ---
 
-## 7. Not yet done / open
+## 7. Impact analysis
+
+The module includes an optional **Regulation Impact Analysis** layer that, when enabled, automatically
+detects which of an organization's AI systems, controls, policies, vendors, and assessments are
+affected by a regulation change — and provides concise "why" reasoning for each.
+
+### Data model
+
+New table `regulation_impact_analysis`:
+- `id` SERIAL PK
+- `organization_id` FK (CASCADE)
+- `country_slug` VARCHAR(120)
+- `regulation_hash` VARCHAR(120) — the source regulation's hash; used to detect stale results
+- `result` JSONB (nullable) — structured verdict: `{ systems: [{id, name, why}], controls: [...], policies: [...], vendors: [...], assessments: [...], generatedAt }`
+- `status` VARCHAR(120) — `"ok"`, `"no_key"`, `"skipped_no_candidates"`, `"error"`
+- `model` VARCHAR(255) — which LLM model executed the analysis (null if skipped/error)
+- `created_at`, `refreshed_at` TIMESTAMPTZ
+- **UNIQUE** on `(organization_id, country_slug)` — one analysis row per org+country pair
+
+New `regulation_tracker_settings` columns:
+- `impact_enabled` BOOLEAN (default true) — org can toggle analysis on/off
+- `last_impact_run_at` TIMESTAMPTZ (nullable) — when the last analysis ran for this org (populated across all countries)
+
+### Endpoints
+
+| Method/path | Auth | Limiter |
+|---|---|---|
+| `GET /countries/:slug/impact` | any | — | Returns `{result, status, refreshed_at, stale}` or null if no analysis exists. Computed `stale` flag = true if the cached `regulation_hash` differs from the live feed hash. **Route must be registered BEFORE `/countries/:slug`** to avoid Express greedy-match. Returns 200 with null body if no LLM key is configured for the org. |
+| `POST /countries/:slug/impact/refresh` | Admin | `regulationsTrackerImpactLimiter` | Triggers on-demand analysis for a specific country. Returns the same shape. |
+
+### `/settings` additions
+
+`GET /settings` (Admin) returns:
+- `impact_enabled` — org's toggle state
+- `last_impact_run_at` — when analysis last ran (nullable; across all countries tracked by this org)
+- `has_llm_key` (computed, read-only) — boolean; true if the org has at least one configured LLM key
+
+`PUT /settings` (Admin) accepts `impact_enabled` (boolean, optional); other fields (recipient lists) unchanged.
+
+### Analysis funnel (Stage A + Stage B)
+
+**Stage A — Deterministic candidate queries (over-inclusive, no LLM):**
+- Region map: country name → numeric region code (Europe=2, North America=3, etc.)
+- Framework inference: regulation type → framework (EU AI Act, ISO 42001, NIST AI RMF, etc.); EU-bloc countries imply EU AI Act
+- Candidate queries per entity type:
+  - **Systems (projects)**: WHERE `geography = :region` OR linked frameworks match
+  - **Controls**: WHERE `framework_id` matches inferred frameworks
+  - **Policies**: WHERE `framework_id` matches AND linked to an affected control
+  - **Vendors**: WHERE linked to an affected system/policy
+  - **Assessments**: WHERE linked to an affected system/control
+
+Stage A result = `Candidate[]` per entity type (over-inclusive by design).
+
+**Stage B — LLM filter-and-annotate (specific verdicts only):**
+- One call per entity type (5 parallel calls if all candidate lists non-empty)
+- LLM receives: regulation identity + change diff, candidate entity list, key obligations + penalties
+- **LLM contract:** responds with JSON `{results: [{type, id, affected, why}, ...]}` where:
+  - `affected` is boolean (true = impacted by this change)
+  - `why` is a concise reason string (1–2 sentences)
+  - LLM can ONLY filter candidates and annotate; cannot invent new entities
+- `validateVerdicts()` enforces: only returned entities that were in the sent candidate list are accepted; any unknown entities are dropped
+- Result `ImpactResult` = filtered + annotated systems/controls/policies/vendors/assessments
+
+### LLM-key gating
+
+- Orgs without a configured LLM key: `runImpactAnalysis()` returns `{status: "no_key", result: null}`. The endpoint returns 200/null; no panel rendered in the UI.
+- When a change notification is sent for a keyless org, a one-line nudge is appended: *"Configure an LLM key to see how this regulation affects your organization."*
+- Orgs with `impact_enabled = false`: analysis is skipped; no panel, no nudge (Settings shows the toggle state + "not run yet" if never run).
+
+### Sync hook integration
+
+Impact analysis runs **synchronously per-(org, country) during the notification phase** of the weekly sync (or on-demand admin `/sync`). Isolated in a try/catch so a per-country analysis failure never breaks the overall sync.
+
+Result caching: analysis is cached by `(organizationId, country_slug, regulation_hash)`. If the regulation hash has not changed since the last run, the cached result is returned without re-invoking the LLM.
+
+Failure mode: if LLM call fails for a country, the sync continues and records impact status = `"error"`; the notification for that country includes no impact suffix.
+
+### V1 limitations
+
+- **Country→region mapping coarse:** the region lookup table contains ~30 country names. The LLM is expected to refine boundaries (e.g., "EU Digital Services Act" affects Austria, not just Germany). Standalone policies (not linked to a control) are unmatched.
+- **Policies unlinked to controls:** Stage A only catches policies that are directly linked via `policy_frameworks` to a framework that matched. Orphaned policies are excluded.
+- **Per-run cap deferred:** V1 has no global cap on parallel LLM calls per sync (`IMPACT_MAX_ANALYSES_PER_RUN`). Stage A already bounds cost per-(org,country) and the weekly cadence limits fan-out; the cap will be added in a later iteration if large feeds prove slow.
+
+---
+
+## 8. Not yet done / open
 
 - **PR not opened** (branch `feat/regulations-tracker`, ~33 commits). Awaiting go-ahead.
 - Open review items left as acceptable: `getStoredHashes` duplicates upsertFeedTx's internal prefetch
