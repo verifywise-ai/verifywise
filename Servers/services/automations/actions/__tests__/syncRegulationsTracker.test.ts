@@ -31,11 +31,21 @@ jest.mock("../../../../utils/regulationsTracker.utils", () => {
     getStoredHashes: jest.fn().mockResolvedValue(new Map()),
     setGlobalFeeds: jest.fn().mockResolvedValue(undefined),
     recordRunStatus: jest.fn().mockResolvedValue(undefined),
+    getSettings: jest.fn().mockResolvedValue({ impact_enabled: true }),
+    setLastImpactRunAt: jest.fn().mockResolvedValue(undefined),
     // keep currentIsoWeek and escapeHtml real
     currentIsoWeek: actual.currentIsoWeek,
     escapeHtml: actual.escapeHtml,
   };
 });
+
+jest.mock("../../../../utils/regulationImpact.utils", () => ({
+  runImpactAnalysis: jest.fn().mockResolvedValue({ status: "ok", counts: {} }),
+}));
+
+jest.mock("../../../../utils/llmKey.utils", () => ({
+  getLLMKeysWithKeyQuery: jest.fn().mockResolvedValue([]),
+}));
 
 jest.mock("../../../emailService", () => ({
   sendAutomationEmail: jest.fn(),
@@ -61,6 +71,8 @@ import * as feedUtils from "../../../../utils/regulationsTrackerFeed";
 import * as trackerUtils from "../../../../utils/regulationsTracker.utils";
 import * as emailService from "../../../emailService";
 import * as notificationUtils from "../../../../utils/notification.utils";
+import * as impactUtils from "../../../../utils/regulationImpact.utils";
+import * as llmKeyUtils from "../../../../utils/llmKey.utils";
 
 // ---------------------------------------------------------------------------
 // Typed mock helpers
@@ -306,7 +318,67 @@ describe("syncRegulationsTracker", () => {
     );
   });
 
-  // 5. New-country awareness (#4): brand-new countries notify each org's admins.
+  // 5. Impact analysis isolation: a throwing runImpactAnalysis must NOT break the sync.
+  it("completes successfully even when runImpactAnalysis throws", async () => {
+    const mockRunImpact = impactUtils.runImpactAnalysis as jest.MockedFunction<
+      typeof impactUtils.runImpactAnalysis
+    >;
+    const mockGetLLMKeys = llmKeyUtils.getLLMKeysWithKeyQuery as jest.MockedFunction<
+      typeof llmKeyUtils.getLLMKeysWithKeyQuery
+    >;
+    const mockRecordRunStatus = trackerUtils.recordRunStatus as jest.MockedFunction<
+      typeof trackerUtils.recordRunStatus
+    >;
+
+    // Impact analysis always throws for this test.
+    mockRunImpact.mockRejectedValue(new Error("LLM exploded"));
+    // Org has a key → impact will be attempted.
+    mockGetLLMKeys.mockResolvedValue([{ key: "k", name: "OpenAI", url: null, model: "m" } as any]);
+
+    mockGetMeta.mockResolvedValue({
+      seeded_at: "2026-01-01",
+      last_good_count: 5,
+      last_run_week: OTHER_WEEK,
+    } as any);
+    const country = { slug: "de", name: "Germany", hash: "abc", regulationCount: 1 };
+    mockValidate.mockReturnValue(makeValidResult([country]));
+    mockUpsert.mockResolvedValue({
+      changed: [
+        {
+          slug: "de",
+          name: "Germany",
+          lines: ["AI Act: status draft → enacted"],
+          unstructured: false,
+          changeCount: 1,
+          changeDates: [],
+        },
+      ],
+      newlyAdded: [],
+      newlyRemoved: [],
+      wasFirstSeed: false,
+    });
+    mockGetAffected.mockResolvedValue([
+      { organization_id: 42, country_slug: "de", name: "Germany" },
+    ] as any);
+    mockResolveInApp.mockResolvedValue([99]);
+    mockResolveEmail.mockResolvedValue([]);
+    mockCreateNotification.mockResolvedValue(undefined as any);
+
+    // Should not throw.
+    const result = await syncRegulationsTracker({ feed: DUMMY_FEED });
+
+    // Sync completed and status was recorded as ok.
+    expect(result.orgsNotified).toBe(1);
+    expect(mockRecordRunStatus).toHaveBeenCalledWith(expect.stringContaining("ok"));
+    // Notifications were still created despite impact throwing.
+    expect(mockCreateNotification).toHaveBeenCalledTimes(1);
+    expect(mockCreateNotification).toHaveBeenCalledWith(
+      expect.objectContaining({ user_id: 99 }),
+      42,
+    );
+  });
+
+  // 6. New-country awareness (#4): brand-new countries notify each org's admins.
   it("notifies org admins when a new country is added", async () => {
     mockGetMeta.mockResolvedValue({
       seeded_at: "2026-01-01",

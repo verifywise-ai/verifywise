@@ -20,8 +20,12 @@ import {
   resolveInAppUserIds,
   currentIsoWeek,
   escapeHtml,
+  getSettings,
+  setLastImpactRunAt,
   CountryChange,
 } from "../../../utils/regulationsTracker.utils";
+import { runImpactAnalysis } from "../../../utils/regulationImpact.utils";
+import { getLLMKeysWithKeyQuery } from "../../../utils/llmKey.utils";
 import { createNotificationQuery } from "../../../utils/notification.utils";
 import {
   NotificationType,
@@ -260,6 +264,17 @@ async function runSync(deps?: { feed?: unknown }): Promise<{
       }
 
       for (const [orgId, countries] of byOrg) {
+        let orgHasKey = false;
+        let impactEnabled = true;
+        let impactRan = false; // becomes true if at least one impact pass executes this run
+        try {
+          orgHasKey = (await getLLMKeysWithKeyQuery(orgId)).length > 0;
+          const orgSettings = await getSettings(orgId);
+          impactEnabled = orgSettings.impact_enabled !== false; // default ON
+        } catch {
+          orgHasKey = false;
+        }
+
         const changedItems: DigestItem[] = countries
           .filter((c) => !c.removed)
           .map((c) => ({ name: c.name, detail: c.lines.length ? c.lines.join(", ") : undefined }));
@@ -285,11 +300,39 @@ async function runSync(deps?: { feed?: unknown }): Promise<{
                     c.changeDates.length ? `: ${c.changeDates.join(", ")}` : ""
                   }; showing the latest)`
                 : "";
-            const message = c.removed
+            const baseMessage = c.removed
               ? `${c.name} is no longer in the regulations feed.`
               : (c.lines.length
                   ? c.lines.join("; ")
                   : "Regulations were updated — open to see the details.") + multiNote;
+            let impactSuffix = "";
+            if (!c.removed) {
+              if (orgHasKey && impactEnabled) {
+                impactRan = true;
+                try {
+                  const impact = await runImpactAnalysis(orgId, c.slug);
+                  if (impact.status === "ok") {
+                    const parts: string[] = [];
+                    if (impact.counts.system) parts.push(`${impact.counts.system} AI system(s) affected`);
+                    if (impact.counts.control) parts.push(`${impact.counts.control} control(s) to review`);
+                    if (impact.counts.policy) parts.push(`${impact.counts.policy} policy(ies) may be outdated`);
+                    if (impact.counts.vendor) parts.push(`${impact.counts.vendor} vendor(s) impacted`);
+                    if (impact.counts.assessment) parts.push(`${impact.counts.assessment} assessment(s) to update`);
+                    if (parts.length) impactSuffix = `\n\nImpact: ${parts.join(", ")}.`;
+                  }
+                } catch (err) {
+                  logger.error(
+                    `[regulations-tracker] impact analysis failed for org ${orgId} / ${c.slug}: ${(err as Error).message}`,
+                  );
+                }
+              } else if (!orgHasKey) {
+                // keyless org → nudge to configure a key. A key-having org that toggled
+                // impact OFF (impactEnabled === false) gets NEITHER panel NOR nudge — they chose.
+                impactSuffix =
+                  "\n\nConfigure an LLM key to see which of your AI systems, controls and vendors this affects.";
+              }
+            }
+            const message = `${baseMessage}${impactSuffix}`;
             for (const uid of userIds) {
               await createNotificationQuery(
                 {
@@ -318,6 +361,9 @@ async function runSync(deps?: { feed?: unknown }): Promise<{
             undefined,
           );
           orgsEmailed++;
+        }
+        if (impactRan) {
+          try { await setLastImpactRunAt(orgId); } catch { /* best-effort */ }
         }
       }
     }
