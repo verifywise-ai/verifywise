@@ -38,7 +38,11 @@ jest.mock("../../utils/regulationsTracker.utils", () => ({
 }));
 
 jest.mock("../../utils/regulationsTrackerFeed", () => ({
-  fetchCountryDetail: jest.fn().mockResolvedValue({ name: "European Union", regulations: [] }),
+  // The real feed nests detail under `country` with `meta` alongside.
+  fetchCountryDetail: jest.fn().mockResolvedValue({
+    country: { slug: "eu", name: "European Union", regulations: [{ name: "EU AI Act" }] },
+    meta: { disclaimer: "info only" },
+  }),
   fetchHorizon: jest.fn().mockResolvedValue({ changes: [] }),
   fetchDeadlines: jest.fn().mockResolvedValue({ deadlines: [], unscheduled: [] }),
   fetchSnapshot: jest.fn().mockResolvedValue({ frameworks: [] }),
@@ -118,12 +122,27 @@ describe("getCountries", () => {
 // GET /api/regulations-tracker/countries/:slug
 // ---------------------------------------------------------------------------
 describe("getCountryDetail", () => {
-  it("returns 200 with live data when fetchCountryDetail succeeds", async () => {
+  it("returns 200 with flattened live data (not stale) when fetchCountryDetail succeeds", async () => {
     const req: any = { userId: 1, organizationId: 7, params: { slug: "eu" } };
     const res = mockRes();
     await getCountryDetail(req, res);
     expect(res.status).toHaveBeenCalledWith(200);
     expect(getCountryRow).toHaveBeenCalledWith("eu", 7);
+    const payload = (res.json as jest.Mock).mock.calls[0][0];
+    // Live country is flattened to the root (regulations/name/meta) and stale:false.
+    expect(payload.data).toEqual(expect.objectContaining({ name: "European Union", stale: false }));
+    expect(payload.data.regulations).toEqual([{ name: "EU AI Act" }]);
+  });
+
+  it("falls back to stale stored data when the live feed returns an empty country payload", async () => {
+    const { fetchCountryDetail } = require("../../utils/regulationsTrackerFeed");
+    fetchCountryDetail.mockResolvedValueOnce({ country: {}, meta: null });
+    const req: any = { userId: 1, organizationId: 7, params: { slug: "eu" } };
+    const res = mockRes();
+    await getCountryDetail(req, res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    const payload = (res.json as jest.Mock).mock.calls[0][0];
+    expect(payload.data.stale).toBe(true);
   });
 
   it("returns 404 when the country slug is unknown", async () => {
@@ -142,6 +161,8 @@ describe("getCountryDetail", () => {
     await getCountryDetail(req, res);
     // Controller catches the inner error and still returns 200 with stale data
     expect(res.status).toHaveBeenCalledWith(200);
+    const payload = (res.json as jest.Mock).mock.calls[0][0];
+    expect(payload.data.stale).toBe(true);
   });
 });
 

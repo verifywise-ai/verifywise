@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
+import logger from "../utils/logger/fileLogger";
 import {
   listCountries,
   getCountryRow,
@@ -83,6 +84,12 @@ export async function getCountryDetail(req: Request, res: Response): Promise<any
     const slug = req.params.slug as string;
     const local = await getCountryRow(slug, req.organizationId!);
     if (!local) return res.status(404).json(STATUS_CODE[404]("country not found"));
+
+    // Try the live feed first; fall back to our stored snapshot if the feed is
+    // unreachable OR returns a 200 with an empty/unexpected body. We capture the
+    // fallback reason and log it, so a genuine bug in the live path surfaces in
+    // monitoring instead of being silently masked as "stale".
+    let staleReason: string | null = null;
     try {
       // Use the canonical stored slug (normalized) rather than the raw URL param to
       // avoid a false stale fallback when the URL slug has different casing/whitespace.
@@ -90,40 +97,51 @@ export async function getCountryDetail(req: Request, res: Response): Promise<any
         country?: Record<string, unknown>;
         meta?: Record<string, unknown>;
       };
-      await logSuccess({
-        eventType: "Read",
-        description: "fetched live country detail",
-        functionName: fn,
-        fileName: file,
-        userId: req.userId!,
-        organizationId: req.organizationId!,
-      });
-      // The live feed nests detail under `country` with `meta` alongside; the client
-      // reads regulations/timeline/meta at the root, so flatten to one shape that
-      // matches the stale (DB) path exactly.
-      return res.status(200).json(
-        STATUS_CODE[200]({
-          ...(live.country ?? {}),
-          meta: live.meta ?? null,
-          stale: false,
-          is_tracked: local.is_tracked,
-        }),
-      );
-    } catch {
-      await logSuccess({
-        eventType: "Read",
-        description: "returned stored country detail",
-        functionName: fn,
-        fileName: file,
-        userId: req.userId!,
-        organizationId: req.organizationId!,
-      });
-      // local.data already holds the full detail (regulations/timeline/meta) seeded
-      // and refreshed by the weekly sync, so this renders complete content offline.
-      return res
-        .status(200)
-        .json(STATUS_CODE[200]({ ...local.data, stale: true, is_tracked: local.is_tracked }));
+      // fetchCountryDetail only throws on non-200; a 200 with an empty/missing
+      // `country` would otherwise render a blank page. Guard for real content.
+      const liveCountry = live?.country;
+      if (!liveCountry || Object.keys(liveCountry).length === 0) {
+        staleReason = "live feed returned an empty country payload";
+      } else {
+        await logSuccess({
+          eventType: "Read",
+          description: "fetched live country detail",
+          functionName: fn,
+          fileName: file,
+          userId: req.userId!,
+          organizationId: req.organizationId!,
+        });
+        // The live feed nests detail under `country` with `meta` alongside; the client
+        // reads regulations/timeline/meta at the root, so flatten to one shape that
+        // matches the stale (DB) path exactly.
+        return res.status(200).json(
+          STATUS_CODE[200]({
+            ...liveCountry,
+            meta: live.meta ?? null,
+            stale: false,
+            is_tracked: local.is_tracked,
+          }),
+        );
+      }
+    } catch (liveErr) {
+      staleReason = (liveErr as Error).message;
     }
+
+    // Fallback path: log WHY we're serving stale so real failures are visible.
+    logger.warn(`[regulations-tracker] serving stored detail for ${local.slug}: ${staleReason}`);
+    await logSuccess({
+      eventType: "Read",
+      description: "returned stored country detail",
+      functionName: fn,
+      fileName: file,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    // local.data already holds the full detail (regulations/timeline/meta) seeded
+    // and refreshed by the weekly sync, so this renders complete content offline.
+    return res
+      .status(200)
+      .json(STATUS_CODE[200]({ ...local.data, stale: true, is_tracked: local.is_tracked }));
   } catch (error) {
     await logFailure({
       eventType: "Read",

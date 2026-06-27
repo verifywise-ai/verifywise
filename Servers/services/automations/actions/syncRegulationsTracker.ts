@@ -65,7 +65,40 @@ async function renderDigest(changed: DigestItem[], removed: DigestItem[]): Promi
   });
 }
 
+// In-process guard so an admin "check for updates now" can't run concurrently
+// with the scheduled weekly job (or with another admin trigger). The two would
+// otherwise both hit the external feed (~60 detail fetches each) and race on the
+// global-feed / run-status writes that sit outside upsertFeedTx's row lock.
+let syncInProgress = false;
+
 export async function syncRegulationsTracker(deps?: { feed?: unknown }): Promise<{
+  fetched: number;
+  changed: number;
+  newlyRemoved: number;
+  orgsEmailed: number;
+  orgsNotified: number;
+  skipped?: string;
+}> {
+  if (syncInProgress) {
+    logger.info("[regulations-tracker] sync already in progress; skipping concurrent run");
+    return {
+      fetched: 0,
+      changed: 0,
+      newlyRemoved: 0,
+      orgsEmailed: 0,
+      orgsNotified: 0,
+      skipped: "already running",
+    };
+  }
+  syncInProgress = true;
+  try {
+    return await runSync(deps);
+  } finally {
+    syncInProgress = false;
+  }
+}
+
+async function runSync(deps?: { feed?: unknown }): Promise<{
   fetched: number;
   changed: number;
   newlyRemoved: number;
@@ -129,7 +162,7 @@ export async function syncRegulationsTracker(deps?: { feed?: unknown }): Promise
   const detailBySlug = new Map<string, unknown>();
   for (const c of staleForDetail) {
     try {
-      const d = (await fetchCountryDetail(c.slug)) as {
+      const d = (await fetchCountryDetail(norm(c.slug))) as {
         country?: Record<string, unknown>;
         meta?: Record<string, unknown>;
       };
@@ -144,7 +177,11 @@ export async function syncRegulationsTracker(deps?: { feed?: unknown }): Promise
   const { changed, newlyAdded, newlyRemoved, wasFirstSeed } = await upsertFeedTx(
     validated.countries,
     validated.presentSlugs,
-    validated.rawCount,
+    // Persist the VALID country count as last_good_count, not rawCount. The
+    // 50%-drop guard compares the next run's valid count against this watermark,
+    // so storing the (larger) raw count would inflate the baseline and could
+    // wrongly reject a later, legitimately-smaller-but-valid feed.
+    validated.countries.length,
     detailBySlug,
   );
 
@@ -184,137 +221,159 @@ export async function syncRegulationsTracker(deps?: { feed?: unknown }): Promise
   const changedSlugs = Array.from(new Set([...changed.map((c) => c.slug), ...newlyRemoved]));
   let orgsEmailed = 0;
   let orgsNotified = 0;
-
-  if (changedSlugs.length) {
-    const affected = await getAffectedOrgsBySlugs(changedSlugs);
-    // Per-org buckets carry each affected country's slug + name + (for changed
-    // countries) the human change lines, so we can both build the email digest
-    // and emit one deep-linked in-app notification per country.
-    interface OrgCountry {
-      slug: string;
-      name: string;
-      removed: boolean;
-      lines: string[];
-      changeCount: number;
-      changeDates: string[];
-    }
-    const byOrg = new Map<number, OrgCountry[]>();
-    for (const row of affected) {
-      const list = byOrg.get(row.organization_id) ?? [];
-      const name = row.name ?? row.country_slug;
-      const removed = newlyRemoved.includes(row.country_slug);
-      const ch = changeBySlug.get(row.country_slug);
-      list.push({
-        slug: row.country_slug,
-        name,
-        removed,
-        lines: ch?.lines ?? [],
-        changeCount: ch?.changeCount ?? 1,
-        changeDates: ch?.changeDates ?? [],
-      });
-      byOrg.set(row.organization_id, list);
-    }
-
-    for (const [orgId, countries] of byOrg) {
-      const changedItems: DigestItem[] = countries
-        .filter((c) => !c.removed)
-        .map((c) => ({ name: c.name, detail: c.lines.length ? c.lines.join(", ") : undefined }));
-      const removedItems: DigestItem[] = countries
-        .filter((c) => c.removed)
-        .map((c) => ({ name: c.name }));
-
-      // In-app: always to admins ∪ configured recipients. One deep-linked
-      // notification per affected country so the message names what changed and
-      // links straight to that country's page.
-      const userIds = await resolveInAppUserIds(orgId);
-      if (userIds.length) {
-        for (const c of countries) {
-          const title = c.removed
-            ? `${c.name} removed from the regulations feed`
-            : `AI regulations updated: ${c.name}`;
-          // When a country changed more than once since our last check, the feed
-          // only carries the latest change's detail — note the count + dates so
-          // the user knows to review the full history at the source.
-          const multiNote =
-            !c.removed && c.changeCount > 1
-              ? ` (changed ${c.changeCount} times since last check${
-                  c.changeDates.length ? `: ${c.changeDates.join(", ")}` : ""
-                }; showing the latest)`
-              : "";
-          const message = c.removed
-            ? `${c.name} is no longer in the regulations feed.`
-            : (c.lines.length
-                ? c.lines.join("; ")
-                : "Regulations were updated — open to see the details.") + multiNote;
-          for (const uid of userIds) {
-            await createNotificationQuery(
-              {
-                user_id: uid,
-                type: NotificationType.REGULATIONS_TRACKER,
-                title,
-                message,
-                entity_type: NotificationEntityType.REGULATION_COUNTRY,
-                entity_name: c.name,
-                action_url: `/regulations-tracker/${c.slug}`,
-              },
-              orgId,
-            );
-          }
-        }
-        orgsNotified++;
-      }
-      // Email: configured recipients only, no fallback.
-      const emails = await resolveEmailRecipients(orgId);
-      if (emails.length) {
-        const html = await renderDigest(changedItems, removedItems);
-        await sendAutomationEmail(emails, "Global AI regulations — weekly update", html, undefined);
-        orgsEmailed++;
-      }
-    }
-  }
-
-  // New countries appeared in the feed. They aren't tracked by anyone yet, so
-  // notify each org's admins (in-app only) so they can decide whether to track.
   let orgsNotifiedNew = 0;
-  if (newlyAdded.length) {
-    // Resolve display names from the validated feed (slug -> name).
-    const feedName = new Map(validated.countries.map((c) => [c.slug.trim().toLowerCase(), c.name]));
-    const addedNames = newlyAdded.map((s) => feedName.get(s) ?? s);
-    const admins = await getAllOrgAdmins();
-    const byOrgAdmins = new Map<number, number[]>();
-    for (const a of admins) {
-      const arr = byOrgAdmins.get(a.organization_id) ?? [];
-      arr.push(a.user_id);
-      byOrgAdmins.set(a.organization_id, arr);
-    }
-    const title =
-      newlyAdded.length === 1
-        ? `New jurisdiction added: ${addedNames[0]}`
-        : `${newlyAdded.length} new jurisdictions added`;
-    const message =
-      newlyAdded.length === 1
-        ? `${addedNames[0]} was added to the regulations catalogue. Track it to monitor its AI regulations.`
-        : `Added: ${addedNames.join(", ")}. Track the ones relevant to your organization.`;
-    const actionUrl =
-      newlyAdded.length === 1
-        ? `/regulations-tracker/${newlyAdded[0]}`
-        : "/regulations-tracker/browse";
-    for (const [orgId, userIds] of byOrgAdmins) {
-      for (const uid of userIds) {
-        await createNotificationQuery(
-          {
-            user_id: uid,
-            type: NotificationType.REGULATIONS_TRACKER,
-            title,
-            message,
-            entity_type: NotificationEntityType.REGULATION_COUNTRY,
-            action_url: actionUrl,
-          },
-          orgId,
-        );
+
+  // The catalogue is already committed by upsertFeedTx (and last_run_week is set,
+  // so we won't re-import this week — that's correct, the data landed). But if
+  // notification/email dispatch throws, we must NOT leave last_run_status showing
+  // the previous "ok": record the failure and rethrow so the job is marked failed
+  // and the Settings page reflects that notifications didn't go out.
+  try {
+    if (changedSlugs.length) {
+      const affected = await getAffectedOrgsBySlugs(changedSlugs);
+      // Per-org buckets carry each affected country's slug + name + (for changed
+      // countries) the human change lines, so we can both build the email digest
+      // and emit one deep-linked in-app notification per country.
+      interface OrgCountry {
+        slug: string;
+        name: string;
+        removed: boolean;
+        lines: string[];
+        changeCount: number;
+        changeDates: string[];
       }
-      orgsNotifiedNew++;
+      const byOrg = new Map<number, OrgCountry[]>();
+      for (const row of affected) {
+        const list = byOrg.get(row.organization_id) ?? [];
+        const name = row.name ?? row.country_slug;
+        const removed = newlyRemoved.includes(row.country_slug);
+        const ch = changeBySlug.get(row.country_slug);
+        list.push({
+          slug: row.country_slug,
+          name,
+          removed,
+          lines: ch?.lines ?? [],
+          changeCount: ch?.changeCount ?? 1,
+          changeDates: ch?.changeDates ?? [],
+        });
+        byOrg.set(row.organization_id, list);
+      }
+
+      for (const [orgId, countries] of byOrg) {
+        const changedItems: DigestItem[] = countries
+          .filter((c) => !c.removed)
+          .map((c) => ({ name: c.name, detail: c.lines.length ? c.lines.join(", ") : undefined }));
+        const removedItems: DigestItem[] = countries
+          .filter((c) => c.removed)
+          .map((c) => ({ name: c.name }));
+
+        // In-app: always to admins ∪ configured recipients. One deep-linked
+        // notification per affected country so the message names what changed and
+        // links straight to that country's page.
+        const userIds = await resolveInAppUserIds(orgId);
+        if (userIds.length) {
+          for (const c of countries) {
+            const title = c.removed
+              ? `${c.name} removed from the regulations feed`
+              : `AI regulations updated: ${c.name}`;
+            // When a country changed more than once since our last check, the feed
+            // only carries the latest change's detail — note the count + dates so
+            // the user knows to review the full history at the source.
+            const multiNote =
+              !c.removed && c.changeCount > 1
+                ? ` (changed ${c.changeCount} times since last check${
+                    c.changeDates.length ? `: ${c.changeDates.join(", ")}` : ""
+                  }; showing the latest)`
+                : "";
+            const message = c.removed
+              ? `${c.name} is no longer in the regulations feed.`
+              : (c.lines.length
+                  ? c.lines.join("; ")
+                  : "Regulations were updated — open to see the details.") + multiNote;
+            for (const uid of userIds) {
+              await createNotificationQuery(
+                {
+                  user_id: uid,
+                  type: NotificationType.REGULATIONS_TRACKER,
+                  title,
+                  message,
+                  entity_type: NotificationEntityType.REGULATION_COUNTRY,
+                  entity_name: c.name,
+                  action_url: `/regulations-tracker/${c.slug}`,
+                },
+                orgId,
+              );
+            }
+          }
+          orgsNotified++;
+        }
+        // Email: configured recipients only, no fallback.
+        const emails = await resolveEmailRecipients(orgId);
+        if (emails.length) {
+          const html = await renderDigest(changedItems, removedItems);
+          await sendAutomationEmail(
+            emails,
+            "Global AI regulations — weekly update",
+            html,
+            undefined,
+          );
+          orgsEmailed++;
+        }
+      }
     }
+
+    // New countries appeared in the feed. They aren't tracked by anyone yet, so
+    // notify each org's admins (in-app only) so they can decide whether to track.
+    if (newlyAdded.length) {
+      // Resolve display names from the validated feed (slug -> name).
+      const feedName = new Map(
+        validated.countries.map((c) => [c.slug.trim().toLowerCase(), c.name]),
+      );
+      const addedNames = newlyAdded.map((s) => feedName.get(s) ?? s);
+      const admins = await getAllOrgAdmins();
+      const byOrgAdmins = new Map<number, number[]>();
+      for (const a of admins) {
+        const arr = byOrgAdmins.get(a.organization_id) ?? [];
+        arr.push(a.user_id);
+        byOrgAdmins.set(a.organization_id, arr);
+      }
+      const title =
+        newlyAdded.length === 1
+          ? `New jurisdiction added: ${addedNames[0]}`
+          : `${newlyAdded.length} new jurisdictions added`;
+      const message =
+        newlyAdded.length === 1
+          ? `${addedNames[0]} was added to the regulations catalogue. Track it to monitor its AI regulations.`
+          : `Added: ${addedNames.join(", ")}. Track the ones relevant to your organization.`;
+      const actionUrl =
+        newlyAdded.length === 1
+          ? `/regulations-tracker/${newlyAdded[0]}`
+          : "/regulations-tracker/browse";
+      for (const [orgId, userIds] of byOrgAdmins) {
+        for (const uid of userIds) {
+          await createNotificationQuery(
+            {
+              user_id: uid,
+              type: NotificationType.REGULATIONS_TRACKER,
+              title,
+              message,
+              entity_type: NotificationEntityType.REGULATION_COUNTRY,
+              action_url: actionUrl,
+            },
+            orgId,
+          );
+        }
+        orgsNotifiedNew++;
+      }
+    }
+  } catch (e) {
+    // Notifications/emails failed after the catalogue was committed. Surface the
+    // failure on the run status and rethrow so BullMQ marks the job failed.
+    logger.error(`[regulations-tracker] notification dispatch failed: ${(e as Error).message}`);
+    await recordRunStatus(`error: notifications failed: ${(e as Error).message}`).catch(
+      () => undefined,
+    );
+    throw e;
   }
 
   logger.info(
