@@ -622,7 +622,7 @@ export default function CountryDetail() {
                   variant="text"
                   onClick={() => refreshImpact.mutate(slug)}
                   isDisabled={refreshImpact.isPending}
-                  sx={{ height: 28, fontSize: "13px", flexShrink: 0, p: "0 8px" }}
+                  sx={{ height: 30, fontSize: "13px", flexShrink: 0, p: "0 8px" }}
                 />
               </Box>
             )}

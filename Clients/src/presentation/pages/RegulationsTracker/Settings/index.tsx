@@ -9,6 +9,7 @@
  */
 
 import { useState, useEffect, useRef, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { Box, Stack, Typography, CircularProgress } from "@mui/material";
 import ChipInput from "../../../components/Inputs/ChipInput";
 import AutoCompleteField from "../../../components/Inputs/Autocomplete";
@@ -33,6 +34,7 @@ interface UserOption {
 }
 
 export default function Settings() {
+  const navigate = useNavigate();
   const { userRoleName, isSuperAdmin } = useAuth();
   const isAdmin = isSuperAdmin || userRoleName === "Admin" || userRoleName === "SuperAdmin";
 
@@ -263,9 +265,13 @@ export default function Settings() {
             >
               Configure an LLM key to enable impact analysis.{" "}
               <Box
-                component="a"
-                href="/settings/apikeys"
-                sx={{ color: palette.brand.primary, textDecoration: "underline" }}
+                component="span"
+                onClick={() => navigate("/settings/apikeys")}
+                sx={{
+                  color: palette.brand.primary,
+                  textDecoration: "underline",
+                  cursor: "pointer",
+                }}
               >
                 Configure key
               </Box>
