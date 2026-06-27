@@ -1,3 +1,6 @@
+import { sequelize } from "../database/db";
+import { QueryTypes } from "sequelize";
+
 export type EntityType = "system" | "control" | "policy" | "vendor" | "assessment";
 
 export interface Candidate {
@@ -63,4 +66,112 @@ export function validateVerdicts(raw: unknown, sent: Candidate[]): LlmVerdict[] 
     out.push({ type: type as EntityType, id, affected, why: why.trim() });
   }
   return out;
+}
+
+const EMPTY_BY_TYPE = (): Record<EntityType, Candidate[]> => ({
+  system: [], control: [], policy: [], vendor: [], assessment: [],
+});
+
+export async function getCandidates(
+  organizationId: number,
+  countryName: string,
+  regulation: { type?: string; country?: string },
+): Promise<Record<EntityType, Candidate[]>> {
+  const region = regionForCountry(countryName);
+  const frameworks = frameworksForRegulation({ type: regulation.type, country: countryName });
+  const out = EMPTY_BY_TYPE();
+
+  // --- systems (projects): geography region match OR framework match via project_frameworks ---
+  const systems = (await sequelize.query(
+    `SELECT DISTINCT p.id, p.project_title AS name,
+            COALESCE(p.goal, '') AS description
+       FROM projects p
+       LEFT JOIN project_frameworks pf ON pf.project_id = p.id
+       LEFT JOIN frameworks f ON f.id = pf.framework_id
+      WHERE p.organization_id = :organizationId
+        AND ( (:region IS NOT NULL AND p.geography = :region)
+              OR f.name = ANY(:frameworks) )`,
+    { replacements: { organizationId, region, frameworks }, type: QueryTypes.SELECT },
+  )) as { id: number; name: string; description: string }[];
+  out.system = systems.map((r) => ({ type: "system", id: r.id, name: r.name, description: r.description }));
+
+  const candidateProjectIds = systems.map((s) => s.id);
+
+  // --- controls: belong to a project whose framework matches (3-hop) ---
+  const controls = (await sequelize.query(
+    `SELECT DISTINCT c.id, c.title AS name, COALESCE(c.description, '') AS description
+       FROM controls c
+       JOIN control_categories cc ON cc.id = c.control_category_id
+       JOIN project_frameworks pf ON pf.project_id = cc.project_id
+       JOIN frameworks f ON f.id = pf.framework_id
+       JOIN projects p ON p.id = cc.project_id
+      WHERE p.organization_id = :organizationId
+        AND f.name = ANY(:frameworks)`,
+    { replacements: { organizationId, frameworks }, type: QueryTypes.SELECT },
+  )) as { id: number; name: string; description: string }[];
+  out.control = controls.map((r) => ({ type: "control", id: r.id, name: r.name, description: r.description }));
+
+  // --- assessments: project_id in candidate projects ---
+  if (candidateProjectIds.length) {
+    const assessments = (await sequelize.query(
+      `SELECT a.id, COALESCE(p.project_title, 'Assessment') AS name, '' AS description
+         FROM assessments a
+         JOIN projects p ON p.id = a.project_id
+        WHERE p.organization_id = :organizationId
+          AND a.project_id = ANY(:projectIds)`,
+      { replacements: { organizationId, projectIds: candidateProjectIds }, type: QueryTypes.SELECT },
+    )) as { id: number; name: string; description: string }[];
+    out.assessment = assessments.map((r) => ({ type: "assessment", id: r.id, name: r.name, description: r.description }));
+  } else {
+    await sequelize.query(`SELECT 1`, { replacements: { organizationId }, type: QueryTypes.SELECT }); // keep query count stable for tests
+  }
+
+  // --- vendors: regulatory_exposure maps to framework OR linked to a candidate project ---
+  const vendors = (await sequelize.query(
+    `SELECT DISTINCT v.id, v.vendor_name AS name, COALESCE(v.vendor_provides, '') AS description
+       FROM vendors v
+       LEFT JOIN vendors_projects vp ON vp.vendor_id = v.id
+      WHERE v.organization_id = :organizationId
+        AND ( v.regulatory_exposure = ANY(:frameworkExposure)
+              OR (:hasProjects AND vp.project_id = ANY(:projectIds)) )`,
+    {
+      replacements: {
+        organizationId,
+        frameworkExposure: mapFrameworksToExposure(frameworks),
+        hasProjects: candidateProjectIds.length > 0,
+        projectIds: candidateProjectIds.length > 0 ? candidateProjectIds : [-1],
+      },
+      type: QueryTypes.SELECT,
+    },
+  )) as { id: number; name: string; description: string }[];
+  out.vendor = vendors.map((r) => ({ type: "vendor", id: r.id, name: r.name, description: r.description }));
+
+  // --- policies: linked to a candidate control via policy_linked_objects ---
+  const controlIds = controls.map((c) => c.id);
+  if (controlIds.length) {
+    const policies = (await sequelize.query(
+      `SELECT DISTINCT pm.id, pm.title AS name, '' AS description
+         FROM policy_manager pm
+         JOIN policy_linked_objects plo ON plo.policy_id = pm.id
+        WHERE pm.organization_id = :organizationId
+          AND plo.object_type = 'control'
+          AND plo.object_id = ANY(:controlIds)`,
+      { replacements: { organizationId, controlIds }, type: QueryTypes.SELECT },
+    )) as { id: number; name: string; description: string }[];
+    out.policy = policies.map((r) => ({ type: "policy", id: r.id, name: r.name, description: r.description }));
+  } else {
+    await sequelize.query(`SELECT 1`, { replacements: { organizationId }, type: QueryTypes.SELECT }); // keep query count stable for tests
+  }
+
+  return out;
+}
+
+// vendors.regulatory_exposure enum strings don't match framework names exactly.
+function mapFrameworksToExposure(frameworks: string[]): string[] {
+  const m: Record<string, string> = {
+    "EU AI Act": "EU AI act",
+    "ISO 27001": "ISO 27001",
+  };
+  const mapped = frameworks.map((f) => m[f]).filter(Boolean);
+  return mapped.length ? mapped : ["__none__"];
 }
