@@ -14,6 +14,7 @@ import {
   getGlobalFeed,
   setGlobalFeeds,
   getMetaQuery,
+  normalizeSlug,
 } from "../utils/regulationsTracker.utils";
 import {
   fetchCountryDetail,
@@ -603,24 +604,64 @@ export async function triggerSync(req: Request, res: Response): Promise<any> {
 // GET /api/regulations-tracker/impact/:slug  [any authenticated user]
 // Returns the stored impact-analysis row for the org + country, plus a stale
 // flag computed by comparing the stored regulation_hash to the current catalog.
-// Returns 200/null when no analysis row exists yet.
+// Returns 200/null when no analysis row exists yet or impact is disabled.
 // ---------------------------------------------------------------------------
-export async function getImpactAnalysis(req: any, res: any) {
+export async function getImpactAnalysis(req: Request, res: Response): Promise<any> {
+  const fn = "getImpactAnalysis";
+  logProcessing({
+    description: "get regulation impact analysis",
+    functionName: fn,
+    fileName: file,
+    userId: req.userId!,
+    organizationId: req.organizationId!,
+  });
   try {
-    const { slug } = req.params;
-    const row = await getImpactRow(req.organizationId, slug);
-    if (!row) return res.status(200).json(STATUS_CODE[200](null));
+    // BUG 4: Honor the impact_enabled toggle — return null so the panel hides.
+    const settings = await getSettings(req.organizationId!);
+    if (settings.impact_enabled === false) {
+      await logSuccess({
+        eventType: "Read",
+        description: "impact analysis disabled — returning null",
+        functionName: fn,
+        fileName: file,
+        userId: req.userId!,
+        organizationId: req.organizationId!,
+      });
+      return res.status(200).json(STATUS_CODE[200](null));
+    }
+
+    // BUG 3: Normalize slug so reads agree with writes.
+    const slug = normalizeSlug(req.params.slug as string);
+    const row = await getImpactRow(req.organizationId!, slug);
+    if (!row) {
+      await logSuccess({
+        eventType: "Read",
+        description: "no impact analysis row yet",
+        functionName: fn,
+        fileName: file,
+        userId: req.userId!,
+        organizationId: req.organizationId!,
+      });
+      return res.status(200).json(STATUS_CODE[200](null));
+    }
     // Staleness: compare the hash that was current when analysis ran against
-    // the hash that is current in the catalog now. Real signature is
-    // getCountryRow(slug, organizationId) — both args required.
-    // Wrapped defensively so that test mocks which stub this util to {} still pass.
+    // the hash that is current in the catalog now. Wrapped defensively so that
+    // test mocks which stub this util to {} still pass.
     let stale = false;
     try {
-      const current = await getCountryRow(slug, req.organizationId);
+      const current = await getCountryRow(slug, req.organizationId!);
       stale = !!current && current.hash !== row.regulation_hash;
     } catch {
       // Unable to fetch current hash — treat as not stale rather than erroring.
     }
+    await logSuccess({
+      eventType: "Read",
+      description: "fetched impact analysis",
+      functionName: fn,
+      fileName: file,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
     return res.status(200).json(
       STATUS_CODE[200]({
         result: row.result,
@@ -630,6 +671,15 @@ export async function getImpactAnalysis(req: any, res: any) {
       }),
     );
   } catch (error) {
+    await logFailure({
+      eventType: "Read",
+      description: "get impact analysis failed",
+      functionName: fn,
+      fileName: file,
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
@@ -639,19 +689,54 @@ export async function getImpactAnalysis(req: any, res: any) {
 // Runs the full impact-analysis pipeline for the org + country and returns the
 // fresh result. Rate-limited at the route layer.
 // ---------------------------------------------------------------------------
-export async function refreshImpactAnalysis(req: any, res: any) {
+export async function refreshImpactAnalysis(req: Request, res: Response): Promise<any> {
+  const fn = "refreshImpactAnalysis";
+  logProcessing({
+    description: "refresh regulation impact analysis",
+    functionName: fn,
+    fileName: file,
+    userId: req.userId!,
+    organizationId: req.organizationId!,
+  });
   if (!isAdmin(req.role)) {
     return res.status(403).json(STATUS_CODE[403]("Admin access required"));
   }
   try {
-    const { slug } = req.params;
     const settings = await getSettings(req.organizationId!);
     if (settings.impact_enabled === false) {
+      await logSuccess({
+        eventType: "Update",
+        description: "impact analysis disabled — skipping refresh",
+        functionName: fn,
+        fileName: file,
+        userId: req.userId!,
+        organizationId: req.organizationId!,
+      });
       return res.status(200).json(STATUS_CODE[200]({ status: "disabled" }));
     }
-    const out = await runImpactAnalysis(req.organizationId, slug);
+    // BUG 3: Normalize slug.
+    // BUG 2: Pass force=true so admin re-analysis is never silently skipped by cache.
+    const slug = normalizeSlug(req.params.slug as string);
+    const out = await runImpactAnalysis(req.organizationId!, slug, true);
+    await logSuccess({
+      eventType: "Update",
+      description: "refreshed impact analysis",
+      functionName: fn,
+      fileName: file,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
     return res.status(200).json(STATUS_CODE[200](out));
   } catch (error) {
+    await logFailure({
+      eventType: "Update",
+      description: "refresh impact analysis failed",
+      functionName: fn,
+      fileName: file,
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }

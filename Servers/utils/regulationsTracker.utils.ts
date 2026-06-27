@@ -40,7 +40,7 @@ export function currentIsoWeek(date: Date): string {
   return `${d.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
 }
 
-function normalizeSlug(s: string): string {
+export function normalizeSlug(s: string): string {
   return String(s).trim().toLowerCase();
 }
 

@@ -378,6 +378,61 @@ describe("syncRegulationsTracker", () => {
     );
   });
 
+  // BUG 5: Cap counting — cache hits must NOT increment impactAnalysesRun so they
+  // don't starve countries that need real LLM analysis.
+  it("does not count cache hits against the per-run impact cap", async () => {
+    const mockRunImpact = impactUtils.runImpactAnalysis as jest.MockedFunction<
+      typeof impactUtils.runImpactAnalysis
+    >;
+    const mockGetLLMKeys = llmKeyUtils.getLLMKeysWithKeyQuery as jest.MockedFunction<
+      typeof llmKeyUtils.getLLMKeysWithKeyQuery
+    >;
+
+    // Org has a key → impact will be attempted.
+    mockGetLLMKeys.mockResolvedValue([{ key: "k", name: "OpenAI", url: null, model: "m" } as any]);
+
+    mockGetMeta.mockResolvedValue({
+      seeded_at: "2026-01-01",
+      last_good_count: 5,
+      last_run_week: OTHER_WEEK,
+    } as any);
+
+    // Two changed countries — fr (cached) and de (real LLM run)
+    const countries = [
+      { slug: "fr", name: "France", hash: "xyz", regulationCount: 2 },
+      { slug: "de", name: "Germany", hash: "abc", regulationCount: 1 },
+    ];
+    mockValidate.mockReturnValue(makeValidResult(countries));
+    mockUpsert.mockResolvedValue({
+      changed: [
+        { slug: "fr", name: "France", lines: ["status draft → enacted"], unstructured: false, changeCount: 1, changeDates: [] },
+        { slug: "de", name: "Germany", lines: ["status draft → enacted"], unstructured: false, changeCount: 1, changeDates: [] },
+      ],
+      newlyAdded: [],
+      newlyRemoved: [],
+      wasFirstSeed: false,
+    });
+    mockGetAffected.mockResolvedValue([
+      { organization_id: 42, country_slug: "fr", name: "France" },
+      { organization_id: 42, country_slug: "de", name: "Germany" },
+    ]);
+    mockResolveInApp.mockResolvedValue([99]);
+    mockResolveEmail.mockResolvedValue([]);
+    mockCreateNotification.mockResolvedValue(undefined as any);
+
+    // France is a cache hit, Germany is a real LLM run
+    mockRunImpact
+      .mockResolvedValueOnce({ status: "ok", counts: {}, cached: true } as any)   // France (cache)
+      .mockResolvedValueOnce({ status: "ok", counts: {}, cached: false } as any); // Germany (real)
+
+    await syncRegulationsTracker({ feed: DUMMY_FEED });
+
+    // runImpactAnalysis was called for both countries
+    expect(mockRunImpact).toHaveBeenCalledTimes(2);
+    // Both notifications sent (cap not hit; only 1 real run counted)
+    expect(mockCreateNotification).toHaveBeenCalledTimes(2);
+  });
+
   // 6. New-country awareness (#4): brand-new countries notify each org's admins.
   it("notifies org admins when a new country is added", async () => {
     mockGetMeta.mockResolvedValue({

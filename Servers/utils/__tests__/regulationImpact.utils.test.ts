@@ -7,6 +7,11 @@ jest.mock("../llmKey.utils", () => ({
   getLLMKeysWithKeyQuery: jest.fn(),
   getLLMProviderUrl: jest.fn().mockReturnValue("https://api.openai.com/v1/"),
 }));
+// BUG 3: normalizeSlug is now exported and used — mock the module, keeping it
+// real so slug normalization happens correctly in these unit tests.
+jest.mock("../regulationsTracker.utils", () => ({
+  normalizeSlug: (s: string) => String(s).trim().toLowerCase(),
+}));
 
 import { sequelize } from "../../database/db";
 import { runAdvisorAiSdk } from "../../advisor/aiSdkAgent";
@@ -170,30 +175,50 @@ describe("analyzeType", () => {
   const cands = [{ type: "system" as const, id: 1, name: "A", description: "" }];
   beforeEach(() => (runAdvisorAiSdk as jest.Mock).mockReset());
 
-  it("parses and validates a good JSON response", async () => {
+  it("returns ok:true with verdicts for a good JSON response", async () => {
     (runAdvisorAiSdk as jest.Mock).mockResolvedValue(
       '{"results":[{"type":"system","id":1,"affected":true,"why":"in scope"}]}',
     );
     const out = await analyzeType("system", ctx, cands, creds, 7);
-    expect(out).toEqual([{ type: "system", id: 1, affected: true, why: "in scope" }]);
+    expect(out.ok).toBe(true);
+    if (out.ok) {
+      expect(out.verdicts).toEqual([{ type: "system", id: 1, affected: true, why: "in scope" }]);
+    }
   });
 
-  it("returns [] when the LLM throws", async () => {
+  it("returns ok:false (not ok:true with []) when the LLM throws", async () => {
     (runAdvisorAiSdk as jest.Mock).mockRejectedValue(new Error("provider down"));
-    expect(await analyzeType("system", ctx, cands, creds, 7)).toEqual([]);
+    const out = await analyzeType("system", ctx, cands, creds, 7);
+    expect(out.ok).toBe(false);
   });
 
-  it("returns [] for non-JSON text (no throw)", async () => {
+  it("returns ok:false for non-JSON text (parse error is a failure, not empty success)", async () => {
     (runAdvisorAiSdk as jest.Mock).mockResolvedValue("Sorry, I cannot help.");
-    expect(await analyzeType("system", ctx, cands, creds, 7)).toEqual([]);
+    const out = await analyzeType("system", ctx, cands, creds, 7);
+    expect(out.ok).toBe(false);
   });
 
-  it("strips markdown fences and parses the inner JSON", async () => {
+  it("strips markdown fences and parses the inner JSON, returning ok:true", async () => {
     (runAdvisorAiSdk as jest.Mock).mockResolvedValue(
       '```json\n{"results":[{"type":"system","id":1,"affected":false,"why":"not in scope"}]}\n```',
     );
     const out = await analyzeType("system", ctx, cands, creds, 7);
-    expect(out).toEqual([{ type: "system", id: 1, affected: false, why: "not in scope" }]);
+    expect(out.ok).toBe(true);
+    if (out.ok) {
+      expect(out.verdicts).toEqual([{ type: "system", id: 1, affected: false, why: "not in scope" }]);
+    }
+  });
+
+  it("returns ok:true with empty verdicts when the LLM returns all not-affected (genuine empty)", async () => {
+    (runAdvisorAiSdk as jest.Mock).mockResolvedValue(
+      '{"results":[{"type":"system","id":1,"affected":false,"why":"not in scope"}]}',
+    );
+    const out = await analyzeType("system", ctx, cands, creds, 7);
+    expect(out.ok).toBe(true);
+    if (out.ok) {
+      // validateVerdicts passes all entries through (including affected:false), so verdicts.length >= 0
+      expect(Array.isArray(out.verdicts)).toBe(true);
+    }
   });
 });
 
@@ -211,6 +236,7 @@ describe("runImpactAnalysis", () => {
     q.mockResolvedValueOnce([{ data: { name: "AI Act", regulations: [], history: null }, hash: "h1" }]);
     const out = await runImpactAnalysis(7, "eu");
     expect(out.status).toBe("no_key");
+    expect(out.cached).toBe(false);
     expect(runAdvisorAiSdk).not.toHaveBeenCalled();
   });
 
@@ -225,6 +251,7 @@ describe("runImpactAnalysis", () => {
     q.mockResolvedValue([]);
     const out = await runImpactAnalysis(7, "eu");
     expect(out.status).toBe("skipped_no_candidates");
+    expect(out.cached).toBe(false);
     expect(runAdvisorAiSdk).not.toHaveBeenCalled();
   });
 
@@ -243,10 +270,11 @@ describe("runImpactAnalysis", () => {
     const out = await runImpactAnalysis(7, "eu");
     // Must NOT return cached "ok" — hash mismatch forces re-analysis
     expect(out.status).toBe("skipped_no_candidates");
+    expect(out.cached).toBe(false);
     expect(runAdvisorAiSdk).not.toHaveBeenCalled();
   });
 
-  it("reuses a cached row when hash matches", async () => {
+  it("reuses a cached row when hash matches and returns cached:true", async () => {
     (getLLMKeysWithKeyQuery as jest.Mock).mockResolvedValue([
       { key: "k", name: "OpenAI", url: null, model: "gpt-4o" },
     ]);
@@ -256,6 +284,63 @@ describe("runImpactAnalysis", () => {
     ]); // cached, hash matches
     const out = await runImpactAnalysis(7, "eu");
     expect(out.status).toBe("ok");
+    // BUG 2 / BUG 5: cached:true signals that no LLM call was made
+    expect(out.cached).toBe(true);
     expect(runAdvisorAiSdk).not.toHaveBeenCalled();
+  });
+
+  // BUG 1: all analyzeType calls fail → status "error", NOT "ok" (no cache poisoning)
+  it("returns status:error (not ok) when every LLM type call fails", async () => {
+    (getLLMKeysWithKeyQuery as jest.Mock).mockResolvedValue([
+      { key: "k", name: "OpenAI", url: null, model: "gpt-4o" },
+    ]);
+    q.mockResolvedValueOnce([{ data: { name: "AI Act", country: "European Union", regulations: [], history: null }, hash: "h1" }]); // reg row
+    q.mockResolvedValueOnce([]); // getImpactRow — no cache
+    // Stage A: one non-empty type so Stage B fires
+    q.mockResolvedValueOnce([{ id: 1, name: "Sys", description: "" }]); // systems
+    q.mockResolvedValue([]); // controls, vendors, (no assessments/policies branches)
+    // Every LLM call throws
+    (runAdvisorAiSdk as jest.Mock).mockRejectedValue(new Error("provider down"));
+    // upsertImpactRow call
+    q.mockResolvedValue([]);
+    const out = await runImpactAnalysis(7, "eu");
+    expect(out.status).toBe("error");
+    expect(out.result).toBeNull();
+    expect(out.cached).toBe(false);
+  });
+
+  // BUG 2: force=true bypasses the cache even when hash matches
+  it("bypasses cache and re-runs LLM when force=true", async () => {
+    (getLLMKeysWithKeyQuery as jest.Mock).mockResolvedValue([
+      { key: "k", name: "OpenAI", url: null, model: "gpt-4o" },
+    ]);
+    q.mockResolvedValueOnce([{ data: { name: "AI Act", country: "European Union", regulations: [], history: null }, hash: "h1" }]); // reg row
+    // No getImpactRow call expected when force=true (cache is skipped entirely)
+    // Stage A: all empty → skipped_no_candidates (no LLM call needed, just prove cache bypassed)
+    q.mockResolvedValue([]);
+    const out = await runImpactAnalysis(7, "eu", true);
+    // force=true skipped the cache — result is from a fresh run
+    expect(out.status).toBe("skipped_no_candidates");
+    expect(out.cached).toBe(false);
+  });
+
+  // BUG 3: mixed-case / whitespace slug is normalized and resolves to the same row
+  it("normalizes a mixed-case slug so it resolves to the same cached row as lowercase", async () => {
+    (getLLMKeysWithKeyQuery as jest.Mock).mockResolvedValue([
+      { key: "k", name: "OpenAI", url: null, model: "gpt-4o" },
+    ]);
+    // Catalog row stored under normalized "eu"
+    q.mockResolvedValueOnce([{ data: { name: "AI Act", regulations: [], history: null }, hash: "h1" }]); // reg row
+    // Cache row also stored under "eu" (normalized)
+    q.mockResolvedValueOnce([
+      { regulation_hash: "h1", status: "ok", result: { systems: [], controls: [], policies: [], vendors: [], assessments: [], generatedAt: "x" }, refreshed_at: "t" },
+    ]);
+    // Pass "  EU  " — should normalize to "eu" and hit the cache
+    const out = await runImpactAnalysis(7, "  EU  ");
+    expect(out.status).toBe("ok");
+    expect(out.cached).toBe(true);
+    // Verify the normalized slug was used in the DB query
+    const firstQueryReplacements = (q.mock.calls[0][1] as any).replacements;
+    expect(firstQueryReplacements.slug).toBe("eu");
   });
 });

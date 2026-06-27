@@ -9,6 +9,7 @@ jest.mock("../../utils/regulationsTracker.utils", () => ({
     slug: "eu",
     data: { name: "European Union", slug: "eu" },
     is_tracked: false,
+    hash: "h1",
   }),
   listTracked: jest.fn().mockResolvedValue([{ country_slug: "eu", name: "European Union" }]),
   trackCountry: jest.fn().mockResolvedValue({ tracked: true }),
@@ -40,10 +41,27 @@ jest.mock("../../utils/regulationsTracker.utils", () => ({
   getGlobalFeed: jest.fn().mockResolvedValue(null),
   setGlobalFeeds: jest.fn().mockResolvedValue(undefined),
   setLastImpactRunAt: jest.fn().mockResolvedValue(undefined),
+  // BUG 3: normalizeSlug exported — keep real behaviour in tests
+  normalizeSlug: (s: string) => String(s).trim().toLowerCase(),
 }));
 
 jest.mock("../../utils/llmKey.utils", () => ({
   getLLMKeysWithKeyQuery: jest.fn().mockResolvedValue([]),
+}));
+
+jest.mock("../../utils/regulationImpact.utils", () => ({
+  getImpactRow: jest.fn().mockResolvedValue({
+    regulation_hash: "h1",
+    status: "ok",
+    result: { systems: [], controls: [], policies: [], vendors: [], assessments: [], generatedAt: "x" },
+    refreshed_at: "2026-06-27T00:00:00.000Z",
+  }),
+  runImpactAnalysis: jest.fn().mockResolvedValue({
+    status: "ok",
+    result: { systems: [], controls: [], policies: [], vendors: [], assessments: [], generatedAt: "x" },
+    counts: { system: 0, control: 0, policy: 0, vendor: 0, assessment: 0 },
+    cached: false,
+  }),
 }));
 
 jest.mock("../../utils/regulationsTrackerFeed", () => ({
@@ -73,6 +91,8 @@ import {
   getSettingsCtrl,
   updateSettingsCtrl,
   triggerSync,
+  getImpactAnalysis,
+  refreshImpactAnalysis,
 } from "../regulationsTracker.ctrl";
 import {
   listCountries,
@@ -86,6 +106,7 @@ import {
   getMetaQuery,
 } from "../../utils/regulationsTracker.utils";
 import { getLLMKeysWithKeyQuery } from "../../utils/llmKey.utils";
+import { getImpactRow, runImpactAnalysis } from "../../utils/regulationImpact.utils";
 
 // ---------------------------------------------------------------------------
 // Global mock reset — prevents call counts from accumulating across tests
@@ -480,5 +501,100 @@ describe("updateSettingsCtrl with impact_enabled", () => {
     const res = mockRes();
     await updateSettingsCtrl(req, res);
     expect(upsertSettings).toHaveBeenCalledWith(7, [], [], 1, false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/regulations-tracker/impact/:slug
+// BUG 4: impact_enabled=false must return 200/null even when a row exists.
+// BUG 6: handler must have logProcessing / logSuccess / logFailure.
+// ---------------------------------------------------------------------------
+describe("getImpactAnalysis", () => {
+  it("returns 200 with the stored row when impact is enabled", async () => {
+    (getSettings as jest.Mock).mockResolvedValue({ impact_enabled: true });
+    const req: any = { userId: 1, organizationId: 7, params: { slug: "eu" } };
+    const res = mockRes();
+    await getImpactAnalysis(req, res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    const payload = (res.json as jest.Mock).mock.calls[0][0];
+    expect(payload.data).not.toBeNull();
+    expect(payload.data.status).toBe("ok");
+  });
+
+  // BUG 4: GET must honor impact_enabled toggle
+  it("returns 200/null when impact_enabled is false, even though a row exists", async () => {
+    (getSettings as jest.Mock).mockResolvedValue({ impact_enabled: false });
+    const req: any = { userId: 1, organizationId: 7, params: { slug: "eu" } };
+    const res = mockRes();
+    await getImpactAnalysis(req, res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    const payload = (res.json as jest.Mock).mock.calls[0][0];
+    // Must be null — impact disabled means no panel
+    expect(payload.data).toBeNull();
+    // getImpactRow must NOT have been called — settings check comes first
+    expect(getImpactRow).not.toHaveBeenCalled();
+  });
+
+  it("returns 200/null when no row exists yet", async () => {
+    (getSettings as jest.Mock).mockResolvedValue({ impact_enabled: true });
+    (getImpactRow as jest.Mock).mockResolvedValueOnce(null);
+    const req: any = { userId: 1, organizationId: 7, params: { slug: "eu" } };
+    const res = mockRes();
+    await getImpactAnalysis(req, res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect((res.json as jest.Mock).mock.calls[0][0].data).toBeNull();
+  });
+
+  it("returns 500 on unexpected error", async () => {
+    (getSettings as jest.Mock).mockRejectedValueOnce(new Error("db down"));
+    const req: any = { userId: 1, organizationId: 7, params: { slug: "eu" } };
+    const res = mockRes();
+    await getImpactAnalysis(req, res);
+    expect(res.status).toHaveBeenCalledWith(500);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/regulations-tracker/impact/:slug/refresh  [ADMIN]
+// BUG 2: refreshImpactAnalysis must call runImpactAnalysis with force=true.
+// BUG 6: handler must have logProcessing / logSuccess / logFailure.
+// ---------------------------------------------------------------------------
+describe("refreshImpactAnalysis", () => {
+  it("returns 403 for non-admin", async () => {
+    const req: any = { userId: 1, organizationId: 7, role: "Editor", params: { slug: "eu" } };
+    const res = mockRes();
+    await refreshImpactAnalysis(req, res);
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(runImpactAnalysis).not.toHaveBeenCalled();
+  });
+
+  it("returns 200/disabled when impact_enabled is false", async () => {
+    (getSettings as jest.Mock).mockResolvedValue({ impact_enabled: false });
+    const req: any = { userId: 1, organizationId: 7, role: "Admin", params: { slug: "eu" } };
+    const res = mockRes();
+    await refreshImpactAnalysis(req, res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect((res.json as jest.Mock).mock.calls[0][0].data.status).toBe("disabled");
+    expect(runImpactAnalysis).not.toHaveBeenCalled();
+  });
+
+  // BUG 2: force=true must be passed so admin refresh is never silently no-op'd
+  it("calls runImpactAnalysis with force=true for an Admin", async () => {
+    (getSettings as jest.Mock).mockResolvedValue({ impact_enabled: true });
+    const req: any = { userId: 1, organizationId: 7, role: "Admin", params: { slug: "eu" } };
+    const res = mockRes();
+    await refreshImpactAnalysis(req, res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    // Verify force=true was passed
+    expect(runImpactAnalysis).toHaveBeenCalledWith(7, "eu", true);
+  });
+
+  it("returns 500 on unexpected error", async () => {
+    (getSettings as jest.Mock).mockResolvedValue({ impact_enabled: true });
+    (runImpactAnalysis as jest.Mock).mockRejectedValueOnce(new Error("llm exploded"));
+    const req: any = { userId: 1, organizationId: 7, role: "Admin", params: { slug: "eu" } };
+    const res = mockRes();
+    await refreshImpactAnalysis(req, res);
+    expect(res.status).toHaveBeenCalledWith(500);
   });
 });

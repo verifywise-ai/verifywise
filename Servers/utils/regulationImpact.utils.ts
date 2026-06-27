@@ -3,6 +3,7 @@ import { QueryTypes } from "sequelize";
 import { runAdvisorAiSdk } from "../advisor/aiSdkAgent";
 import { logFailure } from "./logger/logHelper";
 import { getLLMKeysWithKeyQuery, getLLMProviderUrl } from "./llmKey.utils";
+import { normalizeSlug } from "./regulationsTracker.utils";
 
 export type EntityType = "system" | "control" | "policy" | "vendor" | "assessment";
 
@@ -256,13 +257,15 @@ function parseJsonLoose(text: string): unknown {
   return JSON.parse(body.slice(start, end + 1));
 }
 
+export type AnalyzeTypeResult = { ok: true; verdicts: LlmVerdict[] } | { ok: false };
+
 export async function analyzeType(
   type: EntityType,
   ctx: RegulationContext,
   candidates: Candidate[],
   creds: LlmCreds,
   tenant: number,
-): Promise<LlmVerdict[]> {
+): Promise<AnalyzeTypeResult> {
   try {
     const text = await runAdvisorAiSdk({
       apiKey: creds.apiKey,
@@ -275,7 +278,7 @@ export async function analyzeType(
       toolsDefinition: [],
       enableToolSubsetting: false,
     } as any);
-    return validateVerdicts(parseJsonLoose(text), candidates);
+    return { ok: true, verdicts: validateVerdicts(parseJsonLoose(text), candidates) };
   } catch (err) {
     const error = err instanceof Error ? err : new Error(String(err));
     await logFailure({
@@ -286,7 +289,7 @@ export async function analyzeType(
       error,
       userId: 0, // background job — no user context
     });
-    return [];
+    return { ok: false };
   }
 }
 
@@ -306,12 +309,13 @@ const RESULT_KEY: Record<EntityType, keyof Omit<ImpactResult, "generatedAt">> = 
 // ─── Persistence helpers ──────────────────────────────────────────────────────
 
 export async function getImpactRow(organizationId: number, slug: string) {
+  const normalizedSlug = normalizeSlug(slug);
   const rows = (await sequelize.query(
     `SELECT regulation_hash, status, result, refreshed_at
        FROM regulation_impact_analysis
       WHERE organization_id = :organizationId AND country_slug = :slug
       LIMIT 1`,
-    { replacements: { organizationId, slug }, type: QueryTypes.SELECT },
+    { replacements: { organizationId, slug: normalizedSlug }, type: QueryTypes.SELECT },
   )) as { regulation_hash: string; status: string; result: ImpactResult | null; refreshed_at: string }[];
   return rows[0] ?? null;
 }
@@ -368,21 +372,26 @@ export function buildContext(slug: string, data: any): RegulationContext {
 // ─── Orchestrator ─────────────────────────────────────────────────────────────
 
 export async function runImpactAnalysis(
-  organizationId: number, slug: string,
-): Promise<{ status: string; result: ImpactResult | null; counts: Record<EntityType, number> }> {
+  organizationId: number,
+  slug: string,
+  force = false,
+): Promise<{ status: string; result: ImpactResult | null; counts: Record<EntityType, number>; cached: boolean }> {
   const zeroCounts = (): Record<EntityType, number> => ({ system: 0, control: 0, policy: 0, vendor: 0, assessment: 0 });
+
+  // BUG 3: Normalize slug at the top so reads and writes always agree.
+  const normalizedSlug = normalizeSlug(slug);
 
   // load the global catalog row
   const regRows = (await sequelize.query(
     `SELECT data, hash FROM regulation_countries WHERE slug = :slug LIMIT 1`,
-    { replacements: { slug }, type: QueryTypes.SELECT },
+    { replacements: { slug: normalizedSlug }, type: QueryTypes.SELECT },
   )) as { data: any; hash: string }[];
-  if (!regRows.length) return { status: "error", result: null, counts: zeroCounts() };
+  if (!regRows.length) return { status: "error", result: null, counts: zeroCounts(), cached: false };
   const { data, hash } = regRows[0];
 
   // key gate
   const keys = await getLLMKeysWithKeyQuery(organizationId);
-  if (!keys.length) return { status: "no_key", result: null, counts: zeroCounts() };
+  if (!keys.length) return { status: "no_key", result: null, counts: zeroCounts(), cached: false };
   const k = keys[0];
   const creds: LlmCreds = {
     apiKey: k.key,
@@ -391,37 +400,49 @@ export async function runImpactAnalysis(
     provider: k.name,
   };
 
-  // cache check
-  const cached = await getImpactRow(organizationId, slug);
-  if (cached && cached.regulation_hash === hash && cached.status === "ok") {
-    return { status: "ok", result: cached.result, counts: countsFromResult(cached.result) };
+  // BUG 2: cache check — skipped when force=true (admin forced re-analysis).
+  if (!force) {
+    const cachedRow = await getImpactRow(organizationId, normalizedSlug);
+    if (cachedRow && cachedRow.regulation_hash === hash && cachedRow.status === "ok") {
+      return { status: "ok", result: cachedRow.result, counts: countsFromResult(cachedRow.result), cached: true };
+    }
   }
 
-  const ctx = buildContext(slug, data);
+  const ctx = buildContext(normalizedSlug, data);
   const candidates = await getCandidates(organizationId, ctx.country, { type: ctx.type, country: ctx.country });
 
   const nonEmpty = (Object.keys(candidates) as EntityType[]).filter((t) => candidates[t].length > 0);
   if (!nonEmpty.length) {
-    await upsertImpactRow(organizationId, slug, hash, "skipped_no_candidates", null, null);
-    return { status: "skipped_no_candidates", result: null, counts: zeroCounts() };
+    await upsertImpactRow(organizationId, normalizedSlug, hash, "skipped_no_candidates", null, null);
+    return { status: "skipped_no_candidates", result: null, counts: zeroCounts(), cached: false };
   }
 
   const verdictsByType = await Promise.all(
-    nonEmpty.map((t) => analyzeType(t, ctx, candidates[t], creds, organizationId).then((v) => [t, v] as const)),
+    nonEmpty.map((t) => analyzeType(t, ctx, candidates[t], creds, organizationId).then((r) => [t, r] as const)),
   );
+
+  // BUG 1: Only cache as "ok" if at least one type's LLM call actually succeeded.
+  // If every analyzeType returned { ok: false }, the result is all-empty due to
+  // LLM failures — cache as "error" rather than poisoning with a false "ok".
+  const allFailed = verdictsByType.every(([, r]) => !r.ok);
+  if (allFailed) {
+    await upsertImpactRow(organizationId, normalizedSlug, hash, "error", null, null);
+    return { status: "error", result: null, counts: zeroCounts(), cached: false };
+  }
 
   const result: ImpactResult = {
     systems: [], controls: [], policies: [], vendors: [], assessments: [],
     generatedAt: new Date().toISOString(),
   };
-  for (const [t, verdicts] of verdictsByType) {
+  for (const [t, r] of verdictsByType) {
+    if (!r.ok) continue; // skip failed types; partial success is acceptable
     const byId = new Map(candidates[t].map((c) => [c.id, c.name]));
-    for (const v of verdicts) {
+    for (const v of r.verdicts) {
       if (v.affected) result[RESULT_KEY[t]].push({ id: v.id, name: byId.get(v.id) ?? String(v.id), why: v.why });
     }
   }
-  await upsertImpactRow(organizationId, slug, hash, "ok", result, creds.model);
-  return { status: "ok", result, counts: countsFromResult(result) };
+  await upsertImpactRow(organizationId, normalizedSlug, hash, "ok", result, creds.model);
+  return { status: "ok", result, counts: countsFromResult(result), cached: false };
 }
 
 function countsFromResult(result: ImpactResult | null): Record<EntityType, number> {
