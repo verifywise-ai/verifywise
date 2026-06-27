@@ -277,13 +277,13 @@ export async function analyzeType(
     return validateVerdicts(parseJsonLoose(text), candidates);
   } catch (err) {
     const error = err instanceof Error ? err : new Error(String(err));
-    logFailure({
+    await logFailure({
       eventType: "Error",
       description: `impact analysis ${type} call failed: ${error.message}`,
       functionName: "analyzeType",
       fileName: "regulationImpact.utils.ts",
       error,
-      userId: 0,
+      userId: 0, // background job — no user context
     });
     return [];
   }
