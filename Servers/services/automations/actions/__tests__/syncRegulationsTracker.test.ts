@@ -433,6 +433,65 @@ describe("syncRegulationsTracker", () => {
     expect(mockCreateNotification).toHaveBeenCalledTimes(2);
   });
 
+  // BUG 5b: no_key and skipped_no_candidates must NOT increment impactAnalysesRun.
+  // A sync covering orgs with no LLM key or no matching candidates must not exhaust
+  // the per-run cap and starve later orgs that need real analysis.
+  it("does not count no_key or skipped_no_candidates passes against the per-run impact cap", async () => {
+    const mockRunImpact = impactUtils.runImpactAnalysis as jest.MockedFunction<
+      typeof impactUtils.runImpactAnalysis
+    >;
+    const mockGetLLMKeys = llmKeyUtils.getLLMKeysWithKeyQuery as jest.MockedFunction<
+      typeof llmKeyUtils.getLLMKeysWithKeyQuery
+    >;
+
+    mockGetLLMKeys.mockResolvedValue([{ key: "k", name: "OpenAI", url: null, model: "m" } as any]);
+
+    mockGetMeta.mockResolvedValue({
+      seeded_at: "2026-01-01",
+      last_good_count: 5,
+      last_run_week: OTHER_WEEK,
+    } as any);
+
+    // Three changed countries: no_key, skipped_no_candidates, then a real LLM run.
+    const countries = [
+      { slug: "aa", name: "Alpha", hash: "h1", regulationCount: 1 },
+      { slug: "bb", name: "Beta", hash: "h2", regulationCount: 1 },
+      { slug: "cc", name: "Gamma", hash: "h3", regulationCount: 1 },
+    ];
+    mockValidate.mockReturnValue(makeValidResult(countries));
+    mockUpsert.mockResolvedValue({
+      changed: [
+        { slug: "aa", name: "Alpha", lines: ["a"], unstructured: false, changeCount: 1, changeDates: [] },
+        { slug: "bb", name: "Beta", lines: ["b"], unstructured: false, changeCount: 1, changeDates: [] },
+        { slug: "cc", name: "Gamma", lines: ["c"], unstructured: false, changeCount: 1, changeDates: [] },
+      ],
+      newlyAdded: [],
+      newlyRemoved: [],
+      wasFirstSeed: false,
+    });
+    mockGetAffected.mockResolvedValue([
+      { organization_id: 42, country_slug: "aa", name: "Alpha" },
+      { organization_id: 42, country_slug: "bb", name: "Beta" },
+      { organization_id: 42, country_slug: "cc", name: "Gamma" },
+    ]);
+    mockResolveInApp.mockResolvedValue([99]);
+    mockResolveEmail.mockResolvedValue([]);
+    mockCreateNotification.mockResolvedValue(undefined as any);
+
+    // First two return non-LLM statuses (cached: false but no LLM call made)
+    mockRunImpact
+      .mockResolvedValueOnce({ status: "no_key", result: null, counts: {}, cached: false } as any)
+      .mockResolvedValueOnce({ status: "skipped_no_candidates", result: null, counts: {}, cached: false } as any)
+      .mockResolvedValueOnce({ status: "ok", counts: {}, cached: false } as any); // real LLM run
+
+    await syncRegulationsTracker({ feed: DUMMY_FEED });
+
+    // All three countries were processed — cap was NOT exhausted by the non-LLM passes
+    expect(mockRunImpact).toHaveBeenCalledTimes(3);
+    // Notifications sent for all three tracked orgs
+    expect(mockCreateNotification).toHaveBeenCalledTimes(3);
+  });
+
   // 6. New-country awareness (#4): brand-new countries notify each org's admins.
   it("notifies org admins when a new country is added", async () => {
     mockGetMeta.mockResolvedValue({

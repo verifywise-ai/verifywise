@@ -327,7 +327,12 @@ async function runSync(deps?: { feed?: unknown }): Promise<{
                   // BUG 5: Only count passes that actually called the LLM. Cache
                   // hits, no_key, and skipped statuses do not consume LLM capacity
                   // and must not burn the per-run cap.
-                  if (!impact.cached) impactAnalysesRun += 1;
+                  if (
+                    !impact.cached &&
+                    impact.status !== "no_key" &&
+                    impact.status !== "skipped_no_candidates"
+                  )
+                    impactAnalysesRun += 1;
                   if (impact.status === "ok") {
                     const parts: string[] = [];
                     if (impact.counts.system) parts.push(`${impact.counts.system} AI system(s) affected`);
