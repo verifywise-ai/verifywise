@@ -90,24 +90,41 @@ For a changed country (slug, mapped region, framework name(s) the regulation map
 ## 4. Timing — eager at sync time
 
 When the weekly sync (or admin `POST /sync`) detects a country change, the impact analysis runs inside
-the existing notification phase, which already loops exactly the orgs tracking the changed country.
+the existing notification phase of `syncRegulationsTracker.ts`. That phase is an **outer per-org loop**
+(`for (const [orgId, countries] of byOrg)`, ~line 262) with an **inner per-country loop**
+(`for (const c of countries)`, ~line 275). The impact-analysis hook sits at the **top of the inner
+loop**, before the per-user notification fan-out.
 
-For each such org:
-1. **Key check** — `getLLMKeysWithKeyQuery(organizationId)`. Empty → no analysis; append the no-key
-   nudge line to the org's change notification; continue.
-2. **Stage A** per entity type. All-empty → no LLM, store `status='skipped_no_candidates'`, plain
-   notification.
-3. **Stage B** — one call per non-empty type. Validate, persist, build the count-bearing notification.
-4. **Cache** keyed by `(organization_id, country_slug, regulation_hash)` — re-runs free until the hash
-   moves.
+**Per org (resolved once, at the top of the `byOrg` loop, before the country loop):**
+- `hasKey = (await getLLMKeysWithKeyQuery(orgId)).length > 0`. Resolve **once per org**, not per country
+  (the result also drives the no-key nudge in §7).
 
-**Isolation:** the whole per-org analysis is wrapped in its own try/catch. A bad key, provider outage,
-rate limit or malformed response → log, store `status='error'`, fall back to today's plain notification
-for that org, and continue. **A broken key never breaks the sync** (consistent with the module's
-existing try/catch-per-phase discipline).
+**Per (org, country) — inside the inner loop, only when `hasKey`:**
+1. **Fetch detail.** `CountryChange`/`c` carries only `lines[]`/`changeCount`/`changeDates` — NOT
+   obligations. Query `regulation_countries WHERE slug = :slug` for `data` (JSONB) + `hash` to get
+   `obligations[]`, `name`, `type`, `status`, `maxPenalty`, country name. (One query per changed country,
+   not per org — cache the detail in a `Map<slug, detail>` across the outer loop.)
+2. **Cache check.** If a `regulation_impact_analysis` row for `(orgId, slug)` already has
+   `regulation_hash === current hash` and `status='ok'`, reuse it — no LLM. (Covers re-runs and admin
+   refresh hitting an unchanged hash.)
+3. **Stage A** per entity type. All five empty → persist `status='skipped_no_candidates'`,
+   `result=NULL`; plain notification (today's `c.lines`, no counts).
+4. **Stage B** — one LLM call **per non-empty type**, the 5 calls run with `Promise.all` (bounded:
+   ≤5 concurrent per country). Validate, assemble `result`, upsert `status='ok'`.
+5. **Build the count-bearing notification message** from validated affected-only counts (§7).
 
-**Cost bounding:** only orgs tracking the changed country, only those with a key, only non-empty types,
-one batched call per type (not per entity), cached by hash.
+**Isolation (mandatory, not optional):** `runAdvisorAiSdk` **throws** on LLM error, and the whole
+notification phase sits inside a try/catch (line ~231) that calls `recordRunStatus("error")` and
+**rethrows** — so an unguarded throw here would mark the entire sync failed even though the catalogue
+write and other orgs' notifications succeeded. Therefore each per-(org,country) impact analysis is
+wrapped in its **own** try/catch: on any failure → log, upsert `status='error'`, `result=NULL`, and
+fall back to today's plain notification (org has a key, so **no** nudge line). Continue the loop.
+
+**Cost & latency bounding:** only orgs tracking the changed country, only those with a key, only
+non-empty types; ≤5 concurrent LLM calls per (org, country) via `Promise.all`; country detail fetched
+once per slug and memoised; cached by hash so re-runs are free. A **per-run safety cap**
+(`IMPACT_MAX_ANALYSES_PER_RUN`, default e.g. 200) bounds total LLM calls in one sync; analyses beyond
+the cap are skipped (logged), so a feed touching many countries can't fan out unboundedly.
 
 ---
 
@@ -141,7 +158,7 @@ hash/refreshed_at).
 
 | Method/path | Auth | Behaviour |
 |---|---|---|
-| `GET /countries/:slug/impact` | any authed user in org | Single JOIN'd query against `regulation_countries` returns `{ result, status, refreshed_at, stale }` where `stale = (stored regulation_hash ≠ current hash)`. `null`/404 when no analysis or org has no key. Read-only. |
+| `GET /countries/:slug/impact` | any authed user in org | Single JOIN'd query against `regulation_countries` returns `{ result, status, refreshed_at, stale }` where `stale = (stored regulation_hash ≠ current hash)`. Returns `200` with `null` when no analysis row exists (keyless orgs simply have no row — the endpoint does NOT probe key state). Read-only. |
 | `POST /countries/:slug/impact/refresh` | **Admin** | Manually re-run analysis against the current hash. Covers "I just set my key" / "I added a system." |
 
 - Admin guard: **first line in the controller**, reuse `isAdmin` helper (`regulationsTracker.ctrl.ts:26`),
@@ -157,9 +174,14 @@ hash/refreshed_at).
 
 ## 6. LLM contract (Stage B)
 
-Reuses the AI Advisor mechanism (NOT the AI Gateway): `getLLMKeysWithKeyQuery(organizationId)` for the
-key + provider/model/baseURL, `runAdvisorAiSdk(params)` for the non-streaming call. Decryption and the
-provider factory are handled by the advisor stack.
+Reuses the AI Advisor mechanism (NOT the AI Gateway): `getLLMKeysWithKeyQuery(organizationId)` returns
+the org's keys including the decrypted `key`, `name` (provider), `url`, `model`. We pick the first key
+(`clients[0]`, matching the advisor's default) and build `AiSdkAdvisorParams`:
+`{ apiKey: key, baseURL: url || getLLMProviderUrl(name), model, provider: name, tenant: orgId,
+userPrompt, availableTools: {}, toolsDefinition: [] }`. `userId`/`sessionId` omitted (no memory writes
+wanted). **No JSON mode exists** — we instruct JSON in the prompt and `JSON.parse` the returned string,
+guarded by try/catch. `runAdvisorAiSdk` returns `Promise<string>` and **throws** on any LLM/provider
+error — every call is inside the per-(org,country) try/catch from §4.
 
 **One call per entity type** (five types). A type with no Stage-A candidates is skipped. Each type's
 prompt uses the same six rules; only the type noun/verb and the closing instruction differ
@@ -223,10 +245,14 @@ boolean; `why` non-empty. Drop anything malformed or hallucinated. If the whole 
 - **Affected (key present):** the existing per-country deep-linked notification gains the headline
   counts ("4 AI systems affected, 9 controls need review …"), deep-linking to
   `/regulations-tracker/<slug>` where the full panel renders. Built from validated affected-only counts.
-- **Keyless org, change affects them:** the existing change notification gains **one appended line** —
-  "Configure an LLM key to see which of your AI systems, controls and vendors this affects." — deep-linking
-  to LLM key settings. Only appears when there's a real change AND the org has no key. No separate
-  notification, no nag flag.
+- **Keyless org, change affects them:** the per-(org,country) notification `message` (built at
+  ~line 294) gains **one appended line** — "Configure an LLM key to see which of your AI systems,
+  controls and vendors this affects." — deep-linking to LLM key settings. Gated on the per-org `hasKey`
+  flag resolved once at the top of the `byOrg` loop (§4), so the line is appended uniformly to every
+  affected country's message for that org. Only appears when there's a real change AND the org has no
+  key. No separate notification, no nag flag.
+- **Stage B errored (org has a key):** fall back to today's plain notification (`c.lines`) — no counts,
+  **no** nudge line (the org has a key; nudging would be wrong).
 
 ---
 
@@ -253,6 +279,12 @@ English-only, consistent with the rest of the module.
   add a `framework_id`/jurisdiction column to `policy_manager` or richer policy linking.
 - **No task creation / completion tracking / audit evidence** — these are the "Act" and "Prove" phases,
   deliberately out of V1.
+- **Soft-deleted (removed) countries keep their impact rows.** When a country is soft-deleted
+  (`is_active=false`), we do NOT delete its `regulation_impact_analysis` rows — they're harmless tenant
+  data and the country is already hidden from list/detail queries. The `org→organizations` FK
+  `ON DELETE CASCADE` still cleans up when an org is deleted.
+- **Per-run cap.** `IMPACT_MAX_ANALYSES_PER_RUN` bounds LLM fan-out in a single sync; over-cap analyses
+  are skipped and logged (no row written), and will be picked up on the next change or via admin refresh.
 
 ---
 
