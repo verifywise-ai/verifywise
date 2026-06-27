@@ -106,7 +106,7 @@ export interface CountryChange {
 // feed only carries structured change detail for the latest change, so this lets
 // us tell the user "changed N times since last check" with the dates, even
 // though we can only show the most recent change's specifics.
-function countChangesSince(
+export function countChangesSince(
   history: IManifestCountry["history"],
   storedHash: string | undefined,
 ): { count: number; dates: string[] } {
