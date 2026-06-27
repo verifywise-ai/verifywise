@@ -78,6 +78,12 @@ const RATE_LIMIT_CONFIGS: Record<string, RateLimitConfig> = {
     message:
       "Too many regulations-tracker sync requests, please wait a few minutes before checking again",
   },
+  regulationsTrackerImpact: {
+    windowMinutes: 5,
+    maxRequests: 10,
+    message:
+      "Too many impact-analysis refresh requests, please wait a few minutes before trying again",
+  },
 };
 
 /**
@@ -148,4 +154,12 @@ export const aiDetectionScanLimiter = createRateLimiter(RATE_LIMIT_CONFIGS.aiDet
  */
 export const regulationsTrackerSyncLimiter = createRateLimiter(
   RATE_LIMIT_CONFIGS.regulationsTrackerSync,
+);
+
+/**
+ * Rate limiter for the admin-triggered impact-analysis refresh. Each run can
+ * issue several LLM calls, so cap manual refreshes per 5-minute window.
+ */
+export const regulationsTrackerImpactLimiter = createRateLimiter(
+  RATE_LIMIT_CONFIGS.regulationsTrackerImpact,
 );

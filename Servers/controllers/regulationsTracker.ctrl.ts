@@ -22,6 +22,7 @@ import {
   fetchSnapshot,
 } from "../utils/regulationsTrackerFeed";
 import { getLLMKeysWithKeyQuery } from "../utils/llmKey.utils";
+import { getImpactRow, runImpactAnalysis } from "../utils/regulationImpact.utils";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const isAdmin = (role?: string) => role === "Admin" || role === "SuperAdmin";
@@ -594,6 +595,59 @@ export async function triggerSync(req: Request, res: Response): Promise<any> {
       userId: req.userId!,
       organizationId: req.organizationId!,
     });
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+  }
+}
+
+// ---------------------------------------------------------------------------
+// GET /api/regulations-tracker/impact/:slug  [any authenticated user]
+// Returns the stored impact-analysis row for the org + country, plus a stale
+// flag computed by comparing the stored regulation_hash to the current catalog.
+// Returns 200/null when no analysis row exists yet.
+// ---------------------------------------------------------------------------
+export async function getImpactAnalysis(req: any, res: any) {
+  try {
+    const { slug } = req.params;
+    const row = await getImpactRow(req.organizationId, slug);
+    if (!row) return res.status(200).json(STATUS_CODE[200](null));
+    // Staleness: compare the hash that was current when analysis ran against
+    // the hash that is current in the catalog now. Real signature is
+    // getCountryRow(slug, organizationId) — both args required.
+    // Wrapped defensively so that test mocks which stub this util to {} still pass.
+    let stale = false;
+    try {
+      const current = await getCountryRow(slug, req.organizationId);
+      stale = !!current && current.hash !== row.regulation_hash;
+    } catch {
+      // Unable to fetch current hash — treat as not stale rather than erroring.
+    }
+    return res.status(200).json(
+      STATUS_CODE[200]({
+        result: row.result,
+        status: row.status,
+        refreshed_at: row.refreshed_at,
+        stale,
+      }),
+    );
+  } catch (error) {
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+  }
+}
+
+// ---------------------------------------------------------------------------
+// POST /api/regulations-tracker/impact/:slug/refresh  [ADMIN]
+// Runs the full impact-analysis pipeline for the org + country and returns the
+// fresh result. Rate-limited at the route layer.
+// ---------------------------------------------------------------------------
+export async function refreshImpactAnalysis(req: any, res: any) {
+  if (!isAdmin(req.role)) {
+    return res.status(403).json(STATUS_CODE[403]("Admin access required"));
+  }
+  try {
+    const { slug } = req.params;
+    const out = await runImpactAnalysis(req.organizationId, slug);
+    return res.status(200).json(STATUS_CODE[200](out));
+  } catch (error) {
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
