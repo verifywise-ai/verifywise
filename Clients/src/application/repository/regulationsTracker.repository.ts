@@ -57,3 +57,7 @@ export async function getDeadlines(): Promise<any> {
 export async function getFrameworks(): Promise<any> {
   return (await apiServices.get(`${BASE}/frameworks`)).data;
 }
+
+export async function triggerSync(): Promise<any> {
+  return (await apiServices.post(`${BASE}/sync`, {})).data;
+}

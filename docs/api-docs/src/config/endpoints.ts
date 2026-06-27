@@ -7808,6 +7808,17 @@ export const regulationsTrackerEndpoints: Endpoint[] = [
     ],
     tag: "Regulations Tracker",
   },
+  {
+    method: 'POST',
+    path: '/regulations-tracker/sync',
+    summary: "Trigger Sync",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Regulations Tracker",
+  },
 ];
 
 // Reporting endpoints

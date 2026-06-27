@@ -72,6 +72,12 @@ const RATE_LIMIT_CONFIGS: Record<string, RateLimitConfig> = {
     maxRequests: 10,
     message: "Too many AI detection scan requests from this IP, please try again after 60 minutes",
   },
+  regulationsTrackerSync: {
+    windowMinutes: 5,
+    maxRequests: 5,
+    message:
+      "Too many regulations-tracker sync requests, please wait a few minutes before checking again",
+  },
 };
 
 /**
@@ -134,3 +140,12 @@ export const tokenRefreshLimiter = createRateLimiter(RATE_LIMIT_CONFIGS.tokenRef
  * Moderate limits as scans are resource-intensive
  */
 export const aiDetectionScanLimiter = createRateLimiter(RATE_LIMIT_CONFIGS.aiDetectionScan);
+
+/**
+ * Rate limiter for the admin-triggered "check for updates now" regulations sync.
+ * Each run hits the external feed plus up to ~60 detail fetches, so cap manual
+ * triggers to a few per 5-minute window.
+ */
+export const regulationsTrackerSyncLimiter = createRateLimiter(
+  RATE_LIMIT_CONFIGS.regulationsTrackerSync,
+);

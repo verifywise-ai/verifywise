@@ -12,6 +12,10 @@ import { sectionMjml, syncRegulationsTracker } from "../syncRegulationsTracker";
 jest.mock("../../../../utils/regulationsTrackerFeed", () => ({
   fetchManifest: jest.fn(),
   validateManifest: jest.fn(),
+  fetchCountryDetail: jest.fn().mockResolvedValue({ country: {}, meta: null }),
+  fetchHorizon: jest.fn().mockResolvedValue({ changes: [] }),
+  fetchDeadlines: jest.fn().mockResolvedValue({ deadlines: [], unscheduled: [] }),
+  fetchSnapshot: jest.fn().mockResolvedValue({ frameworks: [] }),
 }));
 
 jest.mock("../../../../utils/regulationsTracker.utils", () => {
@@ -21,8 +25,12 @@ jest.mock("../../../../utils/regulationsTracker.utils", () => {
     getMetaQuery: jest.fn(),
     upsertFeedTx: jest.fn(),
     getAffectedOrgsBySlugs: jest.fn(),
+    getAllOrgAdmins: jest.fn().mockResolvedValue([]),
     resolveEmailRecipients: jest.fn(),
     resolveInAppUserIds: jest.fn(),
+    getStoredHashes: jest.fn().mockResolvedValue(new Map()),
+    setGlobalFeeds: jest.fn().mockResolvedValue(undefined),
+    recordRunStatus: jest.fn().mockResolvedValue(undefined),
     // keep currentIsoWeek and escapeHtml real
     currentIsoWeek: actual.currentIsoWeek,
     escapeHtml: actual.escapeHtml,
@@ -79,10 +87,9 @@ const mockValidate = feedUtils.validateManifest as jest.MockedFunction<
 const mockSendEmail = emailService.sendAutomationEmail as jest.MockedFunction<
   typeof emailService.sendAutomationEmail
 >;
-const mockCreateNotification =
-  notificationUtils.createNotificationQuery as jest.MockedFunction<
-    typeof notificationUtils.createNotificationQuery
-  >;
+const mockCreateNotification = notificationUtils.createNotificationQuery as jest.MockedFunction<
+  typeof notificationUtils.createNotificationQuery
+>;
 
 // ---------------------------------------------------------------------------
 // Shared fixtures
@@ -162,6 +169,7 @@ describe("syncRegulationsTracker", () => {
     mockValidate.mockReturnValue(makeValidResult([country]));
     mockUpsert.mockResolvedValue({
       changed: [],
+      newlyAdded: [],
       newlyRemoved: [],
       wasFirstSeed: true,
     });
@@ -191,14 +199,14 @@ describe("syncRegulationsTracker", () => {
     const changedCountry: trackerUtils.CountryChange = {
       slug: "fr",
       name: "France",
-      lines: [
-        "AI Act: status draft → enacted",
-        "AI Act: effective date 2026-01-01 → 2026-06-01",
-      ],
+      lines: ["AI Act: status draft → enacted", "AI Act: effective date 2026-01-01 → 2026-06-01"],
       unstructured: false,
+      changeCount: 1,
+      changeDates: [],
     };
     mockUpsert.mockResolvedValue({
       changed: [changedCountry],
+      newlyAdded: [],
       newlyRemoved: [],
       wasFirstSeed: false,
     });
@@ -224,10 +232,16 @@ describe("syncRegulationsTracker", () => {
     expect(result.changed).toBe(1);
     expect(result.newlyRemoved).toBe(0);
 
-    // In-app notification created for user 99 in org 42.
+    // In-app notification created for user 99 in org 42, deep-linked to the
+    // country page, with the change detail in the message.
     expect(mockCreateNotification).toHaveBeenCalledTimes(1);
     expect(mockCreateNotification).toHaveBeenCalledWith(
-      expect.objectContaining({ user_id: 99 }),
+      expect.objectContaining({
+        user_id: 99,
+        action_url: "/regulations-tracker/fr",
+        entity_name: "France",
+        message: expect.stringContaining("status draft → enacted"),
+      }),
       42,
     );
 
@@ -248,5 +262,83 @@ describe("syncRegulationsTracker", () => {
     const expectedDetail = changedCountry.lines.join(", ");
     expect(vars.changedSection).toContain("France");
     expect(vars.changedSection).toContain(expectedDetail);
+  });
+
+  // 4. Multi-change note (#3): when a country changed more than once since last
+  //    check, the in-app message notes the count + dates.
+  it("notes multiple changes since last check in the in-app message", async () => {
+    mockGetMeta.mockResolvedValue({
+      seeded_at: "2026-01-01",
+      last_good_count: 5,
+      last_run_week: OTHER_WEEK,
+    } as any);
+    const country = { slug: "fr", name: "France", hash: "xyz", regulationCount: 2 };
+    mockValidate.mockReturnValue(makeValidResult([country]));
+    mockUpsert.mockResolvedValue({
+      changed: [
+        {
+          slug: "fr",
+          name: "France",
+          lines: ["AI Act: status draft → enacted"],
+          unstructured: false,
+          changeCount: 3,
+          changeDates: ["2026-06-10", "2026-05-02", "2026-04-01"],
+        },
+      ],
+      newlyAdded: [],
+      newlyRemoved: [],
+      wasFirstSeed: false,
+    });
+    mockGetAffected.mockResolvedValue([
+      { organization_id: 42, country_slug: "fr", name: "France" },
+    ] as any);
+    mockResolveInApp.mockResolvedValue([99]);
+    mockResolveEmail.mockResolvedValue([]);
+    mockCreateNotification.mockResolvedValue(undefined as any);
+
+    await syncRegulationsTracker({ feed: DUMMY_FEED });
+
+    expect(mockCreateNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining("changed 3 times since last check"),
+      }),
+      42,
+    );
+  });
+
+  // 5. New-country awareness (#4): brand-new countries notify each org's admins.
+  it("notifies org admins when a new country is added", async () => {
+    mockGetMeta.mockResolvedValue({
+      seeded_at: "2026-01-01",
+      last_good_count: 5,
+      last_run_week: OTHER_WEEK,
+    } as any);
+    const country = { slug: "newland", name: "Newland", hash: "n1", regulationCount: 1 };
+    mockValidate.mockReturnValue(makeValidResult([country]));
+    mockUpsert.mockResolvedValue({
+      changed: [],
+      newlyAdded: ["newland"],
+      newlyRemoved: [],
+      wasFirstSeed: false,
+    });
+    mockGetAffected.mockResolvedValue([]);
+    (trackerUtils.getAllOrgAdmins as jest.Mock).mockResolvedValue([
+      { organization_id: 7, user_id: 1 },
+      { organization_id: 7, user_id: 2 },
+    ]);
+    mockCreateNotification.mockResolvedValue(undefined as any);
+
+    await syncRegulationsTracker({ feed: DUMMY_FEED });
+
+    // Both admins of org 7 get a deep-linked "new jurisdiction" notification.
+    expect(mockCreateNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        user_id: 1,
+        action_url: "/regulations-tracker/newland",
+        title: expect.stringContaining("New jurisdiction"),
+      }),
+      7,
+    );
+    expect(mockCreateNotification).toHaveBeenCalledWith(expect.objectContaining({ user_id: 2 }), 7);
   });
 });

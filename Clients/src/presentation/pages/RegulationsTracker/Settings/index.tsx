@@ -12,13 +12,15 @@ import { useState, useEffect, useRef, useMemo } from "react";
 import { Box, Stack, Typography, CircularProgress } from "@mui/material";
 import ChipInput from "../../../components/Inputs/ChipInput";
 import AutoCompleteField from "../../../components/Inputs/Autocomplete";
-import { Lock } from "lucide-react";
+import { Lock, RefreshCw } from "lucide-react";
 import { EmptyState } from "../../../components/EmptyState";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
+import { CustomizableButton } from "../../../components/button/customizable-button";
 import { palette } from "../../../themes/palette";
 import {
   useSettings,
   useUpdateSettings,
+  useTriggerSync,
 } from "../../../../application/hooks/useRegulationsTracker";
 import useUsers from "../../../../application/hooks/useUsers";
 import { useAuth } from "../../../../application/hooks/useAuth";
@@ -36,7 +38,8 @@ export default function Settings() {
   const { data: settingsData, isLoading: settingsLoading } = useSettings();
   const { users, loading: usersLoading } = useUsers();
   const updateSettings = useUpdateSettings();
-  const { showError, AlertSlot } = useTrackerAlert();
+  const triggerSync = useTriggerSync();
+  const { showError, showSuccess, AlertSlot } = useTrackerAlert();
 
   const [recipientUserIds, setRecipientUserIds] = useState<number[]>([]);
   const [recipientEmails, setRecipientEmails] = useState<string[]>([]);
@@ -169,6 +172,32 @@ export default function Settings() {
                 </Box>
               )}
             </Typography>
+            <Box sx={{ mt: "12px" }}>
+              <CustomizableButton
+                text={triggerSync.isPending ? "Checking…" : "Check for updates now"}
+                variant="outlined"
+                size="small"
+                startIcon={<RefreshCw size={14} strokeWidth={1.5} />}
+                isDisabled={triggerSync.isPending}
+                onClick={() =>
+                  triggerSync.mutate(undefined, {
+                    onSuccess: (res) => {
+                      const r = res?.data ?? {};
+                      showSuccess(
+                        r.skipped
+                          ? `Check complete (${r.skipped}).`
+                          : `Check complete: ${r.changed ?? 0} changed, ${r.newlyRemoved ?? 0} removed.`,
+                        "Up to date",
+                      );
+                    },
+                    onError: () =>
+                      showError(
+                        "We couldn't check for updates right now. Please try again shortly.",
+                      ),
+                  })
+                }
+              />
+            </Box>
           </Box>
 
           <AutoCompleteField

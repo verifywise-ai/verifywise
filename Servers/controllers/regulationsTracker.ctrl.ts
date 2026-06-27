@@ -521,3 +521,49 @@ export async function getFrameworks(req: Request, res: Response): Promise<any> {
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
+
+// ---------------------------------------------------------------------------
+// POST /api/regulations-tracker/sync  [ADMIN]
+// On-demand "check for updates now". Bypasses the weekly-idempotency guard by
+// clearing last_run_week first, then runs the sync inline. Rate-limited at the
+// route layer.
+// ---------------------------------------------------------------------------
+export async function triggerSync(req: Request, res: Response): Promise<any> {
+  const fn = "triggerSync";
+  logProcessing({
+    description: "manual regulations sync",
+    functionName: fn,
+    fileName: file,
+    userId: req.userId!,
+    organizationId: req.organizationId!,
+  });
+  try {
+    if (!isAdmin(req.role)) return res.status(403).json(STATUS_CODE[403]("Admin access required"));
+    // Lazy import to avoid a controller -> automations import cycle at module load.
+    const { syncRegulationsTracker } =
+      await import("../services/automations/actions/syncRegulationsTracker");
+    const { clearLastRunWeek } = await import("../utils/regulationsTracker.utils");
+    await clearLastRunWeek();
+    const result = await syncRegulationsTracker();
+    await logSuccess({
+      eventType: "Update",
+      description: "manual regulations sync complete",
+      functionName: fn,
+      fileName: file,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(200).json(STATUS_CODE[200](result));
+  } catch (error) {
+    await logFailure({
+      eventType: "Update",
+      description: "manual regulations sync failed",
+      functionName: fn,
+      fileName: file,
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+  }
+}

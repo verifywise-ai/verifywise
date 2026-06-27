@@ -1,5 +1,6 @@
 import express from "express";
 import authenticateJWT from "../middleware/auth.middleware";
+import { regulationsTrackerSyncLimiter } from "../middleware/rateLimit.middleware";
 import {
   getCountries,
   getCountryDetail,
@@ -12,6 +13,7 @@ import {
   getHorizon,
   getDeadlines,
   getFrameworks,
+  triggerSync,
 } from "../controllers/regulationsTracker.ctrl";
 
 const router = express.Router();
@@ -27,5 +29,6 @@ router.put("/settings", authenticateJWT, updateSettingsCtrl);
 router.get("/horizon", authenticateJWT, getHorizon);
 router.get("/deadlines", authenticateJWT, getDeadlines);
 router.get("/frameworks", authenticateJWT, getFrameworks);
+router.post("/sync", authenticateJWT, regulationsTrackerSyncLimiter, triggerSync);
 
 export default router;

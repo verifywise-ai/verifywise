@@ -67,6 +67,12 @@ export async function getMetaQuery(): Promise<{
   );
 }
 
+// Clears the week-idempotency watermark so the very next sync run actually
+// fetches + diffs (used by the admin "check for updates now" trigger).
+export async function clearLastRunWeek(): Promise<void> {
+  await sequelize.query(`UPDATE regulation_tracker_meta SET last_run_week = NULL WHERE id = 1;`);
+}
+
 // Stamps the most recent sync attempt's time + outcome on the meta singleton.
 // Called at every exit point of the weekly job (skip / fail / success) so the
 // app can surface freshness and failures.
@@ -84,6 +90,38 @@ export interface CountryChange {
   name: string;
   lines: string[];
   unstructured: boolean;
+  /**
+   * Number of distinct assessments recorded in the feed's hashHistory since our
+   * previously-stored hash. 1 = a single change since last check; >1 means the
+   * country changed multiple times between our runs and only the latest change's
+   * detail is available from the feed.
+   */
+  changeCount: number;
+  /** ISO dates of those intervening assessments (newest first), for a timeline note. */
+  changeDates: string[];
+}
+
+// Given the feed country's hashHistory and our previously-stored hash, count how
+// many assessments are newer than the stored one and collect their dates. The
+// feed only carries structured change detail for the latest change, so this lets
+// us tell the user "changed N times since last check" with the dates, even
+// though we can only show the most recent change's specifics.
+function countChangesSince(
+  history: IManifestCountry["history"],
+  storedHash: string | undefined,
+): { count: number; dates: string[] } {
+  const hh = history?.hashHistory ?? [];
+  if (!hh.length) return { count: 1, dates: [] };
+  // hashHistory is chronological (oldest first). Find the stored hash; everything
+  // after it is new. If not found (or no stored hash), treat the latest entry as
+  // the single change we're reporting.
+  const idx = storedHash ? hh.findIndex((h) => h.hash === storedHash) : -1;
+  const newer = idx >= 0 ? hh.slice(idx + 1) : hh.slice(-1);
+  const dates = newer
+    .map((h) => h.date)
+    .filter((d): d is string => !!d)
+    .reverse(); // newest first
+  return { count: Math.max(newer.length, 1), dates };
 }
 
 // ---------------------------------------------------------------------------
@@ -153,10 +191,17 @@ export async function upsertFeedTx(
   // falls back to the manifest summary entry. Lets a fresh install / sync mirror
   // the website's full data instead of summary-only.
   detailBySlug?: Map<string, unknown>,
-): Promise<{ changed: CountryChange[]; newlyRemoved: string[]; wasFirstSeed: boolean }> {
-  if (!countries.length) return { changed: [], newlyRemoved: [], wasFirstSeed: false };
+): Promise<{
+  changed: CountryChange[];
+  newlyAdded: string[];
+  newlyRemoved: string[];
+  wasFirstSeed: boolean;
+}> {
+  if (!countries.length)
+    return { changed: [], newlyAdded: [], newlyRemoved: [], wasFirstSeed: false };
 
   const changed: CountryChange[] = [];
+  const newlyAdded: string[] = [];
   const newlyRemoved: string[] = [];
   let wasFirstSeed = false;
 
@@ -189,11 +234,14 @@ export async function upsertFeedTx(
         if (hashMoved) {
           const lc = c.history?.lastChange ?? null;
           const lines = (lc?.changes ?? []).map(renderChangeLine);
+          const { count, dates } = countChangesSince(c.history, existingHash);
           changed.push({
             slug,
             name: c.name,
             lines: lines.length ? lines : ["Updated — see source"],
             unstructured: lines.length === 0,
+            changeCount: count,
+            changeDates: dates,
           });
         }
         await sequelize.query(
@@ -215,6 +263,7 @@ export async function upsertFeedTx(
           },
         );
       } else {
+        newlyAdded.push(slug);
         await sequelize.query(
           `INSERT INTO regulation_countries
              (slug, name, region, regulation_count, data, hash, is_active, last_changed_at, last_fetched_at)
@@ -262,7 +311,7 @@ export async function upsertFeedTx(
     `[regulationsTracker] upsertFeedTx complete: changed=${changed.length}, removed=${newlyRemoved.length}, firstSeed=${wasFirstSeed}`,
   );
 
-  return { changed, newlyRemoved, wasFirstSeed };
+  return { changed, newlyAdded, newlyRemoved, wasFirstSeed };
 }
 
 // ---------------------------------------------------------------------------
@@ -450,4 +499,17 @@ export async function resolveInAppUserIds(organizationId: number): Promise<numbe
     { replacements: { organizationId }, type: QueryTypes.SELECT },
   )) as { id: number }[];
   return Array.from(new Set([...admins.map((a) => a.id), ...configured]));
+}
+
+// Every (org, admin user) pair across all organizations. Used to notify admins
+// when brand-new countries appear in the feed — those aren't tracked by anyone
+// yet, so the alert is org-agnostic (goes to each org's admins).
+export async function getAllOrgAdmins(): Promise<{ organization_id: number; user_id: number }[]> {
+  return (await sequelize.query(
+    `SELECT u.organization_id, u.id AS user_id
+     FROM users u
+     JOIN roles r ON r.id = u.role_id
+     WHERE r.name IN ('Admin', 'SuperAdmin');`,
+    { type: QueryTypes.SELECT },
+  )) as { organization_id: number; user_id: number }[];
 }

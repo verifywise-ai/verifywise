@@ -12,6 +12,7 @@ import {
   getHorizon,
   getDeadlines,
   getFrameworks,
+  triggerSync,
 } from "../repository/regulationsTracker.repository";
 
 const KEY = "regulations-tracker";
@@ -123,5 +124,17 @@ export function useFrameworks() {
     queryKey: [KEY, "frameworks"],
     queryFn: getFrameworks,
     placeholderData: keepPreviousData,
+  });
+}
+
+export function useTriggerSync() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: triggerSync,
+    onSuccess: () => {
+      // Refresh everything the sync may have changed: catalog, tracked list,
+      // the global feeds, and settings (which carries last-run status).
+      qc.invalidateQueries({ queryKey: [KEY] });
+    },
   });
 }

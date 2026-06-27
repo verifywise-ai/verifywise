@@ -15,6 +15,7 @@ import {
   setGlobalFeeds,
   recordRunStatus,
   getAffectedOrgsBySlugs,
+  getAllOrgAdmins,
   resolveEmailRecipients,
   resolveInAppUserIds,
   currentIsoWeek,
@@ -140,7 +141,7 @@ export async function syncRegulationsTracker(deps?: { feed?: unknown }): Promise
     }
   }
 
-  const { changed, newlyRemoved, wasFirstSeed } = await upsertFeedTx(
+  const { changed, newlyAdded, newlyRemoved, wasFirstSeed } = await upsertFeedTx(
     validated.countries,
     validated.presentSlugs,
     validated.rawCount,
@@ -194,6 +195,8 @@ export async function syncRegulationsTracker(deps?: { feed?: unknown }): Promise
       name: string;
       removed: boolean;
       lines: string[];
+      changeCount: number;
+      changeDates: string[];
     }
     const byOrg = new Map<number, OrgCountry[]>();
     for (const row of affected) {
@@ -201,7 +204,14 @@ export async function syncRegulationsTracker(deps?: { feed?: unknown }): Promise
       const name = row.name ?? row.country_slug;
       const removed = newlyRemoved.includes(row.country_slug);
       const ch = changeBySlug.get(row.country_slug);
-      list.push({ slug: row.country_slug, name, removed, lines: ch?.lines ?? [] });
+      list.push({
+        slug: row.country_slug,
+        name,
+        removed,
+        lines: ch?.lines ?? [],
+        changeCount: ch?.changeCount ?? 1,
+        changeDates: ch?.changeDates ?? [],
+      });
       byOrg.set(row.organization_id, list);
     }
 
@@ -222,11 +232,20 @@ export async function syncRegulationsTracker(deps?: { feed?: unknown }): Promise
           const title = c.removed
             ? `${c.name} removed from the regulations feed`
             : `AI regulations updated: ${c.name}`;
+          // When a country changed more than once since our last check, the feed
+          // only carries the latest change's detail — note the count + dates so
+          // the user knows to review the full history at the source.
+          const multiNote =
+            !c.removed && c.changeCount > 1
+              ? ` (changed ${c.changeCount} times since last check${
+                  c.changeDates.length ? `: ${c.changeDates.join(", ")}` : ""
+                }; showing the latest)`
+              : "";
           const message = c.removed
             ? `${c.name} is no longer in the regulations feed.`
-            : c.lines.length
-              ? c.lines.join("; ")
-              : "Regulations were updated — open to see the details.";
+            : (c.lines.length
+                ? c.lines.join("; ")
+                : "Regulations were updated — open to see the details.") + multiNote;
           for (const uid of userIds) {
             await createNotificationQuery(
               {
@@ -254,8 +273,52 @@ export async function syncRegulationsTracker(deps?: { feed?: unknown }): Promise
     }
   }
 
+  // New countries appeared in the feed. They aren't tracked by anyone yet, so
+  // notify each org's admins (in-app only) so they can decide whether to track.
+  let orgsNotifiedNew = 0;
+  if (newlyAdded.length) {
+    // Resolve display names from the validated feed (slug -> name).
+    const feedName = new Map(validated.countries.map((c) => [c.slug.trim().toLowerCase(), c.name]));
+    const addedNames = newlyAdded.map((s) => feedName.get(s) ?? s);
+    const admins = await getAllOrgAdmins();
+    const byOrgAdmins = new Map<number, number[]>();
+    for (const a of admins) {
+      const arr = byOrgAdmins.get(a.organization_id) ?? [];
+      arr.push(a.user_id);
+      byOrgAdmins.set(a.organization_id, arr);
+    }
+    const title =
+      newlyAdded.length === 1
+        ? `New jurisdiction added: ${addedNames[0]}`
+        : `${newlyAdded.length} new jurisdictions added`;
+    const message =
+      newlyAdded.length === 1
+        ? `${addedNames[0]} was added to the regulations catalogue. Track it to monitor its AI regulations.`
+        : `Added: ${addedNames.join(", ")}. Track the ones relevant to your organization.`;
+    const actionUrl =
+      newlyAdded.length === 1
+        ? `/regulations-tracker/${newlyAdded[0]}`
+        : "/regulations-tracker/browse";
+    for (const [orgId, userIds] of byOrgAdmins) {
+      for (const uid of userIds) {
+        await createNotificationQuery(
+          {
+            user_id: uid,
+            type: NotificationType.REGULATIONS_TRACKER,
+            title,
+            message,
+            entity_type: NotificationEntityType.REGULATION_COUNTRY,
+            action_url: actionUrl,
+          },
+          orgId,
+        );
+      }
+      orgsNotifiedNew++;
+    }
+  }
+
   logger.info(
-    `[regulations-tracker] done: fetched=${validated.countries.length} changed=${changed.length} removed=${newlyRemoved.length} emailed=${orgsEmailed} notified=${orgsNotified}`,
+    `[regulations-tracker] done: fetched=${validated.countries.length} added=${newlyAdded.length} changed=${changed.length} removed=${newlyRemoved.length} emailed=${orgsEmailed} notified=${orgsNotified} newCountryOrgs=${orgsNotifiedNew}`,
   );
   await recordRunStatus(`ok: ${changed.length} changed, ${newlyRemoved.length} removed`).catch(
     () => undefined,

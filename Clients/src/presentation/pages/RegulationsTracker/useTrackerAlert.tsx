@@ -26,6 +26,10 @@ export function useTrackerAlert() {
     setAlert({ variant: "error", title, body });
   }, []);
 
+  const showSuccess = useCallback((body: string, title = "Done") => {
+    setAlert({ variant: "success", title, body });
+  }, []);
+
   const AlertSlot = alert ? (
     <Box sx={{ position: "fixed", top: "16px", right: "16px", zIndex: 9999 }}>
       <Alert
@@ -38,5 +42,5 @@ export function useTrackerAlert() {
     </Box>
   ) : null;
 
-  return { showError, AlertSlot };
+  return { showError, showSuccess, AlertSlot };
 }

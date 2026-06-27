@@ -59,6 +59,7 @@ import {
   untrackCountryCtrl,
   getSettingsCtrl,
   updateSettingsCtrl,
+  triggerSync,
 } from "../regulationsTracker.ctrl";
 import {
   listCountries,
@@ -383,5 +384,17 @@ describe("updateSettingsCtrl", () => {
     await updateSettingsCtrl(req, res);
     expect(res.status).toHaveBeenCalledWith(200);
     expect(upsertSettings).toHaveBeenCalledWith(7, [2], ["dpo@acme.com"], 1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/regulations-tracker/sync  [ADMIN]
+// ---------------------------------------------------------------------------
+describe("triggerSync", () => {
+  it("returns 403 for a non-admin (gate fires before any sync work)", async () => {
+    const req: any = { userId: 1, organizationId: 7, role: "Editor" };
+    const res = mockRes();
+    await triggerSync(req, res);
+    expect(res.status).toHaveBeenCalledWith(403);
   });
 });

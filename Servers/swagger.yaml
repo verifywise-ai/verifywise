@@ -22914,6 +22914,20 @@ paths:
       security:
         -
           bearerAuth: []
+  /regulations-tracker/sync:
+    post:
+      summary: 'Trigger Sync'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Regulations Tracker'
+      operationId: regulations_tracker_triggerSync
+      security:
+        -
+          bearerAuth: []
   /health:
     get:
       tags:
