@@ -228,6 +228,24 @@ describe("runImpactAnalysis", () => {
     expect(runAdvisorAiSdk).not.toHaveBeenCalled();
   });
 
+  it("does NOT use stale cache when regulation_hash differs — proceeds to Stage A and returns skipped_no_candidates", async () => {
+    (getLLMKeysWithKeyQuery as jest.Mock).mockResolvedValue([
+      { key: "k", name: "OpenAI", url: null, model: "gpt-4o" },
+    ]);
+    // regulation_countries returns hash "h2" (new hash)
+    q.mockResolvedValueOnce([{ data: { name: "AI Act", country: "European Union", regulations: [], history: null }, hash: "h2" }]); // reg row
+    // getImpactRow returns a cached row with OLD hash "h1" and status "ok"
+    q.mockResolvedValueOnce([
+      { regulation_hash: "h1", status: "ok", result: { systems: [], controls: [], policies: [], vendors: [], assessments: [], generatedAt: "x" }, refreshed_at: "t" },
+    ]); // stale cached row
+    // Stage A: all candidate queries return empty
+    q.mockResolvedValue([]);
+    const out = await runImpactAnalysis(7, "eu");
+    // Must NOT return cached "ok" — hash mismatch forces re-analysis
+    expect(out.status).toBe("skipped_no_candidates");
+    expect(runAdvisorAiSdk).not.toHaveBeenCalled();
+  });
+
   it("reuses a cached row when hash matches", async () => {
     (getLLMKeysWithKeyQuery as jest.Mock).mockResolvedValue([
       { key: "k", name: "OpenAI", url: null, model: "gpt-4o" },

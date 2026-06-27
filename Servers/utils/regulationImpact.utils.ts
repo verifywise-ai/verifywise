@@ -325,7 +325,8 @@ async function upsertImpactRow(
        (organization_id, country_slug, regulation_hash, status, result, model, refreshed_at)
      VALUES (:organizationId, :slug, :hash, :status, :result::jsonb, :model, NOW())
      ON CONFLICT (organization_id, country_slug) DO UPDATE
-        SET status = EXCLUDED.status,
+        SET regulation_hash = EXCLUDED.regulation_hash,
+            status = EXCLUDED.status,
             result = EXCLUDED.result,
             model = EXCLUDED.model,
             refreshed_at = NOW()`,
@@ -345,7 +346,7 @@ export function buildContext(slug: string, data: any): RegulationContext {
   for (const r of regs) if (Array.isArray(r.obligations)) obligations.push(...r.obligations);
   const changeLines: string[] = [];
   const history = data?.history ?? null;
-  if (history?.lastChange?.changes) {
+  if (Array.isArray(history?.lastChange?.changes)) {
     for (const ch of history.lastChange.changes) {
       if (ch.field === "status") changeLines.push(`status: ${ch.from} → ${ch.to}`);
       else if (ch.field === "effectiveDate") changeLines.push(`effective date ${ch.from} → ${ch.to}`);
