@@ -1,8 +1,13 @@
 jest.mock("../../database/db", () => ({
   sequelize: { query: jest.fn() },
 }));
+jest.mock("../../advisor/aiSdkAgent", () => ({ runAdvisorAiSdk: jest.fn() }));
+jest.mock("../logger/logHelper", () => ({ logFailure: jest.fn() }));
+
 import { sequelize } from "../../database/db";
+import { runAdvisorAiSdk } from "../../advisor/aiSdkAgent";
 import { getCandidates } from "../regulationImpact.utils";
+import { buildUserPrompt, analyzeType, SYSTEM_PROMPTS } from "../regulationImpact.utils";
 
 import {
   regionForCountry,
@@ -126,5 +131,61 @@ describe("getCandidates", () => {
     for (const call of q.mock.calls) {
       expect(call[1].replacements.organizationId).toBe(42);
     }
+  });
+});
+
+const ctx = {
+  name: "AI Act", type: "EU AI Act", status: "in force", country: "European Union",
+  obligations: ["human oversight"], maxPenalty: "€35M", changeLines: ["status: draft → in force"],
+};
+
+describe("buildUserPrompt", () => {
+  it("includes regulation header, the change, and each candidate line", () => {
+    const p = buildUserPrompt("system", ctx, [
+      { type: "system", id: 1, name: "Resume Ranker", description: "hiring tool" },
+    ]);
+    expect(p).toContain("EU AI Act");
+    expect(p).toContain("status: draft → in force");
+    expect(p).toContain('id=1 "Resume Ranker"');
+  });
+});
+
+describe("SYSTEM_PROMPTS", () => {
+  it("has a prompt for every entity type with the conservative rule", () => {
+    for (const t of ["system", "control", "policy", "vendor", "assessment"] as const) {
+      expect(SYSTEM_PROMPTS[t]).toContain("conservative");
+    }
+  });
+});
+
+describe("analyzeType", () => {
+  const creds = { apiKey: "k", baseURL: "u", model: "m", provider: "OpenAI" as const };
+  const cands = [{ type: "system" as const, id: 1, name: "A", description: "" }];
+  beforeEach(() => (runAdvisorAiSdk as jest.Mock).mockReset());
+
+  it("parses and validates a good JSON response", async () => {
+    (runAdvisorAiSdk as jest.Mock).mockResolvedValue(
+      '{"results":[{"type":"system","id":1,"affected":true,"why":"in scope"}]}',
+    );
+    const out = await analyzeType("system", ctx, cands, creds, 7);
+    expect(out).toEqual([{ type: "system", id: 1, affected: true, why: "in scope" }]);
+  });
+
+  it("returns [] when the LLM throws", async () => {
+    (runAdvisorAiSdk as jest.Mock).mockRejectedValue(new Error("provider down"));
+    expect(await analyzeType("system", ctx, cands, creds, 7)).toEqual([]);
+  });
+
+  it("returns [] for non-JSON text (no throw)", async () => {
+    (runAdvisorAiSdk as jest.Mock).mockResolvedValue("Sorry, I cannot help.");
+    expect(await analyzeType("system", ctx, cands, creds, 7)).toEqual([]);
+  });
+
+  it("strips markdown fences and parses the inner JSON", async () => {
+    (runAdvisorAiSdk as jest.Mock).mockResolvedValue(
+      '```json\n{"results":[{"type":"system","id":1,"affected":false,"why":"not in scope"}]}\n```',
+    );
+    const out = await analyzeType("system", ctx, cands, creds, 7);
+    expect(out).toEqual([{ type: "system", id: 1, affected: false, why: "not in scope" }]);
   });
 });

@@ -1,5 +1,7 @@
 import { sequelize } from "../database/db";
 import { QueryTypes } from "sequelize";
+import { runAdvisorAiSdk } from "../advisor/aiSdkAgent";
+import { logFailure } from "./logger/logHelper";
 
 export type EntityType = "system" | "control" | "policy" | "vendor" | "assessment";
 
@@ -170,4 +172,119 @@ function mapFrameworksToExposure(frameworks: string[]): string[] {
   };
   const mapped = frameworks.map((f) => m[f]).filter(Boolean);
   return mapped.length ? mapped : ["__none__"];
+}
+
+// ─── Stage B: prompt assembly + per-type LLM call ───────────────────────────
+
+export interface RegulationContext {
+  name: string;
+  type: string;
+  status: string;
+  country: string;
+  obligations: string[];
+  maxPenalty: string;
+  changeLines: string[];
+}
+
+export interface LlmCreds {
+  apiKey: string;
+  baseURL: string;
+  model: string;
+  provider: "Anthropic" | "OpenAI" | "OpenRouter" | "Custom";
+}
+
+const TYPE_NOUN: Record<EntityType, string> = {
+  system: "AI systems",
+  control: "controls",
+  policy: "policies",
+  vendor: "vendors",
+  assessment: "assessments",
+};
+
+function systemPrompt(noun: string): string {
+  return [
+    `You are a compliance analyst assessing how a specific change to an AI regulation affects a list of an organisation's ${noun}.`,
+    `You will be given: the regulation's identity and country, the specific change that just occurred (not the whole regulation), and a numbered list of candidate entities, each with a type, id, name and description.`,
+    `For each candidate, decide whether this specific change plausibly creates new or altered obligations for that entity.`,
+    `Rules you must follow:`,
+    `1. Judge the change, not the regulation in general. An entity is "affected" only if the described change alters what the organisation must do about it.`,
+    `2. Be conservative — when unsure, mark not affected. A false "affected" wastes the team's time and erodes trust.`,
+    `3. Use only the information given. Do not assume facts about an entity beyond its description. Do not infer geography, sector or framework that isn't stated.`,
+    `4. Only reason about entities in the provided list. Never introduce an entity, id or name that was not given to you.`,
+    `5. For each affected entity, give one sentence stating the concrete reason, citing the specific obligation or change. No generic statements.`,
+    `6. If a candidate is not affected, still return it with affected:false and a short reason.`,
+    `Return ONLY valid JSON of the form {"results":[{"type":"...","id":N,"affected":true|false,"why":"..."}]}. No prose outside the JSON.`,
+  ].join("\n");
+}
+
+export const SYSTEM_PROMPTS: Record<EntityType, string> = {
+  system: systemPrompt(TYPE_NOUN.system),
+  control: systemPrompt(TYPE_NOUN.control),
+  policy: systemPrompt(TYPE_NOUN.policy),
+  vendor: systemPrompt(TYPE_NOUN.vendor),
+  assessment: systemPrompt(TYPE_NOUN.assessment),
+};
+
+export function buildUserPrompt(
+  type: EntityType,
+  ctx: RegulationContext,
+  candidates: Candidate[],
+): string {
+  const change = ctx.changeLines.length
+    ? ctx.changeLines.map((l) => `- ${l}`).join("\n")
+    : "- (no structured diff available)";
+  const cands = candidates
+    .map((c) => `[${c.type}] id=${c.id} "${c.name}" — ${c.description || "(no description)"}`)
+    .join("\n");
+  return [
+    `REGULATION: ${ctx.name} (${ctx.type}, ${ctx.status}) — ${ctx.country}`,
+    `THE CHANGE:\n${change}`,
+    `KEY OBLIGATIONS: ${ctx.obligations.join("; ") || "(none listed)"}`,
+    `MAX PENALTY: ${ctx.maxPenalty || "(not specified)"}`,
+    ``,
+    `CANDIDATE ENTITIES:\n${cands}`,
+  ].join("\n");
+}
+
+function parseJsonLoose(text: string): unknown {
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  const body = fenced ? fenced[1] : text;
+  const start = body.indexOf("{");
+  const end = body.lastIndexOf("}");
+  if (start === -1 || end === -1) throw new Error("no JSON object in response");
+  return JSON.parse(body.slice(start, end + 1));
+}
+
+export async function analyzeType(
+  type: EntityType,
+  ctx: RegulationContext,
+  candidates: Candidate[],
+  creds: LlmCreds,
+  tenant: number,
+): Promise<LlmVerdict[]> {
+  try {
+    const text = await runAdvisorAiSdk({
+      apiKey: creds.apiKey,
+      baseURL: creds.baseURL,
+      model: creds.model,
+      provider: creds.provider,
+      tenant,
+      userPrompt: `${SYSTEM_PROMPTS[type]}\n\n${buildUserPrompt(type, ctx, candidates)}`,
+      availableTools: {},
+      toolsDefinition: [],
+      enableToolSubsetting: false,
+    } as any);
+    return validateVerdicts(parseJsonLoose(text), candidates);
+  } catch (err) {
+    const error = err instanceof Error ? err : new Error(String(err));
+    logFailure({
+      eventType: "Error",
+      description: `impact analysis ${type} call failed: ${error.message}`,
+      functionName: "analyzeType",
+      fileName: "regulationImpact.utils.ts",
+      error,
+      userId: 0,
+    });
+    return [];
+  }
 }
