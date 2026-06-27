@@ -242,7 +242,11 @@ export default function Settings() {
             <Typography sx={{ fontSize: "13px", color: palette.text.primary }}>
               Analyse how regulation changes affect my organisation
             </Typography>
-            <Toggle checked={impactEnabled} onChange={(_e, checked) => setImpactEnabled(checked)} />
+            <Toggle
+              disabled={!isAdmin}
+              checked={impactEnabled}
+              onChange={(_e, checked) => setImpactEnabled(checked)}
+            />
           </Box>
 
           {/* LLM key status */}
