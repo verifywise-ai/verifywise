@@ -288,7 +288,7 @@ export default function CountryDetail() {
             size={16}
             strokeWidth={1.5}
             color={STALE_BANNER_ICON_COLOR}
-            style={{ flexShrink: 0, marginTop: 2 }}
+            style={{ flexShrink: 0, marginTop: "2px" }}
           />
           <Typography sx={{ fontSize: "13px", color: STALE_BANNER_TEXT_COLOR, lineHeight: 1.5 }}>
             This data may be outdated. The feed has not been refreshed recently for this country.
@@ -608,7 +608,7 @@ export default function CountryDetail() {
                   size={16}
                   strokeWidth={1.5}
                   color={STALE_BANNER_ICON_COLOR}
-                  style={{ flexShrink: 0, marginTop: 2 }}
+                  style={{ flexShrink: 0, marginTop: "2px" }}
                 />
                 <Box sx={{ flex: 1, minWidth: 0 }}>
                   <Typography
@@ -634,22 +634,20 @@ export default function CountryDetail() {
                 ["vendors", "Vendors impacted"],
                 ["assessments", "Assessments to update"],
               ] as const
-            ).map(([key, label]) =>
-              (impact.result as Record<string, { id: number; name: string; why: string }[]>)[key]
-                ?.length ? (
+            ).map(([key, label]) => {
+              const groups = impact.result as Record<
+                string,
+                { id: number; name: string; why: string }[]
+              >;
+              const entities = groups[key];
+              if (!entities?.length) return null;
+              return (
                 <Box key={key} sx={{ mb: "8px" }}>
                   <Typography sx={{ fontSize: "13px", fontWeight: 500, mb: "4px" }}>
-                    {
-                      (
-                        impact.result as Record<string, { id: number; name: string; why: string }[]>
-                      )[key].length
-                    }{" "}
-                    {label}
+                    {entities.length} {label}
                   </Typography>
                   <Stack sx={{ pl: "12px", gap: "4px" }}>
-                    {(impact.result as Record<string, { id: number; name: string; why: string }[]>)[
-                      key
-                    ].map((e) => (
+                    {entities.map((e) => (
                       <Typography
                         key={e.id}
                         sx={{ fontSize: "13px", color: palette.text.secondary, lineHeight: 1.5 }}
@@ -662,8 +660,8 @@ export default function CountryDetail() {
                     ))}
                   </Stack>
                 </Box>
-              ) : null,
-            )}
+              );
+            })}
           </SectionCard>
         )}
 
