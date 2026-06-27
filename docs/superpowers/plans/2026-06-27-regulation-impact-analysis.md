@@ -58,7 +58,7 @@ Tasks 1–2 are pure (table + pure helpers) — testable with zero DB. Task 3 (S
 - Create: `Servers/database/migrations/<ts>-create-regulation-impact-analysis-table.js`
 
 **Interfaces:**
-- Produces: table `verifywise.regulation_impact_analysis` with columns `id, organization_id, country_slug, regulation_hash, result (jsonb null), status, model, created_at, refreshed_at`, `UNIQUE(organization_id, country_slug)`.
+- Produces: table `verifywise.regulation_impact_analysis` with columns `id, organization_id, country_slug, regulation_hash, result (jsonb null), status, model, created_at, refreshed_at`, `UNIQUE(organization_id, country_slug)`; plus two new columns on `regulation_tracker_settings`: `impact_enabled BOOLEAN NOT NULL DEFAULT true`, `last_impact_run_at TIMESTAMPTZ`.
 
 - [ ] **Step 1: Generate the timestamp**
 
@@ -91,8 +91,19 @@ module.exports = {
       CREATE INDEX IF NOT EXISTS idx_reg_impact_org_slug
         ON verifywise.regulation_impact_analysis(organization_id, country_slug);
     `);
+    // Settings columns for the impact toggle + last-run line (§5a)
+    await queryInterface.sequelize.query(`
+      ALTER TABLE verifywise.regulation_tracker_settings
+        ADD COLUMN IF NOT EXISTS impact_enabled      BOOLEAN NOT NULL DEFAULT true,
+        ADD COLUMN IF NOT EXISTS last_impact_run_at  TIMESTAMPTZ;
+    `);
   },
   async down(queryInterface) {
+    await queryInterface.sequelize.query(`
+      ALTER TABLE verifywise.regulation_tracker_settings
+        DROP COLUMN IF EXISTS impact_enabled,
+        DROP COLUMN IF EXISTS last_impact_run_at;
+    `);
     await queryInterface.sequelize.query(`
       DROP TABLE IF EXISTS verifywise.regulation_impact_analysis;
     `);
@@ -946,6 +957,215 @@ git commit -m "feat(regulations-tracker): impact analysis orchestrator + persist
 
 ---
 
+### Task 5a: Settings backend — `impact_enabled`, `last_impact_run_at`, `has_llm_key`
+
+**Files:**
+- Modify: `Servers/utils/regulationsTracker.utils.ts` (`getSettings` ~line 404, `upsertSettings` ~line 420; add `setLastImpactRunAt`)
+- Modify: `Servers/controllers/regulationsTracker.ctrl.ts` (`getSettingsCtrl` ~line 325, `updateSettingsCtrl` ~line 370)
+- Test: `Servers/controllers/__tests__/regulationsTracker.ctrl.test.ts` (extend existing settings tests)
+
+**Interfaces:**
+- Consumes: `getLLMKeysWithKeyQuery` from `../utils/llmKey.utils`.
+- Produces:
+  - `getSettings` return gains `impact_enabled: boolean`, `last_impact_run_at: Date | null`.
+  - `upsertSettings(organizationId, userIds, emails, userId, impactEnabled?: boolean)` — new optional param; when omitted, preserves the existing value (COALESCE).
+  - `setLastImpactRunAt(organizationId: number): Promise<void>` — sets `last_impact_run_at = NOW()` for an org (no-op if no settings row exists yet — insert one).
+  - GET `/settings` response gains `impact_enabled`, `last_impact_run_at`, and computed `has_llm_key: boolean`.
+  - PUT `/settings` accepts optional `impact_enabled` boolean.
+
+- [ ] **Step 1: Write the failing controller test**
+
+Add to `Servers/controllers/__tests__/regulationsTracker.ctrl.test.ts` (the utils module is already mocked there — add the new fns to that mock and add `getLLMKeysWithKeyQuery` mock):
+
+```typescript
+// in the existing jest.mock("../../utils/regulationsTracker.utils", ...) add:
+//   getSettings: jest.fn(), upsertSettings: jest.fn(), getMetaQuery: jest.fn(),
+//   setLastImpactRunAt: jest.fn(),
+jest.mock("../../utils/llmKey.utils", () => ({
+  getLLMKeysWithKeyQuery: jest.fn(),
+}));
+import { getLLMKeysWithKeyQuery } from "../../utils/llmKey.utils";
+import { getSettings, upsertSettings, getMetaQuery } from "../../utils/regulationsTracker.utils";
+
+describe("getSettingsCtrl with impact fields", () => {
+  it("includes has_llm_key=true when the org has a key", async () => {
+    (getSettings as jest.Mock).mockResolvedValue({
+      recipient_user_ids: [], recipient_emails: [], updated_by: null, updated_at: null,
+      impact_enabled: true, last_impact_run_at: null,
+    });
+    (getMetaQuery as jest.Mock).mockResolvedValue({ last_run_at: null, last_run_status: null });
+    (getLLMKeysWithKeyQuery as jest.Mock).mockResolvedValue([{ key: "k" }]);
+    const req: any = { organizationId: 7, role: "Admin" };
+    const res = mockRes();
+    await getSettingsCtrl(req, res);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ has_llm_key: true, impact_enabled: true }) }),
+    );
+  });
+
+  it("has_llm_key=false when the org has no key", async () => {
+    (getSettings as jest.Mock).mockResolvedValue({
+      recipient_user_ids: [], recipient_emails: [], updated_by: null, updated_at: null,
+      impact_enabled: true, last_impact_run_at: null,
+    });
+    (getMetaQuery as jest.Mock).mockResolvedValue({ last_run_at: null, last_run_status: null });
+    (getLLMKeysWithKeyQuery as jest.Mock).mockResolvedValue([]);
+    const req: any = { organizationId: 7, role: "Admin" };
+    const res = mockRes();
+    await getSettingsCtrl(req, res);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ has_llm_key: false }) }),
+    );
+  });
+});
+
+describe("updateSettingsCtrl with impact_enabled", () => {
+  it("passes impact_enabled through to upsertSettings", async () => {
+    (upsertSettings as jest.Mock).mockResolvedValue({});
+    const req: any = {
+      organizationId: 7, userId: 1, role: "Admin",
+      body: { recipient_user_ids: [], recipient_emails: [], impact_enabled: false },
+    };
+    const res = mockRes();
+    await updateSettingsCtrl(req, res);
+    expect(upsertSettings).toHaveBeenCalledWith(7, [], [], 1, false);
+  });
+});
+```
+
+- [ ] **Step 2: Run to verify failure**
+
+Run: `cd Servers && npm run test -- --testPathPattern="regulationsTracker.ctrl"`
+Expected: FAIL — `has_llm_key` missing / `upsertSettings` arity mismatch.
+
+- [ ] **Step 3: Extend `getSettings` (add columns to SELECT + return)**
+
+In `Servers/utils/regulationsTracker.utils.ts`, change the `getSettings` SELECT and types:
+
+```typescript
+export async function getSettings(organizationId: number) {
+  const rows = (await sequelize.query(
+    `SELECT recipient_user_ids, recipient_emails, updated_by, updated_at,
+            impact_enabled, last_impact_run_at
+     FROM regulation_tracker_settings WHERE organization_id = :organizationId;`,
+    { replacements: { organizationId }, type: QueryTypes.SELECT },
+  )) as {
+    recipient_user_ids: number[] | null;
+    recipient_emails: string[] | null;
+    updated_by: number | null;
+    updated_at: Date | null;
+    impact_enabled: boolean | null;
+    last_impact_run_at: Date | null;
+  }[];
+  return (
+    rows[0] ?? {
+      recipient_user_ids: [], recipient_emails: [], updated_by: null, updated_at: null,
+      impact_enabled: true, last_impact_run_at: null,
+    }
+  );
+}
+```
+
+- [ ] **Step 4: Extend `upsertSettings` + add `setLastImpactRunAt`**
+
+```typescript
+export async function upsertSettings(
+  organizationId: number,
+  userIds: number[],
+  emails: string[],
+  userId: number,
+  impactEnabled?: boolean,
+) {
+  await sequelize.query(
+    `INSERT INTO regulation_tracker_settings
+       (organization_id, recipient_user_ids, recipient_emails, updated_by, updated_at, impact_enabled)
+     VALUES (:organizationId, :userIds::jsonb, :emails::jsonb, :userId, NOW(), COALESCE(:impactEnabled, true))
+     ON CONFLICT (organization_id) DO UPDATE SET
+       recipient_user_ids = :userIds::jsonb, recipient_emails = :emails::jsonb,
+       updated_by = :userId, updated_at = NOW(),
+       impact_enabled = COALESCE(:impactEnabled, regulation_tracker_settings.impact_enabled);`,
+    {
+      replacements: {
+        organizationId, userId,
+        userIds: JSON.stringify(userIds ?? []),
+        emails: JSON.stringify(emails ?? []),
+        impactEnabled: impactEnabled === undefined ? null : impactEnabled,
+      },
+    },
+  );
+  return getSettings(organizationId);
+}
+
+export async function setLastImpactRunAt(organizationId: number): Promise<void> {
+  await sequelize.query(
+    `INSERT INTO regulation_tracker_settings (organization_id, last_impact_run_at, updated_at)
+     VALUES (:organizationId, NOW(), NOW())
+     ON CONFLICT (organization_id) DO UPDATE SET last_impact_run_at = NOW();`,
+    { replacements: { organizationId } },
+  );
+}
+```
+
+- [ ] **Step 5: Extend the controllers**
+
+In `Servers/controllers/regulationsTracker.ctrl.ts`, add import:
+
+```typescript
+import { getLLMKeysWithKeyQuery } from "../utils/llmKey.utils";
+```
+
+In `getSettingsCtrl`, compute and merge `has_llm_key`:
+
+```typescript
+const settings = await getSettings(req.organizationId!);
+const meta = await getMetaQuery();
+let has_llm_key = false;
+try {
+  has_llm_key = (await getLLMKeysWithKeyQuery(req.organizationId!)).length > 0;
+} catch {
+  has_llm_key = false;
+}
+const data = {
+  ...settings,
+  last_run_at: meta.last_run_at,
+  last_run_status: meta.last_run_status,
+  has_llm_key,
+};
+return res.status(200).json(STATUS_CODE[200](data));
+```
+
+In `updateSettingsCtrl`, read + validate + pass `impact_enabled`:
+
+```typescript
+const impactEnabledRaw = req.body?.impact_enabled;
+const impactEnabled =
+  typeof impactEnabledRaw === "boolean" ? impactEnabledRaw : undefined;
+const result = await upsertSettings(
+  req.organizationId!,
+  recipientUserIds as number[],
+  recipientEmails as string[],
+  req.userId!,
+  impactEnabled,
+);
+return res.status(200).json(STATUS_CODE[200](result));
+```
+
+- [ ] **Step 6: Run tests + build**
+
+Run: `cd Servers && npm run test -- --testPathPattern="regulationsTracker.ctrl"`
+Expected: PASS.
+Run: `cd Servers && npm run build`
+Expected: clean.
+
+- [ ] **Step 7: Commit**
+
+```bash
+git add Servers/utils/regulationsTracker.utils.ts Servers/controllers/regulationsTracker.ctrl.ts Servers/controllers/__tests__/regulationsTracker.ctrl.test.ts
+git commit -m "feat(regulations-tracker): settings support for impact toggle, last-run, llm-key status"
+```
+
+---
+
 ### Task 6: Wire Stage A+B into the sync notification phase
 
 **Files:**
@@ -953,23 +1173,35 @@ git commit -m "feat(regulations-tracker): impact analysis orchestrator + persist
 - Test: `Servers/services/automations/actions/__tests__/syncRegulationsTracker.test.ts` (extend existing)
 
 **Interfaces:**
-- Consumes: `runImpactAnalysis` (Task 5), `getLLMKeysWithKeyQuery` (for the per-org `hasKey` flag).
+- Consumes: `runImpactAnalysis` (Task 5), `getLLMKeysWithKeyQuery` (for the per-org `hasKey` flag), `getSettings` + `setLastImpactRunAt` (Task 5a, for the `impact_enabled` gate + last-run bump).
 
 - [ ] **Step 1: Read the existing sync test + the loop**
 
 Run: `cd Servers && sed -n '255,320p' services/automations/actions/syncRegulationsTracker.ts`
 Confirm the variable names `byOrg`, `orgId`, `countries`, `c`, `userIds`, the `createNotificationQuery` call, and the `message`/`title` construction. (The plan below assumes `message` is a `let` built per country; if it is `const`, change it to `let` so the nudge/counts can be appended.)
 
-- [ ] **Step 2: Add the per-org key check + per-country analysis**
+- [ ] **Step 2: Add the per-org key + enable check, and a per-org "ran any" flag**
 
 At the top of the `for (const [orgId, countries] of byOrg)` body (before the `userIds` resolution), insert:
 
 ```typescript
 let orgHasKey = false;
+let impactEnabled = true;
+let impactRan = false; // becomes true if at least one impact pass executes this run
 try {
   orgHasKey = (await getLLMKeysWithKeyQuery(orgId)).length > 0;
+  const orgSettings = await getSettings(orgId);
+  impactEnabled = orgSettings.impact_enabled !== false; // default ON
 } catch {
   orgHasKey = false;
+}
+```
+
+At the END of the `for (const [orgId, countries] of byOrg)` body (after the email send), bump the last-run timestamp if any impact pass ran:
+
+```typescript
+if (impactRan) {
+  try { await setLastImpactRunAt(orgId); } catch { /* best-effort */ }
 }
 ```
 
@@ -978,7 +1210,8 @@ Inside `for (const c of countries)` (before the `for (const uid of userIds)` fan
 ```typescript
 let impactSuffix = "";
 if (!c.removed) {
-  if (orgHasKey) {
+  if (orgHasKey && impactEnabled) {
+    impactRan = true;
     try {
       const impact = await runImpactAnalysis(orgId, c.slug);
       if (impact.status === "ok") {
@@ -998,7 +1231,9 @@ if (!c.removed) {
         fileName: "syncRegulationsTracker.ts",
       });
     }
-  } else {
+  } else if (!orgHasKey) {
+    // keyless org → nudge to configure a key. A key-having org that toggled
+    // impact OFF (impactEnabled === false) gets NEITHER panel NOR nudge — they chose.
     impactSuffix =
       "\n\nConfigure an LLM key to see which of your AI systems, controls and vendors this affects.";
   }
@@ -1018,9 +1253,10 @@ const message = `${/* existing message body, e.g. c.lines.join("\n") */ baseMess
 ```typescript
 import { runImpactAnalysis } from "../../../utils/regulationImpact.utils";
 import { getLLMKeysWithKeyQuery } from "../../../utils/llmKey.utils";
+import { getSettings, setLastImpactRunAt } from "../../../utils/regulationsTracker.utils";
 ```
 
-(Adjust the relative depth to match the file's existing imports — it is under `Servers/services/automations/actions/`.)
+(Adjust the relative depth to match the file's existing imports — it is under `Servers/services/automations/actions/`. `getSettings` may already be imported in this file — if so, just add `setLastImpactRunAt` to the existing import.)
 
 - [ ] **Step 4: Extend the sync test — assert a bad LLM key never breaks the sync**
 
@@ -1434,6 +1670,98 @@ git commit -m "feat(regulations-tracker): impact panel on country detail page"
 
 ---
 
+### Task 10a: Frontend — Settings page (toggle + status lines)
+
+**Files:**
+- Modify: `Clients/src/presentation/pages/RegulationsTracker/Settings/index.tsx`
+
+**Interfaces:**
+- Consumes: the existing `useSettings` / `useUpdateSettings` hooks (their response now carries `impact_enabled`, `last_impact_run_at`, `has_llm_key`; the PUT accepts `impact_enabled`).
+
+The Settings data shape gains: `impact_enabled: boolean`, `last_impact_run_at: string | null`, `has_llm_key: boolean`. The page already auto-saves recipients debounced via `useUpdateSettings`; the toggle joins that same save path.
+
+- [ ] **Step 1: Add the Toggle (new pattern on this page)**
+
+Import the VerifyWise `Toggle` (mirror its use from another page):
+
+```typescript
+import Toggle from "../../../components/Inputs/Toggle";
+```
+
+Add local state seeded from settings, and include `impact_enabled` in the debounced save payload alongside `recipient_user_ids`/`recipient_emails`:
+
+```tsx
+const [impactEnabled, setImpactEnabled] = useState<boolean>(true);
+useEffect(() => {
+  if (settings?.impact_enabled !== undefined) setImpactEnabled(settings.impact_enabled);
+}, [settings?.impact_enabled]);
+
+// in the same debounced effect that already PUTs recipients, add impact_enabled:
+updateSettings.mutate({
+  recipient_user_ids: recipientUserIds,
+  recipient_emails: recipientEmails,
+  impact_enabled: impactEnabled,
+});
+```
+
+Render the toggle row (admin view), label translated:
+
+```tsx
+<Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mt: "16px" }}>
+  <Typography>{t("regulationsTracker.settings.impactToggle", "Analyse how regulation changes affect my organisation")}</Typography>
+  <Toggle checked={impactEnabled} onChange={(_e, v) => setImpactEnabled(v)} />
+</Box>
+```
+
+> **Note:** match the exact `Toggle` prop names to the component's actual signature (`checked`/`onChange` vs `value`/`onToggle`) — open `components/Inputs/Toggle/index.tsx` and adapt. The `useUpdateSettings` mutation's payload type may need `impact_enabled?: boolean` added to its TS type.
+
+- [ ] **Step 2: Add the LLM-key status indicator (read-only)**
+
+```tsx
+{!settings?.has_llm_key && (
+  <Alert severity="info" sx={{ mt: "8px" }}>
+    {t("regulationsTracker.settings.noKey", "Configure an LLM key to enable impact analysis.")}{" "}
+    <Link href="/settings" >{t("regulationsTracker.settings.noKeyLink", "Configure key")}</Link>
+  </Alert>
+)}
+{settings?.has_llm_key && (
+  <Typography variant="body2" sx={{ mt: "8px", color: "#13715B" }}>
+    {t("regulationsTracker.settings.keyActive", "Impact analysis: active")}
+  </Typography>
+)}
+```
+
+> **Note:** point the `Link href` at the real LLM-keys settings route (check the app's route for the AI Advisor / LLM keys page; adjust from the `/settings` placeholder).
+
+- [ ] **Step 3: Add the "Last impact run" line (read-only)**
+
+```tsx
+<Typography variant="body2" sx={{ mt: "8px" }}>
+  {settings?.last_impact_run_at
+    ? t("regulationsTracker.settings.lastImpactRun", "Impact analysis last ran:") + " " +
+      new Date(settings.last_impact_run_at).toLocaleString()
+    : t("regulationsTracker.settings.lastImpactNever", "Impact analysis has not run yet.")}
+</Typography>
+```
+
+- [ ] **Step 4: Add i18n keys**
+
+Add to `i18n/translations.ts` (en/de/fr/es): `regulationsTracker.settings.impactToggle`, `.noKey`, `.noKeyLink`, `.keyActive`, `.lastImpactRun`, `.lastImpactNever`.
+
+- [ ] **Step 5: Typecheck + i18n audit + format**
+
+Run: `cd Clients && npm run typecheck && npm run i18n:audit:strict && npm run format-check`
+Expected: clean. (Run `npm run format` if format-check flags.)
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add Clients/src/presentation/pages/RegulationsTracker/Settings/index.tsx Clients/src/**/i18n/translations.ts
+git commit -m "feat(regulations-tracker): settings toggle + llm-key status + last-impact-run line"
+```
+
+---
+
 ### Task 11: Docs — update the module reference
 
 **Files:**
@@ -1441,7 +1769,7 @@ git commit -m "feat(regulations-tracker): impact panel on country detail page"
 
 - [ ] **Step 1: Append an "Impact analysis" section**
 
-Add a section to `docs/technical/domains/regulations-tracker.md` documenting: the new table, the two endpoints (with the route-ordering caveat), the Stage A/Stage B funnel, the LLM-key gating, the sync hook point, and the V1 limitations (country→region coarseness, standalone policies unmatched). Move the spec's §9 limitations into the "open items" of that doc. Keep it factual and short — mirror the existing doc's tone.
+Add a section to `docs/technical/domains/regulations-tracker.md` documenting: the new table, the two new `regulation_tracker_settings` columns (`impact_enabled`, `last_impact_run_at`), the two impact endpoints (with the route-ordering caveat), the `/settings` additions (`impact_enabled`, `last_impact_run_at`, computed `has_llm_key`), the Stage A/Stage B funnel, the LLM-key gating + the enable toggle, the sync hook point, and the V1 limitations (country→region coarseness, standalone policies unmatched). Move the spec's §9 limitations into the "open items" of that doc. Keep it factual and short — mirror the existing doc's tone.
 
 - [ ] **Step 2: Update the "Last updated" date and commit**
 
@@ -1459,7 +1787,9 @@ git commit -m "docs(regulations-tracker): document impact analysis (table, endpo
 - [ ] `cd Servers && npm run test -- --testPathPattern="syncRegulationsTracker"` — green
 - [ ] `cd Clients && npm run typecheck && npm run i18n:audit:strict && npm run format-check` — clean
 - [ ] Manual smoke: configure an LLM key for the dev org, run admin `POST /sync` (or `POST /countries/<slug>/impact/refresh`), open a tracked changed country's detail page → Impact panel renders with at least one "why".
-- [ ] Manual smoke: an org with NO key → no panel, notification carries the "Configure an LLM key…" line.
+- [ ] Manual smoke: an org with NO key → no panel, notification carries the "Configure an LLM key…" line; Settings shows the "Configure an LLM key" indicator + "not run yet".
+- [ ] Manual smoke: toggle impact analysis OFF in Settings for a key-having org → next sync produces NO impact panel and NO nudge for that org; toggle back ON restores it.
+- [ ] Manual smoke: after a run, Settings "Last impact run" shows a recent timestamp.
 
 ---
 

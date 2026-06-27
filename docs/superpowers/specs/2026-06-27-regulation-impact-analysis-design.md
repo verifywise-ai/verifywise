@@ -98,8 +98,13 @@ loop**, before the per-user notification fan-out.
 **Per org (resolved once, at the top of the `byOrg` loop, before the country loop):**
 - `hasKey = (await getLLMKeysWithKeyQuery(orgId)).length > 0`. Resolve **once per org**, not per country
   (the result also drives the no-key nudge in §7).
+- `impactEnabled` — read from `regulation_tracker_settings.impact_enabled` (default `true`; see §5a).
+  When a key exists but `impactEnabled === false`, the org has **opted out**: skip Stage A/B entirely
+  and emit today's plain notification with **no** counts and **no** nudge (they made a choice).
+- After the country loop, if any impact pass ran for the org, set
+  `regulation_tracker_settings.last_impact_run_at = NOW()` (the Settings "Last impact run" line, §5a).
 
-**Per (org, country) — inside the inner loop, only when `hasKey`:**
+**Per (org, country) — inside the inner loop, only when `hasKey && impactEnabled`:**
 1. **Fetch detail.** `CountryChange`/`c` carries only `lines[]`/`changeCount`/`changeDates` — NOT
    obligations. Query `regulation_countries WHERE slug = :slug` for `data` (JSONB) + `hash` to get
    `obligations[]`, `name`, `type`, `status`, `maxPenalty`, country name. (One query per changed country,
@@ -169,6 +174,39 @@ hash/refreshed_at).
 - Response helper: `STATUS_CODE[200](data)` (always 200 for success). Errors `STATUS_CODE[500]((error as Error).message)`.
 - The sync job writes rows via the same util the refresh endpoint calls (`runImpactAnalysis(orgId, country)`);
   the GET endpoint only ever reads.
+
+---
+
+## 5a. Settings page additions
+
+Three items are added to the existing Regulations Tracker **Settings** page (admin view). They reuse the
+existing tenant settings table `regulation_tracker_settings` and the existing GET/PUT `/settings`
+endpoints — no new settings endpoint.
+
+**Schema changes** (migration adds two columns to `regulation_tracker_settings`):
+- `impact_enabled BOOLEAN NOT NULL DEFAULT true` — existing rows light up enabled.
+- `last_impact_run_at TIMESTAMPTZ` (nullable) — bumped by the sync after an org's impact pass.
+
+**GET `/settings` response gains:**
+- `impact_enabled` (boolean) — from the row.
+- `last_impact_run_at` (timestamp | null) — from the row.
+- `has_llm_key` (boolean) — **computed** at request time via `getLLMKeysWithKeyQuery(org).length > 0`,
+  never stored (always reflects reality, no drift).
+
+**PUT `/settings` gains:** an optional `impact_enabled` boolean (Admin only, same endpoint/guard as the
+existing recipient updates). Recipients and `impact_enabled` can be saved in the same call.
+
+**The three UI items (admin view):**
+1. **Enable/disable toggle** — `Toggle` (from `components/Inputs/Toggle/`, a new pattern on this page),
+   bound to `impact_enabled`, auto-saved (debounced) like the existing recipient fields. Default ON.
+2. **LLM-key status indicator** — read-only line driven by `has_llm_key`: "Impact analysis: active"
+   when true, else "Configure an LLM key to enable impact analysis" with a deep link to LLM key settings.
+3. **"Last impact run" status line** — read-only: "Impact analysis last ran: {date}" from
+   `last_impact_run_at` (or "Not run yet" when null). Mirrors the existing "Last checked" cadence line.
+
+**Gating interaction:** the toggle gates the sync (`hasKey && impactEnabled`, §4) and the refresh
+endpoint (a `POST …/impact/refresh` when `impact_enabled === false` returns `200` with
+`status:"disabled"` and does not call the LLM).
 
 ---
 
@@ -265,9 +303,14 @@ boolean; `why` non-empty. Drop anything malformed or hallucinated. If the whole 
   (`POST …/impact/refresh`).
 - Keyless orgs: no panel (the appended notification line is the only surface).
 
+`pages/RegulationsTracker/Settings` gains the three items from §5a (toggle + two read-only status lines),
+wired through the existing `useSettings`/`useUpdateSettings` hooks (the response just carries the new
+fields).
+
 Repository/hook additions mirror the existing `regulationsTracker.repository.ts` / `useRegulationsTracker.ts`
-patterns (KEY=`"regulations-tracker"`). i18n: page-level strings de/fr/es; inline `Label: {value}` JSX is
-English-only, consistent with the rest of the module.
+patterns (KEY=`"regulations-tracker"`). i18n: page-level strings de/fr/es (including the new Settings
+labels and the impact-panel title/stale banner); inline `Label: {value}` JSX is English-only, consistent
+with the rest of the module.
 
 ---
 
