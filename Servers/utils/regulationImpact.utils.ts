@@ -122,8 +122,6 @@ export async function getCandidates(
       { replacements: { organizationId, projectIds: candidateProjectIds }, type: QueryTypes.SELECT },
     )) as { id: number; name: string; description: string }[];
     out.assessment = assessments.map((r) => ({ type: "assessment", id: r.id, name: r.name, description: r.description }));
-  } else {
-    await sequelize.query(`SELECT 1`, { replacements: { organizationId }, type: QueryTypes.SELECT }); // keep query count stable for tests
   }
 
   // --- vendors: regulatory_exposure maps to framework OR linked to a candidate project ---
@@ -159,8 +157,6 @@ export async function getCandidates(
       { replacements: { organizationId, controlIds }, type: QueryTypes.SELECT },
     )) as { id: number; name: string; description: string }[];
     out.policy = policies.map((r) => ({ type: "policy", id: r.id, name: r.name, description: r.description }));
-  } else {
-    await sequelize.query(`SELECT 1`, { replacements: { organizationId }, type: QueryTypes.SELECT }); // keep query count stable for tests
   }
 
   return out;

@@ -71,7 +71,8 @@ describe("getCandidates", () => {
   beforeEach(() => q.mockReset());
 
   it("returns candidates grouped by type", async () => {
-    // 5 queries in fixed order: systems, controls, assessments, vendors, policies
+    // 5 real queries fire when systems and controls are both non-empty:
+    // systems, controls, assessments (projectIds non-empty), vendors, policies (controlIds non-empty)
     q.mockResolvedValueOnce([{ id: 1, name: "Resume Ranker", description: "hiring" }]); // systems
     q.mockResolvedValueOnce([{ id: 7, name: "Human oversight", description: "" }]);     // controls
     q.mockResolvedValueOnce([]);                                                        // assessments
@@ -86,6 +87,37 @@ describe("getCandidates", () => {
     expect(out.vendor).toEqual([{ type: "vendor", id: 3, name: "OpenAI", description: "vendor" }]);
     expect(out.policy).toEqual([]);
     expect(q).toHaveBeenCalledTimes(5);
+  });
+
+  it("skips the assessments query and returns [] when systems is empty", async () => {
+    // systems empty → candidateProjectIds=[] → assessments branch skipped
+    // controls empty → policies branch skipped
+    // Only 3 real queries: systems, controls, vendors
+    q.mockResolvedValue([]);
+    const out = await getCandidates(5, "Germany", { type: "EU AI Act" });
+
+    expect(out.assessment).toEqual([]);
+    // No assessments query should have fired
+    const sqls = q.mock.calls.map((c: unknown[]) => c[0] as string);
+    expect(sqls.some((s) => /FROM assessments/.test(s))).toBe(false);
+    expect(q).toHaveBeenCalledTimes(3); // systems, controls, vendors only
+  });
+
+  it("skips the policies query and returns [] when controls is empty", async () => {
+    // systems non-empty → assessments query fires
+    // controls empty → policies branch skipped
+    // Total: 4 queries: systems, controls, assessments, vendors
+    q.mockResolvedValueOnce([{ id: 10, name: "Proj A", description: "" }]); // systems
+    q.mockResolvedValueOnce([]);                                             // controls (empty)
+    q.mockResolvedValueOnce([]);                                             // assessments
+    q.mockResolvedValueOnce([]);                                             // vendors
+
+    const out = await getCandidates(5, "European Union", { type: "EU AI Act" });
+
+    expect(out.policy).toEqual([]);
+    const sqls = q.mock.calls.map((c: unknown[]) => c[0] as string);
+    expect(sqls.some((s) => /policy_manager/.test(s))).toBe(false);
+    expect(q).toHaveBeenCalledTimes(4); // systems, controls, assessments, vendors — no policies
   });
 
   it("scopes every query to organization_id", async () => {
