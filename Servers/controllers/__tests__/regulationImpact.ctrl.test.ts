@@ -4,12 +4,13 @@ jest.mock("../../utils/regulationImpact.utils", () => ({
 }));
 jest.mock("../../utils/regulationsTracker.utils", () => ({
   getCountryRow: jest.fn(),
+  getSettings: jest.fn(),
 }));
 jest.mock("../../utils/logger/logHelper", () => ({
   logProcessing: jest.fn(), logSuccess: jest.fn(), logFailure: jest.fn(),
 }));
 import { getImpactRow, runImpactAnalysis } from "../../utils/regulationImpact.utils";
-import { getCountryRow } from "../../utils/regulationsTracker.utils";
+import { getCountryRow, getSettings } from "../../utils/regulationsTracker.utils";
 import { getImpactAnalysis, refreshImpactAnalysis } from "../regulationsTracker.ctrl";
 
 function mockRes() {
@@ -78,11 +79,22 @@ describe("refreshImpactAnalysis", () => {
   });
 
   it("runs analysis for admins and returns 200", async () => {
+    (getSettings as jest.Mock).mockResolvedValue({ impact_enabled: true });
     (runImpactAnalysis as jest.Mock).mockResolvedValue({ status: "ok", result: null, counts: {} });
     const req: any = { organizationId: 7, role: "Admin", params: { slug: "eu" } };
     const res = mockRes();
     await refreshImpactAnalysis(req, res);
     expect(runImpactAnalysis).toHaveBeenCalledWith(7, "eu");
     expect(res.status).toHaveBeenCalledWith(200);
+  });
+
+  it("returns 200 {status: disabled} and does NOT call runImpactAnalysis when impact_enabled is false", async () => {
+    (getSettings as jest.Mock).mockResolvedValue({ impact_enabled: false });
+    const req: any = { organizationId: 7, role: "Admin", params: { slug: "eu" } };
+    const res = mockRes();
+    await refreshImpactAnalysis(req, res);
+    expect(runImpactAnalysis).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: { status: "disabled" } }));
   });
 });

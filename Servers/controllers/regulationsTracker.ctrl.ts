@@ -645,6 +645,10 @@ export async function refreshImpactAnalysis(req: any, res: any) {
   }
   try {
     const { slug } = req.params;
+    const settings = await getSettings(req.organizationId!);
+    if (settings.impact_enabled === false) {
+      return res.status(200).json(STATUS_CODE[200]({ status: "disabled" }));
+    }
     const out = await runImpactAnalysis(req.organizationId, slug);
     return res.status(200).json(STATUS_CODE[200](out));
   } catch (error) {

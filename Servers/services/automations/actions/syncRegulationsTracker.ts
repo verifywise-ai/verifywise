@@ -35,6 +35,8 @@ import { sendAutomationEmail } from "../../emailService";
 import { compileMjmlToHtml } from "../../../tools/mjmlCompiler";
 import logger from "../../../utils/logger/fileLogger";
 
+const IMPACT_MAX_ANALYSES_PER_RUN = 200;
+
 const FRONTEND = process.env.FRONTEND_URL ?? "http://localhost:5173";
 const MODULE_URL = FRONTEND + "/regulations-tracker/browse";
 const TRACKED_URL = FRONTEND + "/regulations-tracker/tracked";
@@ -263,6 +265,9 @@ async function runSync(deps?: { feed?: unknown }): Promise<{
         byOrg.set(row.organization_id, list);
       }
 
+      let impactAnalysesRun = 0;
+      let impactCapLogged = false;
+
       for (const [orgId, countries] of byOrg) {
         let orgHasKey = false;
         let impactEnabled = true;
@@ -308,7 +313,16 @@ async function runSync(deps?: { feed?: unknown }): Promise<{
             let impactSuffix = "";
             if (!c.removed) {
               if (orgHasKey && impactEnabled) {
+                if (impactAnalysesRun >= IMPACT_MAX_ANALYSES_PER_RUN) {
+                  if (!impactCapLogged) {
+                    logger.warn(
+                      `[regulations-tracker] per-run impact cap (${IMPACT_MAX_ANALYSES_PER_RUN}) reached; skipping remaining LLM analyses for this sync`,
+                    );
+                    impactCapLogged = true;
+                  }
+                } else {
                 impactRan = true;
+                impactAnalysesRun += 1;
                 try {
                   const impact = await runImpactAnalysis(orgId, c.slug);
                   if (impact.status === "ok") {
@@ -325,6 +339,7 @@ async function runSync(deps?: { feed?: unknown }): Promise<{
                     `[regulations-tracker] impact analysis failed for org ${orgId} / ${c.slug}: ${(err as Error).message}`,
                   );
                 }
+                } // end cap-else
               } else if (!orgHasKey) {
                 // keyless org → nudge to configure a key. A key-having org that toggled
                 // impact OFF (impactEnabled === false) gets NEITHER panel NOR nudge — they chose.
