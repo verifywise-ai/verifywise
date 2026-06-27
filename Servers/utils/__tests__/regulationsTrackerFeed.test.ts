@@ -1,7 +1,15 @@
 import { validateManifest, ABSOLUTE_FLOOR } from "../regulationsTrackerFeed";
 
 function makeCountry(slug: string) {
-  return { slug, name: slug, region: "europe", regulationCount: 1, hash: "sha256-x", history: null, url: `/c/${slug}` };
+  return {
+    slug,
+    name: slug,
+    region: "europe",
+    regulationCount: 1,
+    hash: "sha256-x",
+    history: null,
+    url: `/c/${slug}`,
+  };
 }
 function manifest(n: number, extra: Record<string, unknown> = {}) {
   return {
@@ -70,7 +78,9 @@ describe("validateManifest", () => {
   it("rejects a feed whose valid count is below the absolute floor even if rawCount is above it", () => {
     // 30 raw entries but only ABSOLUTE_FLOOR - 1 valid → should reject
     const m = manifest(ABSOLUTE_FLOOR - 1); // valid entries
-    const malformed = Array.from({ length: 30 - (ABSOLUTE_FLOOR - 1) }, (_, i) => ({ slug: `bad-${i}` }));
+    const malformed = Array.from({ length: 30 - (ABSOLUTE_FLOOR - 1) }, (_, i) => ({
+      slug: `bad-${i}`,
+    }));
     (m.countries as any[]).push(...malformed);
     m.counts.countries = m.countries.length;
     const r = validateManifest(m, null);

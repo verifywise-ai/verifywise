@@ -23,12 +23,31 @@ export interface LlmVerdict {
 
 // geography enum: 1 Global, 2 Europe, 3 North America, 4 South America, 5 Asia, 6 Africa
 const REGION_BY_COUNTRY: Record<string, number> = {
-  "european union": 2, germany: 2, france: 2, italy: 2, spain: 2,
-  netherlands: 2, "united kingdom": 2, ireland: 2, poland: 2, sweden: 2,
-  "united states": 3, canada: 3, mexico: 3,
-  brazil: 4, argentina: 4, chile: 4,
-  china: 5, japan: 5, "south korea": 5, india: 5, singapore: 5,
-  "south africa": 6, nigeria: 6, kenya: 6, egypt: 6,
+  "european union": 2,
+  germany: 2,
+  france: 2,
+  italy: 2,
+  spain: 2,
+  netherlands: 2,
+  "united kingdom": 2,
+  ireland: 2,
+  poland: 2,
+  sweden: 2,
+  "united states": 3,
+  canada: 3,
+  mexico: 3,
+  brazil: 4,
+  argentina: 4,
+  chile: 4,
+  china: 5,
+  japan: 5,
+  "south korea": 5,
+  india: 5,
+  singapore: 5,
+  "south africa": 6,
+  nigeria: 6,
+  kenya: 6,
+  egypt: 6,
 };
 
 export function regionForCountry(countryName: string): number | null {
@@ -73,7 +92,11 @@ export function validateVerdicts(raw: unknown, sent: Candidate[]): LlmVerdict[] 
 }
 
 const EMPTY_BY_TYPE = (): Record<EntityType, Candidate[]> => ({
-  system: [], control: [], policy: [], vendor: [], assessment: [],
+  system: [],
+  control: [],
+  policy: [],
+  vendor: [],
+  assessment: [],
 });
 
 export async function getCandidates(
@@ -97,7 +120,12 @@ export async function getCandidates(
               OR f.name = ANY(:frameworks) )`,
     { replacements: { organizationId, region, frameworks }, type: QueryTypes.SELECT },
   )) as { id: number; name: string; description: string }[];
-  out.system = systems.map((r) => ({ type: "system", id: r.id, name: r.name, description: r.description }));
+  out.system = systems.map((r) => ({
+    type: "system",
+    id: r.id,
+    name: r.name,
+    description: r.description,
+  }));
 
   const candidateProjectIds = systems.map((s) => s.id);
 
@@ -113,7 +141,12 @@ export async function getCandidates(
         AND f.name = ANY(:frameworks)`,
     { replacements: { organizationId, frameworks }, type: QueryTypes.SELECT },
   )) as { id: number; name: string; description: string }[];
-  out.control = controls.map((r) => ({ type: "control", id: r.id, name: r.name, description: r.description }));
+  out.control = controls.map((r) => ({
+    type: "control",
+    id: r.id,
+    name: r.name,
+    description: r.description,
+  }));
 
   // --- assessments: project_id in candidate projects ---
   if (candidateProjectIds.length) {
@@ -123,9 +156,17 @@ export async function getCandidates(
          JOIN projects p ON p.id = a.project_id
         WHERE p.organization_id = :organizationId
           AND a.project_id = ANY(:projectIds)`,
-      { replacements: { organizationId, projectIds: candidateProjectIds }, type: QueryTypes.SELECT },
+      {
+        replacements: { organizationId, projectIds: candidateProjectIds },
+        type: QueryTypes.SELECT,
+      },
     )) as { id: number; name: string; description: string }[];
-    out.assessment = assessments.map((r) => ({ type: "assessment", id: r.id, name: r.name, description: r.description }));
+    out.assessment = assessments.map((r) => ({
+      type: "assessment",
+      id: r.id,
+      name: r.name,
+      description: r.description,
+    }));
   }
 
   // --- vendors: regulatory_exposure maps to framework OR linked to a candidate project ---
@@ -146,7 +187,12 @@ export async function getCandidates(
       type: QueryTypes.SELECT,
     },
   )) as { id: number; name: string; description: string }[];
-  out.vendor = vendors.map((r) => ({ type: "vendor", id: r.id, name: r.name, description: r.description }));
+  out.vendor = vendors.map((r) => ({
+    type: "vendor",
+    id: r.id,
+    name: r.name,
+    description: r.description,
+  }));
 
   // --- policies: linked to a candidate control via policy_linked_objects ---
   const controlIds = controls.map((c) => c.id);
@@ -160,7 +206,12 @@ export async function getCandidates(
           AND plo.object_id = ANY(:controlIds)`,
       { replacements: { organizationId, controlIds }, type: QueryTypes.SELECT },
     )) as { id: number; name: string; description: string }[];
-    out.policy = policies.map((r) => ({ type: "policy", id: r.id, name: r.name, description: r.description }));
+    out.policy = policies.map((r) => ({
+      type: "policy",
+      id: r.id,
+      name: r.name,
+      description: r.description,
+    }));
   }
 
   return out;
@@ -295,15 +346,26 @@ export async function analyzeType(
 
 // ─── Persistence types ────────────────────────────────────────────────────────
 
-export interface AffectedEntity { id: number; name: string; why: string }
+export interface AffectedEntity {
+  id: number;
+  name: string;
+  why: string;
+}
 export interface ImpactResult {
-  systems: AffectedEntity[]; controls: AffectedEntity[]; policies: AffectedEntity[];
-  vendors: AffectedEntity[]; assessments: AffectedEntity[]; generatedAt: string;
+  systems: AffectedEntity[];
+  controls: AffectedEntity[];
+  policies: AffectedEntity[];
+  vendors: AffectedEntity[];
+  assessments: AffectedEntity[];
+  generatedAt: string;
 }
 
 const RESULT_KEY: Record<EntityType, keyof Omit<ImpactResult, "generatedAt">> = {
-  system: "systems", control: "controls", policy: "policies",
-  vendor: "vendors", assessment: "assessments",
+  system: "systems",
+  control: "controls",
+  policy: "policies",
+  vendor: "vendors",
+  assessment: "assessments",
 };
 
 // ─── Persistence helpers ──────────────────────────────────────────────────────
@@ -316,13 +378,22 @@ export async function getImpactRow(organizationId: number, slug: string) {
       WHERE organization_id = :organizationId AND country_slug = :slug
       LIMIT 1`,
     { replacements: { organizationId, slug: normalizedSlug }, type: QueryTypes.SELECT },
-  )) as { regulation_hash: string; status: string; result: ImpactResult | null; refreshed_at: string }[];
+  )) as {
+    regulation_hash: string;
+    status: string;
+    result: ImpactResult | null;
+    refreshed_at: string;
+  }[];
   return rows[0] ?? null;
 }
 
 async function upsertImpactRow(
-  organizationId: number, slug: string, hash: string,
-  status: string, result: ImpactResult | null, model: string | null,
+  organizationId: number,
+  slug: string,
+  hash: string,
+  status: string,
+  result: ImpactResult | null,
+  model: string | null,
 ) {
   await sequelize.query(
     `INSERT INTO regulation_impact_analysis
@@ -336,7 +407,11 @@ async function upsertImpactRow(
             refreshed_at = NOW()`,
     {
       replacements: {
-        organizationId, slug, hash, status, model,
+        organizationId,
+        slug,
+        hash,
+        status,
+        model,
         result: result ? JSON.stringify(result) : null,
       },
     },
@@ -353,9 +428,11 @@ export function buildContext(slug: string, data: any): RegulationContext {
   if (Array.isArray(history?.lastChange?.changes)) {
     for (const ch of history.lastChange.changes) {
       if (ch.field === "status") changeLines.push(`status: ${ch.from} → ${ch.to}`);
-      else if (ch.field === "effectiveDate") changeLines.push(`effective date ${ch.from} → ${ch.to}`);
+      else if (ch.field === "effectiveDate")
+        changeLines.push(`effective date ${ch.from} → ${ch.to}`);
       else if (ch.field === "regulation") changeLines.push(`regulation ${ch.change}: ${ch.value}`);
-      else if (ch.field === "regulationCount") changeLines.push(`regulation count ${ch.from} → ${ch.to}`);
+      else if (ch.field === "regulationCount")
+        changeLines.push(`regulation count ${ch.from} → ${ch.to}`);
     }
   }
   return {
@@ -375,8 +452,19 @@ export async function runImpactAnalysis(
   organizationId: number,
   slug: string,
   force = false,
-): Promise<{ status: string; result: ImpactResult | null; counts: Record<EntityType, number>; cached: boolean }> {
-  const zeroCounts = (): Record<EntityType, number> => ({ system: 0, control: 0, policy: 0, vendor: 0, assessment: 0 });
+): Promise<{
+  status: string;
+  result: ImpactResult | null;
+  counts: Record<EntityType, number>;
+  cached: boolean;
+}> {
+  const zeroCounts = (): Record<EntityType, number> => ({
+    system: 0,
+    control: 0,
+    policy: 0,
+    vendor: 0,
+    assessment: 0,
+  });
 
   // BUG 3: Normalize slug at the top so reads and writes always agree.
   const normalizedSlug = normalizeSlug(slug);
@@ -386,7 +474,8 @@ export async function runImpactAnalysis(
     `SELECT data, hash FROM regulation_countries WHERE slug = :slug LIMIT 1`,
     { replacements: { slug: normalizedSlug }, type: QueryTypes.SELECT },
   )) as { data: any; hash: string }[];
-  if (!regRows.length) return { status: "error", result: null, counts: zeroCounts(), cached: false };
+  if (!regRows.length)
+    return { status: "error", result: null, counts: zeroCounts(), cached: false };
   const { data, hash } = regRows[0];
 
   // key gate
@@ -404,21 +493,40 @@ export async function runImpactAnalysis(
   if (!force) {
     const cachedRow = await getImpactRow(organizationId, normalizedSlug);
     if (cachedRow && cachedRow.regulation_hash === hash && cachedRow.status === "ok") {
-      return { status: "ok", result: cachedRow.result, counts: countsFromResult(cachedRow.result), cached: true };
+      return {
+        status: "ok",
+        result: cachedRow.result,
+        counts: countsFromResult(cachedRow.result),
+        cached: true,
+      };
     }
   }
 
   const ctx = buildContext(normalizedSlug, data);
-  const candidates = await getCandidates(organizationId, ctx.country, { type: ctx.type, country: ctx.country });
+  const candidates = await getCandidates(organizationId, ctx.country, {
+    type: ctx.type,
+    country: ctx.country,
+  });
 
-  const nonEmpty = (Object.keys(candidates) as EntityType[]).filter((t) => candidates[t].length > 0);
+  const nonEmpty = (Object.keys(candidates) as EntityType[]).filter(
+    (t) => candidates[t].length > 0,
+  );
   if (!nonEmpty.length) {
-    await upsertImpactRow(organizationId, normalizedSlug, hash, "skipped_no_candidates", null, null);
+    await upsertImpactRow(
+      organizationId,
+      normalizedSlug,
+      hash,
+      "skipped_no_candidates",
+      null,
+      null,
+    );
     return { status: "skipped_no_candidates", result: null, counts: zeroCounts(), cached: false };
   }
 
   const verdictsByType = await Promise.all(
-    nonEmpty.map((t) => analyzeType(t, ctx, candidates[t], creds, organizationId).then((r) => [t, r] as const)),
+    nonEmpty.map((t) =>
+      analyzeType(t, ctx, candidates[t], creds, organizationId).then((r) => [t, r] as const),
+    ),
   );
 
   // BUG 1: Only cache as "ok" if at least one type's LLM call actually succeeded.
@@ -431,14 +539,19 @@ export async function runImpactAnalysis(
   }
 
   const result: ImpactResult = {
-    systems: [], controls: [], policies: [], vendors: [], assessments: [],
+    systems: [],
+    controls: [],
+    policies: [],
+    vendors: [],
+    assessments: [],
     generatedAt: new Date().toISOString(),
   };
   for (const [t, r] of verdictsByType) {
     if (!r.ok) continue; // skip failed types; partial success is acceptable
     const byId = new Map(candidates[t].map((c) => [c.id, c.name]));
     for (const v of r.verdicts) {
-      if (v.affected) result[RESULT_KEY[t]].push({ id: v.id, name: byId.get(v.id) ?? String(v.id), why: v.why });
+      if (v.affected)
+        result[RESULT_KEY[t]].push({ id: v.id, name: byId.get(v.id) ?? String(v.id), why: v.why });
     }
   }
   await upsertImpactRow(organizationId, normalizedSlug, hash, "ok", result, creds.model);

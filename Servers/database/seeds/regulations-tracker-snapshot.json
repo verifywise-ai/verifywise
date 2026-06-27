@@ -45,9 +45,7 @@
             "Transparency obligations for AI systems that interact with people, generate deepfakes, or make emotion-recognition decisions"
           ],
           "maxPenalty": "€35 million or 7% of global annual turnover for prohibited-practice violations; €15 million or 3% for other non-compliance; ��7.5 million or 1% for supplying incorrect information",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj",
           "lastVerified": "March 2026"
         },
@@ -65,9 +63,7 @@
             "Aligns liability framework with the risk tiers established in the EU AI Act"
           ],
           "maxPenalty": "Civil damages determined by national courts (no fixed regulatory cap)",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX%3A52022PC0496",
           "lastVerified": "March 2026"
         },
@@ -86,9 +82,7 @@
             "Member states must transpose the directive into national law by December 2026"
           ],
           "maxPenalty": "Civil damages determined by national courts; no regulatory fine cap, but strict liability applies without proof of fault",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://eur-lex.europa.eu/eli/dir/2024/2853/oj",
           "lastVerified": "March 2026"
         },
@@ -108,9 +102,7 @@
             "Implement cybersecurity protections for model weights"
           ],
           "maxPenalty": "Non-compliance with the Code may be used as evidence of AI Act violation, triggering fines up to €15 million or 3% of global turnover",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://digital-strategy.ec.europa.eu/en/library/general-purpose-ai-code-practice",
           "lastVerified": "March 2026"
         },
@@ -129,9 +121,7 @@
             "Provide researcher access to algorithmic data upon request from the Digital Services Coordinator"
           ],
           "maxPenalty": "Up to 6% of global annual turnover; periodic penalty payments up to 5% of average daily worldwide turnover",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://eur-lex.europa.eu/eli/reg/2022/2065/oj",
           "lastVerified": "March 2026"
         },
@@ -150,9 +140,7 @@
             "Trade-secret protections balanced against data-access rights, with technical safeguards permitted"
           ],
           "maxPenalty": "Penalties set by individual EU member states; the regulation requires they be ‘effective, proportionate, and dissuasive’",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://eur-lex.europa.eu/eli/reg/2023/2854/oj",
           "lastVerified": "March 2026"
         }
@@ -232,9 +220,7 @@
             "Maintains the focus on protecting Americans from AI-enabled fraud and deception using existing legal authorities"
           ],
           "maxPenalty": "Executive orders do not carry direct penalties; enforcement flows through agency rulemaking under existing statutes",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.federalregister.gov/documents/2025/01/31/2025-02172/removing-barriers-to-american-leadership-in-artificial-intelligence",
           "lastVerified": "June 2026"
         },
@@ -254,9 +240,7 @@
             "Continuously monitor and document AI system behavior throughout the lifecycle"
           ],
           "maxPenalty": "No direct penalties (voluntary framework); however, adherence may be considered in enforcement actions by FTC and other agencies",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.nist.gov/artificial-intelligence/executive-order-safe-secure-and-trustworthy-artificial-intelligence",
           "lastVerified": "March 2026"
         },
@@ -276,9 +260,7 @@
             "FTC can order algorithmic disgorgement (deletion of models built on improperly collected data)"
           ],
           "maxPenalty": "$50,120 per violation per day under Section 5; FTC can also seek injunctive relief and algorithmic disgorgement",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.ftc.gov/business-guidance/blog/2021/04/aiming-truth-fairness-equity-your-companys-use-ai",
           "lastVerified": "March 2026"
         },
@@ -298,9 +280,7 @@
             "Label AI/ML devices with clear descriptions of intended use, performance data, and limitations"
           ],
           "maxPenalty": "Product seizure, injunctions, and civil monetary penalties up to $15,000 per violation; criminal penalties for willful violations",
-          "industryTags": [
-            "healthcare"
-          ],
+          "industryTags": ["healthcare"],
           "sourceUrl": "https://www.fda.gov/medical-devices/software-medical-device-samd/artificial-intelligence-and-machine-learning-aiml-enabled-medical-devices",
           "lastVerified": "March 2026"
         },
@@ -319,9 +299,7 @@
             "Algorithmic decision-making that causes disparate impact is unlawful unless the employer demonstrates business necessity"
           ],
           "maxPenalty": "Compensatory and punitive damages up to $300,000 per claim under Title VII; back pay, front pay, and injunctive relief; pattern-or-practice suits have no cap",
-          "industryTags": [
-            "hr-employment"
-          ],
+          "industryTags": ["hr-employment"],
           "sourceUrl": "https://www.eeoc.gov/eeoc-disability-related-resources/artificial-intelligence-and-ada",
           "lastVerified": "June 2026"
         },
@@ -341,9 +319,7 @@
             "Board and senior management must oversee model risk with clear accountability"
           ],
           "maxPenalty": "Enforcement actions including cease-and-desist orders, civil monetary penalties up to $2 million per day for ongoing violations, and consent orders",
-          "industryTags": [
-            "financial-services"
-          ],
+          "industryTags": ["financial-services"],
           "sourceUrl": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-13.html",
           "lastVerified": "June 2026"
         },
@@ -362,12 +338,7 @@
             "SB26-189 removed the original duty of reasonable care to prevent algorithmic discrimination, the deployer risk-management program, the impact-assessment requirement, and certain Attorney General reporting duties"
           ],
           "maxPenalty": "Enforced by Colorado Attorney General under the Colorado Consumer Protection Act; penalties up to $20,000 per violation with no statutory cap on aggregate fines",
-          "industryTags": [
-            "general",
-            "insurance",
-            "hr-employment",
-            "financial-services"
-          ],
+          "industryTags": ["general", "insurance", "hr-employment", "financial-services"],
           "sourceUrl": "https://leg.colorado.gov/bills/sb26-189",
           "lastVerified": "June 2026"
         },
@@ -387,9 +358,7 @@
             "Destroy all video recordings within 30 days of an applicant’s request"
           ],
           "maxPenalty": "$1,000 per violation; enforced through private right of action; no cap on aggregate damages in class actions",
-          "industryTags": [
-            "hr-employment"
-          ],
+          "industryTags": ["hr-employment"],
           "sourceUrl": "https://www.ilga.gov/legislation/ilcs/ilcs3.asp?ActID=4015",
           "lastVerified": "March 2026"
         },
@@ -409,9 +378,7 @@
             "Allow candidates to request an alternative selection process or accommodation"
           ],
           "maxPenalty": "$500 for the first violation; $500–$1,500 per subsequent violation per day; enforced by NYC Department of Consumer and Worker Protection",
-          "industryTags": [
-            "hr-employment"
-          ],
+          "industryTags": ["hr-employment"],
           "sourceUrl": "https://www.nyc.gov/site/dca/about/automated-employment-decision-tools.page",
           "lastVerified": "March 2026"
         },
@@ -430,9 +397,7 @@
             "Make the disclosure accessible in a clear and easy-to-understand format"
           ],
           "maxPenalty": "Enforced by the California Attorney General; penalties under the Unfair Competition Law up to $2,500 per violation or $7,500 per intentional violation",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://leginfo.legislature.ca.gov/faces/billNavClient.xhtml?bill_id=202320240AB2013",
           "lastVerified": "March 2026"
         }
@@ -512,9 +477,7 @@
             "Sandbox and testbed programs to support responsible AI innovation"
           ],
           "maxPenalty": "No direct penalties (policy framework); enforcement through sector-specific regulators under existing legal powers",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.gov.uk/government/publications/ai-regulation-a-pro-innovation-approach/white-paper",
           "lastVerified": "March 2026"
         },
@@ -533,9 +496,7 @@
             "Engagement with AISI evaluations is currently voluntary for AI developers"
           ],
           "maxPenalty": "No enforcement power; participation is voluntary. Future AI legislation may grant statutory authority",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.aisi.gov.uk/",
           "lastVerified": "March 2026"
         },
@@ -555,9 +516,7 @@
             "Apply data-minimization and purpose-limitation principles to AI training data"
           ],
           "maxPenalty": "£17.5 million or 4% of global annual turnover under the UK GDPR, whichever is higher",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://ico.org.uk/for-organisations/uk-gdpr-guidance-and-resources/artificial-intelligence/",
           "lastVerified": "March 2026"
         },
@@ -577,10 +536,7 @@
             "Document AI model development, validation, monitoring, and decommissioning processes"
           ],
           "maxPenalty": "Unlimited fines under FSMA 2000; FCA can impose requirements, suspend permissions, or pursue criminal prosecution for the most serious breaches",
-          "industryTags": [
-            "financial-services",
-            "insurance"
-          ],
+          "industryTags": ["financial-services", "insurance"],
           "sourceUrl": "https://www.fca.org.uk/firms/innovation/ai-approach",
           "lastVerified": "June 2026"
         },
@@ -600,9 +556,7 @@
             "Future binding AI-specific rules remain possible but are no longer the announced vehicle"
           ],
           "maxPenalty": "TBD — no dedicated AI statute announced; enforcement continues through existing sector regulators",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.gov.uk/government/organisations/ai-safety-institute",
           "lastVerified": "June 2026"
         }
@@ -680,9 +634,7 @@
             "Provide mechanisms for users to report and complain about AI outputs"
           ],
           "maxPenalty": "Warnings, fines up to RMB 100,000 (~$14,000), suspension of services, revocation of business licenses; criminal liability for serious violations",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "http://www.cac.gov.cn/2023-07/13/c_1690898327029107.htm",
           "lastVerified": "March 2026"
         },
@@ -702,9 +654,7 @@
             "Conduct security assessments for deep synthesis services that influence public opinion"
           ],
           "maxPenalty": "Warnings, fines up to RMB 100,000 (~$14,000), service suspension; referral to public security organs for criminal violations",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "http://www.cac.gov.cn/2022-12/11/c_1672221949318230.htm",
           "lastVerified": "March 2026"
         },
@@ -725,9 +675,7 @@
             "Do not use algorithms to spread disinformation or manipulate public opinion"
           ],
           "maxPenalty": "Fines up to RMB 100,000 (~$14,000) per violation; service suspension; revocation of permits for serious offenses",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "http://www.cac.gov.cn/2022-01/04/c_1642894606364259.htm",
           "lastVerified": "March 2026"
         },
@@ -746,9 +694,7 @@
             "Content without proper AI labeling may be removed from distribution platforms"
           ],
           "maxPenalty": "Penalties enforced under existing CAC regulations; platforms face fines and content removal orders",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.tc260.org.cn/",
           "lastVerified": "March 2026"
         },
@@ -769,9 +715,7 @@
             "Cross-border data transfers require CAC security assessments, standard contractual clauses, or certification"
           ],
           "maxPenalty": "Fines up to RMB 50 million (~$7 million) or 5% of the previous year’s annual revenue; personal liability for responsible individuals up to RMB 1 million (~$140,000)",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "http://www.npc.gov.cn/npc/c30834/202108/a8c4e3672c74491a80b53a172bb753fe.shtml",
           "lastVerified": "March 2026"
         },
@@ -791,9 +735,7 @@
             "Anticipated to address foundation models, autonomous systems, and AI in critical infrastructure"
           ],
           "maxPenalty": "TBD — expected to significantly increase penalty ceilings beyond current regulations",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "http://www.cac.gov.cn/",
           "lastVerified": "March 2026"
         }
@@ -875,9 +817,7 @@
             "Engage with affected communities and stakeholders throughout the AI lifecycle"
           ],
           "maxPenalty": "No penalties (currently voluntary); adoption demonstrates good practice and may mitigate enforcement risk under future mandatory rules",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.industry.gov.au/publications/voluntary-ai-safety-standard",
           "lastVerified": "March 2026"
         },
@@ -896,9 +836,7 @@
             "A dedicated mandatory high-risk AI regime is not currently proceeding, though the position may be revisited"
           ],
           "maxPenalty": "No dedicated AI penalties; enforcement runs through existing consumer, privacy and anti-discrimination law",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://consult.industry.gov.au/supporting-responsible-ai",
           "lastVerified": "June 2026"
         },
@@ -918,9 +856,7 @@
             "Stricter consent requirements for using personal information to train AI models"
           ],
           "maxPenalty": "Current Privacy Act maximum: AUD 50 million, three times the benefit obtained, or 30% of domestic turnover (whichever is greatest); reforms may increase these",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.ag.gov.au/rights-and-protections/privacy",
           "lastVerified": "March 2026"
         },
@@ -939,9 +875,7 @@
             "Ensure AI systems do not engage in unconscionable conduct or unfair contract terms"
           ],
           "maxPenalty": "AUD 50 million, three times the benefit obtained, or 30% of domestic turnover per contravention (whichever is greatest) under the Australian Consumer Law",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.accc.gov.au/by-industry/digital-platforms-and-services",
           "lastVerified": "June 2026"
         },
@@ -961,9 +895,7 @@
             "Ensure procurement contracts with AI vendors require compliance with the framework"
           ],
           "maxPenalty": "Internal government compliance mechanism; no external penalties but non-compliance may affect procurement eligibility",
-          "industryTags": [
-            "public-sector"
-          ],
+          "industryTags": ["public-sector"],
           "sourceUrl": "https://www.industry.gov.au/publications/australias-artificial-intelligence-ethics-framework",
           "lastVerified": "March 2026"
         }
@@ -1034,9 +966,7 @@
             "Market surveillance for AI systems embedded in products will involve existing French sectoral regulators"
           ],
           "maxPenalty": "€35 million or 7% of global annual turnover for prohibited-practice violations (EU AI Act penalties)",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj",
           "lastVerified": "March 2026"
         },
@@ -1056,9 +986,7 @@
             "CNIL has clarified that web-scraping personal data for AI training requires explicit legal basis and must respect robots.txt and opt-outs"
           ],
           "maxPenalty": "€20 million or 4% of global annual turnover under GDPR, enforced by CNIL",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.cnil.fr/en/topics/artificial-intelligence-ai",
           "lastVerified": "June 2026"
         },
@@ -1077,9 +1005,7 @@
             "Promote responsible AI development through ethics advisory bodies and public engagement"
           ],
           "maxPenalty": "Not applicable (investment and policy strategy, not a regulatory instrument)",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.gouvernement.fr/france-2030",
           "lastVerified": "March 2026"
         },
@@ -1098,9 +1024,7 @@
             "Publish details about algorithms used in administrative decisions upon request (under the Code des relations entre le public et l’administration)"
           ],
           "maxPenalty": "No direct financial penalties (internal government framework); judicial review available for affected citizens under administrative law",
-          "industryTags": [
-            "public-sector"
-          ],
+          "industryTags": ["public-sector"],
           "sourceUrl": "https://www.numerique.gouv.fr/",
           "lastVerified": "March 2026"
         }
@@ -1175,9 +1099,7 @@
             "Market surveillance for AI embedded in regulated products involves existing Italian sectoral regulators"
           ],
           "maxPenalty": "€35 million or 7% of global annual turnover for prohibited-practice violations (EU AI Act penalties)",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj",
           "lastVerified": "June 2026"
         },
@@ -1197,12 +1119,7 @@
             "Government delegated to adopt further implementing decrees aligning Italian law with the EU AI Act"
           ],
           "maxPenalty": "New criminal offence for unlawful dissemination of harmful AI-generated or AI-altered (deepfake) content, punishable by imprisonment of one to five years; aggravating circumstances added to fraud, market-manipulation, and identity-related offences committed via AI",
-          "industryTags": [
-            "general",
-            "healthcare",
-            "hr-employment",
-            "public-sector"
-          ],
+          "industryTags": ["general", "healthcare", "hr-employment", "public-sector"],
           "sourceUrl": "https://www.gazzettaufficiale.it/eli/id/2025/09/25/25G00143/sg",
           "lastVerified": "June 2026"
         },
@@ -1221,9 +1138,7 @@
             "Implement age-verification and safeguards where AI services may be accessed by minors"
           ],
           "maxPenalty": "€20 million or 4% of global annual turnover under the GDPR, enforced by the Garante; the authority has previously ordered temporary suspension of AI services in Italy",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.garanteprivacy.it/temi/intelligenza-artificiale",
           "lastVerified": "June 2026"
         },
@@ -1242,9 +1157,7 @@
             "Align national AI deployment with the EU AI Act and the values of human-centred AI"
           ],
           "maxPenalty": "Not applicable (investment and policy strategy, not a regulatory instrument)",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.agid.gov.it/it/intelligenza-artificiale",
           "lastVerified": "June 2026"
         }
@@ -1319,9 +1232,7 @@
             "German sector regulators (BaFin, BfArM, Bundesnetzagentur) will enforce AI Act provisions in their domains"
           ],
           "maxPenalty": "€35 million or 7% of global annual turnover for prohibited-practice violations (EU AI Act penalties)",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj",
           "lastVerified": "March 2026"
         },
@@ -1340,9 +1251,7 @@
             "Develop and adopt technical standards for AI systems through DIN/DKE standardization processes"
           ],
           "maxPenalty": "Not applicable (policy strategy, not a regulatory instrument)",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.ki-strategie-deutschland.de/",
           "lastVerified": "March 2026"
         },
@@ -1361,9 +1270,7 @@
             "Supports EU AI Act compliance by pre-aligning with expected harmonized European standards"
           ],
           "maxPenalty": "No penalties (voluntary standardization framework); adherence supports EU AI Act conformity assessment",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.din.de/en/innovation-and-research/artificial-intelligence",
           "lastVerified": "March 2026"
         },
@@ -1382,9 +1289,7 @@
             "Purpose limitation: personal data collected for one purpose may not be repurposed for AI training without a fresh legal basis"
           ],
           "maxPenalty": "€20 million or 4% of global annual turnover under GDPR; German state data protection authorities enforce independently",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.datenschutzkonferenz-online.de/",
           "lastVerified": "March 2026"
         },
@@ -1403,10 +1308,7 @@
             "Ongoing monitoring and periodic validation of AI model performance and fairness"
           ],
           "maxPenalty": "Enforcement actions under the German Banking Act and Insurance Supervision Act; fines, conditions on business operations, or licence restrictions",
-          "industryTags": [
-            "financial-services",
-            "insurance"
-          ],
+          "industryTags": ["financial-services", "insurance"],
           "sourceUrl": "https://www.bafin.de/SharedDocs/Downloads/EN/Aufsichtsrecht/dl_Prinzipienpapier_BDAI_en.html",
           "lastVerified": "June 2026"
         }
@@ -1481,9 +1383,7 @@
             "Swedish sector regulators will enforce AI Act provisions within their existing mandates"
           ],
           "maxPenalty": "€35 million or 7% of global annual turnover for prohibited-practice violations (EU AI Act penalties)",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj",
           "lastVerified": "March 2026"
         },
@@ -1502,9 +1402,7 @@
             "Invest in AI skills development and workforce transition programmes"
           ],
           "maxPenalty": "Not applicable (national strategy, not a regulatory instrument)",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.government.se/information-material/2018/05/national-approach-to-artificial-intelligence/",
           "lastVerified": "March 2026"
         },
@@ -1523,9 +1421,7 @@
             "Maintain transparency about how AI uses personal data in privacy policies and notices"
           ],
           "maxPenalty": "€20 million or 4% of global annual turnover under GDPR, enforced by IMY",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.imy.se/en/",
           "lastVerified": "March 2026"
         },
@@ -1544,9 +1440,7 @@
             "Maintain audit trails and documentation for AI-supported government decisions"
           ],
           "maxPenalty": "No direct penalties (government guidelines); non-compliance may result in judicial review of administrative decisions",
-          "industryTags": [
-            "public-sector"
-          ],
+          "industryTags": ["public-sector"],
           "sourceUrl": "https://www.digg.se/en",
           "lastVerified": "March 2026"
         }
@@ -1619,9 +1513,7 @@
             "Bill died when Parliament prorogued in January 2025; reintroduction timing uncertain"
           ],
           "maxPenalty": "Would have included fines up to CAD $25 million or 5% of global revenue and criminal penalties including imprisonment",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://ised-isde.canada.ca/site/innovation-better-canada/en/artificial-intelligence-and-data-act",
           "lastVerified": "March 2026"
         },
@@ -1640,9 +1532,7 @@
             "Commits to future AI and privacy legislation, but does not itself create binding AI obligations"
           ],
           "maxPenalty": "None — strategy and funding framework, not a binding statute",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.pm.gc.ca/en/news/news-releases/2026/06/04/prime-minister-carney-launches-ai-all-canadas-new-national-artificial",
           "lastVerified": "June 2026"
         },
@@ -1662,9 +1552,7 @@
             "Document and make public the assessment results; maintain ongoing monitoring and recalibration"
           ],
           "maxPenalty": "Internal compliance mechanism enforced by Treasury Board Secretariat; no external fines but non-compliance findings can halt system deployment",
-          "industryTags": [
-            "public-sector"
-          ],
+          "industryTags": ["public-sector"],
           "sourceUrl": "https://www.tbs-sct.canada.ca/pol/doc-eng.aspx?id=32592",
           "lastVerified": "March 2026"
         },
@@ -1684,9 +1572,7 @@
             "Engage in ongoing monitoring and red-teaming of generative AI systems"
           ],
           "maxPenalty": "No penalties (voluntary code); signatories commit publicly and non-compliance may affect reputation",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://ised-isde.canada.ca/site/ised/en/voluntary-code-conduct-responsible-development-and-management-advanced-generative-ai-systems",
           "lastVerified": "March 2026"
         },
@@ -1705,9 +1591,7 @@
             "Implement safeguards appropriate to the sensitivity of personal information used in AI systems"
           ],
           "maxPenalty": "OPC can seek Federal Court orders; penalties under the proposed CPPA replacement would be up to CAD $25 million or 5% of global revenue",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.priv.gc.ca/en/privacy-topics/privacy-laws-in-canada/the-personal-information-protection-and-electronic-documents-act-pipeda/",
           "lastVerified": "March 2026"
         }
@@ -1779,9 +1663,7 @@
             "Proposes regulatory sandbox approach for testing AI applications in controlled environments"
           ],
           "maxPenalty": "Not applicable (policy document, not a regulatory instrument)",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.niti.gov.in/sites/default/files/2023-03/National-Strategy-for-Artificial-Intelligence.pdf",
           "lastVerified": "March 2026"
         },
@@ -1800,9 +1682,7 @@
             "Implement safeguards to prevent AI-generated deepfakes and misinformation"
           ],
           "maxPenalty": "Enforcement under the IT Act 2000 and IT Rules 2021; intermediary safe-harbour protections may be revoked for non-compliance",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.meity.gov.in/",
           "lastVerified": "March 2026"
         },
@@ -1822,9 +1702,7 @@
             "Data fiduciaries must implement reasonable security safeguards for personal data"
           ],
           "maxPenalty": "Penalties up to INR 250 crore (~$30 million) per violation; Data Protection Board to enforce",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.meity.gov.in/data-protection-framework",
           "lastVerified": "March 2026"
         },
@@ -1843,9 +1721,7 @@
             "Ensure investor protection through disclosure of AI/ML use in advisory and portfolio management services"
           ],
           "maxPenalty": "Penalties under SEBI Act including monetary penalties, suspension of registration, and prosecution for market manipulation",
-          "industryTags": [
-            "financial-services"
-          ],
+          "industryTags": ["financial-services"],
           "sourceUrl": "https://www.sebi.gov.in/",
           "lastVerified": "March 2026"
         }
@@ -1918,9 +1794,7 @@
             "Establish accountability structures with designated responsible persons for AI governance"
           ],
           "maxPenalty": "No direct penalties (voluntary guidelines); adoption demonstrates alignment with government expectations and may influence regulatory treatment",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.meti.go.jp/english/policy/economy/ai-governance/index.html",
           "lastVerified": "March 2026"
         },
@@ -1940,9 +1814,7 @@
             "Encourages international cooperation on AI governance standards"
           ],
           "maxPenalty": "Framework law without direct penalties; sector-specific implementing guidelines may include enforcement mechanisms",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www8.cao.go.jp/cstp/ai/ai_act/ai_act.html",
           "lastVerified": "March 2026"
         },
@@ -1961,9 +1833,7 @@
             "Report to FSA on significant AI-related incidents or unexpected model behaviour affecting customers"
           ],
           "maxPenalty": "Enforcement under existing financial regulatory framework; FSA can issue business improvement orders, restrict operations, or revoke licences",
-          "industryTags": [
-            "financial-services"
-          ],
+          "industryTags": ["financial-services"],
           "sourceUrl": "https://www.fsa.go.jp/en/",
           "lastVerified": "March 2026"
         },
@@ -1982,9 +1852,7 @@
             "Pseudonymized data can be processed for AI research under relaxed conditions, but re-identification is prohibited"
           ],
           "maxPenalty": "Fines up to JPY 100 million (~$670,000) for organizations; PPC can issue orders and refer violations for criminal prosecution",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.ppc.go.jp/en/",
           "lastVerified": "March 2026"
         }
@@ -2057,9 +1925,7 @@
             "Maintain data quality and manage bias throughout the AI lifecycle"
           ],
           "maxPenalty": "No penalties (voluntary framework); widely considered a baseline expectation for responsible AI deployment in Singapore",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.pdpc.gov.sg/help-and-resources/2020/01/model-ai-governance-framework",
           "lastVerified": "March 2026"
         },
@@ -2078,9 +1944,7 @@
             "AI Verify Foundation (established 2023) coordinates international community development and adoption"
           ],
           "maxPenalty": "No penalties (voluntary testing framework); adoption demonstrates governance maturity to regulators and customers",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://aiverifyfoundation.sg/",
           "lastVerified": "March 2026"
         },
@@ -2100,9 +1964,7 @@
             "Maintain records of AI model development, validation, and deployment decisions"
           ],
           "maxPenalty": "Enforcement under MAS’s existing supervisory framework; MAS can issue directions, restrict activities, or revoke licences",
-          "industryTags": [
-            "financial-services"
-          ],
+          "industryTags": ["financial-services"],
           "sourceUrl": "https://www.mas.gov.sg/publications/monographs-or-information-paper/2018/feat",
           "lastVerified": "March 2026"
         },
@@ -2121,9 +1983,7 @@
             "Invests in AI compute infrastructure and talent pipeline to support the AI ecosystem"
           ],
           "maxPenalty": "Not applicable (national strategy, not a regulatory instrument)",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.smartnation.gov.sg/initiatives/national-ai-strategy/",
           "lastVerified": "March 2026"
         },
@@ -2142,9 +2002,7 @@
             "Individuals have the right to access and correct personal data held by organizations, including data used in AI systems"
           ],
           "maxPenalty": "Fines up to SGD $1 million or 10% of annual turnover in Singapore (whichever is higher) per violation",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.pdpc.gov.sg/overview-of-pdpa/the-legislation/personal-data-protection-act",
           "lastVerified": "March 2026"
         }
@@ -2217,9 +2075,7 @@
             "Promote trustworthy AI development through certification and standardization programmes"
           ],
           "maxPenalty": "Framework law establishes principles with sector-specific enforcement mechanisms; detailed penalty regulations being developed",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.law.go.kr/",
           "lastVerified": "March 2026"
         },
@@ -2239,9 +2095,7 @@
             "The PIPC oversees compliance and can investigate AI-related data protection complaints"
           ],
           "maxPenalty": "Fines up to 3% of related revenue or KRW 2 billion (~$1.5 million); criminal penalties including imprisonment for serious violations",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.pipc.go.kr/eng/index.do",
           "lastVerified": "March 2026"
         },
@@ -2260,9 +2114,7 @@
             "Promote AI adoption across key industries including manufacturing, healthcare, and public services"
           ],
           "maxPenalty": "Not applicable (national strategy, not a regulatory instrument)",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.msit.go.kr/eng/index.do",
           "lastVerified": "March 2026"
         }
@@ -2334,9 +2186,7 @@
             "Supports AI sandboxes and innovation hubs for testing AI applications in regulated sectors"
           ],
           "maxPenalty": "Not applicable (policy framework, not a regulatory instrument)",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://innovationisrael.org.il/en/",
           "lastVerified": "March 2026"
         },
@@ -2355,9 +2205,7 @@
             "Conduct risk assessments for AI systems that process sensitive personal data at scale"
           ],
           "maxPenalty": "Enforcement under the Privacy Protection Law; administrative fines introduced in recent amendments, plus potential criminal penalties",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.gov.il/en/departments/the_privacy_protection_authority/",
           "lastVerified": "March 2026"
         },
@@ -2376,9 +2224,7 @@
             "Proposals influenced by EU AI Act and Council of Europe Framework Convention obligations"
           ],
           "maxPenalty": "TBD — legislation not yet introduced",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.gov.il/en/departments/ministry_of_innovation_science_and_technology",
           "lastVerified": "March 2026"
         }
@@ -2433,9 +2279,7 @@
             "Establishes governance principles aligned with ASEAN AI governance norms"
           ],
           "maxPenalty": "Not applicable (national strategy, not a regulatory instrument)",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://airmap.my/",
           "lastVerified": "March 2026"
         },
@@ -2455,9 +2299,7 @@
             "Maintain documentation of AI system development and deployment decisions"
           ],
           "maxPenalty": "No penalties (voluntary principles); adoption demonstrates alignment with government expectations",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://mdec.my/",
           "lastVerified": "March 2026"
         },
@@ -2476,9 +2318,7 @@
             "Individuals have right of access to and correction of personal data held in AI systems"
           ],
           "maxPenalty": "Fines up to MYR 500,000 (~$107,000) and/or imprisonment up to 3 years per violation",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.pdp.gov.my/",
           "lastVerified": "March 2026"
         }
@@ -2533,9 +2373,7 @@
             "Sets ethical principles for AI including transparency, accountability, and inclusivity"
           ],
           "maxPenalty": "Not applicable (national strategy, not a regulatory instrument)",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://korika.id/en/document/strategi-nasional-kecerdasan-artifisial-indonesia-2020-2045/",
           "lastVerified": "March 2026"
         },
@@ -2555,9 +2393,7 @@
             "Maintain records of data processing activities and appoint a data protection officer for certain categories of processing"
           ],
           "maxPenalty": "Administrative fines up to 2% of annual revenue; criminal penalties including imprisonment up to 6 years and fines up to IDR 6 billion (~$380,000)",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.komnasham.go.id/",
           "lastVerified": "March 2026"
         },
@@ -2576,9 +2412,7 @@
             "Maintain documentation of AI system design decisions and risk assessments"
           ],
           "maxPenalty": "No penalties (voluntary guidelines); adoption supports compliance with future regulations",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.kominfo.go.id/",
           "lastVerified": "March 2026"
         }
@@ -2634,9 +2468,7 @@
             "Emphasizes importance of data infrastructure development to support AI adoption"
           ],
           "maxPenalty": "Not applicable (national strategy, not a regulatory instrument)",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://a2i.gov.bd/",
           "lastVerified": "March 2026"
         },
@@ -2655,9 +2487,7 @@
             "Expected to establish a data protection authority for oversight and enforcement"
           ],
           "maxPenalty": "TBD — legislation not yet enacted",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://ictd.gov.bd/",
           "lastVerified": "March 2026"
         }
@@ -2713,9 +2543,7 @@
             "Mandates regular review and updating of AI governance measures to keep pace with technology"
           ],
           "maxPenalty": "Framework law without direct penalties; sector-specific implementing regulations will include enforcement mechanisms",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.nstc.gov.tw/",
           "lastVerified": "March 2026"
         },
@@ -2734,9 +2562,7 @@
             "Cross-border transfer of personal data for AI purposes must comply with PDPA restrictions"
           ],
           "maxPenalty": "Fines up to TWD 500,000 (~$15,000) per violation with potential for higher penalties for serious breaches; civil liability for damages",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://law.moj.gov.tw/",
           "lastVerified": "March 2026"
         },
@@ -2755,9 +2581,7 @@
             "Maintain documentation of AI model development, validation, and deployment"
           ],
           "maxPenalty": "Enforcement under existing financial regulation; FSC can impose fines, restrict operations, or revoke licences",
-          "industryTags": [
-            "financial-services"
-          ],
+          "industryTags": ["financial-services"],
           "sourceUrl": "https://www.fsc.gov.tw/en/",
           "lastVerified": "March 2026"
         }
@@ -2822,9 +2646,7 @@
             "Maintain documentation of AI design and deployment decisions"
           ],
           "maxPenalty": "No penalties (voluntary guidelines); adoption demonstrates alignment with government expectations",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.etda.or.th/getattachment/9d370f25-f37a-4b7c-b661-48d2d730651d/Digital-Thailand-AI-Ethics-Principle-and-Guideline.pdf.aspx",
           "lastVerified": "March 2026"
         },
@@ -2843,9 +2665,7 @@
             "Establishes governance framework aligned with ASEAN AI governance norms"
           ],
           "maxPenalty": "Not applicable (national strategy, not a regulatory instrument)",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.nstda.or.th/en/",
           "lastVerified": "March 2026"
         },
@@ -2865,9 +2685,7 @@
             "Data breach notification within 72 hours to the Personal Data Protection Committee"
           ],
           "maxPenalty": "Administrative fines up to THB 5 million (~$140,000); criminal penalties including imprisonment up to 1 year; civil liability for damages",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.pdpc.or.th/",
           "lastVerified": "March 2026"
         }
@@ -2923,9 +2741,7 @@
             "Establishes a legal framework for AI governance, including ethical guidelines and standards"
           ],
           "maxPenalty": "Not applicable (national strategy, not a regulatory instrument)",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.most.gov.vn/en/",
           "lastVerified": "March 2026"
         },
@@ -2944,9 +2760,7 @@
             "Notify individuals about AI-related processing of their personal data and provide access rights"
           ],
           "maxPenalty": "Administrative fines under existing cybersecurity law; specific penalties under the decree being developed through implementing regulations",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://mic.gov.vn/en/",
           "lastVerified": "March 2026"
         },
@@ -2967,12 +2781,7 @@
             "Use the controlled regulatory sandbox for sensitive AI; transition periods run to March 2027 (September 2027 for health, education and finance)"
           ],
           "maxPenalty": "Administrative fines reported up to VND 2 billion (~USD 76,000) for organisations, with revenue-based fines for serious violations plus possible criminal and civil liability",
-          "industryTags": [
-            "general",
-            "healthcare",
-            "financial-services",
-            "public-sector"
-          ],
+          "industryTags": ["general", "healthcare", "financial-services", "public-sector"],
           "sourceUrl": "https://www.most.gov.vn/en/",
           "lastVerified": "June 2026"
         }
@@ -3027,9 +2836,7 @@
             "Establishes SDAIA as the central authority for AI and data governance in the kingdom"
           ],
           "maxPenalty": "Not applicable (national strategy, not a regulatory instrument)",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://sdaia.gov.sa/en/default.aspx",
           "lastVerified": "March 2026"
         },
@@ -3049,9 +2856,7 @@
             "Maintain documentation of AI governance practices and make them available for review"
           ],
           "maxPenalty": "Effectively mandatory for government contractors; non-compliance may result in loss of government contracts and SDAIA-related certifications",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://sdaia.gov.sa/en/SDAIA/about/governance/Pages/EthicalPrinciples.aspx",
           "lastVerified": "March 2026"
         },
@@ -3071,9 +2876,7 @@
             "Maintain records of data processing activities and appoint a data protection officer"
           ],
           "maxPenalty": "Fines up to SAR 5 million (~$1.3 million) per violation; criminal penalties including imprisonment for serious breaches",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://sdaia.gov.sa/en/SDAIA/NDMO/Pages/PersonalDataProtection.aspx",
           "lastVerified": "March 2026"
         }
@@ -3137,9 +2940,7 @@
             "Promotes responsible AI through governance frameworks and ethical guidelines"
           ],
           "maxPenalty": "Not applicable (national strategy, not a regulatory instrument)",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://ai.gov.ae/",
           "lastVerified": "March 2026"
         },
@@ -3159,10 +2960,7 @@
             "Maintain audit trails for AI-supported government decisions"
           ],
           "maxPenalty": "No direct penalties (voluntary guidelines for most private entities); effectively mandatory for Dubai government services",
-          "industryTags": [
-            "general",
-            "public-sector"
-          ],
+          "industryTags": ["general", "public-sector"],
           "sourceUrl": "https://www.smartdubai.ae/",
           "lastVerified": "March 2026"
         },
@@ -3182,9 +2980,7 @@
             "Conduct data protection impact assessments for high-risk processing activities"
           ],
           "maxPenalty": "Administrative fines up to AED 2 million (~$545,000) per violation; additional penalties under sector-specific regulations",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://tdra.gov.ae/",
           "lastVerified": "March 2026"
         },
@@ -3203,9 +2999,7 @@
             "Maintain documentation of AI model development, validation, and monitoring processes"
           ],
           "maxPenalty": "Enforcement under ADGM’s regulatory framework; powers include fines, licence conditions, and revocation",
-          "industryTags": [
-            "financial-services"
-          ],
+          "industryTags": ["financial-services"],
           "sourceUrl": "https://www.adgm.com/",
           "lastVerified": "March 2026"
         }
@@ -3278,9 +3072,7 @@
             "Ensure human oversight for AI decisions with significant effects on individuals’ rights"
           ],
           "maxPenalty": "Expected penalties up to 2% of the company’s revenue in Brazil (up to BRL 50 million, ~$10 million), suspension of AI operations, and prohibition of processing data",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www25.senado.leg.br/web/atividade/materias/-/materia/163054",
           "lastVerified": "March 2026"
         },
@@ -3300,9 +3092,7 @@
             "ANPD can request explanations of automated decision-making logic from data controllers"
           ],
           "maxPenalty": "Fines up to 2% of the company’s revenue in Brazil (capped at BRL 50 million, ~$10 million per violation); ANPD can also issue warnings and block data processing",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.gov.br/anpd/pt-br",
           "lastVerified": "March 2026"
         },
@@ -3321,9 +3111,7 @@
             "Supports AI adoption in government services and key economic sectors"
           ],
           "maxPenalty": "Not applicable (national strategy, not a regulatory instrument)",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.gov.br/mcti/pt-br/acompanhe-o-mcti/transformacaodigital/inteligencia-artificial",
           "lastVerified": "March 2026"
         }
@@ -3396,9 +3184,7 @@
             "Promotes AI skills development and digital literacy programmes"
           ],
           "maxPenalty": "Not applicable (national strategy, not a regulatory instrument)",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.boletinoficial.gob.ar/detalleAviso/primera/314465/20240924",
           "lastVerified": "March 2026"
         },
@@ -3418,9 +3204,7 @@
             "AAIP has issued guidance interpreting existing law to cover automated profiling and decision-making"
           ],
           "maxPenalty": "Administrative fines, database suspension, and criminal penalties for severe violations; Argentina’s data protection is recognized as adequate by the EU",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.argentina.gob.ar/aaip",
           "lastVerified": "March 2026"
         }
@@ -3476,9 +3260,7 @@
             "Aligns with OECD AI Principles and international governance standards"
           ],
           "maxPenalty": "Not applicable (national policy, not a regulatory instrument)",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.minciencia.gob.cl/areas/inteligencia-artificial/politica-nacional-de-inteligencia-artificial/",
           "lastVerified": "March 2026"
         },
@@ -3496,10 +3278,7 @@
             "Neural data generated by brain-computer interfaces is classified as personal data under data protection law"
           ],
           "maxPenalty": "Constitutional right enforced through courts; violations subject to constitutional remedies and potential criminal liability",
-          "industryTags": [
-            "general",
-            "healthcare"
-          ],
+          "industryTags": ["general", "healthcare"],
           "sourceUrl": "https://www.bcn.cl/leychile/navegar?idNorma=1168725",
           "lastVerified": "March 2026"
         },
@@ -3519,9 +3298,7 @@
             "Enhanced consent requirements and rights to access, rectification, erasure, and portability"
           ],
           "maxPenalty": "Fines up to UTM 20,000 (~$1.5 million); data processing suspension; the new data protection authority will enforce",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.bcn.cl/leychile/navegar?idNorma=1198789",
           "lastVerified": "March 2026"
         },
@@ -3540,9 +3317,7 @@
             "Aligns with OECD AI Principles and regional best practices"
           ],
           "maxPenalty": "TBD — bill under legislative discussion",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.senado.cl/",
           "lastVerified": "March 2026"
         }
@@ -3611,9 +3386,7 @@
             "Invests in AI research capacity through universities and ColCiencias (now MinCiencias)"
           ],
           "maxPenalty": "Not applicable (national policy, not a regulatory instrument)",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://colaboracion.dnp.gov.co/CDT/Conpes/Econ%C3%B3micos/3975.pdf",
           "lastVerified": "March 2026"
         },
@@ -3633,9 +3406,7 @@
             "SIC has interpreted existing law to cover profiling and automated decision-making obligations"
           ],
           "maxPenalty": "Fines up to 2,000 minimum monthly wages (~$500,000); SIC can also issue corrective orders and suspend processing activities",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.sic.gov.co/sobre-la-proteccion-de-datos-personales",
           "lastVerified": "March 2026"
         },
@@ -3654,9 +3425,7 @@
             "Promote inclusive AI development that considers Colombia’s diverse population"
           ],
           "maxPenalty": "No penalties (voluntary recommendations); adoption demonstrates alignment with government expectations",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.mintic.gov.co/",
           "lastVerified": "March 2026"
         }
@@ -3712,10 +3481,7 @@
             "Encourages private-sector AI adoption with responsible governance practices"
           ],
           "maxPenalty": "Promotional law without direct penalty provisions; enforcement of AI governance principles through existing legal frameworks",
-          "industryTags": [
-            "general",
-            "public-sector"
-          ],
+          "industryTags": ["general", "public-sector"],
           "sourceUrl": "https://www.gob.pe/pcm",
           "lastVerified": "March 2026"
         },
@@ -3734,9 +3500,7 @@
             "Creates ethical guidelines for AI aligned with international best practices"
           ],
           "maxPenalty": "Not applicable (national strategy, not a regulatory instrument)",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.gob.pe/pcm",
           "lastVerified": "March 2026"
         },
@@ -3755,9 +3519,7 @@
             "Individuals have rights to access, rectify, cancel, and oppose processing of personal data in AI systems"
           ],
           "maxPenalty": "Administrative fines up to 100 UIT (~$130,000); the ANPDP can also order correction or cessation of processing",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.gob.pe/anpd",
           "lastVerified": "March 2026"
         }
@@ -3813,9 +3575,7 @@
             "Addresses digital infrastructure needs to support AI deployment"
           ],
           "maxPenalty": "Not applicable (national strategy, not a regulatory instrument)",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://nitda.gov.ng/",
           "lastVerified": "March 2026"
         },
@@ -3835,9 +3595,7 @@
             "Register as a data controller or processor with the NDPC"
           ],
           "maxPenalty": "Fines up to NGN 10 million (~$6,500) or 2% of annual gross revenue for major data controllers; additional penalties for serious violations",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://ndpc.gov.ng/",
           "lastVerified": "March 2026"
         },
@@ -3857,9 +3615,7 @@
             "Framework expected to become binding once finalized"
           ],
           "maxPenalty": "Currently voluntary; expected to include enforcement mechanisms when finalized",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://nitda.gov.ng/",
           "lastVerified": "March 2026"
         }
@@ -3915,9 +3671,7 @@
             "Coordinates through the National Council for AI, chaired by the Cabinet"
           ],
           "maxPenalty": "Not applicable (national strategy, not a regulatory instrument)",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://mcit.gov.eg/en/Artificial_Intelligence",
           "lastVerified": "March 2026"
         },
@@ -3937,9 +3691,7 @@
             "Cross-border data transfers require authorization from the data protection centre"
           ],
           "maxPenalty": "Fines from EGP 100,000 to EGP 5 million (~$3,200 to $162,000); criminal penalties including imprisonment for serious violations",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://mcit.gov.eg/en/Publication/Publication_Summary/9341",
           "lastVerified": "March 2026"
         },
@@ -3958,9 +3710,7 @@
             "Promote inclusive AI development that benefits all segments of Egyptian society"
           ],
           "maxPenalty": "No penalties (voluntary charter); adoption supports alignment with government expectations",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://mcit.gov.eg/en/Artificial_Intelligence",
           "lastVerified": "March 2026"
         }
@@ -4016,9 +3766,7 @@
             "Develops ethical guidelines for responsible AI deployment"
           ],
           "maxPenalty": "Not applicable (national strategy, not a regulatory instrument)",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://ncb.govmu.org/",
           "lastVerified": "March 2026"
         },
@@ -4038,9 +3786,7 @@
             "Individuals have rights to access, rectify, and object to processing of personal data"
           ],
           "maxPenalty": "Fines up to MUR 200,000 (~$4,400) and/or imprisonment up to 5 years per violation",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://dataprotection.govmu.org/",
           "lastVerified": "March 2026"
         },
@@ -4059,9 +3805,7 @@
             "Promote AI literacy and public engagement on AI governance"
           ],
           "maxPenalty": "No penalties (voluntary guidance); adoption demonstrates governance maturity",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://ncb.govmu.org/",
           "lastVerified": "March 2026"
         }
@@ -4117,9 +3861,7 @@
             "Maintain human oversight: ensure algorithms support but do not replace human decision-making on matters affecting individuals’ rights"
           ],
           "maxPenalty": "No direct penalties (voluntary charter); signatory agencies publicly commit and are accountable through reporting mechanisms",
-          "industryTags": [
-            "public-sector"
-          ],
+          "industryTags": ["public-sector"],
           "sourceUrl": "https://data.govt.nz/toolkit/data-ethics/government-algorithm-transparency-and-accountability/algorithm-charter",
           "lastVerified": "March 2026"
         },
@@ -4139,9 +3881,7 @@
             "Individuals have the right to access and correct personal information held in AI systems"
           ],
           "maxPenalty": "Privacy Commissioner can issue compliance notices; fines up to NZD $10,000 per offence for non-compliance with notices; Human Rights Review Tribunal can award damages",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.privacy.org.nz/privacy-act-2020/",
           "lastVerified": "March 2026"
         },
@@ -4160,9 +3900,7 @@
             "Consider the cultural context, including Māori data sovereignty principles, in AI design and deployment"
           ],
           "maxPenalty": "Enforcement under the Privacy Act 2020; compliance notices and potential damages",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://www.privacy.org.nz/resources-and-learning/a-z-topics/ai/",
           "lastVerified": "March 2026"
         },
@@ -4181,9 +3919,7 @@
             "Maintain human oversight for AI-assisted government decisions affecting individual rights"
           ],
           "maxPenalty": "No direct penalties (government guidance); non-compliance may result in judicial review of government decisions",
-          "industryTags": [
-            "public-sector"
-          ],
+          "industryTags": ["public-sector"],
           "sourceUrl": "https://data.govt.nz/toolkit/data-ethics/",
           "lastVerified": "March 2026"
         }
@@ -4282,12 +4018,7 @@
             "Observe bans on subliminal manipulation and unlawful biometric categorisation mirrored from the EU AI Act"
           ],
           "maxPenalty": "Aligned to EU AI Act tiers — up to €35 million or 7% of worldwide annual turnover for the most serious infringements (subject to final parliamentary text)",
-          "industryTags": [
-            "general",
-            "hr-employment",
-            "public-sector",
-            "financial-services"
-          ],
+          "industryTags": ["general", "hr-employment", "public-sector", "financial-services"],
           "sourceUrl": "https://aesia.digital.gob.es/en/es",
           "lastVerified": "June 2026"
         },
@@ -4306,10 +4037,7 @@
             "Contribute to good-practice reports and technical implementation guides produced by the programme"
           ],
           "maxPenalty": "No direct fines (voluntary participation framework); the sandbox does not exempt participants from EU AI Act duties",
-          "industryTags": [
-            "general",
-            "public-sector"
-          ],
+          "industryTags": ["general", "public-sector"],
           "sourceUrl": "https://www.boe.es/diario_boe/txt.php?id=BOE-A-2023-22767",
           "lastVerified": "June 2026"
         }
@@ -4389,11 +4117,7 @@
             "Monitor the implementation bill expected for consultation by the end of 2026"
           ],
           "maxPenalty": "No standalone AI penalties; enforcement runs through existing sectoral and data-protection law",
-          "industryTags": [
-            "general",
-            "public-sector",
-            "financial-services"
-          ],
+          "industryTags": ["general", "public-sector", "financial-services"],
           "sourceUrl": "https://www.admin.ch/en/nsb?id=104110",
           "lastVerified": "June 2026"
         },
@@ -4412,10 +4136,7 @@
             "Carry out risk and impact assessments as specified by implementing Swiss legislation"
           ],
           "maxPenalty": "To be determined by the Swiss implementing legislation (the Convention itself sets no fixed penalties)",
-          "industryTags": [
-            "general",
-            "public-sector"
-          ],
+          "industryTags": ["general", "public-sector"],
           "sourceUrl": "https://www.coe.int/en/web/artificial-intelligence/the-framework-convention-on-artificial-intelligence",
           "lastVerified": "June 2026"
         },
@@ -4435,12 +4156,7 @@
             "Respect data-subject rights of access, objection and human review where applicable"
           ],
           "maxPenalty": "Fines up to CHF 250,000 against responsible private individuals for certain violations",
-          "industryTags": [
-            "general",
-            "financial-services",
-            "healthcare",
-            "hr-employment"
-          ],
+          "industryTags": ["general", "financial-services", "healthcare", "hr-employment"],
           "sourceUrl": "https://www.edoeb.admin.ch/en",
           "lastVerified": "June 2026"
         },
@@ -4459,10 +4175,7 @@
             "Monitor for and document AI-related operational and reputational risks"
           ],
           "maxPenalty": "FINMA supervisory measures (enforcement actions, licence restrictions); no fixed AI fine schedule",
-          "industryTags": [
-            "financial-services",
-            "insurance"
-          ],
+          "industryTags": ["financial-services", "insurance"],
           "sourceUrl": "https://www.finma.ch/en/",
           "lastVerified": "June 2026"
         }
@@ -4539,11 +4252,7 @@
             "Coordinate with KVKK on privacy and with BTK on telecommunications and network-integrity matters"
           ],
           "maxPenalty": "Draft provides significant administrative fines (fixed amounts and turnover-based percentages); exact figures provisional pending the final text",
-          "industryTags": [
-            "general",
-            "public-sector",
-            "healthcare"
-          ],
+          "industryTags": ["general", "public-sector", "healthcare"],
           "sourceUrl": "https://www.tbmm.gov.tr",
           "lastVerified": "June 2026"
         },
@@ -4563,12 +4272,7 @@
             "Register with VERBIS where required and meet reporting obligations to the KVKK authority"
           ],
           "maxPenalty": "Administrative fines under Law No. 6698 (periodically revalued); plus potential criminal liability for unlawful data processing",
-          "industryTags": [
-            "general",
-            "financial-services",
-            "healthcare",
-            "hr-employment"
-          ],
+          "industryTags": ["general", "financial-services", "healthcare", "hr-employment"],
           "sourceUrl": "https://www.kvkk.gov.tr/",
           "lastVerified": "June 2026"
         },
@@ -4587,10 +4291,7 @@
             "Coordinate implementation via the national AI steering committee"
           ],
           "maxPenalty": "No penalties (policy framework, not binding law)",
-          "industryTags": [
-            "general",
-            "public-sector"
-          ],
+          "industryTags": ["general", "public-sector"],
           "sourceUrl": "https://cbddo.gov.tr/en/",
           "lastVerified": "June 2026"
         }
@@ -4667,10 +4368,7 @@
             "Promote widely beneficial and inclusive private-sector AI adoption"
           ],
           "maxPenalty": "None — non-binding national policy with no statutory penalties",
-          "industryTags": [
-            "general",
-            "public-sector"
-          ],
+          "industryTags": ["general", "public-sector"],
           "sourceUrl": "https://www.minict.gov.rw/ai-policy",
           "lastVerified": "June 2026"
         },
@@ -4691,12 +4389,7 @@
             "Meet conditions for cross-border transfers of personal data"
           ],
           "maxPenalty": "Administrative fine of RWF 2–5 million or up to 1% of prior-year global turnover; criminal offences punishable by 1–3 years imprisonment and a RWF 7–10 million fine",
-          "industryTags": [
-            "general",
-            "financial-services",
-            "healthcare",
-            "public-sector"
-          ],
+          "industryTags": ["general", "financial-services", "healthcare", "public-sector"],
           "sourceUrl": "https://dpo.gov.rw/legal-framework",
           "lastVerified": "June 2026"
         }
@@ -4773,10 +4466,7 @@
             "Use multi-stakeholder governance and coordinate with the Information Regulator"
           ],
           "maxPenalty": "None — non-binding policy framework with no statutory penalties (statute pending)",
-          "industryTags": [
-            "general",
-            "public-sector"
-          ],
+          "industryTags": ["general", "public-sector"],
           "sourceUrl": "https://www.dcdt.gov.za/sa-national-ai-policy-framework.html",
           "lastVerified": "June 2026"
         },
@@ -4881,11 +4571,7 @@
             "Target strategic AI deployment in priority sectors"
           ],
           "maxPenalty": "None — non-binding national strategy with no statutory penalties",
-          "industryTags": [
-            "general",
-            "public-sector",
-            "healthcare"
-          ],
+          "industryTags": ["general", "public-sector", "healthcare"],
           "sourceUrl": "https://www.dti.gov.ph/",
           "lastVerified": "June 2026"
         },
@@ -4989,12 +4675,7 @@
             "Article 50 transparency duties (labelling deepfakes and AI interactions) apply from August 2026"
           ],
           "maxPenalty": "Up to €35 million or 7% of total worldwide annual turnover, whichever is higher (EU AI Act penalties)",
-          "industryTags": [
-            "general",
-            "public-sector",
-            "financial-services",
-            "healthcare"
-          ],
+          "industryTags": ["general", "public-sector", "financial-services", "healthcare"],
           "sourceUrl": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj",
           "lastVerified": "June 2026"
         },
@@ -5013,10 +4694,7 @@
             "Coordinates with sector regulators ahead of formal AI Act competent-authority designation"
           ],
           "maxPenalty": "No standalone algorithm fines; enforced via GDPR (up to €20 million or 4% of turnover) and, going forward, the EU AI Act",
-          "industryTags": [
-            "general",
-            "public-sector"
-          ],
+          "industryTags": ["general", "public-sector"],
           "sourceUrl": "https://www.autoriteitpersoonsgegevens.nl/en/themes/algorithms-ai/eu-ai-act",
           "lastVerified": "June 2026"
         },
@@ -5035,10 +4713,7 @@
             "Aligns Dutch practice with EU AI Act transparency expectations for public bodies"
           ],
           "maxPenalty": "Transparency instrument; no direct penalties",
-          "industryTags": [
-            "public-sector",
-            "general"
-          ],
+          "industryTags": ["public-sector", "general"],
           "sourceUrl": "https://algoritmes.overheid.nl/en",
           "lastVerified": "June 2026"
         }
@@ -5115,12 +4790,7 @@
             "Article 50 transparency duties for deepfakes and AI interactions from August 2026"
           ],
           "maxPenalty": "Up to €35 million or 7% of total worldwide annual turnover, whichever is higher (EU AI Act penalties)",
-          "industryTags": [
-            "general",
-            "financial-services",
-            "healthcare",
-            "public-sector"
-          ],
+          "industryTags": ["general", "financial-services", "healthcare", "public-sector"],
           "sourceUrl": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj",
           "lastVerified": "June 2026"
         },
@@ -5139,12 +4809,7 @@
             "Designated bodies oversee market surveillance and fundamental-rights protection for high-risk AI"
           ],
           "maxPenalty": "Enforces EU AI Act penalties: up to €35 million or 7% of worldwide annual turnover",
-          "industryTags": [
-            "general",
-            "financial-services",
-            "healthcare",
-            "public-sector"
-          ],
+          "industryTags": ["general", "financial-services", "healthcare", "public-sector"],
           "sourceUrl": "https://enterprise.gov.ie/en/news-and-events/department-news/2025/september/20250916.html",
           "lastVerified": "June 2026"
         },
@@ -5163,10 +4828,7 @@
             "Conduct data protection impact assessments for high-risk AI processing"
           ],
           "maxPenalty": "GDPR fines up to €20 million or 4% of total worldwide annual turnover, whichever is higher",
-          "industryTags": [
-            "general",
-            "financial-services"
-          ],
+          "industryTags": ["general", "financial-services"],
           "sourceUrl": "https://www.dataprotection.ie/en/dpc-guidance/blogs/AI-LLMs-and-Data-Protection",
           "lastVerified": "June 2026"
         }
@@ -5242,12 +4904,7 @@
             "Norway is preparing national implementation in parallel rather than waiting on incorporation"
           ],
           "maxPenalty": "Reference EU AI Act cap is €35 million or 7% of worldwide turnover; Norwegian commencement and penalty regime not yet settled",
-          "industryTags": [
-            "general",
-            "financial-services",
-            "healthcare",
-            "public-sector"
-          ],
+          "industryTags": ["general", "financial-services", "healthcare", "public-sector"],
           "sourceUrl": "https://www.regjeringen.no/en/whats-new/gjor-norge-klar-for-trygg-og-innovativ-ki-bruk/id3093081/",
           "lastVerified": "June 2026"
         },
@@ -5266,10 +4923,7 @@
             "Frame later regulatory and sandbox initiatives"
           ],
           "maxPenalty": "None (policy framework)",
-          "industryTags": [
-            "general",
-            "public-sector"
-          ],
+          "industryTags": ["general", "public-sector"],
           "sourceUrl": "https://www.regjeringen.no/en/documents/nasjonal-strategi-for-kunstig-intelligens/id2685594/",
           "lastVerified": "June 2026"
         },
@@ -5288,11 +4942,7 @@
             "Voluntary participation; offers regulatory guidance rather than approval"
           ],
           "maxPenalty": "No sandbox-specific penalties; GDPR fines up to €20 million or 4% of turnover apply generally",
-          "industryTags": [
-            "general",
-            "public-sector",
-            "healthcare"
-          ],
+          "industryTags": ["general", "public-sector", "healthcare"],
           "sourceUrl": "https://www.datatilsynet.no/en/regulations-and-tools/sandbox-for-artificial-intelligence/",
           "lastVerified": "June 2026"
         }
@@ -5368,11 +5018,7 @@
             "Oversight now sits with the Secretaría Anticorrupción y Buen Gobierno after INAI's abolition"
           ],
           "maxPenalty": "Data-protection fines under the LFPDPPP, scaled by violation; figures set by the consolidated law text",
-          "industryTags": [
-            "general",
-            "financial-services",
-            "healthcare"
-          ],
+          "industryTags": ["general", "financial-services", "healthcare"],
           "sourceUrl": "https://www.diputados.gob.mx/LeyesBiblio/ref/lfpdppp/LFPDPPP_orig_20mar25.pdf",
           "lastVerified": "June 2026"
         },
@@ -5391,10 +5037,7 @@
             "Mexico has no single AI authority yet operational"
           ],
           "maxPenalty": "Not enacted; proposed penalties not in force",
-          "industryTags": [
-            "general",
-            "public-sector"
-          ],
+          "industryTags": ["general", "public-sector"],
           "sourceUrl": "https://www.diputados.gob.mx/",
           "lastVerified": "June 2026"
         },
@@ -5413,10 +5056,7 @@
             "Sectoral in scope, not a general AI law"
           ],
           "maxPenalty": "To be set by the amended statutes if enacted",
-          "industryTags": [
-            "general",
-            "hr-employment"
-          ],
+          "industryTags": ["general", "hr-employment"],
           "sourceUrl": "https://www.diputados.gob.mx/",
           "lastVerified": "June 2026"
         }
@@ -5492,10 +5132,7 @@
             "No binding obligations or penalties imposed at this stage"
           ],
           "maxPenalty": "None (voluntary roadmap)",
-          "industryTags": [
-            "general",
-            "public-sector"
-          ],
+          "industryTags": ["general", "public-sector"],
           "sourceUrl": "https://oecd.ai/en/dashboards/policy-initiatives/roadmap-for-ai-regulation-in-ukraine-a-bottom-up-approach",
           "lastVerified": "June 2026"
         },
@@ -5514,9 +5151,7 @@
             "Part of stage-one preparation under the White Paper roadmap"
           ],
           "maxPenalty": "None (voluntary commitment)",
-          "industryTags": [
-            "general"
-          ],
+          "industryTags": ["general"],
           "sourceUrl": "https://oecd.ai/en/dashboards/policy-initiatives/roadmap-for-ai-regulation-in-ukraine-a-bottom-up-approach",
           "lastVerified": "June 2026"
         },
@@ -5535,10 +5170,7 @@
             "Reinforces alignment toward EU and Council of Europe standards"
           ],
           "maxPenalty": "Set by future domestic implementing law",
-          "industryTags": [
-            "general",
-            "public-sector"
-          ],
+          "industryTags": ["general", "public-sector"],
           "sourceUrl": "https://www.coe.int/en/web/artificial-intelligence/the-framework-convention-on-artificial-intelligence",
           "lastVerified": "June 2026"
         }
@@ -5641,11 +5273,7 @@
             "Prepare for corrective orders including suspension, recall or withdrawal of non-compliant systems"
           ],
           "maxPenalty": "References EU AI Act fines (up to €35M / 7% turnover); up to PLN 500,000 proposed for obstructing inspections (subject to final parliamentary text)",
-          "industryTags": [
-            "general",
-            "financial-services",
-            "public-sector"
-          ],
+          "industryTags": ["general", "financial-services", "public-sector"],
           "sourceUrl": "https://www.gov.pl/web/cyfryzacja",
           "lastVerified": "June 2026"
         },
@@ -5747,10 +5375,7 @@
             "Reference existing frameworks (Constitution 2010, Data Protection Act 2019, National ICT Policy) when deploying AI"
           ],
           "maxPenalty": "None — non-binding national strategy with no statutory penalties",
-          "industryTags": [
-            "general",
-            "public-sector"
-          ],
+          "industryTags": ["general", "public-sector"],
           "sourceUrl": "https://ict.go.ke/sites/default/files/2025-03/Kenya%20AI%20Strategy%202025%20-%202030.pdf",
           "lastVerified": "June 2026"
         },
@@ -5877,12 +5502,7 @@
             "Align AI use with fundamental rights and non-discrimination"
           ],
           "maxPenalty": "None — voluntary guidelines with no statutory penalties",
-          "industryTags": [
-            "general",
-            "public-sector",
-            "healthcare",
-            "financial-services"
-          ],
+          "industryTags": ["general", "public-sector", "healthcare", "financial-services"],
           "sourceUrl": "https://www.mcit.gov.qa/wp-content/uploads/sites/4/2025/04/AI-Guidelines-_-En.pdf",
           "lastVerified": "June 2026"
         },
@@ -5901,10 +5521,7 @@
             "Coordinate with sector regulators as the framework matures"
           ],
           "maxPenalty": "None — non-binding national strategy with no statutory penalties",
-          "industryTags": [
-            "general",
-            "public-sector"
-          ],
+          "industryTags": ["general", "public-sector"],
           "sourceUrl": "https://www.mcit.gov.qa/en/",
           "lastVerified": "June 2026"
         }
@@ -6003,10 +5620,7 @@
             "Underpin the legislative and institutional framework later codified in the AI Law"
           ],
           "maxPenalty": "None — non-binding policy concept with no statutory penalties",
-          "industryTags": [
-            "general",
-            "public-sector"
-          ],
+          "industryTags": ["general", "public-sector"],
           "sourceUrl": "https://www.gov.kz/?lang=en",
           "lastVerified": "June 2026"
         },
@@ -6025,12 +5639,7 @@
             "Observe localisation and cross-border transfer requirements for personal data"
           ],
           "maxPenalty": "Administrative fines under the Code of Administrative Offences, with possible suspension of processing",
-          "industryTags": [
-            "general",
-            "financial-services",
-            "healthcare",
-            "public-sector"
-          ],
+          "industryTags": ["general", "financial-services", "healthcare", "public-sector"],
           "sourceUrl": "https://adilet.zan.kz/eng/docs/Z1300000094",
           "lastVerified": "June 2026"
         }
@@ -6103,12 +5712,7 @@
             "Support national AI skills, infrastructure and innovation goals"
           ],
           "maxPenalty": "None — non-binding national policy with no statutory penalties",
-          "industryTags": [
-            "general",
-            "public-sector",
-            "financial-services",
-            "healthcare"
-          ],
+          "industryTags": ["general", "public-sector", "financial-services", "healthcare"],
           "sourceUrl": "https://moitt.gov.pk/SiteImage/Misc/files/National%20AI%20Policy.pdf",
           "lastVerified": "June 2026"
         },
@@ -6127,12 +5731,7 @@
             "Observe data-localisation and cross-border transfer rules under discussion"
           ],
           "maxPenalty": "Not yet in force — penalties to be set on enactment (draft proposes administrative fines)",
-          "industryTags": [
-            "general",
-            "financial-services",
-            "healthcare",
-            "public-sector"
-          ],
+          "industryTags": ["general", "financial-services", "healthcare", "public-sector"],
           "sourceUrl": "https://moitt.gov.pk/",
           "lastVerified": "June 2026"
         },
@@ -6151,11 +5750,7 @@
             "Apply safeguards where AI processes data that could enable cyber offences"
           ],
           "maxPenalty": "Imprisonment and/or fines as specified per offence under the Act (varies by offence)",
-          "industryTags": [
-            "general",
-            "public-sector",
-            "financial-services"
-          ],
+          "industryTags": ["general", "public-sector", "financial-services"],
           "sourceUrl": "https://moitt.gov.pk/",
           "lastVerified": "June 2026"
         }
@@ -6229,11 +5824,7 @@
             "Appoint a data protection guardian or supervisor where required"
           ],
           "maxPenalty": "Imprisonment up to one year and/or fines up to BHD 20,000 for serious breaches under the PDPL",
-          "industryTags": [
-            "general",
-            "financial-services",
-            "public-sector"
-          ],
+          "industryTags": ["general", "financial-services", "public-sector"],
           "sourceUrl": "https://www.pdp.gov.bh/en/index.html",
           "lastVerified": "June 2026"
         },
@@ -6252,10 +5843,7 @@
             "Apply the GCC guiding manual on AI ethics referenced by the policy"
           ],
           "maxPenalty": "None — policy instrument with no standalone penalties",
-          "industryTags": [
-            "public-sector",
-            "general"
-          ],
+          "industryTags": ["public-sector", "general"],
           "sourceUrl": "https://www.iga.gov.bh/",
           "lastVerified": "June 2026"
         }
@@ -6329,11 +5917,7 @@
             "Comply with cross-border transfer conditions set by the Authority"
           ],
           "maxPenalty": "Administrative penalties up to LKR 10 million per instance imposed by the Data Protection Authority, with higher exposure for repeat non-compliance",
-          "industryTags": [
-            "general",
-            "financial-services",
-            "healthcare"
-          ],
+          "industryTags": ["general", "financial-services", "healthcare"],
           "sourceUrl": "https://www.dpa.gov.lk/",
           "lastVerified": "June 2026"
         },
@@ -6352,10 +5936,7 @@
             "Align AI initiatives with the Digital Economy Strategy 2030"
           ],
           "maxPenalty": "None — strategy instrument with no standalone penalties",
-          "industryTags": [
-            "general",
-            "public-sector"
-          ],
+          "industryTags": ["general", "public-sector"],
           "sourceUrl": "https://mode.gov.lk/",
           "lastVerified": "June 2026"
         }
@@ -6429,11 +6010,7 @@
             "Meet authorisation and adequacy conditions for international data transfers"
           ],
           "maxPenalty": "Administrative sanctions imposed by the URCDP ranging from warnings to fines and suspension of databases",
-          "industryTags": [
-            "general",
-            "financial-services",
-            "public-sector"
-          ],
+          "industryTags": ["general", "financial-services", "public-sector"],
           "sourceUrl": "https://www.gub.uy/unidad-reguladora-control-datos-personales",
           "lastVerified": "June 2026"
         },
@@ -6452,10 +6029,7 @@
             "Monitor and review AI deployments for legal and ethical compliance"
           ],
           "maxPenalty": "None — strategy instrument with no standalone penalties (binding force flows from Law 18.331 and Law 20.212)",
-          "industryTags": [
-            "public-sector",
-            "general"
-          ],
+          "industryTags": ["public-sector", "general"],
           "sourceUrl": "https://www.gub.uy/agencia-gobierno-electronico-sociedad-informacion-conocimiento/",
           "lastVerified": "June 2026"
         }
@@ -6525,11 +6099,7 @@
             "Cooperate with CNDP oversight and complaint-handling"
           ],
           "maxPenalty": "Administrative fines plus criminal penalties of up to MAD 300,000 and imprisonment for serious violations under Law 09-08",
-          "industryTags": [
-            "general",
-            "financial-services",
-            "public-sector"
-          ],
+          "industryTags": ["general", "financial-services", "public-sector"],
           "sourceUrl": "https://www.cndp.ma/",
           "lastVerified": "June 2026"
         },
@@ -6548,10 +6118,7 @@
             "Align AI initiatives with the Digital Morocco 2030 strategy"
           ],
           "maxPenalty": "None — strategy instrument with no standalone penalties (binding data rules flow from Law 09-08)",
-          "industryTags": [
-            "public-sector",
-            "general"
-          ],
+          "industryTags": ["public-sector", "general"],
           "sourceUrl": "https://www.cndp.ma/",
           "lastVerified": "June 2026"
         }
@@ -6621,11 +6188,7 @@
             "Comply with oversight by the competent data protection authority"
           ],
           "maxPenalty": "Graduated administrative fines under the PDPL, with higher exposure for sensitive-data and cross-border violations",
-          "industryTags": [
-            "general",
-            "financial-services",
-            "public-sector"
-          ],
+          "industryTags": ["general", "financial-services", "public-sector"],
           "sourceUrl": "https://www.modee.gov.jo/",
           "lastVerified": "June 2026"
         },
@@ -6644,10 +6207,7 @@
             "Promote ethical and responsible AI adoption"
           ],
           "maxPenalty": "None — strategy instrument with no standalone penalties",
-          "industryTags": [
-            "public-sector",
-            "general"
-          ],
+          "industryTags": ["public-sector", "general"],
           "sourceUrl": "https://www.modee.gov.jo/ebv4.0/root_storage/en/eb_list_page/40435648.pdf",
           "lastVerified": "June 2026"
         }
@@ -6721,11 +6281,7 @@
             "Comply with conditions for cross-border transfers of personal data"
           ],
           "maxPenalty": "Fines under the PDPL up to OMR 500,000 for serious violations, with additional penalties for sensitive-data breaches",
-          "industryTags": [
-            "general",
-            "financial-services",
-            "healthcare"
-          ],
+          "industryTags": ["general", "financial-services", "healthcare"],
           "sourceUrl": "https://mtcit.gov.om/library-3/legislations-policies-8/laws-75/personal-data-protection-law-1034",
           "lastVerified": "June 2026"
         },
@@ -6744,10 +6300,7 @@
             "Deliver national initiatives such as an AI research centre and national data platform"
           ],
           "maxPenalty": "None — program instrument with no standalone penalties (binding data rules flow from the PDPL)",
-          "industryTags": [
-            "public-sector",
-            "general"
-          ],
+          "industryTags": ["public-sector", "general"],
           "sourceUrl": "https://mtcit.gov.om/",
           "lastVerified": "June 2026"
         }
@@ -6821,12 +6374,7 @@
             "Meet stricter conditions for sensitive data and cross-border transfers"
           ],
           "maxPenalty": "Administrative fines up to roughly 30 base salaries plus possible suspension of database operations for serious violations",
-          "industryTags": [
-            "general",
-            "financial-services",
-            "healthcare",
-            "public-sector"
-          ],
+          "industryTags": ["general", "financial-services", "healthcare", "public-sector"],
           "sourceUrl": "https://www.prodhab.go.cr/",
           "lastVerified": "June 2026"
         },
@@ -6845,10 +6393,7 @@
             "Foster responsible public-sector AI adoption and data governance"
           ],
           "maxPenalty": "None — non-binding policy guidance",
-          "industryTags": [
-            "general",
-            "public-sector"
-          ],
+          "industryTags": ["general", "public-sector"],
           "sourceUrl": "https://www.micitt.go.cr/",
           "lastVerified": "June 2026"
         }
@@ -6918,12 +6463,7 @@
             "Meet additional conditions for sensitive data and international transfers"
           ],
           "maxPenalty": "Serious violations: fine of 0.7% to 1% of the previous financial year's turnover; minor violations 0.1% to 0.7%",
-          "industryTags": [
-            "general",
-            "financial-services",
-            "healthcare",
-            "public-sector"
-          ],
+          "industryTags": ["general", "financial-services", "healthcare", "public-sector"],
           "sourceUrl": "https://www.gob.ec/regulaciones/ley-organica-proteccion-datos-personales",
           "lastVerified": "June 2026"
         },
@@ -6942,10 +6482,7 @@
             "Promote AI literacy, innovation and rights protection"
           ],
           "maxPenalty": "Not yet defined; the bill is not enacted",
-          "industryTags": [
-            "general",
-            "public-sector"
-          ],
+          "industryTags": ["general", "public-sector"],
           "sourceUrl": "https://www.asambleanacional.gob.ec/",
           "lastVerified": "June 2026"
         }
@@ -7019,12 +6556,7 @@
             "Apply heightened protection to sensitive data"
           ],
           "maxPenalty": "Criminal and administrative sanctions including fines and imprisonment for serious breaches under the Organic Law",
-          "industryTags": [
-            "general",
-            "financial-services",
-            "healthcare",
-            "public-sector"
-          ],
+          "industryTags": ["general", "financial-services", "healthcare", "public-sector"],
           "sourceUrl": "https://www.inpdp.tn/",
           "lastVerified": "June 2026"
         },
@@ -7043,11 +6575,7 @@
             "Coordinate AI policy across ministries through a planned National AI Council"
           ],
           "maxPenalty": "None — non-binding policy guidance",
-          "industryTags": [
-            "general",
-            "public-sector",
-            "healthcare"
-          ],
+          "industryTags": ["general", "public-sector", "healthcare"],
           "sourceUrl": "https://www.inpdp.tn/",
           "lastVerified": "June 2026"
         }
@@ -7121,11 +6649,7 @@
             "Maintain accountability and records for data-processing activities"
           ],
           "maxPenalty": "Enforcement and penalties administered by CITRA under its regulatory powers; specific fine amounts set by CITRA decisions",
-          "industryTags": [
-            "general",
-            "financial-services",
-            "public-sector"
-          ],
+          "industryTags": ["general", "financial-services", "public-sector"],
           "sourceUrl": "https://www.citra.gov.kw/",
           "lastVerified": "June 2026"
         },
@@ -7144,10 +6668,7 @@
             "Align AI regulation, infrastructure and innovation across government"
           ],
           "maxPenalty": "Not yet defined; the strategy is in development",
-          "industryTags": [
-            "general",
-            "public-sector"
-          ],
+          "industryTags": ["general", "public-sector"],
           "sourceUrl": "https://www.citra.gov.kw/",
           "lastVerified": "June 2026"
         }
@@ -7217,12 +6738,7 @@
             "Meet conditions for processing sensitive data and cross-border transfers"
           ],
           "maxPenalty": "Offences under Act 843 carry fines (penalty units) and, for serious breaches, imprisonment of up to several years",
-          "industryTags": [
-            "general",
-            "financial-services",
-            "healthcare",
-            "public-sector"
-          ],
+          "industryTags": ["general", "financial-services", "healthcare", "public-sector"],
           "sourceUrl": "https://www.dataprotection.org.gh/",
           "lastVerified": "June 2026"
         },
@@ -7241,10 +6757,7 @@
             "Promote ethical, responsible and inclusive AI adoption in public services"
           ],
           "maxPenalty": "None — non-binding policy guidance",
-          "industryTags": [
-            "general",
-            "public-sector"
-          ],
+          "industryTags": ["general", "public-sector"],
           "sourceUrl": "https://moc.gov.gh/",
           "lastVerified": "June 2026"
         }
@@ -7314,12 +6827,7 @@
             "Meet conditions for processing special-category data and international transfers"
           ],
           "maxPenalty": "Administrative fines per violation up to GEL 10,000 or GEL 20,000 depending on the sanctioned entity's turnover",
-          "industryTags": [
-            "general",
-            "financial-services",
-            "healthcare",
-            "public-sector"
-          ],
+          "industryTags": ["general", "financial-services", "healthcare", "public-sector"],
           "sourceUrl": "https://matsne.gov.ge/en/document/view/5827307",
           "lastVerified": "June 2026"
         }

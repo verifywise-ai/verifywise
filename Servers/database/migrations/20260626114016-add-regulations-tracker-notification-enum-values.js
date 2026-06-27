@@ -17,5 +17,7 @@ module.exports = {
       ALTER TYPE verifywise.enum_notification_entity_type ADD VALUE IF NOT EXISTS 'regulation_country';
     `);
   },
-  async down() { /* No-op: enum value removal requires type recreation. */ },
+  async down() {
+    /* No-op: enum value removal requires type recreation. */
+  },
 };

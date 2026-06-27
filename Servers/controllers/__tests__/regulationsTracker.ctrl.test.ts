@@ -53,12 +53,26 @@ jest.mock("../../utils/regulationImpact.utils", () => ({
   getImpactRow: jest.fn().mockResolvedValue({
     regulation_hash: "h1",
     status: "ok",
-    result: { systems: [], controls: [], policies: [], vendors: [], assessments: [], generatedAt: "x" },
+    result: {
+      systems: [],
+      controls: [],
+      policies: [],
+      vendors: [],
+      assessments: [],
+      generatedAt: "x",
+    },
     refreshed_at: "2026-06-27T00:00:00.000Z",
   }),
   runImpactAnalysis: jest.fn().mockResolvedValue({
     status: "ok",
-    result: { systems: [], controls: [], policies: [], vendors: [], assessments: [], generatedAt: "x" },
+    result: {
+      systems: [],
+      controls: [],
+      policies: [],
+      vendors: [],
+      assessments: [],
+      generatedAt: "x",
+    },
     counts: { system: 0, control: 0, policy: 0, vendor: 0, assessment: 0 },
     cached: false,
   }),
@@ -459,8 +473,12 @@ describe("triggerSync", () => {
 describe("getSettingsCtrl with impact fields", () => {
   it("includes has_llm_key=true when the org has a key", async () => {
     (getSettings as jest.Mock).mockResolvedValue({
-      recipient_user_ids: [], recipient_emails: [], updated_by: null, updated_at: null,
-      impact_enabled: true, last_impact_run_at: null,
+      recipient_user_ids: [],
+      recipient_emails: [],
+      updated_by: null,
+      updated_at: null,
+      impact_enabled: true,
+      last_impact_run_at: null,
     });
     (getMetaQuery as jest.Mock).mockResolvedValue({ last_run_at: null, last_run_status: null });
     (getLLMKeysWithKeyQuery as jest.Mock).mockResolvedValue([{ key: "k" }]);
@@ -468,14 +486,20 @@ describe("getSettingsCtrl with impact fields", () => {
     const res = mockRes();
     await getSettingsCtrl(req, res);
     expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ has_llm_key: true, impact_enabled: true }) }),
+      expect.objectContaining({
+        data: expect.objectContaining({ has_llm_key: true, impact_enabled: true }),
+      }),
     );
   });
 
   it("has_llm_key=false when the org has no key", async () => {
     (getSettings as jest.Mock).mockResolvedValue({
-      recipient_user_ids: [], recipient_emails: [], updated_by: null, updated_at: null,
-      impact_enabled: true, last_impact_run_at: null,
+      recipient_user_ids: [],
+      recipient_emails: [],
+      updated_by: null,
+      updated_at: null,
+      impact_enabled: true,
+      last_impact_run_at: null,
     });
     (getMetaQuery as jest.Mock).mockResolvedValue({ last_run_at: null, last_run_status: null });
     (getLLMKeysWithKeyQuery as jest.Mock).mockResolvedValue([]);
@@ -495,7 +519,9 @@ describe("updateSettingsCtrl with impact_enabled", () => {
   it("passes impact_enabled through to upsertSettings", async () => {
     (upsertSettings as jest.Mock).mockResolvedValue({});
     const req: any = {
-      organizationId: 7, userId: 1, role: "Admin",
+      organizationId: 7,
+      userId: 1,
+      role: "Admin",
       body: { recipient_user_ids: [], recipient_emails: [], impact_enabled: false },
     };
     const res = mockRes();

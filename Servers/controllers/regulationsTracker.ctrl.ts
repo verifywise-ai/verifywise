@@ -403,8 +403,7 @@ export async function updateSettingsCtrl(req: Request, res: Response): Promise<a
     if (badEmail !== undefined)
       return res.status(400).json(STATUS_CODE[400](`Invalid email: ${String(badEmail)}`));
     const impactEnabledRaw = req.body?.impact_enabled;
-    const impactEnabled =
-      typeof impactEnabledRaw === "boolean" ? impactEnabledRaw : undefined;
+    const impactEnabled = typeof impactEnabledRaw === "boolean" ? impactEnabledRaw : undefined;
     const result = await upsertSettings(
       req.organizationId!,
       recipientUserIds as number[],

@@ -321,32 +321,37 @@ async function runSync(deps?: { feed?: unknown }): Promise<{
                     impactCapLogged = true;
                   }
                 } else {
-                impactRan = true;
-                try {
-                  const impact = await runImpactAnalysis(orgId, c.slug);
-                  // BUG 5: Only count passes that actually called the LLM. Cache
-                  // hits, no_key, and skipped statuses do not consume LLM capacity
-                  // and must not burn the per-run cap.
-                  if (
-                    !impact.cached &&
-                    impact.status !== "no_key" &&
-                    impact.status !== "skipped_no_candidates"
-                  )
-                    impactAnalysesRun += 1;
-                  if (impact.status === "ok") {
-                    const parts: string[] = [];
-                    if (impact.counts.system) parts.push(`${impact.counts.system} AI system(s) affected`);
-                    if (impact.counts.control) parts.push(`${impact.counts.control} control(s) to review`);
-                    if (impact.counts.policy) parts.push(`${impact.counts.policy} policy(ies) may be outdated`);
-                    if (impact.counts.vendor) parts.push(`${impact.counts.vendor} vendor(s) impacted`);
-                    if (impact.counts.assessment) parts.push(`${impact.counts.assessment} assessment(s) to update`);
-                    if (parts.length) impactSuffix = `\n\nImpact: ${parts.join(", ")}.`;
+                  impactRan = true;
+                  try {
+                    const impact = await runImpactAnalysis(orgId, c.slug);
+                    // BUG 5: Only count passes that actually called the LLM. Cache
+                    // hits, no_key, and skipped statuses do not consume LLM capacity
+                    // and must not burn the per-run cap.
+                    if (
+                      !impact.cached &&
+                      impact.status !== "no_key" &&
+                      impact.status !== "skipped_no_candidates"
+                    )
+                      impactAnalysesRun += 1;
+                    if (impact.status === "ok") {
+                      const parts: string[] = [];
+                      if (impact.counts.system)
+                        parts.push(`${impact.counts.system} AI system(s) affected`);
+                      if (impact.counts.control)
+                        parts.push(`${impact.counts.control} control(s) to review`);
+                      if (impact.counts.policy)
+                        parts.push(`${impact.counts.policy} policy(ies) may be outdated`);
+                      if (impact.counts.vendor)
+                        parts.push(`${impact.counts.vendor} vendor(s) impacted`);
+                      if (impact.counts.assessment)
+                        parts.push(`${impact.counts.assessment} assessment(s) to update`);
+                      if (parts.length) impactSuffix = `\n\nImpact: ${parts.join(", ")}.`;
+                    }
+                  } catch (err) {
+                    logger.error(
+                      `[regulations-tracker] impact analysis failed for org ${orgId} / ${c.slug}: ${(err as Error).message}`,
+                    );
                   }
-                } catch (err) {
-                  logger.error(
-                    `[regulations-tracker] impact analysis failed for org ${orgId} / ${c.slug}: ${(err as Error).message}`,
-                  );
-                }
                 } // end cap-else
               } else if (!orgHasKey) {
                 // keyless org → nudge to configure a key. A key-having org that toggled
@@ -386,7 +391,11 @@ async function runSync(deps?: { feed?: unknown }): Promise<{
           orgsEmailed++;
         }
         if (impactRan) {
-          try { await setLastImpactRunAt(orgId); } catch { /* best-effort */ }
+          try {
+            await setLastImpactRunAt(orgId);
+          } catch {
+            /* best-effort */
+          }
         }
       }
     }

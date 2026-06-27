@@ -405,8 +405,22 @@ describe("syncRegulationsTracker", () => {
     mockValidate.mockReturnValue(makeValidResult(countries));
     mockUpsert.mockResolvedValue({
       changed: [
-        { slug: "fr", name: "France", lines: ["status draft → enacted"], unstructured: false, changeCount: 1, changeDates: [] },
-        { slug: "de", name: "Germany", lines: ["status draft → enacted"], unstructured: false, changeCount: 1, changeDates: [] },
+        {
+          slug: "fr",
+          name: "France",
+          lines: ["status draft → enacted"],
+          unstructured: false,
+          changeCount: 1,
+          changeDates: [],
+        },
+        {
+          slug: "de",
+          name: "Germany",
+          lines: ["status draft → enacted"],
+          unstructured: false,
+          changeCount: 1,
+          changeDates: [],
+        },
       ],
       newlyAdded: [],
       newlyRemoved: [],
@@ -422,7 +436,7 @@ describe("syncRegulationsTracker", () => {
 
     // France is a cache hit, Germany is a real LLM run
     mockRunImpact
-      .mockResolvedValueOnce({ status: "ok", counts: {}, cached: true } as any)   // France (cache)
+      .mockResolvedValueOnce({ status: "ok", counts: {}, cached: true } as any) // France (cache)
       .mockResolvedValueOnce({ status: "ok", counts: {}, cached: false } as any); // Germany (real)
 
     await syncRegulationsTracker({ feed: DUMMY_FEED });
@@ -461,9 +475,30 @@ describe("syncRegulationsTracker", () => {
     mockValidate.mockReturnValue(makeValidResult(countries));
     mockUpsert.mockResolvedValue({
       changed: [
-        { slug: "aa", name: "Alpha", lines: ["a"], unstructured: false, changeCount: 1, changeDates: [] },
-        { slug: "bb", name: "Beta", lines: ["b"], unstructured: false, changeCount: 1, changeDates: [] },
-        { slug: "cc", name: "Gamma", lines: ["c"], unstructured: false, changeCount: 1, changeDates: [] },
+        {
+          slug: "aa",
+          name: "Alpha",
+          lines: ["a"],
+          unstructured: false,
+          changeCount: 1,
+          changeDates: [],
+        },
+        {
+          slug: "bb",
+          name: "Beta",
+          lines: ["b"],
+          unstructured: false,
+          changeCount: 1,
+          changeDates: [],
+        },
+        {
+          slug: "cc",
+          name: "Gamma",
+          lines: ["c"],
+          unstructured: false,
+          changeCount: 1,
+          changeDates: [],
+        },
       ],
       newlyAdded: [],
       newlyRemoved: [],
@@ -481,7 +516,12 @@ describe("syncRegulationsTracker", () => {
     // First two return non-LLM statuses (cached: false but no LLM call made)
     mockRunImpact
       .mockResolvedValueOnce({ status: "no_key", result: null, counts: {}, cached: false } as any)
-      .mockResolvedValueOnce({ status: "skipped_no_candidates", result: null, counts: {}, cached: false } as any)
+      .mockResolvedValueOnce({
+        status: "skipped_no_candidates",
+        result: null,
+        counts: {},
+        cached: false,
+      } as any)
       .mockResolvedValueOnce({ status: "ok", counts: {}, cached: false } as any); // real LLM run
 
     await syncRegulationsTracker({ feed: DUMMY_FEED });

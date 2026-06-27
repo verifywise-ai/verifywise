@@ -8,7 +8,9 @@ jest.mock("../../utils/regulationsTracker.utils", () => ({
   normalizeSlug: (s: string) => String(s).trim().toLowerCase(),
 }));
 jest.mock("../../utils/logger/logHelper", () => ({
-  logProcessing: jest.fn(), logSuccess: jest.fn(), logFailure: jest.fn(),
+  logProcessing: jest.fn(),
+  logSuccess: jest.fn(),
+  logFailure: jest.fn(),
 }));
 import { getImpactRow, runImpactAnalysis } from "../../utils/regulationImpact.utils";
 import { getCountryRow, getSettings } from "../../utils/regulationsTracker.utils";
@@ -26,7 +28,14 @@ describe("getImpactAnalysis", () => {
   const storedRow = {
     regulation_hash: "h1",
     status: "ok",
-    result: { systems: [], controls: [], policies: [], vendors: [], assessments: [], generatedAt: "x" },
+    result: {
+      systems: [],
+      controls: [],
+      policies: [],
+      vendors: [],
+      assessments: [],
+      generatedAt: "x",
+    },
     refreshed_at: "t",
   };
 
@@ -97,7 +106,12 @@ describe("refreshImpactAnalysis", () => {
   // BUG 2: refreshImpactAnalysis must pass force=true so admin re-analysis is never a no-op
   it("runs analysis for admins with force=true and returns 200", async () => {
     (getSettings as jest.Mock).mockResolvedValue({ impact_enabled: true });
-    (runImpactAnalysis as jest.Mock).mockResolvedValue({ status: "ok", result: null, counts: {}, cached: false });
+    (runImpactAnalysis as jest.Mock).mockResolvedValue({
+      status: "ok",
+      result: null,
+      counts: {},
+      cached: false,
+    });
     const req: any = { userId: 1, organizationId: 7, role: "Admin", params: { slug: "eu" } };
     const res = mockRes();
     await refreshImpactAnalysis(req, res);
@@ -113,6 +127,8 @@ describe("refreshImpactAnalysis", () => {
     await refreshImpactAnalysis(req, res);
     expect(runImpactAnalysis).not.toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(200);
-    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: { status: "disabled" } }));
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { status: "disabled" } }),
+    );
   });
 });

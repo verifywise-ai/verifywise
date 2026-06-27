@@ -417,8 +417,12 @@ export async function getSettings(organizationId: number) {
   }[];
   return (
     rows[0] ?? {
-      recipient_user_ids: [], recipient_emails: [], updated_by: null, updated_at: null,
-      impact_enabled: true, last_impact_run_at: null,
+      recipient_user_ids: [],
+      recipient_emails: [],
+      updated_by: null,
+      updated_at: null,
+      impact_enabled: true,
+      last_impact_run_at: null,
     }
   );
 }

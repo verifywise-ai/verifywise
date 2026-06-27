@@ -45,12 +45,12 @@ describe("regionForCountry", () => {
 
 describe("frameworksForRegulation", () => {
   it("maps an EU AI Act regulation to the EU AI Act framework", () => {
-    expect(frameworksForRegulation({ type: "EU AI Act", country: "European Union" }))
-      .toContain("EU AI Act");
+    expect(frameworksForRegulation({ type: "EU AI Act", country: "European Union" })).toContain(
+      "EU AI Act",
+    );
   });
   it("returns an empty array when no framework maps", () => {
-    expect(frameworksForRegulation({ type: "Local guidance", country: "Atlantis" }))
-      .toEqual([]);
+    expect(frameworksForRegulation({ type: "Local guidance", country: "Atlantis" })).toEqual([]);
   });
 });
 
@@ -91,15 +91,22 @@ describe("getCandidates", () => {
     // 5 real queries fire when systems and controls are both non-empty:
     // systems, controls, assessments (projectIds non-empty), vendors, policies (controlIds non-empty)
     q.mockResolvedValueOnce([{ id: 1, name: "Resume Ranker", description: "hiring" }]); // systems
-    q.mockResolvedValueOnce([{ id: 7, name: "Human oversight", description: "" }]);     // controls
-    q.mockResolvedValueOnce([]);                                                        // assessments
-    q.mockResolvedValueOnce([{ id: 3, name: "OpenAI", description: "vendor" }]);         // vendors
-    q.mockResolvedValueOnce([]);                                                        // policies
+    q.mockResolvedValueOnce([{ id: 7, name: "Human oversight", description: "" }]); // controls
+    q.mockResolvedValueOnce([]); // assessments
+    q.mockResolvedValueOnce([{ id: 3, name: "OpenAI", description: "vendor" }]); // vendors
+    q.mockResolvedValueOnce([]); // policies
 
-    const out = await getCandidates(7, "European Union", { type: "EU AI Act", country: "European Union" });
+    const out = await getCandidates(7, "European Union", {
+      type: "EU AI Act",
+      country: "European Union",
+    });
 
-    expect(out.system).toEqual([{ type: "system", id: 1, name: "Resume Ranker", description: "hiring" }]);
-    expect(out.control).toEqual([{ type: "control", id: 7, name: "Human oversight", description: "" }]);
+    expect(out.system).toEqual([
+      { type: "system", id: 1, name: "Resume Ranker", description: "hiring" },
+    ]);
+    expect(out.control).toEqual([
+      { type: "control", id: 7, name: "Human oversight", description: "" },
+    ]);
     expect(out.assessment).toEqual([]);
     expect(out.vendor).toEqual([{ type: "vendor", id: 3, name: "OpenAI", description: "vendor" }]);
     expect(out.policy).toEqual([]);
@@ -125,9 +132,9 @@ describe("getCandidates", () => {
     // controls empty → policies branch skipped
     // Total: 4 queries: systems, controls, assessments, vendors
     q.mockResolvedValueOnce([{ id: 10, name: "Proj A", description: "" }]); // systems
-    q.mockResolvedValueOnce([]);                                             // controls (empty)
-    q.mockResolvedValueOnce([]);                                             // assessments
-    q.mockResolvedValueOnce([]);                                             // vendors
+    q.mockResolvedValueOnce([]); // controls (empty)
+    q.mockResolvedValueOnce([]); // assessments
+    q.mockResolvedValueOnce([]); // vendors
 
     const out = await getCandidates(5, "European Union", { type: "EU AI Act" });
 
@@ -147,8 +154,13 @@ describe("getCandidates", () => {
 });
 
 const ctx = {
-  name: "AI Act", type: "EU AI Act", status: "in force", country: "European Union",
-  obligations: ["human oversight"], maxPenalty: "€35M", changeLines: ["status: draft → in force"],
+  name: "AI Act",
+  type: "EU AI Act",
+  status: "in force",
+  country: "European Union",
+  obligations: ["human oversight"],
+  maxPenalty: "€35M",
+  changeLines: ["status: draft → in force"],
 };
 
 describe("buildUserPrompt", () => {
@@ -205,7 +217,9 @@ describe("analyzeType", () => {
     const out = await analyzeType("system", ctx, cands, creds, 7);
     expect(out.ok).toBe(true);
     if (out.ok) {
-      expect(out.verdicts).toEqual([{ type: "system", id: 1, affected: false, why: "not in scope" }]);
+      expect(out.verdicts).toEqual([
+        { type: "system", id: 1, affected: false, why: "not in scope" },
+      ]);
     }
   });
 
@@ -233,7 +247,9 @@ describe("runImpactAnalysis", () => {
   it("returns no_key and does not call the LLM when the org has no key", async () => {
     (getLLMKeysWithKeyQuery as jest.Mock).mockResolvedValue([]);
     // regulation_countries row lookup
-    q.mockResolvedValueOnce([{ data: { name: "AI Act", regulations: [], history: null }, hash: "h1" }]);
+    q.mockResolvedValueOnce([
+      { data: { name: "AI Act", regulations: [], history: null }, hash: "h1" },
+    ]);
     const out = await runImpactAnalysis(7, "eu");
     expect(out.status).toBe("no_key");
     expect(out.cached).toBe(false);
@@ -244,7 +260,12 @@ describe("runImpactAnalysis", () => {
     (getLLMKeysWithKeyQuery as jest.Mock).mockResolvedValue([
       { key: "k", name: "OpenAI", url: null, model: "gpt-4o" },
     ]);
-    q.mockResolvedValueOnce([{ data: { name: "AI Act", country: "European Union", regulations: [], history: null }, hash: "h1" }]); // reg row
+    q.mockResolvedValueOnce([
+      {
+        data: { name: "AI Act", country: "European Union", regulations: [], history: null },
+        hash: "h1",
+      },
+    ]); // reg row
     // no cached row
     q.mockResolvedValueOnce([]); // getImpactRow
     // Stage A: 5 queries all empty
@@ -260,10 +281,27 @@ describe("runImpactAnalysis", () => {
       { key: "k", name: "OpenAI", url: null, model: "gpt-4o" },
     ]);
     // regulation_countries returns hash "h2" (new hash)
-    q.mockResolvedValueOnce([{ data: { name: "AI Act", country: "European Union", regulations: [], history: null }, hash: "h2" }]); // reg row
+    q.mockResolvedValueOnce([
+      {
+        data: { name: "AI Act", country: "European Union", regulations: [], history: null },
+        hash: "h2",
+      },
+    ]); // reg row
     // getImpactRow returns a cached row with OLD hash "h1" and status "ok"
     q.mockResolvedValueOnce([
-      { regulation_hash: "h1", status: "ok", result: { systems: [], controls: [], policies: [], vendors: [], assessments: [], generatedAt: "x" }, refreshed_at: "t" },
+      {
+        regulation_hash: "h1",
+        status: "ok",
+        result: {
+          systems: [],
+          controls: [],
+          policies: [],
+          vendors: [],
+          assessments: [],
+          generatedAt: "x",
+        },
+        refreshed_at: "t",
+      },
     ]); // stale cached row
     // Stage A: all candidate queries return empty
     q.mockResolvedValue([]);
@@ -278,9 +316,23 @@ describe("runImpactAnalysis", () => {
     (getLLMKeysWithKeyQuery as jest.Mock).mockResolvedValue([
       { key: "k", name: "OpenAI", url: null, model: "gpt-4o" },
     ]);
-    q.mockResolvedValueOnce([{ data: { name: "AI Act", regulations: [], history: null }, hash: "h1" }]); // reg row
     q.mockResolvedValueOnce([
-      { regulation_hash: "h1", status: "ok", result: { systems: [], controls: [], policies: [], vendors: [], assessments: [], generatedAt: "x" }, refreshed_at: "t" },
+      { data: { name: "AI Act", regulations: [], history: null }, hash: "h1" },
+    ]); // reg row
+    q.mockResolvedValueOnce([
+      {
+        regulation_hash: "h1",
+        status: "ok",
+        result: {
+          systems: [],
+          controls: [],
+          policies: [],
+          vendors: [],
+          assessments: [],
+          generatedAt: "x",
+        },
+        refreshed_at: "t",
+      },
     ]); // cached, hash matches
     const out = await runImpactAnalysis(7, "eu");
     expect(out.status).toBe("ok");
@@ -294,7 +346,12 @@ describe("runImpactAnalysis", () => {
     (getLLMKeysWithKeyQuery as jest.Mock).mockResolvedValue([
       { key: "k", name: "OpenAI", url: null, model: "gpt-4o" },
     ]);
-    q.mockResolvedValueOnce([{ data: { name: "AI Act", country: "European Union", regulations: [], history: null }, hash: "h1" }]); // reg row
+    q.mockResolvedValueOnce([
+      {
+        data: { name: "AI Act", country: "European Union", regulations: [], history: null },
+        hash: "h1",
+      },
+    ]); // reg row
     q.mockResolvedValueOnce([]); // getImpactRow — no cache
     // Stage A: one non-empty type so Stage B fires
     q.mockResolvedValueOnce([{ id: 1, name: "Sys", description: "" }]); // systems
@@ -314,7 +371,12 @@ describe("runImpactAnalysis", () => {
     (getLLMKeysWithKeyQuery as jest.Mock).mockResolvedValue([
       { key: "k", name: "OpenAI", url: null, model: "gpt-4o" },
     ]);
-    q.mockResolvedValueOnce([{ data: { name: "AI Act", country: "European Union", regulations: [], history: null }, hash: "h1" }]); // reg row
+    q.mockResolvedValueOnce([
+      {
+        data: { name: "AI Act", country: "European Union", regulations: [], history: null },
+        hash: "h1",
+      },
+    ]); // reg row
     // No getImpactRow call expected when force=true (cache is skipped entirely)
     // Stage A: all empty → skipped_no_candidates (no LLM call needed, just prove cache bypassed)
     q.mockResolvedValue([]);
@@ -330,10 +392,24 @@ describe("runImpactAnalysis", () => {
       { key: "k", name: "OpenAI", url: null, model: "gpt-4o" },
     ]);
     // Catalog row stored under normalized "eu"
-    q.mockResolvedValueOnce([{ data: { name: "AI Act", regulations: [], history: null }, hash: "h1" }]); // reg row
+    q.mockResolvedValueOnce([
+      { data: { name: "AI Act", regulations: [], history: null }, hash: "h1" },
+    ]); // reg row
     // Cache row also stored under "eu" (normalized)
     q.mockResolvedValueOnce([
-      { regulation_hash: "h1", status: "ok", result: { systems: [], controls: [], policies: [], vendors: [], assessments: [], generatedAt: "x" }, refreshed_at: "t" },
+      {
+        regulation_hash: "h1",
+        status: "ok",
+        result: {
+          systems: [],
+          controls: [],
+          policies: [],
+          vendors: [],
+          assessments: [],
+          generatedAt: "x",
+        },
+        refreshed_at: "t",
+      },
     ]);
     // Pass "  EU  " — should normalize to "eu" and hit the cache
     const out = await runImpactAnalysis(7, "  EU  ");

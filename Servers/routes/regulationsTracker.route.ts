@@ -1,6 +1,9 @@
 import express from "express";
 import authenticateJWT from "../middleware/auth.middleware";
-import { regulationsTrackerSyncLimiter, regulationsTrackerImpactLimiter } from "../middleware/rateLimit.middleware";
+import {
+  regulationsTrackerSyncLimiter,
+  regulationsTrackerImpactLimiter,
+} from "../middleware/rateLimit.middleware";
 import {
   getCountries,
   getCountryDetail,
