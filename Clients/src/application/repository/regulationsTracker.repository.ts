@@ -58,6 +58,22 @@ export async function getFrameworks(): Promise<any> {
   return (await apiServices.get(`${BASE}/frameworks`)).data;
 }
 
+export async function getImpactAnalysis(slug: string): Promise<any> {
+  const response = await apiServices.get(
+    `${BASE}/countries/${encodeURIComponent(slug)}/impact`,
+  );
+  return response.data;
+}
+
+export async function refreshImpactAnalysis(slug: string): Promise<any> {
+  return (
+    await apiServices.post(
+      `${BASE}/countries/${encodeURIComponent(slug)}/impact/refresh`,
+      {},
+    )
+  ).data;
+}
+
 export async function triggerSync(): Promise<any> {
   return (await apiServices.post(`${BASE}/sync`, {})).data;
 }

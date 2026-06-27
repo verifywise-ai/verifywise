@@ -13,6 +13,8 @@ import {
   getDeadlines,
   getFrameworks,
   triggerSync,
+  getImpactAnalysis,
+  refreshImpactAnalysis,
 } from "../repository/regulationsTracker.repository";
 
 const KEY = "regulations-tracker";
@@ -135,6 +137,25 @@ export function useTriggerSync() {
       // Refresh everything the sync may have changed: catalog, tracked list,
       // the global feeds, and settings (which carries last-run status).
       qc.invalidateQueries({ queryKey: [KEY] });
+    },
+  });
+}
+
+export function useImpactAnalysis(slug: string) {
+  return useQuery({
+    queryKey: [KEY, "impact", slug],
+    queryFn: () => getImpactAnalysis(slug),
+    enabled: !!slug,
+    placeholderData: keepPreviousData,
+  });
+}
+
+export function useRefreshImpactAnalysis() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (slug: string) => refreshImpactAnalysis(slug),
+    onSuccess: (_data, slug) => {
+      qc.invalidateQueries({ queryKey: [KEY, "impact", slug] });
     },
   });
 }
