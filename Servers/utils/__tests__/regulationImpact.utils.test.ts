@@ -3,6 +3,10 @@ jest.mock("../../database/db", () => ({
 }));
 jest.mock("../../advisor/aiSdkAgent", () => ({ runAdvisorAiSdk: jest.fn() }));
 jest.mock("../logger/logHelper", () => ({ logFailure: jest.fn() }));
+jest.mock("../llmKey.utils", () => ({
+  getLLMKeysWithKeyQuery: jest.fn(),
+  getLLMProviderUrl: jest.fn().mockReturnValue("https://api.openai.com/v1/"),
+}));
 
 import { sequelize } from "../../database/db";
 import { runAdvisorAiSdk } from "../../advisor/aiSdkAgent";
@@ -14,6 +18,9 @@ import {
   frameworksForRegulation,
   validateVerdicts,
 } from "../regulationImpact.utils";
+
+import { getLLMKeysWithKeyQuery } from "../llmKey.utils";
+import { runImpactAnalysis } from "../regulationImpact.utils";
 
 describe("regionForCountry", () => {
   it("maps known European countries to 2", () => {
@@ -187,5 +194,50 @@ describe("analyzeType", () => {
     );
     const out = await analyzeType("system", ctx, cands, creds, 7);
     expect(out).toEqual([{ type: "system", id: 1, affected: false, why: "not in scope" }]);
+  });
+});
+
+describe("runImpactAnalysis", () => {
+  const q = sequelize.query as jest.Mock;
+  beforeEach(() => {
+    q.mockReset();
+    (getLLMKeysWithKeyQuery as jest.Mock).mockReset();
+    (runAdvisorAiSdk as jest.Mock).mockReset();
+  });
+
+  it("returns no_key and does not call the LLM when the org has no key", async () => {
+    (getLLMKeysWithKeyQuery as jest.Mock).mockResolvedValue([]);
+    // regulation_countries row lookup
+    q.mockResolvedValueOnce([{ data: { name: "AI Act", regulations: [], history: null }, hash: "h1" }]);
+    const out = await runImpactAnalysis(7, "eu");
+    expect(out.status).toBe("no_key");
+    expect(runAdvisorAiSdk).not.toHaveBeenCalled();
+  });
+
+  it("returns skipped_no_candidates when Stage A is empty for all types", async () => {
+    (getLLMKeysWithKeyQuery as jest.Mock).mockResolvedValue([
+      { key: "k", name: "OpenAI", url: null, model: "gpt-4o" },
+    ]);
+    q.mockResolvedValueOnce([{ data: { name: "AI Act", country: "European Union", regulations: [], history: null }, hash: "h1" }]); // reg row
+    // no cached row
+    q.mockResolvedValueOnce([]); // getImpactRow
+    // Stage A: 5 queries all empty
+    q.mockResolvedValue([]);
+    const out = await runImpactAnalysis(7, "eu");
+    expect(out.status).toBe("skipped_no_candidates");
+    expect(runAdvisorAiSdk).not.toHaveBeenCalled();
+  });
+
+  it("reuses a cached row when hash matches", async () => {
+    (getLLMKeysWithKeyQuery as jest.Mock).mockResolvedValue([
+      { key: "k", name: "OpenAI", url: null, model: "gpt-4o" },
+    ]);
+    q.mockResolvedValueOnce([{ data: { name: "AI Act", regulations: [], history: null }, hash: "h1" }]); // reg row
+    q.mockResolvedValueOnce([
+      { regulation_hash: "h1", status: "ok", result: { systems: [], controls: [], policies: [], vendors: [], assessments: [], generatedAt: "x" }, refreshed_at: "t" },
+    ]); // cached, hash matches
+    const out = await runImpactAnalysis(7, "eu");
+    expect(out.status).toBe("ok");
+    expect(runAdvisorAiSdk).not.toHaveBeenCalled();
   });
 });

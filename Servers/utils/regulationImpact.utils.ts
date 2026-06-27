@@ -2,6 +2,7 @@ import { sequelize } from "../database/db";
 import { QueryTypes } from "sequelize";
 import { runAdvisorAiSdk } from "../advisor/aiSdkAgent";
 import { logFailure } from "./logger/logHelper";
+import { getLLMKeysWithKeyQuery, getLLMProviderUrl } from "./llmKey.utils";
 
 export type EntityType = "system" | "control" | "policy" | "vendor" | "assessment";
 
@@ -287,4 +288,147 @@ export async function analyzeType(
     });
     return [];
   }
+}
+
+// ─── Persistence types ────────────────────────────────────────────────────────
+
+export interface AffectedEntity { id: number; name: string; why: string }
+export interface ImpactResult {
+  systems: AffectedEntity[]; controls: AffectedEntity[]; policies: AffectedEntity[];
+  vendors: AffectedEntity[]; assessments: AffectedEntity[]; generatedAt: string;
+}
+
+const RESULT_KEY: Record<EntityType, keyof Omit<ImpactResult, "generatedAt">> = {
+  system: "systems", control: "controls", policy: "policies",
+  vendor: "vendors", assessment: "assessments",
+};
+
+// ─── Persistence helpers ──────────────────────────────────────────────────────
+
+export async function getImpactRow(organizationId: number, slug: string) {
+  const rows = (await sequelize.query(
+    `SELECT regulation_hash, status, result, refreshed_at
+       FROM regulation_impact_analysis
+      WHERE organization_id = :organizationId AND country_slug = :slug
+      LIMIT 1`,
+    { replacements: { organizationId, slug }, type: QueryTypes.SELECT },
+  )) as { regulation_hash: string; status: string; result: ImpactResult | null; refreshed_at: string }[];
+  return rows[0] ?? null;
+}
+
+async function upsertImpactRow(
+  organizationId: number, slug: string, hash: string,
+  status: string, result: ImpactResult | null, model: string | null,
+) {
+  await sequelize.query(
+    `INSERT INTO regulation_impact_analysis
+       (organization_id, country_slug, regulation_hash, status, result, model, refreshed_at)
+     VALUES (:organizationId, :slug, :hash, :status, :result::jsonb, :model, NOW())
+     ON CONFLICT (organization_id, country_slug) DO UPDATE
+        SET status = EXCLUDED.status,
+            result = EXCLUDED.result,
+            model = EXCLUDED.model,
+            refreshed_at = NOW()`,
+    {
+      replacements: {
+        organizationId, slug, hash, status, model,
+        result: result ? JSON.stringify(result) : null,
+      },
+    },
+  );
+}
+
+export function buildContext(slug: string, data: any): RegulationContext {
+  const regs = Array.isArray(data?.regulations) ? data.regulations : [];
+  const first = regs[0] ?? {};
+  const obligations: string[] = [];
+  for (const r of regs) if (Array.isArray(r.obligations)) obligations.push(...r.obligations);
+  const changeLines: string[] = [];
+  const history = data?.history ?? null;
+  if (history?.lastChange?.changes) {
+    for (const ch of history.lastChange.changes) {
+      if (ch.field === "status") changeLines.push(`status: ${ch.from} → ${ch.to}`);
+      else if (ch.field === "effectiveDate") changeLines.push(`effective date ${ch.from} → ${ch.to}`);
+      else if (ch.field === "regulation") changeLines.push(`regulation ${ch.change}: ${ch.value}`);
+      else if (ch.field === "regulationCount") changeLines.push(`regulation count ${ch.from} → ${ch.to}`);
+    }
+  }
+  return {
+    name: data?.name ?? slug,
+    type: first.type ?? "",
+    status: first.status ?? "",
+    country: data?.name ?? "",
+    obligations,
+    maxPenalty: first.maxPenalty ?? "",
+    changeLines,
+  };
+}
+
+// ─── Orchestrator ─────────────────────────────────────────────────────────────
+
+export async function runImpactAnalysis(
+  organizationId: number, slug: string,
+): Promise<{ status: string; result: ImpactResult | null; counts: Record<EntityType, number> }> {
+  const zeroCounts = (): Record<EntityType, number> => ({ system: 0, control: 0, policy: 0, vendor: 0, assessment: 0 });
+
+  // load the global catalog row
+  const regRows = (await sequelize.query(
+    `SELECT data, hash FROM regulation_countries WHERE slug = :slug LIMIT 1`,
+    { replacements: { slug }, type: QueryTypes.SELECT },
+  )) as { data: any; hash: string }[];
+  if (!regRows.length) return { status: "error", result: null, counts: zeroCounts() };
+  const { data, hash } = regRows[0];
+
+  // key gate
+  const keys = await getLLMKeysWithKeyQuery(organizationId);
+  if (!keys.length) return { status: "no_key", result: null, counts: zeroCounts() };
+  const k = keys[0];
+  const creds: LlmCreds = {
+    apiKey: k.key,
+    baseURL: k.url || getLLMProviderUrl(k.name),
+    model: k.model,
+    provider: k.name,
+  };
+
+  // cache check
+  const cached = await getImpactRow(organizationId, slug);
+  if (cached && cached.regulation_hash === hash && cached.status === "ok") {
+    return { status: "ok", result: cached.result, counts: countsFromResult(cached.result) };
+  }
+
+  const ctx = buildContext(slug, data);
+  const candidates = await getCandidates(organizationId, ctx.country, { type: ctx.type, country: ctx.country });
+
+  const nonEmpty = (Object.keys(candidates) as EntityType[]).filter((t) => candidates[t].length > 0);
+  if (!nonEmpty.length) {
+    await upsertImpactRow(organizationId, slug, hash, "skipped_no_candidates", null, null);
+    return { status: "skipped_no_candidates", result: null, counts: zeroCounts() };
+  }
+
+  const verdictsByType = await Promise.all(
+    nonEmpty.map((t) => analyzeType(t, ctx, candidates[t], creds, organizationId).then((v) => [t, v] as const)),
+  );
+
+  const result: ImpactResult = {
+    systems: [], controls: [], policies: [], vendors: [], assessments: [],
+    generatedAt: new Date().toISOString(),
+  };
+  for (const [t, verdicts] of verdictsByType) {
+    const byId = new Map(candidates[t].map((c) => [c.id, c.name]));
+    for (const v of verdicts) {
+      if (v.affected) result[RESULT_KEY[t]].push({ id: v.id, name: byId.get(v.id) ?? String(v.id), why: v.why });
+    }
+  }
+  await upsertImpactRow(organizationId, slug, hash, "ok", result, creds.model);
+  return { status: "ok", result, counts: countsFromResult(result) };
+}
+
+function countsFromResult(result: ImpactResult | null): Record<EntityType, number> {
+  return {
+    system: result?.systems.length ?? 0,
+    control: result?.controls.length ?? 0,
+    policy: result?.policies.length ?? 0,
+    vendor: result?.vendors.length ?? 0,
+    assessment: result?.assessments.length ?? 0,
+  };
 }
