@@ -499,7 +499,7 @@ async function enrichWithFlags(items: unknown[]): Promise<unknown[]> {
     ] as string[];
     if (!slugs.length) return items;
     const rows = (await sequelize.query(
-      `SELECT slug, data->>'flag' AS flag FROM regulation_countries WHERE slug = ANY(:slugs)`,
+      `SELECT slug, data->>'flag' AS flag FROM regulation_countries WHERE slug IN (:slugs)`,
       { replacements: { slugs }, type: QueryTypes.SELECT },
     )) as { slug: string; flag: string | null }[];
     const flagMap = new Map(rows.map((r) => [r.slug, r.flag ?? undefined]));
