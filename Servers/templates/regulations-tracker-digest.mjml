@@ -12,6 +12,7 @@
         </mj-text>
         {{changedSection}}
         {{removedSection}}
+        {{impactSection}}
         <mj-button background-color="#13715B" href="{{moduleUrl}}" align="left" border-radius="4px">
           Browse
         </mj-button>

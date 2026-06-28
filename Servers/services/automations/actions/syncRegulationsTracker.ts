@@ -24,7 +24,7 @@ import {
   setLastImpactRunAt,
   CountryChange,
 } from "../../../utils/regulationsTracker.utils";
-import { runImpactAnalysis } from "../../../utils/regulationImpact.utils";
+import { runImpactAnalysis, ImpactResult } from "../../../utils/regulationImpact.utils";
 import { getLLMKeysWithKeyQuery } from "../../../utils/llmKey.utils";
 import { createNotificationQuery } from "../../../utils/notification.utils";
 import {
@@ -59,12 +59,76 @@ export function sectionMjml(title: string, items: DigestItem[]): string {
   return header + lines;
 }
 
-async function renderDigest(changed: DigestItem[], removed: DigestItem[]): Promise<string> {
+// One country's impact analysis, prepared for the email digest. `result` is the
+// full ImpactResult (per-entity name + reason), not just counts — the email has
+// the room the cramped in-app notification does not.
+export interface ImpactDigestItem {
+  countryName: string;
+  result: ImpactResult;
+}
+
+// Renders the "How these changes affect your organization" block: per country,
+// each affected entity group (systems / controls / policies / vendors /
+// assessments) with the specific item names and the LLM's one-line reason. Only
+// groups with at least one affected entity are shown.
+export function impactSectionMjml(items: ImpactDigestItem[]): string {
+  const GROUPS: { key: keyof Omit<ImpactResult, "generatedAt">; label: string }[] = [
+    { key: "systems", label: "AI systems" },
+    { key: "controls", label: "Controls to review" },
+    { key: "policies", label: "Policies that may be outdated" },
+    { key: "vendors", label: "Vendors impacted" },
+    { key: "assessments", label: "Assessments to update" },
+  ];
+
+  const blocks = items
+    .map(({ countryName, result }) => {
+      const groupMjml = GROUPS.map(({ key, label }) => {
+        const entities = result[key];
+        if (!entities.length) return "";
+        const groupHeader = `<mj-text font-size="13px" font-weight="600" color="#344054" padding-bottom="2px">${escapeHtml(
+          label,
+        )} (${entities.length})</mj-text>`;
+        const rows = entities
+          .map(
+            (e) =>
+              `<mj-text font-size="13px" color="#475467" padding-top="0" padding-bottom="2px">• <strong>${escapeHtml(
+                e.name,
+              )}</strong> — ${escapeHtml(e.why)}</mj-text>`,
+          )
+          .join("");
+        return groupHeader + rows;
+      }).join("");
+
+      if (!groupMjml) return ""; // nothing affected for this country
+      const countryHeader = `<mj-text font-size="14px" font-weight="600" color="#13715B" padding-top="12px">${escapeHtml(
+        countryName,
+      )}</mj-text>`;
+      return countryHeader + groupMjml;
+    })
+    .filter(Boolean)
+    .join("");
+
+  if (!blocks) return "";
+
+  return (
+    `<mj-divider border-width="1px" border-color="#eaecf0" padding="16px 0 8px 0" />` +
+    `<mj-text font-size="15px" font-weight="600" color="#101828">How these changes affect your organization</mj-text>` +
+    `<mj-text font-size="12px" color="#98a2b3" padding-top="0" padding-bottom="4px">Based on your AI systems, controls, policies, vendors and assessments. Generated automatically — review before acting.</mj-text>` +
+    blocks
+  );
+}
+
+async function renderDigest(
+  changed: DigestItem[],
+  removed: DigestItem[],
+  impact: ImpactDigestItem[] = [],
+): Promise<string> {
   const tmplPath = path.join(__dirname, "../../../templates/regulations-tracker-digest.mjml");
   const template = await fs.readFile(tmplPath, "utf8");
   return compileMjmlToHtml(template, {
     changedSection: sectionMjml("Changed", changed),
     removedSection: sectionMjml("No longer in the feed", removed),
+    impactSection: impactSectionMjml(impact),
     moduleUrl: MODULE_URL,
     trackedUrl: TRACKED_URL,
     settingsUrl: SETTINGS_URL,
@@ -296,6 +360,11 @@ async function runSync(deps?: { feed?: unknown }): Promise<{
           .filter((c) => c.removed)
           .map((c) => ({ name: c.name }));
 
+        // Per-country impact results captured during analysis below, for the
+        // email digest (the verbose, roomy surface). Keyed by slug so a country
+        // analyzed for in-app notifications is reused for the email too.
+        const impactBySlug = new Map<string, ImpactResult>();
+
         // In-app: always to admins ∪ configured recipients. One deep-linked
         // notification per affected country so the message names what changed and
         // links straight to that country's page.
@@ -343,6 +412,7 @@ async function runSync(deps?: { feed?: unknown }): Promise<{
                     )
                       impactAnalysesRun += 1;
                     if (impact.status === "ok") {
+                      if (impact.result) impactBySlug.set(c.slug, impact.result);
                       const parts: string[] = [];
                       if (impact.counts.system)
                         parts.push(`${impact.counts.system} AI system(s) affected`);
@@ -390,7 +460,46 @@ async function runSync(deps?: { feed?: unknown }): Promise<{
         // Email: configured recipients only, no fallback.
         const emails = await resolveEmailRecipients(orgId);
         if (emails.length) {
-          const html = await renderDigest(changedItems, removedItems);
+          // Email-only orgs (no in-app recipients) never entered the loop above,
+          // so impactBySlug may be empty even though a key is configured. Backfill
+          // impact for changed countries we haven't analyzed yet, honoring the
+          // same key/enabled gate and per-run LLM cap.
+          if (orgHasKey && impactEnabled) {
+            for (const c of countries) {
+              if (c.removed || impactBySlug.has(c.slug)) continue;
+              if (impactAnalysesRun >= IMPACT_MAX_ANALYSES_PER_RUN) {
+                if (!impactCapLogged) {
+                  logger.warn(
+                    `[regulations-tracker] per-run impact cap (${IMPACT_MAX_ANALYSES_PER_RUN}) reached; skipping remaining LLM analyses for this sync`,
+                  );
+                  impactCapLogged = true;
+                }
+                break;
+              }
+              impactRan = true;
+              try {
+                const impact = await runImpactAnalysis(orgId, c.slug);
+                if (
+                  !impact.cached &&
+                  impact.status !== "no_key" &&
+                  impact.status !== "skipped_no_candidates"
+                )
+                  impactAnalysesRun += 1;
+                if (impact.status === "ok" && impact.result) impactBySlug.set(c.slug, impact.result);
+              } catch (err) {
+                logger.error(
+                  `[regulations-tracker] impact analysis failed for org ${orgId} / ${c.slug}: ${(err as Error).message}`,
+                );
+              }
+            }
+          }
+
+          // Build the per-country impact section for the email (verbose surface).
+          const impactItems: ImpactDigestItem[] = countries
+            .filter((c) => !c.removed && impactBySlug.has(c.slug))
+            .map((c) => ({ countryName: c.name, result: impactBySlug.get(c.slug)! }));
+
+          const html = await renderDigest(changedItems, removedItems, impactItems);
           await sendAutomationEmail(
             emails,
             "Global AI regulations — update",
