@@ -226,13 +226,17 @@ export async function scheduleAiTrustIndexSync() {
 }
 
 export async function scheduleRegulationsTrackerSync() {
-  logger.info("Adding Regulations Tracker weekly sync job to the queue...");
-  // Monday 06:00 UTC. The handler self-guards via last_run_week. Repeatable add is idempotent by repeat key.
+  logger.info("Adding Regulations Tracker daily sync job to the queue...");
+  // Daily 06:00 UTC so a regulation change is picked up (and tracked-country
+  // customers alerted) the day it lands rather than waiting for the next Monday.
+  // The handler self-guards via the day key in last_run_week (one fetch+diff per
+  // UTC day), and the hash-diff makes a no-change run cheap (1 manifest fetch, 0
+  // detail fetches). Repeatable add is idempotent by repeat key.
   await automationQueue.add(
     "regulations_tracker_sync",
     {},
     {
-      repeat: { pattern: "0 6 * * 1", tz: "UTC" }, // Mondays 06:00 UTC
+      repeat: { pattern: "0 6 * * *", tz: "UTC" }, // every day 06:00 UTC
       removeOnComplete: true,
       removeOnFail: false,
     },

@@ -118,6 +118,7 @@ import {
   upsertSettings,
   getSettings,
   getMetaQuery,
+  getGlobalFeed,
 } from "../../utils/regulationsTracker.utils";
 import { getLLMKeysWithKeyQuery } from "../../utils/llmKey.utils";
 import { getImpactRow, runImpactAnalysis } from "../../utils/regulationImpact.utils";
@@ -395,6 +396,26 @@ describe("getSettingsCtrl", () => {
       expect.objectContaining({ last_run_status: "ok: 0 changed, 0 removed" }),
     );
     expect(payload.data.last_run_at).toBeTruthy();
+  });
+
+  it("surfaces feed_last_data_update from the stored horizon blob meta", async () => {
+    (getGlobalFeed as jest.Mock).mockResolvedValueOnce({
+      meta: { lastDataUpdate: "2026-06-27" },
+    });
+    const req: any = { userId: 1, organizationId: 7 };
+    const res = mockRes();
+    await getSettingsCtrl(req, res);
+    const payload = (res.json as jest.Mock).mock.calls[0][0];
+    expect(payload.data.feed_last_data_update).toBe("2026-06-27");
+  });
+
+  it("returns feed_last_data_update = null when no horizon blob is stored", async () => {
+    (getGlobalFeed as jest.Mock).mockResolvedValueOnce(null);
+    const req: any = { userId: 1, organizationId: 7 };
+    const res = mockRes();
+    await getSettingsCtrl(req, res);
+    const payload = (res.json as jest.Mock).mock.calls[0][0];
+    expect(payload.data.feed_last_data_update).toBeNull();
   });
 });
 

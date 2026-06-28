@@ -18,7 +18,7 @@ import {
   getAllOrgAdmins,
   resolveEmailRecipients,
   resolveInAppUserIds,
-  currentIsoWeek,
+  currentIsoDay,
   escapeHtml,
   getSettings,
   setLastImpactRunAt,
@@ -72,7 +72,7 @@ async function renderDigest(changed: DigestItem[], removed: DigestItem[]): Promi
 }
 
 // In-process guard so an admin "check for updates now" can't run concurrently
-// with the scheduled weekly job (or with another admin trigger). The two would
+// with the scheduled daily job (or with another admin trigger). The two would
 // otherwise both hit the external feed (~60 detail fetches each) and race on the
 // global-feed / run-status writes that sit outside upsertFeedTx's row lock.
 let syncInProgress = false;
@@ -116,8 +116,10 @@ async function runSync(deps?: { feed?: unknown }): Promise<{
   skipped?: string;
 }> {
   const meta = await getMetaQuery();
-  const thisWeek = currentIsoWeek(new Date());
-  if (meta.last_run_week === thisWeek)
+  // Daily idempotency: the cron fires every morning, but we only fetch + diff
+  // once per UTC day. The day key is stored in the legacy last_run_week column.
+  const today = currentIsoDay(new Date());
+  if (meta.last_run_week === today)
     return {
       fetched: 0,
       changed: 0,
@@ -125,7 +127,7 @@ async function runSync(deps?: { feed?: unknown }): Promise<{
       newlyRemoved: 0,
       orgsEmailed: 0,
       orgsNotified: 0,
-      skipped: `already ran ${thisWeek}`,
+      skipped: `already ran ${today}`,
     };
 
   let raw: unknown;
@@ -391,7 +393,7 @@ async function runSync(deps?: { feed?: unknown }): Promise<{
           const html = await renderDigest(changedItems, removedItems);
           await sendAutomationEmail(
             emails,
-            "Global AI regulations — weekly update",
+            "Global AI regulations — update",
             html,
             undefined,
           );

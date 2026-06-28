@@ -142,7 +142,7 @@ export async function getCountryDetail(req: Request, res: Response): Promise<any
       organizationId: req.organizationId!,
     });
     // local.data already holds the full detail (regulations/timeline/meta) seeded
-    // and refreshed by the weekly sync, so this renders complete content offline.
+    // and refreshed by the daily sync, so this renders complete content offline.
     return res
       .status(200)
       .json(STATUS_CODE[200]({ ...local.data, stale: true, is_tracked: local.is_tracked }));
@@ -340,6 +340,22 @@ export async function getSettingsCtrl(req: Request, res: Response): Promise<any>
     // Merge in global run observability (last sync time + outcome) so the
     // Settings page can show when the catalogue was last checked.
     const meta = await getMetaQuery();
+    // Surface the FEED's own data-update timestamp (independent of when our sync
+    // last ran). A feed that returns 200 but stopped publishing looks identical
+    // to "nothing changed" from last_run_status alone; an aging
+    // feed_last_data_update is the signal the UI can warn on. Read from the
+    // stored horizon blob's meta.lastDataUpdate — no extra external call. Best-
+    // effort: never let it turn this GET into a 500.
+    let feed_last_data_update: string | null = null;
+    try {
+      const horizon = (await getGlobalFeed("horizon")) as
+        | { meta?: { lastDataUpdate?: unknown } }
+        | null;
+      const v = horizon?.meta?.lastDataUpdate;
+      if (typeof v === "string") feed_last_data_update = v;
+    } catch {
+      feed_last_data_update = null;
+    }
     let has_llm_key = false;
     let llm_key_provider: string | null = null;
     let llm_key_model: string | null = null;
@@ -357,6 +373,7 @@ export async function getSettingsCtrl(req: Request, res: Response): Promise<any>
       ...settings,
       last_run_at: meta.last_run_at,
       last_run_status: meta.last_run_status,
+      feed_last_data_update,
       has_llm_key,
       llm_key_provider,
       llm_key_model,
@@ -580,9 +597,9 @@ export async function getFrameworks(req: Request, res: Response): Promise<any> {
 
 // ---------------------------------------------------------------------------
 // POST /api/regulations-tracker/sync  [ADMIN]
-// On-demand "check for updates now". Bypasses the weekly-idempotency guard by
-// clearing last_run_week first, then runs the sync inline. Rate-limited at the
-// route layer.
+// On-demand "check for updates now". Bypasses the daily-idempotency guard by
+// clearing the day key (last_run_week column) first, then runs the sync inline.
+// Rate-limited at the route layer.
 // ---------------------------------------------------------------------------
 export async function triggerSync(req: Request, res: Response): Promise<any> {
   const fn = "triggerSync";
@@ -598,8 +615,8 @@ export async function triggerSync(req: Request, res: Response): Promise<any> {
     // Lazy import to avoid a controller -> automations import cycle at module load.
     const { syncRegulationsTracker } =
       await import("../services/automations/actions/syncRegulationsTracker");
-    const { clearLastRunWeek } = await import("../utils/regulationsTracker.utils");
-    await clearLastRunWeek();
+    const { clearLastRunDay } = await import("../utils/regulationsTracker.utils");
+    await clearLastRunDay();
     const result = await syncRegulationsTracker();
     await logSuccess({
       eventType: "Update",

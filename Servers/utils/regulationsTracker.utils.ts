@@ -40,6 +40,19 @@ export function currentIsoWeek(date: Date): string {
   return `${d.getUTCFullYear()}-W${String(week).padStart(2, "0")}`;
 }
 
+// UTC calendar day, e.g. "2026-06-29". The regulations sync runs daily (every
+// morning at 06:00 UTC) so customers tracking a country are alerted the day a
+// change lands rather than waiting for the next Monday. We reuse the existing
+// last_run_week VARCHAR(10) column to hold this day key (no migration); the
+// 10-char width fits "YYYY-MM-DD" exactly.
+export function currentIsoDay(date: Date): string {
+  return new Date(
+    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
+  )
+    .toISOString()
+    .slice(0, 10);
+}
+
 export function normalizeSlug(s: string): string {
   return String(s).trim().toLowerCase();
 }
@@ -67,14 +80,15 @@ export async function getMetaQuery(): Promise<{
   );
 }
 
-// Clears the week-idempotency watermark so the very next sync run actually
-// fetches + diffs (used by the admin "check for updates now" trigger).
-export async function clearLastRunWeek(): Promise<void> {
+// Clears the day-idempotency watermark so the very next sync run actually
+// fetches + diffs (used by the admin "check for updates now" trigger). The
+// watermark lives in the legacy-named last_run_week column (see currentIsoDay).
+export async function clearLastRunDay(): Promise<void> {
   await sequelize.query(`UPDATE regulation_tracker_meta SET last_run_week = NULL WHERE id = 1;`);
 }
 
 // Stamps the most recent sync attempt's time + outcome on the meta singleton.
-// Called at every exit point of the weekly job (skip / fail / success) so the
+// Called at every exit point of the daily sync job (skip / fail / success) so the
 // app can surface freshness and failures.
 export async function recordRunStatus(status: string): Promise<void> {
   await sequelize.query(
@@ -169,7 +183,7 @@ export async function setGlobalFeeds(feeds: {
 }
 
 // Returns a map of normalized slug -> stored hash for the given slugs. Used by
-// the weekly sync to decide which countries' full detail needs re-fetching
+// the daily sync to decide which countries' full detail needs re-fetching
 // (new or hash-changed) before upserting.
 export async function getStoredHashes(slugs: string[]): Promise<Map<string, string>> {
   if (!slugs.length) return new Map();
@@ -301,7 +315,7 @@ export async function upsertFeedTx(
              ${wasFirstSeed ? ", seeded_at = NOW()" : ""}
        WHERE id = 1;`,
       {
-        replacements: { count: rawCount ?? countries.length, week: currentIsoWeek(new Date()) },
+        replacements: { count: rawCount ?? countries.length, week: currentIsoDay(new Date()) },
         transaction,
       },
     );
@@ -465,7 +479,7 @@ export async function setLastImpactRunAt(organizationId: number): Promise<void> 
 }
 
 // ---------------------------------------------------------------------------
-// Query: orgs tracking any of the given slugs (used by the weekly job)
+// Query: orgs tracking any of the given slugs (used by the daily sync job)
 // ---------------------------------------------------------------------------
 
 export async function getAffectedOrgsBySlugs(

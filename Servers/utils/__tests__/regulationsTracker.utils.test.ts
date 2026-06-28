@@ -1,6 +1,7 @@
 import {
   renderChangeLine,
   currentIsoWeek,
+  currentIsoDay,
   escapeHtml,
   countChangesSince,
 } from "../regulationsTracker.utils";
@@ -39,6 +40,18 @@ describe("renderChangeLine", () => {
 describe("currentIsoWeek", () => {
   it("returns YYYY-Www format", () => {
     expect(currentIsoWeek(new Date("2026-06-25T00:00:00Z"))).toMatch(/^\d{4}-W\d{2}$/);
+  });
+});
+
+describe("currentIsoDay", () => {
+  it("returns the UTC calendar day as YYYY-MM-DD", () => {
+    expect(currentIsoDay(new Date("2026-06-29T13:45:00Z"))).toBe("2026-06-29");
+  });
+  it("uses UTC, not local time, near a day boundary", () => {
+    expect(currentIsoDay(new Date("2026-06-29T23:59:59Z"))).toBe("2026-06-29");
+  });
+  it("fits the legacy last_run_week VARCHAR(10) width", () => {
+    expect(currentIsoDay(new Date("2026-06-29T00:00:00Z")).length).toBe(10);
   });
 });
 

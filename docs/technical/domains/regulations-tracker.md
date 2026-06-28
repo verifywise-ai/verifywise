@@ -5,7 +5,7 @@
 
 The Regulations Tracker is a standalone sidebar module that gives every organisation a window into
 the public **Global AI Regulations** feed published by the marketing site (`verifywise.ai`). VerifyWise
-pulls the feed on a weekly schedule, detects when a country's regulations change (by content hash),
+pulls the feed on a daily schedule, detects when a country's regulations change (by content hash),
 and notifies the organisations tracking that country — in-app and by email. It also surfaces three
 global reference feeds (changelog, deadlines, international frameworks). No scraping, no LLM, no new
 external service; VerifyWise never writes back to the website.
@@ -19,7 +19,7 @@ Read-only.
 
 | Endpoint | Used for |
 |---|---|
-| `GET /api/regulations` | **Manifest** — per-country `{slug, name, region, regulationCount, hash, history, url}`. The weekly diff trigger. |
+| `GET /api/regulations` | **Manifest** — per-country `{slug, name, region, regulationCount, hash, history, url}`. The daily diff trigger. |
 | `GET /api/regulations/country/<slug>` | **Detail** — `{ feedVersion, meta, country }` where `country` nests `{regulations[], timeline[], oneLiner, executiveSummary, practicalTakeaway, flag, hash, history}`. **Detail is nested under `country`, NOT flat** (a recurring review trip-hazard). |
 | `GET /api/regulations/horizon` | Curated dated changelog: `{ changes: [{date, countrySlug, countryName, countryFlag, type, description, detail}] }`. |
 | `GET /api/regulations/deadlines` | `{ deadlines: [...], unscheduled: [...] }` — effective-date milestones. |
@@ -55,7 +55,7 @@ Migrations (all on the branch):
 
 **Seed:** `database/seeds/regulations-tracker-snapshot.json` holds the **full** per-country detail
 (60 countries) so a fresh install renders complete content day-one with no external call. The seed
-migration is idempotent (skips if the catalog is non-empty) and baselines `meta` so the first weekly
+migration is idempotent (skips if the catalog is non-empty) and baselines `meta` so the first sync
 run notifies nobody.
 
 ---
@@ -67,7 +67,7 @@ routes/regulationsTracker.route.ts        9 endpoints, all authenticateJWT
 controllers/regulationsTracker.ctrl.ts    thin controllers; isAdmin = inline arrow (role==="Admin"||"SuperAdmin")
 utils/regulationsTracker.utils.ts         CRUD, upsertFeedTx, recipient resolution, global-feed get/set, run-status, countChangesSince
 utils/regulationsTrackerFeed.ts           fetchManifest/validateManifest/fetchCountryDetail/fetchHorizon/fetchDeadlines/fetchSnapshot
-services/automations/actions/syncRegulationsTracker.ts   the weekly job
+services/automations/actions/syncRegulationsTracker.ts   the daily sync job
 templates/regulations-tracker-digest.mjml email digest
 middleware/rateLimit.middleware.ts        regulationsTrackerSyncLimiter (5 req / 5 min)
 ```
@@ -94,9 +94,10 @@ middleware/rateLimit.middleware.ts        regulationsTrackerSyncLimiter (5 req /
 WEBSITE: researcher edits a regulation → site recomputes the country hash + appends
          history.lastChange.changes[]. The feed now serves the new hash + structured diff.
 
-WEEKLY JOB  (BullMQ "regulations_tracker_sync", Mondays 06:00 UTC; or admin POST /sync)
- 1. In-process syncInProgress guard (no concurrent runs). Then week-idempotency guard
-    (last_run_week === currentIsoWeek, OUR clock) — admin /sync clears last_run_week first.
+DAILY JOB  (BullMQ "regulations_tracker_sync", every day 06:00 UTC; or admin POST /sync)
+ 1. In-process syncInProgress guard (no concurrent runs). Then day-idempotency guard
+    (last_run_week column holds the day key === currentIsoDay, OUR clock) — admin /sync
+    clears the day key first.
  2. Fetch manifest. Validate: feedVersion===1, counts match, ≥20 VALID countries, ≥50% of
     last_good_count (gated on VALID count). Any failure → recordRunStatus + return, no writes.
  3. For new/hash-changed countries, fetch full detail (normalized slug) and store {...country, meta}.
@@ -229,7 +230,7 @@ Stage A result = `Candidate[]` per entity type (over-inclusive by design).
 
 ### Sync hook integration
 
-Impact analysis runs **synchronously per-(org, country) during the notification phase** of the weekly sync (or on-demand admin `/sync`). Isolated in a try/catch so a per-country analysis failure never breaks the overall sync.
+Impact analysis runs **synchronously per-(org, country) during the notification phase** of the daily sync (or on-demand admin `/sync`). Isolated in a try/catch so a per-country analysis failure never breaks the overall sync.
 
 Result caching: analysis is cached by `(organizationId, country_slug, regulation_hash)`. If the regulation hash has not changed since the last run, the cached result is returned without re-invoking the LLM.
 
@@ -239,7 +240,7 @@ Failure mode: if LLM call fails for a country, the sync continues and records im
 
 - **Country→region mapping coarse:** the region lookup table contains ~30 country names. The LLM is expected to refine boundaries (e.g., "EU Digital Services Act" affects Austria, not just Germany). Standalone policies (not linked to a control) are unmatched.
 - **Policies unlinked to controls:** Stage A only catches policies that are directly linked via `policy_frameworks` to a framework that matched. Orphaned policies are excluded.
-- **Per-run cap deferred:** V1 has no global cap on parallel LLM calls per sync (`IMPACT_MAX_ANALYSES_PER_RUN`). Stage A already bounds cost per-(org,country) and the weekly cadence limits fan-out; the cap will be added in a later iteration if large feeds prove slow.
+- **Per-run cap, not a weekly budget:** `IMPACT_MAX_ANALYSES_PER_RUN` caps LLM analyses *per run* but resets each run. With the daily cadence, weeks where regulations change on multiple days can drive up to ~7× the LLM calls of the old weekly design. Impact only runs on real content changes and analysis is cached by `(org, country, regulation_hash)`, so the multiplier is bounded by how often regulations actually change. If spend needs a hard weekly ceiling, gate impact off `last_impact_run_at` rather than relying solely on the per-run cap.
 
 ---
 

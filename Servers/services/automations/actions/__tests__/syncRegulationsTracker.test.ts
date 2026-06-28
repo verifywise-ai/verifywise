@@ -33,8 +33,8 @@ jest.mock("../../../../utils/regulationsTracker.utils", () => {
     recordRunStatus: jest.fn().mockResolvedValue(undefined),
     getSettings: jest.fn().mockResolvedValue({ impact_enabled: true }),
     setLastImpactRunAt: jest.fn().mockResolvedValue(undefined),
-    // keep currentIsoWeek and escapeHtml real
-    currentIsoWeek: actual.currentIsoWeek,
+    // keep the day-key helper and escapeHtml real
+    currentIsoDay: actual.currentIsoDay,
     escapeHtml: actual.escapeHtml,
   };
 });
@@ -120,9 +120,11 @@ function makeValidResult(countries: any[] = []) {
   };
 }
 
-// Current ISO week (real util so the guard fires correctly).
-const THIS_WEEK = trackerUtils.currentIsoWeek(new Date());
-const OTHER_WEEK = "2000-W01";
+// Current UTC day key (real util so the daily guard fires correctly). The key is
+// stored in the legacy-named last_run_week column. OTHER_WEEK is any value that
+// can never equal today's day string, used by tests that must NOT hit the skip.
+const THIS_WEEK = trackerUtils.currentIsoDay(new Date());
+const OTHER_WEEK = "2000-01-01";
 
 // ---------------------------------------------------------------------------
 // sectionMjml — existing tests (preserved)
@@ -151,7 +153,7 @@ describe("syncRegulationsTracker", () => {
   // -------------------------------------------------------------------------
   // 1. Week-guard skip
   // -------------------------------------------------------------------------
-  it("skips and does not call validateManifest when last_run_week equals current ISO week", async () => {
+  it("skips and does not call validateManifest when the day key equals today (already ran)", async () => {
     mockGetMeta.mockResolvedValue({
       seeded_at: "2026-01-01",
       last_good_count: 10,
