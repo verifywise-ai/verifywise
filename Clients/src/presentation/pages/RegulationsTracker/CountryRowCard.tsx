@@ -105,18 +105,20 @@ export function CountryRowCard({
       }}
       onClick={onClick}
     >
-      <Box
-        sx={{
-          width: "20px",
-          height: "20px",
-          flexShrink: 0,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        {checkbox}
-      </Box>
+      {checkbox && (
+        <Box
+          sx={{
+            width: "20px",
+            height: "20px",
+            flexShrink: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          {checkbox}
+        </Box>
+      )}
 
       {row.flag ? (
         <Box

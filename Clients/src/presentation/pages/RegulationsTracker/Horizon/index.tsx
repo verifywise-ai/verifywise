@@ -33,7 +33,7 @@ export default function Horizon() {
 
   return (
     <PageHeaderExtended
-      title="Horizon"
+      title="Activity"
       description="A dated changelog of AI-regulation changes across all tracked jurisdictions, newest first."
       helpArticlePath="regulations-tracker/horizon"
     >

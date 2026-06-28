@@ -8713,6 +8713,12 @@ export const translations: Record<string, Record<string, string>> = {
     "Upcoming effective-date milestones for AI regulations, soonest first, plus regulations with no scheduled date yet.":
       "Bevorstehende Inkrafttreten-Meilensteine für KI-Regulierungen, früheste zuerst, plus Regulierungen ohne geplantes Datum.",
     "International frameworks": "Internationale Rahmenwerke",
+    "Country details": "Länderdetails",
+    "AI regulations for a specific country": "KI-Vorschriften für ein bestimmtes Land",
+    "No international frameworks are available yet. Cross-border frameworks like the OECD AI Principles will appear here once the feed publishes them.":
+      "Es sind noch keine internationalen Rahmenwerke verfügbar. Grenzüberschreitende Rahmenwerke wie die OECD-KI-Grundsätze werden hier angezeigt, sobald sie im Feed veröffentlicht werden.",
+    "No upcoming regulation deadlines are recorded yet. Effective-date milestones for AI regulations will appear here as they are published.":
+      "Es sind noch keine bevorstehenden Regulierungsfristen erfasst. Stichtags-Meilensteine für KI-Vorschriften werden hier angezeigt, sobald sie veröffentlicht werden.",
     "Cross-border AI governance frameworks and principles that complement national regulations.":
       "Grenzüberschreitende KI-Governance-Rahmenwerke und -Grundsätze, die nationale Regulierungen ergänzen.",
     "Key obligations": "Wesentliche Pflichten",
@@ -17438,6 +17444,12 @@ export const translations: Record<string, Record<string, string>> = {
     "Upcoming effective-date milestones for AI regulations, soonest first, plus regulations with no scheduled date yet.":
       "Prochaines échéances d'entrée en vigueur des réglementations IA, les plus proches en premier, plus les réglementations sans date prévue.",
     "International frameworks": "Cadres internationaux",
+    "Country details": "Détails du pays",
+    "AI regulations for a specific country": "Réglementations sur l'IA pour un pays spécifique",
+    "No international frameworks are available yet. Cross-border frameworks like the OECD AI Principles will appear here once the feed publishes them.":
+      "Aucun cadre international n'est encore disponible. Les cadres transfrontaliers tels que les Principes de l'OCDE sur l'IA apparaîtront ici une fois publiés dans le flux.",
+    "No upcoming regulation deadlines are recorded yet. Effective-date milestones for AI regulations will appear here as they are published.":
+      "Aucune échéance réglementaire à venir n'est encore enregistrée. Les jalons de dates d'entrée en vigueur des réglementations sur l'IA apparaîtront ici au fur et à mesure de leur publication.",
     "Cross-border AI governance frameworks and principles that complement national regulations.":
       "Cadres et principes transfrontaliers de gouvernance de l'IA qui complètent les réglementations nationales.",
     "Key obligations": "Obligations clés",
@@ -26079,6 +26091,12 @@ export const translations: Record<string, Record<string, string>> = {
     "Upcoming effective-date milestones for AI regulations, soonest first, plus regulations with no scheduled date yet.":
       "Próximos hitos de entrada en vigor de las regulaciones de IA, los más cercanos primero, más regulaciones sin fecha programada aún.",
     "International frameworks": "Marcos internacionales",
+    "Country details": "Detalles del país",
+    "AI regulations for a specific country": "Regulaciones de IA para un país específico",
+    "No international frameworks are available yet. Cross-border frameworks like the OECD AI Principles will appear here once the feed publishes them.":
+      "Aún no hay marcos internacionales disponibles. Los marcos transfronterizos como los Principios de IA de la OCDE aparecerán aquí una vez que se publiquen en el feed.",
+    "No upcoming regulation deadlines are recorded yet. Effective-date milestones for AI regulations will appear here as they are published.":
+      "Aún no se han registrado próximos plazos regulatorios. Los hitos de fechas de entrada en vigor de las regulaciones de IA aparecerán aquí a medida que se publiquen.",
     "Cross-border AI governance frameworks and principles that complement national regulations.":
       "Marcos y principios transfronterizos de gobernanza de IA que complementan las regulaciones nacionales.",
     "Key obligations": "Obligaciones clave",

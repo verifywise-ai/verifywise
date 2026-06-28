@@ -46,7 +46,7 @@ export default function RegulationsTrackerSidebar({
     },
     {
       id: "horizon",
-      label: "Horizon",
+      label: "Activity",
       value: "horizon",
       icon: <History size={16} strokeWidth={1.5} />,
       disabled: false,

@@ -357,7 +357,7 @@ export default function Deadlines() {
       {isEmpty && !isError && (
         <EmptyState
           icon={CalendarClock}
-          message="No upcoming regulation deadlines are recorded yet. Effective-date milestones for AI regulations will appear here as they're published."
+          message="No upcoming regulation deadlines are recorded yet. Effective-date milestones for AI regulations will appear here as they are published."
           showBorder
         />
       )}

@@ -52,6 +52,10 @@ import {
   Gauge,
   Compass,
   Star,
+  Globe,
+  CalendarClock,
+  Landmark,
+  Scale,
 } from "lucide-react";
 
 /**
@@ -137,6 +141,15 @@ export const routeMapping: Record<string, string> = {
   "/ai-trust-index/browse": "Browse",
   "/ai-trust-index/tracked": "Tracked",
   "/ai-trust-index/settings": "Settings",
+
+  // Regulations Tracker
+  "/regulations-tracker": "Regulations Tracker",
+  "/regulations-tracker/browse": "Browse",
+  "/regulations-tracker/tracked": "Tracked",
+  "/regulations-tracker/horizon": "Activity",
+  "/regulations-tracker/deadlines": "Deadlines",
+  "/regulations-tracker/frameworks": "Frameworks",
+  "/regulations-tracker/settings": "Settings",
 
   // AI Gateway
   "/ai-gateway": "AI gateway",
@@ -307,6 +320,19 @@ export const routeIconMapping: Record<string, () => React.ReactNode> = {
   "/ai-trust-index/tracked": () => React.createElement(Star, { size: 14, strokeWidth: 1.5 }),
   "/ai-trust-index/settings": () => React.createElement(Settings, { size: 14, strokeWidth: 1.5 }),
 
+  // Regulations Tracker
+  "/regulations-tracker": () => React.createElement(Scale, { size: 14, strokeWidth: 1.5 }),
+  "/regulations-tracker/browse": () => React.createElement(Globe, { size: 14, strokeWidth: 1.5 }),
+  "/regulations-tracker/tracked": () => React.createElement(Star, { size: 14, strokeWidth: 1.5 }),
+  "/regulations-tracker/horizon": () =>
+    React.createElement(History, { size: 14, strokeWidth: 1.5 }),
+  "/regulations-tracker/deadlines": () =>
+    React.createElement(CalendarClock, { size: 14, strokeWidth: 1.5 }),
+  "/regulations-tracker/frameworks": () =>
+    React.createElement(Landmark, { size: 14, strokeWidth: 1.5 }),
+  "/regulations-tracker/settings": () =>
+    React.createElement(Settings, { size: 14, strokeWidth: 1.5 }),
+
   // Intake forms
   "/intake-forms": () => React.createElement(ClipboardList, { size: 14, strokeWidth: 1.5 }),
   "/intake-forms/submissions": () => React.createElement(Inbox, { size: 14, strokeWidth: 1.5 }),
@@ -439,6 +465,15 @@ export const dynamicRoutePatterns = [
     label: "App details",
     description: "Full assessment for a specific AI Trust Index app",
     icon: () => React.createElement(Gauge, { size: 14, strokeWidth: 1.5 }),
+  },
+  {
+    // Only consulted when there's no exact routeMapping hit, so the explicit
+    // /regulations-tracker/browse|tracked|horizon|deadlines|frameworks|settings
+    // entries take precedence; this catches the per-country detail page.
+    pattern: /\/regulations-tracker\/[^/]+$/,
+    label: "Country details",
+    description: "AI regulations for a specific country",
+    icon: () => React.createElement(Globe, { size: 14, strokeWidth: 1.5 }),
   },
   {
     pattern: /\/super-admin\/organizations\/\d+\/users/,

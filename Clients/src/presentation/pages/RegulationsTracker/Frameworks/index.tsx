@@ -99,8 +99,12 @@ export default function Frameworks() {
           <Box
             sx={{
               display: "grid",
-              gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+              gridTemplateColumns: {
+                xs: "1fr",
+                md: "repeat(2, minmax(0, 1fr))",
+              },
               gap: "16px",
+              alignItems: "start",
             }}
           >
             {items.map((f, i) => (
@@ -165,7 +169,24 @@ export default function Frameworks() {
                 {f.namedDocuments && f.namedDocuments.length > 0 && (
                   <Stack direction="row" gap="6px" flexWrap="wrap" sx={{ mt: "8px" }}>
                     {f.namedDocuments.map((doc, j) => (
-                      <Chip key={j} label={doc} variant="default" uppercase={false} />
+                      <Box
+                        key={j}
+                        component="span"
+                        sx={{
+                          maxWidth: "100%",
+                          padding: "4px 8px",
+                          borderRadius: "4px",
+                          backgroundColor: palette.background.hover,
+                          border: `1px solid ${palette.border.dark}`,
+                          color: palette.text.secondary,
+                          fontSize: "11px",
+                          lineHeight: 1.4,
+                          whiteSpace: "normal",
+                          overflowWrap: "anywhere",
+                        }}
+                      >
+                        {doc}
+                      </Box>
                     ))}
                   </Stack>
                 )}
