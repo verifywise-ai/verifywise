@@ -108,17 +108,17 @@ export async function getCandidates(
   const frameworks = frameworksForRegulation({ type: regulation.type, country: countryName });
   const out = EMPTY_BY_TYPE();
 
-  // --- systems (projects): geography region match OR framework match via project_frameworks ---
+  // --- systems (projects): geography region match OR framework match via projects_frameworks ---
   const systems = (await sequelize.query(
     `SELECT DISTINCT p.id, p.project_title AS name,
             COALESCE(p.goal, '') AS description
        FROM projects p
-       LEFT JOIN project_frameworks pf ON pf.project_id = p.id
+       LEFT JOIN projects_frameworks pf ON pf.project_id = p.id
        LEFT JOIN frameworks f ON f.id = pf.framework_id
       WHERE p.organization_id = :organizationId
         AND ( (:region IS NOT NULL AND p.geography = :region)
-              OR f.name = ANY(:frameworks) )`,
-    { replacements: { organizationId, region, frameworks }, type: QueryTypes.SELECT },
+              OR f.name IN (:frameworks) )`,
+    { replacements: { organizationId, region, frameworks: frameworks.length ? frameworks : ["__none__"] }, type: QueryTypes.SELECT },
   )) as { id: number; name: string; description: string }[];
   out.system = systems.map((r) => ({
     type: "system",
@@ -134,12 +134,12 @@ export async function getCandidates(
     `SELECT DISTINCT c.id, c.title AS name, COALESCE(c.description, '') AS description
        FROM controls c
        JOIN control_categories cc ON cc.id = c.control_category_id
-       JOIN project_frameworks pf ON pf.project_id = cc.project_id
+       JOIN projects_frameworks pf ON pf.project_id = cc.project_id
        JOIN frameworks f ON f.id = pf.framework_id
        JOIN projects p ON p.id = cc.project_id
       WHERE p.organization_id = :organizationId
-        AND f.name = ANY(:frameworks)`,
-    { replacements: { organizationId, frameworks }, type: QueryTypes.SELECT },
+        AND f.name IN (:frameworks)`,
+    { replacements: { organizationId, frameworks: frameworks.length ? frameworks : ["__none__"] }, type: QueryTypes.SELECT },
   )) as { id: number; name: string; description: string }[];
   out.control = controls.map((r) => ({
     type: "control",
@@ -155,7 +155,7 @@ export async function getCandidates(
          FROM assessments a
          JOIN projects p ON p.id = a.project_id
         WHERE p.organization_id = :organizationId
-          AND a.project_id = ANY(:projectIds)`,
+          AND a.project_id IN (:projectIds)`,
       {
         replacements: { organizationId, projectIds: candidateProjectIds },
         type: QueryTypes.SELECT,
@@ -175,8 +175,8 @@ export async function getCandidates(
        FROM vendors v
        LEFT JOIN vendors_projects vp ON vp.vendor_id = v.id
       WHERE v.organization_id = :organizationId
-        AND ( v.regulatory_exposure = ANY(:frameworkExposure)
-              OR (:hasProjects AND vp.project_id = ANY(:projectIds)) )`,
+        AND ( v.regulatory_exposure IN (:frameworkExposure)
+              OR (:hasProjects AND vp.project_id IN (:projectIds)) )`,
     {
       replacements: {
         organizationId,
@@ -203,7 +203,7 @@ export async function getCandidates(
          JOIN policy_linked_objects plo ON plo.policy_id = pm.id
         WHERE pm.organization_id = :organizationId
           AND plo.object_type = 'control'
-          AND plo.object_id = ANY(:controlIds)`,
+          AND plo.object_id IN (:controlIds)`,
       { replacements: { organizationId, controlIds }, type: QueryTypes.SELECT },
     )) as { id: number; name: string; description: string }[];
     out.policy = policies.map((r) => ({

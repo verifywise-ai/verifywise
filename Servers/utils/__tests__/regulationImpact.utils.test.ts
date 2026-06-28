@@ -151,6 +151,18 @@ describe("getCandidates", () => {
       expect(call[1].replacements.organizationId).toBe(42);
     }
   });
+
+  it("uses IN (:param) not = ANY(:param) for all array replacements", async () => {
+    q.mockResolvedValue([]);
+    await getCandidates(1, "European Union", { type: "EU AI Act", country: "European Union" });
+    const sqls = q.mock.calls.map((c: unknown[]) => c[0] as string);
+    for (const sql of sqls) {
+      expect(sql).not.toMatch(/=\s*ANY\s*\(/);
+      if (/IN\s*\(/.test(sql)) {
+        expect(sql).toMatch(/IN\s*\(/);
+      }
+    }
+  });
 });
 
 const ctx = {
