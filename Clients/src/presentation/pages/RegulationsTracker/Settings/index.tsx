@@ -13,7 +13,7 @@ import { useNavigate } from "react-router-dom";
 import { Box, Stack, Typography, CircularProgress } from "@mui/material";
 import ChipInput from "../../../components/Inputs/ChipInput";
 import AutoCompleteField from "../../../components/Inputs/Autocomplete";
-import { Lock, RefreshCw } from "lucide-react";
+import { Check, Lock, RefreshCw, X } from "lucide-react";
 import Toggle from "../../../components/Inputs/Toggle";
 import { EmptyState } from "../../../components/EmptyState";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
@@ -33,6 +33,36 @@ interface UserOption {
   label: string;
 }
 
+// ─── Sync progress state machine ────────────────────────────────────────────
+
+const SYNC_STAGES = [
+  "Retrieving the latest regulations feed",
+  "Validating the feed",
+  "Comparing against your tracked countries",
+  "Finishing up",
+] as const;
+
+type StageIndex = 0 | 1 | 2 | 3;
+
+// Delay (ms) between advancing stages during the simulation
+const STAGE_DELAYS: number[] = [800, 850, 900];
+
+type SyncStatus = "idle" | "running" | "done" | "error";
+
+interface SyncState {
+  status: SyncStatus;
+  currentStage: StageIndex;
+  resultMessage: string | null;
+}
+
+const INITIAL_SYNC_STATE: SyncState = {
+  status: "idle",
+  currentStage: 0,
+  resultMessage: null,
+};
+
+// ─── Component ──────────────────────────────────────────────────────────────
+
 export default function Settings() {
   const navigate = useNavigate();
   const { userRoleName, isSuperAdmin } = useAuth();
@@ -42,12 +72,22 @@ export default function Settings() {
   const { users, loading: usersLoading } = useUsers();
   const updateSettings = useUpdateSettings();
   const triggerSync = useTriggerSync();
-  const { showError, showSuccess, AlertSlot } = useTrackerAlert();
+  const { showError, AlertSlot } = useTrackerAlert();
 
   const [recipientUserIds, setRecipientUserIds] = useState<number[]>([]);
   const [recipientEmails, setRecipientEmails] = useState<string[]>([]);
   const [impactEnabled, setImpactEnabled] = useState<boolean>(true);
   const [justSaved, setJustSaved] = useState(false);
+
+  // Sync progress state
+  const [syncState, setSyncState] = useState<SyncState>(INITIAL_SYNC_STATE);
+
+  // Refs to coordinate simulation vs real mutation
+  const stageTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const mutationSettledRef = useRef<{ settled: boolean; result?: string; error?: boolean }>({
+    settled: false,
+  });
+  const simulationDoneRef = useRef(false);
 
   useEffect(() => {
     if (!justSaved) return undefined;
@@ -122,6 +162,118 @@ export default function Settings() {
     [userOptions, recipientUserIds],
   );
 
+  // Clear all stage timers
+  const clearStageTimers = () => {
+    stageTimersRef.current.forEach(clearTimeout);
+    stageTimersRef.current = [];
+  };
+
+  // Resolve: fast-forward remaining stages to done, then show result
+  const resolveSimulation = (resultMsg: string) => {
+    clearStageTimers();
+    setSyncState({
+      status: "done",
+      currentStage: (SYNC_STAGES.length - 1) as StageIndex,
+      resultMessage: resultMsg,
+    });
+    simulationDoneRef.current = true;
+  };
+
+  const handleCheckNow = () => {
+    if (syncState.status === "running") return;
+
+    // Reset refs
+    mutationSettledRef.current = { settled: false };
+    simulationDoneRef.current = false;
+    clearStageTimers();
+
+    // Start the display
+    setSyncState({ status: "running", currentStage: 0, resultMessage: null });
+
+    // ── Simulated stage advancement ─────────────────────────────────
+    // Stages 0→1→2→3, each on a timer. Stage 3 ("Finishing up") stays
+    // active (spinning) until the real mutation resolves.
+    let accumulatedDelay = 0;
+    STAGE_DELAYS.forEach((delay, i) => {
+      accumulatedDelay += delay;
+      const nextStage = (i + 1) as StageIndex;
+      const timer = setTimeout(() => {
+        setSyncState((prev) => {
+          if (prev.status !== "running") return prev;
+          // If the mutation already settled while we were simulating,
+          // and we just hit the last simulated stage, resolve immediately.
+          if (nextStage === ((SYNC_STAGES.length - 1) as StageIndex)) {
+            if (mutationSettledRef.current.settled) {
+              simulationDoneRef.current = true;
+              if (mutationSettledRef.current.error) {
+                return {
+                  status: "error",
+                  currentStage: nextStage,
+                  resultMessage: null,
+                };
+              }
+              return {
+                status: "done",
+                currentStage: nextStage,
+                resultMessage: mutationSettledRef.current.result ?? null,
+              };
+            }
+            // Mutation not yet settled — stay on stage 3 spinner and wait
+          }
+          return { ...prev, currentStage: nextStage };
+        });
+      }, accumulatedDelay);
+      stageTimersRef.current.push(timer);
+    });
+
+    // ── Real mutation ───────────────────────────────────────────────
+    triggerSync.mutate(undefined, {
+      onSuccess: (res) => {
+        const r = res?.data ?? {};
+        const msg = r.skipped
+          ? `Already up to date (${r.skipped}).`
+          : `Done — ${r.changed ?? 0} changed, ${r.newlyRemoved ?? 0} removed${r.newlyAdded ? `, ${r.newlyAdded} new` : ""}.`;
+
+        mutationSettledRef.current = { settled: true, result: msg };
+
+        // If the simulation already reached the last stage, resolve now.
+        // Otherwise let the stage timer detect the settled flag.
+        if (simulationDoneRef.current) {
+          resolveSimulation(msg);
+        } else {
+          setSyncState((prev) => {
+            if (prev.status !== "running") return prev;
+            if (prev.currentStage === ((SYNC_STAGES.length - 1) as StageIndex)) {
+              // We're already on the last spinner — resolve immediately
+              simulationDoneRef.current = true;
+              return { status: "done", currentStage: prev.currentStage, resultMessage: msg };
+            }
+            // Still on an earlier stage — the stage timer will pick up the flag
+            return prev;
+          });
+        }
+      },
+      onError: () => {
+        mutationSettledRef.current = { settled: true, error: true };
+        clearStageTimers();
+        setSyncState((prev) => ({
+          status: "error",
+          currentStage: prev.currentStage,
+          resultMessage: null,
+        }));
+        simulationDoneRef.current = true;
+      },
+    });
+  };
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => clearStageTimers();
+  }, []);
+
+  const isSyncRunning = syncState.status === "running";
+  const showProgressPanel = syncState.status !== "idle";
+
   if (!isAdmin) {
     return (
       <PageHeaderExtended
@@ -153,7 +305,7 @@ export default function Settings() {
         </Box>
       ) : (
         <Stack gap="24px" sx={{ maxWidth: 560 }}>
-          {/* Cadence note */}
+          {/* Cadence note + check-for-updates */}
           <Box
             sx={{
               border: `1px solid ${palette.border.dark}`,
@@ -183,32 +335,154 @@ export default function Settings() {
                 </Box>
               )}
             </Typography>
+
             <Box sx={{ mt: "12px" }}>
               <CustomizableButton
-                text={triggerSync.isPending ? "Checking…" : "Check for updates now"}
+                text={isSyncRunning ? "Checking…" : "Check for updates now"}
                 variant="outlined"
                 size="small"
                 startIcon={<RefreshCw size={14} strokeWidth={1.5} />}
-                isDisabled={triggerSync.isPending}
-                onClick={() =>
-                  triggerSync.mutate(undefined, {
-                    onSuccess: (res) => {
-                      const r = res?.data ?? {};
-                      showSuccess(
-                        r.skipped
-                          ? `Check complete (${r.skipped}).`
-                          : `Check complete: ${r.changed ?? 0} changed, ${r.newlyRemoved ?? 0} removed.`,
-                        "Up to date",
-                      );
-                    },
-                    onError: () =>
-                      showError(
-                        "We couldn't check for updates right now. Please try again shortly.",
-                      ),
-                  })
-                }
+                isDisabled={isSyncRunning || triggerSync.isPending}
+                onClick={handleCheckNow}
               />
             </Box>
+
+            {/* ── Progress panel ── */}
+            {showProgressPanel && (
+              <Box
+                role="status"
+                aria-live="polite"
+                aria-label="Check for updates progress"
+                sx={{
+                  mt: "16px",
+                  pt: "14px",
+                  borderTop: `1px solid ${palette.border.dark}`,
+                }}
+              >
+                <Stack gap="8px">
+                  {SYNC_STAGES.map((label, idx) => {
+                    const stageIdx = idx as StageIndex;
+                    const isDone =
+                      syncState.status === "done" ||
+                      (syncState.status === "error" && stageIdx < syncState.currentStage) ||
+                      (syncState.status === "running" && stageIdx < syncState.currentStage);
+                    const isActive =
+                      syncState.status === "running" && stageIdx === syncState.currentStage;
+                    const isUpcoming =
+                      syncState.status === "running" && stageIdx > syncState.currentStage;
+
+                    return (
+                      <Stack
+                        key={label}
+                        direction="row"
+                        alignItems="center"
+                        gap="8px"
+                        sx={{ opacity: isUpcoming ? 0.4 : 1, transition: "opacity 0.2s" }}
+                      >
+                        {/* Stage indicator */}
+                        <Box
+                          sx={{
+                            width: "16px",
+                            height: "16px",
+                            flexShrink: 0,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                          }}
+                        >
+                          {isDone && (
+                            <Check
+                              size={14}
+                              strokeWidth={2}
+                              color={palette.brand.primary}
+                              aria-hidden="true"
+                            />
+                          )}
+                          {isActive && (
+                            <CircularProgress
+                              size={12}
+                              sx={{ color: palette.brand.primary }}
+                              aria-hidden="true"
+                            />
+                          )}
+                          {isUpcoming && (
+                            <Box
+                              sx={{
+                                width: "6px",
+                                height: "6px",
+                                borderRadius: "50%",
+                                backgroundColor: palette.text.tertiary,
+                              }}
+                              aria-hidden="true"
+                            />
+                          )}
+                        </Box>
+
+                        <Typography
+                          sx={{
+                            fontSize: "13px",
+                            color: isDone
+                              ? palette.brand.primary
+                              : isActive
+                                ? palette.text.primary
+                                : palette.text.tertiary,
+                            fontWeight: isActive ? 500 : 400,
+                            lineHeight: 1.5,
+                          }}
+                        >
+                          {label}
+                        </Typography>
+                      </Stack>
+                    );
+                  })}
+                </Stack>
+
+                {/* Result / error line */}
+                {syncState.status === "done" && syncState.resultMessage && (
+                  <Typography
+                    sx={{
+                      mt: "10px",
+                      fontSize: "13px",
+                      color: palette.brand.primary,
+                      fontWeight: 500,
+                    }}
+                  >
+                    {syncState.resultMessage}
+                  </Typography>
+                )}
+
+                {syncState.status === "error" && (
+                  <Stack direction="row" alignItems="center" gap="6px" sx={{ mt: "10px" }}>
+                    <X
+                      size={14}
+                      strokeWidth={2}
+                      color={palette.status.error.text}
+                      aria-hidden="true"
+                    />
+                    <Typography
+                      sx={{
+                        fontSize: "13px",
+                        color: palette.status.error.text,
+                      }}
+                    >
+                      We couldn&apos;t check for updates right now. Please try again.
+                    </Typography>
+                  </Stack>
+                )}
+
+                {/* Dismiss / reset */}
+                {(syncState.status === "done" || syncState.status === "error") && (
+                  <Box sx={{ mt: "12px" }}>
+                    <CustomizableButton
+                      text="Dismiss"
+                      variant="text"
+                      size="small"
+                      onClick={() => setSyncState(INITIAL_SYNC_STATE)}
+                    />
+                  </Box>
+                )}
+              </Box>
+            )}
           </Box>
 
           <AutoCompleteField

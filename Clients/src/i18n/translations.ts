@@ -8790,6 +8790,9 @@ export const translations: Record<string, Record<string, string>> = {
     "Impact analysis: active": "Auswirkungsanalyse: aktiv",
     "Impact analysis last ran: ": "Auswirkungsanalyse zuletzt ausgeführt: ",
     "Impact analysis has not run yet.": "Die Auswirkungsanalyse wurde noch nicht ausgeführt.",
+    "Check for updates progress": "Fortschritt der Aktualisierungsprüfung",
+    "We couldn&apos;t check for updates right now. Please try again.":
+      "Die Aktualisierungsprüfung konnte gerade nicht durchgeführt werden. Bitte versuchen Sie es erneut.",
   },
 
   fr: {
@@ -17511,6 +17514,9 @@ export const translations: Record<string, Record<string, string>> = {
     "Impact analysis: active": "Analyse d'impact : active",
     "Impact analysis last ran: ": "Dernière exécution de l'analyse d'impact : ",
     "Impact analysis has not run yet.": "L'analyse d'impact n'a pas encore été exécutée.",
+    "Check for updates progress": "Progression de la vérification des mises à jour",
+    "We couldn&apos;t check for updates right now. Please try again.":
+      "Nous n'avons pas pu vérifier les mises à jour pour le moment. Veuillez réessayer.",
   },
   es: {
     // AI Trust Index
@@ -26148,5 +26154,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Impact analysis: active": "Análisis de impacto: activo",
     "Impact analysis last ran: ": "Último análisis de impacto ejecutado: ",
     "Impact analysis has not run yet.": "El análisis de impacto aún no se ha ejecutado.",
+    "Check for updates progress": "Progreso de la verificación de actualizaciones",
+    "We couldn&apos;t check for updates right now. Please try again.":
+      "No pudimos verificar las actualizaciones en este momento. Por favor, inténtelo de nuevo.",
   },
 };
