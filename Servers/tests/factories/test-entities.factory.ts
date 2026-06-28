@@ -81,6 +81,8 @@ export async function createTestRisk(
 export interface CreateTestTaskOptions {
   title?: string;
   creator_id?: number;
+  due_date?: Date | string;
+  status?: string;
 }
 
 export async function createTestTask(
@@ -88,14 +90,18 @@ export async function createTestTask(
   options: CreateTestTaskOptions = {},
 ): Promise<number> {
   const title = options.title ?? `Task ${Date.now()}`;
+  const dueDate = options.due_date ?? null;
+  const status = options.status ?? "Open";
   const [result] = await sequelize.query(
-    `INSERT INTO tasks (organization_id, title, creator_id, created_at, updated_at)
-     VALUES (:orgId, :title, :creatorId, NOW(), NOW()) RETURNING id`,
+    `INSERT INTO tasks (organization_id, title, creator_id, due_date, status, created_at, updated_at)
+     VALUES (:orgId, :title, :creatorId, :dueDate, :status, NOW(), NOW()) RETURNING id`,
     {
       replacements: {
         orgId,
         title,
         creatorId: options.creator_id ?? null,
+        dueDate,
+        status,
       },
     },
   );
