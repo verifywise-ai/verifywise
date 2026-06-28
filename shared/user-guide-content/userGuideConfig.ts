@@ -839,6 +839,51 @@ export const collections: Collection[] = [
       },
     ],
   },
+  {
+    id: 'regulations-tracker',
+    title: 'Regulations Tracker',
+    description: 'Track AI regulations by country, watch upcoming deadlines and international frameworks, and see how regulation changes affect your organization.',
+    icon: 'FileText',
+    articleCount: 6,
+    articles: [
+      {
+        id: 'browse',
+        title: 'Browsing and tracking countries',
+        description: 'Search the catalogue of countries and jurisdictions and track the ones relevant to your organization.',
+        keywords: ['regulations tracker', 'browse', 'countries', 'jurisdictions', 'track', 'untrack', 'bulk', 'search', 'region', 'catalogue'],
+      },
+      {
+        id: 'tracked',
+        title: 'Managing tracked countries',
+        description: 'Review the countries you follow, with regulation counts and last-changed dates, and remove ones you no longer need.',
+        keywords: ['tracked', 'countries', 'regulations', 'last changed', 'tracked since', 'untrack', 'sort', 'region', 'notify'],
+      },
+      {
+        id: 'horizon',
+        title: 'The horizon changelog',
+        description: 'A dated changelog of AI-regulation changes across jurisdictions, newest first.',
+        keywords: ['horizon', 'changelog', 'changes', 'updates', 'history', 'dated', 'newest', 'jurisdictions'],
+      },
+      {
+        id: 'deadlines',
+        title: 'Effective-date deadlines',
+        description: 'Upcoming effective dates for AI regulations shown on a 12-month calendar and a scheduled list.',
+        keywords: ['deadlines', 'effective date', 'milestones', 'calendar', 'next 12 months', 'scheduled', 'unscheduled', 'source'],
+      },
+      {
+        id: 'frameworks',
+        title: 'International frameworks',
+        description: 'Cross-border AI governance frameworks and principles that complement national regulations.',
+        keywords: ['frameworks', 'international', 'cross-border', 'principles', 'oecd', 'unesco', 'governance', 'eu ai act'],
+      },
+      {
+        id: 'settings',
+        title: 'Settings, notifications, and impact analysis',
+        description: 'Choose who is notified of regulation changes, check for updates, and turn on impact analysis.',
+        keywords: ['settings', 'recipients', 'email', 'notify', 'check for updates', 'impact analysis', 'llm key', 'admin', 'digest'],
+      },
+    ],
+  },
 ];
 
 // Fast Finds - Popular/quick access articles

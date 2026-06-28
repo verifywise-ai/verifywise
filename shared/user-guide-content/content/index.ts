@@ -111,6 +111,12 @@ import { aiTrustIndexDashboardContent } from './ai-trust-index/dashboard';
 import { aiTrustIndexBrowseContent } from './ai-trust-index/browse';
 import { aiTrustIndexTrackedContent } from './ai-trust-index/tracked';
 import { aiTrustIndexSettingsContent } from './ai-trust-index/settings';
+import { regulationsTrackerBrowseContent } from './regulations-tracker/browse';
+import { regulationsTrackerTrackedContent } from './regulations-tracker/tracked';
+import { regulationsTrackerHorizonContent } from './regulations-tracker/horizon';
+import { regulationsTrackerDeadlinesContent } from './regulations-tracker/deadlines';
+import { regulationsTrackerFrameworksContent } from './regulations-tracker/frameworks';
+import { regulationsTrackerSettingsContent } from './regulations-tracker/settings';
 
 // Map of article IDs to their content
 // Format: 'collectionId/articleId': ArticleContent
@@ -242,6 +248,12 @@ export const articleContentMap: Record<string, ArticleContent> = {
   'ai-trust-index/browse': aiTrustIndexBrowseContent,
   'ai-trust-index/tracked': aiTrustIndexTrackedContent,
   'ai-trust-index/settings': aiTrustIndexSettingsContent,
+  'regulations-tracker/browse': regulationsTrackerBrowseContent,
+  'regulations-tracker/tracked': regulationsTrackerTrackedContent,
+  'regulations-tracker/horizon': regulationsTrackerHorizonContent,
+  'regulations-tracker/deadlines': regulationsTrackerDeadlinesContent,
+  'regulations-tracker/frameworks': regulationsTrackerFrameworksContent,
+  'regulations-tracker/settings': regulationsTrackerSettingsContent,
 };
 
 // Helper to get article content
