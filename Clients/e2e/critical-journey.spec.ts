@@ -29,7 +29,12 @@ test.describe("Critical end-to-end journey", () => {
       .getByText(/add manually/i)
       .or(page.getByText(/custom risk/i))
       .or(page.getByText(/add a new risk/i));
-    if (await manualOption.first().isVisible({ timeout: 3_000 }).catch(() => false)) {
+    if (
+      await manualOption
+        .first()
+        .isVisible({ timeout: 3_000 })
+        .catch(() => false)
+    ) {
       await manualOption.first().click();
     }
 
@@ -44,10 +49,20 @@ test.describe("Critical end-to-end journey", () => {
     const projectSelect = page
       .getByRole("combobox", { name: /project/i })
       .or(page.getByText(/select.*project/i));
-    if (await projectSelect.first().isVisible().catch(() => false)) {
+    if (
+      await projectSelect
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await projectSelect.first().click();
       const projectOption = page.getByRole("option", { name: new RegExp(projectName, "i") });
-      if (await projectOption.first().isVisible({ timeout: 3_000 }).catch(() => false)) {
+      if (
+        await projectOption
+          .first()
+          .isVisible({ timeout: 3_000 })
+          .catch(() => false)
+      ) {
         await projectOption.first().click();
       }
     }
