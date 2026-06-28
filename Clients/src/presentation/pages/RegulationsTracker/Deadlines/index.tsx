@@ -15,6 +15,7 @@ import { EmptyState } from "../../../components/EmptyState";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
 import Chip from "../../../components/Chip";
 import { VWLink } from "../../../components/Link";
+import VWTooltip from "../../../components/VWTooltip";
 import { palette } from "../../../themes/palette";
 import { useDeadlines } from "../../../../application/hooks/useRegulationsTracker";
 import { regulationStatusVariant } from "../statusVariant";
@@ -196,7 +197,6 @@ function RunwayCalendar({ deadlines, onMarkerClick }: RunwayProps) {
         >
           {months.map((ym, colIdx) => {
             const monthsFromNow = colIdx; // 0 = current month
-            const isCurrentMonth = colIdx === 0;
             const isUrgent = monthsFromNow <= 2;
             const colDeadlines = byMonth.get(ym) ?? [];
 
@@ -205,8 +205,7 @@ function RunwayCalendar({ deadlines, onMarkerClick }: RunwayProps) {
                 key={ym}
                 sx={{
                   borderRadius: "4px",
-                  backgroundColor: isUrgent ? "rgba(19,113,91,0.06)" : "transparent",
-                  borderLeft: isCurrentMonth ? `2px solid ${palette.brand.primary}` : "none",
+                  backgroundColor: isUrgent ? "rgba(19,113,91,0.035)" : "transparent",
                   display: "flex",
                   flexDirection: "column",
                   alignItems: "center",
@@ -234,48 +233,61 @@ function RunwayCalendar({ deadlines, onMarkerClick }: RunwayProps) {
                     const ariaLabel = `${d.regulationName} — ${d.effectiveDateRaw || ym} (${d.countryName})`;
 
                     return (
-                      <Box
+                      <VWTooltip
                         key={`${d.countrySlug}-${mIdx}`}
-                        component="button"
-                        onClick={() => handleClick(d, stableIdx)}
-                        title={ariaLabel}
-                        aria-label={ariaLabel}
-                        sx={{
-                          "background": "transparent",
-                          "border": "none",
-                          "cursor": "pointer",
-                          "p": "0",
-                          "display": "flex",
-                          "alignItems": "center",
-                          "justifyContent": "center",
-                          "width": "22px",
-                          "height": "22px",
-                          "borderRadius": "50%",
-                          "&:focus-visible": {
-                            outline: `2px solid ${palette.brand.primary}`,
-                            outlineOffset: "2px",
-                          },
-                        }}
+                        header={d.regulationName}
+                        content={
+                          <>
+                            <div>{d.effectiveDateRaw || d.effectiveDateISO}</div>
+                            <div>
+                              {d.countryFlag ? `${d.countryFlag} ` : ""}
+                              {d.countryName}
+                            </div>
+                          </>
+                        }
+                        placement="top"
                       >
-                        {d.countryFlag ? (
-                          <Box
-                            component="span"
-                            aria-hidden
-                            sx={{ fontSize: "14px", lineHeight: 1 }}
-                          >
-                            {d.countryFlag}
-                          </Box>
-                        ) : (
-                          <Box
-                            sx={{
-                              width: "8px",
-                              height: "8px",
-                              borderRadius: "50%",
-                              backgroundColor: palette.brand.primary,
-                            }}
-                          />
-                        )}
-                      </Box>
+                        <Box
+                          component="button"
+                          onClick={() => handleClick(d, stableIdx)}
+                          aria-label={ariaLabel}
+                          sx={{
+                            "background": "transparent",
+                            "border": "none",
+                            "cursor": "pointer",
+                            "p": "0",
+                            "display": "flex",
+                            "alignItems": "center",
+                            "justifyContent": "center",
+                            "width": "22px",
+                            "height": "22px",
+                            "borderRadius": "50%",
+                            "&:focus-visible": {
+                              outline: `2px solid ${palette.brand.primary}`,
+                              outlineOffset: "2px",
+                            },
+                          }}
+                        >
+                          {d.countryFlag ? (
+                            <Box
+                              component="span"
+                              aria-hidden
+                              sx={{ fontSize: "14px", lineHeight: 1 }}
+                            >
+                              {d.countryFlag}
+                            </Box>
+                          ) : (
+                            <Box
+                              sx={{
+                                width: "8px",
+                                height: "8px",
+                                borderRadius: "50%",
+                                backgroundColor: palette.brand.primary,
+                              }}
+                            />
+                          )}
+                        </Box>
+                      </VWTooltip>
                     );
                   })}
                 </Stack>
