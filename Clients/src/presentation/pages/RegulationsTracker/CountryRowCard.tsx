@@ -58,8 +58,10 @@ export interface CountryRowCardProps {
 
 const DATE_FMT: Intl.DateTimeFormatOptions = { year: "numeric", month: "short", day: "numeric" };
 
-function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, DATE_FMT);
+function formatDate(iso: string): string | null {
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  return d.toLocaleDateString(undefined, DATE_FMT);
 }
 
 export function CountryRowCard({
@@ -80,10 +82,12 @@ export function CountryRowCard({
       );
     }
     if (row.last_changed_at) {
-      metaParts.push(`Last changed ${formatDate(row.last_changed_at)}`);
+      const d = formatDate(row.last_changed_at);
+      if (d) metaParts.push(`Last changed ${d}`);
     }
     if (row.created_at) {
-      metaParts.push(`Tracked since ${formatDate(row.created_at)}`);
+      const d = formatDate(row.created_at);
+      if (d) metaParts.push(`Tracked since ${d}`);
     }
   }
   return (

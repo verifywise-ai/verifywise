@@ -1,6 +1,4 @@
 import { Request, Response } from "express";
-import { QueryTypes } from "sequelize";
-import { sequelize } from "../database/db";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
 import logger from "../utils/logger/fileLogger";
@@ -17,6 +15,7 @@ import {
   setGlobalFeeds,
   getMetaQuery,
   normalizeSlug,
+  enrichWithFlags,
 } from "../utils/regulationsTracker.utils";
 import {
   fetchCountryDetail,
@@ -485,33 +484,8 @@ export async function getHorizon(req: Request, res: Response): Promise<any> {
 
 // ---------------------------------------------------------------------------
 // Enriches a deadlines array with countryFlag from the regulation_countries
-// catalog. One batched query for all distinct slugs; best-effort (never throws).
-// ---------------------------------------------------------------------------
-async function enrichWithFlags(items: unknown[]): Promise<unknown[]> {
-  if (!items.length) return items;
-  try {
-    const slugs = [
-      ...new Set(
-        items
-          .map((i) => (i as Record<string, unknown>).countrySlug)
-          .filter((s) => typeof s === "string"),
-      ),
-    ] as string[];
-    if (!slugs.length) return items;
-    const rows = (await sequelize.query(
-      `SELECT slug, data->>'flag' AS flag FROM regulation_countries WHERE slug IN (:slugs)`,
-      { replacements: { slugs }, type: QueryTypes.SELECT },
-    )) as { slug: string; flag: string | null }[];
-    const flagMap = new Map(rows.map((r) => [r.slug, r.flag ?? undefined]));
-    return items.map((item) => {
-      const it = item as Record<string, unknown>;
-      const flag = flagMap.get(it.countrySlug as string);
-      return flag !== undefined ? { ...it, countryFlag: flag } : it;
-    });
-  } catch {
-    return items;
-  }
-}
+// enrichWithFlags has been moved to regulationsTracker.utils.ts (thin-controller
+// convention: raw SQL belongs in utils, not controllers). It is imported above.
 
 export async function getDeadlines(req: Request, res: Response): Promise<any> {
   const fn = "getDeadlines";
@@ -525,8 +499,11 @@ export async function getDeadlines(req: Request, res: Response): Promise<any> {
   try {
     try {
       const live = (await fetchDeadlines()) as { deadlines?: unknown[]; unscheduled?: unknown[] };
-      const deadlines = await enrichWithFlags(live.deadlines ?? []);
-      const unscheduled = await enrichWithFlags(live.unscheduled ?? []);
+      // Run both flag-enrichment calls concurrently — they are independent queries.
+      const [deadlines, unscheduled] = await Promise.all([
+        enrichWithFlags(live.deadlines ?? []),
+        enrichWithFlags(live.unscheduled ?? []),
+      ]);
       return res.status(200).json(
         STATUS_CODE[200]({
           deadlines,
@@ -539,8 +516,11 @@ export async function getDeadlines(req: Request, res: Response): Promise<any> {
         deadlines?: unknown[];
         unscheduled?: unknown[];
       } | null;
-      const deadlines = await enrichWithFlags(stored?.deadlines ?? []);
-      const unscheduled = await enrichWithFlags(stored?.unscheduled ?? []);
+      // Run both flag-enrichment calls concurrently — they are independent queries.
+      const [deadlines, unscheduled] = await Promise.all([
+        enrichWithFlags(stored?.deadlines ?? []),
+        enrichWithFlags(stored?.unscheduled ?? []),
+      ]);
       return res.status(200).json(
         STATUS_CODE[200]({
           deadlines,
@@ -660,21 +640,31 @@ export async function getImpactAnalysis(req: Request, res: Response): Promise<an
     organizationId: req.organizationId!,
   });
   try {
-    // BUG 4: Honor the impact_enabled toggle — return null so the panel hides.
-    const settings = await getSettings(req.organizationId!);
-    if (settings.impact_enabled === false) {
-      await logSuccess({
-        eventType: "Read",
-        description: "impact analysis disabled — returning null",
-        functionName: fn,
-        fileName: file,
-        userId: req.userId!,
-        organizationId: req.organizationId!,
-      });
-      return res.status(200).json(STATUS_CODE[200](null));
+    // Honor the impact_enabled toggle — return null so the panel hides.
+    // Wrapped defensively: a transient settings read failure must not convert
+    // this GET into a 500 (it had no settings dependency before). On failure,
+    // default to treating impact as enabled so the panel still loads.
+    try {
+      const settings = await getSettings(req.organizationId!);
+      if (settings.impact_enabled === false) {
+        await logSuccess({
+          eventType: "Read",
+          description: "impact analysis disabled — returning null",
+          functionName: fn,
+          fileName: file,
+          userId: req.userId!,
+          organizationId: req.organizationId!,
+        });
+        return res.status(200).json(STATUS_CODE[200](null));
+      }
+    } catch {
+      // Settings read failed — proceed as if impact is enabled (fail-open).
+      logger.warn(
+        "[regulations-tracker] getImpactAnalysis: settings read failed; treating as enabled",
+      );
     }
 
-    // BUG 3: Normalize slug so reads agree with writes.
+    // Normalize slug so reads agree with writes.
     const slug = normalizeSlug(req.params.slug as string);
     const row = await getImpactRow(req.organizationId!, slug);
     if (!row) {

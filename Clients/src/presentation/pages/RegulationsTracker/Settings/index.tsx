@@ -44,7 +44,11 @@ const SYNC_STAGES = [
 
 type StageIndex = 0 | 1 | 2 | 3;
 
-// Delay (ms) between advancing stages during the simulation
+// Delay (ms) between advancing stages during the simulation.
+// INVARIANT: STAGE_DELAYS.length === SYNC_STAGES.length - 1
+// (one inter-stage delay per transition; the final stage has no delay after it).
+// If you add a stage to SYNC_STAGES, add a corresponding delay here or the
+// progress bar will stall one step short of "Finishing up".
 const STAGE_DELAYS: number[] = [800, 850, 900];
 
 type SyncStatus = "idle" | "running" | "done" | "error";

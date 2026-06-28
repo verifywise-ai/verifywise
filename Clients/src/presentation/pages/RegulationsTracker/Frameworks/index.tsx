@@ -61,18 +61,9 @@ export default function Frameworks() {
         />
         <Typography sx={{ fontSize: "13px", color: palette.text.secondary }}>
           Looking for the EU AI Act, or another country&apos;s law? Those live under each country.{" "}
-          <Box
-            component="span"
-            onClick={() => navigate("/regulations-tracker/browse")}
-            sx={{
-              "color": palette.brand.primary,
-              "cursor": "pointer",
-              "textDecoration": "underline",
-              "&:hover": { color: "#0F5A47" },
-            }}
-          >
+          <VWLink onClick={() => navigate("/regulations-tracker/browse")}>
             Find them in Browse.
-          </Box>
+          </VWLink>
         </Typography>
       </Box>
 

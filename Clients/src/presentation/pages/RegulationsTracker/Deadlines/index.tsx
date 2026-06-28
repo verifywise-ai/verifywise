@@ -140,6 +140,13 @@ function RunwayCalendar({ deadlines, onMarkerClick }: RunwayProps) {
 
   const hasAnyInWindow = byMonth.size > 0;
 
+  // Build a map from deadline object → its index in the `deadlines` array so
+  // the runway markers use the exact same index as the Scheduled list rows
+  // (`deadline-${countrySlug}-${i}`). This is done once here rather than
+  // calling findIndex() per marker, which would return the FIRST match for
+  // duplicate entries and jump to the wrong row.
+  const markerIdxMap = new Map<Deadline, number>(deadlines.map((d, i) => [d, i]));
+
   const prefersReducedMotion =
     typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
@@ -221,15 +228,12 @@ function RunwayCalendar({ deadlines, onMarkerClick }: RunwayProps) {
                   sx={{ flex: 1, justifyContent: "flex-end", width: "100%" }}
                 >
                   {colDeadlines.map((d, mIdx) => {
-                    // Find the global index of this deadline in the sorted deadlines array
-                    // so the id matches the Row id assigned below
-                    const globalIdx = deadlines.findIndex(
-                      (x) =>
-                        x.countrySlug === d.countrySlug &&
-                        x.regulationName === d.regulationName &&
-                        x.effectiveDateISO === d.effectiveDateISO,
-                    );
-                    const stableIdx = globalIdx >= 0 ? globalIdx : mIdx;
+                    // markerIdxMap carries the real position of each deadline in the
+                    // top-level `deadlines` array, built once before the grid render.
+                    // Using it here avoids findIndex which returns the FIRST match and
+                    // would jump to the wrong row when two deadlines share the same
+                    // countrySlug + regulationName + effectiveDateISO triple.
+                    const stableIdx = markerIdxMap.get(d) ?? mIdx;
                     const ariaLabel = `${d.regulationName} — ${d.effectiveDateRaw || ym} (${d.countryName})`;
 
                     return (

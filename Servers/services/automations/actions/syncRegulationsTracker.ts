@@ -80,6 +80,7 @@ let syncInProgress = false;
 export async function syncRegulationsTracker(deps?: { feed?: unknown }): Promise<{
   fetched: number;
   changed: number;
+  newlyAdded: number;
   newlyRemoved: number;
   orgsEmailed: number;
   orgsNotified: number;
@@ -90,6 +91,7 @@ export async function syncRegulationsTracker(deps?: { feed?: unknown }): Promise
     return {
       fetched: 0,
       changed: 0,
+      newlyAdded: 0,
       newlyRemoved: 0,
       orgsEmailed: 0,
       orgsNotified: 0,
@@ -107,6 +109,7 @@ export async function syncRegulationsTracker(deps?: { feed?: unknown }): Promise
 async function runSync(deps?: { feed?: unknown }): Promise<{
   fetched: number;
   changed: number;
+  newlyAdded: number;
   newlyRemoved: number;
   orgsEmailed: number;
   orgsNotified: number;
@@ -118,6 +121,7 @@ async function runSync(deps?: { feed?: unknown }): Promise<{
     return {
       fetched: 0,
       changed: 0,
+      newlyAdded: 0,
       newlyRemoved: 0,
       orgsEmailed: 0,
       orgsNotified: 0,
@@ -133,6 +137,7 @@ async function runSync(deps?: { feed?: unknown }): Promise<{
     return {
       fetched: 0,
       changed: 0,
+      newlyAdded: 0,
       newlyRemoved: 0,
       orgsEmailed: 0,
       orgsNotified: 0,
@@ -147,6 +152,7 @@ async function runSync(deps?: { feed?: unknown }): Promise<{
     return {
       fetched: 0,
       changed: 0,
+      newlyAdded: 0,
       newlyRemoved: 0,
       orgsEmailed: 0,
       orgsNotified: 0,
@@ -217,6 +223,7 @@ async function runSync(deps?: { feed?: unknown }): Promise<{
     return {
       fetched: validated.countries.length,
       changed: 0,
+      newlyAdded: 0,
       newlyRemoved: 0,
       orgsEmailed: 0,
       orgsNotified: 0,
@@ -463,6 +470,7 @@ async function runSync(deps?: { feed?: unknown }): Promise<{
   return {
     fetched: validated.countries.length,
     changed: changed.length,
+    newlyAdded: newlyAdded.length,
     newlyRemoved: newlyRemoved.length,
     orgsEmailed,
     orgsNotified,

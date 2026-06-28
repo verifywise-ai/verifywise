@@ -118,7 +118,14 @@ export async function getCandidates(
       WHERE p.organization_id = :organizationId
         AND ( (:region IS NOT NULL AND p.geography = :region)
               OR f.name IN (:frameworks) )`,
-    { replacements: { organizationId, region, frameworks: frameworks.length ? frameworks : ["__none__"] }, type: QueryTypes.SELECT },
+    {
+      replacements: {
+        organizationId,
+        region,
+        frameworks: frameworks.length ? frameworks : ["__none__"],
+      },
+      type: QueryTypes.SELECT,
+    },
   )) as { id: number; name: string; description: string }[];
   out.system = systems.map((r) => ({
     type: "system",
@@ -139,7 +146,10 @@ export async function getCandidates(
        JOIN projects p ON p.id = cc.project_id
       WHERE p.organization_id = :organizationId
         AND f.name IN (:frameworks)`,
-    { replacements: { organizationId, frameworks: frameworks.length ? frameworks : ["__none__"] }, type: QueryTypes.SELECT },
+    {
+      replacements: { organizationId, frameworks: frameworks.length ? frameworks : ["__none__"] },
+      type: QueryTypes.SELECT,
+    },
   )) as { id: number; name: string; description: string }[];
   out.control = controls.map((r) => ({
     type: "control",
@@ -217,7 +227,15 @@ export async function getCandidates(
   return out;
 }
 
-// vendors.regulatory_exposure enum strings don't match framework names exactly.
+// Maps regulation framework names to the vendor regulatory_exposure enum values.
+// NOTE: ISO 42001 and NIST AI RMF are intentionally NOT mapped here — the
+// vendor.regulatory_exposure enum (vendor.model.ts) only includes:
+//   "GDPR (EU)", "HIPAA (US)", "SOC 2", "ISO 27001", "EU AI act", "CCPA (california)"
+// There is no "ISO 42001" or "NIST AI RMF" exposure value, so mapping them
+// would be incorrect. Vendors relevant to those frameworks are found via the
+// project-link path, not the regulatory_exposure column.
+// Returns ["__none__"] when no mapping exists so the caller's IN-clause never
+// matches real data (safe sentinel, not a bug).
 function mapFrameworksToExposure(frameworks: string[]): string[] {
   const m: Record<string, string> = {
     "EU AI Act": "EU AI act",

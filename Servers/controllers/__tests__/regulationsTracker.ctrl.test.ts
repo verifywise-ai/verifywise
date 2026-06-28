@@ -571,8 +571,20 @@ describe("getImpactAnalysis", () => {
     expect((res.json as jest.Mock).mock.calls[0][0].data).toBeNull();
   });
 
-  it("returns 500 on unexpected error", async () => {
+  it("fails open (200/null) when getSettings throws — transient settings blip must not 500 the GET", async () => {
+    // settings read fails → proceed as enabled → no impact row → 200/null
     (getSettings as jest.Mock).mockRejectedValueOnce(new Error("db down"));
+    (getImpactRow as jest.Mock).mockResolvedValueOnce(null);
+    const req: any = { userId: 1, organizationId: 7, params: { slug: "eu" } };
+    const res = mockRes();
+    await getImpactAnalysis(req, res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect((res.json as jest.Mock).mock.calls[0][0].data).toBeNull();
+  });
+
+  it("returns 500 on unexpected error from getImpactRow", async () => {
+    (getSettings as jest.Mock).mockResolvedValue({ impact_enabled: true });
+    (getImpactRow as jest.Mock).mockRejectedValueOnce(new Error("db down"));
     const req: any = { userId: 1, organizationId: 7, params: { slug: "eu" } };
     const res = mockRes();
     await getImpactAnalysis(req, res);

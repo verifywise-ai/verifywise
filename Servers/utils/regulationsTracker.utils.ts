@@ -535,3 +535,42 @@ export async function getAllOrgAdmins(): Promise<{ organization_id: number; user
     { type: QueryTypes.SELECT },
   )) as { organization_id: number; user_id: number }[];
 }
+
+// ---------------------------------------------------------------------------
+// Deadline flag enrichment
+// ---------------------------------------------------------------------------
+
+/**
+ * Enriches a deadlines/unscheduled array with `countryFlag` fetched from the
+ * regulation_countries catalog. Uses a single batched query for all distinct
+ * slugs. Best-effort: never throws — if the query fails the original items are
+ * returned unchanged.
+ *
+ * Moved here from the controller per the thin-controller convention (raw SQL
+ * belongs in utils, not controllers).
+ */
+export async function enrichWithFlags(items: unknown[]): Promise<unknown[]> {
+  if (!items.length) return items;
+  try {
+    const slugs = [
+      ...new Set(
+        items
+          .map((i) => (i as Record<string, unknown>).countrySlug)
+          .filter((s) => typeof s === "string"),
+      ),
+    ] as string[];
+    if (!slugs.length) return items;
+    const rows = (await sequelize.query(
+      `SELECT slug, data->>'flag' AS flag FROM regulation_countries WHERE slug IN (:slugs)`,
+      { replacements: { slugs }, type: QueryTypes.SELECT },
+    )) as { slug: string; flag: string | null }[];
+    const flagMap = new Map(rows.map((r) => [r.slug, r.flag ?? undefined]));
+    return items.map((item) => {
+      const it = item as Record<string, unknown>;
+      const flag = flagMap.get(it.countrySlug as string);
+      return flag !== undefined ? { ...it, countryFlag: flag } : it;
+    });
+  } catch {
+    return items;
+  }
+}
