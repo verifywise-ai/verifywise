@@ -14,9 +14,7 @@ export interface DeadlineSummary {
  * @returns {Promise<{ data: DeadlineSummary }>} The wrapped summary payload.
  * @throws Will throw an error if the request fails.
  */
-export async function getDeadlineSummary(
-  days?: number,
-): Promise<{ data: DeadlineSummary }> {
+export async function getDeadlineSummary(days?: number): Promise<{ data: DeadlineSummary }> {
   const query = typeof days === "number" ? `?threshold=${days}` : "";
   const response = await apiServices.get(`/deadlines/summary${query}`);
   const backend = response.data as {
