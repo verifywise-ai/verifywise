@@ -16,7 +16,12 @@ jest.mock("../regulationsTracker.utils", () => ({
 import { sequelize } from "../../database/db";
 import { runAdvisorAiSdk } from "../../advisor/aiSdkAgent";
 import { getCandidates } from "../regulationImpact.utils";
-import { buildUserPrompt, analyzeType, SYSTEM_PROMPTS } from "../regulationImpact.utils";
+import {
+  buildUserPrompt,
+  analyzeType,
+  SYSTEM_PROMPTS,
+  buildContext,
+} from "../regulationImpact.utils";
 
 import {
   regionForCountry,
@@ -191,6 +196,97 @@ describe("SYSTEM_PROMPTS", () => {
     for (const t of ["system", "control", "policy", "vendor", "assessment"] as const) {
       expect(SYSTEM_PROMPTS[t]).toContain("conservative");
     }
+  });
+});
+
+describe("buildContext", () => {
+  // Two regulations, each with its own obligations. Only the first changes.
+  const data = {
+    name: "Testland",
+    regulations: [
+      {
+        name: "Alpha Act",
+        type: "law",
+        status: "in-force",
+        maxPenalty: "€10m",
+        obligations: ["Alpha obligation 1", "Alpha obligation 2"],
+      },
+      {
+        name: "Beta Act",
+        type: "law",
+        status: "proposed",
+        obligations: ["Beta obligation 1", "Beta obligation 2", "Beta obligation 3"],
+      },
+    ],
+    history: {
+      lastChange: {
+        date: "2026-07-15",
+        changes: [
+          {
+            field: "regulation.status",
+            regulation: "Alpha Act",
+            from: "Proposed",
+            to: "Enacted",
+          },
+          {
+            field: "regulation.effectiveDate",
+            regulation: "Alpha Act",
+            from: "2026-09-01",
+            to: "2026-02-01",
+          },
+        ],
+      },
+    },
+  };
+
+  it("captures regulation.status and regulation.effectiveDate changes with the regulation name", () => {
+    const ctx = buildContext("testland", data);
+    expect(ctx.changeLines).toContain("Alpha Act: status Proposed → Enacted");
+    expect(ctx.changeLines).toContain("Alpha Act: effective date 2026-09-01 → 2026-02-01");
+  });
+
+  it("scopes obligations to the changed regulation only", () => {
+    const ctx = buildContext("testland", data);
+    // Only Alpha Act changed → only its two obligations, not Beta's three.
+    expect(ctx.obligations).toEqual(["Alpha obligation 1", "Alpha obligation 2"]);
+    expect(ctx.obligations).not.toContain("Beta obligation 1");
+  });
+
+  it("falls back to all obligations when no specific regulation can be identified", () => {
+    const countOnly = {
+      ...data,
+      history: {
+        lastChange: { date: "x", changes: [{ field: "regulationCount", from: 2, to: 3 }] },
+      },
+    };
+    const ctx = buildContext("testland", countOnly);
+    // regulationCount change names no regulation → keep all five obligations.
+    expect(ctx.obligations).toHaveLength(5);
+    expect(ctx.changeLines).toContain("regulation count 2 → 3");
+  });
+
+  it("handles an added regulation and a missing history without throwing", () => {
+    const added = buildContext("testland", {
+      ...data,
+      history: {
+        lastChange: {
+          date: "x",
+          changes: [{ field: "regulation", change: "added", value: "Beta Act" }],
+        },
+      },
+    });
+    expect(added.changeLines).toContain("regulation added: Beta Act");
+    // "Beta Act" matches regs[1] → its three obligations are scoped in.
+    expect(added.obligations).toEqual([
+      "Beta obligation 1",
+      "Beta obligation 2",
+      "Beta obligation 3",
+    ]);
+
+    const noHistory = buildContext("testland", { ...data, history: null });
+    expect(noHistory.changeLines).toEqual([]);
+    // No structured change → fall back to all obligations.
+    expect(noHistory.obligations).toHaveLength(5);
   });
 });
 

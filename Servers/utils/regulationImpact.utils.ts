@@ -439,20 +439,47 @@ async function upsertImpactRow(
 export function buildContext(slug: string, data: any): RegulationContext {
   const regs = Array.isArray(data?.regulations) ? data.regulations : [];
   const first = regs[0] ?? {};
-  const obligations: string[] = [];
-  for (const r of regs) if (Array.isArray(r.obligations)) obligations.push(...r.obligations);
+
+  // Build the change lines from the feed's structured diff. The field names
+  // must match the feed's RegulationChange shape exactly (regulation.status /
+  // regulation.effectiveDate / regulation / regulationCount); the status and
+  // effective-date variants carry the specific regulation's name, which we both
+  // surface in the line and use to scope obligations below.
   const changeLines: string[] = [];
+  const changedRegNames = new Set<string>();
   const history = data?.history ?? null;
   if (Array.isArray(history?.lastChange?.changes)) {
     for (const ch of history.lastChange.changes) {
-      if (ch.field === "status") changeLines.push(`status: ${ch.from} → ${ch.to}`);
-      else if (ch.field === "effectiveDate")
-        changeLines.push(`effective date ${ch.from} → ${ch.to}`);
-      else if (ch.field === "regulation") changeLines.push(`regulation ${ch.change}: ${ch.value}`);
-      else if (ch.field === "regulationCount")
+      if (ch.field === "regulation.status") {
+        changeLines.push(`${ch.regulation}: status ${ch.from} → ${ch.to}`);
+        if (ch.regulation) changedRegNames.add(ch.regulation);
+      } else if (ch.field === "regulation.effectiveDate") {
+        changeLines.push(`${ch.regulation}: effective date ${ch.from} → ${ch.to}`);
+        if (ch.regulation) changedRegNames.add(ch.regulation);
+      } else if (ch.field === "regulation") {
+        changeLines.push(`regulation ${ch.change}: ${ch.value}`);
+        if (ch.value) changedRegNames.add(ch.value);
+      } else if (ch.field === "regulationCount") {
         changeLines.push(`regulation count ${ch.from} → ${ch.to}`);
+      }
     }
   }
+
+  // Scope obligations to the regulation(s) that actually changed, so the prompt
+  // foregrounds the new/altered duties instead of drowning them in the whole
+  // country's regulatory baseline. Match a changed regulation name against a
+  // regs[] entry's name (a "regulation: added" value may be free text that
+  // doesn't exactly match, so matching is best-effort). If nothing matches —
+  // e.g. only a regulationCount change, or an added regulation we can't line up
+  // — fall back to all obligations rather than sending the LLM none.
+  const matchedRegs = changedRegNames.size
+    ? regs.filter((r: any) => typeof r?.name === "string" && changedRegNames.has(r.name))
+    : [];
+  const obligationSource = matchedRegs.length ? matchedRegs : regs;
+  const obligations: string[] = [];
+  for (const r of obligationSource)
+    if (Array.isArray(r.obligations)) obligations.push(...r.obligations);
+
   return {
     name: data?.name ?? slug,
     type: first.type ?? "",
