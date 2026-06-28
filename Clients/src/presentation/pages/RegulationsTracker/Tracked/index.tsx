@@ -192,6 +192,7 @@ export default function Tracked() {
                 actionLabel="Untrack"
                 onAction={() => handleUntrack(row)}
                 actionDisabled={untrackCountry.isPending && untrackCountry.variables === row.slug}
+                showMeta
               />
             ))}
           </Stack>

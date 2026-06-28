@@ -23,6 +23,12 @@ export interface CountryRow {
   /** Unicode flag emoji from the feed (e.g. "🇪🇺"); falls back to a globe icon. */
   flag?: string;
   is_tracked?: boolean;
+  /** Number of regulations recorded for this country (from listTracked). */
+  regulation_count?: number;
+  /** ISO timestamp of the last regulation change (from listTracked). */
+  last_changed_at?: string | null;
+  /** ISO timestamp when the org started tracking this country (from listTracked). */
+  created_at?: string | null;
 }
 
 export interface CountryRowCardProps {
@@ -42,6 +48,18 @@ export interface CountryRowCardProps {
    * Browse uses this for the bulk-select checkbox; Tracked omits it.
    */
   checkbox?: React.ReactNode;
+  /**
+   * When true, renders a secondary metadata line with regulation_count,
+   * last_changed_at, and created_at from the row. Used only by the Tracked
+   * page; Browse leaves this unset so no metadata line appears there.
+   */
+  showMeta?: boolean;
+}
+
+const DATE_FMT: Intl.DateTimeFormatOptions = { year: "numeric", month: "short", day: "numeric" };
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, DATE_FMT);
 }
 
 export function CountryRowCard({
@@ -52,7 +70,22 @@ export function CountryRowCard({
   onAction,
   actionDisabled = false,
   checkbox,
+  showMeta = false,
 }: CountryRowCardProps) {
+  const metaParts: string[] = [];
+  if (showMeta) {
+    if (typeof row.regulation_count === "number") {
+      metaParts.push(
+        row.regulation_count === 1 ? "1 regulation" : `${row.regulation_count} regulations`,
+      );
+    }
+    if (row.last_changed_at) {
+      metaParts.push(`Last changed ${formatDate(row.last_changed_at)}`);
+    }
+    if (row.created_at) {
+      metaParts.push(`Tracked since ${formatDate(row.created_at)}`);
+    }
+  }
   return (
     <Box
       sx={{
@@ -68,7 +101,18 @@ export function CountryRowCard({
       }}
       onClick={onClick}
     >
-      {checkbox}
+      <Box
+        sx={{
+          width: "20px",
+          height: "20px",
+          flexShrink: 0,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        {checkbox}
+      </Box>
 
       {row.flag ? (
         <Box
@@ -95,6 +139,11 @@ export function CountryRowCard({
         {row.region && (
           <Typography sx={{ fontSize: "12px", color: palette.text.tertiary }}>
             {row.region}
+          </Typography>
+        )}
+        {showMeta && metaParts.length > 0 && (
+          <Typography sx={{ fontSize: "12px", color: palette.text.tertiary, mt: "2px" }}>
+            {metaParts.join(" · ")}
           </Typography>
         )}
       </Box>
