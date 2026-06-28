@@ -8732,6 +8732,7 @@ export const translations: Record<string, Record<string, string>> = {
       "Es sind noch keine bevorstehenden Regulierungsfristen erfasst.",
     "No international frameworks are recorded yet.":
       "Es sind noch keine internationalen Rahmenwerke erfasst.",
+    "Find them in Browse.": "Diese finden Sie unter Durchsuchen.",
     "Showing the last known changelog; live data is temporarily unavailable.":
       "Das letzte bekannte Änderungsprotokoll wird angezeigt; Live-Daten sind vorübergehend nicht verfügbar.",
     "Showing the last known deadlines; live data is temporarily unavailable.":
@@ -17453,6 +17454,7 @@ export const translations: Record<string, Record<string, string>> = {
       "Aucune échéance réglementaire à venir n'est encore enregistrée.",
     "No international frameworks are recorded yet.":
       "Aucun cadre international n'est encore enregistré.",
+    "Find them in Browse.": "Retrouvez-les dans Parcourir.",
     "Showing the last known changelog; live data is temporarily unavailable.":
       "Affichage du dernier journal connu ; les données en direct sont temporairement indisponibles.",
     "Showing the last known deadlines; live data is temporarily unavailable.":
@@ -26090,6 +26092,7 @@ export const translations: Record<string, Record<string, string>> = {
       "Todavía no se han registrado plazos regulatorios próximos.",
     "No international frameworks are recorded yet.":
       "Todavía no se han registrado marcos internacionales.",
+    "Find them in Browse.": "Encuéntralos en Explorar.",
     "Showing the last known changelog; live data is temporarily unavailable.":
       "Mostrando el último registro de cambios conocido; los datos en tiempo real no están disponibles temporalmente.",
     "Showing the last known deadlines; live data is temporarily unavailable.":
