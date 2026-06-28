@@ -35,12 +35,10 @@ export default function Browse() {
   const navigate = useNavigate();
   const sidebar = useRegulationsTrackerSidebarContextSafe();
   const { userRoleName, isSuperAdmin } = useAuth();
-  // Tracking is available to admins and editors. Other roles see a read-only catalogue.
-  const canTrack =
-    isSuperAdmin ||
-    userRoleName === "Admin" ||
-    userRoleName === "SuperAdmin" ||
-    userRoleName === "Editor";
+  // Tracking is available to admins and editors. A super-admin viewing an organization
+  // has read-only access (the backend blocks all writes), so they see a read-only
+  // catalogue, as do other roles.
+  const canTrack = !isSuperAdmin && (userRoleName === "Admin" || userRoleName === "Editor");
   const { showError, AlertSlot } = useTrackerAlert();
 
   const [searchInput, setSearchInput] = useState("");

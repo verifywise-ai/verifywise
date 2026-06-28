@@ -403,9 +403,7 @@ export default function Deadlines() {
                         <Typography
                           role="link"
                           tabIndex={0}
-                          onClick={() =>
-                            navigate(`/regulations-tracker/${d.countrySlug}`)
-                          }
+                          onClick={() => navigate(`/regulations-tracker/${d.countrySlug}`)}
                           onKeyDown={(e) => {
                             if (e.key === "Enter" || e.key === " ") {
                               e.preventDefault();
@@ -414,13 +412,13 @@ export default function Deadlines() {
                           }}
                           title={`View ${d.countryName}`}
                           sx={{
-                            fontSize: "12px",
-                            color: palette.text.tertiary,
-                            ml: "auto",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "4px",
-                            cursor: "pointer",
+                            "fontSize": "12px",
+                            "color": palette.text.tertiary,
+                            "ml": "auto",
+                            "display": "flex",
+                            "alignItems": "center",
+                            "gap": "4px",
+                            "cursor": "pointer",
                             "&:hover": {
                               color: palette.brand.primary,
                               textDecoration: "underline",
@@ -478,9 +476,7 @@ export default function Deadlines() {
                       <Typography
                         role="link"
                         tabIndex={0}
-                        onClick={() =>
-                          navigate(`/regulations-tracker/${u.countrySlug}`)
-                        }
+                        onClick={() => navigate(`/regulations-tracker/${u.countrySlug}`)}
                         onKeyDown={(e) => {
                           if (e.key === "Enter" || e.key === " ") {
                             e.preventDefault();
@@ -489,13 +485,13 @@ export default function Deadlines() {
                         }}
                         title={`View ${u.countryName}`}
                         sx={{
-                          fontSize: "12px",
-                          color: palette.text.tertiary,
-                          ml: "auto",
-                          display: "flex",
-                          alignItems: "center",
-                          gap: "4px",
-                          cursor: "pointer",
+                          "fontSize": "12px",
+                          "color": palette.text.tertiary,
+                          "ml": "auto",
+                          "display": "flex",
+                          "alignItems": "center",
+                          "gap": "4px",
+                          "cursor": "pointer",
                           "&:hover": {
                             color: palette.brand.primary,
                             textDecoration: "underline",

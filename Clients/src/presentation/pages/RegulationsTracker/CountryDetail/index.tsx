@@ -31,6 +31,7 @@ import {
   useUntrackCountry,
 } from "../../../../application/hooks/useRegulationsTracker";
 import { useRegulationsTrackerSidebarContextSafe } from "../../../../application/contexts/RegulationsTrackerSidebar.context";
+import { useAuth } from "../../../../application/hooks/useAuth";
 import { useTrackerAlert } from "../useTrackerAlert";
 import { regulationStatusVariant } from "../statusVariant";
 
@@ -118,6 +119,13 @@ export default function CountryDetail() {
   const trackCountry = useTrackCountry();
   const untrackCountry = useUntrackCountry();
   const { showError, AlertSlot } = useTrackerAlert();
+
+  const { userRoleName, isSuperAdmin } = useAuth();
+  // Tracking is available to admins and editors; re-running impact analysis is
+  // admin-only. A super-admin viewing an organization is read-only, so both
+  // actions are hidden for them (the backend blocks the writes regardless).
+  const canTrack = !isSuperAdmin && (userRoleName === "Admin" || userRoleName === "Editor");
+  const canReanalyse = !isSuperAdmin && userRoleName === "Admin";
 
   const { data: impactRes } = useImpactAnalysis(slug);
   const refreshImpact = useRefreshImpactAnalysis();
@@ -262,13 +270,15 @@ export default function CountryDetail() {
           )}
         </Box>
 
-        <CustomizableButton
-          text={country.is_tracked ? "Untrack" : "Track"}
-          variant={country.is_tracked ? "outlined" : "contained"}
-          onClick={handleToggleTrack}
-          isDisabled={trackCountry.isPending || untrackCountry.isPending}
-          sx={{ height: 34, minWidth: 96, flexShrink: 0 }}
-        />
+        {canTrack && (
+          <CustomizableButton
+            text={country.is_tracked ? "Untrack" : "Track"}
+            variant={country.is_tracked ? "outlined" : "contained"}
+            onClick={handleToggleTrack}
+            isDisabled={trackCountry.isPending || untrackCountry.isPending}
+            sx={{ height: 34, minWidth: 96, flexShrink: 0 }}
+          />
+        )}
       </Stack>
 
       {/* Stale data warning banner */}
@@ -684,13 +694,15 @@ export default function CountryDetail() {
                     This analysis predates the latest change.
                   </Typography>
                 </Box>
-                <CustomizableButton
-                  text="Re-analyse"
-                  variant="text"
-                  onClick={() => refreshImpact.mutate(slug)}
-                  isDisabled={refreshImpact.isPending}
-                  sx={{ height: 30, fontSize: "13px", flexShrink: 0, p: "0 8px" }}
-                />
+                {canReanalyse && (
+                  <CustomizableButton
+                    text="Re-analyse"
+                    variant="text"
+                    onClick={() => refreshImpact.mutate(slug)}
+                    isDisabled={refreshImpact.isPending}
+                    sx={{ height: 30, fontSize: "13px", flexShrink: 0, p: "0 8px" }}
+                  />
+                )}
               </Box>
             )}
             {(

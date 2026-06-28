@@ -70,7 +70,10 @@ const INITIAL_SYNC_STATE: SyncState = {
 export default function Settings() {
   const navigate = useNavigate();
   const { userRoleName, isSuperAdmin } = useAuth();
-  const isAdmin = isSuperAdmin || userRoleName === "Admin" || userRoleName === "SuperAdmin";
+  // Editing settings requires an organization administrator. A super-admin viewing an
+  // organization has read-only access (the backend blocks all writes), so they see the
+  // read-only view rather than editable controls that would fail to save.
+  const isAdmin = !isSuperAdmin && (userRoleName === "Admin" || userRoleName === "SuperAdmin");
 
   const { data: settingsData, isLoading: settingsLoading } = useSettings();
   const { users, loading: usersLoading } = useUsers();
