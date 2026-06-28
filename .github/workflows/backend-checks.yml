@@ -137,6 +137,21 @@ jobs:
           ENCRYPTION_KEY: default-key-change-this-in-production-32chars!!
         run: npm run test:integration -- --testPathPatterns=tenant-isolation
 
+      - name: Run deadline-summary smoke test
+        env:
+          DB_HOST: localhost
+          DB_PORT: "5432"
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          DB_NAME: verifywise_test
+          NODE_ENV: test
+          SUPERADMIN_EMAIL: super@local.dev
+          SUPERADMIN_PASSWORD: Super123!
+          JWT_SECRET: test-jwt-secret-key-for-testing-only
+          REFRESH_TOKEN_SECRET: test-refresh-secret-key-for-testing-only
+          ENCRYPTION_KEY: default-key-change-this-in-production-32chars!!
+        run: npm run test:smoke
+
       - name: Run schema-drift tenant isolation audit
         env:
           DB_HOST: localhost
