@@ -470,45 +470,120 @@ export default function CountryDetail() {
         {/* Timeline */}
         {country.timeline && country.timeline.length > 0 && (
           <SectionCard title="Timeline">
-            <Stack gap="8px">
-              {/* Newest first: the feed lists timeline events chronologically. */}
-              {[...country.timeline].reverse().map((event, i) => (
-                <Box
-                  key={`${event.date}-${i}`}
-                  sx={{ display: "flex", gap: "12px", alignItems: "flex-start" }}
-                >
-                  <Box
-                    sx={{
-                      width: 8,
-                      height: 8,
-                      borderRadius: "50%",
-                      backgroundColor: palette.brand.primary,
-                      flexShrink: 0,
-                      mt: "5px",
-                    }}
-                  />
-                  <Box>
-                    <Typography
-                      sx={{ fontSize: "12px", fontWeight: 600, color: palette.text.tertiary }}
+            {/* Relatively-positioned container so the absolute vertical rail
+                sits behind all event rows (z-index 0) while dots sit on top
+                (z-index 1).  The rail spans the full height of this box; dots
+                have a solid card-background fill so the line appears to
+                start/end at the outermost dot centers rather than bleeding
+                past them. */}
+            <Box sx={{ position: "relative" }}>
+              {/* Vertical connecting rail — 1px, aligned to dot center (10px
+                  from left edge of the dot column: 4px left-padding of the
+                  row + half of 12px dot = 10px). */}
+              <Box
+                aria-hidden="true"
+                sx={{
+                  position: "absolute",
+                  left: "10px",
+                  top: "6px",
+                  bottom: "6px",
+                  width: "1px",
+                  backgroundColor: palette.border.dark,
+                  zIndex: 0,
+                }}
+              />
+
+              <Stack gap="0px">
+                {/* Newest first: the feed lists timeline events chronologically. */}
+                {[...country.timeline].reverse().map((event, i) => {
+                  const isLatest = i === 0;
+                  return (
+                    <Box
+                      key={`${event.date}-${i}`}
+                      sx={{
+                        "display": "flex",
+                        "gap": "14px",
+                        "alignItems": "flex-start",
+                        "position": "relative",
+                        "zIndex": 1,
+                        "pb": "20px",
+                        "&:last-child": { pb: "0px" },
+                      }}
                     >
-                      {event.date}
-                    </Typography>
-                    {event.description && (
-                      <Typography
+                      {/* Dot column — width matches left offset of the rail (10px
+                          = 4px spacing + 6px half-dot so dot center == rail). */}
+                      <Box
                         sx={{
-                          fontSize: "13px",
-                          color: theme.palette.text.secondary,
-                          mt: "2px",
-                          lineHeight: 1.5,
+                          flexShrink: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          width: "20px",
+                          pt: "3px",
                         }}
                       >
-                        {event.description}
-                      </Typography>
-                    )}
-                  </Box>
-                </Box>
-              ))}
-            </Stack>
+                        {/* Outer ring (halo) — only visible on the latest event */}
+                        <Box
+                          aria-hidden="true"
+                          sx={{
+                            width: isLatest ? "20px" : "16px",
+                            height: isLatest ? "20px" : "16px",
+                            borderRadius: "50%",
+                            backgroundColor: palette.background.main,
+                            border: isLatest
+                              ? `2px solid ${palette.brand.primary}`
+                              : `2px solid ${palette.border.dark}`,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            transition: "all 0.15s ease",
+                          }}
+                        >
+                          {/* Inner filled dot */}
+                          <Box
+                            sx={{
+                              width: isLatest ? "8px" : "6px",
+                              height: isLatest ? "8px" : "6px",
+                              borderRadius: "50%",
+                              backgroundColor: isLatest
+                                ? palette.brand.primary
+                                : palette.border.dark,
+                            }}
+                          />
+                        </Box>
+                      </Box>
+
+                      {/* Text content */}
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography
+                          sx={{
+                            fontSize: "12px",
+                            fontWeight: 600,
+                            color: isLatest ? palette.brand.primary : palette.text.secondary,
+                            letterSpacing: "0.02em",
+                            lineHeight: 1.4,
+                          }}
+                        >
+                          {event.date}
+                        </Typography>
+                        {event.description && (
+                          <Typography
+                            sx={{
+                              fontSize: "13px",
+                              color: theme.palette.text.secondary,
+                              mt: "4px",
+                              lineHeight: 1.6,
+                            }}
+                          >
+                            {event.description}
+                          </Typography>
+                        )}
+                      </Box>
+                    </Box>
+                  );
+                })}
+              </Stack>
+            </Box>
           </SectionCard>
         )}
 
