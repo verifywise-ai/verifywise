@@ -100,13 +100,26 @@ test.describe("Use Cases / Projects", () => {
 
     // Fill Goal field (required)
     const goalInput = page.getByText(/^Goal/i).locator("..").getByRole("textbox");
-    if (await goalInput.first().isVisible().catch(() => false)) {
+    if (
+      await goalInput
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await goalInput.first().fill("E2E test goal");
     }
 
     // Select Applicable regulations if dropdown exists (required for some configurations)
-    const regulationsSelect = page.getByText(/Applicable regulations/i).locator("..").getByRole("combobox");
-    if (await regulationsSelect.first().isVisible().catch(() => false)) {
+    const regulationsSelect = page
+      .getByText(/Applicable regulations/i)
+      .locator("..")
+      .getByRole("combobox");
+    if (
+      await regulationsSelect
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await regulationsSelect.first().click();
       const option = page.getByRole("option").first();
       if (await option.isVisible({ timeout: 3_000 }).catch(() => false)) {
@@ -115,8 +128,16 @@ test.describe("Use Cases / Projects", () => {
     }
 
     // Select Owner if dropdown exists
-    const ownerSelect = page.getByText(/^Owner/i).locator("..").getByRole("combobox");
-    if (await ownerSelect.first().isVisible().catch(() => false)) {
+    const ownerSelect = page
+      .getByText(/^Owner/i)
+      .locator("..")
+      .getByRole("combobox");
+    if (
+      await ownerSelect
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await ownerSelect.first().click();
       const option = page.getByRole("option").first();
       if (await option.isVisible({ timeout: 3_000 }).catch(() => false)) {
@@ -125,8 +146,16 @@ test.describe("Use Cases / Projects", () => {
     }
 
     // Select AI risk classification if dropdown exists
-    const riskSelect = page.getByText(/AI risk classification/i).locator("..").getByRole("combobox");
-    if (await riskSelect.first().isVisible().catch(() => false)) {
+    const riskSelect = page
+      .getByText(/AI risk classification/i)
+      .locator("..")
+      .getByRole("combobox");
+    if (
+      await riskSelect
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await riskSelect.first().click();
       const option = page.getByRole("option").first();
       if (await option.isVisible({ timeout: 3_000 }).catch(() => false)) {
@@ -135,8 +164,16 @@ test.describe("Use Cases / Projects", () => {
     }
 
     // Select Type of high risk role if dropdown exists
-    const highRiskSelect = page.getByText(/Type of high risk role/i).locator("..").getByRole("combobox");
-    if (await highRiskSelect.first().isVisible().catch(() => false)) {
+    const highRiskSelect = page
+      .getByText(/Type of high risk role/i)
+      .locator("..")
+      .getByRole("combobox");
+    if (
+      await highRiskSelect
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
       await highRiskSelect.first().click();
       const option = page.getByRole("option").first();
       if (await option.isVisible({ timeout: 3_000 }).catch(() => false)) {
