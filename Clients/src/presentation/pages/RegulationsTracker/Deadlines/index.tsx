@@ -17,6 +17,7 @@ import Chip from "../../../components/Chip";
 import { VWLink } from "../../../components/Link";
 import { palette } from "../../../themes/palette";
 import { useDeadlines } from "../../../../application/hooks/useRegulationsTracker";
+import { regulationStatusVariant } from "../statusVariant";
 
 interface Deadline {
   effectiveDateISO: string;
@@ -374,7 +375,13 @@ export default function Deadlines() {
                         >
                           {d.effectiveDateRaw || d.effectiveDateISO}
                         </Typography>
-                        {d.status && <Chip label={d.status} variant="default" uppercase={false} />}
+                        {d.status && (
+                          <Chip
+                            label={d.status}
+                            variant={regulationStatusVariant(d.status)}
+                            uppercase={false}
+                          />
+                        )}
                         <Typography
                           sx={{
                             fontSize: "12px",
@@ -426,7 +433,13 @@ export default function Deadlines() {
                       <Typography sx={{ fontSize: "13px", color: palette.text.tertiary }}>
                         {u.effectiveDateRaw || "Date TBD"}
                       </Typography>
-                      {u.status && <Chip label={u.status} variant="default" uppercase={false} />}
+                      {u.status && (
+                        <Chip
+                          label={u.status}
+                          variant={regulationStatusVariant(u.status)}
+                          uppercase={false}
+                        />
+                      )}
                       <Typography
                         sx={{
                           fontSize: "12px",

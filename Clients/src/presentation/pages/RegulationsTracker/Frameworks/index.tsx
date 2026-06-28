@@ -15,6 +15,7 @@ import Chip from "../../../components/Chip";
 import { VWLink } from "../../../components/Link";
 import { palette } from "../../../themes/palette";
 import { useFrameworks } from "../../../../application/hooks/useRegulationsTracker";
+import { regulationStatusVariant } from "../statusVariant";
 
 interface Framework {
   name: string;
@@ -81,7 +82,13 @@ export default function Frameworks() {
                 <Typography sx={{ fontSize: "14px", fontWeight: 600, flex: 1, minWidth: 0 }}>
                   {f.name}
                 </Typography>
-                {f.status && <Chip label={f.status} variant="default" uppercase={false} />}
+                {f.status && (
+                  <Chip
+                    label={f.status}
+                    variant={regulationStatusVariant(f.status)}
+                    uppercase={false}
+                  />
+                )}
               </Stack>
               {f.adoptedBy && (
                 <Typography sx={{ fontSize: "12px", color: palette.text.tertiary, mt: "4px" }}>

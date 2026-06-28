@@ -32,6 +32,7 @@ import {
 } from "../../../../application/hooks/useRegulationsTracker";
 import { useRegulationsTrackerSidebarContextSafe } from "../../../../application/contexts/RegulationsTrackerSidebar.context";
 import { useTrackerAlert } from "../useTrackerAlert";
+import { regulationStatusVariant } from "../statusVariant";
 
 // Amber/warning colors for the stale-data banner.
 // palette.status.warning uses a slightly different hue (#FFF8E1/#795548),
@@ -364,16 +365,7 @@ export default function CountryDetail() {
                     {reg.status && (
                       <Chip
                         label={reg.status}
-                        variant={
-                          reg.status.toLowerCase().includes("in-force") ||
-                          reg.status.toLowerCase().includes("in force") ||
-                          reg.status.toLowerCase().includes("active")
-                            ? "success"
-                            : reg.status.toLowerCase().includes("draft") ||
-                                reg.status.toLowerCase().includes("proposed")
-                              ? "warning"
-                              : "default"
-                        }
+                        variant={regulationStatusVariant(reg.status)}
                         uppercase={false}
                       />
                     )}

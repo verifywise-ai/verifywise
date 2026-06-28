@@ -83,7 +83,7 @@ export default function Horizon() {
                   </Box>
                 )}
                 <Typography sx={{ fontSize: "14px", fontWeight: 600 }}>{c.countryName}</Typography>
-                {c.type && <Chip label={c.type} variant="default" uppercase={false} />}
+                {c.type && <Chip label={c.type} variant="info" uppercase={false} />}
                 <Typography sx={{ fontSize: "12px", color: palette.text.tertiary, ml: "auto" }}>
                   {c.date}
                 </Typography>
