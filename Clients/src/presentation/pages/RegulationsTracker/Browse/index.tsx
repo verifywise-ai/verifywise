@@ -10,7 +10,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Box, Stack, TablePagination, CircularProgress } from "@mui/material";
-import { SearchX, AlertTriangle, CheckSquare } from "lucide-react";
+import { SearchX, AlertTriangle, CheckSquare, Square } from "lucide-react";
 import { SearchBox } from "../../../components/Search";
 import { CustomSelect } from "../../../components/CustomSelect";
 import { CustomizableButton } from "../../../components/button/customizable-button";
@@ -263,23 +263,48 @@ export default function Browse() {
                       </Box>
                     ) : (
                       <Box
-                        component="input"
-                        type="checkbox"
+                        component="button"
+                        type="button"
+                        role="checkbox"
+                        aria-checked={isSelected}
                         aria-label={`Select ${row.name}`}
-                        checked={isSelected}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                        onClick={(e: React.MouseEvent) => {
                           e.stopPropagation();
                           toggleRow(row.slug);
                         }}
-                        onClick={(e: React.MouseEvent) => e.stopPropagation()}
                         sx={{
-                          cursor: "pointer",
-                          width: 16,
-                          height: 16,
-                          flexShrink: 0,
-                          accentColor: palette.brand.primary,
+                          "width": 16,
+                          "height": 16,
+                          "flexShrink": 0,
+                          "p": 0,
+                          "border": "none",
+                          "background": "none",
+                          "cursor": "pointer",
+                          "display": "flex",
+                          "alignItems": "center",
+                          "justifyContent": "center",
+                          "&:focus-visible": {
+                            outline: `2px solid ${palette.brand.primary}`,
+                            outlineOffset: "2px",
+                            borderRadius: "2px",
+                          },
                         }}
-                      />
+                      >
+                        <CheckSquare
+                          size={16}
+                          strokeWidth={2}
+                          color={palette.brand.primary}
+                          style={{ display: isSelected ? "block" : "none" }}
+                          aria-hidden
+                        />
+                        <Square
+                          size={16}
+                          strokeWidth={2}
+                          color={palette.text.tertiary}
+                          style={{ display: isSelected ? "none" : "block" }}
+                          aria-hidden
+                        />
+                      </Box>
                     )
                   }
                 />
