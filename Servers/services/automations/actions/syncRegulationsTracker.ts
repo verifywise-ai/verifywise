@@ -47,6 +47,45 @@ export interface DigestItem {
   detail?: string;
 }
 
+// Per-run tally of impact-analysis outcomes, for the feed-quality / value
+// telemetry logged at the end of a sync. See the call sites in run().
+export interface ImpactOutcomeTally {
+  ok: number;
+  skipped_no_candidates: number;
+  error: number;
+  no_key: number;
+  cached: number;
+}
+
+/**
+ * Classify one runImpactAnalysis result into the tally. A cached `ok` is
+ * recorded as `cached` (reused analysis), not as a fresh `ok`, so the two
+ * signals stay distinct. Unknown statuses fall into `error` so nothing is
+ * silently dropped.
+ */
+export function tallyImpact(
+  tally: ImpactOutcomeTally,
+  impact: { status: string; cached: boolean },
+): void {
+  if (impact.cached) {
+    tally.cached += 1;
+    return;
+  }
+  switch (impact.status) {
+    case "ok":
+      tally.ok += 1;
+      break;
+    case "skipped_no_candidates":
+      tally.skipped_no_candidates += 1;
+      break;
+    case "no_key":
+      tally.no_key += 1;
+      break;
+    default:
+      tally.error += 1;
+  }
+}
+
 export function sectionMjml(title: string, items: DigestItem[]): string {
   if (!items.length) return "";
   const header = `<mj-text font-size="14px" font-weight="600" color="#344054">${escapeHtml(title)}</mj-text>`;
@@ -298,6 +337,45 @@ async function runSync(deps?: { feed?: unknown }): Promise<{
 
   const changeBySlug = new Map<string, CountryChange>(changed.map((c) => [c.slug, c]));
   const changedSlugs = Array.from(new Set([...changed.map((c) => c.slug), ...newlyRemoved]));
+
+  // Feed-quality signal: a "changed" country is only actionable for impact
+  // analysis when the feed gives us a structured per-field diff (status /
+  // effective-date / regulation added-or-removed). When `unstructured` is true
+  // the hash moved but the feed carried no field-level changes, so the LLM is
+  // told "(no structured diff available)" and its verdicts degrade to generic.
+  // Tracking the split over time tells us whether the enriched email is
+  // delivering change-specific value or just "something changed" noise.
+  const structuredChanges = changed.filter((c) => !c.unstructured).length;
+  const unstructuredChanges = changed.length - structuredChanges;
+  if (changed.length) {
+    logger.info(
+      `[regulations-tracker] feed diff quality: ${structuredChanges}/${changed.length} changed countries had a structured field-level diff, ${unstructuredChanges} were hash-only (no structured diff)`,
+    );
+    if (unstructuredChanges) {
+      logger.warn(
+        `[regulations-tracker] ${unstructuredChanges} changed countr${
+          unstructuredChanges === 1 ? "y" : "ies"
+        } had no structured diff this run: ${changed
+          .filter((c) => c.unstructured)
+          .map((c) => c.slug)
+          .join(", ")} — impact analysis for these will be generic`,
+      );
+    }
+  }
+
+  // Impact-run outcome tally across every org/country pass this run. Lets us
+  // measure, in production, how often the LLM pass actually produced a verdict
+  // ("ok") versus had nothing to judge ("skipped_no_candidates"), failed
+  // ("error"), or was gated out ("no_key"). Cache hits are counted separately
+  // since they reflect reused, not freshly-generated, analysis.
+  const impactOutcomes = {
+    ok: 0,
+    skipped_no_candidates: 0,
+    error: 0,
+    no_key: 0,
+    cached: 0,
+  };
+
   let orgsEmailed = 0;
   let orgsNotified = 0;
   let orgsNotifiedNew = 0;
@@ -402,6 +480,7 @@ async function runSync(deps?: { feed?: unknown }): Promise<{
                   impactRan = true;
                   try {
                     const impact = await runImpactAnalysis(orgId, c.slug);
+                    tallyImpact(impactOutcomes, impact);
                     // BUG 5: Only count passes that actually called the LLM. Cache
                     // hits, no_key, and skipped statuses do not consume LLM capacity
                     // and must not burn the per-run cap.
@@ -479,6 +558,7 @@ async function runSync(deps?: { feed?: unknown }): Promise<{
               impactRan = true;
               try {
                 const impact = await runImpactAnalysis(orgId, c.slug);
+                tallyImpact(impactOutcomes, impact);
                 if (
                   !impact.cached &&
                   impact.status !== "no_key" &&
@@ -575,6 +655,11 @@ async function runSync(deps?: { feed?: unknown }): Promise<{
   logger.info(
     `[regulations-tracker] done: fetched=${validated.countries.length} added=${newlyAdded.length} changed=${changed.length} removed=${newlyRemoved.length} emailed=${orgsEmailed} notified=${orgsNotified} newCountryOrgs=${orgsNotifiedNew}`,
   );
+  if (changed.length) {
+    logger.info(
+      `[regulations-tracker] value telemetry: feedDiff structured=${structuredChanges} unstructured=${unstructuredChanges} | impact ok=${impactOutcomes.ok} skippedNoCandidates=${impactOutcomes.skipped_no_candidates} error=${impactOutcomes.error} noKey=${impactOutcomes.no_key} cached=${impactOutcomes.cached}`,
+    );
+  }
   await recordRunStatus(`ok: ${changed.length} changed, ${newlyRemoved.length} removed`).catch(
     () => undefined,
   );
