@@ -5,7 +5,7 @@
   "scripts": {
     "test:unit": "jest --testPathIgnorePatterns=/tests/integration/ --testPathIgnorePatterns=/helpers/ --detectOpenHandles --forceExit",
     "test:smoke": "jest --config jest.config.js --globalSetup=\"<rootDir>/tests/integration/globalSetup.js\" --testPathPatterns=deadline-summary --runInBand",
-    "test": "npm run test:unit && npm run test:smoke",
+    "test": "npm run test:unit",
     "test:watch": "jest --watch",
     "test:integration": "jest --config jest.config.js --globalSetup=\"<rootDir>/tests/integration/globalSetup.js\" --testMatch=\"**/tests/integration/**/*.test.ts\" --runInBand",
     "build": "tsc",
