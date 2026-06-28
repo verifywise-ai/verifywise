@@ -48,7 +48,7 @@ export const regulationsTrackerBrowseContent: ArticleContent = {
     {
       type: 'callout',
       variant: 'info',
-      text: 'Any user can track or untrack a country. Only the Settings tab is restricted to administrators.',
+      text: 'Administrators and editors can track and untrack countries. Other roles see the catalogue as read-only. The Settings tab is restricted to administrators.',
     },
     {
       type: 'heading',

@@ -35,12 +35,12 @@ export interface CountryRowCardProps {
   row: CountryRow;
   /** Called when the row body (name/region area) is clicked. */
   onClick: () => void;
-  /** Label for the action button (e.g. "Track", "Untrack"). */
-  actionLabel: string;
+  /** Label for the action button (e.g. "Track", "Untrack"). Omit to hide the action (read-only row). */
+  actionLabel?: string;
   /** Variant for the action button. */
   actionVariant?: "outlined" | "contained" | "text";
-  /** Called when the action button is clicked. */
-  onAction: (e: React.MouseEvent) => void;
+  /** Called when the action button is clicked. Required only when actionLabel is set. */
+  onAction?: (e: React.MouseEvent) => void;
   /** Whether the action button should be shown as disabled. */
   actionDisabled?: boolean;
   /**
@@ -152,17 +152,19 @@ export function CountryRowCard({
         )}
       </Box>
 
-      <CustomizableButton
-        text={actionLabel}
-        variant={actionVariant}
-        size="small"
-        onClick={(e: React.MouseEvent) => {
-          e.stopPropagation();
-          onAction(e);
-        }}
-        isDisabled={actionDisabled}
-        sx={{ flexShrink: 0 }}
-      />
+      {actionLabel && (
+        <CustomizableButton
+          text={actionLabel}
+          variant={actionVariant}
+          size="small"
+          onClick={(e: React.MouseEvent) => {
+            e.stopPropagation();
+            onAction?.(e);
+          }}
+          isDisabled={actionDisabled}
+          sx={{ flexShrink: 0 }}
+        />
+      )}
     </Box>
   );
 }

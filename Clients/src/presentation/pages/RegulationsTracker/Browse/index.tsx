@@ -25,6 +25,7 @@ import {
   useTrackBulk,
 } from "../../../../application/hooks/useRegulationsTracker";
 import { useRegulationsTrackerSidebarContextSafe } from "../../../../application/contexts/RegulationsTrackerSidebar.context";
+import { useAuth } from "../../../../application/hooks/useAuth";
 import { useTrackerAlert } from "../useTrackerAlert";
 import { CountryRow, CountryRowCard } from "../CountryRowCard";
 
@@ -33,6 +34,13 @@ const PAGE_SIZE = 24;
 export default function Browse() {
   const navigate = useNavigate();
   const sidebar = useRegulationsTrackerSidebarContextSafe();
+  const { userRoleName, isSuperAdmin } = useAuth();
+  // Tracking is available to admins and editors. Other roles see a read-only catalogue.
+  const canTrack =
+    isSuperAdmin ||
+    userRoleName === "Admin" ||
+    userRoleName === "SuperAdmin" ||
+    userRoleName === "Editor";
   const { showError, AlertSlot } = useTrackerAlert();
 
   const [searchInput, setSearchInput] = useState("");
@@ -182,26 +190,28 @@ export default function Browse() {
           options={regionOptions}
         />
         <Box sx={{ flex: 1 }} />
-        {/* Select-all checkbox area */}
-        <Stack direction="row" alignItems="center" gap="8px">
-          <Box
-            component="input"
-            type="checkbox"
-            aria-label="Select all on page"
-            checked={allOnPageSelected}
-            ref={(el: HTMLInputElement | null) => {
-              if (el) el.indeterminate = !allOnPageSelected && someOnPageSelected;
-            }}
-            onChange={toggleSelectAll}
-            sx={{ cursor: "pointer", width: 16, height: 16, accentColor: palette.brand.primary }}
-          />
-          <CustomizableButton
-            text={`Track selected (${selected.length})`}
-            onClick={handleTrackSelected}
-            isDisabled={selected.length === 0 || trackBulk.isPending}
-            sx={{ height: 34 }}
-          />
-        </Stack>
+        {/* Select-all checkbox area — only for roles that can track */}
+        {canTrack && (
+          <Stack direction="row" alignItems="center" gap="8px">
+            <Box
+              component="input"
+              type="checkbox"
+              aria-label="Select all on page"
+              checked={allOnPageSelected}
+              ref={(el: HTMLInputElement | null) => {
+                if (el) el.indeterminate = !allOnPageSelected && someOnPageSelected;
+              }}
+              onChange={toggleSelectAll}
+              sx={{ cursor: "pointer", width: 16, height: 16, accentColor: palette.brand.primary }}
+            />
+            <CustomizableButton
+              text={`Track selected (${selected.length})`}
+              onClick={handleTrackSelected}
+              isDisabled={selected.length === 0 || trackBulk.isPending}
+              sx={{ height: 34 }}
+            />
+          </Stack>
+        )}
       </Stack>
 
       {isLoading && (
@@ -233,17 +243,21 @@ export default function Browse() {
                   key={row.slug}
                   row={row}
                   onClick={() => navigate(`/regulations-tracker/${row.slug}`)}
-                  actionLabel={row.is_tracked ? "Untrack" : "Track"}
-                  onAction={(e) => {
-                    e.stopPropagation();
-                    handleToggleTrack(row);
-                  }}
+                  actionLabel={canTrack ? (row.is_tracked ? "Untrack" : "Track") : undefined}
+                  onAction={
+                    canTrack
+                      ? (e) => {
+                          e.stopPropagation();
+                          handleToggleTrack(row);
+                        }
+                      : undefined
+                  }
                   actionDisabled={
                     (trackCountry.isPending && trackCountry.variables === row.slug) ||
                     (untrackCountry.isPending && untrackCountry.variables === row.slug)
                   }
                   checkbox={
-                    row.is_tracked ? (
+                    !canTrack ? undefined : row.is_tracked ? (
                       <Box
                         sx={{
                           width: 16,

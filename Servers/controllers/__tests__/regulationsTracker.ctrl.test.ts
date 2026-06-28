@@ -255,16 +255,24 @@ describe("getTracked", () => {
 // POST /api/regulations-tracker/tracked  [ADMIN]
 // ---------------------------------------------------------------------------
 describe("trackCountryCtrl", () => {
-  it("returns 403 for a non-admin role and does not call trackCountry", async () => {
+  it("returns 200 for an Editor (tracking is allowed for admins and editors)", async () => {
     const req: any = { role: "Editor", userId: 1, organizationId: 7, body: { slug: "eu" } };
+    const res = mockRes();
+    await trackCountryCtrl(req, res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(trackCountry).toHaveBeenCalled();
+  });
+
+  it("returns 403 for an Auditor role", async () => {
+    const req: any = { role: "Auditor", userId: 1, organizationId: 7, body: { slug: "eu" } };
     const res = mockRes();
     await trackCountryCtrl(req, res);
     expect(res.status).toHaveBeenCalledWith(403);
     expect(trackCountry).not.toHaveBeenCalled();
   });
 
-  it("returns 403 for an Auditor role", async () => {
-    const req: any = { role: "Auditor", userId: 1, organizationId: 7, body: { slug: "eu" } };
+  it("returns 403 for a Reviewer role", async () => {
+    const req: any = { role: "Reviewer", userId: 1, organizationId: 7, body: { slug: "eu" } };
     const res = mockRes();
     await trackCountryCtrl(req, res);
     expect(res.status).toHaveBeenCalledWith(403);
@@ -305,7 +313,7 @@ describe("trackCountryCtrl", () => {
 // POST /api/regulations-tracker/tracked/bulk  [ADMIN]
 // ---------------------------------------------------------------------------
 describe("trackBulkCtrl", () => {
-  it("returns 403 for a non-admin role", async () => {
+  it("returns 403 for a Reviewer role", async () => {
     const req: any = {
       role: "Reviewer",
       userId: 1,
@@ -316,6 +324,19 @@ describe("trackBulkCtrl", () => {
     await trackBulkCtrl(req, res);
     expect(res.status).toHaveBeenCalledWith(403);
     expect(trackCountriesBulk).not.toHaveBeenCalled();
+  });
+
+  it("returns 200 for an Editor (tracking is allowed for admins and editors)", async () => {
+    const req: any = {
+      role: "Editor",
+      userId: 1,
+      organizationId: 7,
+      body: { slugs: ["eu", "us"] },
+    };
+    const res = mockRes();
+    await trackBulkCtrl(req, res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(trackCountriesBulk).toHaveBeenCalled();
   });
 
   it("returns 400 when slugs is not an array", async () => {
@@ -345,12 +366,20 @@ describe("trackBulkCtrl", () => {
 // DELETE /api/regulations-tracker/tracked/:slug  [ADMIN]
 // ---------------------------------------------------------------------------
 describe("untrackCountryCtrl", () => {
-  it("returns 403 for a non-admin role", async () => {
-    const req: any = { role: "Editor", userId: 1, organizationId: 7, params: { slug: "eu" } };
+  it("returns 403 for an Auditor role", async () => {
+    const req: any = { role: "Auditor", userId: 1, organizationId: 7, params: { slug: "eu" } };
     const res = mockRes();
     await untrackCountryCtrl(req, res);
     expect(res.status).toHaveBeenCalledWith(403);
     expect(untrackCountry).not.toHaveBeenCalled();
+  });
+
+  it("returns 200 for an Editor (tracking is allowed for admins and editors)", async () => {
+    const req: any = { role: "Editor", userId: 1, organizationId: 7, params: { slug: "eu" } };
+    const res = mockRes();
+    await untrackCountryCtrl(req, res);
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(untrackCountry).toHaveBeenCalled();
   });
 
   it("is idempotent: returns 200 even when the country was never tracked", async () => {

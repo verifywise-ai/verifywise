@@ -28,6 +28,10 @@ import { getImpactRow, runImpactAnalysis } from "../utils/regulationImpact.utils
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const isAdmin = (role?: string) => role === "Admin" || role === "SuperAdmin";
+// Tracking (track / untrack / bulk-track) is allowed for admins and editors.
+// Settings remain admin-only via isAdmin.
+const canTrack = (role?: string) =>
+  role === "Admin" || role === "SuperAdmin" || role === "Editor";
 
 const file = "regulationsTracker.ctrl.ts";
 
@@ -210,7 +214,8 @@ export async function trackCountryCtrl(req: Request, res: Response): Promise<any
     organizationId: req.organizationId!,
   });
   try {
-    if (!isAdmin(req.role)) return res.status(403).json(STATUS_CODE[403]("Admin access required"));
+    if (!canTrack(req.role))
+      return res.status(403).json(STATUS_CODE[403]("Admin or editor access required"));
     const { slug } = req.body ?? {};
     if (!slug || typeof slug !== "string")
       return res.status(400).json(STATUS_CODE[400]("slug is required"));
@@ -251,7 +256,8 @@ export async function trackBulkCtrl(req: Request, res: Response): Promise<any> {
     organizationId: req.organizationId!,
   });
   try {
-    if (!isAdmin(req.role)) return res.status(403).json(STATUS_CODE[403]("Admin access required"));
+    if (!canTrack(req.role))
+      return res.status(403).json(STATUS_CODE[403]("Admin or editor access required"));
     const slugs: unknown = req.body?.slugs;
     if (!Array.isArray(slugs) || slugs.length === 0)
       return res.status(400).json(STATUS_CODE[400]("slugs must be a non-empty array"));
@@ -297,7 +303,8 @@ export async function untrackCountryCtrl(req: Request, res: Response): Promise<a
     organizationId: req.organizationId!,
   });
   try {
-    if (!isAdmin(req.role)) return res.status(403).json(STATUS_CODE[403]("Admin access required"));
+    if (!canTrack(req.role))
+      return res.status(403).json(STATUS_CODE[403]("Admin or editor access required"));
     const slug = req.params.slug as string;
     await untrackCountry(req.organizationId!, slug);
     await logSuccess({
