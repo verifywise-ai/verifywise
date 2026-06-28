@@ -54,7 +54,7 @@ export default function Horizon() {
       {isEmpty && !isError && (
         <EmptyState
           icon={History}
-          message="No regulation changes have been recorded yet."
+          message="You're all caught up — no regulation changes have been recorded yet. When a tracked jurisdiction updates its AI rules, the change will appear here."
           showBorder
         />
       )}

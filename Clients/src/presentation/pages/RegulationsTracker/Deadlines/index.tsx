@@ -9,6 +9,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Box, Stack, Typography, CircularProgress } from "@mui/material";
 import { AlertTriangle, CalendarClock } from "lucide-react";
 import { EmptyState } from "../../../components/EmptyState";
@@ -308,6 +309,7 @@ function RunwayCalendar({ deadlines, onMarkerClick }: RunwayProps) {
 }
 
 export default function Deadlines() {
+  const navigate = useNavigate();
   const { data, isLoading, isError } = useDeadlines();
   const deadlines: Deadline[] = Array.isArray(data?.data?.deadlines) ? data.data.deadlines : [];
   const unscheduled: Unscheduled[] = Array.isArray(data?.data?.unscheduled)
@@ -355,7 +357,7 @@ export default function Deadlines() {
       {isEmpty && !isError && (
         <EmptyState
           icon={CalendarClock}
-          message="No upcoming regulation deadlines are recorded yet."
+          message="No upcoming regulation deadlines are recorded yet. Effective-date milestones for AI regulations will appear here as they're published."
           showBorder
         />
       )}
@@ -399,6 +401,18 @@ export default function Deadlines() {
                           />
                         )}
                         <Typography
+                          role="link"
+                          tabIndex={0}
+                          onClick={() =>
+                            navigate(`/regulations-tracker/${d.countrySlug}`)
+                          }
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              navigate(`/regulations-tracker/${d.countrySlug}`);
+                            }
+                          }}
+                          title={`View ${d.countryName}`}
                           sx={{
                             fontSize: "12px",
                             color: palette.text.tertiary,
@@ -406,6 +420,11 @@ export default function Deadlines() {
                             display: "flex",
                             alignItems: "center",
                             gap: "4px",
+                            cursor: "pointer",
+                            "&:hover": {
+                              color: palette.brand.primary,
+                              textDecoration: "underline",
+                            },
                           }}
                         >
                           {d.countryFlag && (
@@ -457,6 +476,18 @@ export default function Deadlines() {
                         />
                       )}
                       <Typography
+                        role="link"
+                        tabIndex={0}
+                        onClick={() =>
+                          navigate(`/regulations-tracker/${u.countrySlug}`)
+                        }
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            navigate(`/regulations-tracker/${u.countrySlug}`);
+                          }
+                        }}
+                        title={`View ${u.countryName}`}
                         sx={{
                           fontSize: "12px",
                           color: palette.text.tertiary,
@@ -464,6 +495,11 @@ export default function Deadlines() {
                           display: "flex",
                           alignItems: "center",
                           gap: "4px",
+                          cursor: "pointer",
+                          "&:hover": {
+                            color: palette.brand.primary,
+                            textDecoration: "underline",
+                          },
                         }}
                       >
                         {u.countryFlag && (

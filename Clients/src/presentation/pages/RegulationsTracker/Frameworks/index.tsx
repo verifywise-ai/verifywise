@@ -84,7 +84,7 @@ export default function Frameworks() {
       {isEmpty && !isError && (
         <EmptyState
           icon={Landmark}
-          message="No international frameworks are recorded yet."
+          message="No international frameworks are available yet. Cross-border frameworks like the OECD AI Principles will appear here once the feed publishes them."
           showBorder
         />
       )}
