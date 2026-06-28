@@ -71,33 +71,25 @@ async function getAuthToken(page: any): Promise<string> {
 async function createOrganization(page: any): Promise<number> {
   const token = await getAuthToken(page);
   const orgName = `E2E Org ${Date.now()}`;
-  const response = await page.request.post(
-    `${BACKEND_URL}/api/super-admin/organizations`,
-    {
-      data: { name: orgName },
-      headers: { Authorization: `Bearer ${token}` },
-      failOnStatusCode: true,
-    },
-  );
+  const response = await page.request.post(`${BACKEND_URL}/api/super-admin/organizations`, {
+    data: { name: orgName },
+    headers: { Authorization: `Bearer ${token}` },
+    failOnStatusCode: true,
+  });
   const body = await response.json();
   const orgId = body?.data?.id;
   if (typeof orgId !== "number") {
-    throw new Error(
-      `Failed to create E2E organization. Response: ${JSON.stringify(body)}`,
-    );
+    throw new Error(`Failed to create E2E organization. Response: ${JSON.stringify(body)}`);
   }
   return orgId;
 }
 
 function seedAdminInOrg(orgId: number): SeedOutput {
-  const stdout = execSync(
-    `npx ts-node scripts/seedE2EAdmin.ts ${orgId}`,
-    {
-      cwd: SERVERS_DIR,
-      encoding: "utf-8",
-      env: process.env,
-    },
-  );
+  const stdout = execSync(`npx ts-node scripts/seedE2EAdmin.ts ${orgId}`, {
+    cwd: SERVERS_DIR,
+    encoding: "utf-8",
+    env: process.env,
+  });
   const lastLine = stdout.trim().split("\n").pop() || "";
   return JSON.parse(lastLine) as SeedOutput;
 }
