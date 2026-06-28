@@ -22776,6 +22776,34 @@ paths:
       security:
         -
           bearerAuth: []
+  '/regulations-tracker/countries/{slug}/impact':
+    get:
+      summary: 'Get Impact Analysis'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Regulations Tracker'
+      operationId: getImpactAnalysis
+      security:
+        -
+          bearerAuth: []
+  '/regulations-tracker/countries/{slug}/impact/refresh':
+    post:
+      summary: 'Refresh Impact Analysis'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Regulations Tracker'
+      operationId: refreshImpactAnalysis
+      security:
+        -
+          bearerAuth: []
   '/regulations-tracker/countries/{slug}':
     get:
       summary: 'Get Country Detail'

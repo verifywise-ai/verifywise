@@ -7700,6 +7700,28 @@ export const regulationsTrackerEndpoints: Endpoint[] = [
   },
   {
     method: 'GET',
+    path: '/regulations-tracker/countries/{slug}/impact',
+    summary: "Get Impact Analysis",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Regulations Tracker",
+  },
+  {
+    method: 'POST',
+    path: '/regulations-tracker/countries/{slug}/impact/refresh',
+    summary: "Refresh Impact Analysis",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Regulations Tracker",
+  },
+  {
+    method: 'GET',
     path: '/regulations-tracker/countries/{slug}',
     summary: "Get Country Detail",
     requiresAuth: true,
