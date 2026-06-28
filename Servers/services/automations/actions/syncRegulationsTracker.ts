@@ -398,6 +398,11 @@ async function runSync(deps?: { feed?: unknown }): Promise<{
         lines: string[];
         changeCount: number;
         changeDates: string[];
+        // True when the feed moved the country's hash but carried no structured
+        // field-level diff. Impact analysis is skipped for these: with no diff
+        // to judge, the LLM would only produce a generic verdict, so we don't
+        // run it, don't show an impact block, and don't burn LLM capacity.
+        unstructured: boolean;
       }
       const byOrg = new Map<number, OrgCountry[]>();
       for (const row of affected) {
@@ -412,6 +417,7 @@ async function runSync(deps?: { feed?: unknown }): Promise<{
           lines: ch?.lines ?? [],
           changeCount: ch?.changeCount ?? 1,
           changeDates: ch?.changeDates ?? [],
+          unstructured: ch?.unstructured ?? false,
         });
         byOrg.set(row.organization_id, list);
       }
@@ -468,7 +474,7 @@ async function runSync(deps?: { feed?: unknown }): Promise<{
                   : "Regulations were updated — open to see the details.") + multiNote;
             let impactSuffix = "";
             if (!c.removed) {
-              if (orgHasKey && impactEnabled) {
+              if (orgHasKey && impactEnabled && !c.unstructured) {
                 if (impactAnalysesRun >= IMPACT_MAX_ANALYSES_PER_RUN) {
                   if (!impactCapLogged) {
                     logger.warn(
@@ -511,9 +517,12 @@ async function runSync(deps?: { feed?: unknown }): Promise<{
                     );
                   }
                 } // end cap-else
-              } else if (!orgHasKey) {
-                // keyless org → nudge to configure a key. A key-having org that toggled
-                // impact OFF (impactEnabled === false) gets NEITHER panel NOR nudge — they chose.
+              } else if (!orgHasKey && !c.unstructured) {
+                // Keyless org with a structured change → nudge to configure a key,
+                // since a key would have produced a real impact panel here. A
+                // key-having org that toggled impact OFF (impactEnabled === false)
+                // gets NEITHER panel NOR nudge — they chose. An unstructured change
+                // gets no nudge either: even with a key there'd be nothing to show.
                 impactSuffix =
                   "\n\nConfigure an LLM key to see which of your AI systems, controls and vendors this affects.";
               }
@@ -545,7 +554,10 @@ async function runSync(deps?: { feed?: unknown }): Promise<{
           // same key/enabled gate and per-run LLM cap.
           if (orgHasKey && impactEnabled) {
             for (const c of countries) {
-              if (c.removed || impactBySlug.has(c.slug)) continue;
+              // Skip removed, already-analyzed, and unstructured changes — the
+              // last has no diff to judge, so we don't run the LLM or show a
+              // panel (mirrors the in-app gate above).
+              if (c.removed || c.unstructured || impactBySlug.has(c.slug)) continue;
               if (impactAnalysesRun >= IMPACT_MAX_ANALYSES_PER_RUN) {
                 if (!impactCapLogged) {
                   logger.warn(

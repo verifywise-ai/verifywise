@@ -380,6 +380,76 @@ describe("syncRegulationsTracker", () => {
     );
   });
 
+  // Unstructured-change suppression: when the feed moved a country's hash but
+  // carried no structured field-level diff, impact analysis must be skipped
+  // entirely (no LLM call, no impact panel), while the plain change
+  // notification still fires so the org knows the country changed.
+  it("skips impact analysis for an unstructured change but still notifies", async () => {
+    const mockRunImpact = impactUtils.runImpactAnalysis as jest.MockedFunction<
+      typeof impactUtils.runImpactAnalysis
+    >;
+    const mockGetLLMKeys = llmKeyUtils.getLLMKeysWithKeyQuery as jest.MockedFunction<
+      typeof llmKeyUtils.getLLMKeysWithKeyQuery
+    >;
+
+    // Org HAS a key and impact is enabled — so the ONLY reason to skip the LLM
+    // is the change being unstructured.
+    mockGetLLMKeys.mockResolvedValue([{ key: "k", name: "OpenAI", url: null, model: "m" } as any]);
+
+    mockGetMeta.mockResolvedValue({
+      seeded_at: "2026-01-01",
+      last_good_count: 5,
+      last_run_week: OTHER_WEEK,
+    } as any);
+    const country = { slug: "de", name: "Germany", hash: "abc", regulationCount: 1 };
+    mockValidate.mockReturnValue(makeValidResult([country]));
+    mockUpsert.mockResolvedValue({
+      changed: [
+        {
+          slug: "de",
+          name: "Germany",
+          // No structured lines — the hash moved but the feed gave no field diff.
+          lines: [],
+          unstructured: true,
+          changeCount: 1,
+          changeDates: [],
+        },
+      ],
+      newlyAdded: [],
+      newlyRemoved: [],
+      wasFirstSeed: false,
+    });
+    mockGetAffected.mockResolvedValue([
+      { organization_id: 42, country_slug: "de", name: "Germany" },
+    ] as any);
+    mockResolveInApp.mockResolvedValue([99]);
+    // Email recipient present too, to exercise the email backfill gate.
+    mockResolveEmail.mockResolvedValue(["admin@acme.com"]);
+    mockSendEmail.mockResolvedValue(undefined as any);
+    mockCreateNotification.mockResolvedValue(undefined as any);
+
+    const result = await syncRegulationsTracker({ feed: DUMMY_FEED });
+
+    // The LLM was never invoked for an unstructured change — neither the in-app
+    // pass nor the email backfill should have called it.
+    expect(mockRunImpact).not.toHaveBeenCalled();
+
+    // The org is still told the country changed (plain notification, no
+    // "Impact:" suffix, and no "Configure an LLM key" nudge since a key would
+    // not have produced a panel here anyway).
+    expect(result.orgsNotified).toBe(1);
+    expect(mockCreateNotification).toHaveBeenCalledTimes(1);
+    const notifArg = mockCreateNotification.mock.calls[0][0] as { message: string };
+    expect(notifArg.message).not.toContain("Impact:");
+    expect(notifArg.message).not.toContain("Configure an LLM key");
+
+    // Email still goes out, but with no impact section.
+    expect(mockSendEmail).toHaveBeenCalledTimes(1);
+    const htmlArg = mockSendEmail.mock.calls[0][2] as string;
+    const vars = JSON.parse(htmlArg);
+    expect(vars.impactSection ?? "").toBe("");
+  });
+
   // BUG 5: Cap counting — cache hits must NOT increment impactAnalysesRun so they
   // don't starve countries that need real LLM analysis.
   it("does not count cache hits against the per-run impact cap", async () => {
