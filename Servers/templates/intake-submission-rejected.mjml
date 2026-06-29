@@ -53,7 +53,7 @@
         <mj-column width="100%">
           <mj-text>
                 <!-- submitterName, formName, submissionId, rejectionReason, resubmitLink --><h2 class="email-heading">Submission rejected</h2><p class="email-body">Hello {{submitterName}},</p><p class="email-body">Unfortunately, your submission for <strong>{{formName}}</strong> has been rejected.</p><div class="box box-error"><p class="box-subtitle" style="margin-bottom: 6px;"><strong>Reference number:</strong> #{{submissionId}}</p>
-                <p class="box-subtitle"><strong>Reason:</strong> {{rejectionReason}}</p></div><p class="email-body">You can update your submission and resubmit using the link below.</p><p style="margin: 28px 0 0 0;"><a href="{{resubmitLink}}" class="btn btn-error">Edit and resubmit</a></p><p class="email-body">If you have any questions, please contact the administrator.</p>
+                <p class="box-subtitle"><strong>Reason:</strong> {{rejectionReason}}</p></div><p class="email-body">You can update your submission and resubmit using the link below.</p><p style="margin: 28px 0 24px 0;"><a href="{{resubmitLink}}" class="btn btn-error">Edit and resubmit</a></p><p class="email-body">If you have any questions, please contact the administrator.</p>
           </mj-text>
         </mj-column>
       </mj-section>
