@@ -52,7 +52,7 @@
       <mj-section>
         <mj-column width="100%">
           <mj-text>
-                <!-- name, link --><h2 class="email-heading">Welcome to VerifyWise</h2><p class="email-body">Hello {{name}},</p><p class="email-body">An administrator has created an account for you on the VerifyWise server.</p><p class="email-body">Click the button below to set up your account and get started.</p><p style="margin: 28px 0 0 0;"><a href="{{link}}" class="btn btn-primary">Create account</a></p><p class="email-body">If you did not expect this invitation, please ignore this email.</p><p class="email-body">Thank you.</p>
+                <!-- name, link --><h2 class="email-heading">Welcome to VerifyWise</h2><p class="email-body">Hello {{name}},</p><p class="email-body">An administrator has created an account for you on the VerifyWise server.</p><p class="email-body">Click the button below to set up your account and get started.</p><p style="margin: 28px 0 24px 0;"><a href="{{link}}" class="btn btn-primary">Create account</a></p><p class="email-body">If you did not expect this invitation, please ignore this email.</p><p class="email-body">Thank you.</p>
           </mj-text>
         </mj-column>
       </mj-section>
