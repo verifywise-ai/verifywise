@@ -57,7 +57,7 @@
                 <tr><td class="data-label">Trigger</td><td class="data-value">{{trigger_type}}</td></tr>
                 <tr><td class="data-label">Tool</td><td class="data-value">{{tool_name}}</td></tr>
                 <tr><td class="data-label">Time</td><td class="data-value">{{fired_at}}</td></tr>
-                </table><p style="margin: 28px 0 0 0;"><a href="{{action_url}}" class="btn btn-error">View in Shadow AI</a></p>
+                </table><p style="margin: 28px 0 24px 0;"><a href="{{action_url}}" class="btn btn-error">View in Shadow AI</a></p>
           </mj-text>
         </mj-column>
       </mj-section>
