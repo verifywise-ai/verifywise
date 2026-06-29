@@ -38,7 +38,7 @@
     "@emotion/styled": "^11.14.1",
     "@eslint/js": "^10.0.1",
     "@mui/lab": "^7.0.1-beta.25",
-    "@mui/material": "^7.3.9",
+    "@mui/material": "^9.1.2",
     "@mui/styled-engine-sc": "^9.1.1",
     "@mui/x-charts": "^9.6.0",
     "@mui/x-date-pickers": "^9.6.0",
