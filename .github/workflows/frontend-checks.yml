@@ -107,9 +107,8 @@ jobs:
       - name: Run tests (shard ${{ matrix.shard }}/4)
         run: npx vitest run --shard=${{ matrix.shard }}/4
 
-  # Coverage is the slowest path, so it runs as its own job only on push to a
-  # protected branch (not on every PR). Pull requests rely on the sharded
-  # test matrix above for pass/fail.
+  # Runs the CI test command with coverage on every push and pull request,
+  # uploading the coverage report and enforcing the configured thresholds.
   coverage:
     name: Coverage
     runs-on: ubuntu-latest
