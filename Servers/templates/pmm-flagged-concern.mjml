@@ -55,7 +55,7 @@
                 <h2 class="email-heading">Concern flagged: {{use_case_title}}</h2><p class="email-body">Hi {{recipient_name}},</p><p class="email-body">A concern has been flagged during the post-market monitoring for <strong>{{use_case_title}}</strong> (Cycle #{{cycle_number}}).</p><div class="box box-error"><p class="box-subtitle" style="margin-bottom: 6px;"><strong>Flagged by:</strong> {{stakeholder_name}}</p>
                 <p class="box-subtitle"><strong>Date:</strong> {{flagged_at}}</p></div><p class="email-body"><strong>Flagged items:</strong></p><div style="background-color: #f9fafb; padding: 20px; border-radius: 6px; margin: 20px 0;">
                   {{flagged_questions_html}}
-                </div><p class="email-body">Please review the flagged concerns and take appropriate action to address any compliance issues.</p><p style="margin: 28px 0 0 0;"><a href="{{monitoring_link}}" class="btn btn-error">Review concerns</a></p>
+                </div><p class="email-body">Please review the flagged concerns and take appropriate action to address any compliance issues.</p><p style="margin: 28px 0 24px 0;"><a href="{{monitoring_link}}" class="btn btn-error">Review concerns</a></p>
           </mj-text>
         </mj-column>
       </mj-section>
