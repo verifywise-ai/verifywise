@@ -112,7 +112,6 @@ jobs:
   # test matrix above for pass/fail.
   coverage:
     name: Coverage
-    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -132,7 +131,7 @@ jobs:
         run: npm ci --legacy-peer-deps
 
       - name: Run tests with coverage
-        run: npx vitest run --coverage
+        run: npm run test:ci
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v7
