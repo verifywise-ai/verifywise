@@ -57,7 +57,7 @@
                 <tr><td class="data-label">PII detections</td><td class="data-value">{{pii_count}}</td></tr>
                 <tr><td class="data-label">Content filter hits</td><td class="data-value">{{content_filter_count}}</td></tr>
                 <tr><td class="data-label">Active guardrail rules</td><td class="data-value">{{active_rules}}</td></tr>
-                </table><p class="email-body">This could indicate a policy violation, a misconfigured rule, or an unusual usage pattern. Review the guardrail logs and recent requests.</p><p style="margin: 28px 0 0 0;"><a href="{{guardrails_url}}" class="btn btn-primary">View guardrail logs</a></p>
+                </table><p class="email-body">This could indicate a policy violation, a misconfigured rule, or an unusual usage pattern. Review the guardrail logs and recent requests.</p><p style="margin: 28px 0 24px 0;"><a href="{{guardrails_url}}" class="btn btn-primary">View guardrail logs</a></p>
           </mj-text>
         </mj-column>
       </mj-section>
