@@ -52,7 +52,7 @@
       <mj-section>
         <mj-column width="100%">
           <mj-text>
-                <!-- submitterName, formName, submissionId, resubmitLink --><h2 class="email-heading">Submission received</h2><p class="email-body">Hello {{submitterName}},</p><p class="email-body">Thank you for submitting <strong>{{formName}}</strong>. Your submission has been received and is now pending review.</p><div class="box box-info"><p class="box-subtitle"><strong>Reference number:</strong> #{{submissionId}}</p></div><p class="email-body">You will receive an email notification when your submission has been reviewed.</p><p class="email-body">If you need to make changes before review, use the link below.</p><p style="margin: 28px 0 0 0;"><a href="{{resubmitLink}}" class="btn btn-info">Edit submission</a></p>
+                <!-- submitterName, formName, submissionId, resubmitLink --><h2 class="email-heading">Submission received</h2><p class="email-body">Hello {{submitterName}},</p><p class="email-body">Thank you for submitting <strong>{{formName}}</strong>. Your submission has been received and is now pending review.</p><div class="box box-info"><p class="box-subtitle"><strong>Reference number:</strong> #{{submissionId}}</p></div><p class="email-body">You will receive an email notification when your submission has been reviewed.</p><p class="email-body">If you need to make changes before review, use the link below.</p><p style="margin: 28px 0 24px 0;"><a href="{{resubmitLink}}" class="btn btn-info">Edit submission</a></p>
           </mj-text>
         </mj-column>
       </mj-section>
