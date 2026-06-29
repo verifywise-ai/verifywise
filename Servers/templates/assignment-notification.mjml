@@ -61,7 +61,7 @@
                     <tr><td class="data-label">Assigned by</td><td class="data-value">{{assigner_name}}</td></tr>
                     <tr><td class="data-label">Your role</td><td class="data-value">{{role_type}}</td></tr>
                   </table>
-                </div></div><div class="box box-primary"><p class="box-subtitle" style="color: #13715B; font-weight: 500;">{{role_description}}</p></div><p style="margin: 28px 0 0 0;"><a href="{{entity_url}}" class="btn btn-primary">View {{entity_type}}</a></p>
+                </div></div><div class="box box-primary"><p class="box-subtitle" style="color: #13715B; font-weight: 500;">{{role_description}}</p></div><p style="margin: 28px 0 24px 0;"><a href="{{entity_url}}" class="btn btn-primary">View {{entity_type}}</a></p>
           </mj-text>
         </mj-column>
       </mj-section>
