@@ -57,7 +57,7 @@
                 <tr><td class="data-label">Priority</td><td class="data-value">{{task_priority}}</td></tr>
                 <tr><td class="data-label">Status</td><td class="data-value">{{task_status}}</td></tr>
                 <tr><td class="data-label">Due date</td><td class="data-value">{{task_due_date}}</td></tr>
-                </table>{{entity_links_html}}<p style="margin: 28px 0 0 0;"><a href="{{task_url}}" class="btn btn-info">View task</a></p>
+                </table>{{entity_links_html}}<p style="margin: 28px 0 24px 0;"><a href="{{task_url}}" class="btn btn-info">View task</a></p>
           </mj-text>
         </mj-column>
       </mj-section>
