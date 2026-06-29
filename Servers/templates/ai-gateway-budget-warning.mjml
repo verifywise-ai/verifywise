@@ -57,7 +57,7 @@
                 <tr><td class="data-label">Alert threshold</td><td class="data-value">{{threshold}}%</td></tr>
                 <tr><td class="data-label">Hard limit</td><td class="data-value">{{hard_limit_status}}</td></tr>
                 <tr><td class="data-label">Total requests</td><td class="data-value">{{total_requests}}</td></tr>
-                </table><p style="margin: 28px 0 0 0;"><a href="{{gateway_url}}" class="btn btn-primary">View analytics</a></p>
+                </table><p style="margin: 28px 0 24px 0;"><a href="{{gateway_url}}" class="btn btn-primary">View analytics</a></p>
           </mj-text>
         </mj-column>
       </mj-section>
