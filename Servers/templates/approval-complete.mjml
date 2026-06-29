@@ -53,7 +53,7 @@
         <mj-column width="100%">
           <mj-text>
                 <h2 class="email-heading">Your use case has been fully approved</h2><p class="email-body">Hi {{requester_name}},</p><p class="email-body">Congratulations. Your use case has completed all approval steps and is now fully approved.</p><div class="box box-success"><p class="box-title">{{use_case_name}}</p>
-                <p class="box-status-success">All {{total_steps}} approval steps completed</p></div><p style="margin: 28px 0 0 0;"><a href="{{use_case_url}}" class="btn btn-success">View use case</a></p>
+                <p class="box-status-success">All {{total_steps}} approval steps completed</p></div><p style="margin: 28px 0 24px 0;"><a href="{{use_case_url}}" class="btn btn-success">View use case</a></p>
           </mj-text>
         </mj-column>
       </mj-section>
