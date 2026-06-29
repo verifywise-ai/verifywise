@@ -57,7 +57,7 @@
                 <tr><td class="data-label">Approved by</td><td class="data-value">{{approver_name}}</td></tr>
                 <tr><td class="data-label">Workflow</td><td class="data-value">{{workflow_name}}</td></tr>
                 <tr><td class="data-label">Next step</td><td class="data-value">Step {{next_step}} — awaiting approval</td></tr>
-                </table><p style="margin: 28px 0 0 0;"><a href="{{request_url}}" class="btn btn-success">View progress</a></p>
+                </table><p style="margin: 28px 0 24px 0;"><a href="{{request_url}}" class="btn btn-success">View progress</a></p>
           </mj-text>
         </mj-column>
       </mj-section>
