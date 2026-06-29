@@ -19,6 +19,7 @@
     "format-check": "prettier --check .",
     "preview": "vite preview",
     "test": "vitest watch",
+    "test:ci": "vitest run --coverage",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "test:e2e:headed": "playwright test --headed",
