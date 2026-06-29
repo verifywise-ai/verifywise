@@ -52,7 +52,7 @@
       <mj-section>
         <mj-column width="100%">
           <mj-text>
-                <h2 class="email-heading">Your role has been updated on {{project_name}}</h2><p class="email-body">Hi {{user_name}},</p><p class="email-body">Your role on <strong>{{project_name}}</strong> has been changed from <strong>editor</strong> to <strong>admin</strong> by {{actor_name}}.</p><p class="email-body">You now have full admin permissions for members, policies, and controls.</p><p style="margin: 28px 0 0 0;"><a href="{{project_url}}" class="btn btn-primary">Open project</a></p>
+                <h2 class="email-heading">Your role has been updated on {{project_name}}</h2><p class="email-body">Hi {{user_name}},</p><p class="email-body">Your role on <strong>{{project_name}}</strong> has been changed from <strong>editor</strong> to <strong>admin</strong> by {{actor_name}}.</p><p class="email-body">You now have full admin permissions for members, policies, and controls.</p><p style="margin: 28px 0 24px 0;"><a href="{{project_url}}" class="btn btn-primary">Open project</a></p>
           </mj-text>
         </mj-column>
       </mj-section>
