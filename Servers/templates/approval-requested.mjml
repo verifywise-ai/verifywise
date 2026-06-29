@@ -56,7 +56,7 @@
                 <p class="box-subtitle">Requested by: {{requester_name}}</p></div><table class="data-table">
                 <tr><td class="data-label">Workflow</td><td class="data-value">{{workflow_name}}</td></tr>
                 <tr><td class="data-label">Current step</td><td class="data-value">Step {{step_number}} of {{total_steps}}</td></tr>
-                </table><p style="margin: 28px 0 0 0;"><a href="{{approval_url}}" class="btn btn-primary">Review and approve</a></p>
+                </table><p style="margin: 28px 0 24px 0;"><a href="{{approval_url}}" class="btn btn-primary">Review and approve</a></p>
           </mj-text>
         </mj-column>
       </mj-section>
