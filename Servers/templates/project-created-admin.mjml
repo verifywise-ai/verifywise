@@ -52,7 +52,7 @@
       <mj-section>
         <mj-column width="100%">
           <mj-text>
-                <h2 class="email-heading">{{project_name}} is ready in VerifyWise</h2><p class="email-body">Hi {{admin_name}},</p><p class="email-body">Your project <strong>{{project_name}}</strong> has been successfully created in VerifyWise.</p><div class="box box-primary"><p class="box-title">{{project_name}}</p></div><p style="margin: 28px 0 0 0;"><a href="{{project_url}}" class="btn btn-primary">Open project</a></p>
+                <h2 class="email-heading">{{project_name}} is ready in VerifyWise</h2><p class="email-body">Hi {{admin_name}},</p><p class="email-body">Your project <strong>{{project_name}}</strong> has been successfully created in VerifyWise.</p><div class="box box-primary"><p class="box-title">{{project_name}}</p></div><p style="margin: 28px 0 24px 0;"><a href="{{project_url}}" class="btn btn-primary">Open project</a></p>
           </mj-text>
         </mj-column>
       </mj-section>
