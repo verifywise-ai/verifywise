@@ -52,7 +52,7 @@
       <mj-section>
         <mj-column width="100%">
           <mj-text>
-                <h2 class="email-heading">You are now a project editor for {{project_name}}</h2><p class="email-body">Hi {{user_name}},</p><p class="email-body">You have been added as a <strong>project editor</strong> for <strong>{{project_name}}</strong> by {{actor_name}}.</p><p class="email-body">As an editor, you can contribute evidence and documentation to policies and controls.</p><p style="margin: 28px 0 0 0;"><a href="{{project_url}}" class="btn btn-primary">Open project</a></p>
+                <h2 class="email-heading">You are now a project editor for {{project_name}}</h2><p class="email-body">Hi {{user_name}},</p><p class="email-body">You have been added as a <strong>project editor</strong> for <strong>{{project_name}}</strong> by {{actor_name}}.</p><p class="email-body">As an editor, you can contribute evidence and documentation to policies and controls.</p><p style="margin: 28px 0 24px 0;"><a href="{{project_url}}" class="btn btn-primary">Open project</a></p>
           </mj-text>
         </mj-column>
       </mj-section>
