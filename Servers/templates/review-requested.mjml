@@ -1,31 +1,66 @@
 <mjml>
-  <mj-head>
-    <mj-font name="Roboto" href="https://fonts.googleapis.com/css?family=Roboto:300,500"></mj-font>
-    <mj-attributes>
-      <mj-all font-family="Roboto, Helvetica, sans-serif"></mj-all>
-      <mj-text font-weight="300" font-size="14px" color="#616161" line-height="24px"></mj-text>
-      <mj-section padding="0px"></mj-section>
-    </mj-attributes>
-  </mj-head>
-  <mj-body width="100%">
-    <mj-section text-align="left" padding="0px">
-      <mj-column width="100%" vertical-align="top">
-        <mj-text align="left">
-          <h2 style="color: #2c3e50; margin-bottom: 20px;">Review requested</h2>
-          <p>Hi {{reviewer_name}},</p>
-          <p><strong>{{requester_name}}</strong> has requested your review on the following {{entity_type}}:</p>
-          <div style="background-color: #f8f9fa; padding: 16px; border-radius: 4px; margin: 20px 0; border-left: 4px solid #3B82F6;">
-            <p style="margin: 0 0 8px 0; font-weight: 500; color: #2c3e50;">{{entity_name}}</p>
-            <p style="margin: 0; color: #667085; font-size: 13px;">{{project_name}}</p>
-          </div>
-          <p><strong>Message from requester:</strong></p>
-          <p style="color: #667085; font-style: italic;">"{{review_message}}"</p>
-          <p style="margin: 20px 0;">
-            <a href="{{review_url}}" style="background-color: #3B82F6; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">Start review</a>
-          </p>
-          <p style="margin-top: 30px; color: #7f8c8d; font-size: 12px;">
-            Sent from VerifyWise
-          </p>
+<mj-head>
+  <mj-font name="Inter" href="https://fonts.googleapis.com/css?family=Inter:400,500,600"></mj-font>
+  <mj-attributes>
+    <mj-all font-family="Geist, Inter, system-ui, -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" color="#344054"></mj-all>
+    <mj-text font-size="14px" line-height="22px" color="#344054" padding="0"></mj-text>
+    <mj-section padding="0px"></mj-section>
+    <mj-column padding="0px"></mj-column>
+    <mj-button background-color="#13715B" color="#ffffff" border-radius="4px" font-size="13px" font-weight="500" padding="0" height="40px"></mj-button>
+  </mj-attributes>
+  <mj-style inline="inline">
+    .email-card { background-color: #ffffff; border: 1px solid #eaecf0; border-radius: 8px; overflow: hidden; }
+    .email-heading { color: #1c2130; font-size: 20px; font-weight: 600; line-height: 1.3; margin: 0 0 16px 0; }
+    .email-body { color: #344054; font-size: 14px; line-height: 22px; margin: 0 0 16px 0; }
+    .email-muted { color: #475467; font-size: 13px; line-height: 20px; margin: 0; }
+    .email-footer { color: #838c99; font-size: 12px; line-height: 18px; text-align: center; }
+    .box { padding: 16px; border-radius: 4px; margin: 16px 0; }
+    .box-info { background-color: #f9fafb; border-left: 3px solid #13715B; }
+    .box-success { background-color: #E6F4EA; border-left: 3px solid #138A5E; }
+    .box-error { background-color: #FFD6D6; border-left: 3px solid #D32F2F; }
+    .box-warning { background-color: #FFF8E1; border-left: 3px solid #795548; }
+    .box-primary { background-color: #E6F0EC; border-left: 3px solid #13715B; }
+    .box-title { color: #1c2130; font-weight: 500; margin: 0 0 8px 0; }
+    .box-subtitle { color: #475467; font-size: 13px; margin: 0; }
+    .box-status-success { color: #138A5E; font-size: 13px; font-weight: 500; margin: 0; }
+    .box-status-error { color: #D32F2F; font-size: 13px; font-weight: 500; margin: 0; }
+    .data-table { width: 100%; font-size: 13px; border-collapse: collapse; margin: 16px 0; }
+    .data-table td { padding: 6px 0; vertical-align: top; }
+    .data-label { color: #475467; width: 130px; padding-right: 16px; }
+    .data-value { color: #1c2130; font-weight: 500; }
+    ul { margin: 0 0 16px 0; padding-left: 20px; color: #344054; }
+    li { margin-bottom: 6px; }
+    a { color: #13715B; text-decoration: none; }
+    .btn { display: inline-block; padding: 10px 20px; border-radius: 4px; text-decoration: none; font-size: 13px; font-weight: 500; color: #ffffff; }
+    .btn-primary { background-color: #13715B; }
+    .btn-success { background-color: #138A5E; }
+    .btn-error { background-color: #D32F2F; }
+    .btn-warning { background-color: #795548; }
+    .btn-info { background-color: #1565C0; }
+  </mj-style>
+</mj-head>
+  <mj-body background-color="#f4f6f8">
+    <mj-section padding="24px 16px 16px">
+      <mj-column width="100%">
+        <mj-text align="center" padding="0 0 24px 0">
+          <span style="color: #13715B; font-size: 20px; font-weight: 600; letter-spacing: -0.5px;">VerifyWise</span>
+        </mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-wrapper css-class="email-card" padding="32px">
+      <mj-section>
+        <mj-column width="100%">
+          <mj-text>
+          <h2 class="email-heading">Review requested</h2><p class="email-body">Hi {{reviewer_name}},</p><p class="email-body"><strong>{{requester_name}}</strong> has requested your review on the following {{entity_type}}.</p><div class="box box-info"><p class="box-title">{{entity_name}}</p>
+          <p class="box-subtitle">{{project_name}}</p></div><p class="email-body"><strong>Message from requester:</strong></p><p class="email-body"><span class="email-muted" style="font-style: italic;">"{{review_message}}"</span></p><p style="margin: 24px 0 0 0;"><a href="{{review_url}}" class="btn btn-info">Start review</a></p>
+          </mj-text>
+        </mj-column>
+      </mj-section>
+    </mj-wrapper>
+    <mj-section padding="24px 16px">
+      <mj-column width="100%">
+        <mj-text css-class="email-footer" align="center">
+          Sent with care from VerifyWise
         </mj-text>
       </mj-column>
     </mj-section>
