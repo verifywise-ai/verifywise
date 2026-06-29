@@ -53,7 +53,7 @@
         <mj-column width="100%">
           <mj-text>
                 <h2 class="email-heading">Virtual key budget exhausted</h2><p class="email-body">Hi {{recipient_name}},</p><p class="email-body">The virtual key <strong>"{{key_name}}"</strong> has reached its monthly spending limit. <strong>All requests using this key are now being rejected</strong>.</p><div class="box box-error"><p class="box-status-error">Spend: ${{current_spend}} / ${{monthly_limit}}</p>
-                <p class="box-subtitle">Requests are being rejected with HTTP 429</p></div><p class="email-body"><strong>To restore service:</strong></p><ul><li>Increase the key&apos;s monthly budget</li><li>Remove the budget limit entirely</li><li>Wait for the automatic monthly reset on the 1st</li></ul><p style="margin: 28px 0 0 0;"><a href="{{settings_url}}" class="btn btn-error">Manage virtual keys</a></p>
+                <p class="box-subtitle">Requests are being rejected with HTTP 429</p></div><p class="email-body"><strong>To restore service:</strong></p><ul><li>Increase the key&apos;s monthly budget</li><li>Remove the budget limit entirely</li><li>Wait for the automatic monthly reset on the 1st</li></ul><p style="margin: 28px 0 24px 0;"><a href="{{settings_url}}" class="btn btn-error">Manage virtual keys</a></p>
           </mj-text>
         </mj-column>
       </mj-section>
