@@ -1,44 +1,70 @@
 <mjml>
-  <mj-head>
-    <mj-font name="Roboto" href="https://fonts.googleapis.com/css?family=Roboto:300,500"></mj-font>
-    <mj-attributes>
-      <mj-all font-family="Roboto, Helvetica, sans-serif"></mj-all>
-      <mj-text font-weight="300" font-size="14px" color="#616161" line-height="24px"></mj-text>
-      <mj-section padding="0px"></mj-section>
-    </mj-attributes>
-  </mj-head>
-  <mj-body width="100%">
-    <mj-section text-align="left" padding="0px">
-      <mj-column width="100%" vertical-align="top">
-        <mj-text align="left">
-          <h2 style="color: #2c3e50; margin-bottom: 20px;">Guardrail activity spike</h2>
-          <p>Hi {{recipient_name}},</p>
-          <p>An unusual number of requests were blocked or masked by AI Gateway guardrails in the last hour.</p>
-          <div style="background-color: #FEF3C7; padding: 16px; border-radius: 4px; margin: 20px 0; border-left: 4px solid #F59E0B;">
-            <p style="margin: 0 0 8px 0; font-weight: 500; color: #2c3e50;">{{blocked_count}} blocked, {{masked_count}} masked in the last hour</p>
-            <p style="margin: 0; color: #667085; font-size: 13px;">This is above the normal baseline</p>
-          </div>
-          <table style="width: 100%; margin: 16px 0; font-size: 13px;">
-            <tr>
-              <td style="color: #667085; padding: 4px 0;">PII detections:</td>
-              <td style="color: #344054; padding: 4px 0;"><strong>{{pii_count}}</strong></td>
-            </tr>
-            <tr>
-              <td style="color: #667085; padding: 4px 0;">Content filter hits:</td>
-              <td style="color: #344054; padding: 4px 0;"><strong>{{content_filter_count}}</strong></td>
-            </tr>
-            <tr>
-              <td style="color: #667085; padding: 4px 0;">Active guardrail rules:</td>
-              <td style="color: #344054; padding: 4px 0;"><strong>{{active_rules}}</strong></td>
-            </tr>
-          </table>
-          <p>This could indicate a policy violation, a misconfigured rule, or an unusual usage pattern. Review the guardrail logs and recent requests.</p>
-          <p style="margin: 20px 0;">
-            <a href="{{guardrails_url}}" style="background-color: #13715B; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">View guardrail logs</a>
-          </p>
-          <p style="margin-top: 30px; color: #7f8c8d; font-size: 12px;">
-            Sent from VerifyWise
-          </p>
+<mj-head>
+  <mj-font name="Inter" href="https://fonts.googleapis.com/css?family=Inter:400,500,600"></mj-font>
+  <mj-attributes>
+    <mj-all font-family="Geist, Inter, system-ui, -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" color="#344054"></mj-all>
+    <mj-text font-size="14px" line-height="22px" color="#344054" padding="0"></mj-text>
+    <mj-section padding="0px"></mj-section>
+    <mj-column padding="0px"></mj-column>
+    <mj-button background-color="#13715B" color="#ffffff" border-radius="4px" font-size="13px" font-weight="500" padding="0" height="40px"></mj-button>
+  </mj-attributes>
+  <mj-style inline="inline">
+    .email-card { background-color: #ffffff; border: 1px solid #eaecf0; border-radius: 8px; overflow: hidden; }
+    .email-heading { color: #1c2130; font-size: 20px; font-weight: 600; line-height: 1.3; margin: 0 0 16px 0; }
+    .email-body { color: #344054; font-size: 14px; line-height: 22px; margin: 0 0 16px 0; }
+    .email-muted { color: #475467; font-size: 13px; line-height: 20px; margin: 0; }
+    .email-footer { color: #838c99; font-size: 12px; line-height: 18px; text-align: center; }
+    .box { padding: 16px; border-radius: 4px; margin: 16px 0; }
+    .box-info { background-color: #f9fafb; border-left: 3px solid #13715B; }
+    .box-success { background-color: #E6F4EA; border-left: 3px solid #138A5E; }
+    .box-error { background-color: #FFD6D6; border-left: 3px solid #D32F2F; }
+    .box-warning { background-color: #FFF8E1; border-left: 3px solid #795548; }
+    .box-primary { background-color: #E6F0EC; border-left: 3px solid #13715B; }
+    .box-title { color: #1c2130; font-weight: 500; margin: 0 0 8px 0; }
+    .box-subtitle { color: #475467; font-size: 13px; margin: 0; }
+    .box-status-success { color: #138A5E; font-size: 13px; font-weight: 500; margin: 0; }
+    .box-status-error { color: #D32F2F; font-size: 13px; font-weight: 500; margin: 0; }
+    .data-table { width: 100%; font-size: 13px; border-collapse: collapse; margin: 16px 0; }
+    .data-table td { padding: 6px 0; vertical-align: top; }
+    .data-label { color: #475467; width: 130px; padding-right: 16px; }
+    .data-value { color: #1c2130; font-weight: 500; }
+    ul { margin: 0 0 16px 0; padding-left: 20px; color: #344054; }
+    li { margin-bottom: 6px; }
+    a { color: #13715B; text-decoration: none; }
+    .btn { display: inline-block; padding: 10px 20px; border-radius: 4px; text-decoration: none; font-size: 13px; font-weight: 500; color: #ffffff; }
+    .btn-primary { background-color: #13715B; }
+    .btn-success { background-color: #138A5E; }
+    .btn-error { background-color: #D32F2F; }
+    .btn-warning { background-color: #795548; }
+    .btn-info { background-color: #1565C0; }
+  </mj-style>
+</mj-head>
+  <mj-body background-color="#f4f6f8">
+    <mj-section padding="24px 16px 16px">
+      <mj-column width="100%">
+        <mj-text align="center" padding="0 0 24px 0">
+          <span style="color: #13715B; font-size: 20px; font-weight: 600; letter-spacing: -0.5px;">VerifyWise</span>
+        </mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-wrapper css-class="email-card" padding="32px">
+      <mj-section>
+        <mj-column width="100%">
+          <mj-text>
+          <h2 class="email-heading">Guardrail activity spike</h2><p class="email-body">Hi {{recipient_name}},</p><p class="email-body">An unusual number of requests were blocked or masked by AI Gateway guardrails in the last hour.</p><div class="box box-warning"><p class="box-title">{{blocked_count}} blocked, {{masked_count}} masked in the last hour</p>
+          <p class="box-subtitle">This is above the normal baseline</p></div><table class="data-table">
+          <tr><td class="data-label">PII detections</td><td class="data-value">{{pii_count}}</td></tr>
+          <tr><td class="data-label">Content filter hits</td><td class="data-value">{{content_filter_count}}</td></tr>
+          <tr><td class="data-label">Active guardrail rules</td><td class="data-value">{{active_rules}}</td></tr>
+          </table><p class="email-body">This could indicate a policy violation, a misconfigured rule, or an unusual usage pattern. Review the guardrail logs and recent requests.</p><p style="margin: 24px 0 0 0;"><a href="{{guardrails_url}}" class="btn btn-primary">View guardrail logs</a></p>
+          </mj-text>
+        </mj-column>
+      </mj-section>
+    </mj-wrapper>
+    <mj-section padding="24px 16px">
+      <mj-column width="100%">
+        <mj-text css-class="email-footer" align="center">
+          Sent with care from VerifyWise
         </mj-text>
       </mj-column>
     </mj-section>
