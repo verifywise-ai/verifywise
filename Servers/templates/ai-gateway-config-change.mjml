@@ -56,7 +56,7 @@
                 <p class="box-subtitle">{{change_detail}}</p></div><table class="data-table">
                 <tr><td class="data-label">Changed by</td><td class="data-value">{{changed_by}}</td></tr>
                 <tr><td class="data-label">Time</td><td class="data-value">{{changed_at}}</td></tr>
-                </table><p style="margin: 28px 0 0 0;"><a href="{{action_url}}" class="btn btn-primary">{{action_label}}</a></p>
+                </table><p style="margin: 28px 0 24px 0;"><a href="{{action_url}}" class="btn btn-primary">{{action_label}}</a></p>
           </mj-text>
         </mj-column>
       </mj-section>
