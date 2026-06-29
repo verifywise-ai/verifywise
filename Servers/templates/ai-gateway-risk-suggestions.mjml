@@ -54,7 +54,7 @@
           <mj-text>
                 <h2 class="email-heading">AI Gateway risk suggestions</h2><p class="email-body">Hi {{recipient_name}},</p><p class="email-body">{{suggestion_count}} new risk suggestion(s) were detected in your AI Gateway based on recent monitoring data.</p><table style="width: 100%; margin: 24px 0; border-collapse: collapse;">
                   {{suggestion_rows}}
-                </table><p style="margin: 28px 0 0 0;"><a href="{{gateway_url}}" class="btn btn-primary">Review in VerifyWise</a></p><p class="email-muted">You can adjust detection thresholds or disable conditions in Settings &gt; Suggested risks.</p>
+                </table><p style="margin: 28px 0 24px 0;"><a href="{{gateway_url}}" class="btn btn-primary">Review in VerifyWise</a></p><p class="email-muted">You can adjust detection thresholds or disable conditions in Settings &gt; Suggested risks.</p>
           </mj-text>
         </mj-column>
       </mj-section>
