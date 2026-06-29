@@ -52,7 +52,7 @@
       <mj-section>
         <mj-column width="100%">
           <mj-text>
-                <h2 class="email-heading">AI Trust Index — weekly update</h2><p class="email-body">Hi there,</p><p class="email-body">Changes were detected in AI apps your organization tracks. Here is your weekly summary.</p>{{changedSection}}{{removedSection}}<p style="margin: 28px 0 0 0;"><a href="{{moduleUrl}}" class="btn btn-primary">Open AI Trust Index</a></p><p class="email-muted">Or jump straight to your <a href="{{trackedUrl}}">tracked apps</a>.</p>
+                <h2 class="email-heading">AI Trust Index — weekly update</h2><p class="email-body">Hi there,</p><p class="email-body">Changes were detected in AI apps your organization tracks. Here is your weekly summary.</p>{{changedSection}}{{removedSection}}<p style="margin: 28px 0 24px 0;"><a href="{{moduleUrl}}" class="btn btn-primary">Open AI Trust Index</a></p><p class="email-muted">Or jump straight to your <a href="{{trackedUrl}}">tracked apps</a>.</p>
           </mj-text>
         </mj-column>
       </mj-section>
