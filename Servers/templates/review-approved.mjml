@@ -53,7 +53,7 @@
         <mj-column width="100%">
           <mj-text>
                 <h2 class="email-heading">Your {{entity_type}} has been approved</h2><p class="email-body">Hi {{owner_name}},</p><p class="email-body">Great news. <strong>{{reviewer_name}}</strong> has approved your {{entity_type}}.</p><div class="box box-success"><p class="box-title">{{entity_name}}</p>
-                <p class="box-subtitle">{{project_name}}</p></div><p class="email-body"><strong>Reviewer&apos;s comment:</strong></p><p class="email-body"><span class="email-muted" style="font-style: italic;">"{{review_comment}}"</span></p><p style="margin: 28px 0 0 0;"><a href="{{entity_url}}" class="btn btn-success">View details</a></p>
+                <p class="box-subtitle">{{project_name}}</p></div><p class="email-body"><strong>Reviewer&apos;s comment:</strong></p><p class="email-body"><span class="email-muted" style="font-style: italic;">"{{review_comment}}"</span></p><p style="margin: 28px 0 24px 0;"><a href="{{entity_url}}" class="btn btn-success">View details</a></p>
           </mj-text>
         </mj-column>
       </mj-section>
