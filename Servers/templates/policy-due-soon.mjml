@@ -52,7 +52,7 @@
       <mj-section>
         <mj-column width="100%">
           <mj-text>
-                <h2 class="email-heading">Policy "{{policy_name}}" due soon</h2><p class="email-body">Hi {{admin_name}},</p><p class="email-body">The policy <strong>{{policy_name}}</strong> for <strong>{{project_name}}</strong> is due on <strong>{{due_date}}</strong> and is still incomplete.</p><p class="email-body"><strong>Recommended next steps:</strong></p><ul><li>Review missing evidence or controls</li><li>Assign editors if needed</li><li>Update the policy status when ready</li></ul><p style="margin: 28px 0 0 0;"><a href="{{policy_url}}" class="btn btn-info">Open policy</a></p>
+                <h2 class="email-heading">Policy "{{policy_name}}" due soon</h2><p class="email-body">Hi {{admin_name}},</p><p class="email-body">The policy <strong>{{policy_name}}</strong> for <strong>{{project_name}}</strong> is due on <strong>{{due_date}}</strong> and is still incomplete.</p><p class="email-body"><strong>Recommended next steps:</strong></p><ul><li>Review missing evidence or controls</li><li>Assign editors if needed</li><li>Update the policy status when ready</li></ul><p style="margin: 28px 0 24px 0;"><a href="{{policy_url}}" class="btn btn-info">Open policy</a></p>
           </mj-text>
         </mj-column>
       </mj-section>
