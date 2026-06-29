@@ -57,7 +57,7 @@
                 <tr><td class="data-label">Risk level</td><td class="data-value">{{risk_level}}</td></tr>
                 <tr><td class="data-label">Last reviewed</td><td class="data-value">{{last_review_date}}</td></tr>
                 <tr><td class="data-label">Projects</td><td class="data-value">{{project_count}} project(s)</td></tr>
-                </table><p class="email-body"><strong>Next steps:</strong></p><ul><li>Review vendor documentation</li><li>Check compliance status</li><li>Update risk assessment if needed</li><li>Complete the review checklist</li></ul><p style="margin: 28px 0 0 0;"><a href="{{vendor_url}}" class="btn btn-warning">Review vendor</a></p>
+                </table><p class="email-body"><strong>Next steps:</strong></p><ul><li>Review vendor documentation</li><li>Check compliance status</li><li>Update risk assessment if needed</li><li>Complete the review checklist</li></ul><p style="margin: 28px 0 24px 0;"><a href="{{vendor_url}}" class="btn btn-warning">Review vendor</a></p>
           </mj-text>
         </mj-column>
       </mj-section>
