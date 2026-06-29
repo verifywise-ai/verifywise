@@ -52,7 +52,7 @@
       <mj-section>
         <mj-column width="100%">
           <mj-text>
-                <h2 class="email-heading">Approval request rejected</h2><p class="email-body">Hi {{requester_name}},</p><p class="email-body">Your approval request has been reviewed and rejected by <strong>{{rejector_name}}</strong>.</p><div class="box box-error"><p class="box-title">{{request_name}}</p></div><p class="email-body"><strong>Reason:</strong></p><p class="email-body"><span class="email-muted" style="font-style: italic;">"{{rejection_reason}}"</span></p><p style="margin: 28px 0 0 0;"><a href="{{request_url}}" class="btn btn-error">View request</a></p>
+                <h2 class="email-heading">Approval request rejected</h2><p class="email-body">Hi {{requester_name}},</p><p class="email-body">Your approval request has been reviewed and rejected by <strong>{{rejector_name}}</strong>.</p><div class="box box-error"><p class="box-title">{{request_name}}</p></div><p class="email-body"><strong>Reason:</strong></p><p class="email-body"><span class="email-muted" style="font-style: italic;">"{{rejection_reason}}"</span></p><p style="margin: 28px 0 24px 0;"><a href="{{request_url}}" class="btn btn-error">View request</a></p>
           </mj-text>
         </mj-column>
       </mj-section>
