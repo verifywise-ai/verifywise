@@ -15,6 +15,10 @@ import { CustomizableButton } from "../../components/button/customizable-button"
 import { deletePolicy } from "../../../application/repository/policy.repository";
 import { EmptyState } from "../../components/EmptyState";
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
+import StandardTableHead from "../../components/Table/StandardTableHead";
+import { TableEmptyStateLayout } from "../../components/Table/TableEmptyStateLayout";
+import { useStandardTable } from "../../../application/hooks/useStandardTable";
+import type { StandardColumn } from "../../../domain/types/standardTable";
 import { SearchBox } from "../../components/Search";
 import { handleAlert } from "../../../application/tools/alertUtils";
 import Alert from "../../components/Alert";
@@ -450,6 +454,58 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
     getGroupKey: getPolicyGroupKey,
   });
 
+  const standardTableColumns = useMemo(
+    (): StandardColumn[] =>
+      POLICY_TABLE_COLUMNS.filter((col) => col.alwaysVisible || visibleColumns.has(col.key)).map(
+        (col) => ({
+          id: col.key,
+          label: col.key === "actions" ? "" : col.label.toUpperCase(),
+          sortable: col.key !== "actions",
+        }),
+      ),
+    [visibleColumns],
+  );
+
+  const policySortComparator = useCallback(
+    (a: PolicyManagerModel, b: PolicyManagerModel, key: string): number => {
+      switch (key) {
+        case "title":
+          return (a.title?.toLowerCase() || "").localeCompare(b.title?.toLowerCase() || "");
+        case "status":
+          return (a.status?.toLowerCase() || "").localeCompare(b.status?.toLowerCase() || "");
+        case "next_review": {
+          const aVal = a.next_review_date ? new Date(a.next_review_date).getTime() : 0;
+          const bVal = b.next_review_date ? new Date(b.next_review_date).getTime() : 0;
+          return aVal - bVal;
+        }
+        case "author":
+          return (a.author_id?.toString() || "").localeCompare(b.author_id?.toString() || "");
+        case "last_updated": {
+          const aVal = a.last_updated_at ? new Date(a.last_updated_at).getTime() : 0;
+          const bVal = b.last_updated_at ? new Date(b.last_updated_at).getTime() : 0;
+          return aVal - bVal;
+        }
+        case "updated_by":
+          return (a.last_updated_by?.toString() || "").localeCompare(
+            b.last_updated_by?.toString() || "",
+          );
+        default:
+          return 0;
+      }
+    },
+    [],
+  );
+
+  const { sortConfig, handleSort } = useStandardTable<PolicyManagerModel>({
+    rows: filteredPolicies,
+    storageKey: "policy_manager_table",
+    defaultSortColumn: "",
+    defaultSortDirection: null,
+    sortComparator: policySortComparator,
+  });
+
+  const hasActiveFilters = !!searchTerm.trim() || !!selectedStatus || folderPolicyIds !== null;
+
   // Define export columns for policy table
   const exportColumns = useMemo(() => {
     return [
@@ -633,35 +689,45 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
             {isLoading ? (
               <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
             ) : filteredPolicies.length === 0 ? (
-              <EmptyState
-                icon={FileText}
-                message={
-                  searchTerm
-                    ? "No matching policies found."
-                    : "No policies yet. Policies define the rules your organization follows for AI governance."
+              <TableEmptyStateLayout
+                header={
+                  <StandardTableHead
+                    columns={standardTableColumns}
+                    sortConfig={sortConfig}
+                    onSort={handleSort}
+                  />
                 }
-                imageAlt="No policies available"
               >
-                {!searchTerm && (
-                  <>
-                    <EmptyStateTip
-                      icon={Sparkles}
-                      title="Create from templates"
-                      description="Start with a blank policy or use one of the built-in templates. Fill in the details for your organization and publish when ready."
-                    />
-                    <EmptyStateTip
-                      icon={Shield}
-                      title="Link policies to controls"
-                      description="Each policy can be mapped to specific compliance controls, creating an audit trail showing which policies address which requirements."
-                    />
-                    <EmptyStateTip
-                      icon={Link2}
-                      title="Common policies to start with"
-                      description="AI Ethics Policy, Data Governance Policy, AI Risk Management Policy, Incident Response Policy, and Third-Party AI Vendor Policy."
-                    />
-                  </>
-                )}
-              </EmptyState>
+                <EmptyState
+                  icon={FileText}
+                  message={
+                    hasActiveFilters
+                      ? "No matching policies found."
+                      : "No policies yet. Policies define the rules your organization follows for AI governance."
+                  }
+                  imageAlt="No policies available"
+                >
+                  {!hasActiveFilters && (
+                    <>
+                      <EmptyStateTip
+                        icon={Sparkles}
+                        title="Create from templates"
+                        description="Start with a blank policy or use one of the built-in templates. Fill in the details for your organization and publish when ready."
+                      />
+                      <EmptyStateTip
+                        icon={Shield}
+                        title="Link policies to controls"
+                        description="Each policy can be mapped to specific compliance controls, creating an audit trail showing which policies address which requirements."
+                      />
+                      <EmptyStateTip
+                        icon={Link2}
+                        title="Common policies to start with"
+                        description="AI Ethics Policy, Data Governance Policy, AI Risk Management Policy, Incident Response Policy, and Third-Party AI Vendor Policy."
+                      />
+                    </>
+                  )}
+                </EmptyState>
+              </TableEmptyStateLayout>
             ) : (
               <GroupedTableView
                 groupedData={groupedPolicies}

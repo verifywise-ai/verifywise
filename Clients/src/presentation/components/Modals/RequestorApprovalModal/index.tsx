@@ -542,15 +542,12 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
           }}
         >
           {hasNoData ? (
-            <Box
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                height: "100%",
-              }}
-            >
-              <EmptyState message="No approval requests found." icon={ClipboardCheck} />
+            <Box sx={{ width: "100%", height: "100%" }}>
+              <EmptyState
+                message="No approval requests found."
+                icon={ClipboardCheck}
+                fillContainer
+              />
             </Box>
           ) : (
             <Stack direction="row" spacing={12} sx={{ height: "100%", flex: 1 }}>
