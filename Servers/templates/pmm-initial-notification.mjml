@@ -54,7 +54,7 @@
           <mj-text>
                 <h2 class="email-heading">Post-market monitoring due for "{{use_case_title}}"</h2><p class="email-body">Hi {{stakeholder_name}},</p><p class="email-body">A new post-market monitoring cycle (#{{cycle_number}}) is due for the use case <strong>{{use_case_title}}</strong>.</p><table class="data-table">
                 <tr><td class="data-label">Due date</td><td class="data-value">{{due_date}} ({{days_remaining}} days remaining)</td></tr>
-                </table><p class="email-body">Please complete the monitoring questionnaire to ensure continued compliance with EU AI Act requirements.</p><p class="email-body"><strong>What you need to do:</strong></p><ul><li>Review the current status of risks, models, and vendors</li><li>Answer the compliance questions</li><li>Flag any concerns that require attention</li><li>Submit the completed form before the due date</li></ul><p style="margin: 28px 0 0 0;"><a href="{{monitoring_link}}" class="btn btn-primary">Complete monitoring</a></p>
+                </table><p class="email-body">Please complete the monitoring questionnaire to ensure continued compliance with EU AI Act requirements.</p><p class="email-body"><strong>What you need to do:</strong></p><ul><li>Review the current status of risks, models, and vendors</li><li>Answer the compliance questions</li><li>Flag any concerns that require attention</li><li>Submit the completed form before the due date</li></ul><p style="margin: 28px 0 24px 0;"><a href="{{monitoring_link}}" class="btn btn-primary">Complete monitoring</a></p>
           </mj-text>
         </mj-column>
       </mj-section>
