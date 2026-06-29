@@ -1,3 +1,5 @@
+import path from "path";
+import fs from "fs";
 import { QueryTypes } from "sequelize";
 import { sequelize } from "../database/db";
 import logger from "./logger/fileLogger";
@@ -5,6 +7,49 @@ import {
   IManifestCountry,
   RegulationChange,
 } from "../domain.layer/interfaces/i.regulationsTracker";
+
+// ---------------------------------------------------------------------------
+// Country flags
+// ---------------------------------------------------------------------------
+// The public manifest feed does NOT carry a per-country `flag` (only the
+// per-country detail endpoint does, inconsistently). So every sync would
+// otherwise store flag-less rows and the Tracked/Browse/Deadlines flags would
+// vanish on the next sync. We treat the committed seed snapshot as the durable
+// source of truth for flags (a static, presentation-only slug -> emoji map) and
+// re-inject the flag into every row we store. Loaded once, lazily.
+let _flagMap: Map<string, string> | null = null;
+
+function flagBySlug(): Map<string, string> {
+  if (_flagMap) return _flagMap;
+  const map = new Map<string, string>();
+  try {
+    const snapshotPath = path.join(
+      __dirname,
+      "../database/seeds/regulations-tracker-snapshot.json",
+    );
+    const snapshot = JSON.parse(fs.readFileSync(snapshotPath, "utf8"));
+    for (const c of snapshot.countries ?? []) {
+      if (c?.slug && c?.flag) map.set(String(c.slug).trim().toLowerCase(), c.flag);
+    }
+  } catch (e) {
+    logger.warn(`[regulations-tracker] could not load flag map: ${(e as Error).message}`);
+  }
+  _flagMap = map;
+  return map;
+}
+
+/**
+ * Returns `data` with a top-level `flag` guaranteed: keeps any flag the feed
+ * supplied, otherwise fills it from the static seed-snapshot map keyed by slug.
+ * Presentation-only — never part of the change-detection hash.
+ */
+export function withFlag(slug: string, data: any): any {
+  const existing = data && typeof data === "object" ? (data as Record<string, unknown>).flag : null;
+  if (typeof existing === "string" && existing) return data;
+  const flag = flagBySlug().get(slug.trim().toLowerCase());
+  if (!flag) return data;
+  return { ...(data && typeof data === "object" ? data : {}), flag };
+}
 
 export function renderChangeLine(c: RegulationChange): string {
   switch (c.field) {
@@ -297,8 +342,9 @@ export async function upsertFeedTx(
       upsertedSlugs.push(slug);
       const existingHash = existingMap.get(slug);
       // Prefer the full detail object (regulations/timeline/meta) when the caller
-      // supplied it; otherwise store the manifest summary entry.
-      const storedData = detailBySlug?.get(slug) ?? c;
+      // supplied it; otherwise store the manifest summary entry. Always re-inject
+      // the flag (the feed doesn't carry one) so it survives every sync.
+      const storedData = withFlag(slug, detailBySlug?.get(slug) ?? c);
 
       if (existingHash !== undefined) {
         const hashMoved = existingHash !== c.hash;
