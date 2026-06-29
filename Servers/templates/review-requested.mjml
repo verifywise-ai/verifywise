@@ -15,11 +15,11 @@
     .email-muted { color: #475467; font-size: 14px; line-height: 22px; margin: 0; }
     .email-footer { color: #838c99; font-size: 13px; line-height: 20px; text-align: center; }
     .box { padding: 20px; border-radius: 6px; margin: 24px 0; }
-    .box-info { background-color: #f9fafb; border-left: 3px solid #13715B; }
-    .box-success { background-color: #E6F4EA; border-left: 3px solid #138A5E; }
-    .box-error { background-color: #FFD6D6; border-left: 3px solid #D32F2F; }
-    .box-warning { background-color: #FFF8E1; border-left: 3px solid #795548; }
-    .box-primary { background-color: #E6F0EC; border-left: 3px solid #13715B; }
+    .box-info { background-color: #f9fafb; }
+    .box-success { background-color: #E6F4EA; }
+    .box-error { background-color: #FFD6D6; }
+    .box-warning { background-color: #FFF8E1; }
+    .box-primary { background-color: #E6F0EC; }
     .box-title { color: #1c2130; font-weight: 600; font-size: 15px; margin: 0 0 10px 0; }
     .box-subtitle { color: #475467; font-size: 14px; line-height: 22px; margin: 0; }
     .box-status-success { color: #138A5E; font-size: 14px; font-weight: 600; margin: 0; }
