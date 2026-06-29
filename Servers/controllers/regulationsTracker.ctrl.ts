@@ -12,7 +12,6 @@ import {
   getSettings,
   upsertSettings,
   getGlobalFeed,
-  setGlobalFeeds,
   getMetaQuery,
   normalizeSlug,
   enrichWithFlags,
@@ -30,8 +29,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const isAdmin = (role?: string) => role === "Admin" || role === "SuperAdmin";
 // Tracking (track / untrack / bulk-track) is allowed for admins and editors.
 // Settings remain admin-only via isAdmin.
-const canTrack = (role?: string) =>
-  role === "Admin" || role === "SuperAdmin" || role === "Editor";
+const canTrack = (role?: string) => role === "Admin" || role === "SuperAdmin" || role === "Editor";
 
 const file = "regulationsTracker.ctrl.ts";
 
@@ -72,7 +70,7 @@ export async function getCountries(req: Request, res: Response): Promise<any> {
       userId: req.userId!,
       organizationId: req.organizationId!,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500]("Internal server error"));
   }
 }
 
@@ -160,7 +158,7 @@ export async function getCountryDetail(req: Request, res: Response): Promise<any
       userId: req.userId!,
       organizationId: req.organizationId!,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500]("Internal server error"));
   }
 }
 
@@ -197,7 +195,7 @@ export async function getTracked(req: Request, res: Response): Promise<any> {
       userId: req.userId!,
       organizationId: req.organizationId!,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500]("Internal server error"));
   }
 }
 
@@ -239,7 +237,7 @@ export async function trackCountryCtrl(req: Request, res: Response): Promise<any
       userId: req.userId!,
       organizationId: req.organizationId!,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500]("Internal server error"));
   }
 }
 
@@ -286,7 +284,7 @@ export async function trackBulkCtrl(req: Request, res: Response): Promise<any> {
       userId: req.userId!,
       organizationId: req.organizationId!,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500]("Internal server error"));
   }
 }
 
@@ -326,7 +324,7 @@ export async function untrackCountryCtrl(req: Request, res: Response): Promise<a
       userId: req.userId!,
       organizationId: req.organizationId!,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500]("Internal server error"));
   }
 }
 
@@ -355,9 +353,9 @@ export async function getSettingsCtrl(req: Request, res: Response): Promise<any>
     // effort: never let it turn this GET into a 500.
     let feed_last_data_update: string | null = null;
     try {
-      const horizon = (await getGlobalFeed("horizon")) as
-        | { meta?: { lastDataUpdate?: unknown } }
-        | null;
+      const horizon = (await getGlobalFeed("horizon")) as {
+        meta?: { lastDataUpdate?: unknown };
+      } | null;
       const v = horizon?.meta?.lastDataUpdate;
       if (typeof v === "string") feed_last_data_update = v;
     } catch {
@@ -404,7 +402,7 @@ export async function getSettingsCtrl(req: Request, res: Response): Promise<any>
       userId: req.userId!,
       organizationId: req.organizationId!,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500]("Internal server error"));
   }
 }
 
@@ -464,7 +462,7 @@ export async function updateSettingsCtrl(req: Request, res: Response): Promise<a
       userId: req.userId!,
       organizationId: req.organizationId!,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500]("Internal server error"));
   }
 }
 
@@ -502,7 +500,7 @@ export async function getHorizon(req: Request, res: Response): Promise<any> {
       userId: req.userId!,
       organizationId: req.organizationId!,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500]("Internal server error"));
   }
 }
 
@@ -563,7 +561,7 @@ export async function getDeadlines(req: Request, res: Response): Promise<any> {
       userId: req.userId!,
       organizationId: req.organizationId!,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500]("Internal server error"));
   }
 }
 
@@ -577,12 +575,11 @@ export async function getFrameworks(req: Request, res: Response): Promise<any> {
     organizationId: req.organizationId!,
   });
   try {
+    // Read-only: try the live feed, fall back to the cached copy. The cache is
+    // written exclusively by the daily sync job's global-feed refresh — a GET
+    // must not mutate shared, cross-tenant state, so we do NOT write here.
     try {
       const live = (await fetchSnapshot()) as { frameworks?: unknown[] };
-      // Opportunistically refresh the cached copy so the stale fallback stays warm.
-      if (Array.isArray(live.frameworks)) {
-        await setGlobalFeeds({ frameworks: live.frameworks }).catch(() => undefined);
-      }
       return res.status(200).json(STATUS_CODE[200]({ items: live.frameworks ?? [], stale: false }));
     } catch {
       const stored = (await getGlobalFeed("frameworks")) as unknown[] | null;
@@ -598,7 +595,7 @@ export async function getFrameworks(req: Request, res: Response): Promise<any> {
       userId: req.userId!,
       organizationId: req.organizationId!,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500]("Internal server error"));
   }
 }
 
@@ -644,7 +641,7 @@ export async function triggerSync(req: Request, res: Response): Promise<any> {
       userId: req.userId!,
       organizationId: req.organizationId!,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500]("Internal server error"));
   }
 }
 
@@ -738,7 +735,7 @@ export async function getImpactAnalysis(req: Request, res: Response): Promise<an
       userId: req.userId!,
       organizationId: req.organizationId!,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500]("Internal server error"));
   }
 }
 
@@ -795,6 +792,6 @@ export async function refreshImpactAnalysis(req: Request, res: Response): Promis
       userId: req.userId!,
       organizationId: req.organizationId!,
     });
-    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+    return res.status(500).json(STATUS_CODE[500]("Internal server error"));
   }
 }

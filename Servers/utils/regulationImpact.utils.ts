@@ -81,8 +81,18 @@ export function validateVerdicts(raw: unknown, sent: Candidate[]): LlmVerdict[] 
   const out: LlmVerdict[] = [];
   for (const r of results) {
     if (!r || typeof r !== "object") continue;
-    const { type, id, affected, why } = r as Record<string, unknown>;
-    if (typeof type !== "string" || typeof id !== "number") continue;
+    const { type, id: rawId, affected, why } = r as Record<string, unknown>;
+    if (typeof type !== "string") continue;
+    // Some models serialize numeric ids as JSON strings ("id": "42"). Coerce
+    // those rather than silently dropping the verdict. The sentKeys check below
+    // still rejects any id that wasn't actually sent (hallucination guard).
+    const id =
+      typeof rawId === "number"
+        ? rawId
+        : typeof rawId === "string" && /^\d+$/.test(rawId.trim())
+          ? parseInt(rawId, 10)
+          : NaN;
+    if (!Number.isInteger(id)) continue;
     if (!sentKeys.has(`${type}:${id}`)) continue;
     if (typeof affected !== "boolean") continue;
     if (typeof why !== "string" || why.trim() === "") continue;
@@ -321,8 +331,24 @@ function parseJsonLoose(text: string): unknown {
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
   const body = fenced ? fenced[1] : text;
   const start = body.indexOf("{");
-  const end = body.lastIndexOf("}");
-  if (start === -1 || end === -1) throw new Error("no JSON object in response");
+  if (start === -1) throw new Error("no JSON object in response");
+  // Scan brace depth to find the matching close of the FIRST top-level object,
+  // rather than lastIndexOf("}"). The latter mis-bounds when the model appends
+  // prose containing a "}" after the JSON (e.g. "... the {control 7} item.").
+  let depth = 0;
+  let end = -1;
+  for (let i = start; i < body.length; i++) {
+    const ch = body[i];
+    if (ch === "{") depth++;
+    else if (ch === "}") {
+      depth--;
+      if (depth === 0) {
+        end = i;
+        break;
+      }
+    }
+  }
+  if (end === -1) throw new Error("unterminated JSON object in response");
   return JSON.parse(body.slice(start, end + 1));
 }
 

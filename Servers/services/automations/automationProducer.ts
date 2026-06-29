@@ -16,7 +16,12 @@ export async function enqueueAutomationAction(
 }
 
 export async function scheduleVendorReviewDateNotification() {
-  await automationQueue.obliterate({ force: true });
+  // NOTE: previously called automationQueue.obliterate({ force: true }) here,
+  // which wiped the ENTIRE shared queue (every repeatable schedule, not just
+  // this one). That made job survival depend on registration order and silently
+  // dropped sibling jobs (e.g. the regulations-tracker daily sync) whenever a
+  // scheduler that obliterates ran after them. queue.add with a repeat pattern
+  // is idempotent by repeat key, so no obliterate is needed.
   logger.info("Adding Vendor Review Date Notification jobs to the queue...");
   // Vendor Review Date Notification Every day at 12 am
   await automationQueue.add(
@@ -49,7 +54,9 @@ export async function schedulePolicyDueSoonNotification() {
 }
 
 export async function scheduleReportNotification() {
-  await automationQueue.obliterate({ force: true });
+  // NOTE: obliterate({ force: true }) removed here too — see the comment in
+  // scheduleVendorReviewDateNotification. It wiped the whole queue and made
+  // job survival order-dependent. The repeatable add below is idempotent.
   logger.info("Adding Report Notification jobs to the queue...");
   // Report Notification Every day at 12 am
   await automationQueue.add(

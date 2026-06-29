@@ -86,6 +86,24 @@ describe("validateVerdicts", () => {
     expect(validateVerdicts(null, sent)).toEqual([]);
     expect(validateVerdicts({ nope: 1 }, sent)).toEqual([]);
   });
+  it("coerces numeric-string ids that some models emit", () => {
+    const raw = { results: [{ type: "system", id: "2", affected: false, why: "ok" }] };
+    expect(validateVerdicts(raw, sent)).toEqual([
+      { type: "system", id: 2, affected: false, why: "ok" },
+    ]);
+  });
+  it("still drops non-numeric string ids and hallucinated coerced ids", () => {
+    expect(
+      validateVerdicts(
+        { results: [{ type: "system", id: "abc", affected: true, why: "x" }] },
+        sent,
+      ),
+    ).toEqual([]);
+    // "99" coerces to 99 but 99 was never sent → rejected by the sentKeys guard.
+    expect(
+      validateVerdicts({ results: [{ type: "system", id: "99", affected: true, why: "x" }] }, sent),
+    ).toEqual([]);
+  });
 });
 
 describe("getCandidates", () => {

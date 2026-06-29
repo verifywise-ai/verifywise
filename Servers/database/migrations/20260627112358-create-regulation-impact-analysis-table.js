@@ -15,10 +15,10 @@ module.exports = {
         UNIQUE (organization_id, country_slug)
       );
     `);
-    await queryInterface.sequelize.query(`
-      CREATE INDEX IF NOT EXISTS idx_reg_impact_org_slug
-        ON verifywise.regulation_impact_analysis(organization_id, country_slug);
-    `);
+    // NOTE: no explicit index on (organization_id, country_slug) — the UNIQUE
+    // constraint above already creates a B-tree index on exactly those columns,
+    // which serves every lookup (all reads are by org+slug). A separate index
+    // would be a pure duplicate (extra storage + write cost, no query benefit).
     // Settings columns for the impact toggle + last-run line (§5a)
     await queryInterface.sequelize.query(`
       ALTER TABLE verifywise.regulation_tracker_settings
@@ -27,8 +27,10 @@ module.exports = {
     `);
   },
   async down(queryInterface) {
+    // ALTER TABLE IF EXISTS so an out-of-order rollback (settings table already
+    // dropped by an earlier migration's down) is a no-op instead of throwing.
     await queryInterface.sequelize.query(`
-      ALTER TABLE verifywise.regulation_tracker_settings
+      ALTER TABLE IF EXISTS verifywise.regulation_tracker_settings
         DROP COLUMN IF EXISTS impact_enabled,
         DROP COLUMN IF EXISTS last_impact_run_at;
     `);

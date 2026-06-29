@@ -46,9 +46,7 @@ export function currentIsoWeek(date: Date): string {
 // last_run_week VARCHAR(10) column to hold this day key (no migration); the
 // 10-char width fits "YYYY-MM-DD" exactly.
 export function currentIsoDay(date: Date): string {
-  return new Date(
-    Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
-  )
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()))
     .toISOString()
     .slice(0, 10);
 }
@@ -97,6 +95,65 @@ export async function recordRunStatus(status: string): Promise<void> {
      WHERE id = 1;`,
     { replacements: { status: status.slice(0, 120) } },
   );
+}
+
+// ---------------------------------------------------------------------------
+// Cross-process sync lock
+// ---------------------------------------------------------------------------
+
+// Arbitrary, stable 64-bit key identifying the regulations-tracker sync lock.
+// Chosen once; must stay constant so every process contends on the same key.
+const SYNC_ADVISORY_LOCK_KEY = 4216_2026;
+
+/**
+ * Try to acquire the cross-process regulations-tracker sync lock.
+ *
+ * Returns a release function on success, or `null` if another process/connection
+ * already holds it. Uses a Postgres session-level advisory lock pinned to a
+ * single pooled connection via a dedicated transaction, so acquire and release
+ * always run on the same backend (required for pg_advisory_unlock to match).
+ *
+ * Unlike a module-level boolean, this is effective across multiple worker
+ * processes / pods — the real concurrency boundary for a horizontally-scaled
+ * BullMQ deployment.
+ */
+export async function acquireSyncLock(): Promise<(() => Promise<void>) | null> {
+  const tx = await sequelize.transaction();
+  try {
+    const rows = (await sequelize.query(`SELECT pg_try_advisory_lock(:key) AS acquired`, {
+      replacements: { key: SYNC_ADVISORY_LOCK_KEY },
+      type: QueryTypes.SELECT,
+      transaction: tx,
+    })) as { acquired: boolean }[];
+    if (!rows[0]?.acquired) {
+      // Didn't get the lock — close the holding transaction and report contention.
+      await tx.commit();
+      return null;
+    }
+    // Hold the lock on this transaction's connection. The returned release
+    // function unlocks on the SAME connection, then commits to free it back to
+    // the pool. Best-effort: never throws out of release.
+    return async () => {
+      try {
+        await sequelize.query(`SELECT pg_advisory_unlock(:key)`, {
+          replacements: { key: SYNC_ADVISORY_LOCK_KEY },
+          type: QueryTypes.SELECT,
+          transaction: tx,
+        });
+      } catch (e) {
+        logger.warn(`[regulations-tracker] advisory unlock failed: ${(e as Error).message}`);
+      } finally {
+        await tx.commit().catch(() => undefined);
+      }
+    };
+  } catch (e) {
+    await tx.rollback().catch(() => undefined);
+    logger.warn(`[regulations-tracker] advisory lock acquire failed: ${(e as Error).message}`);
+    // Fail open: if the lock machinery itself errors, let the sync proceed
+    // rather than silently never running. The day-key guard still prevents
+    // duplicate same-day work in the common case.
+    return async () => undefined;
+  }
 }
 
 export interface CountryChange {
@@ -486,6 +543,11 @@ export async function getAffectedOrgsBySlugs(
   slugs: string[],
 ): Promise<{ organization_id: number; country_slug: string; name: string | null }[]> {
   if (!slugs.length) return [];
+  // NOTE: intentionally NO `c.is_active = TRUE` filter. This is called with both
+  // CHANGED and newly-REMOVED slugs; a removed country has is_active = FALSE but
+  // its org still needs the "removed from the feed" notification. The LEFT JOIN
+  // also tolerates a truly-orphaned tracking row (country gone from the catalog
+  // entirely) by returning name = NULL, which the caller resolves to the slug.
   return (await sequelize.query(
     `SELECT DISTINCT t.organization_id, t.country_slug, c.name
      FROM regulation_tracked_countries t

@@ -73,7 +73,9 @@ export default function Settings() {
   // Editing settings requires an organization administrator. A super-admin viewing an
   // organization has read-only access (the backend blocks all writes), so they see the
   // read-only view rather than editable controls that would fail to save.
-  const isAdmin = !isSuperAdmin && (userRoleName === "Admin" || userRoleName === "SuperAdmin");
+  // Note: the `userRoleName === "SuperAdmin"` case is intentionally excluded —
+  // !isSuperAdmin already gates super-admins out, so only org Admins can edit.
+  const isAdmin = !isSuperAdmin && userRoleName === "Admin";
 
   const { data: settingsData, isLoading: settingsLoading } = useSettings();
   const { users, loading: usersLoading } = useUsers();

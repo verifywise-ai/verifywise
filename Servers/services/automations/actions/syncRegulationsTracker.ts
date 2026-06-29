@@ -22,6 +22,7 @@ import {
   escapeHtml,
   getSettings,
   setLastImpactRunAt,
+  acquireSyncLock,
   CountryChange,
 } from "../../../utils/regulationsTracker.utils";
 import { runImpactAnalysis, ImpactResult } from "../../../utils/regulationImpact.utils";
@@ -178,7 +179,20 @@ async function renderDigest(
 // with the scheduled daily job (or with another admin trigger). The two would
 // otherwise both hit the external feed (~60 detail fetches each) and race on the
 // global-feed / run-status writes that sit outside upsertFeedTx's row lock.
+// In-process fast-path guard: cheaply short-circuits a second concurrent call
+// within the SAME process without a DB round-trip. The authoritative,
+// cross-process guard is the Postgres advisory lock below (acquireSyncLock).
 let syncInProgress = false;
+
+const SKIPPED_RESULT = (reason: string) => ({
+  fetched: 0,
+  changed: 0,
+  newlyAdded: 0,
+  newlyRemoved: 0,
+  orgsEmailed: 0,
+  orgsNotified: 0,
+  skipped: reason,
+});
 
 export async function syncRegulationsTracker(deps?: { feed?: unknown }): Promise<{
   fetched: number;
@@ -190,22 +204,23 @@ export async function syncRegulationsTracker(deps?: { feed?: unknown }): Promise
   skipped?: string;
 }> {
   if (syncInProgress) {
-    logger.info("[regulations-tracker] sync already in progress; skipping concurrent run");
-    return {
-      fetched: 0,
-      changed: 0,
-      newlyAdded: 0,
-      newlyRemoved: 0,
-      orgsEmailed: 0,
-      orgsNotified: 0,
-      skipped: "already running",
-    };
+    logger.info("[regulations-tracker] sync already in progress (same process); skipping");
+    return SKIPPED_RESULT("already running");
+  }
+  // Cross-process lock: prevents the daily cron and an admin trigger (or two
+  // worker pods) from both hitting the external feed and racing on the global
+  // writes that sit outside upsertFeedTx's row lock.
+  const release = await acquireSyncLock();
+  if (!release) {
+    logger.info("[regulations-tracker] sync already in progress (another process); skipping");
+    return SKIPPED_RESULT("already running");
   }
   syncInProgress = true;
   try {
     return await runSync(deps);
   } finally {
     syncInProgress = false;
+    await release();
   }
 }
 
@@ -424,57 +439,152 @@ async function runSync(deps?: { feed?: unknown }): Promise<{
 
       let impactAnalysesRun = 0;
       let impactCapLogged = false;
+      // Count orgs whose dispatch failed, so a partial failure is visible in the
+      // run status instead of either aborting the whole job (losing every
+      // not-yet-notified org) or silently passing.
+      let orgsFailed = 0;
 
       for (const [orgId, countries] of byOrg) {
-        let orgHasKey = false;
-        let impactEnabled = true;
-        let impactRan = false; // becomes true if at least one impact pass executes this run
+        // Isolate each org's dispatch: a failure for one org (DB blip, email
+        // provider error) must not abort the loop and starve every subsequent
+        // org of its notification. We log + count the failure and move on, so
+        // the day-key guard doesn't then make a retry skip the whole run.
         try {
-          orgHasKey = (await getLLMKeysWithKeyQuery(orgId)).length > 0;
-          const orgSettings = await getSettings(orgId);
-          impactEnabled = orgSettings.impact_enabled !== false; // default ON
-        } catch {
-          orgHasKey = false;
-        }
+          let orgHasKey = false;
+          let impactEnabled = true;
+          let impactRan = false; // becomes true if at least one impact pass executes this run
+          try {
+            orgHasKey = (await getLLMKeysWithKeyQuery(orgId)).length > 0;
+            const orgSettings = await getSettings(orgId);
+            impactEnabled = orgSettings.impact_enabled !== false; // default ON
+          } catch {
+            orgHasKey = false;
+          }
 
-        const changedItems: DigestItem[] = countries
-          .filter((c) => !c.removed)
-          .map((c) => ({ name: c.name, detail: c.lines.length ? c.lines.join(", ") : undefined }));
-        const removedItems: DigestItem[] = countries
-          .filter((c) => c.removed)
-          .map((c) => ({ name: c.name }));
+          const changedItems: DigestItem[] = countries
+            .filter((c) => !c.removed)
+            .map((c) => ({
+              name: c.name,
+              detail: c.lines.length ? c.lines.join(", ") : undefined,
+            }));
+          const removedItems: DigestItem[] = countries
+            .filter((c) => c.removed)
+            .map((c) => ({ name: c.name }));
 
-        // Per-country impact results captured during analysis below, for the
-        // email digest (the verbose, roomy surface). Keyed by slug so a country
-        // analyzed for in-app notifications is reused for the email too.
-        const impactBySlug = new Map<string, ImpactResult>();
+          // Per-country impact results captured during analysis below, for the
+          // email digest (the verbose, roomy surface). Keyed by slug so a country
+          // analyzed for in-app notifications is reused for the email too.
+          const impactBySlug = new Map<string, ImpactResult>();
 
-        // In-app: always to admins ∪ configured recipients. One deep-linked
-        // notification per affected country so the message names what changed and
-        // links straight to that country's page.
-        const userIds = await resolveInAppUserIds(orgId);
-        if (userIds.length) {
-          for (const c of countries) {
-            const title = c.removed
-              ? `${c.name} removed from the regulations feed`
-              : `AI regulations updated: ${c.name}`;
-            // When a country changed more than once since our last check, the feed
-            // only carries the latest change's detail — note the count + dates so
-            // the user knows to review the full history at the source.
-            const multiNote =
-              !c.removed && c.changeCount > 1
-                ? ` (changed ${c.changeCount} times since last check${
-                    c.changeDates.length ? `: ${c.changeDates.join(", ")}` : ""
-                  }; showing the latest)`
-                : "";
-            const baseMessage = c.removed
-              ? `${c.name} is no longer in the regulations feed.`
-              : (c.lines.length
-                  ? c.lines.join("; ")
-                  : "Regulations were updated — open to see the details.") + multiNote;
-            let impactSuffix = "";
-            if (!c.removed) {
-              if (orgHasKey && impactEnabled && !c.unstructured) {
+          // In-app: always to admins ∪ configured recipients. One deep-linked
+          // notification per affected country so the message names what changed and
+          // links straight to that country's page.
+          const userIds = await resolveInAppUserIds(orgId);
+          if (userIds.length) {
+            for (const c of countries) {
+              const title = c.removed
+                ? `${c.name} removed from the regulations feed`
+                : `AI regulations updated: ${c.name}`;
+              // When a country changed more than once since our last check, the feed
+              // only carries the latest change's detail — note the count + dates so
+              // the user knows to review the full history at the source.
+              const multiNote =
+                !c.removed && c.changeCount > 1
+                  ? ` (changed ${c.changeCount} times since last check${
+                      c.changeDates.length ? `: ${c.changeDates.join(", ")}` : ""
+                    }; showing the latest)`
+                  : "";
+              const baseMessage = c.removed
+                ? `${c.name} is no longer in the regulations feed.`
+                : (c.lines.length
+                    ? c.lines.join("; ")
+                    : "Regulations were updated — open to see the details.") + multiNote;
+              let impactSuffix = "";
+              if (!c.removed) {
+                if (orgHasKey && impactEnabled && !c.unstructured) {
+                  if (impactAnalysesRun >= IMPACT_MAX_ANALYSES_PER_RUN) {
+                    if (!impactCapLogged) {
+                      logger.warn(
+                        `[regulations-tracker] per-run impact cap (${IMPACT_MAX_ANALYSES_PER_RUN}) reached; skipping remaining LLM analyses for this sync`,
+                      );
+                      impactCapLogged = true;
+                    }
+                  } else {
+                    impactRan = true;
+                    try {
+                      const impact = await runImpactAnalysis(orgId, c.slug);
+                      tallyImpact(impactOutcomes, impact);
+                      // BUG 5: Only count passes that actually called the LLM. Cache
+                      // hits, no_key, and skipped statuses do not consume LLM capacity
+                      // and must not burn the per-run cap.
+                      if (
+                        !impact.cached &&
+                        impact.status !== "no_key" &&
+                        impact.status !== "skipped_no_candidates"
+                      )
+                        impactAnalysesRun += 1;
+                      if (impact.status === "ok") {
+                        if (impact.result) impactBySlug.set(c.slug, impact.result);
+                        const parts: string[] = [];
+                        if (impact.counts.system)
+                          parts.push(`${impact.counts.system} AI system(s) affected`);
+                        if (impact.counts.control)
+                          parts.push(`${impact.counts.control} control(s) to review`);
+                        if (impact.counts.policy)
+                          parts.push(`${impact.counts.policy} policy(ies) may be outdated`);
+                        if (impact.counts.vendor)
+                          parts.push(`${impact.counts.vendor} vendor(s) impacted`);
+                        if (impact.counts.assessment)
+                          parts.push(`${impact.counts.assessment} assessment(s) to update`);
+                        if (parts.length) impactSuffix = `\n\nImpact: ${parts.join(", ")}.`;
+                      }
+                    } catch (err) {
+                      logger.error(
+                        `[regulations-tracker] impact analysis failed for org ${orgId} / ${c.slug}: ${(err as Error).message}`,
+                      );
+                    }
+                  } // end cap-else
+                } else if (!orgHasKey && !c.unstructured) {
+                  // Keyless org with a structured change → nudge to configure a key,
+                  // since a key would have produced a real impact panel here. A
+                  // key-having org that toggled impact OFF (impactEnabled === false)
+                  // gets NEITHER panel NOR nudge — they chose. An unstructured change
+                  // gets no nudge either: even with a key there'd be nothing to show.
+                  impactSuffix =
+                    "\n\nConfigure an LLM key to see which of your AI systems, controls and vendors this affects.";
+                }
+              }
+              const message = `${baseMessage}${impactSuffix}`;
+              for (const uid of userIds) {
+                await createNotificationQuery(
+                  {
+                    user_id: uid,
+                    type: NotificationType.REGULATIONS_TRACKER,
+                    title,
+                    message,
+                    entity_type: NotificationEntityType.REGULATION_COUNTRY,
+                    entity_name: c.name,
+                    action_url: `/regulations-tracker/${c.slug}`,
+                  },
+                  orgId,
+                );
+              }
+            }
+            orgsNotified++;
+          }
+          // Email: configured recipients only, no fallback.
+          const emails = await resolveEmailRecipients(orgId);
+          if (emails.length) {
+            // Email-only orgs (no in-app recipients) never entered the loop above,
+            // so impactBySlug may be empty even though a key is configured. Backfill
+            // impact for changed countries we haven't analyzed yet, honoring the
+            // same key/enabled gate and per-run LLM cap.
+            if (orgHasKey && impactEnabled) {
+              for (const c of countries) {
+                // Skip removed, already-analyzed, and unstructured changes — the
+                // last has no diff to judge, so we don't run the LLM or show a
+                // panel (mirrors the in-app gate above).
+                if (c.removed || c.unstructured || impactBySlug.has(c.slug)) continue;
                 if (impactAnalysesRun >= IMPACT_MAX_ANALYSES_PER_RUN) {
                   if (!impactCapLogged) {
                     logger.warn(
@@ -482,131 +592,58 @@ async function runSync(deps?: { feed?: unknown }): Promise<{
                     );
                     impactCapLogged = true;
                   }
-                } else {
-                  impactRan = true;
-                  try {
-                    const impact = await runImpactAnalysis(orgId, c.slug);
-                    tallyImpact(impactOutcomes, impact);
-                    // BUG 5: Only count passes that actually called the LLM. Cache
-                    // hits, no_key, and skipped statuses do not consume LLM capacity
-                    // and must not burn the per-run cap.
-                    if (
-                      !impact.cached &&
-                      impact.status !== "no_key" &&
-                      impact.status !== "skipped_no_candidates"
-                    )
-                      impactAnalysesRun += 1;
-                    if (impact.status === "ok") {
-                      if (impact.result) impactBySlug.set(c.slug, impact.result);
-                      const parts: string[] = [];
-                      if (impact.counts.system)
-                        parts.push(`${impact.counts.system} AI system(s) affected`);
-                      if (impact.counts.control)
-                        parts.push(`${impact.counts.control} control(s) to review`);
-                      if (impact.counts.policy)
-                        parts.push(`${impact.counts.policy} policy(ies) may be outdated`);
-                      if (impact.counts.vendor)
-                        parts.push(`${impact.counts.vendor} vendor(s) impacted`);
-                      if (impact.counts.assessment)
-                        parts.push(`${impact.counts.assessment} assessment(s) to update`);
-                      if (parts.length) impactSuffix = `\n\nImpact: ${parts.join(", ")}.`;
-                    }
-                  } catch (err) {
-                    logger.error(
-                      `[regulations-tracker] impact analysis failed for org ${orgId} / ${c.slug}: ${(err as Error).message}`,
-                    );
-                  }
-                } // end cap-else
-              } else if (!orgHasKey && !c.unstructured) {
-                // Keyless org with a structured change → nudge to configure a key,
-                // since a key would have produced a real impact panel here. A
-                // key-having org that toggled impact OFF (impactEnabled === false)
-                // gets NEITHER panel NOR nudge — they chose. An unstructured change
-                // gets no nudge either: even with a key there'd be nothing to show.
-                impactSuffix =
-                  "\n\nConfigure an LLM key to see which of your AI systems, controls and vendors this affects.";
-              }
-            }
-            const message = `${baseMessage}${impactSuffix}`;
-            for (const uid of userIds) {
-              await createNotificationQuery(
-                {
-                  user_id: uid,
-                  type: NotificationType.REGULATIONS_TRACKER,
-                  title,
-                  message,
-                  entity_type: NotificationEntityType.REGULATION_COUNTRY,
-                  entity_name: c.name,
-                  action_url: `/regulations-tracker/${c.slug}`,
-                },
-                orgId,
-              );
-            }
-          }
-          orgsNotified++;
-        }
-        // Email: configured recipients only, no fallback.
-        const emails = await resolveEmailRecipients(orgId);
-        if (emails.length) {
-          // Email-only orgs (no in-app recipients) never entered the loop above,
-          // so impactBySlug may be empty even though a key is configured. Backfill
-          // impact for changed countries we haven't analyzed yet, honoring the
-          // same key/enabled gate and per-run LLM cap.
-          if (orgHasKey && impactEnabled) {
-            for (const c of countries) {
-              // Skip removed, already-analyzed, and unstructured changes — the
-              // last has no diff to judge, so we don't run the LLM or show a
-              // panel (mirrors the in-app gate above).
-              if (c.removed || c.unstructured || impactBySlug.has(c.slug)) continue;
-              if (impactAnalysesRun >= IMPACT_MAX_ANALYSES_PER_RUN) {
-                if (!impactCapLogged) {
-                  logger.warn(
-                    `[regulations-tracker] per-run impact cap (${IMPACT_MAX_ANALYSES_PER_RUN}) reached; skipping remaining LLM analyses for this sync`,
-                  );
-                  impactCapLogged = true;
+                  break;
                 }
-                break;
-              }
-              impactRan = true;
-              try {
-                const impact = await runImpactAnalysis(orgId, c.slug);
-                tallyImpact(impactOutcomes, impact);
-                if (
-                  !impact.cached &&
-                  impact.status !== "no_key" &&
-                  impact.status !== "skipped_no_candidates"
-                )
-                  impactAnalysesRun += 1;
-                if (impact.status === "ok" && impact.result) impactBySlug.set(c.slug, impact.result);
-              } catch (err) {
-                logger.error(
-                  `[regulations-tracker] impact analysis failed for org ${orgId} / ${c.slug}: ${(err as Error).message}`,
-                );
+                impactRan = true;
+                try {
+                  const impact = await runImpactAnalysis(orgId, c.slug);
+                  tallyImpact(impactOutcomes, impact);
+                  if (
+                    !impact.cached &&
+                    impact.status !== "no_key" &&
+                    impact.status !== "skipped_no_candidates"
+                  )
+                    impactAnalysesRun += 1;
+                  if (impact.status === "ok" && impact.result)
+                    impactBySlug.set(c.slug, impact.result);
+                } catch (err) {
+                  logger.error(
+                    `[regulations-tracker] impact analysis failed for org ${orgId} / ${c.slug}: ${(err as Error).message}`,
+                  );
+                }
               }
             }
+
+            // Build the per-country impact section for the email (verbose surface).
+            const impactItems: ImpactDigestItem[] = countries
+              .filter((c) => !c.removed && impactBySlug.has(c.slug))
+              .map((c) => ({ countryName: c.name, result: impactBySlug.get(c.slug)! }));
+
+            const html = await renderDigest(changedItems, removedItems, impactItems);
+            await sendAutomationEmail(emails, "Global AI regulations — update", html, undefined);
+            orgsEmailed++;
           }
-
-          // Build the per-country impact section for the email (verbose surface).
-          const impactItems: ImpactDigestItem[] = countries
-            .filter((c) => !c.removed && impactBySlug.has(c.slug))
-            .map((c) => ({ countryName: c.name, result: impactBySlug.get(c.slug)! }));
-
-          const html = await renderDigest(changedItems, removedItems, impactItems);
-          await sendAutomationEmail(
-            emails,
-            "Global AI regulations — update",
-            html,
-            undefined,
+          if (impactRan) {
+            try {
+              await setLastImpactRunAt(orgId);
+            } catch {
+              /* best-effort */
+            }
+          }
+        } catch (orgErr) {
+          orgsFailed += 1;
+          logger.error(
+            `[regulations-tracker] dispatch failed for org ${orgId}; continuing with remaining orgs: ${(orgErr as Error).message}`,
           );
-          orgsEmailed++;
         }
-        if (impactRan) {
-          try {
-            await setLastImpactRunAt(orgId);
-          } catch {
-            /* best-effort */
-          }
-        }
+      }
+      if (orgsFailed) {
+        // Surface partial failure on the run status. The catalogue is committed
+        // and the day key is set, so a retry would skip — but at least the
+        // Settings page and logs reflect that some orgs were not notified.
+        await recordRunStatus(
+          `partial: ${orgsFailed} org(s) failed to notify (${orgsNotified} notified, ${orgsEmailed} emailed)`,
+        ).catch(() => undefined);
       }
     }
 

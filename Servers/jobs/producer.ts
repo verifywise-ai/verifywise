@@ -29,8 +29,11 @@ export async function addAllJobs(): Promise<void> {
   await scheduleAiGatewayRiskDetection();
   await scheduleAiGatewayCacheCleanup();
   await scheduleMcpGatewayCleanup();
-  await scheduleAiTrustIndexSync(); // MUST be last — earlier schedulers obliterate the queue
+  await scheduleAiTrustIndexSync();
   await scheduleRegulationsTrackerSync();
+  // Registration order is no longer significant: no scheduler obliterates the
+  // shared queue any more (see automationProducer.ts). Each repeatable add is
+  // idempotent by repeat key, so jobs survive regardless of order.
 }
 
 if (require.main === module) {

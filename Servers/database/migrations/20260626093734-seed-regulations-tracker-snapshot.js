@@ -17,6 +17,12 @@ module.exports = {
     if (existing[0].n > 0) return; // already seeded
 
     const snapshotPath = path.join(__dirname, "../seeds/regulations-tracker-snapshot.json");
+    if (!fs.existsSync(snapshotPath)) {
+      throw new Error(
+        `Regulations Tracker seed snapshot not found at ${snapshotPath}. ` +
+          "Ensure Servers/database/seeds/regulations-tracker-snapshot.json is committed and bundled with the deploy artifact.",
+      );
+    }
     const snapshot = JSON.parse(fs.readFileSync(snapshotPath, "utf8"));
 
     for (const c of snapshot.countries) {
@@ -47,7 +53,13 @@ module.exports = {
   },
 
   async down(queryInterface) {
-    await queryInterface.sequelize.query("DELETE FROM verifywise.regulation_countries");
+    // Only reset the seed markers. We deliberately do NOT `DELETE FROM
+    // regulation_countries` here: that table is global (shared by every tenant)
+    // and a bare DELETE would wipe the entire live catalog — every org's Browse,
+    // Tracked, Deadlines and Frameworks views go dark — for a mere seed rollback.
+    // Full teardown is the create-tables migration's down(), which DROPs the
+    // table outright. Rolling back just the seed leaves the catalog populated,
+    // which is harmless (the COUNT(*) guard in up() makes a re-run a no-op).
     await queryInterface.sequelize.query(
       "UPDATE verifywise.regulation_tracker_meta SET seeded_at = NULL, last_good_count = NULL WHERE id = 1",
     );

@@ -21,6 +21,14 @@ const path = require("path");
 module.exports = {
   async up(queryInterface) {
     const snapshotPath = path.join(__dirname, "../seeds/regulations-tracker-snapshot.json");
+    if (!fs.existsSync(snapshotPath)) {
+      // Flags are presentation-only; a missing snapshot should not fail the whole
+      // migration run. Skip gracefully — the next daily sync re-derives flags.
+      console.warn(
+        `[backfill-flags] snapshot not found at ${snapshotPath}; skipping flag backfill (sync will re-derive).`,
+      );
+      return;
+    }
     const snapshot = JSON.parse(fs.readFileSync(snapshotPath, "utf8"));
 
     for (const c of snapshot.countries) {

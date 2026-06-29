@@ -68,7 +68,9 @@ module.exports = {
         id              INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
         seeded_at       TIMESTAMPTZ,
         last_good_count INTEGER,
-        last_run_week   VARCHAR(10)
+        -- Holds a "YYYY-MM-DD" day key (10 chars). VARCHAR(20) leaves headroom
+        -- so a future format change (e.g. ISO week-with-day) can't truncate it.
+        last_run_week   VARCHAR(20)
       );
     `);
     await queryInterface.sequelize.query(`
