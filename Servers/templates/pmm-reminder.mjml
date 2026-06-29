@@ -54,7 +54,7 @@
           <mj-text>
                 <h2 class="email-heading">Reminder: Post-market monitoring due soon</h2><p class="email-body">Hi {{stakeholder_name}},</p><p class="email-body">This is a friendly reminder that the post-market monitoring for <strong>{{use_case_title}}</strong> (Cycle #{{cycle_number}}) is due in <strong>{{days_remaining}} days</strong>.</p><table class="data-table">
                 <tr><td class="data-label">Due date</td><td class="data-value">{{due_date}}</td></tr>
-                </table><p class="email-body">Please complete the monitoring questionnaire as soon as possible to maintain compliance with EU AI Act requirements.</p><p style="margin: 28px 0 0 0;"><a href="{{monitoring_link}}" class="btn btn-warning">Complete monitoring now</a></p><p class="email-muted">If you have already completed this monitoring, please disregard this email.</p>
+                </table><p class="email-body">Please complete the monitoring questionnaire as soon as possible to maintain compliance with EU AI Act requirements.</p><p style="margin: 28px 0 24px 0;"><a href="{{monitoring_link}}" class="btn btn-warning">Complete monitoring now</a></p><p class="email-muted">If you have already completed this monitoring, please disregard this email.</p>
           </mj-text>
         </mj-column>
       </mj-section>
