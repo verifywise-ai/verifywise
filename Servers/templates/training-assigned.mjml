@@ -56,7 +56,7 @@
                 <p class="box-subtitle">{{training_description}}</p></div><table class="data-table">
                 <tr><td class="data-label">Duration</td><td class="data-value">{{training_duration}}</td></tr>
                 <tr><td class="data-label">Due date</td><td class="data-value">{{training_due_date}}</td></tr>
-                </table><p style="margin: 28px 0 0 0;"><a href="{{training_url}}" class="btn btn-warning">Start training</a></p>
+                </table><p style="margin: 28px 0 24px 0;"><a href="{{training_url}}" class="btn btn-warning">Start training</a></p>
           </mj-text>
         </mj-column>
       </mj-section>
