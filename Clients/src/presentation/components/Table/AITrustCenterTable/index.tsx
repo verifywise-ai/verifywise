@@ -15,10 +15,11 @@ import {
 } from "@mui/material";
 import singleTheme from "../../../themes/v1SingleTheme";
 import TablePaginationActions from "../../TablePagination";
-import { ChevronsUpDown, ChevronUp, ChevronDown, Inbox } from "lucide-react";
-import { EmptyState } from "../../EmptyState";
+import { ChevronsUpDown, ChevronUp, ChevronDown, FileText } from "lucide-react";
 import { IAITrustCenterTableProps } from "../../../types/interfaces/i.table";
 import CustomizableSkeleton from "../../Skeletons";
+import { TableEmptyStateLayout } from "../TableEmptyStateLayout";
+import { EmptyState } from "../../EmptyState";
 
 const SelectorVertical = (props: any) => <ChevronsUpDown size={16} {...props} />;
 
@@ -37,7 +38,7 @@ const AITrustCenterTable = <T extends { id: number }>({
   isLoading = false,
   paginated = true,
   emptyStateText = "No data found. Add your first item to get started.",
-  emptyStateIcon = Inbox,
+  emptyStateIcon = FileText,
   renderRow,
   onRowClick,
   tableId = "ai-trust-center-table",
@@ -303,8 +304,12 @@ const AITrustCenterTable = <T extends { id: number }>({
   );
 
   const emptyState = useMemo(
-    () => <EmptyState icon={emptyStateIcon} message={emptyStateText} />,
-    [emptyStateIcon, emptyStateText],
+    () => (
+      <TableEmptyStateLayout header={tableHeader}>
+        <EmptyState icon={emptyStateIcon} message={emptyStateText} />
+      </TableEmptyStateLayout>
+    ),
+    [tableHeader, emptyStateIcon, emptyStateText],
   );
 
   if (isLoading) {
