@@ -25,6 +25,8 @@ import { store } from "../../application/redux/store";
 import { ENV_VARs } from "../../../env.vars";
 import { clearAuthState, setAuthToken } from "../../application/redux/auth/authSlice";
 import { AlertProps } from "../../presentation/types/alert.types";
+import { translations, type Lang } from "../../i18n/translations";
+import { getLanguage } from "../../i18n/domTranslator";
 import type {
   ApiErrorEnvelope,
   ApiSuccessEnvelope,
@@ -50,6 +52,31 @@ export const setShowAlertCallback = (callback: (alert: AlertProps) => void) => {
 export const showAlert = (alert: AlertProps) => {
   if (showAlertCallback) {
     showAlertCallback(alert);
+  }
+};
+
+// Lightweight translation helper for non-React infrastructure code.
+// Looks up the current language from the DOM translator and falls back to the
+// English source key when no translation is available.
+const translate = (key: string): string => {
+  const lang: Lang = getLanguage();
+  if (lang === "en") return key;
+  return translations[lang]?.[key] || key;
+};
+
+// Show a translated error toast for server or network failures.
+// 4xx errors are intentionally left for callers/UI layers to handle.
+const showGlobalErrorAlert = (error: AxiosError) => {
+  const status = error.response?.status;
+  const isServerError = status != null && status >= 500;
+  const isNetworkError = error.response == null;
+
+  if (isServerError || isNetworkError) {
+    showAlert({
+      variant: "error",
+      title: translate("Error"),
+      body: translate("An error occurred. Please try again later"),
+    });
   }
 };
 
@@ -231,6 +258,10 @@ CustomAxios.interceptors.response.use(
         isRefreshing = false;
       }
     }
+
+    // Surface generic translated error toasts for server and network failures.
+    // Auth-specific errors (403/429/406) are handled above and return early.
+    showGlobalErrorAlert(error);
 
     return Promise.reject(error);
   },
