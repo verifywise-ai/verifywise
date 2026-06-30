@@ -23,7 +23,7 @@ vi.mock("../../../i18n/domTranslator", () => ({
 vi.mock("../../../i18n/translations", () => ({
   translations: {
     de: {
-      Error: "Fehler",
+      "Error": "Fehler",
       "An error occurred. Please try again later":
         "Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut",
     },
