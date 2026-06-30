@@ -107,12 +107,10 @@ jobs:
       - name: Run tests (shard ${{ matrix.shard }}/4)
         run: npx vitest run --shard=${{ matrix.shard }}/4
 
-  # Coverage is the slowest path, so it runs as its own job only on push to a
-  # protected branch (not on every PR). Pull requests rely on the sharded
-  # test matrix above for pass/fail.
+  # Runs the CI test command with coverage on every push and pull request,
+  # uploading the coverage report and enforcing the configured thresholds.
   coverage:
     name: Coverage
-    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -132,7 +130,7 @@ jobs:
         run: npm ci --legacy-peer-deps
 
       - name: Run tests with coverage
-        run: npx vitest run --coverage
+        run: npm run test:ci
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v7

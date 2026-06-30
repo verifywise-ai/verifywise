@@ -110,12 +110,10 @@ export default defineConfig({
         "src/i18n/**",
       ],
       thresholds: {
-        global: {
-          statements: 10,
-          branches: 10,
-          functions: 10,
-          lines: 10,
-        },
+        statements: 30,
+        branches: 20,
+        functions: 25,
+        lines: 30,
       },
     },
   },
