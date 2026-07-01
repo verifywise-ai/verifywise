@@ -29,6 +29,7 @@ import Select from "../../Inputs/Select";
 import { useState, useEffect, useMemo, useRef } from "react";
 import TabBar from "../../TabBar";
 import StandardModal from "../../Modals/StandardModal";
+import { drawerAccessibilityProps, DRAWER_TITLE_ID } from "../drawerAccessibility";
 import {
   getFileById,
   attachFilesToEntity,
@@ -665,6 +666,7 @@ const VWISO27001AnnexDrawerDialog = ({
       <Drawer
         open={open}
         onClose={onClose}
+        {...drawerAccessibilityProps}
         sx={{
           "width": 850,
           "margin": 0,
@@ -697,6 +699,7 @@ const VWISO27001AnnexDrawerDialog = ({
       className="vw-iso-27001-annex-drawer-dialog"
       open={open}
       onClose={onClose}
+      {...drawerAccessibilityProps}
       sx={{
         "width": 850,
         "margin": 0,
@@ -718,7 +721,7 @@ const VWISO27001AnnexDrawerDialog = ({
             alignItems: "center",
           }}
         >
-          <Typography fontSize={15} fontWeight={700}>
+          <Typography id={DRAWER_TITLE_ID} fontSize={15} fontWeight={700}>
             {title}
           </Typography>
           <CustomizableButton

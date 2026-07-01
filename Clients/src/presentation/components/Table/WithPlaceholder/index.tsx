@@ -378,15 +378,6 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
                   "outline": "none",
                 }}
                 onClick={() => onEdit(row.id)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    onEdit(row.id);
-                  }
-                }}
-                tabIndex={0}
-                role="button"
-                aria-label={`Edit vendor ${row.vendor_name}`}
               >
                 <TableCell
                   sx={{
