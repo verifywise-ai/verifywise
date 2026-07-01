@@ -42,6 +42,7 @@ import TabBar from "../../TabBar";
 import { CustomizableButton } from "../../button/customizable-button";
 import Alert from "../../Alert";
 import StandardModal from "../../Modals/StandardModal";
+import { drawerAccessibilityProps, DRAWER_TITLE_ID } from "../drawerAccessibility";
 import { text } from "../../../themes/palette";
 
 import { LinkedRisksPopup } from "../../LinkedRisks";
@@ -833,6 +834,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
       <Drawer
         open={open}
         onClose={onClose}
+        {...drawerAccessibilityProps}
         sx={{
           "width": 850,
           "margin": 0,
@@ -869,6 +871,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
         className="eu-ai-act-question-drawer-dialog"
         open={open}
         onClose={onClose}
+        {...drawerAccessibilityProps}
         sx={{
           "width": 850,
           "margin": 0,
@@ -892,7 +895,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
             alignItems="center"
             padding="15px 20px"
           >
-            <Typography fontSize={15} fontWeight={700}>
+            <Typography id={DRAWER_TITLE_ID} fontSize={15} fontWeight={700}>
               {subtopic?.title}
             </Typography>
             <Button
