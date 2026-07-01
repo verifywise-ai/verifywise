@@ -345,8 +345,6 @@ function normalizeSlateHtml(html: string): string {
   return n;
 }
 
-
-
 // ── Search highlight extension ─────────────────────────────────────────
 const searchHighlightKey = new PluginKey("searchHighlight");
 

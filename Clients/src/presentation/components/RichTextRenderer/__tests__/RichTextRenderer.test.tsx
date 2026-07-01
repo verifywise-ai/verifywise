@@ -37,10 +37,7 @@ describe("RichTextRenderer", () => {
   it("calls onStripped when dangerous content is removed", () => {
     const onStripped = vi.fn();
     render(
-      <RichTextRenderer
-        html="<p>safe</p><script>alert(1)</script>"
-        onStripped={onStripped}
-      />,
+      <RichTextRenderer html="<p>safe</p><script>alert(1)</script>" onStripped={onStripped} />,
     );
     expect(onStripped).toHaveBeenCalledTimes(1);
   });

@@ -185,11 +185,9 @@ describe("sanitizeUserHtml", () => {
 
     it("preserves color and background-color styles", () => {
       const clean =
-        `<p style="color:#ff0000;">red</p>` +
-        `<p style="background-color:rgb(0,128,0);">green</p>`;
+        `<p style="color:#ff0000;">red</p>` + `<p style="background-color:rgb(0,128,0);">green</p>`;
       const expected =
-        `<p style="color:#ff0000">red</p>` +
-        `<p style="background-color:rgb(0,128,0)">green</p>`;
+        `<p style="color:#ff0000">red</p>` + `<p style="background-color:rgb(0,128,0)">green</p>`;
       expect(sanitizeUserHtml(clean)).toBe(expected);
     });
 

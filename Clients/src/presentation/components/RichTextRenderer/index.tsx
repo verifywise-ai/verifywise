@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import { useRichTextSanitizer } from "../../../application/utils/richTextSanitizer";
+import { useTranslation } from "../../../application/hooks/useTranslation";
 
 export interface RichTextRendererProps {
   /** Raw HTML content to sanitize and render. */
@@ -42,6 +43,7 @@ export const RichTextRenderer: React.FC<RichTextRendererProps> = ({
   onStripped,
 }) => {
   const { sanitizedHtml, wasStripped } = useRichTextSanitizer(html);
+  const { t } = useTranslation();
 
   useEffect(() => {
     if (wasStripped && onStripped) {
@@ -64,17 +66,12 @@ export const RichTextRenderer: React.FC<RichTextRendererProps> = ({
           width: "100%",
           minHeight: "80px",
         }}
-        title="Rich text content"
+        title={t("Rich text content")}
       />
     );
   }
 
-  return (
-    <div
-      className={className}
-      dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
-    />
-  );
+  return <div className={className} dangerouslySetInnerHTML={{ __html: sanitizedHtml }} />;
 };
 
 export default RichTextRenderer;

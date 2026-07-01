@@ -98,14 +98,8 @@ export const USER_HTML_ALLOWED_ATTRIBUTES: sanitizeHtml.IOptions["allowedAttribu
 export const USER_HTML_ALLOWED_STYLES: sanitizeHtml.IOptions["allowedStyles"] = {
   "*": {
     "text-align": [/^left$|^right$|^center$|^justify$/i],
-    color: [
-      /^#(?:[0-9a-f]{3,4}|[0-9a-f]{6,8})$/i,
-      /^(?:rgb|hsl)a?\([^)]*\)$/i,
-    ],
-    "background-color": [
-      /^#(?:[0-9a-f]{3,4}|[0-9a-f]{6,8})$/i,
-      /^(?:rgb|hsl)a?\([^)]*\)$/i,
-    ],
+    color: [/^#(?:[0-9a-f]{3,4}|[0-9a-f]{6,8})$/i, /^(?:rgb|hsl)a?\([^)]*\)$/i],
+    "background-color": [/^#(?:[0-9a-f]{3,4}|[0-9a-f]{6,8})$/i, /^(?:rgb|hsl)a?\([^)]*\)$/i],
   },
 };
 

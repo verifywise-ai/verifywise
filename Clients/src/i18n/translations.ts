@@ -25,6 +25,8 @@ export type Lang = "en" | "de" | "fr" | "es";
 
 export const translations: Record<string, Record<string, string>> = {
   de: {
+    // Rich text renderer
+    "Rich text content": "Rich-Text-Inhalt",
     // Settings — help text
     "Enabled — risks include monetary estimates based on the FAIR model: annual loss expectancy, residual risk after controls, and return on mitigation investment.":
       "Aktiviert — Risiken enthalten monetäre Schätzungen auf Basis des FAIR-Modells: erwarteter Jahresverlust, Restrisiko nach Maßnahmen und Rendite der Risikominderung.",
@@ -8732,6 +8734,8 @@ export const translations: Record<string, Record<string, string>> = {
   },
 
   fr: {
+    // Rich text renderer
+    "Rich text content": "Contenu de texte enrichi",
     // Settings — help text
     "Enabled — risks include monetary estimates based on the FAIR model: annual loss expectancy, residual risk after controls, and return on mitigation investment.":
       "Activé — les risques incluent des estimations monétaires basées sur le modèle FAIR : perte annuelle attendue, risque résiduel après contrôles et retour sur l'investissement de mitigation.",
@@ -17393,6 +17397,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Select a log to view details.": "Sélectionnez un journal pour voir les détails.",
   },
   es: {
+    // Rich text renderer
+    "Rich text content": "Contenido de texto enriquecido",
     // Settings — help text
     "Enabled — risks include monetary estimates based on the FAIR model: annual loss expectancy, residual risk after controls, and return on mitigation investment.":
       "Activado — los riesgos incluyen estimaciones monetarias basadas en el modelo FAIR: pérdida anual esperada, riesgo residual tras los controles y retorno de la inversión en mitigación.",

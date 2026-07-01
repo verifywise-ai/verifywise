@@ -12,12 +12,12 @@ jest.mock("mammoth", () => ({
 
 // Mock the shared sanitizer module to assert it's called with the converted
 // HTML. Real sanitize-html behavior is covered by utils/__tests__/sanitizeUserHtml.test.ts.
-jest.mock("../../../utils/sanitizeUserHtml", () => ({
+jest.mock("../../../utils/sanitization.utils", () => ({
   sanitizeUserHtml: jest.fn((html: unknown) => html),
 }));
 
 import mammoth from "mammoth";
-import { sanitizeUserHtml } from "../../../utils/sanitizeUserHtml";
+import { sanitizeUserHtml } from "../../../utils/sanitization.utils";
 import { convertDocxToHtml, DOCX_MAX_FILE_SIZE_BYTES, DOCX_ALLOWED_MIMES } from "../policyImporter";
 
 const mockConvertToHtml = mammoth.convertToHtml as jest.MockedFunction<

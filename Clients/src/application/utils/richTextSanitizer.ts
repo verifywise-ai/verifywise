@@ -119,8 +119,7 @@ export const DOMPURIFY_CONFIG: DOMPurify.Config = {
   ],
   ALLOW_DATA_ATTR: false,
   // Restrict URI schemes to safe values (http, https, blob, mailto, tel).
-  ALLOWED_URI_REGEXP:
-    /^(?:(?:(?:f|ht)tps?|blob|mailto|tel):|[^a-z]|[a-z.+\-]+(?:[^a-z.+\-:]|$))/i,
+  ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|blob|mailto|tel):|[^a-z]|[a-z.+\-]+(?:[^a-z.+\-:]|$))/i,
 };
 
 /**
@@ -164,14 +163,12 @@ function blockDataUrisOnImages(html: string): string {
   const wrapper = document.createElement("div");
   wrapper.innerHTML = html;
 
-  wrapper
-    .querySelectorAll("img")
-    .forEach((img) => {
-      const src = img.getAttribute("src") || "";
-      if (src.trim().toLowerCase().startsWith("data:")) {
-        img.removeAttribute("src");
-      }
-    });
+  wrapper.querySelectorAll("img").forEach((img) => {
+    const src = img.getAttribute("src") || "";
+    if (src.trim().toLowerCase().startsWith("data:")) {
+      img.removeAttribute("src");
+    }
+  });
 
   return wrapper.innerHTML;
 }
