@@ -79,7 +79,7 @@ export const USER_HTML_ALLOWED_TAGS: string[] = [
  * Link and image attributes are restricted to safe, non-executable values.
  */
 export const USER_HTML_ALLOWED_ATTRIBUTES: sanitizeHtml.IOptions["allowedAttributes"] = {
-  "*": ["class"],
+  "*": ["class", "style"],
   a: ["href", "target", "rel", "title"],
   img: ["src", "alt", "width", "height", "title"],
   th: ["colspan", "rowspan"],

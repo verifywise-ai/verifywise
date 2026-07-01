@@ -1,5 +1,5 @@
 import { describe, expect, it } from "@jest/globals";
-import { sanitizeUserHtml } from "../sanitizeUserHtml";
+import { sanitizeUserHtml } from "../sanitization.utils";
 
 describe("sanitizeUserHtml", () => {
   describe("null / undefined / non-string handling", () => {
@@ -40,10 +40,23 @@ describe("sanitizeUserHtml", () => {
       expect(result).toContain(`href="https://example.com"`);
     });
 
+    it("strips onmouseover handlers", () => {
+      const dirty = `<p onmouseover="alert(1)">hover me</p>`;
+      const result = sanitizeUserHtml(dirty)!;
+      expect(result).not.toContain("onmouseover");
+      expect(result).toContain("hover me");
+    });
+
     it("blocks javascript: URIs on anchors", () => {
       const dirty = `<a href="javascript:alert('x')">click</a>`;
       const result = sanitizeUserHtml(dirty)!;
       expect(result).not.toContain("javascript:");
+    });
+
+    it("blocks vbscript: URIs on anchors", () => {
+      const dirty = `<a href="vbscript:msgbox(1)">click</a>`;
+      const result = sanitizeUserHtml(dirty)!;
+      expect(result).not.toContain("vbscript:");
     });
 
     it("blocks data: URIs on images (which can carry executable SVG payloads)", () => {
@@ -61,6 +74,14 @@ describe("sanitizeUserHtml", () => {
       expect(result).toContain("<p>after</p>");
     });
 
+    it("strips iframe srcdoc payloads", () => {
+      const dirty = `<iframe srcdoc="<script>alert(1)</script>"></iframe>`;
+      const result = sanitizeUserHtml(dirty)!;
+      expect(result).not.toContain("<iframe");
+      expect(result).not.toContain("srcdoc");
+      expect(result).not.toContain("alert");
+    });
+
     it("strips <object> and <embed> tags", () => {
       const dirty = `<object data="evil.swf"></object><embed src="evil.swf">`;
       const result = sanitizeUserHtml(dirty)!;
@@ -74,6 +95,39 @@ describe("sanitizeUserHtml", () => {
       expect(result).not.toContain("<style");
       expect(result).not.toContain("javascript:");
     });
+
+    it("strips SVG tags with onload handlers", () => {
+      const dirty = `<svg onload="alert(1)"><rect width="100" height="100"/></svg>`;
+      const result = sanitizeUserHtml(dirty)!;
+      expect(result).not.toContain("<svg");
+      expect(result).not.toContain("onload");
+      expect(result).not.toContain("alert");
+    });
+
+    it("strips form and input elements", () => {
+      const dirty = `<form action="/evil"><input type="text" name="x"><button>go</button></form>`;
+      const result = sanitizeUserHtml(dirty)!;
+      expect(result).not.toContain("<form");
+      expect(result).not.toContain("<input");
+      expect(result).not.toContain("<button");
+    });
+
+    it("strips <base> and <meta> tags", () => {
+      const dirty = `<base href="https://evil.example/"><meta http-equiv="refresh" content="0;url=javascript:alert(1)"><p>ok</p>`;
+      const result = sanitizeUserHtml(dirty)!;
+      expect(result).not.toContain("<base");
+      expect(result).not.toContain("<meta");
+      expect(result).not.toContain("javascript:");
+      expect(result).toContain("<p>ok</p>");
+    });
+
+    it("strips arbitrary style properties that could be used for XSS", () => {
+      const dirty = `<p style="behavior:url(javascript:alert(1)); position:absolute;">x</p>`;
+      const result = sanitizeUserHtml(dirty)!;
+      expect(result).not.toContain("behavior");
+      expect(result).not.toContain("javascript:");
+      expect(result).toBe("<p>x</p>");
+    });
   });
 
   describe("safe content preservation", () => {
@@ -82,13 +136,18 @@ describe("sanitizeUserHtml", () => {
       expect(sanitizeUserHtml(clean)).toBe(clean);
     });
 
-    it("preserves headings h1-h3 (per the allowlist)", () => {
-      const clean = `<h1>A</h1><h2>B</h2><h3>C</h3>`;
+    it("preserves headings h1-h6", () => {
+      const clean = `<h1>A</h1><h2>B</h2><h3>C</h3><h4>D</h4><h5>E</h5><h6>F</h6>`;
       expect(sanitizeUserHtml(clean)).toBe(clean);
     });
 
     it("preserves anchors with safe http(s) URLs", () => {
       const clean = `<a href="https://verifywise.ai">link</a>`;
+      expect(sanitizeUserHtml(clean)).toBe(clean);
+    });
+
+    it("preserves anchors with mailto and tel URLs", () => {
+      const clean = `<a href="mailto:test@example.com">email</a><a href="tel:+1234567890">call</a>`;
       expect(sanitizeUserHtml(clean)).toBe(clean);
     });
 
@@ -107,6 +166,38 @@ describe("sanitizeUserHtml", () => {
       expect(result).toContain("blob:");
     });
 
+    it("preserves tables with colspan and rowspan", () => {
+      const clean =
+        `<table><thead><tr><th colspan="2">Header</th></tr></thead>` +
+        `<tbody><tr><td rowspan="2">A</td><td>B</td></tr></tbody></table>`;
+      expect(sanitizeUserHtml(clean)).toBe(clean);
+    });
+
+    it("preserves TipTap task-list markup", () => {
+      const clean = `<ul data-type="taskList"><li data-checked="true">Done task</li></ul>`;
+      expect(sanitizeUserHtml(clean)).toBe(clean);
+    });
+
+    it("preserves text-align style", () => {
+      const clean = `<p style="text-align:center;">centered</p>`;
+      expect(sanitizeUserHtml(clean)).toBe(`<p style="text-align:center">centered</p>`);
+    });
+
+    it("preserves color and background-color styles", () => {
+      const clean =
+        `<p style="color:#ff0000;">red</p>` +
+        `<p style="background-color:rgb(0,128,0);">green</p>`;
+      const expected =
+        `<p style="color:#ff0000">red</p>` +
+        `<p style="background-color:rgb(0,128,0)">green</p>`;
+      expect(sanitizeUserHtml(clean)).toBe(expected);
+    });
+
+    it("preserves code blocks and blockquotes", () => {
+      const clean = `<pre><code>const x = 1;</code></pre><blockquote><p>quote</p></blockquote>`;
+      expect(sanitizeUserHtml(clean)).toBe(clean);
+    });
+
     it("preserves plain text without tags untouched", () => {
       expect(sanitizeUserHtml("just a sentence")).toBe("just a sentence");
     });
@@ -118,6 +209,20 @@ describe("sanitizeUserHtml", () => {
       const once = sanitizeUserHtml(dirty);
       const twice = sanitizeUserHtml(once);
       expect(twice).toBe(once);
+    });
+  });
+
+  describe("stripping detection", () => {
+    it("returns different output when dangerous content is stripped", () => {
+      const dirty = `<p>safe</p><script>alert(1)</script>`;
+      const sanitized = sanitizeUserHtml(dirty);
+      expect(sanitized).not.toBe(dirty);
+      expect(sanitized).toBe("<p>safe</p>");
+    });
+
+    it("returns identical output for already-clean content", () => {
+      const clean = `<p><strong>bold</strong> <a href="https://example.com">link</a></p>`;
+      expect(sanitizeUserHtml(clean)).toBe(clean);
     });
   });
 });
