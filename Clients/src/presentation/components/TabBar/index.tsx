@@ -3,15 +3,15 @@ import { Box, SxProps, Theme } from "@mui/material";
 import Tab from "@mui/material/Tab";
 import TabList from "@mui/lab/TabList";
 import { createTabLabelWithCount } from "../../utils/tabUtils";
-import * as LucideIcons from "lucide-react";
 import { LucideIcon } from "lucide-react";
+import iconMap, { IconName } from "../../utils/iconMap";
 import VWTooltip from "../VWTooltip";
 import { brand } from "../../themes/palette";
 
 export interface TabItem {
   label: string;
   value: string;
-  icon?: keyof typeof LucideIcons;
+  icon?: IconName;
   count?: number;
   isLoading?: boolean;
   disabled?: boolean;
@@ -164,8 +164,8 @@ const TabBar: React.FC<TabBarProps> = ({
         })}
       >
         {tabs.map((tab) => {
-          // Dynamically get the icon component from lucide-react
-          const IconComponent = tab.icon ? (LucideIcons[tab.icon] as LucideIcon) : undefined;
+          // Resolve the icon component from the tree-shakeable map
+          const IconComponent = tab.icon ? (iconMap[tab.icon] as LucideIcon) : undefined;
           const iconElement = IconComponent ? (
             <IconComponent
               size={TAB_ICON_SIZE}

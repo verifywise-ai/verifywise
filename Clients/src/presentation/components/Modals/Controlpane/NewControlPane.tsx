@@ -18,7 +18,7 @@ import {
   FileText as FileIcon,
   Eye as ViewIcon,
 } from "lucide-react";
-import * as LucideIcons from "lucide-react";
+import iconMap from "../../../utils/iconMap";
 import { useState, useEffect, useMemo, useRef } from "react";
 import dayjs from "dayjs";
 import Select from "../../Inputs/Select";
@@ -920,22 +920,22 @@ const NewControlPane = ({
     {
       label: "Details",
       value: "details",
-      icon: "FileText" as keyof typeof LucideIcons,
+      icon: "FileText",
     },
     {
       label: "Evidence",
       value: "evidences",
-      icon: "FolderOpen" as keyof typeof LucideIcons,
+      icon: "FolderOpen",
     },
     {
       label: "Cross mappings",
       value: "cross-mappings",
-      icon: "Link" as keyof typeof LucideIcons,
+      icon: "Link",
     },
     {
       label: "Notes",
       value: "notes",
-      icon: "MessageSquare" as keyof typeof LucideIcons,
+      icon: "MessageSquare",
     },
   ];
 

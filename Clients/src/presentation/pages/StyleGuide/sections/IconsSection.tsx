@@ -8,8 +8,98 @@ import {
   TextField,
   InputAdornment,
 } from "@mui/material";
-import { Copy, Search } from "lucide-react";
-import * as LucideIcons from "lucide-react";
+import {
+  Activity,
+  AlertCircle,
+  AlertTriangle,
+  ArrowLeft,
+  ArrowRight,
+  BarChart,
+  Bell,
+  BellOff,
+  Bookmark,
+  Box as BoxIcon,
+  Calendar,
+  Check,
+  CheckCircle,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  ChevronUp,
+  Clock,
+  Columns,
+  Compass,
+  Copy,
+  Crosshair,
+  Download,
+  Edit,
+  ExternalLink,
+  Eye,
+  EyeOff,
+  File,
+  FileText,
+  Filter,
+  Flag,
+  Folder,
+  FolderOpen,
+  Globe,
+  Grid,
+  Heart,
+  HelpCircle,
+  Home,
+  Image,
+  Info,
+  Layers,
+  Layout,
+  LayoutGrid,
+  LayoutList,
+  Link,
+  Loader,
+  Loader2,
+  Lock,
+  Mail,
+  MapPin,
+  Menu,
+  MessageCircle,
+  MessageSquare,
+  Minus,
+  MoreHorizontal,
+  MoreVertical,
+  Navigation,
+  Package,
+  PieChart,
+  Plus,
+  RefreshCw,
+  RotateCcw,
+  Rows,
+  Save,
+  Search,
+  Settings,
+  Share,
+  Shield,
+  ShieldCheck,
+  Star,
+  Table,
+  Table2,
+  Tag,
+  Target,
+  ThumbsUp,
+  TrendingDown,
+  TrendingUp,
+  Trash2,
+  Unlock,
+  Upload,
+  User,
+  UserCircle,
+  UserMinus,
+  UserPlus,
+  Users,
+  X,
+  XCircle,
+  Zap,
+} from "lucide-react";
 import CodeBlock from "../components/CodeBlock";
 import { status } from "../../../themes/palette";
 
@@ -115,6 +205,98 @@ const COMMON_ICONS = [
   "Navigation",
   "Compass",
 ];
+
+const iconCatalog: Record<string, React.FC<{ size?: number; color?: string }>> = {
+  Activity,
+  AlertCircle,
+  AlertTriangle,
+  ArrowLeft,
+  ArrowRight,
+  BarChart,
+  Bell,
+  BellOff,
+  Bookmark,
+  Box: BoxIcon,
+  Calendar,
+  Check,
+  CheckCircle,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  ChevronUp,
+  Clock,
+  Columns,
+  Compass,
+  Crosshair,
+  Download,
+  Edit,
+  ExternalLink,
+  Eye,
+  EyeOff,
+  File,
+  FileText,
+  Filter,
+  Flag,
+  Folder,
+  FolderOpen,
+  Globe,
+  Grid,
+  Heart,
+  HelpCircle,
+  Home,
+  Image,
+  Info,
+  Layers,
+  Layout,
+  LayoutGrid,
+  LayoutList,
+  Link,
+  Loader,
+  Loader2,
+  Lock,
+  Mail,
+  MapPin,
+  Menu,
+  MessageCircle,
+  MessageSquare,
+  Minus,
+  MoreHorizontal,
+  MoreVertical,
+  Navigation,
+  Package,
+  PieChart,
+  Plus,
+  RefreshCw,
+  RotateCcw,
+  Rows,
+  Save,
+  Search,
+  Settings,
+  Share,
+  Shield,
+  ShieldCheck,
+  Star,
+  Table,
+  Table2,
+  Tag,
+  Target,
+  ThumbsUp,
+  TrendingDown,
+  TrendingUp,
+  Trash2,
+  Unlock,
+  Upload,
+  User,
+  UserCircle,
+  UserMinus,
+  UserPlus,
+  Users,
+  X,
+  XCircle,
+  Zap,
+};
 
 const iconSnippets = {
   basic: `import { User, Settings, Bell } from "lucide-react";
@@ -245,9 +427,7 @@ const IconsSection: React.FC = () => {
           }}
         >
           {filteredIcons.map((iconName) => {
-            const IconComponent = (
-              LucideIcons as unknown as Record<string, React.FC<{ size?: number; color?: string }>>
-            )[iconName];
+            const IconComponent = iconCatalog[iconName];
             if (!IconComponent) return null;
             return (
               <Box
@@ -317,7 +497,7 @@ const IconsSection: React.FC = () => {
                   }}
                 >
                   <Box sx={{ textAlign: "center" }}>
-                    <LucideIcons.User size={16} color={theme.palette.text.secondary} />
+                    <User size={16} color={theme.palette.text.secondary} />
                     <Typography
                       sx={{ fontSize: 10, color: theme.palette.text.tertiary, mt: "4px" }}
                     >
@@ -325,7 +505,7 @@ const IconsSection: React.FC = () => {
                     </Typography>
                   </Box>
                   <Box sx={{ textAlign: "center" }}>
-                    <LucideIcons.Settings size={20} color={theme.palette.text.secondary} />
+                    <Settings size={20} color={theme.palette.text.secondary} />
                     <Typography
                       sx={{ fontSize: 10, color: theme.palette.text.tertiary, mt: "4px" }}
                     >
@@ -333,7 +513,7 @@ const IconsSection: React.FC = () => {
                     </Typography>
                   </Box>
                   <Box sx={{ textAlign: "center" }}>
-                    <LucideIcons.Bell size={24} color={theme.palette.text.secondary} />
+                    <Bell size={24} color={theme.palette.text.secondary} />
                     <Typography
                       sx={{ fontSize: 10, color: theme.palette.text.tertiary, mt: "4px" }}
                     >
@@ -359,7 +539,7 @@ const IconsSection: React.FC = () => {
                   }}
                 >
                   <Box sx={{ textAlign: "center" }}>
-                    <LucideIcons.CheckCircle size={20} color={status.success.text} />
+                    <CheckCircle size={20} color={status.success.text} />
                     <Typography
                       sx={{ fontSize: 10, color: theme.palette.text.tertiary, mt: "4px" }}
                     >
@@ -367,7 +547,7 @@ const IconsSection: React.FC = () => {
                     </Typography>
                   </Box>
                   <Box sx={{ textAlign: "center" }}>
-                    <LucideIcons.AlertCircle size={20} color={status.error.text} />
+                    <AlertCircle size={20} color={status.error.text} />
                     <Typography
                       sx={{ fontSize: 10, color: theme.palette.text.tertiary, mt: "4px" }}
                     >
@@ -375,7 +555,7 @@ const IconsSection: React.FC = () => {
                     </Typography>
                   </Box>
                   <Box sx={{ textAlign: "center" }}>
-                    <LucideIcons.AlertTriangle size={20} color="#795548" />
+                    <AlertTriangle size={20} color="#795548" />
                     <Typography
                       sx={{ fontSize: 10, color: theme.palette.text.tertiary, mt: "4px" }}
                     >
@@ -383,7 +563,7 @@ const IconsSection: React.FC = () => {
                     </Typography>
                   </Box>
                   <Box sx={{ textAlign: "center" }}>
-                    <LucideIcons.Info size={20} color="#1565C0" />
+                    <Info size={20} color="#1565C0" />
                     <Typography
                       sx={{ fontSize: 10, color: theme.palette.text.tertiary, mt: "4px" }}
                     >
@@ -409,7 +589,7 @@ const IconsSection: React.FC = () => {
                   }}
                 >
                   <Box sx={{ textAlign: "center" }}>
-                    <LucideIcons.User
+                    <User
                       size={24}
                       strokeWidth={1.5}
                       color={theme.palette.text.secondary}
@@ -421,7 +601,7 @@ const IconsSection: React.FC = () => {
                     </Typography>
                   </Box>
                   <Box sx={{ textAlign: "center" }}>
-                    <LucideIcons.User
+                    <User
                       size={24}
                       strokeWidth={2}
                       color={theme.palette.text.secondary}
@@ -433,7 +613,7 @@ const IconsSection: React.FC = () => {
                     </Typography>
                   </Box>
                   <Box sx={{ textAlign: "center" }}>
-                    <LucideIcons.User
+                    <User
                       size={24}
                       strokeWidth={2.5}
                       color={theme.palette.text.secondary}
@@ -541,7 +721,7 @@ const IconsSection: React.FC = () => {
           >
             <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
               Pass icon name as string: <code>icon: "User"</code> → renders{" "}
-              <LucideIcons.User size={14} style={{ verticalAlign: "middle" }} />
+              <User size={14} style={{ verticalAlign: "middle" }} />
             </Typography>
           </Box>
         </ExampleWithCode>
