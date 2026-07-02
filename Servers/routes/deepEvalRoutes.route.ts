@@ -336,6 +336,7 @@ function deepEvalRoutes() {
             "x-internal-key": AI_GATEWAY_KEY,
             "x-organization-id": String(orgId || ""),
             "x-provider-key": apiKey,
+            ...(req.requestId ? { "x-request-id": req.requestId } : {}),
           },
           body: JSON.stringify({ model: litellmModel, messages, stream: false }),
           signal: AbortSignal.timeout(120_000),
@@ -378,6 +379,9 @@ function deepEvalRoutes() {
       proxyReq: (proxyReq, req) => {
         // Forward custom headers to the proxy target
         const expressReq = req as Request;
+        if (expressReq.requestId) {
+          proxyReq.setHeader("x-request-id", expressReq.requestId);
+        }
         if (expressReq.organizationId) {
           proxyReq.setHeader("x-organization-id", expressReq.organizationId.toString());
         }

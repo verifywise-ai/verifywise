@@ -112,3 +112,8 @@ websockets==15.0.1
 wheel==0.46.2
 yarl==1.22.0
 zipp==3.23.0
+
+# Observability — OpenTelemetry metrics + logs (pushed to central OTLP collector)
+opentelemetry-api>=1.27.0
+opentelemetry-sdk>=1.27.0
+opentelemetry-exporter-otlp-proto-http>=1.27.0

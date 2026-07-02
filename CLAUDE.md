@@ -1,6 +1,6 @@
 # VerifyWise - Development Guide
 
-> **Last Updated:** 2026-06-19
+> **Last Updated:** 2026-06-22
 
 This document contains cross-cutting rules for the VerifyWise codebase. Directory-scoped guides load automatically when working in each area:
 
@@ -193,6 +193,7 @@ Read the relevant file BEFORE implementing changes in that area:
 | Post-market monitoring | `docs/technical/domains/post-market-monitoring.md` |
 | FRIA (Fundamental Rights Impact Assessment) | `docs/technical/domains/fria.md` |
 | Compliance frameworks | `docs/technical/domains/compliance-frameworks.md` |
+| Observability (OTel metrics + logs → Grafana/Prometheus/Loki) | `docs/technical/infrastructure/observability.md` |
 | Docker & deployment | `docs/deployment/PRODUCTION_DEPLOYMENT_GUIDE.md` |
 | Database schema | `docs/technical/architecture/database-schema.md` |
 | Authentication architecture | `docs/technical/architecture/authentication.md` |

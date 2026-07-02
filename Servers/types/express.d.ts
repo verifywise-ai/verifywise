@@ -27,6 +27,8 @@ declare module "express" {
     isSuperAdmin?: boolean;
     /** Test bypass flag set by createTestApp({ bypassAuth: true }) for integration tests */
     testBypassAuth?: boolean;
+    /** Per-request correlation id. Set by requestMetricsMiddleware. */
+    requestId?: string;
     /** Virtual key context, set by virtualKeyAuth middleware for /v1/* proxy routes */
     virtualKey?: {
       id: number;

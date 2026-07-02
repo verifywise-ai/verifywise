@@ -1,0 +1,86 @@
+# Centralized observability stack for VerifyWise managed deployments.
+#
+# This file is INTENTIONALLY separate from the application compose files
+# (docker-compose.yml / .override / .prod). Deploy it on a dedicated
+# monitoring VM. Every managed VerifyWise deployment then pushes OpenTelemetry
+# metrics + logs to this VM's OTel Collector endpoint (configured per
+# deployment via SuperAdmin → Settings → Monitoring).
+#
+# Flow:
+#   VerifyWise services --(OTLP)--> otel-collector --> Prometheus (metrics)
+#                                                  \--> Loki        (logs)
+#   Grafana visualizes both, grouped by the `deployment` label.
+#
+# Usage on the VM:
+#   docker compose -f docker-compose.observability.yml up -d
+#
+# Then expose the collector OTLP HTTP port (4318) to your deployments, and
+# Grafana (3001) to your operators. Put both behind TLS / a reverse proxy in
+# production and set GRAFANA_ADMIN_PASSWORD.
+
+version: "3.9"
+
+services:
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.115.1
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./observability/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    ports:
+      - "4317:4317" # OTLP gRPC
+      - "4318:4318" # OTLP HTTP  <-- this is the URL deployments push to
+    depends_on:
+      - prometheus
+      - loki
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-30d}"
+      # Accept pushed metrics over OTLP (matches "direct export" — no app-side collector).
+      - "--web.enable-otlp-receiver"
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    expose:
+      - "9090"
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:3.3.2
+    command: ["-config.file=/etc/loki/loki-config.yaml"]
+    volumes:
+      - ./observability/loki-config.yaml:/etc/loki/loki-config.yaml:ro
+      - loki_data:/loki
+    expose:
+      - "3100"
+    ports:
+      - "3100:3100"
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+      - loki
+    restart: unless-stopped
+
+volumes:
+  prometheus_data:
+  loki_data:
+  grafana_data:

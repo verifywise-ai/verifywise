@@ -12,6 +12,8 @@ import {
   inviteUserToOrg,
   updateUser,
   removeUser,
+  getMonitoring,
+  updateMonitoring,
 } from "../controllers/superAdmin.ctrl";
 
 const router = express.Router();
@@ -29,5 +31,9 @@ router.get("/organizations/:id/users", listOrgUsers);
 router.post("/organizations/:id/invite", inviteUserToOrg);
 router.patch("/users/:id", updateUser);
 router.delete("/users/:id", removeUser);
+
+// Observability / monitoring configuration (instance-level)
+router.get("/monitoring", getMonitoring);
+router.put("/monitoring", updateMonitoring);
 
 export default router;

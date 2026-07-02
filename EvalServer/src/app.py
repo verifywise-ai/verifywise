@@ -62,6 +62,11 @@ app.add_middleware(
 
 app.add_middleware(TenantMiddleware)
 
+# Observability — push OTLP metrics/logs to the central stack (no-op if disabled)
+from observability import setup_observability  # noqa: E402
+
+setup_observability(app, "verifywise-eval-server")
+
 async def cleanup_orphaned_experiments():
     """Mark any experiments stuck in 'running' as failed on server restart."""
     from database.db import get_db

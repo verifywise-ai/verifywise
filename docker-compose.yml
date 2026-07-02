@@ -114,6 +114,7 @@ services:
       - DB_NAME=$DB_NAME
       - AI_GATEWAY_INTERNAL_KEY=${AI_GATEWAY_INTERNAL_KEY:?AI_GATEWAY_INTERNAL_KEY must be set in the env file before starting}
       - AI_GATEWAY_PORT=8100
+      - BACKEND_URL=http://backend:$BACKEND_PORT
     restart: unless-stopped
 
 volumes:

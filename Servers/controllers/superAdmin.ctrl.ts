@@ -5,8 +5,18 @@ import { createOrganizationQuery } from "../utils/organization.utils";
 import { deleteUserByIdQuery } from "../utils/user.utils";
 import { invite } from "./vwmailer.ctrl";
 import { OrganizationModel } from "../domain.layer/models/organization/organization.model";
+import { getMonitoringConfig, upsertMonitoringConfig } from "../utils/monitoringConfig.utils";
 
 import { translateError } from "../utils/i18n.utils";
+
+/**
+ * Strip the auth_header secret before returning config to the browser.
+ * The UI only needs to know whether an auth header is set, not its value.
+ */
+function redactMonitoringConfig(config: Awaited<ReturnType<typeof getMonitoringConfig>>) {
+  const { auth_header, ...rest } = config;
+  return { ...rest, auth_header_set: Boolean(auth_header) };
+}
 /**
  * List all organizations
  */
@@ -325,6 +335,68 @@ export async function removeUser(req: Request, res: Response) {
     return res.status(200).json(STATUS_CODE[200]({ deleted: true, userId }));
   } catch (error) {
     await transaction.rollback();
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+/**
+ * Get the instance-level observability/monitoring configuration.
+ * The auth header secret is redacted; only its presence is reported.
+ */
+export async function getMonitoring(req: Request, res: Response) {
+  try {
+    const config = await getMonitoringConfig();
+    return res.status(200).json(STATUS_CODE[200](redactMonitoringConfig(config)));
+  } catch (error) {
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+/**
+ * Update the instance-level observability/monitoring configuration.
+ *
+ * Changes take effect after services restart (exporters are configured at
+ * startup). `auth_header` is only overwritten when explicitly provided so the
+ * redacted GET round-trip doesn't wipe an existing secret.
+ */
+export async function updateMonitoring(req: Request, res: Response) {
+  try {
+    const { enabled, otlp_endpoint, deployment_name, auth_header } = req.body ?? {};
+
+    if (enabled && (!otlp_endpoint || !deployment_name)) {
+      return res.status(400).json(
+        STATUS_CODE[400]({
+          message: req.t!("Observability URL and deployment name are required when enabled"),
+        }),
+      );
+    }
+
+    if (otlp_endpoint) {
+      try {
+        const url = new URL(String(otlp_endpoint));
+        if (!["http:", "https:"].includes(url.protocol)) {
+          throw new Error("invalid protocol");
+        }
+      } catch {
+        return res
+          .status(400)
+          .json(STATUS_CODE[400]({ message: req.t!("Observability URL is not a valid URL") }));
+      }
+    }
+
+    const existing = await getMonitoringConfig();
+
+    const updated = await upsertMonitoringConfig({
+      enabled: Boolean(enabled),
+      otlp_endpoint: otlp_endpoint ?? null,
+      deployment_name: deployment_name ?? null,
+      // Preserve the stored secret unless a new (non-empty) value is provided.
+      auth_header: auth_header === undefined ? existing.auth_header : auth_header || null,
+      updated_by: req.userId ?? null,
+    });
+
+    return res.status(200).json(STATUS_CODE[200](redactMonitoringConfig(updated)));
+  } catch (error) {
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }

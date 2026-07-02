@@ -32,6 +32,11 @@ function aiGatewayRoutes() {
         // Forward internal API key
         proxyReq.setHeader("x-internal-key", AI_GATEWAY_KEY);
 
+        // Forward the request id so logs thread across services
+        if (expressReq.requestId) {
+          proxyReq.setHeader("x-request-id", expressReq.requestId);
+        }
+
         // Forward tenant context from JWT
         if (expressReq.organizationId) {
           proxyReq.setHeader("x-organization-id", expressReq.organizationId.toString());

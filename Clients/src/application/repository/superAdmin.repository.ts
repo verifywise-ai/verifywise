@@ -76,3 +76,29 @@ export async function updateUser(
 export async function removeUser(userId: number) {
   return apiServices.delete(`/super-admin/users/${userId}`);
 }
+
+export interface MonitoringConfig {
+  enabled: boolean;
+  otlp_endpoint: string | null;
+  deployment_name: string | null;
+  auth_header_set: boolean;
+  updated_by: number | null;
+  updated_at: string | null;
+}
+
+export interface MonitoringConfigInput {
+  enabled: boolean;
+  otlp_endpoint: string;
+  deployment_name: string;
+  // Only send when the operator wants to change the stored secret. Omit to keep
+  // the existing value; send "" to clear it.
+  auth_header?: string;
+}
+
+export async function getMonitoringConfig() {
+  return apiServices.get<ServerResponse<MonitoringConfig>>("/super-admin/monitoring");
+}
+
+export async function updateMonitoringConfig(data: MonitoringConfigInput) {
+  return apiServices.put<ServerResponse<MonitoringConfig>>("/super-admin/monitoring", data);
+}
