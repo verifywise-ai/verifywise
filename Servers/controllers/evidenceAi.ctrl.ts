@@ -261,7 +261,7 @@ export async function analyzeFile(req: Request, res: Response) {
     }
 
     // ---- Persist -------------------------------------------------
-    const visibility = req.body.visibility || "public";
+    const visibility = req.body?.visibility || "public";
     const analysis = await upsertAnalysisQuery(fileId, organizationId, {
       summary,
       key_findings: keyFindings,
