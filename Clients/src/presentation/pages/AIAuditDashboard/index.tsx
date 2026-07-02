@@ -47,7 +47,6 @@ import {
   accent,
 } from "../../themes/palette";
 import Chip from "../../components/Chip";
-import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import { cardStyles, tableStyles } from "../../themes/components";
 import { useAuditLog, useAuditAnalytics } from "../../../application/hooks/useAIAudit";
 import {
@@ -191,10 +190,25 @@ export default function AIAuditDashboard() {
   ];
 
   return (
-    <PageHeaderExtended
-      title="AI audit"
-      description="Complete audit trail for every AI action. EU AI Act Article 12 compliance."
-      actionButton={
+    <Box>
+      {/* Header — matches Readiness / AI content review style */}
+      <Stack direction="row" justifyContent="space-between" alignItems="center" mb="8px">
+        <Box>
+          <Typography
+            sx={{
+              fontWeight: 600,
+              fontSize: 20,
+              fontFamily: "'Red Hat Display', 'Geist', sans-serif",
+              color: textColors.primary,
+            }}
+          >
+            AI audit
+          </Typography>
+          <Typography sx={{ fontSize: 13, color: textColors.secondary, mt: 0.25 }}>
+            Complete audit trail for every AI action. EU AI Act Article 12 compliance.
+          </Typography>
+        </Box>
+
         <Stack direction="row" alignItems="center" spacing={1.5}>
           {/* Period chips — same pattern as VisibilityChips */}
           <Stack direction="row" spacing={1}>
@@ -240,14 +254,15 @@ export default function AIAuditDashboard() {
             Export CSV
           </Button>
         </Stack>
-      }
-    >
+      </Stack>
+
       {/* Stat cards — matches AI Content Review DashboardHeaderCard pattern */}
       <Box
         sx={{
           "display": "flex",
           "flexWrap": "wrap",
           "gap": "16px",
+          "mb": "16px",
           "& > *": { flex: "1 1 0", minWidth: "120px" },
         }}
       >
@@ -291,6 +306,7 @@ export default function AIAuditDashboard() {
           display: "grid",
           gridTemplateColumns: { xs: "1fr", md: "1fr 1fr 1fr" },
           gap: "16px",
+          mb: "16px",
         }}
       >
         <Card elevation={0} sx={cardStyles.base(theme)}>
@@ -423,6 +439,7 @@ export default function AIAuditDashboard() {
         value={0}
         TabIndicatorProps={{ style: { backgroundColor: brand.primary } }}
         sx={{
+          "mb": "8px",
           "minHeight": "20px",
           "& .MuiTab-root": {
             textTransform: "none",
@@ -454,7 +471,7 @@ export default function AIAuditDashboard() {
       </Tabs>
 
       {/* Actor type filter chips */}
-      <Stack direction="row" alignItems="center" spacing={1}>
+      <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: "8px" }}>
         <Typography
           sx={{
             fontSize: 12,
@@ -659,6 +676,6 @@ export default function AIAuditDashboard() {
           )}
         </DialogContent>
       </Dialog>
-    </PageHeaderExtended>
+    </Box>
   );
 }
