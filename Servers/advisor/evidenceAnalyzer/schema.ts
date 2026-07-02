@@ -1,33 +1,33 @@
 /**
  * Evidence Analyzer — Zod schemas for LLM structured output.
  *
- * The LLM produces ONLY semantic dimensions and qualitative signals.
- * Recency, reliability composition, and the overall score are computed
- * deterministically in code from the LLM output + file metadata.
- *
- * This split keeps scoring reproducible: same document + same metadata
- * → same overall score, even if the LLM rephrases its rationale.
+ * The LLM produces ALL five quality dimensions as A–F letter grades plus a
+ * holistic overall grade. Recency and reliability are judged by the LLM from
+ * the file metadata we feed it (upload/expiry date, file type, parse fidelity)
+ * — there is no deterministic scoring in code anymore.
  */
 
 import { z } from "zod";
 
 /**
- * Per-dimension semantic score with explicit rationale.
- * The rationale forces the LLM to ground its score in the rubric anchors.
+ * QualityGrade — A (Excellent) / B (Good) / C (Adequate) / D (Weak) / F (Insufficient).
  */
-const dimensionScoreSchema = z
+export const qualityGradeSchema = z
+  .enum(["A", "B", "C", "D", "F"])
+  .describe("Letter grade: A Excellent, B Good, C Adequate, D Weak, F Insufficient.");
+
+/**
+ * Per-dimension grade with a short rationale grounding the letter in the rubric.
+ */
+const dimensionGradeSchema = z
   .object({
-    score: z
-      .number()
-      .min(0)
-      .max(100)
-      .describe("Score on the 0-100 ladder, anchored to the rubric tiers (0,30,50,70,90,100)."),
+    grade: qualityGradeSchema,
     rationale: z
       .string()
       .min(10)
       .max(400)
       .describe(
-        "One- or two-sentence justification quoting the rubric tier this evidence matches and citing concrete textual signals.",
+        "One- or two-sentence justification citing the rubric anchor for this letter and concrete signals from the document/metadata.",
       ),
   })
   .strict();
@@ -55,54 +55,7 @@ const keyFindingSchema = z
   .strict();
 
 /**
- * Document character signals — deterministic features the LLM detects.
- * These bump reliability score in code (e.g., signed → +10).
- */
-const documentSignalsSchema = z
-  .object({
-    document_type: z
-      .enum([
-        "policy",
-        "procedure",
-        "report",
-        "assessment",
-        "log",
-        "training_record",
-        "audit",
-        "contract",
-        "other",
-      ])
-      .describe("Best-fit document classification."),
-    has_explicit_dates: z
-      .boolean()
-      .describe("True if the document contains specific dates (created/reviewed/effective)."),
-    has_named_owner: z
-      .boolean()
-      .describe("True if a specific role, team, or individual is named as owner/approver."),
-    has_version: z
-      .boolean()
-      .describe("True if a version identifier (v1.0, rev-2, etc.) is present."),
-    has_metrics: z
-      .boolean()
-      .describe(
-        "True if measurable metrics, thresholds, or KPIs are stated (e.g., '<5%', 'within 24h').",
-      ),
-    is_draft: z
-      .boolean()
-      .describe("True if the document is marked as draft, work-in-progress, or unsigned."),
-    authority_signal: z
-      .number()
-      .min(0)
-      .max(100)
-      .describe(
-        "Authority level 0-100. Anchors: 100=board-approved+signed; 80=management-approved; 60=internal published policy; 40=internal memo; 20=draft/notes; 0=unknown.",
-      ),
-  })
-  .strict();
-
-/**
- * Full LLM output — semantic dimensions + signals only.
- * Recency, overall, and final reliability are computed deterministically.
+ * Full LLM output — five graded dimensions + holistic overall grade.
  */
 export const llmAnalysisSchema = z
   .object({
@@ -123,20 +76,29 @@ export const llmAnalysisSchema = z
       .describe(
         "Normalized compliance area labels (e.g., 'Risk management', 'Data governance'). Use canonical capitalization.",
       ),
-    semantic_scores: z
+    quality_grades: z
       .object({
-        relevance: dimensionScoreSchema,
-        completeness: dimensionScoreSchema,
-        specificity: dimensionScoreSchema,
+        relevance: dimensionGradeSchema,
+        completeness: dimensionGradeSchema,
+        recency: dimensionGradeSchema,
+        reliability: dimensionGradeSchema,
+        specificity: dimensionGradeSchema,
       })
       .strict()
-      .describe("LLM-scored semantic dimensions. Recency and reliability are computed in code."),
-    document_signals: documentSignalsSchema,
+      .describe("A–F grade + rationale for each of the five quality dimensions."),
+    overall_grade: qualityGradeSchema.describe(
+      "Holistic overall letter grade for the evidence. Judge the document as a whole — do NOT mechanically average the five dimensions.",
+    ),
+    overall_rationale: z
+      .string()
+      .min(10)
+      .max(400)
+      .describe("One- or two-sentence justification for the holistic overall grade."),
     abstain_reason: z
       .string()
       .nullable()
       .describe(
-        "If the document is too short, garbled, or off-topic to score, set this to a one-sentence reason and assign all dimension scores ≤ 30. Otherwise null.",
+        "If the document is too short, garbled, or off-topic to grade, set this to a one-sentence reason and grade every dimension and overall as F. Otherwise null.",
       ),
   })
   .strict();
