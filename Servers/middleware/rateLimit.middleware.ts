@@ -2,10 +2,10 @@
  * @fileoverview Rate Limiting Middleware
  *
  * Provides production-ready rate limiting for API endpoints to prevent abuse and DoS attacks.
- * Uses express-rate-limit with IPv6-safe IP normalization.
+ * Uses express-rate-limit with a Redis-backed store for horizontal scaling.
  *
  * Rate Limiters:
- * - fileOperationsLimiter: 50 requests/15min (for file uploads, downloads, deletions)
+ * - fileOperationsLimiter: 100 requests/15min (for file uploads, downloads, deletions)
  * - generalApiLimiter: 100 requests/15min (for standard API endpoints)
  * - authLimiter: 5 requests/15min (for login/register/reset to prevent brute force)
  * - tokenRefreshLimiter: 60 requests/15min (for automatic access-token refresh)
@@ -18,9 +18,10 @@
  * @module middleware/rateLimit
  */
 
-import rateLimit, { Options } from "express-rate-limit";
+import rateLimit, { Options, Store } from "express-rate-limit";
 import { Request, Response } from "express";
 import logger from "../utils/logger/fileLogger";
+import redisClient from "../database/redis";
 
 // Fail closed: the strict (production) limits apply unless NODE_ENV is
 // EXPLICITLY a known non-production value. A missing or misspelled NODE_ENV in
@@ -36,6 +37,7 @@ interface RateLimitConfig {
   windowMinutes: number;
   maxRequests: number;
   message: string;
+  prefix: string;
 }
 
 /**
@@ -46,11 +48,13 @@ const RATE_LIMIT_CONFIGS: Record<string, RateLimitConfig> = {
     windowMinutes: 15,
     maxRequests: 100,
     message: "Too many file operation requests from this IP, please try again after 15 minutes",
+    prefix: "rl:fileops",
   },
   generalApi: {
     windowMinutes: 15,
     maxRequests: 100,
     message: "Too many requests from this IP, please try again after 15 minutes",
+    prefix: "rl:api",
   },
   auth: {
     windowMinutes: 15,
@@ -58,6 +62,7 @@ const RATE_LIMIT_CONFIGS: Record<string, RateLimitConfig> = {
     // dev/test so a single developer on one localhost IP is not locked out.
     maxRequests: isNonProduction ? 1000 : 5,
     message: "Too many authentication attempts from this IP, please try again after 15 minutes",
+    prefix: "rl:auth",
   },
   // Token refresh happens automatically and legitimately many times in a normal
   // session, so it gets its own generous limit rather than sharing the strict
@@ -66,13 +71,64 @@ const RATE_LIMIT_CONFIGS: Record<string, RateLimitConfig> = {
     windowMinutes: 15,
     maxRequests: isNonProduction ? 1000 : 60,
     message: "Too many token refresh attempts from this IP, please try again after 15 minutes",
+    prefix: "rl:refresh",
   },
   aiDetectionScan: {
     windowMinutes: 60,
     maxRequests: 10,
     message: "Too many AI detection scan requests from this IP, please try again after 60 minutes",
+    prefix: "rl:aidet",
   },
 };
+
+/**
+ * Redis-backed store for express-rate-limit.
+ * Shares counters across all server instances. Fails open (allows the request)
+ * if Redis is unreachable to avoid blocking all traffic during an outage.
+ */
+class RedisRateLimitStore implements Store {
+  private windowMs: number;
+  private prefix: string;
+
+  constructor(options: { windowMs: number; prefix: string }) {
+    this.windowMs = options.windowMs;
+    this.prefix = options.prefix;
+  }
+
+  async increment(key: string): Promise<{ totalHits: number; resetTime?: Date }> {
+    const redisKey = `${this.prefix}:${key}`;
+    try {
+      const pipeline = redisClient.pipeline();
+      pipeline.incr(redisKey);
+      pipeline.pexpire(redisKey, this.windowMs);
+      const results = await pipeline.exec();
+      const totalHits = (results?.[0]?.[1] as number) ?? 1;
+      return { totalHits, resetTime: new Date(Date.now() + this.windowMs) };
+    } catch (error) {
+      logger.error(`Redis rate-limit increment failed for ${redisKey}:`, error);
+      // Fail open so a Redis outage does not hard-block the API.
+      return { totalHits: 0 };
+    }
+  }
+
+  async decrement(key: string): Promise<void> {
+    const redisKey = `${this.prefix}:${key}`;
+    try {
+      await redisClient.decr(redisKey);
+    } catch (error) {
+      logger.error(`Redis rate-limit decrement failed for ${redisKey}:`, error);
+    }
+  }
+
+  async resetKey(key: string): Promise<void> {
+    const redisKey = `${this.prefix}:${key}`;
+    try {
+      await redisClient.del(redisKey);
+    } catch (error) {
+      logger.error(`Redis rate-limit reset failed for ${redisKey}:`, error);
+    }
+  }
+}
 
 /**
  * Creates a standardized rate limit error handler
@@ -91,14 +147,14 @@ const createRateLimitHandler = (message: string) => {
  * Uses express-rate-limit's built-in IP extraction and IPv6 normalization
  */
 const createRateLimiter = (config: RateLimitConfig) => {
+  const windowMs = config.windowMinutes * 60 * 1000;
   const options: Partial<Options> = {
-    windowMs: config.windowMinutes * 60 * 1000,
+    windowMs,
     max: config.maxRequests,
     standardHeaders: true, // Send rate limit info in RateLimit-* headers
     legacyHeaders: false, // Disable X-RateLimit-* headers
     handler: createRateLimitHandler(config.message),
-    // Let express-rate-limit handle IP extraction with IPv6 support
-    // This automatically uses req.ip with proper IPv6 normalization
+    store: new RedisRateLimitStore({ windowMs, prefix: config.prefix }),
   };
 
   return rateLimit(options);
