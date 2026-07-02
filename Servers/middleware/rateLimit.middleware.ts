@@ -52,7 +52,10 @@ const RATE_LIMIT_CONFIGS: Record<string, RateLimitConfig> = {
   },
   generalApi: {
     windowMinutes: 15,
-    maxRequests: 100,
+    // Global safety net. Must be generous enough that a normal dashboard load
+    // (which fires many parallel requests) does not trip it. Stricter limits
+    // are applied by route-specific limiters (auth, file ops, AI scans).
+    maxRequests: isNonProduction ? 1000 : 500,
     message: "Too many requests from this IP, please try again after 15 minutes",
     prefix: "rl:api",
   },
