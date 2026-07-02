@@ -5,9 +5,6 @@ import light from "./presentation/themes/light";
 import { CssBaseline } from "@mui/material";
 import { VerifyWiseContext } from "./application/contexts/VerifyWise.context";
 import { useCallback, useMemo, useState, useEffect } from "react";
-import { Provider } from "react-redux";
-import { PersistGate } from "redux-persist/integration/react";
-import { store, persistor } from "./application/redux/store";
 import { useAuth } from "./application/hooks/useAuth";
 import { Project } from "./domain/types/Project";
 import { CookiesProvider } from "react-cookie";
@@ -262,9 +259,7 @@ function App() {
 
   return (
     <CookiesProvider>
-      <Provider store={store}>
-        <PersistGate loading={null} persistor={persistor}>
-          <VerifyWiseContext.Provider value={contextValues}>
+      <VerifyWiseContext.Provider value={contextValues}>
             <PluginRegistryProvider>
               <PluginLoader />
               <UserGuideSidebarProvider>
@@ -301,9 +296,7 @@ function App() {
                 </SmartPromptProvider>
               </UserGuideSidebarProvider>
             </PluginRegistryProvider>
-          </VerifyWiseContext.Provider>
-        </PersistGate>
-      </Provider>
+      </VerifyWiseContext.Provider>
 
       {/* React Query DevTools - Only in development */}
       {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
