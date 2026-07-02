@@ -88,31 +88,32 @@ const RATE_LIMIT_CONFIGS: Record<string, RateLimitConfig> = {
  */
 class RedisRateLimitStore implements Store {
   private windowMs: number;
-  private prefix: string;
+  private keyPrefix: string;
 
   constructor(options: { windowMs: number; prefix: string }) {
     this.windowMs = options.windowMs;
-    this.prefix = options.prefix;
+    this.keyPrefix = options.prefix;
   }
 
-  async increment(key: string): Promise<{ totalHits: number; resetTime?: Date }> {
-    const redisKey = `${this.prefix}:${key}`;
+  async increment(key: string) {
+    const redisKey = `${this.keyPrefix}:${key}`;
+    const resetTime = new Date(Date.now() + this.windowMs);
     try {
       const pipeline = redisClient.pipeline();
       pipeline.incr(redisKey);
       pipeline.pexpire(redisKey, this.windowMs);
       const results = await pipeline.exec();
       const totalHits = (results?.[0]?.[1] as number) ?? 1;
-      return { totalHits, resetTime: new Date(Date.now() + this.windowMs) };
+      return { totalHits, resetTime };
     } catch (error) {
       logger.error(`Redis rate-limit increment failed for ${redisKey}:`, error);
       // Fail open so a Redis outage does not hard-block the API.
-      return { totalHits: 0 };
+      return { totalHits: 0, resetTime };
     }
   }
 
   async decrement(key: string): Promise<void> {
-    const redisKey = `${this.prefix}:${key}`;
+    const redisKey = `${this.keyPrefix}:${key}`;
     try {
       await redisClient.decr(redisKey);
     } catch (error) {
@@ -121,7 +122,7 @@ class RedisRateLimitStore implements Store {
   }
 
   async resetKey(key: string): Promise<void> {
-    const redisKey = `${this.prefix}:${key}`;
+    const redisKey = `${this.keyPrefix}:${key}`;
     try {
       await redisClient.del(redisKey);
     } catch (error) {
