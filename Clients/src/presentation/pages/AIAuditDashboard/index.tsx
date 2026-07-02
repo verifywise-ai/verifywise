@@ -337,6 +337,7 @@ export default function AIAuditDashboard() {
                     innerRadius={45}
                     outerRadius={75}
                     paddingAngle={2}
+                    isAnimationActive={false}
                   >
                     {byState.map((entry: any, i: number) => (
                       <Cell key={i} fill={getStateColor(entry.state)} />
@@ -384,7 +385,7 @@ export default function AIAuditDashboard() {
                       border: `1px solid ${borderPalette.dark}`,
                     }}
                   />
-                  <Bar dataKey="count" fill={brand.primary} radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="count" fill={brand.primary} radius={[4, 4, 0, 0]} isAnimationActive={false} />
                 </BarChart>
               </ResponsiveContainer>
             )}
