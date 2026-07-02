@@ -28,7 +28,7 @@ export async function addAllJobs(): Promise<void> {
   await scheduleAiGatewayRiskDetection();
   await scheduleAiGatewayCacheCleanup();
   await scheduleMcpGatewayCleanup();
-  await scheduleAiTrustIndexSync(); // MUST be last — earlier schedulers obliterate the queue
+  await scheduleAiTrustIndexSync();
 }
 
 if (require.main === module) {
