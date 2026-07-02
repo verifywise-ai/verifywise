@@ -41,7 +41,7 @@ import { getAllEntities } from "../../../application/repository/entity.repositor
 import { EmptyState } from "../../components/EmptyState";
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import { FileIcon } from "../../components/FileIcon";
-import EvidenceQualityBadge from "../../components/EvidenceQualityBadge";
+import EvidenceQualityBadge, { type QualityGrade } from "../../components/EvidenceQualityBadge";
 import EvidenceAnalysisPanel from "../../components/EvidenceAnalysisPanel";
 import { useQualityScores, useTriggerAnalysis } from "../../../application/hooks/useEvidenceAi";
 import { text as textColors, border as borderPalette } from "../../themes/palette";
@@ -61,6 +61,10 @@ import { EvidenceHubTableProps } from "../../../domain/interfaces/i.modelInvento
 dayjs.extend(utc);
 
 const EVIDENCE_HUB_SORTING_KEY = "verifywise_evidence_hub_sorting";
+
+// Grade → sortable rank (A=5 … F=1, unrated=0)
+const gradeRank = (grade?: string): number =>
+  ({ A: 5, B: 4, C: 3, D: 2, F: 1 })[grade ?? ""] ?? 0;
 
 type SortDirection = "asc" | "desc" | null;
 type SortConfig = {
@@ -264,13 +268,13 @@ const EvidenceHubTable: React.FC<EvidenceHubTableProps> = ({
     return map;
   }, [modelInventoryData]);
 
-  // Build a map of file_id → quality score from AI analysis data
+  // Build a map of file_id → overall quality grade from AI analysis data
   const qualityMap = useMemo(() => {
-    const map = new Map<number, number>();
+    const map = new Map<number, string>();
     if (qualityScoresData && Array.isArray(qualityScoresData)) {
       qualityScoresData.forEach((item: any) => {
-        if (item.file_id && item.overall_quality_score != null) {
-          map.set(item.file_id, item.overall_quality_score);
+        if (item.file_id && item.overall_quality_grade != null) {
+          map.set(item.file_id, item.overall_quality_grade);
         }
       });
     }
@@ -390,6 +394,14 @@ const EvidenceHubTable: React.FC<EvidenceHubTableProps> = ({
           bValue = b.expiry_date ? new Date(b.expiry_date).getTime() : 0;
           break;
 
+        case "quality": {
+          const aFileId = a.evidence_files?.[0]?.id;
+          const bFileId = b.evidence_files?.[0]?.id;
+          aValue = gradeRank(aFileId ? qualityMap.get(Number(aFileId)) : undefined);
+          bValue = gradeRank(bFileId ? qualityMap.get(Number(bFileId)) : undefined);
+          break;
+        }
+
         default:
           return 0;
       }
@@ -405,7 +417,7 @@ const EvidenceHubTable: React.FC<EvidenceHubTableProps> = ({
       if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
       return 0;
     });
-  }, [data, sortConfig, userMap]);
+  }, [data, sortConfig, userMap, qualityMap]);
 
   const getRange = useMemo(() => {
     const start = page * rowsPerPage + 1;
@@ -603,11 +615,11 @@ const EvidenceHubTable: React.FC<EvidenceHubTableProps> = ({
                   <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
                     {(() => {
                       const fileId = evidence.evidence_files?.[0]?.id;
-                      const score = fileId ? qualityMap.get(Number(fileId)) : undefined;
+                      const grade = fileId ? qualityMap.get(Number(fileId)) : undefined;
                       const analysis = fileId ? qualityAnalysisMap.get(Number(fileId)) : undefined;
-                      return score != null ? (
+                      return grade != null ? (
                         <EvidenceQualityBadge
-                          score={score}
+                          grade={grade as QualityGrade}
                           onClick={
                             analysis
                               ? (e) => {

@@ -34,14 +34,18 @@ import {
   border as borderPalette,
   background,
 } from "../../themes/palette";
-import EvidenceQualityBadge from "../EvidenceQualityBadge";
+import EvidenceQualityBadge, {
+  getGradeColor,
+  getGradeLabel,
+  type QualityGrade,
+} from "../EvidenceQualityBadge";
 
 interface QualityScore {
-  relevance: number;
-  completeness: number;
-  recency: number;
-  reliability: number;
-  specificity: number;
+  relevance: QualityGrade | null;
+  completeness: QualityGrade | null;
+  recency: QualityGrade | null;
+  reliability: QualityGrade | null;
+  specificity: QualityGrade | null;
 }
 
 interface SuggestedLink {
@@ -86,7 +90,7 @@ interface AnalysisData {
   key_findings: string[];
   compliance_areas: string[];
   quality_score: QualityScore;
-  overall_quality_score: number;
+  overall_quality_grade: QualityGrade | null;
   suggested_control_links: SuggestedLink[];
   analysis_model: string;
   analysis_version: number;
@@ -109,18 +113,22 @@ const cardSx = {
   background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
 };
 
-function getScoreColor(score: number) {
-  if (score >= 80) return status.success;
-  if (score >= 60) return accent.primary;
-  if (score >= 40) return status.warning;
-  return status.error;
-}
-
-function getScoreLabel(score: number) {
-  if (score >= 80) return "High";
-  if (score >= 60) return "Good";
-  if (score >= 40) return "Fair";
-  return "Low";
+// Grade → progress-bar fill % (A=100 … F=20, null=0)
+function gradeFill(grade: QualityGrade | null) {
+  switch (grade) {
+    case "A":
+      return 100;
+    case "B":
+      return 80;
+    case "C":
+      return 60;
+    case "D":
+      return 40;
+    case "F":
+      return 20;
+    default:
+      return 0;
+  }
 }
 
 const DIMENSION_META = [
@@ -159,17 +167,17 @@ const DIMENSION_META = [
 function DimensionCard({
   label,
   description,
-  score,
+  grade,
   Icon,
   rationale,
 }: {
   label: string;
   description: string;
-  score: number;
+  grade: QualityGrade | null;
   Icon: any;
   rationale?: string | null;
 }) {
-  const colors = getScoreColor(score);
+  const colors = getGradeColor(grade);
   const [expanded, setExpanded] = useState(false);
   const hasRationale = !!rationale && rationale.trim().length > 0;
 
@@ -221,26 +229,15 @@ function DimensionCard({
         sx={{
           fontSize: 24,
           fontWeight: 700,
-          color: textColors.primary,
+          color: colors.text,
           lineHeight: 1.1,
         }}
       >
-        {score}
-        <Typography
-          component="span"
-          sx={{
-            fontSize: 12,
-            fontWeight: 500,
-            color: textColors.accent,
-            ml: 0.5,
-          }}
-        >
-          / 100
-        </Typography>
+        {grade ?? "—"}
       </Typography>
       <LinearProgress
         variant="determinate"
-        value={score}
+        value={gradeFill(grade)}
         sx={{
           "height": 5,
           "borderRadius": 3,
@@ -400,8 +397,9 @@ export default function EvidenceAnalysisPanel({
   const abstainReason = auditMetadata?.abstain_reason;
   const findingsWithQuotes = auditMetadata?.findings_with_quotes;
 
-  const overallColors = getScoreColor(analysis.overall_quality_score);
-  const overallLabel = getScoreLabel(analysis.overall_quality_score);
+  const overallGrade = analysis.overall_quality_grade;
+  const overallColors = getGradeColor(overallGrade);
+  const overallLabel = getGradeLabel(overallGrade);
 
   return (
     <Box sx={{ p: 3, backgroundColor: background.alt }}>
@@ -461,19 +459,8 @@ export default function EvidenceAnalysisPanel({
               flexShrink: 0,
             }}
           >
-            <Typography sx={{ fontSize: 32, fontWeight: 700, lineHeight: 1 }}>
-              {analysis.overall_quality_score}
-            </Typography>
-            <Typography
-              sx={{
-                fontSize: 10,
-                fontWeight: 500,
-                textTransform: "uppercase",
-                letterSpacing: 0.5,
-                opacity: 0.8,
-              }}
-            >
-              / 100
+            <Typography sx={{ fontSize: 44, fontWeight: 700, lineHeight: 1 }}>
+              {overallGrade ?? "—"}
             </Typography>
           </Box>
 
@@ -489,9 +476,9 @@ export default function EvidenceAnalysisPanel({
                   letterSpacing: 0.3,
                 }}
               >
-                Overall Quality Score
+                Overall Quality Grade
               </Typography>
-              <EvidenceQualityBadge score={analysis.overall_quality_score} size="small" />
+              <EvidenceQualityBadge grade={overallGrade} size="small" />
             </Stack>
             <Typography
               sx={{
@@ -502,7 +489,7 @@ export default function EvidenceAnalysisPanel({
                 mb: 0.75,
               }}
             >
-              {overallLabel} quality evidence
+              {overallGrade ? `${overallLabel} quality evidence` : "AI grading unavailable"}
             </Typography>
             <Typography
               sx={{
@@ -549,7 +536,7 @@ export default function EvidenceAnalysisPanel({
               key={dim.key}
               label={dim.label}
               description={dim.description}
-              score={qualityScore?.[dim.key as keyof QualityScore] ?? 0}
+              grade={qualityScore?.[dim.key as keyof QualityScore] ?? null}
               Icon={dim.icon}
               rationale={rationales?.[dim.key as keyof typeof rationales] ?? null}
             />
