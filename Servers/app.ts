@@ -105,6 +105,7 @@ import virtualKeyProxyRoutes from "./routes/virtualKeyProxy.route";
 import internalRoutes from "./routes/internal.route";
 import superAdminRoutes from "./routes/superAdmin.route";
 import { i18nMiddleware } from "./middleware/i18n.middleware";
+import { generalApiLimiter } from "./middleware/rateLimit.middleware";
 import { sequelize } from "./database/db";
 import redisClient from "./database/redis";
 import ssoConfigRoutes from "./routes/ssoConfig.route";
@@ -116,6 +117,7 @@ const DEFAULT_HOST = "localhost";
 
 export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Application {
   const app = express();
+  app.set("trust proxy", Number(process.env.TRUST_PROXY_HOPS ?? 1));
   const host = process.env.HOST || DEFAULT_HOST;
 
   app.use(
@@ -208,6 +210,10 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
   if (preRoutesMiddleware) {
     preRoutesMiddleware.forEach((mw) => app.use(mw));
   }
+
+  // Global API rate limiter applied to all /api routes. Specific routes may
+  // mount stricter limiters on top of this lenient baseline.
+  app.use("/api", generalApiLimiter);
 
   app.use("/api/users", userRoutes);
   app.use("/api/vendorRisks", vendorRiskRoutes);
