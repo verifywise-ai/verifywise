@@ -16,13 +16,13 @@ export async function enqueueAutomationAction(
 }
 
 export async function scheduleVendorReviewDateNotification() {
-  await automationQueue.obliterate({ force: true });
   logger.info("Adding Vendor Review Date Notification jobs to the queue...");
   // Vendor Review Date Notification Every day at 12 am
   await automationQueue.add(
     "send_vendor_notification",
     { type: "review_date" },
     {
+      jobId: "vendor-review-date-notification",
       repeat: {
         pattern: "0 0 * * *",
       },
@@ -39,6 +39,7 @@ export async function schedulePolicyDueSoonNotification() {
     "send_policy_due_soon_notification",
     { type: "policy_due_soon" },
     {
+      jobId: "policy-due-soon-notification",
       repeat: {
         pattern: "0 8 * * *",
       },
@@ -49,13 +50,13 @@ export async function schedulePolicyDueSoonNotification() {
 }
 
 export async function scheduleReportNotification() {
-  await automationQueue.obliterate({ force: true });
   logger.info("Adding Report Notification jobs to the queue...");
   // Report Notification Every day at 12 am
   await automationQueue.add(
     "send_report_notification",
     { type: "report_notification" },
     {
+      jobId: "report-notification",
       repeat: {
         pattern: "0 0 * * *",
       },
@@ -72,6 +73,7 @@ export async function schedulePMMHourlyCheck() {
     "pmm_hourly_check",
     { type: "pmm" },
     {
+      jobId: "pmm-hourly-check",
       repeat: {
         pattern: "0 * * * *", // Every hour at minute 0
       },
@@ -89,6 +91,7 @@ export async function scheduleShadowAiJobs() {
     "shadow_ai_daily_rollup",
     { type: "shadow_ai" },
     {
+      jobId: "shadow-ai-daily-rollup",
       repeat: { pattern: "0 1 * * *" },
       removeOnComplete: true,
       removeOnFail: false,
@@ -100,6 +103,7 @@ export async function scheduleShadowAiJobs() {
     "shadow_ai_monthly_rollup",
     { type: "shadow_ai" },
     {
+      jobId: "shadow-ai-monthly-rollup",
       repeat: { pattern: "0 1 1 * *" },
       removeOnComplete: true,
       removeOnFail: false,
@@ -111,6 +115,7 @@ export async function scheduleShadowAiJobs() {
     "shadow_ai_risk_scoring",
     { type: "shadow_ai" },
     {
+      jobId: "shadow-ai-risk-scoring",
       repeat: { pattern: "30 1 * * *" },
       removeOnComplete: true,
       removeOnFail: false,
@@ -122,6 +127,7 @@ export async function scheduleShadowAiJobs() {
     "shadow_ai_purge_events",
     { type: "shadow_ai" },
     {
+      jobId: "shadow-ai-purge-events",
       repeat: { pattern: "0 2 * * *" },
       removeOnComplete: true,
       removeOnFail: false,
@@ -133,6 +139,7 @@ export async function scheduleShadowAiJobs() {
     "ai_gateway_budget_reset",
     { type: "ai_gateway" },
     {
+      jobId: "ai-gateway-budget-reset",
       repeat: { pattern: "5 0 1 * *" },
       removeOnComplete: true,
       removeOnFail: false,
@@ -147,6 +154,7 @@ export async function scheduleAgentDiscoverySync() {
     "agent_discovery_sync",
     { type: "agent_discovery" },
     {
+      jobId: "agent-discovery-sync",
       repeat: { pattern: "0 */6 * * *" },
       removeOnComplete: true,
       removeOnFail: false,
@@ -161,6 +169,7 @@ export async function scheduleAiDetectionScanCheck() {
     "ai_detection_scheduled_scan_check",
     { type: "ai_detection" },
     {
+      jobId: "ai-detection-scheduled-scan-check",
       repeat: { pattern: "*/5 * * * *" },
       removeOnComplete: true,
       removeOnFail: false,
@@ -175,6 +184,7 @@ export async function scheduleAiGatewayRiskDetection() {
     "ai_gateway_risk_detection",
     { type: "ai_gateway_risk" },
     {
+      jobId: "ai-gateway-risk-detection",
       repeat: { pattern: "0 6 * * *" },
       removeOnComplete: true,
       removeOnFail: false,
@@ -189,6 +199,7 @@ export async function scheduleAiGatewayCacheCleanup() {
     "ai_gateway_cache_cleanup",
     { type: "ai_gateway_cache" },
     {
+      jobId: "ai-gateway-cache-cleanup",
       repeat: { pattern: "0 3 * * *" },
       removeOnComplete: true,
       removeOnFail: false,
@@ -203,6 +214,7 @@ export async function scheduleMcpGatewayCleanup() {
     "mcp_audit_cleanup",
     { type: "mcp_gateway" },
     {
+      jobId: "mcp-audit-cleanup",
       repeat: { pattern: "0 3 * * *" },
       removeOnComplete: true,
       removeOnFail: false,
@@ -212,12 +224,12 @@ export async function scheduleMcpGatewayCleanup() {
 
 export async function scheduleAiTrustIndexSync() {
   logger.info("Adding AI Trust Index weekly sync job to the queue...");
-  // Monday 06:00 UTC. jobId keyed weekly is set at runtime is not needed here;
-  // the handler self-guards via last_run_week. Repeatable add is idempotent by repeat key.
+  // Monday 06:00 UTC.
   await automationQueue.add(
     "ai_trust_index_sync",
     {},
     {
+      jobId: "ai-trust-index-sync",
       repeat: { pattern: "0 6 * * 1", tz: "UTC" },
       removeOnComplete: true,
       removeOnFail: false,
