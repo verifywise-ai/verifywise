@@ -1,5 +1,6 @@
 import { sequelize } from "../database/db";
 import { buildVisibilityFilterForEvidence } from "./visibility.utils";
+import type { QualityGrade } from "../domain.layer/interfaces/i.evidenceAi";
 
 /**
  * Insert or update an AI analysis result for a file.
@@ -16,7 +17,7 @@ export const upsertAnalysisQuery = async (
     key_findings: any;
     compliance_areas: any;
     quality_score: any;
-    overall_quality_score: number;
+    overall_quality_grade: QualityGrade | null;
     suggested_control_links: any;
     analysis_model: string;
     analyzed_by: number | null;
@@ -43,7 +44,7 @@ export const upsertAnalysisQuery = async (
          key_findings = :key_findings,
          compliance_areas = :compliance_areas,
          quality_score = :quality_score,
-         overall_quality_score = :overall_quality_score,
+         overall_quality_grade = :overall_quality_grade,
          suggested_control_links = :suggested_control_links,
          analysis_model = :analysis_model,
          analysis_version = analysis_version + 1,
@@ -61,7 +62,7 @@ export const upsertAnalysisQuery = async (
           key_findings: JSON.stringify(data.key_findings),
           compliance_areas: JSON.stringify(data.compliance_areas),
           quality_score: JSON.stringify(data.quality_score),
-          overall_quality_score: data.overall_quality_score,
+          overall_quality_grade: data.overall_quality_grade,
           suggested_control_links: JSON.stringify(data.suggested_control_links),
           analysis_model: data.analysis_model,
           analyzed_by: data.analyzed_by,
@@ -76,12 +77,12 @@ export const upsertAnalysisQuery = async (
   const [created] = await sequelize.query(
     `INSERT INTO evidence_ai_analysis (
        file_id, summary, key_findings, compliance_areas,
-       quality_score, overall_quality_score, suggested_control_links,
+       quality_score, overall_quality_grade, suggested_control_links,
        analysis_model, analyzed_by, visibility, organization_id,
        audit_metadata
      ) VALUES (
        :fileId, :summary, :key_findings, :compliance_areas,
-       :quality_score, :overall_quality_score, :suggested_control_links,
+       :quality_score, :overall_quality_grade, :suggested_control_links,
        :analysis_model, :analyzed_by, :visibility, :organizationId,
        :audit_metadata::jsonb
      ) RETURNING *`,
@@ -93,7 +94,7 @@ export const upsertAnalysisQuery = async (
         key_findings: JSON.stringify(data.key_findings),
         compliance_areas: JSON.stringify(data.compliance_areas),
         quality_score: JSON.stringify(data.quality_score),
-        overall_quality_score: data.overall_quality_score,
+        overall_quality_grade: data.overall_quality_grade,
         suggested_control_links: JSON.stringify(data.suggested_control_links),
         analysis_model: data.analysis_model,
         analyzed_by: data.analyzed_by,
@@ -141,7 +142,9 @@ export const getQualityScoresQuery = async (
      LEFT JOIN files f ON f.id = eaa.file_id
      WHERE eaa.organization_id = :organizationId
      ${vis.clause}
-     ORDER BY eaa.overall_quality_score ASC`,
+     ORDER BY CASE eaa.overall_quality_grade
+       WHEN 'F' THEN 0 WHEN 'D' THEN 1 WHEN 'C' THEN 2
+       WHEN 'B' THEN 3 WHEN 'A' THEN 4 ELSE 5 END ASC`,
     { replacements: { organizationId, ...vis.replacements } },
   );
   return rows as any[];
@@ -153,7 +156,7 @@ export const getQualityScoresQuery = async (
 export const getEvidenceGapsQuery = async (
   organizationId: number,
   frameworkType?: string,
-  qualityThreshold: number = 50,
+  lowGrades: QualityGrade[] = ["D", "F"],
 ) => {
   const fwTypes = frameworkType ? [frameworkType] : ["eu_ai_act", "iso_42001"];
   const allGaps: any[] = [];
@@ -169,19 +172,26 @@ export const getEvidenceGapsQuery = async (
       controlTitleCol = "title";
     }
 
+    // adequate evidence = an analysis whose overall_quality_grade is graded and
+    // NOT in the low set. Low-quality (unrated/D/F) evidence and un-analyzed
+    // files don't count toward adequacy, so a control with only those reads as
+    // a gap. Worst controls (fewest evidence, then fewest adequate) sort first.
     const [gaps] = await sequelize.query(
       `SELECT
          :fwType as framework_type,
          cs.id as control_id,
          cs.${controlTitleCol} as control_title,
          COALESCE(stats.evidence_count, 0)::int as evidence_count,
-         COALESCE(stats.avg_quality, 0)::int as avg_quality
+         COALESCE(stats.adequate_count, 0)::int as adequate_count
        FROM ${controlQuery} cs
        LEFT JOIN (
          SELECT
            fel.entity_id,
            COUNT(DISTINCT fel.file_id) as evidence_count,
-           AVG(eaa.overall_quality_score) as avg_quality
+           COUNT(DISTINCT fel.file_id) FILTER (
+             WHERE eaa.overall_quality_grade IS NOT NULL
+               AND eaa.overall_quality_grade <> ALL(ARRAY[:lowGrades]::varchar[])
+           ) as adequate_count
          FROM file_entity_links fel
          LEFT JOIN evidence_ai_analysis eaa
            ON eaa.file_id = fel.file_id AND eaa.organization_id = :organizationId
@@ -190,8 +200,8 @@ export const getEvidenceGapsQuery = async (
          GROUP BY fel.entity_id
        ) stats ON stats.entity_id = cs.id
        WHERE cs.${controlTitleCol} IS NOT NULL
-       ORDER BY COALESCE(stats.evidence_count, 0) ASC, COALESCE(stats.avg_quality, 0) ASC`,
-      { replacements: { organizationId, fwType: fw } },
+       ORDER BY COALESCE(stats.evidence_count, 0) ASC, COALESCE(stats.adequate_count, 0) ASC`,
+      { replacements: { organizationId, fwType: fw, lowGrades } },
     );
 
     allGaps.push(...(gaps as any[]));
@@ -202,7 +212,7 @@ export const getEvidenceGapsQuery = async (
     gap_type:
       g.evidence_count === 0
         ? "no_evidence"
-        : g.avg_quality < qualityThreshold
+        : g.adequate_count === 0
           ? "low_quality"
           : "adequate",
   }));
@@ -221,7 +231,7 @@ export const getSuggestionsQuery = async (fileId: number, organizationId: number
       typeof analysis.suggested_control_links === "string"
         ? JSON.parse(analysis.suggested_control_links)
         : analysis.suggested_control_links,
-    overall_quality_score: analysis.overall_quality_score,
+    overall_quality_grade: analysis.overall_quality_grade,
   };
 };
 

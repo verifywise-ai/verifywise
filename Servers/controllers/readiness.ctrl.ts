@@ -39,7 +39,9 @@ async function calculateControlReadiness(
   const [evidenceRows] = await sequelize.query(
     `SELECT
        COUNT(DISTINCT fel.file_id) AS evidence_count,
-       COALESCE(AVG(eaa.overall_quality_score), 0) AS avg_quality,
+       COALESCE(AVG(CASE eaa.overall_quality_grade
+         WHEN 'A' THEN 95 WHEN 'B' THEN 80 WHEN 'C' THEN 65
+         WHEN 'D' THEN 45 WHEN 'F' THEN 20 END), 0) AS avg_quality,
        EXTRACT(DAY FROM NOW() - MAX(eaa.analyzed_at))::INT AS days_since_latest
      FROM file_entity_links fel
      LEFT JOIN evidence_ai_analysis eaa
