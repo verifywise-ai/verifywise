@@ -9,14 +9,15 @@ import {
   Tabs,
   Card,
   CardContent,
+  useTheme,
 } from "@mui/material";
 import { ShieldCheck, RefreshCw } from "lucide-react";
+import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import { VisibilityChips } from "../../components/VisibilityToggle";
 import type { VisibilityFilterValue } from "../../components/VisibilityToggle";
+import { cardStyles, layoutStyles } from "../../themes/components";
 import {
   text as textColors,
-  background,
-  border as borderPalette,
   brand,
   status,
   accent,
@@ -37,13 +38,6 @@ const FRAMEWORK_TABS = [
   { value: "eu_ai_act", label: "EU AI Act" },
   { value: "iso_42001", label: "ISO 42001" },
 ];
-
-// Consistent card style matching DashboardCard / DashboardHeaderCard
-const cardSx = {
-  border: `1px solid ${borderPalette.dark}`,
-  borderRadius: "4px",
-  background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
-};
 
 function getLevelColor(level: ReadinessLevel | string | undefined) {
   switch (level) {
@@ -93,6 +87,7 @@ function formatFrameworkName(type: string): string {
 }
 
 export default function ReadinessDashboard() {
+  const theme = useTheme();
   const [selectedFramework, setSelectedFramework] = useState("eu_ai_act");
   const [visFilter, setVisFilter] = useState<VisibilityFilterValue>("all");
 
@@ -118,24 +113,10 @@ export default function ReadinessDashboard() {
   };
 
   return (
-    <Box>
-      {/* Header — matches dashboard style */}
-      <Stack direction="row" justifyContent="space-between" alignItems="center" mb="8px">
-        <Box>
-          <Typography
-            sx={{
-              fontWeight: 600,
-              fontSize: 20,
-              fontFamily: "'Red Hat Display', 'Geist', sans-serif",
-              color: textColors.primary,
-            }}
-          >
-            Audit readiness
-          </Typography>
-          <Typography sx={{ fontSize: 13, color: textColors.secondary, mt: 0.25 }}>
-            Per-control readiness scores, framework aggregations, and improvement recommendations.
-          </Typography>
-        </Box>
+    <PageHeaderExtended
+      title="Audit readiness"
+      description="Per-control readiness scores, framework aggregations, and improvement recommendations."
+      actionButton={
         <Stack direction="row" alignItems="center" spacing={1.5}>
           <VisibilityChips value={visFilter} onChange={setVisFilter} />
           <Button
@@ -167,16 +148,13 @@ export default function ReadinessDashboard() {
             {triggerCalculate.isPending ? "Calculating..." : "Calculate readiness"}
           </Button>
         </Stack>
-      </Stack>
-
-      {/* Summary stat cards — matching DashboardHeaderCard layout */}
+      }
+    >
+      {/* Summary stat cards */}
       <Box
         sx={{
-          "display": "flex",
-          "flexWrap": "wrap",
-          "gap": "8px",
-          "mb": "8px",
-          "& > *": { flex: "1 1 0", minWidth: "150px" },
+          ...layoutStyles.gridContainer(theme),
+          gridTemplateColumns: { xs: "1fr", sm: "repeat(auto-fill, minmax(240px, 1fr))" },
         }}
       >
         {scoresLoading ? (
@@ -188,17 +166,13 @@ export default function ReadinessDashboard() {
             const score = fw.avg_score ?? 0;
             const level = classifyLevel(score);
             return (
-              <Stack
+              <Card
                 key={`${fw.framework_type}-${fw.project_id ?? "org"}`}
+                elevation={0}
                 sx={{
-                  ...cardSx,
-                  "borderRadius": 2,
-                  "padding": "12px 18px 16px 18px",
-                  "transition": "all 0.2s ease",
-                  "&:hover": {
-                    borderColor: getLevelColor(level),
-                    background: `linear-gradient(135deg, ${background.accent} 0%, ${background.gradientStop} 100%)`,
-                  },
+                  ...cardStyles.base(theme),
+                  "transition": "border-color 0.2s ease",
+                  "&:hover": { borderColor: getLevelColor(level) },
                 }}
               >
                 <Typography
@@ -271,11 +245,11 @@ export default function ReadinessDashboard() {
                     </Typography>
                   ))}
                 </Stack>
-              </Stack>
+              </Card>
             );
           })
         ) : (
-          <Card elevation={0} sx={{ ...cardSx, width: "100%" }}>
+          <Card elevation={0} sx={{ ...cardStyles.base(theme), gridColumn: "1 / -1" }}>
             <CardContent sx={{ "textAlign": "center", "py": 3, "&:last-child": { pb: 3 } }}>
               <ShieldCheck
                 size={32}
@@ -298,7 +272,6 @@ export default function ReadinessDashboard() {
           style: { backgroundColor: brand.primary },
         }}
         sx={{
-          "mb": "8px",
           "minHeight": "20px",
           "& .MuiTab-root": {
             textTransform: "none",
@@ -316,17 +289,15 @@ export default function ReadinessDashboard() {
         ))}
       </Tabs>
 
-      {/* Two-column: Heatmap + Trend — using DashboardCard pattern */}
+      {/* Two-column: Heatmap + Trend */}
       <Box
         sx={{
-          display: "grid",
+          ...layoutStyles.gridContainer(theme),
           gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
-          gap: "8px",
-          mb: "8px",
         }}
       >
-        <Card elevation={0} sx={cardSx}>
-          <CardContent sx={{ "p": "16px", "&:last-child": { pb: "16px" } }}>
+        <Card elevation={0} sx={cardStyles.base(theme)}>
+          <CardContent sx={{ "p": 0, "&:last-child": { pb: 0 } }}>
             <ReadinessHeatmap
               controls={controlScores ?? []}
               frameworkType={selectedFramework}
@@ -334,19 +305,19 @@ export default function ReadinessDashboard() {
             />
           </CardContent>
         </Card>
-        <Card elevation={0} sx={cardSx}>
-          <CardContent sx={{ "p": "16px", "&:last-child": { pb: "16px" } }}>
+        <Card elevation={0} sx={cardStyles.base(theme)}>
+          <CardContent sx={{ "p": 0, "&:last-child": { pb: 0 } }}>
             <ReadinessTrend data={history ?? []} isLoading={historyLoading} />
           </CardContent>
         </Card>
       </Box>
 
       {/* Weakest controls */}
-      <Card elevation={0} sx={cardSx}>
-        <CardContent sx={{ "p": "16px", "&:last-child": { pb: "16px" } }}>
+      <Card elevation={0} sx={cardStyles.base(theme)}>
+        <CardContent sx={{ "p": 0, "&:last-child": { pb: 0 } }}>
           <WeakControlsList controls={weakest ?? []} isLoading={weakestLoading} />
         </CardContent>
       </Card>
-    </Box>
+    </PageHeaderExtended>
   );
 }
