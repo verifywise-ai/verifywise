@@ -12,7 +12,6 @@ import {
   useTheme,
 } from "@mui/material";
 import { ShieldCheck, RefreshCw } from "lucide-react";
-import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import { VisibilityChips } from "../../components/VisibilityToggle";
 import type { VisibilityFilterValue } from "../../components/VisibilityToggle";
 import { cardStyles, layoutStyles } from "../../themes/components";
@@ -113,10 +112,24 @@ export default function ReadinessDashboard() {
   };
 
   return (
-    <PageHeaderExtended
-      title="Audit readiness"
-      description="Per-control readiness scores, framework aggregations, and improvement recommendations."
-      actionButton={
+    <Box>
+      {/* Header — matches dashboard style */}
+      <Stack direction="row" justifyContent="space-between" alignItems="center" mb="8px">
+        <Box>
+          <Typography
+            sx={{
+              fontWeight: 600,
+              fontSize: 20,
+              fontFamily: "'Red Hat Display', 'Geist', sans-serif",
+              color: textColors.primary,
+            }}
+          >
+            Audit readiness
+          </Typography>
+          <Typography sx={{ fontSize: 13, color: textColors.secondary, mt: 0.25 }}>
+            Per-control readiness scores, framework aggregations, and improvement recommendations.
+          </Typography>
+        </Box>
         <Stack direction="row" alignItems="center" spacing={1.5}>
           <VisibilityChips value={visFilter} onChange={setVisFilter} />
           <Button
@@ -148,13 +161,14 @@ export default function ReadinessDashboard() {
             {triggerCalculate.isPending ? "Calculating..." : "Calculate readiness"}
           </Button>
         </Stack>
-      }
-    >
+      </Stack>
+
       {/* Summary stat cards */}
       <Box
         sx={{
           ...layoutStyles.gridContainer(theme),
           gridTemplateColumns: { xs: "1fr", sm: "repeat(auto-fill, minmax(240px, 1fr))" },
+          mb: "8px",
         }}
       >
         {scoresLoading ? (
@@ -272,6 +286,7 @@ export default function ReadinessDashboard() {
           style: { backgroundColor: brand.primary },
         }}
         sx={{
+          "mb": "8px",
           "minHeight": "20px",
           "& .MuiTab-root": {
             textTransform: "none",
@@ -294,6 +309,7 @@ export default function ReadinessDashboard() {
         sx={{
           ...layoutStyles.gridContainer(theme),
           gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+          mb: "8px",
         }}
       >
         <Card elevation={0} sx={cardStyles.base(theme)}>
@@ -318,6 +334,6 @@ export default function ReadinessDashboard() {
           <WeakControlsList controls={weakest ?? []} isLoading={weakestLoading} />
         </CardContent>
       </Card>
-    </PageHeaderExtended>
+    </Box>
   );
 }
