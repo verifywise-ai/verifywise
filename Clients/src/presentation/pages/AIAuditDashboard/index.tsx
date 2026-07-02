@@ -21,6 +21,7 @@ import {
   CardContent,
   Tabs,
   Tab,
+  useTheme,
 } from "@mui/material";
 import {
   BarChart,
@@ -46,18 +47,13 @@ import {
   accent,
 } from "../../themes/palette";
 import Chip from "../../components/Chip";
+import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
+import { cardStyles, tableStyles } from "../../themes/components";
 import { useAuditLog, useAuditAnalytics } from "../../../application/hooks/useAIAudit";
 import {
   exportAuditLog,
   getActionAuditTrail,
 } from "../../../application/repository/aiAudit.repository";
-
-// Consistent card style matching DashboardCard / DashboardHeaderCard
-const cardSx = {
-  border: `1px solid ${borderPalette.dark}`,
-  borderRadius: "4px",
-  background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
-};
 
 const PERIOD_OPTIONS = [
   { value: "7d", label: "Last 7 days", days: 7 },
@@ -120,6 +116,7 @@ const ACTOR_TYPE_OPTIONS = [
 ];
 
 export default function AIAuditDashboard() {
+  const theme = useTheme();
   const [period, setPeriod] = useState("30d");
   const [actorType, setActorType] = useState<string>("all");
   const [page, setPage] = useState(0);
@@ -194,25 +191,10 @@ export default function AIAuditDashboard() {
   ];
 
   return (
-    <Box>
-      {/* Header — matches Readiness / AI content review style */}
-      <Stack direction="row" justifyContent="space-between" alignItems="center" mb="8px">
-        <Box>
-          <Typography
-            sx={{
-              fontWeight: 600,
-              fontSize: 20,
-              fontFamily: "'Red Hat Display', 'Geist', sans-serif",
-              color: textColors.primary,
-            }}
-          >
-            AI audit
-          </Typography>
-          <Typography sx={{ fontSize: 13, color: textColors.secondary, mt: 0.25 }}>
-            Complete audit trail for every AI action. EU AI Act Article 12 compliance.
-          </Typography>
-        </Box>
-
+    <PageHeaderExtended
+      title="AI audit"
+      description="Complete audit trail for every AI action. EU AI Act Article 12 compliance."
+      actionButton={
         <Stack direction="row" alignItems="center" spacing={1.5}>
           {/* Period chips — same pattern as VisibilityChips */}
           <Stack direction="row" spacing={1}>
@@ -258,15 +240,14 @@ export default function AIAuditDashboard() {
             Export CSV
           </Button>
         </Stack>
-      </Stack>
-
+      }
+    >
       {/* Stat cards — matches AI Content Review DashboardHeaderCard pattern */}
       <Box
         sx={{
           "display": "flex",
           "flexWrap": "wrap",
-          "gap": "8px",
-          "mb": "8px",
+          "gap": "16px",
           "& > *": { flex: "1 1 0", minWidth: "120px" },
         }}
       >
@@ -276,14 +257,7 @@ export default function AIAuditDashboard() {
           </Box>
         ) : (
           statCards.map((card) => (
-            <Stack
-              key={card.label}
-              sx={{
-                ...cardSx,
-                borderRadius: 2,
-                padding: "8px 14px 14px 14px",
-              }}
-            >
+            <Stack key={card.label} sx={cardStyles.base(theme)}>
               <Stack direction="row" alignItems="center" spacing={0.75}>
                 <Box sx={{ color: textColors.icon, display: "flex" }}>{card.icon}</Box>
                 <Typography
@@ -316,12 +290,11 @@ export default function AIAuditDashboard() {
         sx={{
           display: "grid",
           gridTemplateColumns: { xs: "1fr", md: "1fr 1fr 1fr" },
-          gap: "8px",
-          mb: "8px",
+          gap: "16px",
         }}
       >
-        <Card elevation={0} sx={cardSx}>
-          <CardContent sx={{ "p": "16px", "&:last-child": { pb: "16px" } }}>
+        <Card elevation={0} sx={cardStyles.base(theme)}>
+          <CardContent sx={{ "p": 0, "&:last-child": { pb: 0 } }}>
             <Typography
               sx={{
                 fontSize: 13,
@@ -366,8 +339,8 @@ export default function AIAuditDashboard() {
           </CardContent>
         </Card>
 
-        <Card elevation={0} sx={cardSx}>
-          <CardContent sx={{ "p": "16px", "&:last-child": { pb: "16px" } }}>
+        <Card elevation={0} sx={cardStyles.base(theme)}>
+          <CardContent sx={{ "p": 0, "&:last-child": { pb: 0 } }}>
             <Typography
               sx={{
                 fontSize: 13,
@@ -402,8 +375,8 @@ export default function AIAuditDashboard() {
           </CardContent>
         </Card>
 
-        <Card elevation={0} sx={cardSx}>
-          <CardContent sx={{ "p": "16px", "&:last-child": { pb: "16px" } }}>
+        <Card elevation={0} sx={cardStyles.base(theme)}>
+          <CardContent sx={{ "p": 0, "&:last-child": { pb: 0 } }}>
             <Typography
               sx={{
                 fontSize: 13,
@@ -450,7 +423,6 @@ export default function AIAuditDashboard() {
         value={0}
         TabIndicatorProps={{ style: { backgroundColor: brand.primary } }}
         sx={{
-          "mb": "8px",
           "minHeight": "20px",
           "& .MuiTab-root": {
             textTransform: "none",
@@ -482,7 +454,7 @@ export default function AIAuditDashboard() {
       </Tabs>
 
       {/* Actor type filter chips */}
-      <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: "8px" }}>
+      <Stack direction="row" alignItems="center" spacing={1}>
         <Typography
           sx={{
             fontSize: 12,
@@ -516,23 +488,13 @@ export default function AIAuditDashboard() {
       </Stack>
 
       {/* Audit log table */}
-      <Card elevation={0} sx={cardSx}>
+      <Card elevation={0} sx={{ ...cardStyles.base(theme), p: 0 }}>
         <TableContainer>
           <Table size="small">
             <TableHead>
-              <TableRow sx={{ backgroundColor: background.accent }}>
+              <TableRow sx={tableStyles.headerRow(theme)}>
                 {["Timestamp", "Tool", "State", "Actor", "Risk", "Action"].map((h) => (
-                  <TableCell
-                    key={h}
-                    sx={{
-                      fontSize: 12,
-                      fontWeight: 600,
-                      color: textColors.secondary,
-                      textTransform: "uppercase",
-                      letterSpacing: 0.3,
-                      borderBottom: `1px solid ${borderPalette.dark}`,
-                    }}
-                  >
+                  <TableCell key={h} sx={tableStyles.headerCell(theme)}>
                     {h}
                   </TableCell>
                 ))}
@@ -555,33 +517,21 @@ export default function AIAuditDashboard() {
                 </TableRow>
               ) : (
                 (logData?.rows || []).map((row: any, i: number) => (
-                  <TableRow
-                    key={row.id || i}
-                    hover
-                    sx={{
-                      "&:hover": { backgroundColor: background.hover },
-                    }}
-                  >
-                    <TableCell
-                      sx={{
-                        fontSize: 12,
-                        color: textColors.secondary,
-                        borderBottom: `1px solid ${borderPalette.light}`,
-                      }}
-                    >
+                  <TableRow key={row.id || i} hover sx={tableStyles.bodyRow(theme)}>
+                    <TableCell sx={{ ...tableStyles.bodyCell(theme), color: textColors.secondary }}>
                       {new Date(row.created_at).toLocaleString()}
                     </TableCell>
                     <TableCell
                       sx={{
-                        fontSize: 12,
+                        ...tableStyles.bodyCell(theme),
                         fontFamily: "monospace",
                         color: textColors.primary,
-                        borderBottom: `1px solid ${borderPalette.light}`,
+                        textTransform: "none",
                       }}
                     >
                       {row.tool_name || "—"}
                     </TableCell>
-                    <TableCell sx={{ borderBottom: `1px solid ${borderPalette.light}` }}>
+                    <TableCell sx={tableStyles.bodyCell(theme)}>
                       <Chip
                         label={formatStateLabel(row.to_state)}
                         size="small"
@@ -590,27 +540,15 @@ export default function AIAuditDashboard() {
                         textColor={getStateColor(row.to_state)}
                       />
                     </TableCell>
-                    <TableCell
-                      sx={{
-                        fontSize: 12,
-                        color: textColors.secondary,
-                        borderBottom: `1px solid ${borderPalette.light}`,
-                      }}
-                    >
+                    <TableCell sx={{ ...tableStyles.bodyCell(theme), color: textColors.secondary }}>
                       {row.actor_name
                         ? `${row.actor_name} ${row.actor_surname || ""}`.trim()
                         : row.actor_type}
                     </TableCell>
-                    <TableCell
-                      sx={{
-                        fontSize: 12,
-                        color: textColors.secondary,
-                        borderBottom: `1px solid ${borderPalette.light}`,
-                      }}
-                    >
+                    <TableCell sx={{ ...tableStyles.bodyCell(theme), color: textColors.secondary }}>
                       {row.risk_level || "—"}
                     </TableCell>
-                    <TableCell sx={{ borderBottom: `1px solid ${borderPalette.light}` }}>
+                    <TableCell sx={tableStyles.bodyCell(theme)}>
                       <IconButton
                         size="small"
                         onClick={() => handleViewDetail(row.action_approval_id)}
@@ -667,7 +605,6 @@ export default function AIAuditDashboard() {
             fontSize: 16,
             fontWeight: 600,
             color: textColors.primary,
-            fontFamily: "'Red Hat Display', 'Geist', sans-serif",
             borderBottom: `1px solid ${borderPalette.light}`,
           }}
         >
@@ -722,6 +659,6 @@ export default function AIAuditDashboard() {
           )}
         </DialogContent>
       </Dialog>
-    </Box>
+    </PageHeaderExtended>
   );
 }
