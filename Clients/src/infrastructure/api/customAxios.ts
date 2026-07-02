@@ -25,8 +25,39 @@ import { store } from "../../application/redux/store";
 import { ENV_VARs } from "../../../env.vars";
 import { clearAuthState, setAuthToken } from "../../application/redux/auth/authSlice";
 import { AlertProps } from "../../presentation/types/alert.types";
-import { translations, type Lang } from "../../i18n/translations";
-import { getLanguage } from "../../i18n/domTranslator";
+type Lang = "en" | "de" | "fr" | "es";
+
+const SUPPORTED_LANGS: Lang[] = ["en", "de", "fr", "es"];
+
+const getLanguage = (): Lang => {
+  if (typeof window === "undefined") return "en";
+  const stored = localStorage.getItem("vw_lang_prototype") as Lang | null;
+  return stored && SUPPORTED_LANGS.includes(stored) ? stored : "en";
+};
+
+// Minimal error-message map for infrastructure-level alerts. Keeps the Axios
+// layer free of the full 1.9 MB translation dictionary.
+const ERROR_TRANSLATIONS: Record<Lang, Record<string, string>> = {
+  en: {
+    Error: "Error",
+    "An error occurred. Please try again later": "An error occurred. Please try again later",
+  },
+  de: {
+    Error: "Fehler",
+    "An error occurred. Please try again later":
+      "Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut",
+  },
+  fr: {
+    Error: "Erreur",
+    "An error occurred. Please try again later":
+      "Une erreur s'est produite. Veuillez réessayer plus tard",
+  },
+  es: {
+    Error: "Error",
+    "An error occurred. Please try again later":
+      "Se produjo un error. Vuelva a intentarlo más tarde",
+  },
+};
 import type {
   ApiErrorEnvelope,
   ApiSuccessEnvelope,
@@ -61,7 +92,7 @@ export const showAlert = (alert: AlertProps) => {
 const translate = (key: string): string => {
   const lang: Lang = getLanguage();
   if (lang === "en") return key;
-  return translations[lang]?.[key] || key;
+  return ERROR_TRANSLATIONS[lang]?.[key] || key;
 };
 
 // Show a translated error toast for server or network failures.
