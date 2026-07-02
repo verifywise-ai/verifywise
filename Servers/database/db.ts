@@ -117,6 +117,17 @@ const sequelize = new Sequelize(conf.database!, conf.username!, conf.password, {
   dialect: conf.dialect! as Dialect,
   schema: "verifywise",
   logging: false,
+  pool: {
+    min: Number(process.env.DB_POOL_MIN ?? 2),
+    max: Number(process.env.DB_POOL_MAX ?? 20),
+    acquire: Number(process.env.DB_POOL_ACQUIRE_MS ?? 30000),
+    idle: Number(process.env.DB_POOL_IDLE_MS ?? 10000),
+    evict: Number(process.env.DB_POOL_EVICT_MS ?? 10000),
+  },
+  dialectOptions: {
+    connectTimeout: Number(process.env.DB_CONNECT_TIMEOUT_MS ?? 10000),
+    statement_timeout: Number(process.env.DB_STATEMENT_TIMEOUT_MS ?? 30000),
+  },
   define: {
     schema: "verifywise",
   },
