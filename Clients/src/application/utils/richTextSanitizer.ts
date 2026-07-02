@@ -88,7 +88,7 @@ export const RICH_TEXT_ALLOWED_STYLES: ReadonlySet<string> = new Set([
  * DOMPurify configuration that applies the same allowlist philosophy as the
  * backend sanitizer.
  */
-export const DOMPURIFY_CONFIG: DOMPurify.Config = {
+export const DOMPURIFY_CONFIG: NonNullable<Parameters<typeof DOMPurify.sanitize>[1]> = {
   ALLOWED_TAGS: RICH_TEXT_ALLOWED_TAGS,
   ALLOWED_ATTR: RICH_TEXT_ALLOWED_ATTR,
   FORBID_TAGS: [
@@ -208,7 +208,7 @@ function restrictInlineStyles(html: string): string {
  */
 export function sanitizeRichText(html: string): string {
   if (!html) return html;
-  const firstPass = DOMPurify.sanitize(html, DOMPURIFY_CONFIG);
+  const firstPass = DOMPurify.sanitize(html, DOMPURIFY_CONFIG) as string;
   const noDataImages = blockDataUrisOnImages(firstPass);
   return restrictInlineStyles(noDataImages);
 }
