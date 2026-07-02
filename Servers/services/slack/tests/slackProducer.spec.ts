@@ -6,12 +6,10 @@
  * @module tests/slackProducer
  */
 
-const mockObliterate = jest.fn().mockResolvedValue(undefined);
 const mockAdd = jest.fn().mockResolvedValue({ id: "job-1" });
 
 jest.mock("bullmq", () => ({
   Queue: jest.fn().mockImplementation(() => ({
-    obliterate: mockObliterate,
     add: mockAdd,
   })),
 }));
@@ -30,22 +28,17 @@ import { scheduleDailyNotification } from "../slackProducer";
 
 describe("slackProducer", () => {
   beforeEach(() => {
-    mockObliterate.mockClear();
     mockAdd.mockClear();
   });
 
   describe("scheduleDailyNotification", () => {
-    it("should obliterate existing jobs before adding new ones", async () => {
-      await scheduleDailyNotification();
-      expect(mockObliterate).toHaveBeenCalledWith({ force: true });
-    });
-
-    it("should add policy notification job with cron pattern", async () => {
+    it("should add a stable policy notification job with cron pattern", async () => {
       await scheduleDailyNotification();
       expect(mockAdd).toHaveBeenCalledWith(
         "slack-notification-policy",
         { type: "policies" },
         expect.objectContaining({
+          jobId: "slack-notification-policy",
           repeat: { pattern: "0 9 * * *" },
           removeOnComplete: true,
           removeOnFail: false,

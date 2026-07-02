@@ -16,30 +16,17 @@ vi.mock("../../../application/redux/auth/authSlice", () => ({
   setAuthToken: vi.fn((token: string) => ({ type: "auth/setAuthToken", payload: token })),
 }));
 
-vi.mock("../../../i18n/domTranslator", () => ({
-  getLanguage: vi.fn(() => "en"),
-}));
-
-vi.mock("../../../i18n/translations", () => ({
-  translations: {
-    de: {
-      "Error": "Fehler",
-      "An error occurred. Please try again later":
-        "Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut",
-    },
-  },
-}));
-
 import CustomAxios, { showAlert, setShowAlertCallback } from "../customAxios";
 import { store } from "../../../application/redux/store";
-import { getLanguage } from "../../../i18n/domTranslator";
 
 const mockStore = vi.mocked(store);
+const STORAGE_KEY = "vw_lang_prototype";
 
 describe("customAxios", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     setShowAlertCallback(null as any);
+    localStorage.clear();
     mockStore.getState.mockReturnValue({
       auth: { authToken: "test-token", activeOrganizationId: null },
     } as any);
@@ -146,7 +133,7 @@ describe("customAxios", () => {
     });
 
     it("translates the toast body when the active language is not English", async () => {
-      vi.mocked(getLanguage).mockReturnValue("de");
+      localStorage.setItem(STORAGE_KEY, "de");
       const callback = vi.fn();
       setShowAlertCallback(callback);
 

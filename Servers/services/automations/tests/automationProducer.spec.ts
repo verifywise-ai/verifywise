@@ -8,11 +8,9 @@
 
 jest.mock("bullmq", () => {
   const mockAdd = jest.fn().mockResolvedValue({ id: "job-1" });
-  const mockObliterate = jest.fn().mockResolvedValue(undefined);
   return {
     Queue: jest.fn().mockImplementation(() => ({
       add: mockAdd,
-      obliterate: mockObliterate,
     })),
   };
 });
@@ -42,9 +40,6 @@ import {
 } from "../automationProducer";
 
 const mockAdd = automationQueue.add as jest.MockedFunction<typeof automationQueue.add>;
-const mockObliterate = automationQueue.obliterate as jest.MockedFunction<
-  typeof automationQueue.obliterate
->;
 
 describe("automationProducer", () => {
   beforeEach(() => {
@@ -67,14 +62,14 @@ describe("automationProducer", () => {
   });
 
   describe("scheduleVendorReviewDateNotification", () => {
-    it("should obliterate queue and add a repeating job", async () => {
+    it("should add a stable repeating job", async () => {
       await scheduleVendorReviewDateNotification();
 
-      expect(mockObliterate).toHaveBeenCalledWith({ force: true });
       expect(mockAdd).toHaveBeenCalledWith(
         "send_vendor_notification",
         { type: "review_date" },
         expect.objectContaining({
+          jobId: "vendor-review-date-notification",
           repeat: { pattern: "0 0 * * *" },
           removeOnComplete: true,
           removeOnFail: false,
@@ -91,22 +86,27 @@ describe("automationProducer", () => {
         "send_policy_due_soon_notification",
         { type: "policy_due_soon" },
         expect.objectContaining({
+          jobId: "policy-due-soon-notification",
           repeat: { pattern: "0 8 * * *" },
+          removeOnComplete: true,
+          removeOnFail: false,
         }),
       );
     });
   });
 
   describe("scheduleReportNotification", () => {
-    it("should obliterate queue and add a repeating job", async () => {
+    it("should add a stable repeating job", async () => {
       await scheduleReportNotification();
 
-      expect(mockObliterate).toHaveBeenCalledWith({ force: true });
       expect(mockAdd).toHaveBeenCalledWith(
         "send_report_notification",
         { type: "report_notification" },
         expect.objectContaining({
+          jobId: "report-notification",
           repeat: { pattern: "0 0 * * *" },
+          removeOnComplete: true,
+          removeOnFail: false,
         }),
       );
     });

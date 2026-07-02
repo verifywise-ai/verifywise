@@ -5,7 +5,7 @@ describe("queryClient config", () => {
   it("should have default query options configured", () => {
     const defaults = queryClient.getDefaultOptions();
 
-    expect(defaults.queries?.staleTime).toBe(2000);
+    expect(defaults.queries?.staleTime).toBe(300000);
     expect(defaults.queries?.gcTime).toBe(600000);
     expect(defaults.queries?.retry).toBe(3);
     expect(defaults.queries?.refetchOnWindowFocus).toBe(false);
