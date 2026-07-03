@@ -26,6 +26,74 @@ export type Lang = "en" | "de" | "fr" | "es";
 export const translations: Record<string, Record<string, string>> = {
   de: {
     // Settings — help text
+    // Model risk management (MRM) module
+    "A finding must be verified before it can be closed.":
+      "Eine Feststellung muss verifiziert sein, bevor sie geschlossen werden kann.",
+    "Assign tier": "Stufe zuweisen",
+    "Conceptual soundness": "Konzeptionelle Belastbarkeit",
+    "Conclusion & sign-off": "Schlussfolgerung & Freigabe",
+    "Create finding": "Feststellung erstellen",
+    "Data review": "Datenprüfung",
+    "Developer": "Entwickler",
+    "Does": "Aufgabe",
+    "Due": "Fällig",
+    "Findings": "Feststellungen",
+    "Findings & limitations": "Feststellungen & Einschränkungen",
+    "How will this finding be remediated?": "Wie wird diese Feststellung behoben?",
+    "In validation": "In Validierung",
+    "Last validated": "Zuletzt validiert",
+    "Materiality drivers": "Wesentlichkeitsfaktoren",
+    "Model risk management": "Modellrisikomanagement",
+    "Next due": "Nächste Fälligkeit",
+    "No findings raised yet. Findings are created from a validation.":
+      "Noch keine Feststellungen erfasst. Feststellungen werden aus einer Validierung erstellt.",
+    "No models to tier yet. Add models to your inventory first.":
+      "Noch keine Modelle zum Einstufen. Fügen Sie zuerst Modelle zu Ihrem Inventar hinzu.",
+    "No validations yet. Start a validation to open a report.":
+      "Noch keine Validierungen. Starten Sie eine Validierung, um einen Bericht zu öffnen.",
+    "Not validated": "Nicht validiert",
+    "On this model": "Für dieses Modell",
+    "Open a new validation cycle for a model. Only one validation can be in progress per model.":
+      "Starten Sie einen neuen Validierungszyklus für ein Modell. Pro Modell kann nur eine Validierung laufen.",
+    "Outcomes analysis": "Ergebnisanalyse",
+    "Purpose & scope": "Zweck & Umfang",
+    "Raise a finding against a validation. It joins the register and tracks to closure.":
+      "Erfassen Sie eine Feststellung zu einer Validierung. Sie wird ins Register aufgenommen und bis zum Abschluss verfolgt.",
+    "Record the validation outcome. This marks the validation as validated and closes the active cycle.":
+      "Erfassen Sie das Validierungsergebnis. Damit wird die Validierung als validiert markiert und der aktive Zyklus geschlossen.",
+    "Record the validator": "Erfassen Sie den Validator",
+    "Remediation plan": "Maßnahmenplan",
+    "Roles & independence": "Rollen & Unabhängigkeit",
+    "Save report": "Bericht speichern",
+    "Save roles": "Rollen speichern",
+    "Select a model to view and assign its roles.":
+      "Wählen Sie ein Modell, um dessen Rollen anzuzeigen und zuzuweisen.",
+    "Select a tier": "Stufe auswählen",
+    "Select a validation": "Validierung auswählen",
+    "Select an outcome": "Ergebnis auswählen",
+    "Select stage": "Phase auswählen",
+    "Short description of the finding": "Kurzbeschreibung der Feststellung",
+    "Sign off": "Freigeben",
+    "Sign off validation": "Validierung freigeben",
+    "Stage": "Phase",
+    "Start": "Starten",
+    "Start validation": "Validierung starten",
+    "Tier": "Stufe",
+    "Tier 1": "Stufe 1",
+    "Tier 2": "Stufe 2",
+    "Tier 3": "Stufe 3",
+    "Tiered on": "Eingestuft am",
+    "Tiering": "Einstufung",
+    "Tiering rules": "Einstufungsregeln",
+    "Tiering, validation, findings and roles for model risk management":
+      "Einstufung, Validierung, Feststellungen und Rollen für das Modellrisikomanagement",
+    "Validated": "Validiert",
+    "Validated with findings": "Validiert mit Feststellungen",
+    "Validation depth & revalidation cadence": "Validierungstiefe & Revalidierungszyklus",
+    "Validation report": "Validierungsbericht",
+    "Validator": "Validator",
+    "Why this tier? e.g. capital impact, regulatory reporting, customer exposure":
+      "Warum diese Stufe? z. B. Kapitalauswirkung, aufsichtsrechtliches Reporting, Kundenexposition",
     "Enabled — risks include monetary estimates based on the FAIR model: annual loss expectancy, residual risk after controls, and return on mitigation investment.":
       "Aktiviert — Risiken enthalten monetäre Schätzungen auf Basis des FAIR-Modells: erwarteter Jahresverlust, Restrisiko nach Maßnahmen und Rendite der Risikominderung.",
     "Disabled — risks use qualitative scoring only, based on severity and likelihood.":
@@ -8733,6 +8801,75 @@ export const translations: Record<string, Record<string, string>> = {
 
   fr: {
     // Settings — help text
+    // Model risk management (MRM) module
+    "A finding must be verified before it can be closed.":
+      "Une constatation doit être vérifiée avant de pouvoir être clôturée.",
+    "Assign tier": "Attribuer un niveau",
+    "Conceptual soundness": "Solidité conceptuelle",
+    "Conclusion & sign-off": "Conclusion et validation",
+    "Create finding": "Créer une constatation",
+    "Data review": "Revue des données",
+    "Developer": "Développeur",
+    "Does": "Rôle",
+    "Due": "Échéance",
+    "Findings": "Constatations",
+    "Findings & limitations": "Constatations et limites",
+    "How will this finding be remediated?": "Comment cette constatation sera-t-elle corrigée ?",
+    "In validation": "En validation",
+    "Last validated": "Dernière validation",
+    "Materiality drivers": "Facteurs de matérialité",
+    "Model risk management": "Gestion du risque de modèle",
+    "Next due": "Prochaine échéance",
+    "No findings raised yet. Findings are created from a validation.":
+      "Aucune constatation pour le moment. Les constatations sont créées à partir d'une validation.",
+    "No models to tier yet. Add models to your inventory first.":
+      "Aucun modèle à classer pour le moment. Ajoutez d'abord des modèles à votre inventaire.",
+    "No validations yet. Start a validation to open a report.":
+      "Aucune validation pour le moment. Démarrez une validation pour ouvrir un rapport.",
+    "Not validated": "Non validé",
+    "On this model": "Sur ce modèle",
+    "Open a new validation cycle for a model. Only one validation can be in progress per model.":
+      "Ouvrez un nouveau cycle de validation pour un modèle. Une seule validation peut être en cours par modèle.",
+    "Outcomes analysis": "Analyse des résultats",
+    "Purpose & scope": "Objet et périmètre",
+    "Raise a finding against a validation. It joins the register and tracks to closure.":
+      "Enregistrez une constatation liée à une validation. Elle rejoint le registre et est suivie jusqu'à sa clôture.",
+    "Record the validation outcome. This marks the validation as validated and closes the active cycle.":
+      "Enregistrez le résultat de la validation. Cela marque la validation comme validée et clôt le cycle actif.",
+    "Record the validator": "Enregistrez le validateur",
+    "Remediation plan": "Plan de remédiation",
+    "Roles & independence": "Rôles et indépendance",
+    "Save report": "Enregistrer le rapport",
+    "Save roles": "Enregistrer les rôles",
+    "Select a model to view and assign its roles.":
+      "Sélectionnez un modèle pour afficher et attribuer ses rôles.",
+    "Select a tier": "Sélectionner un niveau",
+    "Select a validation": "Sélectionner une validation",
+    "Select an outcome": "Sélectionner un résultat",
+    "Select stage": "Sélectionner une étape",
+    "Short description of the finding": "Brève description de la constatation",
+    "Sign off": "Valider",
+    "Sign off validation": "Valider la validation",
+    "Stage": "Étape",
+    "Start": "Démarrer",
+    "Start validation": "Démarrer la validation",
+    "Tier": "Niveau",
+    "Tier 1": "Niveau 1",
+    "Tier 2": "Niveau 2",
+    "Tier 3": "Niveau 3",
+    "Tiered on": "Classé le",
+    "Tiering": "Classement",
+    "Tiering rules": "Règles de classement",
+    "Tiering, validation, findings and roles for model risk management":
+      "Classement, validation, constatations et rôles pour la gestion du risque de modèle",
+    "Validated": "Validé",
+    "Validated with findings": "Validé avec constatations",
+    "Validation depth & revalidation cadence":
+      "Profondeur de validation et fréquence de revalidation",
+    "Validation report": "Rapport de validation",
+    "Validator": "Validateur",
+    "Why this tier? e.g. capital impact, regulatory reporting, customer exposure":
+      "Pourquoi ce niveau ? p. ex. impact en capital, reporting réglementaire, exposition client",
     "Enabled — risks include monetary estimates based on the FAIR model: annual loss expectancy, residual risk after controls, and return on mitigation investment.":
       "Activé — les risques incluent des estimations monétaires basées sur le modèle FAIR : perte annuelle attendue, risque résiduel après contrôles et retour sur l'investissement de mitigation.",
     "Disabled — risks use qualitative scoring only, based on severity and likelihood.":
@@ -17394,6 +17531,75 @@ export const translations: Record<string, Record<string, string>> = {
   },
   es: {
     // Settings — help text
+    // Model risk management (MRM) module
+    "A finding must be verified before it can be closed.":
+      "Un hallazgo debe verificarse antes de poder cerrarse.",
+    "Assign tier": "Asignar nivel",
+    "Conceptual soundness": "Solidez conceptual",
+    "Conclusion & sign-off": "Conclusión y aprobación",
+    "Create finding": "Crear hallazgo",
+    "Data review": "Revisión de datos",
+    "Developer": "Desarrollador",
+    "Does": "Función",
+    "Due": "Vence",
+    "Findings": "Hallazgos",
+    "Findings & limitations": "Hallazgos y limitaciones",
+    "How will this finding be remediated?": "¿Cómo se remediará este hallazgo?",
+    "In validation": "En validación",
+    "Last validated": "Última validación",
+    "Materiality drivers": "Factores de materialidad",
+    "Model risk management": "Gestión del riesgo de modelos",
+    "Next due": "Próximo vencimiento",
+    "No findings raised yet. Findings are created from a validation.":
+      "Aún no hay hallazgos. Los hallazgos se crean a partir de una validación.",
+    "No models to tier yet. Add models to your inventory first.":
+      "Aún no hay modelos que clasificar. Añada primero modelos a su inventario.",
+    "No validations yet. Start a validation to open a report.":
+      "Aún no hay validaciones. Inicie una validación para abrir un informe.",
+    "Not validated": "No validado",
+    "On this model": "En este modelo",
+    "Open a new validation cycle for a model. Only one validation can be in progress per model.":
+      "Abra un nuevo ciclo de validación para un modelo. Solo puede haber una validación en curso por modelo.",
+    "Outcomes analysis": "Análisis de resultados",
+    "Purpose & scope": "Propósito y alcance",
+    "Raise a finding against a validation. It joins the register and tracks to closure.":
+      "Registre un hallazgo asociado a una validación. Se incorpora al registro y se sigue hasta su cierre.",
+    "Record the validation outcome. This marks the validation as validated and closes the active cycle.":
+      "Registre el resultado de la validación. Esto marca la validación como validada y cierra el ciclo activo.",
+    "Record the validator": "Registre al validador",
+    "Remediation plan": "Plan de remediación",
+    "Roles & independence": "Roles e independencia",
+    "Save report": "Guardar informe",
+    "Save roles": "Guardar roles",
+    "Select a model to view and assign its roles.":
+      "Seleccione un modelo para ver y asignar sus roles.",
+    "Select a tier": "Seleccionar un nivel",
+    "Select a validation": "Seleccionar una validación",
+    "Select an outcome": "Seleccionar un resultado",
+    "Select stage": "Seleccionar una etapa",
+    "Short description of the finding": "Breve descripción del hallazgo",
+    "Sign off": "Aprobar",
+    "Sign off validation": "Aprobar la validación",
+    "Stage": "Etapa",
+    "Start": "Iniciar",
+    "Start validation": "Iniciar validación",
+    "Tier": "Nivel",
+    "Tier 1": "Nivel 1",
+    "Tier 2": "Nivel 2",
+    "Tier 3": "Nivel 3",
+    "Tiered on": "Clasificado el",
+    "Tiering": "Clasificación",
+    "Tiering rules": "Reglas de clasificación",
+    "Tiering, validation, findings and roles for model risk management":
+      "Clasificación, validación, hallazgos y roles para la gestión del riesgo de modelos",
+    "Validated": "Validado",
+    "Validated with findings": "Validado con hallazgos",
+    "Validation depth & revalidation cadence":
+      "Profundidad de validación y frecuencia de revalidación",
+    "Validation report": "Informe de validación",
+    "Validator": "Validador",
+    "Why this tier? e.g. capital impact, regulatory reporting, customer exposure":
+      "¿Por qué este nivel? p. ej. impacto de capital, informes regulatorios, exposición de clientes",
     "Enabled — risks include monetary estimates based on the FAIR model: annual loss expectancy, residual risk after controls, and return on mitigation investment.":
       "Activado — los riesgos incluyen estimaciones monetarias basadas en el modelo FAIR: pérdida anual esperada, riesgo residual tras los controles y retorno de la inversión en mitigación.",
     "Disabled — risks use qualitative scoring only, based on severity and likelihood.":
