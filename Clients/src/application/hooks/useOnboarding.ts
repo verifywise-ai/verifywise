@@ -1,11 +1,11 @@
-import { useState, useEffect, useCallback, useContext } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import {
   OnboardingState,
   UserPreferences,
   SampleProjectData,
 } from "../../presentation/types/interfaces/i.onboarding";
-import { VerifyWiseContext } from "../contexts/VerifyWise.context";
+import { useAuthContext, useUsersContext } from "../contexts/verifywise";
 import { useAuth } from "./useAuth";
 import { setOnboardingStatus as setReduxOnboardingStatus } from "../redux/auth/authSlice";
 import type { RootState } from "../redux/store";
@@ -25,7 +25,8 @@ const initialState: OnboardingState = {
 
 export const useOnboarding = () => {
   const { userId } = useAuth();
-  const { users, organizationId } = useContext(VerifyWiseContext);
+  const { users } = useUsersContext();
+  const { organizationId } = useAuthContext();
   const dispatch = useDispatch();
 
   // Get server-side onboarding status from Redux
