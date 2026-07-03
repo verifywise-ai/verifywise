@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useContext, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Box, Tab, Alert } from "@mui/material";
 import TabList from "@mui/lab/TabList";
 import TabPanel from "@mui/lab/TabPanel";
@@ -12,7 +12,7 @@ import AssessmentTracker from "../../Assessment/1.0AssessmentTracker";
 import useFrameworks from "../../../../application/hooks/useFrameworks";
 import AddFrameworkModal from "../AddNewFramework";
 import useMultipleOnScreen from "../../../../application/hooks/useMultipleOnScreen";
-import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
+import { useVisibility } from "../../../../application/contexts/verifywise";
 import { ButtonToggle } from "../../../components/button-toggle";
 import { PluginSlot } from "../../../components/PluginSlot";
 import { PLUGIN_SLOTS } from "../../../../domain/constants/pluginSlots";
@@ -59,7 +59,7 @@ const ProjectFrameworks = ({
   const [searchParams, setSearchParams] = useSearchParams();
   const { users } = useUsers();
 
-  const { changeComponentVisibility } = useContext(VerifyWiseContext);
+  const { changeComponentVisibility } = useVisibility();
   const { userRoleName } = useAuth();
   const { getComponentsForSlot } = usePluginRegistry();
 
