@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useContext, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import {
   Stack,
   Table,
@@ -14,7 +14,7 @@ import {
   Box,
 } from "@mui/material";
 import TablePaginationActions from "../../TablePagination";
-import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
+import { useInput } from "../../../../application/contexts/verifywise";
 import singleTheme from "../../../themes/v1SingleTheme";
 import { ChevronsUpDown, ChevronUp, ChevronDown } from "lucide-react";
 import Checkbox from "../../Inputs/Checkbox";
@@ -54,7 +54,7 @@ const CustomizablePolicyTable = ({
   const [rowsPerPage, setRowsPerPage] = useState(() =>
     getPaginationRowCount("policyManager", DEFAULT_ROWS_PER_PAGE),
   );
-  const { setInputValues } = useContext(VerifyWiseContext);
+  const { setInputValues } = useInput();
 
   // Initialize sorting state from localStorage or default to no sorting
   const [sortConfig, setSortConfig] = useState<SortConfig>(() => {
