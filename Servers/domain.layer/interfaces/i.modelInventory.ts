@@ -1,4 +1,5 @@
 import { ModelInventoryStatus } from "../enums/model-inventory-status.enum";
+import { MrmTier } from "../enums/mrm.enum";
 
 export interface IModelInventory {
   id?: number;
@@ -17,6 +18,12 @@ export interface IModelInventory {
   hosting_provider?: string;
   security_assessment_data: Filedata[];
   is_demo?: boolean;
+  // MRM (Model Risk Management) — manual tiering + external key (all nullable)
+  external_key?: string;
+  mrm_tier?: MrmTier;
+  mrm_materiality_drivers?: string;
+  mrm_tiered_at?: Date;
+  mrm_tiered_by?: number;
   created_at?: Date;
   updated_at?: Date;
 }

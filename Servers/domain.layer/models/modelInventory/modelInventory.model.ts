@@ -1,6 +1,7 @@
 import { Column, DataType, Model, Table } from "sequelize-typescript";
 import { Filedata, IModelInventory } from "../../interfaces/i.modelInventory";
 import { ModelInventoryStatus } from "../../enums/model-inventory-status.enum";
+import { MrmTier } from "../../enums/mrm.enum";
 import { ValidationException } from "../../exceptions/custom.exception";
 
 @Table({
@@ -109,6 +110,39 @@ export class ModelInventoryModel extends Model<ModelInventoryModel> implements I
     defaultValue: false,
   })
   is_demo?: boolean;
+
+  // ── MRM (Model Risk Management) — manual tiering + external key ──
+  // All nullable/additive. Tiering is manual in v1 (human-chosen tier only).
+
+  @Column({
+    type: DataType.STRING,
+    allowNull: true,
+  })
+  external_key?: string;
+
+  @Column({
+    type: DataType.ENUM(...Object.values(MrmTier)),
+    allowNull: true,
+  })
+  mrm_tier?: MrmTier;
+
+  @Column({
+    type: DataType.TEXT,
+    allowNull: true,
+  })
+  mrm_materiality_drivers?: string;
+
+  @Column({
+    type: DataType.DATE,
+    allowNull: true,
+  })
+  mrm_tiered_at?: Date;
+
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: true,
+  })
+  mrm_tiered_by?: number;
 
   @Column({
     type: DataType.DATE,

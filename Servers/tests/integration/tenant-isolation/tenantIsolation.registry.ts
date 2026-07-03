@@ -97,6 +97,21 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     tables: ["file_change_history"],
     baseRoute: "/api/file-change-history",
   },
+  {
+    name: "mrm_validations",
+    tables: ["mrm_validations"],
+    baseRoute: "/api/mrm/validations",
+  },
+  {
+    name: "mrm_findings",
+    tables: ["mrm_findings"],
+    baseRoute: "/api/mrm/findings",
+  },
+  {
+    name: "mrm_model_roles",
+    tables: ["mrm_model_roles"],
+    baseRoute: "/api/mrm/model-roles",
+  },
 ];
 
 /** Flat set of all tenant-scoped tables declared in the registry. */

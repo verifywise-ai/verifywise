@@ -373,3 +373,112 @@ export async function createTestFileChangeHistory(
   );
   return (result as any[])[0].id;
 }
+
+// ── MRM (Model Risk Management) factories ──
+
+export interface CreateTestModelInventoryOptions {
+  provider?: string;
+  model?: string;
+  version?: string;
+}
+
+export async function createTestModelInventory(
+  orgId: number,
+  options: CreateTestModelInventoryOptions = {},
+): Promise<number> {
+  const suffix = Date.now();
+  const [result] = await sequelize.query(
+    `INSERT INTO model_inventories (organization_id, provider, model, version, created_at, updated_at)
+     VALUES (:orgId, :provider, :model, :version, NOW(), NOW()) RETURNING id`,
+    {
+      replacements: {
+        orgId,
+        provider: options.provider ?? `Provider ${suffix}`,
+        model: options.model ?? `Model ${suffix}`,
+        version: options.version ?? "1.0",
+      },
+    },
+  );
+  return (result as any[])[0].id;
+}
+
+export interface CreateTestMrmValidationOptions {
+  model_inventory_id?: number;
+  validator_id?: number;
+}
+
+export async function createTestMrmValidation(
+  orgId: number,
+  modelInventoryId: number,
+  options: CreateTestMrmValidationOptions = {},
+): Promise<number> {
+  const [result] = await sequelize.query(
+    `INSERT INTO mrm_validations (organization_id, model_inventory_id, stage, validator_id, report, created_at, updated_at)
+     VALUES (:orgId, :modelInventoryId, 'not_started', :validatorId, '{}'::jsonb, NOW(), NOW()) RETURNING id`,
+    {
+      replacements: {
+        orgId,
+        modelInventoryId: options.model_inventory_id ?? modelInventoryId,
+        validatorId: options.validator_id ?? null,
+      },
+    },
+  );
+  return (result as any[])[0].id;
+}
+
+export interface CreateTestMrmFindingOptions {
+  validation_id?: number;
+  title?: string;
+  owner_id?: number;
+  severity?: string;
+  stage?: string;
+}
+
+export async function createTestMrmFinding(
+  orgId: number,
+  modelInventoryId: number,
+  options: CreateTestMrmFindingOptions = {},
+): Promise<number> {
+  const suffix = Date.now();
+  const [result] = await sequelize.query(
+    `INSERT INTO mrm_findings (organization_id, model_inventory_id, validation_id, title, severity, stage, owner_id, created_at, updated_at)
+     VALUES (:orgId, :modelInventoryId, :validationId, :title, :severity, :stage, :ownerId, NOW(), NOW()) RETURNING id`,
+    {
+      replacements: {
+        orgId,
+        modelInventoryId,
+        validationId: options.validation_id ?? null,
+        title: options.title ?? `Finding ${suffix}`,
+        severity: options.severity ?? "medium",
+        stage: options.stage ?? "open",
+        ownerId: options.owner_id ?? null,
+      },
+    },
+  );
+  return (result as any[])[0].id;
+}
+
+export interface CreateTestMrmModelRoleOptions {
+  role?: string;
+}
+
+export async function createTestMrmModelRole(
+  orgId: number,
+  modelInventoryId: number,
+  userId: number,
+  options: CreateTestMrmModelRoleOptions = {},
+): Promise<number> {
+  const [result] = await sequelize.query(
+    `INSERT INTO mrm_model_roles (organization_id, model_inventory_id, role, user_id, created_at)
+     VALUES (:orgId, :modelInventoryId, :role, :userId, NOW()) RETURNING id`,
+    {
+      replacements: {
+        orgId,
+        modelInventoryId,
+        role: options.role ?? "owner",
+        userId,
+      },
+    },
+  );
+  return (result as any[])[0].id;
+}

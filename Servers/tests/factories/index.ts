@@ -22,4 +22,8 @@ export {
   linkRiskToProject,
   linkVendorToProject,
   assignTaskToUser,
+  createTestModelInventory,
+  createTestMrmValidation,
+  createTestMrmFinding,
+  createTestMrmModelRole,
 } from "./test-entities.factory";
