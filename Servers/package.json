@@ -4,6 +4,7 @@
   "main": "index.js",
   "scripts": {
     "test:unit": "jest --testPathIgnorePatterns=/tests/integration/ --testPathIgnorePatterns=/helpers/ --detectOpenHandles --forceExit",
+    "test:coverage": "jest --coverage",
     "test:smoke": "jest --config jest.config.js --globalSetup=\"<rootDir>/tests/integration/globalSetup.js\" --testPathPatterns=deadline-summary --runInBand",
     "test": "npm run test:unit",
     "test:watch": "jest --watch",
