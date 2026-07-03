@@ -137,6 +137,11 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     tables: ["mrm_ingestion_tokens"],
     baseRoute: "/api/mrm/ingestion-tokens",
   },
+  {
+    name: "mrm_revalidation_events",
+    tables: ["mrm_revalidation_events"],
+    baseRoute: "/api/mrm/revalidation-events",
+  },
 ];
 
 /** Flat set of all tenant-scoped tables declared in the registry. */

@@ -27,6 +27,7 @@ import { MrmThresholdModel } from "../domain.layer/models/mrm/mrmThreshold.model
 import { MrmMetricModel } from "../domain.layer/models/mrm/mrmMetric.model";
 import { MrmMetricEvaluationModel } from "../domain.layer/models/mrm/mrmMetricEvaluation.model";
 import { MrmIngestionTokenModel } from "../domain.layer/models/mrm/mrmIngestionToken.model";
+import { MrmRevalidationEventModel } from "../domain.layer/models/mrm/mrmRevalidationEvent.model";
 import dbConfig from "./config/config";
 import { Dialect } from "sequelize";
 import { FrameworkModel } from "../domain.layer/models/frameworks/frameworks.model";
@@ -161,6 +162,7 @@ const sequelize = new Sequelize(conf.database!, conf.username!, conf.password, {
     MrmMetricModel,
     MrmMetricEvaluationModel,
     MrmIngestionTokenModel,
+    MrmRevalidationEventModel,
     FrameworkModel,
     ProjectFrameworksModel,
     AssessmentEUModel,

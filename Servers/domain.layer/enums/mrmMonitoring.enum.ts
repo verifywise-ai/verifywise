@@ -44,3 +44,18 @@ export enum MrmEvalStatus {
   BREACH = "breach",
   NO_THRESHOLD = "no_threshold",
 }
+
+/**
+ * MRM (Model Risk Management) — Branch 3 (revalidation triggers).
+ *
+ * What fired a revalidation trigger. All 4 sources converge on the one
+ * task-creation path and are recorded in the mrm_revalidation_events audit log.
+ * `tier_increase` fires when a model is re-tiered upward (1 is the highest);
+ * `scheduled` fires from the due-date sweep over validation next_due dates.
+ */
+export enum MrmRevalidationTriggerSource {
+  BREACH = "breach",
+  MATERIAL_CHANGE = "material_change",
+  TIER_INCREASE = "tier_increase",
+  SCHEDULED = "scheduled",
+}

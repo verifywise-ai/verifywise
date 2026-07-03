@@ -31,4 +31,5 @@ export {
   createTestMrmIngestionToken,
   createTestMrmMetric,
   createTestMrmMetricEvaluation,
+  createTestMrmRevalidationEvent,
 } from "./test-entities.factory";

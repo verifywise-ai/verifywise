@@ -657,3 +657,44 @@ export async function createTestMrmMetricEvaluation(
   );
   return (result as any[])[0].id;
 }
+
+// ---------------------------------------------------------------------------
+// MRM Branch 3 (revalidation triggers) factories
+// ---------------------------------------------------------------------------
+
+export interface CreateTestMrmRevalidationEventOptions {
+  trigger_source?: string;
+  reason?: string | null;
+  resulting_validation_id?: number | null;
+  created_validation?: boolean;
+  source_ref?: Record<string, unknown> | null;
+}
+
+export async function createTestMrmRevalidationEvent(
+  orgId: number,
+  modelInventoryId: number,
+  options: CreateTestMrmRevalidationEventOptions = {},
+): Promise<number> {
+  const sourceRef = options.source_ref ?? null;
+  const [result] = await sequelize.query(
+    `INSERT INTO mrm_revalidation_events
+       (organization_id, model_inventory_id, trigger_source, reason,
+        resulting_validation_id, created_validation, source_ref, fired_at, created_at)
+     VALUES (:orgId, :modelInventoryId, :triggerSource, :reason,
+             :resultingValidationId, :createdValidation,
+             CASE WHEN :sourceRef IS NULL THEN NULL ELSE CAST(:sourceRef AS jsonb) END, NOW(), NOW())
+     RETURNING id`,
+    {
+      replacements: {
+        orgId,
+        modelInventoryId,
+        triggerSource: options.trigger_source ?? "breach",
+        reason: options.reason ?? null,
+        resultingValidationId: options.resulting_validation_id ?? null,
+        createdValidation: options.created_validation ?? false,
+        sourceRef: sourceRef === null ? null : JSON.stringify(sourceRef),
+      },
+    },
+  );
+  return (result as any[])[0].id;
+}
