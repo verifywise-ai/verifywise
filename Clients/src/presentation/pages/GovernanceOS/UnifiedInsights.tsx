@@ -1,4 +1,4 @@
-import { useContext, useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Typography, CircularProgress, Stack, Box, Alert, alpha } from "@mui/material";
 import { SelectChangeEvent } from "@mui/material/Select";
 import { BarChart3, Download, Target } from "lucide-react";
@@ -17,13 +17,14 @@ import {
   useGovernancePreferences,
 } from "../../../application/hooks/useGovernanceOs";
 import { createTask } from "../../../application/repository/task.repository";
-import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
+import { useAuthContext, useProjectsContext } from "../../../application/contexts/verifywise";
 import { ITask } from "../../../domain/interfaces/i.task";
 import { TaskPriority, TaskStatus } from "../../../domain/enums/task.enum";
 import { background, text, brand } from "../../themes/palette";
 
 const UnifiedInsights = () => {
-  const { projects, userId, organizationId } = useContext(VerifyWiseContext);
+  const { projects } = useProjectsContext();
+  const { userId, organizationId } = useAuthContext();
   const [selectedProjectId, setSelectedProjectId] = useState<number | "">("");
   const { data: coverage, isLoading } = useCoverage(
     typeof selectedProjectId === "number" ? selectedProjectId : 0,
