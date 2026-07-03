@@ -17,15 +17,15 @@ module.exports = {
     "^jsdom$": "<rootDir>/tests/integration/__mocks__/jsdom.js",
     "^\.\/routes\/automation\.route\.js$": "<rootDir>/routes/automation.route.ts",
   },
-  collectCoverage: true,
   coverageDirectory: "coverage",
   coverageReporters: ["text", "html", "json-summary"],
+  coveragePathIgnorePatterns: ["/node_modules/", "/dist/", "/tests/", "/coverage/"],
   coverageThreshold: {
     global: {
       statements: 30,
       branches: 30,
       functions: 30,
-      lines: 30,
+      lines: 40,
     },
   },
   forceExit: true,
