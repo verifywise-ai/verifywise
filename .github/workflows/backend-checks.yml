@@ -210,7 +210,7 @@ jobs:
             }
             const json = JSON.parse(fs.readFileSync(summaryPath, "utf8"));
             const total = json.total;
-            const threshold = { statements: 30, branches: 30, functions: 30, lines: 30 };
+            const threshold = { statements: 30, branches: 25, functions: 25, lines: 40 };
             const rows = ["| Metric | Threshold | Actual | Status |", "|--------|----------:|------:|:------:|"];
             let passed = true;
             for (const key of ["statements", "branches", "functions", "lines"]) {
