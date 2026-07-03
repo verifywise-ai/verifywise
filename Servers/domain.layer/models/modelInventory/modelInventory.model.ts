@@ -144,6 +144,30 @@ export class ModelInventoryModel extends Model<ModelInventoryModel> implements I
   })
   mrm_tiered_by?: number;
 
+  // ── MRM (Model Risk Management) — Branch 2 revalidation seed flag ──
+  // Set when a monitored metric breaches a threshold whose breach_action is
+  // notify_flag_revalidation. Branch 2 only sets the seed; the full
+  // revalidation-task workflow is Branch 3.
+
+  @Column({
+    type: DataType.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+  })
+  mrm_revalidation_flagged?: boolean;
+
+  @Column({
+    type: DataType.DATE,
+    allowNull: true,
+  })
+  mrm_revalidation_flagged_at?: Date;
+
+  @Column({
+    type: DataType.TEXT,
+    allowNull: true,
+  })
+  mrm_revalidation_reason?: string;
+
   @Column({
     type: DataType.DATE,
     allowNull: false,

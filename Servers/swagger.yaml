@@ -12867,6 +12867,196 @@ paths:
       security:
         -
           bearerAuth: []
+  /mrm/ingestion-tokens:
+    get:
+      summary: 'Get Ingestion Tokens'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Mrm
+      operationId: getIngestionTokens
+      security:
+        -
+          bearerAuth: []
+    post:
+      summary: 'Create Ingestion Token'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Mrm
+      operationId: createIngestionToken
+      security:
+        -
+          bearerAuth: []
+  '/mrm/ingestion-tokens/{id}/rotate':
+    post:
+      summary: 'Rotate Ingestion Token'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Mrm
+      operationId: rotateIngestionToken
+      security:
+        -
+          bearerAuth: []
+  '/mrm/ingestion-tokens/{id}/revoke':
+    post:
+      summary: 'Revoke Ingestion Token'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Mrm
+      operationId: revokeIngestionToken
+      security:
+        -
+          bearerAuth: []
+  /mrm/thresholds:
+    get:
+      summary: 'Get Thresholds'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Mrm
+      operationId: getThresholds
+      security:
+        -
+          bearerAuth: []
+  '/mrm/models/{modelId}/thresholds':
+    post:
+      summary: 'Create Threshold'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Mrm
+      operationId: createThreshold
+      security:
+        -
+          bearerAuth: []
+  '/mrm/thresholds/{id}':
+    patch:
+      summary: 'Update Threshold'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Mrm
+      operationId: updateThreshold
+      security:
+        -
+          bearerAuth: []
+    delete:
+      summary: 'Delete Threshold'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Mrm
+      operationId: deleteThreshold
+      security:
+        -
+          bearerAuth: []
+  /mrm/metric-keys:
+    get:
+      summary: 'Get Metric Keys'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Mrm
+      operationId: getMetricKeys
+      security:
+        -
+          bearerAuth: []
+    post:
+      summary: 'Create Metric Key'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Mrm
+      operationId: createMetricKey
+      security:
+        -
+          bearerAuth: []
+  '/mrm/models/{modelId}/monitoring':
+    get:
+      summary: 'Get Model Monitoring'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Mrm
+      operationId: getModelMonitoring
+      security:
+        -
+          bearerAuth: []
+  '/mrm/models/{modelId}/monitoring/trend':
+    get:
+      summary: 'Get Metric Trend'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Mrm
+      operationId: getMetricTrend
+      security:
+        -
+          bearerAuth: []
+  '/mrm/models/{modelId}/monitoring/breaches':
+    get:
+      summary: 'Get Breach History'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Mrm
+      operationId: getBreachHistory
+      security:
+        -
+          bearerAuth: []
+  '/mrm/models/{externalModelKey}/metrics':
+    post:
+      summary: 'Ingest Metrics'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Mrm
+      operationId: ingestMetrics
   /datasets:
     get:
       tags:

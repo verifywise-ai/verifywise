@@ -14,6 +14,21 @@ import {
   updateFinding,
   updateValidation,
 } from "../controllers/mrm.ctrl";
+import {
+  createIngestionToken,
+  createMetricKey,
+  createThreshold,
+  deleteThreshold,
+  getBreachHistory,
+  getIngestionTokens,
+  getMetricKeys,
+  getMetricTrend,
+  getModelMonitoring,
+  getThresholds,
+  revokeIngestionToken,
+  rotateIngestionToken,
+  updateThreshold,
+} from "../controllers/mrmMonitoring.ctrl";
 
 // --- Tiering ---
 router.get("/tiering", authenticateJWT, getFleetTiering);
@@ -36,5 +51,32 @@ router.patch("/findings/:id", authenticateJWT, updateFinding);
 // --- Per-model roles ---
 router.get("/models/:modelId/roles", authenticateJWT, getModelRoles);
 router.put("/models/:modelId/roles", authenticateJWT, setModelRoles);
+
+// ===========================================================================
+// Branch 2 (monitoring) — JWT-authed management + read
+// (The token-authed metric-push route lives in mrmIngestion.route.ts.)
+// ===========================================================================
+
+// --- Ingestion tokens (admin) ---
+// Create returns the plaintext token ONCE; list never returns hashes/plaintext.
+router.get("/ingestion-tokens", authenticateJWT, getIngestionTokens);
+router.post("/ingestion-tokens", authenticateJWT, createIngestionToken);
+router.post("/ingestion-tokens/:id/rotate", authenticateJWT, rotateIngestionToken);
+router.post("/ingestion-tokens/:id/revoke", authenticateJWT, revokeIngestionToken);
+
+// --- Thresholds (config — deletable, unlike findings) ---
+router.get("/thresholds", authenticateJWT, getThresholds);
+router.post("/models/:modelId/thresholds", authenticateJWT, createThreshold);
+router.patch("/thresholds/:id", authenticateJWT, updateThreshold);
+router.delete("/thresholds/:id", authenticateJWT, deleteThreshold);
+
+// --- Metric-key catalogue ---
+router.get("/metric-keys", authenticateJWT, getMetricKeys);
+router.post("/metric-keys", authenticateJWT, createMetricKey);
+
+// --- Monitoring read ---
+router.get("/models/:modelId/monitoring", authenticateJWT, getModelMonitoring);
+router.get("/models/:modelId/monitoring/trend", authenticateJWT, getMetricTrend);
+router.get("/models/:modelId/monitoring/breaches", authenticateJWT, getBreachHistory);
 
 export default router;

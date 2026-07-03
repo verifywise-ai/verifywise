@@ -36,6 +36,9 @@ interface RateLimitConfig {
   windowMinutes: number;
   maxRequests: number;
   message: string;
+  // Optional custom key. Defaults to per-IP. Machine-auth endpoints (e.g. MRM
+  // ingestion) key by token so tenants behind a shared NAT don't share a budget.
+  keyGenerator?: Options["keyGenerator"];
 }
 
 /**
@@ -72,6 +75,23 @@ const RATE_LIMIT_CONFIGS: Record<string, RateLimitConfig> = {
     maxRequests: 10,
     message: "Too many AI detection scan requests from this IP, please try again after 60 minutes",
   },
+  // MRM metric ingestion is a machine-to-machine push from a customer's
+  // monitoring pipeline. It is legitimately high-volume (a nightly job may push
+  // many models x metrics, and a single request can batch many points), so the
+  // limit is deliberately generous — far above the auth/general limiters — while
+  // still capping a runaway or abusive pusher. Keyed by ingestion TOKEN (not IP):
+  // enterprise pipelines behind a shared NAT must not share one budget, and one
+  // runaway token must not 429 every other tenant on the same egress IP.
+  mrmIngestion: {
+    windowMinutes: 15,
+    maxRequests: isNonProduction ? 100000 : 5000,
+    message: "Too many metric ingestion requests for this token, please slow down and retry",
+    keyGenerator: (req) => {
+      const tokenId = (req as { mrmIngestionToken?: { tokenId?: number } }).mrmIngestionToken
+        ?.tokenId;
+      return tokenId !== undefined ? `mrm-token:${tokenId}` : (req.ip ?? "unknown");
+    },
+  },
 };
 
 /**
@@ -99,6 +119,7 @@ const createRateLimiter = (config: RateLimitConfig) => {
     handler: createRateLimitHandler(config.message),
     // Let express-rate-limit handle IP extraction with IPv6 support
     // This automatically uses req.ip with proper IPv6 normalization
+    ...(config.keyGenerator ? { keyGenerator: config.keyGenerator } : {}),
   };
 
   return rateLimit(options);
@@ -134,3 +155,11 @@ export const tokenRefreshLimiter = createRateLimiter(RATE_LIMIT_CONFIGS.tokenRef
  * Moderate limits as scans are resource-intensive
  */
 export const aiDetectionScanLimiter = createRateLimiter(RATE_LIMIT_CONFIGS.aiDetectionScan);
+
+/**
+ * Dedicated rate limiter for the MRM metric-ingestion push endpoint.
+ * Generous vs. the auth/general limiters because ingestion is a legitimate
+ * high-volume machine-to-machine flow (batched pushes from a monitoring cron),
+ * but still bounded so a runaway pusher cannot flood the system.
+ */
+export const mrmIngestionLimiter = createRateLimiter(RATE_LIMIT_CONFIGS.mrmIngestion);

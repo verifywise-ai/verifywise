@@ -6135,6 +6135,160 @@ export const mrmEndpoints: Endpoint[] = [
     ],
     tag: "Mrm",
   },
+  {
+    method: 'GET',
+    path: '/mrm/ingestion-tokens',
+    summary: "Get Ingestion Tokens",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'POST',
+    path: '/mrm/ingestion-tokens',
+    summary: "Create Ingestion Token",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'POST',
+    path: '/mrm/ingestion-tokens/{id}/rotate',
+    summary: "Rotate Ingestion Token",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'POST',
+    path: '/mrm/ingestion-tokens/{id}/revoke',
+    summary: "Revoke Ingestion Token",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'GET',
+    path: '/mrm/thresholds',
+    summary: "Get Thresholds",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'POST',
+    path: '/mrm/models/{modelId}/thresholds',
+    summary: "Create Threshold",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'PATCH',
+    path: '/mrm/thresholds/{id}',
+    summary: "Update Threshold",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'DELETE',
+    path: '/mrm/thresholds/{id}',
+    summary: "Delete Threshold",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'GET',
+    path: '/mrm/metric-keys',
+    summary: "Get Metric Keys",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'POST',
+    path: '/mrm/metric-keys',
+    summary: "Create Metric Key",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'GET',
+    path: '/mrm/models/{modelId}/monitoring',
+    summary: "Get Model Monitoring",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'GET',
+    path: '/mrm/models/{modelId}/monitoring/trend',
+    summary: "Get Metric Trend",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'GET',
+    path: '/mrm/models/{modelId}/monitoring/breaches',
+    summary: "Get Breach History",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'POST',
+    path: '/mrm/models/{externalModelKey}/metrics',
+    summary: "Ingest Metrics",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
 ];
 
 // NIST AI RMF endpoints
