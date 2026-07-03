@@ -3,19 +3,11 @@ import "./App.css";
 import { ThemeProvider } from "@emotion/react";
 import light from "./presentation/themes/light";
 import { CssBaseline } from "@mui/material";
-import { VerifyWiseContext } from "./application/contexts/VerifyWise.context";
+import { VerifyWiseProvider } from "./application/contexts/verifywise";
 import { useCallback, useMemo, useState, useEffect } from "react";
 import { useAuth } from "./application/hooks/useAuth";
-import { Project } from "./domain/types/Project";
 import { CookiesProvider } from "react-cookie";
 import { createRoutes } from "./application/config/routes";
-import {
-  DashboardState,
-  UIValues,
-  AuthValues,
-  InputValues,
-} from "./application/interfaces/appStates";
-import { ComponentVisible } from "./application/interfaces/ComponentVisible";
 import { AlertProps } from "./presentation/types/alert.types";
 import { setShowAlertCallback } from "./infrastructure/api/customAxios";
 import {
@@ -23,7 +15,6 @@ import {
   type UserPreferences as StoredPreferences,
 } from "./infrastructure/storage";
 import Alert from "./presentation/components/Alert";
-import useUsers from "./application/hooks/useUsers";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { useLocation, useNavigate } from "react-router-dom";
 import { clearChunkReloadFlag } from "./application/utils/deploymentHelpers";
@@ -115,9 +106,8 @@ const ConditionalThemeWrapper = ({ children }: { children: React.ReactNode }) =>
 function App() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { token, userRoleName, organizationId, userId } = useAuth();
+  const { token, userId } = useAuth();
   const [alert, setAlert] = useState<AlertProps | null>(null);
-  const { users, refreshUsers } = useUsers();
   const { userPreferences } = useUserPreferences();
   const commandPalette = useCommandPalette();
   const { completeOnboarding, state, isLoading: isOnboardingLoading } = useOnboarding();
@@ -169,89 +159,7 @@ function App() {
     }
   }, [userPreferences]);
 
-  const [uiValues, setUiValues] = useState<UIValues>({});
-  const [authValues, setAuthValues] = useState<AuthValues>({});
-  const [dashboardValues, setDashboardValues] = useState<DashboardState>({
-    dashboard: {},
-    projects: {},
-    compliance: {},
-    assessments: {},
-    vendors: [],
-    users: [],
-  });
-  const [inputValues, setInputValues] = useState<InputValues>({});
-  const [projects, setProjects] = useState<Project[]>([]);
   const [triggerSidebar, setTriggerSidebar] = useState(false);
-
-  const [currentProjectId, setCurrentProjectId] = useState<string | null>("");
-  const [componentsVisible, setComponentsVisible] = useState<ComponentVisible>({
-    home: false,
-    sidebar: false,
-    projectFrameworks: false,
-    compliance: false,
-  });
-  const changeComponentVisibility = useCallback(
-    (component: keyof ComponentVisible, value: boolean) => {
-      setComponentsVisible((prev) => ({
-        ...prev,
-        [component]: value,
-      }));
-    },
-    [],
-  );
-
-  const [photoRefreshFlag, setPhotoRefreshFlag] = useState(false);
-
-  const contextValues = useMemo(
-    () => ({
-      uiValues,
-      setUiValues,
-      authValues,
-      setAuthValues,
-      dashboardValues,
-      setDashboardValues,
-      inputValues,
-      setInputValues,
-      token,
-      currentProjectId,
-      setCurrentProjectId,
-      userId,
-      projects,
-      setProjects,
-      componentsVisible,
-      changeComponentVisibility,
-      users,
-      refreshUsers,
-      userRoleName,
-      organizationId,
-      photoRefreshFlag,
-      setPhotoRefreshFlag,
-    }),
-    [
-      uiValues,
-      setUiValues,
-      authValues,
-      setAuthValues,
-      dashboardValues,
-      setDashboardValues,
-      inputValues,
-      setInputValues,
-      token,
-      currentProjectId,
-      setCurrentProjectId,
-      userId,
-      projects,
-      setProjects,
-      componentsVisible,
-      changeComponentVisibility,
-      users,
-      refreshUsers,
-      userRoleName,
-      organizationId,
-      photoRefreshFlag,
-      setPhotoRefreshFlag,
-    ],
-  );
 
   const triggerSidebarReload = () => {
     setTriggerSidebar((prev) => !prev);
@@ -259,7 +167,7 @@ function App() {
 
   return (
     <CookiesProvider>
-      <VerifyWiseContext.Provider value={contextValues}>
+      <VerifyWiseProvider>
         <PluginRegistryProvider>
           <PluginLoader />
           <UserGuideSidebarProvider>
@@ -296,7 +204,7 @@ function App() {
             </SmartPromptProvider>
           </UserGuideSidebarProvider>
         </PluginRegistryProvider>
-      </VerifyWiseContext.Provider>
+      </VerifyWiseProvider>
 
       {/* React Query DevTools - Only in development */}
       {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
