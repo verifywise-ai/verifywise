@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useContext, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { Likelihood, Severity } from "../../RiskLevel/constants";
 import { RiskLikelihood, RiskSeverity } from "../../RiskLevel/riskValues";
@@ -15,7 +15,7 @@ import { createProjectRisk } from "../../../../application/repository/projectRis
 import { useUpdateProjectRisk } from "../../../../application/hooks/useUpdateProjectRisk";
 import useUsers from "../../../../application/hooks/useUsers";
 import { useAuth } from "../../../../application/hooks/useAuth";
-import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
+import { useInput } from "../../../../application/contexts/verifywise";
 import allowedRoles from "../../../../application/constants/permissions";
 import { RiskCalculator } from "../../../tools/riskCalculator";
 import { CustomFieldsSectionHandle } from "../../CustomFieldsSection";
@@ -124,7 +124,7 @@ export function useRiskForm(props: AddNewRiskFormProps): UseRiskFormReturn {
   const users = usersProp || hookData.users;
   const usersLoading = usersLoadingProp !== undefined ? usersLoadingProp : hookData.loading;
 
-  const { inputValues } = useContext(VerifyWiseContext);
+  const { inputValues } = useInput();
   const updateProjectRiskMutation = useUpdateProjectRisk();
 
   const isEditingDisabled = !allowedRoles.projectRisks.edit.includes(userRoleName);
