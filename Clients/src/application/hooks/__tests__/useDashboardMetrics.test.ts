@@ -1,4 +1,6 @@
+import React from "react";
 import { renderHook, waitFor, act } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { hasDashboardCache, useDashboardMetrics, CACHE_KEY } from "../useDashboardMetrics";
 
 // Mock the entity repository
@@ -11,6 +13,14 @@ import { getAllEntities, getEntityById } from "../../repository/entity.repositor
 
 const mockGetAllEntities = vi.mocked(getAllEntities);
 const mockGetEntityById = vi.mocked(getEntityById);
+
+const createWrapper = () => {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return ({ children }: { children: React.ReactNode }) =>
+    React.createElement(QueryClientProvider, { client: queryClient }, children);
+};
 
 describe("hasDashboardCache", () => {
   beforeEach(() => {
@@ -54,7 +64,7 @@ describe("useDashboardMetrics", () => {
   });
 
   it("should set loading=false after all groups complete", async () => {
-    const { result } = renderHook(() => useDashboardMetrics());
+    const { result } = renderHook(() => useDashboardMetrics(), { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -80,7 +90,7 @@ describe("useDashboardMetrics", () => {
       return { data: [] };
     });
 
-    const { result } = renderHook(() => useDashboardMetrics());
+    const { result } = renderHook(() => useDashboardMetrics(), { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -106,7 +116,7 @@ describe("useDashboardMetrics", () => {
       return { data: [] };
     });
 
-    const { result } = renderHook(() => useDashboardMetrics());
+    const { result } = renderHook(() => useDashboardMetrics(), { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -122,7 +132,7 @@ describe("useDashboardMetrics", () => {
     vi.spyOn(console, "warn").mockImplementation(() => {});
     mockGetAllEntities.mockRejectedValue(new Error("Network error"));
 
-    const { result } = renderHook(() => useDashboardMetrics());
+    const { result } = renderHook(() => useDashboardMetrics(), { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -133,27 +143,38 @@ describe("useDashboardMetrics", () => {
   });
 
   it("should use cached data when cache is fresh", async () => {
-    // Seed all critical keys so shouldSkipFetch returns true
+    // Seed every dashboard query key so React Query treats all data as fresh
+    // and skips network calls.
     const freshTimestamp = Date.now();
     const cacheData: Record<string, any> = {};
-    const criticalKeys = [
-      "trainingMetrics",
+    const allKeys = [
+      "riskMetrics",
+      "evidenceMetrics",
+      "vendorRiskMetrics",
+      "vendorMetrics",
+      "policyMetrics",
       "policyStatusMetrics",
+      "incidentMetrics",
       "incidentStatusMetrics",
+      "modelRiskMetrics",
+      "trainingMetrics",
       "evidenceHubMetrics",
       "modelLifecycleMetrics",
+      "organizationalFrameworks",
+      "taskMetrics",
+      "useCaseMetrics",
+      "governanceScoreMetrics",
     ];
-    criticalKeys.forEach((key) => {
+    allKeys.forEach((key) => {
       cacheData[key] = { data: { total: 1 }, timestamp: freshTimestamp };
     });
-    // Also seed risk so we see it from cache
     cacheData.riskMetrics = {
       data: { total: 10, distribution: { high: 5, medium: 3, low: 2, resolved: 0 }, recent: [] },
       timestamp: freshTimestamp,
     };
     localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
 
-    const { result } = renderHook(() => useDashboardMetrics());
+    const { result } = renderHook(() => useDashboardMetrics(), { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -167,7 +188,7 @@ describe("useDashboardMetrics", () => {
   });
 
   it("should expose individual fetch functions", async () => {
-    const { result } = renderHook(() => useDashboardMetrics());
+    const { result } = renderHook(() => useDashboardMetrics(), { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -186,7 +207,7 @@ describe("useDashboardMetrics", () => {
 
   it("should track progress steps during sequential fetch groups", async () => {
     // Use a slow mock to observe progress
-    let resolvers: (() => void)[] = [];
+    const resolvers: (() => void)[] = [];
     mockGetAllEntities.mockImplementation(
       () =>
         new Promise<any>((resolve) => {
@@ -195,7 +216,7 @@ describe("useDashboardMetrics", () => {
     );
     mockGetEntityById.mockResolvedValue({ data: {} });
 
-    const { result } = renderHook(() => useDashboardMetrics());
+    const { result } = renderHook(() => useDashboardMetrics(), { wrapper: createWrapper() });
 
     // Progress starts at 0
     expect(result.current.progressStep).toBe(0);
@@ -222,7 +243,7 @@ describe("useDashboardMetrics", () => {
       return { data: [] };
     });
 
-    const { result } = renderHook(() => useDashboardMetrics());
+    const { result } = renderHook(() => useDashboardMetrics(), { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -245,7 +266,7 @@ describe("useDashboardMetrics", () => {
       return { data: [] };
     });
 
-    const { result } = renderHook(() => useDashboardMetrics());
+    const { result } = renderHook(() => useDashboardMetrics(), { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -257,7 +278,7 @@ describe("useDashboardMetrics", () => {
   });
 
   it("should call individual fetch function and update state", async () => {
-    const { result } = renderHook(() => useDashboardMetrics());
+    const { result } = renderHook(() => useDashboardMetrics(), { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -273,8 +294,10 @@ describe("useDashboardMetrics", () => {
       await result.current.fetchRiskMetrics();
     });
 
-    expect(result.current.riskMetrics).not.toBeNull();
-    expect(result.current.riskMetrics!.total).toBe(1);
+    await waitFor(() => {
+      expect(result.current.riskMetrics).not.toBeNull();
+      expect(result.current.riskMetrics!.total).toBe(1);
+    });
     expect(mockGetAllEntities).toHaveBeenCalledWith({ routeUrl: "/projectRisks" });
   });
 
@@ -295,7 +318,7 @@ describe("useDashboardMetrics", () => {
       return { data: [] };
     });
 
-    const { result } = renderHook(() => useDashboardMetrics());
+    const { result } = renderHook(() => useDashboardMetrics(), { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -329,7 +352,7 @@ describe("useDashboardMetrics", () => {
       return { data: [] };
     });
 
-    const { result } = renderHook(() => useDashboardMetrics());
+    const { result } = renderHook(() => useDashboardMetrics(), { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -362,7 +385,7 @@ describe("useDashboardMetrics", () => {
       return { data: [] };
     });
 
-    const { result } = renderHook(() => useDashboardMetrics());
+    const { result } = renderHook(() => useDashboardMetrics(), { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -392,7 +415,7 @@ describe("useDashboardMetrics", () => {
       return { data: [] };
     });
 
-    const { result } = renderHook(() => useDashboardMetrics());
+    const { result } = renderHook(() => useDashboardMetrics(), { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -420,7 +443,7 @@ describe("useDashboardMetrics", () => {
       return { data: [] };
     });
 
-    const { result } = renderHook(() => useDashboardMetrics());
+    const { result } = renderHook(() => useDashboardMetrics(), { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -460,7 +483,7 @@ describe("useDashboardMetrics", () => {
       return { data: [] };
     });
 
-    const { result } = renderHook(() => useDashboardMetrics());
+    const { result } = renderHook(() => useDashboardMetrics(), { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -486,7 +509,7 @@ describe("useDashboardMetrics", () => {
       return { data: [] };
     });
 
-    const { result } = renderHook(() => useDashboardMetrics());
+    const { result } = renderHook(() => useDashboardMetrics(), { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
@@ -512,7 +535,7 @@ describe("useDashboardMetrics", () => {
     });
     localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
 
-    const { result } = renderHook(() => useDashboardMetrics());
+    const { result } = renderHook(() => useDashboardMetrics(), { wrapper: createWrapper() });
 
     await waitFor(() => {
       // isRevalidating should become true then false as stale data is revalidated
