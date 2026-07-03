@@ -4,9 +4,10 @@ import { lazyRoute, LazyFallback } from "../utils/lazyRoute";
 import { SHOW_AI_GATEWAY_PROMPTS } from "./featureFlags";
 
 // Eager imports — app shell, route guard, and Use cases page (mounts with layout for table skeleton UX)
-import Dashboard from "../../presentation/containers/Dashboard";
 import ProtectedRoute from "../../presentation/components/ProtectedRoute";
 import VWHome from "../../presentation/pages/Home/1.0Home";
+
+const Dashboard = lazyRoute(() => import("../../presentation/containers/Dashboard"));
 
 // ── Authentication routes ─────────────────────────────────────────────
 const Login = lazyRoute(() => import("../../presentation/pages/Authentication/Login"));
@@ -250,7 +251,11 @@ export const createRoutes = (
   <Route
     key="dashboard"
     path="/"
-    element={<ProtectedRoute Component={Dashboard} reloadTrigger={triggerSidebar} />}
+    element={
+      <Suspense fallback={<LazyFallback />}>
+        <ProtectedRoute Component={Dashboard} reloadTrigger={triggerSidebar} />
+      </Suspense>
+    }
   >
     <Route
       path="/vendors"
