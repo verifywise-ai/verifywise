@@ -1,4 +1,4 @@
-import React, { useContext, useMemo } from "react";
+import React, { useMemo } from "react";
 import {
   Stack,
   Box,
@@ -42,7 +42,7 @@ import {
   useGovernancePreferences,
   useCoverage,
 } from "../../../../application/hooks/useGovernanceOs";
-import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
+import { useProjectsContext } from "../../../../application/contexts/verifywise";
 
 interface ModuleCardProps {
   title: string;
@@ -158,7 +158,7 @@ const ModuleCard: React.FC<ModuleCardProps> = ({
 
 const GovernanceHub: React.FC = () => {
   const navigate = useNavigate();
-  const { projects, currentProjectId } = useContext(VerifyWiseContext);
+  const { projects, currentProjectId } = useProjectsContext();
   const { data: mappings } = useMappings();
   const { data: scenarios } = useScenarios();
   const { data: preferences } = useGovernancePreferences();
