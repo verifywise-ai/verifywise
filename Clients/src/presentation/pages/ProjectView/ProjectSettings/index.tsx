@@ -10,7 +10,7 @@ import {
 } from "@mui/material";
 import { VWLink } from "../../../components/Link";
 import { ChevronDown } from "lucide-react";
-import React, { useState, useCallback, useMemo, useEffect, useRef, useContext } from "react";
+import React, { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import Field from "../../../components/Inputs/Field";
 import DatePicker from "../../../components/Inputs/Datepicker";
 import dayjs, { Dayjs } from "dayjs";
@@ -39,7 +39,7 @@ import { useRequiredCustomFieldsGate } from "../../../components/CustomFieldsSec
 import useFrameworks from "../../../../application/hooks/useFrameworks";
 import { Framework } from "../../../../domain/types/Framework";
 import allowedRoles from "../../../../application/constants/permissions";
-import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
+import { useProjectsContext } from "../../../../application/contexts/verifywise";
 import { User } from "../../../../domain/types/User";
 import {
   deleteProject,
@@ -145,7 +145,7 @@ const initialState: FormValues = {
 
 const ProjectSettings = React.memo(
   ({ triggerRefresh = () => {} }: { triggerRefresh?: (isUpdate: boolean) => void }) => {
-    const { setProjects } = useContext(VerifyWiseContext);
+    const { setProjects } = useProjectsContext();
     const { userRoleName, userId } = useAuth();
     const [searchParams] = useSearchParams();
     const projectId = searchParams.get("projectId") ?? "1"; // default project ID is 2
