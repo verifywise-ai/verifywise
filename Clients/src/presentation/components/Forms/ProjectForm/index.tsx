@@ -1,7 +1,7 @@
 import { Alert, Box, SelectChangeEvent, Stack, Typography, useTheme } from "@mui/material";
 import { TabContext } from "@mui/lab";
 import { X as ClearIcon } from "lucide-react";
-import { Suspense, useCallback, useContext, useMemo, useRef, useState, useEffect } from "react";
+import { Suspense, useCallback, useMemo, useRef, useState, useEffect } from "react";
 import CustomFieldsSection, { type CustomFieldsSectionHandle } from "../../CustomFieldsSection";
 import TabBar from "../../TabBar";
 import { CustomizableButton } from "../../../components/button/customizable-button";
@@ -28,7 +28,7 @@ import { extractUserToken } from "../../../../application/tools/extractToken";
 import { useSelector } from "react-redux";
 import Checkbox from "../../../components/Inputs/Checkbox";
 import { Project } from "../../../../domain/types/Project";
-import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
+import { useProjectsContext } from "../../../../application/contexts/verifywise";
 import { FrameworkTypeEnum } from "./constants";
 import { FormValues } from "./constants";
 import { initialState } from "./constants";
@@ -76,7 +76,7 @@ export const ProjectForm = ({
   onSubmitRef,
 }: ProjectFormProps) => {
   const theme = useTheme();
-  const { setProjects } = useContext(VerifyWiseContext);
+  const { setProjects } = useProjectsContext();
 
   // Initialize form values based on whether we're editing or creating
   const [values, setValues] = useState<FormValues>(() => {
