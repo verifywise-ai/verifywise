@@ -11,9 +11,9 @@ import {
 import { VWLink } from "../../Link";
 import singleTheme from "../../../themes/v1SingleTheme";
 import Checkbox from "../../Inputs/Checkbox";
-import { Suspense, useContext, useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { ProjectRisk } from "../../../../domain/types/ProjectRisk";
-import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
+import { useInput } from "../../../../application/contexts/verifywise";
 import IconButton from "../../IconButton";
 import ViewRelationshipsButton from "../../ViewRelationshipsButton";
 import { displayFormattedDate } from "../../../tools/isoDateToString";
@@ -74,7 +74,7 @@ const VWProjectRisksTableBody = ({
 }: IVWProjectRisksTableRow) => {
   const isColVisible = (colId: string) => !visibleColumns || visibleColumns.has(colId);
   const theme = useTheme();
-  const { setInputValues } = useContext(VerifyWiseContext);
+  const { setInputValues } = useInput();
   const { userRoleName } = useAuth();
   const { users } = useUsers();
   const isDeletingAllowed = allowedRoles.projectRisks.delete.includes(userRoleName);
