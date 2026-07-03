@@ -1,4 +1,4 @@
-import { FC, useContext, useEffect, useState, useRef, useCallback, memo } from "react";
+import { FC, useEffect, useState, useRef, useCallback, memo } from "react";
 import { Stack, Box, useTheme, Avatar, Typography, Theme } from "@mui/material";
 import { MessagePrimitive, useMessagePartText, useAuiState } from "@assistant-ui/react";
 import Markdown from "react-markdown";
@@ -8,7 +8,7 @@ import { Bot, Copy, Check } from "lucide-react";
 import { ChartRenderer } from "./ChartRenderer";
 import ConfirmationToolUI from "./ConfirmationToolUI";
 import VWAvatar from "../Avatar/VWAvatar";
-import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
+import { useAuthContext, useUsersContext } from "../../../application/contexts/verifywise";
 import { useProfilePhotoFetch } from "../../../application/hooks/useProfilePhotoFetch";
 import { User } from "../../../domain/types/User";
 
@@ -499,7 +499,8 @@ const DEFAULT_USER: User = {
 
 const CustomMessageComponent: FC = () => {
   const theme = useTheme();
-  const { userId, users, photoRefreshFlag } = useContext(VerifyWiseContext);
+  const { userId } = useAuthContext();
+  const { users, photoRefreshFlag } = useUsersContext();
   const { fetchProfilePhotoAsBlobUrl } = useProfilePhotoFetch();
   const [avatarUrl, setAvatarUrl] = useState<string>("");
   const bubbleRef = useRef<HTMLDivElement>(null);
