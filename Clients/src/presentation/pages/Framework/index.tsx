@@ -9,7 +9,7 @@ import {
   Divider,
   Popover,
 } from "@mui/material";
-import { useContext, useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import {
   CirclePlus as AddCircleOutlineIcon,
   Settings as SettingsIcon,
@@ -18,7 +18,11 @@ import {
   ChevronDown as WhiteDownArrowIcon,
 } from "lucide-react";
 import CustomizableSkeleton from "../../components/Skeletons";
-import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
+import {
+  useVisibility,
+  useProjectsContext,
+  useAuthContext,
+} from "../../../application/contexts/verifywise";
 import { usePluginRegistry } from "../../../application/contexts/PluginRegistry.context";
 import useMultipleOnScreen from "../../../application/hooks/useMultipleOnScreen";
 import useFrameworks from "../../../application/hooks/useFrameworks";
@@ -115,8 +119,9 @@ const Framework = () => {
   const categoryId = searchParams.get("categoryId");
   const subcategoryId = searchParams.get("subcategoryId");
 
-  const { changeComponentVisibility, projects, userRoleName, setProjects } =
-    useContext(VerifyWiseContext);
+  const { changeComponentVisibility } = useVisibility();
+  const { projects, setProjects } = useProjectsContext();
+  const { userRoleName } = useAuthContext();
   const { getComponentsForSlot } = usePluginRegistry();
   const { refs, allVisible } = useMultipleOnScreen<HTMLElement>({
     countToTrigger: 1,
