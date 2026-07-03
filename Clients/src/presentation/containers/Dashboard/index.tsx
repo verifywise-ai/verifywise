@@ -1,9 +1,9 @@
 import { Stack, Typography, Box } from "@mui/material";
 import "./index.css";
 import { Outlet, useLocation } from "react-router";
-import { useContext, useEffect, FC, useState } from "react";
+import { useEffect, FC, useState } from "react";
 import { useDispatch } from "react-redux";
-import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
+import { useDashboardContext, useProjectsContext } from "../../../application/contexts/verifywise";
 import { EvalsSidebarProvider } from "../../../application/contexts/EvalsSidebar.context";
 import { AIDetectionSidebarProvider } from "../../../application/contexts/AIDetectionSidebar.context";
 import { ShadowAISidebarProvider } from "../../../application/contexts/ShadowAISidebar.context";
@@ -35,7 +35,8 @@ interface DashboardProps {
 }
 
 const Dashboard: FC<DashboardProps> = ({ reloadTrigger }) => {
-  const { setDashboardValues, setProjects } = useContext(VerifyWiseContext);
+  const { setDashboardValues } = useDashboardContext();
+  const { setProjects } = useProjectsContext();
   const location = useLocation();
   const { activeModule, setActiveModule } = useActiveModule();
   const { userRoleName, isSuperAdmin, activeOrganizationId } = useAuth();
