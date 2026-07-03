@@ -22,7 +22,6 @@ import {
   deleteThresholdQuery,
   flagModelForRevalidationQuery,
   generateIngestionTokenPlaintext,
-  getActiveIngestionTokenByIdQuery,
   getBreachHistoryQuery,
   getBreachNotificationRecipientsQuery,
   getIngestionTokensQuery,
@@ -523,14 +522,12 @@ export async function revokeIngestionToken(req: Request, res: Response) {
   }
 
   try {
-    const revoked = await revokeIngestionTokenQuery(id, req.organizationId!);
-    if (!revoked) {
+    const revokedRow = await revokeIngestionTokenQuery(id, req.organizationId!);
+    if (!revokedRow) {
       return res.status(404).json(STATUS_CODE[404](req.t!("Active ingestion token not found")));
     }
-    // Return the (now revoked) safe row for the UI to reflect state.
-    const row = await getActiveIngestionTokenByIdQuery(id, req.organizationId!);
     logStructured("successful", `ingestion token ${id} revoked`, fn, FILE);
-    return res.status(200).json(STATUS_CODE[200](row ?? { id, revoked: true }));
+    return res.status(200).json(STATUS_CODE[200](revokedRow));
   } catch (error) {
     return fail(req, res, fn, "failed to revoke ingestion token", error);
   }

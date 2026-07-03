@@ -23,6 +23,9 @@ import {
   useSetModelRoles,
 } from "../../../../application/hooks/useMrm";
 import { fleetModelName, mrmErrorMessage, ROLE_DEFINITIONS } from "./constants";
+import MetricsFeedSection from "./MetricsFeedSection";
+import DefaultThresholdsSection from "./DefaultThresholdsSection";
+import AlertsSection from "./AlertsSection";
 import {
   mrmSectionIntroStyle,
   mrmTableCellStyle,
@@ -36,11 +39,14 @@ interface SettingsTabProps {
   onSuccess: (message: string) => void;
 }
 
-type SettingsSection = "roles" | "tiering-rules";
+type SettingsSection = "metrics-feed" | "tiering-rules" | "default-thresholds" | "alerts" | "roles";
 
 const SECTION_ITEMS: { key: SettingsSection; label: string }[] = [
-  { key: "roles", label: "Roles & independence" },
+  { key: "metrics-feed", label: "Metrics feed & tokens" },
   { key: "tiering-rules", label: "Tiering rules" },
+  { key: "default-thresholds", label: "Default thresholds" },
+  { key: "alerts", label: "Alerts & notifications" },
+  { key: "roles", label: "Roles & independence" },
 ];
 
 const TIERING_RULES = [
@@ -222,11 +228,12 @@ const TieringRulesSection = () => (
 
 const SettingsTab = ({ users, onError, onSuccess }: SettingsTabProps) => {
   const theme = useTheme();
-  const [section, setSection] = useState<SettingsSection>("roles");
+  const [section, setSection] = useState<SettingsSection>("metrics-feed");
 
   return (
     <Stack direction="row" sx={{ gap: "48px", alignItems: "flex-start" }}>
       <Box
+        role="tablist"
         sx={{
           minWidth: "200px",
           border: `1px solid ${theme.palette.border.dark}`,
@@ -238,7 +245,8 @@ const SettingsTab = ({ users, onError, onSuccess }: SettingsTabProps) => {
         {SECTION_ITEMS.map((item) => (
           <Box
             key={item.key}
-            role="button"
+            role="tab"
+            aria-selected={section === item.key}
             tabIndex={0}
             onClick={() => setSection(item.key)}
             onKeyDown={(e) => {
@@ -260,10 +268,16 @@ const SettingsTab = ({ users, onError, onSuccess }: SettingsTabProps) => {
       </Box>
 
       <Box sx={{ flex: 1, minWidth: 0 }}>
-        {section === "roles" ? (
+        {section === "metrics-feed" && (
+          <MetricsFeedSection onError={onError} onSuccess={onSuccess} />
+        )}
+        {section === "tiering-rules" && <TieringRulesSection />}
+        {section === "default-thresholds" && (
+          <DefaultThresholdsSection onError={onError} onSuccess={onSuccess} />
+        )}
+        {section === "alerts" && <AlertsSection users={users} />}
+        {section === "roles" && (
           <RolesSection users={users} onError={onError} onSuccess={onSuccess} />
-        ) : (
-          <TieringRulesSection />
         )}
       </Box>
     </Stack>

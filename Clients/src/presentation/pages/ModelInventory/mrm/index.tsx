@@ -8,13 +8,14 @@ import { MrmUser } from "./types";
 import TieringTab from "./TieringTab";
 import ValidationTab from "./ValidationTab";
 import FindingsTab from "./FindingsTab";
+import MonitoringTab from "./MonitoringTab";
 import SettingsTab from "./SettingsTab";
 
 interface ModelRiskManagementTabProps {
   users: MrmUser[];
 }
 
-type MrmSubTab = "tiering" | "validation" | "findings" | "settings";
+type MrmSubTab = "tiering" | "validation" | "findings" | "monitoring" | "settings";
 
 interface MrmToast {
   variant: "success" | "error" | "info";
@@ -63,6 +64,7 @@ const ModelRiskManagementTab = ({ users }: ModelRiskManagementTabProps) => {
               { label: "Tiering", value: "tiering", icon: "Layers" },
               { label: "Validation", value: "validation", icon: "ClipboardCheck" },
               { label: "Findings", value: "findings", icon: "Flag" },
+              { label: "Monitoring", value: "monitoring", icon: "Activity" },
               { label: "Settings", value: "settings", icon: "Settings" },
             ]}
             activeTab={subTab}
@@ -79,6 +81,7 @@ const ModelRiskManagementTab = ({ users }: ModelRiskManagementTabProps) => {
       {subTab === "findings" && (
         <FindingsTab users={users} onError={onError} onSuccess={onSuccess} />
       )}
+      {subTab === "monitoring" && <MonitoringTab onError={onError} onSuccess={onSuccess} />}
       {subTab === "settings" && (
         <SettingsTab users={users} onError={onError} onSuccess={onSuccess} />
       )}

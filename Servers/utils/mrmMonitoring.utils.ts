@@ -706,21 +706,25 @@ export const rotateIngestionTokenQuery = async (
   }
 };
 
-/** Soft-revoke a token (set revoked_at). Returns false when none is active. */
+/**
+ * Soft-revoke a token (set revoked_at). Returns the updated safe row on
+ * success, or null when no active token with that id exists for the org.
+ * Never returns token_hash.
+ */
 export const revokeIngestionTokenQuery = async (
   id: number,
   organizationId: number,
-): Promise<boolean> => {
+): Promise<IngestionTokenSafeRow | null> => {
   const rows = (await sequelize.query(
     `UPDATE mrm_ingestion_tokens SET revoked_at = NOW()
       WHERE organization_id = :organizationId AND id = :id AND revoked_at IS NULL
-      RETURNING id`,
+      RETURNING ${INGESTION_TOKEN_SAFE_COLUMNS}`,
     {
       replacements: { organizationId, id },
       type: QueryTypes.SELECT,
     },
-  )) as { id: number }[];
-  return rows.length > 0;
+  )) as IngestionTokenSafeRow[];
+  return rows[0] ?? null;
 };
 
 // ===========================================================================

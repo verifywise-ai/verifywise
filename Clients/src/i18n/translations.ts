@@ -27,6 +27,59 @@ export const translations: Record<string, Record<string, string>> = {
   de: {
     // Settings — help text
     // Model risk management (MRM) module
+    "Add threshold": "Schwellenwert hinzufügen",
+    "Alerts & notifications": "Warnungen & Benachrichtigungen",
+    "Assigned to": "Zugewiesen an",
+    "Breach history": "Verlauf der Überschreitungen",
+    "Copy token": "Token kopieren",
+    "Copy your token now": "Kopieren Sie Ihren Token jetzt",
+    "Create an ingestion token below (per-org, machine-to-machine, revocable).":
+      "Erstellen Sie unten einen Ingestion-Token (pro Organisation, Maschine-zu-Maschine, widerrufbar).",
+    "Create ingestion token": "Ingestion-Token erstellen",
+    "Default thresholds": "Standard-Schwellenwerte",
+    "Example request": "Beispielanfrage",
+    "How to send metrics": "So senden Sie Metriken",
+    "Ingestion tokens": "Ingestion-Token",
+    "Last received": "Zuletzt empfangen",
+    "Latest": "Aktuell",
+    "Maximum": "Maximum",
+    "Metric": "Metrik",
+    "Metric date": "Metrikdatum",
+    "Metric trend": "Metriktrend",
+    "Metrics feed & tokens": "Metrik-Feed & Token",
+    "Minimum": "Minimum",
+    "Name a machine-to-machine token your pipeline will use to push metrics.":
+      "Benennen Sie einen Maschine-zu-Maschine-Token, den Ihre Pipeline zum Senden von Metriken verwendet.",
+    "No breaches recorded. Every metric is within its threshold.":
+      "Keine Überschreitungen erfasst. Jede Metrik liegt innerhalb ihres Schwellenwerts.",
+    "No data yet. This model is awaiting its first metric from your monitoring feed.":
+      "Noch keine Daten. Dieses Modell wartet auf seine erste Metrik aus Ihrem Monitoring-Feed.",
+    "No ingestion tokens yet. Create one to start pushing metrics.":
+      "Noch keine Ingestion-Token. Erstellen Sie einen, um mit dem Senden von Metriken zu beginnen.",
+    "No threshold defined": "Kein Schwellenwert definiert",
+    "No thresholds defined yet. Add one so ingested metrics can be evaluated.":
+      "Noch keine Schwellenwerte definiert. Fügen Sie einen hinzu, damit eingehende Metriken ausgewertet werden können.",
+    "Notified on breach": "Bei Überschreitung benachrichtigt",
+    "Notify and flag for revalidation": "Benachrichtigen und zur erneuten Validierung markieren",
+    "Notify only": "Nur benachrichtigen",
+    "On breach": "Bei Überschreitung",
+    "POST a metric event to the model&apos;s URL, per metric, on your own cadence.":
+      "Senden Sie ein Metrik-Ereignis per POST an die URL des Modells, pro Metrik, in Ihrem eigenen Rhythmus.",
+    "Payload schema": "Payload-Schema",
+    "Rotate": "Rotieren",
+    "Select a model to see who is notified of its breaches.":
+      "Wählen Sie ein Modell, um zu sehen, wer über dessen Überschreitungen benachrichtigt wird.",
+    "Select a model to view its monitored metrics.":
+      "Wählen Sie ein Modell, um dessen überwachte Metriken anzuzeigen.",
+    "Select a shape": "Form auswählen",
+    "Set the metric, shape and severity VerifyWise evaluates ingested points against.":
+      "Legen Sie Metrik, Form und Schweregrad fest, anhand derer VerifyWise eingehende Punkte auswertet.",
+    "Shape": "Form",
+    "Threshold": "Schwellenwert",
+    "Threshold at evaluation": "Schwellenwert zum Auswertungszeitpunkt",
+    "Token name": "Token-Name",
+    "Trend": "Trend",
+    "Yes, in-app": "Ja, in der App",
     "A finding must be verified before it can be closed.":
       "Eine Feststellung muss verifiziert sein, bevor sie geschlossen werden kann.",
     "Assign tier": "Stufe zuweisen",
@@ -8802,6 +8855,59 @@ export const translations: Record<string, Record<string, string>> = {
   fr: {
     // Settings — help text
     // Model risk management (MRM) module
+    "Add threshold": "Ajouter un seuil",
+    "Alerts & notifications": "Alertes et notifications",
+    "Assigned to": "Attribué à",
+    "Breach history": "Historique des dépassements",
+    "Copy token": "Copier le jeton",
+    "Copy your token now": "Copiez votre jeton maintenant",
+    "Create an ingestion token below (per-org, machine-to-machine, revocable).":
+      "Créez un jeton d'ingestion ci-dessous (par organisation, machine à machine, révocable).",
+    "Create ingestion token": "Créer un jeton d'ingestion",
+    "Default thresholds": "Seuils par défaut",
+    "Example request": "Exemple de requête",
+    "How to send metrics": "Comment envoyer des métriques",
+    "Ingestion tokens": "Jetons d'ingestion",
+    "Last received": "Dernière réception",
+    "Latest": "Dernier",
+    "Maximum": "Maximum",
+    "Metric": "Métrique",
+    "Metric date": "Date de la métrique",
+    "Metric trend": "Tendance de la métrique",
+    "Metrics feed & tokens": "Flux de métriques et jetons",
+    "Minimum": "Minimum",
+    "Name a machine-to-machine token your pipeline will use to push metrics.":
+      "Nommez un jeton machine à machine que votre pipeline utilisera pour envoyer des métriques.",
+    "No breaches recorded. Every metric is within its threshold.":
+      "Aucun dépassement enregistré. Chaque métrique respecte son seuil.",
+    "No data yet. This model is awaiting its first metric from your monitoring feed.":
+      "Aucune donnée pour le moment. Ce modèle attend sa première métrique de votre flux de surveillance.",
+    "No ingestion tokens yet. Create one to start pushing metrics.":
+      "Aucun jeton d'ingestion pour le moment. Créez-en un pour commencer à envoyer des métriques.",
+    "No threshold defined": "Aucun seuil défini",
+    "No thresholds defined yet. Add one so ingested metrics can be evaluated.":
+      "Aucun seuil défini pour le moment. Ajoutez-en un pour que les métriques ingérées puissent être évaluées.",
+    "Notified on breach": "Notifié en cas de dépassement",
+    "Notify and flag for revalidation": "Notifier et signaler pour revalidation",
+    "Notify only": "Notifier uniquement",
+    "On breach": "En cas de dépassement",
+    "POST a metric event to the model&apos;s URL, per metric, on your own cadence.":
+      "Envoyez un événement de métrique en POST à l'URL du modèle, par métrique, à votre propre rythme.",
+    "Payload schema": "Schéma de la charge utile",
+    "Rotate": "Renouveler",
+    "Select a model to see who is notified of its breaches.":
+      "Sélectionnez un modèle pour voir qui est notifié de ses dépassements.",
+    "Select a model to view its monitored metrics.":
+      "Sélectionnez un modèle pour afficher ses métriques surveillées.",
+    "Select a shape": "Sélectionner une forme",
+    "Set the metric, shape and severity VerifyWise evaluates ingested points against.":
+      "Définissez la métrique, la forme et la gravité selon lesquelles VerifyWise évalue les points ingérés.",
+    "Shape": "Forme",
+    "Threshold": "Seuil",
+    "Threshold at evaluation": "Seuil au moment de l'évaluation",
+    "Token name": "Nom du jeton",
+    "Trend": "Tendance",
+    "Yes, in-app": "Oui, dans l'application",
     "A finding must be verified before it can be closed.":
       "Une constatation doit être vérifiée avant de pouvoir être clôturée.",
     "Assign tier": "Attribuer un niveau",
@@ -17532,6 +17638,59 @@ export const translations: Record<string, Record<string, string>> = {
   es: {
     // Settings — help text
     // Model risk management (MRM) module
+    "Add threshold": "Añadir umbral",
+    "Alerts & notifications": "Alertas y notificaciones",
+    "Assigned to": "Asignado a",
+    "Breach history": "Historial de incumplimientos",
+    "Copy token": "Copiar token",
+    "Copy your token now": "Copie su token ahora",
+    "Create an ingestion token below (per-org, machine-to-machine, revocable).":
+      "Cree un token de ingesta a continuación (por organización, de máquina a máquina, revocable).",
+    "Create ingestion token": "Crear token de ingesta",
+    "Default thresholds": "Umbrales predeterminados",
+    "Example request": "Solicitud de ejemplo",
+    "How to send metrics": "Cómo enviar métricas",
+    "Ingestion tokens": "Tokens de ingesta",
+    "Last received": "Última recepción",
+    "Latest": "Último",
+    "Maximum": "Máximo",
+    "Metric": "Métrica",
+    "Metric date": "Fecha de la métrica",
+    "Metric trend": "Tendencia de la métrica",
+    "Metrics feed & tokens": "Flujo de métricas y tokens",
+    "Minimum": "Mínimo",
+    "Name a machine-to-machine token your pipeline will use to push metrics.":
+      "Asigne un nombre a un token de máquina a máquina que su canalización usará para enviar métricas.",
+    "No breaches recorded. Every metric is within its threshold.":
+      "No se registraron incumplimientos. Cada métrica está dentro de su umbral.",
+    "No data yet. This model is awaiting its first metric from your monitoring feed.":
+      "Aún no hay datos. Este modelo está esperando su primera métrica de su flujo de monitoreo.",
+    "No ingestion tokens yet. Create one to start pushing metrics.":
+      "Aún no hay tokens de ingesta. Cree uno para empezar a enviar métricas.",
+    "No threshold defined": "Sin umbral definido",
+    "No thresholds defined yet. Add one so ingested metrics can be evaluated.":
+      "Aún no se han definido umbrales. Añada uno para que las métricas ingeridas puedan evaluarse.",
+    "Notified on breach": "Notificado en caso de incumplimiento",
+    "Notify and flag for revalidation": "Notificar y marcar para revalidación",
+    "Notify only": "Solo notificar",
+    "On breach": "En caso de incumplimiento",
+    "POST a metric event to the model&apos;s URL, per metric, on your own cadence.":
+      "Envíe un evento de métrica mediante POST a la URL del modelo, por métrica, a su propio ritmo.",
+    "Payload schema": "Esquema de la carga útil",
+    "Rotate": "Rotar",
+    "Select a model to see who is notified of its breaches.":
+      "Seleccione un modelo para ver quién recibe notificaciones de sus incumplimientos.",
+    "Select a model to view its monitored metrics.":
+      "Seleccione un modelo para ver sus métricas monitoreadas.",
+    "Select a shape": "Seleccionar una forma",
+    "Set the metric, shape and severity VerifyWise evaluates ingested points against.":
+      "Defina la métrica, la forma y la gravedad con las que VerifyWise evalúa los puntos ingeridos.",
+    "Shape": "Forma",
+    "Threshold": "Umbral",
+    "Threshold at evaluation": "Umbral en el momento de la evaluación",
+    "Token name": "Nombre del token",
+    "Trend": "Tendencia",
+    "Yes, in-app": "Sí, en la aplicación",
     "A finding must be verified before it can be closed.":
       "Un hallazgo debe verificarse antes de poder cerrarse.",
     "Assign tier": "Asignar nivel",
