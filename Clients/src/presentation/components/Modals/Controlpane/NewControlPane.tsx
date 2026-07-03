@@ -26,7 +26,7 @@ import { Control } from "../../../../domain/types/Control";
 import { FileData } from "../../../../domain/types/File";
 import Alert from "../../Alert";
 import CustomizableToast from "../../Toast";
-import TabBar from "../../TabBar";
+import TabBar, { type TabItem } from "../../TabBar";
 import { CustomizableButton } from "../../button/customizable-button";
 import RichTextEditor from "../../RichTextEditor";
 import StandardModal from "../../Modals/StandardModal";
@@ -915,7 +915,7 @@ const NewControlPane = ({
   const currentSubcontrol = controlData.subControls?.[selectedSubcontrolIndex];
   const currentFormData = currentSubcontrol?.id ? subcontrolFormData[currentSubcontrol.id] : null;
 
-  const innerTabs = [
+  const innerTabs: TabItem[] = [
     {
       label: "Details",
       value: "details",

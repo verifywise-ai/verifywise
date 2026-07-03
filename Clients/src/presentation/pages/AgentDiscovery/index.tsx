@@ -108,7 +108,7 @@ const AgentDiscovery: React.FC = () => {
       });
       setAgents(response?.data || []);
     } catch (_error) {
-      console.error("Failed to fetch agents:", error);
+      console.error("Failed to fetch agents:", _error);
     } finally {
       setIsLoading(false);
     }
@@ -123,7 +123,7 @@ const AgentDiscovery: React.FC = () => {
         setStats(response.data);
       }
     } catch (_error) {
-      console.error("Failed to fetch agent stats:", error);
+      console.error("Failed to fetch agent stats:", _error);
     }
   }, []);
 
@@ -345,7 +345,7 @@ const AgentDiscovery: React.FC = () => {
       fetchStats();
       showAlertMessage("success", "Agent deleted successfully.");
     } catch (_error) {
-      console.error("Failed to delete agent:", error);
+      console.error("Failed to delete agent:", _error);
       showAlertMessage("error", "Failed to delete agent.");
     }
   };

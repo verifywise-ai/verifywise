@@ -45,19 +45,19 @@ const setCache = (cache: MetricsCache): void => {
 
 const getCachedValue = <T>(
   key: keyof MetricsCache,
-): { data: T | null; isFresh: boolean; isStale: boolean } => {
+): { data: T | null; timestamp: number | null; isFresh: boolean; isStale: boolean } => {
   const cache = getCache();
   const entry = cache[key] as CacheEntry<T> | undefined;
 
   if (!entry) {
-    return { data: null, isFresh: false, isStale: false };
+    return { data: null, timestamp: null, isFresh: false, isStale: false };
   }
 
   const age = Date.now() - entry.timestamp;
   const isFresh = age < CACHE_TTL_MS;
   const isStale = age < STALE_TTL_MS;
 
-  return { data: entry.data, isFresh, isStale };
+  return { data: entry.data, timestamp: entry.timestamp, isFresh, isStale };
 };
 
 const setCachedValue = <T>(key: keyof MetricsCache, data: T): void => {
@@ -950,7 +950,7 @@ const getInitialDataAndUpdatedAt = <T>(key: keyof MetricsCache) => {
   const cached = getCachedValue<T>(key);
   return {
     initialData: cached.data ?? undefined,
-    initialDataUpdatedAt: cached.data ? cached.timestamp : undefined,
+    initialDataUpdatedAt: cached.timestamp ?? undefined,
   };
 };
 
