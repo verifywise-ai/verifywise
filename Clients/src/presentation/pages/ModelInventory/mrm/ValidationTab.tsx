@@ -34,6 +34,7 @@ import {
   VALIDATION_STAGE_LABELS,
   VALIDATION_STAGE_ORDER,
   validationStageChipVariant,
+  validationTriggerLabel,
 } from "./constants";
 import {
   mrmPipelineCountStyle,
@@ -44,6 +45,7 @@ import {
   mrmTableContainerStyle,
   mrmTableHeadCellStyle,
   mrmToolbarStyle,
+  mrmTriggerBadgeStyle,
 } from "./mrmStyles";
 
 interface ValidationTabProps {
@@ -168,6 +170,7 @@ const ValidationTab = ({ users, onError, onSuccess }: ValidationTabProps) => {
                 <TableCell sx={mrmTableHeadCellStyle}>Model</TableCell>
                 <TableCell sx={mrmTableHeadCellStyle}>Tier</TableCell>
                 <TableCell sx={mrmTableHeadCellStyle}>Stage</TableCell>
+                <TableCell sx={mrmTableHeadCellStyle}>Triggered by</TableCell>
                 <TableCell sx={mrmTableHeadCellStyle}>Validator</TableCell>
                 <TableCell sx={mrmTableHeadCellStyle}>Report</TableCell>
                 <TableCell sx={mrmTableHeadCellStyle}>Last validated</TableCell>
@@ -200,6 +203,15 @@ const ValidationTab = ({ users, onError, onSuccess }: ValidationTabProps) => {
                         variant={validationStageChipVariant(validation.stage)}
                         uppercase={false}
                       />
+                    </TableCell>
+                    <TableCell sx={mrmTableCellStyle}>
+                      {validation.trigger ? (
+                        <Box component="span" sx={mrmTriggerBadgeStyle}>
+                          {validationTriggerLabel(validation.trigger)}
+                        </Box>
+                      ) : (
+                        "—"
+                      )}
                     </TableCell>
                     <TableCell sx={mrmTableCellStyle}>
                       {userName(validation.validator_id)}

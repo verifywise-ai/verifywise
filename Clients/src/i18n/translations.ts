@@ -97,6 +97,30 @@ export const translations: Record<string, Record<string, string>> = {
     "Last validated": "Zuletzt validiert",
     "Materiality drivers": "Wesentlichkeitsfaktoren",
     "Model risk management": "Modellrisikomanagement",
+    // MRM Branch 3 — portfolio summary & attestation
+    "Attestation": "Attestierung",
+    "Could not load the portfolio summary. Try again shortly.":
+      "Portfolioübersicht konnte nicht geladen werden. Bitte versuchen Sie es in Kürze erneut.",
+    "Fleet attestation status": "Attestierungsstatus des Bestands",
+    "Generate attestation report": "Attestierungsbericht erstellen",
+    "Advance this validation to In validation to begin writing the report.":
+      "Setzen Sie diese Validierung auf In Validierung, um mit dem Bericht zu beginnen.",
+    "Models by tier": "Modelle nach Stufe",
+    "Monitoring active": "Überwachung aktiv",
+    "No models in the inventory yet. Add models and assign tiers to build the portfolio summary.":
+      "Noch keine Modelle im Inventar. Fügen Sie Modelle hinzu und weisen Sie Stufen zu, um die Portfolioübersicht zu erstellen.",
+    "No tiered models yet. Assign tiers on the Tiering tab.":
+      "Noch keine eingestuften Modelle. Weisen Sie Stufen im Tab „Einstufung“ zu.",
+    "Open findings": "Offene Feststellungen",
+    "Overdue validations": "Überfällige Validierungen",
+    "Past their next due date": "Über das nächste Fälligkeitsdatum hinaus",
+    "Tiering up to date": "Einstufung aktuell",
+    "Validation coverage": "Validierungsabdeckung",
+    "Tier increase": "Stufenerhöhung",
+    "First use": "Erstnutzung",
+    "Breach": "Überschreitung",
+    "Change": "Änderung",
+    "Scheduled": "Geplant",
     "Next due": "Nächste Fälligkeit",
     "No findings raised yet. Findings are created from a validation.":
       "Noch keine Feststellungen erfasst. Feststellungen werden aus einer Validierung erstellt.",
@@ -8925,6 +8949,30 @@ export const translations: Record<string, Record<string, string>> = {
     "Last validated": "Dernière validation",
     "Materiality drivers": "Facteurs de matérialité",
     "Model risk management": "Gestion du risque de modèle",
+    // MRM Branch 3 — portfolio summary & attestation
+    "Attestation": "Attestation",
+    "Could not load the portfolio summary. Try again shortly.":
+      "Impossible de charger le résumé du portefeuille. Réessayez sous peu.",
+    "Fleet attestation status": "Statut d’attestation du parc",
+    "Generate attestation report": "Générer le rapport d’attestation",
+    "Advance this validation to In validation to begin writing the report.":
+      "Faites passer cette validation à En validation pour commencer à rédiger le rapport.",
+    "Models by tier": "Modèles par niveau",
+    "Monitoring active": "Surveillance active",
+    "No models in the inventory yet. Add models and assign tiers to build the portfolio summary.":
+      "Aucun modèle dans l’inventaire pour l’instant. Ajoutez des modèles et attribuez des niveaux pour créer le résumé du portefeuille.",
+    "No tiered models yet. Assign tiers on the Tiering tab.":
+      "Aucun modèle classé pour l’instant. Attribuez des niveaux dans l’onglet « Classement ».",
+    "Open findings": "Constatations ouvertes",
+    "Overdue validations": "Validations en retard",
+    "Past their next due date": "Au-delà de leur prochaine échéance",
+    "Tiering up to date": "Classement à jour",
+    "Validation coverage": "Couverture de validation",
+    "Tier increase": "Augmentation de niveau",
+    "First use": "Première utilisation",
+    "Breach": "Dépassement",
+    "Change": "Changement",
+    "Scheduled": "Planifié",
     "Next due": "Prochaine échéance",
     "No findings raised yet. Findings are created from a validation.":
       "Aucune constatation pour le moment. Les constatations sont créées à partir d'une validation.",
@@ -17708,6 +17756,30 @@ export const translations: Record<string, Record<string, string>> = {
     "Last validated": "Última validación",
     "Materiality drivers": "Factores de materialidad",
     "Model risk management": "Gestión del riesgo de modelos",
+    // MRM Branch 3 — portfolio summary & attestation
+    "Attestation": "Atestación",
+    "Could not load the portfolio summary. Try again shortly.":
+      "No se pudo cargar el resumen de la cartera. Vuelva a intentarlo en breve.",
+    "Fleet attestation status": "Estado de atestación de la flota",
+    "Generate attestation report": "Generar informe de atestación",
+    "Advance this validation to In validation to begin writing the report.":
+      "Avance esta validación a En validación para comenzar a redactar el informe.",
+    "Models by tier": "Modelos por nivel",
+    "Monitoring active": "Supervisión activa",
+    "No models in the inventory yet. Add models and assign tiers to build the portfolio summary.":
+      "Aún no hay modelos en el inventario. Agregue modelos y asigne niveles para crear el resumen de la cartera.",
+    "No tiered models yet. Assign tiers on the Tiering tab.":
+      "Aún no hay modelos clasificados. Asigne niveles en la pestaña «Clasificación».",
+    "Open findings": "Hallazgos abiertos",
+    "Overdue validations": "Validaciones vencidas",
+    "Past their next due date": "Después de su próxima fecha de vencimiento",
+    "Tiering up to date": "Clasificación actualizada",
+    "Validation coverage": "Cobertura de validación",
+    "Tier increase": "Aumento de nivel",
+    "First use": "Primer uso",
+    "Breach": "Incumplimiento",
+    "Change": "Cambio",
+    "Scheduled": "Programado",
     "Next due": "Próximo vencimiento",
     "No findings raised yet. Findings are created from a validation.":
       "Aún no hay hallazgos. Los hallazgos se crean a partir de una validación.",

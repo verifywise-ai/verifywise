@@ -8,16 +8,19 @@
 
 import { ChipVariant } from "../../../types/interfaces/i.chip";
 import {
+  MrmAttestationStatus,
   MrmBreachAction,
   MrmEvalStatus,
   MrmFindingSeverity,
   MrmFindingStage,
   MrmModelRole,
+  MrmRevalidationTriggerSource,
   MrmThresholdOp,
   MrmThresholdSeverity,
   MrmTier,
   MrmValidationOutcome,
   MrmValidationStage,
+  MrmValidationTrigger,
 } from "../../../../domain/enums/mrm.enum";
 import { IMrmThreshold } from "../../../../domain/interfaces/i.mrm";
 
@@ -360,3 +363,49 @@ export const fleetModelName = (row: {
   if (!base) return "Unnamed model";
   return row.version ? `${base} (v${row.version})` : base;
 };
+
+// ---- Validation trigger (why a validation cycle exists) ----
+
+/**
+ * Friendly label for a validation's `trigger` field. Mirrors the revalidation
+ * source vocabulary from the mockup ("Breach", "Scheduled", "Tier increase",
+ * "Change"); `first_use` is the initial validation.
+ */
+export const VALIDATION_TRIGGER_LABELS: Record<MrmValidationTrigger, string> = {
+  [MrmValidationTrigger.PERIODIC]: "Scheduled",
+  [MrmValidationTrigger.FIRST_USE]: "First use",
+  [MrmValidationTrigger.CHANGE]: "Change",
+  [MrmValidationTrigger.BREACH]: "Breach",
+};
+
+export const validationTriggerLabel = (trigger: MrmValidationTrigger): string =>
+  VALIDATION_TRIGGER_LABELS[trigger] ?? trigger;
+
+// ---- Branch 3: revalidation trigger source ----
+
+/**
+ * Friendly label for why a validation was triggered. Uses the mockup's
+ * vocabulary ("Breach", "Scheduled", "Tier increase", "Change").
+ */
+export const REVALIDATION_TRIGGER_SOURCE_LABELS: Record<MrmRevalidationTriggerSource, string> = {
+  [MrmRevalidationTriggerSource.BREACH]: "Breach",
+  [MrmRevalidationTriggerSource.MATERIAL_CHANGE]: "Change",
+  [MrmRevalidationTriggerSource.TIER_INCREASE]: "Tier increase",
+  [MrmRevalidationTriggerSource.SCHEDULED]: "Scheduled",
+};
+
+export const revalidationTriggerSourceLabel = (source: MrmRevalidationTriggerSource): string =>
+  REVALIDATION_TRIGGER_SOURCE_LABELS[source] ?? source;
+
+// ---- Branch 3: attestation status ----
+
+export const ATTESTATION_STATUS_LABELS: Record<MrmAttestationStatus, string> = {
+  [MrmAttestationStatus.OK]: "Ready",
+  [MrmAttestationStatus.BLOCKED]: "Blocked",
+};
+
+export const attestationStatusLabel = (status: MrmAttestationStatus): string =>
+  ATTESTATION_STATUS_LABELS[status] ?? status;
+
+export const attestationStatusChipVariant = (status: MrmAttestationStatus): ChipVariant =>
+  status === MrmAttestationStatus.BLOCKED ? "warning" : "success";

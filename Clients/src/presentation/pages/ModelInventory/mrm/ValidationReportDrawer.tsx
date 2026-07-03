@@ -8,15 +8,18 @@ import StandardModal from "../../../components/Modals/StandardModal";
 import { MrmValidationOutcome, MrmValidationStage } from "../../../../domain/enums/mrm.enum";
 import { IMrmValidation, IMrmValidationReport } from "../../../../domain/interfaces/i.mrm";
 import { useSignoffValidation, useUpdateValidation } from "../../../../application/hooks/useMrm";
+import { displayFormattedDate } from "../../../tools/isoDateToString";
 import {
   mrmErrorMessage,
   REPORT_SECTIONS,
   ReportSectionKey,
+  revalidationTriggerSourceLabel,
   VALIDATION_OUTCOME_OPTIONS,
   VALIDATION_STAGE_LABELS,
   VALIDATION_STAGE_OPTIONS,
   validationStageChipVariant,
 } from "./constants";
+import { mrmSubHeadingStyle, mrmTriggerBadgeStyle } from "./mrmStyles";
 
 interface ValidationReportDrawerProps {
   validation: IMrmValidation | null;
@@ -73,12 +76,22 @@ const ValidationReportDrawer = ({
   const isNotStarted = validation?.stage === MrmValidationStage.NOT_STARTED;
   const reportReadOnly = isSignedOff || isNotStarted;
 
+  /** Dated reasons this validation was triggered (Branch 3), newest first. */
+  const revalidationTriggers = useMemo(
+    () => validation?.report?.revalidation_triggers ?? [],
+    [validation],
+  );
+
   const reportPatch = useMemo<IMrmValidationReport>(() => {
     const patch: IMrmValidationReport = {};
     (Object.keys(sections) as ReportSectionKey[]).forEach((key) => {
       const existing = validation?.report?.[key]?.evidence_links ?? [];
       patch[key] = { text: sections[key], evidence_links: existing };
     });
+    // Preserve the audit-trail trigger array — it is not editable in this form.
+    if (validation?.report?.revalidation_triggers) {
+      patch.revalidation_triggers = validation.report.revalidation_triggers;
+    }
     return patch;
   }, [sections, validation]);
 
@@ -149,6 +162,47 @@ const ValidationReportDrawer = ({
               items={VALIDATION_STAGE_OPTIONS.map((o) => ({ _id: o.value, name: o.label }))}
               onChange={(e) => setStage(e.target.value as MrmValidationStage)}
             />
+          )}
+
+          {revalidationTriggers.length > 0 && (
+            <Box>
+              <Typography sx={mrmSubHeadingStyle}>Triggered by</Typography>
+              <Stack sx={{ gap: "8px" }}>
+                {revalidationTriggers.map((entry, index) => (
+                  <Stack
+                    key={`${entry.source}-${entry.at}-${index}`}
+                    direction="row"
+                    alignItems="flex-start"
+                    sx={{ gap: "8px", flexWrap: "wrap" }}
+                  >
+                    <Box component="span" sx={mrmTriggerBadgeStyle}>
+                      {revalidationTriggerSourceLabel(entry.source)}
+                    </Box>
+                    <Typography sx={{ fontSize: "13px", color: "text.secondary", flex: 1 }}>
+                      {entry.reason}
+                      {entry.at ? ` · ${displayFormattedDate(entry.at)}` : ""}
+                    </Typography>
+                  </Stack>
+                ))}
+              </Stack>
+            </Box>
+          )}
+
+          {isNotStarted && (
+            <Box
+              sx={{
+                padding: "8px 12px",
+                marginBottom: "16px",
+                borderRadius: "4px",
+                backgroundColor: "background.accent",
+                border: "1px solid",
+                borderColor: "border.light",
+              }}
+            >
+              <Typography sx={{ fontSize: "12px", color: "text.secondary" }}>
+                Advance this validation to In validation to begin writing the report.
+              </Typography>
+            </Box>
           )}
 
           {REPORT_SECTIONS.map((section, index) => (

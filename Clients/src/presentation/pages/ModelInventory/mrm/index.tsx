@@ -5,6 +5,7 @@ import TabBar from "../../../components/TabBar";
 import Alert from "../../../components/Alert";
 import { toastFadeStyle } from "../style";
 import { MrmUser } from "./types";
+import OverviewTab from "./OverviewTab";
 import TieringTab from "./TieringTab";
 import ValidationTab from "./ValidationTab";
 import FindingsTab from "./FindingsTab";
@@ -15,7 +16,7 @@ interface ModelRiskManagementTabProps {
   users: MrmUser[];
 }
 
-type MrmSubTab = "tiering" | "validation" | "findings" | "monitoring" | "settings";
+type MrmSubTab = "overview" | "tiering" | "validation" | "findings" | "monitoring" | "settings";
 
 interface MrmToast {
   variant: "success" | "error" | "info";
@@ -23,7 +24,7 @@ interface MrmToast {
 }
 
 const ModelRiskManagementTab = ({ users }: ModelRiskManagementTabProps) => {
-  const [subTab, setSubTab] = useState<MrmSubTab>("tiering");
+  const [subTab, setSubTab] = useState<MrmSubTab>("overview");
   const [toast, setToast] = useState<MrmToast | null>(null);
   const [showToast, setShowToast] = useState(false);
 
@@ -61,6 +62,7 @@ const ModelRiskManagementTab = ({ users }: ModelRiskManagementTabProps) => {
         <Box sx={{ marginBottom: "24px" }}>
           <TabBar
             tabs={[
+              { label: "Overview", value: "overview", icon: "LayoutDashboard" },
               { label: "Tiering", value: "tiering", icon: "Layers" },
               { label: "Validation", value: "validation", icon: "ClipboardCheck" },
               { label: "Findings", value: "findings", icon: "Flag" },
@@ -74,6 +76,7 @@ const ModelRiskManagementTab = ({ users }: ModelRiskManagementTabProps) => {
         </Box>
       </TabContext>
 
+      {subTab === "overview" && <OverviewTab onError={onError} onSuccess={onSuccess} />}
       {subTab === "tiering" && <TieringTab onError={onError} onSuccess={onSuccess} />}
       {subTab === "validation" && (
         <ValidationTab users={users} onError={onError} onSuccess={onSuccess} />

@@ -5,11 +5,13 @@
  */
 
 import {
+  MrmAttestationStatus,
   MrmBreachAction,
   MrmEvalStatus,
   MrmFindingSeverity,
   MrmFindingStage,
   MrmModelRole,
+  MrmRevalidationTriggerSource,
   MrmThresholdOp,
   MrmThresholdSeverity,
   MrmTier,
@@ -38,6 +40,16 @@ export interface IMrmValidationReportSection {
   evidence_links: number[];
 }
 
+/**
+ * One dated entry in a validation report's `revalidation_triggers` array — the
+ * audit trail of what pushed this validation open/annotated (Branch 3).
+ */
+export interface IMrmRevalidationTriggerEntry {
+  source: MrmRevalidationTriggerSource;
+  reason: string;
+  at: string;
+}
+
 /** The 6 sections of a validation report (JSONB on mrm_validations.report). */
 export interface IMrmValidationReport {
   purpose_scope?: IMrmValidationReportSection;
@@ -46,6 +58,8 @@ export interface IMrmValidationReport {
   outcomes_analysis?: IMrmValidationReportSection;
   findings_limitations?: IMrmValidationReportSection;
   conclusion_signoff?: IMrmValidationReportSection;
+  /** Branch 3: dated reasons this validation was triggered (breach/change/tier/scheduled). */
+  revalidation_triggers?: IMrmRevalidationTriggerEntry[];
 }
 
 export interface IMrmValidation {
@@ -280,4 +294,62 @@ export interface IMrmMetricKey {
 export interface ICreateMetricKeyPayload {
   key: string;
   display_name?: string | null;
+}
+
+// ---- Branch 3: revalidation events + attestation ----
+
+/**
+ * One row of the per-model revalidation-trigger firing history
+ * (GET /api/mrm/models/:modelId/revalidation-events) — an append-only audit log.
+ * `created_validation` is true when the firing opened a new validation task;
+ * false when it annotated an already-open one.
+ */
+export interface IMrmRevalidationEvent {
+  id: number;
+  organization_id: number;
+  model_inventory_id: number;
+  trigger_source: MrmRevalidationTriggerSource;
+  reason: string | null;
+  resulting_validation_id: number | null;
+  created_validation: boolean;
+  source_ref: Record<string, unknown> | null;
+  fired_at: string;
+  created_at: string;
+}
+
+/** Validation coverage counts, per model (not per validation row). */
+export interface IMrmValidationCoverage {
+  validated: number;
+  in_review: number;
+  not_started: number;
+  overdue: number;
+}
+
+/**
+ * One row of the per-tier attestation table (GET /api/mrm/attestation/summary).
+ * A tier is `blocked` when any model is untiered-in-time, unvalidated, overdue,
+ * or carries an open critical/high finding.
+ */
+export interface IMrmAttestationTierRow {
+  tier: MrmTier;
+  models: number;
+  tiering_current: number;
+  validated: number;
+  monitoring_active: number;
+  open_findings: number;
+  critical_high_findings: number;
+  attestation_status: MrmAttestationStatus;
+}
+
+/** The fleet attestation roll-up (GET /api/mrm/attestation/summary). */
+export interface IMrmAttestationSummary {
+  generated_at: string;
+  models_total: number;
+  models_untiered: number;
+  models_by_tier: Partial<Record<MrmTier, number>>;
+  validation_coverage: IMrmValidationCoverage;
+  open_findings_by_severity: Record<MrmFindingSeverity, number>;
+  overdue_validations: number;
+  per_tier: IMrmAttestationTierRow[];
+  attestation_status: MrmAttestationStatus;
 }

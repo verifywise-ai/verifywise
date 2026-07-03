@@ -8,6 +8,10 @@
 
 import { apiServices } from "../../infrastructure/api/networkServices";
 import {
+  extractFilenameFromHeaders,
+  triggerBrowserDownload,
+} from "../../presentation/utils/browserDownload.utils";
+import {
   IAssignTierPayload,
   ICreateFindingPayload,
   ICreateIngestionTokenPayload,
@@ -15,6 +19,7 @@ import {
   ICreateThresholdPayload,
   ICreateValidationPayload,
   ICreatedIngestionToken,
+  IMrmAttestationSummary,
   IMrmBreachHistoryRow,
   IMrmFinding,
   IMrmFleetRow,
@@ -22,6 +27,7 @@ import {
   IMrmMetricKey,
   IMrmModelRole,
   IMrmMonitoringRow,
+  IMrmRevalidationEvent,
   IMrmThreshold,
   IMrmTrendPoint,
   IMrmValidation,
@@ -228,4 +234,50 @@ export async function getMetricKeys(signal?: AbortSignal): Promise<IMrmMetricKey
 export async function createMetricKey(payload: ICreateMetricKeyPayload): Promise<IMrmMetricKey> {
   const response = await apiServices.post("/mrm/metric-keys", payload);
   return (response.data as { data: IMrmMetricKey }).data;
+}
+
+// ---- Branch 3: revalidation events + attestation ----
+
+/** Per-model revalidation-trigger firing history (audit log, newest first). */
+export async function getRevalidationEvents(
+  modelId: number,
+  signal?: AbortSignal,
+): Promise<IMrmRevalidationEvent[]> {
+  const response = await apiServices.get(`/mrm/models/${modelId}/revalidation-events`, { signal });
+  return (response.data as { data: IMrmRevalidationEvent[] }).data ?? [];
+}
+
+/** Fleet attestation roll-up (tiers, coverage, findings, per-tier status). */
+export async function getAttestationSummary(signal?: AbortSignal): Promise<IMrmAttestationSummary> {
+  const response = await apiServices.get("/mrm/attestation/summary", { signal });
+  return (response.data as { data: IMrmAttestationSummary }).data;
+}
+
+/**
+ * Download the attestation report (DOCX). Fetches the file as a blob, reads the
+ * filename from the Content-Disposition header (falling back to a sensible
+ * default), and triggers a browser download.
+ */
+export async function downloadAttestationReport(): Promise<void> {
+  const response = await apiServices.get("/mrm/attestation/report", {
+    responseType: "blob",
+  });
+  // With responseType "blob" a server error can resolve (not reject) with a Blob
+  // whose body is the JSON error string — delivering a .docx that is actually an
+  // error payload. Guard so the caller's catch handles it instead.
+  if (!(response.data instanceof Blob) || response.data.size === 0) {
+    throw new Error("Attestation report generation failed on the server.");
+  }
+  const headers = new Headers();
+  const disposition = response.headers?.["content-disposition"];
+  if (typeof disposition === "string") {
+    headers.set("Content-Disposition", disposition);
+  }
+  const filename = extractFilenameFromHeaders(headers, "mrm-attestation-report.docx");
+  const blob = new Blob([response.data as BlobPart], {
+    type:
+      (response.data as Blob)?.type ||
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  });
+  triggerBrowserDownload(blob, filename);
 }

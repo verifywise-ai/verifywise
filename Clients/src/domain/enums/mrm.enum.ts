@@ -96,3 +96,23 @@ export enum MrmEvalStatus {
   BREACH = "breach",
   NO_THRESHOLD = "no_threshold",
 }
+
+/**
+ * MRM Branch 3 (revalidation triggers) — mirror of
+ * Servers/domain.layer/enums/mrmMonitoring.enum.ts. What kind of event opened a
+ * revalidation task. `tier_increase` fires when a model is re-tiered upward;
+ * `scheduled` when a tier-driven periodic cadence comes due. String values must
+ * match the API exactly.
+ */
+export enum MrmRevalidationTriggerSource {
+  BREACH = "breach",
+  MATERIAL_CHANGE = "material_change",
+  TIER_INCREASE = "tier_increase",
+  SCHEDULED = "scheduled",
+}
+
+/** Overall / per-tier attestation status returned by GET /mrm/attestation/summary. */
+export enum MrmAttestationStatus {
+  OK = "ok",
+  BLOCKED = "blocked",
+}

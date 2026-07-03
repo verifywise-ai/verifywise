@@ -104,3 +104,54 @@ export const mrmCaptionStyle: SxProps<Theme> = {
   lineHeight: 1.6,
   marginBottom: "16px",
 };
+
+/** Grid of summary cards on the Overview roll-up. */
+export const mrmCardsStyle: SxProps<Theme> = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+  gap: "16px",
+  marginBottom: "24px",
+};
+
+/** A single summary card (label, big number, note). */
+export const mrmCardStyle: SxProps<Theme> = (theme) => ({
+  border: `1px solid ${theme.palette.border.dark}`,
+  borderRadius: "4px",
+  backgroundColor: "background.main",
+  padding: "16px",
+  display: "flex",
+  flexDirection: "column",
+  gap: "4px",
+});
+
+export const mrmCardLabelStyle: SxProps<Theme> = {
+  fontSize: "12px",
+  fontWeight: 600,
+  color: "text.secondary",
+};
+
+export const mrmCardNumberStyle: SxProps<Theme> = {
+  fontSize: "24px",
+  fontWeight: 600,
+  color: "text.primary",
+  lineHeight: 1.2,
+};
+
+export const mrmCardNoteStyle: SxProps<Theme> = {
+  fontSize: "12px",
+  color: "text.tertiary",
+  lineHeight: 1.5,
+};
+
+/** Small inline trigger badge shown on a validation row. */
+export const mrmTriggerBadgeStyle: SxProps<Theme> = (theme) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  border: `1px solid ${theme.palette.border.dark}`,
+  borderRadius: "4px",
+  padding: "1px 8px",
+  fontSize: "12px",
+  color: "text.secondary",
+  backgroundColor: "background.accent",
+  whiteSpace: "nowrap",
+});

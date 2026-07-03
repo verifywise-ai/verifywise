@@ -7,6 +7,7 @@ import {
   createThreshold,
   createValidation,
   deleteThreshold,
+  getAttestationSummary,
   getFindings,
   getFleetTiering,
   getIngestionTokens,
@@ -15,6 +16,7 @@ import {
   getModelBreaches,
   getModelMonitoring,
   getModelRoles,
+  getRevalidationEvents,
   getThresholds,
   getValidations,
   revokeIngestionToken,
@@ -33,6 +35,7 @@ import {
   ICreateThresholdPayload,
   ICreateValidationPayload,
   ICreatedIngestionToken,
+  IMrmAttestationSummary,
   IMrmBreachHistoryRow,
   IMrmFinding,
   IMrmFleetRow,
@@ -40,6 +43,7 @@ import {
   IMrmMetricKey,
   IMrmModelRole,
   IMrmMonitoringRow,
+  IMrmRevalidationEvent,
   IMrmThreshold,
   IMrmTrendPoint,
   IMrmValidation,
@@ -77,6 +81,9 @@ export const mrmQueryKeys = {
       filters?.metric ?? "all",
     ] as const,
   metricKeys: () => [...mrmQueryKeys.all, "metric-keys"] as const,
+  attestationSummary: () => [...mrmQueryKeys.all, "attestation-summary"] as const,
+  revalidationEvents: (modelId: number | null) =>
+    [...mrmQueryKeys.all, "revalidation-events", modelId ?? -1] as const,
 };
 
 const STALE_TIME = 2 * 60 * 1000;
@@ -375,3 +382,27 @@ export const useCreateMetricKey = () => {
     },
   });
 };
+
+// ---- Branch 3: revalidation events + attestation ----
+
+export const useAttestationSummary = (): UseQueryResult<IMrmAttestationSummary, Error> =>
+  useQuery({
+    queryKey: mrmQueryKeys.attestationSummary(),
+    queryFn: async ({ signal }) => await getAttestationSummary(signal),
+    staleTime: STALE_TIME,
+    gcTime: GC_TIME,
+  });
+
+export const useRevalidationEvents = (
+  modelId: number | null,
+): UseQueryResult<IMrmRevalidationEvent[], Error> =>
+  useQuery({
+    queryKey: mrmQueryKeys.revalidationEvents(modelId),
+    queryFn: async ({ signal }) => {
+      if (!modelId) return [];
+      return await getRevalidationEvents(modelId, signal);
+    },
+    enabled: !!modelId,
+    staleTime: STALE_TIME,
+    gcTime: GC_TIME,
+  });
