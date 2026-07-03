@@ -9,7 +9,9 @@ import {
   MrmEvalStatus,
   MrmThresholdOp,
   MrmThresholdSeverity,
+  MrmRevalidationTriggerSource,
 } from "../domain.layer/enums/mrmMonitoring.enum";
+import { triggerRevalidation } from "../utils/mrmRevalidation.utils";
 import {
   NotificationType,
   NotificationEntityType,
@@ -372,11 +374,17 @@ async function handleBreaches(
     (o) => o.evaluation!.threshold?.breach_action === MrmBreachAction.NOTIFY_FLAG_REVALIDATION,
   );
   if (needsFlag) {
+    const flaggingBreach = breaches.find(
+      (o) => o.evaluation!.threshold?.breach_action === MrmBreachAction.NOTIFY_FLAG_REVALIDATION,
+    )!;
+    const reason = `Metric "${flaggingBreach.point.metric}" breached its threshold (value ${flaggingBreach.point.value})`;
+
+    // The seed flag is a fast indicator on the model record only. triggerRevalidation
+    // (below) clears it when it creates a real revalidation task. If triggerRevalidation
+    // fails, the flag may remain set with no matching task — that is acceptable: the flag
+    // is just an indicator, and the mrm_revalidation_events audit log is the authoritative
+    // record of what fired and what task (if any) resulted.
     try {
-      const flaggingBreach = breaches.find(
-        (o) => o.evaluation!.threshold?.breach_action === MrmBreachAction.NOTIFY_FLAG_REVALIDATION,
-      )!;
-      const reason = `Metric "${flaggingBreach.point.metric}" breached its threshold (value ${flaggingBreach.point.value})`;
       const transaction = await sequelize.transaction();
       try {
         await flagModelForRevalidationQuery(organizationId, modelInventoryId, reason, transaction);
@@ -387,6 +395,27 @@ async function handleBreaches(
       }
     } catch (error) {
       logger.error("❌ Failed to set revalidation flag after breach:", error);
+    }
+
+    // The real action (B3): open/annotate a revalidation task. Post-commit and
+    // best-effort — a failure here must never roll back or fail the already
+    // committed ingestion. triggerRevalidation is dedup-safe and clears the seed
+    // flag when it opens a new task.
+    try {
+      await triggerRevalidation(
+        organizationId,
+        modelInventoryId,
+        MrmRevalidationTriggerSource.BREACH,
+        reason,
+        {
+          metric: flaggingBreach.point.metric,
+          value: flaggingBreach.point.value,
+          at: flaggingBreach.point.at.toISOString(),
+          evaluation_id: flaggingBreach.metricId,
+        },
+      );
+    } catch (error) {
+      logger.error("❌ Failed to open revalidation task after breach:", error);
     }
   }
 

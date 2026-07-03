@@ -29,6 +29,13 @@ import {
   rotateIngestionToken,
   updateThreshold,
 } from "../controllers/mrmMonitoring.ctrl";
+import {
+  generateAttestationReportHandler,
+  getAttestationSummaryHandler,
+  getRevalidationEvents,
+  requestRevalidation,
+  runRevalidationSweepForOrg,
+} from "../controllers/mrmRevalidation.ctrl";
 
 // --- Tiering ---
 router.get("/tiering", authenticateJWT, getFleetTiering);
@@ -78,5 +85,21 @@ router.post("/metric-keys", authenticateJWT, createMetricKey);
 router.get("/models/:modelId/monitoring", authenticateJWT, getModelMonitoring);
 router.get("/models/:modelId/monitoring/trend", authenticateJWT, getMetricTrend);
 router.get("/models/:modelId/monitoring/breaches", authenticateJWT, getBreachHistory);
+
+// ===========================================================================
+// Branch 3 (revalidation triggers + attestation) — JWT-authed
+// ===========================================================================
+
+// --- Revalidation triggers ---
+// Explicit material-change trigger (the manual "request revalidation" action).
+router.post("/models/:modelId/request-revalidation", authenticateJWT, requestRevalidation);
+// Per-model revalidation-trigger firing history (append-only audit log).
+router.get("/models/:modelId/revalidation-events", authenticateJWT, getRevalidationEvents);
+// Run the due-date revalidation sweep on demand for this org (also runs daily via BullMQ).
+router.post("/revalidation/sweep", authenticateJWT, runRevalidationSweepForOrg);
+
+// --- Attestation / portfolio roll-up ---
+router.get("/attestation/summary", authenticateJWT, getAttestationSummaryHandler);
+router.get("/attestation/report", authenticateJWT, generateAttestationReportHandler);
 
 export default router;

@@ -20,6 +20,7 @@ import {
   getFindingsQuery,
   getFleetTieringQuery,
   getModelRolesQuery,
+  getModelTierQuery,
   getValidationByIdQuery,
   getValidationModelIdQuery,
   getValidationsQuery,
@@ -29,6 +30,8 @@ import {
   updateFindingQuery,
   updateValidationQuery,
 } from "../utils/mrm.utils";
+import { triggerRevalidation } from "../utils/mrmRevalidation.utils";
+import { MrmRevalidationTriggerSource } from "../domain.layer/enums/mrmMonitoring.enum";
 
 const FILE = "mrm.ctrl.ts";
 
@@ -82,6 +85,9 @@ export async function assignModelTier(req: Request, res: Response) {
   }
 
   try {
+    // Fetch the old tier BEFORE the update so we can detect an upward re-tier.
+    const oldTier = await getModelTierQuery(modelId, req.organizationId!);
+
     const updated = await assignModelTierQuery(
       modelId,
       req.organizationId!,
@@ -93,6 +99,24 @@ export async function assignModelTier(req: Request, res: Response) {
       logStructured("successful", `model not found: ${modelId}`, fn, FILE);
       return res.status(404).json(STATUS_CODE[404](req.t!("Model not found")));
     }
+
+    // Tier-increase trigger: tier "1" is the highest risk, so a LOWER number is a
+    // higher risk. Fire only when the model was previously tiered and moved up in
+    // risk. Best-effort — a trigger failure must not fail the tier assignment.
+    if (oldTier !== null && Number(tier) < Number(oldTier)) {
+      try {
+        await triggerRevalidation(
+          req.organizationId!,
+          modelId,
+          MrmRevalidationTriggerSource.TIER_INCREASE,
+          `re-tiered from ${oldTier} to ${tier}`,
+          { old_tier: oldTier, new_tier: tier },
+        );
+      } catch (error) {
+        logger.error("❌ Failed to open revalidation task after tier increase:", error);
+      }
+    }
+
     logStructured("successful", `tier assigned for model ${modelId}`, fn, FILE);
     return res.status(200).json(STATUS_CODE[200](updated));
   } catch (error) {

@@ -63,6 +63,27 @@ export const getFleetTieringQuery = async (organizationId: number): Promise<MrmF
 };
 
 /**
+ * The model's current tier (before an update), or null when untiered or the
+ * model does not exist for this org. Used by the tier-increase revalidation
+ * trigger to compare old vs new before writing.
+ */
+export const getModelTierQuery = async (
+  modelId: number,
+  organizationId: number,
+): Promise<MrmTier | null> => {
+  const rows = (await sequelize.query(
+    `SELECT mrm_tier FROM model_inventories
+      WHERE organization_id = :organizationId AND id = :modelId
+      LIMIT 1`,
+    {
+      replacements: { organizationId, modelId },
+      type: QueryTypes.SELECT,
+    },
+  )) as { mrm_tier: MrmTier | null }[];
+  return rows[0]?.mrm_tier ?? null;
+};
+
+/**
  * Assign / update a model's tier. Manual only — no formula. Stamps
  * mrm_tiered_at = now() and mrm_tiered_by = the acting user. Returns null when
  * the model does not exist for this org.
@@ -163,6 +184,11 @@ export interface CreateValidationInput {
   report_version?: string | null;
   report?: MrmValidationReport;
   next_due?: Date | null;
+  // Optional opening stage. Defaults to IN_VALIDATION (the manual "start a
+  // validation" flow). Trigger-fired revalidations pass NOT_STARTED so the task
+  // lands in the queue for the validator to pick up rather than being marked
+  // already in progress.
+  stage?: MrmValidationStage;
 }
 
 /**
@@ -170,11 +196,15 @@ export interface CreateValidationInput {
  * `idx_mrm_validations_one_active` allows only one row per (org, model) where
  * stage <> 'validated'; a second in-flight validation raises a 23505, which we
  * translate into a clean ConflictException rather than surfacing a raw DB error.
+ *
+ * Transaction-aware: pass a transaction so the insert and any accompanying audit
+ * writes (e.g. the revalidation-event log) commit atomically.
  */
 export const createValidationQuery = async (
   modelId: number,
   organizationId: number,
   input: CreateValidationInput,
+  transaction?: Transaction,
 ): Promise<MrmValidationModel> => {
   try {
     const rows = (await sequelize.query(
@@ -189,7 +219,7 @@ export const createValidationQuery = async (
         replacements: {
           organizationId,
           modelId,
-          stage: MrmValidationStage.IN_VALIDATION,
+          stage: input.stage ?? MrmValidationStage.IN_VALIDATION,
           trigger: input.trigger ?? null,
           validatorId: input.validator_id ?? null,
           reportVersion: input.report_version ?? null,
@@ -199,6 +229,7 @@ export const createValidationQuery = async (
         },
         mapToModel: true,
         model: MrmValidationModel,
+        transaction,
       },
     )) as MrmValidationModel[];
     return rows[0];

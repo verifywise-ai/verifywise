@@ -6280,6 +6280,61 @@ export const mrmEndpoints: Endpoint[] = [
   },
   {
     method: 'POST',
+    path: '/mrm/models/{modelId}/request-revalidation',
+    summary: "Request Revalidation",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'GET',
+    path: '/mrm/models/{modelId}/revalidation-events',
+    summary: "Get Revalidation Events",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'POST',
+    path: '/mrm/revalidation/sweep',
+    summary: "Run Revalidation Sweep For Org",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'GET',
+    path: '/mrm/attestation/summary',
+    summary: "Get Attestation Summary Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'GET',
+    path: '/mrm/attestation/report',
+    summary: "Generate Attestation Report Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'POST',
     path: '/mrm/models/{externalModelKey}/metrics',
     summary: "Ingest Metrics",
     requiresAuth: false,

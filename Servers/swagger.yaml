@@ -13046,6 +13046,76 @@ paths:
       security:
         -
           bearerAuth: []
+  '/mrm/models/{modelId}/request-revalidation':
+    post:
+      summary: 'Request Revalidation'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Mrm
+      operationId: requestRevalidation
+      security:
+        -
+          bearerAuth: []
+  '/mrm/models/{modelId}/revalidation-events':
+    get:
+      summary: 'Get Revalidation Events'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Mrm
+      operationId: getRevalidationEvents
+      security:
+        -
+          bearerAuth: []
+  /mrm/revalidation/sweep:
+    post:
+      summary: 'Run Revalidation Sweep For Org'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Mrm
+      operationId: runRevalidationSweepForOrg
+      security:
+        -
+          bearerAuth: []
+  /mrm/attestation/summary:
+    get:
+      summary: 'Get Attestation Summary Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Mrm
+      operationId: getAttestationSummaryHandler
+      security:
+        -
+          bearerAuth: []
+  /mrm/attestation/report:
+    get:
+      summary: 'Generate Attestation Report Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Mrm
+      operationId: generateAttestationReportHandler
+      security:
+        -
+          bearerAuth: []
   '/mrm/models/{externalModelKey}/metrics':
     post:
       summary: 'Ingest Metrics'
