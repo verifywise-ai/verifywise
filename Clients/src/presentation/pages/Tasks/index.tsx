@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState, useEffect, useContext, useMemo, useCallback, useRef } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Box, Stack, Typography, Fade } from "@mui/material";
 import TabContext from "@mui/lab/TabContext";
@@ -10,7 +10,7 @@ import TasksTable from "../../components/Table/TasksTable";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import DeadlineWarningBox from "../../components/DeadlineWarningBox";
-import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
+import { useAuthContext } from "../../../application/contexts/verifywise";
 import { storageService } from "../../../infrastructure/storage";
 import { ITask, TaskSummary } from "../../../domain/interfaces/i.task";
 import {
@@ -126,7 +126,7 @@ const Tasks: React.FC = () => {
     storageService.set("tasksViewTab", activeTab);
   }, [activeTab]);
 
-  const { userRoleName, userId } = useContext(VerifyWiseContext);
+  const { userRoleName, userId } = useAuthContext();
   const { users } = useUsers();
 
   // Track if we've already processed the URL param to avoid duplicate fetches
