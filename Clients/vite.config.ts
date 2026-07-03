@@ -75,8 +75,43 @@ export default defineConfig({
             if (id.includes("@tiptap")) {
               return "vendor-editor";
             }
-            if (id.includes("recharts") || id.includes("html2canvas")) {
+            if (
+              id.includes("recharts") ||
+              id.includes("html2canvas") ||
+              id.includes("plotly.js") ||
+              id.includes("react-plotly.js")
+            ) {
               return "vendor-charts";
+            }
+            if (id.includes("@assistant-ui") || id.includes("@ai-sdk")) {
+              return "vendor-ai";
+            }
+            if (id.includes("@xyflow")) {
+              return "vendor-flow";
+            }
+            if (
+              id.includes("react-markdown") ||
+              id.includes("remark-") ||
+              id.includes("rehype-") ||
+              id.includes("/katex/")
+            ) {
+              return "vendor-markdown";
+            }
+            if (
+              id.includes("xlsx") ||
+              id.includes("exceljs") ||
+              id.includes("jspdf") ||
+              id.includes("jszip") ||
+              id.includes("papaparse") ||
+              id.includes("file-saver")
+            ) {
+              return "vendor-export";
+            }
+            if (id.includes("date-fns") || id.includes("dayjs")) {
+              return "vendor-date";
+            }
+            if (id.includes("lucide-react")) {
+              return "vendor-icons";
             }
           }
         },
