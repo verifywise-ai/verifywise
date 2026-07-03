@@ -11,7 +11,6 @@ import AutoCompleteField from "../Inputs/Autocomplete";
 const DEBUG = import.meta.env?.DEV;
 const debugLog = (...args: unknown[]) => {
   if (DEBUG) {
-    // eslint-disable-next-line no-console
     console.debug("[PolicyForm]", ...args);
   }
 };

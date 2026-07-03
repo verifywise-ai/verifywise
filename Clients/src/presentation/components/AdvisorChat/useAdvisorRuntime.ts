@@ -281,7 +281,7 @@ export const useAdvisorRuntime = (selectedLLMKeyId?: number, pageContext?: Advis
   const onError = useCallback((error: unknown) => {
     console.error("[advisor] chat runtime error:", error);
     const message = error instanceof Error ? error.message : String(error);
-    // eslint-disable-next-line no-alert
+
     alert(
       `The AI advisor encountered an error: ${message}\n\n` +
         `If this keeps happening, check your LLM key in Settings or try again in a moment.`,

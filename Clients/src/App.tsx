@@ -260,42 +260,42 @@ function App() {
   return (
     <CookiesProvider>
       <VerifyWiseContext.Provider value={contextValues}>
-            <PluginRegistryProvider>
-              <PluginLoader />
-              <UserGuideSidebarProvider>
-                <SmartPromptProvider>
-                  <ConditionalThemeWrapper>
-                    {alert && (
-                      <Alert
-                        variant={alert.variant}
-                        title={alert.title}
-                        body={alert.body}
-                        isToast={true}
-                        onClick={() => setAlert(null)}
-                      />
-                    )}
-                    <SmartPrompt />
-                    <CommandPaletteErrorBoundary>
-                      <CommandPalette
-                        open={commandPalette.isOpen}
-                        onOpenChange={commandPalette.close}
-                      />
-                    </CommandPaletteErrorBoundary>
-                    {showModal && (
-                      <SetupModal onComplete={handleOnboardingDone} onSkip={handleOnboardingDone} />
-                    )}
-                    <ChunkErrorBoundary>
-                      <Routes>{createRoutes(triggerSidebar, triggerSidebarReload)}</Routes>
-                    </ChunkErrorBoundary>
+        <PluginRegistryProvider>
+          <PluginLoader />
+          <UserGuideSidebarProvider>
+            <SmartPromptProvider>
+              <ConditionalThemeWrapper>
+                {alert && (
+                  <Alert
+                    variant={alert.variant}
+                    title={alert.title}
+                    body={alert.body}
+                    isToast={true}
+                    onClick={() => setAlert(null)}
+                  />
+                )}
+                <SmartPrompt />
+                <CommandPaletteErrorBoundary>
+                  <CommandPalette
+                    open={commandPalette.isOpen}
+                    onOpenChange={commandPalette.close}
+                  />
+                </CommandPaletteErrorBoundary>
+                {showModal && (
+                  <SetupModal onComplete={handleOnboardingDone} onSkip={handleOnboardingDone} />
+                )}
+                <ChunkErrorBoundary>
+                  <Routes>{createRoutes(triggerSidebar, triggerSidebarReload)}</Routes>
+                </ChunkErrorBoundary>
 
-                    {/* User Guide Sidebar with Advisor Conversation persistence */}
-                    <AdvisorConversationProvider>
-                      <UserGuideSidebarContainer />
-                    </AdvisorConversationProvider>
-                  </ConditionalThemeWrapper>
-                </SmartPromptProvider>
-              </UserGuideSidebarProvider>
-            </PluginRegistryProvider>
+                {/* User Guide Sidebar with Advisor Conversation persistence */}
+                <AdvisorConversationProvider>
+                  <UserGuideSidebarContainer />
+                </AdvisorConversationProvider>
+              </ConditionalThemeWrapper>
+            </SmartPromptProvider>
+          </UserGuideSidebarProvider>
+        </PluginRegistryProvider>
       </VerifyWiseContext.Provider>
 
       {/* React Query DevTools - Only in development */}

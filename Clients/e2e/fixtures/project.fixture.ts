@@ -13,7 +13,7 @@ export const test = base.extend<{
   projectPage: Page;
   projectName: string;
 }>({
-  projectName: async ({}, use) => {
+  projectName: async (_context, use) => {
     await use(`E2E-Project-${Date.now()}`);
   },
 

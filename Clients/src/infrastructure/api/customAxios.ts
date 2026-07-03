@@ -39,21 +39,21 @@ const getLanguage = (): Lang => {
 // layer free of the full 1.9 MB translation dictionary.
 const ERROR_TRANSLATIONS: Record<Lang, Record<string, string>> = {
   en: {
-    Error: "Error",
+    "Error": "Error",
     "An error occurred. Please try again later": "An error occurred. Please try again later",
   },
   de: {
-    Error: "Fehler",
+    "Error": "Fehler",
     "An error occurred. Please try again later":
       "Ein Fehler ist aufgetreten. Bitte versuchen Sie es später erneut",
   },
   fr: {
-    Error: "Erreur",
+    "Error": "Erreur",
     "An error occurred. Please try again later":
       "Une erreur s'est produite. Veuillez réessayer plus tard",
   },
   es: {
-    Error: "Error",
+    "Error": "Error",
     "An error occurred. Please try again later":
       "Se produjo un error. Vuelva a intentarlo más tarde",
   },

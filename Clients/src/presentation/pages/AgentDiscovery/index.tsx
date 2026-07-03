@@ -107,7 +107,7 @@ const AgentDiscovery: React.FC = () => {
         routeUrl: "/agent-primitives",
       });
       setAgents(response?.data || []);
-    } catch (error) {
+    } catch (_error) {
       console.error("Failed to fetch agents:", error);
     } finally {
       setIsLoading(false);
@@ -122,7 +122,7 @@ const AgentDiscovery: React.FC = () => {
       if (response?.data) {
         setStats(response.data);
       }
-    } catch (error) {
+    } catch (_error) {
       console.error("Failed to fetch agent stats:", error);
     }
   }, []);
@@ -293,7 +293,7 @@ const AgentDiscovery: React.FC = () => {
       }
       fetchAgents();
       fetchStats();
-    } catch (error) {
+    } catch (_error) {
       showAlertMessage(
         "error",
         "Sync failed. Check that a discovery-capable plugin is installed and configured.",
@@ -344,7 +344,7 @@ const AgentDiscovery: React.FC = () => {
       fetchAgents();
       fetchStats();
       showAlertMessage("success", "Agent deleted successfully.");
-    } catch (error) {
+    } catch (_error) {
       console.error("Failed to delete agent:", error);
       showAlertMessage("error", "Failed to delete agent.");
     }

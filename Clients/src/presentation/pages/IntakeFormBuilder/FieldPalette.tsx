@@ -436,7 +436,7 @@ export const SuggestedQuestionsPanel = forwardRef<
             triggerSparkle();
           }
         }
-      } catch (err: unknown) {
+      } catch (_err: unknown) {
         if (!controller.signal.aborted) {
           setLlmError("Could not generate questions. Check your LLM key.");
           setLlmFetched(true);

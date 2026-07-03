@@ -1976,7 +1976,7 @@ export function ProjectDatasets({ projectId, orgId }: ProjectDatasetsProps) {
           <CustomizableButton
             variant="outlined"
             onClick={() => {
-              actionDataset && handleViewPrompts(actionDataset);
+              if (actionDataset) handleViewPrompts(actionDataset);
               handleActionMenuClose();
             }}
             startIcon={<Eye size={14} />}
@@ -2000,7 +2000,7 @@ export function ProjectDatasets({ projectId, orgId }: ProjectDatasetsProps) {
           <CustomizableButton
             variant="outlined"
             onClick={() => {
-              actionDataset && handleOpenInEditor(actionDataset);
+              if (actionDataset) handleOpenInEditor(actionDataset);
               handleActionMenuClose();
             }}
             startIcon={<Edit3 size={14} />}
@@ -2024,7 +2024,7 @@ export function ProjectDatasets({ projectId, orgId }: ProjectDatasetsProps) {
           <CustomizableButton
             variant="outlined"
             onClick={() => {
-              actionDataset && handleDownloadDataset(actionDataset);
+              if (actionDataset) handleDownloadDataset(actionDataset);
               handleActionMenuClose();
             }}
             startIcon={<Download size={14} />}
@@ -2048,7 +2048,7 @@ export function ProjectDatasets({ projectId, orgId }: ProjectDatasetsProps) {
           <CustomizableButton
             variant="outlined"
             onClick={() => {
-              actionDataset && handleRemoveDataset(actionDataset);
+              if (actionDataset) handleRemoveDataset(actionDataset);
               handleActionMenuClose();
             }}
             startIcon={<Trash2 size={14} />}

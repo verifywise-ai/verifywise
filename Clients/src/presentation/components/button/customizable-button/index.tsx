@@ -98,8 +98,8 @@ const CustomizableButton = memo(
       fullWidth = false,
       className,
       title,
-      indicator,
-      textColor,
+      indicator: _indicator,
+      textColor: _textColor,
       iconOnly = false,
       ...rest
     },
@@ -157,7 +157,10 @@ const CustomizableButton = memo(
       />
     );
 
-    const { selectionFollowsFocus, ...filteredRest } = rest as Record<string, unknown>;
+    const { selectionFollowsFocus: _selectionFollowsFocus, ...filteredRest } = rest as Record<
+      string,
+      unknown
+    >;
 
     return (
       <Button

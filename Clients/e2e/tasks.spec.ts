@@ -348,6 +348,7 @@ test.describe("Tasks", () => {
 
     // Get initial row count
     const initialRows = await page.getByRole("row").count();
+    void initialRows;
 
     await rowsPerPage.first().click();
     await page.waitForTimeout(500);

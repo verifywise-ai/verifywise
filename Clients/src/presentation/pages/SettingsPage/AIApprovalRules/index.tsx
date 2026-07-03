@@ -56,7 +56,7 @@ export default function AIApprovalRules() {
       setError(null);
       const data = await listApprovalRules();
       setRules(Array.isArray(data) ? data : []);
-    } catch (err) {
+    } catch (_err) {
       setError("Failed to load approval rules");
     } finally {
       setLoading(false);

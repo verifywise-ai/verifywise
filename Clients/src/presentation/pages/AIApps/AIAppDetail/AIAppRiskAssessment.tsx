@@ -60,7 +60,7 @@ export default function AIAppRiskAssessment({ appId, currentRiskScore }: AIAppRi
         data: { risk_score: calculatedScore },
       });
       setAlert({ variant: "success", body: `Risk score updated to ${calculatedScore}` });
-    } catch (err) {
+    } catch (_err) {
       setAlert({ variant: "error", body: "Failed to save risk assessment" });
     }
   };

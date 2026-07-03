@@ -81,7 +81,7 @@ test.describe("Frameworks", () => {
     }
 
     // Click the second tab
-    const firstTabText = await tabs
+    await tabs
       .nth(0)
       .textContent()
       .catch(() => "");

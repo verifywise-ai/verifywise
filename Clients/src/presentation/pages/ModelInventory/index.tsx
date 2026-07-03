@@ -1350,15 +1350,11 @@ const ModelInventory: React.FC = () => {
       let disabledCount = 0;
       for (const link of existingLinks) {
         if (link.is_enabled) {
-          try {
-            await updateShareMutation.mutateAsync({
-              id: link.id,
-              is_enabled: false,
-            });
-            disabledCount++;
-          } catch (updateError) {
-            throw updateError;
-          }
+          await updateShareMutation.mutateAsync({
+            id: link.id,
+            is_enabled: false,
+          });
+          disabledCount++;
         }
       }
 

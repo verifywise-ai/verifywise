@@ -589,11 +589,7 @@ const IconsSection: React.FC = () => {
                   }}
                 >
                   <Box sx={{ textAlign: "center" }}>
-                    <User
-                      size={24}
-                      strokeWidth={1.5}
-                      color={theme.palette.text.secondary}
-                    />
+                    <User size={24} strokeWidth={1.5} color={theme.palette.text.secondary} />
                     <Typography
                       sx={{ fontSize: 10, color: theme.palette.text.tertiary, mt: "4px" }}
                     >
@@ -601,11 +597,7 @@ const IconsSection: React.FC = () => {
                     </Typography>
                   </Box>
                   <Box sx={{ textAlign: "center" }}>
-                    <User
-                      size={24}
-                      strokeWidth={2}
-                      color={theme.palette.text.secondary}
-                    />
+                    <User size={24} strokeWidth={2} color={theme.palette.text.secondary} />
                     <Typography
                       sx={{ fontSize: 10, color: theme.palette.text.tertiary, mt: "4px" }}
                     >
@@ -613,11 +605,7 @@ const IconsSection: React.FC = () => {
                     </Typography>
                   </Box>
                   <Box sx={{ textAlign: "center" }}>
-                    <User
-                      size={24}
-                      strokeWidth={2.5}
-                      color={theme.palette.text.secondary}
-                    />
+                    <User size={24} strokeWidth={2.5} color={theme.palette.text.secondary} />
                     <Typography
                       sx={{ fontSize: 10, color: theme.palette.text.tertiary, mt: "4px" }}
                     >

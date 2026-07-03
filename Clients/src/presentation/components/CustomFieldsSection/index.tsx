@@ -296,7 +296,6 @@ const CustomFieldRow: React.FC<CustomFieldRowProps> = ({
   // flush invalidates the cache and refetches).
   useEffect(() => {
     setDraft(normalize(storedValue, definition.field_type));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storedValue, definition.id, definition.field_type]);
 
   const storedHasValue = !isEmpty(stored, definition.field_type);

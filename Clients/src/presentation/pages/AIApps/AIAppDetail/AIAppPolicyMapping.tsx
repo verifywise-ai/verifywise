@@ -96,7 +96,7 @@ export default function AIAppPolicyMapping({ appId, appName, policies }: AIAppPo
           })),
         });
         setAlert({ variant: "success", body: "Policy mapping saved" });
-      } catch (err) {
+      } catch (_err) {
         setAlert({ variant: "error", body: "Failed to save policy mapping" });
         // Re-seed from the server-truth prop so the UI doesn't drift on failure.
         setLinkedPolicies(policies.map((p) => ({ policy_id: p.id, title: p.title })));

@@ -179,7 +179,7 @@ const EntityLinkSelector: React.FC<EntityLinkSelectorProps> = ({
   const fetchSubEntities = useCallback(async (frameworkId: number, projectFrameworkId?: number) => {
     setLoadingEntities(true);
     try {
-      let subEntityList: any[] = [];
+      const subEntityList: any[] = [];
 
       switch (frameworkId) {
         case 1: // EU AI Act

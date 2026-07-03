@@ -403,7 +403,7 @@ const sanitizeOptions: Parameters<typeof DOMPurify.sanitize>[1] = {
     "checked",
   ],
   ALLOWED_URI_REGEXP:
-    /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|cid|xmpp|data):|[^a-z]|[a-z.+\-]+(?:[^a-z.+\-:]|$))/i,
+    /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|cid|xmpp|data):|[^a-z]|[a-z.+-]+(?:[^a-z.+-:]|$))/i,
   ADD_ATTR: ["target"],
   FORBID_TAGS: ["script", "object", "embed", "iframe", "form", "input", "button"],
   FORBID_ATTR: ["onerror", "onload", "onclick", "onmouseover", "onfocus", "onblur"],
@@ -667,7 +667,7 @@ export default function PolicyEditorPage() {
           if (cancelled) return;
           setPolicy(fetchedPolicy);
         }
-      } catch (err: any) {
+      } catch (_err: any) {
         if (!cancelled) {
           setLoadError(id ? "Failed to load policy. It may not exist." : "Failed to load tags.");
         }

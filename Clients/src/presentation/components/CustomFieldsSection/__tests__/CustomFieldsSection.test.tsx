@@ -26,8 +26,8 @@ let mockDefsIsError = false;
 let mockValuesData: any = null;
 let mockValuesIsLoading = false;
 
-let mockUsers = [{ id: 1, name: "Alice", surname: "Smith", email: "alice@test.com" }];
-let mockUsersLoading = false;
+const mockUsers = [{ id: 1, name: "Alice", surname: "Smith", email: "alice@test.com" }];
+const mockUsersLoading = false;
 
 let mockSetCustomFieldValue = vi.fn().mockResolvedValue({});
 let mockDeleteCustomFieldValue = vi.fn().mockResolvedValue({});

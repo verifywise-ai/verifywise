@@ -216,7 +216,7 @@ const isDev = import.meta.env.DEV;
 
 export const createRoutes = (
   triggerSidebar: boolean,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   _triggerSidebarReload: () => void,
 ) => [
   // ReactFlow Demo - Development only (must be before dashboard route)

@@ -3,10 +3,11 @@ import Chip from "../../Chip";
 import { useCategoryStyles } from "./styles";
 
 export function CategoryChip({ categories }: { categories: string[] }) {
+  const { stackStyle } = useCategoryStyles();
   if (!categories || categories.length === 0) return null;
 
   return (
-    <Stack direction="row" sx={useCategoryStyles().stackStyle}>
+    <Stack direction="row" sx={stackStyle}>
       {categories.slice(0, 2).map((category) => (
         <Chip key={category} label={category} size="small" variant="info" />
       ))}

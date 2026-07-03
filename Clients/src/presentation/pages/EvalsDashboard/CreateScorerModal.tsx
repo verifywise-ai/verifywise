@@ -1063,7 +1063,6 @@ export default function CreateScorerModal({
           })
           .catch(() => {});
       }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     },
     [gatewayModels],
   );

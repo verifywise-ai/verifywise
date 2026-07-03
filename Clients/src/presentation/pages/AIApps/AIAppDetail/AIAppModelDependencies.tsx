@@ -120,7 +120,7 @@ export default function AIAppModelDependencies({ appId, models }: AIAppModelDepe
       try {
         await linkModelsMutation.mutateAsync({ id: appId, modelInventoryIds: next });
         setAlert({ variant: "success", body: "Model dependencies updated" });
-      } catch (err) {
+      } catch (_err) {
         setAlert({ variant: "error", body: "Failed to update model dependencies" });
         // Re-seed from server-truth so the UI doesn't drift on failure.
         setLinkedIds(models.map((m) => m.id));

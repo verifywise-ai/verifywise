@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/preserve-manual-memoization */
 import React, { useMemo, useState, useEffect } from "react";
 import { Box, Stack, Typography, Collapse, IconButton } from "@mui/material";
 import {

@@ -114,6 +114,7 @@ test.describe("Super Admin", () => {
           .locator('[class*="sort" i]')
           .or(page.locator("svg"))
           .or(page.locator("[aria-sort]"));
+        void sortIndicator;
 
         // Just verify the click didn't break anything
         await expect(page.locator("body")).not.toBeEmpty();

@@ -286,7 +286,7 @@ function SubmissionPreviewModal({
           submissionStatus: sub?.status ?? "pending",
         });
         setEditedEntityData({ ...(entityPreview || {}) });
-      } catch (err) {
+      } catch (_err) {
         if (cancelled) return;
         setFetchError("Failed to load submission preview. Please try again.");
       } finally {
@@ -341,7 +341,7 @@ function SubmissionPreviewModal({
       await approveSubmission(submissionId, payload);
       onApproved();
       onClose();
-    } catch (err) {
+    } catch (_err) {
       setApproveError("Failed to approve submission. Please try again.");
     } finally {
       setIsApproving(false);

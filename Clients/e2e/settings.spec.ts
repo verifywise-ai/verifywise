@@ -224,6 +224,7 @@ test.describe("Settings", () => {
         .getByRole("combobox", { name: /role/i })
         .or(page.getByText(/select.*role/i))
         .or(page.getByText(/role/i));
+      void roleField;
 
       if (
         await emailField

@@ -155,7 +155,6 @@ export function useFria(projectId: string) {
         }
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
 
   // Re-fetch assessment for updated scores after mutations
