@@ -1,5 +1,5 @@
 // React imports
-import { FC, useState, useContext, useEffect, useCallback, useMemo, useRef } from "react";
+import { FC, useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 
 // MUI imports
@@ -30,7 +30,7 @@ import {
   createVendorRisk,
   updateVendorRisk,
 } from "../../../application/repository/vendorRisk.repository";
-import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
+import { useInput, useDashboardContext } from "../../../application/contexts/verifywise";
 import useUsers from "../../../application/hooks/useUsers";
 import useFrameworks from "../../../application/hooks/useFrameworks";
 import { handleAlert } from "../../../application/tools/alertUtils";
@@ -126,7 +126,8 @@ const formatErrorMessage = (operation: string, error: unknown): string => {
 
 const AddNewVendorRiskForm: FC<RiskSectionProps> = ({ closePopup, onSuccess, popupStatus }) => {
   const theme = useTheme();
-  const { inputValues, dashboardValues } = useContext(VerifyWiseContext);
+  const { inputValues } = useInput();
+  const { dashboardValues } = useDashboardContext();
 
   const [searchParams] = useSearchParams();
   const projectId = searchParams.get("projectId");
