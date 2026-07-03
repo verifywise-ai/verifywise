@@ -75,10 +75,10 @@ describe("MRM model roles tenant isolation", () => {
       replacements: { userId: owner.userId },
     });
 
-    const [row] = (await sequelize.query(
-      `SELECT user_id FROM mrm_model_roles WHERE id = :id`,
-      { replacements: { id: roleId }, type: QueryTypes.SELECT },
-    )) as [{ user_id: number | null } | undefined];
+    const [row] = (await sequelize.query(`SELECT user_id FROM mrm_model_roles WHERE id = :id`, {
+      replacements: { id: roleId },
+      type: QueryTypes.SELECT,
+    })) as [{ user_id: number | null } | undefined];
 
     expect(row).toBeDefined();
     expect(row?.user_id).toBeNull();
