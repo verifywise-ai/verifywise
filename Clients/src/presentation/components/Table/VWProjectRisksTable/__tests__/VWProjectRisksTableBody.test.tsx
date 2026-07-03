@@ -5,6 +5,11 @@ import VWProjectRisksTableBody from "../VWProjectRisksTableBody";
 import { VerifyWiseContext } from "../../../../../application/contexts/VerifyWise.context";
 import type { RiskModel } from "../../../../../domain/models/Common/risks/risk.model";
 
+const mockSetInputValues = vi.fn();
+vi.mock("../../../../../application/contexts/verifywise", () => ({
+  useInput: () => ({ inputValues: {}, setInputValues: mockSetInputValues }),
+}));
+
 vi.mock("../../../../../application/hooks/useAuth", () => ({
   useAuth: () => ({
     userRoleName: "Admin",
@@ -228,23 +233,16 @@ describe("VWProjectRisksTableBody", () => {
   });
 
   it("calls setInputValues on row click with assessment_mapping", async () => {
-    const setInputValues = vi.fn();
     const user = userEvent.setup();
 
     const rowsWithAssessment = [
       { ...mockRows[0], assessment_mapping: 5 },
     ] as unknown as RiskModel[];
 
-    renderWithContext(
-      <VerifyWiseContext.Provider value={{ ...contextValue, setInputValues }}>
-        <table>
-          <VWProjectRisksTableBody {...defaultProps} rows={rowsWithAssessment} />
-        </table>
-      </VerifyWiseContext.Provider>,
-    );
+    renderWithContext(<VWProjectRisksTableBody {...defaultProps} rows={rowsWithAssessment} />);
 
     await user.click(screen.getByText("Data Breach Risk"));
-    expect(setInputValues).toHaveBeenCalledWith(
+    expect(mockSetInputValues).toHaveBeenCalledWith(
       expect.objectContaining({
         assessment_mapping: 5,
       }),
