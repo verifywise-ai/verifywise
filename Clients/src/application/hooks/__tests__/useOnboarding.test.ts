@@ -6,21 +6,10 @@ vi.mock("../useAuth", () => ({
   useAuth: () => ({ userId: mockUserId() }),
 }));
 
-vi.mock("../../contexts/VerifyWise.context", () => ({
-  VerifyWiseContext: {
-    _currentValue: { users: [{ id: 1 }], organizationId: 1 },
-  },
+vi.mock("../contexts/verifywise", () => ({
+  useUsersContext: () => ({ users: [{ id: 1 }] }),
+  useAuthContext: () => ({ organizationId: 1 }),
 }));
-
-// Mock useContext to return our context values
-const mockContextValue = { users: [{ id: 1 }], organizationId: 1 };
-vi.mock("react", async () => {
-  const actual = await vi.importActual("react");
-  return {
-    ...actual,
-    useContext: () => mockContextValue,
-  };
-});
 
 vi.mock("react-redux", () => ({
   useSelector: vi.fn((fn: any) =>
@@ -29,12 +18,16 @@ vi.mock("react-redux", () => ({
   useDispatch: () => vi.fn(),
 }));
 
-vi.mock("../../redux/auth/authSlice", () => ({
-  setOnboardingStatus: vi.fn((status: string) => ({
-    type: "auth/setOnboardingStatus",
-    payload: status,
-  })),
-}));
+vi.mock("../../redux/auth/authSlice", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../redux/auth/authSlice")>();
+  return {
+    ...actual,
+    setOnboardingStatus: vi.fn((status: string) => ({
+      type: "auth/setOnboardingStatus",
+      payload: status,
+    })),
+  };
+});
 
 import { useOnboarding } from "../useOnboarding";
 
