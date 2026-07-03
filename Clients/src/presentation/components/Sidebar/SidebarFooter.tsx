@@ -1,4 +1,4 @@
-import { FC, useState, useRef, useEffect, useContext } from "react";
+import { FC, useState, useRef, useEffect } from "react";
 import {
   Box,
   Divider,
@@ -37,7 +37,7 @@ import {
 } from "lucide-react";
 import Avatar from "../Avatar/VWAvatar";
 import { brand, text, background } from "../../themes/palette";
-import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
+import { useAuthContext, useUsersContext } from "../../../application/contexts/verifywise";
 import { ROLES } from "../../../application/constants/roles";
 import useLogout from "../../../application/hooks/useLogout";
 import { getUserById } from "../../../application/repository/user.repository";
@@ -124,7 +124,8 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
   const { activeModule } = useActiveModule();
   const managementItems =
     activeModule === "super-admin" ? SUPER_ADMIN_MANAGEMENT_ITEMS : MANAGEMENT_ITEMS;
-  const { userId, users, photoRefreshFlag } = useContext(VerifyWiseContext);
+  const { userId } = useAuthContext();
+  const { users, photoRefreshFlag } = useUsersContext();
   const [selfUser, setSelfUser] = useState<User | null>(null);
 
   // Fetch current user directly when not in the org users list (e.g., super-admin)
