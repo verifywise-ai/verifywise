@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useContext } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import {
   Stack,
   Table,
@@ -12,7 +12,7 @@ import {
   useTheme,
 } from "@mui/material";
 import TablePaginationActions from "../TablePagination";
-import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
+import { useInput, useDashboardContext } from "../../../application/contexts/verifywise";
 import { DashboardState, User, InputValues } from "../../../application/interfaces/appStates";
 import singleTheme from "../../themes/v1SingleTheme";
 import { RISK_LABELS } from "../../components/RiskLevel/constants";
@@ -71,7 +71,8 @@ const CustomizableBasicTable = ({
     const saved = localStorage.getItem(RISKS_ROWS_PER_PAGE_KEY);
     return saved ? parseInt(saved, 10) : DEFAULT_ROWS_PER_PAGE;
   });
-  const { setInputValues, dashboardValues, setDashboardValues } = useContext(VerifyWiseContext);
+  const { setInputValues } = useInput();
+  const { dashboardValues, setDashboardValues } = useDashboardContext();
 
   useEffect(() => setPage(0), [data]);
 
