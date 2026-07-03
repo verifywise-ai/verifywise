@@ -1,6 +1,10 @@
-import { useContext, useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
+import {
+  useVisibility,
+  useUsersContext,
+  useAuthContext,
+} from "../../../../application/contexts/verifywise";
 import { FrameworkTypeEnum } from "../../../components/Forms/ProjectForm/constants";
 import { ProjectForm } from "../../../components/Forms/ProjectForm";
 import PageTour from "../../../components/PageTour";
@@ -19,8 +23,9 @@ import { brand } from "../../../themes/palette";
 const Home = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { componentsVisible, changeComponentVisibility, refreshUsers, userRoleName } =
-    useContext(VerifyWiseContext);
+  const { componentsVisible, changeComponentVisibility } = useVisibility();
+  const { refreshUsers } = useUsersContext();
+  const { userRoleName } = useAuthContext();
   const [isProjectFormModalOpen, setIsProjectFormModalOpen] = useState<boolean>(false);
   const [isScreeningOpen, setIsScreeningOpen] = useState<boolean>(false);
   const [refreshProjectsFlag, setRefreshProjectsFlag] = useState<boolean>(false);
