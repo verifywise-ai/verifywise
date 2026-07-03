@@ -26,4 +26,9 @@ export {
   createTestMrmValidation,
   createTestMrmFinding,
   createTestMrmModelRole,
+  createTestMrmMetricKey,
+  createTestMrmThreshold,
+  createTestMrmIngestionToken,
+  createTestMrmMetric,
+  createTestMrmMetricEvaluation,
 } from "./test-entities.factory";

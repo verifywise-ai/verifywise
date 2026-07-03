@@ -22,6 +22,11 @@ import { ModelRiskModel } from "../domain.layer/models/modelRisk/modelRisk.model
 import { MrmValidationModel } from "../domain.layer/models/mrm/mrmValidation.model";
 import { MrmFindingModel } from "../domain.layer/models/mrm/mrmFinding.model";
 import { MrmModelRoleModel } from "../domain.layer/models/mrm/mrmModelRole.model";
+import { MrmMetricKeyModel } from "../domain.layer/models/mrm/mrmMetricKey.model";
+import { MrmThresholdModel } from "../domain.layer/models/mrm/mrmThreshold.model";
+import { MrmMetricModel } from "../domain.layer/models/mrm/mrmMetric.model";
+import { MrmMetricEvaluationModel } from "../domain.layer/models/mrm/mrmMetricEvaluation.model";
+import { MrmIngestionTokenModel } from "../domain.layer/models/mrm/mrmIngestionToken.model";
 import dbConfig from "./config/config";
 import { Dialect } from "sequelize";
 import { FrameworkModel } from "../domain.layer/models/frameworks/frameworks.model";
@@ -151,6 +156,11 @@ const sequelize = new Sequelize(conf.database!, conf.username!, conf.password, {
     MrmValidationModel,
     MrmFindingModel,
     MrmModelRoleModel,
+    MrmMetricKeyModel,
+    MrmThresholdModel,
+    MrmMetricModel,
+    MrmMetricEvaluationModel,
+    MrmIngestionTokenModel,
     FrameworkModel,
     ProjectFrameworksModel,
     AssessmentEUModel,

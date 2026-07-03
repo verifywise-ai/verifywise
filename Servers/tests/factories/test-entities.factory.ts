@@ -482,3 +482,178 @@ export async function createTestMrmModelRole(
   );
   return (result as any[])[0].id;
 }
+
+// ---------------------------------------------------------------------------
+// MRM Branch 2 (monitoring / ingestion) factories
+// ---------------------------------------------------------------------------
+
+export interface CreateTestMrmMetricKeyOptions {
+  key?: string;
+  display_name?: string;
+}
+
+export async function createTestMrmMetricKey(
+  orgId: number,
+  options: CreateTestMrmMetricKeyOptions = {},
+): Promise<number> {
+  const suffix = Date.now();
+  const [result] = await sequelize.query(
+    `INSERT INTO mrm_metric_keys (organization_id, key, display_name, created_at)
+     VALUES (:orgId, :key, :displayName, NOW()) RETURNING id`,
+    {
+      replacements: {
+        orgId,
+        key: options.key ?? `metric_${suffix}`,
+        displayName: options.display_name ?? null,
+      },
+    },
+  );
+  return (result as any[])[0].id;
+}
+
+export interface CreateTestMrmThresholdOptions {
+  metric?: string;
+  segment?: string | null;
+  window?: string | null;
+  op?: string;
+  value_num?: number | null;
+  value_lo?: number | null;
+  value_hi?: number | null;
+  severity?: string;
+  breach_action?: string;
+  active?: boolean;
+}
+
+export async function createTestMrmThreshold(
+  orgId: number,
+  modelInventoryId: number,
+  options: CreateTestMrmThresholdOptions = {},
+): Promise<number> {
+  const [result] = await sequelize.query(
+    `INSERT INTO mrm_thresholds
+       (organization_id, model_inventory_id, metric, segment, window, op,
+        value_num, value_lo, value_hi, severity, breach_action, active, created_at, updated_at)
+     VALUES (:orgId, :modelInventoryId, :metric, :segment, :window, :op,
+             :valueNum, :valueLo, :valueHi, :severity, :breachAction, :active, NOW(), NOW())
+     RETURNING id`,
+    {
+      replacements: {
+        orgId,
+        modelInventoryId,
+        metric: options.metric ?? "psi",
+        segment: options.segment ?? null,
+        window: options.window ?? null,
+        op: options.op ?? "gt",
+        valueNum: options.value_num ?? 0.25,
+        valueLo: options.value_lo ?? null,
+        valueHi: options.value_hi ?? null,
+        severity: options.severity ?? "high",
+        breachAction: options.breach_action ?? "notify",
+        active: options.active ?? true,
+      },
+    },
+  );
+  return (result as any[])[0].id;
+}
+
+export interface CreateTestMrmIngestionTokenOptions {
+  name?: string;
+  token_hash?: string;
+  model_inventory_id?: number | null;
+  created_by?: number | null;
+  revoked_at?: string | null;
+}
+
+export async function createTestMrmIngestionToken(
+  orgId: number,
+  options: CreateTestMrmIngestionTokenOptions = {},
+): Promise<number> {
+  const suffix = Date.now();
+  const [result] = await sequelize.query(
+    `INSERT INTO mrm_ingestion_tokens
+       (organization_id, name, token_hash, model_inventory_id, revoked_at, created_by, created_at)
+     VALUES (:orgId, :name, :tokenHash, :modelInventoryId, :revokedAt, :createdBy, NOW())
+     RETURNING id`,
+    {
+      replacements: {
+        orgId,
+        name: options.name ?? `token_${suffix}`,
+        tokenHash: options.token_hash ?? `hash_${suffix}`,
+        modelInventoryId: options.model_inventory_id ?? null,
+        revokedAt: options.revoked_at ?? null,
+        createdBy: options.created_by ?? null,
+      },
+    },
+  );
+  return (result as any[])[0].id;
+}
+
+export interface CreateTestMrmMetricOptions {
+  metric?: string;
+  value?: number;
+  at?: string;
+  window?: string | null;
+  segment?: string;
+  context?: Record<string, unknown>;
+  ingestion_token_id?: number | null;
+}
+
+export async function createTestMrmMetric(
+  orgId: number,
+  modelInventoryId: number,
+  options: CreateTestMrmMetricOptions = {},
+): Promise<number> {
+  const [result] = await sequelize.query(
+    `INSERT INTO mrm_metrics
+       (organization_id, model_inventory_id, metric, value, at, window, segment,
+        context, ingestion_token_id, received_at, created_at)
+     VALUES (:orgId, :modelInventoryId, :metric, :value, :at, :window, :segment,
+             CAST(:context AS jsonb), :ingestionTokenId, NOW(), NOW())
+     RETURNING id`,
+    {
+      replacements: {
+        orgId,
+        modelInventoryId,
+        metric: options.metric ?? "psi",
+        value: options.value ?? 0.28,
+        at: options.at ?? "2026-07-02T00:00:00Z",
+        window: options.window ?? null,
+        segment: options.segment ?? "overall",
+        context: JSON.stringify(options.context ?? {}),
+        ingestionTokenId: options.ingestion_token_id ?? null,
+      },
+    },
+  );
+  return (result as any[])[0].id;
+}
+
+export interface CreateTestMrmMetricEvaluationOptions {
+  threshold_id?: number | null;
+  status?: string;
+  threshold_snapshot?: Record<string, unknown> | null;
+}
+
+export async function createTestMrmMetricEvaluation(
+  orgId: number,
+  metricId: number,
+  options: CreateTestMrmMetricEvaluationOptions = {},
+): Promise<number> {
+  const snapshot = options.threshold_snapshot ?? null;
+  const [result] = await sequelize.query(
+    `INSERT INTO mrm_metric_evaluations
+       (organization_id, metric_id, threshold_id, status, threshold_snapshot, evaluated_at)
+     VALUES (:orgId, :metricId, :thresholdId, :status,
+             CASE WHEN :snapshot IS NULL THEN NULL ELSE CAST(:snapshot AS jsonb) END, NOW())
+     RETURNING id`,
+    {
+      replacements: {
+        orgId,
+        metricId,
+        thresholdId: options.threshold_id ?? null,
+        status: options.status ?? "ok",
+        snapshot: snapshot === null ? null : JSON.stringify(snapshot),
+      },
+    },
+  );
+  return (result as any[])[0].id;
+}
