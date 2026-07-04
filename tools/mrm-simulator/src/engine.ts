@@ -9,6 +9,24 @@ const segmentsFor = (model: FleetModel, metric: string): string[] => {
   return [...new Set(segs)];
 };
 
+// Rounded metric value with an explicit finite guard: the engine feeds the
+// ingestion API, which rejects non-finite values, so surface a clear local
+// error rather than pushing a NaN/Infinity that the server would silently drop.
+const roundedValue = (
+  externalKey: string,
+  metric: string,
+  dayIndex: number,
+  segment?: string,
+): number => {
+  const raw = metricValue(externalKey, metric, dayIndex, segment);
+  if (!Number.isFinite(raw)) {
+    throw new Error(
+      `Non-finite metric value for ${externalKey}/${metric} (day ${dayIndex}, segment ${segment ?? "overall"})`,
+    );
+  }
+  return Number(raw.toFixed(4));
+};
+
 export const generatePoints = (model: FleetModel, dayIndex: number, date: Date): MetricPoint[] => {
   const at = date.toISOString();
   const points: MetricPoint[] = [];
@@ -16,7 +34,7 @@ export const generatePoints = (model: FleetModel, dayIndex: number, date: Date):
     // Base (overall) point.
     points.push({
       metric,
-      value: Number(metricValue(model.externalKey, metric, dayIndex).toFixed(4)),
+      value: roundedValue(model.externalKey, metric, dayIndex),
       at,
       window: "daily",
       segment: "overall",
@@ -26,7 +44,7 @@ export const generatePoints = (model: FleetModel, dayIndex: number, date: Date):
     for (const seg of segmentsFor(model, metric)) {
       points.push({
         metric,
-        value: Number(metricValue(model.externalKey, metric, dayIndex, seg).toFixed(4)),
+        value: roundedValue(model.externalKey, metric, dayIndex, seg),
         at,
         window: "daily",
         segment: seg,
