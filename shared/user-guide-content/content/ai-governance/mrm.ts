@@ -191,7 +191,7 @@ export const mrmContent: ArticleContent = {
     {
       type: 'code',
       language: 'text',
-      code: 'POST https://app.verifywise.ai/api/mrm/models/{externalModelKey}/metrics',
+      code: 'POST https://your-server/api/mrm/models/{externalModelKey}/metrics',
     },
     {
       type: 'paragraph',
