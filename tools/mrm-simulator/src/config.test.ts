@@ -20,4 +20,14 @@ describe("config", () => {
     const cfg = loadConfig(["--base-url", "https://app.example.com", "--i-know-what-im-doing"]);
     expect(() => assertSafeTarget(cfg)).not.toThrow();
   });
+
+  it("assertSafeTarget rejects a localhost-prefixed subdomain", () => {
+    const cfg = loadConfig(["--base-url", "http://localhost.evil.com"]);
+    expect(() => assertSafeTarget(cfg)).toThrow(/refusing/i);
+  });
+
+  it("assertSafeTarget rejects the userinfo trick (localhost@evil.com)", () => {
+    const cfg = loadConfig(["--base-url", "http://localhost@evil.com"]);
+    expect(() => assertSafeTarget(cfg)).toThrow(/refusing/i);
+  });
 });

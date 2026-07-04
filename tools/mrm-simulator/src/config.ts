@@ -26,7 +26,13 @@ export const loadConfig = (argv: string[]): SimConfig => ({
 });
 
 export const assertSafeTarget = (cfg: SimConfig): void => {
-  const isLocal = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/.test(cfg.baseUrl);
+  let hostname: string;
+  try {
+    hostname = new URL(cfg.baseUrl).hostname;
+  } catch {
+    throw new Error(`refusing to run: baseUrl is not a valid URL: ${cfg.baseUrl}`);
+  }
+  const isLocal = hostname === "localhost" || hostname === "127.0.0.1";
   if (!isLocal && !cfg.allowRemote) {
     throw new Error(
       `refusing to run against non-localhost target ${cfg.baseUrl}. ` +
