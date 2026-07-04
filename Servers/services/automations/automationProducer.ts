@@ -210,6 +210,22 @@ export async function scheduleMcpGatewayCleanup() {
   );
 }
 
+export async function scheduleMrmRevalidationSweep() {
+  logger.info("Adding MRM revalidation sweep job to the queue...");
+  // Daily at 4 AM — sweep open validations whose next_due has passed and fire the
+  // scheduled revalidation trigger for each (dedup-safe; annotates already-open
+  // tasks). No obliterate here — the repeatable add is idempotent by repeat key.
+  await automationQueue.add(
+    "mrm_revalidation_sweep",
+    { type: "mrm_revalidation" },
+    {
+      repeat: { pattern: "0 4 * * *" },
+      removeOnComplete: true,
+      removeOnFail: false,
+    },
+  );
+}
+
 export async function scheduleAiTrustIndexSync() {
   logger.info("Adding AI Trust Index weekly sync job to the queue...");
   // Monday 06:00 UTC. jobId keyed weekly is set at runtime is not needed here;
