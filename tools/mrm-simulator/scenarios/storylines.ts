@@ -18,16 +18,31 @@ const ramp = (day: number, fromDay: number, toDay: number, fromVal: number, toVa
   return fromVal + t * (toVal - fromVal);
 };
 
+// Content-based character sum — avoids seed collisions between same-length strings.
+const charSum = (s: string): number => {
+  let sum = 0;
+  for (let i = 0; i < s.length; i++) sum += s.charCodeAt(i);
+  return sum;
+};
+
 export const metricValue = (
   externalKey: string,
   metric: string,
   dayIndex: number,
   segment: string = "overall",
 ): number => {
-  const n = noise(dayIndex + metric.length * 7 + externalKey.length * 13) * 0.01;
+  // FINDING 2 FIX: incorporate string content (not just length) so same-length
+  // keys produce different seeds and noise values don't collide.
+  const n = noise(dayIndex + charSum(metric) + charSum(externalKey)) * 0.01;
 
   if (externalKey === "credit-scoring-v3") {
-    if (metric === "psi") return clamp(ramp(dayIndex, 0, 30, 0.05, 0.28) + n, 0, 1);
+    // FINDING 1 FIX: ramp from day 11→30 (flat at 0.05 before day 11) with endpoint 0.44.
+    // Boundary arithmetic (noise amplitude = ±0.01):
+    //   ramp(17) = 0.05 + (6/19)*0.39 = 0.05 + 0.1232 = 0.1732 → worst-case high = 0.1832 < 0.20  ✓ margin 0.017
+    //   ramp(20) = 0.05 + (9/19)*0.39 = 0.05 + 0.1847 = 0.2347 → worst-case low  = 0.2247 > 0.215 ✓ margin 0.010
+    //   ramp( 0) = 0.05 (flat before day 11)                     → worst-case high = 0.06   < 0.10  ✓
+    //   ramp(30) = 0.44 ≥ 0.30, so fleet PSI > 0.20 threshold fires as intended.
+    if (metric === "psi") return clamp(ramp(dayIndex, 11, 30, 0.05, 0.44) + n, 0, 1);
     if (metric === "auc") return clamp(ramp(dayIndex, 0, 30, 0.86, 0.82) + n, 0, 1);
     if (metric === "gini") return clamp(ramp(dayIndex, 0, 30, 0.7, 0.63) + n, 0, 1);
     if (metric === "ks") return clamp(0.4 + n, 0, 1);

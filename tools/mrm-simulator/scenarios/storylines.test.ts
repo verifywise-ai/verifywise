@@ -6,6 +6,9 @@ describe("storylines", () => {
     expect(metricValue("credit-scoring-v3", "psi", 0)).toBeLessThan(0.1);
     expect(metricValue("credit-scoring-v3", "psi", 17)).toBeLessThan(0.2);
     expect(metricValue("credit-scoring-v3", "psi", 20)).toBeGreaterThan(0.2);
+    // Robustness: worst-case noise-adjusted floor is 0.2247, well above 0.215.
+    // This catches regressions to a thin margin (e.g. old endpoint 0.28 would fail here).
+    expect(metricValue("credit-scoring-v3", "psi", 20)).toBeGreaterThan(0.215);
   });
 
   it("fraud-detector-v2 stays healthy (psi never breaches 0.25)", () => {
