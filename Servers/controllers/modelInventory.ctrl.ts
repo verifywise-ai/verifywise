@@ -347,6 +347,18 @@ export async function createNewModelInventory(req: Request, res: Response) {
       }
     }
 
+    // A duplicate external_key within the org violates the partial unique index.
+    const code =
+      (error as { parent?: { code?: string }; original?: { code?: string } })?.parent?.code ??
+      (error as { original?: { code?: string } })?.original?.code;
+    if (code === "23505") {
+      return res
+        .status(409)
+        .json(
+          STATUS_CODE[409]("A model with this external key already exists in your organization."),
+        );
+    }
+
     logStructured(
       "error",
       "failed to create new model inventory",
