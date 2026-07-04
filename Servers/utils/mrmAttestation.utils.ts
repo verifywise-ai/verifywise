@@ -147,7 +147,7 @@ const getOpenFindingsBySeverityQuery = async (
     `SELECT severity, COUNT(*)::int AS count
        FROM mrm_findings
       WHERE organization_id = :organizationId
-        AND stage = ANY(:openStages)
+        AND stage IN (:openStages)
       GROUP BY severity`,
     {
       replacements: {
@@ -206,8 +206,8 @@ const getPerTierAttestationQuery = async (
        ) t ON t.model_inventory_id = mi.id
        LEFT JOIN (
          SELECT model_inventory_id,
-                COUNT(*) FILTER (WHERE stage = ANY(:openStages)) AS open_findings,
-                COUNT(*) FILTER (WHERE stage = ANY(:openStages) AND severity IN (:critical, :high)) AS critical_high_findings
+                COUNT(*) FILTER (WHERE stage IN (:openStages)) AS open_findings,
+                COUNT(*) FILTER (WHERE stage IN (:openStages) AND severity IN (:critical, :high)) AS critical_high_findings
            FROM mrm_findings
           WHERE organization_id = :organizationId
           GROUP BY model_inventory_id
