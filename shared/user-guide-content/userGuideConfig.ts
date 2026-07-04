@@ -78,7 +78,7 @@ export const collections: Collection[] = [
     title: 'AI governance',
     description: 'Manage your AI models, track their lifecycle, and maintain comprehensive documentation.',
     icon: 'Brain',
-    articleCount: 17,
+    articleCount: 19,
     articles: [
       {
         id: 'use-cases',
@@ -109,6 +109,12 @@ export const collections: Collection[] = [
         title: 'Model lifecycle management',
         description: 'Track models from development through deployment and retirement.',
         keywords: ['lifecycle', 'development', 'deployment', 'retirement'],
+      },
+      {
+        id: 'mrm',
+        title: 'Model risk management',
+        description: 'Tier models, run independent validations, track findings, monitor metrics against thresholds, and produce a board-level attestation for SR 26-2, SS1/23, and OSFI E-23.',
+        keywords: ['mrm', 'model risk', 'tiering', 'tier', 'validation', 'validate', 'findings', 'remediation', 'independence', 'validator', 'monitoring', 'metrics', 'ingestion', 'threshold', 'breach', 'revalidation', 'attestation', 'sr 26-2', 'ss1/23', 'osfi e-23', 'materiality', 'banking'],
       },
       {
         id: 'task-management',

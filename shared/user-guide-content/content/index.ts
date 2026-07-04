@@ -8,6 +8,7 @@ import { intakeFormsContent } from './ai-governance/intake-forms';
 import { modelInventoryContent } from './ai-governance/model-inventory';
 import { aiAppsContent } from './ai-governance/ai-apps';
 import { modelLifecycleContent } from './ai-governance/model-lifecycle';
+import { mrmContent } from './ai-governance/mrm';
 import { taskManagementContent } from './ai-governance/task-management';
 import { incidentManagementContent } from './ai-governance/incident-management';
 import { evidenceCollectionContent } from './ai-governance/evidence-collection';
@@ -126,6 +127,7 @@ export const articleContentMap: Record<string, ArticleContent> = {
   'ai-governance/model-inventory': modelInventoryContent,
   'ai-governance/ai-apps': aiAppsContent,
   'ai-governance/model-lifecycle': modelLifecycleContent,
+  'ai-governance/mrm': mrmContent,
   'ai-governance/task-management': taskManagementContent,
   'ai-governance/incident-management': incidentManagementContent,
   'ai-governance/evidence-collection': evidenceCollectionContent,
