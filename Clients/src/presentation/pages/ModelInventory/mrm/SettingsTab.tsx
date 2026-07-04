@@ -61,7 +61,12 @@ const TIERING_RULES = [
 const RolesSection = ({ users, onError, onSuccess }: SettingsTabProps) => {
   const { data: fleet = [] } = useFleetTiering();
   const [modelId, setModelId] = useState<number | "">("");
-  const { data: roles = [] } = useModelRoles(modelId === "" ? null : Number(modelId));
+  // Do NOT default to `= []` here: when the query is disabled (no model
+  // selected) `data` is undefined, and an inline `= []` would produce a fresh
+  // array reference on every render. That new reference would retrigger the
+  // effect below, which calls setAssignments, causing an infinite render loop.
+  // Keeping `roles` as React Query's stable `data` avoids that.
+  const { data: roles } = useModelRoles(modelId === "" ? null : Number(modelId));
   const setRoles = useSetModelRoles();
 
   const [assignments, setAssignments] = useState<Record<MrmModelRole, number | "">>({
@@ -78,7 +83,7 @@ const RolesSection = ({ users, onError, onSuccess }: SettingsTabProps) => {
       [MrmModelRole.VALIDATOR]: "",
       [MrmModelRole.APPROVER]: "",
     };
-    roles.forEach((r) => {
+    (roles ?? []).forEach((r) => {
       if (r.user_id != null) next[r.role] = Number(r.user_id);
     });
     setAssignments(next);
