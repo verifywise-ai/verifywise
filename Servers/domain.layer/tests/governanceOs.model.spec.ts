@@ -26,6 +26,7 @@ jest.mock("sequelize-typescript", () => ({
 
 class TestGovernanceControlMappingModel {
   id?: number;
+  organization_id!: number;
   source_framework_id!: number;
   source_control_type!: string;
   source_control_identifier!: string;
@@ -112,6 +113,7 @@ describe("GovernanceControlMappingModel", () => {
   it("should create a mapping with all required fields", () => {
     const mapping = new TestGovernanceControlMappingModel({
       id: 1,
+      organization_id: 5,
       source_framework_id: 1,
       source_control_type: "control_category",
       source_control_identifier: "Art.9",
@@ -124,6 +126,7 @@ describe("GovernanceControlMappingModel", () => {
       confidence_score: 0.95,
     });
 
+    expect(mapping.organization_id).toBe(5);
     expect(mapping.source_framework_id).toBe(1);
     expect(mapping.target_framework_id).toBe(2);
     expect(mapping.mapping_strength).toBe("direct");
@@ -133,6 +136,7 @@ describe("GovernanceControlMappingModel", () => {
 
   it("should allow optional fields to be undefined", () => {
     const mapping = new TestGovernanceControlMappingModel({
+      organization_id: 3,
       source_framework_id: 1,
       source_control_type: "control_category",
       source_control_identifier: "Art.9",
@@ -143,6 +147,7 @@ describe("GovernanceControlMappingModel", () => {
       mapping_direction: "forward",
     });
 
+    expect(mapping.organization_id).toBe(3);
     expect(mapping.source_control_id).toBeUndefined();
     expect(mapping.target_control_id).toBeUndefined();
     expect(mapping.rationale).toBeUndefined();

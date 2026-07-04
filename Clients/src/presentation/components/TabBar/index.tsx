@@ -17,6 +17,11 @@ export interface TabItem {
   disabled?: boolean;
   /** Optional tooltip shown on hover to explain the tab's purpose */
   tooltip?: string;
+  /** Optional rich tooltip with header and description */
+  tooltipContent?: {
+    header: string;
+    description: string;
+  };
 }
 
 export interface TabBarProps {
@@ -169,7 +174,7 @@ const TabBar: React.FC<TabBarProps> = ({
             />
           ) : undefined;
 
-          const tooltipText = tab.tooltip || (tab.disabled ? disabledTabTooltip : "");
+          const fallbackTooltip = tab.tooltip || (tab.disabled ? disabledTabTooltip : "");
           const labelContent = createTabLabelWithCount({
             label: tab.label,
             icon: iconElement,
@@ -178,8 +183,16 @@ const TabBar: React.FC<TabBarProps> = ({
           });
 
           // Wrap label content in VWTooltip so Tab remains a direct child of TabList
-          const label = tooltipText ? (
-            <VWTooltip content={tooltipText} placement="top">
+          const label = tab.tooltipContent ? (
+            <VWTooltip
+              header={tab.tooltipContent.header}
+              content={tab.tooltipContent.description}
+              placement="top"
+            >
+              <span style={{ display: "inline-flex", alignItems: "center" }}>{labelContent}</span>
+            </VWTooltip>
+          ) : fallbackTooltip ? (
+            <VWTooltip content={fallbackTooltip} placement="top">
               <span style={{ display: "inline-flex", alignItems: "center" }}>{labelContent}</span>
             </VWTooltip>
           ) : (

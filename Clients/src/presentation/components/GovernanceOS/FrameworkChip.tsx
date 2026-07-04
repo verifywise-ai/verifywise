@@ -1,5 +1,6 @@
 import React from "react";
 import { Box } from "@mui/material";
+import GovernanceTooltip from "./GovernanceTooltip";
 import { accent, background, text, border as borderPalette } from "../../themes/palette";
 
 interface FrameworkChipProps {
@@ -31,27 +32,40 @@ const FrameworkChip: React.FC<FrameworkChipProps> = ({
   const fontSize = size === "small" ? 11 : 12;
   const padding = size === "small" ? "0 8px" : "0 10px";
 
+  const tooltip =
+    priority === "supplementary"
+      ? {
+          header: "Inactive framework",
+          description: "This framework is not currently assigned to the project",
+        }
+      : {
+          header: "Active framework",
+          description: "This framework is assigned to the project",
+        };
+
   return (
-    <Box
-      component="span"
-      data-framework={FRAMEWORK_SLUGS[frameworkName.toLowerCase()] || frameworkName.toLowerCase()}
-      data-priority={priority}
-      sx={{
-        display: "inline-flex",
-        alignItems: "center",
-        height,
-        padding,
-        borderRadius: "4px",
-        backgroundColor: colors.bg,
-        color: colors.text,
-        border: `1px solid ${colors.border}`,
-        fontSize,
-        fontWeight: 500,
-        whiteSpace: "nowrap",
-      }}
-    >
-      {frameworkName}
-    </Box>
+    <GovernanceTooltip header={tooltip.header} description={tooltip.description}>
+      <Box
+        component="span"
+        data-framework={FRAMEWORK_SLUGS[frameworkName.toLowerCase()] || frameworkName.toLowerCase()}
+        data-priority={priority}
+        sx={{
+          display: "inline-flex",
+          alignItems: "center",
+          height,
+          padding,
+          borderRadius: "4px",
+          backgroundColor: colors.bg,
+          color: colors.text,
+          border: `1px solid ${colors.border}`,
+          fontSize,
+          fontWeight: 500,
+          whiteSpace: "nowrap",
+        }}
+      >
+        {frameworkName}
+      </Box>
+    </GovernanceTooltip>
   );
 };
 

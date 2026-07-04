@@ -102,6 +102,18 @@ async def notify_guardrail_spike(
     })
 
 
+async def notify_approval_pending(
+    organization_id: int,
+    approval: dict[str, Any],
+) -> None:
+    """Notify admins that an MCP tool call is waiting for human approval."""
+    await _send_notification({
+        "type": "approval_pending",
+        "organization_id": organization_id,
+        "approval": approval,
+    })
+
+
 async def notify_virtual_key_budget_exhausted(
     organization_id: int,
     key_name: str,

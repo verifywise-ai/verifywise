@@ -85,6 +85,10 @@ import {
   ValidationException,
   BusinessLogicException,
 } from "../../domain.layer/exceptions/custom.exception";
+import {
+  buildOrganization,
+  buildManyOrganization,
+} from "../../tests/factories/organization.factory";
 
 const mockGetAll = getAllOrganizationsQuery as jest.MockedFunction<typeof getAllOrganizationsQuery>;
 const mockGetExists = getOrganizationsExistsQuery as jest.MockedFunction<
@@ -136,7 +140,7 @@ describe("organization.ctrl", () => {
 
   describe("getAllOrganizations", () => {
     it("should return 200 with organizations when data exists", async () => {
-      const data = [{ id: 1, name: "Org1" }];
+      const data = buildManyOrganization(1);
       mockGetAll.mockResolvedValue(data as any);
       const req = createReq();
       const res = createRes();
@@ -180,7 +184,7 @@ describe("organization.ctrl", () => {
 
   describe("getOrganizationById", () => {
     it("should return 200 when organization is found", async () => {
-      const org = { id: 1, name: "Org1" };
+      const org = buildOrganization();
       mockGetById.mockResolvedValue(org as any);
       const req = createReq({ params: { id: "1" } });
       const res = createRes();
@@ -206,7 +210,7 @@ describe("organization.ctrl", () => {
 
   describe("createOrganization", () => {
     it("should return 201 when organization is created successfully", async () => {
-      const org = { id: 1, name: "NewOrg" };
+      const org = buildOrganization({ name: "NewOrg" });
       const orgModel = {
         validateOrganizationData: jest.fn().mockResolvedValue(undefined),
       };
@@ -318,7 +322,7 @@ describe("organization.ctrl", () => {
 
   describe("updateOrganizationById", () => {
     it("should return 200 when organization is updated", async () => {
-      const updated = { id: 1, name: "Updated" };
+      const updated = buildOrganization({ name: "Updated" });
       const orgInstance = {
         updateOrganization: jest.fn().mockResolvedValue(undefined),
         validateOrganizationData: jest.fn().mockResolvedValue(undefined),
@@ -360,7 +364,7 @@ describe("organization.ctrl", () => {
 
   describe("deleteOrganizationById", () => {
     it("should return 200 when organization is deleted", async () => {
-      const org = { id: 1, name: "Org1" };
+      const org = buildOrganization();
       mockGetById.mockResolvedValue(org as any);
       mockDeleteQuery.mockResolvedValue(true as any);
       const req = createReq({ params: { id: "1" } });
@@ -377,7 +381,7 @@ describe("organization.ctrl", () => {
       expect(res.status).toHaveBeenCalledWith(404);
     });
     it("should return 400 when delete returns false", async () => {
-      const org = { id: 1, name: "Org1" };
+      const org = buildOrganization();
       mockGetById.mockResolvedValue(org as any);
       mockDeleteQuery.mockResolvedValue(false as any);
       const req = createReq({ params: { id: "1" } });
@@ -396,7 +400,7 @@ describe("organization.ctrl", () => {
 
   describe("updateOnboardingStatus", () => {
     it("should return 200 when onboarding status is updated", async () => {
-      const org = { id: 1, name: "Org1" };
+      const org = buildOrganization();
       mockGetById.mockResolvedValue(org as any);
       const req = createReq({ params: { id: "1" }, organizationId: 1 });
       const res = createRes();

@@ -52,6 +52,7 @@ import AddRepositoryModal from "./AddRepositoryModal";
 import { palette } from "../../themes/palette";
 import singleTheme from "../../themes/v1SingleTheme";
 import { keyframes } from "@mui/system";
+import { displayFormattedDate, displayFormattedDateTime } from "../../tools/isoDateToString";
 
 const spin = keyframes`from { transform: rotate(0deg); } to { transform: rotate(360deg); }`;
 
@@ -101,19 +102,12 @@ function formatRelativeTime(dateStr: string | null | undefined): string {
   if (diffMins < 60) return `${diffMins}m ago`;
   if (diffHours < 24) return `${diffHours}h ago`;
   if (diffDays < 30) return `${diffDays}d ago`;
-  return date.toLocaleDateString();
+  return displayFormattedDate(date);
 }
 
 function formatNextScan(dateStr: string | null | undefined): string {
   if (!dateStr) return "—";
-  const date = new Date(dateStr);
-  return date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
+  return displayFormattedDateTime(dateStr);
 }
 
 function getStatusChipColor(

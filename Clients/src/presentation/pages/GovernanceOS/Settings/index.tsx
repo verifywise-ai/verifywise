@@ -14,6 +14,7 @@ import GovernanceLayout from "../shared/GovernanceLayout";
 import Toggle from "../../../components/Inputs/Toggle";
 import Checkbox from "../../../components/Inputs/Checkbox";
 import FrameworkChip from "../../../components/GovernanceOS/FrameworkChip";
+import GovernanceTooltip from "../../../components/GovernanceOS/GovernanceTooltip";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import {
   useGovernancePreferences,
@@ -123,16 +124,23 @@ const GovernanceSettings: React.FC = () => {
                   : "Module is disabled and hidden from sidebar."}
               </Typography>
             </Box>
-            <FormControlLabel
-              control={
-                <Toggle
-                  checked={isEnabled}
-                  onChange={(e) => setIsEnabled(e.target.checked)}
-                  disabled={!isAdmin}
+            <GovernanceTooltip
+              header="Module Status"
+              description="Toggle Governance Intelligence on or off for your organization. Only admins can change this."
+            >
+              <span>
+                <FormControlLabel
+                  control={
+                    <Toggle
+                      checked={isEnabled}
+                      onChange={(e) => setIsEnabled(e.target.checked)}
+                      disabled={!isAdmin}
+                    />
+                  }
+                  label=""
                 />
-              }
-              label=""
-            />
+              </span>
+            </GovernanceTooltip>
           </Box>
           {!isAdmin && (
             <Typography sx={{ fontSize: 11, color: text.muted, mt: "4px" }}>
@@ -182,12 +190,19 @@ const GovernanceSettings: React.FC = () => {
                   </Stack>
                 )}
                 <Box>
-                  <CustomizableButton
-                    size="small"
-                    variant="outlined"
-                    onClick={() => navigate("/governance/scenarios")}
-                    text="Change scenario"
-                  />
+                  <GovernanceTooltip
+                    header="Change scenario"
+                    description="Switch to a different governance scenario to update framework priorities."
+                  >
+                    <span>
+                      <CustomizableButton
+                        size="small"
+                        variant="outlined"
+                        onClick={() => navigate("/governance/scenarios")}
+                        text="Change scenario"
+                      />
+                    </span>
+                  </GovernanceTooltip>
                 </Box>
               </Stack>
             ) : (
@@ -195,12 +210,19 @@ const GovernanceSettings: React.FC = () => {
                 <Typography sx={{ fontSize: 13, color: text.accent }}>
                   No active scenario selected.
                 </Typography>
-                <CustomizableButton
-                  size="small"
-                  variant="contained"
-                  onClick={() => navigate("/governance/scenarios")}
-                  text="Choose scenario"
-                />
+                <GovernanceTooltip
+                  header="Choose scenario"
+                  description="Select or create a governance scenario to activate framework prioritization across projects."
+                >
+                  <span>
+                    <CustomizableButton
+                      size="small"
+                      variant="contained"
+                      onClick={() => navigate("/governance/scenarios")}
+                      text="Choose scenario"
+                    />
+                  </span>
+                </GovernanceTooltip>
               </Stack>
             )}
           </Box>
@@ -221,24 +243,38 @@ const GovernanceSettings: React.FC = () => {
             }}
           >
             <Box sx={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <Checkbox
-                id="dont-ask-governance-os"
-                isChecked={dontAskAgain}
-                value="dont-ask"
-                onChange={() => setDontAskAgain((prev) => !prev)}
-              />
+              <GovernanceTooltip
+                header="Smart Prompt Preference"
+                description="Stop the system from prompting you to enable Governance Intelligence in the future."
+              >
+                <span>
+                  <Checkbox
+                    id="dont-ask-governance-os"
+                    isChecked={dontAskAgain}
+                    value="dont-ask"
+                    onChange={() => setDontAskAgain((prev) => !prev)}
+                  />
+                </span>
+              </GovernanceTooltip>
               <Typography sx={{ fontSize: 13, color: text.primary }}>
                 Don&apos;t ask me again about enabling Governance Intelligence
               </Typography>
             </Box>
             <Box sx={{ mt: "12px" }}>
-              <CustomizableButton
-                size="small"
-                variant="text"
-                onClick={() => setDontAskAgain(false)}
-                isDisabled={!dontAskAgain}
-                text="Reset prompt preference"
-              />
+              <GovernanceTooltip
+                header="Reset prompt preference"
+                description="Re-enable the smart prompt that suggests turning on Governance Intelligence."
+              >
+                <span>
+                  <CustomizableButton
+                    size="small"
+                    variant="text"
+                    onClick={() => setDontAskAgain(false)}
+                    isDisabled={!dontAskAgain}
+                    text="Reset prompt preference"
+                  />
+                </span>
+              </GovernanceTooltip>
             </Box>
           </Box>
         </SettingsSection>
@@ -267,26 +303,40 @@ const GovernanceSettings: React.FC = () => {
               </Typography>
             )}
             <Box sx={{ mt: "12px" }}>
-              <CustomizableButton
-                size="small"
-                variant="outlined"
-                onClick={() => navigate("/governance/framework-mapper")}
-                text="Open Framework Mapper"
-              />
+              <GovernanceTooltip
+                header="Open Framework Mapper"
+                description="Go to the Framework Mapper to configure filters for your session."
+              >
+                <span>
+                  <CustomizableButton
+                    size="small"
+                    variant="outlined"
+                    onClick={() => navigate("/governance/framework-mapper")}
+                    text="Open Framework Mapper"
+                  />
+                </span>
+              </GovernanceTooltip>
             </Box>
           </Box>
         </SettingsSection>
 
         {/* Save */}
         <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
-          <CustomizableButton
-            variant="contained"
-            size="small"
-            startIcon={<Save size={14} />}
-            onClick={handleSave}
-            isDisabled={updatePrefsMutation.isPending}
-            text={updatePrefsMutation.isPending ? "Saving..." : "Save changes"}
-          />
+          <GovernanceTooltip
+            header="Save changes"
+            description="Save your Governance Intelligence preferences."
+          >
+            <span>
+              <CustomizableButton
+                variant="contained"
+                size="small"
+                startIcon={<Save size={14} />}
+                onClick={handleSave}
+                isDisabled={updatePrefsMutation.isPending}
+                text={updatePrefsMutation.isPending ? "Saving..." : "Save changes"}
+              />
+            </span>
+          </GovernanceTooltip>
         </Box>
       </Stack>
     </GovernanceLayout>

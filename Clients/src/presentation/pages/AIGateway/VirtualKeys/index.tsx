@@ -10,6 +10,8 @@ import {
   Check,
   Server,
   TriangleAlert,
+  AlertTriangle,
+  RotateCcw,
 } from "lucide-react";
 import { EmptyState } from "../../../components/EmptyState";
 import EmptyStateTip from "../../../components/EmptyState/EmptyStateTip";
@@ -21,6 +23,7 @@ import StandardModal from "../../../components/Modals/StandardModal";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import palette from "../../../themes/palette";
+import CustomizableSkeleton from "../../../components/Skeletons";
 import {
   sectionTitleSx,
   useCardSx,
@@ -71,6 +74,7 @@ export default function AIGatewayVirtualKeysPage({ embedded }: { embedded?: bool
   const [keys, setKeys] = useState<VirtualKey[]>([]);
   const [endpointCount, setEndpointCount] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Create modal
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -104,6 +108,8 @@ export default function AIGatewayVirtualKeysPage({ embedded }: { embedded?: bool
   }, []);
 
   const loadData = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
     try {
       const [keysRes, endpointsRes] = await Promise.all([
         apiServices.get<Record<string, any>>("/ai-gateway/virtual-keys"),
@@ -113,7 +119,7 @@ export default function AIGatewayVirtualKeysPage({ embedded }: { embedded?: bool
       const eps = endpointsRes?.data?.endpoints || [];
       setEndpointCount(eps.filter((e: any) => e.is_active).length);
     } catch {
-      // Silently handle
+      setLoadError("Failed to load virtual keys. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -237,57 +243,70 @@ export default function AIGatewayVirtualKeysPage({ embedded }: { embedded?: bool
 
   const content = (
     <>
-      {!loading && keys.length === 0 && (
-        <EmptyState
-          icon={KeyRound}
-          message="Give your developers a single API key to access any LLM through the gateway — no VerifyWise account needed."
-          showBorder
-        >
-          {endpointCount === 0 && (
-            <Box
-              sx={{
-                display: "flex",
-                alignItems: "flex-start",
-                gap: "8px",
-                p: "12px 16px",
-                borderRadius: "4px",
-                border: "1px solid #FEDF89",
-                bgcolor: "#FFFAEB",
-                mb: "8px",
-              }}
-            >
-              <TriangleAlert
-                size={16}
-                strokeWidth={1.5}
-                color="#B54708"
-                style={{ flexShrink: 0, marginTop: 1 }}
-              />
-              <Box>
-                <Typography fontSize={13} fontWeight={500} color="#B54708">
-                  No endpoints configured
-                </Typography>
-                <Typography fontSize={12} color="#93370D" mt="2px">
-                  Virtual keys route requests through endpoints. You need at least one active
-                  endpoint before creating a virtual key.{" "}
-                  <Link to="/ai-gateway/endpoints" style={{ color: "#B54708", fontWeight: 500 }}>
-                    Go to Endpoints
-                  </Link>{" "}
-                  to set one up.
-                </Typography>
-              </Box>
-            </Box>
-          )}
-          <EmptyStateTip
-            icon={Server}
-            title="Drop-in replacement for any OpenAI SDK"
-            description="Developers point their existing OpenAI SDK at the gateway URL and swap in the virtual key. No code changes beyond the base URL and key — all guardrails, logging, and budget controls apply automatically."
-          />
-          <EmptyStateTip
-            icon={KeyRound}
-            title="Per-key budgets and rate limits"
-            description="Each virtual key can have its own monthly spending cap and request-per-minute limit. When a key hits its budget, only that key is blocked — other keys and the rest of the gateway keep running."
+      {loading ? (
+        <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
+      ) : loadError ? (
+        <EmptyState icon={AlertTriangle} message={loadError}>
+          <CustomizableButton
+            variant="outlined"
+            text="Retry"
+            icon={<RotateCcw size={16} />}
+            onClick={loadData}
           />
         </EmptyState>
+      ) : (
+        keys.length === 0 && (
+          <EmptyState
+            icon={KeyRound}
+            message="Give your developers a single API key to access any LLM through the gateway — no VerifyWise account needed."
+            showBorder
+          >
+            {endpointCount === 0 && (
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: "8px",
+                  p: "12px 16px",
+                  borderRadius: "4px",
+                  border: "1px solid #FEDF89",
+                  bgcolor: "#FFFAEB",
+                  mb: "8px",
+                }}
+              >
+                <TriangleAlert
+                  size={16}
+                  strokeWidth={1.5}
+                  color="#B54708"
+                  style={{ flexShrink: 0, marginTop: 1 }}
+                />
+                <Box>
+                  <Typography fontSize={13} fontWeight={500} color="#B54708">
+                    No endpoints configured
+                  </Typography>
+                  <Typography fontSize={12} color="#93370D" mt="2px">
+                    Virtual keys route requests through endpoints. You need at least one active
+                    endpoint before creating a virtual key.{" "}
+                    <Link to="/ai-gateway/endpoints" style={{ color: "#B54708", fontWeight: 500 }}>
+                      Go to Endpoints
+                    </Link>{" "}
+                    to set one up.
+                  </Typography>
+                </Box>
+              </Box>
+            )}
+            <EmptyStateTip
+              icon={Server}
+              title="Drop-in replacement for any OpenAI SDK"
+              description="Developers point their existing OpenAI SDK at the gateway URL and swap in the virtual key. No code changes beyond the base URL and key — all guardrails, logging, and budget controls apply automatically."
+            />
+            <EmptyStateTip
+              icon={KeyRound}
+              title="Per-key budgets and rate limits"
+              description="Each virtual key can have its own monthly spending cap and request-per-minute limit. When a key hits its budget, only that key is blocked — other keys and the rest of the gateway keep running."
+            />
+          </EmptyState>
+        )
       )}
 
       {!loading && keys.length > 0 && (

@@ -45,7 +45,14 @@ export interface ProjectRisk {
   recommendations?: any;
 }
 
-const PROJECT_RISKS_QUERY_KEY = ["projectRisks"] as const;
+export const projectRiskQueryKeys = {
+  all: ["projectRisks"] as const,
+  lists: () => [...projectRiskQueryKeys.all, "list"] as const,
+  list: (projectId: number | string, filter?: string) =>
+    [...projectRiskQueryKeys.lists(), { projectId, filter }] as const,
+  details: () => [...projectRiskQueryKeys.all, "detail"] as const,
+  detail: (id: number | string) => [...projectRiskQueryKeys.details(), id] as const,
+};
 
 const useProjectRisks = ({ projectId, refreshKey }: { projectId: number; refreshKey?: any }) => {
   const {
@@ -53,7 +60,7 @@ const useProjectRisks = ({ projectId, refreshKey }: { projectId: number; refresh
     isLoading: loadingProjectRisks,
     error,
   } = useQuery({
-    queryKey: [...PROJECT_RISKS_QUERY_KEY, projectId, refreshKey],
+    queryKey: [...projectRiskQueryKeys.list(projectId, "active"), refreshKey],
     queryFn: async ({ signal }) => {
       const response = await getAllProjectRisksByProjectId({
         projectId: String(projectId),

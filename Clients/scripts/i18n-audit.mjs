@@ -17,7 +17,7 @@ import { dirname } from "node:path";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const SRC_DIR = join(__dirname, "..", "src");
 const TRANSLATIONS_PATH = join(SRC_DIR, "i18n", "translations.ts");
-const SUPPORTED_LANGS = ["de", "fr"];
+const SUPPORTED_LANGS = ["de", "fr", "es"];
 
 const args = process.argv.slice(2);
 const wantJson = args.includes("--json");
@@ -188,6 +188,17 @@ const KNOWN_DEMO_STRINGS = new Set([
   "Usage example",
   "With retrieval context",
   "VerifyWise", // brand name, doesn't translate
+  // AI Trust Index — English content mirrored verbatim from the public website
+  // feed/rubric (verifywise.ai/ai-trust-index.json). This surface displays the
+  // upstream assessment in English by design; these labels are not translated.
+  "Training-data use",
+  "Data-subject rights",
+  "Retention and deletion",
+  "Third-party sharing",
+  "Sensitive data and children",
+  "Security and accountability",
+  "Grade scale",
+  "What the policy is silent or vague on",
 ]);
 
 function isNoise(s) {

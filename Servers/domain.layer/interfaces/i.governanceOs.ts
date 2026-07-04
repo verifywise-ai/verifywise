@@ -13,6 +13,7 @@ export type ControlType =
 
 export interface IGovernanceControlMappingAttributes {
   id?: number;
+  organization_id: number;
   source_framework_id: number;
   source_control_type: ControlType;
   source_control_identifier: string;
@@ -78,6 +79,7 @@ export interface IGovernanceCoverageCacheAttributes {
   coverage_percentage: number;
   gap_details?: Record<string, unknown>;
   synergy_details?: Record<string, unknown>;
+  calculation_methodology?: string;
   computed_at?: Date;
 }
 

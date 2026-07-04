@@ -23,28 +23,31 @@ const VALID_INDUSTRIES = [
 const VALID_REGIONS = ["eu", "us", "global", "apac", "uk", "mena"];
 const VALID_USE_CASE_TYPES = ["high_risk_ai", "general_purpose_ai", "limited_risk"];
 
-export function validateMappingInput(data: Partial<IGovernanceControlMappingAttributes>): {
+export function validateMappingInput(
+  data: Partial<IGovernanceControlMappingAttributes>,
+  isUpdate = false,
+): {
   valid: boolean;
   errors: string[];
 } {
   const errors: string[] = [];
 
-  if (!data.source_framework_id) {
+  if (!isUpdate && !data.source_framework_id) {
     errors.push("source_framework_id is required");
   }
-  if (!data.target_framework_id) {
+  if (!isUpdate && !data.target_framework_id) {
     errors.push("target_framework_id is required");
   }
-  if (!stringValidation(data.source_control_type, 1, 50)) {
+  if (!isUpdate && !stringValidation(data.source_control_type, 1, 50)) {
     errors.push("source_control_type is required (1-50 chars)");
   }
-  if (!stringValidation(data.source_control_identifier, 1, 100)) {
+  if (!isUpdate && !stringValidation(data.source_control_identifier, 1, 100)) {
     errors.push("source_control_identifier is required (1-100 chars)");
   }
-  if (!stringValidation(data.target_control_type, 1, 50)) {
+  if (!isUpdate && !stringValidation(data.target_control_type, 1, 50)) {
     errors.push("target_control_type is required (1-50 chars)");
   }
-  if (!stringValidation(data.target_control_identifier, 1, 100)) {
+  if (!isUpdate && !stringValidation(data.target_control_identifier, 1, 100)) {
     errors.push("target_control_identifier is required (1-100 chars)");
   }
   if (data.mapping_strength && !enumValidation(data.mapping_strength, VALID_MAPPING_STRENGTHS)) {

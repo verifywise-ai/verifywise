@@ -23,6 +23,10 @@ const RiskLevel: FC<IRiskLevelProps> = ({
   riskSeverity,
   handleOnSelectChange,
   disabled = false,
+  likelihoodError,
+  riskSeverityError,
+  onLikelihoodBlur,
+  onRiskSeverityBlur,
 }) => {
   const theme = useTheme();
 
@@ -47,7 +51,9 @@ const RiskLevel: FC<IRiskLevelProps> = ({
         placeholder="Select likelihood of risk to happen"
         value={likelihood}
         onChange={handleOnSelectChange("likelihood")}
+        onBlur={onLikelihoodBlur}
         items={likelihoodItems}
+        error={likelihoodError}
         sx={{ width: "325px", backgroundColor: theme.palette.background.main }}
         disabled={disabled}
       />
@@ -57,7 +63,9 @@ const RiskLevel: FC<IRiskLevelProps> = ({
         placeholder="Select risk severity"
         value={riskSeverity}
         onChange={handleOnSelectChange("riskSeverity")}
+        onBlur={onRiskSeverityBlur}
         items={riskSeverityItems}
+        error={riskSeverityError}
         sx={{ width: "325px", backgroundColor: theme.palette.background.main }}
         disabled={disabled}
       />

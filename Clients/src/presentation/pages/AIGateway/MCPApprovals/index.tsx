@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { Box, Typography, Stack } from "@mui/material";
 import TabContext from "@mui/lab/TabContext";
-import { CheckCircle, XCircle, ShieldCheck } from "lucide-react";
+import { CheckCircle, XCircle, ShieldCheck, AlertTriangle, RotateCcw } from "lucide-react";
 import TabBar from "../../../components/TabBar";
 import Chip from "../../../components/Chip";
 import Field from "../../../components/Inputs/Field";
@@ -12,8 +12,10 @@ import { EmptyState } from "../../../components/EmptyState";
 import EmptyStateTip from "../../../components/EmptyState/EmptyStateTip";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import { sectionTitleSx, useCardSx, MCP_STATUS_COLORS, MCP_STATUS_FALLBACK } from "../shared";
+import MCPTable from "../MCPTable";
 import { displayFormattedDate } from "../../../tools/isoDateToString";
 import palette from "../../../themes/palette";
+import CustomizableSkeleton from "../../../components/Skeletons";
 
 interface Approval {
   id: number;
@@ -39,6 +41,7 @@ export default function MCPApprovalsPage() {
   const [pending, setPending] = useState<Approval[]>([]);
   const [history, setHistory] = useState<Approval[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Decision modal state
   const [decisionTarget, setDecisionTarget] = useState<{
@@ -49,24 +52,30 @@ export default function MCPApprovalsPage() {
   const [reason, setReason] = useState("");
 
   const loadPending = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
     try {
       const res = await apiServices.get<Record<string, any>>("/ai-gateway/mcp/approvals");
       setPending(res?.data?.data || []);
     } catch {
-      // silent
+      setLoadError("Failed to load pending approvals. Please try again.");
     } finally {
       setLoading(false);
     }
   }, []);
 
   const loadHistory = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
     try {
       const res = await apiServices.get<Record<string, any>>(
         "/ai-gateway/mcp/approvals/history?limit=50",
       );
       setHistory(res?.data?.data || []);
     } catch {
-      // silent
+      setLoadError("Failed to load approval history. Please try again.");
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -74,6 +83,24 @@ export default function MCPApprovalsPage() {
     if (tab === "pending") loadPending();
     else loadHistory();
   }, [tab, loadPending, loadHistory]);
+
+  // Poll the pending tab so newly-arrived approval requests appear without a
+  // manual refresh. Only runs while the pending tab is active and the browser
+  // tab is visible, so backgrounded tabs don't keep hitting the API.
+  useEffect(() => {
+    if (tab !== "pending") return;
+    const interval = setInterval(() => {
+      if (!document.hidden) loadPending();
+    }, 10000);
+    const onVisible = () => {
+      if (!document.hidden) loadPending();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [tab, loadPending]);
 
   const handleDecision = async () => {
     if (!decisionTarget) return;
@@ -99,27 +126,27 @@ export default function MCPApprovalsPage() {
   };
 
   const isEmpty =
-    !loading &&
-    ((tab === "pending" && pending.length === 0) || (tab === "history" && history.length === 0));
+    (tab === "pending" && pending.length === 0) || (tab === "history" && history.length === 0);
 
   const items = tab === "pending" ? pending : history;
 
   return (
     <PageHeaderExtended
-      title="MCP Approvals"
-      description="Review and manage tool invocation approval requests."
+      title="Approvals"
+      description="Review and decide on agent tool calls that require human approval before they run."
+      helpArticlePath="ai-gateway/mcp-approvals"
     >
       {/* Tab bar */}
       <Box sx={{ px: 3, pt: 1 }}>
         <TabContext value={tab}>
           <TabBar
             tabs={[
+              { label: "History", value: "history", icon: "History" as const },
               {
                 label: `Pending${pending.length > 0 ? ` (${pending.length})` : ""}`,
                 value: "pending",
                 icon: "Clock" as const,
               },
-              { label: "History", value: "history", icon: "History" as const },
             ]}
             activeTab={tab}
             onChange={(_, v) => setTab(v as "pending" | "history")}
@@ -127,7 +154,18 @@ export default function MCPApprovalsPage() {
         </TabContext>
       </Box>
 
-      {isEmpty ? (
+      {loading ? (
+        <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
+      ) : loadError ? (
+        <EmptyState icon={AlertTriangle} message={loadError}>
+          <CustomizableButton
+            variant="outlined"
+            text="Retry"
+            icon={<RotateCcw size={16} />}
+            onClick={() => (tab === "pending" ? loadPending() : loadHistory())}
+          />
+        </EmptyState>
+      ) : isEmpty ? (
         <Box sx={{ px: 3, pt: 2 }}>
           <EmptyState
             icon={ShieldCheck}
@@ -151,13 +189,58 @@ export default function MCPApprovalsPage() {
             {tab === "pending" ? "Pending requests" : "Decision history"}
           </Typography>
 
-          <Stack spacing={1.5} sx={{ px: 3, pb: 3 }}>
-            {loading ? (
-              <Typography color="text.secondary" sx={{ py: 2 }}>
-                Loading...
-              </Typography>
-            ) : (
-              items.map((item) => {
+          {tab === "history" ? (
+            <Box sx={{ px: 3, pb: 3 }}>
+              <MCPTable
+                id="mcp-approvals-history-table"
+                columns={[
+                  { label: "Tool", width: 160 },
+                  { label: "Status", width: 110 },
+                  { label: "Agent key", width: 160 },
+                  { label: "Arguments" },
+                  { label: "Decided by", width: 180 },
+                  { label: "Reason", width: 200 },
+                ]}
+                rows={history}
+                rowKey={(item) => item.id}
+                renderRow={(item) => {
+                  const colors = MCP_STATUS_COLORS[item.status] || { ...MCP_STATUS_FALLBACK };
+                  return [
+                    <Typography sx={{ fontSize: 13, fontFamily: "monospace", fontWeight: 600 }}>
+                      {item.tool_name}
+                    </Typography>,
+                    <Chip
+                      label={item.status}
+                      backgroundColor={colors.bg}
+                      textColor={colors.text}
+                    />,
+                    <Typography variant="body2" color="text.secondary">
+                      {item.key_name || item.agent_key_name || `Key #${item.agent_key_id}`}
+                    </Typography>,
+                    <Typography
+                      variant="body2"
+                      color="text.secondary"
+                      sx={{ fontFamily: "monospace", fontSize: 12 }}
+                    >
+                      {item.arguments && Object.keys(item.arguments).length > 0
+                        ? JSON.stringify(item.arguments).slice(0, 120)
+                        : "—"}
+                    </Typography>,
+                    <Typography variant="body2" color="text.secondary">
+                      {item.decided_at
+                        ? `${item.decided_by_name || `User #${item.decided_by}`} · ${displayFormattedDate(item.decided_at)}`
+                        : "—"}
+                    </Typography>,
+                    <Typography variant="body2" color="text.secondary">
+                      {item.decision_reason || "—"}
+                    </Typography>,
+                  ];
+                }}
+              />
+            </Box>
+          ) : (
+            <Stack spacing={1.5} sx={{ px: 3, pb: 3 }}>
+              {items.map((item) => {
                 const colors = MCP_STATUS_COLORS[item.status] || {
                   ...MCP_STATUS_FALLBACK,
                 };
@@ -280,9 +363,9 @@ export default function MCPApprovalsPage() {
                     </Stack>
                   </Box>
                 );
-              })
-            )}
-          </Stack>
+              })}
+            </Stack>
+          )}
         </>
       )}
 

@@ -20,11 +20,20 @@
  * This setup ensures that all HTTP requests made using this custom Axios instance are consistent in terms of configuration and error handling.
  */
 
-import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
+import axios, { AxiosError } from "axios";
 import { store } from "../../application/redux/store";
 import { ENV_VARs } from "../../../env.vars";
 import { clearAuthState, setAuthToken } from "../../application/redux/auth/authSlice";
 import { AlertProps } from "../../presentation/types/alert.types";
+import { translations, type Lang } from "../../i18n/translations";
+import { getLanguage } from "../../i18n/domTranslator";
+import type {
+  ApiErrorEnvelope,
+  ApiSuccessEnvelope,
+  QueuedRequest,
+  RefreshTokenResponse,
+  RetriableRequestConfig,
+} from "./api.types";
 
 const performLogout = () => {
   store.dispatch(clearAuthState());
@@ -46,6 +55,31 @@ export const showAlert = (alert: AlertProps) => {
   }
 };
 
+// Lightweight translation helper for non-React infrastructure code.
+// Looks up the current language from the DOM translator and falls back to the
+// English source key when no translation is available.
+const translate = (key: string): string => {
+  const lang: Lang = getLanguage();
+  if (lang === "en") return key;
+  return translations[lang]?.[key] || key;
+};
+
+// Show a translated error toast for server or network failures.
+// 4xx errors are intentionally left for callers/UI layers to handle.
+const showGlobalErrorAlert = (error: AxiosError) => {
+  const status = error.response?.status;
+  const isServerError = status != null && status >= 500;
+  const isNetworkError = error.response == null;
+
+  if (isServerError || isNetworkError) {
+    showAlert({
+      variant: "error",
+      title: translate("Error"),
+      body: translate("An error occurred. Please try again later"),
+    });
+  }
+};
+
 // Create an instance of axios with default configurations
 const CustomAxios = axios.create({
   baseURL: `${ENV_VARs.URL}/api`,
@@ -61,12 +95,9 @@ const CustomAxios = axios.create({
 // Flag to prevent multiple refresh token requests
 let isRefreshing = false;
 // Store pending requests that should be retried after token refresh
-let failedQueue: Array<{
-  resolve: (value?: unknown) => void;
-  reject: (reason?: any) => void;
-}> = [];
+let failedQueue: QueuedRequest[] = [];
 
-const processQueue = (error: any, token: string | null = null) => {
+const processQueue = (error: unknown, token: string | null = null) => {
   failedQueue.forEach((prom) => {
     if (error) {
       prom.reject(error);
@@ -123,8 +154,8 @@ CustomAxios.interceptors.response.use(
     return response;
   },
   async (error: AxiosError) => {
-    const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean };
-    const responseData = error.response?.data as { message?: string };
+    const originalRequest = error.config as RetriableRequestConfig;
+    const responseData = (error.response?.data ?? {}) as ApiErrorEnvelope;
     // Don't transform 404 errors - let them through as AxiosErrors so status is preserved
     // This allows downstream code to handle 404s differently (e.g., as empty state vs error)
     // if (error.response?.status === 404) {
@@ -150,6 +181,22 @@ CustomAxios.interceptors.response.use(
       return Promise.reject(new Error(responseData?.message || "Forbidden"));
     }
 
+    // If the auth/refresh limiter has been tripped (429), stop the retry
+    // cascade and surface a clear message instead of letting calls keep
+    // hammering the refresh endpoint.
+    if (error.response?.status === 429 && originalRequest.url === "/users/refresh-token") {
+      isRefreshing = false;
+      processQueue(error, null);
+      if (showAlertCallback) {
+        showAlertCallback({
+          variant: "warning",
+          title: "Too many attempts",
+          body: "Too many requests in a short time. Please wait a moment and refresh the page.",
+        });
+      }
+      return Promise.reject(error);
+    }
+
     // If error is 406 (Token Expired) and we haven't tried to refresh yet
     if (error.response?.status === 406 && !originalRequest._retry) {
       // If this is the refresh token request itself returning 406
@@ -167,16 +214,16 @@ CustomAxios.interceptors.response.use(
 
       // For other APIs returning 406, try to refresh the token
       if (isRefreshing) {
-        return new Promise((resolve, reject) => {
+        return new Promise<string | null>((resolve, reject) => {
           failedQueue.push({ resolve, reject });
         })
           .then((token) => {
             originalRequest.headers.Authorization = `Bearer ${token}`;
             return CustomAxios(originalRequest);
           })
-          .catch((err) => {
+          .catch((err: unknown) => {
             // If refresh token fails, redirect to login
-            if (err.response?.status === 406) {
+            if (axios.isAxiosError(err) && err.response?.status === 406) {
               store.dispatch(setAuthToken(""));
             }
             return Promise.reject(err);
@@ -187,7 +234,7 @@ CustomAxios.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        const response = await CustomAxios.post(
+        const response = await CustomAxios.post<ApiSuccessEnvelope<RefreshTokenResponse>>(
           `/users/refresh-token`,
           {},
           { withCredentials: true },
@@ -200,10 +247,10 @@ CustomAxios.interceptors.response.use(
           processQueue(null, newToken);
           return CustomAxios(originalRequest);
         }
-      } catch (refreshError: any) {
+      } catch (refreshError: unknown) {
         processQueue(refreshError, null);
         // If refresh token request fails with 406, redirect to login
-        if (refreshError.response?.status === 406) {
+        if (axios.isAxiosError(refreshError) && refreshError.response?.status === 406) {
           store.dispatch(setAuthToken(""));
         }
         return Promise.reject(refreshError);
@@ -211,6 +258,10 @@ CustomAxios.interceptors.response.use(
         isRefreshing = false;
       }
     }
+
+    // Surface generic translated error toasts for server and network failures.
+    // Auth-specific errors (403/429/406) are handled above and return early.
+    showGlobalErrorAlert(error);
 
     return Promise.reject(error);
   },

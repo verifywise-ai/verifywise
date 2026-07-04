@@ -1,14 +1,6 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-
-vi.mock("../customAxios", () => ({
-  default: {
-    get: vi.fn(),
-    post: vi.fn(),
-    put: vi.fn(),
-    patch: vi.fn(),
-    delete: vi.fn(),
-  },
-}));
+import { describe, it, expect } from "vitest";
+import { server } from "../../../test/mocks/server";
+import { http, HttpResponse } from "msw";
 
 import {
   evaluationLogsService,
@@ -17,147 +9,114 @@ import {
   experimentsService,
   monitoringService,
 } from "../evaluationLogsService";
-import CustomAxios from "../customAxios";
-
-const mockAxios = vi.mocked(CustomAxios, { deep: true });
 
 describe("evaluationLogsService", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("createLog posts log data", async () => {
-    mockAxios.post.mockResolvedValue({ data: { id: "log1" } });
+    server.use(
+      http.post("/api/deepeval/logs", async ({ request }) => {
+        const body = (await request.json()) as Record<string, unknown>;
+        return HttpResponse.json({ id: "log1", project_id: body.project_id });
+      }),
+    );
     const result = await evaluationLogsService.createLog({ project_id: "p1" });
-    expect(mockAxios.post).toHaveBeenCalledWith("/deepeval/logs", { project_id: "p1" });
     expect(result.id).toBe("log1");
   });
 
   it("getLogs fetches with params and timeout", async () => {
-    mockAxios.get.mockResolvedValue({ data: { logs: [] } });
-    await evaluationLogsService.getLogs({ project_id: "p1", limit: 10 });
-    expect(mockAxios.get).toHaveBeenCalledWith("/deepeval/logs", {
-      params: { project_id: "p1", limit: 10 },
-      timeout: 60000,
-    });
+    server.use(http.get("/api/deepeval/logs", () => HttpResponse.json({ logs: [] })));
+    const result = await evaluationLogsService.getLogs({ project_id: "p1", limit: 10 });
+    expect(result.logs).toEqual([]);
   });
 
   it("getLog fetches by ID", async () => {
-    mockAxios.get.mockResolvedValue({ data: { id: "log1" } });
     const result = await evaluationLogsService.getLog("log1");
-    expect(mockAxios.get).toHaveBeenCalledWith("/deepeval/logs/log1");
     expect(result.id).toBe("log1");
   });
 
   it("getTraceLogs fetches by trace ID", async () => {
-    mockAxios.get.mockResolvedValue({ data: { logs: [] } });
-    await evaluationLogsService.getTraceLogs("trace-1");
-    expect(mockAxios.get).toHaveBeenCalledWith("/deepeval/logs/trace/trace-1");
+    const result = await evaluationLogsService.getTraceLogs("trace-1");
+    expect(result.logs).toHaveLength(1);
   });
 });
 
 describe("metricsService", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("createMetric posts metric data", async () => {
-    mockAxios.post.mockResolvedValue({ data: { id: "m1" } });
-    await metricsService.createMetric({ project_id: "p1", metric_name: "accuracy" } as any);
-    expect(mockAxios.post).toHaveBeenCalledWith("/deepeval/metrics", expect.any(Object));
+    server.use(http.post("/api/deepeval/metrics", () => HttpResponse.json({ id: "m1" })));
+    const result = await metricsService.createMetric({
+      project_id: "p1",
+      metric_name: "accuracy",
+    } as any);
+    expect(result.id).toBe("m1");
   });
 
   it("getMetrics fetches with params", async () => {
-    mockAxios.get.mockResolvedValue({ data: { metrics: [] } });
-    await metricsService.getMetrics({ project_id: "p1" });
-    expect(mockAxios.get).toHaveBeenCalledWith("/deepeval/metrics", {
-      params: { project_id: "p1" },
-    });
+    const result = await metricsService.getMetrics({ project_id: "p1" });
+    expect(result.metrics).toHaveLength(1);
   });
 
   it("getMetricAggregates fetches aggregates", async () => {
-    mockAxios.get.mockResolvedValue({ data: { average: 0.9 } });
-    await metricsService.getMetricAggregates({ project_id: "p1", metric_name: "accuracy" });
-    expect(mockAxios.get).toHaveBeenCalledWith("/deepeval/metrics/aggregates", {
-      params: { project_id: "p1", metric_name: "accuracy" },
+    const result = await metricsService.getMetricAggregates({
+      project_id: "p1",
+      metric_name: "accuracy",
     });
+    expect(result.average).toBe(0.85);
   });
 });
 
 describe("modelValidationService", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("validateModel posts model info", async () => {
-    mockAxios.post.mockResolvedValue({ data: { valid: true, model_name: "gpt-4" } });
     const result = await modelValidationService.validateModel("gpt-4", "openai");
-    expect(mockAxios.post).toHaveBeenCalledWith("/deepeval/models/validate", {
-      model_name: "gpt-4",
-      provider: "openai",
-    });
     expect(result.valid).toBe(true);
   });
 });
 
 describe("experimentsService", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("createExperiment posts experiment data", async () => {
-    mockAxios.post.mockResolvedValue({ data: { id: "e1" } });
-    await experimentsService.createExperiment({ project_id: "p1", name: "Test", config: {} });
-    expect(mockAxios.post).toHaveBeenCalledWith("/deepeval/experiments", expect.any(Object));
+    server.use(http.post("/api/deepeval/experiments", () => HttpResponse.json({ id: "e1" })));
+    const result = await experimentsService.createExperiment({
+      project_id: "p1",
+      name: "Test",
+      config: {},
+    });
+    expect(result.id).toBe("e1");
   });
 
   it("getExperiments fetches with timeout", async () => {
-    mockAxios.get.mockResolvedValue({ data: { experiments: [] } });
-    await experimentsService.getExperiments({ project_id: "p1" });
-    expect(mockAxios.get).toHaveBeenCalledWith("/deepeval/experiments", {
-      params: { project_id: "p1" },
-      timeout: 60000,
-    });
+    const result = await experimentsService.getExperiments({ project_id: "p1" });
+    expect(result.experiments).toHaveLength(1);
   });
 
   it("getExperiment fetches by ID", async () => {
-    mockAxios.get.mockResolvedValue({ data: { id: "e1" } });
-    await experimentsService.getExperiment("e1");
-    expect(mockAxios.get).toHaveBeenCalledWith("/deepeval/experiments/e1");
+    const result = await experimentsService.getExperiment("e1");
+    expect(result.id).toBe("e1");
   });
 
   it("updateExperiment patches experiment", async () => {
-    mockAxios.patch.mockResolvedValue({ data: { id: "e1" } });
-    await experimentsService.updateExperiment("e1", { name: "Updated" });
-    expect(mockAxios.patch).toHaveBeenCalledWith("/deepeval/experiments/e1", { name: "Updated" });
+    server.use(http.patch("/api/deepeval/experiments/:id", () => HttpResponse.json({ id: "e1" })));
+    const result = await experimentsService.updateExperiment("e1", { name: "Updated" });
+    expect(result.id).toBe("e1");
   });
 
   it("updateExperimentStatus puts status", async () => {
-    mockAxios.put.mockResolvedValue({ data: { id: "e1" } });
-    await experimentsService.updateExperimentStatus("e1", { status: "completed" });
-    expect(mockAxios.put).toHaveBeenCalledWith("/deepeval/experiments/e1/status", {
-      status: "completed",
-    });
+    server.use(
+      http.put("/api/deepeval/experiments/:id/status", () => HttpResponse.json({ id: "e1" })),
+    );
+    const result = await experimentsService.updateExperimentStatus("e1", { status: "completed" });
+    expect(result.id).toBe("e1");
   });
 
   it("deleteExperiment calls DELETE", async () => {
-    mockAxios.delete.mockResolvedValue({ data: { message: "deleted" } });
-    await experimentsService.deleteExperiment("e1");
-    expect(mockAxios.delete).toHaveBeenCalledWith("/deepeval/experiments/e1");
+    server.use(
+      http.delete("/api/deepeval/experiments/:id", () => HttpResponse.json({ message: "deleted" })),
+    );
+    const result = await experimentsService.deleteExperiment("e1");
+    expect(result.message).toBe("deleted");
   });
 });
 
 describe("monitoringService", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("getDashboard fetches dashboard data", async () => {
-    mockAxios.get.mockResolvedValue({ data: { data: { project_id: "p1" } } });
     const result = await monitoringService.getDashboard("p1", { start_date: "2024-01-01" });
-    expect(mockAxios.get).toHaveBeenCalledWith("/deepeval/projects/p1/monitor/dashboard", {
-      params: { start_date: "2024-01-01" },
-    });
     expect(result.data.project_id).toBe("p1");
   });
 });

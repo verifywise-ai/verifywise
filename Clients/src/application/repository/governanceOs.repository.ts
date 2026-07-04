@@ -39,21 +39,6 @@ export async function getMappingsBetween({
   return response.data;
 }
 
-export async function getMappingsForControl({
-  controlType,
-  controlId,
-  signal,
-}: {
-  controlType: string;
-  controlId: number;
-  signal?: AbortSignal;
-}): Promise<any> {
-  const response = await apiServices.get(`${BASE}/mappings/control/${controlType}/${controlId}`, {
-    signal,
-  });
-  return response.data;
-}
-
 export async function createMapping({ body }: { body: any }): Promise<any> {
   const response = await apiServices.post(`${BASE}/mappings`, body);
   return response.data;
@@ -77,17 +62,6 @@ export async function createBulkMappings({ body }: { body: { mappings: any[] } }
 // Scenarios
 export async function getAllScenarios({ signal }: { signal?: AbortSignal } = {}): Promise<any> {
   const response = await apiServices.get(`${BASE}/scenarios`, { signal });
-  return response.data;
-}
-
-export async function getScenarioById({
-  id,
-  signal,
-}: {
-  id: number;
-  signal?: AbortSignal;
-}): Promise<any> {
-  const response = await apiServices.get(`${BASE}/scenarios/${id}`, { signal });
   return response.data;
 }
 
@@ -172,12 +146,6 @@ export async function getUnifiedView({
   signal?: AbortSignal;
 }): Promise<any> {
   const response = await apiServices.get(`${BASE}/unified-view/${projectId}`, { signal });
-  return response.data;
-}
-
-// Eligibility
-export async function getEligibility({ signal }: { signal?: AbortSignal } = {}): Promise<any> {
-  const response = await apiServices.get(`${BASE}/eligibility`, { signal });
   return response.data;
 }
 

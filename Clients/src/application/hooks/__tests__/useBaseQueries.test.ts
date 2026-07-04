@@ -20,19 +20,27 @@ import {
   useGetAllEntities,
   useGetEntityById,
   useCreateEntity,
+  useUpdateEntity,
   useDeleteEntity,
+  useArchivedEntity,
 } from "../useBaseQueries";
 import {
   getAllEntities,
   getEntityById,
   createNewUser,
+  updateEntityById,
   deleteEntityById,
+  archiveIncidentById,
 } from "../../repository/entity.repository";
+import { invalidateQueries } from "../../config/queryClient";
 
 const mockGetAll = vi.mocked(getAllEntities);
 const mockGetById = vi.mocked(getEntityById);
 const mockCreate = vi.mocked(createNewUser);
+const mockUpdate = vi.mocked(updateEntityById);
 const mockDelete = vi.mocked(deleteEntityById);
+const mockArchive = vi.mocked(archiveIncidentById);
+const mockInvalidateKeys = vi.mocked(invalidateQueries);
 
 function createWrapper() {
   const queryClient = new QueryClient({
@@ -53,6 +61,24 @@ describe("useGetAllEntities", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(mockGetAll).toHaveBeenCalledWith({ routeUrl: "/users" });
   });
+
+  it("respects enabled option", () => {
+    renderHook(() => useGetAllEntities("/users", { enabled: false }), {
+      wrapper: createWrapper(),
+    });
+
+    expect(mockGetAll).not.toHaveBeenCalled();
+  });
+
+  it("respects custom staleTime", async () => {
+    mockGetAll.mockResolvedValue({ data: [] });
+
+    const { result } = renderHook(() => useGetAllEntities("/users", { staleTime: 0 }), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+  });
 });
 
 describe("useGetEntityById", () => {
@@ -68,6 +94,14 @@ describe("useGetEntityById", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(mockGetById).toHaveBeenCalledWith({ routeUrl: "/users/5" });
   });
+
+  it("respects enabled option", () => {
+    renderHook(() => useGetEntityById("/users", 5, { enabled: false }), {
+      wrapper: createWrapper(),
+    });
+
+    expect(mockGetById).not.toHaveBeenCalled();
+  });
 });
 
 describe("useCreateEntity", () => {
@@ -82,6 +116,44 @@ describe("useCreateEntity", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(mockCreate).toHaveBeenCalledWith({ routeUrl: "/users", body: { name: "New User" } });
   });
+
+  it("calls invalidateQueries when invalidateKeys provided", async () => {
+    mockCreate.mockResolvedValue({ data: { id: 4 } });
+
+    const { result } = renderHook(() => useCreateEntity("/users", [["related", "key"]]), {
+      wrapper: createWrapper(),
+    });
+    result.current.mutate({ name: "Test" });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(mockInvalidateKeys).toHaveBeenCalledWith([["related", "key"]]);
+  });
+});
+
+describe("useUpdateEntity", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("updates entity", async () => {
+    mockUpdate.mockResolvedValue({ data: { id: 5 } });
+
+    const { result } = renderHook(() => useUpdateEntity("/users"), { wrapper: createWrapper() });
+    result.current.mutate({ id: 5, body: { name: "Updated" } });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(mockUpdate).toHaveBeenCalledWith({ routeUrl: "/users/5", body: { name: "Updated" } });
+  });
+
+  it("calls invalidateQueries when invalidateKeys provided", async () => {
+    mockUpdate.mockResolvedValue({ data: { id: 5 } });
+
+    const { result } = renderHook(() => useUpdateEntity("/users", [["related", "key"]]), {
+      wrapper: createWrapper(),
+    });
+    result.current.mutate({ id: 5, body: { name: "Test" } });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(mockInvalidateKeys).toHaveBeenCalledWith([["related", "key"]]);
+  });
 });
 
 describe("useDeleteEntity", () => {
@@ -95,5 +167,48 @@ describe("useDeleteEntity", () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(mockDelete).toHaveBeenCalledWith({ routeUrl: "/users/5" });
+  });
+
+  it("calls invalidateQueries when invalidateKeys provided", async () => {
+    mockDelete.mockResolvedValue({ success: true });
+
+    const { result } = renderHook(() => useDeleteEntity("/users", [["related", "key"]]), {
+      wrapper: createWrapper(),
+    });
+    result.current.mutate(5);
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(mockInvalidateKeys).toHaveBeenCalledWith([["related", "key"]]);
+  });
+});
+
+describe("useArchivedEntity", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("archives entity", async () => {
+    mockArchive.mockResolvedValue({ success: true });
+
+    const { result } = renderHook(() => useArchivedEntity("/incidents"), {
+      wrapper: createWrapper(),
+    });
+    result.current.mutate(3);
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(mockArchive).toHaveBeenCalledWith({
+      routeUrl: "/incidents/3",
+      body: { archived: true },
+    });
+  });
+
+  it("calls invalidateQueries when invalidateKeys provided", async () => {
+    mockArchive.mockResolvedValue({ success: true });
+
+    const { result } = renderHook(() => useArchivedEntity("/incidents", [["related", "key"]]), {
+      wrapper: createWrapper(),
+    });
+    result.current.mutate(3);
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(mockInvalidateKeys).toHaveBeenCalledWith([["related", "key"]]);
   });
 });

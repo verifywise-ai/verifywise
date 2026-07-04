@@ -224,6 +224,22 @@ export async function scheduleProactiveRiskAnomalyDetection() {
   );
 }
 
+export async function scheduleMrmRevalidationSweep() {
+  logger.info("Adding MRM revalidation sweep job to the queue...");
+  // Daily at 4 AM — sweep open validations whose next_due has passed and fire the
+  // scheduled revalidation trigger for each (dedup-safe; annotates already-open
+  // tasks). No obliterate here — the repeatable add is idempotent by repeat key.
+  await automationQueue.add(
+    "mrm_revalidation_sweep",
+    { type: "mrm_revalidation" },
+    {
+      repeat: { pattern: "0 4 * * *" },
+      removeOnComplete: true,
+      removeOnFail: false,
+    },
+  );
+}
+
 export async function scheduleProactiveComplianceScoreCheck() {
   logger.info("Adding Proactive Compliance Score Check jobs to the queue...");
   // Weekly compliance score drop check — Mondays at 1 AM
@@ -317,6 +333,21 @@ export async function scheduleWorkflowAutopilotJobs() {
     { type: "workflow" },
     {
       repeat: { pattern: "0 5 1 1,4,7,10 *" },
+      removeOnComplete: true,
+      removeOnFail: false,
+    },
+  );
+}
+
+export async function scheduleAiTrustIndexSync() {
+  logger.info("Adding AI Trust Index weekly sync job to the queue...");
+  // Monday 06:00 UTC. jobId keyed weekly is set at runtime is not needed here;
+  // the handler self-guards via last_run_week. Repeatable add is idempotent by repeat key.
+  await automationQueue.add(
+    "ai_trust_index_sync",
+    {},
+    {
+      repeat: { pattern: "0 6 * * 1", tz: "UTC" },
       removeOnComplete: true,
       removeOnFail: false,
     },

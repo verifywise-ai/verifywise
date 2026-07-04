@@ -5,7 +5,6 @@ import {
   TableCell,
   TableContainer,
   TableRow,
-  useTheme,
   Stack,
   Typography,
   Tooltip,
@@ -20,6 +19,7 @@ import allowedRoles from "../../../application/constants/permissions";
 import { useAuth } from "../../../application/hooks/useAuth";
 import { Cpu, Layers, BarChart3, Link2 } from "lucide-react";
 import { EmptyState } from "../../components/EmptyState";
+import CustomizableSkeleton from "../../components/Skeletons";
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import {
   ModelInventoryTableProps,
@@ -27,7 +27,7 @@ import {
 } from "../../../domain/interfaces/i.modelInventory";
 import { getAllEntities } from "../../../application/repository/entity.repository";
 import { User } from "../../../domain/types/User";
-import { tableRowHoverStyle, tableRowDeletingStyle, loadingContainerStyle } from "./style";
+import { tableRowHoverStyle, tableRowDeletingStyle } from "./style";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import { displayFormattedDate } from "../../tools/isoDateToString";
@@ -40,6 +40,7 @@ import { useStandardTable } from "../../../application/hooks/useStandardTable";
 import type { StandardColumn } from "../../../domain/types/standardTable";
 import StandardTableHead from "../../components/Table/StandardTableHead";
 import StandardTablePagination from "../../components/Table/StandardTablePagination";
+import { TableEmptyStateLayout } from "../../components/Table/TableEmptyStateLayout";
 import { useCustomFieldDefinitions } from "../../../application/hooks/useCustomFields";
 import { formatCustomFieldValue } from "../../components/CustomFieldsSection/formatCustomFieldValue";
 
@@ -93,7 +94,6 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
   flashRowId,
   visibleColumns,
 }) => {
-  const theme = useTheme();
   const { userRoleName } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
 
@@ -532,34 +532,44 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
 
   if (isLoading) {
     return (
-      <Stack alignItems="center" justifyContent="center" sx={loadingContainerStyle(theme)}>
-        <Typography>Loading...</Typography>
+      <Stack spacing={2}>
+        <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
       </Stack>
     );
   }
 
   if (!data || data.length === 0) {
     return (
-      <EmptyState
-        icon={Cpu}
-        message="No models registered yet. Maintain a complete inventory of all AI models your organization uses."
+      <TableEmptyStateLayout
+        header={
+          <StandardTableHead
+            columns={visibleTableColumns}
+            sortConfig={sortConfig}
+            onSort={handleSort}
+          />
+        }
       >
-        <EmptyStateTip
-          icon={Layers}
-          title="What counts as a model?"
-          description="Any machine learning model, large language model, computer vision system, or automated decision-making tool. Include both internal and third-party models."
-        />
-        <EmptyStateTip
-          icon={BarChart3}
-          title="Track model status"
-          description="Record each model's status: approved, restricted, pending, blocked, or rejected. This gives auditors visibility into your governance coverage."
-        />
-        <EmptyStateTip
-          icon={Link2}
-          title="Link to vendors and risks"
-          description="Connect each model to its provider and associated risks. This creates a full traceability map for your audit."
-        />
-      </EmptyState>
+        <EmptyState
+          icon={Cpu}
+          message="No models registered yet. Maintain a complete inventory of all AI models your organization uses."
+        >
+          <EmptyStateTip
+            icon={Layers}
+            title="What counts as a model?"
+            description="Any machine learning model, large language model, computer vision system, or automated decision-making tool. Include both internal and third-party models."
+          />
+          <EmptyStateTip
+            icon={BarChart3}
+            title="Track model status"
+            description="Record each model's status: approved, restricted, pending, blocked, or rejected. This gives auditors visibility into your governance coverage."
+          />
+          <EmptyStateTip
+            icon={Link2}
+            title="Link to vendors and risks"
+            description="Connect each model to its provider and associated risks. This creates a full traceability map for your audit."
+          />
+        </EmptyState>
+      </TableEmptyStateLayout>
     );
   }
 

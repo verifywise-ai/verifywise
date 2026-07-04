@@ -12,11 +12,11 @@ import { sequelize } from "../database/db";
  * This function is kept temporarily for backward compatibility during migration.
  * It will be removed once all queries are migrated to use organization_id directly.
  *
- * @param tenantId - The organization ID (number)
+ * @param organizationId - The organization ID
  * @returns A 10-character alphanumeric hash
  */
-export const getTenantHash = (tenantId: number): string => {
-  const hash = createHash("sha256").update(tenantId.toString()).digest("base64");
+export const getTenantHash = (organizationId: number): string => {
+  const hash = createHash("sha256").update(organizationId.toString()).digest("base64");
   return hash.replace(/[^a-zA-Z0-9]/g, "").slice(0, 10);
 };
 

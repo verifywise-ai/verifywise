@@ -10,11 +10,11 @@ export const mcpToolsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Tool Catalog shows every MCP tool discovered across all your registered servers. It\'s the central place to see what your agents can do, assign risk levels, and decide which tools need human approval before execution.',
+      text: 'The Tool Catalog shows every MCP tool discovered across your registered servers. It\'s where you see what your agents can do, assign risk levels and decide which tools need human approval before execution.',
     },
     {
       type: 'paragraph',
-      text: 'You\'ll find it at **AI Gateway > MCP Gateway > Tools**.',
+      text: 'You\'ll find it at **AI Gateway > Agent Control > MCP Tools**.',
     },
     {
       type: 'heading',
@@ -55,7 +55,7 @@ export const mcpToolsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Filters work together. Select both a server and a risk level to narrow down to exactly the tools you\'re looking for.',
+      text: 'Filters work together. Select both a server and a risk level to narrow down to the exact tools you want.',
     },
     {
       type: 'heading',
@@ -77,12 +77,12 @@ export const mcpToolsContent: ArticleContent = {
       rows: [
         { level: 'Low', color: 'Green', when: 'Read-only tools that don\'t access sensitive data. Examples: search, get_weather, list_items.' },
         { level: 'Medium', color: 'Amber', when: 'Tools that modify data or access internal systems. Examples: update_record, send_email, create_ticket.' },
-        { level: 'High', color: 'Red', when: 'Tools that delete data, access PII, or perform irreversible actions. Examples: delete_record, drop_table, transfer_funds.' },
+        { level: 'High', color: 'Red', when: 'Tools that delete data, access PII or perform irreversible actions. Examples: delete_record, drop_table, transfer_funds.' },
       ],
     },
     {
       type: 'paragraph',
-      text: 'New tools default to "low" risk. You should review and classify them as part of your onboarding process.',
+      text: 'New tools default to "low" risk. Review and classify them as part of your onboarding process.',
     },
     {
       type: 'heading',
@@ -106,13 +106,13 @@ export const mcpToolsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'You can toggle approval on and off directly from the tool list using the toggle, or from the edit modal.',
+      text: 'You can toggle approval on and off directly from the tool list, or change it from the edit modal.',
     },
     {
       type: 'callout',
       variant: 'warning',
       title: 'High-risk tools without approval',
-      text: 'If you mark a tool as high risk but don\'t enable approval, the edit modal shows a warning. Consider enabling approval for high-risk tools to ensure human oversight.',
+      text: 'If you mark a tool as high risk but don\'t enable approval, the edit modal shows a warning. Enable approval for high-risk tools so a person reviews each call.',
     },
     {
       type: 'heading',
@@ -127,8 +127,8 @@ export const mcpToolsContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Tool info box', text: 'Read-only section showing the tool name, description, and which server it belongs to.' },
-        { bold: 'Risk level', text: 'Dropdown to select low, medium, or high.' },
+        { bold: 'Tool info box', text: 'Read-only section showing the tool name, description and which server it belongs to.' },
+        { bold: 'Risk level', text: 'Dropdown to select low, medium or high.' },
         { bold: 'Requires approval', text: 'Toggle with a description: "When enabled, tool invocations must be approved before execution."' },
       ],
     },
@@ -144,7 +144,7 @@ export const mcpToolsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Tools appear in the catalog after the gateway runs tool discovery on a registered server. Discovery calls the server\'s `tools/list` MCP method and stores each tool with its name, description, and input schema.',
+      text: 'Tools appear in the catalog after the gateway runs tool discovery on a registered server. Discovery calls the server\'s `tools/list` MCP method and stores each tool with its name, description and input schema.',
     },
     {
       type: 'paragraph',

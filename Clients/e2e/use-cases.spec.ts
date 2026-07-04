@@ -62,6 +62,13 @@ test.describe("Use Cases / Projects", () => {
     await page.goto("/overview");
     const projectName = `E2E Project ${Date.now()}`;
 
+    // Dismiss "Welcome to VerifyWise" dialog if it appears
+    const welcomeSkip = page.getByRole("button", { name: /skip for now/i });
+    if (await welcomeSkip.isVisible({ timeout: 3_000 }).catch(() => false)) {
+      await welcomeSkip.click();
+      await page.waitForTimeout(1000);
+    }
+
     // Click new project button
     const newProjectBtn = page
       .locator('[data-joyride-id="new-project-button"]')
@@ -69,15 +76,7 @@ test.describe("Use Cases / Projects", () => {
       .or(page.getByRole("button", { name: /add.*project/i }))
       .or(page.getByRole("button", { name: /new project/i }));
 
-    if (
-      !(await newProjectBtn
-        .first()
-        .isVisible()
-        .catch(() => false))
-    ) {
-      test.skip();
-      return;
-    }
+    await expect(newProjectBtn.first()).toBeVisible({ timeout: 15_000 });
     await newProjectBtn.first().click();
 
     // Handle screening modal if it appears
@@ -95,41 +94,100 @@ test.describe("Use Cases / Projects", () => {
     }
 
     // Fill project title
-    const titleInput = page
-      .getByRole("textbox", { name: /title/i })
-      .or(page.getByPlaceholder(/title/i))
-      .or(page.getByPlaceholder(/project name/i))
-      .or(page.getByPlaceholder(/use case name/i));
+    const titleInput = page.locator("#project-title-input");
+    await expect(titleInput).toBeVisible({ timeout: 10_000 });
+    await titleInput.fill(projectName);
+
+    // Fill Goal field (required)
+    const goalInput = page.getByText(/^Goal/i).locator("..").getByRole("textbox");
     if (
-      await titleInput
+      await goalInput
         .first()
-        .isVisible({ timeout: 10_000 })
+        .isVisible()
         .catch(() => false)
     ) {
-      await titleInput.first().fill(projectName);
-
-      // Submit
-      const submitBtn = page
-        .getByRole("button", { name: /create|save|submit|next|continue/i })
-        .last();
-      await submitBtn.click();
-      await page.waitForTimeout(2000);
-
-      // Navigate back to overview and verify project appears
-      await page.goto("/overview");
-      await page.waitForTimeout(1000);
-      const projectText = page.getByText(projectName);
-      if (
-        await projectText
-          .first()
-          .isVisible()
-          .catch(() => false)
-      ) {
-        await expect(projectText.first()).toBeVisible();
-      }
-    } else {
-      await page.keyboard.press("Escape");
+      await goalInput.first().fill("E2E test goal");
     }
+
+    // Select Applicable regulations if dropdown exists (required for some configurations)
+    const regulationsSelect = page
+      .getByText(/Applicable regulations/i)
+      .locator("..")
+      .getByRole("combobox");
+    if (
+      await regulationsSelect
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
+      await regulationsSelect.first().click();
+      const option = page.getByRole("option").first();
+      if (await option.isVisible({ timeout: 3_000 }).catch(() => false)) {
+        await option.click();
+      }
+    }
+
+    // Select Owner if dropdown exists
+    const ownerSelect = page
+      .getByText(/^Owner/i)
+      .locator("..")
+      .getByRole("combobox");
+    if (
+      await ownerSelect
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
+      await ownerSelect.first().click();
+      const option = page.getByRole("option").first();
+      if (await option.isVisible({ timeout: 3_000 }).catch(() => false)) {
+        await option.click();
+      }
+    }
+
+    // Select AI risk classification if dropdown exists
+    const riskSelect = page
+      .getByText(/AI risk classification/i)
+      .locator("..")
+      .getByRole("combobox");
+    if (
+      await riskSelect
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
+      await riskSelect.first().click();
+      const option = page.getByRole("option").first();
+      if (await option.isVisible({ timeout: 3_000 }).catch(() => false)) {
+        await option.click();
+      }
+    }
+
+    // Select Type of high risk role if dropdown exists
+    const highRiskSelect = page
+      .getByText(/Type of high risk role/i)
+      .locator("..")
+      .getByRole("combobox");
+    if (
+      await highRiskSelect
+        .first()
+        .isVisible()
+        .catch(() => false)
+    ) {
+      await highRiskSelect.first().click();
+      const option = page.getByRole("option").first();
+      if (await option.isVisible({ timeout: 3_000 }).catch(() => false)) {
+        await option.click();
+      }
+    }
+
+    // Submit and wait for redirect back to overview
+    const submitBtn = page.getByRole("button", { name: /create use case/i });
+    await submitBtn.click();
+    await page.waitForURL(/\/overview/, { timeout: 15_000 });
+
+    // Verify project appears in the overview list
+    await expect(page.getByText(projectName).first()).toBeVisible({ timeout: 15_000 });
   });
 
   test("can navigate to project view after creation", async ({ authedPage: page }) => {

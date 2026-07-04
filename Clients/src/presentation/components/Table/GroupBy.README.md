@@ -71,7 +71,7 @@ const getMyDataGroupKey = (item: MyDataType, field: string): string | string[] =
       return "Unassigned";
 
     case "date":
-      return item.date ? new Date(item.date).toLocaleDateString() : "No Date";
+      return item.date ? displayFormattedDate(item.date) : "No Date";
 
     default:
       return "Other";

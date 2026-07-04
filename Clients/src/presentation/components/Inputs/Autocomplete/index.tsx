@@ -8,6 +8,7 @@ import {
   Typography,
   useTheme,
 } from "@mui/material";
+import { ChevronDown } from "lucide-react";
 import "./index.css";
 import { getAutocompleteStyles } from "../../../utils/inputStyles";
 
@@ -74,15 +75,6 @@ function AutoCompleteField<
     );
   })();
 
-  if (import.meta.env?.DEV) {
-    // eslint-disable-next-line no-console
-    console.debug("[AutoCompleteField] layout", {
-      label,
-      extractedLayoutProps,
-      sxKeysOnAutocomplete: Object.keys(sxWithoutLayoutProps ?? {}),
-    });
-  }
-
   return (
     <Stack gap={theme.spacing(2)} sx={extractedLayoutProps}>
       {label && (
@@ -115,6 +107,7 @@ function AutoCompleteField<
       )}
       <Autocomplete<T, Multiple, DisableClearable, FreeSolo>
         disabled={disabled}
+        popupIcon={<ChevronDown size={16} color={theme.palette.text.tertiary} />}
         renderInput={(params) => (
           <TextField
             {...params}

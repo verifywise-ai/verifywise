@@ -24,7 +24,7 @@ import { uploadDatasetFile } from "../controllers/datasetBulkUpload.ctrl";
 
 const router = express.Router();
 
-// Auth first so req.tenantId is available before the plugin guard runs
+// Auth first so req.organizationId is available before the plugin guard runs
 router.use(authenticateJWT);
 router.use(requirePlugin("dataset-bulk-upload"));
 

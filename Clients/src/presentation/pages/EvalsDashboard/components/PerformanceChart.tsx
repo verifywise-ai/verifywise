@@ -15,6 +15,7 @@ import {
   type Experiment,
 } from "../../../../application/repository/deepEval.repository";
 import { vwTooltipStyle, ChartOutlineWrapper } from "../../../components/Charts/VWCharts";
+import { displayFormattedDate, displayFormattedTime } from "../../../tools/isoDateToString";
 
 export type TimeRange = "7d" | "30d" | "100d" | "all";
 
@@ -156,15 +157,8 @@ export default function PerformanceChart({ projectId, timeRange }: PerformanceCh
         });
 
         // Build chart point
-        const dateStr = new Date(exp.created_at).toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-        });
-        const timeStr = new Date(exp.created_at).toLocaleTimeString("en-US", {
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: true,
-        });
+        const dateStr = displayFormattedDate(exp.created_at);
+        const timeStr = displayFormattedTime(exp.created_at);
         const point: ChartPoint = {
           name: `Run ${i + 1}`,
           date: `${dateStr}`,

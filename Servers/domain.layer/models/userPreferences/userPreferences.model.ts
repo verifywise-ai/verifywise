@@ -4,7 +4,7 @@ import { IUserPreferences, UserLanguage } from "../../interfaces/i.userPreferenc
 import { UserDateFormat } from "../../enums/user-preferences.enum";
 import { ValidationException } from "../../exceptions/custom.exception";
 
-const VALID_LANGUAGES: UserLanguage[] = ["en", "de", "fr"];
+const VALID_LANGUAGES: UserLanguage[] = ["en", "de", "fr", "es"];
 
 @Table({
   tableName: "user_preferences",

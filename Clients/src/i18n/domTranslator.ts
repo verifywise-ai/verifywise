@@ -72,7 +72,7 @@ if (typeof window !== "undefined") {
   };
 }
 
-const SUPPORTED: Lang[] = ["en", "de", "fr"];
+const SUPPORTED: Lang[] = ["en", "de", "fr", "es"];
 
 const getCurrentLang = (): Lang => {
   const stored = localStorage.getItem(STORAGE_KEY) as Lang | null;
@@ -83,6 +83,9 @@ const setCurrentLang = (lang: Lang) => {
   localStorage.setItem(STORAGE_KEY, lang);
   currentLang = lang;
   dict = lang === "en" ? {} : translations[lang] || {};
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("vw:languagechange", { detail: { lang } }));
+  }
 };
 
 const translate = (text: string): string | null => {

@@ -144,13 +144,23 @@ const generateRefreshToken = (payload: Object) => {
 
 /**
  * Generates a JWT API token with configurable expiration
- * For programmatic API access by integrations and scripts
- * @param payload - Token payload (user info, tenant, etc.)
+ * For programmatic API access by integrations and scripts.
+ *
+ * The token carries a `type: "api_token"` claim. The auth middleware uses this
+ * claim to branch into a database-backed check against the api_tokens table, so
+ * that API tokens can be revoked independently of their JWT expiry. Session
+ * tokens have no `type` claim and skip that lookup.
+ *
+ * @param payload - Token payload (user info, organization, role, etc.)
  * @param expiresInDays - Optional expiration in days (default: 30 days)
  */
 const generateApiToken = (payload: Object, expiresInDays?: number) => {
   const expiresInMs = expiresInDays ? expiresInDays * 24 * 60 * 60 * 1000 : THIRTY_DAYS_MS;
-  return signToken(payload, expiresInMs, process.env.JWT_SECRET as string);
+  return signToken(
+    { ...payload, type: "api_token" },
+    expiresInMs,
+    process.env.JWT_SECRET as string,
+  );
 };
 
 export {

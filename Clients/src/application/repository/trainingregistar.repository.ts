@@ -8,11 +8,6 @@ import { apiServices } from "../../infrastructure/api/networkServices";
  * @returns {Promise<any>} The response from the API.
  */
 export async function createTraining(routeUrl: string, data: any): Promise<any> {
-  try {
-    const response = await apiServices.post(routeUrl, data);
-    return response.data;
-  } catch (error) {
-    console.error("Error creating training:", error);
-    throw error;
-  }
+  const response = await apiServices.post(routeUrl, data);
+  return response.data;
 }

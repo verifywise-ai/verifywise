@@ -61,20 +61,6 @@ describe("useDashboard", () => {
     });
   });
 
-  it("should provide fetchDashboard function for cache invalidation", async () => {
-    mockGetAllEntities.mockResolvedValue({ data: { projects: 0 } });
-
-    const { result } = renderHook(() => useDashboard(), {
-      wrapper: createWrapper(),
-    });
-
-    await waitFor(() => {
-      expect(result.current.loading).toBe(false);
-    });
-
-    expect(typeof result.current.fetchDashboard).toBe("function");
-  });
-
   it("should handle API error gracefully", async () => {
     mockGetAllEntities.mockRejectedValue(new Error("Network error"));
 
@@ -88,5 +74,65 @@ describe("useDashboard", () => {
 
     // Dashboard stays null on error
     expect(result.current.dashboard).toBeNull();
+  });
+
+  it("should invalidate cache and refetch when fetchDashboard is called", async () => {
+    const initialData = { projects: 0 };
+    const freshData = { projects: 10 };
+    mockGetAllEntities.mockResolvedValue({ data: initialData });
+
+    const { result } = renderHook(() => useDashboard(), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.dashboard).toEqual(initialData);
+
+    // Update mock to return fresh data
+    mockGetAllEntities.mockResolvedValue({ data: freshData });
+
+    // Call fetchDashboard to invalidate cache
+    await result.current.fetchDashboard();
+
+    await waitFor(() => {
+      expect(mockGetAllEntities).toHaveBeenCalledTimes(2);
+    });
+
+    // Data should now be the fresh values
+    await waitFor(() => {
+      expect(result.current.dashboard).toEqual(freshData);
+    });
+  });
+
+  it("should handle fetchDashboard being called before initial data loads", async () => {
+    // Keep the initial promise pending
+    mockGetAllEntities.mockImplementation(
+      () => new Promise((resolve) => setTimeout(() => resolve({ data: { projects: 1 } }), 100)),
+    );
+
+    const { result } = renderHook(() => useDashboard(), {
+      wrapper: createWrapper(),
+    });
+
+    // fetchDashboard returns a promise even when called during loading
+    const fetchPromise = result.current.fetchDashboard();
+    expect(fetchPromise).toBeInstanceOf(Promise);
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+  });
+
+  it("should provide fetchDashboard as a function", () => {
+    mockGetAllEntities.mockResolvedValue({ data: { projects: 0 } });
+
+    const { result } = renderHook(() => useDashboard(), {
+      wrapper: createWrapper(),
+    });
+
+    expect(typeof result.current.fetchDashboard).toBe("function");
   });
 });

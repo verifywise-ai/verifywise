@@ -1,9 +1,11 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { getAllEntities, getEntityById } from "../repository/entity.repository";
 import type { ProgressStep } from "../../presentation/components/StepProgressDialog";
+import { storageService, type DashboardMetricsCache } from "../../infrastructure/storage";
 
-// Cache configuration
-export const CACHE_KEY = "dashboard_metrics_cache";
+// Cache configuration — canonical namespaced key (migrated once from the old
+// "dashboard_metrics_cache" via the StorageService legacy-key mechanism).
+export const CACHE_KEY = "verifywise_dashboard_metrics_cache";
 const CACHE_TTL_MS = 30 * 1000; // 30 seconds - data is considered fresh
 const STALE_TTL_MS = 5 * 60 * 1000; // 5 minutes - data can still be shown while revalidating
 
@@ -31,22 +33,13 @@ interface MetricsCache {
   governanceScoreMetrics?: CacheEntry<any>;
 }
 
-// Cache utility functions
-const getCache = (): MetricsCache => {
-  try {
-    const cached = localStorage.getItem(CACHE_KEY);
-    return cached ? JSON.parse(cached) : {};
-  } catch {
-    return {};
-  }
-};
+// Cache utility functions — backed by the typed StorageService (JSON, SSR/sandbox
+// safe). The "dashboardMetricsCache" registry entry owns the canonical key and the
+// one-time legacy migration.
+const getCache = (): MetricsCache => storageService.get("dashboardMetricsCache", {});
 
 const setCache = (cache: MetricsCache): void => {
-  try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
-  } catch {
-    // localStorage might be full or disabled
-  }
+  storageService.set("dashboardMetricsCache", cache as DashboardMetricsCache);
 };
 
 const getCachedValue = <T>(
@@ -66,7 +59,30 @@ const getCachedValue = <T>(
   return { data: entry.data, isFresh, isStale };
 };
 
+// When a bulk fetch is in progress, cache writes accumulate in this in-memory
+// buffer instead of re-serializing the whole localStorage blob on every metric.
+// The parallel batch fires ~18 setCachedValue calls in one tight window; without
+// buffering that is 18 full read-parse-stringify-write cycles of a growing object
+// on the main thread during first paint. While buffering, each write is O(1) in
+// memory and the whole cache is persisted once via flushCacheBuffer().
+let cacheBuffer: MetricsCache | null = null;
+
+const beginCacheBuffering = (): void => {
+  cacheBuffer = getCache();
+};
+
+const flushCacheBuffer = (): void => {
+  if (cacheBuffer) {
+    setCache(cacheBuffer);
+    cacheBuffer = null;
+  }
+};
+
 const setCachedValue = <T>(key: keyof MetricsCache, data: T): void => {
+  if (cacheBuffer) {
+    cacheBuffer[key] = { data, timestamp: Date.now() };
+    return;
+  }
   const cache = getCache();
   cache[key] = { data, timestamp: Date.now() };
   setCache(cache);
@@ -1178,39 +1194,61 @@ export const useDashboardMetrics = () => {
       setError(null);
       setProgressStep(0);
 
+      // Buffer cache writes so the ~18 metric persists collapse into one
+      // localStorage serialization at the end instead of one per metric.
+      beginCacheBuffering();
       try {
-        // Group 1: Core - risks, evidence files
-        await Promise.allSettled([fetchRiskMetrics(), fetchEvidenceMetrics()]);
-        setProgressStep(1);
+        // These metric groups are independent of one another, so they run as a
+        // single parallel batch instead of five sequential stages. On first
+        // login (empty cache) this is the difference between waiting on the sum
+        // of each stage's slowest call and waiting on the slowest call overall.
+        // Group 4 (projects -> frameworks -> per-framework progress) is an
+        // internal waterfall and stays the long pole; everything else resolves
+        // underneath it.
+        //
+        // The progress dialog labels are stage-ordered with increasing
+        // percentages, so progressStep must stay a monotonic prefix index: it
+        // advances to step i only once every stage 0..i has completed. Tracking
+        // the leading run of completed stages (rather than a raw settle count)
+        // keeps the displayed label honest — it never shows "models" while
+        // risks are still loading, and the percentage never jumps backwards
+        // when groups settle out of order.
+        const groupDone = [false, false, false, false, false];
+        const markDone = (index: number) => () => {
+          groupDone[index] = true;
+          let completedPrefix = 0;
+          while (completedPrefix < groupDone.length && groupDone[completedPrefix]) {
+            completedPrefix += 1;
+          }
+          setProgressStep(completedPrefix);
+        };
 
-        // Group 2: Vendors & policies
-        await Promise.allSettled([
+        const group1 = Promise.allSettled([fetchRiskMetrics(), fetchEvidenceMetrics()]).then(
+          markDone(0),
+        );
+        const group2 = Promise.allSettled([
           fetchVendorRiskMetrics(),
           fetchVendorMetrics(),
           fetchPolicyMetrics(),
           fetchIncidentMetrics(),
-        ]);
-        setProgressStep(2);
-
-        // Group 3: Models - merged model metrics (evidenceHub + modelLifecycle), model risks, training
-        await Promise.allSettled([
+        ]).then(markDone(1));
+        const group3 = Promise.allSettled([
           fetchModelMetrics(),
           fetchModelRiskMetrics(),
           fetchTrainingMetrics(),
-        ]);
-        setProgressStep(3);
+        ]).then(markDone(2));
+        const group4 = Promise.allSettled([fetchProjectMetrics()]).then(markDone(3));
+        const group5 = Promise.allSettled([fetchGovernanceScoreMetrics(), fetchTaskMetrics()]).then(
+          markDone(4),
+        );
 
-        // Group 4: Frameworks - merged project metrics (useCases + orgFrameworks)
-        await Promise.allSettled([fetchProjectMetrics()]);
-        setProgressStep(4);
-
-        // Group 5: Scores - governance score, tasks
-        await Promise.allSettled([fetchGovernanceScoreMetrics(), fetchTaskMetrics()]);
-        setProgressStep(5);
+        await Promise.all([group1, group2, group3, group4, group5]);
+        setProgressStep(groupDone.length);
       } catch (err) {
         setError("Failed to fetch dashboard metrics");
         console.error("Error fetching dashboard metrics:", err);
       } finally {
+        flushCacheBuffer();
         setLoading(false);
         setIsRevalidating(false);
       }

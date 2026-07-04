@@ -7,7 +7,11 @@ const DASHBOARD_QUERY_KEY = ["dashboard"] as const;
 export const useDashboard = () => {
   const queryClient = useQueryClient();
 
-  const { data: dashboard = null, isLoading: loading } = useQuery({
+  const {
+    data: dashboard = null,
+    isLoading: loading,
+    isPending,
+  } = useQuery({
     queryKey: DASHBOARD_QUERY_KEY,
     queryFn: async () => {
       const response = await getAllEntities({ routeUrl: "/dashboard" });
@@ -21,5 +25,5 @@ export const useDashboard = () => {
     await queryClient.invalidateQueries({ queryKey: DASHBOARD_QUERY_KEY });
   };
 
-  return { dashboard, loading, fetchDashboard };
+  return { dashboard, loading, isPending, fetchDashboard };
 };

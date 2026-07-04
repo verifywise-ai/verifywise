@@ -15,3 +15,8 @@ export async function deleteApiToken({ routeUrl }: RequestParams): Promise<any> 
   const response = await apiServices.delete(routeUrl);
   return response;
 }
+
+export async function revokeApiToken({ routeUrl }: RequestParams): Promise<any> {
+  const response = await apiServices.post(routeUrl, {});
+  return response;
+}

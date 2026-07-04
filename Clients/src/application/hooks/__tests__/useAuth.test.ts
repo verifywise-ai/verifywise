@@ -18,7 +18,7 @@ function fakeJwt(payload: Record<string, unknown>): string {
   return `${header}.${body}.fake-signature`;
 }
 
-function createWrapper(authToken: string) {
+function createWrapper(authToken: string, overrides?: Record<string, unknown>) {
   const store = configureStore({
     reducer: { auth: authReducer, ui: uiReducer, files: fileReducer },
     preloadedState: {
@@ -34,6 +34,7 @@ function createWrapper(authToken: string) {
         isOrgCreator: false,
         isSuperAdmin: false,
         activeOrganizationId: null,
+        ...overrides,
       },
     },
   });
@@ -103,5 +104,88 @@ describe("useAuth", () => {
     });
 
     expect(result.current.userId).toBeNaN(); // parseInt("not-a-number") is NaN
+  });
+
+  it("should return activeOrganizationId when user is super admin", () => {
+    const token = fakeJwt({
+      id: "1",
+      roleName: "SuperAdmin",
+      organizationId: "7",
+    });
+
+    const { result } = renderHook(() => useAuth(), {
+      wrapper: createWrapper(token, {
+        isSuperAdmin: true,
+        activeOrganizationId: 99,
+      }),
+    });
+
+    expect(result.current.isSuperAdmin).toBe(true);
+    // When super admin, organizationId should come from activeOrganizationId, not the token
+    expect(result.current.organizationId).toBe(99);
+  });
+
+  it("should return null organizationId when token has no organizationId", () => {
+    const token = fakeJwt({
+      id: "5",
+      roleName: "Editor",
+    });
+
+    const { result } = renderHook(() => useAuth(), {
+      wrapper: createWrapper(token),
+    });
+
+    expect(result.current.organizationId).toBeNull();
+    expect(result.current.isAuthenticated).toBe(true);
+    expect(result.current.userId).toBe(5);
+    expect(result.current.userRoleName).toBe("Editor");
+  });
+
+  it("should return empty roleName when token has no roleName", () => {
+    const token = fakeJwt({
+      id: "3",
+    });
+
+    const { result } = renderHook(() => useAuth(), {
+      wrapper: createWrapper(token),
+    });
+
+    expect(result.current.userRoleName).toBe("");
+    expect(result.current.userToken).not.toBeNull();
+  });
+
+  it("should default isSuperAdmin to false when undefined", () => {
+    const token = fakeJwt({ id: "10", roleName: "Admin", organizationId: "7" });
+
+    const { result } = renderHook(() => useAuth(), {
+      wrapper: createWrapper(token, {
+        isSuperAdmin: undefined,
+        activeOrganizationId: undefined,
+      }),
+    });
+
+    expect(result.current.isSuperAdmin).toBe(false);
+    expect(result.current.activeOrganizationId).toBeNull();
+    // organizationId falls back to tokenOrgId since isSuperAdmin is false
+    expect(result.current.organizationId).toBe(7);
+  });
+
+  it("should return null organizationId when super admin has no activeOrganizationId", () => {
+    const token = fakeJwt({
+      id: "1",
+      roleName: "SuperAdmin",
+      organizationId: "7",
+    });
+
+    const { result } = renderHook(() => useAuth(), {
+      wrapper: createWrapper(token, {
+        isSuperAdmin: true,
+        activeOrganizationId: null,
+      }),
+    });
+
+    expect(result.current.isSuperAdmin).toBe(true);
+    // When super admin but no activeOrganizationId, organizationId should be null
+    expect(result.current.organizationId).toBeNull();
   });
 });

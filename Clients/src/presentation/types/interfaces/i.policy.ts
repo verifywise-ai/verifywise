@@ -63,9 +63,7 @@ export interface PolicyFormProps {
  * Props for policy manager component
  */
 export interface PolicyManagerProps {
-  policies: PolicyManagerModel[];
   tags: string[];
-  fetchAll: () => void;
 }
 
 /**
@@ -73,5 +71,6 @@ export interface PolicyManagerProps {
  */
 export interface PolicyTemplatesProps {
   tags: string[];
-  fetchAll: () => void;
+  fetchAll?: () => void;
+  isLoading?: boolean;
 }

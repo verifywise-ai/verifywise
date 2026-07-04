@@ -4,7 +4,6 @@ import { useEffect, useState, useRef } from "react";
 import { useDispatch } from "react-redux";
 import { setUserExists, clearAuthState } from "../../../application/redux/auth/authSlice";
 import { getAllEntities } from "../../../application/repository/entity.repository";
-import CustomizableToast from "../Toast";
 import { extractUserToken } from "../../../application/tools/extractToken";
 import { IProtectedRouteProps } from "../../types/widget.types";
 
@@ -83,7 +82,10 @@ const ProtectedRoute = ({ Component, ...rest }: IProtectedRouteProps) => {
   }, [dispatch, authState.authToken, isPublicRoute]);
 
   if (loading) {
-    return <CustomizableToast title="Loading..." />; // Show a loading indicator while checking user existence
+    if (authState.authToken) {
+      return <Component {...rest} />;
+    }
+    return null;
   }
 
   // Always allow access to login route

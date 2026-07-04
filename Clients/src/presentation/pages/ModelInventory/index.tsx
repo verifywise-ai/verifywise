@@ -60,6 +60,7 @@ import EvidenceHubTable from "./evidenceHubTable";
 import FilePreviewPanel from "../FileManager/components/FilePreviewPanel";
 import { FileMetadata } from "../../../application/repository/file.repository";
 import ModelEvaluationsTab from "./ModelEvaluationsTab";
+import ModelRiskManagementTab from "./mrm";
 import ShareButton from "../../components/ShareViewDropdown/ShareButton";
 import ShareViewDropdown, { ShareViewSettings } from "../../components/ShareViewDropdown";
 import { useCreateShareLink, useUpdateShareLink } from "../../../application/hooks/useShare";
@@ -640,6 +641,7 @@ const ModelInventory: React.FC = () => {
 
   // Determine the active tab based on the URL
   const getTabFromPath = useCallback((pathname: string, tabs: typeof pluginTabs) => {
+    if (pathname.includes("model-risk-management")) return "model-risk-management";
     if (pathname.includes("model-risks")) return "model-risks";
     if (pathname.includes("evidence-hub")) return "evidence-hub";
     if (pathname.includes("evaluations")) return "evaluations";
@@ -658,7 +660,13 @@ const ModelInventory: React.FC = () => {
 
     // If trying to access a plugin tab but plugin is not installed, redirect to models
     const isPluginTab = pluginTabs.some((t) => t.value === newTab);
-    const isBuiltInTab = ["models", "model-risks", "evidence-hub", "evaluations"].includes(newTab);
+    const isBuiltInTab = [
+      "models",
+      "model-risks",
+      "evidence-hub",
+      "evaluations",
+      "model-risk-management",
+    ].includes(newTab);
 
     if (!isBuiltInTab && !isPluginTab) {
       setActiveTab("models");
@@ -1943,6 +1951,8 @@ const ModelInventory: React.FC = () => {
       navigate("/model-inventory/model-risks");
     } else if (newValue === "evidence-hub") {
       navigate("/model-inventory/evidence-hub");
+    } else if (newValue === "model-risk-management") {
+      navigate("/model-inventory/model-risk-management");
     } else {
       // Handle plugin tabs dynamically
       navigate(`/model-inventory/${newValue}`);
@@ -2164,6 +2174,12 @@ const ModelInventory: React.FC = () => {
                   count: evidenceHubData.length,
                   isLoading: isEvidenceLoading,
                   tooltip: "Compliance evidence and documentation for audits",
+                },
+                {
+                  label: "Model risk management",
+                  value: "model-risk-management",
+                  icon: "ShieldCheck" as const,
+                  tooltip: "Tiering, validation, findings and roles for model risk management",
                 },
               ]}
               activeTab={activeTab}
@@ -2452,7 +2468,7 @@ const ModelInventory: React.FC = () => {
               renderTable={(data, options) => (
                 <EvidenceHubTable
                   key={tableKey}
-                  isLoading={isLoading}
+                  isLoading={isEvidenceLoading}
                   data={data}
                   onEdit={handleEditEvidence}
                   onDelete={handleDeleteEvidence}
@@ -2470,6 +2486,12 @@ const ModelInventory: React.FC = () => {
         {activeTab === "evaluations" && (
           <Box sx={{ mt: "16px" }}>
             <ModelEvaluationsTab />
+          </Box>
+        )}
+
+        {activeTab === "model-risk-management" && (
+          <Box sx={{ mt: "16px" }}>
+            <ModelRiskManagementTab users={users} />
           </Box>
         )}
 

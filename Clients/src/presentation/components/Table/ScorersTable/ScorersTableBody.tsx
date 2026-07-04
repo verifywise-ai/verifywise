@@ -13,6 +13,7 @@ import singleTheme from "../../../themes/v1SingleTheme";
 import { ScorerRow } from "./index";
 import { CustomizableButton } from "../../button/customizable-button";
 import { brand, text, background, border as borderPalette, status } from "../../../themes/palette";
+import { displayFormattedDateTime } from "../../../tools/isoDateToString";
 
 interface ScorersTableBodyProps {
   rows: ScorerRow[];
@@ -25,19 +26,7 @@ interface ScorersTableBodyProps {
 
 const formatDate = (dateStr?: string | null): string => {
   if (!dateStr) return "-";
-  const date = new Date(dateStr);
-  return (
-    date.toLocaleDateString(undefined, {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    }) +
-    ", " +
-    date.toLocaleTimeString(undefined, {
-      hour: "2-digit",
-      minute: "2-digit",
-    })
-  );
+  return displayFormattedDateTime(dateStr);
 };
 
 const ScorersTableBody: React.FC<ScorersTableBodyProps> = ({

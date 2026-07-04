@@ -68,6 +68,7 @@ const DeadlineWarningBox = () => {
 
   return (
     <Stack
+      data-testid="deadline-warning-banner"
       direction={{ xs: "column", sm: "row" }}
       alignItems={{ xs: "flex-start", sm: "center" }}
       justifyContent="space-between"

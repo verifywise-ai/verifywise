@@ -1,6 +1,6 @@
 import { UserDateFormat } from "../../../enums/userDateFormat.enum";
 
-export type UserLanguage = "en" | "de" | "fr";
+export type UserLanguage = "en" | "de" | "fr" | "es";
 
 export class UserPreferencesModel {
   id?: number;

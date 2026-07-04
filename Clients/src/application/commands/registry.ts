@@ -17,9 +17,6 @@ import {
   Layers,
   Flag,
   AlertCircle,
-  LayoutDashboard,
-  GitCompareArrows,
-  Compass,
 } from "lucide-react";
 
 // Define command groups
@@ -169,42 +166,10 @@ const NAVIGATION_COMMANDS: Command[] = [
     icon: AlertCircle,
     action: { type: "navigate", payload: "/ai-incident-managements" },
   },
-  {
-    id: "nav-governance-hub",
-    label: "Governance Intelligence Hub",
-    description: "Governance workspace dashboard",
-    keywords: ["governance", "compliance", "frameworks", "mappings", "intelligence"],
-    group: COMMAND_GROUPS[0],
-    icon: LayoutDashboard,
-    action: { type: "navigate", payload: "/governance" },
-  },
-  {
-    id: "nav-framework-mapper",
-    label: "Framework Mapper",
-    description: "Cross-framework control mappings",
-    keywords: ["mappings", "frameworks", "controls", "iso", "nist"],
-    group: COMMAND_GROUPS[0],
-    icon: GitCompareArrows,
-    action: { type: "navigate", payload: "/governance/framework-mapper" },
-  },
-  {
-    id: "nav-scenario-builder",
-    label: "Scenario Builder",
-    description: "Governance scenario recommendations",
-    keywords: ["scenarios", "recommendations", "governance"],
-    group: COMMAND_GROUPS[0],
-    icon: Compass,
-    action: { type: "navigate", payload: "/governance/scenarios" },
-  },
-  {
-    id: "nav-unified-insights",
-    label: "Unified Insights",
-    description: "Coverage analysis and gaps",
-    keywords: ["coverage", "gaps", "insights", "compliance"],
-    group: COMMAND_GROUPS[0],
-    icon: BarChart3,
-    action: { type: "navigate", payload: "/governance/insights" },
-  },
+  // Governance OS navigation commands are intentionally disabled from the
+  // command palette while the module is not broadly released. The module remains
+  // reachable by direct URL (e.g. /governance or /governance-os) so it can still
+  // be activated and used by authorized users who know the route.
 ];
 
 // Quick action commands - will be implemented later

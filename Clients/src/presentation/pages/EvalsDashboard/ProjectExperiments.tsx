@@ -39,6 +39,11 @@ import HelperIcon from "../../components/HelperIcon";
 import TipBox from "../../components/TipBox";
 import { useAuth } from "../../../application/hooks/useAuth";
 import allowedRoles from "../../../application/constants/permissions";
+import {
+  displayFormattedDate,
+  displayFormattedDateTime,
+  displayFormattedTime,
+} from "../../tools/isoDateToString";
 
 interface ProjectExperimentsProps {
   projectId: string;
@@ -249,15 +254,8 @@ export default function ProjectExperiments({
       const baseConfig = originalExp.config || {};
 
       const now = new Date();
-      const dateStr = now.toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-      });
-      const timeStr = now.toLocaleTimeString("en-US", {
-        hour: "2-digit",
-        minute: "2-digit",
-        hour12: true,
-      });
+      const dateStr = displayFormattedDate(now);
+      const timeStr = displayFormattedTime(now);
       const nextName = `${originalExp.name || "Eval"} (rerun ${dateStr}, ${timeStr})`;
 
       const payload = {
@@ -543,15 +541,7 @@ export default function ProjectExperiments({
     }
 
     // Format the date with time
-    const createdDate = exp.created_at
-      ? new Date(exp.created_at).toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        })
-      : "-";
+    const createdDate = exp.created_at ? displayFormattedDateTime(exp.created_at) : "-";
 
     // Determine judge display based on evaluation mode
     const evaluationMode = exp.config?.evaluationMode || "standard";

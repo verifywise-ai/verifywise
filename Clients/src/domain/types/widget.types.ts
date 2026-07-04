@@ -43,6 +43,8 @@ export interface DatePickerCoreProps {
   error?: string;
   handleDateChange: (date: Dayjs | null) => void;
   disabled?: boolean;
+  id?: string;
+  onBlur?: () => void;
 }
 
 export interface DropDownsProps {
@@ -75,6 +77,7 @@ export interface SelectCorProps {
   error?: string;
   getOptionValue?: (item: any) => any;
   disabled?: boolean;
+  onBlur?: () => void;
   customRenderValue?: (value: any, selectedItem: any) => React.ReactNode;
   isFilterApplied?: boolean;
   /** Insert a visual divider after this many items (e.g., 10 = divider after first 10 items) */

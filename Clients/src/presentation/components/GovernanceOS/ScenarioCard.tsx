@@ -12,7 +12,7 @@ import {
   GitCompareArrows,
   ArrowRight,
 } from "lucide-react";
-import VWTooltip from "../VWTooltip";
+import GovernanceTooltip from "./GovernanceTooltip";
 import StandardModal from "../Modals/StandardModal";
 import FrameworkChip from "./FrameworkChip";
 import { CustomizableButton } from "../button/customizable-button";
@@ -87,86 +87,89 @@ const ScenarioCard = ({
             )}
           </Box>
           <Stack direction="row" gap="8px" alignItems="center">
-            <VWTooltip
-              content="View details about what selecting this scenario means"
-              placement="top"
+            <GovernanceTooltip
+              header="Scenario details"
+              description="View what selecting this scenario means for the project"
             >
-              <IconButton
-                size="small"
-                disableRipple
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setDetailOpen(true);
-                }}
-                sx={{ "color": text.muted, "&:hover": { color: text.primary } }}
-              >
-                <Info size={16} />
-              </IconButton>
-            </VWTooltip>
-            {onEdit && !scenario.is_builtin && (
-              <VWTooltip content="Edit scenario" placement="top">
+              <span>
                 <IconButton
                   size="small"
                   disableRipple
                   onClick={(e) => {
                     e.stopPropagation();
-                    onEdit(scenario);
+                    setDetailOpen(true);
                   }}
                   sx={{ "color": text.muted, "&:hover": { color: text.primary } }}
                 >
-                  <Pencil size={14} />
+                  <Info size={16} />
                 </IconButton>
-              </VWTooltip>
+              </span>
+            </GovernanceTooltip>
+            {onEdit && !scenario.is_builtin && (
+              <GovernanceTooltip
+                header="Edit scenario"
+                description="Modify this governance scenario"
+              >
+                <span>
+                  <IconButton
+                    size="small"
+                    disableRipple
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onEdit(scenario);
+                    }}
+                    sx={{ "color": text.muted, "&:hover": { color: text.primary } }}
+                  >
+                    <Pencil size={14} />
+                  </IconButton>
+                </span>
+              </GovernanceTooltip>
             )}
             {onDelete && !scenario.is_builtin && (
-              <VWTooltip content="Delete scenario" placement="top">
-                <IconButton
-                  size="small"
-                  disableRipple
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(scenario);
-                  }}
-                  sx={{ "color": text.muted, "&:hover": { color: status.error.text } }}
-                >
-                  <Trash2 size={14} />
-                </IconButton>
-              </VWTooltip>
+              <GovernanceTooltip
+                header="Delete scenario"
+                description="Remove this governance scenario permanently"
+              >
+                <span>
+                  <IconButton
+                    size="small"
+                    disableRipple
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDelete(scenario);
+                    }}
+                    sx={{ "color": text.muted, "&:hover": { color: status.error.text } }}
+                  >
+                    <Trash2 size={14} />
+                  </IconButton>
+                </span>
+              </GovernanceTooltip>
             )}
             {onActivate && (
-              <VWTooltip
-                header="Activate this scenario"
-                content={
-                  <p>
-                    Activation creates real tasks for each prioritized framework across selected
-                    projects. Tasks are assigned with staggered due dates based on priority.
-                  </p>
-                }
+              <GovernanceTooltip
+                header="Activate scenario"
+                description="Create tasks across selected projects using this scenario"
                 placement="left"
               >
-                <CustomizableButton
-                  size="small"
-                  variant="contained"
-                  onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
-                    e.stopPropagation();
-                    onActivate(scenario);
-                  }}
-                  startIcon={<Zap size={14} />}
-                  text="Activate"
-                  sx={{}}
-                />
-              </VWTooltip>
+                <span>
+                  <CustomizableButton
+                    size="small"
+                    variant="contained"
+                    onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+                      e.stopPropagation();
+                      onActivate(scenario);
+                    }}
+                    startIcon={<Zap size={14} />}
+                    text="Activate"
+                    sx={{}}
+                  />
+                </span>
+              </GovernanceTooltip>
             )}
             {onSelect && (
-              <VWTooltip
-                header="Set as active governance strategy"
-                content={
-                  <p>
-                    Selecting this scenario sets it as your organization&apos;s active governance
-                    strategy. It defines which frameworks to prioritize (primary, secondary,
-                    supplementary) and guides compliance planning across all projects.
-                  </p>
-                }
+              <GovernanceTooltip
+                header="Select scenario"
+                description="Set this scenario as the active governance strategy"
                 placement="left"
               >
                 <span>
@@ -192,7 +195,7 @@ const ScenarioCard = ({
                     }}
                   />
                 </span>
-              </VWTooltip>
+              </GovernanceTooltip>
             )}
           </Stack>
         </Stack>

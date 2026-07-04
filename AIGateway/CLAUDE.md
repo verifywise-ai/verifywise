@@ -1,6 +1,6 @@
 # AIGateway — LLM Gateway Service
 
-> **Last Updated:** 2026-03-24
+> **Last Updated:** 2026-06-18
 
 ---
 
@@ -84,6 +84,8 @@ Express backend at `Servers/routes/aiGateway.route.ts` proxies `/api/ai-gateway/
 
 | When working on... | Read this file |
 |---------------------|---------------|
+| Agent Control (native tool-call hook, file-write gating, approval, result capture, run correlation) | `docs/technical/domains/agent-control.md` |
+| Agent Control developer/integrator guide (connect any agent: Claude Code, Cursor, generic) | `shared/user-guide-content/content/developers/` |
 | AI Advisor | `docs/technical/infrastructure/ai-advisor.md` |
 | Integrations (Slack, GitHub) | `docs/technical/infrastructure/integrations.md` |
 

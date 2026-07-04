@@ -1,10 +1,12 @@
 import { Suspense } from "react";
 import { Route, Navigate } from "react-router-dom";
 import { lazyRoute, LazyFallback } from "../utils/lazyRoute";
+import { SHOW_AI_GATEWAY_PROMPTS } from "./featureFlags";
 
-// Eager imports — only the app shell and route guard
+// Eager imports — app shell, route guard, and Use cases page (mounts with layout for table skeleton UX)
 import Dashboard from "../../presentation/containers/Dashboard";
 import ProtectedRoute from "../../presentation/components/ProtectedRoute";
+import VWHome from "../../presentation/pages/Home/1.0Home";
 
 // ── Authentication routes ─────────────────────────────────────────────
 const Login = lazyRoute(() => import("../../presentation/pages/Authentication/Login"));
@@ -37,7 +39,6 @@ const IntegratedDashboard = lazyRoute(
   () => import("../../presentation/pages/DashboardOverview/IntegratedDashboard"),
 );
 const StartHere = lazyRoute(() => import("../../presentation/pages/StartHere"));
-const VWHome = lazyRoute(() => import("../../presentation/pages/Home/1.0Home"));
 const VWProjectView = lazyRoute(
   () => import("../../presentation/pages/ProjectView/V1.0ProjectView"),
 );
@@ -69,6 +70,7 @@ const DatasetEditorPage = lazyRoute(
 );
 const AgentDiscovery = lazyRoute(() => import("../../presentation/pages/AgentDiscovery"));
 const ModelInventory = lazyRoute(() => import("../../presentation/pages/ModelInventory"));
+const AIApps = lazyRoute(() => import("../../presentation/pages/AIApps"));
 const ModelLifecycleDetail = lazyRoute(
   () => import("../../presentation/pages/ModelInventory/ModelLifecycleDetail"),
 );
@@ -89,6 +91,19 @@ const RepositoriesPage = lazyRoute(
 const ScanDetailsPage = lazyRoute(
   () => import("../../presentation/pages/AIDetection/ScanDetailsPage"),
 );
+// ── AI Trust Index routes ─────────────────────────────────────────────
+const AITrustIndex = lazyRoute(() => import("../../presentation/pages/AITrustIndex"));
+const AITrustIndexBrowse = lazyRoute(() => import("../../presentation/pages/AITrustIndex/Browse"));
+const AITrustIndexTracked = lazyRoute(
+  () => import("../../presentation/pages/AITrustIndex/Tracked"),
+);
+const AITrustIndexSettings = lazyRoute(
+  () => import("../../presentation/pages/AITrustIndex/Settings"),
+);
+const AITrustIndexDetail = lazyRoute(
+  () => import("../../presentation/pages/AITrustIndex/AppDetail"),
+);
+
 const InsightsPage = lazyRoute(() => import("../../presentation/pages/ShadowAI/InsightsPage"));
 const UserActivityPage = lazyRoute(
   () => import("../../presentation/pages/ShadowAI/UserActivityPage"),
@@ -129,12 +144,14 @@ const MCPServersPage = lazyRoute(() => import("../../presentation/pages/AIGatewa
 const MCPToolCatalogPage = lazyRoute(
   () => import("../../presentation/pages/AIGateway/MCPToolCatalog"),
 );
+const MCPRunsPage = lazyRoute(() => import("../../presentation/pages/AIGateway/MCPRuns"));
 const MCPAuditLogPage = lazyRoute(() => import("../../presentation/pages/AIGateway/MCPAuditLog"));
 const MCPApprovalsPage = lazyRoute(() => import("../../presentation/pages/AIGateway/MCPApprovals"));
 const MCPGuardrailsPage = lazyRoute(
   () => import("../../presentation/pages/AIGateway/MCPGuardrails"),
 );
 
+/*
 // ── Governance OS routes ─────────────────────────────────────────────
 const GovernanceOS = lazyRoute(() => import("../../presentation/pages/GovernanceOS"));
 
@@ -159,6 +176,9 @@ const KnowledgeGraph = lazyRoute(
 const RegulatoryRadar = lazyRoute(
   () => import("../../presentation/pages/GovernanceOS/RegulatoryRadar"),
 );
+
+Governance OS routes are disabled while the module is not broadly released.
+*/
 
 // ── Remaining routes ──────────────────────────────────────────────────
 const Plugins = lazyRoute(() => import("../../presentation/pages/Plugins"));
@@ -351,14 +371,7 @@ export const createRoutes = (
         </Suspense>
       }
     />
-    <Route
-      path="/overview"
-      element={
-        <Suspense fallback={<LazyFallback />}>
-          <VWHome />
-        </Suspense>
-      }
-    />
+    <Route path="/overview" element={<VWHome />} />
     <Route
       path="/framework/:tab?"
       element={
@@ -367,6 +380,8 @@ export const createRoutes = (
         </Suspense>
       }
     />
+    {/*
+    Governance OS routes are disabled while the module is not broadly released.
     <Route
       path="/governance-os/:tab?"
       element={
@@ -440,6 +455,7 @@ export const createRoutes = (
       }
     />
     <Route path="/governance-os/*" element={<Navigate to="/governance" replace />} />
+    */}
     <Route
       path="/project-view"
       element={
@@ -572,6 +588,22 @@ export const createRoutes = (
       }
     />
     <Route
+      path="/ai-apps"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <AIApps />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/ai-apps/:id"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <AIApps />
+        </Suspense>
+      }
+    />
+    <Route
       path="/model-inventory"
       element={
         <Suspense fallback={<LazyFallback />}>
@@ -597,6 +629,14 @@ export const createRoutes = (
     />
     <Route
       path="/model-inventory/evidence-hub"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <ModelInventory />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/model-inventory/model-risk-management"
       element={
         <Suspense fallback={<LazyFallback />}>
           <ModelInventory />
@@ -734,6 +774,46 @@ export const createRoutes = (
         </Suspense>
       }
     />
+    <Route
+      path="/ai-trust-index"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <AITrustIndex />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/ai-trust-index/browse"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <AITrustIndexBrowse />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/ai-trust-index/tracked"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <AITrustIndexTracked />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/ai-trust-index/settings"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <AITrustIndexSettings />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/ai-trust-index/:slug"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <AITrustIndexDetail />
+        </Suspense>
+      }
+    />
     <Route path="/shadow-ai" element={<Navigate to="/shadow-ai/insights" replace />} />
     <Route
       path="/shadow-ai/insights"
@@ -864,22 +944,27 @@ export const createRoutes = (
         </Suspense>
       }
     />
-    <Route
-      path="/ai-gateway/prompts"
-      element={
-        <Suspense fallback={<LazyFallback />}>
-          <AIGatewayPromptsPage />
-        </Suspense>
-      }
-    />
-    <Route
-      path="/ai-gateway/prompts/:id"
-      element={
-        <Suspense fallback={<LazyFallback />}>
-          <AIGatewayPromptEditorPage />
-        </Suspense>
-      }
-    />
+    {/* Prompts routes are gated behind SHOW_AI_GATEWAY_PROMPTS. */}
+    {SHOW_AI_GATEWAY_PROMPTS && (
+      <Route
+        path="/ai-gateway/prompts"
+        element={
+          <Suspense fallback={<LazyFallback />}>
+            <AIGatewayPromptsPage />
+          </Suspense>
+        }
+      />
+    )}
+    {SHOW_AI_GATEWAY_PROMPTS && (
+      <Route
+        path="/ai-gateway/prompts/:id"
+        element={
+          <Suspense fallback={<LazyFallback />}>
+            <AIGatewayPromptEditorPage />
+          </Suspense>
+        }
+      />
+    )}
     <Route
       path="/ai-gateway/virtual-keys"
       element={
@@ -922,6 +1007,14 @@ export const createRoutes = (
       element={
         <Suspense fallback={<LazyFallback />}>
           <MCPToolCatalogPage />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/ai-gateway/mcp/runs"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <MCPRunsPage />
         </Suspense>
       }
     />

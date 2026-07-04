@@ -1,6 +1,7 @@
 import React, { useMemo } from "react";
 import { Box, Typography, Stack } from "@mui/material";
 import { IGovernanceControlMapping } from "../../../../domain/interfaces/i.governanceOs";
+import GovernanceTooltip from "../../../components/GovernanceOS/GovernanceTooltip";
 import { border as borderPalette, background, text, chart } from "../../../themes/palette";
 
 interface MappingMatrixViewProps {
@@ -77,24 +78,29 @@ const MappingMatrixView: React.FC<MappingMatrixViewProps> = ({ mappings, onCellC
                   flexShrink: 0,
                 }}
               >
-                <Box
-                  component="span"
-                  sx={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    height: 22,
-                    px: "8px",
-                    borderRadius: "4px",
-                    fontSize: 11,
-                    fontWeight: 600,
-                    maxWidth: 100,
-                    backgroundColor: `${fw.color}15`,
-                    color: fw.color,
-                    border: `1px solid ${fw.color}30`,
-                  }}
+                <GovernanceTooltip
+                  header="Framework axis"
+                  description="Source frameworks as rows and target frameworks as columns"
                 >
-                  {fw.name}
-                </Box>
+                  <Box
+                    component="span"
+                    sx={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      height: 22,
+                      px: "8px",
+                      borderRadius: "4px",
+                      fontSize: 11,
+                      fontWeight: 600,
+                      maxWidth: 100,
+                      backgroundColor: `${fw.color}15`,
+                      color: fw.color,
+                      border: `1px solid ${fw.color}30`,
+                    }}
+                  >
+                    {fw.name}
+                  </Box>
+                </GovernanceTooltip>
               </Box>
             ))}
           </Stack>
@@ -114,31 +120,36 @@ const MappingMatrixView: React.FC<MappingMatrixViewProps> = ({ mappings, onCellC
                   flexShrink: 0,
                 }}
               >
-                <Box
-                  component="span"
-                  sx={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    height: 22,
-                    px: "8px",
-                    borderRadius: "4px",
-                    fontSize: 11,
-                    fontWeight: 600,
-                    maxWidth: 130,
-                    backgroundColor: `${rowFw.color}15`,
-                    color: rowFw.color,
-                    border: `1px solid ${rowFw.color}30`,
-                  }}
+                <GovernanceTooltip
+                  header="Framework axis"
+                  description="Source frameworks as rows and target frameworks as columns"
                 >
-                  {rowFw.name}
-                </Box>
+                  <Box
+                    component="span"
+                    sx={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      height: 22,
+                      px: "8px",
+                      borderRadius: "4px",
+                      fontSize: 11,
+                      fontWeight: 600,
+                      maxWidth: 130,
+                      backgroundColor: `${rowFw.color}15`,
+                      color: rowFw.color,
+                      border: `1px solid ${rowFw.color}30`,
+                    }}
+                  >
+                    {rowFw.name}
+                  </Box>
+                </GovernanceTooltip>
               </Box>
 
               {/* Cells */}
               {FRAMEWORKS.map((colFw) => {
                 const count = matrix.counts[`${rowFw.id}-${colFw.id}`] || 0;
                 const isDiagonal = rowFw.id === colFw.id;
-                return (
+                const cell = (
                   <Box
                     key={colFw.id}
                     onClick={() => !isDiagonal && count > 0 && onCellClick(rowFw.id, colFw.id)}
@@ -176,6 +187,17 @@ const MappingMatrixView: React.FC<MappingMatrixViewProps> = ({ mappings, onCellC
                     )}
                   </Box>
                 );
+                return !isDiagonal && count > 0 ? (
+                  <GovernanceTooltip
+                    key={colFw.id}
+                    header="Mapping count"
+                    description="Click to view the mappings between these two frameworks"
+                  >
+                    {cell}
+                  </GovernanceTooltip>
+                ) : (
+                  cell
+                );
               })}
             </Stack>
           ))}
@@ -183,24 +205,29 @@ const MappingMatrixView: React.FC<MappingMatrixViewProps> = ({ mappings, onCellC
       </Box>
 
       {/* Legend */}
-      <Stack direction="row" gap="16px" alignItems="center" sx={{ mt: "16px" }}>
-        <Typography sx={{ fontSize: 12, color: text.muted }}>Density:</Typography>
-        <Stack direction="row" gap="4px" alignItems="center">
-          {[0, 0.25, 0.5, 0.75, 1].map((intensity, i) => (
-            <Box
-              key={i}
-              sx={{
-                width: 24,
-                height: 16,
-                backgroundColor: getCellColor(intensity * matrix.maxCount, matrix.maxCount || 1),
-                border: `1px solid ${borderPalette.light}`,
-                borderRadius: "4px",
-              }}
-            />
-          ))}
+      <GovernanceTooltip
+        header="Density legend"
+        description="Color intensity shows the density of mappings"
+      >
+        <Stack direction="row" gap="16px" alignItems="center" sx={{ mt: "16px" }}>
+          <Typography sx={{ fontSize: 12, color: text.muted }}>Density:</Typography>
+          <Stack direction="row" gap="4px" alignItems="center">
+            {[0, 0.25, 0.5, 0.75, 1].map((intensity, i) => (
+              <Box
+                key={i}
+                sx={{
+                  width: 24,
+                  height: 16,
+                  backgroundColor: getCellColor(intensity * matrix.maxCount, matrix.maxCount || 1),
+                  border: `1px solid ${borderPalette.light}`,
+                  borderRadius: "4px",
+                }}
+              />
+            ))}
+          </Stack>
+          <Typography sx={{ fontSize: 12, color: text.muted }}>Low → High</Typography>
         </Stack>
-        <Typography sx={{ fontSize: 12, color: text.muted }}>Low → High</Typography>
-      </Stack>
+      </GovernanceTooltip>
     </Box>
   );
 };

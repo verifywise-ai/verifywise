@@ -10,11 +10,11 @@ export const mcpAuditContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Audit Log records every tool call that flows through the MCP Gateway. It\'s your compliance trail for agent activity: what was called, who called it, whether it succeeded, and how long it took.',
+      text: 'The Audit Log records every tool call that flows through the MCP Gateway. It\'s your compliance trail for agent activity, covering what was called, who called it, whether it succeeded and how long it took.',
     },
     {
       type: 'paragraph',
-      text: 'You\'ll find it at **AI Gateway > MCP Gateway > Audit log**.',
+      text: 'You\'ll find it at **AI Gateway > Agent Control > Activity**.',
     },
     {
       type: 'heading',
@@ -104,7 +104,7 @@ export const mcpAuditContent: ArticleContent = {
       ],
       rows: [
         { field: 'Tool name', description: 'The name of the tool that was called, in monospace font.' },
-        { field: 'Status', description: 'Color-coded chip showing the outcome: success, error, blocked, rate_limited, or approval_required.' },
+        { field: 'Status', description: 'Color-coded chip showing the outcome: success, error, blocked, rate_limited or approval_required.' },
         { field: 'Latency', description: 'Round-trip time in milliseconds.' },
         { field: 'Result summary', description: 'A truncated summary of the tool\'s response (up to 500 characters). Shows a dash if no summary is available.' },
         { field: 'Agent key', description: 'The name of the agent key that made the call.' },
@@ -145,7 +145,7 @@ export const mcpAuditContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { bold: 'Filter by tool', text: 'Text field. Type a tool name (e.g., "greet") to show only calls to that tool.' },
-        { bold: 'Status', text: 'Dropdown to filter by result status: All statuses, Success, Error, Blocked, or Rate limited.' },
+        { bold: 'Status', text: 'Dropdown to filter by result status: All statuses, Success, Error, Blocked or Rate limited.' },
       ],
     },
     {
@@ -237,7 +237,7 @@ export const mcpAuditContent: ArticleContent = {
         { text: 'What was called (tool name and arguments)' },
         { text: 'When it happened (timestamp)' },
         { text: 'What happened (status, result summary, latency)' },
-        { text: 'Whether it was blocked, rate-limited, or required approval' },
+        { text: 'Whether it was blocked, rate-limited or required approval' },
       ],
     },
     {

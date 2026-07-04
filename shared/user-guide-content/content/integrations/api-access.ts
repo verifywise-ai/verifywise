@@ -107,9 +107,10 @@ export const apiAccessContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { bold: 'Name', text: 'The descriptive name you gave the key' },
-        { bold: 'Status', text: 'Whether the key is Active or Expired' },
+        { bold: 'Status', text: 'Whether the key is Active, Expired or Revoked' },
         { bold: 'Created', text: 'When the key was created' },
         { bold: 'Expires', text: 'When the key will expire' },
+        { bold: 'Last used', text: 'When the key last authenticated a request, or Never if it has not been used yet' },
       ],
     },
     {
@@ -120,7 +121,30 @@ export const apiAccessContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Active keys have a green status badge. Expired keys show a warning indicator and can no longer be used.',
+      text: 'Active keys have a green badge. Expired keys can no longer be used. Revoked keys were turned off manually and are kept in the list for your records.',
+    },
+    {
+      type: 'heading',
+      id: 'revoking-keys',
+      level: 2,
+      text: 'Revoking API keys',
+    },
+    {
+      type: 'paragraph',
+      text: 'Revoking a key turns it off straight away while keeping it in the list, marked as revoked, for your records. This is the best way to retire a key you no longer trust.',
+    },
+    {
+      type: 'ordered-list',
+      items: [
+        { text: 'Find the key in the API keys list' },
+        { text: 'Click the revoke icon for that key' },
+        { text: 'Confirm when prompted' },
+      ],
+    },
+    {
+      type: 'callout',
+      variant: 'tip',
+      text: 'A revoked key is rejected on its very next request, before its expiry date. If a key might be compromised, revoke it rather than waiting for it to expire.',
     },
     {
       type: 'heading',
@@ -130,7 +154,7 @@ export const apiAccessContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'To delete an API key:',
+      text: 'Deleting removes a key from the list entirely. If you want to keep a record that the key existed, revoke it instead. To delete a key:',
     },
     {
       type: 'ordered-list',
@@ -163,6 +187,10 @@ export const apiAccessContent: ArticleContent = {
       ],
     },
     {
+      type: 'paragraph',
+      text: 'For the base URL, the response shape, the full list of endpoints and the current limits, see the Platform REST API article in the developer guide. You can also browse the live endpoint reference in your browser at /api/docs.',
+    },
+    {
       type: 'heading',
       id: 'security-best-practices',
       level: 2,
@@ -173,9 +201,9 @@ export const apiAccessContent: ArticleContent = {
       items: [
         { bold: 'Never share keys', text: 'Keep API keys confidential. Don\'t share them in emails, chat or version control.' },
         { bold: 'Use environment variables', text: 'Store keys in environment variables rather than hard-coding them.' },
-        { bold: 'Rotate regularly', text: 'Create new keys periodically and delete old ones to limit exposure.' },
+        { bold: 'Rotate regularly', text: 'Create new keys periodically and revoke old ones to limit exposure.' },
         { bold: 'Use separate keys', text: 'Create different keys for different environments and purposes.' },
-        { bold: 'Act on compromises', text: 'If you suspect a key has been compromised, delete it right away and create a new one.' },
+        { bold: 'Act on compromises', text: 'If you suspect a key has been compromised, revoke it right away and create a new one.' },
         { bold: 'Limit access', text: 'Only admins should manage API keys.' },
       ],
     },
@@ -219,7 +247,7 @@ export const apiAccessContent: ArticleContent = {
         { text: 'Check that the API key is correct and complete' },
         { text: 'Verify the key hasn\'t expired' },
         { text: 'Make sure the Authorization header is formatted properly' },
-        { text: 'Confirm the key hasn\'t been deleted' },
+        { text: 'Confirm the key hasn\'t been revoked or deleted' },
       ],
     },
     {
@@ -266,7 +294,7 @@ export const apiAccessContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'API keys give access to VerifyWise API endpoints based on your organization\'s permissions. The specific endpoints and operations available are documented in the API reference.',
+      text: 'A key carries the role of the Admin who created it and is scoped to your organization, so it can only read and write your own organization\'s data. The endpoints and operations available are listed in the Platform REST API article and the live reference at /api/docs.',
     },
     {
       type: 'heading',
@@ -276,12 +304,18 @@ export const apiAccessContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'API requests may be rate-limited to keep the platform stable. If you run into rate limit errors, reduce request frequency or contact support.',
+      text: 'Some route groups, such as login and file uploads, are rate-limited, but the main data (CRUD) endpoints currently are not. Keep your request volume reasonable anyway, since limits may be added later. The Platform REST API article covers this in more detail.',
     },
     {
       type: 'article-links',
       title: 'Related articles',
       items: [
+        {
+          collectionId: 'developers',
+          articleId: 'platform-rest-api',
+          title: 'Platform REST API',
+          description: 'Base URL, authentication, response shape and limits for the API',
+        },
         {
           collectionId: 'integrations',
           articleId: 'integration-overview',

@@ -7,7 +7,6 @@ import {
   deleteMapping,
   createBulkMappings,
   getAllScenarios,
-  getScenarioById,
   createScenario,
   updateScenario,
   deleteScenario,
@@ -20,7 +19,6 @@ import {
   getCoverage,
   refreshCoverage,
   getUnifiedView,
-  getEligibility,
   getPreferences,
   updatePreferences,
 } from "../repository/governanceOs.repository";
@@ -42,12 +40,10 @@ export const governanceOsQueryKeys = {
   mappingsBetween: (sourceId: number, targetId: number) =>
     [...governanceOsQueryKeys.mappings(), "between", sourceId, targetId] as const,
   scenarios: () => [...governanceOsQueryKeys.all, "scenarios"] as const,
-  scenario: (id: number) => [...governanceOsQueryKeys.scenarios(), id] as const,
   coverage: (projectId: number) => [...governanceOsQueryKeys.all, "coverage", projectId] as const,
   unifiedView: (projectId: number) =>
     [...governanceOsQueryKeys.all, "unified-view", projectId] as const,
   preferences: () => [...governanceOsQueryKeys.all, "preferences"] as const,
-  eligibility: () => [...governanceOsQueryKeys.all, "eligibility"] as const,
 };
 
 export const useCreateMapping = () => {
@@ -184,18 +180,6 @@ export const useScenarios = () => {
   });
 };
 
-/** @deprecated Not currently used by any component. Kept for potential future use. */
-export const useScenario = (id: number) => {
-  return useQuery<IGovernanceScenario>({
-    queryKey: governanceOsQueryKeys.scenario(id),
-    queryFn: async () => {
-      const response = await getScenarioById({ id });
-      return response?.data;
-    },
-    enabled: id > 0,
-  });
-};
-
 export const useCreateScenario = () => {
   const queryClient = useQueryClient();
   return useMutation({
@@ -266,18 +250,6 @@ export const useUnifiedView = (projectId: number) => {
     },
     enabled: projectId > 0,
     staleTime: 5 * 60 * 1000,
-  });
-};
-
-/** @deprecated Not currently used by any component. Kept for potential future use. */
-export const useGovernanceOsEligibility = () => {
-  return useQuery<{ eligible: boolean; frameworkCount: number }>({
-    queryKey: governanceOsQueryKeys.eligibility(),
-    queryFn: async () => {
-      const response = await getEligibility();
-      return response?.data || { eligible: false, frameworkCount: 0 };
-    },
-    staleTime: 2 * 60 * 1000,
   });
 };
 

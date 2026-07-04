@@ -4,12 +4,14 @@ import { useEvalsSidebarContextSafe } from "../../../application/contexts/EvalsS
 import { useAIDetectionSidebarContextSafe } from "../../../application/contexts/AIDetectionSidebar.context";
 import { useShadowAISidebarContextSafe } from "../../../application/contexts/ShadowAISidebar.context";
 import { useAIGatewaySidebarContextSafe } from "../../../application/contexts/AIGatewaySidebar.context";
+import { useAITrustIndexSidebarContextSafe } from "../../../application/contexts/AITrustIndexSidebar.context";
 import Sidebar from "../Sidebar";
 import SuperAdminSidebar from "../SuperAdminSidebar";
 import EvalsSidebar from "../../pages/EvalsDashboard/EvalsSidebar";
 import AIDetectionSidebar from "../../pages/AIDetection/AIDetectionSidebar";
 import ShadowAISidebar from "../../pages/ShadowAI/ShadowAISidebar";
 import AIGatewaySidebar from "../../pages/AIGateway/AIGatewaySidebar";
+import AITrustIndexSidebar from "../../pages/AITrustIndex/AITrustIndexSidebar";
 
 interface ContextSidebarProps {
   activeModule: AppModule;
@@ -42,6 +44,7 @@ export function ContextSidebar({
   const aiDetectionSidebarContext = useAIDetectionSidebarContextSafe();
   const shadowAiSidebarContext = useShadowAISidebarContextSafe();
   const aiGatewaySidebarContext = useAIGatewaySidebarContextSafe();
+  const aiTrustIndexSidebarContext = useAITrustIndexSidebarContextSafe();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -165,6 +168,15 @@ export function ContextSidebar({
     case "ai-gateway": {
       const gatewayTab = (() => {
         const p = location.pathname;
+        // MCP / Agent Control sub-routes must be checked before the broader
+        // matches so a path like /ai-gateway/mcp/audit doesn't fall through.
+        if (p.includes("/ai-gateway/mcp/agent-keys")) return "mcp/agent-keys";
+        if (p.includes("/ai-gateway/mcp/runs")) return "mcp/runs";
+        if (p.includes("/ai-gateway/mcp/audit")) return "mcp/audit";
+        if (p.includes("/ai-gateway/mcp/approvals")) return "mcp/approvals";
+        if (p.includes("/ai-gateway/mcp/servers")) return "mcp/servers";
+        if (p.includes("/ai-gateway/mcp/tools")) return "mcp/tools";
+        if (p.includes("/ai-gateway/mcp/guardrails")) return "mcp/guardrails";
         if (p.includes("/ai-gateway/dashboard")) return "dashboard";
         if (p.includes("/ai-gateway/endpoints")) return "endpoints";
         if (p.includes("/ai-gateway/playground")) return "playground";
@@ -188,6 +200,26 @@ export function ContextSidebar({
           endpointsCount={aiGatewaySidebarContext?.endpointsCount ?? 0}
           promptsCount={aiGatewaySidebarContext?.promptsCount ?? 0}
           virtualKeysCount={aiGatewaySidebarContext?.virtualKeysCount ?? 0}
+        />
+      );
+    }
+    case "ai-trust-index": {
+      const trustIndexTab = location.pathname.includes("/ai-trust-index/tracked")
+        ? "tracked"
+        : location.pathname.includes("/ai-trust-index/settings")
+          ? "settings"
+          : "browse";
+
+      const handleTrustIndexTabChange = (newTab: string) => {
+        navigate(`/ai-trust-index/${newTab}`);
+      };
+
+      return (
+        <AITrustIndexSidebar
+          activeTab={trustIndexTab}
+          onTabChange={handleTrustIndexTabChange}
+          trackedCount={aiTrustIndexSidebarContext?.trackedCount ?? 0}
+          isAdmin={isAdmin}
         />
       );
     }

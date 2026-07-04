@@ -26,6 +26,7 @@ import SearchBox from "../../../components/Search/SearchBox";
 import { EmptyState } from "../../../components/EmptyState";
 import { ROLE_OPTIONS, ROLE_COLORS } from "../../../../application/constants/roles";
 import singleTheme from "../../../themes/v1SingleTheme";
+import { displayFormattedDate } from "../../../tools/isoDateToString";
 
 const Users = () => {
   const { id: orgId } = useParams<{ id: string }>();
@@ -235,20 +236,10 @@ const Users = () => {
                       </Box>
                     </TableCell>
                     <TableCell sx={tableStyles.body.cell}>
-                      {new Date(user.created_at).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })}
+                      {displayFormattedDate(user.created_at)}
                     </TableCell>
                     <TableCell sx={tableStyles.body.cell}>
-                      {user.last_login
-                        ? new Date(user.last_login).toLocaleDateString("en-US", {
-                            year: "numeric",
-                            month: "short",
-                            day: "numeric",
-                          })
-                        : "Never"}
+                      {user.last_login ? displayFormattedDate(user.last_login) : "Never"}
                     </TableCell>
                     <TableCell sx={{ ...tableStyles.body.cell, textAlign: "right" }}>
                       <Button

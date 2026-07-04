@@ -10,56 +10,80 @@ const TABS = [
     label: "Hub",
     path: "/governance",
     icon: "LayoutDashboard" as const,
-    tooltip: "Governance overview and module navigation",
+    tooltipContent: {
+      header: "Hub",
+      description: "Governance overview and module navigation.",
+    },
   },
   {
     value: "framework-mapper",
     label: "Framework Mapper",
     path: "/governance/framework-mapper",
     icon: "GitCompareArrows" as const,
-    tooltip: "Explore cross-framework control mappings",
+    tooltipContent: {
+      header: "Framework Mapper",
+      description: "Explore and manage cross-framework control mappings.",
+    },
   },
   {
     value: "scenarios",
     label: "Scenario Builder",
     path: "/governance/scenarios",
     icon: "Compass" as const,
-    tooltip: "Governance scenarios and recommendations",
+    tooltipContent: {
+      header: "Scenario Builder",
+      description: "Get framework recommendations and manage governance scenarios.",
+    },
   },
   {
     value: "insights",
     label: "Unified Insights",
     path: "/governance/insights",
     icon: "BarChart3" as const,
-    tooltip: "Coverage analysis and gap detection",
+    tooltipContent: {
+      header: "Unified Insights",
+      description: "Per-project coverage analysis and gap detection.",
+    },
   },
   {
     value: "evidence",
     label: "Evidence Hub",
     path: "/governance/evidence",
     icon: "FileCheck" as const,
-    tooltip: "Centralized compliance evidence",
+    tooltipContent: {
+      header: "Evidence Hub",
+      description: "Centralize and manage compliance evidence across frameworks.",
+    },
   },
   {
     value: "knowledge-graph",
     label: "Knowledge Graph",
     path: "/governance/knowledge-graph",
     icon: "Network" as const,
-    tooltip: "Visual governance relationships",
+    tooltipContent: {
+      header: "Knowledge Graph",
+      description: "Visual exploration of governance relationships and dependencies.",
+    },
   },
   {
     value: "regulatory-radar",
     label: "Regulatory Radar",
     path: "/governance/regulatory-radar",
     icon: "Radio" as const,
-    tooltip: "Monitor regulatory changes",
+    tooltipContent: {
+      header: "Regulatory Radar",
+      description: "Monitor regulatory changes and compliance deadlines.",
+    },
   },
   {
     value: "settings",
     label: "Settings",
     path: "/governance/settings",
     icon: "Settings" as const,
-    tooltip: "Governance preferences",
+    tooltipContent: {
+      header: "Settings",
+      description: "Manage Governance Intelligence preferences and defaults.",
+    },
   },
 ];
 
@@ -117,7 +141,7 @@ const GovernanceLayout: React.FC<GovernanceLayoutProps> = ({
             label: t.label,
             value: t.value,
             icon: t.icon,
-            tooltip: t.tooltip,
+            tooltipContent: t.tooltipContent,
           }))}
           activeTab={activeTab}
           onChange={handleChange}

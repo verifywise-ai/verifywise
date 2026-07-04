@@ -1,21 +1,22 @@
-import { Box, Tooltip } from "@mui/material";
+import { Box } from "@mui/material";
 import { Link2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import GovernanceTooltip from "./GovernanceTooltip";
 import { accent } from "../../themes/palette";
 
 interface CrossMappingBadgeProps {
   mappingCount: number;
-  controlIdentifier?: string;
 }
 
-const CrossMappingBadge = ({ mappingCount, controlIdentifier }: CrossMappingBadgeProps) => {
+const CrossMappingBadge = ({ mappingCount }: CrossMappingBadgeProps) => {
   const navigate = useNavigate();
 
   if (mappingCount === 0) return null;
 
   return (
-    <Tooltip
-      title={`${mappingCount} cross-framework mapping(s)${controlIdentifier ? ` for ${controlIdentifier}` : ""}`}
+    <GovernanceTooltip
+      header="Cross-framework mappings"
+      description="Number of mappings linked to this control"
     >
       <Box
         onClick={() => navigate("/governance-os/mapper")}
@@ -40,7 +41,7 @@ const CrossMappingBadge = ({ mappingCount, controlIdentifier }: CrossMappingBadg
         <Link2 size={14} />
         {mappingCount}
       </Box>
-    </Tooltip>
+    </GovernanceTooltip>
   );
 };
 

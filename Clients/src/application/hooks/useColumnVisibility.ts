@@ -25,6 +25,7 @@
  */
 
 import { useState, useCallback, useEffect, useMemo } from "react";
+import { storageService, dynamicKeys } from "../../infrastructure/storage";
 
 /**
  * Column configuration interface
@@ -91,40 +92,33 @@ export function useColumnVisibility<TKey extends string = string>(
 ): UseColumnVisibilityReturn<TKey> {
   const { tableId, columns, storagePrefix = "verifywise:columns" } = options;
 
-  const storageKey = `${storagePrefix}:${tableId}`;
+  // Canonical namespaced key; the old `${storagePrefix}:${tableId}` key is
+  // migrated once via the StorageService legacy-key mechanism.
+  const storageKey = dynamicKeys.columns(tableId);
+  const legacyKey = `${storagePrefix}:${tableId}`;
 
   // Get default visible columns
   const getDefaultVisibleColumns = useCallback((): Set<TKey> => {
     return new Set(columns.filter((c) => c.defaultVisible).map((c) => c.key));
   }, [columns]);
 
-  // Initialize from localStorage or defaults
+  // Initialize from storage or defaults
   const [visibleColumns, setVisibleColumns] = useState<Set<TKey>>(() => {
-    try {
-      const stored = localStorage.getItem(storageKey);
-      if (stored) {
-        const parsed = JSON.parse(stored) as TKey[];
-        // Validate that stored columns still exist in config
-        const validColumns = parsed.filter((key) => columns.some((c) => c.key === key));
-        // Always include alwaysVisible columns
-        const alwaysVisibleKeys = columns.filter((c) => c.alwaysVisible).map((c) => c.key);
-        return new Set([...validColumns, ...alwaysVisibleKeys]);
-      }
-    } catch (err) {
-      console.error(`Error loading column visibility for ${tableId}:`, err);
+    const parsed = storageService.getRaw<TKey[] | null>(storageKey, null, { legacyKey });
+    if (Array.isArray(parsed)) {
+      // Validate that stored columns still exist in config
+      const validColumns = parsed.filter((key) => columns.some((c) => c.key === key));
+      // Always include alwaysVisible columns
+      const alwaysVisibleKeys = columns.filter((c) => c.alwaysVisible).map((c) => c.key);
+      return new Set([...validColumns, ...alwaysVisibleKeys]);
     }
     return getDefaultVisibleColumns();
   });
 
-  // Persist to localStorage when visibility changes
+  // Persist when visibility changes
   useEffect(() => {
-    try {
-      const columnsArray = Array.from(visibleColumns);
-      localStorage.setItem(storageKey, JSON.stringify(columnsArray));
-    } catch (err) {
-      console.error(`Error saving column visibility for ${tableId}:`, err);
-    }
-  }, [visibleColumns, storageKey, tableId]);
+    storageService.setRaw(storageKey, Array.from(visibleColumns));
+  }, [visibleColumns, storageKey]);
 
   /**
    * Toggle a column's visibility

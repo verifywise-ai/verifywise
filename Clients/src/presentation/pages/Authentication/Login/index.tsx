@@ -244,6 +244,8 @@ const Login: React.FC = () => {
             return;
           }
 
+          dispatch(setIsSuperAdmin(false));
+
           const onboardingStatus = response.data.data.onboarding_status || "completed";
           const isOrgCreatorFlag = response.data.data.is_org_creator || false;
 

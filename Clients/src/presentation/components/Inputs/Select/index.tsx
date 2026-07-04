@@ -48,6 +48,7 @@ function Select({
   optionalLabel,
   error,
   onChange,
+  onBlur,
   sx,
   getOptionValue,
   disabled,
@@ -96,11 +97,6 @@ function Select({
           Object.entries(sx).filter(([key]) => !(LAYOUT_KEYS as readonly string[]).includes(key)),
         )
       : sx;
-
-  if (import.meta.env?.DEV) {
-    // eslint-disable-next-line no-console
-    console.debug("[Select] layout", { label, id, extractedLayoutProps });
-  }
 
   const renderValue = (value: unknown) => {
     const selected = value as string | number;
@@ -151,7 +147,6 @@ function Select({
             height: "22px",
             display: "flex",
             alignItems: "center",
-            cursor: "pointer",
           }}
         >
           {label}
@@ -177,6 +172,7 @@ function Select({
         className="select-component"
         value={value}
         onChange={onChange}
+        onBlur={onBlur}
         displayEmpty
         inputProps={{
           "id": selectId,

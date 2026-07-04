@@ -69,9 +69,9 @@ describe("project.repository", () => {
 
       const result = await getAllProjects();
 
-      expect(apiServices.get).toHaveBeenCalledWith("/projects", {
-        signal: undefined,
-      });
+      // Without a signal the call is deduped, which forwards an undefined config
+      // to apiServices.get (equivalent to the previous { signal: undefined }).
+      expect(apiServices.get).toHaveBeenCalledWith("/projects", undefined);
       expect(result).toEqual(mockProjects);
       expect(result).toHaveLength(2);
     });
@@ -82,9 +82,8 @@ describe("project.repository", () => {
 
       const result = await getAllProjects({});
 
-      expect(apiServices.get).toHaveBeenCalledWith("/projects", {
-        signal: undefined,
-      });
+      // No signal -> deduped path -> apiServices.get called with an undefined config.
+      expect(apiServices.get).toHaveBeenCalledWith("/projects", undefined);
       expect(result).toEqual(mockProjects);
     });
 

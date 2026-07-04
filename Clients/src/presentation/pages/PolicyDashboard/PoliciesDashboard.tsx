@@ -5,15 +5,16 @@ import TabContext from "@mui/lab/TabContext";
 import TabBar from "../../components/TabBar";
 import PageTour from "../../components/PageTour";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
-import { PolicyManagerModel } from "../../../domain/models/Common/policy/policyManager.model";
-import { getAllPolicies, getAllTags } from "../../../application/repository/policy.repository";
+import { usePolicies } from "../../../application/hooks/usePolicies";
+import { useTags } from "../../../application/hooks/useTags";
 import PolicyManager from "./PolicyManager";
 import PolicyTemplates from "./PolicyTemplates";
 import PolicySteps from "./PolicySteps";
 
 const PolicyDashboard: React.FC = () => {
-  const [policies, setPolicies] = useState<PolicyManagerModel[]>([]);
-  const [tags, setTags] = useState<string[]>([]);
+  const { data: policies = [], isLoading: isPoliciesLoading } = usePolicies();
+  const { data: tags = [], isLoading: isTagsLoading } = useTags();
+  const [isTemplatesLoading, setIsTemplatesLoading] = useState(true);
   const [isInitialLoadComplete, setIsInitialLoadComplete] = useState(false);
   const [templateCount, setTemplateCount] = useState(0);
 
@@ -23,20 +24,20 @@ const PolicyDashboard: React.FC = () => {
   const isPolicyTemplateTab = currentPath.includes("/policies/templates");
   const activeTab = isPolicyTemplateTab ? "templates" : "policies";
 
-  const fetchAll = async () => {
-    const [pRes, tRes] = await Promise.all([getAllPolicies(), getAllTags()]);
-    setPolicies(pRes);
-    setTags(tRes);
-    setIsInitialLoadComplete(true);
-  };
-
   useEffect(() => {
-    fetchAll();
+    setIsTemplatesLoading(true);
     fetch("/data/PolicyTemplates.json")
       .then((res) => res.json())
       .then((data: unknown[]) => setTemplateCount(data.length))
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setIsTemplatesLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (!isPoliciesLoading && !isTagsLoading) {
+      setIsInitialLoadComplete(true);
+    }
+  }, [isPoliciesLoading, isTagsLoading]);
 
   const handleTabChange = (_: React.SyntheticEvent, tabValue: string) => {
     if (tabValue === "policies") {
@@ -62,6 +63,7 @@ const PolicyDashboard: React.FC = () => {
                 value: "policies",
                 icon: "Shield",
                 count: policies.length,
+                isLoading: isPoliciesLoading,
                 tooltip: "Your organization's active policies",
               },
               {
@@ -69,6 +71,7 @@ const PolicyDashboard: React.FC = () => {
                 value: "templates",
                 icon: "ShieldHalf",
                 count: templateCount,
+                isLoading: isTemplatesLoading,
                 tooltip: "Pre-built templates to create new policies from",
               },
             ]}
@@ -78,10 +81,8 @@ const PolicyDashboard: React.FC = () => {
           />
         </Box>
 
-        {activeTab === "policies" && (
-          <PolicyManager policies={policies} tags={tags} fetchAll={fetchAll} />
-        )}
-        {activeTab === "templates" && <PolicyTemplates tags={tags} fetchAll={fetchAll} />}
+        {activeTab === "policies" && <PolicyManager tags={tags} />}
+        {activeTab === "templates" && <PolicyTemplates tags={tags} isLoading={isPoliciesLoading} />}
 
         <PageTour steps={PolicySteps} run={isInitialLoadComplete} tourKey="policy-tour" />
       </TabContext>

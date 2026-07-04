@@ -384,8 +384,8 @@ const AgentDiscovery: React.FC = () => {
         ) : undefined
       }
     >
-      {/* Controls row - only show when agents exist */}
-      {hasAgents && (
+      {/* Controls row - show while loading or when agents exist */}
+      {(hasAgents || isLoading) && (
         <Stack spacing={2}>
           <Stack direction="row" justifyContent="space-between" alignItems="center">
             <Stack direction="row" gap={2} alignItems="center">

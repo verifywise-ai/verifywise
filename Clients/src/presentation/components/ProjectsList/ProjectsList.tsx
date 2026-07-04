@@ -18,10 +18,17 @@ import { FilterBy, FilterColumn } from "../Table/FilterBy";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import { ColumnSelector } from "../Table/ColumnSelector";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
+import CustomizableSkeleton from "../Skeletons";
 
 import { projectWrapperStyle, noProjectsTextStyle, vwhomeBodyProjectsGrid } from "./style";
+import { displayFormattedDate } from "../../tools/isoDateToString";
 
-const ProjectList = ({ projects, newProjectButton, onProjectDeleted }: IProjectListProps) => {
+const ProjectList = ({
+  projects,
+  newProjectButton,
+  onProjectDeleted,
+  isLoading = false,
+}: IProjectListProps) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = usePersistedViewMode("projects-view-mode", "table");
 
@@ -223,6 +230,14 @@ const ProjectList = ({ projects, newProjectButton, onProjectDeleted }: IProjectL
 
   // Extracted render logic
   const renderProjects = () => {
+    if (isLoading) {
+      return (
+        <Stack spacing={2}>
+          <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
+        </Stack>
+      );
+    }
+
     if (!projects || projects.length === 0) {
       return viewMode === "table" ? (
         <ProjectTableView projects={[]} />
@@ -302,10 +317,8 @@ const ProjectList = ({ projects, newProjectButton, onProjectDeleted }: IProjectL
         project_title: project.project_title || "-",
         ai_risk_classification: project.ai_risk_classification || "-",
         type_of_high_risk_role: project.type_of_high_risk_role?.replace(/_/g, " ") || "-",
-        start_date: project.start_date ? new Date(project.start_date).toLocaleDateString() : "-",
-        last_updated: project.last_updated
-          ? new Date(project.last_updated).toLocaleDateString()
-          : "-",
+        start_date: project.start_date ? displayFormattedDate(project.start_date) : "-",
+        last_updated: project.last_updated ? displayFormattedDate(project.last_updated) : "-",
         owner: ownerName,
         status: project.status || "-",
       };
@@ -323,39 +336,35 @@ const ProjectList = ({ projects, newProjectButton, onProjectDeleted }: IProjectL
         }}
       >
         <Stack direction="row" spacing={2} alignItems="center" sx={{ flex: 1 }}>
-          {projects && projects.length > 0 && (
+          <FilterBy columns={projectFilterColumns} onFilterChange={handleProjectFilterChange} />
+
+          {viewMode === "table" && (
             <>
-              <FilterBy columns={projectFilterColumns} onFilterChange={handleProjectFilterChange} />
-
-              {viewMode === "table" && (
-                <>
-                  <GroupBy
-                    options={[
-                      { id: "risk_level", label: "Risk level" },
-                      { id: "role", label: "Role" },
-                      { id: "owner", label: "Owner" },
-                      { id: "status", label: "Status" },
-                    ]}
-                    onGroupChange={handleGroupChange}
-                  />
-                  <ColumnSelector
-                    columns={allColumns}
-                    visibleColumns={visibleColumns}
-                    onToggleColumn={toggleColumn}
-                    onResetToDefaults={resetToDefaults}
-                  />
-                </>
-              )}
-
-              <SearchBox
-                placeholder="Search use cases..."
-                value={searchTerm}
-                onChange={setSearchTerm}
-                inputProps={{ "aria-label": "Search use cases" }}
-                fullWidth={false}
+              <GroupBy
+                options={[
+                  { id: "risk_level", label: "Risk level" },
+                  { id: "role", label: "Role" },
+                  { id: "owner", label: "Owner" },
+                  { id: "status", label: "Status" },
+                ]}
+                onGroupChange={handleGroupChange}
+              />
+              <ColumnSelector
+                columns={allColumns}
+                visibleColumns={visibleColumns}
+                onToggleColumn={toggleColumn}
+                onResetToDefaults={resetToDefaults}
               />
             </>
           )}
+
+          <SearchBox
+            placeholder="Search use cases..."
+            value={searchTerm}
+            onChange={setSearchTerm}
+            inputProps={{ "aria-label": "Search use cases" }}
+            fullWidth={false}
+          />
         </Stack>
 
         <Box
@@ -365,18 +374,14 @@ const ProjectList = ({ projects, newProjectButton, onProjectDeleted }: IProjectL
             gap: "8px",
           }}
         >
-          {projects && projects.length > 0 && (
-            <ExportMenu
-              data={exportData}
-              columns={exportColumns}
-              filename="use-cases"
-              title="Use Cases"
-            />
-          )}
+          <ExportMenu
+            data={exportData}
+            columns={exportColumns}
+            filename="use-cases"
+            title="Use Cases"
+          />
           {newProjectButton as React.ReactNode}
-          {projects && projects.length > 0 && (
-            <ViewToggle viewMode={viewMode} onViewChange={setViewMode} />
-          )}
+          <ViewToggle viewMode={viewMode} onViewChange={setViewMode} />
         </Box>
       </Box>
 

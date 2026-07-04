@@ -7,14 +7,27 @@
  * Rate Limiters:
  * - fileOperationsLimiter: 50 requests/15min (for file uploads, downloads, deletions)
  * - generalApiLimiter: 100 requests/15min (for standard API endpoints)
- * - authLimiter: 5 requests/15min (for authentication to prevent brute force)
+ * - authLimiter: 5 requests/15min (for login/register/reset to prevent brute force)
+ * - tokenRefreshLimiter: 60 requests/15min (for automatic access-token refresh)
+ *
+ * The strict auth/refresh limits apply by default. They are relaxed ONLY when
+ * NODE_ENV is an explicit dev/test value, so a single developer hammering
+ * localhost from one IP is not locked out. A missing or unknown NODE_ENV keeps
+ * the strict production limits (fail closed).
  *
  * @module middleware/rateLimit
  */
 
-import rateLimit, { Options } from "express-rate-limit";
+import rateLimit, { Options, ipKeyGenerator } from "express-rate-limit";
 import { Request, Response } from "express";
 import logger from "../utils/logger/fileLogger";
+
+// Fail closed: the strict (production) limits apply unless NODE_ENV is
+// EXPLICITLY a known non-production value. A missing or misspelled NODE_ENV in
+// production must NOT silently relax brute-force protection, so anything we
+// don't recognise as dev/test is treated as production.
+const nodeEnv = (process.env.NODE_ENV ?? "").trim().toLowerCase();
+const isNonProduction = nodeEnv === "development" || nodeEnv === "test" || nodeEnv === "local";
 
 /**
  * Rate limit configuration with time window and request limits
@@ -23,6 +36,9 @@ interface RateLimitConfig {
   windowMinutes: number;
   maxRequests: number;
   message: string;
+  // Optional custom key. Defaults to per-IP. Machine-auth endpoints (e.g. MRM
+  // ingestion) key by token so tenants behind a shared NAT don't share a budget.
+  keyGenerator?: Options["keyGenerator"];
 }
 
 /**
@@ -41,13 +57,43 @@ const RATE_LIMIT_CONFIGS: Record<string, RateLimitConfig> = {
   },
   auth: {
     windowMinutes: 15,
-    maxRequests: 5,
+    // Strict by default to prevent brute force; relaxed only in explicit
+    // dev/test so a single developer on one localhost IP is not locked out.
+    maxRequests: isNonProduction ? 1000 : 5,
     message: "Too many authentication attempts from this IP, please try again after 15 minutes",
+  },
+  // Token refresh happens automatically and legitimately many times in a normal
+  // session, so it gets its own generous limit rather than sharing the strict
+  // brute-force limiter. It still requires a valid refresh-token cookie.
+  tokenRefresh: {
+    windowMinutes: 15,
+    maxRequests: isNonProduction ? 1000 : 60,
+    message: "Too many token refresh attempts from this IP, please try again after 15 minutes",
   },
   aiDetectionScan: {
     windowMinutes: 60,
     maxRequests: 10,
     message: "Too many AI detection scan requests from this IP, please try again after 60 minutes",
+  },
+  // MRM metric ingestion is a machine-to-machine push from a customer's
+  // monitoring pipeline. It is legitimately high-volume (a nightly job may push
+  // many models x metrics, and a single request can batch many points), so the
+  // limit is deliberately generous — far above the auth/general limiters — while
+  // still capping a runaway or abusive pusher. Keyed by ingestion TOKEN (not IP):
+  // enterprise pipelines behind a shared NAT must not share one budget, and one
+  // runaway token must not 429 every other tenant on the same egress IP.
+  mrmIngestion: {
+    windowMinutes: 15,
+    maxRequests: isNonProduction ? 100000 : 5000,
+    message: "Too many metric ingestion requests for this token, please slow down and retry",
+    keyGenerator: (req) => {
+      const tokenId = (req as { mrmIngestionToken?: { tokenId?: number } }).mrmIngestionToken
+        ?.tokenId;
+      // Auth runs before this limiter, so a token is present for every real request.
+      // The IP branch is a defensive fallback — use the library's ipKeyGenerator so
+      // IPv6 addresses are normalized (raw req.ip is rejected by express-rate-limit v8).
+      return tokenId !== undefined ? `mrm-token:${tokenId}` : ipKeyGenerator(req.ip ?? "");
+    },
   },
 };
 
@@ -76,6 +122,7 @@ const createRateLimiter = (config: RateLimitConfig) => {
     handler: createRateLimitHandler(config.message),
     // Let express-rate-limit handle IP extraction with IPv6 support
     // This automatically uses req.ip with proper IPv6 normalization
+    ...(config.keyGenerator ? { keyGenerator: config.keyGenerator } : {}),
   };
 
   return rateLimit(options);
@@ -94,13 +141,28 @@ export const fileOperationsLimiter = createRateLimiter(RATE_LIMIT_CONFIGS.fileOp
 export const generalApiLimiter = createRateLimiter(RATE_LIMIT_CONFIGS.generalApi);
 
 /**
- * Strict rate limiter for authentication endpoints
+ * Strict rate limiter for authentication endpoints (login, register, reset)
  * Very restrictive to prevent brute force attacks
  */
 export const authLimiter = createRateLimiter(RATE_LIMIT_CONFIGS.auth);
+
+/**
+ * Rate limiter for the automatic access-token refresh endpoint
+ * More generous than authLimiter because refresh is a routine, non-credential
+ * operation that happens repeatedly during a normal session
+ */
+export const tokenRefreshLimiter = createRateLimiter(RATE_LIMIT_CONFIGS.tokenRefresh);
 
 /**
  * Rate limiter for AI Detection scan operations
  * Moderate limits as scans are resource-intensive
  */
 export const aiDetectionScanLimiter = createRateLimiter(RATE_LIMIT_CONFIGS.aiDetectionScan);
+
+/**
+ * Dedicated rate limiter for the MRM metric-ingestion push endpoint.
+ * Generous vs. the auth/general limiters because ingestion is a legitimate
+ * high-volume machine-to-machine flow (batched pushes from a monitoring cron),
+ * but still bounded so a runaway pusher cannot flood the system.
+ */
+export const mrmIngestionLimiter = createRateLimiter(RATE_LIMIT_CONFIGS.mrmIngestion);

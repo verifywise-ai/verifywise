@@ -390,7 +390,7 @@ export async function sendSlackMessage(req: Request, res: Response): Promise<any
 
     logStructured("error", `Failed to send slack message: ID ${requestId}`, functionName, fileName);
     logger.error("❌ Error in sendSlackMessage:", error);
-    return res.status(500).json({ message: (error as Error).message });
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
 

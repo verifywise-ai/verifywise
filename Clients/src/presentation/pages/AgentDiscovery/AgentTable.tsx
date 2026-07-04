@@ -28,6 +28,7 @@ import {
 import IconButton from "../../components/IconButton";
 import { ReactComponent as SelectorVertical } from "../../assets/icons/selector-vertical.svg";
 import { EmptyState } from "../../components/EmptyState";
+import CustomizableSkeleton from "../../components/Skeletons";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import { getInstalledPlugins } from "../../../application/repository/plugin.repository";
@@ -43,6 +44,7 @@ import {
   agentPagination,
 } from "./style";
 import { AgentTableProps } from "src/domain/interfaces/i.agentDiscovery";
+import { displayFormattedDate } from "../../tools/isoDateToString";
 
 const cellStyle = singleTheme.tableStyles.primary.body.cell;
 
@@ -165,11 +167,7 @@ const AgentTable: React.FC<AgentTableProps> = ({
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "—";
-    return new Date(dateStr).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+    return displayFormattedDate(dateStr);
   };
 
   const getRange = useMemo(() => {
@@ -179,7 +177,11 @@ const AgentTable: React.FC<AgentTableProps> = ({
   }, [page, rowsPerPage, sortedData.length]);
 
   if (isLoading) {
-    return <EmptyState icon={Bot} message="Loading agents..." />;
+    return (
+      <Stack spacing={2}>
+        <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
+      </Stack>
+    );
   }
 
   if (!sortedData || sortedData.length === 0) {

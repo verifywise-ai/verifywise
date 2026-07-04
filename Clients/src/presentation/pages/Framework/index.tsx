@@ -17,6 +17,7 @@ import {
   Pencil as EditIconGrey,
   ChevronDown as WhiteDownArrowIcon,
 } from "lucide-react";
+import CustomizableSkeleton from "../../components/Skeletons";
 import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
 import { usePluginRegistry } from "../../../application/contexts/PluginRegistry.context";
 import useMultipleOnScreen from "../../../application/hooks/useMultipleOnScreen";
@@ -57,7 +58,6 @@ import NISTAIRMFMap from "./NIST-AI-RMF/Map";
 import NISTAIRMFMeasure from "./NIST-AI-RMF/Measure";
 import NISTAIRMFManage from "./NIST-AI-RMF/Manage";
 import { brand } from "../../themes/palette";
-import GovernanceOsBanner from "../../components/GovernanceOS/GovernanceOsBanner";
 import GovernanceIntelligenceContextBar from "../../components/GovernanceOS/GovernanceIntelligenceContextBar";
 
 // Tab styles following ProjectFrameworks pattern
@@ -512,13 +512,7 @@ const Framework = () => {
 
   const renderFrameworkContent = () => {
     if (loading) {
-      return (
-        <Box sx={{ textAlign: "center", py: 8 }}>
-          <Typography variant="body1" color="text.secondary">
-            Loading framework information...
-          </Typography>
-        </Box>
-      );
+      return <CustomizableSkeleton variant="rectangular" width="100%" height={400} />;
     }
 
     if (error) {
@@ -990,9 +984,6 @@ const Framework = () => {
 
               <TabPanel value="dashboard" sx={tabPanelStyle}>
                 <Box data-joyride-id="framework-dashboard">
-                  <GovernanceOsBanner
-                    frameworkCount={organizationalProject.framework?.length || 0}
-                  />
                   <GovernanceIntelligenceContextBar
                     frameworkCount={organizationalProject.framework?.length || 0}
                   />

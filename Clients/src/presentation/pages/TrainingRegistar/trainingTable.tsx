@@ -1,21 +1,14 @@
 import React, { useCallback, useMemo } from "react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableRow,
-  useTheme,
-  Stack,
-  Typography,
-} from "@mui/material";
+import { Table, TableBody, TableCell, TableContainer, TableRow, Stack } from "@mui/material";
 import "../../components/Table/index.css";
 import singleTheme from "../../themes/v1SingleTheme";
 import CustomIconButton from "../../components/IconButton";
 import allowedRoles from "../../../application/constants/permissions";
 import { GraduationCap, Users, Calendar, Award } from "lucide-react";
 import { EmptyState } from "../../components/EmptyState";
+import CustomizableSkeleton from "../../components/Skeletons";
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
+import { TableEmptyStateLayout } from "../../components/Table/TableEmptyStateLayout";
 import { useAuth } from "../../../application/hooks/useAuth";
 import { TrainingRegistarModel } from "../../../domain/models/Common/trainingRegistar/trainingRegistar.model";
 import { TrainingStatus } from "../../../domain/enums/status.enum";
@@ -67,7 +60,6 @@ const TrainingTable: React.FC<TrainingTableProps> = ({
   hidePagination = false,
   visibleColumns,
 }) => {
-  const theme = useTheme();
   const { userRoleName } = useAuth();
 
   const isVisible = useCallback(
@@ -315,43 +307,44 @@ const TrainingTable: React.FC<TrainingTableProps> = ({
 
   if (isLoading) {
     return (
-      <Stack
-        alignItems="center"
-        justifyContent="center"
-        sx={{
-          border: "1px solid #EEEEEE",
-          borderRadius: "4px",
-          padding: theme.spacing(15, 5),
-          minHeight: 200,
-        }}
-      >
-        <Typography>Loading...</Typography>
+      <Stack spacing={2} sx={{ width: "100%" }}>
+        <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
       </Stack>
     );
   }
 
   if (!data || data.length === 0) {
     return (
-      <EmptyState
-        icon={GraduationCap}
-        message="No training records yet. Track AI governance training for your team."
+      <TableEmptyStateLayout
+        header={
+          <StandardTableHead
+            columns={visibleTableColumns}
+            sortConfig={sortConfig}
+            onSort={handleSort}
+          />
+        }
       >
-        <EmptyStateTip
-          icon={Users}
-          title="Assign training to team members"
-          description="Each record tracks who completed what training, when, and their score. This creates an audit trail for competency requirements."
-        />
-        <EmptyStateTip
-          icon={Calendar}
-          title="Set renewal dates"
-          description="Some certifications and training expire. Record renewal dates so you can keep track of upcoming expirations."
-        />
-        <EmptyStateTip
-          icon={Award}
-          title="Common training topics"
-          description="AI ethics, data privacy, responsible AI use, bias awareness, incident reporting procedures, and framework-specific requirements."
-        />
-      </EmptyState>
+        <EmptyState
+          icon={GraduationCap}
+          message="No training records yet. Track AI governance training for your team."
+        >
+          <EmptyStateTip
+            icon={Users}
+            title="Assign training to team members"
+            description="Each record tracks who completed what training, when, and their score. This creates an audit trail for competency requirements."
+          />
+          <EmptyStateTip
+            icon={Calendar}
+            title="Set renewal dates"
+            description="Some certifications and training expire. Record renewal dates so you can keep track of upcoming expirations."
+          />
+          <EmptyStateTip
+            icon={Award}
+            title="Common training topics"
+            description="AI ethics, data privacy, responsible AI use, bias awareness, incident reporting procedures, and framework-specific requirements."
+          />
+        </EmptyState>
+      </TableEmptyStateLayout>
     );
   }
 

@@ -109,10 +109,9 @@ import { uploadFileToManager } from "../../../application/repository/file.reposi
 import {
   getPolicyById,
   getAllTags,
-  createPolicy,
-  updatePolicy,
   importDocxToHtml,
 } from "../../../application/repository/policy.repository";
+import { useCreatePolicy, useUpdatePolicy } from "../../../application/hooks/usePolicyMutations";
 import useUsers from "../../../application/hooks/useUsers";
 import { User } from "../../../domain/types/User";
 import { PolicyFormData, PolicyFormErrors, PolicyInput } from "../../types/interfaces/i.policy";
@@ -471,6 +470,8 @@ export default function PolicyEditorPage() {
   const navigate = useNavigate();
   const theme = useTheme();
   const { users } = useUsers();
+  const createPolicyMutation = useCreatePolicy();
+  const updatePolicyMutation = useUpdatePolicy();
 
   const isNew = !id;
   const templateId = searchParams.get("templateId");
@@ -608,7 +609,10 @@ export default function PolicyEditorPage() {
 
     setIsSavingTitle(true);
     try {
-      const updated = await updatePolicy(policy.id, { title: trimmed } as PolicyInput);
+      const updated = await updatePolicyMutation.mutateAsync({
+        id: policy.id,
+        input: { title: trimmed } as PolicyInput,
+      });
       setFormData((prev) => ({ ...prev, title: trimmed }));
       setPolicy((prev) => (prev ? { ...prev, ...updated, title: trimmed } : updated));
       clearFieldError("title");
@@ -1331,6 +1335,7 @@ export default function PolicyEditorPage() {
 
   // ── Save ──────────────────────────────────────────────────────────
   const save = async () => {
+    if (customFieldsGate.blocked) return;
     setServerErrors({});
     resetErrors();
     if (!validateAll(formData)) {
@@ -1361,9 +1366,12 @@ export default function PolicyEditorPage() {
       let savedPolicy: PolicyManagerModel;
 
       if (isNew) {
-        savedPolicy = await createPolicy(payload);
+        savedPolicy = await createPolicyMutation.mutateAsync(payload);
       } else {
-        savedPolicy = await updatePolicy(policy!.id, payload);
+        savedPolicy = await updatePolicyMutation.mutateAsync({
+          id: policy!.id,
+          input: payload,
+        });
       }
 
       // Flush any locally-staged custom field changes (create OR update).
@@ -1966,6 +1974,7 @@ export default function PolicyEditorPage() {
               ref={customFieldsRef}
               entityType="policy"
               entityId={isNew ? null : (policy?.id ?? null)}
+              onPendingChange={customFieldsGate.onPendingChange}
             />
           </Stack>
 

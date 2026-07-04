@@ -12,7 +12,7 @@ import { INotificationFilters, NotificationType } from "../domain.layer/interfac
 import { logStructured } from "../utils/logger/fileLogger";
 
 // Store active SSE connections
-// Key: `${tenantId}:${userId}`
+// Key: `${organizationId}:${userId}`
 // Value: Connection metadata with Response object
 interface ConnectionData {
   response: Response;
@@ -28,7 +28,7 @@ const connections = new Map<string, ConnectionData>();
  * GET /api/notifications/stream
  */
 export const streamNotifications = async (req: Request, res: Response): Promise<void> => {
-  const { userId, organizationId, tenantId } = req;
+  const { userId, organizationId } = req;
 
   if (!userId || !organizationId) {
     logStructured(
@@ -37,17 +37,15 @@ export const streamNotifications = async (req: Request, res: Response): Promise<
       "streamNotifications",
       "notification.ctrl.ts",
     );
-    res.status(401).json({ error: req.t!("Unauthorized") });
+    res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     return;
   }
 
   try {
-    // Note: The authenticateToken middleware already validates:
-    // 1. User belongs to the organization
-    // 2. tenantId matches organizationId
-    // So we can trust req.userId and req.organizationId here
+    // Note: authenticateJWT already verified the user belongs to the organization,
+    // so we can trust req.userId and req.organizationId here.
 
-    const connectionKey = `${tenantId}:${userId}`;
+    const connectionKey = `${organizationId}:${userId}`;
 
     // Close existing connection for this user if any (prevents connection accumulation)
     const existingConnection = connections.get(connectionKey);
@@ -114,7 +112,7 @@ export const streamNotifications = async (req: Request, res: Response): Promise<
       "streamNotifications",
       "notification.ctrl.ts",
     );
-    res.status(500).json({ error: req.t!("Internal server error") });
+    res.status(500).json(STATUS_CODE[500](req.t!("Internal server error")));
   }
 };
 
@@ -170,9 +168,9 @@ const startCleanupInterval = (): void => {
  * GET /api/notifications
  */
 export const getNotifications = async (req: Request, res: Response): Promise<Response> => {
-  const { userId, tenantId } = req;
+  const { userId, organizationId } = req;
 
-  if (!userId || !tenantId) {
+  if (!userId || !organizationId) {
     return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
   }
 
@@ -185,7 +183,7 @@ export const getNotifications = async (req: Request, res: Response): Promise<Res
       offset: req.query.offset ? parseInt(req.query.offset as string, 10) : 0,
     };
 
-    const notifications = await getNotificationsQuery(userId, tenantId, filters);
+    const notifications = await getNotificationsQuery(userId, organizationId, filters);
     return res.status(200).json(STATUS_CODE[200](notifications));
   } catch (error) {
     logStructured(
@@ -203,14 +201,14 @@ export const getNotifications = async (req: Request, res: Response): Promise<Res
  * GET /api/notifications/summary
  */
 export const getNotificationSummary = async (req: Request, res: Response): Promise<Response> => {
-  const { userId, tenantId } = req;
+  const { userId, organizationId } = req;
 
-  if (!userId || !tenantId) {
+  if (!userId || !organizationId) {
     return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
   }
 
   try {
-    const summary = await getNotificationSummaryQuery(userId, tenantId);
+    const summary = await getNotificationSummaryQuery(userId, organizationId);
     return res.status(200).json(STATUS_CODE[200](summary));
   } catch (error) {
     logStructured(
@@ -228,14 +226,14 @@ export const getNotificationSummary = async (req: Request, res: Response): Promi
  * GET /api/notifications/unread-count
  */
 export const getUnreadCount = async (req: Request, res: Response): Promise<Response> => {
-  const { userId, tenantId } = req;
+  const { userId, organizationId } = req;
 
-  if (!userId || !tenantId) {
+  if (!userId || !organizationId) {
     return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
   }
 
   try {
-    const count = await getUnreadCountQuery(userId, tenantId);
+    const count = await getUnreadCountQuery(userId, organizationId);
     return res.status(200).json(STATUS_CODE[200]({ unread_count: count }));
   } catch (error) {
     logStructured(
@@ -253,11 +251,11 @@ export const getUnreadCount = async (req: Request, res: Response): Promise<Respo
  * PATCH /api/notifications/:id/read
  */
 export const markAsRead = async (req: Request, res: Response): Promise<Response> => {
-  const { userId, tenantId } = req;
+  const { userId, organizationId } = req;
   const idParam = req.params.id;
   const notificationId = parseInt(Array.isArray(idParam) ? idParam[0] : idParam, 10);
 
-  if (!userId || !tenantId) {
+  if (!userId || !organizationId) {
     return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
   }
 
@@ -266,7 +264,7 @@ export const markAsRead = async (req: Request, res: Response): Promise<Response>
   }
 
   try {
-    const notification = await markNotificationAsReadQuery(notificationId, userId, tenantId);
+    const notification = await markNotificationAsReadQuery(notificationId, userId, organizationId);
 
     if (!notification) {
       return res.status(404).json(STATUS_CODE[404](req.t!("Notification not found")));
@@ -289,14 +287,14 @@ export const markAsRead = async (req: Request, res: Response): Promise<Response>
  * PATCH /api/notifications/read-all
  */
 export const markAllAsRead = async (req: Request, res: Response): Promise<Response> => {
-  const { userId, tenantId } = req;
+  const { userId, organizationId } = req;
 
-  if (!userId || !tenantId) {
+  if (!userId || !organizationId) {
     return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
   }
 
   try {
-    const count = await markAllNotificationsAsReadQuery(userId, tenantId);
+    const count = await markAllNotificationsAsReadQuery(userId, organizationId);
     return res.status(200).json(STATUS_CODE[200]({ marked_count: count }));
   } catch (error) {
     logStructured(
@@ -314,11 +312,11 @@ export const markAllAsRead = async (req: Request, res: Response): Promise<Respon
  * DELETE /api/notifications/:id
  */
 export const deleteNotification = async (req: Request, res: Response): Promise<Response> => {
-  const { userId, tenantId } = req;
+  const { userId, organizationId } = req;
   const idParam = req.params.id;
   const notificationId = parseInt(Array.isArray(idParam) ? idParam[0] : idParam, 10);
 
-  if (!userId || !tenantId) {
+  if (!userId || !organizationId) {
     return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
   }
 
@@ -327,7 +325,7 @@ export const deleteNotification = async (req: Request, res: Response): Promise<R
   }
 
   try {
-    const deleted = await deleteNotificationQuery(notificationId, userId, tenantId);
+    const deleted = await deleteNotificationQuery(notificationId, userId, organizationId);
 
     if (!deleted) {
       return res.status(404).json(STATUS_CODE[404](req.t!("Notification not found")));

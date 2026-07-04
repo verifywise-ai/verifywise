@@ -47,6 +47,7 @@ import { CustomizableButton } from "../../button/customizable-button";
 import Alert from "../../Alert";
 import StandardModal from "../../Modals/StandardModal";
 import { text } from "../../../themes/palette";
+import { drawerAccessibilityProps, DRAWER_TITLE_ID } from "../drawerAccessibility";
 
 import { LinkedRisksPopup } from "../../LinkedRisks";
 import NotesTab from "../../Notes/NotesTab";
@@ -312,8 +313,9 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
     if (subclause?.id) {
       try {
         const response = await getEntityFiles("iso_42001", "subclause", subclause.id);
-        if (response && Array.isArray(response)) {
-          linkedFiles = response.map((file: any) => ({
+        const responseFiles = response?.files ?? [];
+        if (responseFiles.length > 0) {
+          linkedFiles = responseFiles.map((file: any) => ({
             id: file.id?.toString() || file.file_id?.toString() || "",
             fileName: file.filename || file.fileName || file.file_name || "",
             size: file.size || 0,
@@ -673,7 +675,7 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
 
   if (isLoading && !subclause) {
     return (
-      <Drawer open={open} onClose={onClose} anchor="right">
+      <Drawer open={open} onClose={onClose} anchor="right" {...drawerAccessibilityProps}>
         <Stack
           sx={{
             width: 850,
@@ -700,6 +702,7 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
         className="iso42001-clause-drawer-dialog"
         open={open}
         onClose={onClose}
+        {...drawerAccessibilityProps}
         sx={{
           "width": 850,
           "margin": 0,
@@ -721,7 +724,7 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
             alignItems="center"
             padding="15px 20px"
           >
-            <Typography fontSize={15} fontWeight={700}>
+            <Typography id={DRAWER_TITLE_ID} fontSize={15} fontWeight={700}>
               {subclause?.subclause_id ??
                 (clause?.clause_no
                   ? `${clause.clause_no}.${subclause?.order_no || 1}`

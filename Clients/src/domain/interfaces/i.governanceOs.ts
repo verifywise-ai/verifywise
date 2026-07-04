@@ -3,6 +3,7 @@ export type MappingDirection = "forward" | "backward" | "bidirectional";
 
 export interface IGovernanceControlMapping {
   id: number;
+  organization_id: number;
   source_framework_id: number;
   source_control_type: string;
   source_control_identifier: string;
@@ -61,6 +62,7 @@ export interface IGovernanceCoverage {
   coverage_percentage: number;
   gap_details: { unmapped_controls: string[] };
   synergy_details: { multi_framework_controls: string[] };
+  calculation_methodology?: string;
 }
 
 export interface IRecommendationRequest {
@@ -88,10 +90,6 @@ export interface IUnifiedView {
   };
   preferences: IGovernanceOrgPreferences | null;
   projectId: number;
-}
-
-export interface IGovernanceOsPageProps {
-  defaultTab?: string;
 }
 
 export interface IMappingCardProps {

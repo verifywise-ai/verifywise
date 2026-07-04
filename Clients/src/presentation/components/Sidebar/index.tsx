@@ -15,6 +15,7 @@ import {
   Layers,
   AlertCircle,
   Bot,
+  Network,
   Database,
   Rocket,
   // Workflow,
@@ -133,6 +134,12 @@ const Sidebar: React.FC<SidebarProps> = ({
           path: "/model-inventory",
         },
         {
+          id: "ai-apps",
+          label: "AI apps",
+          icon: <Bot size={16} strokeWidth={1.5} />,
+          path: "/ai-apps",
+        },
+        {
           id: "datasets",
           label: "Datasets",
           icon: <Database size={16} strokeWidth={1.5} />,
@@ -141,7 +148,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         {
           id: "agent-discovery",
           label: "Agent discovery",
-          icon: <Bot size={16} strokeWidth={1.5} />,
+          icon: <Network size={16} strokeWidth={1.5} />,
           path: "/agent-discovery",
         },
       ],

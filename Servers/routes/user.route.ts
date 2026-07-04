@@ -33,7 +33,7 @@ const multer = require("multer");
 const upload = multer({ storage: multer.memoryStorage() });
 
 import rateLimit from "express-rate-limit";
-import { authLimiter } from "../middleware/rateLimit.middleware";
+import { authLimiter, tokenRefreshLimiter } from "../middleware/rateLimit.middleware";
 
 import {
   checkUserExists,
@@ -134,7 +134,7 @@ const loginLimiter = rateLimit({
 router.post("/login", loginLimiter, loginUser);
 router.post("/login-microsoft", loginLimiter, loginUserWithMicrosoft);
 
-router.post("/refresh-token", authLimiter, refreshAccessToken);
+router.post("/refresh-token", tokenRefreshLimiter, refreshAccessToken);
 
 /**
  * POST /users/reset-password

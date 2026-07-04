@@ -12,7 +12,12 @@ import {
 } from "@mui/material";
 import { useState, useCallback, useEffect } from "react";
 import { CustomizableButton } from "../../../components/button/customizable-button";
-import { Plus as PlusIcon, Trash2 as DeleteIcon, Copy as CopyIcon } from "lucide-react";
+import {
+  Plus as PlusIcon,
+  Trash2 as DeleteIcon,
+  Copy as CopyIcon,
+  Ban as RevokeIcon,
+} from "lucide-react";
 import Alert from "../../../components/Alert";
 import ConfirmationModal from "../../../components/Dialogs/ConfirmationModal";
 import Field from "../../../components/Inputs/Field";
@@ -21,6 +26,7 @@ import {
   createApiToken,
   deleteApiToken,
   getApiTokens,
+  revokeApiToken,
 } from "../../../../application/repository/tokens.repository";
 import allowedRoles from "../../../../application/constants/permissions";
 import { useAuth } from "../../../../application/hooks/useAuth";
@@ -55,6 +61,8 @@ const ApiKeys = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [tokenToDelete, setTokenToDelete] = useState<ApiTokenModel | null>(null);
+  const [isRevokeModalOpen, setIsRevokeModalOpen] = useState(false);
+  const [tokenToRevoke, setTokenToRevoke] = useState<ApiTokenModel | null>(null);
   const [newTokenName, setNewTokenName] = useState("");
   const [newTokenNameError, setNewTokenNameError] = useState<string | null>(null);
   const [selectedExpiry, setSelectedExpiry] = useState<number>(30);
@@ -198,6 +206,25 @@ const ApiKeys = () => {
       setIsLoading(false);
     }
   }, [tokenToDelete, fetchTokens, showAlert]);
+
+  const handleRevokeToken = useCallback(async () => {
+    if (!tokenToRevoke) return;
+
+    setIsRevokeModalOpen(false);
+    setIsLoading(true);
+    try {
+      await revokeApiToken({
+        routeUrl: `/tokens/${tokenToRevoke.id}/revoke`,
+      });
+      showAlert("success", "Token revoked", "API key revoked successfully");
+      await fetchTokens();
+      setTokenToRevoke(null);
+    } catch (_error) {
+      showAlert("error", "Error", "Failed to revoke API key");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [tokenToRevoke, fetchTokens, showAlert]);
 
   const handleCopyToken = useCallback((token: string, tokenId: number) => {
     navigator.clipboard.writeText(token);
@@ -386,9 +413,48 @@ const ApiKeys = () => {
                           {token.getFormattedExpiryDate()}
                         </Typography>
                       </Typography>
+                      <Typography sx={{ fontSize: 12, color: "#999999" }}>•</Typography>
+                      <Typography sx={{ fontSize: 12, color: "#999999" }}>
+                        Last used{" "}
+                        <Typography
+                          component="span"
+                          sx={{
+                            fontSize: 12,
+                            fontWeight: 600,
+                            color: "text.black",
+                          }}
+                        >
+                          {token.getFormattedLastUsed()}
+                        </Typography>
+                      </Typography>
                     </Box>
                   </Box>
                   <Box sx={{ display: "flex", gap: 1 }}>
+                    {!token.isRevoked() && (
+                      <IconButton
+                        onClick={() => {
+                          setTokenToRevoke(token);
+                          setIsRevokeModalOpen(true);
+                        }}
+                        disableRipple
+                        disabled={isDisabled}
+                        title="Revoke key"
+                        aria-label="Revoke key"
+                        sx={{
+                          "color": "#B54708",
+                          "opacity": hoveredTokenId === token.id ? 1 : 0.6,
+                          "transition": "opacity 0.2s ease-in-out",
+                          "&:hover": {
+                            backgroundColor: "#FFFAEB",
+                          },
+                          "&:disabled": {
+                            opacity: 0.3,
+                          },
+                        }}
+                      >
+                        <RevokeIcon size={18} />
+                      </IconButton>
+                    )}
                     <IconButton
                       onClick={() => {
                         setTokenToDelete(token);
@@ -396,6 +462,8 @@ const ApiKeys = () => {
                       }}
                       disableRipple
                       disabled={isDisabled}
+                      title="Delete key"
+                      aria-label="Delete key"
                       sx={{
                         "color": "#DC2626",
                         "opacity": hoveredTokenId === token.id ? 1 : 0.6,
@@ -626,6 +694,30 @@ const ApiKeys = () => {
             setTokenToDelete(null);
           }}
           onProceed={handleDeleteToken}
+          proceedButtonColor="error"
+          proceedButtonVariant="contained"
+          TitleFontSize={0}
+        />
+      )}
+
+      {/* Revoke Token Modal */}
+      {isRevokeModalOpen && tokenToRevoke && (
+        <ConfirmationModal
+          title="Revoke API Key"
+          body={
+            <Typography fontSize={13}>
+              Are you sure you want to revoke the API key "{tokenToRevoke.name}"? It will stop
+              working immediately and any applications using it will lose access. The key stays
+              listed as revoked for your records.
+            </Typography>
+          }
+          cancelText="Cancel"
+          proceedText={isLoading ? "Revoking..." : "Revoke"}
+          onCancel={() => {
+            setIsRevokeModalOpen(false);
+            setTokenToRevoke(null);
+          }}
+          onProceed={handleRevokeToken}
           proceedButtonColor="error"
           proceedButtonVariant="contained"
           TitleFontSize={0}

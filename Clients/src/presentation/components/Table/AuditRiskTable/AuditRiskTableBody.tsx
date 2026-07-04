@@ -93,7 +93,7 @@ export const AuditRiskTableBody: React.FC<IAuditRiskTableBodyProps> = ({
                     size="small"
                     id={`audit-risk-${row.id}`}
                     isChecked={deletedRisks.includes(row.id) || checkedRows.includes(row.id)}
-                    value={row.id.toString()}
+                    value={row.id?.toString() ?? ""}
                     onChange={(e) => handleChange(row, e)}
                     onClick={(e) => e.stopPropagation()}
                   />

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback, type JSX } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Stack, Box, Typography } from "@mui/material";
 import { Upload as UploadIcon, FolderPlus as FolderPlusIcon } from "lucide-react";
@@ -7,18 +8,16 @@ import PageTour from "../../components/PageTour";
 import useMultipleOnScreen from "../../../application/hooks/useMultipleOnScreen";
 import FileSteps from "./FileSteps";
 import CustomizableSkeleton from "../../components/Skeletons";
-import { useUserFilesMetaData } from "../../../application/hooks/useUserFilesMetaData";
+import { useFiles, fileQueryKeys } from "../../../application/hooks/useFiles";
+import { useUpdateFileMetadata } from "../../../application/hooks/useUpdateFileMetadata";
 import FileTable from "../../components/Table/FileTable/FileTable";
 import {
-  getUserFilesMetaData,
   getFilesWithMetadata,
   getFileMetadata,
-  updateFileMetadata,
   FileMetadata,
   UpdateFileMetadataInput,
 } from "../../../application/repository/file.repository";
-import { transformFilesData } from "../../../application/utils/fileTransform.utils";
-import { filesTableFrame, filesTablePlaceholder } from "./styles";
+import { filesTableFrame } from "./styles";
 import { FileModel } from "../../../domain/models/Common/file/file.model";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import FileManagerUploadModal from "../../components/Modals/FileManagerUpload";
@@ -89,17 +88,10 @@ const FileManager: React.FC = (): JSX.Element => {
     countToTrigger: 1,
   });
 
-  // Use hook for initial data load
-  const {
-    filesData: initialFilesData,
-    loading: initialLoading,
-    error: initialError,
-  } = useUserFilesMetaData();
-
-  // Local state to manage files
-  const [filesData, setFilesData] = useState<FileModel[]>([]);
-  const [loadingFiles, setLoadingFiles] = useState(initialLoading);
-  const [filesError, setFilesError] = useState<Error | null>(null);
+  // Use React Query for file data
+  const { data: filesData = [], isLoading: loadingFiles, error: filesError, refetch } = useFiles();
+  const queryClient = useQueryClient();
+  const updateFileMetadataMutation = useUpdateFileMetadata();
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
   // Virtual folder hooks
@@ -215,26 +207,6 @@ const FileManager: React.FC = (): JSX.Element => {
     return undefined;
   }, [alert]);
 
-  // Sync initial data from hook to local state ONLY on initial load
-  // After that, optimistic updates manage the state independently
-  const [hasInitialized, setHasInitialized] = useState(false);
-
-  useEffect(() => {
-    if (hasInitialized) return;
-
-    // Still loading - reflect that
-    if (initialLoading) {
-      setLoadingFiles(true);
-      return;
-    }
-
-    // Loading finished (success or error) - sync state and mark initialized
-    setFilesData(initialFilesData);
-    setFilesError(initialError);
-    setLoadingFiles(false);
-    setHasInitialized(true);
-  }, [initialFilesData, initialLoading, initialError, hasInitialized]);
-
   // RBAC: Get user role for permission checks
   const { userRoleName } = useAuth();
 
@@ -244,21 +216,6 @@ const FileManager: React.FC = (): JSX.Element => {
   // Permission checks
   const isUploadAllowed = Boolean(userRoleName) && userRoleName !== AUDITOR_ROLE;
   const canManageFolders = Boolean(userRoleName) && MANAGE_ROLES.includes(userRoleName);
-
-  // Manual refetch function - only used for initial load or explicit refresh
-  const refetch = useCallback(async () => {
-    try {
-      setLoadingFiles(true);
-      setFilesError(null);
-      const response = await getUserFilesMetaData();
-      setFilesData(transformFilesData(response));
-    } catch (error) {
-      secureLogError("Error refetching files", FILE_MANAGER_CONTEXT);
-      setFilesError(error instanceof Error ? error : new Error("Failed to load files"));
-    } finally {
-      setLoadingFiles(false);
-    }
-  }, []);
 
   // Fetch files with enhanced metadata
   const fetchFilesWithMetadata = useCallback(async () => {
@@ -336,7 +293,7 @@ const FileManager: React.FC = (): JSX.Element => {
         }
       }
 
-      // Optimistically add uploaded files to local state
+      // Optimistically add uploaded files to the cache
       const newFiles = uploadedFiles.map((file) =>
         FileModel.createNewFile({
           id: String(file.id),
@@ -350,7 +307,9 @@ const FileManager: React.FC = (): JSX.Element => {
         }),
       );
 
-      setFilesData((prev) => [...newFiles, ...prev]);
+      queryClient.setQueryData(fileQueryKeys.list(), (old: FileModel[] | undefined) =>
+        old ? [...newFiles, ...old] : newFiles,
+      );
 
       // Refresh metadata to get the complete file info including review_status
       fetchFilesWithMetadata();
@@ -363,10 +322,16 @@ const FileManager: React.FC = (): JSX.Element => {
     [selectedFolder, fetchFilesWithMetadata, refreshFiles],
   );
 
-  // Handle file deleted - optimistically remove from state
-  const handleFileDeleted = useCallback((fileId: string) => {
-    setFilesData((prev) => prev.filter((file) => String(file.id) !== fileId));
-  }, []);
+  // Handle file deleted - optimistically remove from cache
+  const handleFileDeleted = useCallback(
+    (fileId: string) => {
+      queryClient.setQueryData(
+        fileQueryKeys.list(),
+        (old: FileModel[] | undefined) => old?.filter((file) => String(file.id) !== fileId) ?? [],
+      );
+    },
+    [queryClient],
+  );
 
   // Preview panel handlers
   const handleOpenPreview = useCallback(
@@ -459,8 +424,13 @@ const FileManager: React.FC = (): JSX.Element => {
 
       setIsSubmittingMetadata(true);
       try {
-        await updateFileMetadata({ id: editingFile.id, updates });
-        await fetchFilesWithMetadata();
+        await updateFileMetadataMutation.mutateAsync({ id: editingFile.id, updates });
+        // Keep the enhanced metadata local state in sync for the editor/preview
+        setFilesWithMetadata((prev) =>
+          prev.map((file) =>
+            file.id === editingFile.id ? ({ ...file, ...updates } as FileMetadata) : file,
+          ),
+        );
         handleCloseMetadataEditor();
         setAlert({ variant: "success", body: "File metadata updated successfully", isToast: true });
       } catch (error) {
@@ -471,7 +441,7 @@ const FileManager: React.FC = (): JSX.Element => {
         setIsSubmittingMetadata(false);
       }
     },
-    [editingFile, fetchFilesWithMetadata, handleCloseMetadataEditor],
+    [editingFile, updateFileMetadataMutation, handleCloseMetadataEditor],
   );
 
   // Version history handlers
@@ -935,13 +905,7 @@ const FileManager: React.FC = (): JSX.Element => {
             }}
           >
             {isLoading ? (
-              <Box sx={{ padding: "24px", textAlign: "center" }}>
-                <Typography sx={{ color: "text.icon" }}>Loading files...</Typography>
-                <CustomizableSkeleton
-                  variant="rectangular"
-                  sx={{ ...filesTablePlaceholder, marginTop: 2 }}
-                />
-              </Box>
+              <CustomizableSkeleton variant="rectangular" height={400} />
             ) : filesError ? (
               <Box
                 sx={{
@@ -990,7 +954,7 @@ const FileManager: React.FC = (): JSX.Element => {
                 <CustomizableButton
                   variant="outlined"
                   text="Try again"
-                  onClick={refetch}
+                  onClick={() => refetch()}
                   sx={{ height: "34px" }}
                 />
               </Box>

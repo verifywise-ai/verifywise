@@ -20,11 +20,13 @@ import {
   ClipboardList,
   CheckCircle,
   Shield,
+  GitBranch,
 } from "lucide-react";
 import SidebarShell, {
   SidebarMenuItem,
   SidebarMenuGroup,
 } from "../../components/Sidebar/SidebarShell";
+import { SHOW_AI_GATEWAY_PROMPTS } from "../../../application/config/featureFlags";
 
 interface AIGatewaySidebarProps {
   activeTab: string;
@@ -66,13 +68,19 @@ export default function AIGatewaySidebar({
       value: "guardrails",
       icon: <ShieldCheck size={16} strokeWidth={1.5} />,
     },
-    {
-      id: "prompts",
-      label: "Prompts",
-      value: "prompts",
-      icon: <BookOpen size={16} strokeWidth={1.5} />,
-      count: promptsCount,
-    },
+    // Prompts is gated behind SHOW_AI_GATEWAY_PROMPTS — hidden from the UI
+    // while the page, routes, and backend remain in place.
+    ...(SHOW_AI_GATEWAY_PROMPTS
+      ? [
+          {
+            id: "prompts",
+            label: "Prompts",
+            value: "prompts",
+            icon: <BookOpen size={16} strokeWidth={1.5} />,
+            count: promptsCount,
+          },
+        ]
+      : []),
     {
       id: "models",
       label: "Models",
@@ -95,31 +103,21 @@ export default function AIGatewaySidebar({
 
   const mcpGroups: SidebarMenuGroup[] = [
     {
-      name: "MCP Gateway",
-      collapsible: true,
-      defaultCollapsed: true,
+      name: "Agent Control",
+      collapsible: false,
+      defaultCollapsed: false,
+      // Order: monitor (Activity) → act (Approvals, Guardrails) → divider →
+      // configure (Agent keys, MCP servers, MCP tools).
       items: [
         {
-          id: "mcp-agent-keys",
-          label: "Agent Keys",
-          value: "mcp/agent-keys",
-          icon: <KeyRound size={16} strokeWidth={1.5} />,
-        },
-        {
-          id: "mcp-servers",
-          label: "Servers",
-          value: "mcp/servers",
-          icon: <Server size={16} strokeWidth={1.5} />,
-        },
-        {
-          id: "mcp-tools",
-          label: "Tools",
-          value: "mcp/tools",
-          icon: <Wrench size={16} strokeWidth={1.5} />,
+          id: "mcp-runs",
+          label: "Runs",
+          value: "mcp/runs",
+          icon: <GitBranch size={16} strokeWidth={1.5} />,
         },
         {
           id: "mcp-audit",
-          label: "Audit Log",
+          label: "Activity",
           value: "mcp/audit",
           icon: <ClipboardList size={16} strokeWidth={1.5} />,
         },
@@ -134,6 +132,25 @@ export default function AIGatewaySidebar({
           label: "Guardrails",
           value: "mcp/guardrails",
           icon: <Shield size={16} strokeWidth={1.5} />,
+          dividerAfter: true,
+        },
+        {
+          id: "mcp-agent-keys",
+          label: "Agent keys",
+          value: "mcp/agent-keys",
+          icon: <KeyRound size={16} strokeWidth={1.5} />,
+        },
+        {
+          id: "mcp-servers",
+          label: "MCP servers",
+          value: "mcp/servers",
+          icon: <Server size={16} strokeWidth={1.5} />,
+        },
+        {
+          id: "mcp-tools",
+          label: "MCP tools",
+          value: "mcp/tools",
+          icon: <Wrench size={16} strokeWidth={1.5} />,
         },
       ],
     },

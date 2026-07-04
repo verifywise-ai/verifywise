@@ -48,6 +48,10 @@ import {
   ShieldCheck,
   KeyRound,
   BookOpen,
+  GitBranch,
+  Gauge,
+  Compass,
+  Star,
 } from "lucide-react";
 
 /**
@@ -128,6 +132,12 @@ export const routeMapping: Record<string, string> = {
   "/ai-detection/repositories": "Repositories",
   "/ai-detection/settings": "Settings",
 
+  // AI Trust Index
+  "/ai-trust-index": "AI Trust Index",
+  "/ai-trust-index/browse": "Browse",
+  "/ai-trust-index/tracked": "Tracked",
+  "/ai-trust-index/settings": "Settings",
+
   // AI Gateway
   "/ai-gateway": "AI gateway",
   "/ai-gateway/dashboard": "Dashboard",
@@ -150,12 +160,13 @@ export const routeMapping: Record<string, string> = {
   "/ai-gateway/settings/guardrails": "Guardrail settings",
   "/ai-gateway/settings/risks": "Suggested risks",
 
-  // MCP Gateway
-  "/ai-gateway/mcp": "MCP Gateway",
+  // Agent Control
+  "/ai-gateway/mcp": "Agent Control",
   "/ai-gateway/mcp/agent-keys": "Agent keys",
-  "/ai-gateway/mcp/servers": "Servers",
-  "/ai-gateway/mcp/tools": "Tool catalog",
-  "/ai-gateway/mcp/audit": "Audit log",
+  "/ai-gateway/mcp/servers": "MCP Servers",
+  "/ai-gateway/mcp/tools": "MCP Tools",
+  "/ai-gateway/mcp/runs": "Runs",
+  "/ai-gateway/mcp/audit": "Activity",
   "/ai-gateway/mcp/approvals": "Approvals",
   "/ai-gateway/mcp/guardrails": "Guardrails",
 
@@ -169,6 +180,9 @@ export const routeMapping: Record<string, string> = {
   "/shadow-ai/rules": "Rules",
   "/shadow-ai/rules/alerts": "Alert history",
   "/shadow-ai/settings": "Settings",
+
+  // AI apps
+  "/ai-apps": "AI apps",
 
   // Intake forms
   "/intake-forms": "Intake forms",
@@ -287,6 +301,12 @@ export const routeIconMapping: Record<string, () => React.ReactNode> = {
     React.createElement(FolderGit2, { size: 14, strokeWidth: 1.5 }),
   "/ai-detection/settings": () => React.createElement(Settings, { size: 14, strokeWidth: 1.5 }),
 
+  // AI Trust Index
+  "/ai-trust-index": () => React.createElement(Gauge, { size: 14, strokeWidth: 1.5 }),
+  "/ai-trust-index/browse": () => React.createElement(Compass, { size: 14, strokeWidth: 1.5 }),
+  "/ai-trust-index/tracked": () => React.createElement(Star, { size: 14, strokeWidth: 1.5 }),
+  "/ai-trust-index/settings": () => React.createElement(Settings, { size: 14, strokeWidth: 1.5 }),
+
   // Intake forms
   "/intake-forms": () => React.createElement(ClipboardList, { size: 14, strokeWidth: 1.5 }),
   "/intake-forms/submissions": () => React.createElement(Inbox, { size: 14, strokeWidth: 1.5 }),
@@ -326,6 +346,7 @@ export const routeIconMapping: Record<string, () => React.ReactNode> = {
   "/ai-gateway/mcp/agent-keys": () => React.createElement(KeyRound, { size: 14, strokeWidth: 1.5 }),
   "/ai-gateway/mcp/servers": () => React.createElement(Router, { size: 14, strokeWidth: 1.5 }),
   "/ai-gateway/mcp/tools": () => React.createElement(Layers, { size: 14, strokeWidth: 1.5 }),
+  "/ai-gateway/mcp/runs": () => React.createElement(GitBranch, { size: 14, strokeWidth: 1.5 }),
   "/ai-gateway/mcp/audit": () => React.createElement(FileSearch, { size: 14, strokeWidth: 1.5 }),
   "/ai-gateway/mcp/approvals": () =>
     React.createElement(ShieldCheck, { size: 14, strokeWidth: 1.5 }),
@@ -348,6 +369,9 @@ export const routeIconMapping: Record<string, () => React.ReactNode> = {
   "/shadow-ai/rules": () => React.createElement(ShieldAlert, { size: 14, strokeWidth: 1.5 }),
   "/shadow-ai/rules/alerts": () => React.createElement(ShieldAlert, { size: 14, strokeWidth: 1.5 }),
   "/shadow-ai/settings": () => React.createElement(Settings, { size: 14, strokeWidth: 1.5 }),
+
+  // AI apps
+  "/ai-apps": () => React.createElement(Bot, { size: 14, strokeWidth: 1.5 }),
 };
 
 /**
@@ -401,6 +425,20 @@ export const dynamicRoutePatterns = [
     label: "Tool details",
     description: "Detailed view of specific AI tool",
     icon: () => React.createElement(Bot, { size: 14, strokeWidth: 1.5 }),
+  },
+  {
+    pattern: /\/ai-apps\/\d+/,
+    label: "AI app details",
+    description: "Detailed view of a specific AI app",
+    icon: () => React.createElement(Bot, { size: 14, strokeWidth: 1.5 }),
+  },
+  {
+    // Only consulted when there's no exact routeMapping hit, so the explicit
+    // /ai-trust-index/browse|tracked|settings entries take precedence.
+    pattern: /\/ai-trust-index\/[^/]+$/,
+    label: "App details",
+    description: "Full assessment for a specific AI Trust Index app",
+    icon: () => React.createElement(Gauge, { size: 14, strokeWidth: 1.5 }),
   },
   {
     pattern: /\/super-admin\/organizations\/\d+\/users/,

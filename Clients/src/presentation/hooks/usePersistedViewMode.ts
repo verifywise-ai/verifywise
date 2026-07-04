@@ -1,36 +1,34 @@
 import { useState } from "react";
 import { IViewMode } from "../types/toggle.types";
+import { storageService, dynamicKeys } from "../../infrastructure/storage";
 
 /**
- * Custom hook for managing view mode with localStorage persistence
+ * Custom hook for managing view mode with persistence.
  *
- * @param key - localStorage key for persistence
- * @param defaultValue - default view mode if not found in localStorage
+ * Backed by the typed StorageService (raw string, namespaced under
+ * `verifywise_view_mode_*`), so it never throws in sandboxed/SSR contexts.
+ *
+ * @param key - logical key for persistence (namespaced internally)
+ * @param defaultValue - default view mode if nothing valid is stored
  * @returns [viewMode, setViewMode] tuple
  */
 export const usePersistedViewMode = (
   key: string,
   defaultValue: IViewMode = "card",
 ): [IViewMode, (mode: IViewMode) => void] => {
+  const storageKey = dynamicKeys.viewMode(key);
+
   const [viewMode, setViewMode] = useState<IViewMode>(() => {
-    try {
-      const savedValue = localStorage.getItem(key);
-      if (savedValue && (savedValue === "card" || savedValue === "table")) {
-        return savedValue as IViewMode;
-      }
-    } catch (error) {
-      console.warn("Failed to read view mode from localStorage:", error);
+    const savedValue = storageService.getRaw<string | null>(storageKey, null, { raw: true });
+    if (savedValue === "card" || savedValue === "table") {
+      return savedValue;
     }
     return defaultValue;
   });
 
   const updateViewMode = (mode: IViewMode) => {
     setViewMode(mode);
-    try {
-      localStorage.setItem(key, mode);
-    } catch (error) {
-      console.warn("Failed to save view mode to localStorage:", error);
-    }
+    storageService.setRaw(storageKey, mode, { raw: true });
   };
 
   return [viewMode, updateViewMode];

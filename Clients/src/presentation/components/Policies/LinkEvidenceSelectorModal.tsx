@@ -35,6 +35,7 @@ import { paginationStyle } from "../Table/styles";
 import { FileIcon } from "../FileIcon";
 import { getUserFilesMetaData } from "../../../application/repository/file.repository";
 import CustomizableToast from "../../components/Toast";
+import { displayFormattedDate } from "../../tools/isoDateToString";
 
 const SORT_KEY = "vw_link_evidence_selector_sort";
 
@@ -310,9 +311,7 @@ const LinkEvidenceSelectorModal: React.FC<LinkEvidenceSelectorModalProps> = ({
                   <TableCell>{ev.uploader_name}</TableCell>
 
                   <TableCell>
-                    {ev.upload_date !== "-"
-                      ? new Date(ev.upload_date).toLocaleDateString("en-GB")
-                      : "-"}
+                    {ev.upload_date !== "-" ? displayFormattedDate(ev.upload_date) : "-"}
                   </TableCell>
 
                   <TableCell width={50}>

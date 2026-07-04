@@ -25,6 +25,7 @@ import Alert from "../../Alert";
 import TabBar from "../../TabBar";
 import { LinkedRisksPopup } from "../../LinkedRisks";
 import StandardModal from "../../Modals/StandardModal";
+import { drawerAccessibilityProps, DRAWER_TITLE_ID } from "../drawerAccessibility";
 import { text } from "../../../themes/palette";
 
 import AddNewRiskForm from "../../AddNewRiskForm";
@@ -610,6 +611,7 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
             onClose();
           }
         }}
+        {...drawerAccessibilityProps}
         sx={{
           "width": 850,
           "margin": 0,
@@ -654,7 +656,7 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
                 alignItems="center"
                 padding="15px 20px"
               >
-                <Typography fontSize={15} fontWeight={700}>
+                <Typography id={DRAWER_TITLE_ID} fontSize={15} fontWeight={700}>
                   {functionType} {category?.index}.{subcategory?.index}
                 </Typography>
                 <Button

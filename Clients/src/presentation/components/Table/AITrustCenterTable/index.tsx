@@ -15,9 +15,11 @@ import {
 } from "@mui/material";
 import singleTheme from "../../../themes/v1SingleTheme";
 import TablePaginationActions from "../../TablePagination";
-import { ChevronsUpDown, ChevronUp, ChevronDown } from "lucide-react";
-import Placeholder from "../../../assets/imgs/empty-state.svg";
+import { ChevronsUpDown, ChevronUp, ChevronDown, FileText } from "lucide-react";
 import { IAITrustCenterTableProps } from "../../../types/interfaces/i.table";
+import CustomizableSkeleton from "../../Skeletons";
+import { TableEmptyStateLayout } from "../TableEmptyStateLayout";
+import { EmptyState } from "../../EmptyState";
 
 const SelectorVertical = (props: any) => <ChevronsUpDown size={16} {...props} />;
 
@@ -36,6 +38,7 @@ const AITrustCenterTable = <T extends { id: number }>({
   isLoading = false,
   paginated = true,
   emptyStateText = "No data found. Add your first item to get started.",
+  emptyStateIcon = FileText,
   renderRow,
   onRowClick,
   tableId = "ai-trust-center-table",
@@ -302,39 +305,17 @@ const AITrustCenterTable = <T extends { id: number }>({
 
   const emptyState = useMemo(
     () => (
-      <Stack
-        alignItems="center"
-        justifyContent="center"
-        sx={{
-          border: "1px solid #EEEEEE",
-          borderRadius: "4px",
-          padding: theme.spacing(15, 5),
-          paddingBottom: theme.spacing(20),
-          gap: theme.spacing(10),
-          minHeight: 200,
-          backgroundColor: "background.main",
-        }}
-      >
-        <img src={Placeholder} alt="Empty state" />
-        <Typography sx={{ fontSize: "13px", color: "text.tertiary" }}>{emptyStateText}</Typography>
-      </Stack>
+      <TableEmptyStateLayout header={tableHeader}>
+        <EmptyState icon={emptyStateIcon} message={emptyStateText} />
+      </TableEmptyStateLayout>
     ),
-    [theme, emptyStateText],
+    [tableHeader, emptyStateIcon, emptyStateText],
   );
 
   if (isLoading) {
     return (
-      <Stack
-        alignItems="center"
-        justifyContent="center"
-        sx={{
-          border: "1px solid #EEEEEE",
-          borderRadius: "4px",
-          padding: theme.spacing(15, 5),
-          minHeight: 200,
-        }}
-      >
-        <Typography sx={{ fontSize: "13px", color: "text.tertiary" }}>Loading...</Typography>
+      <Stack spacing={2}>
+        <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
       </Stack>
     );
   }

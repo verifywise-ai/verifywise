@@ -160,7 +160,6 @@ describe("scheduledScanProcessor", () => {
           userId: 5,
           organizationId: 1,
           role: "Admin",
-          tenantId: "1",
         }),
         { repositoryId: 10, triggeredByType: "scheduled" },
       );

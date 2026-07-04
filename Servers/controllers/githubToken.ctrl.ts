@@ -38,7 +38,7 @@ export async function getGitHubTokenStatusController(
     functionName: "getGitHubTokenStatusController",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -53,7 +53,7 @@ export async function getGitHubTokenStatusController(
       functionName: "getGitHubTokenStatusController",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return res.status(500).json(STATUS_CODE[500](errorMessage));
@@ -72,7 +72,7 @@ export async function saveGitHubTokenController(req: Request, res: Response): Pr
     functionName: "saveGitHubTokenController",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -96,7 +96,7 @@ export async function saveGitHubTokenController(req: Request, res: Response): Pr
       functionName: "saveGitHubTokenController",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     // Return status (not the token itself)
@@ -110,7 +110,7 @@ export async function saveGitHubTokenController(req: Request, res: Response): Pr
       functionName: "saveGitHubTokenController",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return res.status(500).json(STATUS_CODE[500](errorMessage));
@@ -128,7 +128,7 @@ export async function deleteGitHubTokenController(req: Request, res: Response): 
     functionName: "deleteGitHubTokenController",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -144,7 +144,7 @@ export async function deleteGitHubTokenController(req: Request, res: Response): 
       functionName: "deleteGitHubTokenController",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res
@@ -158,7 +158,7 @@ export async function deleteGitHubTokenController(req: Request, res: Response): 
       functionName: "deleteGitHubTokenController",
       fileName: FILE_NAME,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return res.status(500).json(STATUS_CODE[500](errorMessage));
@@ -177,7 +177,7 @@ export async function testGitHubTokenController(req: Request, res: Response): Pr
     functionName: "testGitHubTokenController",
     fileName: FILE_NAME,
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {

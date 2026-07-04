@@ -33,6 +33,7 @@ import {
   PMMReportsFilterRequest,
 } from "../../../../domain/types/PostMarketMonitoring";
 import dayjs, { Dayjs } from "dayjs";
+import { displayFormattedDate } from "../../../tools/isoDateToString";
 import { AlertState } from "../../../../application/interfaces/appStates";
 
 interface LocalAlertState extends AlertState {
@@ -306,7 +307,7 @@ const ReportsArchive: React.FC = () => {
                       </TableCell>
                       <TableCell sx={tableCellStyle}>#{report.cycle_number}</TableCell>
                       <TableCell sx={tableCellStyle}>
-                        {dayjs(report.completed_at).format("MMM D, YYYY")}
+                        {report.completed_at ? displayFormattedDate(report.completed_at) : "-"}
                       </TableCell>
                       <TableCell sx={tableCellStyle}>{report.completed_by_name || "-"}</TableCell>
                       <TableCell sx={tableCellStyle} align="center">

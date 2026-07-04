@@ -2,6 +2,7 @@ import React from "react";
 import { Box, Typography, Stack, CircularProgress, alpha } from "@mui/material";
 import { Network } from "lucide-react";
 import { useUnifiedView } from "../../../application/hooks/useGovernanceOs";
+import GovernanceTooltip from "./GovernanceTooltip";
 import { border as borderPalette, background, text, brand, accent } from "../../themes/palette";
 
 interface MappingStatsPanelProps {
@@ -70,10 +71,15 @@ const MappingStatsPanel: React.FC<MappingStatsPanelProps> = ({ projectId }) => {
         background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
       }}
     >
-      <Stack direction="row" gap="16px" alignItems="center" sx={{ mb: "16px" }}>
-        <Network size={20} color={brand.primary} />
-        <Typography sx={{ fontSize: 14, fontWeight: 600 }}>Mapping Statistics</Typography>
-      </Stack>
+      <GovernanceTooltip
+        header="Mapping statistics"
+        description="Breakdown of cross-framework control mappings"
+      >
+        <Stack direction="row" gap="16px" alignItems="center" sx={{ mb: "16px" }}>
+          <Network size={20} color={brand.primary} />
+          <Typography sx={{ fontSize: 14, fontWeight: 600 }}>Mapping Statistics</Typography>
+        </Stack>
+      </GovernanceTooltip>
 
       <Stack gap="16px">
         {/* Total mappings */}
@@ -84,27 +90,37 @@ const MappingStatsPanel: React.FC<MappingStatsPanelProps> = ({ projectId }) => {
             gap: "16px",
           }}
         >
-          <Box
-            sx={{
-              p: "16px",
-              background: background.hover,
-              borderRadius: "4px",
-              textAlign: "center",
-            }}
+          <GovernanceTooltip
+            header="Total mappings"
+            description="All mappings created across frameworks"
           >
-            <Typography sx={{ fontSize: 20, fontWeight: 600, color: brand.primary }}>
-              {stats.total}
-            </Typography>
-            <Typography sx={{ fontSize: 11, color: text.muted }}>Total mappings</Typography>
-          </Box>
+            <Box
+              sx={{
+                p: "16px",
+                background: background.hover,
+                borderRadius: "4px",
+                textAlign: "center",
+              }}
+            >
+              <Typography sx={{ fontSize: 20, fontWeight: 600, color: brand.primary }}>
+                {stats.total}
+              </Typography>
+              <Typography sx={{ fontSize: 11, color: text.muted }}>Total mappings</Typography>
+            </Box>
+          </GovernanceTooltip>
         </Box>
 
         {/* By domain */}
         {domainEntries.length > 0 && (
           <Box>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: text.primary, mb: "8px" }}>
-              By domain
-            </Typography>
+            <GovernanceTooltip
+              header="By domain"
+              description="Mapping count grouped by control domain"
+            >
+              <Typography sx={{ fontSize: 12, fontWeight: 600, color: text.primary, mb: "8px" }}>
+                By domain
+              </Typography>
+            </GovernanceTooltip>
             <Stack direction="row" flexWrap="wrap" gap="8px">
               {domainEntries.map(([domain, count]) => (
                 <Box
@@ -134,32 +150,57 @@ const MappingStatsPanel: React.FC<MappingStatsPanelProps> = ({ projectId }) => {
         {/* By strength */}
         {strengthEntries.length > 0 && (
           <Box>
-            <Typography sx={{ fontSize: 12, fontWeight: 600, color: text.primary, mb: "8px" }}>
-              By mapping strength
-            </Typography>
+            <GovernanceTooltip
+              header="By mapping strength"
+              description="Mapping count grouped by relationship strength"
+            >
+              <Typography sx={{ fontSize: 12, fontWeight: 600, color: text.primary, mb: "8px" }}>
+                By mapping strength
+              </Typography>
+            </GovernanceTooltip>
             <Stack direction="row" flexWrap="wrap" gap="8px">
               {strengthEntries.map(([strength, count]) => {
                 const colors = STRENGTH_COLORS[strength] || STRENGTH_COLORS.related;
+                const strengthTooltip =
+                  strength === "direct"
+                    ? {
+                        header: "Direct mapping",
+                        description: "Exact or strong control correspondence",
+                      }
+                    : strength === "partial"
+                      ? {
+                          header: "Partial mapping",
+                          description: "Control partially satisfies another control",
+                        }
+                      : {
+                          header: "Related mapping",
+                          description: "Loose or tangential correspondence between controls",
+                        };
                 return (
-                  <Box
+                  <GovernanceTooltip
                     key={strength}
-                    component="span"
-                    sx={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      height: 24,
-                      px: "8px",
-                      borderRadius: "4px",
-                      fontSize: 12,
-                      fontWeight: 500,
-                      textTransform: "capitalize",
-                      backgroundColor: colors.bg,
-                      color: colors.text,
-                      border: `1px solid ${colors.border}`,
-                    }}
+                    header={strengthTooltip.header}
+                    description={strengthTooltip.description}
                   >
-                    {STRENGTH_LABELS[strength] || strength}: {count}
-                  </Box>
+                    <Box
+                      component="span"
+                      sx={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        height: 24,
+                        px: "8px",
+                        borderRadius: "4px",
+                        fontSize: 12,
+                        fontWeight: 500,
+                        textTransform: "capitalize",
+                        backgroundColor: colors.bg,
+                        color: colors.text,
+                        border: `1px solid ${colors.border}`,
+                      }}
+                    >
+                      {STRENGTH_LABELS[strength] || strength}: {count}
+                    </Box>
+                  </GovernanceTooltip>
                 );
               })}
             </Stack>

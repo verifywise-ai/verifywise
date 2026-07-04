@@ -1,6 +1,15 @@
 import { useState, useEffect, useCallback } from "react";
 import { Box, Typography, Stack, IconButton, Tooltip } from "@mui/material";
-import { CirclePlus, Server, Trash2, Pencil, Search, Activity } from "lucide-react";
+import {
+  CirclePlus,
+  Server,
+  Trash2,
+  Pencil,
+  Search,
+  Activity,
+  AlertTriangle,
+  RotateCcw,
+} from "lucide-react";
 import Toggle from "../../../components/Inputs/Toggle";
 import { EmptyState } from "../../../components/EmptyState";
 import EmptyStateTip from "../../../components/EmptyState/EmptyStateTip";
@@ -12,7 +21,9 @@ import StandardModal from "../../../components/Modals/StandardModal";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import palette from "../../../themes/palette";
-import { useCardSx, slugify } from "../shared";
+import { slugify } from "../shared";
+import MCPTable from "../MCPTable";
+import CustomizableSkeleton from "../../../components/Skeletons";
 import { displayFormattedDate } from "../../../tools/isoDateToString";
 
 interface ServerForm {
@@ -58,9 +69,9 @@ interface MCPServer {
 }
 
 export default function MCPServersPage() {
-  const cardSx = useCardSx();
   const [servers, setServers] = useState<MCPServer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -71,11 +82,13 @@ export default function MCPServersPage() {
   const [form, setForm] = useState<ServerForm>({ ...EMPTY_FORM });
 
   const loadData = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
     try {
       const res = await apiServices.get<Record<string, any>>("/ai-gateway/mcp/servers");
       setServers(res?.data?.servers || []);
     } catch {
-      // Silently handle
+      setLoadError("Failed to load MCP servers. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -215,11 +228,16 @@ export default function MCPServersPage() {
       }
     >
       {loading ? (
-        <Box sx={cardSx}>
-          <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
-            Loading servers...
-          </Typography>
-        </Box>
+        <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
+      ) : loadError ? (
+        <EmptyState icon={AlertTriangle} message={loadError}>
+          <CustomizableButton
+            variant="outlined"
+            text="Retry"
+            icon={<RotateCcw size={16} />}
+            onClick={loadData}
+          />
+        </EmptyState>
       ) : servers.length === 0 ? (
         <EmptyState
           icon={Server}
@@ -238,84 +256,91 @@ export default function MCPServersPage() {
           />
         </EmptyState>
       ) : (
-        <Box sx={cardSx}>
-          <Stack gap="8px">
-            {servers.map((srv) => (
-              <Stack
-                key={srv.id}
-                direction="row"
-                justifyContent="space-between"
-                alignItems="center"
-                sx={{
-                  "p": "12px 16px",
-                  "border": `1px solid ${palette.border.dark}`,
-                  "borderRadius": "4px",
-                  "cursor": "pointer",
-                  "&:hover": { bgcolor: "action.hover" },
-                }}
-                onClick={() => openEditModal(srv)}
+        <Box sx={{ px: 3, pb: 3 }}>
+          <MCPTable
+            id="mcp-servers-table"
+            columns={[
+              { label: "Name", width: 220 },
+              { label: "Health", width: 110 },
+              { label: "Tools", width: 90 },
+              { label: "Endpoint" },
+              { label: "Added", width: 200 },
+              { label: "Active", width: 80, align: "center" },
+              { label: "", width: 90, align: "right" },
+            ]}
+            rows={servers}
+            rowKey={(srv) => srv.id}
+            onRowClick={(srv) => openEditModal(srv)}
+            renderRow={(srv) => [
+              <Stack direction="row" alignItems="center" gap="8px">
+                <Server size={14} strokeWidth={1.5} color={palette.text.tertiary} />
+                <Typography sx={{ fontSize: 13, fontWeight: 500 }}>{srv.name}</Typography>
+              </Stack>,
+              <Chip
+                label={getHealthLabel(srv.health_status)}
+                variant={getHealthChipVariant(srv.health_status)}
+                size="small"
+                uppercase={false}
+              />,
+              <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
+                {srv.tool_count > 0 ? srv.tool_count : "—"}
+              </Typography>,
+              <Box>
+                <Typography sx={{ fontSize: 12, color: palette.text.secondary }}>
+                  {srv.url}
+                </Typography>
+                <Typography sx={{ fontSize: 11, color: palette.text.tertiary }}>
+                  {srv.auth_type === "none" ? "no auth" : srv.auth_type}
+                  {srv.slug && ` · /${srv.slug}`}
+                </Typography>
+              </Box>,
+              <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
+                {srv.created_by_name ? `${srv.created_by_name} · ` : ""}
+                {displayFormattedDate(srv.created_at)}
+              </Typography>,
+              <Box
+                sx={{ display: "flex", justifyContent: "center" }}
+                onClick={(e) => e.stopPropagation()}
               >
-                <Stack direction="row" alignItems="center" gap="10px">
-                  <Server size={16} strokeWidth={1.5} color={palette.text.tertiary} />
-                  <Box>
-                    <Stack direction="row" alignItems="center" gap="8px">
-                      <Typography sx={{ fontSize: 13, fontWeight: 500 }}>{srv.name}</Typography>
-                      <Chip
-                        label={getHealthLabel(srv.health_status)}
-                        variant={getHealthChipVariant(srv.health_status)}
-                        size="small"
-                        uppercase={false}
-                      />
-                      {srv.tool_count > 0 && (
-                        <Chip
-                          label={`${srv.tool_count} tool${srv.tool_count !== 1 ? "s" : ""}`}
-                          size="small"
-                          uppercase={false}
-                        />
-                      )}
-                    </Stack>
-                    <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
-                      {srv.url} &middot; {srv.auth_type === "none" ? "no auth" : srv.auth_type}
-                      {srv.slug && <span> &middot; /{srv.slug}</span>}
-                    </Typography>
-                    <Typography sx={{ fontSize: 11, color: palette.text.disabled, mt: "2px" }}>
-                      {srv.created_by_name ? `Added by ${srv.created_by_name}` : "Added"} &middot;{" "}
-                      {displayFormattedDate(srv.created_at)}
-                    </Typography>
-                  </Box>
-                </Stack>
-                <Stack
-                  direction="row"
-                  alignItems="center"
-                  gap="8px"
-                  onClick={(e) => e.stopPropagation()}
+                <Toggle
+                  checked={srv.is_active}
+                  onChange={() => handleToggleActive(srv.id, srv.is_active)}
+                  size="small"
+                />
+              </Box>,
+              <Stack
+                direction="row"
+                alignItems="center"
+                justifyContent="flex-end"
+                gap="2px"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Tooltip title="Coming soon" arrow>
+                  <span>
+                    <IconButton size="small" disabled sx={{ p: 0.5 }} aria-label="Discover tools">
+                      <Search size={14} strokeWidth={1.5} color={palette.text.disabled} />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+                <IconButton
+                  size="small"
+                  onClick={() => openEditModal(srv)}
+                  sx={{ p: 0.5 }}
+                  aria-label="Edit server"
                 >
-                  <Tooltip title="Coming soon" arrow>
-                    <span>
-                      <IconButton size="small" disabled sx={{ p: 0.5 }} aria-label="Discover tools">
-                        <Search size={14} strokeWidth={1.5} color={palette.text.disabled} />
-                      </IconButton>
-                    </span>
-                  </Tooltip>
-                  <Toggle
-                    checked={srv.is_active}
-                    onChange={() => handleToggleActive(srv.id, srv.is_active)}
-                    size="small"
-                  />
-                  <IconButton size="small" onClick={() => openEditModal(srv)} sx={{ p: 0.5 }}>
-                    <Pencil size={14} strokeWidth={1.5} color={palette.text.tertiary} />
-                  </IconButton>
-                  <IconButton
-                    size="small"
-                    onClick={() => setDeleteTarget({ id: srv.id, name: srv.name })}
-                    sx={{ p: 0.5 }}
-                  >
-                    <Trash2 size={14} strokeWidth={1.5} color={palette.text.tertiary} />
-                  </IconButton>
-                </Stack>
-              </Stack>
-            ))}
-          </Stack>
+                  <Pencil size={14} strokeWidth={1.5} color={palette.text.tertiary} />
+                </IconButton>
+                <IconButton
+                  size="small"
+                  onClick={() => setDeleteTarget({ id: srv.id, name: srv.name })}
+                  sx={{ p: 0.5 }}
+                  aria-label="Delete server"
+                >
+                  <Trash2 size={14} strokeWidth={1.5} color={palette.text.tertiary} />
+                </IconButton>
+              </Stack>,
+            ]}
+          />
         </Box>
       )}
 

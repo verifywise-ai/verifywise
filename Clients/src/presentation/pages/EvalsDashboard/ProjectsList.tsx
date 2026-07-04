@@ -33,6 +33,7 @@ import { PageHeader } from "../../components/Layout/PageHeader";
 import SelectableCard from "../../components/SelectableCard";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import StandardModal from "../../components/Modals/StandardModal";
+import { displayFormattedDate } from "../../tools/isoDateToString";
 import Field from "../../components/Inputs/Field";
 import Alert from "../../components/Alert";
 import { EmptyState } from "../../components/EmptyState";
@@ -314,11 +315,7 @@ export default function ProjectsList() {
   };
 
   const formatDate = (date: string) => {
-    return new Date(date).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+    return displayFormattedDate(date);
   };
 
   const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, project: DeepEvalProject) => {

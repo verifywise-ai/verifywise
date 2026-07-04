@@ -14,7 +14,7 @@ from utils.notifications import notify_config_change
 
 router = APIRouter(prefix="/mcp/guardrails", tags=["mcp-guardrails"])
 
-VALID_RULE_TYPES = {"pii", "content_filter", "prompt_injection"}
+VALID_RULE_TYPES = {"pii", "content_filter", "prompt_injection", "require_approval"}
 VALID_ACTIONS = {"block", "mask"}
 
 
@@ -75,18 +75,23 @@ async def create_guardrail(request: Request):
             detail=f"rule_type must be one of: {', '.join(sorted(VALID_RULE_TYPES))}",
         )
 
-    # Validate action
+    # Validate action. require_approval rules have no block/mask action — the
+    # rule type itself is the effect — so action is optional and defaults to
+    # the sentinel "require_approval".
     action = body.get("action")
-    if not action:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="action is required",
-        )
-    if action not in VALID_ACTIONS:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"action must be one of: {', '.join(sorted(VALID_ACTIONS))}",
-        )
+    if rule_type == "require_approval":
+        action = "require_approval"
+    else:
+        if not action:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="action is required",
+            )
+        if action not in VALID_ACTIONS:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"action must be one of: {', '.join(sorted(VALID_ACTIONS))}",
+            )
 
     # Validate config (optional, must be object if provided)
     config = body.get("config")
@@ -219,15 +224,23 @@ async def update_guardrail(rule_id: int, request: Request):
             )
         updates["scope"] = scope
 
-    # action
-    if "action" in body:
+    # rule_type carries the effect for require_approval rules, whose stored
+    # action is the "require_approval" sentinel rather than block/mask. Accept
+    # that sentinel here (and when this PATCH sets rule_type=require_approval)
+    # so such rules can be edited by clients that round-trip the action field.
+    if updates.get("rule_type") == "require_approval":
+        updates["action"] = "require_approval"
+    elif "action" in body:
         action = body["action"]
-        if action not in VALID_ACTIONS:
+        if action == "require_approval":
+            updates["action"] = action
+        elif action not in VALID_ACTIONS:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"action must be one of: {', '.join(sorted(VALID_ACTIONS))}",
             )
-        updates["action"] = action
+        else:
+            updates["action"] = action
 
     # applies_to_tools
     if "applies_to_tools" in body:

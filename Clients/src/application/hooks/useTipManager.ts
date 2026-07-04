@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "./useAuth";
 import { ENTITY_TIPS, Tip } from "../config/entityTips";
+import { storageService } from "../../infrastructure/storage";
 
 interface TipState {
   dismissedTips: number[]; // Array of dismissed tip indices
@@ -10,16 +11,8 @@ const getStorageKey = (entityName: string, userId: number) =>
   `verifywise_tips_${entityName}_${userId}`;
 
 const getDismissedTips = (storageKey: string): number[] => {
-  const savedState = localStorage.getItem(storageKey);
-  if (!savedState) return [];
-
-  try {
-    const parsed: TipState = JSON.parse(savedState);
-    return parsed.dismissedTips || [];
-  } catch (error) {
-    console.error("Failed to parse tip state:", error);
-    return [];
-  }
+  const parsed = storageService.getRaw<TipState | null>(storageKey, null);
+  return parsed?.dismissedTips || [];
 };
 
 export const useTipManager = (entityName: string) => {
@@ -68,7 +61,7 @@ export const useTipManager = (entityName: string) => {
 
     // Save updated state
     const newState: TipState = { dismissedTips };
-    localStorage.setItem(storageKey, JSON.stringify(newState));
+    storageService.setRaw(storageKey, newState);
 
     // Hide the tip immediately
     setCurrentTip(null);

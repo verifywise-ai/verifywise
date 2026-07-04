@@ -23,6 +23,7 @@ import {
   Navigation,
   ChevronLeft,
   Tag,
+  Tags,
   BoxSelect,
   Loader,
   MessageCircle,
@@ -53,6 +54,7 @@ import AlertsSection from "./sections/AlertsSection";
 import BreadcrumbsSection from "./sections/BreadcrumbsSection";
 import PaginationSection from "./sections/PaginationSection";
 import TagsSection from "./sections/TagsSection";
+import ChipSection from "./sections/ChipSection";
 import EmptyStatesSection from "./sections/EmptyStatesSection";
 import LoadingStatesSection from "./sections/LoadingStatesSection";
 import TooltipsSection from "./sections/TooltipsSection";
@@ -186,6 +188,14 @@ const StyleGuide: React.FC = () => {
       component: <TagsSection />,
       category: "components",
       keywords: ["tag", "chip", "label", "badge", "policy"],
+    },
+    {
+      id: "chips",
+      label: "Chips",
+      icon: <Tags size={18} />,
+      component: <ChipSection />,
+      category: "components",
+      keywords: ["chip", "badge", "risk", "status", "severity", "variant", "pill", "label"],
     },
     {
       id: "empty-states",

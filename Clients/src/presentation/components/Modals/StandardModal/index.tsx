@@ -167,6 +167,9 @@ const StandardModal: React.FC<StandardModalProps> = ({
           onClose();
         }
       }}
+      disableRestoreFocus={false}
+      disableAutoFocus={false}
+      disableEnforceFocus={false}
       aria-labelledby={titleId}
       aria-describedby={descriptionId}
       sx={{

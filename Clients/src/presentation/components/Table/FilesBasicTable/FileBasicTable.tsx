@@ -12,6 +12,11 @@ import {
   TableRow,
   useTheme,
   Typography,
+  Tooltip,
+  Menu,
+  MenuItem,
+  ListSubheader,
+  Divider,
 } from "@mui/material";
 import VWSelect from "../../Inputs/Select";
 import CustomizableMultiSelect from "../../Inputs/Select/Multi";
@@ -48,10 +53,6 @@ type SortDirection = "asc" | "desc" | null;
 type SortConfig = {
   key: string;
   direction: SortDirection;
-};
-
-const navigateToNewTab = (url: string) => {
-  window.open(url, "_blank", "noopener,noreferrer");
 };
 
 /**
@@ -507,41 +508,45 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
     [handleOpenFolderDialog, handleOpenTagsDialog, bulkMutation.isPending],
   );
 
-  const handleRowClick = (item: FileModel, event: React.MouseEvent) => {
+  // Anchor for the source-details dropdown. Tracks which row opened it so
+  // the menu can pull the right entity_links array. Dropdown is purely
+  // informational — items show source IDs (clause/model/training/etc) but
+  // don't navigate.
+  const [linkMenu, setLinkMenu] = useState<{ anchor: HTMLElement; row: FileModel } | null>(null);
+
+  const handleSourceClick = (item: FileModel, event: React.MouseEvent<HTMLElement>) => {
     event.stopPropagation();
-    switch (item.source) {
-      case "Assessment tracker group":
-        navigateToNewTab(
-          `/project-view?projectId=${item.projectId}&tab=frameworks&framework=eu-ai-act&topicId=${item.parentId}&questionId=${item.metaId}`,
-        );
-        break;
-      case "Compliance tracker group":
-        navigateToNewTab(
-          `/project-view?projectId=${item.projectId}&tab=frameworks&framework=eu-ai-act&controlId=${item.parentId}&subControlId=${item.metaId}&isEvidence=${item.isEvidence}`,
-        );
-        break;
-      case "Management system clauses group":
-        navigateToNewTab(
-          `/framework?frameworkName=iso-42001&clauseId=${item.parentId}&subClauseId=${item.metaId}`,
-        );
-        break;
-      case "Main clauses group":
-        navigateToNewTab(
-          `/framework?frameworkName=iso-27001&clause27001Id=${item.parentId}&subClause27001Id=${item.metaId}`,
-        );
-        break;
-      case "Reference controls group":
-        navigateToNewTab(
-          `/framework?frameworkName=iso-42001&annexId=${item.parentId}&annexCategoryId=${item.metaId}`,
-        );
-        break;
-      case "Annex controls group":
-        navigateToNewTab(
-          `/framework?frameworkName=iso-27001&annex27001Id=${item.parentId}&annexControl27001Id=${item.metaId}`,
-        );
-        break;
+    if ((item.entityLinks?.length ?? 0) === 0) return;
+    setLinkMenu({ anchor: event.currentTarget, row: item });
+  };
+
+  // Format a single link's identifier line (e.g. "Clause ID: 5, Subclause ID: 12"
+  // or "Model ID: 8" for evidence-hub links).
+  const formatLinkDetails = (link: NonNullable<FileModel["entityLinks"]>[number]): string => {
+    if (link.framework_type === "evidence_hub" && link.entity_type === "evidence") {
+      const parts: string[] = [];
+      const models = link.mapped_model_ids ?? [];
+      const trainings = link.mapped_training_ids ?? [];
+      if (models.length > 0) parts.push(`Model ID: ${models.join(", ")}`);
+      if (trainings.length > 0) parts.push(`Training ID: ${trainings.join(", ")}`);
+      if (parts.length === 0) parts.push(`Evidence ID: ${link.entity_id}`);
+      return parts.join(" · ");
+    }
+    switch (link.entity_type) {
+      case "subcontrol":
+        return `Control ID: ${link.parent_id ?? "-"} · Subcontrol ID: ${link.meta_id ?? link.entity_id}`;
+      case "assessment":
+        return `Topic ID: ${link.parent_id ?? "-"} · Subtopic ID: ${link.sub_id ?? "-"} · Question ID: ${link.meta_id ?? link.entity_id}`;
+      case "subclause":
+        return `Clause ID: ${link.parent_id ?? "-"} · Subclause ID: ${link.meta_id ?? link.entity_id}`;
+      case "annex_control":
+        return `Annex ID: ${link.parent_id ?? "-"} · Annex Control ID: ${link.meta_id ?? link.entity_id}`;
+      case "annex_category":
+        return `Annex ID: ${link.parent_id ?? "-"} · Annex Category ID: ${link.meta_id ?? link.entity_id}`;
+      case "subcategory":
+        return `Subcategory ID: ${link.meta_id ?? link.entity_id}`;
       default:
-        console.warn("Unknown source type:", item.source);
+        return `${link.entity_type} ID: ${link.entity_id}`;
     }
   };
 
@@ -704,14 +709,31 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
                   {/* Source column */}
                   {visibleColumnKeys.includes("source") &&
                     (() => {
-                      const isLinked = [
+                      const KNOWN_GROUP_SOURCES = [
                         "Assessment tracker group",
                         "Compliance tracker group",
                         "Management system clauses group",
                         "Main clauses group",
                         "Reference controls group",
                         "Annex controls group",
-                      ].includes(row.source || "");
+                        // Evidence-hub records resolve to one of these three
+                        // labels (derived from mapped_*_ids in evidence_hub).
+                        "Model inventory",
+                        "Training",
+                        "Evidence",
+                      ];
+                      // Backend aggregates multi-entity attachments as "N groups"
+                      // (see getOrganizationFilesWithMetadata).
+                      const isKnownSource =
+                        KNOWN_GROUP_SOURCES.includes(row.source || "") ||
+                        /^\d+ groups$/.test(row.source || "");
+                      const displayLabel =
+                        row.source === "Compliance tracker group"
+                          ? "Requirements tracker group"
+                          : row.source === "Assessment tracker group"
+                            ? "Controls tracker group"
+                            : row.source;
+                      const hasLinks = (row.entityLinks?.length ?? 0) > 0;
                       return (
                         <TableCell
                           sx={{
@@ -724,27 +746,32 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
                               : "inherit",
                           }}
                         >
-                          {isLinked ? (
-                            <Box
-                              sx={{
-                                "display": "flex",
-                                "alignItems": "flex-end",
-                                "gap": "4px",
-                                "textDecoration": "underline",
-                                "& svg": { visibility: "hidden" },
-                                "&:hover": {
-                                  "cursor": "pointer",
-                                  "& svg": { visibility: "visible" },
-                                },
-                              }}
-                              onClick={(event) => handleRowClick(row, event)}
+                          {isKnownSource && hasLinks ? (
+                            <Tooltip
+                              title={
+                                (row.linkGroups?.length ?? 0) > 1
+                                  ? `Linked to: ${row.linkGroups!.join(", ")}`
+                                  : ""
+                              }
+                              arrow
+                              placement="top"
                             >
-                              {row.source === "Compliance tracker group"
-                                ? "Requirements tracker group"
-                                : row.source === "Assessment tracker group"
-                                  ? "Controls tracker group"
-                                  : row.source}
-                            </Box>
+                              <Box
+                                onClick={(e) => handleSourceClick(row, e)}
+                                sx={{
+                                  display: "inline-block",
+                                  fontSize: 13,
+                                  textDecoration: "underline",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                {displayLabel}
+                              </Box>
+                            </Tooltip>
+                          ) : isKnownSource ? (
+                            <Typography variant="body2" sx={{ fontSize: 13 }}>
+                              {displayLabel}
+                            </Typography>
                           ) : (
                             <Typography variant="body2" sx={{ color: "text.muted", fontSize: 13 }}>
                               Not linked
@@ -1013,6 +1040,68 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
           isLoading={bulkMutation.isPending}
         />
       )}
+
+      {/* Source-details dropdown: opens on source-cell click. Items group by
+          group_label and display the source IDs (clause / model / training /
+          etc). Purely informational — items don't navigate. */}
+      <Menu
+        anchorEl={linkMenu?.anchor ?? null}
+        open={Boolean(linkMenu)}
+        onClose={() => setLinkMenu(null)}
+        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
+        transformOrigin={{ vertical: "top", horizontal: "left" }}
+        slotProps={{ paper: { sx: { minWidth: 280, maxWidth: 420 } } }}
+      >
+        {(() => {
+          const links = linkMenu?.row.entityLinks ?? [];
+          const grouped = new Map<string, typeof links>();
+          for (const link of links) {
+            const key = link.group_label || `${link.framework_type} / ${link.entity_type}`;
+            if (!grouped.has(key)) grouped.set(key, []);
+            grouped.get(key)!.push(link);
+          }
+          const groupEntries = Array.from(grouped.entries());
+          const nodes: React.ReactNode[] = [];
+          groupEntries.forEach(([groupLabel, groupLinks], gi) => {
+            if (gi > 0) nodes.push(<Divider key={`div-${gi}`} sx={{ my: 0.5 }} />);
+            nodes.push(
+              <ListSubheader
+                key={`hdr-${groupLabel}`}
+                disableSticky
+                sx={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  textTransform: "uppercase",
+                  letterSpacing: 0.4,
+                  color: "text.secondary",
+                  lineHeight: "28px",
+                  bgcolor: "background.paper",
+                }}
+              >
+                {groupLabel}
+              </ListSubheader>,
+            );
+            groupLinks.forEach((link, li) => {
+              nodes.push(
+                <MenuItem
+                  key={`${gi}-${li}-${link.framework_type}-${link.entity_type}-${link.entity_id}`}
+                  disableRipple
+                  sx={{
+                    "pl": 2.5,
+                    "py": 0.75,
+                    "fontSize": 13,
+                    "cursor": "default",
+                    "&:hover": { backgroundColor: "transparent" },
+                  }}
+                >
+                  {formatLinkDetails(link)}
+                </MenuItem>,
+              );
+            });
+          });
+          return nodes;
+        })()}
+      </Menu>
     </>
   );
 };

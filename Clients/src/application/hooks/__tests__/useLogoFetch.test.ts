@@ -1,11 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook } from "@testing-library/react";
+import { renderHook, waitFor } from "@testing-library/react";
+import { useLogoFetch } from "../useLogoFetch";
 
 vi.mock("../../repository/aiTrustCentre.repository", () => ({
   getAITrustCentreLogo: vi.fn(),
 }));
 
-import { useLogoFetch } from "../useLogoFetch";
 import { getAITrustCentreLogo } from "../../repository/aiTrustCentre.repository";
 
 const mockGetLogo = vi.mocked(getAITrustCentreLogo);
@@ -13,30 +12,55 @@ const mockGetLogo = vi.mocked(getAITrustCentreLogo);
 describe("useLogoFetch", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    global.URL.createObjectURL = vi.fn().mockReturnValue("blob:mock-url");
-    global.URL.revokeObjectURL = vi.fn();
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:test-url");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    // Mock Image for blob URL validation
+    global.Image = class {
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      src = "";
+      constructor() {
+        setTimeout(() => this.onload?.(), 0);
+      }
+    } as any;
   });
 
-  it("returns null when no logo content", async () => {
-    mockGetLogo.mockResolvedValue({ data: { logo: null } });
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
 
+  it("returns null when logo data is empty", async () => {
+    mockGetLogo.mockResolvedValue({ data: { logo: { content: null } } });
     const { result } = renderHook(() => useLogoFetch());
     const url = await result.current.fetchLogoAsBlobUrl("tenant-1");
-
     expect(url).toBeNull();
   });
 
-  it("returns null on error", async () => {
+  it("returns null when response has no logo", async () => {
+    mockGetLogo.mockResolvedValue({ data: {} });
+    const { result } = renderHook(() => useLogoFetch());
+    const url = await result.current.fetchLogoAsBlobUrl("tenant-1");
+    expect(url).toBeNull();
+  });
+
+  it("handles error from repository", async () => {
     mockGetLogo.mockRejectedValue(new Error("Network error"));
-
     const { result } = renderHook(() => useLogoFetch());
     const url = await result.current.fetchLogoAsBlobUrl("tenant-1");
-
     expect(url).toBeNull();
   });
 
-  it("returns fetchLogoAsBlobUrl function", () => {
+  it("processes ArrayBuffer content format", async () => {
+    mockGetLogo.mockResolvedValue({
+      data: {
+        logo: {
+          content: new ArrayBuffer(8),
+          type: "image/png",
+        },
+      },
+    });
     const { result } = renderHook(() => useLogoFetch());
-    expect(typeof result.current.fetchLogoAsBlobUrl).toBe("function");
+    const url = await waitFor(() => result.current.fetchLogoAsBlobUrl("tenant-1"));
+    expect(url).toBe("blob:test-url");
   });
 });

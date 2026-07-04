@@ -12,6 +12,7 @@ import {
 } from "@mui/material";
 import { Upload, Check, X } from "lucide-react";
 import StandardModal from "../../../components/Modals/StandardModal";
+import GovernanceTooltip from "../../../components/GovernanceOS/GovernanceTooltip";
 import {
   IGovernanceControlMapping,
   MappingStrength,
@@ -152,35 +153,40 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
     >
       <Stack spacing={3} sx={{ minWidth: 600, maxWidth: 800 }}>
         {/* Upload area */}
-        <Box
-          component="label"
-          sx={{
-            "display": "flex",
-            "flexDirection": "column",
-            "alignItems": "center",
-            "justifyContent": "center",
-            "p": 4,
-            "border": `2px dashed ${borderPalette.dark}`,
-            "borderRadius": "4px",
-            "backgroundColor": background.accent,
-            "cursor": "pointer",
-            "transition": "all 150ms ease",
-            "&:hover": {
-              borderColor: accent.primary.border,
-              backgroundColor: accent.primary.bg,
-            },
-          }}
+        <GovernanceTooltip
+          header="Upload CSV"
+          description="Select a CSV file containing mapping rows to import"
         >
-          <input type="file" accept=".csv" hidden onChange={handleFileUpload} />
-          <Upload size={24} color={text.muted} />
-          <Typography sx={{ mt: 1, fontSize: 13, color: text.secondary }}>
-            Click to upload CSV file
-          </Typography>
-          <Typography sx={{ fontSize: 11, color: text.muted }}>
-            Required columns: source_framework_id, source_control_identifier, target_framework_id,
-            target_control_identifier
-          </Typography>
-        </Box>
+          <Box
+            component="label"
+            sx={{
+              "display": "flex",
+              "flexDirection": "column",
+              "alignItems": "center",
+              "justifyContent": "center",
+              "p": 4,
+              "border": `2px dashed ${borderPalette.dark}`,
+              "borderRadius": "4px",
+              "backgroundColor": background.accent,
+              "cursor": "pointer",
+              "transition": "all 150ms ease",
+              "&:hover": {
+                borderColor: accent.primary.border,
+                backgroundColor: accent.primary.bg,
+              },
+            }}
+          >
+            <input type="file" accept=".csv" hidden onChange={handleFileUpload} />
+            <Upload size={24} color={text.muted} />
+            <Typography sx={{ mt: 1, fontSize: 13, color: text.secondary }}>
+              Click to upload CSV file
+            </Typography>
+            <Typography sx={{ fontSize: 11, color: text.muted }}>
+              Required columns: source_framework_id, source_control_identifier, target_framework_id,
+              target_control_identifier
+            </Typography>
+          </Box>
+        </GovernanceTooltip>
 
         {parseError && <Alert severity="error">{parseError}</Alert>}
 

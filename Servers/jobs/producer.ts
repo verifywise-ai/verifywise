@@ -19,6 +19,8 @@ import {
   scheduleProactiveWeeklyDigest,
   scheduleWorkflowAutopilotJobs,
   scheduleReportSchedulerTick,
+  scheduleMrmRevalidationSweep,
+  scheduleAiTrustIndexSync,
 } from "../services/automations/automationProducer";
 
 export async function addAllJobs(): Promise<void> {
@@ -39,6 +41,12 @@ export async function addAllJobs(): Promise<void> {
   await scheduleProactiveWeeklyDigest();
   await scheduleWorkflowAutopilotJobs();
   await scheduleReportSchedulerTick();
+  await scheduleMrmRevalidationSweep(); // non-obliterating — safe to run after the obliterating schedulers
+  await scheduleAiTrustIndexSync();
+  // Ordering constraint: obliterate-using schedulers (e.g. vendor-review,
+  // report-notification) must run BEFORE all non-obliterating ones, or they wipe
+  // jobs the non-obliterating schedulers already added. scheduleMrmRevalidationSweep
+  // is non-obliterating, so its placement here (after the obliterating ones) is fine.
 }
 
 if (require.main === module) {

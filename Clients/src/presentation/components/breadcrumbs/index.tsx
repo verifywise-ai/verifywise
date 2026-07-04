@@ -70,6 +70,7 @@ function Breadcrumbs({
       location.pathname.startsWith("/ai-gateway") ||
       location.pathname.startsWith("/evals") ||
       location.pathname.startsWith("/ai-detection") ||
+      location.pathname.startsWith("/ai-trust-index") ||
       location.pathname.startsWith("/shadow-ai");
     if (!skipHome) {
       breadcrumbs.push({

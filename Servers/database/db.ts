@@ -19,6 +19,15 @@ import { VendorRiskModel } from "../domain.layer/models/vendorRisk/vendorRisk.mo
 import { VendorsProjectsModel } from "../domain.layer/models/vendorsProjects/vendorsProjects.model";
 import { ModelInventoryModel } from "../domain.layer/models/modelInventory/modelInventory.model";
 import { ModelRiskModel } from "../domain.layer/models/modelRisk/modelRisk.model";
+import { MrmValidationModel } from "../domain.layer/models/mrm/mrmValidation.model";
+import { MrmFindingModel } from "../domain.layer/models/mrm/mrmFinding.model";
+import { MrmModelRoleModel } from "../domain.layer/models/mrm/mrmModelRole.model";
+import { MrmMetricKeyModel } from "../domain.layer/models/mrm/mrmMetricKey.model";
+import { MrmThresholdModel } from "../domain.layer/models/mrm/mrmThreshold.model";
+import { MrmMetricModel } from "../domain.layer/models/mrm/mrmMetric.model";
+import { MrmMetricEvaluationModel } from "../domain.layer/models/mrm/mrmMetricEvaluation.model";
+import { MrmIngestionTokenModel } from "../domain.layer/models/mrm/mrmIngestionToken.model";
+import { MrmRevalidationEventModel } from "../domain.layer/models/mrm/mrmRevalidationEvent.model";
 import dbConfig from "./config/config";
 import { Dialect } from "sequelize";
 import { FrameworkModel } from "../domain.layer/models/frameworks/frameworks.model";
@@ -94,6 +103,7 @@ import { ApprovalWorkflowStepModel } from "../domain.layer/models/approvalWorkfl
 import { DatasetModel } from "../domain.layer/models/dataset/dataset.model";
 import { AiActionApprovalModel } from "../domain.layer/models/aiApproval/aiActionApproval.model";
 import { AiApprovalRuleModel } from "../domain.layer/models/aiApproval/aiApprovalRule.model";
+import { AiAppModel } from "../domain.layer/models/aiApp/aiApp.model";
 import { GovernanceControlMappingModel } from "../domain.layer/models/governanceOs/governanceControlMapping.model";
 import { GovernanceScenarioModel } from "../domain.layer/models/governanceOs/governanceScenario.model";
 import { GovernanceScenarioRuleModel } from "../domain.layer/models/governanceOs/governanceScenarioRule.model";
@@ -103,7 +113,12 @@ import { GovernanceScenarioActivationModel } from "../domain.layer/models/govern
 
 dotenv.config();
 
-const conf = dbConfig.development;
+if (process.env.NODE_ENV === "test") {
+  dotenv.config({ path: ".env.test", override: true });
+}
+
+const env = process.env.NODE_ENV || "development";
+const conf = (dbConfig as Record<string, any>)[env] || dbConfig.development;
 
 const sequelize = new Sequelize(conf.database!, conf.username!, conf.password, {
   host: conf.host!,
@@ -139,6 +154,15 @@ const sequelize = new Sequelize(conf.database!, conf.username!, conf.password, {
     VendorsProjectsModel,
     ModelInventoryModel,
     ModelRiskModel,
+    MrmValidationModel,
+    MrmFindingModel,
+    MrmModelRoleModel,
+    MrmMetricKeyModel,
+    MrmThresholdModel,
+    MrmMetricModel,
+    MrmMetricEvaluationModel,
+    MrmIngestionTokenModel,
+    MrmRevalidationEventModel,
     FrameworkModel,
     ProjectFrameworksModel,
     AssessmentEUModel,
@@ -211,6 +235,7 @@ const sequelize = new Sequelize(conf.database!, conf.username!, conf.password, {
     DatasetModel,
     AiActionApprovalModel,
     AiApprovalRuleModel,
+    AiAppModel,
     GovernanceControlMappingModel,
     GovernanceScenarioModel,
     GovernanceScenarioRuleModel,

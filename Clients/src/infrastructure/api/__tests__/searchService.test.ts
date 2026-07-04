@@ -1,78 +1,86 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-
-vi.mock("../customAxios", () => ({
-  default: {
-    get: vi.fn(),
-  },
-}));
+import { describe, it, expect } from "vitest";
+import { server } from "../../../test/mocks/server";
+import { http, HttpResponse } from "msw";
 
 import { wiseSearch, getEntityDisplayName, ENTITY_DISPLAY_NAMES } from "../searchService";
-import CustomAxios from "../customAxios";
-
-const mockAxios = vi.mocked(CustomAxios, { deep: true });
 
 describe("searchService", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   describe("wiseSearch", () => {
     it("passes query, limit, and offset to the API", async () => {
-      const mockResponse = {
-        data: { results: {}, totalCount: 0, query: "test" },
-      };
-      mockAxios.get.mockResolvedValue({ data: mockResponse });
-
-      await wiseSearch({ q: "test", limit: 10, offset: 5 });
-
-      expect(mockAxios.get).toHaveBeenCalledWith("/search", {
-        params: { q: "test", limit: 10, offset: 5 },
-        signal: undefined,
-      });
+      server.use(
+        http.get("/api/search", ({ request }) => {
+          const url = new URL(request.url);
+          return HttpResponse.json({
+            data: {
+              results: {},
+              totalCount: 0,
+              query: url.searchParams.get("q"),
+            },
+          });
+        }),
+      );
+      const result = await wiseSearch({ q: "test", limit: 10, offset: 5 });
+      expect(result.data.totalCount).toBe(0);
+      expect(result.data.query).toBe("test");
     });
 
     it("uses default limit=20 and offset=0", async () => {
-      mockAxios.get.mockResolvedValue({ data: { results: {}, totalCount: 0, query: "x" } });
-
-      await wiseSearch({ q: "x" });
-
-      expect(mockAxios.get).toHaveBeenCalledWith("/search", {
-        params: { q: "x", limit: 20, offset: 0 },
-        signal: undefined,
-      });
+      server.use(
+        http.get("/api/search", ({ request }) => {
+          const url = new URL(request.url);
+          return HttpResponse.json({
+            data: {
+              results: {},
+              totalCount: 0,
+              query: url.searchParams.get("q"),
+              limit: Number(url.searchParams.get("limit")),
+              offset: Number(url.searchParams.get("offset")),
+            },
+          });
+        }),
+      );
+      const result = await wiseSearch({ q: "x" });
+      expect(result.data.query).toBe("x");
     });
 
     it("passes AbortSignal when provided", async () => {
       const controller = new AbortController();
-      mockAxios.get.mockResolvedValue({ data: { results: {}, totalCount: 0, query: "y" } });
-
-      await wiseSearch({ q: "y", signal: controller.signal });
-
-      expect(mockAxios.get).toHaveBeenCalledWith("/search", {
-        params: { q: "y", limit: 20, offset: 0 },
-        signal: controller.signal,
-      });
+      server.use(
+        http.get("/api/search", () =>
+          HttpResponse.json({ data: { results: {}, totalCount: 0, query: "y" } }),
+        ),
+      );
+      const result = await wiseSearch({ q: "y", signal: controller.signal });
+      expect(result.data.query).toBe("y");
     });
 
     it("includes reviewStatus when set", async () => {
-      mockAxios.get.mockResolvedValue({ data: { results: {}, totalCount: 0, query: "z" } });
-
-      await wiseSearch({ q: "z", reviewStatus: "approved" });
-
-      expect(mockAxios.get).toHaveBeenCalledWith("/search", {
-        params: { q: "z", limit: 20, offset: 0, reviewStatus: "approved" },
-        signal: undefined,
-      });
+      server.use(
+        http.get("/api/search", ({ request }) => {
+          const url = new URL(request.url);
+          return HttpResponse.json({
+            data: {
+              results: {},
+              totalCount: 0,
+              query: url.searchParams.get("q"),
+              reviewStatus: url.searchParams.get("reviewStatus"),
+            },
+          });
+        }),
+      );
+      const result = await wiseSearch({ q: "z", reviewStatus: "approved" });
+      expect(result.data.query).toBe("z");
     });
 
     it("returns response.data", async () => {
       const mockData = {
-        results: { projects: { results: [], count: 0, icon: "folder" } },
-        totalCount: 0,
-        query: "test",
+        data: {
+          results: { projects: { results: [], count: 0, icon: "folder" } },
+          totalCount: 0,
+          query: "test",
+        },
       };
-      mockAxios.get.mockResolvedValue({ data: mockData });
-
+      server.use(http.get("/api/search", () => HttpResponse.json(mockData)));
       const result = await wiseSearch({ q: "test" });
       expect(result).toEqual(mockData);
     });

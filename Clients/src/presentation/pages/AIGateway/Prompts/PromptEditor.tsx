@@ -10,17 +10,21 @@ import {
   Slider,
 } from "@mui/material";
 import {
-  Plus,
-  Trash2,
-  History,
-  Send,
+  AlertTriangle,
+  BookOpen,
+  GitCompareArrows,
   GripVertical,
+  History,
+  Link2,
+  MessageSquare,
+  Plus,
+  RotateCcw,
+  Send,
   Settings2,
+  Tag,
+  Trash2,
   Upload,
   X,
-  GitCompareArrows,
-  Tag,
-  Link2,
 } from "lucide-react";
 import {
   DndContext,
@@ -45,6 +49,9 @@ import Field from "../../../components/Inputs/Field";
 import Select from "../../../components/Inputs/Select";
 import StandardModal from "../../../components/Modals/StandardModal";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
+import { EmptyState } from "../../../components/EmptyState";
+import EmptyStateTip from "../../../components/EmptyState/EmptyStateTip";
+import CustomizableSkeleton from "../../../components/Skeletons";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import { displayFormattedDate } from "../../../tools/isoDateToString";
 import palette from "../../../themes/palette";
@@ -211,6 +218,7 @@ export default function PromptEditorPage() {
 
   const [prompt, setPrompt] = useState<PromptData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const idCounter = useRef(1);
   const assignId = () => `msg-${idCounter.current++}`;
@@ -291,6 +299,8 @@ export default function PromptEditorPage() {
 
   const loadPrompt = useCallback(async () => {
     if (!id) return;
+    setLoading(true);
+    setLoadError(null);
     try {
       const [promptRes, versionsRes, endpointsRes, labelsRes] = await Promise.all([
         apiServices.get<Record<string, any>>(`/ai-gateway/prompts/${id}`),
@@ -305,7 +315,7 @@ export default function PromptEditorPage() {
       setLabels(labelsRes?.data?.labels || labelsRes?.data?.data || []);
       if (vers.length > 0) loadVersionIntoEditor(vers[0]);
     } catch {
-      /* silently handle */
+      setLoadError("Failed to load prompt. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -531,15 +541,32 @@ export default function PromptEditorPage() {
     }
   };
 
-  if (loading) return null;
+  if (loading) {
+    return <CustomizableSkeleton variant="rectangular" width="100%" height={400} />;
+  }
+  if (loadError) {
+    return (
+      <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
+        <EmptyState icon={AlertTriangle} message={loadError}>
+          <CustomizableButton
+            variant="outlined"
+            text="Retry"
+            icon={<RotateCcw size={16} />}
+            onClick={loadPrompt}
+          />
+        </EmptyState>
+      </Box>
+    );
+  }
   if (!prompt) {
     return (
-      <Box sx={{ p: "16px" }}>
-        <Typography>Prompt not found.</Typography>
-        <CustomizableButton
-          text="Back to prompts"
-          onClick={() => navigate("/ai-gateway/prompts")}
-        />
+      <Box sx={{ display: "flex", justifyContent: "center", py: 8 }}>
+        <EmptyState icon={BookOpen} message="Prompt not found.">
+          <CustomizableButton
+            text="Back to prompts"
+            onClick={() => navigate("/ai-gateway/prompts")}
+          />
+        </EmptyState>
       </Box>
     );
   }
@@ -835,20 +862,21 @@ export default function PromptEditorPage() {
               {/* Chat area */}
               <Box sx={{ flex: 1, overflow: "auto", p: "16px" }}>
                 {chatMessages.length === 0 && (
-                  <Box sx={{ textAlign: "center", py: "64px" }}>
-                    <Typography fontSize={13} color="text.secondary" fontWeight={500}>
-                      Send a message to test this prompt
-                    </Typography>
+                  <EmptyState
+                    icon={MessageSquare}
+                    message="Send a message to test this prompt"
+                    showBorder={false}
+                  >
                     <Typography
                       fontSize={12}
                       color="text.disabled"
-                      mt="8px"
-                      sx={{ maxWidth: 320, mx: "auto" }}
+                      textAlign="center"
+                      sx={{ maxWidth: 320 }}
                     >
                       Your message blocks above will be prepended as context. Type a user message
                       below and the model will respond using your prompt template.
                     </Typography>
-                  </Box>
+                  </EmptyState>
                 )}
                 <Stack spacing="8px">
                   {chatMessages.map((cm, idx) => (
@@ -1251,15 +1279,13 @@ export default function PromptEditorPage() {
               );
             })}
             {versions.length === 0 && (
-              <Box sx={{ textAlign: "center", py: "48px" }}>
-                <History size={32} strokeWidth={1} color={palette.border.dark} />
-                <Typography fontSize={13} color="text.secondary" mt="16px">
-                  No versions yet
-                </Typography>
-                <Typography fontSize={12} color="text.disabled" mt="4px">
-                  Click "Save draft" to create your first version.
-                </Typography>
-              </Box>
+              <EmptyState icon={History} message="No versions yet">
+                <EmptyStateTip
+                  icon={History}
+                  title="Create your first version"
+                  description="Click Save draft to create your first version."
+                />
+              </EmptyState>
             )}
           </Stack>
         </Box>

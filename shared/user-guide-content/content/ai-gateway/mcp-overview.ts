@@ -14,7 +14,7 @@ export const mcpOverviewContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Without a gateway, agents connect directly to MCP servers. That means no central visibility into what tools they\'re calling, no way to block sensitive operations and no audit log. The MCP Gateway solves all three.',
+      text: 'Without a gateway, agents connect directly to MCP servers. That means no central view of what tools they\'re calling, no way to block sensitive operations and no audit log. The MCP Gateway closes all three gaps.',
     },
     {
       type: 'heading',
@@ -55,11 +55,11 @@ export const mcpOverviewContent: ArticleContent = {
       items: [
         {
           title: 'MCP servers',
-          description: 'Backend servers that expose tools (database queries, file operations, search, etc.). You register them in VerifyWise with their URL and auth credentials.',
+          description: 'Backend servers that expose tools (database queries, file operations, search and so on). You register them in VerifyWise with their URL and auth credentials.',
           icon: 'Server',
         },
         {
-          title: 'Tool catalog',
+          title: 'MCP Tools',
           description: 'All discovered tools across your servers, with risk levels and approval requirements you can configure per tool.',
           icon: 'Wrench',
         },
@@ -70,7 +70,7 @@ export const mcpOverviewContent: ArticleContent = {
         },
         {
           title: 'Guardrails',
-          description: 'Rules that scan tool inputs before execution. Detect PII, filter prohibited content, or block prompt injection attempts.',
+          description: 'Rules that scan tool inputs before execution. Detect PII, filter prohibited content or block prompt injection attempts.',
           icon: 'Shield',
         },
         {
@@ -93,7 +93,7 @@ export const mcpOverviewContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'If your organization runs AI agents that call external tools, you need governance around those calls. The MCP Gateway is built for:',
+      text: 'If your organization runs AI agents that call external tools, you need governance around those calls. The MCP Gateway is for:',
     },
     {
       type: 'bullet-list',
@@ -112,14 +112,14 @@ export const mcpOverviewContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Getting started takes about 5 minutes. Here\'s the short version:',
+      text: 'Setup takes about 5 minutes:',
     },
     {
       type: 'ordered-list',
       items: [
-        { text: 'Register an MCP server in **AI Gateway > MCP Gateway > Servers**.' },
+        { text: 'Register an MCP server in **AI Gateway > Agent Control > MCP Servers**.' },
         { text: 'Wait for tool discovery (or trigger it manually once available).' },
-        { text: 'Review discovered tools in the **Tools** page. Set risk levels and approval requirements.' },
+        { text: 'Review discovered tools in the **MCP Tools** page. Set risk levels and approval requirements.' },
         { text: 'Create an agent key in **Agent keys**. Scope it to the tools the agent needs.' },
         { text: 'Point your agent at `POST /v1/mcp` with the key as a Bearer token.' },
       ],
@@ -156,15 +156,15 @@ export const mcpOverviewContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The MCP Gateway section appears as a collapsible group in the AI Gateway sidebar. Click "MCP Gateway" to expand it. You\'ll see six sub-pages:',
+      text: 'The Agent Control section appears as a collapsible group in the AI Gateway sidebar. Click "Agent Control" to expand it. You\'ll see 6 sub-pages:',
     },
     {
       type: 'bullet-list',
       items: [
         { bold: 'Agent keys', text: 'Create and manage API keys for agents' },
         { bold: 'Servers', text: 'Register and monitor backend MCP servers' },
-        { bold: 'Tools', text: 'View all discovered tools, set risk levels' },
-        { bold: 'Audit log', text: 'Review tool invocation history and stats' },
+        { bold: 'MCP Tools', text: 'View all discovered tools, set risk levels' },
+        { bold: 'Activity', text: 'Review tool invocation history and stats' },
         { bold: 'Approvals', text: 'Approve or deny pending tool calls' },
         { bold: 'Guardrails', text: 'Configure input scanning rules' },
       ],
@@ -188,7 +188,7 @@ export const mcpOverviewContent: ArticleContent = {
         {
           collectionId: 'ai-gateway',
           articleId: 'mcp-tools',
-          title: 'Tool catalog',
+          title: 'MCP Tools',
           description: 'Browse discovered tools and configure risk levels.',
         },
       ],

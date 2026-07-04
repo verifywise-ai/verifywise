@@ -1,5 +1,4 @@
 import { Theme, SxProps } from "@mui/material/styles";
-import { AIIncidentManagementApprovalStatus } from "../../../domain/enums/aiIncidentManagement.enum";
 import { brand } from "../../themes/palette";
 
 // Main page styles (index.tsx)
@@ -65,58 +64,6 @@ export const incidentSummaryLabel = (theme: Theme) => ({
   textTransform: "uppercase" as const,
   margin: 0,
 });
-
-// Table component styles (IncidentTable.tsx)
-export const incidentStatusBadge = (status: AIIncidentManagementApprovalStatus) => {
-  const statusStyles = {
-    [AIIncidentManagementApprovalStatus.APPROVED]: {
-      bg: "#E6F4EA",
-      color: "status.success.text",
-    },
-    [AIIncidentManagementApprovalStatus.REJECTED]: {
-      bg: "#FFF8E1",
-      color: "#795548",
-    },
-    [AIIncidentManagementApprovalStatus.PENDING]: {
-      bg: "#FFE5D0",
-      color: "#E64A19",
-    },
-    [AIIncidentManagementApprovalStatus.NOT_REQUIRED]: {
-      bg: "#FFD6D6",
-      color: "status.error.text",
-    },
-  };
-
-  const style = statusStyles[status] || { bg: "#E0E0E0", color: "#424242" };
-
-  return {
-    backgroundColor: style.bg,
-    color: style.color,
-    padding: "4px 8px",
-    borderRadius: 4,
-    fontWeight: 500,
-    fontSize: 11,
-    textTransform: "uppercase" as const,
-    display: "inline-block" as const,
-  };
-};
-
-export const incidentSeverityBadge = (isCritical: boolean) => {
-  const style = isCritical
-    ? { bg: "#FFD6D6", color: "status.error.text" }
-    : { bg: "#E6F4EA", color: "status.success.text" };
-
-  return {
-    backgroundColor: style.bg,
-    color: style.color,
-    padding: "4px 8px",
-    borderRadius: 4,
-    fontWeight: 500,
-    fontSize: 11,
-    textTransform: "uppercase" as const,
-    display: "inline-block" as const,
-  };
-};
 
 // Tags / Chips
 export const incidentTagContainer = {

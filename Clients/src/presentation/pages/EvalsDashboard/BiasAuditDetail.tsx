@@ -28,11 +28,14 @@ import {
   type ScoreDistributionTable,
 } from "../../../application/repository/deepEval.repository";
 import EditableText from "../../components/EditableText";
+import { displayFormattedDateTime } from "../../tools/isoDateToString";
 
 interface BiasAuditDetailProps {
   auditId: string;
   onBack: () => void;
 }
+
+const numberFormatter = new Intl.NumberFormat("en-US");
 
 function ResultsTable({
   table,
@@ -119,12 +122,12 @@ function ResultsTable({
               </Box>
               <Box component="td" sx={{ padding: "8px", textAlign: "right" }}>
                 <Typography sx={{ fontSize: 13, color: theme.palette.text.secondary }}>
-                  {row.applicant_count.toLocaleString()}
+                  {numberFormatter.format(row.applicant_count)}
                 </Typography>
               </Box>
               <Box component="td" sx={{ padding: "8px", textAlign: "right" }}>
                 <Typography sx={{ fontSize: 13, color: theme.palette.text.secondary }}>
-                  {row.selected_count.toLocaleString()}
+                  {numberFormatter.format(row.selected_count)}
                 </Typography>
               </Box>
               <Box component="td" sx={{ padding: "8px", textAlign: "right" }}>
@@ -288,7 +291,7 @@ function FairnessMetricsTableView({ table }: { table: FairnessMetricsTable }) {
               </Box>
               <Box component="td" sx={{ padding: "8px", textAlign: "right" }}>
                 <Typography sx={{ fontSize: 13, color: theme.palette.text.secondary }}>
-                  {g.count.toLocaleString()}
+                  {numberFormatter.format(g.count)}
                 </Typography>
               </Box>
               <Box component="td" sx={{ padding: "8px", textAlign: "right" }}>
@@ -573,12 +576,7 @@ export default function BiasAuditDetail({ auditId, onBack }: BiasAuditDetailProp
           </Stack>
           {audit?.createdAt && (
             <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
-              {audit.presetName} · Created{" "}
-              {new Date(audit.createdAt).toLocaleDateString("en-US", {
-                month: "long",
-                day: "numeric",
-                year: "numeric",
-              })}
+              {audit.presetName} · Created {displayFormattedDateTime(audit.createdAt)}
             </Typography>
           )}
         </Stack>
@@ -681,7 +679,7 @@ export default function BiasAuditDetail({ auditId, onBack }: BiasAuditDetailProp
           >
             <StatCard
               title="Total applicants"
-              value={audit.results.total_applicants.toLocaleString()}
+              value={numberFormatter.format(audit.results.total_applicants)}
               Icon={Users}
             />
             <StatCard
@@ -692,7 +690,7 @@ export default function BiasAuditDetail({ auditId, onBack }: BiasAuditDetailProp
                     ? "Predicted positive"
                     : "Total selected"
               }
-              value={audit.results.total_selected.toLocaleString()}
+              value={numberFormatter.format(audit.results.total_selected)}
               Icon={UserCheck}
             />
             <StatCard
@@ -715,7 +713,7 @@ export default function BiasAuditDetail({ auditId, onBack }: BiasAuditDetailProp
             {audit.results.unknown_count > 0 && (
               <StatCard
                 title="Unknown"
-                value={audit.results.unknown_count.toLocaleString()}
+                value={numberFormatter.format(audit.results.unknown_count)}
                 Icon={HelpCircle}
               />
             )}

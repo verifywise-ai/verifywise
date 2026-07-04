@@ -1,9 +1,10 @@
 from typing import Optional
 
-from fastapi import APIRouter, Request, status
+from fastapi import APIRouter, HTTPException, Request, status
 
 from crud.mcp_audit import (
     delete_expired_audit_logs,
+    get_audit_log_by_id,
     get_audit_logs,
     get_audit_stats,
     get_audit_stats_by_agent,
@@ -53,6 +54,20 @@ async def list_audit_logs(
         "limit": result["limit"],
         "offset": result["offset"],
     }
+
+
+# ---------------------------------------------------------------------------
+# GET /mcp/audit/logs/{log_id}
+# ---------------------------------------------------------------------------
+
+@router.get("/logs/{log_id}", status_code=status.HTTP_200_OK)
+async def get_audit_log(log_id: int, request: Request):
+    verify_internal_key(request)
+    org_id = get_org_id(request)
+    row = await get_audit_log_by_id(org_id, log_id)
+    if not row:
+        raise HTTPException(status_code=404, detail="Audit log not found")
+    return {"status": "success", "data": row}
 
 
 # ---------------------------------------------------------------------------

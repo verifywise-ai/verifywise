@@ -35,6 +35,14 @@ import { initialState } from "./constants";
 import { ProjectFormProps } from "./constants";
 import { useFormValidation } from "../../../../application/hooks/useFormValidation";
 import {
+  PROJECT_FORM_FIELD_IDS,
+  PROJECT_FORM_FIELD_ORDER,
+} from "../../../constants/formValidationFieldMaps";
+import {
+  createFieldBlurHandler,
+  focusFormFieldById,
+} from "../../../../application/utils/formValidationFocus";
+import {
   createProject,
   updateProject,
 } from "../../../../application/repository/project.repository";
@@ -151,7 +159,16 @@ export const ProjectForm = ({
     }),
     [projectToEdit],
   );
-  const { errors, validateAll, clearFieldError } = useFormValidation<FormValues>(validators);
+  const { errors, validateAll, validateField, clearFieldError, getFirstInvalidField } =
+    useFormValidation<FormValues>(validators);
+  const valuesRef = useRef(values);
+  valuesRef.current = values;
+
+  const handleFieldBlur = useCallback(
+    (prop: keyof FormValues) =>
+      createFieldBlurHandler(prop, () => valuesRef.current, validateField),
+    [validateField],
+  );
 
   // Check if the project has a pending approval request
   // Note: We show an info banner but allow editing basic fields
@@ -310,14 +327,18 @@ export const ProjectForm = ({
     [clearFieldError],
   );
 
-  const handleDateChange = useCallback((newDate: Dayjs | null) => {
-    if (newDate?.isValid()) {
-      setValues((prevValues: any) => ({
-        ...prevValues,
-        start_date: newDate ? newDate.toISOString() : "",
-      }));
-    }
-  }, []);
+  const handleDateChange = useCallback(
+    (newDate: Dayjs | null) => {
+      if (newDate?.isValid()) {
+        setValues((prevValues: any) => ({
+          ...prevValues,
+          start_date: newDate ? newDate.toISOString() : "",
+        }));
+        clearFieldError("start_date");
+      }
+    },
+    [clearFieldError],
+  );
 
   const handleCheckboxChange = useCallback(
     (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -330,9 +351,13 @@ export const ProjectForm = ({
     const userInfo = extractUserToken(authState.authToken);
     const teamMember = values.members.map((user) => String(user._id));
 
-    if (!validateAll(values)) {
-      // Surface validation errors that live on the Details tab.
+    if (!validateAll(values, PROJECT_FORM_FIELD_ORDER)) {
       setActiveTab("details");
+      const firstInvalid = getFirstInvalidField();
+      const fieldId = firstInvalid ? PROJECT_FORM_FIELD_IDS[firstInvalid] : undefined;
+      if (fieldId) {
+        focusFormFieldById(fieldId);
+      }
       return;
     }
     {
@@ -434,6 +459,7 @@ export const ProjectForm = ({
     projectToEdit,
     authState.authToken,
     validateAll,
+    getFirstInvalidField,
     projectStatusItems,
     riskClassificationItems,
     highRiskRoleItems,
@@ -568,6 +594,7 @@ export const ProjectForm = ({
                 width="100%"
                 value={values.project_title}
                 onChange={handleOnTextFieldChange("project_title")}
+                onBlur={handleFieldBlur("project_title")}
                 error={errors.project_title}
                 sx={textfieldStyle}
                 isRequired
@@ -578,6 +605,7 @@ export const ProjectForm = ({
                 placeholder="Select owner"
                 value={values.owner || ""}
                 onChange={handleOnSelectChange("owner")}
+                onBlur={handleFieldBlur("owner")}
                 items={
                   users?.map((user: any) => ({
                     _id: user.id,
@@ -632,6 +660,7 @@ export const ProjectForm = ({
                     placeholder="Select an option"
                     value={values.ai_risk_classification || ""}
                     onChange={handleOnSelectChange("ai_risk_classification")}
+                    onBlur={handleFieldBlur("ai_risk_classification")}
                     items={riskClassificationItems}
                     sx={{
                       width: "100%",
@@ -646,6 +675,7 @@ export const ProjectForm = ({
                     placeholder="Select an option"
                     value={values.type_of_high_risk_role || ""}
                     onChange={handleOnSelectChange("type_of_high_risk_role")}
+                    onBlur={handleFieldBlur("type_of_high_risk_role")}
                     items={highRiskRoleItems}
                     sx={{
                       width: "100%",
@@ -727,9 +757,11 @@ export const ProjectForm = ({
                 <Stack sx={{ display: "flex", flexDirection: "row", gap: 6, width: "100%" }}>
                   <Box sx={{ flex: 1 }}>
                     <DatePicker
+                      id="project-start-date-input"
                       label="Start date"
                       date={values.start_date ? dayjs(values.start_date) : dayjs(new Date())}
                       handleDateChange={handleDateChange}
+                      onBlur={handleFieldBlur("start_date")}
                       sx={{
                         width: "100%",
                       }}
@@ -744,6 +776,7 @@ export const ProjectForm = ({
                       placeholder="Select an option"
                       value={values.geography === 0 ? "" : values.geography}
                       onChange={handleOnSelectChange("geography")}
+                      onBlur={handleFieldBlur("geography")}
                       items={geographyItems}
                       sx={{
                         width: "100%",
@@ -763,6 +796,7 @@ export const ProjectForm = ({
                     value={values.monitored_regulations_and_standards}
                     options={filteredFrameworks}
                     onChange={handleOnMultiSelect("monitored_regulations_and_standards")}
+                    onBlur={handleFieldBlur("monitored_regulations_and_standards")}
                     getOptionLabel={(item) => item.name}
                     noOptionsText={
                       values.monitored_regulations_and_standards.length ===
@@ -816,6 +850,7 @@ export const ProjectForm = ({
                   type="description"
                   value={values.goal}
                   onChange={handleOnTextFieldChange("goal")}
+                  onBlur={handleFieldBlur("goal")}
                   sx={{
                     backgroundColor: theme.palette.background.main,
                     marginTop: "1px",
@@ -841,6 +876,7 @@ export const ProjectForm = ({
                   value={values.monitored_regulations_and_standards}
                   options={filteredFrameworks}
                   onChange={handleOnMultiSelect("monitored_regulations_and_standards")}
+                  onBlur={handleFieldBlur("monitored_regulations_and_standards")}
                   getOptionLabel={(item) => item.name}
                   noOptionsText={
                     values.monitored_regulations_and_standards.length === filteredFrameworks.length

@@ -22,6 +22,7 @@ import {
   KeyRound,
   FileCheck,
   Scale,
+  RotateCcw,
 } from "lucide-react";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import Field from "../../../components/Inputs/Field";
@@ -34,6 +35,7 @@ import EmptyStateTip from "../../../components/EmptyState/EmptyStateTip";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import palette from "../../../themes/palette";
 import { sectionTitleSx, useCardSx } from "../shared";
+import CustomizableSkeleton from "../../../components/Skeletons";
 
 // ─── Guardrail Catalog ────────────────────────────────────────────────────────
 
@@ -606,6 +608,7 @@ export default function GuardrailsPage() {
   const activeTab = urlTab === "content-filter" ? "content_filter" : "pii";
   const [rules, setRules] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // PII modal
   const [isPiiModalOpen, setIsPiiModalOpen] = useState(false);
@@ -646,11 +649,13 @@ export default function GuardrailsPage() {
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
 
   const loadRules = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
     try {
       const res = await apiServices.get<Record<string, any>>("/ai-gateway/guardrails");
       setRules(res?.data?.rules || res?.data?.data || []);
     } catch {
-      // Silently handle
+      setLoadError("Failed to load guardrails. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -943,116 +948,129 @@ export default function GuardrailsPage() {
           }
         />
 
-        <Box sx={{ mt: "16px" }}>
-          {/* ─── PII Detection tab ─────────────────────────────────────── */}
-          {activeTab === "pii" && (
-            <Box sx={cardSx}>
-              <Stack gap="12px">
-                <Stack
-                  direction="row"
-                  justifyContent="space-between"
-                  alignItems="flex-start"
-                  gap="16px"
-                >
-                  <Box flex={1} minWidth={0}>
-                    <Typography sx={sectionTitleSx}>PII detection</Typography>
-                    <Typography sx={{ fontSize: 13, color: palette.text.tertiary, mt: "4px" }}>
-                      Detect and protect personal data such as emails, phone numbers, credit cards,
-                      and names. PII scanning runs in-process within your gateway — no data is sent
-                      to external services.
-                    </Typography>
-                  </Box>
-                  <Box sx={{ flexShrink: 0 }}>
-                    <CustomizableButton
-                      text="Add PII rule"
-                      icon={<CirclePlus size={14} strokeWidth={1.5} />}
-                      onClick={() => {
-                        setPiiForm({ name: "", entity: "EMAIL_ADDRESS", action: "block" });
-                        setIsPiiModalOpen(true);
-                      }}
-                    />
-                  </Box>
-                </Stack>
-
-                {loading ? null : piiRules.length === 0 ? (
-                  <EmptyState
-                    icon={Fingerprint}
-                    message="No PII detection rules configured. Add rules to automatically detect and protect personal data in AI requests."
-                    showBorder
+        {!loading && !loadError && (
+          <Box sx={{ mt: "16px" }}>
+            {/* ─── PII Detection tab ─────────────────────────────────────── */}
+            {activeTab === "pii" && (
+              <Box sx={cardSx}>
+                <Stack gap="12px">
+                  <Stack
+                    direction="row"
+                    justifyContent="space-between"
+                    alignItems="flex-start"
+                    gap="16px"
                   >
-                    <EmptyStateTip
-                      icon={Lock}
-                      title="In-process PII scanning"
-                      description="PII detection runs within your gateway infrastructure. No data is sent to external services for scanning. Supports email, phone, credit card, names, IBAN, Turkish TCKN, and more."
-                    />
-                    <EmptyStateTip
-                      icon={ShieldCheck}
-                      title="Block or mask detected PII"
-                      description="Block requests containing personal data, or mask it with placeholders (e.g., <EMAIL_ADDRESS>) before sending to the LLM. Input is scanned before the model sees it."
-                    />
-                  </EmptyState>
-                ) : (
-                  <Stack gap="8px">{piiRules.map(renderRuleRow)}</Stack>
-                )}
-              </Stack>
-            </Box>
-          )}
+                    <Box flex={1} minWidth={0}>
+                      <Typography sx={sectionTitleSx}>PII detection</Typography>
+                      <Typography sx={{ fontSize: 13, color: palette.text.tertiary, mt: "4px" }}>
+                        Detect and protect personal data such as emails, phone numbers, credit
+                        cards, and names. PII scanning runs in-process within your gateway — no data
+                        is sent to external services.
+                      </Typography>
+                    </Box>
+                    <Box sx={{ flexShrink: 0 }}>
+                      <CustomizableButton
+                        text="Add PII rule"
+                        icon={<CirclePlus size={14} strokeWidth={1.5} />}
+                        onClick={() => {
+                          setPiiForm({ name: "", entity: "EMAIL_ADDRESS", action: "block" });
+                          setIsPiiModalOpen(true);
+                        }}
+                      />
+                    </Box>
+                  </Stack>
 
-          {/* ─── Content Filter tab ────────────────────────────────────── */}
-          {activeTab === "content_filter" && (
-            <Box sx={cardSx}>
-              <Stack gap="12px">
-                <Stack
-                  direction="row"
-                  justifyContent="space-between"
-                  alignItems="flex-start"
-                  gap="16px"
-                >
-                  <Box flex={1} minWidth={0}>
-                    <Typography sx={sectionTitleSx}>Content filter</Typography>
-                    <Typography sx={{ fontSize: 13, color: palette.text.tertiary, mt: "4px" }}>
-                      Block or mask content matching specific keywords or regex patterns. Use
-                      keywords for exact terms and regex for format detection (e.g., project codes,
-                      internal URLs).
-                    </Typography>
-                  </Box>
-                  <Box sx={{ flexShrink: 0 }}>
-                    <CustomizableButton
-                      text="Add filter rule"
-                      icon={<CirclePlus size={14} strokeWidth={1.5} />}
-                      onClick={() => {
-                        setCfForm({ name: "", type: "keyword", pattern: "", action: "block" });
-                        setCfError("");
-                        setIsCfModalOpen(true);
-                      }}
-                    />
-                  </Box>
+                  {piiRules.length === 0 ? (
+                    <EmptyState
+                      icon={Fingerprint}
+                      message="No PII detection rules configured. Add rules to automatically detect and protect personal data in AI requests."
+                      showBorder
+                    >
+                      <EmptyStateTip
+                        icon={Lock}
+                        title="In-process PII scanning"
+                        description="PII detection runs within your gateway infrastructure. No data is sent to external services for scanning. Supports email, phone, credit card, names, IBAN, Turkish TCKN, and more."
+                      />
+                      <EmptyStateTip
+                        icon={ShieldCheck}
+                        title="Block or mask detected PII"
+                        description="Block requests containing personal data, or mask it with placeholders (e.g., <EMAIL_ADDRESS>) before sending to the LLM. Input is scanned before the model sees it."
+                      />
+                    </EmptyState>
+                  ) : (
+                    <Stack gap="8px">{piiRules.map(renderRuleRow)}</Stack>
+                  )}
                 </Stack>
+              </Box>
+            )}
 
-                {loading ? null : cfRules.length === 0 ? (
-                  <EmptyState
-                    icon={Filter}
-                    message="No content filter rules configured. Add keyword or regex rules to block or mask prohibited content."
-                    showBorder
+            {/* ─── Content Filter tab ────────────────────────────────────── */}
+            {activeTab === "content_filter" && (
+              <Box sx={cardSx}>
+                <Stack gap="12px">
+                  <Stack
+                    direction="row"
+                    justifyContent="space-between"
+                    alignItems="flex-start"
+                    gap="16px"
                   >
-                    <EmptyStateTip
-                      icon={ScanLine}
-                      title="Keyword and regex matching"
-                      description="Block specific words (exact match with word boundaries) or define custom regex patterns to catch formats like internal project codes, employee IDs, or confidential terms."
-                    />
-                    <EmptyStateTip
-                      icon={FileWarning}
-                      title="Runs on every request, zero latency"
-                      description="Content filters execute in-process with no external API calls. Rules are evaluated before the request reaches the LLM provider."
-                    />
-                  </EmptyState>
-                ) : (
-                  <Stack gap="8px">{cfRules.map(renderRuleRow)}</Stack>
-                )}
-              </Stack>
-            </Box>
-          )}
-        </Box>
+                    <Box flex={1} minWidth={0}>
+                      <Typography sx={sectionTitleSx}>Content filter</Typography>
+                      <Typography sx={{ fontSize: 13, color: palette.text.tertiary, mt: "4px" }}>
+                        Block or mask content matching specific keywords or regex patterns. Use
+                        keywords for exact terms and regex for format detection (e.g., project
+                        codes, internal URLs).
+                      </Typography>
+                    </Box>
+                    <Box sx={{ flexShrink: 0 }}>
+                      <CustomizableButton
+                        text="Add filter rule"
+                        icon={<CirclePlus size={14} strokeWidth={1.5} />}
+                        onClick={() => {
+                          setCfForm({ name: "", type: "keyword", pattern: "", action: "block" });
+                          setCfError("");
+                          setIsCfModalOpen(true);
+                        }}
+                      />
+                    </Box>
+                  </Stack>
+
+                  {cfRules.length === 0 ? (
+                    <EmptyState
+                      icon={Filter}
+                      message="No content filter rules configured. Add keyword or regex rules to block or mask prohibited content."
+                      showBorder
+                    >
+                      <EmptyStateTip
+                        icon={ScanLine}
+                        title="Keyword and regex matching"
+                        description="Block specific words (exact match with word boundaries) or define custom regex patterns to catch formats like internal project codes, employee IDs, or confidential terms."
+                      />
+                      <EmptyStateTip
+                        icon={FileWarning}
+                        title="Runs on every request, zero latency"
+                        description="Content filters execute in-process with no external API calls. Rules are evaluated before the request reaches the LLM provider."
+                      />
+                    </EmptyState>
+                  ) : (
+                    <Stack gap="8px">{cfRules.map(renderRuleRow)}</Stack>
+                  )}
+                </Stack>
+              </Box>
+            )}
+          </Box>
+        )}
+        {loading && <CustomizableSkeleton variant="rectangular" width="100%" height={400} />}
+        {loadError && (
+          <EmptyState icon={AlertTriangle} message={loadError}>
+            <CustomizableButton
+              variant="outlined"
+              text="Retry"
+              icon={<RotateCcw size={16} />}
+              onClick={loadRules}
+            />
+          </EmptyState>
+        )}
       </TabContext>
 
       {/* ─── Add PII Rule Modal ─────────────────────────────────────────── */}

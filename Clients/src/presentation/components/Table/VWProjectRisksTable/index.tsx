@@ -2,7 +2,6 @@ import {
   Box,
   Stack,
   Table,
-  TableBody,
   TableCell,
   TableContainer,
   TablePagination,
@@ -23,9 +22,14 @@ import {
   UserCheck,
   Tag as TagIcon,
   Archive,
+  TrendingDown,
+  Grid3X3,
+  ListChecks,
 } from "lucide-react";
 import VWProjectRisksTableBody from "./VWProjectRisksTableBody";
 import { EmptyState } from "../../EmptyState";
+import EmptyStateTip from "../../EmptyState/EmptyStateTip";
+import { TableEmptyStateLayout } from "../TableEmptyStateLayout";
 import { IVWProjectRisksTable } from "../../../types/interfaces/i.risk";
 import { RiskModel } from "../../../../domain/models/Common/risks/risk.model";
 import { text } from "../../../themes/palette";
@@ -204,6 +208,8 @@ const VWProjectRisksTable = ({
   visibleColumns,
   canRunBulkActions = false,
   onBulkActionSuccess,
+  emptyMessage = "There is currently no data in this table.",
+  showEmptyTips = false,
 }: IVWProjectRisksTable) => {
   const { data: customFieldDefs = [] } = useCustomFieldDefinitions("project_risk");
 
@@ -512,162 +518,194 @@ const VWProjectRisksTable = ({
   );
 
   return (
-    <Stack sx={{ width: "100%" }}>
-      {canRunBulkActions && (
-        <BulkActionsToolbar
-          count={selectionCount}
-          onClear={clearSelection}
-          actions={bulkActions}
-          selectAll={{
-            totalCount: allSelectableRiskIds.length,
-            onSelectAll: () => setAllSelected(allSelectableRiskIds),
-          }}
-        />
-      )}
-      <TableContainer>
-        <Table
-          sx={{
-            ...singleTheme.tableStyles.primary.frame,
-          }}
-        >
-          <SortableTableHead
-            columns={filteredColumns}
-            sortConfig={sortConfig}
-            onSort={handleSort}
-            selection={
-              canRunBulkActions
-                ? {
-                    allSelected: allSelected && selectableRows.length > 0,
-                    someSelected,
-                    onToggleAll: toggleAll,
-                  }
-                : undefined
-            }
-          />
-          {sortedRows.length !== 0 ? (
-            <VWProjectRisksTableBody
-              rows={sortedRows}
-              page={hidePagination ? 0 : page}
-              rowsPerPage={hidePagination ? sortedRows.length : rowsPerPage}
-              setSelectedRow={setSelectedRow}
-              setAnchor={setAnchor}
-              onDeleteRisk={onDeleteRisk}
-              flashRow={flashRow}
+    <>
+      {sortedRows.length === 0 ? (
+        <TableEmptyStateLayout
+          header={
+            <SortableTableHead
+              columns={filteredColumns}
               sortConfig={sortConfig}
-              visibleColumns={visibleColumns}
-              customFieldDefs={customFieldDefs}
-              selection={canRunBulkActions ? { isSelected, onToggle: toggleSelection } : undefined}
+              onSort={handleSort}
+              selection={
+                canRunBulkActions
+                  ? {
+                      allSelected: false,
+                      someSelected: false,
+                      onToggleAll: toggleAll,
+                    }
+                  : undefined
+              }
             />
-          ) : (
-            <TableBody>
-              <TableRow>
-                <TableCell
-                  colSpan={filteredColumns.length + (canRunBulkActions ? 1 : 0)}
-                  sx={{ border: "none", p: 0 }}
-                >
-                  <EmptyState
-                    icon={ShieldAlert}
-                    message="There is currently no data in this table."
-                  />
-                </TableCell>
-              </TableRow>
-            </TableBody>
+          }
+          tableSx={{ ...singleTheme.tableStyles.primary.frame }}
+        >
+          <EmptyState icon={ShieldAlert} message={emptyMessage}>
+            {showEmptyTips && (
+              <>
+                <EmptyStateTip
+                  icon={TrendingDown}
+                  title="Identify AI-specific risks"
+                  description="Document risks related to bias, data quality, security, transparency, and model drift. Cover both technical and organizational risks."
+                />
+                <EmptyStateTip
+                  icon={Grid3X3}
+                  title="Assess likelihood and impact"
+                  description="Rate each risk by likelihood and impact. The risk score and level help you prioritize what needs attention first."
+                />
+                <EmptyStateTip
+                  icon={ListChecks}
+                  title="Create treatment plans"
+                  description="Define mitigation strategies for each risk and track their progress. Link treatments to specific controls for full traceability."
+                />
+              </>
+            )}
+          </EmptyState>
+        </TableEmptyStateLayout>
+      ) : (
+        <Stack sx={{ width: "100%" }}>
+          {canRunBulkActions && (
+            <BulkActionsToolbar
+              count={selectionCount}
+              onClear={clearSelection}
+              actions={bulkActions}
+              selectAll={{
+                totalCount: allSelectableRiskIds.length,
+                onSelectAll: () => setAllSelected(allSelectableRiskIds),
+              }}
+            />
           )}
-          {!hidePagination && (
-            <TableFooter>
-              <TableRow>
-                <TableCell
-                  colSpan={filteredColumns.length + (canRunBulkActions ? 1 : 0)}
-                  sx={{ border: "none", p: 0 }}
-                >
-                  <Box
-                    sx={{
-                      display: "flex",
-                      flexDirection: "row",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      paddingX: theme.spacing(4),
-                    }}
-                  >
-                    <Typography
-                      sx={{
-                        paddingX: theme.spacing(2),
-                        fontSize: 12,
-                        opacity: 0.7,
-                        color: theme.palette.text.tertiary,
-                        whiteSpace: "nowrap",
-                      }}
+          <TableContainer>
+            <Table
+              sx={{
+                ...singleTheme.tableStyles.primary.frame,
+              }}
+            >
+              <SortableTableHead
+                columns={filteredColumns}
+                sortConfig={sortConfig}
+                onSort={handleSort}
+                selection={
+                  canRunBulkActions
+                    ? {
+                        allSelected: allSelected && selectableRows.length > 0,
+                        someSelected,
+                        onToggleAll: toggleAll,
+                      }
+                    : undefined
+                }
+              />
+              <VWProjectRisksTableBody
+                rows={sortedRows}
+                page={hidePagination ? 0 : page}
+                rowsPerPage={hidePagination ? sortedRows.length : rowsPerPage}
+                setSelectedRow={setSelectedRow}
+                setAnchor={setAnchor}
+                onDeleteRisk={onDeleteRisk}
+                flashRow={flashRow}
+                sortConfig={sortConfig}
+                visibleColumns={visibleColumns}
+                customFieldDefs={customFieldDefs}
+                selection={
+                  canRunBulkActions ? { isSelected, onToggle: toggleSelection } : undefined
+                }
+              />
+              {!hidePagination && (
+                <TableFooter>
+                  <TableRow>
+                    <TableCell
+                      colSpan={filteredColumns.length + (canRunBulkActions ? 1 : 0)}
+                      sx={{ border: "none", p: 0 }}
                     >
-                      Showing {getRange} of {sortedRows?.length} project risk(s)
-                    </Typography>
-                    <Box sx={{ display: "flex", alignItems: "center" }}>
-                      <TablePagination
-                        component="div"
-                        count={sortedRows?.length}
-                        page={validPage}
-                        onPageChange={handleChangePage}
-                        rowsPerPage={rowsPerPage}
-                        rowsPerPageOptions={[5, 10, 15, 20, 25]}
-                        onRowsPerPageChange={handleChangeRowsPerPage}
-                        ActionsComponent={(props) => <TablePaginationActions {...props} />}
-                        labelRowsPerPage="Project risks per page"
-                        labelDisplayedRows={({ page, count }) =>
-                          `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
-                        }
+                      <Box
                         sx={{
-                          "mt": theme.spacing(6),
-                          "color": theme.palette.text.secondary,
-                          "& .MuiSelect-select": {
-                            width: theme.spacing(10),
-                            borderRadius: theme.shape.borderRadius,
-                            border: `1px solid ${theme.palette.border.light}`,
-                            padding: theme.spacing(4),
-                          },
-                          "& .MuiTablePagination-selectIcon": {
-                            width: "24px",
-                            height: "fit-content",
-                          },
+                          display: "flex",
+                          flexDirection: "row",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          paddingX: theme.spacing(4),
                         }}
-                        slotProps={{
-                          select: {
-                            MenuProps: {
-                              keepMounted: true,
-                              PaperProps: {
-                                className: "pagination-dropdown",
+                      >
+                        <Typography
+                          sx={{
+                            paddingX: theme.spacing(2),
+                            fontSize: 12,
+                            opacity: 0.7,
+                            color: theme.palette.text.tertiary,
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          Showing {getRange} of {sortedRows?.length} project risk(s)
+                        </Typography>
+                        <Box sx={{ display: "flex", alignItems: "center" }}>
+                          <TablePagination
+                            component="div"
+                            count={sortedRows?.length}
+                            page={validPage}
+                            onPageChange={handleChangePage}
+                            rowsPerPage={rowsPerPage}
+                            rowsPerPageOptions={[5, 10, 15, 20, 25]}
+                            onRowsPerPageChange={handleChangeRowsPerPage}
+                            ActionsComponent={(props) => <TablePaginationActions {...props} />}
+                            labelRowsPerPage="Project risks per page"
+                            labelDisplayedRows={({ page, count }) =>
+                              `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
+                            }
+                            sx={{
+                              "mt": theme.spacing(6),
+                              "color": theme.palette.text.secondary,
+                              "& .MuiSelect-select": {
+                                width: theme.spacing(10),
+                                borderRadius: theme.shape.borderRadius,
+                                border: `1px solid ${theme.palette.border.light}`,
+                                padding: theme.spacing(4),
+                              },
+                              "& .MuiTablePagination-selectIcon": {
+                                width: "24px",
+                                height: "fit-content",
+                              },
+                            }}
+                            slotProps={{
+                              select: {
+                                MenuProps: {
+                                  keepMounted: true,
+                                  PaperProps: {
+                                    className: "pagination-dropdown",
+                                    sx: {
+                                      mt: 0,
+                                      mb: theme.spacing(2),
+                                    },
+                                  },
+                                  transformOrigin: {
+                                    vertical: "bottom",
+                                    horizontal: "left",
+                                  },
+                                  anchorOrigin: { vertical: "top", horizontal: "left" },
+                                  sx: { mt: theme.spacing(-2) },
+                                },
+                                inputProps: { id: "pagination-dropdown" },
+                                IconComponent: SelectorVertical,
                                 sx: {
-                                  mt: 0,
-                                  mb: theme.spacing(2),
+                                  "ml": theme.spacing(4),
+                                  "mr": theme.spacing(12),
+                                  "minWidth": theme.spacing(20),
+                                  "textAlign": "left",
+                                  "&.Mui-focused > div": {
+                                    backgroundColor: theme.palette.background.main,
+                                  },
                                 },
                               },
-                              transformOrigin: {
-                                vertical: "bottom",
-                                horizontal: "left",
-                              },
-                              anchorOrigin: { vertical: "top", horizontal: "left" },
-                              sx: { mt: theme.spacing(-2) },
-                            },
-                            inputProps: { id: "pagination-dropdown" },
-                            IconComponent: SelectorVertical,
-                            sx: {
-                              "ml": theme.spacing(4),
-                              "mr": theme.spacing(12),
-                              "minWidth": theme.spacing(20),
-                              "textAlign": "left",
-                              "&.Mui-focused > div": {
-                                backgroundColor: theme.palette.background.main,
-                              },
-                            },
-                          },
-                        }}
-                      />
-                    </Box>
-                  </Box>
-                </TableCell>
-              </TableRow>
-            </TableFooter>
-          )}
-        </Table>
-      </TableContainer>
+                            }}
+                          />
+                        </Box>
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                </TableFooter>
+              )}
+            </Table>
+          </TableContainer>
+        </Stack>
+      )}
 
       {canRunBulkActions && ownerDialogOpen && (
         <ConfirmationModal
@@ -743,7 +781,7 @@ const VWProjectRisksTable = ({
           isLoading={bulkMutation.isPending}
         />
       )}
-    </Stack>
+    </>
   );
 };
 

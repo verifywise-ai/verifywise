@@ -25,7 +25,7 @@ import {
   getMappingStatsQuery,
 } from "../utils/governanceOs.utils";
 import { computeRecommendations } from "../utils/governanceRecommendation.utils";
-import { getOrComputeCoverage } from "../utils/governanceCoverage.utils";
+import { getOrComputeCoverage, invalidateCoverageCache } from "../utils/governanceCoverage.utils";
 import {
   validateScenarioInput,
   validateRecommendationInput,
@@ -42,8 +42,13 @@ export async function getAllMappings(req: Request, res: Response): Promise<any> 
   const FN = "getAllMappings";
   logStructured("processing", "fetching governance mappings", FN, FILE_NAME);
   try {
+    const { organizationId } = req;
+    if (!organizationId) {
+      return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
+    }
+
     const { frameworkId, strength, domain } = req.query;
-    const mappings = await getAllMappingsQuery({
+    const mappings = await getAllMappingsQuery(organizationId, {
       frameworkId: frameworkId ? Number(frameworkId) : undefined,
       strength: strength as string | undefined,
       domain: domain as string | undefined,
@@ -60,8 +65,17 @@ export async function getMappingsBetween(req: Request, res: Response): Promise<a
   const FN = "getMappingsBetween";
   logStructured("processing", "fetching mappings between frameworks", FN, FILE_NAME);
   try {
+    const { organizationId } = req;
+    if (!organizationId) {
+      return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
+    }
+
     const { sourceId, targetId } = req.params;
-    const mappings = await getMappingsBetweenFrameworksQuery(Number(sourceId), Number(targetId));
+    const mappings = await getMappingsBetweenFrameworksQuery(
+      organizationId,
+      Number(sourceId),
+      Number(targetId),
+    );
     logStructured(
       "successful",
       `fetched ${mappings.length} cross-framework mappings`,
@@ -79,8 +93,17 @@ export async function getMappingsForControl(req: Request, res: Response): Promis
   const FN = "getMappingsForControl";
   logStructured("processing", "fetching mappings for control", FN, FILE_NAME);
   try {
+    const { organizationId } = req;
+    if (!organizationId) {
+      return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
+    }
+
     const { controlType, controlId } = req.params;
-    const mappings = await getMappingsForControlQuery(String(controlType), Number(controlId));
+    const mappings = await getMappingsForControlQuery(
+      organizationId,
+      String(controlType),
+      Number(controlId),
+    );
     logStructured("successful", `fetched ${mappings.length} control mappings`, FN, FILE_NAME);
     return res.status(200).json(STATUS_CODE[200](mappings));
   } catch (error) {
@@ -103,7 +126,8 @@ export async function createMapping(req: Request, res: Response): Promise<any> {
       return res.status(400).json(STATUS_CODE[400](validation.errors.join("; ")));
     }
 
-    const mapping = await createMappingQuery(req.body);
+    const mapping = await createMappingQuery(organizationId, req.body);
+    await invalidateCoverageCache(organizationId);
     logStructured("successful", `created mapping ${mapping.id}`, FN, FILE_NAME);
     return res.status(201).json(STATUS_CODE[201](mapping));
   } catch (error) {
@@ -121,16 +145,17 @@ export async function updateMapping(req: Request, res: Response): Promise<any> {
       return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
     }
 
-    const validation = validateMappingInput(req.body);
+    const validation = validateMappingInput(req.body, true);
     if (!validation.valid) {
       return res.status(400).json(STATUS_CODE[400](validation.errors.join("; ")));
     }
 
     const { id } = req.params;
-    const mapping = await updateMappingQuery(Number(id), req.body);
+    const mapping = await updateMappingQuery(organizationId, Number(id), req.body);
     if (!mapping) {
       return res.status(404).json(STATUS_CODE[404]("Mapping not found"));
     }
+    await invalidateCoverageCache(organizationId);
     logStructured("successful", `updated mapping ${id}`, FN, FILE_NAME);
     return res.status(200).json(STATUS_CODE[200](mapping));
   } catch (error) {
@@ -149,10 +174,11 @@ export async function deleteMapping(req: Request, res: Response): Promise<any> {
     }
 
     const { id } = req.params;
-    const deleted = await deleteMappingQuery(Number(id));
+    const deleted = await deleteMappingQuery(organizationId, Number(id));
     if (!deleted) {
       return res.status(404).json(STATUS_CODE[404]("Mapping not found"));
     }
+    await invalidateCoverageCache(organizationId);
     logStructured("successful", `deleted mapping ${id}`, FN, FILE_NAME);
     return res.status(200).json(STATUS_CODE[200]({ message: "Mapping deleted" }));
   } catch (error) {
@@ -175,7 +201,16 @@ export async function createBulkMappings(req: Request, res: Response): Promise<a
       return res.status(400).json(STATUS_CODE[400]("mappings array is required"));
     }
 
-    const count = await createBulkMappingsQuery(mappings);
+    // Prevent cross-tenant pollution: every mapping in the bulk payload is
+    // stamped with the caller's organization_id. Any embedded organization_id
+    // in the payload is ignored.
+    const sanitizedMappings = mappings.map((m) => ({
+      ...m,
+      organization_id: organizationId,
+    }));
+
+    const count = await createBulkMappingsQuery(organizationId, sanitizedMappings);
+    await invalidateCoverageCache(organizationId);
     logStructured("successful", `created ${count} mappings in bulk`, FN, FILE_NAME);
     return res.status(201).json(STATUS_CODE[201]({ created: count }));
   } catch (error) {
@@ -197,6 +232,12 @@ export async function activateScenario(req: Request, res: Response): Promise<any
     const scenario = await getScenarioByIdQuery(Number(id));
     if (!scenario) {
       return res.status(404).json(STATUS_CODE[404]("Scenario not found"));
+    }
+
+    // IDOR prevention: built-in scenarios are visible to all orgs, but custom
+    // scenarios must belong to the caller's organization.
+    if (!scenario.is_builtin && scenario.organization_id !== organizationId) {
+      return res.status(403).json(STATUS_CODE[403]("Access denied to this scenario"));
     }
 
     const priorityOrder = (scenario.priority_order || {}) as {
@@ -348,6 +389,15 @@ export async function simulateScenario(req: Request, res: Response): Promise<any
         estimatedEffortHours,
         timelineWeeks,
         frameworkBreakdown: breakdown,
+        isHeuristicEstimate: true,
+        methodology: {
+          coverage: "estimatedCoveragePercent = min(85, 40 + 12 * numberOfFrameworks)",
+          effort: "estimatedEffortHours = totalControls * 4",
+          timeline: "timelineWeeks = max(4, ceil(totalControls / 20))",
+          disclaimer:
+            "These numbers are rough heuristic estimates based on simplified assumptions. " +
+            "They are not predictive analytics and should not be used for final compliance planning.",
+        },
       }),
     );
   } catch (error) {
@@ -590,6 +640,7 @@ export async function refreshCoverage(req: Request, res: Response): Promise<any>
     }
 
     const { projectId } = req.params;
+    await invalidateCoverageCache(organizationId, Number(projectId));
     const coverage = await getOrComputeCoverage(organizationId, Number(projectId), true);
     logStructured("successful", `refreshed coverage for project ${projectId}`, FN, FILE_NAME);
     return res.status(200).json(STATUS_CODE[200](coverage));
@@ -611,7 +662,7 @@ export async function getUnifiedView(req: Request, res: Response): Promise<any> 
     const { projectId } = req.params;
     const [coverage, mappingStats, preferences] = await Promise.all([
       getOrComputeCoverage(organizationId, Number(projectId)),
-      getMappingStatsQuery(),
+      getMappingStatsQuery(organizationId),
       getOrgPreferencesQuery(organizationId),
     ]);
 

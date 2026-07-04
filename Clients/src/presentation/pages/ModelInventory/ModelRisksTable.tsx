@@ -14,6 +14,8 @@ import {
 } from "@mui/material";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { EmptyState } from "../../components/EmptyState";
+import { TableEmptyStateLayout } from "../../components/Table/TableEmptyStateLayout";
+import CustomizableSkeleton from "../../components/Skeletons";
 import singleTheme from "../../themes/v1SingleTheme";
 import IconButton from "../../components/IconButton";
 import TablePaginationActions from "../../components/TablePagination";
@@ -495,128 +497,115 @@ const ModelRisksTable: React.FC<ModelRisksTableProps> = ({
     ],
   );
 
-  // Show loading state
   if (isLoading) {
     return (
-      <Stack
-        alignItems="center"
-        justifyContent="center"
-        sx={{
-          border: `1px solid ${palette.border.light}`,
-          borderRadius: "4px",
-          padding: theme.spacing(15, 5),
-          paddingBottom: theme.spacing(20),
-          gap: theme.spacing(10),
-          minHeight: 200,
-        }}
-      >
-        <Typography sx={{ fontSize: "13px", color: palette.text.tertiary }}>
-          Loading model risks...
-        </Typography>
+      <Stack spacing={2}>
+        <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
       </Stack>
     );
   }
 
-  return (
-    <>
-      {/* Empty state outside the table */}
-      {!data || data.length === 0 ? (
+  if (!data || data.length === 0) {
+    return (
+      <TableEmptyStateLayout header={tableHeader}>
         <EmptyState
           icon={ShieldAlert}
           message="There are currently no model risks in this table."
         />
-      ) : (
-        <TableContainer>
-          <Table sx={{ ...singleTheme.tableStyles.primary.frame }}>
-            {tableHeader}
-            {tableBody}
-            {!hidePagination && (
-              <TableFooter>
-                <TableRow
-                  sx={{
-                    "& .MuiTableCell-root.MuiTableCell-footer": {
-                      paddingX: theme.spacing(8),
-                      paddingY: theme.spacing(4),
-                    },
-                  }}
-                >
-                  <TableCell
-                    sx={{
-                      paddingX: theme.spacing(2),
-                      fontSize: 12,
-                      opacity: 0.7,
-                    }}
-                  >
-                    Showing {getRange} of {dataLength} model risk(s)
-                  </TableCell>
-                  <TablePagination
-                    count={dataLength}
-                    page={page}
-                    onPageChange={handleChangePage}
-                    rowsPerPage={rowsPerPage}
-                    rowsPerPageOptions={[5, 10, 15, 25]}
-                    onRowsPerPageChange={handleChangeRowsPerPage}
-                    ActionsComponent={(props) => <TablePaginationActions {...props} />}
-                    labelRowsPerPage="Rows per page"
-                    labelDisplayedRows={({ page, count }) =>
-                      `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
-                    }
-                    slotProps={{
-                      select: {
-                        MenuProps: {
-                          keepMounted: true,
-                          PaperProps: {
-                            className: "pagination-dropdown",
-                            sx: {
-                              mt: 0,
-                              mb: theme.spacing(2),
-                            },
-                          },
-                          transformOrigin: {
-                            vertical: "bottom",
-                            horizontal: "left",
-                          },
-                          anchorOrigin: {
-                            vertical: "top",
-                            horizontal: "left",
-                          },
-                          sx: { mt: theme.spacing(-2) },
-                        },
-                        inputProps: { id: "pagination-dropdown" },
-                        IconComponent: SelectorVertical,
+      </TableEmptyStateLayout>
+    );
+  }
+
+  return (
+    <TableContainer>
+      <Table sx={{ ...singleTheme.tableStyles.primary.frame }}>
+        {tableHeader}
+        {tableBody}
+        {!hidePagination && (
+          <TableFooter>
+            <TableRow
+              sx={{
+                "& .MuiTableCell-root.MuiTableCell-footer": {
+                  paddingX: theme.spacing(8),
+                  paddingY: theme.spacing(4),
+                },
+              }}
+            >
+              <TableCell
+                sx={{
+                  paddingX: theme.spacing(2),
+                  fontSize: 12,
+                  opacity: 0.7,
+                }}
+              >
+                Showing {getRange} of {dataLength} model risk(s)
+              </TableCell>
+              <TablePagination
+                count={dataLength}
+                page={page}
+                onPageChange={handleChangePage}
+                rowsPerPage={rowsPerPage}
+                rowsPerPageOptions={[5, 10, 15, 25]}
+                onRowsPerPageChange={handleChangeRowsPerPage}
+                ActionsComponent={(props) => <TablePaginationActions {...props} />}
+                labelRowsPerPage="Rows per page"
+                labelDisplayedRows={({ page, count }) =>
+                  `Page ${page + 1} of ${Math.max(0, Math.ceil(count / rowsPerPage))}`
+                }
+                slotProps={{
+                  select: {
+                    MenuProps: {
+                      keepMounted: true,
+                      PaperProps: {
+                        className: "pagination-dropdown",
                         sx: {
-                          "ml": theme.spacing(4),
-                          "mr": theme.spacing(12),
-                          "minWidth": theme.spacing(20),
-                          "textAlign": "left",
-                          "&.Mui-focused > div": {
-                            backgroundColor: theme.palette.background.main,
-                          },
+                          mt: 0,
+                          mb: theme.spacing(2),
                         },
                       },
-                    }}
-                    sx={{
-                      "mt": theme.spacing(6),
-                      "color": theme.palette.text.secondary,
-                      "& .MuiSelect-icon": {
-                        width: "24px",
-                        height: "fit-content",
+                      transformOrigin: {
+                        vertical: "bottom",
+                        horizontal: "left",
                       },
-                      "& .MuiSelect-select": {
-                        width: theme.spacing(10),
-                        borderRadius: theme.shape.borderRadius,
-                        border: `1px solid ${theme.palette.border.light}`,
-                        padding: theme.spacing(4),
+                      anchorOrigin: {
+                        vertical: "top",
+                        horizontal: "left",
                       },
-                    }}
-                  />
-                </TableRow>
-              </TableFooter>
-            )}
-          </Table>
-        </TableContainer>
-      )}
-    </>
+                      sx: { mt: theme.spacing(-2) },
+                    },
+                    inputProps: { id: "pagination-dropdown" },
+                    IconComponent: SelectorVertical,
+                    sx: {
+                      "ml": theme.spacing(4),
+                      "mr": theme.spacing(12),
+                      "minWidth": theme.spacing(20),
+                      "textAlign": "left",
+                      "&.Mui-focused > div": {
+                        backgroundColor: theme.palette.background.main,
+                      },
+                    },
+                  },
+                }}
+                sx={{
+                  "mt": theme.spacing(6),
+                  "color": theme.palette.text.secondary,
+                  "& .MuiSelect-icon": {
+                    width: "24px",
+                    height: "fit-content",
+                  },
+                  "& .MuiSelect-select": {
+                    width: theme.spacing(10),
+                    borderRadius: theme.shape.borderRadius,
+                    border: `1px solid ${theme.palette.border.light}`,
+                    padding: theme.spacing(4),
+                  },
+                }}
+              />
+            </TableRow>
+          </TableFooter>
+        )}
+      </Table>
+    </TableContainer>
   );
 };
 

@@ -23,7 +23,7 @@ export async function getComplianceScore(req: Request, res: Response) {
     functionName: "getComplianceScore",
     fileName: "compliance.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -39,7 +39,7 @@ export async function getComplianceScore(req: Request, res: Response) {
       functionName: "getComplianceScore",
       fileName: "compliance.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(200).json(STATUS_CODE[200](complianceScore));
@@ -51,7 +51,7 @@ export async function getComplianceScore(req: Request, res: Response) {
       fileName: "compliance.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
@@ -70,7 +70,7 @@ export async function getComplianceScoreByOrganization(req: Request, res: Respon
     functionName: "getComplianceScoreByOrganization",
     fileName: "compliance.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -105,7 +105,7 @@ export async function getComplianceScoreByOrganization(req: Request, res: Respon
       functionName: "getComplianceScoreByOrganization",
       fileName: "compliance.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(200).json(STATUS_CODE[200](complianceScore));
@@ -117,7 +117,7 @@ export async function getComplianceScoreByOrganization(req: Request, res: Respon
       fileName: "compliance.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
@@ -136,7 +136,7 @@ export async function getComplianceDetails(req: Request, res: Response) {
     functionName: "getComplianceDetails",
     fileName: "compliance.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -204,7 +204,7 @@ export async function getComplianceDetails(req: Request, res: Response) {
       functionName: "getComplianceDetails",
       fileName: "compliance.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(200).json(STATUS_CODE[200](detailedResponse));
@@ -216,7 +216,7 @@ export async function getComplianceDetails(req: Request, res: Response) {
       fileName: "compliance.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));

@@ -106,6 +106,7 @@ jest.mock("../../domain.layer/exceptions/custom.exception", () => ({
   BusinessLogicException: class BusinessLogicException extends Error {},
 }));
 
+import { buildProject, buildManyProject } from "../../tests/factories/project.factory";
 import {
   getAllProjects,
   getProjectById,
@@ -179,7 +180,7 @@ describe("project.ctrl", () => {
       expect(res.status).toHaveBeenCalledWith(401);
     });
     it("should return 200 with projects", async () => {
-      const projects = [{ id: 1, project_title: "P1", dataValues: {} }];
+      const projects = [{ ...buildProject(), dataValues: {} }];
       mockGetAll.mockResolvedValue(projects as any);
       mockHasPending.mockResolvedValue(false as any);
       const req = createReq();
@@ -199,7 +200,7 @@ describe("project.ctrl", () => {
 
   describe("getProjectById", () => {
     it("should return 200 when project is found", async () => {
-      const project = { id: 1, project_title: "P1", dataValues: {} };
+      const project = { ...buildProject(), dataValues: {} };
       mockGetById.mockResolvedValue(project as any);
       mockHasPending.mockResolvedValue(false as any);
       const req = createReq({ params: { id: "1" } });
@@ -229,13 +230,7 @@ describe("project.ctrl", () => {
       mockGetUser.mockResolvedValue({ id: 1, name: "A", surname: "B" } as any);
     });
     it("should return 201 when project is created successfully", async () => {
-      const project = {
-        id: 1,
-        project_title: "P1",
-        owner: 1,
-        approval_workflow_id: null,
-        members: [],
-      };
+      const project = { ...buildProject(), owner: 1, approval_workflow_id: null, members: [] };
       mockCreate.mockResolvedValue(project as any);
       const req = createReq({
         body: {
@@ -293,8 +288,8 @@ describe("project.ctrl", () => {
       expect(res.status).toHaveBeenCalledWith(404);
     });
     it("should return 202 when project is updated", async () => {
-      const existing = { id: 1, project_title: "P1", owner: 1 };
-      const updated = { id: 1, project_title: "P2", owner: 1, members: [] };
+      const existing = { ...buildProject(), owner: 1 };
+      const updated = { ...buildProject({ project_title: "P2" }), owner: 1, members: [] };
       mockGetById.mockResolvedValue(existing as any);
       mockGetMembers.mockResolvedValue([] as any);
       mockUpdate.mockResolvedValue(updated as any);
@@ -316,7 +311,7 @@ describe("project.ctrl", () => {
 
   describe("deleteProjectById", () => {
     it("should return 202 when project is deleted", async () => {
-      const project = { id: 1, project_title: "P1" };
+      const project = buildProject();
       mockGetPendingApproval.mockResolvedValue(null as any);
       mockDelete.mockResolvedValue(project as any);
       const req = createReq({ params: { id: "1" } });
@@ -344,7 +339,7 @@ describe("project.ctrl", () => {
 
   describe("getProjectStatsById", () => {
     it("should return 202 with project stats", async () => {
-      const project = { id: 1, owner: 1, last_updated: new Date(), last_updated_by: 1 };
+      const project = { ...buildProject(), owner: 1, last_updated: new Date(), last_updated_by: 1 };
       mockGetById.mockResolvedValue(project as any);
       mockGetUser.mockResolvedValue({ id: 1, name: "A", surname: "B", email: "a@b.com" } as any);
       const req = createReq({ params: { id: "1" } });

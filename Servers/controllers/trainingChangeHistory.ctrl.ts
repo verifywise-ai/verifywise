@@ -21,7 +21,7 @@ export async function getTrainingChangeHistoryById(req: Request, res: Response):
     functionName: "getTrainingChangeHistoryById",
     fileName: "trainingChangeHistory.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -39,7 +39,7 @@ export async function getTrainingChangeHistoryById(req: Request, res: Response):
       functionName: "getTrainingChangeHistoryById",
       fileName: "trainingChangeHistory.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(200).json(STATUS_CODE[200](result));
@@ -51,7 +51,7 @@ export async function getTrainingChangeHistoryById(req: Request, res: Response):
       fileName: "trainingChangeHistory.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](req.t!("Failed to retrieve change history")));
   }

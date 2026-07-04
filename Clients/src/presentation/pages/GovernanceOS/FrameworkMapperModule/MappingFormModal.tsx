@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Stack, TextField, Typography, Box, Slider } from "@mui/material";
 import StandardModal from "../../../components/Modals/StandardModal";
+import GovernanceTooltip from "../../../components/GovernanceOS/GovernanceTooltip";
 import {
   IGovernanceControlMapping,
   MappingStrength,
@@ -97,11 +98,16 @@ const MappingFormModal: React.FC<MappingFormModalProps> = ({
       <Stack spacing={3} sx={{ minWidth: 520 }}>
         {/* Source Framework */}
         <Box>
-          <Typography
-            sx={{ fontSize: 12, color: text.secondary, fontWeight: 500, display: "block", mb: 1 }}
+          <GovernanceTooltip
+            header="Source framework"
+            description="Framework containing the source control"
           >
-            Source Framework *
-          </Typography>
+            <Typography
+              sx={{ fontSize: 12, color: text.secondary, fontWeight: 500, display: "block", mb: 1 }}
+            >
+              Source Framework *
+            </Typography>
+          </GovernanceTooltip>
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
             {FRAMEWORK_OPTIONS.map((fw) => (
               <Box
@@ -133,22 +139,32 @@ const MappingFormModal: React.FC<MappingFormModalProps> = ({
           </Stack>
         </Box>
 
-        <TextField
-          label="Source Control Identifier *"
-          value={sourceControlIdentifier}
-          onChange={(e) => setSourceControlIdentifier(e.target.value)}
-          fullWidth
-          size="small"
-          placeholder="e.g., Article 9 or A.5.1"
-        />
+        <GovernanceTooltip
+          header="Source control"
+          description="Identifier of the control being mapped"
+        >
+          <TextField
+            label="Source Control Identifier *"
+            value={sourceControlIdentifier}
+            onChange={(e) => setSourceControlIdentifier(e.target.value)}
+            fullWidth
+            size="small"
+            placeholder="e.g., Article 9 or A.5.1"
+          />
+        </GovernanceTooltip>
 
         {/* Target Framework */}
         <Box>
-          <Typography
-            sx={{ fontSize: 12, color: text.secondary, fontWeight: 500, display: "block", mb: 1 }}
+          <GovernanceTooltip
+            header="Target framework"
+            description="Framework receiving the mapped control"
           >
-            Target Framework *
-          </Typography>
+            <Typography
+              sx={{ fontSize: 12, color: text.secondary, fontWeight: 500, display: "block", mb: 1 }}
+            >
+              Target Framework *
+            </Typography>
+          </GovernanceTooltip>
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
             {FRAMEWORK_OPTIONS.map((fw) => (
               <Box
@@ -180,22 +196,32 @@ const MappingFormModal: React.FC<MappingFormModalProps> = ({
           </Stack>
         </Box>
 
-        <TextField
-          label="Target Control Identifier *"
-          value={targetControlIdentifier}
-          onChange={(e) => setTargetControlIdentifier(e.target.value)}
-          fullWidth
-          size="small"
-          placeholder="e.g., Article 9 or A.5.1"
-        />
+        <GovernanceTooltip
+          header="Target control"
+          description="Identifier of the equivalent control in the target framework"
+        >
+          <TextField
+            label="Target Control Identifier *"
+            value={targetControlIdentifier}
+            onChange={(e) => setTargetControlIdentifier(e.target.value)}
+            fullWidth
+            size="small"
+            placeholder="e.g., Article 9 or A.5.1"
+          />
+        </GovernanceTooltip>
 
         {/* Mapping Strength */}
         <Box>
-          <Typography
-            sx={{ fontSize: 12, color: text.secondary, fontWeight: 500, display: "block", mb: 1 }}
+          <GovernanceTooltip
+            header="Mapping strength"
+            description="Relationship between the two mapped controls"
           >
-            Mapping Strength
-          </Typography>
+            <Typography
+              sx={{ fontSize: 12, color: text.secondary, fontWeight: 500, display: "block", mb: 1 }}
+            >
+              Mapping Strength
+            </Typography>
+          </GovernanceTooltip>
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
             {STRENGTH_OPTIONS.map((s) => (
               <Box
@@ -226,33 +252,48 @@ const MappingFormModal: React.FC<MappingFormModalProps> = ({
           </Stack>
         </Box>
 
-        <TextField
-          label="Domain Tag"
-          value={domainTag}
-          onChange={(e) => setDomainTag(e.target.value)}
-          fullWidth
-          size="small"
-          placeholder="e.g., risk_management"
-        />
+        <GovernanceTooltip
+          header="Domain tag"
+          description="Optional governance domain category for grouping mappings"
+        >
+          <TextField
+            label="Domain Tag"
+            value={domainTag}
+            onChange={(e) => setDomainTag(e.target.value)}
+            fullWidth
+            size="small"
+            placeholder="e.g., risk_management"
+          />
+        </GovernanceTooltip>
 
-        <TextField
-          label="Rationale"
-          value={rationale}
-          onChange={(e) => setRationale(e.target.value)}
-          fullWidth
-          size="small"
-          multiline
-          rows={2}
-          placeholder="Why these controls map to each other..."
-        />
+        <GovernanceTooltip
+          header="Rationale"
+          description="Explanation for why these two controls map to each other"
+        >
+          <TextField
+            label="Rationale"
+            value={rationale}
+            onChange={(e) => setRationale(e.target.value)}
+            fullWidth
+            size="small"
+            multiline
+            rows={2}
+            placeholder="Why these controls map to each other..."
+          />
+        </GovernanceTooltip>
 
         {/* Confidence Score */}
         <Box>
-          <Typography
-            sx={{ fontSize: 12, color: text.secondary, fontWeight: 500, display: "block", mb: 1 }}
+          <GovernanceTooltip
+            header="Confidence score"
+            description="Certainty level for this control mapping"
           >
-            Confidence Score: {Math.round(confidenceScore * 100)}%
-          </Typography>
+            <Typography
+              sx={{ fontSize: 12, color: text.secondary, fontWeight: 500, display: "block", mb: 1 }}
+            >
+              Confidence Score: {Math.round(confidenceScore * 100)}%
+            </Typography>
+          </GovernanceTooltip>
           <Slider
             value={confidenceScore}
             onChange={(_, value) => setConfidenceScore(value as number)}

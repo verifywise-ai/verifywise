@@ -229,6 +229,7 @@ const CreateTask: FC<ICreateTaskProps> = ({
 
   const handleSaveTask = async (event?: React.FormEvent) => {
     if (event) event.preventDefault();
+    if (customFieldsGate.blocked) return;
 
     if (validateAll(values)) {
       setIsSubmitting(true);
@@ -524,6 +525,7 @@ const CreateTask: FC<ICreateTaskProps> = ({
             ref={customFieldsRef}
             entityType="task"
             entityId={taskEntityId ?? null}
+            onPendingChange={customFieldsGate.onPendingChange}
           />
         </Box>
         {activeTab === "activity" && isEditMode && taskEntityId && (

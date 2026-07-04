@@ -19,13 +19,16 @@ import { TaskStatus } from "../domain.layer/enums/task-status.enum";
 // MAPPINGS
 // ============================================
 
-export const getAllMappingsQuery = async (filters?: {
-  frameworkId?: number;
-  strength?: string;
-  domain?: string;
-}): Promise<GovernanceControlMappingModel[]> => {
-  let where = "WHERE 1=1";
-  const replacements: Record<string, unknown> = {};
+export const getAllMappingsQuery = async (
+  organizationId: number,
+  filters?: {
+    frameworkId?: number;
+    strength?: string;
+    domain?: string;
+  },
+): Promise<GovernanceControlMappingModel[]> => {
+  let where = "WHERE organization_id = :organizationId";
+  const replacements: Record<string, unknown> = { organizationId };
 
   if (filters?.frameworkId) {
     where += " AND (source_framework_id = :frameworkId OR target_framework_id = :frameworkId)";
@@ -51,16 +54,18 @@ export const getAllMappingsQuery = async (filters?: {
 };
 
 export const getMappingsBetweenFrameworksQuery = async (
+  organizationId: number,
   sourceId: number,
   targetId: number,
 ): Promise<GovernanceControlMappingModel[]> => {
   return sequelize.query(
     `SELECT * FROM governance_control_mappings
-     WHERE (source_framework_id = :sourceId AND target_framework_id = :targetId)
-        OR (source_framework_id = :targetId AND target_framework_id = :sourceId AND mapping_direction = 'bidirectional')
+     WHERE organization_id = :organizationId
+       AND ((source_framework_id = :sourceId AND target_framework_id = :targetId)
+        OR (source_framework_id = :targetId AND target_framework_id = :sourceId AND mapping_direction = 'bidirectional'))
      ORDER BY domain_tag, mapping_strength`,
     {
-      replacements: { sourceId, targetId },
+      replacements: { organizationId, sourceId, targetId },
       mapToModel: true,
       model: GovernanceControlMappingModel,
     },
@@ -68,16 +73,18 @@ export const getMappingsBetweenFrameworksQuery = async (
 };
 
 export const getMappingsForControlQuery = async (
+  organizationId: number,
   controlType: string,
   controlId: number,
 ): Promise<GovernanceControlMappingModel[]> => {
   return sequelize.query(
     `SELECT * FROM governance_control_mappings
-     WHERE (source_control_type = :controlType AND source_control_id = :controlId)
-        OR (target_control_type = :controlType AND target_control_id = :controlId)
+     WHERE organization_id = :organizationId
+       AND ((source_control_type = :controlType AND source_control_id = :controlId)
+        OR (target_control_type = :controlType AND target_control_id = :controlId))
      ORDER BY mapping_strength DESC, confidence_score DESC`,
     {
-      replacements: { controlType, controlId },
+      replacements: { organizationId, controlType, controlId },
       mapToModel: true,
       model: GovernanceControlMappingModel,
     },
@@ -85,20 +92,22 @@ export const getMappingsForControlQuery = async (
 };
 
 export const createMappingQuery = async (
+  organizationId: number,
   data: Partial<IGovernanceControlMappingAttributes>,
 ): Promise<GovernanceControlMappingModel> => {
   const [results] = await sequelize.query(
     `INSERT INTO governance_control_mappings
-      (source_framework_id, source_control_type, source_control_identifier, source_control_id,
+      (organization_id, source_framework_id, source_control_type, source_control_identifier, source_control_id,
        target_framework_id, target_control_type, target_control_identifier, target_control_id,
        mapping_strength, mapping_direction, domain_tag, rationale, confidence_score)
      VALUES
-      (:source_framework_id, :source_control_type, :source_control_identifier, :source_control_id,
+      (:organization_id, :source_framework_id, :source_control_type, :source_control_identifier, :source_control_id,
        :target_framework_id, :target_control_type, :target_control_identifier, :target_control_id,
        :mapping_strength, :mapping_direction, :domain_tag, :rationale, :confidence_score)
      RETURNING *`,
     {
       replacements: {
+        organization_id: organizationId,
         source_framework_id: data.source_framework_id,
         source_control_type: data.source_control_type || "clause",
         source_control_identifier: data.source_control_identifier || "",
@@ -119,11 +128,12 @@ export const createMappingQuery = async (
 };
 
 export const updateMappingQuery = async (
+  organizationId: number,
   id: number,
   data: Partial<IGovernanceControlMappingAttributes>,
 ): Promise<GovernanceControlMappingModel | null> => {
   const setClauses: string[] = [];
-  const replacements: Record<string, unknown> = { id };
+  const replacements: Record<string, unknown> = { id, organizationId };
 
   if (data.mapping_strength !== undefined) {
     setClauses.push("mapping_strength = :mapping_strength");
@@ -152,22 +162,23 @@ export const updateMappingQuery = async (
 
   const [results] = await sequelize.query(
     `UPDATE governance_control_mappings SET ${setClauses.join(", ")}
-     WHERE id = :id
+     WHERE id = :id AND organization_id = :organizationId
      RETURNING *`,
     { replacements },
   );
   return ((results as any[])[0] as GovernanceControlMappingModel) || null;
 };
 
-export const deleteMappingQuery = async (id: number): Promise<boolean> => {
+export const deleteMappingQuery = async (organizationId: number, id: number): Promise<boolean> => {
   const [, metadata] = await sequelize.query(
-    `DELETE FROM governance_control_mappings WHERE id = :id`,
-    { replacements: { id } },
+    `DELETE FROM governance_control_mappings WHERE id = :id AND organization_id = :organizationId`,
+    { replacements: { id, organizationId } },
   );
   return (metadata as any).rowCount > 0;
 };
 
 export const createBulkMappingsQuery = async (
+  organizationId: number,
   mappings: Partial<IGovernanceControlMappingAttributes>[],
 ): Promise<number> => {
   if (mappings.length === 0) return 0;
@@ -175,7 +186,7 @@ export const createBulkMappingsQuery = async (
   const values = mappings
     .map(
       (_, i) =>
-        `(:source_framework_id_${i}, :source_control_type_${i}, :source_control_identifier_${i}, :source_control_id_${i},
+        `(:organization_id_${i}, :source_framework_id_${i}, :source_control_type_${i}, :source_control_identifier_${i}, :source_control_id_${i},
       :target_framework_id_${i}, :target_control_type_${i}, :target_control_identifier_${i}, :target_control_id_${i},
       :mapping_strength_${i}, :mapping_direction_${i}, :domain_tag_${i}, :rationale_${i}, :confidence_score_${i})`,
     )
@@ -183,6 +194,7 @@ export const createBulkMappingsQuery = async (
 
   const replacements: Record<string, unknown> = {};
   mappings.forEach((m, i) => {
+    replacements[`organization_id_${i}`] = organizationId;
     replacements[`source_framework_id_${i}`] = m.source_framework_id;
     replacements[`source_control_type_${i}`] = m.source_control_type || "clause";
     replacements[`source_control_identifier_${i}`] = m.source_control_identifier || "";
@@ -200,7 +212,7 @@ export const createBulkMappingsQuery = async (
 
   const [results] = await sequelize.query(
     `INSERT INTO governance_control_mappings
-      (source_framework_id, source_control_type, source_control_identifier, source_control_id,
+      (organization_id, source_framework_id, source_control_type, source_control_identifier, source_control_id,
        target_framework_id, target_control_type, target_control_identifier, target_control_id,
        mapping_strength, mapping_direction, domain_tag, rationale, confidence_score)
      VALUES ${values}
@@ -616,41 +628,41 @@ export const getTaskProgressByFrameworkQuery = async (
   const activatedAt = (activationResult as any[])[0]?.activated_at;
   if (!activatedAt) return [];
 
-  const frameworkIds = [1, 2, 3, 4];
+  // Single query for all framework slugs to avoid N+1.
+  const slugs = Object.values(FRAMEWORK_SLUGS);
+  const [taskResults] = await sequelize.query(
+    `SELECT
+       jsonb_array_elements_text(categories) as category,
+       COUNT(*) FILTER (WHERE status = 'Completed') as completed,
+       COUNT(*) FILTER (WHERE status = 'In progress') as in_progress,
+       COUNT(*) FILTER (WHERE status = 'Open') as open,
+       COUNT(*) as total
+     FROM tasks
+     WHERE organization_id = :organizationId
+       AND categories::jsonb ? 'governance'
+       AND jsonb_array_elements_text(categories) IN (:slugs)
+       AND created_at >= :activatedAt
+     GROUP BY jsonb_array_elements_text(categories)`,
+    {
+      replacements: { organizationId, slugs, activatedAt },
+    },
+  );
+
   const progress: ReturnType<typeof getTaskProgressByFrameworkQuery> extends Promise<infer T>
     ? T
     : never = [];
 
-  for (const fwId of frameworkIds) {
-    const slug = FRAMEWORK_SLUGS[fwId];
-    const [taskResult] = await sequelize.query(
-      `SELECT
-         COUNT(*) FILTER (WHERE status = 'Completed') as completed,
-         COUNT(*) FILTER (WHERE status = 'In progress') as in_progress,
-         COUNT(*) FILTER (WHERE status = 'Open') as open,
-         COUNT(*) as total
-       FROM tasks
-       WHERE organization_id = :organizationId
-         AND categories::jsonb ? 'governance'
-         AND categories::jsonb ? :slug
-         AND created_at >= :activatedAt`,
-      {
-        replacements: { organizationId, slug, activatedAt },
-      },
-    );
-    const row = (taskResult as any[])[0];
+  for (const row of taskResults as any[]) {
+    const slug = row.category as string;
+    const fwId = Object.entries(FRAMEWORK_SLUGS).find(([, s]) => s === slug)?.[0];
+    if (!fwId) continue;
     const total = parseInt(row?.total || "0", 10);
     if (total > 0) {
+      const id = Number(fwId);
       progress.push({
-        frameworkId: fwId,
+        frameworkId: id,
         frameworkName:
-          fwId === 1
-            ? "EU AI Act"
-            : fwId === 2
-              ? "ISO 42001"
-              : fwId === 3
-                ? "ISO 27001"
-                : "NIST AI RMF",
+          id === 1 ? "EU AI Act" : id === 2 ? "ISO 42001" : id === 3 ? "ISO 27001" : "NIST AI RMF",
         totalTasks: total,
         completedTasks: parseInt(row?.completed || "0", 10),
         inProgressTasks: parseInt(row?.in_progress || "0", 10),
@@ -724,9 +736,10 @@ export const getCoverageCacheQuery = async (
   projectId: number,
 ): Promise<GovernanceCoverageCacheModel[]> => {
   return sequelize.query(
-    `SELECT * FROM governance_coverage_cache
-     WHERE organization_id = :organizationId AND project_id = :projectId
-     ORDER BY framework_id`,
+    `SELECT c.*, f.name as framework_name FROM governance_coverage_cache c
+     JOIN frameworks f ON f.id = c.framework_id
+     WHERE c.organization_id = :organizationId AND c.project_id = :projectId
+     ORDER BY c.framework_id`,
     {
       replacements: { organizationId, projectId },
       mapToModel: true,
@@ -745,20 +758,22 @@ export const upsertCoverageCacheQuery = async (
     coverage_percentage: number;
     gap_details?: Record<string, unknown>;
     synergy_details?: Record<string, unknown>;
+    calculation_methodology?: string;
   },
   transaction: Transaction | null = null,
 ): Promise<void> => {
   await sequelize.query(
     `INSERT INTO governance_coverage_cache
-      (organization_id, project_id, framework_id, total_controls, mapped_controls, coverage_percentage, gap_details, synergy_details, computed_at)
+      (organization_id, project_id, framework_id, total_controls, mapped_controls, coverage_percentage, gap_details, synergy_details, calculation_methodology, computed_at)
      VALUES
-      (:organization_id, :project_id, :framework_id, :total_controls, :mapped_controls, :coverage_percentage, :gap_details, :synergy_details, NOW())
+      (:organization_id, :project_id, :framework_id, :total_controls, :mapped_controls, :coverage_percentage, :gap_details, :synergy_details, :calculation_methodology, NOW())
      ON CONFLICT (organization_id, project_id, framework_id) DO UPDATE SET
       total_controls = EXCLUDED.total_controls,
       mapped_controls = EXCLUDED.mapped_controls,
       coverage_percentage = EXCLUDED.coverage_percentage,
       gap_details = EXCLUDED.gap_details,
       synergy_details = EXCLUDED.synergy_details,
+      calculation_methodology = EXCLUDED.calculation_methodology,
       computed_at = NOW()`,
     {
       replacements: {
@@ -770,29 +785,47 @@ export const upsertCoverageCacheQuery = async (
         coverage_percentage: data.coverage_percentage,
         gap_details: data.gap_details ? JSON.stringify(data.gap_details) : null,
         synergy_details: data.synergy_details ? JSON.stringify(data.synergy_details) : null,
+        calculation_methodology: data.calculation_methodology || null,
       },
       ...(transaction && { transaction }),
     },
   );
 };
 
+export const deleteCoverageCacheQuery = async (
+  organizationId: number,
+  projectId?: number,
+): Promise<void> => {
+  const where = projectId
+    ? "organization_id = :organizationId AND project_id = :projectId"
+    : "organization_id = :organizationId";
+  await sequelize.query(`DELETE FROM governance_coverage_cache WHERE ${where}`, {
+    replacements: { organizationId, projectId },
+  });
+};
+
 // ============================================
 // AGGREGATION (for unified view)
 // ============================================
 
-export const getMappingStatsQuery = async (): Promise<{
+export const getMappingStatsQuery = async (
+  organizationId: number,
+): Promise<{
   total: number;
   byDomain: Record<string, number>;
   byStrength: Record<string, number>;
 }> => {
   const [totalResult] = await sequelize.query(
-    `SELECT COUNT(*) as total FROM governance_control_mappings`,
+    `SELECT COUNT(*) as total FROM governance_control_mappings WHERE organization_id = :organizationId`,
+    { replacements: { organizationId } },
   );
   const [domainResult] = await sequelize.query(
-    `SELECT domain_tag, COUNT(*) as count FROM governance_control_mappings GROUP BY domain_tag ORDER BY count DESC`,
+    `SELECT domain_tag, COUNT(*) as count FROM governance_control_mappings WHERE organization_id = :organizationId GROUP BY domain_tag ORDER BY count DESC`,
+    { replacements: { organizationId } },
   );
   const [strengthResult] = await sequelize.query(
-    `SELECT mapping_strength, COUNT(*) as count FROM governance_control_mappings GROUP BY mapping_strength`,
+    `SELECT mapping_strength, COUNT(*) as count FROM governance_control_mappings WHERE organization_id = :organizationId GROUP BY mapping_strength`,
+    { replacements: { organizationId } },
   );
 
   const byDomain: Record<string, number> = {};

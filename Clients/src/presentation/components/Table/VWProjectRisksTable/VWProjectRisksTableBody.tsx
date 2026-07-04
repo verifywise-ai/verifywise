@@ -142,7 +142,8 @@ const VWProjectRisksTableBody = ({
 
   const displayUserFullName = (userId: number) => {
     const currentUser = users.find((user: User) => user.id === userId);
-    const fullName = currentUser ? `${currentUser.name} ${currentUser.surname}` : "";
+    if (!currentUser) return "-";
+    const fullName = `${currentUser.name} ${currentUser.surname}`;
     return fullName.length > 30 ? `${fullName.slice(0, 30)}...` : fullName;
   };
 

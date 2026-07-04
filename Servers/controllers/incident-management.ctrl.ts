@@ -90,11 +90,13 @@ export async function getIncidentById(req: Request, res: Response) {
       "getIncidentById",
       "incidentManagement.controller.ts",
     );
-    return res.status(400).json({
-      status: "error",
-      message: idValidation.message || "Invalid incident ID",
-      code: idValidation.code || "INVALID_PARAMETER",
-    });
+    return res.status(400).json(
+      STATUS_CODE[400]({
+        status: "error",
+        message: idValidation.message || "Invalid incident ID",
+        code: idValidation.code || "INVALID_PARAMETER",
+      }),
+    );
   }
 
   logStructured(
@@ -151,15 +153,17 @@ export async function createNewIncident(req: Request, res: Response) {
       "createNewIncident",
       "incidentManagement.controller.ts",
     );
-    return res.status(400).json({
-      status: "error",
-      message: "Incident creation validation failed",
-      errors: validationErrors.map((err: ValidationError) => ({
-        field: err.field,
-        message: err.message,
-        code: err.code,
-      })),
-    });
+    return res.status(400).json(
+      STATUS_CODE[400]({
+        status: "error",
+        message: "Incident creation validation failed",
+        errors: validationErrors.map((err: ValidationError) => ({
+          field: err.field,
+          message: err.message,
+          code: err.code,
+        })),
+      }),
+    );
   }
 
   const transaction = await sequelize.transaction();
@@ -257,11 +261,13 @@ export async function updateIncidentById(req: Request, res: Response) {
       "updateIncidentById",
       "incidentManagement.controller.ts",
     );
-    return res.status(400).json({
-      status: "error",
-      message: idValidation.message || "Invalid incident ID",
-      code: idValidation.code || "INVALID_PARAMETER",
-    });
+    return res.status(400).json(
+      STATUS_CODE[400]({
+        status: "error",
+        message: idValidation.message || "Invalid incident ID",
+        code: idValidation.code || "INVALID_PARAMETER",
+      }),
+    );
   }
 
   let existingIncident: AIIncidentManagementModel | null = null;
@@ -285,11 +291,13 @@ export async function updateIncidentById(req: Request, res: Response) {
       "updateIncidentById",
       "incidentManagement.controller.ts",
     );
-    return res.status(400).json({
-      status: "error",
-      message: "Incident update validation failed",
-      errors: errorDetails,
-    });
+    return res.status(400).json(
+      STATUS_CODE[400]({
+        status: "error",
+        message: "Incident update validation failed",
+        errors: errorDetails,
+      }),
+    );
   }
 
   const transaction = await sequelize.transaction();
@@ -370,11 +378,13 @@ export async function deleteIncidentById(req: Request, res: Response) {
       "deleteIncidentById",
       "incidentManagement.controller.ts",
     );
-    return res.status(400).json({
-      status: "error",
-      message: idValidation.message || "Invalid incident ID",
-      code: idValidation.code || "INVALID_PARAMETER",
-    });
+    return res.status(400).json(
+      STATUS_CODE[400]({
+        status: "error",
+        message: idValidation.message || "Invalid incident ID",
+        code: idValidation.code || "INVALID_PARAMETER",
+      }),
+    );
   }
 
   const transaction = await sequelize.transaction();
@@ -430,11 +440,13 @@ export async function archiveIncidentById(req: Request, res: Response) {
       "archiveIncidentById",
       "incidentManagement.controller.ts",
     );
-    return res.status(400).json({
-      status: "error",
-      message: idValidation.message || "Invalid incident ID",
-      code: idValidation.code || "INVALID_PARAMETER",
-    });
+    return res.status(400).json(
+      STATUS_CODE[400]({
+        status: "error",
+        message: idValidation.message || "Invalid incident ID",
+        code: idValidation.code || "INVALID_PARAMETER",
+      }),
+    );
   }
 
   const transaction = await sequelize.transaction();

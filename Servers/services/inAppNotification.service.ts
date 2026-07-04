@@ -1186,7 +1186,7 @@ function buildEntityContextHtml(context?: AssignmentEntityContext): string {
 /**
  * Notify a user when they are assigned to an entity
  *
- * @param organizationId - Tenant ID for multi-tenancy
+ * @param organizationId - Organization ID for multi-tenancy
  * @param assigneeId - User ID being assigned
  * @param assignment - Assignment details including entity info and role
  * @param assignerName - Name of the person making the assignment
