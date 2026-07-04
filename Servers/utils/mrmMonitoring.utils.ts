@@ -364,7 +364,7 @@ export const getActiveThresholdsForQuery = async (
   transaction?: Transaction,
 ): Promise<EvaluableThreshold[]> => {
   const rows = (await sequelize.query(
-    `SELECT id, metric, segment, window, op, value_num, value_lo, value_hi,
+    `SELECT id, metric, segment, "window", op, value_num, value_lo, value_hi,
             severity, breach_action, active
        FROM mrm_thresholds
       WHERE organization_id = :organizationId
@@ -402,16 +402,16 @@ export interface IngestPointResult {
 /**
  * Insert one metric point and evaluate it, transactionally.
  *
- * Idempotency (§5 / O1): the DB UNIQUE (org, model, metric, segment, window,
- * at_bucket) makes a re-POST of the same logical point collide. On the 23505 we
- * treat it as a DUPLICATE — an idempotent no-op SUCCESS (200 + duplicate:true),
- * NOT a 409. No second row, no second evaluation, no double-counted breach.
+ * Idempotency (§5 / O1): the DB UNIQUE (org, model, metric, segment, window, at)
+ * makes a re-POST of the same logical point collide — where `at` is truncated to
+ * the second (date_trunc in the INSERT below) so sub-second jitter can't slip a
+ * duplicate through. On the 23505 we treat it as a DUPLICATE — an idempotent no-op
+ * SUCCESS (200 + duplicate:true), NOT a 409. No second row, no second evaluation,
+ * no double-counted breach.
  *
  * On a fresh insert we run the threshold evaluation (pure engine) and write the
  * immutable evaluation row (with the frozen threshold snapshot) inside the SAME
  * transaction, so a point and its evaluation are always written atomically.
- *
- * `at_bucket` is a GENERATED column — never inserted here.
  */
 export const ingestPointQuery = async (
   organizationId: number,
@@ -426,11 +426,16 @@ export const ingestPointQuery = async (
     // RETURNING behaves like a SELECT for result mapping); QueryTypes.INSERT
     // would yield [rows, meta] and break the row access below.
     const rows = (await sequelize.query(
+      // `at` is truncated to the second here so sub-second jitter between an initial
+      // send and a retry cannot defeat the idempotency UNIQUE. (A generated column
+      // can't do this — Postgres requires generated expressions to be IMMUTABLE and
+      // date_trunc over a timestamptz is only STABLE — so it lives in the one insert path.)
       `INSERT INTO mrm_metrics
-         (organization_id, model_inventory_id, metric, value, at, window, segment,
+         (organization_id, model_inventory_id, metric, value, at, "window", segment,
           context, ingestion_token_id, received_at, created_at)
        VALUES
-         (:organizationId, :modelInventoryId, :metric, :value, :at, :window, :segment,
+         (:organizationId, :modelInventoryId, :metric, :value,
+          date_trunc('second', :at::timestamptz), :window, :segment,
           :context, :ingestionTokenId, :now, :now)
        RETURNING id`,
       {
@@ -785,7 +790,7 @@ export const createThresholdQuery = async (
   const now = new Date();
   const rows = (await sequelize.query(
     `INSERT INTO mrm_thresholds
-       (organization_id, model_inventory_id, metric, segment, window, op,
+       (organization_id, model_inventory_id, metric, segment, "window", op,
         value_num, value_lo, value_hi, severity, breach_action, active, created_at, updated_at)
      VALUES
        (:organizationId, :modelId, :metric, :segment, :window, :op,
@@ -839,7 +844,7 @@ export const updateThresholdQuery = async (
   const rows = (await sequelize.query(
     `UPDATE mrm_thresholds
         SET segment       = CASE WHEN :segmentProvided THEN :segment ELSE segment END,
-            window        = CASE WHEN :windowProvided THEN :window ELSE window END,
+            "window"      = CASE WHEN :windowProvided THEN :window ELSE "window" END,
             op            = COALESCE(:op, op),
             value_num     = CASE WHEN :valueNumProvided THEN :valueNum ELSE value_num END,
             value_lo      = CASE WHEN :valueLoProvided THEN :valueLo ELSE value_lo END,
@@ -960,15 +965,15 @@ export const getModelMonitoringQuery = async (
   modelInventoryId: number,
 ): Promise<LatestMetricRow[]> => {
   return (await sequelize.query(
-    `SELECT DISTINCT ON (m.metric, m.segment, m.window)
-            m.metric, m.segment, m.window, m.value, m.at, m.id AS metric_id,
+    `SELECT DISTINCT ON (m.metric, m.segment, m."window")
+            m.metric, m.segment, m."window", m.value, m.at, m.id AS metric_id,
             e.status, e.threshold_id, e.evaluated_at
        FROM mrm_metrics m
        LEFT JOIN mrm_metric_evaluations e
               ON e.metric_id = m.id AND e.organization_id = m.organization_id
       WHERE m.organization_id = :organizationId
         AND m.model_inventory_id = :modelInventoryId
-      ORDER BY m.metric, m.segment, m.window, m.at DESC, e.evaluated_at DESC`,
+      ORDER BY m.metric, m.segment, m."window", m.at DESC, e.evaluated_at DESC`,
     {
       replacements: { organizationId, modelInventoryId },
       type: QueryTypes.SELECT,
@@ -992,7 +997,7 @@ export const getMetricTrendQuery = async (
   metric: string,
 ): Promise<TrendRow[]> => {
   return (await sequelize.query(
-    `SELECT m.id AS metric_id, m.value, m.at, m.segment, m.window, e.status
+    `SELECT m.id AS metric_id, m.value, m.at, m.segment, m."window", e.status
        FROM mrm_metrics m
        LEFT JOIN mrm_metric_evaluations e
               ON e.metric_id = m.id AND e.organization_id = m.organization_id
@@ -1038,7 +1043,7 @@ export const getBreachHistoryQuery = async (
   if (metric) clauses.push("m.metric = :metric");
   return (await sequelize.query(
     `SELECT e.id AS evaluation_id, m.id AS metric_id, m.metric, m.value, m.at,
-            m.segment, m.window, e.status, e.threshold_id, e.threshold_snapshot, e.evaluated_at
+            m.segment, m."window", e.status, e.threshold_id, e.threshold_snapshot, e.evaluated_at
        FROM mrm_metric_evaluations e
        JOIN mrm_metrics m ON m.id = e.metric_id AND m.organization_id = e.organization_id
       WHERE ${clauses.join(" AND ")}

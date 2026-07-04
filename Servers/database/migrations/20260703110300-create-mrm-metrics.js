@@ -12,8 +12,8 @@
  * `segment`     = per-segment monitoring; defaults to 'overall'
  * `context`     = arbitrary caller metadata (sample size, source job); never evaluated
  *
- * Idempotency: UNIQUE (organization_id, model_inventory_id, metric, segment, window, at_bucket)
- * where at_bucket = date_trunc('second', at).
+ * Idempotency: UNIQUE (organization_id, model_inventory_id, metric, segment, window, at),
+ * where `at` is truncated to the second by the ingestion layer before insert.
  * A re-POST of the same logical point collides here — making a customer's retry-safe
  * cron trivial and preventing double-counting a breach. `window` and `segment` are
  * NOT NULL with concrete defaults ('' / 'overall') so the dedup is guaranteed at the
@@ -34,17 +34,19 @@ module.exports = {
           model_inventory_id INTEGER NOT NULL REFERENCES verifywise.model_inventories(id) ON DELETE CASCADE,
           metric VARCHAR(100) NOT NULL,
           value DOUBLE PRECISION NOT NULL,
-          -- When the metric pertains to (not when it was sent). Raw value kept for display.
+          -- When the metric pertains to. The ingestion layer truncates this to the
+          -- SECOND before insert (date_trunc in app code), so sub-second jitter between
+          -- an initial send and a retry (one carries microseconds, one does not) cannot
+          -- defeat dedup. A generated column is not usable here — Postgres requires a
+          -- generated expression to be IMMUTABLE, but any date_trunc/extract over a
+          -- timestamptz is only STABLE (timezone-dependent). So the unique is on the raw
+          -- (app-truncated) at, and app-side truncation is the single insert path.
           at TIMESTAMP WITH TIME ZONE NOT NULL,
-          -- Idempotency is keyed on the second-truncated timestamp, not the raw at value:
-          -- otherwise sub-second jitter between an initial send and a retry (one carries
-          -- microseconds, one does not) would defeat dedup. Monitoring cadence is never
-          -- sub-second, so second-granularity is the correct logical-point identity.
-          at_bucket TIMESTAMP WITH TIME ZONE GENERATED ALWAYS AS (date_trunc('second', at)) STORED,
           -- NOT NULL with an empty-string sentinel: Postgres treats NULL as DISTINCT in a
           -- UNIQUE, which would break idempotency for the (common) window-less point. A
           -- concrete default guarantees dedup at the DB level, not just in app code.
-          window VARCHAR(50) NOT NULL DEFAULT '',
+          -- "window" is a reserved word in Postgres — must be quoted as an identifier.
+          "window" VARCHAR(50) NOT NULL DEFAULT '',
           segment VARCHAR(100) NOT NULL DEFAULT 'overall',
           context JSONB DEFAULT '{}'::jsonb,
           -- Which token wrote this point (audit). SET NULL if the token is later hard-deleted.
@@ -52,7 +54,7 @@ module.exports = {
           received_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
           created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
           -- Idempotency / dedup key (§5). Re-POST of the same logical point collides here.
-          UNIQUE (organization_id, model_inventory_id, metric, segment, window, at_bucket)
+          UNIQUE (organization_id, model_inventory_id, metric, segment, "window", at)
         );
       `,
         { transaction },

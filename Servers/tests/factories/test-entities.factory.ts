@@ -531,7 +531,7 @@ export async function createTestMrmThreshold(
 ): Promise<number> {
   const [result] = await sequelize.query(
     `INSERT INTO mrm_thresholds
-       (organization_id, model_inventory_id, metric, segment, window, op,
+       (organization_id, model_inventory_id, metric, segment, "window", op,
         value_num, value_lo, value_hi, severity, breach_action, active, created_at, updated_at)
      VALUES (:orgId, :modelInventoryId, :metric, :segment, :window, :op,
              :valueNum, :valueLo, :valueHi, :severity, :breachAction, :active, NOW(), NOW())
@@ -605,9 +605,10 @@ export async function createTestMrmMetric(
 ): Promise<number> {
   const [result] = await sequelize.query(
     `INSERT INTO mrm_metrics
-       (organization_id, model_inventory_id, metric, value, at, window, segment,
+       (organization_id, model_inventory_id, metric, value, at, "window", segment,
         context, ingestion_token_id, received_at, created_at)
-     VALUES (:orgId, :modelInventoryId, :metric, :value, :at, :window, :segment,
+     VALUES (:orgId, :modelInventoryId, :metric, :value,
+             date_trunc('second', :at::timestamptz), :window, :segment,
              CAST(:context AS jsonb), :ingestionTokenId, NOW(), NOW())
      RETURNING id`,
     {
@@ -617,7 +618,9 @@ export async function createTestMrmMetric(
         metric: options.metric ?? "psi",
         value: options.value ?? 0.28,
         at: options.at ?? "2026-07-02T00:00:00Z",
-        window: options.window ?? null,
+        // window/segment are NOT NULL with sentinels ('' / 'overall') — an explicit
+        // null would violate the constraint, so mirror the ingestion normalization.
+        window: options.window ?? "",
         segment: options.segment ?? "overall",
         context: JSON.stringify(options.context ?? {}),
         ingestionTokenId: options.ingestion_token_id ?? null,

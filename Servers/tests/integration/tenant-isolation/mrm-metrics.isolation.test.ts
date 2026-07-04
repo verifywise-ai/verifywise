@@ -53,7 +53,7 @@ describe("MRM metrics tenant isolation", () => {
     expect(row.organization_id).toBe(owner.orgId);
   });
 
-  it("enforces the idempotency unique (org, model, metric, segment, window, at_bucket)", async () => {
+  it("enforces the idempotency unique (org, model, metric, segment, window, at)", async () => {
     const { owner } = await seedTwoTenantContexts();
     const modelId = await createTestModelInventory(owner.orgId);
     const point = {

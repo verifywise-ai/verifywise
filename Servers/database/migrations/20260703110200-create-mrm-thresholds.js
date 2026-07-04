@@ -58,8 +58,9 @@ module.exports = {
           model_inventory_id INTEGER NOT NULL REFERENCES verifywise.model_inventories(id) ON DELETE CASCADE,
           metric VARCHAR(100) NOT NULL,
           -- NULL segment = 'overall'; NULL window = any window.
+          -- "window" is a reserved word in Postgres — must be quoted as an identifier.
           segment VARCHAR(100),
-          window VARCHAR(50),
+          "window" VARCHAR(50),
           op verifywise.enum_mrm_threshold_op NOT NULL,
           -- value_num is used by gt/gte/lt/lte; value_lo/value_hi form the 'outside' band.
           value_num DOUBLE PRECISION,

@@ -18,7 +18,7 @@
  * @module middleware/rateLimit
  */
 
-import rateLimit, { Options } from "express-rate-limit";
+import rateLimit, { Options, ipKeyGenerator } from "express-rate-limit";
 import { Request, Response } from "express";
 import logger from "../utils/logger/fileLogger";
 
@@ -89,7 +89,10 @@ const RATE_LIMIT_CONFIGS: Record<string, RateLimitConfig> = {
     keyGenerator: (req) => {
       const tokenId = (req as { mrmIngestionToken?: { tokenId?: number } }).mrmIngestionToken
         ?.tokenId;
-      return tokenId !== undefined ? `mrm-token:${tokenId}` : (req.ip ?? "unknown");
+      // Auth runs before this limiter, so a token is present for every real request.
+      // The IP branch is a defensive fallback — use the library's ipKeyGenerator so
+      // IPv6 addresses are normalized (raw req.ip is rejected by express-rate-limit v8).
+      return tokenId !== undefined ? `mrm-token:${tokenId}` : ipKeyGenerator(req.ip ?? "");
     },
   },
 };
