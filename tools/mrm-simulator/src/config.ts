@@ -9,6 +9,7 @@ const CACHE_PATH = join(HERE, "..", ".mrm-simulator.json");
 export interface CacheFile {
   token?: string;
   models: Record<string, number>; // externalKey -> modelId
+  lastBackfill?: string;
 }
 
 const flag = (argv: string[], name: string): string | undefined => {
