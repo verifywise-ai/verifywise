@@ -42,18 +42,24 @@ export const runVerify = async (
   const client = new JwtClient(cfg);
   await client.login();
 
-  // credit-scoring-v3 psi breach is notify_flag_revalidation -> expect an event.
-  const creditId = models["credit-scoring-v3"];
-  if (creditId) {
-    const events = await client.getRevalidationEvents(creditId);
+  // Every model with a notify_flag_revalidation threshold should have opened a
+  // revalidation event once its metric breached during backfill. Derive that set
+  // from the fleet so this stays correct if the fleet changes.
+  const flaggingModels = FLEET.filter((m) =>
+    m.thresholds.some((t) => t.breach_action === "notify_flag_revalidation"),
+  );
+  for (const model of flaggingModels) {
+    const modelId = models[model.externalKey];
+    if (modelId === undefined) continue; // not set up (e.g. not in cache) — skip
+    const events = await client.getRevalidationEvents(modelId);
     if (events.length === 0) {
       findings.push({
         category: "workflow",
         severity: "high",
-        title: "PSI breach did not create a revalidation event",
-        expected: "A revalidation event (source=breach) after credit-scoring-v3 PSI crossed 0.20",
+        title: `Breach did not create a revalidation event for ${model.externalKey}`,
+        expected: `A revalidation event after ${model.externalKey} breached its flagged threshold`,
         actual: "GET /revalidation-events returned an empty list",
-        repro: "Backfill 30d, then GET /api/mrm/models/<credit-scoring-v3 id>/revalidation-events",
+        repro: `Backfill 30d, then GET /api/mrm/models/<${model.externalKey} id>/revalidation-events`,
       });
     }
   }
