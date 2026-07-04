@@ -235,6 +235,7 @@ export async function createNewModelInventory(req: Request, res: Response) {
     hosting_provider,
     security_assessment_data,
     is_demo,
+    external_key,
     projects,
     frameworks,
   } = req.body;
@@ -267,6 +268,7 @@ export async function createNewModelInventory(req: Request, res: Response) {
       hosting_provider,
       security_assessment_data,
       is_demo,
+      external_key,
     });
 
     // Create transaction and use the existing database query approach
