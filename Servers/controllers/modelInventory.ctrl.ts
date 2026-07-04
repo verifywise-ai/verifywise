@@ -387,6 +387,7 @@ export async function updateModelInventoryById(req: Request, res: Response) {
     hosting_provider,
     security_assessment_data,
     is_demo,
+    external_key,
     projects,
     frameworks,
     deleteProjects,
@@ -456,6 +457,7 @@ export async function updateModelInventoryById(req: Request, res: Response) {
       hosting_provider,
       security_assessment_data,
       is_demo,
+      external_key,
     });
 
     // Use the existing database query approach for updating

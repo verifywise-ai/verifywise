@@ -505,6 +505,9 @@ export class ModelInventoryModel extends Model<ModelInventoryModel> implements I
     if (data.is_demo !== undefined) {
       existingModel.is_demo = data.is_demo;
     }
+    if (data.external_key !== undefined) {
+      existingModel.external_key = data.external_key;
+    }
 
     // Always update the updated_at timestamp
     existingModel.updated_at = new Date();
