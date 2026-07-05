@@ -1,7 +1,7 @@
 import { createServer } from "node:http";
-import { readFile } from "node:fs/promises";
+import { readFile, realpath } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
-import { dirname, join, extname } from "node:path";
+import { dirname, join, extname, sep } from "node:path";
 import { WebSocketServer, WebSocket } from "ws";
 import { SimConfig } from "../types.js";
 import { DashboardEvent } from "./events.js";
@@ -39,11 +39,21 @@ export const startDashboardServer = async (
     for (const ws of clients) if (ws.readyState === ws.OPEN) ws.send(data);
   };
 
+  const publicReal = await realpath(PUBLIC);
+
   const httpServer = createServer(async (req, res) => {
     const urlPath = req.url === "/" ? "/index.html" : (req.url ?? "/index.html");
-    const filePath = join(PUBLIC, urlPath.split("?")[0]);
-    // Prevent path traversal outside PUBLIC.
-    if (!filePath.startsWith(PUBLIC)) {
+    // Resolve the real path (following symlinks) and require it to stay strictly
+    // inside PUBLIC. A plain string prefix check on the un-resolved join is
+    // bypassable (sibling dirs sharing the prefix, symlinks, "..").
+    let filePath: string;
+    try {
+      filePath = await realpath(join(publicReal, urlPath.split("?")[0]));
+    } catch {
+      res.writeHead(404).end("not found");
+      return;
+    }
+    if (filePath !== publicReal && !filePath.startsWith(publicReal + sep)) {
       res.writeHead(403).end("forbidden");
       return;
     }
@@ -66,7 +76,8 @@ export const startDashboardServer = async (
 
   await new Promise<void>((resolve, reject) => {
     httpServer.once("error", reject);
-    httpServer.listen(opts.port, resolve);
+    // Bind to loopback only — this dev dashboard must not be reachable from the LAN.
+    httpServer.listen(opts.port, "127.0.0.1", resolve);
   });
 
   const deps: RunnerDeps = {
