@@ -235,6 +235,7 @@ export async function createNewModelInventory(req: Request, res: Response) {
     hosting_provider,
     security_assessment_data,
     is_demo,
+    external_key,
     projects,
     frameworks,
   } = req.body;
@@ -267,6 +268,7 @@ export async function createNewModelInventory(req: Request, res: Response) {
       hosting_provider,
       security_assessment_data,
       is_demo,
+      external_key,
     });
 
     // Create transaction and use the existing database query approach
@@ -343,6 +345,18 @@ export async function createNewModelInventory(req: Request, res: Response) {
           rollbackError,
         });
       }
+    }
+
+    // A duplicate external_key within the org violates the partial unique index.
+    const code =
+      (error as { parent?: { code?: string }; original?: { code?: string } })?.parent?.code ??
+      (error as { original?: { code?: string } })?.original?.code;
+    if (code === "23505") {
+      return res
+        .status(409)
+        .json(
+          STATUS_CODE[409]("A model with this external key already exists in your organization."),
+        );
     }
 
     logStructured(
