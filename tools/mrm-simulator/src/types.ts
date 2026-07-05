@@ -28,6 +28,8 @@ export interface FleetModel {
   provider: string;
   tier: "1" | "2" | "3";
   materialityDrivers: string;
+  dataset: string; // bundled CSV filename, e.g. "credit-scoring.csv"
+  segmentCol?: string; // column name for fairness segmentation
   metricKeys: string[]; // keys to register (e.g. psi, auc, gini, ks)
   thresholds: ThresholdSpec[];
 }
