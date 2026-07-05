@@ -421,6 +421,14 @@ export const ingestPointQuery = async (
   transaction: Transaction,
 ): Promise<IngestPointResult> => {
   let metricId: number;
+  // Wrap the metrics INSERT in a SAVEPOINT. A duplicate hits the idempotency
+  // UNIQUE and raises 23505, which aborts the enclosing transaction in Postgres —
+  // catching it in JS is not enough. Without the savepoint, a single duplicate in
+  // a batch poisons the transaction and every later point fails with "current
+  // transaction is aborted". Rolling back to the savepoint isolates the failed
+  // insert so the rest of the batch still commits.
+  const savepoint = `sp_ingest_${Date.now()}_${Math.floor(Math.random() * 1e6)}`;
+  await sequelize.query(`SAVEPOINT ${savepoint}`, { transaction });
   try {
     // SELECT type parses the RETURNING rows as a flat array (an INSERT ...
     // RETURNING behaves like a SELECT for result mapping); QueryTypes.INSERT
@@ -456,9 +464,12 @@ export const ingestPointQuery = async (
       },
     )) as { id: number }[];
     metricId = rows[0].id;
+    await sequelize.query(`RELEASE SAVEPOINT ${savepoint}`, { transaction });
   } catch (error) {
     if ((error as any)?.original?.code === PG_UNIQUE_VIOLATION) {
-      // Idempotent duplicate — a no-op success, not an error (O1).
+      // Idempotent duplicate — roll back just this insert and report a no-op
+      // success, leaving the enclosing transaction usable for the rest of the batch.
+      await sequelize.query(`ROLLBACK TO SAVEPOINT ${savepoint}`, { transaction });
       return { duplicate: true, metricId: null, evaluation: null };
     }
     throw error;
