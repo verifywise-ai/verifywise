@@ -4,7 +4,7 @@ import { runVerify, runContractChecks } from "./verify.js";
 import { writeReport } from "./report.js";
 import { IngestClient } from "./ingestClient.js";
 import { generateRange, generatePoints } from "./engine.js";
-import { FLEET } from "../scenarios/fleet.js";
+import { loadConfig as loadFleetConfig } from "./configLoader.js";
 import { Finding, IngestResultPoint, MetricPoint } from "./types.js";
 
 const arg = (name: string, def: string): string => {
@@ -25,6 +25,7 @@ const main = async () => {
   const cmd = process.argv[2];
   const cfg = loadConfig(process.argv);
   assertSafeTarget(cfg);
+  const FLEET = loadFleetConfig();
 
   if (cmd === "setup") {
     const { token, models, findings } = await runSetup(cfg);

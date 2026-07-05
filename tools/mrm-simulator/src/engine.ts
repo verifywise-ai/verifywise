@@ -1,7 +1,7 @@
 import { FleetModel, MetricPoint } from "./types.js";
-import { metricValue } from "../scenarios/storylines.js";
+import { computeMetrics } from "./computeClient.js";
 
-// Segments a model reports for a metric, derived from its segmented thresholds.
+// Segments a model reports for a metric, from its segmented thresholds.
 const segmentsFor = (model: FleetModel, metric: string): string[] => {
   const segs = model.thresholds
     .filter((t) => t.metric === metric && t.segment)
@@ -9,46 +9,42 @@ const segmentsFor = (model: FleetModel, metric: string): string[] => {
   return [...new Set(segs)];
 };
 
-// Rounded metric value with an explicit finite guard: the engine feeds the
-// ingestion API, which rejects non-finite values, so surface a clear local
-// error rather than pushing a NaN/Infinity that the server would silently drop.
-const roundedValue = (
-  externalKey: string,
-  metric: string,
-  dayIndex: number,
-  segment?: string,
-): number => {
-  const raw = metricValue(externalKey, metric, dayIndex, segment);
-  if (!Number.isFinite(raw)) {
-    throw new Error(
-      `Non-finite metric value for ${externalKey}/${metric} (day ${dayIndex}, segment ${segment ?? "overall"})`,
-    );
+const guardFinite = (v: number, model: string, metric: string, seg: string): number => {
+  if (!Number.isFinite(v)) {
+    throw new Error(`Non-finite computed value ${model}/${metric} (segment ${seg})`);
   }
-  return Number(raw.toFixed(4));
+  return Number(v.toFixed(4));
 };
 
-export const generatePoints = (model: FleetModel, dayIndex: number, date: Date): MetricPoint[] => {
+// Compute one model's points for a given period date (YYYY-MM-DD).
+export const generatePoints = (model: FleetModel, _dayIndex: number, date: Date): MetricPoint[] => {
   const at = date.toISOString();
+  const period = at.slice(0, 10); // YYYY-MM-DD
+  const result = computeMetrics(model.dataset, period, model.metricKeys, model.segmentCol);
   const points: MetricPoint[] = [];
+
   for (const metric of model.metricKeys) {
-    // Base (overall) point.
+    const overall = (result as Record<string, number>)[metric];
+    if (overall === undefined) continue; // metric not returned (e.g. no data that period)
     points.push({
       metric,
-      value: roundedValue(model.externalKey, metric, dayIndex),
+      value: guardFinite(overall, model.externalKey, metric, "overall"),
       at,
       window: "daily",
       segment: "overall",
-      context: { source_job: "nightly-monitor", day_index: dayIndex },
+      context: { source_job: "nightly-monitor", period },
     });
-    // Segmented points where a threshold targets a sub-population.
+    // Segmented points from the fairness block, where a threshold targets a segment.
     for (const seg of segmentsFor(model, metric)) {
+      const segVal = result.fairness?.[seg]?.[metric];
+      if (segVal === undefined) continue;
       points.push({
         metric,
-        value: roundedValue(model.externalKey, metric, dayIndex, seg),
+        value: guardFinite(segVal, model.externalKey, metric, seg),
         at,
         window: "daily",
         segment: seg,
-        context: { source_job: "nightly-monitor", day_index: dayIndex },
+        context: { source_job: "nightly-monitor", period },
       });
     }
   }

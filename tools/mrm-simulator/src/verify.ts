@@ -1,6 +1,8 @@
 import { SimConfig, Finding, IngestResultPoint } from "./types.js";
 import { JwtClient } from "./jwtClient.js";
-import { FLEET } from "../scenarios/fleet.js";
+import { loadConfig } from "./configLoader.js";
+
+const FLEET = loadConfig();
 
 // Which (externalKey, metric) pairs we engineered to breach during backfill.
 const EXPECTED_BREACHES: { externalKey: string; metric: string }[] = [

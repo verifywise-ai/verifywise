@@ -1,12 +1,35 @@
 # MRM model-eval simulator
 
 A standalone tool that impersonates a model-monitoring platform and feeds
-scenario-driven metrics into VerifyWise's MRM ingestion API, then reports gaps.
+compute-backed metrics into VerifyWise's MRM ingestion API, then reports gaps.
 
 ## Prerequisites
 
 - VerifyWise backend running locally (`http://localhost:3000`) with an admin login.
 - Node 22+.
+- Python 3.11+ with a virtualenv for the compute module:
+
+```bash
+cd tools/mrm-simulator/compute
+python3 -m venv venv
+./venv/bin/pip install -r requirements.txt
+```
+
+## Fleet configuration
+
+The fleet of models is defined in `tools/mrm-simulator/config.yaml`. Each entry
+specifies model metadata, the dataset file, metric keys, and threshold rules.
+Edit `config.yaml` to add or remove models without touching any TypeScript.
+
+## Datasets
+
+Parquet/CSV datasets live in `tools/mrm-simulator/datasets/`. They can be
+regenerated at any time:
+
+```bash
+cd tools/mrm-simulator/datasets
+python3 generate.py
+```
 
 ## Install
 
