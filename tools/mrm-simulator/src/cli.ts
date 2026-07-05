@@ -4,7 +4,7 @@ import { runVerify, runContractChecks } from "./verify.js";
 import { writeReport } from "./report.js";
 import { IngestClient } from "./ingestClient.js";
 import { generateRange, generatePoints } from "./engine.js";
-import { FLEET } from "../scenarios/fleet.js";
+import { loadConfig as loadFleetConfig } from "./configLoader.js";
 import { Finding, IngestResultPoint, MetricPoint } from "./types.js";
 
 const arg = (name: string, def: string): string => {
@@ -25,6 +25,7 @@ const main = async () => {
   const cmd = process.argv[2];
   const cfg = loadConfig(process.argv);
   assertSafeTarget(cfg);
+  const FLEET = loadFleetConfig();
 
   if (cmd === "setup") {
     const { token, models, findings } = await runSetup(cfg);
@@ -41,7 +42,14 @@ const main = async () => {
     const cache = readCache();
     if (!cache.token) throw new Error("run `setup` first (no token cached)");
     const client = new IngestClient(cfg, cache.token);
-    const start = new Date(Date.now() - days * 86_400_000);
+    // The bundled datasets are fixed-date (2026-06-01 onward), so pass
+    // --start-date to map the backfill onto the dataset's dates. Without it,
+    // backfill walks the last N days ending today, which only works when the
+    // datasets cover that range.
+    const startArg = arg("--start-date", "");
+    const start = startArg
+      ? new Date(`${startArg}T00:00:00.000Z`)
+      : new Date(Date.now() - days * 86_400_000);
     const resultsByKey: Record<string, IngestResultPoint[]> = {};
     for (const model of FLEET) {
       const points = generateRange(model, start, days);

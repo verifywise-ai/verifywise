@@ -1,7 +1,9 @@
 import { SimConfig, Finding } from "./types.js";
 import { JwtClient } from "./jwtClient.js";
-import { FLEET } from "../scenarios/fleet.js";
+import { loadConfig } from "./configLoader.js";
 import { readCache, writeCache } from "./config.js";
+
+const FLEET = loadConfig();
 
 export const runSetup = async (
   cfg: SimConfig,
