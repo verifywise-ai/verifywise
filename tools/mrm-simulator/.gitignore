@@ -1,3 +1,7 @@
 node_modules/
 .mrm-simulator.json
 gaps-report.md
+compute/venv/
+compute/__pycache__/
+datasets/__pycache__/
+.pytest_cache/
