@@ -245,7 +245,7 @@ git commit -m "feat(mrm-sim): python metric functions (psi/auc/gini/ks/fairness)
 
 **Interfaces:**
 - Consumes: `metrics.py`.
-- Produces: `python -m compute --dataset <path> --reference <start:end> --period <date> --metrics psi,auc,gini,ks --segment-col segment` prints a JSON object `{ "psi": float, "auc": float, ..., "fairness": {seg: {metric: float}} }` to stdout. Exit non-zero with a stderr message on any error.
+- Produces: `python __main__.py --dataset <path> --reference <start:end> --period <date> --metrics psi,auc,gini,ks --segment-col segment` (run from the compute/ dir) prints a JSON object `{ "psi": float, "auc": float, ..., "fairness": {seg: {metric: float}} }` to stdout. Exit non-zero with a stderr message on any error.
 
 - [ ] **Step 1: Write the failing CLI test**
 
@@ -281,7 +281,7 @@ def test_cli_outputs_metric_json(tmp_path):
     csv = _write_csv(tmp_path)
     here = Path(__file__).parent
     result = subprocess.run(
-        [sys.executable, "-m", "compute",
+        [sys.executable, "__main__.py",
          "--dataset", str(csv),
          "--period", "2026-06-13",
          "--metrics", "psi,auc,gini,ks",
@@ -299,7 +299,7 @@ def test_cli_outputs_metric_json(tmp_path):
 def test_cli_errors_on_missing_dataset(tmp_path):
     here = Path(__file__).parent
     result = subprocess.run(
-        [sys.executable, "-m", "compute", "--dataset", "/nope.csv",
+        [sys.executable, "__main__.py", "--dataset", "/nope.csv",
          "--period", "2026-06-13", "--metrics", "psi"],
         cwd=here, capture_output=True, text=True,
     )
@@ -508,7 +508,7 @@ DATA = Path(__file__).parent
 
 
 def _run(dataset, period, metrics, segment=None):
-    args = [sys.executable, "-m", "compute", "--dataset", str(DATA / dataset),
+    args = [sys.executable, "__main__.py", "--dataset", str(DATA / dataset),
             "--period", period, "--metrics", metrics, "--feature-col", "feature"]
     if segment:
         args += ["--segment-col", segment]
@@ -843,7 +843,7 @@ export const computeMetrics = (
   segmentCol?: string,
 ): ComputeResult => {
   const args = [
-    "-m", "compute",
+    "__main__.py",
     "--dataset", join(DATASETS, dataset),
     "--period", period,
     "--metrics", metrics.join(","),
