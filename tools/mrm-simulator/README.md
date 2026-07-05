@@ -60,6 +60,19 @@ works if the datasets cover that range.
 Credentials come from `VW_EMAIL` / `VW_PASSWORD` (default dev creds).
 The tool refuses non-localhost targets unless `--i-know-what-im-doing` is passed.
 
+## Live dashboard
+
+```bash
+npm run sim -- dashboard --start-date 2026-06-01 --days 30 --port 4000
+```
+
+Starts a local web dashboard (default `http://localhost:4000`) that drives the
+simulation and streams computed metrics, breaches, and ingestion results live.
+Four panels: fleet overview, per-model metric charts (with threshold lines),
+a breach/event feed, and ingestion totals. The URL is printed and opened in
+your browser automatically (best-effort). Requires the Python compute venv and
+a running VerifyWise backend, same as the other commands.
+
 ## Output
 
 `gaps-report.md` — categorised findings (Contract / Workflow / UX) to triage
