@@ -26,6 +26,11 @@ describe("configLoader", () => {
     expect(fleet[0].thresholds[0].op).toBe("gt");
   });
 
+  it("rejects a dataset that is a path (traversal)", () => {
+    const bad = VALID.replace("dataset: credit-scoring.csv", "dataset: ../../etc/passwd");
+    expect(() => parseConfig(bad)).toThrow(/plain filename/i);
+  });
+
   it("rejects a model missing dataset", () => {
     const bad = VALID.replace("    dataset: credit-scoring.csv\n", "");
     expect(() => parseConfig(bad)).toThrow(/dataset/i);

@@ -46,6 +46,12 @@ export const parseConfig = (yamlText: string): FleetModel[] => {
     const at = `models[${i}]`;
     if (!m.external_key) fail(`${at}: external_key is required`);
     if (!m.dataset) fail(`${at} (${m.external_key}): dataset is required`);
+    // Defense in depth: the dataset name is joined onto the datasets/ dir and
+    // passed to a subprocess, so reject any path separator or traversal to keep
+    // it a plain basename inside datasets/.
+    if (/[\\/]|\.\./.test(m.dataset)) {
+      fail(`${at} (${m.external_key}): dataset must be a plain filename, not a path`);
+    }
     if (!["1", "2", "3"].includes(String(m.tier))) fail(`${at}: tier must be "1"|"2"|"3"`);
     if (!Array.isArray(m.metrics) || m.metrics.length === 0) fail(`${at}: metrics is required`);
     for (const mk of m.metrics) if (!VALID_METRICS.has(mk)) fail(`${at}: unknown metric '${mk}'`);
