@@ -21,7 +21,7 @@ const makeDeps = (): RunnerDeps => ({
   runSetup: vi.fn(async () => ({ token: "mrm_x", models: { "credit-scoring-v3": 5 }, findings: [] })),
   makeIngestClient: () => ({
     pushBatch: vi.fn(async (_key: string, points: any[]) =>
-      points.map((p) => ({ metric: p.metric, at: p.at, status: p.value > 0.2 ? "breach" : "ok", pointId: 1 })),
+      points.map((p) => ({ metric: p.metric, at: p.at, status: (p.value > 0.2 ? "breach" : "ok") as "breach" | "ok", pointId: 1 })),
     ),
   }),
   // day 0 → psi 0.1 (ok); day 1 → psi 0.25 (breach)
