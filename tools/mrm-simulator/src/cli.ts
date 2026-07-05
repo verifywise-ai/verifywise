@@ -6,6 +6,8 @@ import { IngestClient } from "./ingestClient.js";
 import { generateRange, generatePoints } from "./engine.js";
 import { loadConfig as loadFleetConfig } from "./configLoader.js";
 import { Finding, IngestResultPoint, MetricPoint } from "./types.js";
+import { startDashboardServer } from "./dashboard/server.js";
+import { execFile } from "node:child_process";
 
 const arg = (name: string, def: string): string => {
   const i = process.argv.indexOf(name);
@@ -116,7 +118,22 @@ const main = async () => {
     return;
   }
 
-  console.log("usage: sim <setup|backfill|live|verify|report|teardown> [--days N] [--interval Ns] [--dry-run] [--base-url URL]");
+  if (cmd === "dashboard") {
+    const days = Number(arg("--days", "30"));
+    const port = Number(arg("--port", "4000"));
+    const startArg = arg("--start-date", "2026-06-01");
+    const startDate = new Date(`${startArg}T00:00:00.000Z`);
+    const { url } = await startDashboardServer({ cfg, startDate, days, port });
+    console.log(`dashboard running at ${url} (Ctrl-C to stop)`);
+    // Best-effort browser open; non-fatal.
+    const opener = process.platform === "darwin" ? "open" : process.platform === "win32" ? "start" : "xdg-open";
+    execFile(opener, [url], () => {});
+    // Keep the process alive.
+    await new Promise(() => {});
+    return;
+  }
+
+  console.log("usage: sim <setup|backfill|live|verify|report|teardown|dashboard> [--days N] [--interval Ns] [--dry-run] [--base-url URL]");
 };
 
 main().catch((e) => {
