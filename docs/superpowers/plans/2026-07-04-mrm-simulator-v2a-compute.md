@@ -6,7 +6,7 @@
 
 **Architecture:** A new Python `compute/` module (pandas/numpy/sklearn) reads a bundled CSV, slices a fixed reference window vs. a target period, and returns metric JSON on stdout. The existing TS engine shells out to it per model/period and pushes the real values via the unchanged ingest client. A `config.yaml` + loader replaces `scenarios/fleet.ts` and `scenarios/storylines.ts`.
 
-**Tech Stack:** Python 3.12 (pandas, numpy, scikit-learn, scipy, pytest) for compute; existing TypeScript (tsx, vitest) for orchestration; YAML config.
+**Tech Stack:** Python 3.11 (pandas, numpy, scikit-learn, scipy, pytest) for compute; existing TypeScript (tsx, vitest) for orchestration; YAML config.
 
 ## Global Constraints
 
@@ -64,12 +64,16 @@ tools/mrm-simulator/
 - [ ] **Step 1: Create requirements.txt**
 
 ```
-pandas==2.2.3
-numpy==2.1.3
-scikit-learn==1.5.2
-scipy==1.14.1
-pytest==8.3.4
+pandas>=2.1,<3
+numpy>=1.26,<3
+scikit-learn>=1.3,<2
+scipy>=1.11,<2
+pytest>=8,<9
 ```
+
+(Ranges, not exact pins — the local machine runs Python 3.11, and these lower
+bounds all support 3.11. If a resolver picks incompatible wheels, let pip choose
+compatible versions within the ranges.)
 
 - [ ] **Step 2: Create the venv and install**
 
