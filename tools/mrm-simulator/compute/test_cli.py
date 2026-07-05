@@ -27,7 +27,7 @@ def test_cli_outputs_metric_json(tmp_path):
     csv = _write_csv(tmp_path)
     here = Path(__file__).parent
     result = subprocess.run(
-        [sys.executable, "-m", "compute",
+        [sys.executable, "__main__.py",
          "--dataset", str(csv),
          "--period", "2026-06-13",
          "--metrics", "psi,auc,gini,ks",
@@ -45,7 +45,7 @@ def test_cli_outputs_metric_json(tmp_path):
 def test_cli_errors_on_missing_dataset(tmp_path):
     here = Path(__file__).parent
     result = subprocess.run(
-        [sys.executable, "-m", "compute", "--dataset", "/nope.csv",
+        [sys.executable, "__main__.py", "--dataset", "/nope.csv",
          "--period", "2026-06-13", "--metrics", "psi"],
         cwd=here, capture_output=True, text=True,
     )
