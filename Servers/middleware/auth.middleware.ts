@@ -164,6 +164,17 @@ const authenticateJWT = async (
     // name is sourced live from the roles table (cached, TTL 60s, invalidated
     // on role CRUD) so adding/renaming a role doesn't need a code change.
     const user = await getUserByIdQuery(decoded.id);
+    // A correctly-signed, unexpired token can still reference a user that no
+    // longer exists (deleted account, or a token minted against a different
+    // database). Treat that as an authentication failure with 401 rather than
+    // dereferencing `user.role_id` and throwing an unhandled 500.
+    if (!user) {
+      return res.status(401).json(
+        STATUS_CODE[401]({
+          message: req.t!("Unauthorized **"),
+        }),
+      );
+    }
     const expectedRoleName = await getRoleNameById(user.role_id);
     if (decoded.roleName !== expectedRoleName) {
       return res.status(403).json({ message: req.t!("Not allowed to access") });
