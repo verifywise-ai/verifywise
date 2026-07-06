@@ -25,6 +25,8 @@ export type Lang = "en" | "de" | "fr" | "es";
 
 export const translations: Record<string, Record<string, string>> = {
   de: {
+    // Rich text renderer
+    "Rich text content": "Rich-Text-Inhalt",
     // Settings — help text
     // Model risk management (MRM) module
     "Add threshold": "Schwellenwert hinzufügen",
@@ -8878,6 +8880,8 @@ export const translations: Record<string, Record<string, string>> = {
   },
 
   fr: {
+    // Rich text renderer
+    "Rich text content": "Contenu de texte enrichi",
     // Settings — help text
     // Model risk management (MRM) module
     "Add threshold": "Ajouter un seuil",
@@ -17686,6 +17690,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Select a log to view details.": "Sélectionnez un journal pour voir les détails.",
   },
   es: {
+    // Rich text renderer
+    "Rich text content": "Contenido de texto enriquecido",
     // Settings — help text
     // Model risk management (MRM) module
     "Add threshold": "Añadir umbral",
