@@ -3,6 +3,7 @@ name: Backend Checks
 permissions:
   contents: read
   security-events: write
+  pull-requests: write
 
 on:
   pull_request:
@@ -166,6 +167,87 @@ jobs:
           REFRESH_TOKEN_SECRET: test-refresh-secret-key-for-testing-only
           ENCRYPTION_KEY: default-key-change-this-in-production-32chars!!
         run: npx ts-node scripts/auditTenantIsolationCoverage.ts
+
+  coverage:
+    name: Coverage Gate
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Servers
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests with coverage
+        run: npm run test:coverage
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-coverage-report
+          path: Servers/coverage/
+          retention-days: 14
+
+      - name: Post coverage gate comment on PR
+        if: github.event_name == 'pull_request' && failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require("fs");
+            const summaryPath = "Servers/coverage/coverage-summary.json";
+            if (!fs.existsSync(summaryPath)) {
+              console.log("coverage-summary.json not found, skipping comment");
+              return;
+            }
+            const json = JSON.parse(fs.readFileSync(summaryPath, "utf8"));
+            const total = json.total;
+            const threshold = { statements: 30, branches: 25, functions: 25, lines: 40 };
+            const rows = ["| Metric | Threshold | Actual | Status |", "|--------|----------:|------:|:------:|"];
+            let passed = true;
+            for (const key of ["statements", "branches", "functions", "lines"]) {
+              const actual = total[key].pct;
+              const ok = actual >= threshold[key];
+              if (!ok) passed = false;
+              rows.push(`| ${key.charAt(0).toUpperCase() + key.slice(1)} | ${threshold[key]}% | ${actual}% | ${ok ? "✅" : "❌"} |`);
+            }
+
+            if (passed) {
+              console.log("All coverage thresholds pass");
+              return;
+            }
+
+            const body = `## Coverage Gate Failed\n\n${rows.join("\n")}\n\n<!-- coverage-gate -->`;
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const marker = "<!-- coverage-gate -->";
+            const existing = comments.find(c => c.body && c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
 
   dependency-review:
     name: Dependency Review

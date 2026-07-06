@@ -4,6 +4,7 @@
   "main": "index.js",
   "scripts": {
     "test:unit": "jest --testPathIgnorePatterns=/tests/integration/ --testPathIgnorePatterns=/helpers/ --detectOpenHandles --forceExit",
+    "test:coverage": "jest --coverage --testPathIgnorePatterns=/tests/integration/ --testPathIgnorePatterns=/helpers/ --detectOpenHandles --forceExit",
     "test:smoke": "jest --config jest.config.js --globalSetup=\"<rootDir>/tests/integration/globalSetup.js\" --testPathPatterns=deadline-summary --runInBand",
     "test": "npm run test:unit",
     "test:watch": "jest --watch",
@@ -146,7 +147,6 @@
   },
   "overrides": {
     "html-minifier": "npm:html-minifier-terser@^7.2.0",
-    "minimatch": ">=9.0.7",
     "protobufjs": ">=8.2.0",
     "uuid": "^11.1.1"
   }
