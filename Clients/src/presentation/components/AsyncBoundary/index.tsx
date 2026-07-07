@@ -76,9 +76,7 @@ export const AsyncBoundary: FC<AsyncBoundaryProps> = ({
           px: 3,
           border: `1px dashed ${theme.palette.error.main}`,
           borderRadius: "4px",
-          backgroundColor: theme.palette.error.light
-            ? `${theme.palette.error.light}14`
-            : undefined,
+          backgroundColor: theme.palette.error.light ? `${theme.palette.error.light}14` : undefined,
         }}
         role="alert"
         aria-live="assertive"

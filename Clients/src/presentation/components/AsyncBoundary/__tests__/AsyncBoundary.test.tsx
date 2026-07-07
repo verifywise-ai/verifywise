@@ -28,7 +28,10 @@ describe("AsyncBoundary", () => {
 
   it("renders custom loading fallback when provided", () => {
     renderWithProviders(
-      <AsyncBoundary isLoading={true} loadingFallback={<div data-testid="custom-loading">Custom loading</div>}>
+      <AsyncBoundary
+        isLoading={true}
+        loadingFallback={<div data-testid="custom-loading">Custom loading</div>}
+      >
         <div>Loaded content</div>
       </AsyncBoundary>,
     );
