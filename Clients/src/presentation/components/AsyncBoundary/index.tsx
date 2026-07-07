@@ -20,6 +20,8 @@ export interface AsyncBoundaryProps {
   loadingFallback?: ReactNode;
   /** Custom error UI. Defaults to the standard error card. */
   errorFallback?: ReactNode;
+  /** Custom empty UI. Defaults to EmptyState. */
+  emptyFallback?: ReactNode;
   /** Icon for the empty state. Defaults to Inbox. */
   emptyIcon?: LucideIcon;
   /** Message for the empty state. */
@@ -44,6 +46,7 @@ export const AsyncBoundary: FC<AsyncBoundaryProps> = ({
   onRetry,
   loadingFallback,
   errorFallback,
+  emptyFallback,
   emptyIcon = Inbox,
   emptyMessage,
   emptyChildren,
@@ -121,6 +124,10 @@ export const AsyncBoundary: FC<AsyncBoundaryProps> = ({
   }
 
   if (isEmpty) {
+    if (emptyFallback) {
+      return <>{emptyFallback}</>;
+    }
+
     return (
       <EmptyState icon={emptyIcon} message={emptyMessage}>
         {emptyChildren}

@@ -100,6 +100,21 @@ describe("AsyncBoundary", () => {
     expect(screen.queryByText("Failed")).not.toBeInTheDocument();
   });
 
+  it("renders custom empty fallback when provided", () => {
+    renderWithProviders(
+      <AsyncBoundary
+        isLoading={false}
+        isEmpty={true}
+        emptyFallback={<div data-testid="custom-empty">Custom empty UI</div>}
+      >
+        <div>Loaded content</div>
+      </AsyncBoundary>,
+    );
+
+    expect(screen.getByTestId("custom-empty")).toBeInTheDocument();
+    expect(screen.queryByText("Loaded content")).not.toBeInTheDocument();
+  });
+
   it("calls onRetry when the retry button is clicked", async () => {
     const user = userEvent.setup();
     const onRetry = vi.fn();
