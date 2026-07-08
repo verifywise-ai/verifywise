@@ -258,7 +258,8 @@ const mockColumns: IColumn[] = [
   { id: 4, name: "Source" },
   { id: 5, name: "Version" },
   { id: 6, name: "Status" },
-  { id: 7, name: "Action" },
+  { id: 7, name: "Quality" },
+  { id: 8, name: "Action" },
 ];
 
 const mockFiles = [

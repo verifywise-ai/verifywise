@@ -20,6 +20,7 @@ export type FileColumn =
   | "source"
   | "version"
   | "status"
+  | "quality"
   | "action";
 
 /**
@@ -44,10 +45,13 @@ export const DEFAULT_COLUMNS: ColumnConfig[] = [
   { key: "source", label: "Source", defaultVisible: true },
   { key: "version", label: "Version", defaultVisible: true },
   { key: "status", label: "Status", defaultVisible: true },
+  { key: "quality", label: "Quality", defaultVisible: true },
   { key: "action", label: "Action", defaultVisible: true, alwaysVisible: true },
 ];
 
-const SCHEMA_VERSION = 3;
+// Bumped to 4 when the "quality" column was added, so existing users get it
+// visible by default instead of keeping their stored (pre-quality) set.
+const SCHEMA_VERSION = 4;
 const STORAGE_KEY = "verifywise_file_column_visibility";
 const VERSION_KEY = "verifywise_file_column_visibility_version";
 // Old un-namespaced keys, migrated once via the StorageService legacy-key mechanism.

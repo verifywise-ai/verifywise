@@ -232,6 +232,7 @@ const ALL_COLUMN_KEYS = [
   "source",
   "version",
   "status",
+  "quality",
   "action",
 ] as const;
 
@@ -869,26 +870,12 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
                       />
                     </TableCell>
                   )}
-                  {/* Action column */}
-                  {visibleColumnKeys.includes("action") && (
+                  {/* Quality column — AI analyze trigger + grade badge */}
+                  {visibleColumnKeys.includes("quality") && (
                     <TableCell
-                      sx={{
-                        ...singleTheme.tableStyles.primary.body.cell,
-                        minWidth: "50px",
-                        backgroundColor: getSortMatchForColumn(
-                          data.cols[data.cols.length - 1]?.name,
-                          sortConfig,
-                        )
-                          ? "background.surface"
-                          : "inherit",
-                      }}
+                      sx={{ ...singleTheme.tableStyles.primary.body.cell, minWidth: "80px" }}
                     >
-                      <Stack
-                        direction="row"
-                        alignItems="center"
-                        spacing="4px"
-                        justifyContent="flex-end"
-                      >
+                      <Stack direction="row" alignItems="center" spacing="4px">
                         {(() => {
                           const fid = Number(row.id);
                           const entry = analysisByFileId.get(fid);
@@ -928,7 +915,24 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
                             </>
                           );
                         })()}
-                        <IconButton
+                      </Stack>
+                    </TableCell>
+                  )}
+                  {/* Action column */}
+                  {visibleColumnKeys.includes("action") && (
+                    <TableCell
+                      sx={{
+                        ...singleTheme.tableStyles.primary.body.cell,
+                        minWidth: "50px",
+                        backgroundColor: getSortMatchForColumn(
+                          data.cols[data.cols.length - 1]?.name,
+                          sortConfig,
+                        )
+                          ? "background.surface"
+                          : "inherit",
+                      }}
+                    >
+                      <IconButton
                         id={Number(row.id)}
                         type="report"
                         onEdit={() => {}}
@@ -945,7 +949,6 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
                         warningMessage="When you delete this file, it will be permanently removed from the system. This action cannot be undone."
                         onMouseEvent={() => {}}
                       />
-                      </Stack>
                     </TableCell>
                   )}
                 </TableRow>
