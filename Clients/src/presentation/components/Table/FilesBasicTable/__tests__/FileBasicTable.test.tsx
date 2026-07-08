@@ -17,8 +17,33 @@ const mockBulkState = vi.hoisted(() => ({
   count: 0,
 }));
 
+const mockTrigger = vi.hoisted(() => ({
+  mutate: vi.fn(),
+  mutateAsync: vi.fn().mockResolvedValue({}),
+  isPending: false,
+}));
+const mockQuality = vi.hoisted(() => ({ data: [] as any[] }));
+
 vi.mock("../../../../../application/hooks/useBulkSelection", () => ({
   useBulkSelection: () => mockBulkState,
+}));
+
+vi.mock("../../../../../application/hooks/useEvidenceAi", () => ({
+  useTriggerAnalysis: () => mockTrigger,
+  useQualityScores: () => mockQuality,
+}));
+
+vi.mock("../../../EvidenceAnalysisPanel", () => ({
+  default: () => <div data-testid="analysis-panel" />,
+}));
+
+vi.mock("../../../EvidenceQualityBadge", () => ({
+  default: ({ grade }: any) => <span data-testid="quality-badge">{grade}</span>,
+}));
+
+vi.mock("../../../Modals/StandardModal", () => ({
+  default: ({ isOpen, children }: any) =>
+    isOpen ? <div data-testid="analysis-modal">{children}</div> : null,
 }));
 
 vi.mock("../../../../../application/hooks/useBulkUpdateFiles", () => ({
@@ -286,6 +311,8 @@ describe("FileBasicTable", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     vi.spyOn(console, "warn").mockImplementation(() => {});
     setBulkSelected([]);
+    mockQuality.data = [];
+    mockTrigger.isPending = false;
   });
 
   afterEach(() => {
@@ -728,5 +755,39 @@ describe("FileBasicTable", () => {
       />,
     );
     expect(screen.getByText("legacy-user")).toBeInTheDocument();
+  });
+
+  it("renders an Analyze with AI button per row", () => {
+    renderWithProviders(<FileBasicTable {...defaultProps} />);
+    const analyzeButtons = screen.getAllByRole("button", { name: /analyze with ai/i });
+    expect(analyzeButtons).toHaveLength(3);
+  });
+
+  it("triggers analysis with the numeric row id when analyze is clicked", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<FileBasicTable {...defaultProps} />);
+    const analyzeButtons = screen.getAllByRole("button", { name: /analyze with ai/i });
+    await user.click(analyzeButtons[0]);
+    expect(mockTrigger.mutate).toHaveBeenCalledWith(1);
+  });
+
+  it("renders a quality badge and opens the analysis modal when a grade exists", async () => {
+    mockQuality.data = [{ file_id: 1, overall_quality_grade: "B" }];
+    const user = userEvent.setup();
+    renderWithProviders(<FileBasicTable {...defaultProps} />);
+    const badge = screen.getByTestId("quality-badge");
+    expect(badge).toHaveTextContent("B");
+    await user.click(badge);
+    expect(screen.getByTestId("analysis-modal")).toBeInTheDocument();
+    expect(screen.getByTestId("analysis-panel")).toBeInTheDocument();
+  });
+
+  it("bulk analyze calls mutateAsync once per selected id", async () => {
+    setBulkSelected([1, 2]);
+    const user = userEvent.setup();
+    renderWithProviders(<FileBasicTable {...defaultProps} canRunBulkActions />);
+    await user.click(screen.getByTestId("bulk-action-analyze_ai"));
+    expect(mockTrigger.mutateAsync).toHaveBeenCalledWith(1);
+    expect(mockTrigger.mutateAsync).toHaveBeenCalledWith(2);
   });
 });

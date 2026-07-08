@@ -17,13 +17,21 @@ import {
   MenuItem,
   ListSubheader,
   Divider,
+  IconButton as MUIIconButton,
 } from "@mui/material";
 import VWSelect from "../../Inputs/Select";
 import CustomizableMultiSelect from "../../Inputs/Select/Multi";
 import TablePaginationActions from "../../TablePagination";
 import singleTheme from "../../../themes/v1SingleTheme";
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { ChevronsUpDown, ChevronUp, ChevronDown, FolderInput, Tag as TagIcon } from "lucide-react";
+import {
+  ChevronsUpDown,
+  ChevronUp,
+  ChevronDown,
+  FolderInput,
+  Tag as TagIcon,
+  Sparkles,
+} from "lucide-react";
 import IconButton from "../../IconButton";
 import { FileIcon } from "../../FileIcon";
 import Chip from "../../Chip";
@@ -43,6 +51,10 @@ import { deleteEntityById } from "../../../../application/repository/entity.repo
 import ProjectRiskLinkedPolicies from "../../ProjectRiskMitigation/ProjectRiskLinkedPolicies";
 import { useBulkSelection } from "../../../../application/hooks/useBulkSelection";
 import { useBulkUpdateFiles } from "../../../../application/hooks/useBulkUpdateFiles";
+import { useTriggerAnalysis, useQualityScores } from "../../../../application/hooks/useEvidenceAi";
+import EvidenceAnalysisPanel from "../../EvidenceAnalysisPanel";
+import EvidenceQualityBadge, { type QualityGrade } from "../../EvidenceQualityBadge";
+import StandardModal from "../../Modals/StandardModal";
 import { getAllFolders } from "../../../../application/repository/virtualFolder.repository";
 import type { IFolderWithCount } from "../../../../domain/interfaces/i.virtualFolder";
 
@@ -381,6 +393,21 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
     [sortedBodyData],
   );
 
+  // Evidence AI analysis (relocated here from the Model Inventory evidence hub).
+  // Keyed by files.id, which is exactly what FileManager rows carry.
+  const triggerAnalysis = useTriggerAnalysis();
+  const { data: qualityScores } = useQualityScores();
+  const analysisByFileId = useMemo(() => {
+    const m = new Map<number, { grade: QualityGrade | null; analysis: unknown }>();
+    (qualityScores ?? []).forEach((q: any) => {
+      if (q?.file_id != null) {
+        m.set(Number(q.file_id), { grade: q.overall_quality_grade ?? null, analysis: q });
+      }
+    });
+    return m;
+  }, [qualityScores]);
+  const [selectedAnalysis, setSelectedAnalysis] = useState<any | null>(null);
+
   const [folderDialogOpen, setFolderDialogOpen] = useState(false);
   const [tagsDialogOpen, setTagsDialogOpen] = useState(false);
   const [selectedFolderId, setSelectedFolderId] = useState<string>("");
@@ -504,8 +531,23 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
         onClick: handleOpenTagsDialog,
         disabled: bulkMutation.isPending,
       },
+      {
+        id: "analyze_ai",
+        label: "Analyze with AI",
+        icon: <Sparkles size={16} />,
+        disabled: triggerAnalysis.isPending,
+        onClick: async () => {
+          await Promise.all(selectedIds.map((id) => triggerAnalysis.mutateAsync(id)));
+        },
+      },
     ],
-    [handleOpenFolderDialog, handleOpenTagsDialog, bulkMutation.isPending],
+    [
+      handleOpenFolderDialog,
+      handleOpenTagsDialog,
+      bulkMutation.isPending,
+      triggerAnalysis,
+      selectedIds,
+    ],
   );
 
   // Anchor for the source-details dropdown. Tracks which row opened it so
@@ -841,7 +883,52 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
                           : "inherit",
                       }}
                     >
-                      <IconButton
+                      <Stack
+                        direction="row"
+                        alignItems="center"
+                        spacing="4px"
+                        justifyContent="flex-end"
+                      >
+                        {(() => {
+                          const fid = Number(row.id);
+                          const entry = analysisByFileId.get(fid);
+                          return (
+                            <>
+                              {entry?.grade && (
+                                <Box
+                                  component="span"
+                                  sx={{ cursor: "pointer", display: "inline-flex" }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedAnalysis(entry.analysis);
+                                  }}
+                                >
+                                  <EvidenceQualityBadge grade={entry.grade} />
+                                </Box>
+                              )}
+                              <Tooltip
+                                title={entry?.grade ? "Re-analyze with AI" : "Analyze with AI"}
+                              >
+                                <span>
+                                  <MUIIconButton
+                                    aria-label={
+                                      entry?.grade ? "Re-analyze with AI" : "Analyze with AI"
+                                    }
+                                    size="small"
+                                    disabled={triggerAnalysis.isPending}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (fid) triggerAnalysis.mutate(fid);
+                                    }}
+                                  >
+                                    <Sparkles size={16} />
+                                  </MUIIconButton>
+                                </span>
+                              </Tooltip>
+                            </>
+                          );
+                        })()}
+                        <IconButton
                         id={Number(row.id)}
                         type="report"
                         onEdit={() => {}}
@@ -858,6 +945,7 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
                         warningMessage="When you delete this file, it will be permanently removed from the system. This action cannot be undone."
                         onMouseEvent={() => {}}
                       />
+                      </Stack>
                     </TableCell>
                   )}
                 </TableRow>
@@ -1102,6 +1190,17 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
           return nodes;
         })()}
       </Menu>
+
+      <StandardModal
+        isOpen={selectedAnalysis !== null}
+        onClose={() => setSelectedAnalysis(null)}
+        title="Evidence analysis"
+        description=""
+        hideFooter
+        maxWidth="760px"
+      >
+        {selectedAnalysis && <EvidenceAnalysisPanel analysis={selectedAnalysis} />}
+      </StandardModal>
     </>
   );
 };
