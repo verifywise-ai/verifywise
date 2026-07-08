@@ -78,7 +78,7 @@ export interface AiSdkAdvisorParams {
 /**
  * Create the appropriate AI SDK model instance based on provider.
  */
-function createModel(
+export function createModel(
   params: Pick<AiSdkAdvisorParams, "provider" | "apiKey" | "baseURL" | "model" | "headers">,
 ) {
   if (params.provider === "Anthropic") {
