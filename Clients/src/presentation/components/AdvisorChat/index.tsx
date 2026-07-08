@@ -1,11 +1,21 @@
-import { Box, useTheme, Typography, Paper, CircularProgress, SxProps, Theme } from "@mui/material";
+import {
+  Box,
+  Stack,
+  useTheme,
+  Typography,
+  Paper,
+  CircularProgress,
+  SxProps,
+  Theme,
+} from "@mui/material";
 import { AssistantRuntimeProvider } from "@assistant-ui/react";
 import { useAdvisorRuntime } from "./useAdvisorRuntime";
 import { CustomThread } from "./CustomThread";
 import { AdvisorHeader } from "./AdvisorHeader";
 import { AdvisorDomain } from "./advisorConfig";
+import Toggle from "../Inputs/Toggle";
 import { useAdvisorConversationSafe } from "../../../application/contexts/AdvisorConversation.context";
-import { useEffect, useRef, useMemo, memo } from "react";
+import { useEffect, useRef, useMemo, useState, memo } from "react";
 import { useAuth } from "../../../application/hooks/useAuth";
 import { Settings } from "lucide-react";
 import { useNavigate } from "react-router";
@@ -48,18 +58,40 @@ const AdvisorChatInner = ({
   pageContext?: AdvisorDomain;
 }) => {
   const theme = useTheme();
-  const runtime = useAdvisorRuntime(selectedLLMKeyId, pageContext);
+  // When enabled, one prompt is decomposed into independent subtasks and run
+  // by parallel advisor workers server-side (see advisor/orchestrator). Sent
+  // to the backend via the transport body flag inside useAdvisorRuntime.
+  const [parallelAgents, setParallelAgents] = useState(false);
+  const runtime = useAdvisorRuntime(selectedLLMKeyId, pageContext, parallelAgents);
 
   return (
     <Box
       sx={{
         flex: 1,
         overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
         bgcolor: theme.palette.background.alt ?? theme.palette.background.paper,
       }}
     >
       {runtime ? (
         <AssistantRuntimeProvider runtime={runtime}>
+          <Stack
+            direction="row"
+            alignItems="center"
+            justifyContent="flex-end"
+            spacing="4px"
+            sx={{ px: "12px", py: "4px" }}
+          >
+            <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
+              Parallel agents
+            </Typography>
+            <Toggle
+              checked={parallelAgents}
+              onChange={(e) => setParallelAgents(e.target.checked)}
+              inputProps={{ "aria-label": "parallel-agents-toggle" }}
+            />
+          </Stack>
           <CustomThread pageContext={pageContext} />
         </AssistantRuntimeProvider>
       ) : (
