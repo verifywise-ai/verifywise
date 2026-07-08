@@ -7,6 +7,7 @@ import {
   type AiSdkAdvisorParams,
 } from "../aiSdkAgent";
 import { planSubtasks } from "./planner";
+import { logStructured } from "../../utils/logger/fileLogger";
 
 export interface WorkerResult {
   subtask: string;
@@ -109,6 +110,15 @@ export async function orchestrate(agentParams: AiSdkAdvisorParams, deps: Orchest
   const prompt = extractLatestUserContent(agentParams);
   const model = makeModel(agentParams);
   const decision = await plan(prompt, model);
+
+  logStructured(
+    "processing",
+    `advisor plan: ${decision.mode} (${decision.subtasks.length} subtask(s))${
+      decision.mode === "parallel" ? ` → [${decision.subtasks.join(" | ")}]` : ""
+    }`,
+    "orchestrate",
+    "orchestrator.ts",
+  );
 
   if (decision.mode === "single") {
     return singleStream(agentParams);
