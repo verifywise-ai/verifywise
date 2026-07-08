@@ -15,10 +15,6 @@ import {
   Tooltip,
   Box,
   Chip,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  IconButton as MuiIconButton,
 } from "@mui/material";
 import TablePaginationActions from "../../components/TablePagination";
 import CustomizableSkeleton from "../../components/Skeletons";
@@ -31,8 +27,6 @@ import {
   FolderOpen,
   Shield,
   Clock,
-  Sparkles,
-  X,
 } from "lucide-react";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
@@ -43,10 +37,6 @@ import { EmptyState } from "../../components/EmptyState";
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import { TableEmptyStateLayout } from "../../components/Table/TableEmptyStateLayout";
 import { FileIcon } from "../../components/FileIcon";
-import EvidenceQualityBadge, { type QualityGrade } from "../../components/EvidenceQualityBadge";
-import EvidenceAnalysisPanel from "../../components/EvidenceAnalysisPanel";
-import { useQualityScores, useTriggerAnalysis } from "../../../application/hooks/useEvidenceAi";
-import { text as textColors, border as borderPalette } from "../../themes/palette";
 import {
   paginationMenuProps,
   paginationStyle,
@@ -62,10 +52,6 @@ import { EvidenceHubTableProps } from "../../../domain/interfaces/i.modelInvento
 dayjs.extend(utc);
 
 const EVIDENCE_HUB_SORTING_KEY = "verifywise_evidence_hub_sorting";
-
-// Grade → sortable rank (A=5 … F=1, unrated=0)
-const gradeRank = (grade?: string): number =>
-  ({ A: 5, B: 4, C: 3, D: 2, F: 1 })[grade ?? ""] ?? 0;
 
 type SortDirection = "asc" | "desc" | null;
 type SortConfig = {
@@ -85,7 +71,6 @@ const TABLE_COLUMNS = [
   { id: "uploaded_by", label: "UPLOADED BY", sortable: true },
   { id: "uploaded_on", label: "UPLOADED ON", sortable: true },
   { id: "expiry_date", label: "EXPIRY", sortable: true },
-  { id: "quality", label: "QUALITY", sortable: true },
   { id: "actions", label: "", sortable: false },
 ];
 
@@ -193,10 +178,7 @@ const EvidenceHubTable: React.FC<EvidenceHubTableProps> = ({
   const theme = useTheme();
   const [users, setUsers] = useState<User[]>([]);
   const [page, setPage] = useState(0);
-  const { data: qualityScoresData } = useQualityScores();
-  const triggerAnalysis = useTriggerAnalysis();
   const [rowsPerPage, setRowsPerPage] = useState(10);
-  const [selectedAnalysis, setSelectedAnalysis] = useState<any | null>(null);
 
   // Filter columns based on visibleColumns prop
   const visibleTableColumns = useMemo(() => {
@@ -269,31 +251,6 @@ const EvidenceHubTable: React.FC<EvidenceHubTableProps> = ({
     return map;
   }, [modelInventoryData]);
 
-  // Build a map of file_id → overall quality grade from AI analysis data
-  const qualityMap = useMemo(() => {
-    const map = new Map<number, string>();
-    if (qualityScoresData && Array.isArray(qualityScoresData)) {
-      qualityScoresData.forEach((item: any) => {
-        if (item.file_id && item.overall_quality_grade != null) {
-          map.set(item.file_id, item.overall_quality_grade);
-        }
-      });
-    }
-    return map;
-  }, [qualityScoresData]);
-
-  // Full analysis map: file_id → AI analysis object (used by detail dialog)
-  const qualityAnalysisMap = useMemo(() => {
-    const map = new Map<number, any>();
-    if (qualityScoresData && Array.isArray(qualityScoresData)) {
-      qualityScoresData.forEach((item: any) => {
-        if (item.file_id) {
-          map.set(item.file_id, item);
-        }
-      });
-    }
-    return map;
-  }, [qualityScoresData]);
   const trainingMap = useMemo(() => {
     const map = new Map<number, string>();
     (trainingData ?? []).forEach((t) => {
@@ -395,14 +352,6 @@ const EvidenceHubTable: React.FC<EvidenceHubTableProps> = ({
           bValue = b.expiry_date ? new Date(b.expiry_date).getTime() : 0;
           break;
 
-        case "quality": {
-          const aFileId = a.evidence_files?.[0]?.id;
-          const bFileId = b.evidence_files?.[0]?.id;
-          aValue = gradeRank(aFileId ? qualityMap.get(Number(aFileId)) : undefined);
-          bValue = gradeRank(bFileId ? qualityMap.get(Number(bFileId)) : undefined);
-          break;
-        }
-
         default:
           return 0;
       }
@@ -418,7 +367,7 @@ const EvidenceHubTable: React.FC<EvidenceHubTableProps> = ({
       if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
       return 0;
     });
-  }, [data, sortConfig, userMap, qualityMap]);
+  }, [data, sortConfig, userMap]);
 
   const getRange = useMemo(() => {
     const start = page * rowsPerPage + 1;
@@ -621,70 +570,8 @@ const EvidenceHubTable: React.FC<EvidenceHubTableProps> = ({
                   {evidence.expiry_date ? displayFormattedDate(evidence.expiry_date) : "-"}
                 </TableCell>
               )}
-              {isColVisible("quality") && (
-                <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                  {(() => {
-                    const fileId = evidence.evidence_files?.[0]?.id;
-                    const grade = fileId ? qualityMap.get(Number(fileId)) : undefined;
-                    const analysis = fileId ? qualityAnalysisMap.get(Number(fileId)) : undefined;
-                    return grade != null ? (
-                      <EvidenceQualityBadge
-                        grade={grade as QualityGrade}
-                        onClick={
-                          analysis
-                            ? (e) => {
-                                e.stopPropagation();
-                                setSelectedAnalysis(analysis);
-                              }
-                            : undefined
-                        }
-                      />
-                    ) : (
-                      <Typography sx={{ fontSize: 11, color: palette.text.disabled }}>-</Typography>
-                    );
-                  })()}
-                </TableCell>
-              )}
               <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
                 <Stack direction="row" spacing={1}>
-                  {evidence.evidence_files?.[0]?.id && (
-                    <Tooltip
-                      title={
-                        qualityMap.has(Number(evidence.evidence_files[0].id))
-                          ? "Re-analyze with AI"
-                          : "Analyze with AI"
-                      }
-                    >
-                      <Box
-                        component="button"
-                        onClick={(e: React.MouseEvent) => {
-                          e.stopPropagation();
-                          const fileId = Number(evidence.evidence_files[0].id);
-                          if (fileId) triggerAnalysis.mutate(fileId);
-                        }}
-                        sx={{
-                          "display": "flex",
-                          "alignItems": "center",
-                          "justifyContent": "center",
-                          "width": 28,
-                          "height": 28,
-                          "borderRadius": "6px",
-                          "border": "1px solid",
-                          "borderColor": triggerAnalysis.isPending ? "#ccc" : "#7C3AED",
-                          "backgroundColor": triggerAnalysis.isPending ? "#f5f5f5" : "#F5F3FF",
-                          "color": triggerAnalysis.isPending ? "#999" : "#7C3AED",
-                          "cursor": triggerAnalysis.isPending ? "wait" : "pointer",
-                          "padding": 0,
-                          "&:hover": {
-                            backgroundColor: triggerAnalysis.isPending ? "#f5f5f5" : "#EDE9FE",
-                          },
-                        }}
-                        disabled={triggerAnalysis.isPending}
-                      >
-                        <Sparkles size={14} />
-                      </Box>
-                    </Tooltip>
-                  )}
                   <CustomIconButton
                     id={evidence.id || 0}
                     onDelete={() => onDelete?.(evidence.id || 0)}
@@ -715,9 +602,6 @@ const EvidenceHubTable: React.FC<EvidenceHubTableProps> = ({
       onDelete,
       isColVisible,
       visibleTableColumns,
-      qualityMap,
-      qualityAnalysisMap,
-      triggerAnalysis,
       hidePagination,
     ],
   );
@@ -796,71 +680,6 @@ const EvidenceHubTable: React.FC<EvidenceHubTableProps> = ({
           )}
         </Table>
       </TableContainer>
-
-      {/* Quality Score Detail Dialog — AIAuditDashboard pattern */}
-      <Dialog
-        open={selectedAnalysis !== null}
-        onClose={() => setSelectedAnalysis(null)}
-        maxWidth="md"
-        fullWidth
-        PaperProps={{
-          sx: {
-            borderRadius: "4px",
-            border: `1px solid ${borderPalette.dark}`,
-            backgroundColor: "transparent",
-          },
-        }}
-      >
-        <DialogTitle
-          sx={{
-            fontSize: 16,
-            fontWeight: 600,
-            color: textColors.primary,
-            fontFamily: "'Red Hat Display', 'Geist', sans-serif",
-            borderBottom: `1px solid ${borderPalette.light}`,
-            backgroundColor: "#FFFFFF",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            py: 1.75,
-            px: 3,
-          }}
-        >
-          <Box>
-            <Typography
-              sx={{
-                fontSize: 16,
-                fontWeight: 600,
-                color: textColors.primary,
-                fontFamily: "'Red Hat Display', 'Geist', sans-serif",
-                lineHeight: 1.3,
-              }}
-            >
-              Evidence Quality Details
-            </Typography>
-            <Typography
-              sx={{
-                fontSize: 12,
-                color: textColors.secondary,
-                mt: 0.25,
-                fontWeight: 400,
-              }}
-            >
-              AI-derived score breakdown across 5 dimensions
-            </Typography>
-          </Box>
-          <MuiIconButton
-            onClick={() => setSelectedAnalysis(null)}
-            size="small"
-            sx={{ color: textColors.secondary }}
-          >
-            <X size={18} />
-          </MuiIconButton>
-        </DialogTitle>
-        <DialogContent sx={{ p: 0 }}>
-          {selectedAnalysis && <EvidenceAnalysisPanel analysis={selectedAnalysis} />}
-        </DialogContent>
-      </Dialog>
     </>
   );
 };
