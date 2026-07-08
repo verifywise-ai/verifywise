@@ -107,6 +107,7 @@ import { toolsDefinition as projectToolsDefinition } from "../advisor/tools/proj
 import { toolsDefinition as frameworkLookupToolsDefinition } from "../advisor/tools/frameworkLookupTools";
 import { translateError } from "../utils/i18n.utils";
 import { aiActionToolDefinitions, aiActionFilers } from "../advisor/aiActions";
+import { orchestrate } from "../advisor/orchestrator";
 
 const fileName = "advisor.ctrl.ts";
 
@@ -829,7 +830,7 @@ export async function streamAdvisorV2(req: Request, res: Response) {
             ? `user-${userId}-${new Date().toISOString().slice(0, 10)}`
             : undefined;
 
-    const result = await getStreamTextResult({
+    const agentParams = {
       apiKey: apiKey.key || "",
       baseURL: url,
       model: apiKey.model,
@@ -846,7 +847,15 @@ export async function streamAdvisorV2(req: Request, res: Response) {
       headers: apiKey.custom_headers || undefined,
       sessionId: memorySessionId,
       agentName: "advisor" as const,
-    });
+    };
+
+    // Parallel multi-agent mode is opt-in via a body flag. On single/dependent
+    // prompts or any planner failure, orchestrate() itself falls back to the
+    // single-agent stream, so this branch never regresses default behavior.
+    const parallelRequested = (req.body as { parallel?: unknown })?.parallel === true;
+    const result = parallelRequested
+      ? await orchestrate(agentParams)
+      : await getStreamTextResult(agentParams);
 
     // Pipe the stream. Critical: supply `onError` to convert errors into
     // user-visible text. Without it, the AI SDK silently closes the stream
