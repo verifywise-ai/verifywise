@@ -3,13 +3,13 @@ import {
   Box,
   Typography,
   LinearProgress,
-  Button,
   Stack,
   Card,
   Collapse,
   IconButton,
   Tooltip,
 } from "@mui/material";
+import { CustomizableButton } from "../button/customizable-button";
 import {
   Sparkles,
   Target,
@@ -106,11 +106,12 @@ interface EvidenceAnalysisPanelProps {
   isAnalyzing?: boolean;
 }
 
-// Consistent card style — matches AIAuditDashboard cardSx pattern
+// Flat card per design rules: white bg, light border, 4px radius, no shadow.
 const cardSx = {
-  border: `1px solid ${borderPalette.dark}`,
+  backgroundColor: background.main,
+  border: `1px solid ${borderPalette.light}`,
   borderRadius: "4px",
-  background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
+  boxShadow: "none",
 };
 
 // Grade → progress-bar fill % (A=100 … F=20, null=0)
@@ -185,8 +186,7 @@ function DimensionCard({
     <Stack
       sx={{
         ...cardSx,
-        borderRadius: 2,
-        padding: "10px 14px 12px 14px",
+        padding: "12px 14px",
         height: "100%",
       }}
       spacing={0.75}
@@ -240,10 +240,10 @@ function DimensionCard({
         value={gradeFill(grade)}
         sx={{
           "height": 5,
-          "borderRadius": 3,
+          "borderRadius": "4px",
           "backgroundColor": background.hover,
           "& .MuiLinearProgress-bar": {
-            borderRadius: 3,
+            borderRadius: "4px",
             backgroundColor: colors.text,
           },
         }}
@@ -339,21 +339,17 @@ export default function EvidenceAnalysisPanel({
             No AI analysis available for this evidence yet.
           </Typography>
           {onTriggerAnalysis && (
-            <Button
+            <CustomizableButton
               variant="outlined"
-              size="small"
+              text={isAnalyzing ? "Analyzing..." : "Run AI analysis"}
+              isDisabled={isAnalyzing}
               onClick={onTriggerAnalysis}
-              disabled={isAnalyzing}
               sx={{
-                "textTransform": "none",
-                "fontSize": 13,
                 "borderColor": accent.primary.border,
                 "color": accent.primary.text,
                 "&:hover": { backgroundColor: accent.primary.bg },
               }}
-            >
-              {isAnalyzing ? "Analyzing..." : "Run AI analysis"}
-            </Button>
+            />
           )}
         </Card>
       </Box>
@@ -485,7 +481,6 @@ export default function EvidenceAnalysisPanel({
                 fontSize: 18,
                 fontWeight: 600,
                 color: textColors.primary,
-                fontFamily: "'Red Hat Display', 'Geist', sans-serif",
                 mb: 0.75,
               }}
             >
@@ -622,7 +617,7 @@ export default function EvidenceAnalysisPanel({
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          fontSize: 10,
+                          fontSize: 11,
                           fontWeight: 700,
                           flexShrink: 0,
                           mt: 0.1,
@@ -710,9 +705,10 @@ export default function EvidenceAnalysisPanel({
               </Typography>
             </Stack>
             {onApplySuggestions && (
-              <Button
+              <CustomizableButton
                 variant="outlined"
                 size="small"
+                text="Apply all"
                 onClick={() =>
                   onApplySuggestions(
                     suggestedLinks.map((s) => ({
@@ -722,16 +718,11 @@ export default function EvidenceAnalysisPanel({
                   )
                 }
                 sx={{
-                  "textTransform": "none",
-                  "fontSize": 11,
-                  "py": 0.25,
                   "borderColor": accent.primary.border,
                   "color": accent.primary.text,
                   "&:hover": { backgroundColor: accent.primary.bg },
                 }}
-              >
-                Apply all
-              </Button>
+              />
             )}
           </Stack>
           <Stack spacing={0.75}>
@@ -744,7 +735,7 @@ export default function EvidenceAnalysisPanel({
                   justifyContent: "space-between",
                   p: 1.25,
                   backgroundColor: background.accent,
-                  borderRadius: 1,
+                  borderRadius: "4px",
                   border: `1px solid ${borderPalette.light}`,
                   gap: 1.5,
                 }}
@@ -762,7 +753,7 @@ export default function EvidenceAnalysisPanel({
                   </Typography>
                   <Typography
                     sx={{
-                      fontSize: 10,
+                      fontSize: 11,
                       color: textColors.accent,
                       mt: 0.25,
                       textTransform: "uppercase",
@@ -861,8 +852,8 @@ export default function EvidenceAnalysisPanel({
           gap: 0.75,
         }}
       >
-        <FileText size={11} color={textColors.icon} />
-        <Typography sx={{ fontSize: 10, color: textColors.accent }}>
+        <FileText size={12} color={textColors.icon} />
+        <Typography sx={{ fontSize: 11, color: textColors.accent }}>
           Analyzed by {analysis.analysis_model} (v{analysis.analysis_version}) ·{" "}
           {new Date(analysis.analyzed_at).toLocaleString()}
           {auditMetadata?.analyzer_version ? ` · ${auditMetadata.analyzer_version}` : ""}
@@ -927,14 +918,14 @@ function SignalChip({
         backgroundColor: bg,
         color: textColor,
         border: `1px solid ${borderColor}`,
-        borderRadius: 1,
+        borderRadius: "4px",
         px: 1,
         py: 0.5,
       }}
     >
       <Typography
         sx={{
-          fontSize: 9,
+          fontSize: 11,
           textTransform: "uppercase",
           letterSpacing: 0.3,
           opacity: 0.8,
