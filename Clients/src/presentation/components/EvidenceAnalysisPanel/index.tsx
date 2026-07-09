@@ -178,7 +178,7 @@ function DimensionCard({
                 setExpanded((v) => !v);
               }}
               sx={{
-                "p": 0.25,
+                "p": "4px",
                 "color": textColors.accent,
                 "&:hover": { color: brand.primary },
               }}
@@ -313,7 +313,7 @@ export default function EvidenceAnalysisPanel({
       {/* Filename mismatch — single documented-color sentence, no box */}
       {filenameCheck?.mismatch && filenameCheck.suggested_filename && (
         <Stack direction="row" spacing="16px" alignItems="flex-start">
-          <Box sx={{ color: status.warning.text, mt: 0.25, flexShrink: 0 }}>
+          <Box sx={{ color: status.warning.text, mt: "2px", flexShrink: 0 }}>
             <AlertTriangle size={14} />
           </Box>
           <Typography sx={{ fontSize: 13, color: status.warning.text, lineHeight: 1.5 }}>

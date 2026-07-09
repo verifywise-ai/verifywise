@@ -1200,7 +1200,7 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
         title="Evidence analysis"
         description=""
         hideFooter
-        maxWidth="760px"
+        maxWidth="800px"
       >
         {selectedAnalysis && <EvidenceAnalysisPanel analysis={selectedAnalysis} />}
       </StandardModal>
