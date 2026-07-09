@@ -665,15 +665,8 @@ export default function EvidenceAnalysisPanel({
         </Card>
       )}
 
-      {/* Compliance areas + Key findings */}
-      <Box
-        sx={{
-          display: "grid",
-          gap: "16px",
-          gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
-          mb: "16px",
-        }}
-      >
+      {/* Compliance areas + Key findings — two full-width rows, findings last */}
+      <Stack spacing="16px" sx={{ mb: "16px" }}>
         {/* Compliance areas */}
         <Card elevation={0} sx={{ ...cardSx, p: 2 }}>
           <Typography
@@ -795,7 +788,7 @@ export default function EvidenceAnalysisPanel({
             </Typography>
           )}
         </Card>
-      </Box>
+      </Stack>
 
       {/* Footer — Analysis metadata */}
       <Box
