@@ -3,6 +3,7 @@ import {
   Box,
   Typography,
   LinearProgress,
+  CircularProgress,
   Stack,
   Card,
   Collapse,
@@ -12,6 +13,9 @@ import {
 import { CustomizableButton } from "../button/customizable-button";
 import { Sparkles, ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
 import Chip from "../Chip";
+import { TagChip } from "../Tags";
+import Alert from "../Alert";
+import { EmptyState } from "../EmptyState";
 import {
   status,
   accent,
@@ -96,12 +100,23 @@ interface EvidenceAnalysisPanelProps {
   isAnalyzing?: boolean;
 }
 
-// Flat card per design rules: white bg, light border, 4px radius, no shadow.
+// Cards & containers: background.main, border.light, 4px radius, no shadow.
 const cardSx = {
   backgroundColor: background.main,
   border: `1px solid ${borderPalette.light}`,
   borderRadius: "4px",
   boxShadow: "none",
+};
+
+// Card/Container padding pattern from the spacing scale: 12px 16px.
+const cardPadding = "12px 16px";
+
+// Subsection title: 14px / 600 / 1.5 / text.primary.
+const subsectionTitleSx = {
+  fontSize: 14,
+  fontWeight: 600,
+  color: textColors.primary,
+  lineHeight: 1.5,
 };
 
 // Grade → progress-bar fill % (A=100 … F=20, null=0)
@@ -146,22 +161,9 @@ function DimensionCard({
   const hasRationale = !!rationale && rationale.trim().length > 0;
 
   return (
-    <Stack
-      sx={{
-        ...cardSx,
-        padding: "12px 14px",
-        height: "100%",
-      }}
-      spacing={0.75}
-    >
+    <Stack sx={{ ...cardSx, padding: cardPadding, height: "100%" }} spacing="8px">
       <Stack direction="row" alignItems="center" justifyContent="space-between">
-        <Typography
-          sx={{
-            fontSize: 12,
-            color: textColors.secondary,
-            fontWeight: 500,
-          }}
-        >
+        <Typography sx={{ fontSize: 12, fontWeight: 500, color: textColors.secondary }}>
           {label}
         </Typography>
         {hasRationale && (
@@ -183,14 +185,7 @@ function DimensionCard({
           </Tooltip>
         )}
       </Stack>
-      <Typography
-        sx={{
-          fontSize: 24,
-          fontWeight: 700,
-          color: colors.text,
-          lineHeight: 1.1,
-        }}
-      >
+      <Typography sx={{ fontSize: 24, fontWeight: 700, color: colors.text, lineHeight: 1.1 }}>
         {grade ?? "—"}
       </Typography>
       <LinearProgress
@@ -206,29 +201,18 @@ function DimensionCard({
           },
         }}
       />
-      <Typography
-        sx={{
-          fontSize: 11,
-          color: textColors.accent,
-          lineHeight: 1.3,
-        }}
-      >
+      {/* Caption: 11px / 400 / 1.4 / text.accent */}
+      <Typography sx={{ fontSize: 11, color: textColors.accent, lineHeight: 1.4 }}>
         {description}
       </Typography>
       {hasRationale && (
         <Collapse in={expanded} timeout="auto" unmountOnExit>
-          <Box
-            sx={{
-              mt: 0.75,
-              pt: 0.75,
-              borderTop: `1px dashed ${borderPalette.light}`,
-            }}
-          >
+          <Box sx={{ mt: "8px", pt: "8px", borderTop: `1px dashed ${borderPalette.light}` }}>
             <Typography
               sx={{
                 fontSize: 11,
-                color: textColors.tertiary,
-                lineHeight: 1.45,
+                color: textColors.accent,
+                lineHeight: 1.4,
                 fontStyle: "italic",
               }}
             >
@@ -250,9 +234,9 @@ export default function EvidenceAnalysisPanel({
 }: EvidenceAnalysisPanelProps) {
   if (isLoading) {
     return (
-      <Box sx={{ p: 3 }}>
-        <LinearProgress />
-        <Typography sx={{ mt: 1.5, fontSize: 13, color: textColors.tertiary }}>
+      <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", py: "24px" }}>
+        <CircularProgress size={24} />
+        <Typography sx={{ mt: "12px", fontSize: 12, color: textColors.accent }}>
           Loading analysis...
         </Typography>
       </Box>
@@ -261,56 +245,21 @@ export default function EvidenceAnalysisPanel({
 
   if (!analysis) {
     return (
-      <Box sx={{ p: 3 }}>
-        <Card
-          elevation={0}
-          sx={{
-            ...cardSx,
-            p: 4,
-            textAlign: "center",
-          }}
-        >
-          <Box sx={{ display: "flex", justifyContent: "center", mb: 1.5 }}>
-            <Box
-              sx={{
-                width: 40,
-                height: 40,
-                borderRadius: "50%",
-                backgroundColor: accent.primary.bg,
-                color: accent.primary.text,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <Sparkles size={20} />
-            </Box>
-          </Box>
-          <Typography
+      <EmptyState icon={Sparkles} message="No AI analysis available for this evidence yet." showBorder>
+        {onTriggerAnalysis && (
+          <CustomizableButton
+            variant="outlined"
+            text={isAnalyzing ? "Analyzing..." : "Run AI analysis"}
+            isDisabled={isAnalyzing}
+            onClick={onTriggerAnalysis}
             sx={{
-              fontSize: 14,
-              color: textColors.secondary,
-              mb: 2,
-              fontWeight: 500,
+              "borderColor": accent.primary.border,
+              "color": accent.primary.text,
+              "&:hover": { backgroundColor: accent.primary.bg },
             }}
-          >
-            No AI analysis available for this evidence yet.
-          </Typography>
-          {onTriggerAnalysis && (
-            <CustomizableButton
-              variant="outlined"
-              text={isAnalyzing ? "Analyzing..." : "Run AI analysis"}
-              isDisabled={isAnalyzing}
-              onClick={onTriggerAnalysis}
-              sx={{
-                "borderColor": accent.primary.border,
-                "color": accent.primary.text,
-                "&:hover": { backgroundColor: accent.primary.bg },
-              }}
-            />
-          )}
-        </Card>
-      </Box>
+          />
+        )}
+      </EmptyState>
     );
   }
 
@@ -357,51 +306,19 @@ export default function EvidenceAnalysisPanel({
   const overallLabel = getGradeLabel(overallGrade);
 
   return (
-    <Box sx={{ p: 3, backgroundColor: background.alt }}>
-      {/* Abstain banner — only when LLM explicitly abstained */}
-      {abstainReason && (
-        <Card
-          elevation={0}
-          sx={{
-            ...cardSx,
-            borderColor: status.warning.border,
-            background: status.warning.bg,
-            mb: "16px",
-            p: 1.5,
-          }}
-        >
-          <Stack direction="row" spacing={1} alignItems="flex-start">
-            <Box sx={{ color: status.warning.text, mt: 0.25 }}>
-              <AlertTriangle size={16} />
-            </Box>
-            <Box>
-              <Typography
-                sx={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: status.warning.text,
-                  textTransform: "uppercase",
-                  letterSpacing: 0.3,
-                  mb: 0.25,
-                }}
-              >
-                Analyzer abstained
-              </Typography>
-              <Typography sx={{ fontSize: 12, color: textColors.tertiary, lineHeight: 1.5 }}>
-                {abstainReason}
-              </Typography>
-            </Box>
-          </Stack>
-        </Card>
-      )}
+    // No outer padding/background here — StandardModal's content area already
+    // applies the documented 20px modal-content padding and background.modal.
+    <Stack spacing="16px">
+      {/* Abstain banner — real Alert component, warning variant */}
+      {abstainReason && <Alert variant="warning" title="Analyzer abstained" body={abstainReason} />}
 
-      {/* Filename mismatch — single-sentence suggestion, no card */}
+      {/* Filename mismatch — single documented-color sentence, no box */}
       {filenameCheck?.mismatch && filenameCheck.suggested_filename && (
-        <Stack direction="row" spacing={1} alignItems="flex-start" sx={{ mb: "16px" }}>
-          <Box sx={{ color: accent.orange.text, mt: 0.25, flexShrink: 0 }}>
+        <Stack direction="row" spacing="16px" alignItems="flex-start">
+          <Box sx={{ color: status.warning.text, mt: 0.25, flexShrink: 0 }}>
             <AlertTriangle size={14} />
           </Box>
-          <Typography sx={{ fontSize: 13, color: accent.orange.text, lineHeight: 1.5 }}>
+          <Typography sx={{ fontSize: 13, color: status.warning.text, lineHeight: 1.5 }}>
             This filename doesn&apos;t match its content — consider renaming it to &quot;
             {filenameCheck.suggested_filename}&quot;
             {filenameCheck.reason ? ` (${filenameCheck.reason})` : ""}.
@@ -410,8 +327,8 @@ export default function EvidenceAnalysisPanel({
       )}
 
       {/* Hero overall score panel */}
-      <Card elevation={0} sx={{ ...cardSx, mb: "16px", p: 2.5 }}>
-        <Stack direction="row" spacing={2.5} alignItems="center">
+      <Card elevation={0} sx={{ ...cardSx, padding: cardPadding }}>
+        <Stack direction="row" spacing="16px" alignItems="center">
           {/* Score circle */}
           <Box
             sx={{
@@ -422,7 +339,6 @@ export default function EvidenceAnalysisPanel({
               border: `2px solid ${overallColors.border}`,
               color: overallColors.text,
               display: "flex",
-              flexDirection: "column",
               alignItems: "center",
               justifyContent: "center",
               flexShrink: 0,
@@ -435,37 +351,18 @@ export default function EvidenceAnalysisPanel({
 
           {/* Right text */}
           <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
-              <Typography
-                sx={{
-                  fontSize: 13,
-                  color: textColors.secondary,
-                  fontWeight: 500,
-                  textTransform: "uppercase",
-                  letterSpacing: 0.3,
-                }}
-              >
-                Overall Quality Grade
+            <Stack direction="row" spacing="8px" alignItems="center" sx={{ mb: "8px" }}>
+              <Typography sx={{ fontSize: 12, fontWeight: 500, color: textColors.secondary }}>
+                Overall quality grade
               </Typography>
               <EvidenceQualityBadge grade={overallGrade} size="small" />
             </Stack>
-            <Typography
-              sx={{
-                fontSize: 18,
-                fontWeight: 600,
-                color: textColors.primary,
-                mb: 0.75,
-              }}
-            >
+            {/* Card title: 16px / 600 / 1.4 / text.primary */}
+            <Typography sx={{ fontSize: 16, fontWeight: 600, color: textColors.primary, mb: "8px" }}>
               {overallGrade ? `${overallLabel} quality evidence` : "AI grading unavailable"}
             </Typography>
-            <Typography
-              sx={{
-                fontSize: 13,
-                color: textColors.tertiary,
-                lineHeight: 1.5,
-              }}
-            >
+            {/* Body default: 13px / 400 / 1.5 / text.secondary */}
+            <Typography sx={{ fontSize: 13, color: textColors.secondary, lineHeight: 1.5 }}>
               {analysis.summary}
             </Typography>
           </Box>
@@ -473,19 +370,8 @@ export default function EvidenceAnalysisPanel({
       </Card>
 
       {/* 5 Quality Dimension stat cards */}
-      <Box sx={{ mb: "16px" }}>
-        <Typography
-          sx={{
-            fontSize: 12,
-            fontWeight: 600,
-            color: textColors.secondary,
-            textTransform: "uppercase",
-            letterSpacing: 0.3,
-            mb: 1,
-          }}
-        >
-          Quality breakdown
-        </Typography>
+      <Box>
+        <Typography sx={{ ...subsectionTitleSx, mb: "12px" }}>Quality breakdown</Typography>
         <Box
           sx={{
             display: "grid",
@@ -511,22 +397,9 @@ export default function EvidenceAnalysisPanel({
 
       {/* Suggested control links */}
       {suggestedLinks.length > 0 && (
-        <Card elevation={0} sx={{ ...cardSx, p: 2, mb: "16px" }}>
-          <Stack
-            direction="row"
-            alignItems="center"
-            justifyContent="space-between"
-            sx={{ mb: 1.5 }}
-          >
-            <Typography
-              sx={{
-                fontSize: 12,
-                fontWeight: 600,
-                color: textColors.secondary,
-                textTransform: "uppercase",
-                letterSpacing: 0.3,
-              }}
-            >
+        <Card elevation={0} sx={{ ...cardSx, padding: cardPadding }}>
+          <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: "12px" }}>
+            <Typography sx={subsectionTitleSx}>
               Suggested control links ({suggestedLinks.length})
             </Typography>
             {onApplySuggestions && (
@@ -550,7 +423,7 @@ export default function EvidenceAnalysisPanel({
               />
             )}
           </Stack>
-          <Stack spacing={0.75}>
+          <Stack spacing="8px">
             {suggestedLinks.slice(0, 6).map((link, i) => (
               <Box
                 key={i}
@@ -558,31 +431,26 @@ export default function EvidenceAnalysisPanel({
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
-                  p: 1.25,
+                  padding: cardPadding,
                   backgroundColor: background.accent,
                   borderRadius: "4px",
                   border: `1px solid ${borderPalette.light}`,
-                  gap: 1.5,
+                  gap: "8px",
                 }}
               >
                 <Box sx={{ minWidth: 0, flex: 1 }}>
+                  {/* Table cell: 13px / 400 / 1.5 / text.secondary */}
+                  <Typography sx={{ fontSize: 13, color: textColors.secondary, lineHeight: 1.5 }}>
+                    {link.control_title}
+                  </Typography>
+                  {/* Table header: 12px / 500 / uppercase / text.tertiary */}
                   <Typography
                     sx={{
                       fontSize: 12,
-                      color: textColors.primary,
                       fontWeight: 500,
-                      lineHeight: 1.3,
-                    }}
-                  >
-                    {link.control_title}
-                  </Typography>
-                  <Typography
-                    sx={{
-                      fontSize: 11,
-                      color: textColors.accent,
-                      mt: 0.25,
+                      color: textColors.tertiary,
                       textTransform: "uppercase",
-                      letterSpacing: 0.3,
+                      mt: "4px",
                     }}
                   >
                     {link.framework_type.replace(/_/g, " ")}
@@ -602,19 +470,8 @@ export default function EvidenceAnalysisPanel({
 
       {/* Document signals — only when analyzer-v2 produced them */}
       {docSignals && (
-        <Card elevation={0} sx={{ ...cardSx, p: 2, mb: "16px" }}>
-          <Typography
-            sx={{
-              fontSize: 12,
-              fontWeight: 600,
-              color: textColors.secondary,
-              textTransform: "uppercase",
-              letterSpacing: 0.3,
-              mb: 1.5,
-            }}
-          >
-            Document signals
-          </Typography>
+        <Card elevation={0} sx={{ ...cardSx, padding: cardPadding }}>
+          <Typography sx={{ ...subsectionTitleSx, mb: "12px" }}>Document signals</Typography>
           <Box
             sx={{
               display: "grid",
@@ -655,43 +512,23 @@ export default function EvidenceAnalysisPanel({
               invertSemantic
             />
             {auditMetadata?.truncated && (
-              <SignalChip
-                label="Truncated"
-                value={`${auditMetadata.char_count ?? "?"} ch`}
-                negative
-              />
+              <SignalChip label="Truncated" value={`${auditMetadata.char_count ?? "?"} ch`} negative />
             )}
           </Box>
         </Card>
       )}
 
       {/* Compliance areas + Key findings — two full-width rows, findings last */}
-      <Stack spacing="16px" sx={{ mb: "16px" }}>
+      <Stack spacing="16px">
         {/* Compliance areas */}
-        <Card elevation={0} sx={{ ...cardSx, p: 2 }}>
-          <Typography
-            sx={{
-              fontSize: 12,
-              fontWeight: 600,
-              color: textColors.secondary,
-              textTransform: "uppercase",
-              letterSpacing: 0.3,
-              mb: 1.5,
-            }}
-          >
+        <Card elevation={0} sx={{ ...cardSx, padding: cardPadding }}>
+          <Typography sx={{ ...subsectionTitleSx, mb: "12px" }}>
             Compliance areas ({complianceAreas.length})
           </Typography>
           {complianceAreas.length > 0 ? (
-            <Stack direction="row" flexWrap="wrap" gap={0.75}>
+            <Stack direction="row" flexWrap="wrap" gap="8px">
               {complianceAreas.map((area, i) => (
-                <Chip
-                  key={i}
-                  label={area}
-                  size="small"
-                  backgroundColor={accent.blue.bg}
-                  textColor={accent.blue.text}
-                  uppercase={false}
-                />
+                <TagChip key={i} tag={area} />
               ))}
             </Stack>
           ) : (
@@ -702,83 +539,67 @@ export default function EvidenceAnalysisPanel({
         </Card>
 
         {/* Key findings */}
-        <Card elevation={0} sx={{ ...cardSx, p: 2 }}>
-          <Typography
-            sx={{
-              fontSize: 12,
-              fontWeight: 600,
-              color: textColors.secondary,
-              textTransform: "uppercase",
-              letterSpacing: 0.3,
-              mb: 1.5,
-            }}
-          >
+        <Card elevation={0} sx={{ ...cardSx, padding: cardPadding }}>
+          <Typography sx={{ ...subsectionTitleSx, mb: "12px" }}>
             Key findings ({keyFindings.length})
           </Typography>
           {keyFindings.length > 0 ? (
-            <Stack spacing={1}>
+            <Stack spacing="12px">
               {keyFindings.slice(0, 5).map((finding, i) => {
                 const fwq = findingsWithQuotes?.[i];
                 return (
-                  <Box key={i}>
-                    <Stack direction="row" spacing={0.75} alignItems="flex-start">
-                      <Box
-                        sx={{
-                          width: 18,
-                          height: 18,
-                          borderRadius: "50%",
-                          backgroundColor: accent.primary.bg,
-                          color: accent.primary.text,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: 11,
-                          fontWeight: 700,
-                          flexShrink: 0,
-                          mt: 0.1,
-                        }}
-                      >
-                        {i + 1}
-                      </Box>
-                      <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Typography
+                  <Stack key={i} direction="row" spacing="8px" alignItems="flex-start">
+                    <Box
+                      sx={{
+                        width: 20,
+                        height: 20,
+                        borderRadius: "50%",
+                        backgroundColor: accent.primary.bg,
+                        color: accent.primary.text,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 11,
+                        fontWeight: 700,
+                        flexShrink: 0,
+                      }}
+                    >
+                      {i + 1}
+                    </Box>
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      {/* Body small: 12px / 400 / 1.5 / text.tertiary */}
+                      <Typography sx={{ fontSize: 12, color: textColors.tertiary, lineHeight: 1.5 }}>
+                        {finding.length > 160 ? finding.substring(0, 160) + "..." : finding}
+                      </Typography>
+                      {fwq?.evidence_quote && (
+                        <Box
                           sx={{
-                            fontSize: 12,
-                            color: textColors.tertiary,
-                            lineHeight: 1.5,
+                            mt: "8px",
+                            pl: "12px",
+                            pr: "12px",
+                            py: "8px",
+                            borderLeft: `2px solid ${accent.primary.border}`,
+                            backgroundColor: background.accent,
+                            borderRadius: "4px",
                           }}
                         >
-                          {finding.length > 160 ? finding.substring(0, 160) + "..." : finding}
-                        </Typography>
-                        {fwq?.evidence_quote && (
-                          <Box
+                          {/* Caption: 11px / 400 / 1.4 / text.accent */}
+                          <Typography
                             sx={{
-                              mt: 0.5,
-                              pl: 1,
-                              borderLeft: `2px solid ${accent.primary.border}`,
-                              backgroundColor: background.accent,
-                              py: 0.5,
-                              pr: 1,
-                              borderRadius: "0 4px 4px 0",
+                              fontSize: 11,
+                              color: textColors.accent,
+                              fontStyle: "italic",
+                              lineHeight: 1.4,
                             }}
                           >
-                            <Typography
-                              sx={{
-                                fontSize: 11,
-                                color: textColors.tertiary,
-                                fontStyle: "italic",
-                                lineHeight: 1.45,
-                              }}
-                            >
-                              {fwq.evidence_quote.length > 180
-                                ? fwq.evidence_quote.substring(0, 180) + "..."
-                                : fwq.evidence_quote}
-                            </Typography>
-                          </Box>
-                        )}
-                      </Box>
-                    </Stack>
-                  </Box>
+                            {fwq.evidence_quote.length > 180
+                              ? fwq.evidence_quote.substring(0, 180) + "..."
+                              : fwq.evidence_quote}
+                          </Typography>
+                        </Box>
+                      )}
+                    </Box>
+                  </Stack>
                 );
               })}
             </Stack>
@@ -791,19 +612,14 @@ export default function EvidenceAnalysisPanel({
       </Stack>
 
       {/* Footer — Analysis metadata */}
-      <Box
-        sx={{
-          pt: 1.5,
-          borderTop: `1px solid ${borderPalette.light}`,
-        }}
-      >
+      <Box sx={{ pt: "12px", borderTop: `1px solid ${borderPalette.light}` }}>
         <Typography sx={{ fontSize: 11, color: textColors.accent }}>
           Analyzed by {analysis.analysis_model} (v{analysis.analysis_version}) ·{" "}
           {new Date(analysis.analyzed_at).toLocaleString()}
           {auditMetadata?.analyzer_version ? ` · ${auditMetadata.analyzer_version}` : ""}
         </Typography>
       </Box>
-    </Box>
+    </Stack>
   );
 }
 
@@ -863,19 +679,12 @@ function SignalChip({
         color: textColor,
         border: `1px solid ${borderColor}`,
         borderRadius: "4px",
-        px: 1,
-        py: 0.5,
+        px: "8px",
+        py: "4px",
       }}
     >
-      <Typography
-        sx={{
-          fontSize: 11,
-          textTransform: "uppercase",
-          letterSpacing: 0.3,
-          opacity: 0.8,
-          lineHeight: 1.1,
-        }}
-      >
+      {/* Table header: 12px / 500 / uppercase / text.tertiary (color set by caller above) */}
+      <Typography sx={{ fontSize: 12, fontWeight: 500, textTransform: "uppercase", lineHeight: 1.1 }}>
         {label}
       </Typography>
       <Typography sx={{ fontSize: 12, fontWeight: 600, lineHeight: 1.3 }}>{value}</Typography>

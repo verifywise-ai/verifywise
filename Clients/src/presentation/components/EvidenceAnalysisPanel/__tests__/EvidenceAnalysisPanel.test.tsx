@@ -122,7 +122,7 @@ describe("EvidenceAnalysisPanel", () => {
 
   it("renders overall quality grade", () => {
     renderWithProviders(<EvidenceAnalysisPanel analysis={mockAnalysis} />);
-    expect(screen.getByText("Overall Quality Grade")).toBeInTheDocument();
+    expect(screen.getByText("Overall quality grade")).toBeInTheDocument();
     expect(screen.getByText("Good quality evidence")).toBeInTheDocument();
   });
 
