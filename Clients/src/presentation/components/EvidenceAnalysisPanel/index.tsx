@@ -10,22 +10,7 @@ import {
   Tooltip,
 } from "@mui/material";
 import { CustomizableButton } from "../button/customizable-button";
-import {
-  Sparkles,
-  Target,
-  CheckCircle2,
-  Clock,
-  Shield,
-  Crosshair,
-  FileText,
-  Link2,
-  Lightbulb,
-  ChevronDown,
-  ChevronUp,
-  Quote,
-  Info,
-  AlertTriangle,
-} from "lucide-react";
+import { Sparkles, ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
 import Chip from "../Chip";
 import {
   status,
@@ -138,49 +123,22 @@ function gradeFill(grade: QualityGrade | null) {
 }
 
 const DIMENSION_META = [
-  {
-    key: "relevance",
-    label: "Relevance",
-    icon: Target,
-    description: "Alignment with the control",
-  },
-  {
-    key: "completeness",
-    label: "Completeness",
-    icon: CheckCircle2,
-    description: "Coverage of requirements",
-  },
-  {
-    key: "recency",
-    label: "Recency",
-    icon: Clock,
-    description: "How current the evidence is",
-  },
-  {
-    key: "reliability",
-    label: "Reliability",
-    icon: Shield,
-    description: "Trustworthy source quality",
-  },
-  {
-    key: "specificity",
-    label: "Specificity",
-    icon: Crosshair,
-    description: "Detail and precision",
-  },
+  { key: "relevance", label: "Relevance", description: "Alignment with the control" },
+  { key: "completeness", label: "Completeness", description: "Coverage of requirements" },
+  { key: "recency", label: "Recency", description: "How current the evidence is" },
+  { key: "reliability", label: "Reliability", description: "Trustworthy source quality" },
+  { key: "specificity", label: "Specificity", description: "Detail and precision" },
 ] as const;
 
 function DimensionCard({
   label,
   description,
   grade,
-  Icon,
   rationale,
 }: {
   label: string;
   description: string;
   grade: QualityGrade | null;
-  Icon: any;
   rationale?: string | null;
 }) {
   const colors = getGradeColor(grade);
@@ -197,20 +155,15 @@ function DimensionCard({
       spacing={0.75}
     >
       <Stack direction="row" alignItems="center" justifyContent="space-between">
-        <Stack direction="row" alignItems="center" spacing={0.75}>
-          <Box sx={{ color: textColors.icon, display: "flex" }}>
-            <Icon size={14} />
-          </Box>
-          <Typography
-            sx={{
-              fontSize: 12,
-              color: textColors.secondary,
-              fontWeight: 500,
-            }}
-          >
-            {label}
-          </Typography>
-        </Stack>
+        <Typography
+          sx={{
+            fontSize: 12,
+            color: textColors.secondary,
+            fontWeight: 500,
+          }}
+        >
+          {label}
+        </Typography>
         {hasRationale && (
           <Tooltip title={expanded ? "Hide rationale" : "Why this score?"} arrow>
             <IconButton
@@ -413,7 +366,7 @@ export default function EvidenceAnalysisPanel({
             ...cardSx,
             borderColor: status.warning.border,
             background: status.warning.bg,
-            mb: 2,
+            mb: "16px",
             p: 1.5,
           }}
         >
@@ -444,7 +397,7 @@ export default function EvidenceAnalysisPanel({
 
       {/* Filename mismatch — single-sentence suggestion, no card */}
       {filenameCheck?.mismatch && filenameCheck.suggested_filename && (
-        <Stack direction="row" spacing={1} alignItems="flex-start" sx={{ mb: 2 }}>
+        <Stack direction="row" spacing={1} alignItems="flex-start" sx={{ mb: "16px" }}>
           <Box sx={{ color: accent.orange.text, mt: 0.25, flexShrink: 0 }}>
             <AlertTriangle size={14} />
           </Box>
@@ -457,7 +410,7 @@ export default function EvidenceAnalysisPanel({
       )}
 
       {/* Hero overall score panel */}
-      <Card elevation={0} sx={{ ...cardSx, mb: 2, p: 2.5 }}>
+      <Card elevation={0} sx={{ ...cardSx, mb: "16px", p: 2.5 }}>
         <Stack direction="row" spacing={2.5} alignItems="center">
           {/* Score circle */}
           <Box
@@ -520,25 +473,23 @@ export default function EvidenceAnalysisPanel({
       </Card>
 
       {/* 5 Quality Dimension stat cards */}
-      <Box sx={{ mb: 2 }}>
-        <Stack direction="row" alignItems="center" spacing={0.75} sx={{ mb: 1 }}>
-          <Sparkles size={14} color={textColors.icon} />
-          <Typography
-            sx={{
-              fontSize: 12,
-              fontWeight: 600,
-              color: textColors.secondary,
-              textTransform: "uppercase",
-              letterSpacing: 0.3,
-            }}
-          >
-            Quality breakdown
-          </Typography>
-        </Stack>
+      <Box sx={{ mb: "16px" }}>
+        <Typography
+          sx={{
+            fontSize: 12,
+            fontWeight: 600,
+            color: textColors.secondary,
+            textTransform: "uppercase",
+            letterSpacing: 0.3,
+            mb: 1,
+          }}
+        >
+          Quality breakdown
+        </Typography>
         <Box
           sx={{
             display: "grid",
-            gap: 1,
+            gap: "16px",
             gridTemplateColumns: {
               xs: "repeat(2, 1fr)",
               sm: "repeat(3, 1fr)",
@@ -552,178 +503,32 @@ export default function EvidenceAnalysisPanel({
               label={dim.label}
               description={dim.description}
               grade={qualityScore?.[dim.key as keyof QualityScore] ?? null}
-              Icon={dim.icon}
               rationale={rationales?.[dim.key as keyof typeof rationales] ?? null}
             />
           ))}
         </Box>
       </Box>
 
-      {/* Two-column row: Compliance Areas + Key Findings */}
-      <Box
-        sx={{
-          display: "grid",
-          gap: 1.5,
-          gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
-          mb: 2,
-        }}
-      >
-        {/* Compliance areas */}
-        <Card elevation={0} sx={{ ...cardSx, p: 2 }}>
-          <Stack direction="row" alignItems="center" spacing={0.75} sx={{ mb: 1.5 }}>
-            <Shield size={14} color={textColors.icon} />
-            <Typography
-              sx={{
-                fontSize: 12,
-                fontWeight: 600,
-                color: textColors.secondary,
-                textTransform: "uppercase",
-                letterSpacing: 0.3,
-              }}
-            >
-              Compliance areas ({complianceAreas.length})
-            </Typography>
-          </Stack>
-          {complianceAreas.length > 0 ? (
-            <Stack direction="row" flexWrap="wrap" gap={0.75}>
-              {complianceAreas.map((area, i) => (
-                <Chip
-                  key={i}
-                  label={area}
-                  size="small"
-                  backgroundColor={accent.blue.bg}
-                  textColor={accent.blue.text}
-                  uppercase={false}
-                />
-              ))}
-            </Stack>
-          ) : (
-            <Typography sx={{ fontSize: 12, color: textColors.accent }}>
-              No compliance areas detected.
-            </Typography>
-          )}
-        </Card>
-
-        {/* Key findings */}
-        <Card elevation={0} sx={{ ...cardSx, p: 2 }}>
-          <Stack direction="row" alignItems="center" spacing={0.75} sx={{ mb: 1.5 }}>
-            <Lightbulb size={14} color={textColors.icon} />
-            <Typography
-              sx={{
-                fontSize: 12,
-                fontWeight: 600,
-                color: textColors.secondary,
-                textTransform: "uppercase",
-                letterSpacing: 0.3,
-              }}
-            >
-              Key findings ({keyFindings.length})
-            </Typography>
-          </Stack>
-          {keyFindings.length > 0 ? (
-            <Stack spacing={1}>
-              {keyFindings.slice(0, 5).map((finding, i) => {
-                const fwq = findingsWithQuotes?.[i];
-                return (
-                  <Box key={i}>
-                    <Stack direction="row" spacing={0.75} alignItems="flex-start">
-                      <Box
-                        sx={{
-                          width: 18,
-                          height: 18,
-                          borderRadius: "50%",
-                          backgroundColor: accent.primary.bg,
-                          color: accent.primary.text,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontSize: 11,
-                          fontWeight: 700,
-                          flexShrink: 0,
-                          mt: 0.1,
-                        }}
-                      >
-                        {i + 1}
-                      </Box>
-                      <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Typography
-                          sx={{
-                            fontSize: 12,
-                            color: textColors.tertiary,
-                            lineHeight: 1.5,
-                          }}
-                        >
-                          {finding.length > 160 ? finding.substring(0, 160) + "..." : finding}
-                        </Typography>
-                        {fwq?.evidence_quote && (
-                          <Stack
-                            direction="row"
-                            spacing={0.5}
-                            alignItems="flex-start"
-                            sx={{
-                              mt: 0.5,
-                              pl: 1,
-                              borderLeft: `2px solid ${accent.primary.border}`,
-                              backgroundColor: background.accent,
-                              py: 0.5,
-                              pr: 1,
-                              borderRadius: "0 4px 4px 0",
-                            }}
-                          >
-                            <Box sx={{ color: accent.primary.text, mt: 0.1 }}>
-                              <Quote size={10} />
-                            </Box>
-                            <Typography
-                              sx={{
-                                fontSize: 11,
-                                color: textColors.tertiary,
-                                fontStyle: "italic",
-                                lineHeight: 1.45,
-                              }}
-                            >
-                              {fwq.evidence_quote.length > 180
-                                ? fwq.evidence_quote.substring(0, 180) + "..."
-                                : fwq.evidence_quote}
-                            </Typography>
-                          </Stack>
-                        )}
-                      </Box>
-                    </Stack>
-                  </Box>
-                );
-              })}
-            </Stack>
-          ) : (
-            <Typography sx={{ fontSize: 12, color: textColors.accent }}>
-              No key findings extracted.
-            </Typography>
-          )}
-        </Card>
-      </Box>
-
       {/* Suggested control links */}
       {suggestedLinks.length > 0 && (
-        <Card elevation={0} sx={{ ...cardSx, p: 2, mb: 2 }}>
+        <Card elevation={0} sx={{ ...cardSx, p: 2, mb: "16px" }}>
           <Stack
             direction="row"
             alignItems="center"
             justifyContent="space-between"
             sx={{ mb: 1.5 }}
           >
-            <Stack direction="row" alignItems="center" spacing={0.75}>
-              <Link2 size={14} color={textColors.icon} />
-              <Typography
-                sx={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: textColors.secondary,
-                  textTransform: "uppercase",
-                  letterSpacing: 0.3,
-                }}
-              >
-                Suggested control links ({suggestedLinks.length})
-              </Typography>
-            </Stack>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: textColors.secondary,
+                textTransform: "uppercase",
+                letterSpacing: 0.3,
+              }}
+            >
+              Suggested control links ({suggestedLinks.length})
+            </Typography>
             {onApplySuggestions && (
               <CustomizableButton
                 variant="outlined"
@@ -797,26 +602,24 @@ export default function EvidenceAnalysisPanel({
 
       {/* Document signals — only when analyzer-v2 produced them */}
       {docSignals && (
-        <Card elevation={0} sx={{ ...cardSx, p: 2, mb: 2 }}>
-          <Stack direction="row" alignItems="center" spacing={0.75} sx={{ mb: 1.5 }}>
-            <Info size={14} color={textColors.icon} />
-            <Typography
-              sx={{
-                fontSize: 12,
-                fontWeight: 600,
-                color: textColors.secondary,
-                textTransform: "uppercase",
-                letterSpacing: 0.3,
-              }}
-            >
-              Document signals
-            </Typography>
-          </Stack>
+        <Card elevation={0} sx={{ ...cardSx, p: 2, mb: "16px" }}>
+          <Typography
+            sx={{
+              fontSize: 12,
+              fontWeight: 600,
+              color: textColors.secondary,
+              textTransform: "uppercase",
+              letterSpacing: 0.3,
+              mb: 1.5,
+            }}
+          >
+            Document signals
+          </Typography>
           <Box
             sx={{
               display: "grid",
               gridTemplateColumns: { xs: "repeat(2, 1fr)", sm: "repeat(4, 1fr)" },
-              gap: 1,
+              gap: "16px",
             }}
           >
             <SignalChip
@@ -862,17 +665,145 @@ export default function EvidenceAnalysisPanel({
         </Card>
       )}
 
+      {/* Compliance areas + Key findings */}
+      <Box
+        sx={{
+          display: "grid",
+          gap: "16px",
+          gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+          mb: "16px",
+        }}
+      >
+        {/* Compliance areas */}
+        <Card elevation={0} sx={{ ...cardSx, p: 2 }}>
+          <Typography
+            sx={{
+              fontSize: 12,
+              fontWeight: 600,
+              color: textColors.secondary,
+              textTransform: "uppercase",
+              letterSpacing: 0.3,
+              mb: 1.5,
+            }}
+          >
+            Compliance areas ({complianceAreas.length})
+          </Typography>
+          {complianceAreas.length > 0 ? (
+            <Stack direction="row" flexWrap="wrap" gap={0.75}>
+              {complianceAreas.map((area, i) => (
+                <Chip
+                  key={i}
+                  label={area}
+                  size="small"
+                  backgroundColor={accent.blue.bg}
+                  textColor={accent.blue.text}
+                  uppercase={false}
+                />
+              ))}
+            </Stack>
+          ) : (
+            <Typography sx={{ fontSize: 12, color: textColors.accent }}>
+              No compliance areas detected.
+            </Typography>
+          )}
+        </Card>
+
+        {/* Key findings */}
+        <Card elevation={0} sx={{ ...cardSx, p: 2 }}>
+          <Typography
+            sx={{
+              fontSize: 12,
+              fontWeight: 600,
+              color: textColors.secondary,
+              textTransform: "uppercase",
+              letterSpacing: 0.3,
+              mb: 1.5,
+            }}
+          >
+            Key findings ({keyFindings.length})
+          </Typography>
+          {keyFindings.length > 0 ? (
+            <Stack spacing={1}>
+              {keyFindings.slice(0, 5).map((finding, i) => {
+                const fwq = findingsWithQuotes?.[i];
+                return (
+                  <Box key={i}>
+                    <Stack direction="row" spacing={0.75} alignItems="flex-start">
+                      <Box
+                        sx={{
+                          width: 18,
+                          height: 18,
+                          borderRadius: "50%",
+                          backgroundColor: accent.primary.bg,
+                          color: accent.primary.text,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: 11,
+                          fontWeight: 700,
+                          flexShrink: 0,
+                          mt: 0.1,
+                        }}
+                      >
+                        {i + 1}
+                      </Box>
+                      <Box sx={{ flex: 1, minWidth: 0 }}>
+                        <Typography
+                          sx={{
+                            fontSize: 12,
+                            color: textColors.tertiary,
+                            lineHeight: 1.5,
+                          }}
+                        >
+                          {finding.length > 160 ? finding.substring(0, 160) + "..." : finding}
+                        </Typography>
+                        {fwq?.evidence_quote && (
+                          <Box
+                            sx={{
+                              mt: 0.5,
+                              pl: 1,
+                              borderLeft: `2px solid ${accent.primary.border}`,
+                              backgroundColor: background.accent,
+                              py: 0.5,
+                              pr: 1,
+                              borderRadius: "0 4px 4px 0",
+                            }}
+                          >
+                            <Typography
+                              sx={{
+                                fontSize: 11,
+                                color: textColors.tertiary,
+                                fontStyle: "italic",
+                                lineHeight: 1.45,
+                              }}
+                            >
+                              {fwq.evidence_quote.length > 180
+                                ? fwq.evidence_quote.substring(0, 180) + "..."
+                                : fwq.evidence_quote}
+                            </Typography>
+                          </Box>
+                        )}
+                      </Box>
+                    </Stack>
+                  </Box>
+                );
+              })}
+            </Stack>
+          ) : (
+            <Typography sx={{ fontSize: 12, color: textColors.accent }}>
+              No key findings extracted.
+            </Typography>
+          )}
+        </Card>
+      </Box>
+
       {/* Footer — Analysis metadata */}
       <Box
         sx={{
           pt: 1.5,
           borderTop: `1px solid ${borderPalette.light}`,
-          display: "flex",
-          alignItems: "center",
-          gap: 0.75,
         }}
       >
-        <FileText size={12} color={textColors.icon} />
         <Typography sx={{ fontSize: 11, color: textColors.accent }}>
           Analyzed by {analysis.analysis_model} (v{analysis.analysis_version}) ·{" "}
           {new Date(analysis.analyzed_at).toLocaleString()}
