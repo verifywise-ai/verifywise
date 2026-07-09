@@ -158,7 +158,7 @@ function DimensionCard({
   return (
     <Stack sx={{ ...cardStyles.base(theme), height: "100%" }} spacing="8px">
       <Stack direction="row" alignItems="center" justifyContent="space-between">
-        <Typography sx={{ fontSize: 12, fontWeight: 500, color: textColors.secondary }}>
+        <Typography sx={{ fontSize: 12, fontWeight: 500, color: textColors.tertiary }}>
           {label}
         </Typography>
         {hasRationale && (
@@ -239,16 +239,12 @@ export default function EvidenceAnalysisPanel({
         {onTriggerAnalysis && (
           <CustomizableButton
             variant="outlined"
+            color="primary"
             text={isAnalyzing ? "Analyzing..." : "Run AI analysis"}
             icon={<Sparkles size={16} />}
             loading={isAnalyzing}
             isDisabled={isAnalyzing}
             onClick={onTriggerAnalysis}
-            sx={{
-              "borderColor": brand.primary,
-              "color": brand.primary,
-              "&:hover": { backgroundColor: background.fill },
-            }}
           />
         )}
       </EmptyState>
@@ -301,8 +297,17 @@ export default function EvidenceAnalysisPanel({
     // No outer padding/background here — StandardModal's content area already
     // applies the documented 20px modal-content padding and background.modal.
     <Stack spacing="16px">
-      {/* Abstain banner — real Alert component, warning variant */}
-      {abstainReason && <Alert variant="warning" title="Analyzer abstained" body={abstainReason} />}
+      {/* Abstain banner — real Alert component, warning variant. Alert defaults
+          to position:fixed/top-right (toast behavior); override to render
+          inline in the modal's content flow instead. */}
+      {abstainReason && (
+        <Alert
+          variant="warning"
+          title="Analyzer abstained"
+          body={abstainReason}
+          sx={{ position: "static" }}
+        />
+      )}
 
       {/* Filename mismatch — single documented-color sentence, no box */}
       {filenameCheck?.mismatch && filenameCheck.suggested_filename && (
@@ -344,7 +349,7 @@ export default function EvidenceAnalysisPanel({
           {/* Right text */}
           <Box sx={{ flex: 1, minWidth: 0 }}>
             <Stack direction="row" spacing="8px" alignItems="center" sx={{ mb: "8px" }}>
-              <Typography sx={{ fontSize: 12, fontWeight: 500, color: textColors.secondary }}>
+              <Typography sx={{ fontSize: 12, fontWeight: 500, color: textColors.tertiary }}>
                 Overall quality grade
               </Typography>
               {/* Status chip pattern: real Chip, grade-colored */}
@@ -370,7 +375,7 @@ export default function EvidenceAnalysisPanel({
 
       {/* 5 Quality Dimension stat cards */}
       <Box>
-        <Typography sx={{ ...subsectionTitleSx, mb: "12px" }}>Quality breakdown</Typography>
+        <Typography sx={{ ...subsectionTitleSx, mb: "16px" }}>Quality breakdown</Typography>
         <Box
           sx={{
             display: "grid",
@@ -404,6 +409,7 @@ export default function EvidenceAnalysisPanel({
             {onApplySuggestions && (
               <CustomizableButton
                 variant="outlined"
+                color="primary"
                 size="small"
                 text="Apply all"
                 icon={<Check size={16} />}
@@ -415,11 +421,6 @@ export default function EvidenceAnalysisPanel({
                     })),
                   )
                 }
-                sx={{
-                  "borderColor": brand.primary,
-                  "color": brand.primary,
-                  "&:hover": { backgroundColor: background.fill },
-                }}
               />
             )}
           </Stack>
@@ -441,12 +442,12 @@ export default function EvidenceAnalysisPanel({
                 {suggestedLinks.slice(0, 6).map((link, i) => (
                   <TableRow key={i} sx={singleTheme.tableStyles.primary.body.row}>
                     <TableCell
-                      sx={{ ...singleTheme.tableStyles.primary.body.cell, color: textColors.primary }}
+                      sx={{ ...singleTheme.tableStyles.primary.body.cell, color: textColors.secondary }}
                     >
                       {link.control_title}
                     </TableCell>
                     <TableCell
-                      sx={{ ...singleTheme.tableStyles.primary.body.cell, color: textColors.tertiary }}
+                      sx={{ ...singleTheme.tableStyles.primary.body.cell, color: textColors.secondary }}
                     >
                       {link.framework_type.replace(/_/g, " ")}
                     </TableCell>
@@ -469,7 +470,7 @@ export default function EvidenceAnalysisPanel({
       {/* Document signals — only when analyzer-v2 produced them */}
       {docSignals && (
         <Card elevation={0} sx={cardStyles.base(theme)}>
-          <Typography sx={{ ...subsectionTitleSx, mb: "12px" }}>Document signals</Typography>
+          <Typography sx={{ ...subsectionTitleSx, mb: "16px" }}>Document signals</Typography>
           <Stack direction="row" flexWrap="wrap" gap="8px">
             {(() => {
               const c = signalStatusColors({ positive: (docSignals.authority_signal ?? 0) >= 60 });
@@ -586,7 +587,7 @@ export default function EvidenceAnalysisPanel({
               ))}
             </Stack>
           ) : (
-            <Typography sx={{ fontSize: 12, color: textColors.accent }}>
+            <Typography sx={{ fontSize: 12, color: textColors.tertiary }}>
               No compliance areas detected.
             </Typography>
           )}
@@ -594,7 +595,7 @@ export default function EvidenceAnalysisPanel({
 
         {/* Key findings */}
         <Card elevation={0} sx={cardStyles.base(theme)}>
-          <Typography sx={{ ...subsectionTitleSx, mb: "12px" }}>
+          <Typography sx={{ ...subsectionTitleSx, mb: "16px" }}>
             Key findings ({keyFindings.length})
           </Typography>
           {keyFindings.length > 0 ? (
@@ -649,7 +650,7 @@ export default function EvidenceAnalysisPanel({
               })}
             </Stack>
           ) : (
-            <Typography sx={{ fontSize: 12, color: textColors.accent }}>
+            <Typography sx={{ fontSize: 12, color: textColors.tertiary }}>
               No key findings extracted.
             </Typography>
           )}
