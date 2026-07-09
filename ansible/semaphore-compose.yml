@@ -1,0 +1,17 @@
+services:
+  semaphore:
+    image: semaphoreui/semaphore:v2.10.34
+    restart: unless-stopped
+    ports:
+      - "8888:3000"
+    environment:
+      SEMAPHORE_DB_DIALECT: bolt
+      SEMAPHORE_ADMIN: admin
+      SEMAPHORE_ADMIN_PASSWORD: changeme_admin_password
+      SEMAPHORE_ADMIN_NAME: Admin
+      SEMAPHORE_ADMIN_EMAIL: admin@verifywise.ai
+    volumes:
+      - semaphore-data:/etc/semaphore
+
+volumes:
+  semaphore-data:
