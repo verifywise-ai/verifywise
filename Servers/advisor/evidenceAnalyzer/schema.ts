@@ -100,6 +100,31 @@ export const llmAnalysisSchema = z
       .describe(
         "If the document is too short, garbled, or off-topic to grade, set this to a one-sentence reason and grade every dimension and overall as F. Otherwise null.",
       ),
+    filename_check: z
+      .object({
+        mismatch: z
+          .boolean()
+          .describe("True only if the filename is clearly misleading or generic relative to the content."),
+        suggested_filename: z
+          .string()
+          .min(1)
+          .max(120)
+          .nullable()
+          .describe(
+            "A short, descriptive replacement filename (keep the original extension). Null when mismatch is false.",
+          ),
+        reason: z
+          .string()
+          .min(10)
+          .max(200)
+          .nullable()
+          .describe("One plain-language sentence explaining the mismatch. Null when mismatch is false."),
+      })
+      .strict()
+      .nullable()
+      .describe(
+        "Compare the given filename against what the document is actually about. Set to null if the document was too short/garbled to judge (abstain case).",
+      ),
   })
   .strict();
 

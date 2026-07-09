@@ -82,6 +82,11 @@ interface AuditMetadata {
     evidence_quote: string;
     relevance: "primary" | "supporting" | "tangential";
   }>;
+  filename_check?: {
+    mismatch: boolean;
+    suggested_filename: string | null;
+    reason: string | null;
+  } | null;
 }
 
 interface AnalysisData {
@@ -392,6 +397,7 @@ export default function EvidenceAnalysisPanel({
   const docSignals = auditMetadata?.document_signals;
   const abstainReason = auditMetadata?.abstain_reason;
   const findingsWithQuotes = auditMetadata?.findings_with_quotes;
+  const filenameCheck = auditMetadata?.filename_check;
 
   const overallGrade = analysis.overall_quality_grade;
   const overallColors = getGradeColor(overallGrade);
@@ -434,6 +440,20 @@ export default function EvidenceAnalysisPanel({
             </Box>
           </Stack>
         </Card>
+      )}
+
+      {/* Filename mismatch — single-sentence suggestion, no card */}
+      {filenameCheck?.mismatch && filenameCheck.suggested_filename && (
+        <Stack direction="row" spacing={1} alignItems="flex-start" sx={{ mb: 2 }}>
+          <Box sx={{ color: accent.orange.text, mt: 0.25, flexShrink: 0 }}>
+            <AlertTriangle size={14} />
+          </Box>
+          <Typography sx={{ fontSize: 13, color: accent.orange.text, lineHeight: 1.5 }}>
+            This filename doesn&apos;t match its content — consider renaming it to &quot;
+            {filenameCheck.suggested_filename}&quot;
+            {filenameCheck.reason ? ` (${filenameCheck.reason})` : ""}.
+          </Typography>
+        </Stack>
       )}
 
       {/* Hero overall score panel */}

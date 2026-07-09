@@ -80,6 +80,11 @@ export interface AnalyzerResult {
       evidence_quote: string;
       relevance: "primary" | "supporting" | "tangential";
     }>;
+    filename_check: {
+      mismatch: boolean;
+      suggested_filename: string | null;
+      reason: string | null;
+    } | null;
   };
 }
 
@@ -174,6 +179,7 @@ function buildAbstainResult(
       char_count: charCount,
       truncated: false,
       findings_with_quotes: [],
+      filename_check: null,
     },
   };
 }
@@ -305,6 +311,7 @@ export async function analyzeEvidence(input: AnalyzerInput): Promise<AnalyzerRes
       char_count: charCount,
       truncated,
       findings_with_quotes: llmOutput.key_findings,
+      filename_check: llmOutput.filename_check,
     },
   };
 }

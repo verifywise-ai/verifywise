@@ -244,6 +244,42 @@ describe("EvidenceAnalysisPanel", () => {
     });
   });
 
+  describe("filename mismatch warning", () => {
+    it("renders a suggestion sentence when the filename mismatches the content", () => {
+      const analysis = {
+        ...mockAnalysis,
+        audit_metadata: {
+          filename_check: {
+            mismatch: true,
+            suggested_filename: "vendor-risk-assessment.pdf",
+            reason: "The document is a vendor risk assessment, not a contract.",
+          },
+        } as any,
+      };
+      renderWithProviders(<EvidenceAnalysisPanel analysis={analysis} />);
+      expect(screen.getByText(/vendor-risk-assessment\.pdf/)).toBeInTheDocument();
+      expect(
+        screen.getByText(/vendor risk assessment, not a contract/),
+      ).toBeInTheDocument();
+    });
+
+    it("does not render when mismatch is false", () => {
+      const analysis = {
+        ...mockAnalysis,
+        audit_metadata: {
+          filename_check: { mismatch: false, suggested_filename: null, reason: null },
+        } as any,
+      };
+      renderWithProviders(<EvidenceAnalysisPanel analysis={analysis} />);
+      expect(screen.queryByText(/consider renaming/i)).not.toBeInTheDocument();
+    });
+
+    it("does not render when filename_check is absent", () => {
+      renderWithProviders(<EvidenceAnalysisPanel analysis={mockAnalysis} />);
+      expect(screen.queryByText(/consider renaming/i)).not.toBeInTheDocument();
+    });
+  });
+
   describe("document signals", () => {
     it("renders when document_signals present", () => {
       renderWithProviders(<EvidenceAnalysisPanel analysis={mockAnalysisWithAudit} />);
