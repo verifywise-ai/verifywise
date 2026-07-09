@@ -14,6 +14,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  useTheme,
 } from "@mui/material";
 import { CustomizableButton } from "../button/customizable-button";
 import { Sparkles, ChevronDown, ChevronUp, AlertTriangle, Check } from "lucide-react";
@@ -22,6 +23,7 @@ import { TagChip } from "../Tags";
 import Alert from "../Alert";
 import { EmptyState } from "../EmptyState";
 import singleTheme from "../../themes/v1SingleTheme";
+import { cardStyles } from "../../themes/components";
 import {
   status,
   brand,
@@ -102,17 +104,6 @@ interface EvidenceAnalysisPanelProps {
   isAnalyzing?: boolean;
 }
 
-// Cards & containers: background.main, border.light, 4px radius, no shadow.
-const cardSx = {
-  backgroundColor: background.main,
-  border: `1px solid ${borderPalette.light}`,
-  borderRadius: "4px",
-  boxShadow: "none",
-};
-
-// Card/Container padding pattern from the spacing scale: 12px 16px.
-const cardPadding = "12px 16px";
-
 // Subsection title: 14px / 600 / 1.5 / text.primary.
 const subsectionTitleSx = {
   fontSize: 14,
@@ -159,12 +150,13 @@ function DimensionCard({
   grade: QualityGrade | null;
   rationale?: string | null;
 }) {
+  const theme = useTheme();
   const colors = getGradeColor(grade);
   const [expanded, setExpanded] = useState(false);
   const hasRationale = !!rationale && rationale.trim().length > 0;
 
   return (
-    <Stack sx={{ ...cardSx, padding: cardPadding, height: "100%" }} spacing="8px">
+    <Stack sx={{ ...cardStyles.base(theme), height: "100%" }} spacing="8px">
       <Stack direction="row" alignItems="center" justifyContent="space-between">
         <Typography sx={{ fontSize: 12, fontWeight: 500, color: textColors.secondary }}>
           {label}
@@ -222,6 +214,8 @@ export default function EvidenceAnalysisPanel({
   onApplySuggestions,
   isAnalyzing,
 }: EvidenceAnalysisPanelProps) {
+  const theme = useTheme();
+
   if (isLoading) {
     // Content shape is known (hero + 5-dimension grid), so skeleton loaders
     // are used per the loading-states checklist ("prefer skeleton loaders
@@ -325,7 +319,7 @@ export default function EvidenceAnalysisPanel({
       )}
 
       {/* Hero overall score panel */}
-      <Card elevation={0} sx={{ ...cardSx, padding: cardPadding }}>
+      <Card elevation={0} sx={cardStyles.base(theme)}>
         <Stack direction="row" spacing="16px" alignItems="center">
           {/* Score circle */}
           <Box
@@ -402,7 +396,7 @@ export default function EvidenceAnalysisPanel({
 
       {/* Suggested control links — real Table, singleTheme.tableStyles.primary */}
       {suggestedLinks.length > 0 && (
-        <Card elevation={0} sx={{ ...cardSx, padding: cardPadding }}>
+        <Card elevation={0} sx={cardStyles.base(theme)}>
           <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: "12px" }}>
             <Typography sx={subsectionTitleSx}>
               Suggested control links ({suggestedLinks.length})
@@ -474,7 +468,7 @@ export default function EvidenceAnalysisPanel({
 
       {/* Document signals — only when analyzer-v2 produced them */}
       {docSignals && (
-        <Card elevation={0} sx={{ ...cardSx, padding: cardPadding }}>
+        <Card elevation={0} sx={cardStyles.base(theme)}>
           <Typography sx={{ ...subsectionTitleSx, mb: "12px" }}>Document signals</Typography>
           <Stack direction="row" flexWrap="wrap" gap="8px">
             {(() => {
@@ -581,7 +575,7 @@ export default function EvidenceAnalysisPanel({
       {/* Compliance areas + Key findings — two full-width rows, findings last */}
       <Stack spacing="16px">
         {/* Compliance areas */}
-        <Card elevation={0} sx={{ ...cardSx, padding: cardPadding }}>
+        <Card elevation={0} sx={cardStyles.base(theme)}>
           <Typography sx={{ ...subsectionTitleSx, mb: "12px" }}>
             Compliance areas ({complianceAreas.length})
           </Typography>
@@ -599,7 +593,7 @@ export default function EvidenceAnalysisPanel({
         </Card>
 
         {/* Key findings */}
-        <Card elevation={0} sx={{ ...cardSx, padding: cardPadding }}>
+        <Card elevation={0} sx={cardStyles.base(theme)}>
           <Typography sx={{ ...subsectionTitleSx, mb: "12px" }}>
             Key findings ({keyFindings.length})
           </Typography>
