@@ -632,31 +632,22 @@ export default function EvidenceAnalysisPanel({
                         {finding.length > 160 ? finding.substring(0, 160) + "..." : finding}
                       </Typography>
                       {fwq?.evidence_quote && (
-                        <Box
+                        // Caption: 11px / 400 / 1.4 / text.accent — plain text,
+                        // no box/border (no such "quote card" exists in the
+                        // design rules; only Card, Alert, and Chip do borders).
+                        <Typography
                           sx={{
-                            mt: "8px",
-                            pl: "12px",
-                            pr: "12px",
-                            py: "8px",
-                            borderLeft: `2px solid ${brand.primary}`,
-                            backgroundColor: background.accent,
-                            borderRadius: "4px",
+                            mt: "4px",
+                            fontSize: 11,
+                            color: textColors.accent,
+                            fontStyle: "italic",
+                            lineHeight: 1.4,
                           }}
                         >
-                          {/* Caption: 11px / 400 / 1.4 / text.accent */}
-                          <Typography
-                            sx={{
-                              fontSize: 11,
-                              color: textColors.accent,
-                              fontStyle: "italic",
-                              lineHeight: 1.4,
-                            }}
-                          >
-                            {fwq.evidence_quote.length > 180
-                              ? fwq.evidence_quote.substring(0, 180) + "..."
-                              : fwq.evidence_quote}
-                          </Typography>
-                        </Box>
+                          {fwq.evidence_quote.length > 180
+                            ? fwq.evidence_quote.substring(0, 180) + "..."
+                            : fwq.evidence_quote}
+                        </Typography>
                       )}
                     </Box>
                   </Stack>
