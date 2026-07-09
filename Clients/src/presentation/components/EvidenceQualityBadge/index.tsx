@@ -1,5 +1,5 @@
 import { Box, Tooltip, Typography } from "@mui/material";
-import { status, accent } from "../../themes/palette";
+import { status } from "../../themes/palette";
 
 export type QualityGrade = "A" | "B" | "C" | "D" | "F";
 
@@ -15,11 +15,11 @@ export function getGradeColor(grade: QualityGrade | null) {
     case "A":
       return status.success;
     case "B":
-      return accent.blue;
+      return status.info;
     case "C":
-      return accent.amber;
+      return status.warning;
     case "D":
-      return accent.orange;
+      return status.default;
     case "F":
       return status.error;
     default:

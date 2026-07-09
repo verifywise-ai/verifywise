@@ -171,7 +171,7 @@ function DimensionCard({
               }}
               sx={{
                 "p": "4px",
-                "color": textColors.accent,
+                "color": textColors.icon,
                 "&:hover": { color: brand.primary },
               }}
             >
@@ -180,7 +180,7 @@ function DimensionCard({
           </Tooltip>
         )}
       </Stack>
-      <Typography sx={{ fontSize: 24, fontWeight: 700, color: colors.text, lineHeight: 1.1 }}>
+      <Typography sx={{ fontSize: 24, fontWeight: 600, color: colors.text, lineHeight: 1.3 }}>
         {grade ?? "—"}
       </Typography>
       {/* Caption: 11px / 400 / 1.4 / text.accent */}
@@ -313,7 +313,7 @@ export default function EvidenceAnalysisPanel({
       {filenameCheck?.mismatch && filenameCheck.suggested_filename && (
         <Stack direction="row" spacing="16px" alignItems="flex-start">
           <Box sx={{ color: status.warning.text, mt: "2px", flexShrink: 0 }}>
-            <AlertTriangle size={14} />
+            <AlertTriangle size={16} />
           </Box>
           <Typography sx={{ fontSize: 13, color: status.warning.text, lineHeight: 1.5 }}>
             This filename doesn&apos;t match its content — consider renaming it to &quot;
@@ -341,7 +341,7 @@ export default function EvidenceAnalysisPanel({
               flexShrink: 0,
             }}
           >
-            <Typography sx={{ fontSize: 44, fontWeight: 700, lineHeight: 1 }}>
+            <Typography sx={{ fontSize: 24, fontWeight: 600, lineHeight: 1.3 }}>
               {overallGrade ?? "—"}
             </Typography>
           </Box>
@@ -362,7 +362,9 @@ export default function EvidenceAnalysisPanel({
               />
             </Stack>
             {/* Card title: 16px / 600 / 1.4 / text.primary */}
-            <Typography sx={{ fontSize: 16, fontWeight: 600, color: textColors.primary, mb: "8px" }}>
+            <Typography
+              sx={{ fontSize: 16, fontWeight: 600, lineHeight: 1.4, color: textColors.primary, mb: "8px" }}
+            >
               {overallGrade ? `${overallLabel} quality evidence` : "AI grading unavailable"}
             </Typography>
             {/* Body default: 13px / 400 / 1.5 / text.secondary */}

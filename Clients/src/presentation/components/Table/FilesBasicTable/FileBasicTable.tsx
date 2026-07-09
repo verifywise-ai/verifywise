@@ -895,6 +895,7 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
                               )}
                               <Tooltip
                                 title={entry?.grade ? "Re-analyze with AI" : "Analyze with AI"}
+                                arrow
                               >
                                 <span>
                                   <MUIIconButton
@@ -908,7 +909,7 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
                                       if (fid) triggerAnalysis.mutate(fid);
                                     }}
                                   >
-                                    <Sparkles size={16} />
+                                    <Sparkles size={14} />
                                   </MUIIconButton>
                                 </span>
                               </Tooltip>
