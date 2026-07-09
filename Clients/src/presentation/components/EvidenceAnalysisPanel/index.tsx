@@ -2,13 +2,18 @@ import { useState } from "react";
 import {
   Box,
   Typography,
-  LinearProgress,
   CircularProgress,
   Stack,
   Card,
   Collapse,
   IconButton,
   Tooltip,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
 } from "@mui/material";
 import { CustomizableButton } from "../button/customizable-button";
 import { Sparkles, ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
@@ -16,6 +21,7 @@ import Chip from "../Chip";
 import { TagChip } from "../Tags";
 import Alert from "../Alert";
 import { EmptyState } from "../EmptyState";
+import singleTheme from "../../themes/v1SingleTheme";
 import {
   status,
   accent,
@@ -23,11 +29,7 @@ import {
   border as borderPalette,
   background,
 } from "../../themes/palette";
-import EvidenceQualityBadge, {
-  getGradeColor,
-  getGradeLabel,
-  type QualityGrade,
-} from "../EvidenceQualityBadge";
+import { getGradeColor, getGradeLabel, type QualityGrade } from "../EvidenceQualityBadge";
 
 interface QualityScore {
   relevance: QualityGrade | null;
@@ -119,22 +121,23 @@ const subsectionTitleSx = {
   lineHeight: 1.5,
 };
 
-// Grade → progress-bar fill % (A=100 … F=20, null=0)
-function gradeFill(grade: QualityGrade | null) {
-  switch (grade) {
-    case "A":
-      return 100;
-    case "B":
-      return 80;
-    case "C":
-      return 60;
-    case "D":
-      return 40;
-    case "F":
-      return 20;
-    default:
-      return 0;
+// Status-color triple for a boolean document signal (Status indicators page).
+function signalStatusColors(opts: {
+  positive?: boolean;
+  negative?: boolean;
+  neutral?: boolean;
+  invertSemantic?: boolean;
+}): { bg: string; text: string } {
+  const { positive, negative, neutral, invertSemantic } = opts;
+  if (neutral) return { bg: status.default.bg, text: status.default.text };
+  if (invertSemantic) {
+    return positive
+      ? { bg: status.success.bg, text: status.success.text }
+      : { bg: status.warning.bg, text: status.warning.text };
   }
+  if (positive) return { bg: status.success.bg, text: status.success.text };
+  if (negative) return { bg: status.warning.bg, text: status.warning.text };
+  return { bg: status.default.bg, text: status.default.text };
 }
 
 const DIMENSION_META = [
@@ -188,19 +191,6 @@ function DimensionCard({
       <Typography sx={{ fontSize: 24, fontWeight: 700, color: colors.text, lineHeight: 1.1 }}>
         {grade ?? "—"}
       </Typography>
-      <LinearProgress
-        variant="determinate"
-        value={gradeFill(grade)}
-        sx={{
-          "height": 5,
-          "borderRadius": "4px",
-          "backgroundColor": background.hover,
-          "& .MuiLinearProgress-bar": {
-            borderRadius: "4px",
-            backgroundColor: colors.text,
-          },
-        }}
-      />
       {/* Caption: 11px / 400 / 1.4 / text.accent */}
       <Typography sx={{ fontSize: 11, color: textColors.accent, lineHeight: 1.4 }}>
         {description}
@@ -355,7 +345,14 @@ export default function EvidenceAnalysisPanel({
               <Typography sx={{ fontSize: 12, fontWeight: 500, color: textColors.secondary }}>
                 Overall quality grade
               </Typography>
-              <EvidenceQualityBadge grade={overallGrade} size="small" />
+              {/* Status chip pattern: real Chip, grade-colored */}
+              <Chip
+                label={overallGrade ?? "—"}
+                size="small"
+                uppercase={false}
+                backgroundColor={overallColors.bg}
+                textColor={overallColors.text}
+              />
             </Stack>
             {/* Card title: 16px / 600 / 1.4 / text.primary */}
             <Typography sx={{ fontSize: 16, fontWeight: 600, color: textColors.primary, mb: "8px" }}>
@@ -395,7 +392,7 @@ export default function EvidenceAnalysisPanel({
         </Box>
       </Box>
 
-      {/* Suggested control links */}
+      {/* Suggested control links — real Table, singleTheme.tableStyles.primary */}
       {suggestedLinks.length > 0 && (
         <Card elevation={0} sx={{ ...cardSx, padding: cardPadding }}>
           <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: "12px" }}>
@@ -423,48 +420,43 @@ export default function EvidenceAnalysisPanel({
               />
             )}
           </Stack>
-          <Stack spacing="8px">
-            {suggestedLinks.slice(0, 6).map((link, i) => (
-              <Box
-                key={i}
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  padding: cardPadding,
-                  backgroundColor: background.accent,
-                  borderRadius: "4px",
-                  border: `1px solid ${borderPalette.light}`,
-                  gap: "8px",
-                }}
-              >
-                <Box sx={{ minWidth: 0, flex: 1 }}>
-                  {/* Table cell: 13px / 400 / 1.5 / text.secondary */}
-                  <Typography sx={{ fontSize: 13, color: textColors.secondary, lineHeight: 1.5 }}>
-                    {link.control_title}
-                  </Typography>
-                  {/* Table header: 12px / 500 / uppercase / text.tertiary */}
-                  <Typography
-                    sx={{
-                      fontSize: 12,
-                      fontWeight: 500,
-                      color: textColors.tertiary,
-                      textTransform: "uppercase",
-                      mt: "4px",
-                    }}
-                  >
-                    {link.framework_type.replace(/_/g, " ")}
-                  </Typography>
-                </Box>
-                <Chip
-                  label={`${link.match_score}% match`}
-                  size="small"
-                  variant={link.match_score >= 70 ? "success" : "warning"}
-                  uppercase={false}
-                />
-              </Box>
-            ))}
-          </Stack>
+          <TableContainer sx={singleTheme.tableStyles.primary.frame}>
+            <Table size="small">
+              <TableHead>
+                <TableRow sx={singleTheme.tableStyles.primary.header.row}>
+                  {["Control", "Framework", "Match"].map((h) => (
+                    <TableCell key={h} sx={singleTheme.tableStyles.primary.header.cell}>
+                      {h}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {suggestedLinks.slice(0, 6).map((link, i) => (
+                  <TableRow key={i} sx={singleTheme.tableStyles.primary.body.row}>
+                    <TableCell
+                      sx={{ ...singleTheme.tableStyles.primary.body.cell, color: textColors.primary }}
+                    >
+                      {link.control_title}
+                    </TableCell>
+                    <TableCell
+                      sx={{ ...singleTheme.tableStyles.primary.body.cell, color: textColors.tertiary }}
+                    >
+                      {link.framework_type.replace(/_/g, " ")}
+                    </TableCell>
+                    <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                      <Chip
+                        label={`${link.match_score}% match`}
+                        size="small"
+                        variant={link.match_score >= 70 ? "success" : "warning"}
+                        uppercase={false}
+                      />
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
         </Card>
       )}
 
@@ -472,49 +464,105 @@ export default function EvidenceAnalysisPanel({
       {docSignals && (
         <Card elevation={0} sx={{ ...cardSx, padding: cardPadding }}>
           <Typography sx={{ ...subsectionTitleSx, mb: "12px" }}>Document signals</Typography>
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: { xs: "repeat(2, 1fr)", sm: "repeat(4, 1fr)" },
-              gap: "16px",
-            }}
-          >
-            <SignalChip
-              label="Authority"
-              value={`${docSignals.authority_signal ?? 0}/100`}
-              positive={(docSignals.authority_signal ?? 0) >= 60}
-            />
-            <SignalChip label="Type" value={docSignals.document_type ?? "—"} neutral />
-            <SignalChip
-              label="Named owner"
-              value={docSignals.has_named_owner ? "Yes" : "No"}
-              positive={!!docSignals.has_named_owner}
-            />
-            <SignalChip
-              label="Version"
-              value={docSignals.has_version ? "Yes" : "No"}
-              positive={!!docSignals.has_version}
-            />
-            <SignalChip
-              label="Explicit dates"
-              value={docSignals.has_explicit_dates ? "Yes" : "No"}
-              positive={!!docSignals.has_explicit_dates}
-            />
-            <SignalChip
-              label="Metrics"
-              value={docSignals.has_metrics ? "Yes" : "No"}
-              positive={!!docSignals.has_metrics}
-            />
-            <SignalChip
-              label="Draft"
-              value={docSignals.is_draft ? "Yes" : "No"}
-              positive={!docSignals.is_draft}
-              invertSemantic
-            />
-            {auditMetadata?.truncated && (
-              <SignalChip label="Truncated" value={`${auditMetadata.char_count ?? "?"} ch`} negative />
-            )}
-          </Box>
+          <Stack direction="row" flexWrap="wrap" gap="8px">
+            {(() => {
+              const c = signalStatusColors({ positive: (docSignals.authority_signal ?? 0) >= 60 });
+              return (
+                <Chip
+                  label={`Authority ${docSignals.authority_signal ?? 0}/100`}
+                  size="small"
+                  uppercase={false}
+                  backgroundColor={c.bg}
+                  textColor={c.text}
+                />
+              );
+            })()}
+            {(() => {
+              const c = signalStatusColors({ neutral: true });
+              return (
+                <Chip
+                  label={`Type ${docSignals.document_type ?? "—"}`}
+                  size="small"
+                  uppercase={false}
+                  backgroundColor={c.bg}
+                  textColor={c.text}
+                />
+              );
+            })()}
+            {(() => {
+              const c = signalStatusColors({ positive: !!docSignals.has_named_owner });
+              return (
+                <Chip
+                  label={`Named owner ${docSignals.has_named_owner ? "Yes" : "No"}`}
+                  size="small"
+                  uppercase={false}
+                  backgroundColor={c.bg}
+                  textColor={c.text}
+                />
+              );
+            })()}
+            {(() => {
+              const c = signalStatusColors({ positive: !!docSignals.has_version });
+              return (
+                <Chip
+                  label={`Version ${docSignals.has_version ? "Yes" : "No"}`}
+                  size="small"
+                  uppercase={false}
+                  backgroundColor={c.bg}
+                  textColor={c.text}
+                />
+              );
+            })()}
+            {(() => {
+              const c = signalStatusColors({ positive: !!docSignals.has_explicit_dates });
+              return (
+                <Chip
+                  label={`Explicit dates ${docSignals.has_explicit_dates ? "Yes" : "No"}`}
+                  size="small"
+                  uppercase={false}
+                  backgroundColor={c.bg}
+                  textColor={c.text}
+                />
+              );
+            })()}
+            {(() => {
+              const c = signalStatusColors({ positive: !!docSignals.has_metrics });
+              return (
+                <Chip
+                  label={`Metrics ${docSignals.has_metrics ? "Yes" : "No"}`}
+                  size="small"
+                  uppercase={false}
+                  backgroundColor={c.bg}
+                  textColor={c.text}
+                />
+              );
+            })()}
+            {(() => {
+              const c = signalStatusColors({ positive: !docSignals.is_draft, invertSemantic: true });
+              return (
+                <Chip
+                  label={`Draft ${docSignals.is_draft ? "Yes" : "No"}`}
+                  size="small"
+                  uppercase={false}
+                  backgroundColor={c.bg}
+                  textColor={c.text}
+                />
+              );
+            })()}
+            {auditMetadata?.truncated &&
+              (() => {
+                const c = signalStatusColors({ negative: true });
+                return (
+                  <Chip
+                    label={`Truncated ${auditMetadata.char_count ?? "?"} ch`}
+                    size="small"
+                    uppercase={false}
+                    backgroundColor={c.bg}
+                    textColor={c.text}
+                  />
+                );
+              })()}
+          </Stack>
         </Card>
       )}
 
@@ -620,74 +668,5 @@ export default function EvidenceAnalysisPanel({
         </Typography>
       </Box>
     </Stack>
-  );
-}
-
-/**
- * Compact signal chip used by document-signals grid.
- */
-function SignalChip({
-  label,
-  value,
-  positive,
-  negative,
-  neutral,
-  invertSemantic,
-}: {
-  label: string;
-  value: string;
-  positive?: boolean;
-  negative?: boolean;
-  neutral?: boolean;
-  invertSemantic?: boolean;
-}) {
-  let bg: string = background.accent;
-  let textColor: string = textColors.tertiary;
-  let borderColor: string = borderPalette.light;
-
-  if (!neutral) {
-    if (invertSemantic) {
-      // for "Draft" — positive means "not draft" (good), so green
-      if (positive) {
-        bg = status.success.bg;
-        textColor = status.success.text;
-        borderColor = status.success.border;
-      } else {
-        bg = status.warning.bg;
-        textColor = status.warning.text;
-        borderColor = status.warning.border;
-      }
-    } else if (positive) {
-      bg = status.success.bg;
-      textColor = status.success.text;
-      borderColor = status.success.border;
-    } else if (negative) {
-      bg = status.warning.bg;
-      textColor = status.warning.text;
-      borderColor = status.warning.border;
-    } else {
-      bg = status.default.bg;
-      textColor = status.default.text;
-      borderColor = status.default.border;
-    }
-  }
-
-  return (
-    <Box
-      sx={{
-        backgroundColor: bg,
-        color: textColor,
-        border: `1px solid ${borderColor}`,
-        borderRadius: "4px",
-        px: "8px",
-        py: "4px",
-      }}
-    >
-      {/* Table header: 12px / 500 / uppercase / text.tertiary (color set by caller above) */}
-      <Typography sx={{ fontSize: 12, fontWeight: 500, textTransform: "uppercase", lineHeight: 1.1 }}>
-        {label}
-      </Typography>
-      <Typography sx={{ fontSize: 12, fontWeight: 600, lineHeight: 1.3 }}>{value}</Typography>
-    </Box>
   );
 }

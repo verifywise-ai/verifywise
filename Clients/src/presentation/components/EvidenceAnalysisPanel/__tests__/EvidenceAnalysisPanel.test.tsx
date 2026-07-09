@@ -222,9 +222,10 @@ describe("EvidenceAnalysisPanel", () => {
     expect(screen.getByText(/gpt-4/)).toBeInTheDocument();
   });
 
-  it("renders quality badge", () => {
+  it("renders the overall grade as a status chip", () => {
     renderWithProviders(<EvidenceAnalysisPanel analysis={mockAnalysis} />);
-    expect(screen.getAllByTestId("quality-badge").length).toBeGreaterThan(0);
+    const chips = screen.getAllByTestId("chip");
+    expect(chips.some((c) => c.textContent === "B")).toBe(true);
   });
 
   describe("abstain banner", () => {
@@ -284,14 +285,13 @@ describe("EvidenceAnalysisPanel", () => {
     it("renders when document_signals present", () => {
       renderWithProviders(<EvidenceAnalysisPanel analysis={mockAnalysisWithAudit} />);
       expect(screen.getByText("Document signals")).toBeInTheDocument();
-      expect(screen.getByText("Authority")).toBeInTheDocument();
-      expect(screen.getByText("Type")).toBeInTheDocument();
-      expect(screen.getByText("Policy Document")).toBeInTheDocument();
-      expect(screen.getByText("Named owner")).toBeInTheDocument();
-      expect(screen.getByText("Version")).toBeInTheDocument();
-      expect(screen.getByText("Explicit dates")).toBeInTheDocument();
-      expect(screen.getByText("Metrics")).toBeInTheDocument();
-      expect(screen.getByText("Draft")).toBeInTheDocument();
+      expect(screen.getByText(/^Authority/)).toBeInTheDocument();
+      expect(screen.getByText(/^Type Policy Document/)).toBeInTheDocument();
+      expect(screen.getByText(/^Named owner/)).toBeInTheDocument();
+      expect(screen.getByText(/^Version/)).toBeInTheDocument();
+      expect(screen.getByText(/^Explicit dates/)).toBeInTheDocument();
+      expect(screen.getByText(/^Metrics/)).toBeInTheDocument();
+      expect(screen.getByText(/^Draft/)).toBeInTheDocument();
     });
 
     it("does not render when document_signals is null", () => {
@@ -301,8 +301,7 @@ describe("EvidenceAnalysisPanel", () => {
 
     it("renders truncated signal when truncated is true", () => {
       renderWithProviders(<EvidenceAnalysisPanel analysis={mockAnalysisWithAudit} />);
-      expect(screen.getByText("Truncated")).toBeInTheDocument();
-      expect(screen.getByText(/15000 ch/)).toBeInTheDocument();
+      expect(screen.getByText(/^Truncated.*15000 ch/)).toBeInTheDocument();
     });
   });
 
