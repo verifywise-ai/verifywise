@@ -2,7 +2,7 @@ import { useState } from "react";
 import {
   Box,
   Typography,
-  CircularProgress,
+  Skeleton,
   Stack,
   Card,
   Collapse,
@@ -16,7 +16,7 @@ import {
   TableRow,
 } from "@mui/material";
 import { CustomizableButton } from "../button/customizable-button";
-import { Sparkles, ChevronDown, ChevronUp, AlertTriangle } from "lucide-react";
+import { Sparkles, ChevronDown, ChevronUp, AlertTriangle, Check } from "lucide-react";
 import Chip from "../Chip";
 import { TagChip } from "../Tags";
 import Alert from "../Alert";
@@ -24,7 +24,7 @@ import { EmptyState } from "../EmptyState";
 import singleTheme from "../../themes/v1SingleTheme";
 import {
   status,
-  accent,
+  brand,
   text as textColors,
   border as borderPalette,
   background,
@@ -180,7 +180,7 @@ function DimensionCard({
               sx={{
                 "p": 0.25,
                 "color": textColors.accent,
-                "&:hover": { color: accent.primary.text },
+                "&:hover": { color: brand.primary },
               }}
             >
               {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
@@ -223,13 +223,19 @@ export default function EvidenceAnalysisPanel({
   isAnalyzing,
 }: EvidenceAnalysisPanelProps) {
   if (isLoading) {
+    // Content shape is known (hero + 5-dimension grid), so skeleton loaders
+    // are used per the loading-states checklist ("prefer skeleton loaders
+    // over spinners when content shape is known"), not a bare spinner.
     return (
-      <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center", py: "24px" }}>
-        <CircularProgress size={24} />
-        <Typography sx={{ mt: "12px", fontSize: 12, color: textColors.accent }}>
-          Loading analysis...
-        </Typography>
-      </Box>
+      <Stack spacing="16px">
+        <Skeleton variant="rounded" height={120} />
+        <Box sx={{ display: "grid", gap: "16px", gridTemplateColumns: "repeat(5, 1fr)" }}>
+          {Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} variant="rounded" height={96} />
+          ))}
+        </Box>
+        <Skeleton variant="rounded" height={140} />
+      </Stack>
     );
   }
 
@@ -240,12 +246,14 @@ export default function EvidenceAnalysisPanel({
           <CustomizableButton
             variant="outlined"
             text={isAnalyzing ? "Analyzing..." : "Run AI analysis"}
+            icon={<Sparkles size={16} />}
+            loading={isAnalyzing}
             isDisabled={isAnalyzing}
             onClick={onTriggerAnalysis}
             sx={{
-              "borderColor": accent.primary.border,
-              "color": accent.primary.text,
-              "&:hover": { backgroundColor: accent.primary.bg },
+              "borderColor": brand.primary,
+              "color": brand.primary,
+              "&:hover": { backgroundColor: background.fill },
             }}
           />
         )}
@@ -404,6 +412,7 @@ export default function EvidenceAnalysisPanel({
                 variant="outlined"
                 size="small"
                 text="Apply all"
+                icon={<Check size={16} />}
                 onClick={() =>
                   onApplySuggestions(
                     suggestedLinks.map((s) => ({
@@ -413,16 +422,19 @@ export default function EvidenceAnalysisPanel({
                   )
                 }
                 sx={{
-                  "borderColor": accent.primary.border,
-                  "color": accent.primary.text,
-                  "&:hover": { backgroundColor: accent.primary.bg },
+                  "borderColor": brand.primary,
+                  "color": brand.primary,
+                  "&:hover": { backgroundColor: background.fill },
                 }}
               />
             )}
           </Stack>
-          <TableContainer sx={singleTheme.tableStyles.primary.frame}>
-            <Table size="small">
-              <TableHead>
+          {/* singleTheme.tableStyles.primary: frame on Table, header bg on TableHead */}
+          <TableContainer>
+            <Table size="small" sx={singleTheme.tableStyles.primary.frame}>
+              <TableHead
+                sx={{ backgroundColor: singleTheme.tableStyles.primary.header.backgroundColors }}
+              >
                 <TableRow sx={singleTheme.tableStyles.primary.header.row}>
                   {["Control", "Framework", "Match"].map((h) => (
                     <TableCell key={h} sx={singleTheme.tableStyles.primary.header.cell}>
@@ -602,8 +614,8 @@ export default function EvidenceAnalysisPanel({
                         width: 20,
                         height: 20,
                         borderRadius: "50%",
-                        backgroundColor: accent.primary.bg,
-                        color: accent.primary.text,
+                        backgroundColor: background.fill,
+                        color: brand.primary,
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -626,7 +638,7 @@ export default function EvidenceAnalysisPanel({
                             pl: "12px",
                             pr: "12px",
                             py: "8px",
-                            borderLeft: `2px solid ${accent.primary.border}`,
+                            borderLeft: `2px solid ${brand.primary}`,
                             backgroundColor: background.accent,
                             borderRadius: "4px",
                           }}

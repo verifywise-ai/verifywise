@@ -89,8 +89,8 @@ describe("EvidenceAnalysisPanel", () => {
   };
 
   it("renders loading state", () => {
-    renderWithProviders(<EvidenceAnalysisPanel analysis={null} isLoading />);
-    expect(screen.getByText("Loading analysis...")).toBeInTheDocument();
+    const { container } = renderWithProviders(<EvidenceAnalysisPanel analysis={null} isLoading />);
+    expect(container.querySelectorAll(".MuiSkeleton-root").length).toBeGreaterThan(0);
   });
 
   it("renders empty state when no analysis", () => {
