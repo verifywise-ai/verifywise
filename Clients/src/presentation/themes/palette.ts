@@ -4,10 +4,8 @@
  * Single source of truth for ALL colors across every module:
  * Governance, LLM Evals, AI Detection, Shadow AI, Model Inventory.
  *
- * Design philosophy: calm, pastel backgrounds with muted text —
- * derived from the Chip component's proven palette. All status,
- * risk, chart, and accent colors live here so every module stays
- * visually coherent.
+ * Grey tokens derive from primitives.ts.
+ * Status, risk, accent, brand, and chart hues remain here until their scales are defined.
  *
  * Usage:
  *   import { palette } from '@/presentation/themes/palette';
@@ -15,6 +13,8 @@
  *
  * Migration guide: see /docs/COLOR_MIGRATION.md
  */
+
+import { grey } from "./primitives";
 
 // ---------------------------------------------------------------------------
 // 1. Semantic status colors (success / error / warning / info / default)
@@ -26,7 +26,7 @@ export const status = {
   error: { bg: "#FFD6D6", text: "#D32F2F", border: "#F5B8B8" },
   warning: { bg: "#FFF8E1", text: "#795548", border: "#F5E6B8" },
   info: { bg: "#E3F2FD", text: "#1565C0", border: "#BBDEFB" },
-  default: { bg: "#F3F4F6", text: "#6B7280", border: "#E5E7EB" },
+  default: { bg: grey[100], text: grey[500], border: grey[200] },
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -88,19 +88,19 @@ export const chart = [
 ] as const;
 
 // ---------------------------------------------------------------------------
-// 6. Text hierarchy (from theme — repeated here for palette completeness)
+// 6. Text hierarchy (Figma grey scale)
 // ---------------------------------------------------------------------------
 
 export const text = {
-  primary: "#1c2130",
-  secondary: "#344054",
-  tertiary: "#475467",
-  accent: "#838c99",
-  disabled: "#9CA3AF",
-  black: "#000000",
-  icon: "#667085",
-  muted: "#98A2B3",
-  subdued: "#616161",
+  primary: grey[900],
+  secondary: grey[700],
+  tertiary: grey[600],
+  accent: grey[400],
+  disabled: grey[350],
+  black: grey[950],
+  icon: grey[450],
+  muted: grey[600],
+  subdued: grey[450],
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -108,24 +108,24 @@ export const text = {
 // ---------------------------------------------------------------------------
 
 export const background = {
-  main: "#FFFFFF",
-  alt: "#FCFCFD",
-  modal: "#FCFCFD",
+  main: grey[50],
+  alt: grey[100],
+  modal: grey[100],
   fill: "#E6F0EC",
-  accent: "#f9fafb",
-  hover: "#F3F4F6",
+  accent: grey[100],
+  hover: grey[150],
   selected: "#E6F0EC",
-  surface: "#f5f5f5",
+  surface: grey[150],
   gradientStop: "#f8fafc",
 } as const;
 
 // ---------------------------------------------------------------------------
-// 8. Borders
+// 8. Borders (Figma grey scale)
 // ---------------------------------------------------------------------------
 
 export const border = {
-  light: "#eaecf0",
-  dark: "#d0d5dd",
+  light: grey[200],
+  dark: grey[300],
 } as const;
 
 // ---------------------------------------------------------------------------
