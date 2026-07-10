@@ -399,8 +399,7 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
   // Keyed by files.id, which is exactly what FileManager rows carry.
   const triggerAnalysis = useTriggerAnalysis();
   const { data: qualityScores } = useQualityScores();
-  const { data: llmKeyStatus, loading: loadingLLMKeyStatus } = useLLMKeyStatus();
-  const hasLLMKey = loadingLLMKeyStatus || (llmKeyStatus?.hasKeys ?? false);
+  const { hasKeys: hasLLMKey } = useLLMKeyStatus();
   const analysisByFileId = useMemo(() => {
     const m = new Map<number, { grade: QualityGrade | null; analysis: unknown }>();
     (qualityScores ?? []).forEach((q: any) => {
