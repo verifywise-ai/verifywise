@@ -1,9 +1,6 @@
 import { getAllOrganizationsQuery } from "../../../utils/organization.utils";
 import { getMrmOrgSettings } from "../../../utils/mrmSettings.utils";
-import {
-  getRetentionCutoffQuery,
-  pruneMetricsBatchQuery,
-} from "../../../utils/mrmRetention.utils";
+import { getRetentionCutoffQuery, pruneMetricsBatchQuery } from "../../../utils/mrmRetention.utils";
 import logger from "../../../utils/logger/fileLogger";
 
 /**

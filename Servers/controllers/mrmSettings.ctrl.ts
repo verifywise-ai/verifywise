@@ -44,11 +44,7 @@ export async function updateMrmSettingsHandler(req: Request, res: Response) {
     if (!Number.isInteger(retention_months) || retention_months < MIN_RETENTION_MONTHS) {
       return res
         .status(400)
-        .json(
-          STATUS_CODE[400](
-            req.t!("Retention must be an integer of at least 13 months"),
-          ),
-        );
+        .json(STATUS_CODE[400](req.t!("Retention must be an integer of at least 13 months")));
     }
     const settings = await upsertMrmOrgSettings(req.organizationId!, retention_months);
     logStructured("successful", "MRM settings updated", fn, FILE);

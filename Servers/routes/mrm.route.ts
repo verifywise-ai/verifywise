@@ -36,10 +36,7 @@ import {
   requestRevalidation,
   runRevalidationSweepForOrg,
 } from "../controllers/mrmRevalidation.ctrl";
-import {
-  getMrmSettingsHandler,
-  updateMrmSettingsHandler,
-} from "../controllers/mrmSettings.ctrl";
+import { getMrmSettingsHandler, updateMrmSettingsHandler } from "../controllers/mrmSettings.ctrl";
 
 // --- Tiering ---
 router.get("/tiering", authenticateJWT, getFleetTiering);

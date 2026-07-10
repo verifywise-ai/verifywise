@@ -10,10 +10,7 @@ import {
   createTestMrmMetricEvaluation,
 } from "../../factories";
 import { runRetentionPrune } from "../../../services/automations/actions/mrmRetentionPrune";
-import {
-  getMrmOrgSettings,
-  upsertMrmOrgSettings,
-} from "../../../utils/mrmSettings.utils";
+import { getMrmOrgSettings, upsertMrmOrgSettings } from "../../../utils/mrmSettings.utils";
 
 /**
  * MRM metric retention — tenant isolation + audit-trail guard.
