@@ -1,8 +1,8 @@
 /**
- * VerifyWise grey scale primitives
+ * VerifyWise color primitives.
  *
- * Hex literals for the grey ramp live here only.
- * Status, brand, and accent hues remain in palette.ts until their scales are defined.
+ * Hex literals for color ramps live here only.
+ * Semantic tokens in palette.ts derive from these values.
  */
 
 /** Grey ramp: 50 (lightest) → 950 (black) */
@@ -24,5 +24,21 @@ export const grey = {
 } as const;
 
 export type GreyStep = keyof typeof grey;
+
+/** Brand green ramp: 50 (lightest) → 900 (darkest) */
+export const green = {
+  50: "#F0FDF4",
+  100: "#E6F0EC",
+  200: "#E6F4EA",
+  300: "#C8E6D0",
+  400: "#C2DDD3",
+  500: "#10B981",
+  600: "#138A5E",
+  700: "#13715B",
+  800: "#10614D",
+  900: "#0F5A47",
+} as const;
+
+export type GreenStep = keyof typeof green;
 
 export default grey;

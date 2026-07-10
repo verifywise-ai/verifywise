@@ -4,8 +4,8 @@
  * Single source of truth for ALL colors across every module:
  * Governance, LLM Evals, AI Detection, Shadow AI, Model Inventory.
  *
- * Grey tokens derive from primitives.ts.
- * Status, risk, accent, brand, and chart hues remain here until their scales are defined.
+ * Grey and green tokens derive from primitives.ts.
+ * Other status, risk, accent, and chart hues remain here until their scales are defined.
  *
  * Usage:
  *   import { palette } from '@/presentation/themes/palette';
@@ -14,7 +14,7 @@
  * Migration guide: see /docs/COLOR_MIGRATION.md
  */
 
-import { grey } from "./primitives";
+import { grey, green } from "./primitives";
 
 // ---------------------------------------------------------------------------
 // 1. Semantic status colors (success / error / warning / info / default)
@@ -22,7 +22,7 @@ import { grey } from "./primitives";
 // ---------------------------------------------------------------------------
 
 export const status = {
-  success: { bg: "#E6F4EA", text: "#138A5E", border: "#C8E6D0" },
+  success: { bg: green[200], text: green[600], border: green[300] },
   error: { bg: "#FFD6D6", text: "#D32F2F", border: "#F5B8B8" },
   warning: { bg: "#FFF8E1", text: "#795548", border: "#F5E6B8" },
   info: { bg: "#E3F2FD", text: "#1565C0", border: "#BBDEFB" },
@@ -38,7 +38,7 @@ export const risk = {
   critical: { bg: "#FFD6D6", text: "#D32F2F", border: "#F5B8B8" },
   high: { bg: "#FFE5D0", text: "#E64A19", border: "#F5CDB0" },
   medium: { bg: "#FFF8E1", text: "#795548", border: "#F5E6B8" },
-  low: { bg: "#E6F4EA", text: "#138A5E", border: "#C8E6D0" },
+  low: { bg: green[200], text: green[600], border: green[300] },
   veryLow: { bg: "#E0F7FA", text: "#00695C", border: "#B2EBF2" },
 } as const;
 
@@ -60,7 +60,7 @@ export const severity = {
 // ---------------------------------------------------------------------------
 
 export const accent = {
-  primary: { bg: "#E6F0EC", text: "#13715B", border: "#C2DDD3" },
+  primary: { bg: green[100], text: green[700], border: green[400] },
   indigo: { bg: "#E8EAF6", text: "#3949AB", border: "#C5CAE9" },
   purple: { bg: "#EDE7F6", text: "#5E35B1", border: "#D1C4E9" },
   orange: { bg: "#FFF3E0", text: "#E65100", border: "#FFE0B2" },
@@ -111,10 +111,10 @@ export const background = {
   main: grey[50],
   alt: grey[100],
   modal: grey[100],
-  fill: "#E6F0EC",
+  fill: green[100],
   accent: grey[100],
   hover: grey[150],
-  selected: "#E6F0EC",
+  selected: green[100],
   surface: grey[150],
   gradientStop: "#f8fafc",
 } as const;
@@ -133,10 +133,10 @@ export const border = {
 // ---------------------------------------------------------------------------
 
 export const brand = {
-  primary: "#13715B",
-  primaryHover: "#0F5A47",
-  primaryLight: "#E6F0EC",
-  primaryDark: "#10614d",
+  primary: green[700],
+  primaryHover: green[900],
+  primaryLight: green[100],
+  primaryDark: green[800],
 } as const;
 
 // ---------------------------------------------------------------------------

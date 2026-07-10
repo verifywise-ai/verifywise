@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Box, Stack, Typography, useTheme, Divider, Snackbar } from "@mui/material";
 import { Copy } from "lucide-react";
+import { grey, green } from "../../../themes/primitives";
 
 const ColorsSection: React.FC = () => {
   const theme = useTheme();
@@ -41,12 +42,69 @@ const ColorsSection: React.FC = () => {
             maxWidth: 600,
           }}
         >
-          The VerifyWise color palette. All colors are defined in the theme and should be accessed
-          via theme.palette. Click any color to copy its hex value.
+          The VerifyWise color system: primitive ramps in{" "}
+          <Box component="span" sx={{ fontFamily: "monospace", fontSize: 13 }}>
+            themes/primitives.ts
+          </Box>
+          , semantic tokens in{" "}
+          <Box component="span" sx={{ fontFamily: "monospace", fontSize: 13 }}>
+            themes/palette.ts
+          </Box>
+          . Click any swatch to copy its hex value.
         </Typography>
       </Box>
 
-      {/* Primary Colors */}
+      {/* Color primitives */}
+      <SpecSection title="Color primitives">
+        <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
+          Source-of-truth ramps from{" "}
+          <Box component="span" sx={{ fontFamily: "monospace", fontSize: 13 }}>
+            themes/primitives.ts
+          </Box>
+          . Semantic tokens in palette.ts reference these steps.
+        </Typography>
+        <Box
+          sx={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "48px",
+            alignItems: "flex-start",
+          }}
+        >
+          <Box>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "12px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
+              Grey
+            </Typography>
+            <PrimitiveScale name="Grey" scale={grey} tokenPrefix="grey" onCopy={handleCopy} />
+          </Box>
+          <Box>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "12px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
+              Green
+            </Typography>
+            <PrimitiveScale name="Green" scale={green} tokenPrefix="green" onCopy={handleCopy} />
+          </Box>
+        </Box>
+      </SpecSection>
+
+      <Divider sx={{ my: "32px" }} />
       <SpecSection title="Primary colors">
         <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
           Main brand colors used for primary actions and key UI elements.
@@ -617,11 +675,11 @@ const ColorsSection: React.FC = () => {
         </Typography>
         <Stack spacing="8px">
           {[
-            "Always use theme.palette.* for colors - never hardcode hex values",
-            "Primary green #13715B is the main brand color",
-            "Border color #d0d5dd should be used for all input borders",
-            "Use status colors for feedback (success, error, warning)",
-            "Background colors have semantic meanings - use appropriately",
+            "Define hex values only in themes/primitives.ts — use palette.ts semantics in components",
+            "Grey primitives power text, border, and background tokens",
+            "Green primitives power brand, success, and accent tokens",
+            "Access semantics via theme.palette.* — never hardcode hex in components",
+            "Border color theme.palette.border.dark should be used for input borders",
             "Text hierarchy: primary > secondary > tertiary > accent",
           ].map((item, index) => (
             <Box
@@ -654,6 +712,109 @@ const ColorsSection: React.FC = () => {
 };
 
 // Helper Components
+
+const PrimitiveScale: React.FC<{
+  name: string;
+  scale: Record<number, string>;
+  tokenPrefix: string;
+  onCopy: (text: string) => void;
+}> = ({ name, scale, tokenPrefix, onCopy }) => {
+  const theme = useTheme();
+  const steps = Object.keys(scale)
+    .map(Number)
+    .sort((a, b) => a - b);
+
+  return (
+    <Stack spacing="6px" sx={{ width: 240 }}>
+      {steps.map((step) => {
+        const color = scale[step as keyof typeof scale];
+
+        return (
+          <Box
+            key={step}
+            onClick={() => onCopy(color)}
+            sx={{
+              "display": "flex",
+              "alignItems": "center",
+              "gap": "10px",
+              "px": "8px",
+              "py": "6px",
+              "borderRadius": "4px",
+              "border": `1px solid ${theme.palette.background.hover}`,
+              "cursor": "pointer",
+              "backgroundColor": theme.palette.background.main,
+              "transition": "border-color 150ms ease, background-color 150ms ease",
+              "&:hover": {
+                borderColor: theme.palette.border.light,
+                backgroundColor: theme.palette.background.alt,
+              },
+              "&:hover .primitive-copy-icon": {
+                opacity: 1,
+              },
+            }}
+          >
+            <Box
+              sx={{
+                width: 32,
+                height: 32,
+                flexShrink: 0,
+                borderRadius: "4px",
+                backgroundColor: color,
+                border:
+                  step === 50 && tokenPrefix === "grey"
+                    ? `1px solid ${theme.palette.border.light}`
+                    : "none",
+              }}
+            />
+            <Box sx={{ minWidth: 0, flex: 1 }}>
+              <Typography
+                sx={{
+                  fontSize: 12,
+                  fontWeight: 600,
+                  color: theme.palette.text.primary,
+                  lineHeight: 1.2,
+                }}
+              >
+                {name} {step}
+              </Typography>
+              <Typography
+                sx={{
+                  fontSize: 11,
+                  fontFamily: "monospace",
+                  color: theme.palette.text.accent,
+                  lineHeight: 1.3,
+                }}
+              >
+                {color}
+              </Typography>
+              <Typography
+                sx={{
+                  fontSize: 10,
+                  fontFamily: "monospace",
+                  color: theme.palette.text.tertiary,
+                  lineHeight: 1.3,
+                }}
+              >
+                {tokenPrefix}[{step}]
+              </Typography>
+            </Box>
+            <Box
+              className="primitive-copy-icon"
+              sx={{
+                color: theme.palette.text.secondary,
+                opacity: 0,
+                transition: "opacity 150ms ease",
+                flexShrink: 0,
+              }}
+            >
+              <Copy size={14} />
+            </Box>
+          </Box>
+        );
+      })}
+    </Stack>
+  );
+};
 
 const SpecSection: React.FC<{ title: string; children: React.ReactNode }> = ({
   title,
