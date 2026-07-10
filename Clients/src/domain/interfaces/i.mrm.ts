@@ -353,3 +353,10 @@ export interface IMrmAttestationSummary {
   per_tier: IMrmAttestationTierRow[];
   attestation_status: MrmAttestationStatus;
 }
+
+// ---- Org-wide MRM settings ----
+
+export interface IMrmOrgSettings {
+  organization_id: number;
+  retention_months: number;
+}

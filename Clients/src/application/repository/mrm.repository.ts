@@ -27,6 +27,7 @@ import {
   IMrmMetricKey,
   IMrmModelRole,
   IMrmMonitoringRow,
+  IMrmOrgSettings,
   IMrmRevalidationEvent,
   IMrmThreshold,
   IMrmTrendPoint,
@@ -280,4 +281,16 @@ export async function downloadAttestationReport(): Promise<void> {
       "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   });
   triggerBrowserDownload(blob, filename);
+}
+
+// ---- Org-wide MRM settings (metric retention) ----
+
+export async function getMrmSettings(signal?: AbortSignal): Promise<IMrmOrgSettings> {
+  const response = await apiServices.get("/mrm/settings", { signal });
+  return (response.data as { data: IMrmOrgSettings }).data;
+}
+
+export async function updateMrmSettings(retention_months: number): Promise<IMrmOrgSettings> {
+  const response = await apiServices.put("/mrm/settings", { retention_months });
+  return (response.data as { data: IMrmOrgSettings }).data;
 }

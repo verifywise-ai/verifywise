@@ -11,7 +11,7 @@ import {
   TableRow,
   Typography,
 } from "@mui/material";
-import { Rss, Layers, SlidersHorizontal, Bell, Users } from "lucide-react";
+import { Rss, Layers, SlidersHorizontal, Bell, Users, Archive } from "lucide-react";
 import SectionNav, { SectionNavItem } from "../../../components/SectionNav";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import Select from "../../../components/Inputs/Select";
@@ -28,6 +28,7 @@ import { fleetModelName, mrmErrorMessage, ROLE_DEFINITIONS } from "./constants";
 import MetricsFeedSection from "./MetricsFeedSection";
 import DefaultThresholdsSection from "./DefaultThresholdsSection";
 import AlertsSection from "./AlertsSection";
+import RetentionSection from "./RetentionSection";
 import {
   mrmSectionIntroStyle,
   mrmTableCellStyle,
@@ -41,7 +42,13 @@ interface SettingsTabProps {
   onSuccess: (message: string) => void;
 }
 
-type SettingsSection = "metrics-feed" | "tiering-rules" | "default-thresholds" | "alerts" | "roles";
+type SettingsSection =
+  | "metrics-feed"
+  | "tiering-rules"
+  | "default-thresholds"
+  | "alerts"
+  | "roles"
+  | "retention";
 
 const MRM_SETTINGS_BASE_PATH = "/model-inventory/model-risk-management/settings";
 
@@ -77,6 +84,12 @@ const SECTION_ITEMS: { key: SettingsSection; slug: string; label: string; icon: 
     slug: "roles",
     label: "Roles & independence",
     icon: <Users size={16} strokeWidth={1.5} />,
+  },
+  {
+    key: "retention",
+    slug: "retention",
+    label: "Data retention",
+    icon: <Archive size={16} strokeWidth={1.5} />,
   },
 ];
 
@@ -305,6 +318,7 @@ const SettingsTab = ({ users, onError, onSuccess }: SettingsTabProps) => {
         {section === "roles" && (
           <RolesSection users={users} onError={onError} onSuccess={onSuccess} />
         )}
+        {section === "retention" && <RetentionSection onError={onError} onSuccess={onSuccess} />}
       </Box>
     </Stack>
   );
