@@ -102,6 +102,7 @@ interface EvidenceAnalysisPanelProps {
   onTriggerAnalysis?: () => void;
   onApplySuggestions?: (suggestions: Array<{ control_id: number; framework_type: string }>) => void;
   isAnalyzing?: boolean;
+  hasLLMKey?: boolean;
 }
 
 // Subsection title: 14px / 600 / 1.5 / text.primary.
@@ -213,6 +214,7 @@ export default function EvidenceAnalysisPanel({
   onTriggerAnalysis,
   onApplySuggestions,
   isAnalyzing,
+  hasLLMKey,
 }: EvidenceAnalysisPanelProps) {
   const theme = useTheme();
 
@@ -234,18 +236,23 @@ export default function EvidenceAnalysisPanel({
   }
 
   if (!analysis) {
+    const locked = hasLLMKey === false;
     return (
       <EmptyState icon={Sparkles} message="No AI analysis available for this evidence yet." showBorder>
         {onTriggerAnalysis && (
-          <CustomizableButton
-            variant="outlined"
-            color="primary"
-            text={isAnalyzing ? "Analyzing..." : "Run AI analysis"}
-            icon={<Sparkles size={16} />}
-            loading={isAnalyzing}
-            isDisabled={isAnalyzing}
-            onClick={onTriggerAnalysis}
-          />
+          <Tooltip title={locked ? "Configure an LLM key to enable AI analysis" : ""} arrow>
+            <span>
+              <CustomizableButton
+                variant="outlined"
+                color="primary"
+                text={isAnalyzing ? "Analyzing..." : "Run AI analysis"}
+                icon={<Sparkles size={16} />}
+                loading={isAnalyzing}
+                isDisabled={isAnalyzing || locked}
+                onClick={onTriggerAnalysis}
+              />
+            </span>
+          </Tooltip>
         )}
       </EmptyState>
     );

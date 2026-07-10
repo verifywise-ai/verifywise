@@ -120,6 +120,19 @@ describe("EvidenceAnalysisPanel", () => {
     expect(onTriggerAnalysis).toHaveBeenCalledTimes(1);
   });
 
+  it("disables the empty-state button and shows a tooltip when hasLLMKey is false", () => {
+    const onTriggerAnalysis = vi.fn();
+    renderWithProviders(
+      <EvidenceAnalysisPanel
+        analysis={null}
+        onTriggerAnalysis={onTriggerAnalysis}
+        hasLLMKey={false}
+      />,
+    );
+    const button = screen.getByText("Run AI analysis").closest("button");
+    expect(button).toBeDisabled();
+  });
+
   it("renders overall quality grade", () => {
     renderWithProviders(<EvidenceAnalysisPanel analysis={mockAnalysis} />);
     expect(screen.getByText("Overall quality grade")).toBeInTheDocument();
