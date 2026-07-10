@@ -51,10 +51,12 @@ const AdvisorChatInner = ({
   selectedLLMKeyId,
   pageContext,
   hasLLMKeys,
+  isLoadingLLMKeys,
 }: {
   selectedLLMKeyId?: number;
   pageContext?: AdvisorDomain;
   hasLLMKeys?: boolean | null;
+  isLoadingLLMKeys?: boolean;
 }) => {
   const theme = useTheme();
   // When enabled, one prompt is decomposed into independent subtasks and run
@@ -91,7 +93,11 @@ const AdvisorChatInner = ({
               inputProps={{ "aria-label": "parallel-agents-toggle" }}
             />
           </Stack>
-          <CustomThread pageContext={pageContext} hasLLMKeys={hasLLMKeys} />
+          <CustomThread
+            pageContext={pageContext}
+            hasLLMKeys={hasLLMKeys}
+            isLoadingLLMKeys={isLoadingLLMKeys}
+          />
         </AssistantRuntimeProvider>
       ) : (
         <Box
@@ -114,6 +120,7 @@ const AdvisorChat = ({
   selectedLLMKeyId,
   pageContext,
   hasLLMKeys,
+  isLoadingLLMKeys,
 }: AdvisorChatProps) => {
   const theme = useTheme();
   const conversationContext = useAdvisorConversationSafe();
@@ -177,6 +184,7 @@ const AdvisorChat = ({
         selectedLLMKeyId={selectedLLMKeyId}
         pageContext={pageContext}
         hasLLMKeys={hasLLMKeys}
+        isLoadingLLMKeys={isLoadingLLMKeys}
       />
     </Paper>
   );

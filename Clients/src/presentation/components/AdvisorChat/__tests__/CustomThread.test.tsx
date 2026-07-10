@@ -36,4 +36,9 @@ describe("CustomThread", () => {
       screen.getByText(/configure an llm api key to send messages/i),
     ).toBeInTheDocument();
   });
+
+  it("does not lock the composer while LLM key status is still loading", () => {
+    renderWithProviders(<CustomThread hasLLMKeys={false} isLoadingLLMKeys={true} />);
+    expect(screen.getByTestId("custom-composer")).toBeInTheDocument();
+  });
 });

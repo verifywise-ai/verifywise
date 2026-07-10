@@ -11,6 +11,7 @@ import { useAuth } from "../../../application/hooks/useAuth";
 interface CustomThreadProps {
   pageContext?: AdvisorDomain;
   hasLLMKeys?: boolean | null;
+  isLoadingLLMKeys?: boolean;
 }
 
 interface SuggestionChipsProps {
@@ -109,7 +110,7 @@ const ComposerLocked = () => {
           flexShrink: 0,
         }}
       >
-        <Settings size={16} color={theme.palette.text.secondary as string} />
+        <Settings size={16} color={theme.palette.text.secondary} />
       </Box>
       <Typography sx={{ fontSize: theme.typography.body2.fontSize, color: "text.secondary" }}>
         {isAdmin ? (
@@ -137,7 +138,11 @@ const ComposerLocked = () => {
   );
 };
 
-const CustomThreadComponent = ({ pageContext, hasLLMKeys }: CustomThreadProps) => {
+const CustomThreadComponent = ({
+  pageContext,
+  hasLLMKeys,
+  isLoadingLLMKeys,
+}: CustomThreadProps) => {
   const theme = useTheme();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -204,7 +209,11 @@ const CustomThreadComponent = ({ pageContext, hasLLMKeys }: CustomThreadProps) =
       </Box>
 
       {/* Input Area */}
-      {hasLLMKeys === false ? <ComposerLocked /> : <CustomComposer pageContext={pageContext} />}
+      {!isLoadingLLMKeys && hasLLMKeys === false ? (
+        <ComposerLocked />
+      ) : (
+        <CustomComposer pageContext={pageContext} />
+      )}
     </ThreadPrimitive.Root>
   );
 };
