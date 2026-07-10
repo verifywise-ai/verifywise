@@ -35,5 +35,5 @@ export function useLLMKeyStatus() {
     };
   }, []);
 
-  return { data, loading, error };
+  return { data, loading, error, hasKeys: loading || (data?.hasKeys ?? false) };
 }
