@@ -42,8 +42,7 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
   const { users } = useUsers();
   const { data: projects } = useProjects();
   const isAdmin = useIsAdmin();
-  const { data: llmKeyStatus, loading: loadingLLMKeyStatus } = useLLMKeyStatus();
-  const hasKeys = loadingLLMKeyStatus || (llmKeyStatus?.hasKeys ?? false);
+  const { hasKeys } = useLLMKeyStatus();
   const [alert, setAlert] = useState<{
     variant: "success" | "info" | "warning" | "error";
     title?: string;

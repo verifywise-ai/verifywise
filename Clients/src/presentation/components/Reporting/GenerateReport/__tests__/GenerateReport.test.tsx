@@ -18,7 +18,10 @@ const mockLLMKeyStatus = vi.hoisted(() => ({
 }));
 
 vi.mock("../../../../../application/hooks/useLLMKeyStatus", () => ({
-  useLLMKeyStatus: () => mockLLMKeyStatus,
+  useLLMKeyStatus: () => ({
+    ...mockLLMKeyStatus,
+    hasKeys: mockLLMKeyStatus.loading || (mockLLMKeyStatus.data?.hasKeys ?? false),
+  }),
 }));
 vi.mock("../../../Alert", () => ({
   default: () => null,
