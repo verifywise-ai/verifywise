@@ -55,30 +55,48 @@ CREATE TABLE verifywise.mrm_org_settings (
 
 ## 2. Prune query (examiner-safe core)
 
-For an org, `cutoff = now - retention_months`:
+For an org, `cutoff = now - retention_months` (computed in SQL via
+`now() - make_interval(months => :m)` to avoid JS month-arithmetic edge cases):
 
 ```sql
-DELETE FROM verifywise.mrm_metrics m
-WHERE m.organization_id = :org
-  AND m.at < :cutoff
-  AND NOT EXISTS (
-    SELECT 1 FROM verifywise.mrm_metric_evaluations e
-    WHERE e.metric_id = m.id
-      AND e.status IN ('warn','breach')
-  )
-  AND m.id IN (
-    SELECT id FROM verifywise.mrm_metrics
-    WHERE organization_id = :org AND at < :cutoff
-    ORDER BY id
-    LIMIT :batchSize
-  );
+DELETE FROM verifywise.mrm_metrics
+WHERE id IN (
+  SELECT mm.id
+  FROM verifywise.mrm_metrics mm
+  WHERE mm.organization_id = :org
+    AND mm.at < :cutoff
+    AND NOT EXISTS (
+      SELECT 1 FROM verifywise.mrm_metric_evaluations e
+      WHERE e.organization_id = mm.organization_id
+        AND e.metric_id = mm.id
+        AND e.status IN ('warn','breach')
+    )
+  ORDER BY mm.at
+  LIMIT :batchSize
+);
 ```
 
 - The `NOT EXISTS` guard protects the breach trail — a point with any
   warn/breach eval is never deleted.
+- **The guard lives INSIDE the batching subquery — this is load-bearing.** If the
+  batch window were selected first (oldest N ids) and filtered afterwards,
+  never-deletable protected points would permanently occupy the window's slots;
+  once the oldest `batchSize` rows past cutoff are all protected, every run
+  would select the same rows, delete zero, and the loop's stop condition would
+  fire with prunable rows still beyond the window — silently wedging the job
+  forever. With the guard inside, `deleted < batchSize` genuinely means "no
+  more prunable rows."
+- `e.organization_id = mm.organization_id` correlates the probe onto the existing
+  `idx_mrm_metric_evaluations_org_metric (organization_id, metric_id)` index.
 - Batched (`LIMIT :batchSize`, default 10 000), looped until a run deletes
-  fewer than `batchSize` rows. Bounds lock time and transaction size on the
-  first large purge.
+  fewer than `batchSize` rows, **capped at `maxBatches` (default 500) per run**
+  — a pathological first purge is bounded (~5M rows/org/day) and the daily job
+  picks up the remainder next day. Bounds lock time and transaction size.
+- `ORDER BY mm.at` prunes oldest-first and rides the new index below.
+- **New index** (in the same migration as `mrm_org_settings`):
+  `idx_mrm_metrics_org_at ON verifywise.mrm_metrics (organization_id, at)` —
+  the existing indexes (`(org)` and `(org, model, metric, at)`) do not serve an
+  org + at-range scan.
 - CASCADE cleanly removes a pruned benign point's (benign-only) eval rows; breach
   eval rows are never reached because their metric survives.
 
@@ -92,7 +110,9 @@ runRetentionPruneAllOrgs()        // iterate all orgs, isolated per-org failures
 ```
 
 - `runRetentionPrune` reads the org's `retention_months` (default 25 if no row),
-  computes the cutoff, loops the batched delete, returns a summary.
+  computes the cutoff, loops the batched delete (up to `maxBatches`, default 500),
+  returns a summary `{ organization_id, cutoff, deleted, batches, capped }` —
+  `capped: true` when the run hit `maxBatches` with rows likely remaining.
 - `runRetentionPruneAllOrgs` iterates `getAllOrganizationsQuery()`, wraps each org
   in try/catch (one org's failure cannot block the rest), logs a summary only when
   `deleted > 0`. Same structure as the revalidation sweep.
@@ -136,6 +156,9 @@ Thin controller in the existing MRM controller layer; validation rejects
   - point with a warn eval past cutoff → kept
   - benign point within cutoff → kept
   - batch cap respected (loop terminates)
+  - **wedge regression:** protected points OLDER than benign points do not block
+    pruning of the newer benign points (guard-inside-batch-window behaviour)
+  - `maxBatches` cap: run stops at the cap and reports `capped: true`
 - **Integration** (tenant-isolation, matching the 9 existing
   `tests/integration/tenant-isolation/mrm-*.isolation.test.ts`):
   - org A's prune never deletes org B's points
