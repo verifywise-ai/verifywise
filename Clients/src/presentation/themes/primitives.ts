@@ -53,4 +53,14 @@ export const red = {
 
 export type RedStep = keyof typeof red;
 
+/** Warning / medium — amber surfaces with brown-toned text */
+export const amber = {
+  100: "#FFF8E1",
+  200: "#F5E6B8",
+  600: "#795548",
+  700: "#92400E",
+} as const;
+
+export type AmberStep = keyof typeof amber;
+
 export default grey;

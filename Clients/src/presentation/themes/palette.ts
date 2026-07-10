@@ -4,7 +4,7 @@
  * Single source of truth for ALL colors across every module:
  * Governance, LLM Evals, AI Detection, Shadow AI, Model Inventory.
  *
- * Grey, green, and red tokens derive from primitives.ts.
+ * Grey, green, red, and amber tokens derive from primitives.ts.
  * Other status, risk, accent, and chart hues remain here until their scales are defined.
  *
  * Usage:
@@ -14,7 +14,7 @@
  * Migration guide: see /docs/COLOR_MIGRATION.md
  */
 
-import { grey, green, red } from "./primitives";
+import { grey, green, red, amber } from "./primitives";
 
 // ---------------------------------------------------------------------------
 // 1. Semantic status colors (success / error / warning / info / default)
@@ -24,7 +24,7 @@ import { grey, green, red } from "./primitives";
 export const status = {
   success: { bg: green[200], text: green[600], border: green[300] },
   error: { bg: red[200], text: red[500], border: red[300] },
-  warning: { bg: "#FFF8E1", text: "#795548", border: "#F5E6B8" },
+  warning: { bg: amber[100], text: amber[600], border: amber[200] },
   info: { bg: "#E3F2FD", text: "#1565C0", border: "#BBDEFB" },
   default: { bg: grey[100], text: grey[500], border: grey[200] },
 } as const;
@@ -37,7 +37,7 @@ export const status = {
 export const risk = {
   critical: { bg: red[200], text: red[500], border: red[300] },
   high: { bg: "#FFE5D0", text: "#E64A19", border: "#F5CDB0" },
-  medium: { bg: "#FFF8E1", text: "#795548", border: "#F5E6B8" },
+  medium: { bg: amber[100], text: amber[600], border: amber[200] },
   low: { bg: green[200], text: green[600], border: green[300] },
   veryLow: { bg: "#E0F7FA", text: "#00695C", border: "#B2EBF2" },
 } as const;
@@ -67,7 +67,7 @@ export const accent = {
   teal: { bg: "#E0F2F1", text: "#00695C", border: "#B2DFDB" },
   blue: { bg: "#E3F2FD", text: "#1565C0", border: "#BBDEFB" },
   pink: { bg: "#FCE4EC", text: "#AD1457", border: "#F8BBD0" },
-  amber: { bg: "#FFF8E1", text: "#FF8F00", border: "#FFECB3" },
+  amber: { bg: amber[100], text: amber[700], border: amber[200] },
 } as const;
 
 // ---------------------------------------------------------------------------
