@@ -76,13 +76,19 @@ Extend the existing breach-notify block in `mrmMonitoring.ctrl.ts`:
   `mrm_alert_recipients`), deduplicated.
 - In-app notification: always, as today (type `MRM_METRIC_BREACH`).
 - If `alert_email_enabled` (read via `getMrmOrgSettings` — extended, see §5):
-  additionally send one MJML email per recipient. New template
-  `mrm-breach-alert` carrying model label, metric, value, severity, and a link
-  to the model's monitoring tab. Recipient emails resolved from user ids (new
-  util or existing user util).
+  additionally send one MJML email per recipient via the existing email service
+  (`emailService.ts` / `notificationService.ts` — the plan picks the
+  system-email entry point the other automation emails use). New template
+  `mrm-breach-alert` carrying model label, metric, value, severity, and an app
+  link built the way existing automation email templates build theirs
+  (frontend base URL pattern). Recipient emails resolved from user ids.
 - Per-recipient try/catch (existing pattern) — one failing address never blocks
   the rest, and email failure never affects ingestion (the whole notify block
   is already fire-and-forget after the ingestion transaction commits).
+- **Testability:** the recipient-union, auto-finding dedup+create, and dispatch
+  helpers live in a NEW `Servers/utils/mrmAlerts.utils.ts` — the controller and
+  the sweep call it. Keeps the controller thin and makes the logic
+  unit-testable without HTTP.
 
 ## 3. Auto-open finding
 
@@ -98,6 +104,22 @@ In the breach path, after evaluations are recorded, when
   in-flight). A re-breach after verified closure opens a NEW finding (the
   problem returned). Repeated breaches while one is in-flight are already
   evidenced in the immutable evaluation audit.
+- **Dedup is deliberately segment-coarse:** the key is (model, metric), NOT
+  (model, metric, segment). Two segments breaching the same metric share one
+  finding — the finding says "this metric is breaching"; per-segment detail
+  lives in the evaluation audit. Less register noise, and consistent with
+  findings being problem-level records.
+- **Concurrency-safe:** the check+create pair runs in one short transaction
+  that first takes `SELECT id FROM model_inventories WHERE id = :modelId AND
+  organization_id = :orgId FOR UPDATE` — serializing auto-finding creation per
+  model. Without this, two concurrent ingestion requests breaching the same
+  metric would both pass the dedup check and both create a finding — and
+  findings are permanent (no hard delete), so the duplicate is forever. (A
+  partial UNIQUE index was considered and rejected: it would make a human
+  reopening an old closed auto-finding fail with a DB error whenever a newer
+  in-flight one exists — the lock keeps the constraint out of the PATCH path.)
+  Batch requests are inherently serial within the request, so within-batch
+  repeats of the same metric hit the just-created in-flight finding and skip.
 - Created finding: `title = "Metric breach: <metric>"`, severity mapped from
   the threshold severity (critical→critical, high→high), `auto_metric = metric`,
   `validation_id` = the model's open validation id if one exists (else NULL),
@@ -106,9 +128,15 @@ In the breach path, after evaluations are recorded, when
 
 ## 4. Overdue-validation alerts
 
-In `mrmRevalidationSweep.ts`, after `triggerRevalidation` returns:
+Inside `runRevalidationSweep` (the shared per-org function in
+`mrmRevalidationSweep.ts`), after `triggerRevalidation` returns — so BOTH the
+daily BullMQ job AND the on-demand `POST /revalidation/sweep` endpoint notify
+(they call the same function):
 
 - Fire ONLY when `result.created_validation === true` — once per lifecycle.
+- Scope: only SCHEDULED sweep-opened validations notify. Manual
+  request-revalidation (requester already knows), breach-triggered (recipients
+  just got the breach alert), and tier-increase sources stay silent.
 - Same recipient union as §2; in-app with the NEW notification type
   `MRM_REVALIDATION_DUE = "mrm_revalidation_due"` (TS enum in
   `i.notification.ts` + `ALTER TYPE verifywise.enum_notification_type ADD VALUE
@@ -131,9 +159,12 @@ In `mrmRevalidationSweep.ts`, after `triggerRevalidation` returns:
   its three fields. Validation per present field: `retention_months` rules
   unchanged; booleans must be booleans; `alert_recipients` must be an array of
   integers, each an existing user in the caller's org (400 otherwise).
-- Upsert: settings columns via `upsertMrmOrgSettings` (extended to partial —
-  COALESCE-style update of only provided columns); when `alert_recipients` is
-  present, the list is replaced wholesale (DELETE + INSERT in one transaction).
+- Upsert: `upsertMrmOrgSettings` signature changes from
+  `(orgId, retentionMonths)` to `(orgId, { retention_months?,
+  alert_email_enabled?, breach_auto_open_finding? })` — COALESCE-style update
+  of only provided columns (gap #1's controller call site updated to the new
+  shape); when `alert_recipients` is present, the list is replaced wholesale
+  (DELETE + INSERT in one transaction).
 
 **UI** — `AlertsSection.tsx`:
 
@@ -160,6 +191,9 @@ In `mrmRevalidationSweep.ts`, after `triggerRevalidation` returns:
     PUT rejects a user id from another org (400).
   - breach with toggle on → finding created with `auto_metric`; second breach
     same metric → NO second finding; breach on a different metric → new finding.
+  - ONE batch containing two breaching points of the same metric → exactly one
+    finding (within-batch dedup).
+  - re-breach after the auto-finding is moved to `closed` → a NEW finding opens.
   - warn with toggle on → no finding; breach with toggle off → no finding.
   - sweep newly-opens validation → notification row created; sweep annotates
     existing → no new notification.
