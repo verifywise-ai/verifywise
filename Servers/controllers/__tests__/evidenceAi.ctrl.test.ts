@@ -44,6 +44,8 @@ import { analyzeFile } from "../evidenceAi.ctrl";
 import { sequelize } from "../../database/db";
 import { getLLMKeysWithKeyQuery } from "../../utils/llmKey.utils";
 import { upsertAnalysisQuery } from "../../utils/evidenceAi.utils";
+import { parseDocument } from "../../advisor/parsers";
+import { analyzeEvidence, type AnalyzerResult } from "../../advisor/evidenceAnalyzer/analyzer.service";
 
 function createReq(overrides?: Partial<Request>): any {
   return {
@@ -81,5 +83,76 @@ describe("analyzeFile", () => {
     );
     expect(sequelize.query).not.toHaveBeenCalled();
     expect(upsertAnalysisQuery).not.toHaveBeenCalled();
+  });
+
+  it("returns 200 and persists the analyzer result when a key is configured", async () => {
+    (getLLMKeysWithKeyQuery as jest.Mock).mockResolvedValue([
+      { key: "sk-test", url: "https://api.anthropic.com", model: "claude-3-opus", name: "Anthropic" },
+    ]);
+
+    (sequelize.query as jest.Mock)
+      .mockResolvedValueOnce([[{ id: 42, filename: "policy.pdf", type: "application/pdf" }], {}]) // file metadata
+      .mockResolvedValueOnce([
+        [{ content: Buffer.from("some evidence text"), size_bytes: 100, upload_date: "2026-01-01" }],
+        {},
+      ]) // file content
+      .mockResolvedValueOnce([[], {}]); // evidence expiry (none linked)
+
+    (parseDocument as jest.Mock).mockResolvedValue({ text: "some evidence text" });
+
+    const analyzerResult: AnalyzerResult = {
+      summary: "Test summary",
+      key_findings: ["Finding one"],
+      compliance_areas: ["GDPR"],
+      quality_score: {
+        relevance: "A",
+        completeness: "A",
+        recency: "A",
+        reliability: "A",
+        specificity: "A",
+      },
+      overall_quality_grade: "A",
+      quality_rationale: {
+        relevance: "r",
+        completeness: "c",
+        recency: "rc",
+        reliability: "rl",
+        specificity: "s",
+        overall: "o",
+      },
+      suggested_control_links: [],
+      analysis_model: "claude-3-opus",
+      audit: {
+        analyzer_version: "v1",
+        abstain_reason: null,
+        char_count: 100,
+        truncated: false,
+        findings_with_quotes: [],
+        filename_check: null,
+      },
+    };
+    (analyzeEvidence as jest.Mock).mockResolvedValue(analyzerResult);
+
+    const persisted = { id: 1, file_id: 42, summary: "Test summary" };
+    (upsertAnalysisQuery as jest.Mock).mockResolvedValue(persisted);
+
+    const req = createReq();
+    const res = createRes();
+
+    await analyzeFile(req, res);
+
+    expect(analyzeEvidence).toHaveBeenCalledTimes(1);
+    expect(upsertAnalysisQuery).toHaveBeenCalledWith(
+      42,
+      1,
+      expect.objectContaining({
+        summary: "Test summary",
+        overall_quality_grade: "A",
+      }),
+    );
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith(
+      STATUS_CODE[200]({ ...persisted, quality_rationale: analyzerResult.quality_rationale }),
+    );
   });
 });

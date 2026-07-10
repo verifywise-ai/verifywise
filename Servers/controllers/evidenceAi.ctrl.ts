@@ -135,6 +135,8 @@ export async function analyzeFile(req: Request, res: Response) {
     const userId = req.userId ? Number(req.userId) : null;
 
     // ---- LLM key required ------------------------------------------
+    // NOTE: a DB error here now surfaces as a 500 (previously it was
+    // swallowed into a heuristic-v1 200 fallback) — documented tradeoff.
     const clients = await getLLMKeysWithKeyQuery(organizationId);
     if (clients.length === 0) {
       return res
