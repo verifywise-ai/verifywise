@@ -325,6 +325,7 @@ describe("FileBasicTable", () => {
     mockQuality.data = [];
     mockTrigger.isPending = false;
     mockLLMKeyStatus.data = { hasKeys: true, keyCount: 1, providers: ["Anthropic"] };
+    mockLLMKeyStatus.loading = false;
   });
 
   afterEach(() => {
@@ -815,5 +816,14 @@ describe("FileBasicTable", () => {
     renderWithProviders(<FileBasicTable {...defaultProps} canRunBulkActions />);
     const bulkAction = screen.getByTestId("bulk-action-analyze_ai");
     expect(bulkAction).toBeDisabled();
+  });
+
+  it("does not disable analyze buttons while LLM key status is still loading", () => {
+    mockLLMKeyStatus.data = null;
+    mockLLMKeyStatus.loading = true;
+    renderWithProviders(<FileBasicTable {...defaultProps} canRunBulkActions />);
+    const analyzeButtons = screen.getAllByRole("button", { name: /analyze with ai/i });
+    analyzeButtons.forEach((btn) => expect(btn).not.toBeDisabled());
+    expect(screen.getByTestId("bulk-action-analyze_ai")).not.toBeDisabled();
   });
 });
