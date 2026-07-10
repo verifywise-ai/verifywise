@@ -119,7 +119,7 @@ runRetentionPruneAllOrgs()        // iterate all orgs, isolated per-org failures
 - BullMQ wiring:
   - `automationProducer.ts` — `scheduleMrmRetentionPrune()` with
     `repeat: { pattern: "0 3 * * *" }` (daily 03:00 — off-peak, distinct from the
-    01:00 revalidation sweep).
+    04:00 revalidation sweep).
   - `jobs/producer.ts` — call it among the non-obliterating schedulers.
   - `automationWorker.ts` — dispatch `name === "mrm_retention_prune"` →
     `runRetentionPruneAllOrgs()` (mirrors the `mrm_revalidation_sweep` branch at
