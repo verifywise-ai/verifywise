@@ -113,9 +113,10 @@ function inferParseFidelity(fileType: string): "high" | "medium" | "low" | undef
 
 /**
  * POST /api/evidence-ai/analyze/:fileId
- * Trigger AI analysis for a file. Uses the v2 evidence-analyzer
- * (LLM-rubric + deterministic recency/reliability) when an LLM key is
- * configured. Falls back to heuristic-v1 if no key or the LLM call fails.
+ * Trigger AI analysis for a file. Requires an LLM key — returns 400 if
+ * none is configured for the organization. Uses the v2 evidence-analyzer
+ * (LLM-rubric + deterministic recency/reliability); falls back to
+ * heuristic-v1 only if the LLM call itself fails after a key was found.
  */
 export async function analyzeFile(req: Request, res: Response) {
   const functionName = "analyzeFile";
@@ -132,6 +133,14 @@ export async function analyzeFile(req: Request, res: Response) {
   try {
     const organizationId = req.organizationId!;
     const userId = req.userId ? Number(req.userId) : null;
+
+    // ---- LLM key required ------------------------------------------
+    const clients = await getLLMKeysWithKeyQuery(organizationId);
+    if (clients.length === 0) {
+      return res
+        .status(400)
+        .json(STATUS_CODE[400]("No LLM keys configured for this organization."));
+    }
 
     // ---- File metadata + content ---------------------------------
     const [fileRows] = await sequelize.query(
@@ -186,36 +195,30 @@ export async function analyzeFile(req: Request, res: Response) {
       return res.status(422).json(STATUS_CODE[422]("File has no extractable text content"));
     }
 
-    // ---- Pick LLM key for the org --------------------------------
+    // ---- Run the analyzer ------------------------------------------
     let analyzerResult: AnalyzerResult | null = null;
     let usedFallback = false;
     let fallbackReason = "";
 
     try {
-      const clients = await getLLMKeysWithKeyQuery(organizationId);
-      if (clients.length === 0) {
-        usedFallback = true;
-        fallbackReason = "no LLM key configured";
-      } else {
-        const apiKey = clients[0];
-        const baseURL = apiKey.url || getLLMProviderUrl(apiKey.name as LLMProvider);
-        analyzerResult = await analyzeEvidence({
-          documentText,
-          filename: file.filename,
-          fileType: file.type,
-          fileSizeBytes: contentRow?.size_bytes ?? null,
-          uploadDate: contentRow?.upload_date ?? null,
-          expiryDate,
-          parseFidelity: inferParseFidelity(file.type),
-          llmKey: {
-            apiKey: apiKey.key || "",
-            baseURL,
-            model: apiKey.model,
-            provider: apiKey.name as "Anthropic" | "OpenAI" | "OpenRouter" | "Custom",
-            headers: apiKey.custom_headers || undefined,
-          },
-        });
-      }
+      const apiKey = clients[0];
+      const baseURL = apiKey.url || getLLMProviderUrl(apiKey.name as LLMProvider);
+      analyzerResult = await analyzeEvidence({
+        documentText,
+        filename: file.filename,
+        fileType: file.type,
+        fileSizeBytes: contentRow?.size_bytes ?? null,
+        uploadDate: contentRow?.upload_date ?? null,
+        expiryDate,
+        parseFidelity: inferParseFidelity(file.type),
+        llmKey: {
+          apiKey: apiKey.key || "",
+          baseURL,
+          model: apiKey.model,
+          provider: apiKey.name as "Anthropic" | "OpenAI" | "OpenRouter" | "Custom",
+          headers: apiKey.custom_headers || undefined,
+        },
+      });
     } catch (llmErr) {
       logger.warn("[evidenceAnalyzer] LLM analysis failed, falling back to heuristic-v1", llmErr);
       usedFallback = true;
