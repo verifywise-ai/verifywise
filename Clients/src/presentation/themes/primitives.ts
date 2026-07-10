@@ -41,4 +41,16 @@ export const green = {
 
 export type GreenStep = keyof typeof green;
 
+/**
+ * Error red ramp (partial): 50 (subtle tint) → 500 (main).
+ */
+export const red = {
+  50: "#FEF2F2",
+  200: "#FFD6D6",
+  300: "#F5B8B8",
+  500: "#D32F2F",
+} as const;
+
+export type RedStep = keyof typeof red;
+
 export default grey;

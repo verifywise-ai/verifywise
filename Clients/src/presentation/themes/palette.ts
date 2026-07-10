@@ -4,7 +4,7 @@
  * Single source of truth for ALL colors across every module:
  * Governance, LLM Evals, AI Detection, Shadow AI, Model Inventory.
  *
- * Grey and green tokens derive from primitives.ts.
+ * Grey, green, and red tokens derive from primitives.ts.
  * Other status, risk, accent, and chart hues remain here until their scales are defined.
  *
  * Usage:
@@ -14,7 +14,7 @@
  * Migration guide: see /docs/COLOR_MIGRATION.md
  */
 
-import { grey, green } from "./primitives";
+import { grey, green, red } from "./primitives";
 
 // ---------------------------------------------------------------------------
 // 1. Semantic status colors (success / error / warning / info / default)
@@ -23,7 +23,7 @@ import { grey, green } from "./primitives";
 
 export const status = {
   success: { bg: green[200], text: green[600], border: green[300] },
-  error: { bg: "#FFD6D6", text: "#D32F2F", border: "#F5B8B8" },
+  error: { bg: red[200], text: red[500], border: red[300] },
   warning: { bg: "#FFF8E1", text: "#795548", border: "#F5E6B8" },
   info: { bg: "#E3F2FD", text: "#1565C0", border: "#BBDEFB" },
   default: { bg: grey[100], text: grey[500], border: grey[200] },
@@ -35,7 +35,7 @@ export const status = {
 // ---------------------------------------------------------------------------
 
 export const risk = {
-  critical: { bg: "#FFD6D6", text: "#D32F2F", border: "#F5B8B8" },
+  critical: { bg: red[200], text: red[500], border: red[300] },
   high: { bg: "#FFE5D0", text: "#E64A19", border: "#F5CDB0" },
   medium: { bg: "#FFF8E1", text: "#795548", border: "#F5E6B8" },
   low: { bg: green[200], text: green[600], border: green[300] },
