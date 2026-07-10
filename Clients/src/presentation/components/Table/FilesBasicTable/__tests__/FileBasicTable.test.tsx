@@ -24,6 +24,12 @@ const mockTrigger = vi.hoisted(() => ({
 }));
 const mockQuality = vi.hoisted(() => ({ data: [] as any[] }));
 
+const mockLLMKeyStatus = vi.hoisted(() => ({
+  data: { hasKeys: true, keyCount: 1, providers: ["Anthropic"] } as any,
+  loading: false,
+  error: null as string | null,
+}));
+
 vi.mock("../../../../../application/hooks/useBulkSelection", () => ({
   useBulkSelection: () => mockBulkState,
 }));
@@ -31,6 +37,10 @@ vi.mock("../../../../../application/hooks/useBulkSelection", () => ({
 vi.mock("../../../../../application/hooks/useEvidenceAi", () => ({
   useTriggerAnalysis: () => mockTrigger,
   useQualityScores: () => mockQuality,
+}));
+
+vi.mock("../../../../../application/hooks/useLLMKeyStatus", () => ({
+  useLLMKeyStatus: () => mockLLMKeyStatus,
 }));
 
 vi.mock("../../../EvidenceAnalysisPanel", () => ({
@@ -314,6 +324,7 @@ describe("FileBasicTable", () => {
     setBulkSelected([]);
     mockQuality.data = [];
     mockTrigger.isPending = false;
+    mockLLMKeyStatus.data = { hasKeys: true, keyCount: 1, providers: ["Anthropic"] };
   });
 
   afterEach(() => {
@@ -790,5 +801,19 @@ describe("FileBasicTable", () => {
     await user.click(screen.getByTestId("bulk-action-analyze_ai"));
     expect(mockTrigger.mutateAsync).toHaveBeenCalledWith(1);
     expect(mockTrigger.mutateAsync).toHaveBeenCalledWith(2);
+  });
+
+  it("disables the per-row analyze button when no LLM key is configured", () => {
+    mockLLMKeyStatus.data = { hasKeys: false, keyCount: 0, providers: [] };
+    renderWithProviders(<FileBasicTable {...defaultProps} />);
+    const analyzeButtons = screen.getAllByRole("button", { name: /analyze with ai/i });
+    analyzeButtons.forEach((btn) => expect(btn).toBeDisabled());
+  });
+
+  it("disables the bulk analyze action when no LLM key is configured", () => {
+    mockLLMKeyStatus.data = { hasKeys: false, keyCount: 0, providers: [] };
+    renderWithProviders(<FileBasicTable {...defaultProps} canRunBulkActions />);
+    const bulkAction = screen.getByTestId("bulk-action-analyze_ai");
+    expect(bulkAction).toBeDisabled();
   });
 });

@@ -52,6 +52,7 @@ import ProjectRiskLinkedPolicies from "../../ProjectRiskMitigation/ProjectRiskLi
 import { useBulkSelection } from "../../../../application/hooks/useBulkSelection";
 import { useBulkUpdateFiles } from "../../../../application/hooks/useBulkUpdateFiles";
 import { useTriggerAnalysis, useQualityScores } from "../../../../application/hooks/useEvidenceAi";
+import { useLLMKeyStatus } from "../../../../application/hooks/useLLMKeyStatus";
 import EvidenceAnalysisPanel from "../../EvidenceAnalysisPanel";
 import EvidenceQualityBadge, { type QualityGrade } from "../../EvidenceQualityBadge";
 import StandardModal from "../../Modals/StandardModal";
@@ -398,6 +399,8 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
   // Keyed by files.id, which is exactly what FileManager rows carry.
   const triggerAnalysis = useTriggerAnalysis();
   const { data: qualityScores } = useQualityScores();
+  const { data: llmKeyStatus } = useLLMKeyStatus();
+  const hasLLMKey = llmKeyStatus?.hasKeys ?? false;
   const analysisByFileId = useMemo(() => {
     const m = new Map<number, { grade: QualityGrade | null; analysis: unknown }>();
     (qualityScores ?? []).forEach((q: any) => {
@@ -536,7 +539,7 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
         id: "analyze_ai",
         label: "Analyze with AI",
         icon: <Sparkles size={16} />,
-        disabled: triggerAnalysis.isPending,
+        disabled: triggerAnalysis.isPending || !hasLLMKey,
         onClick: async () => {
           await Promise.all(selectedIds.map((id) => triggerAnalysis.mutateAsync(id)));
         },
@@ -548,6 +551,7 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
       bulkMutation.isPending,
       triggerAnalysis,
       selectedIds,
+      hasLLMKey,
     ],
   );
 
@@ -894,7 +898,13 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
                                 </Box>
                               )}
                               <Tooltip
-                                title={entry?.grade ? "Re-analyze with AI" : "Analyze with AI"}
+                                title={
+                                  !hasLLMKey
+                                    ? "Configure an LLM key to enable AI analysis"
+                                    : entry?.grade
+                                      ? "Re-analyze with AI"
+                                      : "Analyze with AI"
+                                }
                                 arrow
                               >
                                 <span>
@@ -903,7 +913,7 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
                                       entry?.grade ? "Re-analyze with AI" : "Analyze with AI"
                                     }
                                     size="small"
-                                    disabled={triggerAnalysis.isPending}
+                                    disabled={triggerAnalysis.isPending || !hasLLMKey}
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       if (fid) triggerAnalysis.mutate(fid);
