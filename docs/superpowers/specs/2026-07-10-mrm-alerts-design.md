@@ -58,6 +58,10 @@ CREATE INDEX idx_mrm_findings_auto_metric
   ON verifywise.mrm_findings(organization_id, model_inventory_id, auto_metric)
   WHERE auto_metric IS NOT NULL;
 
+-- Amendment 2026-07-11 (see §4): once-per-lifecycle claim for the overdue alert.
+ALTER TABLE verifywise.mrm_validations
+  ADD COLUMN overdue_notified_at TIMESTAMP WITH TIME ZONE;
+
 -- + add the overdue notification type to the notification enum
 -- (exact enum name/value per the existing breach-type migration pattern).
 ```
@@ -133,10 +137,27 @@ Inside `runRevalidationSweep` (the shared per-org function in
 daily BullMQ job AND the on-demand `POST /revalidation/sweep` endpoint notify
 (they call the same function):
 
-- Fire ONLY when `result.created_validation === true` — once per lifecycle.
-- Scope: only SCHEDULED sweep-opened validations notify. Manual
-  request-revalidation (requester already knows), breach-triggered (recipients
-  just got the breach alert), and tier-increase sources stay silent.
+- **AMENDED 2026-07-11 — trigger condition.** The original condition
+  (`result.created_validation === true`) is effectively unreachable:
+  `getDueRevalidationsQuery` only returns models that already HAVE an open
+  `not_started` validation past `next_due`, so `triggerRevalidation` takes the
+  annotate path and returns `created_validation: false` for every swept row
+  (`true` only in a validated-between-query-and-trigger race). The intent —
+  notify ONCE per overdue lifecycle, daily annotations silent — is instead
+  implemented with an atomic claim: new nullable column
+  `mrm_validations.overdue_notified_at`. After `triggerRevalidation` returns,
+  the sweep runs `UPDATE mrm_validations SET overdue_notified_at = now() WHERE
+  id = :validationId AND organization_id = :orgId AND overdue_notified_at IS
+  NULL RETURNING id` — a returned row means this sweep won the first-nudge
+  claim and notifies; every later daily sweep finds the claim taken and stays
+  silent. A new validation row (next cycle) starts with NULL and notifies once
+  again. The claim is taken before the recipient lookup, so an org with no
+  recipients still consumes its one nudge (consistent with the breach path's
+  "recorded, but no one assigned to notify").
+- Scope: only the sweep runs the claim, so manual request-revalidation
+  (requester already knows), breach-triggered (recipients just got the breach
+  alert), and tier-increase sources stay silent — unchanged from the original
+  decision.
 - Same recipient union as §2; in-app with the NEW notification type
   `MRM_REVALIDATION_DUE = "mrm_revalidation_due"` (TS enum in
   `i.notification.ts` + `ALTER TYPE verifywise.enum_notification_type ADD VALUE
