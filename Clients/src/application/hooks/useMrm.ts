@@ -46,6 +46,7 @@ import {
   IMrmModelRole,
   IMrmMonitoringRow,
   IMrmOrgSettings,
+  IMrmOrgSettingsUpdate,
   IMrmRevalidationEvent,
   IMrmThreshold,
   IMrmTrendPoint,
@@ -424,7 +425,7 @@ export const useMrmSettings = (): UseQueryResult<IMrmOrgSettings, Error> =>
 export const useUpdateMrmSettings = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (retention_months: number) => await updateMrmSettings(retention_months),
+    mutationFn: async (update: IMrmOrgSettingsUpdate) => await updateMrmSettings(update),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: mrmQueryKeys.settings() });
     },

@@ -28,6 +28,7 @@ import {
   IMrmModelRole,
   IMrmMonitoringRow,
   IMrmOrgSettings,
+  IMrmOrgSettingsUpdate,
   IMrmRevalidationEvent,
   IMrmThreshold,
   IMrmTrendPoint,
@@ -290,7 +291,7 @@ export async function getMrmSettings(signal?: AbortSignal): Promise<IMrmOrgSetti
   return (response.data as { data: IMrmOrgSettings }).data;
 }
 
-export async function updateMrmSettings(retention_months: number): Promise<IMrmOrgSettings> {
-  const response = await apiServices.put("/mrm/settings", { retention_months });
+export async function updateMrmSettings(update: IMrmOrgSettingsUpdate): Promise<IMrmOrgSettings> {
+  const response = await apiServices.put("/mrm/settings", update);
   return (response.data as { data: IMrmOrgSettings }).data;
 }

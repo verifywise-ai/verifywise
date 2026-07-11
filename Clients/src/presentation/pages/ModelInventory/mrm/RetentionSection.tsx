@@ -30,7 +30,7 @@ const RetentionSection = ({ onError, onSuccess }: RetentionSectionProps) => {
       return;
     }
     try {
-      await updateSettings.mutateAsync(parsed);
+      await updateSettings.mutateAsync({ retention_months: parsed });
       onSuccess("Retention saved");
     } catch (error) {
       onError(mrmErrorMessage(error, "Failed to save retention"));

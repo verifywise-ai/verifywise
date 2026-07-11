@@ -359,4 +359,14 @@ export interface IMrmAttestationSummary {
 export interface IMrmOrgSettings {
   organization_id: number;
   retention_months: number;
+  alert_email_enabled: boolean;
+  breach_auto_open_finding: boolean;
+  alert_recipients: number[];
+}
+
+export interface IMrmOrgSettingsUpdate {
+  retention_months?: number;
+  alert_email_enabled?: boolean;
+  breach_auto_open_finding?: boolean;
+  alert_recipients?: number[];
 }
