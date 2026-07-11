@@ -46,7 +46,7 @@ export async function updateMrmSettingsHandler(req: Request, res: Response) {
         .status(400)
         .json(STATUS_CODE[400](req.t!("Retention must be an integer of at least 13 months")));
     }
-    const settings = await upsertMrmOrgSettings(req.organizationId!, retention_months);
+    const settings = await upsertMrmOrgSettings(req.organizationId!, { retention_months });
     logStructured("successful", "MRM settings updated", fn, FILE);
     return res.status(200).json(STATUS_CODE[200](settings));
   } catch (error) {
