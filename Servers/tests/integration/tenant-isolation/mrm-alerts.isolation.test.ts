@@ -21,6 +21,8 @@ import {
   MrmEvalStatus,
   MrmThresholdSeverity,
 } from "../../../domain.layer/enums/mrmMonitoring.enum";
+import { runRevalidationSweep } from "../../../services/automations/actions/mrmRevalidationSweep";
+import { sendInAppNotification } from "../../../services/inAppNotification.service";
 
 /**
  * MRM alerts — tenant isolation for recipient storage, the recipient union,
@@ -310,5 +312,72 @@ describe("MRM breach auto-open finding", () => {
     expect(bFinding).not.toBeNull();
     expect((await findingRows(owner.orgId)).length).toBe(1);
     expect((await findingRows(attacker.orgId)).length).toBe(1);
+  });
+});
+
+describe("MRM overdue-validation alert (once-per-lifecycle claim)", () => {
+  const mockSend = sendInAppNotification as jest.Mock;
+  const PAST_DUE = "2026-01-01T00:00:00Z";
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+  });
+  afterEach(async () => {
+    await cleanupDatabase();
+  });
+
+  const overdueNotifiedAt = async (validationId: number): Promise<Date | null> => {
+    const rows = (await sequelize.query(
+      `SELECT overdue_notified_at FROM mrm_validations WHERE id = :validationId`,
+      { replacements: { validationId }, type: QueryTypes.SELECT },
+    )) as { overdue_notified_at: Date | null }[];
+    return rows[0].overdue_notified_at;
+  };
+
+  it("notifies once on the first sweep, then stays silent on daily re-runs", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const modelId = await createTestModelInventory(owner.orgId);
+    await createTestMrmModelRole(owner.orgId, modelId, owner.userId, { role: "owner" });
+    const validationId = await createTestMrmValidation(owner.orgId, modelId, {
+      next_due: PAST_DUE,
+    });
+
+    const summary = await runRevalidationSweep(owner.orgId);
+    expect(summary.due).toBe(1);
+
+    expect(mockSend).toHaveBeenCalledTimes(1);
+    const [orgArg, notificationArg] = mockSend.mock.calls[0];
+    expect(orgArg).toBe(owner.orgId);
+    expect(notificationArg.type).toBe("mrm_revalidation_due");
+    expect(notificationArg.user_id).toBe(owner.userId);
+    expect(await overdueNotifiedAt(validationId)).not.toBeNull();
+
+    // Tomorrow's sweep: same overdue validation, claim already taken — silent.
+    jest.clearAllMocks();
+    await runRevalidationSweep(owner.orgId);
+    expect(mockSend).not.toHaveBeenCalled();
+  });
+
+  it("consumes the claim even with no recipients (no spam when roles arrive later)", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const modelId = await createTestModelInventory(owner.orgId);
+    const validationId = await createTestMrmValidation(owner.orgId, modelId, {
+      next_due: PAST_DUE,
+    });
+
+    await runRevalidationSweep(owner.orgId);
+    expect(mockSend).not.toHaveBeenCalled();
+    expect(await overdueNotifiedAt(validationId)).not.toBeNull();
+  });
+
+  it("org A's sweep never consumes org B's claim", async () => {
+    const { owner, attacker } = await seedTwoTenantContexts();
+    const modelB = await createTestModelInventory(attacker.orgId);
+    const validationB = await createTestMrmValidation(attacker.orgId, modelB, {
+      next_due: PAST_DUE,
+    });
+
+    await runRevalidationSweep(owner.orgId);
+    expect(await overdueNotifiedAt(validationB)).toBeNull();
   });
 });

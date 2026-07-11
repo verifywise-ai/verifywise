@@ -1,13 +1,17 @@
 import { QueryTypes, Transaction } from "sequelize";
 import { sequelize } from "../database/db";
-import { getBreachNotificationRecipientsQuery } from "./mrmMonitoring.utils";
+import { getBreachNotificationRecipientsQuery, getModelLabelQuery } from "./mrmMonitoring.utils";
 import { getOpenValidationForModelQuery } from "./mrmRevalidation.utils";
+import { getMrmOrgSettings } from "./mrmSettings.utils";
 import { MrmEvalStatus, MrmThresholdSeverity } from "../domain.layer/enums/mrmMonitoring.enum";
 import { MrmFindingSeverity } from "../domain.layer/enums/mrm.enum";
 import { sendInAppNotification } from "../services/inAppNotification.service";
+import { EMAIL_TEMPLATES } from "../constants/emailTemplates";
 import {
   ICreateNotification,
   IEmailNotificationConfig,
+  NotificationEntityType,
+  NotificationType,
 } from "../domain.layer/interfaces/i.notification";
 import logger from "./logger/fileLogger";
 
@@ -241,4 +245,79 @@ export const dispatchAlerts = async (
       logger.error("❌ Failed to dispatch MRM alert notification:", error);
     }
   }
+};
+
+/**
+ * Atomically claim the ONE overdue nudge a validation lifecycle gets. Returns
+ * true only for the caller that flips overdue_notified_at from NULL — every
+ * later daily sweep finds the claim taken and stays silent. A new validation
+ * row (next cycle) starts at NULL and notifies once again.
+ */
+export const claimOverdueNotificationQuery = async (
+  organizationId: number,
+  validationId: number,
+): Promise<boolean> => {
+  const rows = (await sequelize.query(
+    `UPDATE mrm_validations
+        SET overdue_notified_at = now()
+      WHERE id = :validationId
+        AND organization_id = :organizationId
+        AND overdue_notified_at IS NULL
+      RETURNING id`,
+    {
+      replacements: { organizationId, validationId },
+      type: QueryTypes.SELECT,
+    },
+  )) as { id: number }[];
+  return rows.length > 0;
+};
+
+/**
+ * Overdue-validation alert (spec §4, amended 2026-07-11): fired by the
+ * revalidation sweep — BOTH the daily BullMQ job and the on-demand endpoint
+ * call the same sweep function. Claim first: the lifecycle's single nudge is
+ * consumed even when nobody is assigned to hear it (consistent with the
+ * breach path's "recorded, but no one assigned to notify").
+ */
+export const notifyRevalidationDue = async (
+  organizationId: number,
+  modelInventoryId: number,
+  validationId: number,
+  nextDue: Date | null,
+): Promise<void> => {
+  const claimed = await claimOverdueNotificationQuery(organizationId, validationId);
+  if (!claimed) return;
+
+  const recipients = await getAlertRecipientsUnion(organizationId, modelInventoryId);
+  if (recipients.length === 0) return;
+
+  const settings = await getMrmOrgSettings(organizationId);
+  const label = (await getModelLabelQuery(organizationId, modelInventoryId)) ?? "a model";
+  const dueDate = nextDue ? new Date(nextDue).toISOString().slice(0, 10) : "unknown";
+  const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+  const validationPath = "/model-inventory/model-risk-management/validation";
+
+  await dispatchAlerts(
+    organizationId,
+    recipients,
+    {
+      type: NotificationType.MRM_REVALIDATION_DUE,
+      title: `Validation overdue: ${label}`,
+      message: `${label} — periodic revalidation was due on ${dueDate} and has not been started.`,
+      entity_type: NotificationEntityType.MODEL,
+      entity_id: modelInventoryId,
+      entity_name: label,
+      action_url: validationPath,
+    },
+    settings.alert_email_enabled,
+    {
+      template: EMAIL_TEMPLATES.MRM_REVALIDATION_DUE,
+      subject: `Validation overdue: ${label}`,
+      variables: {
+        model_label: label,
+        due_date: dueDate,
+        validation_url: `${baseUrl}${validationPath}`,
+      },
+    },
+  );
 };
