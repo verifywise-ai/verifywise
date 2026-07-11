@@ -2,9 +2,15 @@ import {
   isAutoFindingEligible,
   severityToFindingSeverity,
   unionRecipients,
+  dispatchAlerts,
 } from "../mrmAlerts.utils";
 import { MrmEvalStatus, MrmThresholdSeverity } from "../../domain.layer/enums/mrmMonitoring.enum";
 import { MrmFindingSeverity } from "../../domain.layer/enums/mrm.enum";
+import { sendInAppNotification } from "../../services/inAppNotification.service";
+import {
+  NotificationType,
+  NotificationEntityType,
+} from "../../domain.layer/interfaces/i.notification";
 
 jest.mock("../../database/db", () => ({
   sequelize: { query: jest.fn(), transaction: jest.fn() },
@@ -56,5 +62,52 @@ describe("isAutoFindingEligible", () => {
     expect(isAutoFindingEligible(MrmEvalStatus.OK, true)).toBe(false);
     expect(isAutoFindingEligible(MrmEvalStatus.NO_THRESHOLD, true)).toBe(false);
     expect(isAutoFindingEligible(MrmEvalStatus.BREACH, false)).toBe(false);
+  });
+});
+
+describe("dispatchAlerts", () => {
+  const mockSend = sendInAppNotification as jest.Mock;
+  const baseNotification = {
+    type: NotificationType.MRM_METRIC_BREACH,
+    title: "Metric breach: psi",
+    message: "Model X breached",
+    entity_type: NotificationEntityType.MODEL,
+    entity_id: 7,
+    entity_name: "Model X",
+  };
+  const email = {
+    template: "mrm-breach-alert.mjml",
+    subject: "Metric breach: psi",
+    variables: { metric: "psi" },
+  };
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockSend.mockResolvedValue(undefined);
+  });
+
+  it("sends one dual-dispatch notification per recipient with the email flag", async () => {
+    await dispatchAlerts(1, [10, 20], baseNotification, true, email);
+    expect(mockSend).toHaveBeenCalledTimes(2);
+    expect(mockSend).toHaveBeenCalledWith(1, { ...baseNotification, user_id: 10 }, true, email);
+    expect(mockSend).toHaveBeenCalledWith(1, { ...baseNotification, user_id: 20 }, true, email);
+  });
+
+  it("passes emailEnabled=false through (in-app only)", async () => {
+    await dispatchAlerts(1, [10], baseNotification, false, email);
+    expect(mockSend).toHaveBeenCalledWith(1, { ...baseNotification, user_id: 10 }, false, email);
+  });
+
+  it("one failing recipient never blocks the rest and never throws", async () => {
+    mockSend.mockRejectedValueOnce(new Error("smtp down"));
+    await expect(
+      dispatchAlerts(1, [10, 20], baseNotification, true, email),
+    ).resolves.toBeUndefined();
+    expect(mockSend).toHaveBeenCalledTimes(2);
+  });
+
+  it("does nothing for an empty recipient list", async () => {
+    await dispatchAlerts(1, [], baseNotification, true, email);
+    expect(mockSend).not.toHaveBeenCalled();
   });
 });

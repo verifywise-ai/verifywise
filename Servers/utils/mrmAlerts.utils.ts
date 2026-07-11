@@ -4,6 +4,12 @@ import { getBreachNotificationRecipientsQuery } from "./mrmMonitoring.utils";
 import { getOpenValidationForModelQuery } from "./mrmRevalidation.utils";
 import { MrmEvalStatus, MrmThresholdSeverity } from "../domain.layer/enums/mrmMonitoring.enum";
 import { MrmFindingSeverity } from "../domain.layer/enums/mrm.enum";
+import { sendInAppNotification } from "../services/inAppNotification.service";
+import {
+  ICreateNotification,
+  IEmailNotificationConfig,
+} from "../domain.layer/interfaces/i.notification";
+import logger from "./logger/fileLogger";
 
 /**
  * MRM alerts (gaps #2+#3): recipient resolution, breach auto-finding, and
@@ -207,5 +213,32 @@ export const maybeAutoOpenFindingForBreach = async (
   } catch (error) {
     await transaction.rollback();
     throw error;
+  }
+};
+
+/**
+ * Fan an alert out to every recipient via the standard dual-dispatch entry
+ * point (in-app always; email when the org enabled it — sendInAppNotification
+ * gates and swallows email failures itself). Per-recipient try/catch so one
+ * failing recipient never blocks the rest; never throws.
+ */
+export const dispatchAlerts = async (
+  organizationId: number,
+  recipients: number[],
+  notification: Omit<ICreateNotification, "user_id">,
+  emailEnabled: boolean,
+  email: IEmailNotificationConfig,
+): Promise<void> => {
+  for (const userId of recipients) {
+    try {
+      await sendInAppNotification(
+        organizationId,
+        { ...notification, user_id: userId },
+        emailEnabled,
+        email,
+      );
+    } catch (error) {
+      logger.error("❌ Failed to dispatch MRM alert notification:", error);
+    }
   }
 };
