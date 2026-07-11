@@ -1,4 +1,10 @@
-import { unionRecipients } from "../mrmAlerts.utils";
+import {
+  isAutoFindingEligible,
+  severityToFindingSeverity,
+  unionRecipients,
+} from "../mrmAlerts.utils";
+import { MrmEvalStatus, MrmThresholdSeverity } from "../../domain.layer/enums/mrmMonitoring.enum";
+import { MrmFindingSeverity } from "../../domain.layer/enums/mrm.enum";
 
 jest.mock("../../database/db", () => ({
   sequelize: { query: jest.fn(), transaction: jest.fn() },
@@ -30,5 +36,25 @@ describe("unionRecipients", () => {
     expect(unionRecipients([], [7])).toEqual([7]);
     expect(unionRecipients([7], [])).toEqual([7]);
     expect(unionRecipients([], [])).toEqual([]);
+  });
+});
+
+describe("severityToFindingSeverity", () => {
+  it("maps critical→critical, high→high, warn→null", () => {
+    expect(severityToFindingSeverity(MrmThresholdSeverity.CRITICAL)).toBe(
+      MrmFindingSeverity.CRITICAL,
+    );
+    expect(severityToFindingSeverity(MrmThresholdSeverity.HIGH)).toBe(MrmFindingSeverity.HIGH);
+    expect(severityToFindingSeverity(MrmThresholdSeverity.WARN)).toBeNull();
+  });
+});
+
+describe("isAutoFindingEligible", () => {
+  it("fires only for a hard breach with the toggle on", () => {
+    expect(isAutoFindingEligible(MrmEvalStatus.BREACH, true)).toBe(true);
+    expect(isAutoFindingEligible(MrmEvalStatus.WARN, true)).toBe(false);
+    expect(isAutoFindingEligible(MrmEvalStatus.OK, true)).toBe(false);
+    expect(isAutoFindingEligible(MrmEvalStatus.NO_THRESHOLD, true)).toBe(false);
+    expect(isAutoFindingEligible(MrmEvalStatus.BREACH, false)).toBe(false);
   });
 });
