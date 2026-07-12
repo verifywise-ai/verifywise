@@ -220,7 +220,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
   const transaction = await sequelize.transaction();
   const projectData = {
     ...req.body,
-    framework: req.body.framework,
+    framework: req.body.framework || [],
   };
 
   logProcessing({
@@ -241,7 +241,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
     const createdProject = await createNewProjectQuery(
       newProject,
       newProject.members ?? [],
-      newProject.framework,
+      newProject.framework || [],
       req.organizationId!,
       req.userId!,
       transaction,
@@ -252,7 +252,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
     const frameworks: { [key: string]: Object } = {};
     if (!createdProject.approval_workflow_id) {
       // No approval workflow - create frameworks immediately
-      for (const framework of newProject.framework) {
+      for (const framework of newProject.framework || []) {
         if (framework === 1) {
           const eu = await createEUFrameworkQuery(
             createdProject.id!,

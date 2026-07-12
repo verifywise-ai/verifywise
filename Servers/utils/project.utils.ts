@@ -243,12 +243,14 @@ export const countAnswersByProjectId = async (
 export const createNewProjectQuery = async (
   project: Partial<ProjectModel> & { enable_ai_data_insertion?: boolean },
   members: number[],
-  frameworks: number[],
+  frameworks: number[] | undefined,
   organizationId: number,
   userId: number,
   transaction: Transaction,
   isDemo: boolean = false,
 ): Promise<ProjectModel> => {
+  // Frameworks are optional for use cases; default to empty array
+  const projectFrameworks = frameworks || [];
   const allowedFrameworks: number[] = [];
   if (project.is_organizational === true) {
     const result = (await sequelize.query(
@@ -263,7 +265,7 @@ export const createNewProjectQuery = async (
     )) as [{ id: number }[], number];
     allowedFrameworks.push(...result[0].map((f) => f.id));
   }
-  for (let framework of frameworks) {
+  for (let framework of projectFrameworks) {
     if (!allowedFrameworks.includes(framework)) {
       throw new Error(`Framework with ID ${framework} is not allowed for this project.`);
     }
@@ -272,7 +274,7 @@ export const createNewProjectQuery = async (
   const ucId = await generateNextUcId(organizationId, transaction);
 
   // If approval workflow is assigned, store frameworks for later creation
-  const pendingFrameworks = project.approval_workflow_id ? frameworks : null;
+  const pendingFrameworks = project.approval_workflow_id ? projectFrameworks : null;
   const enableAiDataInsertion = project.approval_workflow_id
     ? project.enable_ai_data_insertion || false
     : false;
@@ -281,11 +283,11 @@ export const createNewProjectQuery = async (
     `INSERT INTO projects (
       organization_id, uc_id, project_title, owner, start_date, geography, target_industry, description, ai_risk_classification,
       type_of_high_risk_role, goal, status, last_updated, last_updated_by, is_demo, is_organizational, approval_workflow_id,
-      pending_frameworks, enable_ai_data_insertion
+      pending_frameworks, enable_ai_data_insertion, use_case_category, use_case_purpose, use_case_audience, deployment_context
     ) VALUES (
       :organization_id, :uc_id, :project_title, :owner, :start_date, :geography, :target_industry, :description, :ai_risk_classification,
       :type_of_high_risk_role, :goal, :status, :last_updated, :last_updated_by, :is_demo, :is_organizational, :approval_workflow_id,
-      :pending_frameworks, :enable_ai_data_insertion
+      :pending_frameworks, :enable_ai_data_insertion, :use_case_category, :use_case_purpose, :use_case_audience, :deployment_context
     ) RETURNING *`,
     {
       replacements: {
@@ -308,6 +310,10 @@ export const createNewProjectQuery = async (
         approval_workflow_id: project.approval_workflow_id || null,
         pending_frameworks: pendingFrameworks ? JSON.stringify(pendingFrameworks) : null,
         enable_ai_data_insertion: enableAiDataInsertion,
+        use_case_category: project.use_case_category || null,
+        use_case_purpose: project.use_case_purpose || null,
+        use_case_audience: project.use_case_audience || null,
+        deployment_context: project.deployment_context || null,
       },
       mapToModel: true,
       model: ProjectModel,
@@ -338,7 +344,7 @@ export const createNewProjectQuery = async (
   (createdProject.dataValues as any)["framework"] = [];
   // Only create projects_frameworks records if NO approval workflow is assigned
   if (!project.approval_workflow_id) {
-    for (let framework of frameworks) {
+    for (let framework of projectFrameworks) {
       await sequelize.query(
         `INSERT INTO projects_frameworks (organization_id, project_id, framework_id, is_demo) VALUES (:organization_id, :project_id, :framework_id, :is_demo) RETURNING *`,
         {
@@ -520,9 +526,14 @@ export const updateProjectByIdQuery = async (
     "last_updated",
     "last_updated_by",
     "status",
+    "use_case_category",
+    "use_case_purpose",
+    "use_case_audience",
+    "deployment_context",
   ]
     .filter((f) => {
-      if (project[f as keyof ProjectModel] !== undefined && project[f as keyof ProjectModel]) {
+      // Include fields that are explicitly provided, including null, 0, or empty string
+      if (project[f as keyof ProjectModel] !== undefined) {
         updateProject[f as keyof ProjectModel] = project[f as keyof ProjectModel];
         return true;
       }
