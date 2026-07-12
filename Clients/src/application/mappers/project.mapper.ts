@@ -15,7 +15,12 @@ import { CreateProjectFormUserModel } from "../../domain/models/Common/user/user
 /**
  * Converts API risk classification to domain enum
  */
-export function mapRiskClassification(value: number | string): AiRiskClassification {
+export function mapRiskClassification(
+  value: number | string | null | undefined,
+): AiRiskClassification | null {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
   if (typeof value === "number") {
     // Map numeric values to enum (assuming 0-3 mapping)
     const numericMapping: Record<number, AiRiskClassification> = {
@@ -39,7 +44,12 @@ export function mapRiskClassification(value: number | string): AiRiskClassificat
 /**
  * Converts API high risk role to domain enum
  */
-export function mapHighRiskRole(value: number | string): HighRiskRole {
+export function mapHighRiskRole(
+  value: number | string | null | undefined,
+): HighRiskRole | null {
+  if (value === null || value === undefined || value === "") {
+    return null;
+  }
   if (typeof value === "number") {
     return value === 1 ? HighRiskRole.PROVIDER : HighRiskRole.DEPLOYER;
   }
@@ -65,12 +75,8 @@ export function mapProjectResponseDTOToProject(dto: ProjectResponseDTO): Project
     owner: dto.owner,
     members: Array.isArray(dto.members) ? dto.members.map(String) : [],
     start_date: new Date(dto.start_date),
-    ai_risk_classification: mapRiskClassification(
-      dto.ai_risk_classification,
-    ) as unknown as Project["ai_risk_classification"],
-    type_of_high_risk_role: mapHighRiskRole(
-      dto.type_of_high_risk_role,
-    ) as unknown as Project["type_of_high_risk_role"],
+    ai_risk_classification: mapRiskClassification(dto.ai_risk_classification) as unknown as Project["ai_risk_classification"],
+    type_of_high_risk_role: mapHighRiskRole(dto.type_of_high_risk_role) as unknown as Project["type_of_high_risk_role"],
     goal: dto.goal,
     last_updated: new Date(dto.last_updated),
     last_updated_by: dto.last_updated_by,
@@ -81,6 +87,10 @@ export function mapProjectResponseDTOToProject(dto: ProjectResponseDTO): Project
     description: dto.description,
     is_organizational: dto.is_organizational,
     status: dto.status as Project["status"],
+    use_case_category: dto.use_case_category,
+    use_case_purpose: dto.use_case_purpose,
+    use_case_audience: dto.use_case_audience,
+    deployment_context: dto.deployment_context,
     doneSubcontrols: dto.doneSubcontrols,
     totalSubcontrols: dto.totalSubcontrols,
     answeredAssessments: dto.answeredAssessments,
@@ -101,14 +111,18 @@ export function mapProjectResponseDTOToModel(dto: ProjectResponseDTO): ProjectMo
     project_title: dto.project_title,
     owner: dto.owner,
     start_date: new Date(dto.start_date),
-    ai_risk_classification: mapRiskClassification(dto.ai_risk_classification),
-    type_of_high_risk_role: mapHighRiskRole(dto.type_of_high_risk_role),
+    ai_risk_classification: mapRiskClassification(dto.ai_risk_classification) as unknown as ProjectModel["ai_risk_classification"],
+    type_of_high_risk_role: mapHighRiskRole(dto.type_of_high_risk_role) as unknown as ProjectModel["type_of_high_risk_role"],
     goal: dto.goal,
     last_updated: new Date(dto.last_updated),
     last_updated_by: dto.last_updated_by,
     is_demo: dto.is_demo,
     created_at: dto.created_at ? new Date(dto.created_at) : undefined,
     is_organizational: dto.is_organizational ?? false,
+    use_case_category: dto.use_case_category,
+    use_case_purpose: dto.use_case_purpose,
+    use_case_audience: dto.use_case_audience,
+    deployment_context: dto.deployment_context,
   };
 
   return new ProjectModel(projectData);
@@ -145,9 +159,13 @@ export function mapCreateProjectFormToDTO(formValues: {
   owner: number;
   members: CreateProjectFormUserModel[];
   start_date: string;
-  ai_risk_classification: number;
-  type_of_high_risk_role: number;
+  ai_risk_classification?: number | null;
+  type_of_high_risk_role?: number | null;
   goal: string;
+  use_case_category?: string | null;
+  use_case_purpose?: string | null;
+  use_case_audience?: string | null;
+  deployment_context?: string | null;
 }): CreateProjectDTO {
   return {
     project_title: formValues.project_title,
@@ -162,5 +180,9 @@ export function mapCreateProjectFormToDTO(formValues: {
     ai_risk_classification: formValues.ai_risk_classification,
     type_of_high_risk_role: formValues.type_of_high_risk_role,
     goal: formValues.goal,
+    use_case_category: formValues.use_case_category,
+    use_case_purpose: formValues.use_case_purpose,
+    use_case_audience: formValues.use_case_audience,
+    deployment_context: formValues.deployment_context,
   };
 }
