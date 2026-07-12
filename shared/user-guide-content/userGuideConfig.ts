@@ -736,7 +736,7 @@ export const collections: Collection[] = [
     title: 'Developer guide',
     description: 'Build on VerifyWise. The guide covers Agent Control (connect any terminal agent and govern its tool calls) and the platform REST API for reading and writing your governance data. More developer topics are coming.',
     icon: 'Plug',
-    articleCount: 12,
+    articleCount: 13,
     articles: [
       {
         id: 'overview',
@@ -809,6 +809,12 @@ export const collections: Collection[] = [
         title: 'Inbound integrations',
         description: 'Create incidents from another system and submit public intake forms.',
         keywords: ['developer', 'api', 'incident', 'intake', 'form', 'public', 'submission', 'webhook', 'integration', 'monitoring'],
+      },
+      {
+        id: 'mrm-metric-ingestion',
+        title: 'Model metrics ingestion',
+        description: 'Push model monitoring metrics with an ingestion token — payloads, dedup, errors and retries.',
+        keywords: ['developer', 'api', 'mrm', 'model risk', 'metrics', 'ingestion', 'monitoring', 'push', 'token', 'threshold', 'breach', 'drift', 'psi', 'idempotency', 'batch', 'curl', 'integration'],
       },
     ],
   },
