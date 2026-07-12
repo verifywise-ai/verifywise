@@ -86,9 +86,9 @@ export const ProjectForm = ({
         owner: projectToEdit.owner || 0,
         members: [], // Will be populated in useEffect when users data is available
         start_date: projectToEdit.start_date || "",
-        ai_risk_classification: projectToEdit.ai_risk_classification || 0,
+        ai_risk_classification: projectToEdit.ai_risk_classification || null,
         status: getStatusIdFromName(projectToEdit.status),
-        type_of_high_risk_role: projectToEdit.type_of_high_risk_role || 0,
+        type_of_high_risk_role: projectToEdit.type_of_high_risk_role || null,
         goal: projectToEdit.goal || "",
         enable_ai_data_insertion: projectToEdit.enable_ai_data_insertion || false,
         monitored_regulations_and_standards:
@@ -100,11 +100,15 @@ export const ProjectForm = ({
         target_industry: projectToEdit.target_industry || "",
         description: projectToEdit.description || "",
         approval_workflow_id: projectToEdit.approval_workflow_id || 0,
+        use_case_category: projectToEdit.use_case_category || null,
+        use_case_purpose: projectToEdit.use_case_purpose || null,
+        use_case_audience: projectToEdit.use_case_audience || null,
+        deployment_context: projectToEdit.deployment_context || null,
       };
     }
     return {
       ...initialState,
-      framework_type: defaultFrameworkType || null,
+      framework_type: defaultFrameworkType || FrameworkTypeEnum.ProjectBased,
     };
   });
   const { users } = useUsers();
@@ -142,19 +146,26 @@ export const ProjectForm = ({
         return r.accepted ? "" : r.message;
       },
       ai_risk_classification: (v: unknown, vals: FormValues) => {
-        if (vals.framework_type !== FrameworkTypeEnum.ProjectBased) return "";
+        const hasEuAiAct = vals.monitored_regulations_and_standards.some((fw) => fw._id === 1);
+        if (!hasEuAiAct) return "";
+        if (v === null || v === undefined || v === 0) {
+          return "AI risk classification is required when EU AI Act is selected.";
+        }
         const r = selectValidation("AI risk classification", v as number);
         return r.accepted ? "" : r.message;
       },
       type_of_high_risk_role: (v: unknown, vals: FormValues) => {
-        if (vals.framework_type !== FrameworkTypeEnum.ProjectBased) return "";
+        const hasEuAiAct = vals.monitored_regulations_and_standards.some((fw) => fw._id === 1);
+        if (!hasEuAiAct) return "";
+        if (v === null || v === undefined || v === 0) {
+          return "Type of high risk role is required when EU AI Act is selected.";
+        }
         const r = selectValidation("Type of high risk role", v as number);
         return r.accepted ? "" : r.message;
       },
-      monitored_regulations_and_standards: (v: unknown) => {
-        if (projectToEdit) return "";
-        const list = v as FormValues["monitored_regulations_and_standards"];
-        return list.length === 0 ? "At least one framework is required." : "";
+      monitored_regulations_and_standards: () => {
+        // Framework selection is optional for use cases
+        return "";
       },
     }),
     [projectToEdit],
@@ -226,6 +237,12 @@ export const ProjectForm = ({
     fetchWorkflows();
   }, []);
 
+  // True when EU AI Act (framework ID 1) is selected
+  const hasEuAiAct = useMemo(
+    () => values.monitored_regulations_and_standards.some((fw) => fw._id === 1),
+    [values.monitored_regulations_and_standards],
+  );
+
   // Filter frameworks based on framework type
   const filteredFrameworks = useMemo(() => {
     if (!allFrameworks) return [];
@@ -291,6 +308,52 @@ export const ProjectForm = ({
   );
 
   const projectStatusItems = useMemo(() => PROJECT_STATUS_ITEMS, []);
+
+  const useCaseCategoryItems = useMemo(
+    () => [
+      { _id: 1, name: "Generative AI" },
+      { _id: 2, name: "Computer Vision" },
+      { _id: 3, name: "Predictive Analytics" },
+      { _id: 4, name: "Natural Language Processing" },
+      { _id: 5, name: "Robotics" },
+      { _id: 6, name: "Recommendation Systems" },
+      { _id: 7, name: "Other" },
+    ],
+    [],
+  );
+
+  const useCasePurposeItems = useMemo(
+    () => [
+      { _id: 1, name: "Customer service" },
+      { _id: 2, name: "Internal operations" },
+      { _id: 3, name: "Product/feature enhancement" },
+      { _id: 4, name: "Research and development" },
+      { _id: 5, name: "Marketing and sales" },
+      { _id: 6, name: "Risk and compliance" },
+      { _id: 7, name: "Other" },
+    ],
+    [],
+  );
+
+  const useCaseAudienceItems = useMemo(
+    () => [
+      { _id: 1, name: "Internal" },
+      { _id: 2, name: "External" },
+      { _id: 3, name: "Both" },
+    ],
+    [],
+  );
+
+  const deploymentContextItems = useMemo(
+    () => [
+      { _id: 1, name: "Cloud" },
+      { _id: 2, name: "On-premises" },
+      { _id: 3, name: "Edge" },
+      { _id: 4, name: "Hybrid" },
+      { _id: 5, name: "Third-party API" },
+    ],
+    [],
+  );
 
   const handleOnTextFieldChange = useCallback(
     (prop: keyof FormValues) => (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -372,8 +435,9 @@ export const ProjectForm = ({
           enable_ai_data_insertion: values.enable_ai_data_insertion,
         };
 
-        // Add AI-specific fields only for project-based frameworks
-        if (values.framework_type === FrameworkTypeEnum.ProjectBased) {
+        // Add AI-specific fields only when EU AI Act is selected
+        const hasEuAiAct = values.monitored_regulations_and_standards.some((fw) => fw._id === 1);
+        if (hasEuAiAct) {
           body.type_of_high_risk_role = highRiskRoleItems.find(
             (item) => item._id === values.type_of_high_risk_role,
           )?.name;
@@ -381,9 +445,11 @@ export const ProjectForm = ({
             (item) => item._id === values.ai_risk_classification,
           )?.name;
         } else {
-          // For organization-wide frameworks, set default values
           body.type_of_high_risk_role = null;
           body.ai_risk_classification = null;
+        }
+
+        if (values.framework_type === FrameworkTypeEnum.OrganizationWide) {
           body.is_organizational = true;
         }
 
@@ -391,6 +457,20 @@ export const ProjectForm = ({
         if (!projectToEdit) {
           body.framework = values.monitored_regulations_and_standards.map((fw) => fw._id);
         }
+
+        // Include regulation-agnostic classification fields (map _id to name)
+        body.use_case_category = useCaseCategoryItems.find(
+          (item) => item._id === values.use_case_category,
+        )?.name || null;
+        body.use_case_purpose = useCasePurposeItems.find(
+          (item) => item._id === values.use_case_purpose,
+        )?.name || null;
+        body.use_case_audience = useCaseAudienceItems.find(
+          (item) => item._id === values.use_case_audience,
+        )?.name || null;
+        body.deployment_context = deploymentContextItems.find(
+          (item) => item._id === values.deployment_context,
+        )?.name || null;
 
         let res;
         if (projectToEdit) {
@@ -652,7 +732,7 @@ export const ProjectForm = ({
                   error={errors.approval_workflow_id}
                 />
               )}
-              {values.framework_type === FrameworkTypeEnum.ProjectBased && (
+              {hasEuAiAct && (
                 <>
                   <Select
                     id="risk-classification-input"
@@ -789,8 +869,7 @@ export const ProjectForm = ({
                 </Stack>
                 {!projectToEdit && values.framework_type !== FrameworkTypeEnum.OrganizationWide && (
                   <AutoCompleteField
-                    label="Applicable regulations"
-                    isRequired
+                    label="Applicable regulations (optional)"
                     multiple
                     id="monitored-regulations-and-standards-input"
                     value={values.monitored_regulations_and_standards}
@@ -869,8 +948,7 @@ export const ProjectForm = ({
             <Stack>
               {!projectToEdit && (
                 <AutoCompleteField
-                  label="Applicable regulations"
-                  isRequired
+                  label="Applicable regulations (optional)"
                   multiple
                   id="monitored-regulations-and-standards-input"
                   value={values.monitored_regulations_and_standards}
@@ -962,6 +1040,71 @@ export const ProjectForm = ({
                   }}
                   error={errors.description}
                 />
+              </Stack>
+              <Typography variant="h6" sx={{ mb: 2, fontSize: "16px", fontWeight: 600 }}>
+                Use case classification (optional)
+              </Typography>
+              <Stack sx={{ display: "flex", flexDirection: "row", gap: 6, mb: 4, flexWrap: "wrap" }}>
+                <Box sx={{ flex: 1, minWidth: "200px" }}>
+                  <Select
+                    id="use-case-category-input"
+                    label="Category"
+                    placeholder="Select a category"
+                    value={values.use_case_category || ""}
+                    onChange={handleOnSelectChange("use_case_category")}
+                    items={useCaseCategoryItems}
+                    sx={{
+                      width: "100%",
+                      backgroundColor: theme.palette.background.main,
+                    }}
+                    error={errors.use_case_category}
+                  />
+                </Box>
+                <Box sx={{ flex: 1, minWidth: "200px" }}>
+                  <Select
+                    id="use-case-purpose-input"
+                    label="Purpose"
+                    placeholder="Select a purpose"
+                    value={values.use_case_purpose || ""}
+                    onChange={handleOnSelectChange("use_case_purpose")}
+                    items={useCasePurposeItems}
+                    sx={{
+                      width: "100%",
+                      backgroundColor: theme.palette.background.main,
+                    }}
+                    error={errors.use_case_purpose}
+                  />
+                </Box>
+                <Box sx={{ flex: 1, minWidth: "200px" }}>
+                  <Select
+                    id="use-case-audience-input"
+                    label="Audience"
+                    placeholder="Select an audience"
+                    value={values.use_case_audience || ""}
+                    onChange={handleOnSelectChange("use_case_audience")}
+                    items={useCaseAudienceItems}
+                    sx={{
+                      width: "100%",
+                      backgroundColor: theme.palette.background.main,
+                    }}
+                    error={errors.use_case_audience}
+                  />
+                </Box>
+                <Box sx={{ flex: 1, minWidth: "200px" }}>
+                  <Select
+                    id="deployment-context-input"
+                    label="Deployment context"
+                    placeholder="Select a context"
+                    value={values.deployment_context || ""}
+                    onChange={handleOnSelectChange("deployment_context")}
+                    items={deploymentContextItems}
+                    sx={{
+                      width: "100%",
+                      backgroundColor: theme.palette.background.main,
+                    }}
+                    error={errors.deployment_context}
+                  />
+                </Box>
               </Stack>
               <Checkbox
                 size="small"
