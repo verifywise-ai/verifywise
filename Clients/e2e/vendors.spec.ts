@@ -1,6 +1,6 @@
 import { test as authTest, expect as authExpect } from "./fixtures/auth.fixture";
 import { test as projectTest, expect as projectExpect } from "./fixtures/project.fixture";
-import { analyzeCriticalAndSeriousViolations } from "./helpers/axe";
+import { runA11yCheck } from "./helpers/axe";
 
 const test = authTest;
 const expect = authExpect;
@@ -44,11 +44,11 @@ test.describe("Vendors Page", () => {
     await expect(searchInput.first()).toBeVisible({ timeout: 10_000 });
   });
 
-  test("page has no critical or serious accessibility violations", async ({ authedPage: page }) => {
+  test("page has no critical or serious accessibility violations", async ({ authedPage: page }, testInfo) => {
     await page.goto("/vendors");
     await expect(page.getByText(/vendor/i).first()).toBeVisible({ timeout: 10_000 });
 
-    const violations = await analyzeCriticalAndSeriousViolations(page);
+    const violations = await runA11yCheck(page, testInfo);
     expect(violations).toEqual([]);
   });
 

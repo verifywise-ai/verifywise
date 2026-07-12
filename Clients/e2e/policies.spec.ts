@@ -1,5 +1,5 @@
 import { test, expect } from "./fixtures/auth.fixture";
-import { analyzeCriticalAndSeriousViolations } from "./helpers/axe";
+import { runA11yCheck } from "./helpers/axe";
 
 test.describe("Policies", () => {
   test("renders the policies page", async ({ authedPage: page }) => {
@@ -10,11 +10,11 @@ test.describe("Policies", () => {
     await expect(page.getByText(/polic/i).first()).toBeVisible({ timeout: 10_000 });
   });
 
-  test("page has no critical or serious accessibility violations", async ({ authedPage: page }) => {
+  test("page has no critical or serious accessibility violations", async ({ authedPage: page }, testInfo) => {
     await page.goto("/policies");
     await expect(page.getByText(/polic/i).first()).toBeVisible({ timeout: 10_000 });
 
-    const violations = await analyzeCriticalAndSeriousViolations(page);
+    const violations = await runA11yCheck(page, testInfo);
     expect(violations).toEqual([]);
   });
 
