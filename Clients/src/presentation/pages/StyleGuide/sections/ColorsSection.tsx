@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Box, Stack, Typography, useTheme, Divider, Snackbar } from "@mui/material";
 import { Copy } from "lucide-react";
-import { grey, green, red, amber } from "../../../themes/primitives";
+import { grey, green, red, amber, deepOrange } from "../../../themes/primitives";
 
 const ColorsSection: React.FC = () => {
   const theme = useTheme();
@@ -115,6 +115,26 @@ const ColorsSection: React.FC = () => {
               Red
             </Typography>
             <PrimitiveScale name="Red" scale={red} tokenPrefix="red" onCopy={handleCopy} />
+          </Box>
+          <Box>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "12px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
+              Deep orange
+            </Typography>
+            <PrimitiveScale
+              name="Deep orange"
+              scale={deepOrange}
+              tokenPrefix="deepOrange"
+              onCopy={handleCopy}
+            />
           </Box>
           <Box>
             <Typography
@@ -709,6 +729,7 @@ const ColorsSection: React.FC = () => {
             "Grey primitives power text, border, and background tokens",
             "Green primitives power brand, success, and accent tokens",
             "Red primitives power error and critical risk tokens",
+            "Deep orange primitives power high risk and major severity tokens",
             "Amber primitives power warning, medium risk, and accent.amber tokens",
             "Access semantics via theme.palette.* — never hardcode hex in components",
             "Border color theme.palette.border.dark should be used for input borders",
