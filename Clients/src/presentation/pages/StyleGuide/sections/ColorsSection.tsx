@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Box, Stack, Typography, useTheme, Divider, Snackbar } from "@mui/material";
 import { Copy } from "lucide-react";
-import { grey, green, red, amber, orange } from "../../../themes/primitives";
+import { grey, green, red, amber, orange, blue, indigo } from "../../../themes/primitives";
 
 const ColorsSection: React.FC = () => {
   const theme = useTheme();
@@ -145,6 +145,36 @@ const ColorsSection: React.FC = () => {
               Amber
             </Typography>
             <PrimitiveScale name="Amber" scale={amber} tokenPrefix="amber" onCopy={handleCopy} />
+          </Box>
+          <Box>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "12px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
+              Blue
+            </Typography>
+            <PrimitiveScale name="Blue" scale={blue} tokenPrefix="blue" onCopy={handleCopy} />
+          </Box>
+          <Box>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "12px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
+              Indigo
+            </Typography>
+            <PrimitiveScale name="Indigo" scale={indigo} tokenPrefix="indigo" onCopy={handleCopy} />
           </Box>
         </Box>
       </SpecSection>
@@ -726,6 +756,8 @@ const ColorsSection: React.FC = () => {
             "Red primitives power error and critical risk tokens",
             "Orange primitives power high risk, major severity, and accent.orange tokens",
             "Amber primitives power warning, medium risk, and accent.amber tokens",
+            "Blue primitives power info and accent.blue tokens",
+            "Indigo primitives power accent.indigo tokens",
             "Access semantics via theme.palette.* — never hardcode hex in components",
             "Border color theme.palette.border.dark should be used for input borders",
             "Text hierarchy: primary > secondary > tertiary > accent",
@@ -810,7 +842,9 @@ const PrimitiveScale: React.FC<{
                 backgroundColor: color,
                 border:
                   (step === 50 && tokenPrefix === "grey") ||
-                  (step === 50 && tokenPrefix === "orange")
+                  (step === 50 && tokenPrefix === "orange") ||
+                  (step === 50 && tokenPrefix === "blue") ||
+                  (step === 50 && tokenPrefix === "indigo")
                     ? `1px solid ${theme.palette.border.light}`
                     : "none",
               }}

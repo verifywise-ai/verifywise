@@ -73,4 +73,22 @@ export const orange = {
 
 export type OrangeStep = keyof typeof orange;
 
+/** Info and accent.blue — blue ramp */
+export const blue = {
+  50: "#E3F2FD",
+  100: "#BBDEFB",
+  800: "#1565C0",
+} as const;
+
+export type BlueStep = keyof typeof blue;
+
+/** Accent indigo ramp */
+export const indigo = {
+  50: "#E8EAF6",
+  100: "#C5CAE9",
+  600: "#3949AB",
+} as const;
+
+export type IndigoStep = keyof typeof indigo;
+
 export default grey;
