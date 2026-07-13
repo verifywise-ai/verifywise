@@ -44,9 +44,7 @@ export function mapRiskClassification(
 /**
  * Converts API high risk role to domain enum
  */
-export function mapHighRiskRole(
-  value: number | string | null | undefined,
-): HighRiskRole | null {
+export function mapHighRiskRole(value: number | string | null | undefined): HighRiskRole | null {
   if (value === null || value === undefined || value === "") {
     return null;
   }
@@ -75,8 +73,12 @@ export function mapProjectResponseDTOToProject(dto: ProjectResponseDTO): Project
     owner: dto.owner,
     members: Array.isArray(dto.members) ? dto.members.map(String) : [],
     start_date: new Date(dto.start_date),
-    ai_risk_classification: mapRiskClassification(dto.ai_risk_classification) as unknown as Project["ai_risk_classification"],
-    type_of_high_risk_role: mapHighRiskRole(dto.type_of_high_risk_role) as unknown as Project["type_of_high_risk_role"],
+    ai_risk_classification: mapRiskClassification(
+      dto.ai_risk_classification,
+    ) as unknown as Project["ai_risk_classification"],
+    type_of_high_risk_role: mapHighRiskRole(
+      dto.type_of_high_risk_role,
+    ) as unknown as Project["type_of_high_risk_role"],
     goal: dto.goal,
     last_updated: new Date(dto.last_updated),
     last_updated_by: dto.last_updated_by,
@@ -111,8 +113,12 @@ export function mapProjectResponseDTOToModel(dto: ProjectResponseDTO): ProjectMo
     project_title: dto.project_title,
     owner: dto.owner,
     start_date: new Date(dto.start_date),
-    ai_risk_classification: mapRiskClassification(dto.ai_risk_classification) as unknown as ProjectModel["ai_risk_classification"],
-    type_of_high_risk_role: mapHighRiskRole(dto.type_of_high_risk_role) as unknown as ProjectModel["type_of_high_risk_role"],
+    ai_risk_classification: mapRiskClassification(
+      dto.ai_risk_classification,
+    ) as unknown as ProjectModel["ai_risk_classification"],
+    type_of_high_risk_role: mapHighRiskRole(
+      dto.type_of_high_risk_role,
+    ) as unknown as ProjectModel["type_of_high_risk_role"],
     goal: dto.goal,
     last_updated: new Date(dto.last_updated),
     last_updated_by: dto.last_updated_by,
