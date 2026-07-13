@@ -53,13 +53,23 @@ describe("MRM retention tenant isolation + audit guard", () => {
     const before = await getMrmOrgSettings(owner.orgId);
     expect(before.retention_months).toBe(25);
 
-    await upsertMrmOrgSettings(owner.orgId, 36);
+    await upsertMrmOrgSettings(owner.orgId, { retention_months: 36 });
     const ownerAfter = await getMrmOrgSettings(owner.orgId);
     expect(ownerAfter.retention_months).toBe(36);
 
     // The other org still sees defaults — settings are org-scoped.
     const attackerView = await getMrmOrgSettings(attacker.orgId);
     expect(attackerView.retention_months).toBe(25);
+
+    // New alert columns: defaults are false and a partial retention update
+    // never touches them (and vice versa).
+    expect(before.alert_email_enabled).toBe(false);
+    expect(before.breach_auto_open_finding).toBe(false);
+    await upsertMrmOrgSettings(owner.orgId, { alert_email_enabled: true });
+    const partial = await getMrmOrgSettings(owner.orgId);
+    expect(partial.retention_months).toBe(36); // untouched by the boolean-only update
+    expect(partial.alert_email_enabled).toBe(true);
+    expect(partial.breach_auto_open_finding).toBe(false);
   });
 
   it("prunes an aged benign point (and its ok evals) but keeps recent points", async () => {
@@ -140,7 +150,7 @@ describe("MRM retention tenant isolation + audit guard", () => {
   it("respects the cutoff boundary: prunes just outside the window, keeps just inside", async () => {
     const { owner } = await seedTwoTenantContexts();
     const modelId = await createTestModelInventory(owner.orgId);
-    await upsertMrmOrgSettings(owner.orgId, 36);
+    await upsertMrmOrgSettings(owner.orgId, { retention_months: 36 });
 
     // Compute the boundary with the SAME Postgres arithmetic the prune query
     // uses (now() - make_interval). The ±5-day margin absorbs the milliseconds

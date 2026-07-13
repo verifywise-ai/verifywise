@@ -16,7 +16,13 @@ import {
   NotificationType,
   NotificationEntityType,
 } from "../domain.layer/interfaces/i.notification";
-import { sendInAppNotification } from "../services/inAppNotification.service";
+import { getMrmOrgSettings } from "../utils/mrmSettings.utils";
+import {
+  dispatchAlerts,
+  getAlertRecipientsUnion,
+  maybeAutoOpenFindingForBreach,
+} from "../utils/mrmAlerts.utils";
+import { EMAIL_TEMPLATES } from "../constants/emailTemplates";
 import {
   createIngestionTokenQuery,
   createMetricKeyQuery,
@@ -25,7 +31,6 @@ import {
   flagModelForRevalidationQuery,
   generateIngestionTokenPlaintext,
   getBreachHistoryQuery,
-  getBreachNotificationRecipientsQuery,
   getIngestionTokensQuery,
   getMetricKeysQuery,
   getMetricTrendQuery,
@@ -347,11 +352,13 @@ export async function ingestMetrics(req: Request, res: Response) {
 /**
  * Post-commit breach side effects: for each newly-written breach (warn/breach
  * status), flag the model for revalidation when the winning threshold's
- * breach_action requires it, and send an in-app notification to the model's MRM
- * owners/validators. All best-effort and isolated so one failure cannot poison
- * the others or the already-committed ingestion.
+ * breach_action requires it, auto-open a finding for hard breaches (org
+ * toggle), and notify the model's MRM stakeholders in-app (and by email when
+ * the org enabled it). All best-effort and isolated so one failure cannot
+ * poison the others or the already-committed ingestion. Exported for unit
+ * testing.
  */
-async function handleBreaches(
+export async function handleBreaches(
   organizationId: number,
   modelInventoryId: number,
   outcomes: Array<{
@@ -419,36 +426,68 @@ async function handleBreaches(
     }
   }
 
-  // Notify the model's MRM stakeholders.
+  // Alert side effects: auto-open findings (hard breaches, org toggle), then
+  // notify the model's MRM stakeholders (roles ∪ org-wide extra recipients),
+  // in-app always and by email when the org enabled it.
   try {
-    const recipients = await getBreachNotificationRecipientsQuery(organizationId, modelInventoryId);
+    const settings = await getMrmOrgSettings(organizationId);
+
+    // Auto-findings run BEFORE recipient resolution and regardless of it —
+    // and AFTER the triggerRevalidation block above, so a just-opened
+    // validation is available for the finding to link to.
+    for (const breach of breaches) {
+      try {
+        await maybeAutoOpenFindingForBreach(
+          organizationId,
+          modelInventoryId,
+          breach.point.metric,
+          breach.evaluation!.status,
+          breach.evaluation!.threshold?.severity ?? MrmThresholdSeverity.HIGH,
+          settings.breach_auto_open_finding,
+        );
+      } catch (error) {
+        logger.error("❌ Failed to auto-open MRM finding after breach:", error);
+      }
+    }
+
+    const recipients = await getAlertRecipientsUnion(organizationId, modelInventoryId);
     if (recipients.length === 0) return; // recorded, but no one assigned to notify
 
     const label = (await getModelLabelQuery(organizationId, modelInventoryId)) ?? "a model";
+    const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
     for (const breach of breaches) {
       const isHard = breach.evaluation!.status === MrmEvalStatus.BREACH;
       const title = isHard
         ? `Metric breach: ${breach.point.metric}`
         : `Metric warning: ${breach.point.metric}`;
       const message = `${label} — "${breach.point.metric}" = ${breach.point.value} breached its monitoring threshold.`;
-      for (const userId of recipients) {
-        try {
-          await sendInAppNotification(organizationId, {
-            user_id: userId,
-            type: NotificationType.MRM_METRIC_BREACH,
-            title,
-            message,
-            entity_type: NotificationEntityType.MODEL,
-            entity_id: modelInventoryId,
-            entity_name: label,
-          });
-        } catch (error) {
-          logger.error("❌ Failed to send MRM breach notification:", error);
-        }
-      }
+      await dispatchAlerts(
+        organizationId,
+        recipients,
+        {
+          type: NotificationType.MRM_METRIC_BREACH,
+          title,
+          message,
+          entity_type: NotificationEntityType.MODEL,
+          entity_id: modelInventoryId,
+          entity_name: label,
+        },
+        settings.alert_email_enabled,
+        {
+          template: EMAIL_TEMPLATES.MRM_BREACH_ALERT,
+          subject: title,
+          variables: {
+            model_label: label,
+            metric: breach.point.metric,
+            value: String(breach.point.value),
+            severity: breach.evaluation!.threshold?.severity ?? "high",
+            model_url: `${baseUrl}/model-inventory/models/${modelInventoryId}`,
+          },
+        },
+      );
     }
   } catch (error) {
-    logger.error("❌ Failed to resolve MRM breach notification recipients:", error);
+    logger.error("❌ Failed to dispatch MRM breach alerts:", error);
   }
 }
 

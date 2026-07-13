@@ -81,7 +81,24 @@ export const translations: Record<string, Record<string, string>> = {
     "Threshold at evaluation": "Schwellenwert zum Auswertungszeitpunkt",
     "Token name": "Token-Name",
     "Trend": "Trend",
-    "Yes, in-app": "Ja, in der App",
+    "Who hears about a breach. When an ingested metric breaches its threshold, VerifyWise notifies the people assigned to the model's MRM roles, plus any additional recipients configured below. Email delivery and automatic findings are off until you enable them here.":
+      "Wer von einem Verstoß erfährt. Wenn eine erfasste Metrik ihren Schwellenwert verletzt, benachrichtigt VerifyWise die den MRM-Rollen des Modells zugewiesenen Personen sowie alle unten konfigurierten zusätzlichen Empfänger. E-Mail-Versand und automatische Feststellungen sind deaktiviert, bis Sie sie hier aktivieren.",
+    "Send email alerts": "E-Mail-Benachrichtigungen senden",
+    "Applies to breach and overdue-validation alerts. In-app notifications are always on.":
+      "Gilt für Verstoß- und überfällige Validierungsbenachrichtigungen. In-App-Benachrichtigungen sind immer aktiv.",
+    "Automatically open a finding on hard breach":
+      "Bei hartem Verstoß automatisch eine Feststellung öffnen",
+    "One finding per model and metric while it stays open; warnings never open findings.":
+      "Eine Feststellung pro Modell und Metrik, solange sie offen ist; Warnungen öffnen nie Feststellungen.",
+    "Additional recipients": "Zusätzliche Empfänger",
+    "These people are alerted for every model, on top of the model's roles.":
+      "Diese Personen werden für jedes Modell benachrichtigt, zusätzlich zu den Rollen des Modells.",
+    "Save alert settings": "Benachrichtigungseinstellungen speichern",
+    "Alert settings saved": "Benachrichtigungseinstellungen gespeichert",
+    "Failed to save alert settings":
+      "Benachrichtigungseinstellungen konnten nicht gespeichert werden",
+    "Notifications are delivered in-app, and by email when email alerts are enabled. A threshold set to notify and flag for revalidation also marks the model as due for a fresh validation.":
+      "Benachrichtigungen werden in der App zugestellt und per E-Mail, wenn E-Mail-Benachrichtigungen aktiviert sind. Ein Schwellenwert mit Benachrichtigung und Revalidierungs-Kennzeichnung markiert das Modell zusätzlich als fällig für eine neue Validierung.",
     "A finding must be verified before it can be closed.":
       "Eine Feststellung muss verifiziert sein, bevor sie geschlossen werden kann.",
     "Assign tier": "Stufe zuweisen",
@@ -8946,7 +8963,23 @@ export const translations: Record<string, Record<string, string>> = {
     "Threshold at evaluation": "Seuil au moment de l'évaluation",
     "Token name": "Nom du jeton",
     "Trend": "Tendance",
-    "Yes, in-app": "Oui, dans l'application",
+    "Who hears about a breach. When an ingested metric breaches its threshold, VerifyWise notifies the people assigned to the model's MRM roles, plus any additional recipients configured below. Email delivery and automatic findings are off until you enable them here.":
+      "Qui est informé d'un dépassement. Lorsqu'une métrique ingérée dépasse son seuil, VerifyWise notifie les personnes affectées aux rôles MRM du modèle, ainsi que les destinataires supplémentaires configurés ci-dessous. L'envoi d'e-mails et les constats automatiques sont désactivés tant que vous ne les activez pas ici.",
+    "Send email alerts": "Envoyer des alertes par e-mail",
+    "Applies to breach and overdue-validation alerts. In-app notifications are always on.":
+      "S'applique aux alertes de dépassement et de validation en retard. Les notifications dans l'application sont toujours actives.",
+    "Automatically open a finding on hard breach":
+      "Ouvrir automatiquement un constat en cas de dépassement critique",
+    "One finding per model and metric while it stays open; warnings never open findings.":
+      "Un constat par modèle et par métrique tant qu'il reste ouvert ; les avertissements n'ouvrent jamais de constats.",
+    "Additional recipients": "Destinataires supplémentaires",
+    "These people are alerted for every model, on top of the model's roles.":
+      "Ces personnes sont alertées pour chaque modèle, en plus des rôles du modèle.",
+    "Save alert settings": "Enregistrer les paramètres d'alerte",
+    "Alert settings saved": "Paramètres d'alerte enregistrés",
+    "Failed to save alert settings": "Échec de l'enregistrement des paramètres d'alerte",
+    "Notifications are delivered in-app, and by email when email alerts are enabled. A threshold set to notify and flag for revalidation also marks the model as due for a fresh validation.":
+      "Les notifications sont envoyées dans l'application, et par e-mail lorsque les alertes par e-mail sont activées. Un seuil configuré pour notifier et signaler une revalidation marque également le modèle comme devant faire l'objet d'une nouvelle validation.",
     "A finding must be verified before it can be closed.":
       "Une constatation doit être vérifiée avant de pouvoir être clôturée.",
     "Assign tier": "Attribuer un niveau",
@@ -17766,7 +17799,23 @@ export const translations: Record<string, Record<string, string>> = {
     "Threshold at evaluation": "Umbral en el momento de la evaluación",
     "Token name": "Nombre del token",
     "Trend": "Tendencia",
-    "Yes, in-app": "Sí, en la aplicación",
+    "Who hears about a breach. When an ingested metric breaches its threshold, VerifyWise notifies the people assigned to the model's MRM roles, plus any additional recipients configured below. Email delivery and automatic findings are off until you enable them here.":
+      "Quién se entera de un incumplimiento. Cuando una métrica ingerida supera su umbral, VerifyWise notifica a las personas asignadas a los roles MRM del modelo, además de los destinatarios adicionales configurados abajo. El envío de correos y los hallazgos automáticos están desactivados hasta que los habilite aquí.",
+    "Send email alerts": "Enviar alertas por correo electrónico",
+    "Applies to breach and overdue-validation alerts. In-app notifications are always on.":
+      "Se aplica a las alertas de incumplimiento y de validación vencida. Las notificaciones en la aplicación siempre están activas.",
+    "Automatically open a finding on hard breach":
+      "Abrir automáticamente un hallazgo ante un incumplimiento grave",
+    "One finding per model and metric while it stays open; warnings never open findings.":
+      "Un hallazgo por modelo y métrica mientras permanezca abierto; las advertencias nunca abren hallazgos.",
+    "Additional recipients": "Destinatarios adicionales",
+    "These people are alerted for every model, on top of the model's roles.":
+      "Estas personas reciben alertas de todos los modelos, además de los roles del modelo.",
+    "Save alert settings": "Guardar configuración de alertas",
+    "Alert settings saved": "Configuración de alertas guardada",
+    "Failed to save alert settings": "No se pudo guardar la configuración de alertas",
+    "Notifications are delivered in-app, and by email when email alerts are enabled. A threshold set to notify and flag for revalidation also marks the model as due for a fresh validation.":
+      "Las notificaciones se entregan en la aplicación y por correo electrónico cuando las alertas por correo están habilitadas. Un umbral configurado para notificar y marcar para revalidación también marca el modelo como pendiente de una nueva validación.",
     "A finding must be verified before it can be closed.":
       "Un hallazgo debe verificarse antes de poder cerrarse.",
     "Assign tier": "Asignar nivel",

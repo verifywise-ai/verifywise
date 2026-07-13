@@ -314,7 +314,9 @@ const SettingsTab = ({ users, onError, onSuccess }: SettingsTabProps) => {
         {section === "default-thresholds" && (
           <DefaultThresholdsSection onError={onError} onSuccess={onSuccess} />
         )}
-        {section === "alerts" && <AlertsSection users={users} />}
+        {section === "alerts" && (
+          <AlertsSection users={users} onError={onError} onSuccess={onSuccess} />
+        )}
         {section === "roles" && (
           <RolesSection users={users} onError={onError} onSuccess={onSuccess} />
         )}
