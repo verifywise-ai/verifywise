@@ -21,7 +21,7 @@ const VWProjectRisks = ({ project }: { project?: Project }) => {
           projectId: String(projectId),
           filter: filter as "active" | "deleted" | "all",
         });
-        return response.data || [];
+        return response.data?.data || [];
       } catch (error) {
         console.error("Error fetching project risks:", error);
         throw error;
