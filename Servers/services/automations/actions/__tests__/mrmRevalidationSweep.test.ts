@@ -12,6 +12,7 @@ jest.mock("../../../../utils/mrmRevalidation.utils", () => ({
 }));
 jest.mock("../../../../utils/mrmAlerts.utils", () => ({
   notifyRevalidationDue: jest.fn(),
+  loadMrmAlertContext: jest.fn(),
 }));
 jest.mock("../../../../utils/organization.utils", () => ({
   getAllOrganizationsQuery: jest.fn(),
@@ -46,8 +47,8 @@ describe("runRevalidationSweep overdue alerts", () => {
 
     expect(summary).toEqual({ organization_id: 1, due: 2, opened: 1, annotated: 1 });
     expect(mockNotify).toHaveBeenCalledTimes(2);
-    expect(mockNotify).toHaveBeenCalledWith(1, 7, 71, NEXT_DUE);
-    expect(mockNotify).toHaveBeenCalledWith(1, 8, 81, NEXT_DUE);
+    expect(mockNotify).toHaveBeenCalledWith(1, 7, 71, NEXT_DUE, expect.any(Function));
+    expect(mockNotify).toHaveBeenCalledWith(1, 8, 81, NEXT_DUE, expect.any(Function));
   });
 
   it("a notify failure never fails the sweep or skews the counters", async () => {
