@@ -63,13 +63,14 @@ export const amber = {
 
 export type AmberStep = keyof typeof amber;
 
-/** High risk — peach / deep orange */
-export const deepOrange = {
+/** High risk and accent.orange — orange ramp */
+export const orange = {
+  50: "#FFF4EB",
   100: "#FFE5D0",
   200: "#F5CDB0",
   600: "#E64A19",
 } as const;
 
-export type DeepOrangeStep = keyof typeof deepOrange;
+export type OrangeStep = keyof typeof orange;
 
 export default grey;

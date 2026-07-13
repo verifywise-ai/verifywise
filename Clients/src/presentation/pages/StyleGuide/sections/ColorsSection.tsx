@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Box, Stack, Typography, useTheme, Divider, Snackbar } from "@mui/material";
 import { Copy } from "lucide-react";
-import { grey, green, red, amber, deepOrange } from "../../../themes/primitives";
+import { grey, green, red, amber, orange } from "../../../themes/primitives";
 
 const ColorsSection: React.FC = () => {
   const theme = useTheme();
@@ -127,14 +127,9 @@ const ColorsSection: React.FC = () => {
                 letterSpacing: "0.5px",
               }}
             >
-              Deep orange
+              Orange
             </Typography>
-            <PrimitiveScale
-              name="Deep orange"
-              scale={deepOrange}
-              tokenPrefix="deepOrange"
-              onCopy={handleCopy}
-            />
+            <PrimitiveScale name="Orange" scale={orange} tokenPrefix="orange" onCopy={handleCopy} />
           </Box>
           <Box>
             <Typography
@@ -729,7 +724,7 @@ const ColorsSection: React.FC = () => {
             "Grey primitives power text, border, and background tokens",
             "Green primitives power brand, success, and accent tokens",
             "Red primitives power error and critical risk tokens",
-            "Deep orange primitives power high risk and major severity tokens",
+            "Orange primitives power high risk, major severity, and accent.orange tokens",
             "Amber primitives power warning, medium risk, and accent.amber tokens",
             "Access semantics via theme.palette.* — never hardcode hex in components",
             "Border color theme.palette.border.dark should be used for input borders",
@@ -814,7 +809,8 @@ const PrimitiveScale: React.FC<{
                 borderRadius: "4px",
                 backgroundColor: color,
                 border:
-                  step === 50 && tokenPrefix === "grey"
+                  (step === 50 && tokenPrefix === "grey") ||
+                  (step === 50 && tokenPrefix === "orange")
                     ? `1px solid ${theme.palette.border.light}`
                     : "none",
               }}
