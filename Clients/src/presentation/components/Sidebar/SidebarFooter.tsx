@@ -38,6 +38,7 @@ import {
 import Avatar from "../Avatar/VWAvatar";
 import { brand, text, background } from "../../themes/palette";
 import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
+import { storageService } from "../../../infrastructure/storage";
 import { ROLES } from "../../../application/constants/roles";
 import useLogout from "../../../application/hooks/useLogout";
 import { getUserById } from "../../../application/repository/user.repository";
@@ -157,13 +158,11 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
   const drawerRef = useRef<HTMLDivElement>(null);
 
   // Dark mode (CSS filter experiment)
-  const [darkMode, setDarkMode] = useState(() => {
-    return localStorage.getItem("vw_dark_mode") === "true";
-  });
+  const [darkMode, setDarkMode] = useState(() => storageService.get("darkMode", false));
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark-mode", darkMode);
-    localStorage.setItem("vw_dark_mode", String(darkMode));
+    storageService.set("darkMode", darkMode);
   }, [darkMode]);
 
   const user: User =

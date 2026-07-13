@@ -47,6 +47,7 @@ import { sectionTitleSx, useCardSx, GUARDRAIL_ACTION_COLORS, formatEntityType } 
 import { useUserGuideSidebarContext } from "../../../components/UserGuide/UserGuideSidebarContext";
 import MockDashboard from "./MockDashboard";
 import OnboardingOverlay from "./OnboardingOverlay";
+import { storageService } from "../../../../infrastructure/storage";
 
 /** Shared date tick formatter for all time-series charts */
 const formatDayTick = (v: string, period: string) => {
@@ -65,9 +66,7 @@ const PERIOD_OPTIONS = [
 export default function SpendDashboardPage() {
   const cardSx = useCardSx();
   const userGuideSidebar = useUserGuideSidebarContext();
-  const [period, setPeriod] = useState(() => {
-    return localStorage.getItem("vw_ai_gateway_analytics_period") || "1d";
-  });
+  const [period, setPeriod] = useState(() => storageService.get("aiGatewayAnalyticsPeriod", "1d"));
   const [data, setData] = useState<any>(null);
   const [byEndpoint, setByEndpoint] = useState<any[]>([]);
   const [byUser, setByUser] = useState<any[]>([]);
@@ -281,7 +280,7 @@ export default function SpendDashboardPage() {
           onChange={(e) => {
             const val = e.target.value as string;
             setPeriod(val);
-            localStorage.setItem("vw_ai_gateway_analytics_period", val);
+            storageService.set("aiGatewayAnalyticsPeriod", val);
           }}
           sx={{ width: 140 }}
         />

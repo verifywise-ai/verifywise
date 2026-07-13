@@ -41,6 +41,7 @@ import {
   deleteUserById,
   getAllUsers,
   getUserById,
+  getPreferencesForCurrentUser,
   loginUser,
   loginUserWithMicrosoft,
   updateUserById,
@@ -97,6 +98,8 @@ router.get("/", authenticateJWT, getAllUsers);
  * @param {express.Request} req - Express request object
  * @param {express.Response} res - Express response object
  */
+router.get("/preferences", authenticateJWT, getPreferencesForCurrentUser);
+
 router.get("/:id", authenticateJWT, getUserById);
 
 /**

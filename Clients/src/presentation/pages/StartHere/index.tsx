@@ -29,6 +29,7 @@ import { useProjects } from "../../../application/hooks/useProjects";
 import useUsers from "../../../application/hooks/useUsers";
 import { getAllProjectRisks } from "../../../application/repository/projectRisk.repository";
 import { getUserById } from "../../../application/repository/user.repository";
+import { storageService, dynamicKeys } from "../../../infrastructure/storage";
 import { getTimeBasedGreeting } from "../../../application/utils/greetings";
 import { WelcomeVideoPlayer } from "../../components/FeatureVideos/WelcomeVideo";
 import { VideoPlayerModal } from "../../components/FeatureVideos/player/VideoPlayerModal";
@@ -287,20 +288,11 @@ const PROGRESS_STEPS: ProgressStep[] = [
   { label: "Complete a risk assessment", path: "/risk-management" },
 ];
 
-const PROGRESS_STORAGE_KEY = "verifywise_start_here_progress";
-
-/** Read cached progress from localStorage to avoid flicker on load */
+/** Read cached progress from storage to avoid flicker on load */
 const getCachedProgress = (): boolean[] => {
-  try {
-    const cached = localStorage.getItem(PROGRESS_STORAGE_KEY);
-    if (cached) {
-      const parsed = JSON.parse(cached);
-      if (Array.isArray(parsed) && parsed.length === PROGRESS_STEPS.length) {
-        return parsed;
-      }
-    }
-  } catch {
-    /* ignore */
+  const parsed = storageService.get("startHereProgress", []);
+  if (Array.isArray(parsed) && parsed.length === PROGRESS_STEPS.length) {
+    return parsed;
   }
   return [true, true, false, false, false]; // defaults: account + org always done
 };
@@ -314,11 +306,17 @@ const StartHere = () => {
   const { data: projects } = useProjects();
   const [hasRisks, setHasRisks] = useState(() => getCachedProgress()[4]);
   const [progressDismissed, setProgressDismissed] = useState(
-    () => localStorage.getItem("verifywise_start_here_progress_dismissed") === "true",
+    () =>
+      storageService.getRaw<string>(dynamicKeys.startHereDismissed("progress"), "false", {
+        raw: true,
+      }) === "true",
   );
   const [welcomeVideoOpen, setWelcomeVideoOpen] = useState(false);
   const [expertsDismissed, setExpertsDismissed] = useState(
-    () => localStorage.getItem("verifywise_start_here_experts_dismissed") === "true",
+    () =>
+      storageService.getRaw<string>(dynamicKeys.startHereDismissed("experts"), "false", {
+        raw: true,
+      }) === "true",
   );
   const [exploreVideoTitle, setExploreVideoTitle] = useState<string | null>(null);
 
@@ -372,9 +370,9 @@ const StartHere = () => {
     return [accountCreated, orgSetUp, hasTeamMember, hasUseCase, hasRisks];
   }, [users, projects, hasRisks]);
 
-  // Persist progress to localStorage so it doesn't flicker on next visit
+  // Persist progress to storage so it doesn't flicker on next visit
   useEffect(() => {
-    localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(progressDone));
+    storageService.set("startHereProgress", progressDone);
   }, [progressDone]);
 
   const doneCount = progressDone.filter(Boolean).length;
@@ -384,13 +382,12 @@ const StartHere = () => {
   // Fire confetti once when all steps complete, then auto-dismiss card after a delay
   useEffect(() => {
     if (progressPct < 100 || progressDismissed) return;
-    const confettiFiredKey = "verifywise_start_here_confetti_fired";
-    if (localStorage.getItem(confettiFiredKey) === "true") {
+    if (storageService.get("startHereConfettiFired", false)) {
       // Already celebrated — just dismiss
       dismissProgress();
       return;
     }
-    localStorage.setItem(confettiFiredKey, "true");
+    storageService.set("startHereConfettiFired", true);
 
     const duration = 3000;
     const animationEnd = Date.now() + duration;
@@ -428,7 +425,7 @@ const StartHere = () => {
   }, [progressPct, progressDismissed]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const dismissProgress = useCallback(() => {
-    localStorage.setItem("verifywise_start_here_progress_dismissed", "true");
+    storageService.setRaw(dynamicKeys.startHereDismissed("progress"), "true", { raw: true });
     setProgressDismissed(true);
   }, []);
 
@@ -974,7 +971,9 @@ const StartHere = () => {
                 onClick={(e) => {
                   e.stopPropagation();
                   setExpertsDismissed(true);
-                  localStorage.setItem("verifywise_start_here_experts_dismissed", "true");
+                  storageService.setRaw(dynamicKeys.startHereDismissed("experts"), "true", {
+                    raw: true,
+                  });
                 }}
                 sx={{
                   "position": "absolute",
