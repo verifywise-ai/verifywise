@@ -640,10 +640,12 @@ const ProjectSettings = React.memo(
       const hasEuAiAct = values.monitoredRegulationsAndStandards.some((fw) => fw._id === 1);
       if (hasEuAiAct) {
         if (!values.riskClassification) {
-          newErrors.riskClassification = "AI risk classification is required when EU AI Act is selected.";
+          newErrors.riskClassification =
+            "AI risk classification is required when EU AI Act is selected.";
         }
         if (!values.typeOfHighRiskRole) {
-          newErrors.typeOfHighRiskRole = "Type of high risk role is required when EU AI Act is selected.";
+          newErrors.typeOfHighRiskRole =
+            "Type of high risk role is required when EU AI Act is selected.";
         }
       }
 
@@ -690,7 +692,8 @@ const ProjectSettings = React.memo(
     const handleSaveConfirm = useCallback(async () => {
       const hasEuAiAct = values.monitoredRegulationsAndStandards.some((fw) => fw._id === 1);
       const selectedRiskClass = hasEuAiAct
-        ? riskClassificationItems.find((item) => item._id === values.riskClassification)?.name || null
+        ? riskClassificationItems.find((item) => item._id === values.riskClassification)?.name ||
+          null
         : null;
       const selectedHighRiskRole = hasEuAiAct
         ? highRiskRoleItems.find((item) => item._id === values.typeOfHighRiskRole)?.name || null
@@ -720,10 +723,15 @@ const ProjectSettings = React.memo(
           monitored_regulations_and_standards: selectedRegulations,
           last_updated: new Date().toISOString(),
           last_updated_by: userId,
-          use_case_category: useCaseCategoryItems.find((item) => item._id === values.useCaseCategory)?.name || null,
-          use_case_purpose: useCasePurposeItems.find((item) => item._id === values.useCasePurpose)?.name || null,
-          use_case_audience: useCaseAudienceItems.find((item) => item._id === values.useCaseAudience)?.name || null,
-          deployment_context: deploymentContextItems.find((item) => item._id === values.deploymentContext)?.name || null,
+          use_case_category:
+            useCaseCategoryItems.find((item) => item._id === values.useCaseCategory)?.name || null,
+          use_case_purpose:
+            useCasePurposeItems.find((item) => item._id === values.useCasePurpose)?.name || null,
+          use_case_audience:
+            useCaseAudienceItems.find((item) => item._id === values.useCaseAudience)?.name || null,
+          deployment_context:
+            deploymentContextItems.find((item) => item._id === values.deploymentContext)?.name ||
+            null,
           framework: values.monitoredRegulationsAndStandards.map((fw) => ({
             project_framework_id: fw._id,
             framework_id: fw._id,
@@ -1243,7 +1251,6 @@ const ProjectSettings = React.memo(
                             />
                           </span>
                         </Tooltip>
-
                       </Stack>
                     </>
                   )}
@@ -1456,9 +1463,7 @@ const ProjectSettings = React.memo(
 
                   {/* Use case purpose Row */}
                   <Box>
-                    <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-                      Use case purpose
-                    </Typography>
+                    <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Use case purpose</Typography>
                     <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
                       What business purpose does the use case serve?
                     </Typography>
