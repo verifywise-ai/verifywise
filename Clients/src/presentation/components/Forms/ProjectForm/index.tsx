@@ -459,18 +459,15 @@ export const ProjectForm = ({
         }
 
         // Include regulation-agnostic classification fields (map _id to name)
-        body.use_case_category = useCaseCategoryItems.find(
-          (item) => item._id === values.use_case_category,
-        )?.name || null;
-        body.use_case_purpose = useCasePurposeItems.find(
-          (item) => item._id === values.use_case_purpose,
-        )?.name || null;
-        body.use_case_audience = useCaseAudienceItems.find(
-          (item) => item._id === values.use_case_audience,
-        )?.name || null;
-        body.deployment_context = deploymentContextItems.find(
-          (item) => item._id === values.deployment_context,
-        )?.name || null;
+        body.use_case_category =
+          useCaseCategoryItems.find((item) => item._id === values.use_case_category)?.name || null;
+        body.use_case_purpose =
+          useCasePurposeItems.find((item) => item._id === values.use_case_purpose)?.name || null;
+        body.use_case_audience =
+          useCaseAudienceItems.find((item) => item._id === values.use_case_audience)?.name || null;
+        body.deployment_context =
+          deploymentContextItems.find((item) => item._id === values.deployment_context)?.name ||
+          null;
 
         let res;
         if (projectToEdit) {
@@ -902,9 +899,7 @@ export const ProjectForm = ({
                     ...teamMembersSxStyle,
                     flex: values.framework_type === FrameworkTypeEnum.ProjectBased ? 1 : undefined,
                     width:
-                      values.framework_type === FrameworkTypeEnum.ProjectBased
-                        ? undefined
-                        : "100%",
+                      values.framework_type === FrameworkTypeEnum.ProjectBased ? undefined : "100%",
                   }}
                   slotProps={teamMembersSlotProps}
                 />
