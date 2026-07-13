@@ -6334,6 +6334,28 @@ export const mrmEndpoints: Endpoint[] = [
     tag: "Mrm",
   },
   {
+    method: 'GET',
+    path: '/mrm/settings',
+    summary: "Get Mrm Settings Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'PUT',
+    path: '/mrm/settings',
+    summary: "Update Mrm Settings Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
     method: 'POST',
     path: '/mrm/models/{externalModelKey}/metrics',
     summary: "Ingest Metrics",

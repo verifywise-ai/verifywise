@@ -1,7 +1,7 @@
 # Model Risk Management (MRM)
 
-> **Last Updated:** 2026-07-03
-> **Status:** Built, PR #4228 (branch `feat/mrm-revalidation` → `develop`). Not yet merged.
+> **Last Updated:** 2026-07-10
+> **Status:** Merged (PR #4228, 2026-07-04). Metric retention added on `feat/mrm-retention`.
 
 Governance-grade model risk management for regulated banking standards: **SR 26-2**
 (US Fed), **SS1/23** (UK PRA), **OSFI E-23** (Canada). Lives as a grouped **Model risk
@@ -44,6 +44,7 @@ Migrations `20260703100000`–`20260703120000`.
 | `mrm_metric_evaluations` | immutable eval audit | stores a `threshold_snapshot` JSONB so later threshold edits never rewrite history |
 | `mrm_ingestion_tokens` | machine-auth tokens | `token_hash` UNIQUE, **hashed never plaintext**, per-org, revocable, optional per-model scope |
 | `mrm_revalidation_events` | immutable trigger-firing log | `trigger_source`, `created_validation`, `resulting_validation_id` (SET NULL) |
+| `mrm_org_settings` | org-wide MRM config | `retention_months` (default 25, CHECK ≥ 13); one row per org, lazily created — missing row = defaults |
 
 FK intent: model-with-history → RESTRICT (validations/findings; decommission not delete);
 monitoring data → CASCADE with the model; user FKs → SET NULL (preserve audit).
@@ -73,6 +74,13 @@ event). Scheduled sweep = BullMQ daily job (`services/automations/actions/mrmRev
 **Attestation** (`utils/mrmAttestation.utils.ts`, `services/reporting/mrmAttestationReport.ts`)
 — fleet roll-up summary + a DOCX board/examiner report. Attestation is blocked only by open
 **critical/high** findings.
+
+**Metric retention** (`utils/mrmRetention.utils.ts`, `services/automations/actions/mrmRetentionPrune.ts`)
+— daily BullMQ job (03:00) prunes benign aged-out `mrm_metrics` points per org
+(batched 10k, capped 500 batches/run). **A point with any warn/breach evaluation
+is never deleted** — the NOT EXISTS guard lives inside the batch-window subquery
+(guard-outside would let protected rows clog the window and wedge the loop).
+Config via `GET/PUT /api/mrm/settings` (floor 13 months); UI in Settings → Data retention.
 
 ---
 

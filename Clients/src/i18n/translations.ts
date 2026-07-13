@@ -145,6 +145,15 @@ export const translations: Record<string, Record<string, string>> = {
     "Roles & independence": "Rollen & Unabhängigkeit",
     "Save report": "Bericht speichern",
     "Save roles": "Rollen speichern",
+    "Benign monitoring points older than the retention window are removed by a daily job. Breach and evaluation history is never deleted.":
+      "Unauffällige Überwachungspunkte, die älter als das Aufbewahrungsfenster sind, werden durch einen täglichen Job entfernt. Verstoß- und Bewertungshistorie wird nie gelöscht.",
+    "Breach and evaluation history is always retained; this only ages out benign monitoring points.":
+      "Verstoß- und Bewertungshistorie wird immer aufbewahrt; hiermit werden nur unauffällige Überwachungspunkte ausgesondert.",
+    "Failed to save retention": "Aufbewahrung konnte nicht gespeichert werden",
+    "Monitoring data retention (months)": "Aufbewahrung von Überwachungsdaten (Monate)",
+    "Retention must be at least 13 months": "Die Aufbewahrung muss mindestens 13 Monate betragen",
+    "Retention saved": "Aufbewahrung gespeichert",
+    "Save retention": "Aufbewahrung speichern",
     "Select a model to view and assign its roles.":
       "Wählen Sie ein Modell, um dessen Rollen anzuzeigen und zuzuweisen.",
     "Select a tier": "Stufe auswählen",
@@ -9001,6 +9010,15 @@ export const translations: Record<string, Record<string, string>> = {
     "Roles & independence": "Rôles et indépendance",
     "Save report": "Enregistrer le rapport",
     "Save roles": "Enregistrer les rôles",
+    "Benign monitoring points older than the retention window are removed by a daily job. Breach and evaluation history is never deleted.":
+      "Les points de surveillance sans incident plus anciens que la fenêtre de rétention sont supprimés par une tâche quotidienne. L'historique des dépassements et des évaluations n'est jamais supprimé.",
+    "Breach and evaluation history is always retained; this only ages out benign monitoring points.":
+      "L'historique des dépassements et des évaluations est toujours conservé ; seuls les points de surveillance sans incident sont purgés.",
+    "Failed to save retention": "Échec de l'enregistrement de la rétention",
+    "Monitoring data retention (months)": "Rétention des données de surveillance (mois)",
+    "Retention must be at least 13 months": "La rétention doit être d'au moins 13 mois",
+    "Retention saved": "Rétention enregistrée",
+    "Save retention": "Enregistrer la rétention",
     "Select a model to view and assign its roles.":
       "Sélectionnez un modèle pour afficher et attribuer ses rôles.",
     "Select a tier": "Sélectionner un niveau",
@@ -17812,6 +17830,15 @@ export const translations: Record<string, Record<string, string>> = {
     "Roles & independence": "Roles e independencia",
     "Save report": "Guardar informe",
     "Save roles": "Guardar roles",
+    "Benign monitoring points older than the retention window are removed by a daily job. Breach and evaluation history is never deleted.":
+      "Los puntos de monitoreo sin incidencias anteriores a la ventana de retención se eliminan mediante una tarea diaria. El historial de incumplimientos y evaluaciones nunca se elimina.",
+    "Breach and evaluation history is always retained; this only ages out benign monitoring points.":
+      "El historial de incumplimientos y evaluaciones siempre se conserva; esto solo depura puntos de monitoreo sin incidencias.",
+    "Failed to save retention": "No se pudo guardar la retención",
+    "Monitoring data retention (months)": "Retención de datos de monitoreo (meses)",
+    "Retention must be at least 13 months": "La retención debe ser de al menos 13 meses",
+    "Retention saved": "Retención guardada",
+    "Save retention": "Guardar retención",
     "Select a model to view and assign its roles.":
       "Seleccione un modelo para ver y asignar sus roles.",
     "Select a tier": "Seleccionar un nivel",

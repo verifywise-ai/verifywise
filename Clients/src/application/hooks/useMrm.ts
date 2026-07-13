@@ -16,6 +16,7 @@ import {
   getModelBreaches,
   getModelMonitoring,
   getModelRoles,
+  getMrmSettings,
   getRevalidationEvents,
   getThresholds,
   getValidations,
@@ -24,6 +25,7 @@ import {
   setModelRoles,
   signoffValidation,
   updateFinding,
+  updateMrmSettings,
   updateThreshold,
   updateValidation,
 } from "../repository/mrm.repository";
@@ -43,6 +45,7 @@ import {
   IMrmMetricKey,
   IMrmModelRole,
   IMrmMonitoringRow,
+  IMrmOrgSettings,
   IMrmRevalidationEvent,
   IMrmThreshold,
   IMrmTrendPoint,
@@ -84,6 +87,7 @@ export const mrmQueryKeys = {
   attestationSummary: () => [...mrmQueryKeys.all, "attestation-summary"] as const,
   revalidationEvents: (modelId: number | null) =>
     [...mrmQueryKeys.all, "revalidation-events", modelId ?? -1] as const,
+  settings: () => [...mrmQueryKeys.all, "settings"] as const,
 };
 
 const STALE_TIME = 2 * 60 * 1000;
@@ -406,3 +410,23 @@ export const useRevalidationEvents = (
     staleTime: STALE_TIME,
     gcTime: GC_TIME,
   });
+
+// ---- Org-wide MRM settings (metric retention) ----
+
+export const useMrmSettings = (): UseQueryResult<IMrmOrgSettings, Error> =>
+  useQuery({
+    queryKey: mrmQueryKeys.settings(),
+    queryFn: async ({ signal }) => await getMrmSettings(signal),
+    staleTime: STALE_TIME,
+    gcTime: GC_TIME,
+  });
+
+export const useUpdateMrmSettings = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (retention_months: number) => await updateMrmSettings(retention_months),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: mrmQueryKeys.settings() });
+    },
+  });
+};

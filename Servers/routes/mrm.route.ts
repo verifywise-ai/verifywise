@@ -36,6 +36,7 @@ import {
   requestRevalidation,
   runRevalidationSweepForOrg,
 } from "../controllers/mrmRevalidation.ctrl";
+import { getMrmSettingsHandler, updateMrmSettingsHandler } from "../controllers/mrmSettings.ctrl";
 
 // --- Tiering ---
 router.get("/tiering", authenticateJWT, getFleetTiering);
@@ -101,5 +102,13 @@ router.post("/revalidation/sweep", authenticateJWT, runRevalidationSweepForOrg);
 // --- Attestation / portfolio roll-up ---
 router.get("/attestation/summary", authenticateJWT, getAttestationSummaryHandler);
 router.get("/attestation/report", authenticateJWT, generateAttestationReportHandler);
+
+// ===========================================================================
+// Org-wide MRM settings (metric retention)
+// ===========================================================================
+
+// Missing row resolves to defaults (retention_months = 25); floor is 13 months.
+router.get("/settings", authenticateJWT, getMrmSettingsHandler);
+router.put("/settings", authenticateJWT, updateMrmSettingsHandler);
 
 export default router;
