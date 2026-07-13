@@ -95,11 +95,10 @@ export const getAllRisksQuery = async (
     ORDER BY r.created_at DESC, r.id ASC
   `;
 
-  const result = (await sequelize.query(query, {
+  const risks = (await sequelize.query(query, {
     replacements: { organizationId },
     type: QueryTypes.SELECT,
-  })) as [any[], number];
-  const risks = result[0];
+  })) as any[];
 
   // Parse JSON strings if needed
   for (let risk of risks) {
