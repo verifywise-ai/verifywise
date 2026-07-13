@@ -143,7 +143,9 @@ const mockGetById = getUserByIdQuery as jest.MockedFunction<typeof getUserByIdQu
 const mockCreate = createNewUserQuery as jest.MockedFunction<typeof createNewUserQuery>;
 const mockUpdate = updateUserByIdQuery as jest.MockedFunction<typeof updateUserByIdQuery>;
 const mockDelete = deleteUserByIdQuery as jest.MockedFunction<typeof deleteUserByIdQuery>;
-const mockGetPreferences = getPreferencesByUserQuery as jest.MockedFunction<typeof getPreferencesByUserQuery>;
+const mockGetPreferences = getPreferencesByUserQuery as jest.MockedFunction<
+  typeof getPreferencesByUserQuery
+>;
 
 function createReq(overrides?: Partial<Request>): any {
   return {
