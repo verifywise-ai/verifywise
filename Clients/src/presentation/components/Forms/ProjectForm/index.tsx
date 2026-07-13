@@ -659,16 +659,12 @@ export const ProjectForm = ({
         </Box>
 
         <Box sx={{ display: activeTab === "details" ? "block" : "none" }}>
-          <Stack
-            className="vwproject-form-body"
-            sx={{
-              display: "flex",
-              flexDirection: { xs: "column", md: "row" },
-              gap: 6,
-              mt: 2,
-            }}
-          >
-            <Stack className="vwproject-form-body-start" sx={{ gap: 6, flex: 1 }}>
+          <Stack className="vwproject-form-body" sx={{ gap: 6, mt: 2 }}>
+            {/* Row 1: Title | Team members */}
+            <Stack
+              className="vwproject-form-row"
+              sx={{ flexDirection: { xs: "column", md: "row" }, gap: 6 }}
+            >
               <Field
                 id="project-title-input"
                 label={
@@ -676,103 +672,13 @@ export const ProjectForm = ({
                     ? "Framework title"
                     : "Use case title"
                 }
-                width="100%"
                 value={values.project_title}
                 onChange={handleOnTextFieldChange("project_title")}
                 onBlur={handleFieldBlur("project_title")}
                 error={errors.project_title}
-                sx={textfieldStyle}
+                sx={{ ...textfieldStyle, flex: 1 }}
                 isRequired
               />
-              <Select
-                id="owner-input"
-                label="Owner"
-                placeholder="Select owner"
-                value={values.owner || ""}
-                onChange={handleOnSelectChange("owner")}
-                onBlur={handleFieldBlur("owner")}
-                items={
-                  users?.map((user: any) => ({
-                    _id: user.id,
-                    name: `${user.name} ${user.surname}`,
-                    email: user.email,
-                  })) || []
-                }
-                sx={{
-                  width: "100%",
-                  backgroundColor: theme.palette.background.main,
-                }}
-                error={errors.owner}
-                isRequired
-              />
-              <Select
-                id="project-status-input"
-                label={
-                  values.framework_type === FrameworkTypeEnum.OrganizationWide
-                    ? "Framework status"
-                    : "Use case status"
-                }
-                placeholder="Select status"
-                value={values.status || ""}
-                onChange={handleOnSelectChange("status")}
-                items={projectStatusItems}
-                sx={{
-                  width: "100%",
-                  backgroundColor: theme.palette.background.main,
-                }}
-                error={errors.status}
-              />
-              {values.framework_type === FrameworkTypeEnum.ProjectBased && (
-                <Select
-                  id="approval-workflow-input"
-                  label="Approval workflow"
-                  placeholder="Select workflow"
-                  value={values.approval_workflow_id || ""}
-                  onChange={handleOnSelectChange("approval_workflow_id")}
-                  items={approvalWorkflows}
-                  sx={{
-                    width: "100%",
-                    backgroundColor: theme.palette.background.main,
-                  }}
-                  error={errors.approval_workflow_id}
-                />
-              )}
-              {hasEuAiAct && (
-                <>
-                  <Select
-                    id="risk-classification-input"
-                    label="AI risk classification"
-                    placeholder="Select an option"
-                    value={values.ai_risk_classification || ""}
-                    onChange={handleOnSelectChange("ai_risk_classification")}
-                    onBlur={handleFieldBlur("ai_risk_classification")}
-                    items={riskClassificationItems}
-                    sx={{
-                      width: "100%",
-                      backgroundColor: theme.palette.background.main,
-                    }}
-                    error={errors.ai_risk_classification}
-                    isRequired
-                  />
-                  <Select
-                    id="type-of-high-risk-role-input"
-                    label="Type of high risk role"
-                    placeholder="Select an option"
-                    value={values.type_of_high_risk_role || ""}
-                    onChange={handleOnSelectChange("type_of_high_risk_role")}
-                    onBlur={handleFieldBlur("type_of_high_risk_role")}
-                    items={highRiskRoleItems}
-                    sx={{
-                      width: "100%",
-                      backgroundColor: theme.palette.background.main,
-                    }}
-                    isRequired
-                    error={errors.type_of_high_risk_role}
-                  />
-                </>
-              )}
-            </Stack>
-            <Stack className="vwproject-form-body-end" sx={{ gap: 6, flex: 1 }}>
               <Suspense fallback={<div>Loading...</div>}>
                 <AutoCompleteField
                   label="Team members"
@@ -833,123 +739,117 @@ export const ProjectForm = ({
                   sx={{
                     "cursor": "pointer",
                     ...teamMembersSxStyle,
+                    "flex": 1,
                     "& .MuiOutlinedInput-root fieldset": {
                       borderRadius: "3px",
                     },
                   }}
                   slotProps={teamMembersSlotProps}
                 />
-                <Stack sx={{ display: "flex", flexDirection: "row", gap: 6, width: "100%" }}>
-                  <Box sx={{ flex: 1 }}>
-                    <DatePicker
-                      id="project-start-date-input"
-                      label="Start date"
-                      date={values.start_date ? dayjs(values.start_date) : dayjs(new Date())}
-                      handleDateChange={handleDateChange}
-                      onBlur={handleFieldBlur("start_date")}
-                      sx={{
-                        width: "100%",
-                      }}
-                      isRequired
-                      error={errors.start_date}
-                    />
-                  </Box>
-                  <Box sx={{ flex: 1 }}>
-                    <Select
-                      id="geography-type-input"
-                      label="Geography"
-                      placeholder="Select an option"
-                      value={values.geography === 0 ? "" : values.geography}
-                      onChange={handleOnSelectChange("geography")}
-                      onBlur={handleFieldBlur("geography")}
-                      items={geographyItems}
-                      sx={{
-                        width: "100%",
-                        backgroundColor: theme.palette.background.main,
-                      }}
-                      isRequired
-                      error={errors.geography}
-                    />
-                  </Box>
-                </Stack>
-                {!projectToEdit && values.framework_type !== FrameworkTypeEnum.OrganizationWide && (
-                  <AutoCompleteField
-                    label="Applicable regulations (optional)"
-                    multiple
-                    id="monitored-regulations-and-standards-input"
-                    value={values.monitored_regulations_and_standards}
-                    options={filteredFrameworks}
-                    onChange={handleOnMultiSelect("monitored_regulations_and_standards")}
-                    onBlur={handleFieldBlur("monitored_regulations_and_standards")}
-                    getOptionLabel={(item) => item.name}
-                    noOptionsText={
-                      values.monitored_regulations_and_standards.length ===
-                      filteredFrameworks.length
-                        ? "All regulations selected"
-                        : "No options"
-                    }
-                    renderOption={(props, option) => {
-                      const { key, ...optionProps } = props;
-                      const isComingSoon = option.name.includes("coming soon");
-                      return (
-                        <Box
-                          key={key}
-                          component="li"
-                          {...optionProps}
-                          sx={{
-                            "opacity": isComingSoon ? 0.5 : 1,
-                            "cursor": isComingSoon ? "not-allowed" : "pointer",
-                            "&:hover": {
-                              backgroundColor: isComingSoon ? "transparent" : undefined,
-                            },
-                          }}
-                        >
-                          <Typography
-                            sx={{
-                              fontSize: "13px",
-                              color: isComingSoon ? "text.secondary" : "text.primary",
-                            }}
-                          >
-                            {option.name}
-                          </Typography>
-                        </Box>
-                      );
-                    }}
-                    isOptionEqualToValue={(option, value) => option._id === value._id}
-                    getOptionDisabled={(option) => option.name.includes("coming soon")}
-                    filterSelectedOptions
-                    popupIcon={<GreyDownArrowIcon size={16} />}
-                    placeholder="Select regulations and standards"
-                    error={errors.monitored_regulations_and_standards}
-                    sx={{ ...teamMembersSxStyle }}
-                    slotProps={teamMembersSlotProps}
-                  />
-                )}
               </Suspense>
-              {/* Goal field - only for project-based frameworks */}
-              {values.framework_type === FrameworkTypeEnum.ProjectBased && (
-                <Field
-                  id="goal-input"
-                  label="Goal"
-                  type="description"
-                  value={values.goal}
-                  onChange={handleOnTextFieldChange("goal")}
-                  onBlur={handleFieldBlur("goal")}
+            </Stack>
+
+            {/* Row 2: Owner | Status */}
+            <Stack
+              className="vwproject-form-row"
+              sx={{ flexDirection: { xs: "column", md: "row" }, gap: 6 }}
+            >
+              <Select
+                id="owner-input"
+                label="Owner"
+                placeholder="Select owner"
+                value={values.owner || ""}
+                onChange={handleOnSelectChange("owner")}
+                onBlur={handleFieldBlur("owner")}
+                items={
+                  users?.map((user: any) => ({
+                    _id: user.id,
+                    name: `${user.name} ${user.surname}`,
+                    email: user.email,
+                  })) || []
+                }
+                sx={{
+                  flex: 1,
+                  backgroundColor: theme.palette.background.main,
+                }}
+                error={errors.owner}
+                isRequired
+              />
+              <Select
+                id="project-status-input"
+                label={
+                  values.framework_type === FrameworkTypeEnum.OrganizationWide
+                    ? "Framework status"
+                    : "Use case status"
+                }
+                placeholder="Select status"
+                value={values.status || ""}
+                onChange={handleOnSelectChange("status")}
+                items={projectStatusItems}
+                sx={{
+                  flex: 1,
+                  backgroundColor: theme.palette.background.main,
+                }}
+                error={errors.status}
+              />
+            </Stack>
+
+            {/* Row 3: Start date | Geography */}
+            <Stack
+              className="vwproject-form-row"
+              sx={{ flexDirection: { xs: "column", md: "row" }, gap: 6 }}
+            >
+              <Box sx={{ flex: 1 }}>
+                <DatePicker
+                  id="project-start-date-input"
+                  label="Start date"
+                  date={values.start_date ? dayjs(values.start_date) : dayjs(new Date())}
+                  handleDateChange={handleDateChange}
+                  onBlur={handleFieldBlur("start_date")}
                   sx={{
-                    backgroundColor: theme.palette.background.main,
                     width: "100%",
                   }}
-                  rows={8}
                   isRequired
-                  error={errors.goal}
+                  error={errors.start_date}
+                />
+              </Box>
+              <Select
+                id="geography-type-input"
+                label="Geography"
+                placeholder="Select an option"
+                value={values.geography === 0 ? "" : values.geography}
+                onChange={handleOnSelectChange("geography")}
+                onBlur={handleFieldBlur("geography")}
+                items={geographyItems}
+                sx={{
+                  flex: 1,
+                  backgroundColor: theme.palette.background.main,
+                }}
+                isRequired
+                error={errors.geography}
+              />
+            </Stack>
+
+            {/* Row 4: Approval workflow | Applicable regulations (optional) */}
+            <Stack
+              className="vwproject-form-row"
+              sx={{ flexDirection: { xs: "column", md: "row" }, gap: 6 }}
+            >
+              {values.framework_type === FrameworkTypeEnum.ProjectBased && (
+                <Select
+                  id="approval-workflow-input"
+                  label="Approval workflow"
+                  placeholder="Select workflow"
+                  value={values.approval_workflow_id || ""}
+                  onChange={handleOnSelectChange("approval_workflow_id")}
+                  items={approvalWorkflows}
+                  sx={{
+                    flex: 1,
+                    backgroundColor: theme.palette.background.main,
+                  }}
+                  error={errors.approval_workflow_id}
                 />
               )}
-            </Stack>
-          </Stack>
-
-          {/* Goal field - full width only for organization-wide frameworks */}
-          {values.framework_type === FrameworkTypeEnum.OrganizationWide && (
-            <Stack>
               {!projectToEdit && (
                 <AutoCompleteField
                   label="Applicable regulations (optional)"
@@ -998,58 +898,113 @@ export const ProjectForm = ({
                   popupIcon={<GreyDownArrowIcon size={16} />}
                   placeholder="Select regulations and standards"
                   error={errors.monitored_regulations_and_standards}
-                  sx={{ ...teamMembersSxStyle, width: "100%" }}
+                  sx={{
+                    ...teamMembersSxStyle,
+                    flex: values.framework_type === FrameworkTypeEnum.ProjectBased ? 1 : undefined,
+                    width:
+                      values.framework_type === FrameworkTypeEnum.ProjectBased
+                        ? undefined
+                        : "100%",
+                  }}
                   slotProps={teamMembersSlotProps}
                 />
               )}
-              <Field
-                id="goal-input"
-                label="Goal"
-                type="description"
-                value={values.goal}
-                onChange={handleOnTextFieldChange("goal")}
-                sx={{
-                  backgroundColor: theme.palette.background.main,
-                  width: "100%",
-                }}
-                isRequired
-                error={errors.goal}
-              />
             </Stack>
-          )}
-          {!projectToEdit && values.framework_type === FrameworkTypeEnum.ProjectBased && (
-            <Stack>
-              <Stack sx={{ display: "flex", flexDirection: "row", gap: 6, mb: 4 }}>
-                <Field
-                  id="target-industry-input"
-                  label="Target industry"
-                  type="description"
-                  value={values.target_industry}
-                  onChange={handleOnTextFieldChange("target_industry")}
+
+            {/* Row 5: EU AI Act risk fields (conditional) */}
+            {hasEuAiAct && (
+              <Stack
+                className="vwproject-form-row"
+                sx={{ flexDirection: { xs: "column", md: "row" }, gap: 6 }}
+              >
+                <Select
+                  id="risk-classification-input"
+                  label="AI risk classification"
+                  placeholder="Select an option"
+                  value={values.ai_risk_classification || ""}
+                  onChange={handleOnSelectChange("ai_risk_classification")}
+                  onBlur={handleFieldBlur("ai_risk_classification")}
+                  items={riskClassificationItems}
                   sx={{
                     flex: 1,
                     backgroundColor: theme.palette.background.main,
                   }}
-                  error={errors.target_industry}
+                  error={errors.ai_risk_classification}
+                  isRequired
                 />
-                <Field
-                  id="description-input"
-                  label="Description"
-                  type="description"
-                  value={values.description}
-                  onChange={handleOnTextFieldChange("description")}
+                <Select
+                  id="type-of-high-risk-role-input"
+                  label="Type of high risk role"
+                  placeholder="Select an option"
+                  value={values.type_of_high_risk_role || ""}
+                  onChange={handleOnSelectChange("type_of_high_risk_role")}
+                  onBlur={handleFieldBlur("type_of_high_risk_role")}
+                  items={highRiskRoleItems}
                   sx={{
                     flex: 1,
                     backgroundColor: theme.palette.background.main,
                   }}
-                  error={errors.description}
+                  isRequired
+                  error={errors.type_of_high_risk_role}
                 />
               </Stack>
-              <Typography variant="h6" sx={{ mt: 2, mb: 1, fontSize: "16px", fontWeight: 600 }}>
-                Use case classification (optional)
-              </Typography>
-              <Stack sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, gap: 6, flexWrap: "wrap" }}>
-                <Box sx={{ flex: 1, minWidth: "200px" }}>
+            )}
+
+            {/* Row 6: Goal */}
+            <Field
+              id="goal-input"
+              label="Goal"
+              type="description"
+              value={values.goal}
+              onChange={handleOnTextFieldChange("goal")}
+              onBlur={handleFieldBlur("goal")}
+              sx={{
+                backgroundColor: theme.palette.background.main,
+                width: "100%",
+              }}
+              rows={8}
+              isRequired
+              error={errors.goal}
+            />
+
+            {/* Row 7: Target industry | Description */}
+            <Stack
+              className="vwproject-form-row"
+              sx={{ flexDirection: { xs: "column", md: "row" }, gap: 6 }}
+            >
+              <Field
+                id="target-industry-input"
+                label="Target industry"
+                type="description"
+                value={values.target_industry}
+                onChange={handleOnTextFieldChange("target_industry")}
+                sx={{
+                  flex: 1,
+                  backgroundColor: theme.palette.background.main,
+                }}
+                error={errors.target_industry}
+              />
+              <Field
+                id="description-input"
+                label="Description"
+                type="description"
+                value={values.description}
+                onChange={handleOnTextFieldChange("description")}
+                sx={{
+                  flex: 1,
+                  backgroundColor: theme.palette.background.main,
+                }}
+                error={errors.description}
+              />
+            </Stack>
+
+            {/* Use case classification section */}
+            {!projectToEdit && values.framework_type === FrameworkTypeEnum.ProjectBased && (
+              <Stack className="vwproject-form-classification" sx={{ gap: 6 }}>
+                <Typography variant="h6" sx={{ fontSize: "16px", fontWeight: 600 }}>
+                  Use case classification (optional)
+                </Typography>
+                <Stack sx={{ flexDirection: { xs: "column", md: "row" }, gap: 6 }}>
                   <Select
                     id="use-case-category-input"
                     label="Category"
@@ -1058,13 +1013,11 @@ export const ProjectForm = ({
                     onChange={handleOnSelectChange("use_case_category")}
                     items={useCaseCategoryItems}
                     sx={{
-                      width: "100%",
+                      flex: 1,
                       backgroundColor: theme.palette.background.main,
                     }}
                     error={errors.use_case_category}
                   />
-                </Box>
-                <Box sx={{ flex: 1, minWidth: "200px" }}>
                   <Select
                     id="use-case-purpose-input"
                     label="Purpose"
@@ -1073,13 +1026,13 @@ export const ProjectForm = ({
                     onChange={handleOnSelectChange("use_case_purpose")}
                     items={useCasePurposeItems}
                     sx={{
-                      width: "100%",
+                      flex: 1,
                       backgroundColor: theme.palette.background.main,
                     }}
                     error={errors.use_case_purpose}
                   />
-                </Box>
-                <Box sx={{ flex: 1, minWidth: "200px" }}>
+                </Stack>
+                <Stack sx={{ flexDirection: { xs: "column", md: "row" }, gap: 6 }}>
                   <Select
                     id="use-case-audience-input"
                     label="Audience"
@@ -1088,13 +1041,11 @@ export const ProjectForm = ({
                     onChange={handleOnSelectChange("use_case_audience")}
                     items={useCaseAudienceItems}
                     sx={{
-                      width: "100%",
+                      flex: 1,
                       backgroundColor: theme.palette.background.main,
                     }}
                     error={errors.use_case_audience}
                   />
-                </Box>
-                <Box sx={{ flex: 1, minWidth: "200px" }}>
                   <Select
                     id="deployment-context-input"
                     label="Deployment context"
@@ -1103,23 +1054,23 @@ export const ProjectForm = ({
                     onChange={handleOnSelectChange("deployment_context")}
                     items={deploymentContextItems}
                     sx={{
-                      width: "100%",
+                      flex: 1,
                       backgroundColor: theme.palette.background.main,
                     }}
                     error={errors.deployment_context}
                   />
-                </Box>
+                </Stack>
+                <Checkbox
+                  size="small"
+                  id="auto-fill"
+                  onChange={handleCheckboxChange}
+                  isChecked={values.enable_ai_data_insertion}
+                  value={values.enable_ai_data_insertion.toString()}
+                  label="Enable this option to automatically fill in the Requirements and Controls questions with AI-generated answers, helping you save time. You can review and edit these answers anytime."
+                />
               </Stack>
-              <Checkbox
-                size="small"
-                id="auto-fill"
-                onChange={handleCheckboxChange}
-                isChecked={values.enable_ai_data_insertion}
-                value={values.enable_ai_data_insertion.toString()}
-                label="Enable this option to automatically fill in the Requirements and Controls questions with AI-generated answers, helping you save time. You can review and edit these answers anytime."
-              />
-            </Stack>
-          )}
+            )}
+          </Stack>
         </Box>
 
         <Box sx={{ display: activeTab === "custom-fields" ? "block" : "none" }}>
