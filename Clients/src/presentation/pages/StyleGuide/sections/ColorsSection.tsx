@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Box, Stack, Typography, useTheme, Divider, Snackbar } from "@mui/material";
 import { Copy } from "lucide-react";
-import { grey, green, red, amber, orange, blue, indigo } from "../../../themes/primitives";
+import { grey, green, red, amber, orange, blue, indigo, purple } from "../../../themes/primitives";
 
 const ColorsSection: React.FC = () => {
   const theme = useTheme();
@@ -67,7 +67,7 @@ const ColorsSection: React.FC = () => {
           sx={{
             display: "flex",
             flexWrap: "wrap",
-            gap: "48px",
+            gap: "40px",
             alignItems: "flex-start",
           }}
         >
@@ -175,6 +175,21 @@ const ColorsSection: React.FC = () => {
               Indigo
             </Typography>
             <PrimitiveScale name="Indigo" scale={indigo} tokenPrefix="indigo" onCopy={handleCopy} />
+          </Box>
+          <Box>
+            <Typography
+              sx={{
+                fontSize: 12,
+                fontWeight: 600,
+                color: theme.palette.text.secondary,
+                mb: "12px",
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+              }}
+            >
+              Purple
+            </Typography>
+            <PrimitiveScale name="Purple" scale={purple} tokenPrefix="purple" onCopy={handleCopy} />
           </Box>
         </Box>
       </SpecSection>
@@ -758,6 +773,7 @@ const ColorsSection: React.FC = () => {
             "Amber primitives power warning, medium risk, and accent.amber tokens",
             "Blue primitives power info and accent.blue tokens",
             "Indigo primitives power accent.indigo tokens",
+            "Purple primitives power accent.purple tokens",
             "Access semantics via theme.palette.* — never hardcode hex in components",
             "Border color theme.palette.border.dark should be used for input borders",
             "Text hierarchy: primary > secondary > tertiary > accent",
@@ -805,7 +821,7 @@ const PrimitiveScale: React.FC<{
     .sort((a, b) => a - b);
 
   return (
-    <Stack spacing="6px" sx={{ width: 240 }}>
+    <Stack spacing="8px" sx={{ width: 164 }}>
       {steps.map((step) => {
         const color = scale[step as keyof typeof scale];
 
@@ -844,7 +860,8 @@ const PrimitiveScale: React.FC<{
                   (step === 50 && tokenPrefix === "grey") ||
                   (step === 50 && tokenPrefix === "orange") ||
                   (step === 50 && tokenPrefix === "blue") ||
-                  (step === 50 && tokenPrefix === "indigo")
+                  (step === 50 && tokenPrefix === "indigo") ||
+                  (step === 50 && tokenPrefix === "purple")
                     ? `1px solid ${theme.palette.border.light}`
                     : "none",
               }}
