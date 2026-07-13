@@ -147,6 +147,39 @@ describe("MRM retention tenant isolation + audit guard", () => {
     expect(await metricIds(owner.orgId)).toEqual([protectedOldest]);
   });
 
+  it("respects the cutoff boundary: prunes just outside the window, keeps just inside", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const modelId = await createTestModelInventory(owner.orgId);
+    await upsertMrmOrgSettings(owner.orgId, 36);
+
+    // Compute the boundary with the SAME Postgres arithmetic the prune query
+    // uses (now() - make_interval). The ±5-day margin absorbs the milliseconds
+    // between this SELECT and the prune's own now(), and any JS-vs-Postgres
+    // calendar-month differences — while still catching an interval-unit or
+    // comparison-direction regression, which the years-away fixtures above
+    // never would.
+    const boundary = (await sequelize.query(
+      `SELECT (now() - make_interval(months => 36) + interval '5 days')::text AS inside,
+              (now() - make_interval(months => 36) - interval '5 days')::text AS outside`,
+      { type: QueryTypes.SELECT },
+    )) as { inside: string; outside: string }[];
+
+    const keptInside = await createTestMrmMetric(owner.orgId, modelId, {
+      at: boundary[0].inside,
+    });
+    await createTestMrmMetricEvaluation(owner.orgId, keptInside, { status: "ok" });
+    const prunedOutside = await createTestMrmMetric(owner.orgId, modelId, {
+      at: boundary[0].outside,
+      metric: "auc",
+    });
+    await createTestMrmMetricEvaluation(owner.orgId, prunedOutside, { status: "ok" });
+
+    const summary = await runRetentionPrune(owner.orgId);
+
+    expect(summary.deleted).toBe(1);
+    expect(await metricIds(owner.orgId)).toEqual([keptInside]);
+  });
+
   it("org A's prune never touches org B's data", async () => {
     const { owner, attacker } = await seedTwoTenantContexts();
     const ownerModel = await createTestModelInventory(owner.orgId);
