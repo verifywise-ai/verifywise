@@ -40,6 +40,10 @@ export enum NotificationType {
   // Shadow AI notifications
   SHADOW_AI_ALERT = "shadow_ai_alert",
 
+  // MRM (Model Risk Management) monitoring notifications
+  MRM_METRIC_BREACH = "mrm_metric_breach",
+  MRM_REVALIDATION_DUE = "mrm_revalidation_due",
+
   // AI Gateway notifications
   AI_GATEWAY_BUDGET_WARNING = "ai_gateway_budget_warning",
   AI_GATEWAY_BUDGET_EXHAUSTED = "ai_gateway_budget_exhausted",

@@ -145,6 +145,10 @@ export interface IRiskLevelCoreProps {
   likelihood: number;
   riskSeverity: number;
   disabled?: boolean;
+  likelihoodError?: string;
+  riskSeverityError?: string;
+  onLikelihoodBlur?: () => void;
+  onRiskSeverityBlur?: () => void;
 }
 
 /**

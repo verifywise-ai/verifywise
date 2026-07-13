@@ -8,6 +8,7 @@ import {
 import GovernanceTooltip from "./GovernanceTooltip";
 import { CustomizableButton } from "../button/customizable-button";
 import { border as borderPalette, background, text, brand, status } from "../../themes/palette";
+import { displayFormattedDate } from "../../tools/isoDateToString";
 
 const ActivationHistory: React.FC = () => {
   const { data: activations, isLoading } = useActivationHistory();
@@ -63,7 +64,7 @@ const ActivationHistory: React.FC = () => {
         {activations.slice(0, 5).map((activation: any) => {
           const isActive = activation.status === "active";
           const date = activation.activated_at
-            ? new Date(activation.activated_at).toLocaleDateString()
+            ? displayFormattedDate(activation.activated_at)
             : "—";
 
           return (

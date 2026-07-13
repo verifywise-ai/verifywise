@@ -1,29 +1,73 @@
 import React, { useState } from "react";
 import { Box, Stack, Typography, useTheme, Divider, Snackbar } from "@mui/material";
-import { Copy, Inbox, ShieldAlert, Database, ListTodo } from "lucide-react";
+import { Copy, Inbox, ShieldAlert, Database, ListTodo, PlusCircle, Tag, Link2 } from "lucide-react";
 import { EmptyState } from "../../../components/EmptyState";
 import EmptyIllustration from "../../../components/EmptyState/EmptyIllustration";
+import EmptyStateTip from "../../../components/EmptyState/EmptyStateTip";
+import { EmptyStateMessage } from "../../../components/EmptyStateMessage";
+import { TableEmptyStateLayout } from "../../../components/Table/TableEmptyStateLayout";
+import StandardTableHead from "../../../components/Table/StandardTableHead";
 import CodeBlock from "../components/CodeBlock";
 
-const emptyStateSnippets = {
-  basic: `import { EmptyState } from "../EmptyState";
+const TABLE_EMPTY_COLUMNS = [
+  { id: "name", label: "NAME", sortable: true },
+  { id: "status", label: "STATUS", sortable: true },
+  { id: "date", label: "DATE", sortable: true },
+];
 
-<EmptyState />`,
-  customMessage: `<EmptyState
+const emptyStateSnippets = {
+  standard: `import { EmptyState } from "../EmptyState";
+import { Database } from "lucide-react";
+
+<EmptyState
   icon={Database}
   message="No datasets found. Add a dataset to get started."
 />`,
-  withIcon: `import { ShieldAlert } from "lucide-react";
+  withTips: `import { EmptyState } from "../EmptyState";
+import EmptyStateTip from "../EmptyState/EmptyStateTip";
+import { Database, PlusCircle, Tag } from "lucide-react";
 
 <EmptyState
-  icon={ShieldAlert}
-  message="No risks identified."
-  showBorder={true}
-/>`,
+  icon={Database}
+  message="No datasets found. Add a dataset to get started."
+>
+  <EmptyStateTip
+    icon={PlusCircle}
+    title="Create a dataset"
+    description="Register training or evaluation data used by your AI systems."
+  />
+  <EmptyStateTip
+    icon={Tag}
+    title="Link to models"
+    description="Connect datasets to models for traceability and compliance."
+  />
+</EmptyState>`,
   illustration: `import EmptyIllustration from "../EmptyState/EmptyIllustration";
 import { ListTodo } from "lucide-react";
 
 <EmptyIllustration icon={ListTodo} />`,
+  widget: `import { EmptyStateMessage } from "../EmptyStateMessage";
+
+<EmptyStateMessage message="No upcoming deadlines" />`,
+  table: `import { TableEmptyStateLayout } from "../Table/TableEmptyStateLayout";
+import StandardTableHead from "../Table/StandardTableHead";
+import { EmptyState } from "../EmptyState";
+import { Database } from "lucide-react";
+
+<TableEmptyStateLayout
+  header={
+    <StandardTableHead
+      columns={columns}
+      sortConfig={sortConfig}
+      onSort={handleSort}
+    />
+  }
+>
+  <EmptyState
+    icon={Database}
+    message="No datasets found. Add a dataset to get started."
+  />
+</TableEmptyStateLayout>`,
 };
 
 const EmptyStatesSection: React.FC = () => {
@@ -81,24 +125,8 @@ const EmptyStatesSection: React.FC = () => {
           <Box sx={{ flex: "1 1 500px", minWidth: 320 }}>
             <Stack spacing="24px">
               <ExampleWithCode
-                label="Default empty state"
-                code={emptyStateSnippets.basic}
-                onCopy={handleCopy}
-              >
-                <Box
-                  sx={{
-                    backgroundColor: theme.palette.background.fill,
-                    borderRadius: "4px",
-                    overflow: "hidden",
-                  }}
-                >
-                  <EmptyState />
-                </Box>
-              </ExampleWithCode>
-
-              <ExampleWithCode
-                label="With contextual icon"
-                code={emptyStateSnippets.customMessage}
+                label="Standard empty state"
+                code={emptyStateSnippets.standard}
                 onCopy={handleCopy}
               >
                 <Box
@@ -116,11 +144,68 @@ const EmptyStatesSection: React.FC = () => {
               </ExampleWithCode>
 
               <ExampleWithCode
-                label="With border (standalone container)"
-                code={emptyStateSnippets.withIcon}
+                label="With guidance tips"
+                code={emptyStateSnippets.withTips}
                 onCopy={handleCopy}
               >
-                <EmptyState icon={ShieldAlert} message="No risks identified." showBorder={true} />
+                <Box
+                  sx={{
+                    backgroundColor: theme.palette.background.fill,
+                    borderRadius: "4px",
+                    overflow: "hidden",
+                  }}
+                >
+                  <EmptyState
+                    icon={Database}
+                    message="No datasets found. Add a dataset to get started."
+                  >
+                    <EmptyStateTip
+                      icon={PlusCircle}
+                      title="Create a dataset"
+                      description="Register training or evaluation data used by your AI systems."
+                    />
+                    <EmptyStateTip
+                      icon={Tag}
+                      title="Link to models"
+                      description="Connect datasets to models for traceability and compliance."
+                    />
+                    <EmptyStateTip
+                      icon={Link2}
+                      title="Attach evidence"
+                      description="Upload documentation that proves data quality and provenance."
+                    />
+                  </EmptyState>
+                </Box>
+              </ExampleWithCode>
+
+              <ExampleWithCode
+                label="Table empty state (header + EmptyState below)"
+                code={emptyStateSnippets.table}
+                onCopy={handleCopy}
+              >
+                <Box
+                  sx={{
+                    backgroundColor: theme.palette.background.fill,
+                    borderRadius: "4px",
+                    overflow: "hidden",
+                    p: "16px",
+                  }}
+                >
+                  <TableEmptyStateLayout
+                    header={
+                      <StandardTableHead
+                        columns={TABLE_EMPTY_COLUMNS}
+                        sortConfig={{ key: "", direction: null }}
+                        onSort={() => {}}
+                      />
+                    }
+                  >
+                    <EmptyState
+                      icon={Database}
+                      message="No datasets found. Add a dataset to get started."
+                    />
+                  </TableEmptyStateLayout>
+                </Box>
               </ExampleWithCode>
             </Stack>
           </Box>
@@ -141,10 +226,14 @@ const EmptyStatesSection: React.FC = () => {
             <SpecTable
               onCopy={handleCopy}
               specs={[
-                { property: "icon", value: "Inbox (default, any LucideIcon)" },
-                { property: "message", value: '"There is currently no data..."' },
+                { property: "icon", value: "Inbox (fallback — pass contextual LucideIcon)" },
+                {
+                  property: "message",
+                  value: '"There is currently no data in this table."',
+                },
                 { property: "imageAlt", value: '"No data available"' },
-                { property: "showBorder", value: "false (default)" },
+                { property: "showBorder", value: "true (default)" },
+                { property: "children", value: "EmptyStateTip blocks (optional)" },
               ]}
             />
 
@@ -168,13 +257,42 @@ const EmptyStatesSection: React.FC = () => {
                 { property: "Padding bottom", value: "24px (theme.spacing(12))" },
                 { property: "Message font size", value: "13px" },
                 { property: "Message font weight", value: "500" },
+                { property: "Message color", value: "theme.palette.text.accent" },
                 { property: "Message max width", value: "360px" },
-                { property: "Border (when shown)", value: "1px dashed borderPalette.dark" },
+                { property: "Border", value: "1px dashed borderPalette.dark (default)" },
                 { property: "Border radius", value: "4px" },
               ]}
             />
           </Box>
         </Box>
+      </SpecSection>
+
+      <Divider sx={{ my: "32px" }} />
+
+      {/* EmptyStateMessage Component */}
+      <SpecSection title="EmptyStateMessage component">
+        <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
+          Compact empty state for dashboard widget cards. Uses a check-circle icon with a short
+          message — no illustration. Do not use for table or list empty states.
+        </Typography>
+
+        <ExampleWithCode
+          label="Dashboard widget"
+          code={emptyStateSnippets.widget}
+          onCopy={handleCopy}
+        >
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              p: "40px",
+              backgroundColor: theme.palette.background.fill,
+              borderRadius: "4px",
+            }}
+          >
+            <EmptyStateMessage message="No upcoming deadlines" />
+          </Box>
+        </ExampleWithCode>
       </SpecSection>
 
       <Divider sx={{ my: "32px" }} />
@@ -191,7 +309,7 @@ const EmptyStatesSection: React.FC = () => {
           <Box sx={{ flex: "1 1 500px", minWidth: 320 }}>
             <Stack spacing="24px">
               <ExampleWithCode
-                label="Different icons"
+                label="Icon variants"
                 code={emptyStateSnippets.illustration}
                 onCopy={handleCopy}
               >
@@ -283,10 +401,12 @@ const EmptyStatesSection: React.FC = () => {
         </Typography>
         <Stack spacing="8px">
           {[
-            "Use EmptyState for table cells when no data is available",
-            "Pass a contextual icon prop (e.g. Database, ShieldAlert, ListTodo)",
-            "Set showBorder={true} for standalone containers (not inside tables)",
-            "Customize message prop for context-specific feedback",
+            "Always pass a contextual icon and domain-specific message in feature code",
+            "Use EmptyState for table and list empty states — border is on by default",
+            "For tables: use TableEmptyStateLayout — column header row + EmptyState below (not inside TableBody)",
+            "Add EmptyStateTip children for full-page guidance empty states",
+            "Use EmptyStateMessage only for compact dashboard widget cards",
+            "Use showBorder={false} only in tight sidebars or panels",
             "EmptyState includes proper ARIA role='status' for accessibility",
             "Illustration adapts to light/dark theme automatically",
           ].map((item, index) => (

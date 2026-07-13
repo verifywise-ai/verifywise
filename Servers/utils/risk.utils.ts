@@ -1,6 +1,6 @@
 import { RiskModel } from "../domain.layer/models/risks/risk.model";
 import { sequelize } from "../database/db";
-import { Transaction } from "sequelize";
+import { Transaction, QueryTypes } from "sequelize";
 import { IRisk } from "../domain.layer/interfaces/I.risk";
 import { IProjectFrameworks } from "../domain.layer/interfaces/i.projectFramework";
 import { TenantAutomationActionModel } from "../domain.layer/models/tenantAutomationAction/tenantAutomationAction.model";
@@ -95,11 +95,10 @@ export const getAllRisksQuery = async (
     ORDER BY r.created_at DESC, r.id ASC
   `;
 
-  const result = (await sequelize.query(query, { replacements: { organizationId } })) as [
-    any[],
-    number,
-  ];
-  const risks = result[0];
+  const risks = (await sequelize.query(query, {
+    replacements: { organizationId },
+    type: QueryTypes.SELECT,
+  })) as any[];
 
   // Parse JSON strings if needed
   for (let risk of risks) {
@@ -392,9 +391,9 @@ export const getRisksByProjectQuery = async (
       ${whereClause}
       GROUP BY r.id
       ORDER BY r.created_at DESC, r.id ASC`,
-    { replacements: { projectId, organizationId } },
-  )) as [IRisk[], number];
-  return result[0];
+    { replacements: { projectId, organizationId }, type: QueryTypes.SELECT },
+  )) as IRisk[];
+  return result;
 };
 
 export const getRisksByFrameworkQuery = async (
@@ -436,9 +435,9 @@ export const getRisksByFrameworkQuery = async (
     GROUP BY r.id
     ORDER BY r.created_at DESC, r.id ASC;
     `,
-    { replacements: { frameworkId, organizationId } },
-  )) as [IRisk[], number];
-  return result[0];
+    { replacements: { frameworkId, organizationId }, type: QueryTypes.SELECT },
+  )) as IRisk[];
+  return result;
 };
 
 export const getRiskByIdQuery = async (

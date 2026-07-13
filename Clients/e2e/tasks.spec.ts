@@ -141,10 +141,7 @@ test.describe("Tasks", () => {
     await page.goto("/tasks");
     const addBtn = page.getByRole("button", { name: /add new task/i });
 
-    if (!(await addBtn.isVisible().catch(() => false))) {
-      test.skip();
-      return;
-    }
+    await expect(addBtn).toBeVisible({ timeout: 15_000 });
     await addBtn.click();
     await page.waitForTimeout(500);
 
@@ -180,10 +177,7 @@ test.describe("Tasks", () => {
 
     // Create: Click "Add new task"
     const addBtn = page.getByRole("button", { name: /add new task/i });
-    if (!(await addBtn.isVisible().catch(() => false))) {
-      test.skip();
-      return;
-    }
+    await expect(addBtn).toBeVisible({ timeout: 15_000 });
     await addBtn.click();
 
     // Fill in the task title

@@ -47,6 +47,8 @@ export const transformFileData = (file: any): FileModel => {
     version: file.version,
     reviewStatus: file.review_status,
     fileGroupId: file.file_group_id,
+    entityLinks: file.entity_links ?? [],
+    linkGroups: file.link_groups ?? [],
   });
 };
 

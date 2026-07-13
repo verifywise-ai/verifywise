@@ -1,0 +1,35 @@
+:root {
+  --green: #13715b; --green-bg: #e6f0ec; --border: #d0d5dd;
+  --amber: #b54708; --amber-bg: #fef0c7; --red: #b42318; --red-bg: #fee4e2;
+  --text: #1c2130; --muted: #667085; --radius: 4px;
+  font-family: Inter, Geist, system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; color: var(--text); background: #fafafa; font-size: 13px; }
+#topbar { display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; background: #fff; border-bottom: 1px solid var(--border); }
+#topbar .brand { font-weight: 600; color: var(--green); font-size: 15px; }
+#topbar .status { color: var(--muted); }
+#error-banner { background: var(--red-bg); color: var(--red); padding: 10px 20px; border-bottom: 1px solid var(--border); }
+main { display: grid; grid-template-columns: 1fr 1fr 320px; gap: 16px; padding: 16px; align-items: start; }
+.panel { background: #fff; border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; }
+.panel h2 { margin: 0 0 12px; font-size: 13px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+#fleet-cards { display: flex; flex-direction: column; gap: 10px; }
+.model-card { border: 1px solid var(--border); border-radius: var(--radius); padding: 12px; cursor: pointer; }
+.model-card:hover { border-color: var(--green); }
+.model-card.selected { border-color: var(--green); background: var(--green-bg); }
+.model-card .name { font-weight: 600; }
+.model-card .tier { color: var(--muted); font-size: 11px; }
+.model-card .metrics { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.chip { padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 500; }
+.chip.ok { background: var(--green-bg); color: var(--green); }
+.chip.warn { background: var(--amber-bg); color: var(--amber); }
+.chip.breach { background: var(--red-bg); color: var(--red); }
+.chip.no_threshold { background: #f2f4f7; color: var(--muted); }
+#chart-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.chart-box { border: 1px solid var(--border); border-radius: var(--radius); padding: 8px; }
+.chart-box h3 { margin: 0 0 6px; font-size: 12px; color: var(--muted); }
+#feed-list { list-style: none; margin: 0; padding: 0; max-height: 70vh; overflow-y: auto; }
+#feed-list li { padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+#feed-list li.breach { color: var(--red); } #feed-list li.warn { color: var(--amber); }
+footer#ingest { display: flex; gap: 24px; padding: 12px 20px; background: #fff; border-top: 1px solid var(--border); color: var(--muted); }
+footer#ingest b { color: var(--text); }

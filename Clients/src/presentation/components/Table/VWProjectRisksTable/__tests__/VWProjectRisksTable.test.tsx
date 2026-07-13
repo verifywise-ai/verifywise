@@ -6,7 +6,20 @@ import type { RiskModel } from "../../../../../domain/models/Common/risks/risk.m
 import { buildRisk } from "../../../../../test/factories/risk.factory";
 
 vi.mock("../../../../../application/hooks/useCustomFields", () => ({
-  useCustomFieldDefinitions: () => ({ data: [] }),
+  // Stub every hook the module exports so vitest doesn't keep real
+  // customField.repository (→ axios) in the live module graph, which leads
+  // to "module loaded after teardown" unhandled rejections.
+  useCustomFieldDefinitions: () => ({ data: [], isLoading: false, isError: false }),
+  useCustomFieldValues: () => ({ data: [], isLoading: false }),
+  useMissingRequiredCustomFields: () => ({ data: [], isLoading: false }),
+  useCreateCustomFieldDefinition: () => ({ mutate: () => {}, mutateAsync: async () => undefined }),
+  useUpdateCustomFieldDefinition: () => ({ mutate: () => {}, mutateAsync: async () => undefined }),
+  useDeleteCustomFieldDefinition: () => ({ mutate: () => {}, mutateAsync: async () => undefined }),
+  customFieldsKeys: {
+    definitions: () => ["customFields", "definitions"],
+    values: () => ["customFields", "values"],
+    missingRequired: () => ["customFields", "missingRequired"],
+  },
 }));
 
 vi.mock("../../../../../application/hooks/useBulkSelection", () => ({

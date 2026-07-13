@@ -11,6 +11,7 @@ import { sequelize } from "../database/db";
 import { Transaction } from "sequelize";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import logger from "../utils/logger/fileLogger";
+import { logRollbackFailure } from "../utils/logger/logHelper";
 import { validateApiKeyWithCache } from "../utils/shadowAiApiKey.utils";
 import { normalizeEvent, insertEventsQuery } from "../utils/shadowAiIngestion.utils";
 import {
@@ -313,7 +314,14 @@ export async function ingestEvents(req: Request, res: Response) {
       try {
         await transaction.rollback();
       } catch (rollbackError) {
-        logger.error("Transaction rollback failed:", rollbackError);
+        await logRollbackFailure({
+          req,
+          functionName: "ingestEvents",
+          fileName: "shadowAiIngestion.ctrl.ts",
+          eventType: "Create",
+          originalError: error,
+          rollbackError,
+        });
       }
     }
 

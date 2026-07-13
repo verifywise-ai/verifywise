@@ -33,6 +33,9 @@ export function useActiveModule() {
     if (pathname.startsWith("/ai-gateway")) {
       return "ai-gateway";
     }
+    if (pathname.startsWith("/ai-trust-index")) {
+      return "ai-trust-index";
+    }
     if (pathname.startsWith("/super-admin")) {
       return "super-admin";
     }
@@ -70,6 +73,9 @@ export function useActiveModule() {
         case "ai-gateway":
           navigate("/ai-gateway/dashboard");
           break;
+        case "ai-trust-index":
+          navigate("/ai-trust-index/browse");
+          break;
         case "super-admin":
           navigate("/super-admin");
           break;
@@ -87,7 +93,15 @@ export function useActiveModule() {
     const stored = storageService.getRaw<AppModule | null>(STORAGE_KEY, null, { raw: true });
     if (
       stored &&
-      ["main", "evals", "ai-detection", "shadow-ai", "ai-gateway", "super-admin"].includes(stored)
+      [
+        "main",
+        "evals",
+        "ai-detection",
+        "shadow-ai",
+        "ai-gateway",
+        "ai-trust-index",
+        "super-admin",
+      ].includes(stored)
     ) {
       // Only set if URL doesn't already indicate a different module
       const urlModule = getModuleFromPath(location.pathname);

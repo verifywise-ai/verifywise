@@ -7,14 +7,20 @@ export class ProjectModel {
   project_title!: string;
   owner!: number;
   start_date!: Date;
-  ai_risk_classification!: AiRiskClassification;
-  type_of_high_risk_role!: HighRiskRole;
+  ai_risk_classification?: AiRiskClassification | null;
+  type_of_high_risk_role?: HighRiskRole | null;
   goal!: string;
   last_updated!: Date;
   last_updated_by!: number;
   is_demo?: boolean;
   created_at?: Date;
   is_organizational!: boolean;
+
+  // Regulation-agnostic use-case classification
+  use_case_category?: string | null;
+  use_case_purpose?: string | null;
+  use_case_audience?: string | null;
+  deployment_context?: string | null;
 
   constructor(data: ProjectModel) {
     this.id = data.id;
@@ -30,6 +36,10 @@ export class ProjectModel {
     this.is_demo = data.is_demo;
     this.created_at = data.created_at;
     this.is_organizational = data.is_organizational;
+    this.use_case_category = data.use_case_category;
+    this.use_case_purpose = data.use_case_purpose;
+    this.use_case_audience = data.use_case_audience;
+    this.deployment_context = data.deployment_context;
   }
 
   static createNewProject(data: ProjectModel): ProjectModel {

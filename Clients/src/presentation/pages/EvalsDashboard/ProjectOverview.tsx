@@ -31,6 +31,7 @@ import TipBox from "../../components/TipBox";
 import { useAuth } from "../../../application/hooks/useAuth";
 import allowedRoles from "../../../application/constants/permissions";
 import { palette } from "../../themes/palette";
+import { displayFormattedDateTime } from "../../tools/isoDateToString";
 
 interface ProjectOverviewProps {
   projectId: string;
@@ -339,15 +340,7 @@ export default function ProjectOverview({
       }
 
       // Format date
-      const createdDate = exp.created_at
-        ? new Date(exp.created_at).toLocaleDateString("en-US", {
-            month: "short",
-            day: "numeric",
-            year: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          })
-        : "-";
+      const createdDate = exp.created_at ? displayFormattedDateTime(exp.created_at) : "-";
 
       // Judge/scorer display
       const judgeModel = exp.config?.judgeLlm?.model || exp.config?.judgeLlm?.provider || "";

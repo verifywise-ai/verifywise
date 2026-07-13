@@ -13,6 +13,7 @@ jest.mock("../../services/slack/slackNotificationService", () => ({
   sendSlackNotification: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock("../../services/inAppNotification.service", () => ({
+  sendInAppNotification: jest.fn().mockResolvedValue(undefined),
   notifyUserAssigned: jest.fn().mockResolvedValue(undefined),
   notifyTaskAssigned: jest.fn().mockResolvedValue(undefined),
   notifyTaskUpdated: jest.fn().mockResolvedValue(undefined),
@@ -63,7 +64,6 @@ export interface TestAppOptions {
     userId?: number;
     role?: string;
     organizationId?: number;
-    tenantId?: number;
     isSuperAdmin?: boolean;
   };
 }
@@ -72,7 +72,6 @@ const DEFAULT_MOCK_USER = {
   userId: 1,
   role: "Admin",
   organizationId: 1,
-  tenantId: 1,
   isSuperAdmin: false,
 };
 
@@ -86,7 +85,6 @@ export function createTestApp(options?: TestAppOptions): Application {
       req.userId = mockUser.userId;
       req.role = mockUser.role;
       req.organizationId = mockUser.organizationId;
-      req.tenantId = mockUser.tenantId;
       req.isSuperAdmin = mockUser.isSuperAdmin;
       req.tenantHash = getTenantHash(mockUser.organizationId);
       req.testBypassAuth = true;

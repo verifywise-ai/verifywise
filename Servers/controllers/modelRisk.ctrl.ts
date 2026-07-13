@@ -26,7 +26,7 @@ export async function getAllModelRisks(req: Request, res: Response) {
     functionName: "getAllModelRisks",
     fileName: "modelRisk.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -38,7 +38,7 @@ export async function getAllModelRisks(req: Request, res: Response) {
         functionName: "getAllModelRisks",
         fileName: "modelRisk.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res
         .status(200)
@@ -51,7 +51,7 @@ export async function getAllModelRisks(req: Request, res: Response) {
       functionName: "getAllModelRisks",
       fileName: "modelRisk.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(200).json(STATUS_CODE[200]([]));
   } catch (error) {
@@ -62,7 +62,7 @@ export async function getAllModelRisks(req: Request, res: Response) {
       fileName: "modelRisk.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -77,7 +77,7 @@ export async function getModelRiskById(req: Request, res: Response) {
     functionName: "getModelRiskById",
     fileName: "modelRisk.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -89,7 +89,7 @@ export async function getModelRiskById(req: Request, res: Response) {
         functionName: "getModelRiskById",
         fileName: "modelRisk.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(200).json(STATUS_CODE[200](modelRisk.toSafeJSON()));
     }
@@ -101,7 +101,7 @@ export async function getModelRiskById(req: Request, res: Response) {
       fileName: "modelRisk.ctrl.ts",
       error: new Error("Model risk not found"),
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(404).json(STATUS_CODE[404](req.t!("Model risk not found.")));
   } catch (error) {
@@ -112,7 +112,7 @@ export async function getModelRiskById(req: Request, res: Response) {
       fileName: "modelRisk.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -124,7 +124,7 @@ export async function createNewModelRisk(req: Request, res: Response) {
     functionName: "createNewModelRisk",
     fileName: "modelRisk.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   const transaction: Transaction = await sequelize.transaction();
@@ -152,7 +152,7 @@ export async function createNewModelRisk(req: Request, res: Response) {
       functionName: "createNewModelRisk",
       fileName: "modelRisk.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(201).json(STATUS_CODE[201](modelRisk.toSafeJSON()));
   } catch (error) {
@@ -164,7 +164,7 @@ export async function createNewModelRisk(req: Request, res: Response) {
       fileName: "modelRisk.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
   }
@@ -192,7 +192,7 @@ export async function updateModelRiskById(req: Request, res: Response) {
     functionName: "updateModelRiskById",
     fileName: "modelRisk.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   const transaction: Transaction = await sequelize.transaction();
@@ -214,7 +214,7 @@ export async function updateModelRiskById(req: Request, res: Response) {
         fileName: "modelRisk.ctrl.ts",
         error: new Error("Model risk not found"),
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(404).json(STATUS_CODE[404](req.t!("Model risk not found.")));
     }
@@ -241,7 +241,7 @@ export async function updateModelRiskById(req: Request, res: Response) {
       functionName: "updateModelRiskById",
       fileName: "modelRisk.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(200).json(STATUS_CODE[200](modelRisk.toSafeJSON()));
   } catch (error) {
@@ -253,7 +253,7 @@ export async function updateModelRiskById(req: Request, res: Response) {
       fileName: "modelRisk.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
   }
@@ -267,7 +267,7 @@ export async function deleteModelRiskById(req: Request, res: Response) {
     functionName: "deleteModelRiskById",
     fileName: "modelRisk.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   const transaction: Transaction = await sequelize.transaction();
@@ -288,7 +288,7 @@ export async function deleteModelRiskById(req: Request, res: Response) {
         fileName: "modelRisk.ctrl.ts",
         error: new Error("Model risk not found"),
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(404).json(STATUS_CODE[404](req.t!("Model risk not found.")));
     }
@@ -312,7 +312,7 @@ export async function deleteModelRiskById(req: Request, res: Response) {
       functionName: "deleteModelRiskById",
       fileName: "modelRisk.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(200).json(STATUS_CODE[200](req.t!("Model risk deleted successfully.")));
   } catch (error) {
@@ -324,7 +324,7 @@ export async function deleteModelRiskById(req: Request, res: Response) {
       fileName: "modelRisk.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }

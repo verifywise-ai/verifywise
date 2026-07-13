@@ -47,13 +47,15 @@ export class ProjectModel extends Model<ProjectModel> implements IProjectAttribu
 
   @Column({
     type: DataType.ENUM(...Object.values(AiRiskClassification)),
+    allowNull: true,
   })
-  ai_risk_classification!: AiRiskClassification;
+  ai_risk_classification?: AiRiskClassification | null;
 
   @Column({
     type: DataType.ENUM(...Object.values(HighRiskRole)),
+    allowNull: true,
   })
-  type_of_high_risk_role!: HighRiskRole;
+  type_of_high_risk_role?: HighRiskRole | null;
 
   @Column({
     type: DataType.STRING,
@@ -135,6 +137,30 @@ export class ProjectModel extends Model<ProjectModel> implements IProjectAttribu
     type: DataType.STRING,
     allowNull: true,
   })
+  use_case_category?: string | null;
+
+  @Column({
+    type: DataType.STRING,
+    allowNull: true,
+  })
+  use_case_purpose?: string | null;
+
+  @Column({
+    type: DataType.STRING,
+    allowNull: true,
+  })
+  use_case_audience?: string | null;
+
+  @Column({
+    type: DataType.STRING,
+    allowNull: true,
+  })
+  deployment_context?: string | null;
+
+  @Column({
+    type: DataType.STRING,
+    allowNull: true,
+  })
   _source?: string;
 
   static async CreateNewProject(projectAttributes: Partial<IProjectAttributes>) {
@@ -165,6 +191,10 @@ export class ProjectModel extends Model<ProjectModel> implements IProjectAttribu
       geography: this.geography,
       ai_risk_classification: this.ai_risk_classification,
       type_of_high_risk_role: this.type_of_high_risk_role,
+      use_case_category: this.use_case_category,
+      use_case_purpose: this.use_case_purpose,
+      use_case_audience: this.use_case_audience,
+      deployment_context: this.deployment_context,
       goal: this.goal,
       target_industry: this.target_industry,
       description: this.description,

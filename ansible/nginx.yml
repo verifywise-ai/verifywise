@@ -1,0 +1,77 @@
+---
+# nginx reverse proxy for VerifyWise.
+#   ssl=true  (default): server_name = host (domain from inventory), runs certbot --nginx
+#   ssl=false          : server_name = ansible_host (the IP), no SSL
+#
+# Usage:
+#   ansible-playbook -i inventory.ini nginx.yml
+#   ansible-playbook -i inventory.ini nginx.yml -e ssl=false
+
+- name: Install/update nginx (+ SSL) for VerifyWise
+  hosts: verifywise
+  become: true
+
+  vars:
+    ssl: true
+    server_name_value: "{{ host if (ssl | bool) else ansible_host }}"
+
+  tasks:
+    - name: Install nginx
+      ansible.builtin.apt:
+        name: nginx
+        state: present
+        update_cache: true
+
+    - name: Create /var/www/verifywise
+      ansible.builtin.file:
+        path: /var/www/verifywise
+        state: directory
+        mode: "0755"
+
+    - name: Download upgrade.html
+      ansible.builtin.get_url:
+        url: https://raw.githubusercontent.com/bluewave-labs/verifywise/develop/Clients/upgrade.html
+        dest: /var/www/verifywise/upgrade.html
+        mode: "0644"
+
+    - name: Write /etc/nginx/sites-available/verifywise
+      ansible.builtin.template:
+        src: verifywise-nginx.conf.j2
+        dest: /etc/nginx/sites-available/verifywise
+        mode: "0644"
+      notify: Reload nginx
+
+    - name: Enable the site
+      ansible.builtin.file:
+        src: /etc/nginx/sites-available/verifywise
+        dest: /etc/nginx/sites-enabled/verifywise
+        state: link
+      notify: Reload nginx
+
+    - name: nginx -t
+      ansible.builtin.command: nginx -t
+      changed_when: false
+
+    - name: Install certbot
+      ansible.builtin.apt:
+        name:
+          - certbot
+          - python3-certbot-nginx
+        state: present
+      when: ssl | bool
+
+    - name: Reload nginx before certbot runs
+      ansible.builtin.meta: flush_handlers
+
+    - name: Obtain/refresh SSL certificate
+      ansible.builtin.command:
+        cmd: certbot --nginx -d {{ host }} --non-interactive --agree-tos --email {{ certbot_email }} --redirect
+      register: certbot_result
+      changed_when: "'Successfully received certificate' in certbot_result.stdout"
+      when: ssl | bool
+
+  handlers:
+    - name: Reload nginx
+      ansible.builtin.systemd:
+        name: nginx
+        state: reloaded

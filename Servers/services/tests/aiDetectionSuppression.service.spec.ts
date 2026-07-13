@@ -33,7 +33,7 @@ const mockDeleteSuppressionQuery = deleteSuppressionQuery as jest.MockedFunction
   typeof deleteSuppressionQuery
 >;
 
-const ctx = { organizationId: 1, userId: 2, role: "Admin", tenantId: "1" };
+const ctx = { organizationId: 1, userId: 2, role: "Admin" };
 
 describe("aiDetectionSuppression.service", () => {
   beforeEach(() => {

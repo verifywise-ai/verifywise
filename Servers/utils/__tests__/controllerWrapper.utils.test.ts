@@ -28,7 +28,7 @@ const mockLogFailure = logFailure as jest.MockedFunction<typeof logFailure>;
 const mockIsCustomException = isCustomException as jest.MockedFunction<typeof isCustomException>;
 
 describe("controllerWrapper.utils", () => {
-  const mockReq = { userId: 1, tenantId: "abc123" } as unknown as Request;
+  const mockReq = { userId: 1, organizationId: 1 } as unknown as Request;
   const mockRes = {
     status: jest.fn().mockReturnThis(),
     json: jest.fn().mockReturnThis(),
@@ -59,7 +59,7 @@ describe("controllerWrapper.utils", () => {
         functionName: "getItem",
         fileName: "item.ctrl.ts",
         userId: 1,
-        tenantId: "abc123",
+        organizationId: 1,
       });
       expect(mockLogSuccess).toHaveBeenCalledWith({
         eventType: "Read",
@@ -67,7 +67,7 @@ describe("controllerWrapper.utils", () => {
         functionName: "getItem",
         fileName: "item.ctrl.ts",
         userId: 1,
-        tenantId: "abc123",
+        organizationId: 1,
       });
       expect(mockRes.status).toHaveBeenCalledWith(200);
       expect(mockRes.json).toHaveBeenCalledWith({ message: "OK", data: { id: 1 } });
@@ -116,7 +116,7 @@ describe("controllerWrapper.utils", () => {
           fileName: "item.ctrl.ts",
           error,
           userId: 1,
-          tenantId: "abc123",
+          organizationId: 1,
         }),
       );
       expect(mockRes.status).toHaveBeenCalledWith(404);

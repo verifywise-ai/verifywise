@@ -13,7 +13,6 @@ import {
   getFilePreview,
   getFileVersionHistory,
   getFilesWithMetadata,
-  getHighlightedFiles,
   getUserFilesMetaData,
   updateFileMetadata,
   uploadFileToManager,
@@ -636,63 +635,6 @@ describe("Test File Repository", () => {
     });
   });
 
-  describe("getHighlightedFiles", () => {
-    it("should call get with default params and return categorized file IDs", async () => {
-      const signal: AbortSignal = new AbortController().signal;
-
-      vi.mocked(apiServices.get).mockResolvedValue({
-        status: 200,
-        statusText: "OK",
-        data: {
-          data: {
-            dueForUpdate: [1, 2],
-            pendingApproval: [3],
-            recentlyModified: [4, 5, 6],
-          },
-        },
-      });
-
-      const response = await getHighlightedFiles({ signal });
-
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/file-manager/highlighted?daysUntilExpiry=30&recentDays=7",
-        { signal },
-      );
-      expect(response.dueForUpdate).toEqual([1, 2]);
-      expect(response.pendingApproval).toEqual([3]);
-      expect(response.recentlyModified).toEqual([4, 5, 6]);
-    });
-
-    it("should call get with custom daysUntilExpiry and recentDays", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({
-        status: 200,
-        statusText: "OK",
-        data: { dueForUpdate: [], pendingApproval: [], recentlyModified: [] },
-      });
-
-      await getHighlightedFiles({ daysUntilExpiry: 60, recentDays: 14 });
-
-      expect(apiServices.get).toHaveBeenCalledWith(
-        "/file-manager/highlighted?daysUntilExpiry=60&recentDays=14",
-        { signal: undefined },
-      );
-    });
-
-    it("should return empty arrays when data fields are absent", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({
-        status: 200,
-        statusText: "OK",
-        data: { data: {} },
-      });
-
-      const response = await getHighlightedFiles();
-
-      expect(response.dueForUpdate).toEqual([]);
-      expect(response.pendingApproval).toEqual([]);
-      expect(response.recentlyModified).toEqual([]);
-    });
-  });
-
   describe("getFilePreview", () => {
     it("should call get with responseType blob and return response.data", async () => {
       const id = "file-1";
@@ -731,7 +673,7 @@ describe("Test File Repository", () => {
   });
 
   describe("getFileVersionHistory", () => {
-    it("should call get and return mapped array of versions", async () => {
+    it("should call get and return mapped versions with pagination envelope", async () => {
       const id = "42";
       const signal: AbortSignal = new AbortController().signal;
 
@@ -741,6 +683,7 @@ describe("Test File Repository", () => {
         data: {
           data: {
             versions: [rawFileMock, { ...rawFileMock, id: 43, version: "2.0" }],
+            pagination: { total: 2, page: 1, pageSize: 20, totalPages: 1 },
           },
         },
       });
@@ -748,13 +691,33 @@ describe("Test File Repository", () => {
       const response = await getFileVersionHistory({ id, signal });
 
       expect(apiServices.get).toHaveBeenCalledWith("/file-manager/42/versions", { signal });
-      expect(response).toHaveLength(2);
-      expect(response[0].id).toBe("42");
-      expect(response[1].id).toBe("43");
-      expect(response[1].version).toBe("2.0");
+      expect(response.versions).toHaveLength(2);
+      expect(response.versions[0].id).toBe("42");
+      expect(response.versions[1].id).toBe("43");
+      expect(response.versions[1].version).toBe("2.0");
+      expect(response.pagination).toEqual({ total: 2, page: 1, pageSize: 20, totalPages: 1 });
     });
 
-    it("should return empty array when versions are absent", async () => {
+    it("should forward page and pageSize as query params", async () => {
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: {
+          data: {
+            versions: [],
+            pagination: { total: 0, page: 3, pageSize: 5, totalPages: 0 },
+          },
+        },
+      });
+
+      await getFileVersionHistory({ id: "42", page: 3, pageSize: 5 });
+
+      expect(apiServices.get).toHaveBeenCalledWith("/file-manager/42/versions?page=3&pageSize=5", {
+        signal: undefined,
+      });
+    });
+
+    it("should return empty versions and zeroed pagination when versions are absent", async () => {
       vi.mocked(apiServices.get).mockResolvedValue({
         status: 200,
         statusText: "OK",
@@ -763,7 +726,8 @@ describe("Test File Repository", () => {
 
       const response = await getFileVersionHistory({ id: "42" });
 
-      expect(response).toEqual([]);
+      expect(response.versions).toEqual([]);
+      expect(response.pagination.total).toBe(0);
     });
 
     it("should handle response.data without nested data property", async () => {
@@ -775,7 +739,7 @@ describe("Test File Repository", () => {
 
       const response = await getFileVersionHistory({ id: "42" });
 
-      expect(response).toHaveLength(1);
+      expect(response.versions).toHaveLength(1);
     });
 
     it("should default tags to empty array when tags field is absent", async () => {
@@ -789,7 +753,7 @@ describe("Test File Repository", () => {
 
       const response = await getFileVersionHistory({ id: "42" });
 
-      expect(response[0].tags).toEqual([]);
+      expect(response.versions[0].tags).toEqual([]);
     });
   });
 
@@ -951,13 +915,16 @@ describe("Test File Repository", () => {
   });
 
   describe("getEntityFiles", () => {
-    it("should call get and return mapped FileMetadata array", async () => {
+    it("should call get and return paginated EntityFilesPage envelope", async () => {
       const signal: AbortSignal = new AbortController().signal;
 
       vi.mocked(apiServices.get).mockResolvedValue({
         status: 200,
         statusText: "OK",
-        data: [rawFileMock],
+        data: {
+          files: [rawFileMock],
+          pagination: { total: 1, page: 1, pageSize: 50, totalPages: 1 },
+        },
       });
 
       const response = await getEntityFiles("eu_ai_act", "subcontrol", 10, signal);
@@ -965,13 +932,46 @@ describe("Test File Repository", () => {
       expect(apiServices.get).toHaveBeenCalledWith("/files/entity/eu_ai_act/subcontrol/10", {
         signal,
       });
-      expect(response).toHaveLength(1);
-      expect(response[0].id).toBe("42");
-      expect(response[0].filename).toBe("report.pdf");
-      expect(response[0].tags).toEqual(["tag1"]);
+      expect(response.files).toHaveLength(1);
+      expect(response.files[0].id).toBe("42");
+      expect(response.files[0].filename).toBe("report.pdf");
+      expect(response.files[0].tags).toEqual(["tag1"]);
+      expect(response.pagination).toEqual({ total: 1, page: 1, pageSize: 50, totalPages: 1 });
     });
 
-    it("should return empty array when response.data is empty", async () => {
+    it("should still accept the legacy raw-array response shape", async () => {
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: [rawFileMock],
+      });
+
+      const response = await getEntityFiles("eu_ai_act", "subcontrol", 10);
+
+      expect(response.files).toHaveLength(1);
+      expect(response.files[0].id).toBe("42");
+      expect(response.pagination.total).toBe(1);
+    });
+
+    it("should forward page and pageSize as query params", async () => {
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: {
+          files: [],
+          pagination: { total: 0, page: 2, pageSize: 25, totalPages: 0 },
+        },
+      });
+
+      await getEntityFiles("eu_ai_act", "subcontrol", 10, { page: 2, pageSize: 25 });
+
+      expect(apiServices.get).toHaveBeenCalledWith(
+        "/files/entity/eu_ai_act/subcontrol/10?page=2&pageSize=25",
+        { signal: undefined },
+      );
+    });
+
+    it("should return empty files when response.data is empty", async () => {
       vi.mocked(apiServices.get).mockResolvedValue({
         status: 200,
         statusText: "OK",
@@ -983,10 +983,11 @@ describe("Test File Repository", () => {
       expect(apiServices.get).toHaveBeenCalledWith("/files/entity/nist_ai/assessment/5", {
         signal: undefined,
       });
-      expect(response).toEqual([]);
+      expect(response.files).toEqual([]);
+      expect(response.pagination.total).toBe(0);
     });
 
-    it("should return empty array when response.data is null", async () => {
+    it("should return empty files when response.data is null", async () => {
       vi.mocked(apiServices.get).mockResolvedValue({
         status: 200,
         statusText: "OK",
@@ -995,7 +996,8 @@ describe("Test File Repository", () => {
 
       const response = await getEntityFiles("eu_ai_act", "subcontrol", 7);
 
-      expect(response).toEqual([]);
+      expect(response.files).toEqual([]);
+      expect(response.pagination.total).toBe(0);
     });
 
     it("should default tags to empty array when tags field is absent", async () => {
@@ -1004,12 +1006,15 @@ describe("Test File Repository", () => {
       vi.mocked(apiServices.get).mockResolvedValue({
         status: 200,
         statusText: "OK",
-        data: [fileWithoutTags],
+        data: {
+          files: [fileWithoutTags],
+          pagination: { total: 1, page: 1, pageSize: 50, totalPages: 1 },
+        },
       });
 
       const response = await getEntityFiles("eu_ai_act", "subcontrol", 10);
 
-      expect(response[0].tags).toEqual([]);
+      expect(response.files[0].tags).toEqual([]);
     });
   });
 });

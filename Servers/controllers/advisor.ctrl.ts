@@ -236,11 +236,11 @@ export async function runAdvisor(req: Request, res: Response) {
 
     // Validate required parameters
     if (!prompt) {
-      return res.status(400).json({ error: req.t!("Prompt is required") });
+      return res.status(400).json(STATUS_CODE[400](req.t!("Prompt is required")));
     }
 
     if (!organizationId) {
-      return res.status(400).json({ error: req.t!("Organization context is required") });
+      return res.status(400).json(STATUS_CODE[400](req.t!("Organization context is required")));
     }
 
     logger.debug(
@@ -251,7 +251,9 @@ export async function runAdvisor(req: Request, res: Response) {
 
     if (clients.length === 0) {
       logger.debug(`No LLM keys found for organization: ${organizationId}`);
-      return res.status(400).json({ error: "No LLM keys configured for this organization." });
+      return res
+        .status(400)
+        .json(STATUS_CODE[400]("No LLM keys configured for this organization."));
     }
 
     const apiKey = selectLLMKey(clients, llmKeyId);
@@ -338,11 +340,11 @@ export async function listConversations(req: Request, res: Response) {
     const domain = getDomainParam(req);
 
     if (!userId) {
-      return res.status(400).json({ error: req.t!("User context is required") });
+      return res.status(400).json(STATUS_CODE[400](req.t!("User context is required")));
     }
 
     if (!domain) {
-      return res.status(400).json({ error: req.t!("Domain is required") });
+      return res.status(400).json(STATUS_CODE[400](req.t!("Domain is required")));
     }
 
     logger.debug(
@@ -381,15 +383,15 @@ export async function getConversationById(req: Request, res: Response) {
     const id = getIdParam(req);
 
     if (!userId) {
-      return res.status(400).json({ error: req.t!("User context is required") });
+      return res.status(400).json(STATUS_CODE[400](req.t!("User context is required")));
     }
 
     if (!domain) {
-      return res.status(400).json({ error: req.t!("Domain is required") });
+      return res.status(400).json(STATUS_CODE[400](req.t!("Domain is required")));
     }
 
     if (id === null) {
-      return res.status(400).json({ error: req.t!("Valid conversation id is required") });
+      return res.status(400).json(STATUS_CODE[400](req.t!("Valid conversation id is required")));
     }
 
     logger.debug(
@@ -399,14 +401,14 @@ export async function getConversationById(req: Request, res: Response) {
     const conversation = await getConversationByIdQuery(organizationId, userId, id);
 
     if (!conversation) {
-      return res.status(404).json({ error: req.t!("Conversation not found") });
+      return res.status(404).json(STATUS_CODE[404](req.t!("Conversation not found")));
     }
 
     // The row is fetched by id + user + org, but we still verify the domain
     // matches what the client asked for. This catches frontend bugs early
     // (wrong domain in the URL) and keeps responses predictable.
     if (conversation.domain !== domain) {
-      return res.status(404).json({ error: req.t!("Conversation not found") });
+      return res.status(404).json(STATUS_CODE[404](req.t!("Conversation not found")));
     }
 
     logStructured(
@@ -447,11 +449,11 @@ export async function createConversation(req: Request, res: Response) {
     const domain = getDomainParam(req);
 
     if (!userId) {
-      return res.status(400).json({ error: req.t!("User context is required") });
+      return res.status(400).json(STATUS_CODE[400](req.t!("User context is required")));
     }
 
     if (!domain) {
-      return res.status(400).json({ error: req.t!("Domain is required") });
+      return res.status(400).json(STATUS_CODE[400](req.t!("Domain is required")));
     }
 
     logger.debug(
@@ -501,19 +503,19 @@ export async function updateConversation(req: Request, res: Response) {
     const messages: IAdvisorMessage[] = req.body.messages;
 
     if (!userId) {
-      return res.status(400).json({ error: req.t!("User context is required") });
+      return res.status(400).json(STATUS_CODE[400](req.t!("User context is required")));
     }
 
     if (!domain) {
-      return res.status(400).json({ error: req.t!("Domain is required") });
+      return res.status(400).json(STATUS_CODE[400](req.t!("Domain is required")));
     }
 
     if (id === null) {
-      return res.status(400).json({ error: req.t!("Valid conversation id is required") });
+      return res.status(400).json(STATUS_CODE[400](req.t!("Valid conversation id is required")));
     }
 
     if (!Array.isArray(messages)) {
-      return res.status(400).json({ error: req.t!("Messages array is required") });
+      return res.status(400).json(STATUS_CODE[400](req.t!("Messages array is required")));
     }
 
     logger.debug(
@@ -525,10 +527,10 @@ export async function updateConversation(req: Request, res: Response) {
     // a conversation from a different domain. Reject that explicitly.
     const existing = await getConversationByIdQuery(organizationId, userId, id);
     if (!existing) {
-      return res.status(404).json({ error: req.t!("Conversation not found") });
+      return res.status(404).json(STATUS_CODE[404](req.t!("Conversation not found")));
     }
     if (existing.domain !== domain) {
-      return res.status(404).json({ error: req.t!("Conversation not found") });
+      return res.status(404).json(STATUS_CODE[404](req.t!("Conversation not found")));
     }
 
     const conversation = await updateConversationMessagesQuery(
@@ -539,7 +541,7 @@ export async function updateConversation(req: Request, res: Response) {
     );
 
     if (!conversation) {
-      return res.status(404).json({ error: req.t!("Conversation not found") });
+      return res.status(404).json(STATUS_CODE[404](req.t!("Conversation not found")));
     }
 
     logStructured(
@@ -580,28 +582,28 @@ export async function deleteConversation(req: Request, res: Response) {
     const id = getIdParam(req);
 
     if (!userId) {
-      return res.status(400).json({ error: req.t!("User context is required") });
+      return res.status(400).json(STATUS_CODE[400](req.t!("User context is required")));
     }
 
     if (!domain) {
-      return res.status(400).json({ error: req.t!("Domain is required") });
+      return res.status(400).json(STATUS_CODE[400](req.t!("Domain is required")));
     }
 
     if (id === null) {
-      return res.status(400).json({ error: req.t!("Valid conversation id is required") });
+      return res.status(400).json(STATUS_CODE[400](req.t!("Valid conversation id is required")));
     }
 
     // Confirm the row exists in this domain before deleting so we never
     // delete a conversation from a different domain via a crafted URL.
     const existing = await getConversationByIdQuery(organizationId, userId, id);
     if (!existing || existing.domain !== domain) {
-      return res.status(404).json({ error: req.t!("Conversation not found") });
+      return res.status(404).json(STATUS_CODE[404](req.t!("Conversation not found")));
     }
 
     const deleted = await deleteConversationQuery(organizationId, userId, id);
 
     if (!deleted) {
-      return res.status(404).json({ error: req.t!("Conversation not found") });
+      return res.status(404).json(STATUS_CODE[404](req.t!("Conversation not found")));
     }
 
     logStructured(
@@ -636,12 +638,12 @@ export async function streamAdvisor(req: Request, res: Response) {
       : undefined;
 
     if (!prompt) {
-      res.status(400).json({ error: req.t!("Prompt is required") });
+      res.status(400).json(STATUS_CODE[400](req.t!("Prompt is required")));
       return;
     }
 
     if (!organizationId) {
-      res.status(400).json({ error: req.t!("Organization context is required") });
+      res.status(400).json(STATUS_CODE[400](req.t!("Organization context is required")));
       return;
     }
 
@@ -652,7 +654,9 @@ export async function streamAdvisor(req: Request, res: Response) {
     const clients = await getLLMKeysWithKeyQuery(organizationId);
 
     if (clients.length === 0) {
-      res.status(400).json({ error: req.t!("No LLM keys configured for this organization.") });
+      res
+        .status(400)
+        .json(STATUS_CODE[400](req.t!("No LLM keys configured for this organization.")));
       return;
     }
 
@@ -772,7 +776,7 @@ export async function streamAdvisorV2(req: Request, res: Response) {
     // Guard: must end on a user turn so the model has something to respond to.
     const lastMessage = messages[messages.length - 1];
     if (!lastMessage || lastMessage.role !== "user") {
-      res.status(400).json({ error: req.t!("Last message must be from the user") });
+      res.status(400).json(STATUS_CODE[400](req.t!("Last message must be from the user")));
       return;
     }
 
@@ -783,12 +787,12 @@ export async function streamAdvisorV2(req: Request, res: Response) {
     const modelMessages = await convertToModelMessages(messages);
 
     if (modelMessages.length === 0) {
-      res.status(400).json({ error: req.t!("No renderable messages found") });
+      res.status(400).json(STATUS_CODE[400](req.t!("No renderable messages found")));
       return;
     }
 
     if (!organizationId) {
-      res.status(400).json({ error: req.t!("Organization context is required") });
+      res.status(400).json(STATUS_CODE[400](req.t!("Organization context is required")));
       return;
     }
 
@@ -799,7 +803,9 @@ export async function streamAdvisorV2(req: Request, res: Response) {
     const clients = await getLLMKeysWithKeyQuery(organizationId);
 
     if (clients.length === 0) {
-      res.status(400).json({ error: req.t!("No LLM keys configured for this organization.") });
+      res
+        .status(400)
+        .json(STATUS_CODE[400](req.t!("No LLM keys configured for this organization.")));
       return;
     }
 

@@ -21,12 +21,6 @@ declare module "express" {
      */
     tenantHash?: string;
     /**
-     * @deprecated Legacy tenant identifier - now set to organizationId (number)
-     * Will be removed once all queries are migrated to use organizationId directly.
-     * For new code, use organizationId instead.
-     */
-    tenantId?: number;
-    /**
      * True when the authenticated user is a SuperAdmin (role_id = 5).
      * Set by authenticateJWT middleware.
      */
@@ -40,6 +34,18 @@ declare module "express" {
       name: string;
       allowed_endpoint_ids: number[];
       metadata: Record<string, string>;
+    };
+    /**
+     * MRM ingestion-token context, set by mrmIngestionAuth middleware on the
+     * machine-auth metric-push route. Distinct from JWT auth: pushes come from
+     * headless customer pipelines, not a logged-in user.
+     * `modelInventoryId` is null for an org-wide token, or a model id for a
+     * per-model-scoped token.
+     */
+    mrmIngestionToken?: {
+      tokenId: number;
+      organizationId: number;
+      modelInventoryId: number | null;
     };
   }
 }

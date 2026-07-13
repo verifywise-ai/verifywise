@@ -21,7 +21,7 @@ export async function getTaskChangeHistoryById(req: Request, res: Response): Pro
     functionName: "getTaskChangeHistoryById",
     fileName: "taskChangeHistory.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -33,7 +33,7 @@ export async function getTaskChangeHistoryById(req: Request, res: Response): Pro
       functionName: "getTaskChangeHistoryById",
       fileName: "taskChangeHistory.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(200).json(STATUS_CODE[200](result));
@@ -45,7 +45,7 @@ export async function getTaskChangeHistoryById(req: Request, res: Response): Pro
       fileName: "taskChangeHistory.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](req.t!("Failed to retrieve change history")));
   }

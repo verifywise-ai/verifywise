@@ -316,8 +316,8 @@ const MyForm = ({ onSuccess }: { onSuccess: () => void }) => {
       description: "Standard pattern for tables with row actions and empty state.",
       icon: <Layout size={18} />,
       code: `import { Box, Table, TableBody, TableCell, TableHead, TableRow, IconButton } from "@mui/material";
-import { Edit, Trash2 } from "lucide-react";
-import EmptyState from "../EmptyState";
+import { Edit, Trash2, Database } from "lucide-react";
+import { EmptyState } from "../EmptyState";
 
 interface TableItem {
   id: string;
@@ -333,8 +333,8 @@ const MyTable = ({ items, onEdit, onDelete }: {
   if (items.length === 0) {
     return (
       <EmptyState
-        title="No items yet"
-        description="Create your first item to get started."
+        icon={Database}
+        message="No items yet. Create your first item to get started."
       />
     );
   }

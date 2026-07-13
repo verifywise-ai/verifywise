@@ -95,6 +95,74 @@ describe("apiServices", () => {
       await expect(apiServices.get("/test")).rejects.toThrow("Validation failed");
     });
 
+    it("extracts data.data.message from STATUS_CODE-wrapped multi-field error", async () => {
+      server.use(
+        http.post("/api/incidents", () =>
+          HttpResponse.json(
+            {
+              message: "Bad Request",
+              data: {
+                status: "error",
+                message: "Incident creation validation failed",
+                code: "VALIDATION_FAILED",
+                errors: [{ field: "title", message: "required", code: "MISSING" }],
+              },
+            },
+            { status: 400 },
+          ),
+        ),
+      );
+      await expect(apiServices.post("/incidents", {})).rejects.toThrow(
+        "Incident creation validation failed",
+      );
+    });
+
+    it("extracts data.data.error from STATUS_CODE-wrapped { error, details }", async () => {
+      server.use(
+        http.post("/api/mailer", () =>
+          HttpResponse.json(
+            {
+              message: "Internal Server Error",
+              data: {
+                error: "Failed to send email",
+                details: "SMTP timeout",
+              },
+            },
+            { status: 500 },
+          ),
+        ),
+      );
+      await expect(apiServices.post("/mailer", {})).rejects.toThrow("Failed to send email");
+    });
+
+    it("preserves the full response body on CustomException.response for callers that need it", async () => {
+      server.use(
+        http.post("/api/incidents", () =>
+          HttpResponse.json(
+            {
+              message: "Bad Request",
+              data: {
+                status: "error",
+                message: "Incident creation validation failed",
+                errors: [{ field: "title", message: "required" }],
+              },
+            },
+            { status: 400 },
+          ),
+        ),
+      );
+      await expect(apiServices.post("/incidents", {})).rejects.toMatchObject({
+        message: "Incident creation validation failed",
+        status: 400,
+        response: {
+          message: "Bad Request",
+          data: {
+            errors: [{ field: "title", message: "required" }],
+          },
+        },
+      });
+    });
+
     it("falls back to error.message for non-Axios errors", async () => {
       server.use(http.get("/api/test", () => HttpResponse.error()));
       await expect(apiServices.get("/test")).rejects.toThrow();

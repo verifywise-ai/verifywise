@@ -100,7 +100,15 @@ const AVAILABLE_DASHBOARD_TABS: DashboardTabConfig[] = [
   },
 ];
 
-const DEFAULT_TABS = ["overview", "readiness", "ai-content", "ai-audit"];
+// Feature flag: the AI Agent dashboard tabs (Audit readiness, AI content review,
+// AI audit) and the customizable tab bar are hidden from end users for now. The
+// underlying pages, hooks, and APIs stay in the codebase; flip this to true to
+// surface them again.
+const SHOW_AI_AGENT_DASHBOARD_TABS = false;
+
+const DEFAULT_TABS = SHOW_AI_AGENT_DASHBOARD_TABS
+  ? ["overview", "readiness", "ai-content", "ai-audit"]
+  : ["overview"];
 
 const IntegratedDashboard: React.FC = () => {
   const navigateSearch = useNavigateSearch();
@@ -423,17 +431,19 @@ const IntegratedDashboard: React.FC = () => {
         </Stack>
 
         {/* Dashboard Tab Bar */}
-        <TabContext value={dashboardTab}>
-          <Box sx={{ mb: 1 }}>
-            <DashboardTabs
-              availableTabs={AVAILABLE_DASHBOARD_TABS}
-              activeTabs={activeTabs}
-              activeTab={dashboardTab}
-              onTabChange={handleDashboardTabChange}
-              onTabsChange={handleActiveTabsChange}
-            />
-          </Box>
-        </TabContext>
+        {SHOW_AI_AGENT_DASHBOARD_TABS && (
+          <TabContext value={dashboardTab}>
+            <Box sx={{ mb: 1 }}>
+              <DashboardTabs
+                availableTabs={AVAILABLE_DASHBOARD_TABS}
+                activeTabs={activeTabs}
+                activeTab={dashboardTab}
+                onTabChange={handleDashboardTabChange}
+                onTabsChange={handleActiveTabsChange}
+              />
+            </Box>
+          </TabContext>
+        )}
 
         {/* Tab: Readiness Dashboard */}
         {dashboardTab === "readiness" && <ReadinessDashboard />}

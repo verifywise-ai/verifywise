@@ -17,6 +17,7 @@ import {
 } from "@mui/material";
 import { Download, ShieldX } from "lucide-react";
 import { ENV_VARs } from "../../../../env.vars";
+import { displayFormattedDate } from "../../tools/isoDateToString";
 
 /**
  * SharedView page component for displaying publicly shared data
@@ -259,7 +260,7 @@ const SharedView: React.FC = () => {
     if (key === "status_date") {
       try {
         const date = new Date(value);
-        return <Typography variant="body2">{date.toLocaleDateString()}</Typography>;
+        return <Typography variant="body2">{displayFormattedDate(date)}</Typography>;
       } catch {
         return <Typography variant="body2">{String(value)}</Typography>;
       }

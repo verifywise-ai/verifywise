@@ -22,7 +22,6 @@ jest.mock("../../utils/jwt.utils", () => ({
     id: 1,
     email: "a@b.com",
     roleName: "Admin",
-    tenantId: 1,
     organizationId: 1,
     expire: Date.now() + 10000,
   }),

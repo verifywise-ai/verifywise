@@ -100,16 +100,25 @@ const RegisterUser: React.FC = () => {
         });
         setIsSubmitting(false);
 
-        // Extract error message from server response
+        // Extract error message from server response.
+        // Priority matches the central handler in infrastructure/api/networkServices.ts:
+        //   data.data string → data.data.message → data.data.error → data.message → data.error.
         let errorMessage = "Registration failed. Please check your information and try again.";
+        const errorData = response?.response?.data;
 
-        if (response?.data) {
+        if (typeof response?.data === "string") {
           errorMessage = response.data;
-        } else if (response?.response?.data?.data) {
-          errorMessage = response.response.data.data;
-        } else if (response?.response?.data?.message) {
-          errorMessage = response.response.data.message;
-        } else if (response?.message) {
+        } else if (typeof errorData?.data === "string") {
+          errorMessage = errorData.data;
+        } else if (typeof errorData?.data?.message === "string") {
+          errorMessage = errorData.data.message;
+        } else if (typeof errorData?.data?.error === "string") {
+          errorMessage = errorData.data.error;
+        } else if (typeof errorData?.message === "string") {
+          errorMessage = errorData.message;
+        } else if (typeof errorData?.error === "string") {
+          errorMessage = errorData.error;
+        } else if (typeof response?.message === "string") {
           errorMessage = response.message;
         } else if (isSuccess === 409) {
           errorMessage =

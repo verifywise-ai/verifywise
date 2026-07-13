@@ -4,12 +4,14 @@ import { useEvalsSidebarContextSafe } from "../../../application/contexts/EvalsS
 import { useAIDetectionSidebarContextSafe } from "../../../application/contexts/AIDetectionSidebar.context";
 import { useShadowAISidebarContextSafe } from "../../../application/contexts/ShadowAISidebar.context";
 import { useAIGatewaySidebarContextSafe } from "../../../application/contexts/AIGatewaySidebar.context";
+import { useAITrustIndexSidebarContextSafe } from "../../../application/contexts/AITrustIndexSidebar.context";
 import Sidebar from "../Sidebar";
 import SuperAdminSidebar from "../SuperAdminSidebar";
 import EvalsSidebar from "../../pages/EvalsDashboard/EvalsSidebar";
 import AIDetectionSidebar from "../../pages/AIDetection/AIDetectionSidebar";
 import ShadowAISidebar from "../../pages/ShadowAI/ShadowAISidebar";
 import AIGatewaySidebar from "../../pages/AIGateway/AIGatewaySidebar";
+import AITrustIndexSidebar from "../../pages/AITrustIndex/AITrustIndexSidebar";
 
 interface ContextSidebarProps {
   activeModule: AppModule;
@@ -42,6 +44,7 @@ export function ContextSidebar({
   const aiDetectionSidebarContext = useAIDetectionSidebarContextSafe();
   const shadowAiSidebarContext = useShadowAISidebarContextSafe();
   const aiGatewaySidebarContext = useAIGatewaySidebarContextSafe();
+  const aiTrustIndexSidebarContext = useAITrustIndexSidebarContextSafe();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -197,6 +200,26 @@ export function ContextSidebar({
           endpointsCount={aiGatewaySidebarContext?.endpointsCount ?? 0}
           promptsCount={aiGatewaySidebarContext?.promptsCount ?? 0}
           virtualKeysCount={aiGatewaySidebarContext?.virtualKeysCount ?? 0}
+        />
+      );
+    }
+    case "ai-trust-index": {
+      const trustIndexTab = location.pathname.includes("/ai-trust-index/tracked")
+        ? "tracked"
+        : location.pathname.includes("/ai-trust-index/settings")
+          ? "settings"
+          : "browse";
+
+      const handleTrustIndexTabChange = (newTab: string) => {
+        navigate(`/ai-trust-index/${newTab}`);
+      };
+
+      return (
+        <AITrustIndexSidebar
+          activeTab={trustIndexTab}
+          onTabChange={handleTrustIndexTabChange}
+          trackedCount={aiTrustIndexSidebarContext?.trackedCount ?? 0}
+          isAdmin={isAdmin}
         />
       );
     }

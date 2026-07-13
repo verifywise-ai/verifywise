@@ -31,6 +31,7 @@ import DatePicker from "../../Inputs/Datepicker";
 import Select from "../../Inputs/Select";
 import TabBar from "../../TabBar";
 import StandardModal from "../../Modals/StandardModal";
+import { drawerAccessibilityProps, DRAWER_TITLE_ID } from "../drawerAccessibility";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { Dayjs } from "dayjs";
 import dayjs from "dayjs";
@@ -368,8 +369,9 @@ const VWISO42001AnnexDrawerDialog = ({
     if (categoryId) {
       try {
         const response = await getEntityFiles("iso_42001", "annex_category", categoryId);
-        if (response && Array.isArray(response)) {
-          linkedFiles = response.map((file: any) => ({
+        const responseFiles = response?.files ?? [];
+        if (responseFiles.length > 0) {
+          linkedFiles = responseFiles.map((file: any) => ({
             id: file.id?.toString() || file.file_id?.toString() || "",
             fileName: file.filename || file.fileName || file.file_name || "",
             size: file.size || 0,
@@ -602,6 +604,7 @@ const VWISO42001AnnexDrawerDialog = ({
       <Drawer
         open={open}
         onClose={onClose}
+        {...drawerAccessibilityProps}
         sx={{
           "width": 850,
           "margin": 0,
@@ -634,6 +637,7 @@ const VWISO42001AnnexDrawerDialog = ({
       className="vw-iso-42001-annex-drawer-dialog"
       open={open}
       onClose={onClose}
+      {...drawerAccessibilityProps}
       sx={{
         "width": 850,
         "margin": 0,
@@ -660,7 +664,7 @@ const VWISO42001AnnexDrawerDialog = ({
             alignItems: "center",
           }}
         >
-          <Typography fontSize={15} fontWeight={700}>
+          <Typography id={DRAWER_TITLE_ID} fontSize={15} fontWeight={700}>
             {title}
           </Typography>
           <CustomizableButton

@@ -45,7 +45,7 @@ export async function listRepositories(req: Request, res: Response): Promise<any
     functionName: "listRepositories",
     fileName: "aiDetectionRepository.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -73,7 +73,7 @@ export async function listRepositories(req: Request, res: Response): Promise<any
       fileName: "aiDetectionRepository.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -89,7 +89,7 @@ export async function getRepository(req: Request, res: Response): Promise<any> {
     functionName: "getRepository",
     fileName: "aiDetectionRepository.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -112,7 +112,7 @@ export async function getRepository(req: Request, res: Response): Promise<any> {
       fileName: "aiDetectionRepository.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -128,7 +128,7 @@ export async function createRepository(req: Request, res: Response): Promise<any
     functionName: "createRepository",
     fileName: "aiDetectionRepository.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -244,7 +244,7 @@ export async function createRepository(req: Request, res: Response): Promise<any
       functionName: "createRepository",
       fileName: "aiDetectionRepository.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(201).json(STATUS_CODE[201](repository));
@@ -256,7 +256,7 @@ export async function createRepository(req: Request, res: Response): Promise<any
       fileName: "aiDetectionRepository.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -272,7 +272,7 @@ export async function updateRepository(req: Request, res: Response): Promise<any
     functionName: "updateRepository",
     fileName: "aiDetectionRepository.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -371,7 +371,7 @@ export async function updateRepository(req: Request, res: Response): Promise<any
       functionName: "updateRepository",
       fileName: "aiDetectionRepository.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(200).json(STATUS_CODE[200](updated));
@@ -383,7 +383,7 @@ export async function updateRepository(req: Request, res: Response): Promise<any
       fileName: "aiDetectionRepository.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -399,7 +399,7 @@ export async function deleteRepository(req: Request, res: Response): Promise<any
     functionName: "deleteRepository",
     fileName: "aiDetectionRepository.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -435,7 +435,7 @@ export async function deleteRepository(req: Request, res: Response): Promise<any
       functionName: "deleteRepository",
       fileName: "aiDetectionRepository.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res
@@ -449,7 +449,7 @@ export async function deleteRepository(req: Request, res: Response): Promise<any
       fileName: "aiDetectionRepository.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -465,7 +465,7 @@ export async function triggerRepositoryScan(req: Request, res: Response): Promis
     functionName: "triggerRepositoryScan",
     fileName: "aiDetectionRepository.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -497,7 +497,6 @@ export async function triggerRepositoryScan(req: Request, res: Response): Promis
       userId: req.userId!,
       role: req.role!,
       organizationId: req.organizationId!,
-      tenantId: req.tenantHash!,
     };
 
     const scan = await startScan(repository.repository_url, ctx, {
@@ -511,7 +510,7 @@ export async function triggerRepositoryScan(req: Request, res: Response): Promis
       functionName: "triggerRepositoryScan",
       fileName: "aiDetectionRepository.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(201).json(STATUS_CODE[201](scan));
@@ -523,7 +522,7 @@ export async function triggerRepositoryScan(req: Request, res: Response): Promis
       fileName: "aiDetectionRepository.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     const statusCode =
@@ -551,7 +550,7 @@ export async function getRepositoryScans(req: Request, res: Response): Promise<a
     functionName: "getRepositoryScans",
     fileName: "aiDetectionRepository.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -603,7 +602,7 @@ export async function getRepositoryScans(req: Request, res: Response): Promise<a
       fileName: "aiDetectionRepository.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -619,7 +618,7 @@ export async function generateWebhookSecretController(req: Request, res: Respons
     functionName: "generateWebhookSecretController",
     fileName: "aiDetectionRepository.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -643,7 +642,7 @@ export async function generateWebhookSecretController(req: Request, res: Respons
       functionName: "generateWebhookSecretController",
       fileName: "aiDetectionRepository.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(200).json(STATUS_CODE[200]({ webhook_secret: secret }));
@@ -655,7 +654,7 @@ export async function generateWebhookSecretController(req: Request, res: Respons
       fileName: "aiDetectionRepository.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }

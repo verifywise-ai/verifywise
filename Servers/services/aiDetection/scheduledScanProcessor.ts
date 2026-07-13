@@ -130,7 +130,6 @@ export async function processScheduledAiDetectionScans(): Promise<void> {
               userId: repo.created_by,
               role: "Admin",
               organizationId: orgId,
-              tenantId: orgId.toString(), // For interface compatibility
             };
 
             console.log(

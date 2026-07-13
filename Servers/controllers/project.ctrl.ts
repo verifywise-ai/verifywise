@@ -62,13 +62,13 @@ export async function getAllProjects(req: Request, res: Response): Promise<any> 
     functionName: "getAllProjects",
     fileName: "project.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
     const { userId, role } = req;
     if (!userId || !role) {
-      return res.status(401).json({ message: req.t!("Unauthorized") });
+      return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
 
     const projects = (await getAllProjectsQuery(
@@ -112,7 +112,6 @@ export async function getAllProjects(req: Request, res: Response): Promise<any> 
         sequelize,
       );
       if (pluginUseCases.length > 0) {
-        console.log(`[getAllProjects] Merging ${pluginUseCases.length} use-cases from plugins`);
         allProjects = [...projects, ...pluginUseCases];
       }
     } catch (pluginError) {
@@ -126,7 +125,7 @@ export async function getAllProjects(req: Request, res: Response): Promise<any> 
       functionName: "getAllProjects",
       fileName: "project.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(200).json(STATUS_CODE[200](allProjects));
@@ -138,7 +137,7 @@ export async function getAllProjects(req: Request, res: Response): Promise<any> 
       fileName: "project.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
@@ -153,7 +152,7 @@ export async function getProjectById(req: Request, res: Response): Promise<any> 
     functionName: "getProjectById",
     fileName: "project.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -186,7 +185,7 @@ export async function getProjectById(req: Request, res: Response): Promise<any> 
         functionName: "getProjectById",
         fileName: "project.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
 
       return res.status(200).json(STATUS_CODE[200](project));
@@ -198,7 +197,7 @@ export async function getProjectById(req: Request, res: Response): Promise<any> 
       functionName: "getProjectById",
       fileName: "project.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(404).json(STATUS_CODE[404](project));
@@ -210,7 +209,7 @@ export async function getProjectById(req: Request, res: Response): Promise<any> 
       fileName: "project.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
@@ -221,7 +220,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
   const transaction = await sequelize.transaction();
   const projectData = {
     ...req.body,
-    framework: req.body.framework,
+    framework: req.body.framework || [],
   };
 
   logProcessing({
@@ -229,7 +228,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
     functionName: "createProject",
     fileName: "project.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -242,7 +241,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
     const createdProject = await createNewProjectQuery(
       newProject,
       newProject.members ?? [],
-      newProject.framework,
+      newProject.framework || [],
       req.organizationId!,
       req.userId!,
       transaction,
@@ -253,7 +252,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
     const frameworks: { [key: string]: Object } = {};
     if (!createdProject.approval_workflow_id) {
       // No approval workflow - create frameworks immediately
-      for (const framework of newProject.framework) {
+      for (const framework of newProject.framework || []) {
         if (framework === 1) {
           const eu = await createEUFrameworkQuery(
             createdProject.id!,
@@ -290,9 +289,13 @@ export async function createProject(req: Request, res: Response): Promise<any> {
       }
     } else {
       // Approval workflow assigned - defer framework creation until approval
-      console.log("Approval workflow detected - deferring framework creation until approval");
-      console.log("Pending frameworks:", newProject.framework);
-      console.log("enable_ai_data_insertion:", newProject.enable_ai_data_insertion);
+      logProcessing({
+        description: `deferring framework creation pending approval (frameworks=${JSON.stringify(newProject.framework)}, enable_ai_data_insertion=${newProject.enable_ai_data_insertion})`,
+        functionName: "createProject",
+        fileName: "project.ctrl.ts",
+        userId: req.userId!,
+        organizationId: req.organizationId!,
+      });
     }
 
     if (createdProject) {
@@ -334,7 +337,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
         functionName: "createProject",
         fileName: "project.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
 
       // SSE notifications disabled for now - can be re-enabled later if needed
@@ -388,7 +391,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
           fileName: "project.ctrl.ts",
           error: slackError as Error,
           userId: req.userId!,
-          tenantId: req.organizationId!,
+          organizationId: req.organizationId!,
         });
       });
 
@@ -425,7 +428,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
       functionName: "createProject",
       fileName: "project.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(503).json(STATUS_CODE[503]({}));
@@ -440,7 +443,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
         fileName: "project.ctrl.ts",
         error: error as Error,
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
     }
@@ -453,7 +456,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
         fileName: "project.ctrl.ts",
         error: error as Error,
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
     }
@@ -465,7 +468,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
       fileName: "project.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
@@ -482,7 +485,7 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
     functionName: "updateProjectById",
     fileName: "project.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -495,22 +498,23 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
         fileName: "project.ctrl.ts",
         error: new Error("Unauthorized"),
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
-      return res.status(401).json({ message: req.t!("Unauthorized") });
+      return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
 
     // Find existing project
     const existingProject = await getProjectByIdQuery(projectId, req.organizationId!);
 
     if (!existingProject) {
+      await transaction.rollback();
       await logSuccess({
         eventType: "Update",
         description: `Project not found for update: ID ${projectId}`,
         functionName: "updateProjectById",
         fileName: "project.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(404).json(STATUS_CODE[404]({}));
     }
@@ -569,7 +573,7 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
         functionName: "updateProjectById",
         fileName: "project.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
 
       // Send owner assignment notification if owner changed
@@ -615,7 +619,7 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
                 fileName: "project.ctrl.ts",
                 error: new Error(`Invalid role_id type: ${typeof memberUser.role_id}`),
                 userId: req.userId!,
-                tenantId: req.organizationId!,
+                organizationId: req.organizationId!,
               });
               continue;
             }
@@ -657,7 +661,7 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
                 fileName: "project.ctrl.ts",
                 error: new Error(`Unmapped role_id: ${memberUser.role_id}`),
                 userId: req.userId!,
-                tenantId: req.organizationId!,
+                organizationId: req.organizationId!,
               });
             }
           }
@@ -669,7 +673,7 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
             fileName: "project.ctrl.ts",
             error: userLookupError as Error,
             userId: req.userId!,
-            tenantId: req.organizationId!,
+            organizationId: req.organizationId!,
           });
         }
       }
@@ -683,7 +687,7 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
       functionName: "updateProjectById",
       fileName: "project.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(404).json(STATUS_CODE[404]({}));
@@ -698,7 +702,7 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
         fileName: "project.ctrl.ts",
         error: error as Error,
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
     }
@@ -711,7 +715,7 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
         fileName: "project.ctrl.ts",
         error: error as Error,
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
     }
@@ -723,7 +727,7 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
       fileName: "project.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
@@ -739,7 +743,7 @@ export async function deleteProjectById(req: Request, res: Response): Promise<an
     functionName: "deleteProjectById",
     fileName: "project.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -752,15 +756,26 @@ export async function deleteProjectById(req: Request, res: Response): Promise<an
     );
 
     if (pendingApprovalRequestId) {
-      console.log(
-        `Withdrawing approval request ${pendingApprovalRequestId} for project ${projectId} before deletion`,
-      );
+      logProcessing({
+        description: `withdrawing approval request ${pendingApprovalRequestId} for project ${projectId} before deletion`,
+        functionName: "deleteProjectById",
+        fileName: "project.ctrl.ts",
+        userId: req.userId!,
+        organizationId: req.organizationId!,
+      });
       await withdrawApprovalRequestQuery(
         pendingApprovalRequestId,
         req.organizationId!,
         transaction,
       );
-      console.log(`Approval request ${pendingApprovalRequestId} withdrawn successfully`);
+      await logSuccess({
+        eventType: "Update",
+        description: `withdrew approval request ${pendingApprovalRequestId} for project ${projectId}`,
+        functionName: "deleteProjectById",
+        fileName: "project.ctrl.ts",
+        userId: req.userId!,
+        organizationId: req.organizationId!,
+      });
     }
 
     // Record deletion in change history BEFORE deleting the project
@@ -784,19 +799,20 @@ export async function deleteProjectById(req: Request, res: Response): Promise<an
         functionName: "deleteProjectById",
         fileName: "project.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
 
       return res.status(202).json(STATUS_CODE[202](deletedProject));
     }
 
+    await transaction.rollback();
     await logSuccess({
       eventType: "Delete",
       description: `Project not found for deletion: ID ${projectId}`,
       functionName: "deleteProjectById",
       fileName: "project.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(404).json(STATUS_CODE[404]({}));
@@ -810,7 +826,7 @@ export async function deleteProjectById(req: Request, res: Response): Promise<an
       fileName: "project.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
@@ -825,7 +841,7 @@ export async function getProjectStatsById(req: Request, res: Response): Promise<
     functionName: "getProjectStatsById",
     fileName: "project.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -852,7 +868,7 @@ export async function getProjectStatsById(req: Request, res: Response): Promise<
       functionName: "getProjectStatsById",
       fileName: "project.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(202).json(STATUS_CODE[202](overviewDetails));
@@ -864,7 +880,7 @@ export async function getProjectStatsById(req: Request, res: Response): Promise<
       fileName: "project.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
@@ -879,7 +895,7 @@ export async function getProjectRisksCalculations(req: Request, res: Response): 
     functionName: "getProjectRisksCalculations",
     fileName: "project.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -891,7 +907,7 @@ export async function getProjectRisksCalculations(req: Request, res: Response): 
       functionName: "getProjectRisksCalculations",
       fileName: "project.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res
@@ -905,7 +921,7 @@ export async function getProjectRisksCalculations(req: Request, res: Response): 
       fileName: "project.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
@@ -920,7 +936,7 @@ export async function getVendorRisksCalculations(req: Request, res: Response): P
     functionName: "getVendorRisksCalculations",
     fileName: "project.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -932,7 +948,7 @@ export async function getVendorRisksCalculations(req: Request, res: Response): P
       functionName: "getVendorRisksCalculations",
       fileName: "project.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res
@@ -946,7 +962,7 @@ export async function getVendorRisksCalculations(req: Request, res: Response): P
       fileName: "project.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
@@ -963,7 +979,7 @@ export async function getCompliances(req: Request, res: Response) {
     functionName: "getCompliances",
     fileName: "project.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -1002,7 +1018,7 @@ export async function getCompliances(req: Request, res: Response) {
         functionName: "getCompliances",
         fileName: "project.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
 
       return res.status(200).json(STATUS_CODE[200](controlCategories));
@@ -1014,7 +1030,7 @@ export async function getCompliances(req: Request, res: Response) {
       functionName: "getCompliances",
       fileName: "project.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(404).json(STATUS_CODE[404](project));
@@ -1026,7 +1042,7 @@ export async function getCompliances(req: Request, res: Response) {
       fileName: "project.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
@@ -1041,7 +1057,7 @@ export async function projectComplianceProgress(req: Request, res: Response) {
     functionName: "projectComplianceProgress",
     fileName: "project.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -1058,7 +1074,7 @@ export async function projectComplianceProgress(req: Request, res: Response) {
         functionName: "projectComplianceProgress",
         fileName: "project.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
 
       return res.status(200).json(
@@ -1075,7 +1091,7 @@ export async function projectComplianceProgress(req: Request, res: Response) {
       functionName: "projectComplianceProgress",
       fileName: "project.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(404).json(STATUS_CODE[404](project));
@@ -1087,7 +1103,7 @@ export async function projectComplianceProgress(req: Request, res: Response) {
       fileName: "project.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
@@ -1102,7 +1118,7 @@ export async function projectAssessmentProgress(req: Request, res: Response) {
     functionName: "projectAssessmentProgress",
     fileName: "project.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -1119,7 +1135,7 @@ export async function projectAssessmentProgress(req: Request, res: Response) {
         functionName: "projectAssessmentProgress",
         fileName: "project.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
 
       return res.status(200).json(
@@ -1136,7 +1152,7 @@ export async function projectAssessmentProgress(req: Request, res: Response) {
       functionName: "projectAssessmentProgress",
       fileName: "project.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(404).json(STATUS_CODE[404](project));
@@ -1148,7 +1164,7 @@ export async function projectAssessmentProgress(req: Request, res: Response) {
       fileName: "project.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
@@ -1163,13 +1179,13 @@ export async function allProjectsComplianceProgress(req: Request, res: Response)
     functionName: "allProjectsComplianceProgress",
     fileName: "project.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
     const { userId, role } = req;
     if (!userId || !role) {
-      return res.status(401).json({ message: req.t!("Unauthorized") });
+      return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
 
     const projects = await getAllProjectsQuery({ userId, role }, req.organizationId!);
@@ -1191,7 +1207,7 @@ export async function allProjectsComplianceProgress(req: Request, res: Response)
         functionName: "allProjectsComplianceProgress",
         fileName: "project.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
 
       return res.status(200).json(
@@ -1208,7 +1224,7 @@ export async function allProjectsComplianceProgress(req: Request, res: Response)
       functionName: "allProjectsComplianceProgress",
       fileName: "project.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(404).json(STATUS_CODE[404](projects));
@@ -1220,7 +1236,7 @@ export async function allProjectsComplianceProgress(req: Request, res: Response)
       fileName: "project.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
@@ -1235,13 +1251,13 @@ export async function allProjectsAssessmentProgress(req: Request, res: Response)
     functionName: "allProjectsAssessmentProgress",
     fileName: "project.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
     const { userId, role } = req;
     if (!userId || !role) {
-      return res.status(401).json({ message: req.t!("Unauthorized") });
+      return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
 
     const projects = await getAllProjectsQuery({ userId, role }, req.organizationId!);
@@ -1263,7 +1279,7 @@ export async function allProjectsAssessmentProgress(req: Request, res: Response)
         functionName: "allProjectsAssessmentProgress",
         fileName: "project.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
 
       return res.status(200).json(
@@ -1280,7 +1296,7 @@ export async function allProjectsAssessmentProgress(req: Request, res: Response)
       functionName: "allProjectsAssessmentProgress",
       fileName: "project.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(404).json(STATUS_CODE[404](projects));
@@ -1292,7 +1308,7 @@ export async function allProjectsAssessmentProgress(req: Request, res: Response)
       fileName: "project.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
@@ -1309,7 +1325,7 @@ export async function updateProjectStatus(req: Request, res: Response): Promise<
     functionName: "updateProjectStatus",
     fileName: "project.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -1322,7 +1338,7 @@ export async function updateProjectStatus(req: Request, res: Response): Promise<
         functionName: "updateProjectStatus",
         fileName: "project.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
 
       return res.status(404).json(STATUS_CODE[404]({}));
@@ -1363,7 +1379,7 @@ export async function updateProjectStatus(req: Request, res: Response): Promise<
         functionName: "updateProjectStatus",
         fileName: "project.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
 
       return res.status(200).json(STATUS_CODE[200](updatedProject));
@@ -1381,7 +1397,7 @@ export async function updateProjectStatus(req: Request, res: Response): Promise<
       fileName: "project.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));

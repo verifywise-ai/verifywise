@@ -76,16 +76,12 @@ describe("Test Entity Repository", () => {
       expect(response).toEqual(mockResponse);
     });
 
-    it("should log and rethrow when post fails", async () => {
+    it("should rethrow when post fails", async () => {
       const error = new Error("Unauthorized");
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
       vi.mocked(apiServices.post).mockRejectedValue(error);
 
       await expect(loginUser({ routeUrl: "/auth/login", body: {} })).rejects.toThrow(error);
-      expect(consoleErrorSpy).toHaveBeenCalledWith("Error logging in user:", error);
-
-      consoleErrorSpy.mockRestore();
     });
   });
 
@@ -135,9 +131,8 @@ describe("Test Entity Repository", () => {
       expect(response).toEqual("blob");
     });
 
-    it("should NOT log and still rethrow on 404 errors", async () => {
+    it("should rethrow on 404 errors", async () => {
       const error = { status: 404, message: "Not found" };
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
       vi.mocked(apiServices.get).mockRejectedValue(error);
 
@@ -147,14 +142,10 @@ describe("Test Entity Repository", () => {
           signal: new AbortController().signal,
         }),
       ).rejects.toEqual(error);
-      expect(consoleErrorSpy).not.toHaveBeenCalled();
-
-      consoleErrorSpy.mockRestore();
     });
 
-    it("should log and rethrow on non-404 errors", async () => {
+    it("should rethrow on non-404 errors", async () => {
       const error = { status: 500, message: "Server error" };
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
       vi.mocked(apiServices.get).mockRejectedValue(error);
 
@@ -164,9 +155,6 @@ describe("Test Entity Repository", () => {
           signal: new AbortController().signal,
         }),
       ).rejects.toEqual(error);
-      expect(consoleErrorSpy).toHaveBeenCalledWith("Error getting entity by ID:", error);
-
-      consoleErrorSpy.mockRestore();
     });
   });
 
@@ -189,21 +177,17 @@ describe("Test Entity Repository", () => {
       expect(response).toEqual(mockResponse);
     });
 
-    it("should swallow the error and return undefined when patch fails", async () => {
+    it("should rethrow when patch fails", async () => {
       const error = new Error("Patch failed");
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
       vi.mocked(apiServices.patch).mockRejectedValue(error);
 
-      const response = await updateEntityById({
-        routeUrl: "/projects/1",
-        body: {},
-      });
-
-      expect(response).toBeUndefined();
-      expect(consoleErrorSpy).toHaveBeenCalled();
-
-      consoleErrorSpy.mockRestore();
+      await expect(
+        updateEntityById({
+          routeUrl: "/projects/1",
+          body: {},
+        }),
+      ).rejects.toThrow(error);
     });
   });
 
@@ -226,16 +210,12 @@ describe("Test Entity Repository", () => {
       expect(response).toEqual(mockResponse);
     });
 
-    it("should log and rethrow when delete fails", async () => {
+    it("should rethrow when delete fails", async () => {
       const error = new Error("Delete failed");
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
       vi.mocked(apiServices.delete).mockRejectedValue(error);
 
       await expect(deleteEntityById({ routeUrl: "/projects/5" })).rejects.toThrow(error);
-      expect(consoleErrorSpy).toHaveBeenCalledWith("Error deleting user by ID:", error);
-
-      consoleErrorSpy.mockRestore();
     });
   });
 
@@ -273,16 +253,12 @@ describe("Test Entity Repository", () => {
       });
     });
 
-    it("should log and rethrow when get fails", async () => {
+    it("should rethrow when get fails", async () => {
       const error = new Error("Network error");
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
       vi.mocked(apiServices.get).mockRejectedValue(error);
 
       await expect(getAllEntities({ routeUrl: "/projects" })).rejects.toThrow(error);
-      expect(consoleErrorSpy).toHaveBeenCalledWith("Error getting all users:", error);
-
-      consoleErrorSpy.mockRestore();
     });
   });
 
@@ -305,16 +281,12 @@ describe("Test Entity Repository", () => {
       expect(response).toEqual(mockData);
     });
 
-    it("should log and rethrow when get fails", async () => {
+    it("should rethrow when get fails", async () => {
       const error = new Error("Server error");
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
       vi.mocked(apiServices.get).mockRejectedValue(error);
 
       await expect(checkUserExists({ routeUrl: "/users/exists" })).rejects.toThrow(error);
-      expect(consoleErrorSpy).toHaveBeenCalledWith("Error checking if user exists:", error);
-
-      consoleErrorSpy.mockRestore();
     });
   });
 
@@ -336,16 +308,12 @@ describe("Test Entity Repository", () => {
       expect(response).toEqual(mockResponse);
     });
 
-    it("should log and rethrow when post fails", async () => {
+    it("should rethrow when post fails", async () => {
       const error = new Error("Creation error");
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
       vi.mocked(apiServices.post).mockRejectedValue(error);
 
       await expect(postAutoDrivers()).rejects.toThrow(error);
-      expect(consoleErrorSpy).toHaveBeenCalledWith("Error creating demo data:", error);
-
-      consoleErrorSpy.mockRestore();
     });
   });
 
@@ -390,16 +358,11 @@ describe("Test Entity Repository", () => {
     });
 
     it("should return false on error (does not rethrow)", async () => {
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
-
       vi.mocked(apiServices.get).mockRejectedValue(new Error("Network error"));
 
       const result = await checkDemoDataExists();
 
       expect(result).toBe(false);
-      expect(consoleErrorSpy).toHaveBeenCalledWith("Error checking demo data:", expect.any(Error));
-
-      consoleErrorSpy.mockRestore();
     });
   });
 
@@ -421,16 +384,12 @@ describe("Test Entity Repository", () => {
       expect(response).toEqual(mockResponse);
     });
 
-    it("should log and rethrow when delete fails", async () => {
+    it("should rethrow when delete fails", async () => {
       const error = new Error("Delete error");
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
       vi.mocked(apiServices.delete).mockRejectedValue(error);
 
       await expect(deleteAutoDrivers()).rejects.toThrow(error);
-      expect(consoleErrorSpy).toHaveBeenCalledWith("Error deleting demo data:", error);
-
-      consoleErrorSpy.mockRestore();
     });
   });
 
@@ -473,16 +432,12 @@ describe("Test Entity Repository", () => {
       expect(response).toEqual(mockData);
     });
 
-    it("should log and rethrow when get fails", async () => {
+    it("should rethrow when get fails", async () => {
       const error = new Error("Server error");
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
       vi.mocked(apiServices.get).mockRejectedValue(error);
 
       await expect(getAllUsers()).rejects.toThrow(error);
-      expect(consoleErrorSpy).toHaveBeenCalledWith("Error getting all users:", error);
-
-      consoleErrorSpy.mockRestore();
     });
   });
 
@@ -506,21 +461,17 @@ describe("Test Entity Repository", () => {
       expect(response).toEqual(mockResponse);
     });
 
-    it("should swallow the error and return undefined when post fails", async () => {
+    it("should rethrow when post fails", async () => {
       const error = new Error("Report generation failed");
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
       vi.mocked(apiServices.post).mockRejectedValue(error);
 
-      const response = await generateReport({
-        routeUrl: "/reports/generate",
-        body: {},
-      });
-
-      expect(response).toBeUndefined();
-      expect(consoleErrorSpy).toHaveBeenCalled();
-
-      consoleErrorSpy.mockRestore();
+      await expect(
+        generateReport({
+          routeUrl: "/reports/generate",
+          body: {},
+        }),
+      ).rejects.toThrow(error);
     });
   });
 
@@ -542,16 +493,12 @@ describe("Test Entity Repository", () => {
       expect(response).toEqual(mockData);
     });
 
-    it("should log and rethrow when get fails", async () => {
+    it("should rethrow when get fails", async () => {
       const error = new Error("Framework fetch error");
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
       vi.mocked(apiServices.get).mockRejectedValue(error);
 
       await expect(getAllFrameworks()).rejects.toThrow(error);
-      expect(consoleErrorSpy).toHaveBeenCalledWith("Error getting all frameworks:", error);
-
-      consoleErrorSpy.mockRestore();
     });
   });
 
@@ -581,18 +528,14 @@ describe("Test Entity Repository", () => {
       expect(response).toEqual({ status: 201, data: { assigned: true } });
     });
 
-    it("should log and rethrow when post fails", async () => {
+    it("should rethrow when post fails", async () => {
       const error = new Error("Assignment error");
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
       vi.mocked(apiServices.post).mockRejectedValue(error);
 
       await expect(assignFrameworkToProject({ frameworkId: 1, projectId: "p1" })).rejects.toThrow(
         error,
       );
-      expect(consoleErrorSpy).toHaveBeenCalledWith("Error assigning framework to project:", error);
-
-      consoleErrorSpy.mockRestore();
     });
   });
 
@@ -619,18 +562,14 @@ describe("Test Entity Repository", () => {
       expect(response).toEqual(mockResponse);
     });
 
-    it("should log and rethrow when patch fails", async () => {
+    it("should rethrow when patch fails", async () => {
       const error = new Error("Archive error");
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
       vi.mocked(apiServices.patch).mockRejectedValue(error);
 
       await expect(archiveIncidentById({ routeUrl: "/incidents/7", body: {} })).rejects.toThrow(
         error,
       );
-      expect(consoleErrorSpy).toHaveBeenCalledWith("Error archiving incident:", error);
-
-      consoleErrorSpy.mockRestore();
     });
   });
 });

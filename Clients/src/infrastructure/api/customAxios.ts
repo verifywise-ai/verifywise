@@ -26,6 +26,8 @@ import { ENV_VARs } from "../../../env.vars";
 import { clearAuthState, setAuthToken } from "../../application/redux/auth/authSlice";
 import { storageService } from "../storage";
 import { AlertProps } from "../../presentation/types/alert.types";
+import { translations, type Lang } from "../../i18n/translations";
+import { getLanguage } from "../../i18n/domTranslator";
 import type {
   ApiErrorEnvelope,
   ApiSuccessEnvelope,
@@ -51,6 +53,48 @@ export const setShowAlertCallback = (callback: (alert: AlertProps) => void) => {
 export const showAlert = (alert: AlertProps) => {
   if (showAlertCallback) {
     showAlertCallback(alert);
+  }
+};
+
+// Lightweight translation helper for non-React infrastructure code.
+// Looks up the current language from the DOM translator and falls back to the
+// English source key when no translation is available.
+const translate = (key: string): string => {
+  const lang: Lang = getLanguage();
+  if (lang === "en") return key;
+  return translations[lang]?.[key] || key;
+};
+
+// Show a translated error toast for server or network failures.
+// 4xx errors are intentionally left for callers/UI layers to handle.
+const showGlobalErrorAlert = (error: AxiosError) => {
+  // Don't show alerts for deliberately cancelled requests (e.g. component unmount)
+  if (axios.isCancel(error)) {
+    return;
+  }
+
+  const status = error.response?.status;
+  const isServerError = status != null && status >= 500;
+  const isNetworkError = error.response == null;
+
+  // DEBUG: log every global alert trigger so we can identify the failing request
+  // eslint-disable-next-line no-console
+  console.error("[customAxios global alert]", {
+    url: error.config?.url,
+    method: error.config?.method,
+    status,
+    statusText: error.response?.statusText,
+    message: error.message,
+    responseData: (error.response as any)?.data,
+    code: (error as any).code,
+  });
+
+  if (isServerError || isNetworkError) {
+    showAlert({
+      variant: "error",
+      title: translate("Error"),
+      body: translate("An error occurred. Please try again later"),
+    });
   }
 };
 
@@ -228,6 +272,10 @@ CustomAxios.interceptors.response.use(
         isRefreshing = false;
       }
     }
+
+    // Surface generic translated error toasts for server and network failures.
+    // Auth-specific errors (403/429/406) are handled above and return early.
+    showGlobalErrorAlert(error);
 
     return Promise.reject(error);
   },

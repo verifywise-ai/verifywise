@@ -28,6 +28,7 @@ import {
   listSuppressions,
   deleteSuppression,
 } from "../../../../application/repository/aiDetection.repository";
+import { displayFormattedDate } from "../../../tools/isoDateToString";
 import { SuppressionRule } from "../../../../domain/ai-detection/types";
 
 interface SuppressionRulesTabProps {
@@ -50,7 +51,7 @@ function formatExpiry(expires_at: string | null | undefined): string {
   if (!expires_at) return "Never";
   const d = dayjs(expires_at);
   const isPast = d.isBefore(dayjs());
-  return `${d.format("MMM D, YYYY")}${isPast ? " (expired)" : ""}`;
+  return `${displayFormattedDate(expires_at)}${isPast ? " (expired)" : ""}`;
 }
 
 function SuppressionRulesTab({ onMessage }: SuppressionRulesTabProps) {
@@ -159,9 +160,7 @@ function SuppressionRulesTab({ onMessage }: SuppressionRulesTabProps) {
                   {rule.reason || "—"}
                 </TableCell>
                 <TableCell sx={{ fontSize: 13 }}>{formatExpiry(rule.expires_at)}</TableCell>
-                <TableCell sx={{ fontSize: 13 }}>
-                  {dayjs(rule.created_at).format("MMM D, YYYY")}
-                </TableCell>
+                <TableCell sx={{ fontSize: 13 }}>{displayFormattedDate(rule.created_at)}</TableCell>
                 <TableCell align="right">
                   <Tooltip title="Delete rule" arrow placement="top">
                     <IconButton

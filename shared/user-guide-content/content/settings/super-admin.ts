@@ -20,6 +20,22 @@ export const superAdminContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'setup',
+      level: 2,
+      text: 'Setting up the super admin',
+    },
+    {
+      type: 'paragraph',
+      text: 'There is no sign-up for the super admin. The account is created once, when the installation is first set up, from two environment variables: SUPERADMIN_EMAIL and SUPERADMIN_PASSWORD. The password must be at least 8 characters. On first run these seed the single super admin account, and you log in with those credentials.',
+    },
+    {
+      type: 'callout',
+      variant: 'info',
+      title: 'There is only one super admin',
+      text: 'An installation has exactly one super admin account, enforced at the database level. You cannot create a second one, and the super admin role cannot be assigned through the invite flow.',
+    },
+    {
+      type: 'heading',
       id: 'organizations',
       level: 2,
       text: 'Managing organizations',
@@ -27,6 +43,12 @@ export const superAdminContent: ArticleContent = {
     {
       type: 'paragraph',
       text: 'The Organizations page lists all organizations in the system. For each one, you can see the name, number of users and creation date. Click "View users" to see everyone in that organization.',
+    },
+    {
+      type: 'callout',
+      variant: 'info',
+      title: 'Read-only inside an organization',
+      text: 'When the super admin views an organization\'s data, access is read-only. You can see everything but cannot change an organization\'s records from inside it. Managing organizations and users is done from the super admin panel itself, where these actions are allowed.',
     },
     {
       type: 'heading',
@@ -59,9 +81,8 @@ export const superAdminContent: ArticleContent = {
         { text: 'Click **Invite user** on the Users page.' },
         { text: 'Enter the user\'s name, surname and email.' },
         { text: 'Select the organization they belong to.' },
-        { text: 'Choose a role: Admin, Reviewer, Editor or Auditor.' },
-        { text: 'Set a temporary password.' },
-        { text: 'Click **Invite**.' },
+        { text: 'Choose a role: Admin, Reviewer, Editor or Auditor. The super admin role cannot be assigned here.' },
+        { text: 'Click **Invite**. The user receives an invitation to set their own password.' },
       ],
     },
     {

@@ -11,6 +11,24 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "v2.4",
+    date: "June 22, 2026",
+    title: "AI Trust Index, AI Apps inventory, and Agent Control",
+    summary:
+      "Major release with three new modules. The AI Trust Index grades and tracks third-party AI apps, the AI Apps inventory governs the AI tools your teams use, and Agent Control governs what AI agents do. This release also adds AI Agents that suggest risks and review content, custom fields, a deadline warning banner, Microsoft Entra ID single sign-on, and design system updates.",
+    items: [
+      "AI Trust Index — browse a curated catalog of AI apps with letter-grade trust scores and per-domain breakdowns, open app pages with verdicts and watch-outs, track the apps you care about, and get a weekly digest email of what changed",
+      "AI Apps inventory — keep a register of the AI applications your teams use, with detail pages, an approval center, policy and model dependency mapping, and risk assessment templates; you can also promote a discovered Shadow AI tool into a governed app",
+      "Agent Control — govern what AI agents do with tool-call approval and file-write content gating. Run correlation joins an agent's model calls and tool calls into one run on the new Runs page, and it works with Claude Code and Cursor",
+      "AI Agents — agents that suggest model risks, draft tasks, and review evidence and AI-generated content, so the platform does more of the analysis for you",
+      "Custom fields — define your own fields to capture the data your organization needs",
+      "Deadline warning banner — see upcoming deadlines across the dashboard and tasks, with configurable thresholds and per-user snooze",
+      "Microsoft Entra ID single sign-on — sign in with your organization's Microsoft identity",
+      "Design system updates — unified chip component, icon-only and small button sizes, table skeleton loaders on more pages, and a consistent empty state",
+      "Added Spanish (es) language coverage across the application",
+    ],
+  },
+  {
     version: "v2.3.4",
     date: "May 19, 2026",
     title: "Training evidence uploads, governance score helper, and policy ownership",

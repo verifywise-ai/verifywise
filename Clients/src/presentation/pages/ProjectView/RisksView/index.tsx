@@ -11,6 +11,7 @@ import { ProjectRisk } from "../../../../application/hooks/useProjectRisks";
 import { getAllEntities } from "../../../../application/repository/entity.repository";
 import { VendorRisk } from "../../../../domain/types/VendorRisk";
 import { StatusTileCards, StatusTileItem } from "../../../components/Cards/StatusTileCards";
+import { displayFormattedDate } from "../../../tools/isoDateToString";
 
 const projectRisksColNames = [
   {
@@ -104,7 +105,7 @@ const RisksView: FC<RisksViewProps> = memo(({ risksSummary, risksData, title, pr
 
         // Special formatting for dates
         if (col.id === "review_date" && value) {
-          value = new Date(value).toLocaleDateString();
+          value = displayFormattedDate(value);
         }
 
         // Special formatting for ALE currency

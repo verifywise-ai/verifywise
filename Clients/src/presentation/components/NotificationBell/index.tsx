@@ -16,6 +16,7 @@ import VWTooltip from "../VWTooltip";
 import "../Layout/icon-shake.css";
 
 import { text } from "../../themes/palette";
+import { displayFormattedDate } from "../../tools/isoDateToString";
 
 /**
  * Rewrite legacy action_url values that were stored in older notifications
@@ -60,7 +61,7 @@ const formatRelativeTime = (dateString: string): string => {
   if (minutes < 60) return `${minutes}m ago`;
   if (hours < 24) return `${hours}h ago`;
   if (days < 7) return `${days}d ago`;
-  return date.toLocaleDateString();
+  return displayFormattedDate(date);
 };
 
 /**

@@ -44,7 +44,7 @@ export async function getAllVendorRisksAllProjects(req: Request, res: Response):
     functionName: "getAllVendorRisksAllProjects",
     fileName: "vendorRisk.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -55,7 +55,7 @@ export async function getAllVendorRisksAllProjects(req: Request, res: Response):
       functionName: "getAllVendorRisksAllProjects",
       fileName: "vendorRisk.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(200).json(STATUS_CODE[200](risks));
   } catch (error) {
@@ -66,7 +66,7 @@ export async function getAllVendorRisksAllProjects(req: Request, res: Response):
       fileName: "vendorRisk.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -87,7 +87,7 @@ export async function getAllVendorRisks(req: Request, res: Response): Promise<an
     functionName: "getAllVendorRisks",
     fileName: "vendorRisk.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -104,7 +104,7 @@ export async function getAllVendorRisks(req: Request, res: Response): Promise<an
         functionName: "getAllVendorRisks",
         fileName: "vendorRisk.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(200).json(STATUS_CODE[200](vendorRisks));
     }
@@ -115,7 +115,7 @@ export async function getAllVendorRisks(req: Request, res: Response): Promise<an
       functionName: "getAllVendorRisks",
       fileName: "vendorRisk.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(204).json(STATUS_CODE[204](vendorRisks));
   } catch (error) {
@@ -126,7 +126,7 @@ export async function getAllVendorRisks(req: Request, res: Response): Promise<an
       fileName: "vendorRisk.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -141,7 +141,7 @@ export async function getAllVendorRisksByVendorId(req: Request, res: Response) {
     functionName: "getAllVendorRisksByVendorId",
     fileName: "vendorRisk.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -154,7 +154,7 @@ export async function getAllVendorRisksByVendorId(req: Request, res: Response) {
         functionName: "getAllVendorRisksByVendorId",
         fileName: "vendorRisk.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(200).json(STATUS_CODE[200](vendorRisks));
     }
@@ -165,7 +165,7 @@ export async function getAllVendorRisksByVendorId(req: Request, res: Response) {
       functionName: "getAllVendorRisksByVendorId",
       fileName: "vendorRisk.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(204).json(STATUS_CODE[204](vendorRisks));
   } catch (error) {
@@ -176,7 +176,7 @@ export async function getAllVendorRisksByVendorId(req: Request, res: Response) {
       fileName: "vendorRisk.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -190,7 +190,7 @@ export async function getVendorRiskById(req: Request, res: Response): Promise<an
     functionName: "getVendorRiskById",
     fileName: "vendorRisk.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -203,7 +203,7 @@ export async function getVendorRiskById(req: Request, res: Response): Promise<an
         functionName: "getVendorRiskById",
         fileName: "vendorRisk.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(200).json(STATUS_CODE[200](vendorRisk));
     }
@@ -214,7 +214,7 @@ export async function getVendorRiskById(req: Request, res: Response): Promise<an
       functionName: "getVendorRiskById",
       fileName: "vendorRisk.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(404).json(STATUS_CODE[404](vendorRisk));
   } catch (error) {
@@ -225,7 +225,7 @@ export async function getVendorRiskById(req: Request, res: Response): Promise<an
       fileName: "vendorRisk.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -239,7 +239,7 @@ export async function createVendorRisk(req: Request, res: Response): Promise<any
     functionName: "createVendorRisk",
     fileName: "vendorRisk.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -334,7 +334,7 @@ export async function createVendorRisk(req: Request, res: Response): Promise<any
         functionName: "createVendorRisk",
         fileName: "vendorRisk.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(201).json(STATUS_CODE[201](createdVendorRisk));
     }
@@ -345,7 +345,7 @@ export async function createVendorRisk(req: Request, res: Response): Promise<any
       functionName: "createVendorRisk",
       fileName: "vendorRisk.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(503).json(STATUS_CODE[503]({}));
   } catch (error) {
@@ -357,7 +357,7 @@ export async function createVendorRisk(req: Request, res: Response): Promise<any
       fileName: "vendorRisk.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -374,7 +374,7 @@ export async function updateVendorRiskById(req: Request, res: Response): Promise
     functionName: "updateVendorRiskById",
     fileName: "vendorRisk.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -389,7 +389,7 @@ export async function updateVendorRiskById(req: Request, res: Response): Promise
         functionName: "updateVendorRiskById",
         fileName: "vendorRisk.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(404).json(STATUS_CODE[404]({}));
     }
@@ -495,7 +495,7 @@ export async function updateVendorRiskById(req: Request, res: Response): Promise
         functionName: "updateVendorRiskById",
         fileName: "vendorRisk.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(202).json(STATUS_CODE[202](vendorRisk));
     }
@@ -506,7 +506,7 @@ export async function updateVendorRiskById(req: Request, res: Response): Promise
       functionName: "updateVendorRiskById",
       fileName: "vendorRisk.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(404).json(STATUS_CODE[404]({}));
   } catch (error) {
@@ -518,7 +518,7 @@ export async function updateVendorRiskById(req: Request, res: Response): Promise
       fileName: "vendorRisk.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -533,7 +533,7 @@ export async function deleteVendorRiskById(req: Request, res: Response): Promise
     functionName: "deleteVendorRiskById",
     fileName: "vendorRisk.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -551,7 +551,7 @@ export async function deleteVendorRiskById(req: Request, res: Response): Promise
         functionName: "deleteVendorRiskById",
         fileName: "vendorRisk.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(202).json(STATUS_CODE[202](deletedVendorRisk));
     }
@@ -562,7 +562,7 @@ export async function deleteVendorRiskById(req: Request, res: Response): Promise
       functionName: "deleteVendorRiskById",
       fileName: "vendorRisk.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(404).json(STATUS_CODE[404]({}));
   } catch (error) {
@@ -574,7 +574,7 @@ export async function deleteVendorRiskById(req: Request, res: Response): Promise
       fileName: "vendorRisk.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -589,7 +589,7 @@ export async function getVendorRisksByFrameworkId(req: Request, res: Response): 
     functionName: "getVendorRisksByFrameworkId",
     fileName: "vendorRisk.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -605,7 +605,7 @@ export async function getVendorRisksByFrameworkId(req: Request, res: Response): 
       functionName: "getVendorRisksByFrameworkId",
       fileName: "vendorRisk.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(200).json(STATUS_CODE[200](vendorRisks));
   } catch (error) {
@@ -616,7 +616,7 @@ export async function getVendorRisksByFrameworkId(req: Request, res: Response): 
       fileName: "vendorRisk.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }

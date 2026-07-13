@@ -17,6 +17,7 @@ import CustomizableSkeleton from "../Skeletons";
 import singleTheme from "../../themes/v1SingleTheme";
 import { ModelInventoryStatus } from "../../../domain/enums/modelInventory.enum";
 import { EmptyState } from "../EmptyState";
+import { TableEmptyStateLayout } from "../Table/TableEmptyStateLayout";
 import { VWLink } from "../Link";
 import InfoBox from "../InfoBox";
 
@@ -108,31 +109,37 @@ export function LinkedModelsView({
     return (
       <Stack spacing={3}>
         {headerContent}
-        <Stack
-          alignItems="center"
-          justifyContent="center"
-          sx={{
-            minHeight: 300,
-            backgroundColor: theme.palette.background.paper,
-            borderRadius: 1,
-            border: `1px solid ${theme.palette.divider}`,
-          }}
+        <TableEmptyStateLayout
+          header={
+            <TableHead
+              sx={{
+                backgroundColor: singleTheme.tableStyles.primary.header.backgroundColors,
+              }}
+            >
+              <TableRow sx={singleTheme.tableStyles.primary.header.row}>
+                {TABLE_COLUMNS.map((column) => (
+                  <TableCell key={column.id} sx={singleTheme.tableStyles.primary.header.cell}>
+                    {column.label}
+                  </TableCell>
+                ))}
+              </TableRow>
+            </TableHead>
+          }
         >
-          <EmptyState icon={Cpu} message={emptyMessage} />
-          <Typography
-            sx={{
-              color: theme.palette.text.tertiary,
-              fontSize: 13,
-              mt: 1,
-              textAlign: "center",
-              maxWidth: 500,
-            }}
-          >
-            To link a model to this framework, you first need to add it to your model inventory.
-            When adding a model, you can select which framework(s) to link it to.{" "}
-            <VWLink onClick={() => navigate("/model-inventory")}>Go to Model Inventory</VWLink>
-          </Typography>
-        </Stack>
+          <EmptyState icon={Cpu} message={emptyMessage}>
+            <Typography
+              sx={{
+                color: theme.palette.text.tertiary,
+                fontSize: 13,
+                textAlign: "center",
+              }}
+            >
+              To link a model to this framework, you first need to add it to your model inventory.
+              When adding a model, you can select which framework(s) to link it to.{" "}
+              <VWLink onClick={() => navigate("/model-inventory")}>Go to Model Inventory</VWLink>
+            </Typography>
+          </EmptyState>
+        </TableEmptyStateLayout>
       </Stack>
     );
   }

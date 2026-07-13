@@ -1,106 +1,152 @@
-import { renderHook, act } from "@testing-library/react";
-import React from "react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { renderHook, act, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import React from "react";
 import { useBulkUpdateFiles } from "../useBulkUpdateFiles";
-
-const mockBulkUpdateFileTags = vi.fn();
-const mockAssignFilesToFolder = vi.fn();
+import { fileQueryKeys } from "../useFiles";
+import { FileModel } from "../../../domain/models/Common/file/file.model";
 
 vi.mock("../../repository/file.repository", () => ({
-  bulkUpdateFileTags: (...args: unknown[]) => mockBulkUpdateFileTags(...args),
+  bulkUpdateFileTags: vi.fn(),
 }));
 
 vi.mock("../../repository/virtualFolder.repository", () => ({
-  assignFilesToFolder: (...args: unknown[]) => mockAssignFilesToFolder(...args),
+  assignFilesToFolder: vi.fn(),
 }));
+
+import { bulkUpdateFileTags } from "../../repository/file.repository";
+
+const mockBulkUpdateFileTags = vi.mocked(bulkUpdateFileTags);
+
+function createFile(id: string, tags: string[]): FileModel {
+  return FileModel.createNewFile({
+    id,
+    fileName: `file-${id}.txt`,
+    uploadDate: new Date("2025-01-01"),
+    uploader: "user",
+    tags,
+  });
+}
 
 function createWrapper() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return ({ children }: { children: React.ReactNode }) =>
-    React.createElement(QueryClientProvider, { client: queryClient }, children);
+  return {
+    queryClient,
+    wrapper: ({ children }: { children: React.ReactNode }) =>
+      React.createElement(QueryClientProvider, { client: queryClient }, children),
+  };
 }
 
 describe("useBulkUpdateFiles", () => {
-  afterEach(() => {
-    vi.clearAllMocks();
-  });
+  beforeEach(() => vi.clearAllMocks());
 
-  it("should call assignFilesToFolder for move_to_folder action", async () => {
-    mockAssignFilesToFolder.mockResolvedValue({ success: true });
+  it("optimistically updates tags for selected files in set mode", async () => {
+    let resolveMutation: () => void = () => {};
+    mockBulkUpdateFileTags.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveMutation = resolve;
+        }),
+    );
 
-    const { result } = renderHook(() => useBulkUpdateFiles(), {
-      wrapper: createWrapper(),
-    });
+    const queryKey = fileQueryKeys.list();
+    const { queryClient, wrapper } = createWrapper();
 
-    await act(async () => {
-      await result.current.mutateAsync({ type: "move_to_folder", folderId: 5, ids: [1, 2] });
-    });
+    queryClient.setQueryData(queryKey, [createFile("1", ["old"]), createFile("2", ["old"])]);
 
-    expect(mockAssignFilesToFolder).toHaveBeenCalledWith(5, [1, 2]);
-    expect(mockBulkUpdateFileTags).not.toHaveBeenCalled();
-  });
+    const { result } = renderHook(() => useBulkUpdateFiles(), { wrapper });
 
-  it("should call bulkUpdateFileTags for update_tags action", async () => {
-    mockBulkUpdateFileTags.mockResolvedValue({ success: true });
-
-    const { result } = renderHook(() => useBulkUpdateFiles(), {
-      wrapper: createWrapper(),
-    });
-
-    await act(async () => {
-      await result.current.mutateAsync({
+    act(() => {
+      result.current.mutate({
         type: "update_tags",
-        payload: { ids: [1], tags: ["important"], mode: "set" },
+        payload: { ids: [1], tags: ["new"], mode: "set" },
       });
     });
 
-    expect(mockBulkUpdateFileTags).toHaveBeenCalledWith({
-      ids: [1],
-      tags: ["important"],
-      mode: "set",
+    await waitFor(() => {
+      const data = queryClient.getQueryData<FileModel[]>(queryKey);
+      expect(data?.[0].tags).toEqual(["new"]);
+      expect(data?.[1].tags).toEqual(["old"]);
     });
-    expect(mockAssignFilesToFolder).not.toHaveBeenCalled();
+
+    act(() => {
+      resolveMutation();
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
   });
 
-  it("should call onSuccess callback when mutation succeeds", async () => {
-    const onSuccess = vi.fn();
-    mockAssignFilesToFolder.mockResolvedValue({ success: true });
+  it("optimistically adds tags in add mode", async () => {
+    let resolveMutation: () => void = () => {};
+    mockBulkUpdateFileTags.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveMutation = resolve;
+        }),
+    );
 
-    const { result } = renderHook(() => useBulkUpdateFiles({ onSuccess }), {
-      wrapper: createWrapper(),
+    const queryKey = fileQueryKeys.list();
+    const { queryClient, wrapper } = createWrapper();
+
+    queryClient.setQueryData(queryKey, [createFile("1", ["existing"])]);
+
+    const { result } = renderHook(() => useBulkUpdateFiles(), { wrapper });
+
+    act(() => {
+      result.current.mutate({
+        type: "update_tags",
+        payload: { ids: [1], tags: ["new"], mode: "add" },
+      });
     });
 
-    const action = { type: "move_to_folder" as const, folderId: 1, ids: [1] };
-    await act(async () => {
-      await result.current.mutateAsync(action);
+    await waitFor(() => {
+      const data = queryClient.getQueryData<FileModel[]>(queryKey);
+      expect(data?.[0].tags).toEqual(["existing", "new"]);
     });
 
-    expect(onSuccess).toHaveBeenCalledWith(action);
+    act(() => {
+      resolveMutation();
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
   });
 
-  it("should call onError callback when mutation fails", async () => {
-    const onError = vi.fn();
-    const testError = new Error("Network error");
-    mockBulkUpdateFileTags.mockRejectedValue(testError);
+  it("rolls back tag changes when the mutation fails", async () => {
+    let rejectMutation: (error: Error) => void = () => {};
+    mockBulkUpdateFileTags.mockImplementation(
+      () =>
+        new Promise<never>((_resolve, reject) => {
+          rejectMutation = reject;
+        }),
+    );
 
-    const { result } = renderHook(() => useBulkUpdateFiles({ onError }), {
-      wrapper: createWrapper(),
+    const queryKey = fileQueryKeys.list();
+    const { queryClient, wrapper } = createWrapper();
+
+    queryClient.setQueryData(queryKey, [createFile("1", ["old"])]);
+
+    const { result } = renderHook(() => useBulkUpdateFiles(), { wrapper });
+
+    act(() => {
+      result.current.mutate({
+        type: "update_tags",
+        payload: { ids: [1], tags: ["new"], mode: "set" },
+      });
     });
 
-    const action = {
-      type: "update_tags" as const,
-      payload: { ids: [1], tags: ["test"], mode: "set" as const },
-    };
-    await act(async () => {
-      try {
-        await result.current.mutateAsync(action);
-      } catch {
-        // expected
-      }
+    await waitFor(() => {
+      const data = queryClient.getQueryData<FileModel[]>(queryKey);
+      expect(data?.[0].tags).toEqual(["new"]);
     });
 
-    expect(onError).toHaveBeenCalledWith(testError, action);
+    act(() => {
+      rejectMutation(new Error("Failed"));
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    const data = queryClient.getQueryData<FileModel[]>(queryKey);
+    expect(data?.[0].tags).toEqual(["old"]);
   });
 });

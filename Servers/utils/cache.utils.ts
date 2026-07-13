@@ -134,9 +134,9 @@ export function buildOrgCacheKey(prefix: string, organizationId: number): string
  * @deprecated Use buildOrgCacheKey instead for shared-schema multi-tenancy
  *
  * @param prefix - Cache key prefix
- * @param tenantId - Tenant identifier
+ * @param tenantHash - Tenant identifier (string suffix)
  * @returns Full cache key
  */
-export function buildTenantCacheKey(prefix: string, tenantId: string): string {
-  return `${prefix}:${tenantId}`;
+export function buildTenantCacheKey(prefix: string, tenantHash: string): string {
+  return `${prefix}:${tenantHash}`;
 }

@@ -1,6 +1,7 @@
 import { Box, Typography, LinearProgress } from "@mui/material";
 import { status, accent, text as textColors, background } from "../../themes/palette";
 import type { FrameworkReadinessScore } from "../../../domain/interfaces/i.readiness";
+import { displayFormattedDateTime } from "../../tools/isoDateToString";
 
 interface ReadinessTrendProps {
   data: FrameworkReadinessScore[];
@@ -91,14 +92,7 @@ export default function ReadinessTrend({ data, isLoading }: ReadinessTrendProps)
       >
         {data.map((item, idx) => {
           const score = item.avg_score ?? 0;
-          const date = item.calculated_at
-            ? new Date(item.calculated_at).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              })
-            : "";
+          const date = item.calculated_at ? displayFormattedDateTime(item.calculated_at) : "";
 
           return (
             <Box key={idx} sx={{ mb: 2, px: 0.5 }}>

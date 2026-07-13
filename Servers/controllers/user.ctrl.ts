@@ -693,7 +693,8 @@ async function loginUserWithMicrosoft(req: Request, res: Response): Promise<any>
     }
 
     const roleClaim = ((tokenResponse.idTokenClaims as Record<string, any>)?.roles ?? [])[0] as
-      string | undefined;
+      | string
+      | undefined;
     const roleName = roleClaim && SSO_ROLE_MAP.has(roleClaim) ? roleClaim : "Editor";
     const roleId = SSO_ROLE_MAP.get(roleName)!;
 
@@ -812,7 +813,6 @@ async function refreshAccessToken(req: Request, res: Response): Promise<any> {
       id: decoded.id,
       email: decoded.email,
       roleName: decoded.roleName,
-      tenantId: decoded.tenantId,
       organizationId: decoded.organizationId,
     });
 
@@ -1022,7 +1022,7 @@ async function updateUserById(req: Request, res: Response) {
                 fileName: "user.ctrl.ts",
                 error: emailError as Error,
                 userId: req.userId!,
-                tenantId: req.organizationId!,
+                organizationId: req.organizationId!,
               });
             });
           }
@@ -1035,7 +1035,7 @@ async function updateUserById(req: Request, res: Response) {
             fileName: "user.ctrl.ts",
             error: projectError as Error,
             userId: req.userId!,
-            tenantId: req.organizationId!,
+            organizationId: req.organizationId!,
           });
         }
       }
@@ -1221,7 +1221,7 @@ async function checkUserExists(_req: Request, res: Response): Promise<Response> 
   } catch (error) {
     logStructured("error", "failed to check user existence", "checkUserExists", "user.ctrl.ts");
     logger.error("❌ Error in checkUserExists:", error);
-    return res.status(500).json({ message: _req.t!("Internal server error") });
+    return res.status(500).json(STATUS_CODE[500](_req.t!("Internal server error")));
   }
 }
 
@@ -1320,7 +1320,7 @@ async function calculateProgress(req: Request, res: Response): Promise<Response>
       "user.ctrl.ts",
     );
     logger.error("❌ Error in calculateProgress:", error);
-    return res.status(500).json({ message: req.t!("Internal server error") });
+    return res.status(500).json(STATUS_CODE[500](req.t!("Internal server error")));
   }
 }
 
@@ -1348,7 +1348,7 @@ async function ChangePassword(req: Request, res: Response) {
         req.organizationId!,
       );
       await transaction.rollback();
-      return res.status(404).json({ message: req.t!("User not found") });
+      return res.status(404).json(STATUS_CODE[404](req.t!("User not found")));
     }
 
     await user.updatePassword(newPassword, currentPassword);
@@ -1393,7 +1393,7 @@ async function ChangePassword(req: Request, res: Response) {
         req.userId!,
         req.organizationId!,
       );
-      return res.status(400).json({ message: error.message });
+      return res.status(400).json(STATUS_CODE[400](error.message));
     }
 
     if (error instanceof BusinessLogicException) {
@@ -1409,7 +1409,7 @@ async function ChangePassword(req: Request, res: Response) {
         req.userId!,
         req.organizationId!,
       );
-      return res.status(403).json({ message: error.message });
+      return res.status(403).json(STATUS_CODE[403](error.message));
     }
 
     logStructured("error", `unexpected error for user ID ${id}`, "ChangePassword", "user.ctrl.ts");
@@ -1420,7 +1420,7 @@ async function ChangePassword(req: Request, res: Response) {
       req.organizationId!,
     );
     logger.error("❌ Error in ChangePassword:", error);
-    return res.status(500).json({ message: (error as Error).message });
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
 
@@ -1442,7 +1442,7 @@ async function updateUserRole(req: Request, res: Response) {
     // Prevent role escalation to SuperAdmin
     if (newRoleId === 5) {
       await transaction.rollback();
-      return res.status(403).json({ message: req.t!("Cannot assign SuperAdmin role") });
+      return res.status(403).json(STATUS_CODE[403](req.t!("Cannot assign SuperAdmin role")));
     }
 
     const targetUser = await getUserByIdQuery(parseInt(id));
@@ -1455,13 +1455,13 @@ async function updateUserRole(req: Request, res: Response) {
         req.organizationId!,
       );
       await transaction.rollback();
-      return res.status(404).json({ message: req.t!("User not found") });
+      return res.status(404).json(STATUS_CODE[404](req.t!("User not found")));
     }
 
     // Prevent changing super-admin's role
     if (targetUser.role_id === 5) {
       await transaction.rollback();
-      return res.status(403).json({ message: req.t!("Cannot modify SuperAdmin role") });
+      return res.status(403).json(STATUS_CODE[403](req.t!("Cannot modify SuperAdmin role")));
     }
 
     const currentUser = await getUserByIdQuery(currentUserId);
@@ -1479,7 +1479,7 @@ async function updateUserRole(req: Request, res: Response) {
         req.organizationId!,
       );
       await transaction.rollback();
-      return res.status(404).json({ message: req.t!("Current user not found") });
+      return res.status(404).json(STATUS_CODE[404](req.t!("Current user not found")));
     }
 
     // Capture the old role before updating
@@ -1527,7 +1527,7 @@ async function updateUserRole(req: Request, res: Response) {
               fileName: "user.ctrl.ts",
               error: emailError as Error,
               userId: req.userId!,
-              tenantId: req.organizationId!,
+              organizationId: req.organizationId!,
             });
           });
         }
@@ -1540,7 +1540,7 @@ async function updateUserRole(req: Request, res: Response) {
           fileName: "user.ctrl.ts",
           error: projectError as Error,
           userId: req.userId!,
-          tenantId: req.organizationId!,
+          organizationId: req.organizationId!,
         });
       }
     }
@@ -1565,7 +1565,7 @@ async function updateUserRole(req: Request, res: Response) {
         req.userId!,
         req.organizationId!,
       );
-      return res.status(400).json({ message: error.message });
+      return res.status(400).json(STATUS_CODE[400](error.message));
     }
 
     if (error instanceof BusinessLogicException) {
@@ -1581,7 +1581,7 @@ async function updateUserRole(req: Request, res: Response) {
         req.userId!,
         req.organizationId!,
       );
-      return res.status(403).json({ message: error.message });
+      return res.status(403).json(STATUS_CODE[403](error.message));
     }
 
     logStructured("error", `unexpected error for user ID ${id}`, "updateUserRole", "user.ctrl.ts");
@@ -1592,7 +1592,7 @@ async function updateUserRole(req: Request, res: Response) {
       req.organizationId!,
     );
     logger.error("❌ Error in updateUserRole:", error);
-    return res.status(500).json({ message: (error as Error).message });
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
 

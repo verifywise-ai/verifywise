@@ -82,6 +82,7 @@ interface NewModelInventoryFormValues {
   biases: string;
   limitations: string;
   hosting_provider: string;
+  external_key?: string;
   projects: number[];
   frameworks: number[];
   security_assessment_data: FileResponse[];
@@ -101,6 +102,7 @@ const initialState: NewModelInventoryFormValues = {
   biases: "",
   limitations: "",
   hosting_provider: "",
+  external_key: "",
   projects: [],
   frameworks: [],
   security_assessment_data: [],
@@ -445,6 +447,7 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
 
   const handleSaveModelInventory = async (event?: React.FormEvent) => {
     if (event) event.preventDefault();
+    if (customFieldsGate.blocked) return;
     if (validateAll(values)) {
       setIsSubmitting(true);
       try {
@@ -786,6 +789,18 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
         />
       </Stack>
 
+      <Stack direction={"row"} spacing={6}>
+        <Field
+          id="external_key"
+          label="External key"
+          width={"50%"}
+          value={values.external_key ?? ""}
+          onChange={handleOnTextFieldChange("external_key")}
+          sx={fieldStyle}
+          placeholder="eg. credit-scoring-v3"
+        />
+      </Stack>
+
       {/* Security Assessment Section */}
       <Stack>
         <FormControlLabel
@@ -1026,6 +1041,7 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
               ref={customFieldsRef}
               entityType="model_inventory"
               entityId={isEdit ? ((selectedModelInventoryId as number) ?? null) : null}
+              onPendingChange={customFieldsGate.onPendingChange}
             />
           </Box>
           {activeTab === "activity" && isEdit && (

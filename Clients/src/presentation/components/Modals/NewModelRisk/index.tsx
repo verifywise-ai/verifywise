@@ -251,6 +251,7 @@ const NewModelRisk: FC<NewModelRiskProps> = ({
   });
 
   const handleSaveModelRisk = async () => {
+    if (customFieldsGate.blocked) return;
     if (!validateAll(values)) return;
     setIsSubmitting(true);
     try {
@@ -465,9 +466,7 @@ const NewModelRisk: FC<NewModelRiskProps> = ({
           ? "Update risk details, mitigation plan, and tracking information"
           : "Document and track potential risks associated with AI models"
       }
-      onSubmit={
-        activeTab === "activity" || customFieldsGate.blocked ? undefined : handleSaveModelRisk
-      }
+      onSubmit={activeTab === "activity" ? undefined : handleSaveModelRisk}
       submitButtonText={isEdit ? "Update risk" : "Save"}
       isSubmitting={isSubmitting || customFieldsGate.blocked}
       maxWidth="760px"
@@ -488,6 +487,7 @@ const NewModelRisk: FC<NewModelRiskProps> = ({
             ref={customFieldsRef}
             entityType="model_risk"
             entityId={entityId ?? null}
+            onPendingChange={customFieldsGate.onPendingChange}
           />
         </Box>
         {activeTab === "activity" && isEditMode && (

@@ -4,6 +4,7 @@ import React, {
   useCallback,
   useMemo,
   useEffect,
+  useRef,
   Dispatch,
   SetStateAction,
 } from "react";
@@ -22,6 +23,8 @@ import useFrameworks from "../../../../application/hooks/useFrameworks";
 import allowedRoles from "../../../../application/constants/permissions";
 import AutoCompleteField from "../../Inputs/Autocomplete";
 import { useFormValidation } from "../../../../application/hooks/useFormValidation";
+import { RISK_FORM_FIELD_ORDER } from "../../../constants/formValidationFieldMaps";
+import { createFieldBlurHandler } from "../../../../application/utils/formValidationFocus";
 import { checkStringValidation } from "../../../../application/validations/stringValidation";
 import selectValidation from "../../../../application/validations/selectValidation";
 
@@ -58,6 +61,7 @@ interface RiskSectionProps {
   riskValues: RiskFormValues;
   setRiskValues: Dispatch<SetStateAction<RiskFormValues>>;
   validateRef?: React.MutableRefObject<((values: RiskFormValues) => boolean) | null>;
+  firstInvalidFieldRef?: React.MutableRefObject<keyof RiskFormValues | null>;
   userRoleName: string;
   disableInternalScroll?: boolean;
   compactMode?: boolean;
@@ -80,6 +84,7 @@ const RiskSection: FC<RiskSectionProps> = ({
   riskValues,
   setRiskValues,
   validateRef,
+  firstInvalidFieldRef,
   userRoleName,
   disableInternalScroll = false,
   compactMode = false,
@@ -147,13 +152,27 @@ const RiskSection: FC<RiskSectionProps> = ({
     [],
   );
 
-  const { errors, validateAll, clearFieldError } = useFormValidation<RiskFormValues>(validators);
+  const { errors, validateAll, validateField, clearFieldError, getFirstInvalidField } =
+    useFormValidation<RiskFormValues>(validators);
+  const riskValuesRef = useRef(riskValues);
+  riskValuesRef.current = riskValues;
+
+  const handleFieldBlur = useCallback(
+    (prop: keyof RiskFormValues) =>
+      createFieldBlurHandler(prop, () => riskValuesRef.current, validateField),
+    [validateField],
+  );
 
   useEffect(() => {
-    if (validateRef) {
-      validateRef.current = validateAll;
-    }
-  }, [validateRef, validateAll]);
+    if (!validateRef) return;
+    validateRef.current = (values) => {
+      const valid = validateAll(values, RISK_FORM_FIELD_ORDER);
+      if (firstInvalidFieldRef) {
+        firstInvalidFieldRef.current = getFirstInvalidField() ?? null;
+      }
+      return valid;
+    };
+  }, [validateRef, firstInvalidFieldRef, validateAll, getFirstInvalidField]);
 
   const handleOnSelectChange = useCallback(
     (prop: keyof RiskFormValues) => (event: SelectChangeEvent<string | number>) => {
@@ -403,6 +422,7 @@ const RiskSection: FC<RiskSectionProps> = ({
                 placeholder="Write risk name"
                 value={riskValues.riskName}
                 onChange={handleOnTextFieldChange("riskName")}
+                onBlur={handleFieldBlur("riskName")}
                 isRequired
                 error={errors.riskName}
                 sx={{
@@ -441,6 +461,7 @@ const RiskSection: FC<RiskSectionProps> = ({
                 placeholder="Select phase"
                 value={riskValues.aiLifecyclePhase === 0 ? "" : riskValues.aiLifecyclePhase}
                 onChange={handleOnSelectChange("aiLifecyclePhase")}
+                onBlur={handleFieldBlur("aiLifecyclePhase")}
                 items={aiLifecyclePhase}
                 isRequired
                 error={errors.aiLifecyclePhase}
@@ -459,6 +480,7 @@ const RiskSection: FC<RiskSectionProps> = ({
                 placeholder="Write risk description"
                 value={riskValues.riskDescription}
                 onChange={handleOnTextFieldChange("riskDescription")}
+                onBlur={handleFieldBlur("riskDescription")}
                 isRequired
                 error={errors.riskDescription}
                 sx={{
@@ -489,6 +511,7 @@ const RiskSection: FC<RiskSectionProps> = ({
                 popupIcon={<GreyDownArrowIcon size={20} />}
                 placeholder="Select risk categories"
                 onChange={handleOnMultiselectChange("riskCategory")}
+                onBlur={handleFieldBlur("riskCategory")}
                 sx={{
                   "flex": 1,
                   "& .MuiChip-root": {
@@ -533,6 +556,7 @@ const RiskSection: FC<RiskSectionProps> = ({
                 placeholder="Describe potential impact"
                 value={riskValues.potentialImpact}
                 onChange={handleOnTextFieldChange("potentialImpact")}
+                onBlur={handleFieldBlur("potentialImpact")}
                 isRequired
                 error={errors.potentialImpact}
                 sx={{
@@ -582,6 +606,7 @@ const RiskSection: FC<RiskSectionProps> = ({
             rows={2}
             value={riskValues.reviewNotes}
             onChange={handleOnTextFieldChange("reviewNotes")}
+            onBlur={handleFieldBlur("reviewNotes")}
             sx={{
               "width": "100%",
               "& #review-notes-input": {
