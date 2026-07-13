@@ -67,9 +67,26 @@ const translate = (key: string): string => {
 // Show a translated error toast for server or network failures.
 // 4xx errors are intentionally left for callers/UI layers to handle.
 const showGlobalErrorAlert = (error: AxiosError) => {
+  // Don't show alerts for deliberately cancelled requests (e.g. component unmount)
+  if (axios.isCancel(error)) {
+    return;
+  }
+
   const status = error.response?.status;
   const isServerError = status != null && status >= 500;
   const isNetworkError = error.response == null;
+
+  // DEBUG: log every global alert trigger so we can identify the failing request
+  // eslint-disable-next-line no-console
+  console.error("[customAxios global alert]", {
+    url: error.config?.url,
+    method: error.config?.method,
+    status,
+    statusText: error.response?.statusText,
+    message: error.message,
+    responseData: (error.response as any)?.data,
+    code: (error as any).code,
+  });
 
   if (isServerError || isNetworkError) {
     showAlert({

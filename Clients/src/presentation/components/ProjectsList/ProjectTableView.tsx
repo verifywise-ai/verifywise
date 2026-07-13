@@ -311,8 +311,8 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
     return sortableProjects.sort((a: Project, b: Project) => {
       // Risk level order: High > Limited > Minimal
       // Handle various possible formats of risk levels
-      const getRiskValue = (risk: string) => {
-        const riskLower = risk.toLowerCase().trim();
+      const getRiskValue = (risk: string | null | undefined) => {
+        const riskLower = (risk || "").toLowerCase().trim();
         if (riskLower.includes("high")) return 3;
         if (riskLower.includes("limited")) return 2;
         if (riskLower.includes("minimal")) return 1;
