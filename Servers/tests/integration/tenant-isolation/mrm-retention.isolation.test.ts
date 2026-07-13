@@ -150,7 +150,7 @@ describe("MRM retention tenant isolation + audit guard", () => {
   it("respects the cutoff boundary: prunes just outside the window, keeps just inside", async () => {
     const { owner } = await seedTwoTenantContexts();
     const modelId = await createTestModelInventory(owner.orgId);
-    await upsertMrmOrgSettings(owner.orgId, 36);
+    await upsertMrmOrgSettings(owner.orgId, { retention_months: 36 });
 
     // Compute the boundary with the SAME Postgres arithmetic the prune query
     // uses (now() - make_interval). The ±5-day margin absorbs the milliseconds
