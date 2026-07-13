@@ -18,6 +18,8 @@ export {
   blue,
   indigo,
   purple,
+  teal,
+  pink,
   default as grayScale,
 } from "./primitives";
 

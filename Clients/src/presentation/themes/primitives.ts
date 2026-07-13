@@ -100,4 +100,22 @@ export const purple = {
 
 export type PurpleStep = keyof typeof purple;
 
+/** Accent teal ramp */
+export const teal = {
+  50: "#E0F2F1",
+  100: "#B2DFDB",
+  800: "#00695C",
+} as const;
+
+export type TealStep = keyof typeof teal;
+
+/** Accent pink ramp */
+export const pink = {
+  50: "#FCE4EC",
+  100: "#F8BBD0",
+  800: "#AD1457",
+} as const;
+
+export type PinkStep = keyof typeof pink;
+
 export default grey;
