@@ -120,7 +120,7 @@ const VWProjectView = () => {
           projectId: String(numericProjectId),
           filter: "active",
         });
-        setProjectRisksCount(response.data?.data?.length || 0);
+        setProjectRisksCount(response.data?.length || 0);
       } catch {
         setProjectRisksCount(0);
       } finally {

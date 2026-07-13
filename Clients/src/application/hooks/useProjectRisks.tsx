@@ -66,7 +66,7 @@ const useProjectRisks = ({ projectId, refreshKey }: { projectId: number; refresh
         projectId: String(projectId),
         signal,
       });
-      return (response.data?.data as ProjectRisk[]) || [];
+      return (response.data as ProjectRisk[]) || [];
     },
     enabled: !!projectId,
     staleTime: 2 * 60 * 1000, // Consider data fresh for 2 minutes

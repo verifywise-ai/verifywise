@@ -71,6 +71,17 @@ const showGlobalErrorAlert = (error: AxiosError) => {
   const isServerError = status != null && status >= 500;
   const isNetworkError = error.response == null;
 
+  // DEBUG: log every global alert trigger so we can identify the failing request
+  // eslint-disable-next-line no-console
+  console.error("[customAxios global alert]", {
+    url: error.config?.url,
+    method: error.config?.method,
+    status,
+    statusText: error.response?.statusText,
+    message: error.message,
+    responseData: (error.response as any)?.data,
+  });
+
   if (isServerError || isNetworkError) {
     showAlert({
       variant: "error",
