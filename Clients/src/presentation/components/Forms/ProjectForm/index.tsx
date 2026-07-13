@@ -661,7 +661,12 @@ export const ProjectForm = ({
         <Box sx={{ display: activeTab === "details" ? "block" : "none" }}>
           <Stack
             className="vwproject-form-body"
-            sx={{ display: "flex", flexDirection: "row", gap: 6 }}
+            sx={{
+              display: "flex",
+              flexDirection: { xs: "column", md: "row" },
+              gap: 6,
+              mt: 2,
+            }}
           >
             <Stack className="vwproject-form-body-start" sx={{ gap: 6, flex: 1 }}>
               <Field
@@ -932,8 +937,7 @@ export const ProjectForm = ({
                   onBlur={handleFieldBlur("goal")}
                   sx={{
                     backgroundColor: theme.palette.background.main,
-                    marginTop: "1px",
-                    ...(projectToEdit && { width: "350px" }), // Fix width when editing
+                    width: "100%",
                   }}
                   rows={8}
                   isRequired
@@ -1041,10 +1045,10 @@ export const ProjectForm = ({
                   error={errors.description}
                 />
               </Stack>
-              <Typography variant="h6" sx={{ mb: 2, fontSize: "16px", fontWeight: 600 }}>
+              <Typography variant="h6" sx={{ mt: 2, mb: 1, fontSize: "16px", fontWeight: 600 }}>
                 Use case classification (optional)
               </Typography>
-              <Stack sx={{ display: "flex", flexDirection: "row", gap: 6, mb: 4, flexWrap: "wrap" }}>
+              <Stack sx={{ display: "flex", flexDirection: { xs: "column", sm: "row" }, gap: 6, flexWrap: "wrap" }}>
                 <Box sx={{ flex: 1, minWidth: "200px" }}>
                   <Select
                     id="use-case-category-input"
