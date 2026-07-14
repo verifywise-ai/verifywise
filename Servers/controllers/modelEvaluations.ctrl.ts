@@ -32,7 +32,7 @@ export async function getAllModelEvaluations(req: Request, res: Response): Promi
       organizationId,
     });
 
-    return res.status(200).json(data);
+    return res.status(200).json(STATUS_CODE[200](data));
   } catch (error) {
     await logFailure({
       description: "getAllModelEvaluations failed",
@@ -78,7 +78,7 @@ export async function getModelEvaluations(req: Request, res: Response): Promise<
       organizationId,
     });
 
-    return res.status(200).json(data);
+    return res.status(200).json(STATUS_CODE[200](data));
   } catch (error) {
     await logFailure({
       description: "getModelEvaluations failed",

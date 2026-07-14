@@ -25,6 +25,11 @@ export type Lang = "en" | "de" | "fr" | "es";
 
 export const translations: Record<string, Record<string, string>> = {
   de: {
+    // AsyncBoundary
+    "Loading": "Wird geladen...",
+    "Retry loading data": "Daten erneut laden",
+    "Something went wrong. Please try again.":
+      "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
     // Rich text renderer
     "Rich text content": "Rich-Text-Inhalt",
     // Settings — help text
@@ -8947,6 +8952,10 @@ export const translations: Record<string, Record<string, string>> = {
   },
 
   fr: {
+    // AsyncBoundary
+    "Loading": "Chargement...",
+    "Retry loading data": "Réessayer le chargement des données",
+    "Something went wrong. Please try again.": "Une erreur s'est produite. Veuillez réessayer.",
     // Rich text renderer
     "Rich text content": "Contenu de texte enrichi",
     // Settings — help text
@@ -17822,6 +17831,10 @@ export const translations: Record<string, Record<string, string>> = {
     "Who is the intended audience for the use case?": "Quel est le public cible du cas d'usage ?",
   },
   es: {
+    // AsyncBoundary
+    "Loading": "Cargando...",
+    "Retry loading data": "Reintentar cargar datos",
+    "Something went wrong. Please try again.": "Algo salió mal. Por favor, inténtelo de nuevo.",
     // Rich text renderer
     "Rich text content": "Contenido de texto enriquecido",
     // Settings — help text

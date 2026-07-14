@@ -68,6 +68,8 @@ export interface MLFlowModel {
 export interface ModelInventoryTableProps {
   data: IModelInventory[];
   isLoading?: boolean;
+  error?: Error | string | unknown;
+  onRetry?: () => void;
   onEdit?: (id: string) => void;
   onDelete?: (id: string, deleteRisks?: boolean) => void;
   onCheckModelHasRisks?: (id: string) => Promise<boolean>;

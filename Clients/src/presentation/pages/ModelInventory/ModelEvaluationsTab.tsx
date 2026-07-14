@@ -3,6 +3,7 @@ import { Box, Stack, Typography, Alert as MuiAlert } from "@mui/material";
 import { FlaskConical, AlertTriangle } from "lucide-react";
 import Chip from "../../components/Chip";
 import CustomizableSkeleton from "../../components/Skeletons";
+import AsyncBoundary from "../../components/AsyncBoundary";
 import { palette } from "../../themes/palette";
 import {
   getAllModelEvaluations,
@@ -74,13 +75,23 @@ function getKeyResult(eval_: ModelEvaluation): string {
 export default function ModelEvaluationsTab() {
   const [data, setData] = useState<ModelEvaluationsResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | string | unknown>(null);
+
+  const loadEvaluations = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const evaluations = await getAllModelEvaluations();
+      setData(evaluations);
+    } catch (err) {
+      setError(err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    setLoading(true);
-    getAllModelEvaluations()
-      .then(setData)
-      .catch(() => setData({ experiments: [], biasAudits: [] }))
-      .finally(() => setLoading(false));
+    loadEvaluations();
   }, []);
 
   const allEvals = useMemo(() => {
@@ -92,38 +103,37 @@ export default function ModelEvaluationsTab() {
 
   const flaggedCount = useMemo(() => allEvals.filter(hasFailedMetrics).length, [allEvals]);
 
-  if (loading) {
-    return (
-      <Stack spacing={2} sx={{ p: "24px" }}>
-        <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
-      </Stack>
-    );
-  }
-
   return (
-    <Box sx={{ p: "16px" }}>
-      {flaggedCount > 0 && (
-        <MuiAlert
-          severity="warning"
-          icon={<AlertTriangle size={16} strokeWidth={1.5} />}
-          sx={{ mb: "16px", fontSize: "13px", borderRadius: "4px" }}
-        >
-          {flaggedCount} evaluation{flaggedCount !== 1 ? "s" : ""} flagged a potential risk.
-          Consider adding {flaggedCount !== 1 ? "these" : "this"} to the risk register.
-        </MuiAlert>
-      )}
+    <AsyncBoundary
+      isLoading={loading}
+      error={error}
+      isEmpty={!allEvals.length}
+      onRetry={loadEvaluations}
+      loadingFallback={
+        <Stack spacing={2} sx={{ p: "24px" }}>
+          <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
+        </Stack>
+      }
+      emptyIcon={FlaskConical}
+      emptyMessage="No evaluations linked to any model yet"
+      emptyChildren={
+        <Typography sx={{ fontSize: "12px", color: palette.text.secondary }}>
+          Link evaluations to models when creating experiments or bias audits in LLM Evals
+        </Typography>
+      }
+    >
+      <Box sx={{ p: "16px" }}>
+        {flaggedCount > 0 && (
+          <MuiAlert
+            severity="warning"
+            icon={<AlertTriangle size={16} strokeWidth={1.5} />}
+            sx={{ mb: "16px", fontSize: "13px", borderRadius: "4px" }}
+          >
+            {flaggedCount} evaluation{flaggedCount !== 1 ? "s" : ""} flagged a potential risk.
+            Consider adding {flaggedCount !== 1 ? "these" : "this"} to the risk register.
+          </MuiAlert>
+        )}
 
-      {allEvals.length === 0 ? (
-        <Box sx={{ textAlign: "center", py: "48px" }}>
-          <FlaskConical size={32} color={palette.text.secondary} strokeWidth={1.5} />
-          <Typography sx={{ mt: "8px", fontSize: "13px", color: palette.text.secondary }}>
-            No evaluations linked to any model yet
-          </Typography>
-          <Typography sx={{ mt: "4px", fontSize: "12px", color: palette.text.secondary }}>
-            Link evaluations to models when creating experiments or bias audits in LLM Evals
-          </Typography>
-        </Box>
-      ) : (
         <Box
           component="table"
           sx={{
@@ -184,7 +194,7 @@ export default function ModelEvaluationsTab() {
             ))}
           </tbody>
         </Box>
-      )}
-    </Box>
+      </Box>
+    </AsyncBoundary>
   );
 }
