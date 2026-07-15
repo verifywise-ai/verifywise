@@ -5,6 +5,7 @@
 
 import { alertStyles } from "./alerts";
 import { tableStyles } from "./tables";
+import { fontSize, fontWeight, textStyles as typographyTextStyles } from "./typography";
 
 const textColors = {
   theme: "#0f604d",
@@ -20,29 +21,30 @@ const shadowEffect = {
   primary: "0px 4px 24px -4px rgba(16, 24, 40, 0.08), 0px 3px 3px -3px rgba(16, 24, 40, 0.03)",
 };
 
+/** Legacy size keys — values derived from typography.ts (keep export shape for consumers) */
 const fontSizes = {
-  small: "11px",
-  medium: "13px",
-  large: "16px",
+  small: `${fontSize.caption}px`,
+  medium: `${fontSize.base}px`,
+  large: `${fontSize.lg}px`,
 };
 
 // Standardized button sizes
 const buttonSizes = {
   small: {
     height: 28,
-    fontSize: "12px",
+    fontSize: `${fontSize.sm}px`,
     padding: "6px 12px",
     minHeight: 28,
   },
   medium: {
     height: 32,
-    fontSize: "13px",
+    fontSize: `${fontSize.base}px`,
     padding: "8px 16px",
     minHeight: 32,
   },
   large: {
     height: 40,
-    fontSize: "14px",
+    fontSize: `${fontSize.md}px`,
     padding: "10px 20px",
     minHeight: 40,
   },
@@ -89,7 +91,7 @@ const buttons = {
       "textTransform": "inherit",
       "borderRadius": "4px",
       "border": "none",
-      "fontWeight": 500,
+      "fontWeight": fontWeight.medium,
       "transition": "all 0.2s ease",
       "&:hover": {
         backgroundColor: colors.primaryHover,
@@ -112,7 +114,7 @@ const buttons = {
       "boxShadow": "none",
       "textTransform": "inherit",
       "borderRadius": "4px",
-      "fontWeight": 500,
+      "fontWeight": fontWeight.medium,
       "transition": "all 0.2s ease",
       "&:hover": {
         backgroundColor: `${colors.primary}08`,
@@ -135,7 +137,7 @@ const buttons = {
       "boxShadow": "none",
       "textTransform": "inherit",
       "borderRadius": "4px",
-      "fontWeight": 500,
+      "fontWeight": fontWeight.medium,
       "transition": "all 0.2s ease",
       "&:hover": {
         backgroundColor: `${colors.primary}08`,
@@ -159,7 +161,7 @@ const buttons = {
       "textTransform": "inherit",
       "borderRadius": "4px",
       "border": "none",
-      "fontWeight": 500,
+      "fontWeight": fontWeight.medium,
       "transition": "all 0.2s ease",
       "&:hover": {
         backgroundColor: colors.secondaryHover,
@@ -182,7 +184,7 @@ const buttons = {
       "boxShadow": "none",
       "textTransform": "inherit",
       "borderRadius": "4px",
-      "fontWeight": 500,
+      "fontWeight": fontWeight.medium,
       "transition": "all 0.2s ease",
       "&:hover": {
         backgroundColor: `${colors.secondary}08`,
@@ -200,7 +202,7 @@ const buttons = {
       "boxShadow": "none",
       "textTransform": "inherit",
       "borderRadius": "4px",
-      "fontWeight": 500,
+      "fontWeight": fontWeight.medium,
       "transition": "all 0.2s ease",
       "&:hover": {
         backgroundColor: `${colors.secondary}08`,
@@ -220,7 +222,7 @@ const buttons = {
       "textTransform": "inherit",
       "borderRadius": "4px",
       "border": "none",
-      "fontWeight": 500,
+      "fontWeight": fontWeight.medium,
       "transition": "all 0.2s ease",
       "&:hover": {
         backgroundColor: colors.successHover,
@@ -239,7 +241,7 @@ const buttons = {
       "boxShadow": "none",
       "textTransform": "inherit",
       "borderRadius": "4px",
-      "fontWeight": 500,
+      "fontWeight": fontWeight.medium,
       "transition": "all 0.2s ease",
       "&:hover": {
         backgroundColor: `${colors.success}08`,
@@ -254,7 +256,7 @@ const buttons = {
       "boxShadow": "none",
       "textTransform": "inherit",
       "borderRadius": "4px",
-      "fontWeight": 500,
+      "fontWeight": fontWeight.medium,
       "transition": "all 0.2s ease",
       "&:hover": {
         backgroundColor: `${colors.success}08`,
@@ -271,7 +273,7 @@ const buttons = {
       "textTransform": "inherit",
       "borderRadius": "4px",
       "border": "none",
-      "fontWeight": 500,
+      "fontWeight": fontWeight.medium,
       "transition": "all 0.2s ease",
       "&:hover": {
         backgroundColor: colors.warningHover,
@@ -286,7 +288,7 @@ const buttons = {
       "boxShadow": "none",
       "textTransform": "inherit",
       "borderRadius": "4px",
-      "fontWeight": 500,
+      "fontWeight": fontWeight.medium,
       "transition": "all 0.2s ease",
       "&:hover": {
         backgroundColor: `${colors.warning}08`,
@@ -301,7 +303,7 @@ const buttons = {
       "boxShadow": "none",
       "textTransform": "inherit",
       "borderRadius": "4px",
-      "fontWeight": 500,
+      "fontWeight": fontWeight.medium,
       "transition": "all 0.2s ease",
       "&:hover": {
         backgroundColor: `${colors.warning}08`,
@@ -318,7 +320,7 @@ const buttons = {
       "textTransform": "inherit",
       "borderRadius": "4px",
       "border": "none",
-      "fontWeight": 500,
+      "fontWeight": fontWeight.medium,
       "transition": "all 0.2s ease",
       "&:hover": {
         backgroundColor: colors.errorHover,
@@ -337,7 +339,7 @@ const buttons = {
       "boxShadow": "none",
       "textTransform": "inherit",
       "borderRadius": "4px",
-      "fontWeight": 500,
+      "fontWeight": fontWeight.medium,
       "transition": "all 0.2s ease",
       "&:hover": {
         backgroundColor: `${colors.error}08`,
@@ -352,7 +354,7 @@ const buttons = {
       "boxShadow": "none",
       "textTransform": "inherit",
       "borderRadius": "4px",
-      "fontWeight": 500,
+      "fontWeight": fontWeight.medium,
       "transition": "all 0.2s ease",
       "&:hover": {
         backgroundColor: `${colors.error}08`,
@@ -369,7 +371,7 @@ const buttons = {
       "textTransform": "inherit",
       "borderRadius": "4px",
       "border": "none",
-      "fontWeight": 500,
+      "fontWeight": fontWeight.medium,
       "transition": "all 0.2s ease",
       "&:hover": {
         backgroundColor: colors.infoHover,
@@ -384,7 +386,7 @@ const buttons = {
       "boxShadow": "none",
       "textTransform": "inherit",
       "borderRadius": "4px",
-      "fontWeight": 500,
+      "fontWeight": fontWeight.medium,
       "transition": "all 0.2s ease",
       "&:hover": {
         backgroundColor: `${colors.info}08`,
@@ -399,7 +401,7 @@ const buttons = {
       "boxShadow": "none",
       "textTransform": "inherit",
       "borderRadius": "4px",
-      "fontWeight": 500,
+      "fontWeight": fontWeight.medium,
       "transition": "all 0.2s ease",
       "&:hover": {
         backgroundColor: `${colors.info}08`,
@@ -411,12 +413,11 @@ const buttons = {
 const textStyles = {
   pageTitle: {
     color: "#1A1919",
-    fontSize: fontSizes.large,
-    fontWeight: 600,
+    ...typographyTextStyles.pageTitle,
   },
   pageDescription: {
     color: "#344054",
-    fontSize: fontSizes.medium,
+    ...typographyTextStyles.body,
   },
 };
 
@@ -426,7 +427,7 @@ const dropDownStyles = {
     "& ul": { p: "5px" },
     "& li": {
       "m": 0,
-      "fontSize": 13,
+      "fontSize": fontSize.base,
       "& .MuiTouchRipple-root": {
         display: "none",
       },
