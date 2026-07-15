@@ -218,7 +218,10 @@ describe("assessment.ctrl", () => {
 
       await createAssessment(req as Request, res as Response);
 
-      expect(mockAssessmentModel.CreateNewAssessment).toHaveBeenCalledWith({ project_id: 1 });
+      expect(mockAssessmentModel.CreateNewAssessment).toHaveBeenCalledWith({
+        project_id: 1,
+        organization_id: 1,
+      });
       expect(res.status).toHaveBeenCalledWith(201);
       expect(res.json).toHaveBeenCalledWith({
         message: "Created",

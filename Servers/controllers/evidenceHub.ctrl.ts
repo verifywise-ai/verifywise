@@ -10,7 +10,7 @@ import {
 } from "../utils/evidenceHub.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import logger, { logStructured } from "../utils/logger/fileLogger";
-import { sanitizeUserHtml } from "../utils/sanitizeUserHtml";
+import { sanitizeUserHtml } from "../utils/sanitization.utils";
 import { translateError } from "../utils/i18n.utils";
 import {
   recordEvidenceAddedToModel,
@@ -193,6 +193,7 @@ export async function updateEvidenceById(req: Request, res: Response) {
       req.organizationId!,
     )) as EvidenceHubModel;
     if (!existingEvidence) {
+      await transaction.rollback();
       return res.status(404).json(STATUS_CODE[404](req.t!("Evidence not found")));
     }
 
@@ -315,6 +316,7 @@ export async function deleteEvidenceById(req: Request, res: Response) {
       req.organizationId!,
     )) as EvidenceHubModel;
     if (!existingEvidence) {
+      await transaction.rollback();
       return res.status(404).json(STATUS_CODE[404](req.t!("Evidence not found")));
     }
 

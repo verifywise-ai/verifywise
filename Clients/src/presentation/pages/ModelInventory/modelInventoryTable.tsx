@@ -21,6 +21,7 @@ import { Cpu, Layers, BarChart3, Link2 } from "lucide-react";
 import { EmptyState } from "../../components/EmptyState";
 import CustomizableSkeleton from "../../components/Skeletons";
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
+import AsyncBoundary from "../../components/AsyncBoundary";
 import {
   ModelInventoryTableProps,
   IModelInventory,
@@ -40,6 +41,7 @@ import { useStandardTable } from "../../../application/hooks/useStandardTable";
 import type { StandardColumn } from "../../../domain/types/standardTable";
 import StandardTableHead from "../../components/Table/StandardTableHead";
 import StandardTablePagination from "../../components/Table/StandardTablePagination";
+import { TableEmptyStateLayout } from "../../components/Table/TableEmptyStateLayout";
 import { useCustomFieldDefinitions } from "../../../application/hooks/useCustomFields";
 import { formatCustomFieldValue } from "../../components/CustomFieldsSection/formatCustomFieldValue";
 
@@ -82,6 +84,8 @@ const SecurityAssessmentBadge: React.FC<{ assessment: boolean }> = ({ assessment
 const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
   data,
   isLoading,
+  error,
+  onRetry,
   onEdit,
   onDelete,
   onCheckModelHasRisks,
@@ -529,41 +533,50 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
     ],
   );
 
-  if (isLoading) {
-    return (
-      <Stack spacing={2}>
-        <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
-      </Stack>
-    );
-  }
-
-  if (!data || data.length === 0) {
-    return (
-      <EmptyState
-        icon={Cpu}
-        message="No models registered yet. Maintain a complete inventory of all AI models your organization uses."
-      >
-        <EmptyStateTip
-          icon={Layers}
-          title="What counts as a model?"
-          description="Any machine learning model, large language model, computer vision system, or automated decision-making tool. Include both internal and third-party models."
-        />
-        <EmptyStateTip
-          icon={BarChart3}
-          title="Track model status"
-          description="Record each model's status: approved, restricted, pending, blocked, or rejected. This gives auditors visibility into your governance coverage."
-        />
-        <EmptyStateTip
-          icon={Link2}
-          title="Link to vendors and risks"
-          description="Connect each model to its provider and associated risks. This creates a full traceability map for your audit."
-        />
-      </EmptyState>
-    );
-  }
-
   return (
-    <>
+    <AsyncBoundary
+      isLoading={!!isLoading}
+      error={error}
+      isEmpty={!data || data.length === 0}
+      onRetry={onRetry}
+      loadingFallback={
+        <Stack spacing={2}>
+          <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
+        </Stack>
+      }
+      emptyFallback={
+        <TableEmptyStateLayout
+          header={
+            <StandardTableHead
+              columns={visibleTableColumns}
+              sortConfig={sortConfig}
+              onSort={handleSort}
+            />
+          }
+        >
+          <EmptyState
+            icon={Cpu}
+            message="No models registered yet. Maintain a complete inventory of all AI models your organization uses."
+          >
+            <EmptyStateTip
+              icon={Layers}
+              title="What counts as a model?"
+              description="Any machine learning model, large language model, computer vision system, or automated decision-making tool. Include both internal and third-party models."
+            />
+            <EmptyStateTip
+              icon={BarChart3}
+              title="Track model status"
+              description="Record each model's status: approved, restricted, pending, blocked, or rejected. This gives auditors visibility into your governance coverage."
+            />
+            <EmptyStateTip
+              icon={Link2}
+              title="Link to vendors and risks"
+              description="Connect each model to its provider and associated risks. This creates a full traceability map for your audit."
+            />
+          </EmptyState>
+        </TableEmptyStateLayout>
+      }
+    >
       <TableContainer sx={{ overflowX: "auto" }}>
         <Table sx={singleTheme.tableStyles.primary.frame}>
           <StandardTableHead
@@ -596,7 +609,7 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
           modelName={selectedModel.name}
         />
       )}
-    </>
+    </AsyncBoundary>
   );
 };
 

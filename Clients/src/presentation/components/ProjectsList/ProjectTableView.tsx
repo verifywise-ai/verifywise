@@ -33,6 +33,7 @@ import EmptyStateTip from "../EmptyState/EmptyStateTip";
 import { TableEmptyStateLayout } from "../Table/TableEmptyStateLayout";
 import { IProjectTableViewProps } from "../../../domain/interfaces/i.project";
 import { Project } from "../../../domain/types/Project";
+import { displayFormattedDate } from "../../tools/isoDateToString";
 import { deleteProject } from "../../../application/repository/project.repository";
 import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
 import Alert from "../Alert";
@@ -236,11 +237,7 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
   }, []);
 
   const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+    return displayFormattedDate(date);
   };
 
   const handleChangePage = useCallback((_event: unknown, newPage: number) => {
@@ -314,8 +311,8 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
     return sortableProjects.sort((a: Project, b: Project) => {
       // Risk level order: High > Limited > Minimal
       // Handle various possible formats of risk levels
-      const getRiskValue = (risk: string) => {
-        const riskLower = risk.toLowerCase().trim();
+      const getRiskValue = (risk: string | null | undefined) => {
+        const riskLower = (risk || "").toLowerCase().trim();
         if (riskLower.includes("high")) return 3;
         if (riskLower.includes("limited")) return 2;
         if (riskLower.includes("minimal")) return 1;

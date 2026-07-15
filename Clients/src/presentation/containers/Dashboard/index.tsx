@@ -146,7 +146,7 @@ const Dashboard: FC<DashboardProps> = ({ reloadTrigger }) => {
         // Refresh dashboard and projects data
         await Promise.all([
           fetchDashboard(),
-          getAllProjects().then((projectsResponse) => {
+          getAllProjects({ forceFresh: true }).then((projectsResponse) => {
             if (projectsResponse?.data) {
               setProjects(projectsResponse.data);
               setDashboardValues((prevValues: any) => ({
@@ -234,7 +234,7 @@ const Dashboard: FC<DashboardProps> = ({ reloadTrigger }) => {
         // Refresh dashboard and projects data
         await Promise.all([
           fetchDashboard(),
-          getAllProjects().then((projectsResponse) => {
+          getAllProjects({ forceFresh: true }).then((projectsResponse) => {
             if (projectsResponse?.data) {
               setProjects(projectsResponse.data);
               setDashboardValues((prevValues: any) => ({

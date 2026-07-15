@@ -99,85 +99,60 @@ class EvalModelsService {
    * Get all saved models for the organization
    */
   async listModels(orgId?: string): Promise<SavedModel[]> {
-    try {
-      const params = orgId ? { org_id: orgId } : {};
-      const response = await CustomAxios.get<ListModelsResponse>(this.baseUrl, { params });
-      return response.data.models || [];
-    } catch (error) {
-      console.error("Failed to fetch models:", error);
-      return [];
-    }
+    const params = orgId ? { org_id: orgId } : {};
+    const response = await CustomAxios.get<ListModelsResponse>(this.baseUrl, { params });
+    return response.data.models || [];
   }
 
   /**
    * Create a new saved model configuration
    */
-  async createModel(request: CreateModelRequest): Promise<SavedModel | null> {
-    try {
-      const response = await CustomAxios.post<CreateModelResponse>(this.baseUrl, request);
-      return response.data.model;
-    } catch (error) {
-      console.error("Failed to create model:", error);
-      return null;
-    }
+  async createModel(request: CreateModelRequest): Promise<SavedModel> {
+    const response = await CustomAxios.post<CreateModelResponse>(this.baseUrl, request);
+    return response.data.model;
   }
 
   /**
    * Update an existing saved model
    */
-  async updateModel(modelId: string, request: UpdateModelRequest): Promise<SavedModel | null> {
-    try {
-      const response = await CustomAxios.put<UpdateModelResponse>(
-        `${this.baseUrl}/${modelId}`,
-        request,
-      );
-      return response.data.model;
-    } catch (error) {
-      console.error("Failed to update model:", error);
-      return null;
-    }
+  async updateModel(modelId: string, request: UpdateModelRequest): Promise<SavedModel> {
+    const response = await CustomAxios.put<UpdateModelResponse>(
+      `${this.baseUrl}/${modelId}`,
+      request,
+    );
+    return response.data.model;
   }
 
   /**
    * Delete a saved model
    */
-  async deleteModel(modelId: string): Promise<boolean> {
-    try {
-      await CustomAxios.delete<DeleteModelResponse>(`${this.baseUrl}/${modelId}`);
-      return true;
-    } catch (error) {
-      console.error("Failed to delete model:", error);
-      return false;
-    }
+  async deleteModel(modelId: string): Promise<void> {
+    await CustomAxios.delete<DeleteModelResponse>(`${this.baseUrl}/${modelId}`);
   }
 
   /**
    * Fetch the live LiteLLM model catalog from AI Gateway and return chat-mode
    * models for the given frontend provider ID (e.g. "openai", "google").
-   * Results are cached for 5 minutes. Falls back to [] if AI Gateway is down.
+   * Results are cached for 5 minutes. Throws on failure so callers can handle errors.
    */
   async getGatewayModelsForProvider(evalProvider: string): Promise<ModelInfo[]> {
     const litellmProvider = EVAL_TO_LITELLM[evalProvider];
     if (!litellmProvider) return [];
 
-    try {
-      if (!_gatewayModelsCache || Date.now() > _gatewayModelsCacheExpiry) {
-        const response = await CustomAxios.get<GatewayModelsResponse>("/ai-gateway/v1/models");
-        _gatewayModelsCache = response.data;
-        _gatewayModelsCacheExpiry = Date.now() + GATEWAY_MODELS_TTL_MS;
-      }
-
-      const providerModels = _gatewayModelsCache?.models?.[litellmProvider] ?? [];
-      return providerModels
-        .filter((m) => m.mode === "chat")
-        .map((m) => ({
-          id: normalizeModelId(m.id, litellmProvider),
-          name: normalizeModelId(m.id, litellmProvider),
-        }))
-        .sort((a, b) => a.name.localeCompare(b.name));
-    } catch {
-      return [];
+    if (!_gatewayModelsCache || Date.now() > _gatewayModelsCacheExpiry) {
+      const response = await CustomAxios.get<GatewayModelsResponse>("/ai-gateway/v1/models");
+      _gatewayModelsCache = response.data;
+      _gatewayModelsCacheExpiry = Date.now() + GATEWAY_MODELS_TTL_MS;
     }
+
+    const providerModels = _gatewayModelsCache?.models?.[litellmProvider] ?? [];
+    return providerModels
+      .filter((m) => m.mode === "chat")
+      .map((m) => ({
+        id: normalizeModelId(m.id, litellmProvider),
+        name: normalizeModelId(m.id, litellmProvider),
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
   }
 }
 

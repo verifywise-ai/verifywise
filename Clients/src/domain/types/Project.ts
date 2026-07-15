@@ -7,14 +7,15 @@ export type Project = {
   owner: number;
   members: string[];
   start_date: Date;
-  ai_risk_classification: "high risk" | "limited risk" | "minimal risk";
+  ai_risk_classification: "high risk" | "limited risk" | "minimal risk" | null;
   type_of_high_risk_role:
     | "deployer"
     | "provider"
     | "distributor"
     | "importer"
     | "product manufacturer"
-    | "authorized representative";
+    | "authorized representative"
+    | null;
   goal: string;
   last_updated: Date;
   last_updated_by: number;
@@ -28,6 +29,12 @@ export type Project = {
   target_industry?: string;
   description?: string;
   is_organizational?: boolean;
+
+  // Regulation-agnostic use-case classification
+  use_case_category?: string | null;
+  use_case_purpose?: string | null;
+  use_case_audience?: "Internal" | "External" | "Both" | string | null;
+  deployment_context?: string | null;
   status?:
     | "Not started"
     | "In progress"

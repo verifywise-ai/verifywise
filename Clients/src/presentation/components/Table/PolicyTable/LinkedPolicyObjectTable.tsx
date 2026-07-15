@@ -32,6 +32,7 @@ import TablePaginationActions from "../../TablePagination";
 import { paginationStyle } from "../styles";
 import { useUserMap } from "../../../../../src/presentation/hooks/userMap";
 import { text } from "../../../themes/palette";
+import { displayFormattedDateTime } from "../../../tools/isoDateToString";
 
 interface LinkedPolicyObjectsTableProps {
   policies: any[];
@@ -331,7 +332,7 @@ const LinkedPolicyObjectsTable: React.FC<LinkedPolicyObjectsTableProps> = ({
                         : "inherit",
                   }}
                 >
-                  {row.last_updated_at ? new Date(row.last_updated_at).toLocaleString() : "-"}
+                  {row.last_updated_at ? displayFormattedDateTime(row.last_updated_at) : "-"}
                 </TableCell>
 
                 {/* LAST UPDATED BY */}

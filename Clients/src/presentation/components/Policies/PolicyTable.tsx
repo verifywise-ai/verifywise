@@ -18,6 +18,7 @@ import { POLICY_TAGS } from "../../../domain/models/Common/policy/policyManager.
 import { store } from "../../../application/redux/store";
 import { useCustomFieldDefinitions } from "../../../application/hooks/useCustomFields";
 import { formatCustomFieldValue } from "../CustomFieldsSection/formatCustomFieldValue";
+import { displayFormattedDate, displayFormattedDateTime } from "../../tools/isoDateToString";
 
 const tableHeaders = [
   { id: "title", name: "Title" },
@@ -391,9 +392,7 @@ const PolicyTable: React.FC<PolicyTableProps> = ({
                       : undefined,
                 }}
               >
-                {policy.next_review_date
-                  ? new Date(policy.next_review_date).toLocaleDateString()
-                  : "-"}
+                {policy.next_review_date ? displayFormattedDate(policy.next_review_date) : "-"}
               </TableCell>
             )}
             {isVisible("author") && (
@@ -427,7 +426,7 @@ const PolicyTable: React.FC<PolicyTableProps> = ({
                       : undefined,
                 }}
               >
-                {policy.last_updated_at ? new Date(policy.last_updated_at).toLocaleString() : "-"}
+                {policy.last_updated_at ? displayFormattedDateTime(policy.last_updated_at) : "-"}
               </TableCell>
             )}
             {isVisible("updated_by") && (

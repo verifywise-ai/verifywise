@@ -5,11 +5,14 @@ import { PolicyManagerModel } from "../../domain/models/Common/policy/policyMana
 export const policyQueryKeys = {
   all: ["policies"] as const,
   lists: () => [...policyQueryKeys.all, "list"] as const,
+  list: (filters: Record<string, unknown> = {}) => [...policyQueryKeys.lists(), filters] as const,
+  details: () => [...policyQueryKeys.all, "detail"] as const,
+  detail: (id: number | string) => [...policyQueryKeys.details(), id] as const,
 };
 
 export const usePolicies = (): UseQueryResult<PolicyManagerModel[], Error> => {
   return useQuery({
-    queryKey: policyQueryKeys.lists(),
+    queryKey: policyQueryKeys.list(),
     queryFn: async () => {
       return await getAllPolicies();
     },

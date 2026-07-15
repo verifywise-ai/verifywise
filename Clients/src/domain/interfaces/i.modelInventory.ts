@@ -18,6 +18,7 @@ export interface IModelInventory {
   biases?: string;
   limitations?: string;
   hosting_provider?: string;
+  external_key?: string;
   projects: number[];
   frameworks: number[];
   is_demo?: boolean;
@@ -67,6 +68,8 @@ export interface MLFlowModel {
 export interface ModelInventoryTableProps {
   data: IModelInventory[];
   isLoading?: boolean;
+  error?: Error | string | unknown;
+  onRetry?: () => void;
   onEdit?: (id: string) => void;
   onDelete?: (id: string, deleteRisks?: boolean) => void;
   onCheckModelHasRisks?: (id: string) => Promise<boolean>;

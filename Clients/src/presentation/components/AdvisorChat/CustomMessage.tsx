@@ -313,7 +313,22 @@ const CopyButton: FC<{ bubbleRef: React.RefObject<HTMLDivElement | null> }> = ({
       aria-label="Copy response"
       title={copied ? "Copied!" : "Copy"}
     >
-      {copied ? <Check size={12} strokeWidth={1.5} /> : <Copy size={12} strokeWidth={1.5} />}
+      {/* icon-swap (transitions.dev): both icons stacked in one grid
+          cell; data-state cross-fades check ↔ copy on the `copied`
+          toggle. See .t-icon-swap in index.css. */}
+      <Box
+        component="span"
+        className="t-icon-swap"
+        data-state={copied ? "b" : "a"}
+        sx={{ lineHeight: 0 }}
+      >
+        <Box component="span" className="t-icon" data-icon="a" sx={{ lineHeight: 0 }}>
+          <Copy size={12} strokeWidth={1.5} />
+        </Box>
+        <Box component="span" className="t-icon" data-icon="b" sx={{ lineHeight: 0 }}>
+          <Check size={12} strokeWidth={1.5} />
+        </Box>
+      </Box>
       <Typography
         component="span"
         sx={{

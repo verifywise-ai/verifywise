@@ -1,4 +1,5 @@
 import { Stack, SxProps, Theme, Typography, useTheme } from "@mui/material";
+import React from "react";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { DatePicker as MuiDatePicker } from "@mui/x-date-pickers/DatePicker";
@@ -22,8 +23,12 @@ function DatePicker({
   error,
   handleDateChange,
   disabled = false,
+  id,
+  onBlur,
 }: DatePickerProps) {
   const theme = useTheme();
+  const generatedId = React.useId();
+  const fieldId = id ?? generatedId;
 
   const LAYOUT_KEYS = [
     "width",
@@ -96,6 +101,12 @@ function DatePicker({
           onChange={(value) => handleDateChange(value)}
           format="MM/DD/YYYY"
           disabled={disabled}
+          slotProps={{
+            textField: {
+              id: fieldId,
+              onBlur,
+            },
+          }}
         />
       </LocalizationProvider>
       {error && (

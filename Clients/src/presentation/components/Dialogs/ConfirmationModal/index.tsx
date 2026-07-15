@@ -1,7 +1,5 @@
-import { createPortal } from "react-dom";
 import { CustomizableButton } from "../../button/customizable-button";
-import { Stack, SxProps, Theme, Typography } from "@mui/material";
-import { useModalKeyHandling } from "../../../../application/hooks/useModalKeyHandling";
+import { Modal, Stack, SxProps, Theme, Typography } from "@mui/material";
 
 interface ConfirmationModalProps {
   title: string;
@@ -32,45 +30,30 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   isOpen = true,
   isLoading = false,
 }) => {
-  useModalKeyHandling({
-    isOpen,
-    onClose: onCancel,
-  });
-
-  if (!isOpen) return null;
-
-  const stopPropagation = (e: React.MouseEvent) => {
-    e.stopPropagation();
-  };
-
-  return createPortal(
-    <>
-      <Stack
-        className="confirmation-backdrop"
-        onClick={onCancel}
-        sx={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: "rgba(0, 0, 0, 0.5)",
-          zIndex: 1299,
-          cursor: "default",
-        }}
-      />
+  return (
+    <Modal
+      open={isOpen}
+      onClose={onCancel}
+      aria-labelledby="confirmation-modal-title"
+      aria-describedby="confirmation-modal-body"
+      slotProps={{
+        backdrop: {
+          className: "confirmation-backdrop",
+        },
+      }}
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: 2,
+      }}
+    >
       <Stack
         role="dialog"
         aria-modal="true"
         aria-labelledby="confirmation-modal-title"
         aria-describedby="confirmation-modal-body"
-        onClick={stopPropagation}
         sx={{
-          position: "fixed",
-          top: "50%",
-          left: "50%",
-          transform: "translate(-50%, -50%)",
-          zIndex: 1300,
           bgcolor: "background.main",
           cursor: "default",
           width: 485,
@@ -81,6 +64,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
             "0px 8px 8px -4px rgba(16, 24, 40, 0.03), 0px 20px 24px -4px rgba(16, 24, 40, 0.08)",
           gap: 8,
           boxSizing: "border-box",
+          outline: "none",
         }}
       >
         <Stack sx={{ gap: 8 }}>
@@ -119,8 +103,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
           />
         </Stack>
       </Stack>
-    </>,
-    document.body,
+    </Modal>
   );
 };
 

@@ -8,6 +8,7 @@ import { GraduationCap, Users, Calendar, Award } from "lucide-react";
 import { EmptyState } from "../../components/EmptyState";
 import CustomizableSkeleton from "../../components/Skeletons";
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
+import { TableEmptyStateLayout } from "../../components/Table/TableEmptyStateLayout";
 import { useAuth } from "../../../application/hooks/useAuth";
 import { TrainingRegistarModel } from "../../../domain/models/Common/trainingRegistar/trainingRegistar.model";
 import { TrainingStatus } from "../../../domain/enums/status.enum";
@@ -314,26 +315,36 @@ const TrainingTable: React.FC<TrainingTableProps> = ({
 
   if (!data || data.length === 0) {
     return (
-      <EmptyState
-        icon={GraduationCap}
-        message="No training records yet. Track AI governance training for your team."
+      <TableEmptyStateLayout
+        header={
+          <StandardTableHead
+            columns={visibleTableColumns}
+            sortConfig={sortConfig}
+            onSort={handleSort}
+          />
+        }
       >
-        <EmptyStateTip
-          icon={Users}
-          title="Assign training to team members"
-          description="Each record tracks who completed what training, when, and their score. This creates an audit trail for competency requirements."
-        />
-        <EmptyStateTip
-          icon={Calendar}
-          title="Set renewal dates"
-          description="Some certifications and training expire. Record renewal dates so you can keep track of upcoming expirations."
-        />
-        <EmptyStateTip
-          icon={Award}
-          title="Common training topics"
-          description="AI ethics, data privacy, responsible AI use, bias awareness, incident reporting procedures, and framework-specific requirements."
-        />
-      </EmptyState>
+        <EmptyState
+          icon={GraduationCap}
+          message="No training records yet. Track AI governance training for your team."
+        >
+          <EmptyStateTip
+            icon={Users}
+            title="Assign training to team members"
+            description="Each record tracks who completed what training, when, and their score. This creates an audit trail for competency requirements."
+          />
+          <EmptyStateTip
+            icon={Calendar}
+            title="Set renewal dates"
+            description="Some certifications and training expire. Record renewal dates so you can keep track of upcoming expirations."
+          />
+          <EmptyStateTip
+            icon={Award}
+            title="Common training topics"
+            description="AI ethics, data privacy, responsible AI use, bias awareness, incident reporting procedures, and framework-specific requirements."
+          />
+        </EmptyState>
+      </TableEmptyStateLayout>
     );
   }
 

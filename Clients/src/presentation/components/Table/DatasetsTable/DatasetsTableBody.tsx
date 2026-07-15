@@ -16,6 +16,7 @@ import Chip from "../../Chip";
 import singleTheme from "../../../themes/v1SingleTheme";
 import { DatasetRow } from "./index";
 import { text, background, status } from "../../../themes/palette";
+import { displayFormattedDateTime } from "../../../tools/isoDateToString";
 
 interface DatasetsTableBodyProps {
   rows: DatasetRow[];
@@ -82,19 +83,7 @@ const DatasetsTableBody: React.FC<DatasetsTableBodyProps> = ({
 
   const formatDate = (dateStr?: string | null): string => {
     if (!dateStr) return "-";
-    const date = new Date(dateStr);
-    return (
-      date.toLocaleDateString(undefined, {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      }) +
-      ", " +
-      date.toLocaleTimeString(undefined, {
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    );
+    return displayFormattedDateTime(dateStr);
   };
 
   return (

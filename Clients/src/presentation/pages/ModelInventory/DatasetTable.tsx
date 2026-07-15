@@ -31,6 +31,9 @@ import {
 } from "lucide-react";
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import { EmptyState } from "../../components/EmptyState";
+import StandardTableHead from "../../components/Table/StandardTableHead";
+import { TableEmptyStateLayout } from "../../components/Table/TableEmptyStateLayout";
+import type { StandardColumn } from "../../../domain/types/standardTable";
 import { DatasetTableProps } from "../../../domain/interfaces/i.dataset";
 import {
   getPaginationRowCount,
@@ -241,6 +244,16 @@ const DatasetTable: React.FC<DatasetTableProps> = ({
     [isVisible],
   );
 
+  const standardTableColumns: StandardColumn[] = useMemo(
+    () =>
+      visibleTableColumns.map((col) => ({
+        id: col.id,
+        label: col.label,
+        sortable: col.sortable,
+      })),
+    [visibleTableColumns],
+  );
+
   const handleRowClick = useCallback(
     (e: React.MouseEvent, datasetId: string) => {
       if ((e.target as HTMLElement).closest("button") || (e.target as HTMLElement).closest("a")) {
@@ -263,27 +276,37 @@ const DatasetTable: React.FC<DatasetTableProps> = ({
 
   if (!data || data.length === 0) {
     return (
-      <EmptyState
-        icon={Database}
-        message="No datasets found. Add a dataset to start tracking your AI training and validation data."
-        showBorder={true}
+      <TableEmptyStateLayout
+        header={
+          <StandardTableHead
+            columns={standardTableColumns}
+            sortConfig={{ key: sortConfig.key, direction: sortConfig.direction }}
+            onSort={handleSort}
+          />
+        }
+        tableSx={{ minWidth: 650, ...singleTheme.tableStyles.primary.frame }}
       >
-        <EmptyStateTip
-          icon={FileSpreadsheet}
-          title="What to document"
-          description="Record dataset name, source, size, format, and the date it was collected or last updated. Include any preprocessing steps applied."
-        />
-        <EmptyStateTip
-          icon={Tag}
-          title="Label data quality"
-          description="Note whether the dataset has been reviewed for bias, completeness, and accuracy. Track any known quality issues or limitations."
-        />
-        <EmptyStateTip
-          icon={Link2}
-          title="Link to models"
-          description="Connect each dataset to the models that use it for training or validation. This creates traceability for audits and impact analysis."
-        />
-      </EmptyState>
+        <EmptyState
+          icon={Database}
+          message="No datasets found. Add a dataset to start tracking your AI training and validation data."
+        >
+          <EmptyStateTip
+            icon={FileSpreadsheet}
+            title="What to document"
+            description="Record dataset name, source, size, format, and the date it was collected or last updated. Include any preprocessing steps applied."
+          />
+          <EmptyStateTip
+            icon={Tag}
+            title="Label data quality"
+            description="Note whether the dataset has been reviewed for bias, completeness, and accuracy. Track any known quality issues or limitations."
+          />
+          <EmptyStateTip
+            icon={Link2}
+            title="Link to models"
+            description="Connect each dataset to the models that use it for training or validation. This creates traceability for audits and impact analysis."
+          />
+        </EmptyState>
+      </TableEmptyStateLayout>
     );
   }
 

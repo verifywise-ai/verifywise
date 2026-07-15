@@ -154,8 +154,8 @@ export const createNewModelInventoryQuery = async (
 
   try {
     const result = await sequelize.query(
-      `INSERT INTO model_inventories (organization_id, provider_model, provider, model, version, approver, capabilities, security_assessment, status, status_date, reference_link, biases, limitations, hosting_provider, security_assessment_data, is_demo, created_at, updated_at)
-      VALUES (:organization_id, :provider_model, :provider, :model, :version, :approver, :capabilities, :security_assessment, :status, :status_date, :reference_link, :biases, :limitations, :hosting_provider, :security_assessment_data, :is_demo, :created_at, :updated_at) RETURNING *`,
+      `INSERT INTO model_inventories (organization_id, provider_model, provider, model, version, approver, capabilities, security_assessment, status, status_date, reference_link, biases, limitations, hosting_provider, security_assessment_data, is_demo, external_key, created_at, updated_at)
+      VALUES (:organization_id, :provider_model, :provider, :model, :version, :approver, :capabilities, :security_assessment, :status, :status_date, :reference_link, :biases, :limitations, :hosting_provider, :security_assessment_data, :is_demo, :external_key, :created_at, :updated_at) RETURNING *`,
       {
         replacements: {
           organization_id: organizationId,
@@ -176,6 +176,7 @@ export const createNewModelInventoryQuery = async (
           hosting_provider: modelInventory.hosting_provider,
           security_assessment_data: JSON.stringify(modelInventory.security_assessment_data || []),
           is_demo: modelInventory.is_demo,
+          external_key: modelInventory.external_key ?? null,
           created_at: created_at,
           updated_at: created_at,
         },
@@ -276,12 +277,7 @@ export const createNewModelInventoryQuery = async (
     }
 
     // Record history snapshot for status changes
-    try {
-      await recordSnapshotIfChanged("status", organizationId, undefined, transaction);
-    } catch (historyError) {
-      console.error("Error recording history snapshot:", historyError);
-      // Don't throw - history recording failure shouldn't block model creation
-    }
+    await recordSnapshotIfChanged("status", organizationId, undefined, transaction);
 
     return createdModel;
   } catch (error) {
@@ -306,7 +302,7 @@ export const updateModelInventoryByIdQuery = async (
   try {
     // First update the record
     await sequelize.query(
-      `UPDATE model_inventories SET provider_model = :provider_model, provider = :provider, model = :model, version = :version, approver = :approver, capabilities = :capabilities, security_assessment = :security_assessment, status = :status, status_date = :status_date, reference_link = :reference_link, biases = :biases, limitations = :limitations,  hosting_provider = :hosting_provider, security_assessment_data = :security_assessment_data, is_demo = :is_demo, updated_at = :updated_at WHERE organization_id = :organization_id AND id = :id`,
+      `UPDATE model_inventories SET provider_model = :provider_model, provider = :provider, model = :model, version = :version, approver = :approver, capabilities = :capabilities, security_assessment = :security_assessment, status = :status, status_date = :status_date, reference_link = :reference_link, biases = :biases, limitations = :limitations,  hosting_provider = :hosting_provider, security_assessment_data = :security_assessment_data, is_demo = :is_demo, external_key = :external_key, updated_at = :updated_at WHERE organization_id = :organization_id AND id = :id`,
       {
         replacements: {
           organization_id: organizationId,
@@ -328,6 +324,7 @@ export const updateModelInventoryByIdQuery = async (
           hosting_provider: modelInventory.hosting_provider,
           security_assessment_data: JSON.stringify(modelInventory.security_assessment_data || []),
           is_demo: modelInventory.is_demo,
+          external_key: modelInventory.external_key ?? null,
           updated_at,
         },
         transaction,
@@ -460,13 +457,8 @@ export const updateModelInventoryByIdQuery = async (
     }
 
     // Record history snapshot if status changed
-    try {
-      if (oldModel && oldModel.status !== updatedModel.status) {
-        await recordSnapshotIfChanged("status", organizationId, undefined, transaction);
-      }
-    } catch (historyError) {
-      console.error("Error recording history snapshot:", historyError);
-      // Don't throw - history recording failure shouldn't block model update
+    if (oldModel && oldModel.status !== updatedModel.status) {
+      await recordSnapshotIfChanged("status", organizationId, undefined, transaction);
     }
 
     return updatedModel;
@@ -552,12 +544,7 @@ export const deleteModelInventoryByIdQuery = async (
     }
 
     // Record history snapshot after deletion
-    try {
-      await recordSnapshotIfChanged("status", organizationId, undefined, transaction);
-    } catch (historyError) {
-      console.error("Error recording history snapshot:", historyError);
-      // Don't throw - history recording failure shouldn't block model deletion
-    }
+    await recordSnapshotIfChanged("status", organizationId, undefined, transaction);
 
     return deletedModel;
   } catch (error) {

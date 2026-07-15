@@ -3,7 +3,7 @@ import { Box, Typography, Stack, Collapse, useTheme } from "@mui/material";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { useEntityIntakeSubmission } from "../../../../application/hooks/useEntityIntakeSubmission";
 import type { IntakeSubmissionField } from "../../../../application/repository/intakeForm.repository";
-import dayjs from "dayjs";
+import { displayFormattedDate } from "../../../tools/isoDateToString";
 
 interface IntakeSubmissionCardProps {
   projectId: number;
@@ -16,9 +16,7 @@ function renderFieldValue(field: IntakeSubmissionField): string {
   if (type === "checkbox") return value ? "Yes" : "No";
 
   if (type === "date") {
-    return dayjs(value as string).isValid()
-      ? dayjs(value as string).format("MMMM D, YYYY")
-      : String(value);
+    return displayFormattedDate(value as string);
   }
 
   if (type === "select" && options) {
@@ -113,9 +111,7 @@ export default function IntakeSubmissionCard({ projectId }: IntakeSubmissionCard
       {/* Meta line */}
       <Typography sx={{ fontSize: 12, color: theme.palette.text.accent, mb: 3 }}>
         {submission.formName}
-        {submission.submittedAt && (
-          <> &middot; {dayjs(submission.submittedAt).format("MMM D, YYYY")}</>
-        )}
+        {submission.submittedAt && <> &middot; {displayFormattedDate(submission.submittedAt)}</>}
         {(submission.submitterName || submission.submitterEmail) && (
           <> &middot; {submission.submitterName || submission.submitterEmail}</>
         )}

@@ -11,10 +11,8 @@ import {
 } from "../projectRiskValue";
 import { AddNewRiskFormProps } from "../../../types/riskForm.types";
 import { ApiResponse } from "../../../../domain/interfaces/i.response";
-import {
-  createProjectRisk,
-  updateProjectRisk,
-} from "../../../../application/repository/projectRisk.repository";
+import { createProjectRisk } from "../../../../application/repository/projectRisk.repository";
+import { useUpdateProjectRisk } from "../../../../application/hooks/useUpdateProjectRisk";
 import useUsers from "../../../../application/hooks/useUsers";
 import { useAuth } from "../../../../application/hooks/useAuth";
 import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
@@ -25,6 +23,11 @@ import { useRequiredCustomFieldsGate } from "../../CustomFieldsSection/RequiredC
 import { QuantitativeRiskFormValues, quantitativeInitialState } from "../../QuantitativeRiskForm";
 import { useRiskAssessmentMode } from "../../../../application/hooks/useRiskAssessmentMode";
 import { useMitigationSection, mitigationInitialState } from "./useMitigationSection";
+import {
+  MITIGATION_FORM_FIELD_IDS,
+  RISK_FORM_FIELD_IDS,
+} from "../../../constants/formValidationFieldMaps";
+import { focusFormFieldById } from "../../../../application/utils/formValidationFocus";
 
 const riskInitialState: RiskFormValues = {
   riskName: "",
@@ -57,6 +60,8 @@ export interface UseRiskFormReturn {
   originalQuantitativeValues: QuantitativeRiskFormValues;
   riskValidateRef: React.MutableRefObject<((values: RiskFormValues) => boolean) | null>;
   mitigateValidateRef: React.MutableRefObject<((values: MitigationFormValues) => boolean) | null>;
+  riskFirstInvalidFieldRef: React.MutableRefObject<keyof RiskFormValues | null>;
+  mitigationFirstInvalidFieldRef: React.MutableRefObject<keyof MitigationFormValues | null>;
   customFieldsRef: React.MutableRefObject<CustomFieldsSectionHandle | null>;
   customFieldsGate: {
     blocked: boolean;
@@ -94,6 +99,8 @@ export function useRiskForm(props: AddNewRiskFormProps): UseRiskFormReturn {
   } = props;
 
   const riskValidateRef = useRef<((values: RiskFormValues) => boolean) | null>(null);
+  const riskFirstInvalidFieldRef = useRef<keyof RiskFormValues | null>(null);
+  const mitigationFirstInvalidFieldRef = useRef<keyof MitigationFormValues | null>(null);
   const [riskValues, setRiskValues] = useState<RiskFormValues>(initialRiskValues);
   const [originalRiskValues, setOriginalRiskValues] = useState<RiskFormValues>(initialRiskValues);
   const [quantitativeValues, setQuantitativeValues] =
@@ -118,6 +125,7 @@ export function useRiskForm(props: AddNewRiskFormProps): UseRiskFormReturn {
   const usersLoading = usersLoadingProp !== undefined ? usersLoadingProp : hookData.loading;
 
   const { inputValues } = useContext(VerifyWiseContext);
+  const updateProjectRiskMutation = useUpdateProjectRisk();
 
   const isEditingDisabled = !allowedRoles.projectRisks.edit.includes(userRoleName);
   const isCreatingDisabled = !allowedRoles.projectRisks.create.includes(userRoleName);
@@ -485,7 +493,11 @@ export function useRiskForm(props: AddNewRiskFormProps): UseRiskFormReturn {
       try {
         const response =
           popupStatus !== "new"
-            ? await updateProjectRisk({ id: Number(inputValues.id), body: formData })
+            ? await updateProjectRiskMutation.mutateAsync({
+                id: Number(inputValues.id),
+                projectId: projectId ? Number(projectId) : undefined,
+                body: formData,
+              })
             : await createProjectRisk({ body: formData });
 
         if (response && response.status === 201) {
@@ -571,8 +583,18 @@ export function useRiskForm(props: AddNewRiskFormProps): UseRiskFormReturn {
     } else {
       if (!riskValid) {
         setValue("risks");
+        const firstInvalid = riskFirstInvalidFieldRef.current;
+        const fieldId = firstInvalid ? RISK_FORM_FIELD_IDS[firstInvalid] : undefined;
+        if (fieldId) {
+          focusFormFieldById(fieldId);
+        }
       } else {
         setValue("mitigation");
+        const firstInvalid = mitigationFirstInvalidFieldRef.current;
+        const fieldId = firstInvalid ? MITIGATION_FORM_FIELD_IDS[firstInvalid] : undefined;
+        if (fieldId) {
+          focusFormFieldById(fieldId);
+        }
       }
     }
   }
@@ -591,6 +613,8 @@ export function useRiskForm(props: AddNewRiskFormProps): UseRiskFormReturn {
     originalQuantitativeValues,
     riskValidateRef,
     mitigateValidateRef: mitigation.validateRef,
+    riskFirstInvalidFieldRef,
+    mitigationFirstInvalidFieldRef,
     customFieldsRef,
     customFieldsGate,
     riskFormSubmitHandler,

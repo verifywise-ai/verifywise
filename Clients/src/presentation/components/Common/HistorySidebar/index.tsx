@@ -11,6 +11,7 @@ import { useProfilePhotoFetch } from "../../../../application/hooks/useProfilePh
 import { EntityType, getEntityHistoryConfig } from "../../../../config/changeHistory.config";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
+import { displayFormattedDate, displayFormattedTime } from "../../../tools/isoDateToString";
 
 dayjs.extend(relativeTime);
 
@@ -57,16 +58,16 @@ const formatRelativeTime = (date: string | Date): string => {
   if (diffHours < 24 && targetDate.isSame(now, "day")) {
     if (diffHours === 1) return "An hour ago";
     if (diffHours < 3) return "A few hours ago";
-    return `Today at ${targetDate.format("h:mm A")}`;
+    return `Today at ${displayFormattedTime(date)}`;
   }
 
   // Yesterday
   if (diffDays === 1 || (diffHours < 48 && targetDate.isSame(now.subtract(1, "day"), "day"))) {
-    return `Yesterday at ${targetDate.format("h:mm A")}`;
+    return `Yesterday at ${displayFormattedTime(date)}`;
   }
 
   // Older than yesterday - show full date and time
-  return `${targetDate.format("MMMM D, YYYY")} at ${targetDate.format("h:mm A")}`;
+  return `${displayFormattedDate(date)} at ${displayFormattedTime(date)}`;
 };
 
 export function HistorySidebar({
@@ -183,8 +184,8 @@ export function HistorySidebar({
           ? `${creationEntry.user_name} ${creationEntry.user_surname}`
           : creationEntry.user_email || "an unknown user";
 
-    const creationDate = dayjs(creationEntry.changed_at).format("MMMM D, YYYY");
-    const creationTime = dayjs(creationEntry.changed_at).format("h:mm A");
+    const creationDate = displayFormattedDate(creationEntry.changed_at);
+    const creationTime = displayFormattedTime(creationEntry.changed_at);
 
     return { creatorName, creationDate, creationTime };
   }, [creationEntry, currentUserId]);
@@ -199,8 +200,8 @@ export function HistorySidebar({
     );
     const lastEntry = sortedHistory[0];
 
-    const updateDate = dayjs(lastEntry.changed_at).format("MMMM D, YYYY");
-    const updateTime = dayjs(lastEntry.changed_at).format("h:mm A");
+    const updateDate = displayFormattedDate(lastEntry.changed_at);
+    const updateTime = displayFormattedTime(lastEntry.changed_at);
 
     return { updateDate, updateTime };
   }, [history]);

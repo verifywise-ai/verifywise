@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
-import DOMPurify from "dompurify";
+import { sanitizeRichText } from "../../../application/utils/richTextSanitizer";
 import {
   useEditor,
   EditorContent,
@@ -109,10 +109,9 @@ import { uploadFileToManager } from "../../../application/repository/file.reposi
 import {
   getPolicyById,
   getAllTags,
-  createPolicy,
-  updatePolicy,
   importDocxToHtml,
 } from "../../../application/repository/policy.repository";
+import { useCreatePolicy, useUpdatePolicy } from "../../../application/hooks/usePolicyMutations";
 import useUsers from "../../../application/hooks/useUsers";
 import { User } from "../../../domain/types/User";
 import { PolicyFormData, PolicyFormErrors, PolicyInput } from "../../types/interfaces/i.policy";
@@ -346,70 +345,6 @@ function normalizeSlateHtml(html: string): string {
   return n;
 }
 
-const sanitizeOptions: Parameters<typeof DOMPurify.sanitize>[1] = {
-  ALLOWED_TAGS: [
-    "p",
-    "br",
-    "strong",
-    "b",
-    "em",
-    "i",
-    "u",
-    "h1",
-    "h2",
-    "h3",
-    "h4",
-    "h5",
-    "h6",
-    "blockquote",
-    "code",
-    "pre",
-    "ul",
-    "ol",
-    "li",
-    "label",
-    "input",
-    "a",
-    "img",
-    "span",
-    "div",
-    "mark",
-    "s",
-    "hr",
-    "table",
-    "thead",
-    "tbody",
-    "tr",
-    "th",
-    "td",
-    "sup",
-    "sub",
-  ],
-  ALLOWED_ATTR: [
-    "href",
-    "title",
-    "alt",
-    "src",
-    "width",
-    "class",
-    "id",
-    "style",
-    "target",
-    "rel",
-    "colspan",
-    "rowspan",
-    "data-type",
-    "data-checked",
-    "type",
-    "checked",
-  ],
-  ALLOWED_URI_REGEXP:
-    /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|cid|xmpp|data):|[^a-z]|[a-z.+\-]+(?:[^a-z.+\-:]|$))/i,
-  ADD_ATTR: ["target"],
-  FORBID_TAGS: ["script", "object", "embed", "iframe", "form", "input", "button"],
-  FORBID_ATTR: ["onerror", "onload", "onclick", "onmouseover", "onfocus", "onblur"],
-};
-
 // ── Search highlight extension ─────────────────────────────────────────
 const searchHighlightKey = new PluginKey("searchHighlight");
 
@@ -471,6 +406,8 @@ export default function PolicyEditorPage() {
   const navigate = useNavigate();
   const theme = useTheme();
   const { users } = useUsers();
+  const createPolicyMutation = useCreatePolicy();
+  const updatePolicyMutation = useUpdatePolicy();
 
   const isNew = !id;
   const templateId = searchParams.get("templateId");
@@ -608,7 +545,10 @@ export default function PolicyEditorPage() {
 
     setIsSavingTitle(true);
     try {
-      const updated = await updatePolicy(policy.id, { title: trimmed } as PolicyInput);
+      const updated = await updatePolicyMutation.mutateAsync({
+        id: policy.id,
+        input: { title: trimmed } as PolicyInput,
+      });
       setFormData((prev) => ({ ...prev, title: trimmed }));
       setPolicy((prev) => (prev ? { ...prev, ...updated, title: trimmed } : updated));
       clearFieldError("title");
@@ -755,7 +695,7 @@ export default function PolicyEditorPage() {
   const initialContent = (() => {
     const raw = policy?.content_html || template?.content || "";
     if (!raw) return "";
-    return DOMPurify.sanitize(normalizeSlateHtml(raw), sanitizeOptions);
+    return sanitizeRichText(normalizeSlateHtml(raw));
   })();
 
   // ── TipTap editor ─────────────────────────────────────────────────
@@ -1362,9 +1302,12 @@ export default function PolicyEditorPage() {
       let savedPolicy: PolicyManagerModel;
 
       if (isNew) {
-        savedPolicy = await createPolicy(payload);
+        savedPolicy = await createPolicyMutation.mutateAsync(payload);
       } else {
-        savedPolicy = await updatePolicy(policy!.id, payload);
+        savedPolicy = await updatePolicyMutation.mutateAsync({
+          id: policy!.id,
+          input: payload,
+        });
       }
 
       // Flush any locally-staged custom field changes (create OR update).
@@ -1495,7 +1438,7 @@ export default function PolicyEditorPage() {
     setImportError(null);
     try {
       const { html } = await importDocxToHtml(file);
-      const sanitized = DOMPurify.sanitize(html, sanitizeOptions);
+      const sanitized = sanitizeRichText(html);
       if (editor) {
         editor.commands.setContent(sanitized);
       }

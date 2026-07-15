@@ -36,7 +36,7 @@ import { AiRiskClassification } from "../domain.layer/enums/ai-risk-classificati
 import { ModelInventoryModel } from "../domain.layer/models/modelInventory/modelInventory.model";
 import { IIntakeFormSchema } from "../domain.layer/interfaces/i.intakeForm";
 import { STATUS_CODE } from "../utils/statusCode.utils";
-import { sanitizeUserHtml } from "../utils/sanitizeUserHtml";
+import { sanitizeUserHtml } from "../utils/sanitization.utils";
 import logger from "../utils/logger/fileLogger";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
 import {

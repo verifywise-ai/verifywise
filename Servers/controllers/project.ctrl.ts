@@ -220,7 +220,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
   const transaction = await sequelize.transaction();
   const projectData = {
     ...req.body,
-    framework: req.body.framework,
+    framework: req.body.framework || [],
   };
 
   logProcessing({
@@ -241,7 +241,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
     const createdProject = await createNewProjectQuery(
       newProject,
       newProject.members ?? [],
-      newProject.framework,
+      newProject.framework || [],
       req.organizationId!,
       req.userId!,
       transaction,
@@ -252,7 +252,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
     const frameworks: { [key: string]: Object } = {};
     if (!createdProject.approval_workflow_id) {
       // No approval workflow - create frameworks immediately
-      for (const framework of newProject.framework) {
+      for (const framework of newProject.framework || []) {
         if (framework === 1) {
           const eu = await createEUFrameworkQuery(
             createdProject.id!,
@@ -507,6 +507,7 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
     const existingProject = await getProjectByIdQuery(projectId, req.organizationId!);
 
     if (!existingProject) {
+      await transaction.rollback();
       await logSuccess({
         eventType: "Update",
         description: `Project not found for update: ID ${projectId}`,
@@ -804,6 +805,7 @@ export async function deleteProjectById(req: Request, res: Response): Promise<an
       return res.status(202).json(STATUS_CODE[202](deletedProject));
     }
 
+    await transaction.rollback();
     await logSuccess({
       eventType: "Delete",
       description: `Project not found for deletion: ID ${projectId}`,

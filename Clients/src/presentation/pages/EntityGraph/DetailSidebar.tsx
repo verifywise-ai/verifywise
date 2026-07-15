@@ -28,6 +28,7 @@ import { useNavigate } from "react-router-dom";
 import { EntityType } from "./EntityNode";
 import { VWLink } from "../../components/Link";
 import { text } from "../../themes/palette";
+import { displayFormattedDate } from "../../tools/isoDateToString";
 
 export interface EntityDetails {
   id: string;
@@ -79,7 +80,7 @@ const formatDate = (dateValue: unknown): string => {
   try {
     const date = new Date(String(dateValue));
     if (isNaN(date.getTime())) return String(dateValue);
-    return date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+    return displayFormattedDate(date);
   } catch {
     return String(dateValue);
   }

@@ -47,12 +47,15 @@ import { sectionTitleSx, useCardSx, GUARDRAIL_ACTION_COLORS, formatEntityType } 
 import { useUserGuideSidebarContext } from "../../../components/UserGuide/UserGuideSidebarContext";
 import MockDashboard from "./MockDashboard";
 import OnboardingOverlay from "./OnboardingOverlay";
+import { displayFormattedDate } from "../../../tools/isoDateToString";
+
+const numberFormatter = new Intl.NumberFormat("en-US");
 
 /** Shared date tick formatter for all time-series charts */
 const formatDayTick = (v: string, period: string) => {
   if (period === "1d") return v;
   const d = new Date(v + "T00:00:00");
-  return isNaN(d.getTime()) ? v : d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return isNaN(d.getTime()) ? v : displayFormattedDate(d);
 };
 
 const PERIOD_OPTIONS = [
@@ -766,7 +769,7 @@ export default function SpendDashboardPage() {
                         const v = Number(value) || 0;
                         const n = String(name ?? "");
                         return [
-                          v.toLocaleString(),
+                          numberFormatter.format(v),
                           n === "avg_prompt_tokens" ? "Prompt" : "Completion",
                         ];
                       }}

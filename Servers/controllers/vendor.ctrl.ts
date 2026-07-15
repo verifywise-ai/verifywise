@@ -361,6 +361,7 @@ export async function updateVendorById(req: Request, res: Response): Promise<any
   try {
     const { userId, role } = req;
     if (!userId || !role) {
+      await transaction.rollback();
       await logFailure({
         eventType: "Update",
         description: "Unauthorized access attempt to update vendor",
@@ -377,6 +378,7 @@ export async function updateVendorById(req: Request, res: Response): Promise<any
     const existingVendor = await getVendorByIdQuery(vendorId, req.organizationId!);
 
     if (!existingVendor) {
+      await transaction.rollback();
       await logSuccess({
         eventType: "Update",
         description: `Vendor not found for update: ID ${vendorId}`,
@@ -502,6 +504,7 @@ export async function updateVendorById(req: Request, res: Response): Promise<any
       return res.status(202).json(STATUS_CODE[202](vendor));
     }
 
+    await transaction.rollback();
     await logSuccess({
       eventType: "Update",
       description: `Vendor not found for update: ID ${vendorId}`,
@@ -581,6 +584,7 @@ export async function deleteVendorById(req: Request, res: Response): Promise<any
       return res.status(202).json(STATUS_CODE[202](deletedVendor));
     }
 
+    await transaction.rollback();
     await logSuccess({
       eventType: "Delete",
       description: `Vendor not found for deletion: ID ${vendorId}`,

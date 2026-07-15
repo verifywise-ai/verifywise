@@ -1,6 +1,8 @@
 import { useMemo } from "react";
 import { Box, Typography, Stack } from "@mui/material";
+import { GitCompareArrows } from "lucide-react";
 import StandardModal from "../../../components/Modals/StandardModal";
+import { EmptyState } from "../../../components/EmptyState";
 import palette from "../../../themes/palette";
 
 interface Message {
@@ -197,11 +199,7 @@ export default function VersionDiffModal({
       </Stack>
 
       {rows.length === 0 && (
-        <Box sx={{ textAlign: "center", py: "32px" }}>
-          <Typography fontSize={13} color="text.secondary">
-            No differences found
-          </Typography>
-        </Box>
+        <EmptyState icon={GitCompareArrows} message="No differences found" showBorder={false} />
       )}
 
       <ConfigDiff a={versionA} b={versionB} />

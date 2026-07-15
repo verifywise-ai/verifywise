@@ -10,8 +10,8 @@ export interface IProjectAttributes {
   owner: number;
   start_date: Date;
   geography: number;
-  ai_risk_classification: AiRiskClassification;
-  type_of_high_risk_role: HighRiskRole;
+  ai_risk_classification?: AiRiskClassification | null;
+  type_of_high_risk_role?: HighRiskRole | null;
   goal: string;
   target_industry: string;
   description: string;
@@ -25,6 +25,12 @@ export interface IProjectAttributes {
   pending_frameworks?: number[];
   enable_ai_data_insertion?: boolean;
   _source?: string; // Plugin source identifier (e.g., 'jira-assets')
+
+  // Regulation-agnostic use-case classification
+  use_case_category?: string | null;
+  use_case_purpose?: string | null;
+  use_case_audience?: string | null;
+  deployment_context?: string | null;
 
   // Statistical fields
   doneSubcontrols?: number;

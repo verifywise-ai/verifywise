@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import type { LucideIcon } from "lucide-react";
 import { VendorModel } from "../../../domain/models/Common/vendor/vendor.model";
 import { RiskModel } from "../../../domain/models/Common/risks/risk.model";
 import { FileModel } from "../../../domain/models/Common/file/file.model";
@@ -23,6 +24,7 @@ export interface IAITrustCenterTableProps<T> {
   isLoading?: boolean;
   paginated?: boolean;
   emptyStateText?: string;
+  emptyStateIcon?: LucideIcon;
   renderRow: (
     item: T,
     sortConfig?: { key: string; direction: "asc" | "desc" | null },

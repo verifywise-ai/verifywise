@@ -4,7 +4,7 @@ import { VendorModel } from "../vendor/vendor.model";
 import { IVendorsProjects } from "../../interfaces/i.vendorProjects";
 
 @Table({
-  tableName: "vendor_projects",
+  tableName: "vendors_projects",
   timestamps: true,
   underscored: true,
 })

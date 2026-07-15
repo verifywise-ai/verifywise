@@ -11,6 +11,8 @@ import {
   TriangleAlert,
   KeyRound,
   Pencil,
+  AlertTriangle,
+  RotateCcw,
 } from "lucide-react";
 import Toggle from "../../../components/Inputs/Toggle";
 import { EmptyState } from "../../../components/EmptyState";
@@ -25,6 +27,7 @@ import { apiServices } from "../../../../infrastructure/api/networkServices";
 import palette from "../../../themes/palette";
 import { useCardSx, ProviderIcon, useGatewayModels, slugify } from "../shared";
 import { displayFormattedDate } from "../../../tools/isoDateToString";
+import CustomizableSkeleton from "../../../components/Skeletons";
 import { SHOW_AI_GATEWAY_PROMPTS } from "../../../../application/config/featureFlags";
 
 interface EndpointForm {
@@ -67,6 +70,7 @@ export default function EndpointsPage() {
   const [apiKeys, setApiKeys] = useState<any[]>([]);
   const [activeGuardrailCount, setActiveGuardrailCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null); // null = create, number = edit
@@ -82,6 +86,8 @@ export default function EndpointsPage() {
   const { providerItems, getModelsForProvider } = useGatewayModels();
 
   const loadData = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
     try {
       const [endpointsRes, keysRes, grRes, promptsRes] = await Promise.all([
         apiServices.get<Record<string, any>>("/ai-gateway/endpoints"),
@@ -97,7 +103,7 @@ export default function EndpointsPage() {
       const allRules = grRes?.data?.rules || grRes?.data?.data || [];
       setActiveGuardrailCount(allRules.filter((r: any) => r.is_active).length);
     } catch {
-      // Silently handle
+      setLoadError("Failed to load endpoints. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -227,9 +233,9 @@ export default function EndpointsPage() {
     .map((k) => ({ _id: String(k.id), name: `${k.key_name} (${k.provider})` }));
 
   const promptName = (id: number | null) => {
-    if (!id) return null;
+    if (!id) return undefined;
     const p = prompts.find((pr: any) => pr.id === id);
-    return p?.name || null;
+    return p?.name || undefined;
   };
 
   const isEditing = editingId !== null;
@@ -250,11 +256,16 @@ export default function EndpointsPage() {
       }
     >
       {loading ? (
-        <Box sx={cardSx}>
-          <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
-            Loading endpoints...
-          </Typography>
-        </Box>
+        <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
+      ) : loadError ? (
+        <EmptyState icon={AlertTriangle} message={loadError}>
+          <CustomizableButton
+            variant="outlined"
+            text="Retry"
+            icon={<RotateCcw size={16} />}
+            onClick={loadData}
+          />
+        </EmptyState>
       ) : endpoints.length === 0 ? (
         <EmptyState
           icon={Router}
