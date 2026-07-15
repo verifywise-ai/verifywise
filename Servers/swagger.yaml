@@ -13116,6 +13116,33 @@ paths:
       security:
         -
           bearerAuth: []
+  /mrm/settings:
+    get:
+      summary: 'Get Mrm Settings Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Mrm
+      operationId: getMrmSettingsHandler
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Update Mrm Settings Handler'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Mrm
+      operationId: updateMrmSettingsHandler
+      security:
+        -
+          bearerAuth: []
   '/mrm/models/{externalModelKey}/metrics':
     post:
       summary: 'Ingest Metrics'

@@ -405,6 +405,7 @@ export async function createTestModelInventory(
 export interface CreateTestMrmValidationOptions {
   model_inventory_id?: number;
   validator_id?: number;
+  next_due?: string | null;
 }
 
 export async function createTestMrmValidation(
@@ -413,13 +414,14 @@ export async function createTestMrmValidation(
   options: CreateTestMrmValidationOptions = {},
 ): Promise<number> {
   const [result] = await sequelize.query(
-    `INSERT INTO mrm_validations (organization_id, model_inventory_id, stage, validator_id, report, created_at, updated_at)
-     VALUES (:orgId, :modelInventoryId, 'not_started', :validatorId, '{}'::jsonb, NOW(), NOW()) RETURNING id`,
+    `INSERT INTO mrm_validations (organization_id, model_inventory_id, stage, validator_id, next_due, report, created_at, updated_at)
+     VALUES (:orgId, :modelInventoryId, 'not_started', :validatorId, :nextDue, '{}'::jsonb, NOW(), NOW()) RETURNING id`,
     {
       replacements: {
         orgId,
         modelInventoryId: options.model_inventory_id ?? modelInventoryId,
         validatorId: options.validator_id ?? null,
+        nextDue: options.next_due ?? null,
       },
     },
   );

@@ -25,6 +25,11 @@ export type Lang = "en" | "de" | "fr" | "es";
 
 export const translations: Record<string, Record<string, string>> = {
   de: {
+    // AsyncBoundary
+    "Loading": "Wird geladen...",
+    "Retry loading data": "Daten erneut laden",
+    "Something went wrong. Please try again.":
+      "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
     // Rich text renderer
     "Rich text content": "Rich-Text-Inhalt",
     // Settings — help text
@@ -81,7 +86,24 @@ export const translations: Record<string, Record<string, string>> = {
     "Threshold at evaluation": "Schwellenwert zum Auswertungszeitpunkt",
     "Token name": "Token-Name",
     "Trend": "Trend",
-    "Yes, in-app": "Ja, in der App",
+    "Who hears about a breach. When an ingested metric breaches its threshold, VerifyWise notifies the people assigned to the model's MRM roles, plus any additional recipients configured below. Email delivery and automatic findings are off until you enable them here.":
+      "Wer von einem Verstoß erfährt. Wenn eine erfasste Metrik ihren Schwellenwert verletzt, benachrichtigt VerifyWise die den MRM-Rollen des Modells zugewiesenen Personen sowie alle unten konfigurierten zusätzlichen Empfänger. E-Mail-Versand und automatische Feststellungen sind deaktiviert, bis Sie sie hier aktivieren.",
+    "Send email alerts": "E-Mail-Benachrichtigungen senden",
+    "Applies to breach and overdue-validation alerts. In-app notifications are always on.":
+      "Gilt für Verstoß- und überfällige Validierungsbenachrichtigungen. In-App-Benachrichtigungen sind immer aktiv.",
+    "Automatically open a finding on hard breach":
+      "Bei hartem Verstoß automatisch eine Feststellung öffnen",
+    "One finding per model and metric while it stays open; warnings never open findings.":
+      "Eine Feststellung pro Modell und Metrik, solange sie offen ist; Warnungen öffnen nie Feststellungen.",
+    "Additional recipients": "Zusätzliche Empfänger",
+    "These people are alerted for every model, on top of the model's roles.":
+      "Diese Personen werden für jedes Modell benachrichtigt, zusätzlich zu den Rollen des Modells.",
+    "Save alert settings": "Benachrichtigungseinstellungen speichern",
+    "Alert settings saved": "Benachrichtigungseinstellungen gespeichert",
+    "Failed to save alert settings":
+      "Benachrichtigungseinstellungen konnten nicht gespeichert werden",
+    "Notifications are delivered in-app, and by email when email alerts are enabled. A threshold set to notify and flag for revalidation also marks the model as due for a fresh validation.":
+      "Benachrichtigungen werden in der App zugestellt und per E-Mail, wenn E-Mail-Benachrichtigungen aktiviert sind. Ein Schwellenwert mit Benachrichtigung und Revalidierungs-Kennzeichnung markiert das Modell zusätzlich als fällig für eine neue Validierung.",
     "A finding must be verified before it can be closed.":
       "Eine Feststellung muss verifiziert sein, bevor sie geschlossen werden kann.",
     "Assign tier": "Stufe zuweisen",
@@ -145,6 +167,15 @@ export const translations: Record<string, Record<string, string>> = {
     "Roles & independence": "Rollen & Unabhängigkeit",
     "Save report": "Bericht speichern",
     "Save roles": "Rollen speichern",
+    "Benign monitoring points older than the retention window are removed by a daily job. Breach and evaluation history is never deleted.":
+      "Unauffällige Überwachungspunkte, die älter als das Aufbewahrungsfenster sind, werden durch einen täglichen Job entfernt. Verstoß- und Bewertungshistorie wird nie gelöscht.",
+    "Breach and evaluation history is always retained; this only ages out benign monitoring points.":
+      "Verstoß- und Bewertungshistorie wird immer aufbewahrt; hiermit werden nur unauffällige Überwachungspunkte ausgesondert.",
+    "Failed to save retention": "Aufbewahrung konnte nicht gespeichert werden",
+    "Monitoring data retention (months)": "Aufbewahrung von Überwachungsdaten (Monate)",
+    "Retention must be at least 13 months": "Die Aufbewahrung muss mindestens 13 Monate betragen",
+    "Retention saved": "Aufbewahrung gespeichert",
+    "Save retention": "Aufbewahrung speichern",
     "Select a model to view and assign its roles.":
       "Wählen Sie ein Modell, um dessen Rollen anzuzeigen und zuzuweisen.",
     "Select a tier": "Stufe auswählen",
@@ -8878,9 +8909,53 @@ export const translations: Record<string, Record<string, string>> = {
     "Failed to load invocation details.": "Aufrufdetails konnten nicht geladen werden.",
     "Refresh": "Aktualisieren",
     "Select a log to view details.": "Wählen Sie ein Protokoll aus, um Details anzuzeigen.",
+    // Use case classification
+    "Applicable regulations (optional)": "Anwendbare Regulierungen (optional)",
+    "Audience": "Zielgruppe",
+    "Both": "Beides",
+    "Cloud": "Cloud",
+    "Computer Vision": "Computer Vision",
+    "Customer service": "Kundenservice",
+    "Deployment context": "Bereitstellungskontext",
+    "Edge": "Edge",
+    "External": "Extern",
+    "Generative AI": "Generative KI",
+    "How is the AI use case deployed?": "Wie wird der KI-Anwendungsfall bereitgestellt?",
+    "Hybrid": "Hybrid",
+    "ISO 42001, ISO 27001, and NIST AI RMF (company-wide project)":
+      "ISO 42001, ISO 27001 und NIST AI RMF (unternehmensweites Projekt)",
+    "Internal operations": "Interne Abläufe",
+    "Marketing and sales": "Marketing und Vertrieb",
+    "Natural Language Processing": "Natural Language Processing",
+    "Predictive Analytics": "Predictive Analytics",
+    "Product/feature enhancement": "Produkt-/Funktionsverbesserung",
+    "Recommendation Systems": "Empfehlungssysteme",
+    "Research and development": "Forschung und Entwicklung",
+    "Risk and compliance": "Risiko und Compliance",
+    "Robotics": "Robotik",
+    "Select a category": "Kategorie auswählen",
+    "Select a context": "Kontext auswählen",
+    "Select a purpose": "Zweck auswählen",
+    "Select an audience": "Zielgruppe auswählen",
+    "Select the category that best describes the use case.":
+      "Wählen Sie die Kategorie, die den Anwendungsfall am besten beschreibt.",
+    "Third-party API": "API eines Drittanbieters",
+    "Use case audience": "Zielgruppe des Anwendungsfalls",
+    "Use case category": "Kategorie des Anwendungsfalls",
+    "Use case classification (optional)": "Klassifizierung des Anwendungsfalls (optional)",
+    "Use case purpose": "Zweck des Anwendungsfalls",
+    "Use-case level regulations (optional)": "Anwendungsfallbezogene Regulierungen (optional)",
+    "What business purpose does the use case serve?":
+      "Welchem geschäftlichen Zweck dient der Anwendungsfall?",
+    "Who is the intended audience for the use case?":
+      "Wer ist die gewünschte Zielgruppe für den Anwendungsfall?",
   },
 
   fr: {
+    // AsyncBoundary
+    "Loading": "Chargement...",
+    "Retry loading data": "Réessayer le chargement des données",
+    "Something went wrong. Please try again.": "Une erreur s'est produite. Veuillez réessayer.",
     // Rich text renderer
     "Rich text content": "Contenu de texte enrichi",
     // Settings — help text
@@ -8937,7 +9012,23 @@ export const translations: Record<string, Record<string, string>> = {
     "Threshold at evaluation": "Seuil au moment de l'évaluation",
     "Token name": "Nom du jeton",
     "Trend": "Tendance",
-    "Yes, in-app": "Oui, dans l'application",
+    "Who hears about a breach. When an ingested metric breaches its threshold, VerifyWise notifies the people assigned to the model's MRM roles, plus any additional recipients configured below. Email delivery and automatic findings are off until you enable them here.":
+      "Qui est informé d'un dépassement. Lorsqu'une métrique ingérée dépasse son seuil, VerifyWise notifie les personnes affectées aux rôles MRM du modèle, ainsi que les destinataires supplémentaires configurés ci-dessous. L'envoi d'e-mails et les constats automatiques sont désactivés tant que vous ne les activez pas ici.",
+    "Send email alerts": "Envoyer des alertes par e-mail",
+    "Applies to breach and overdue-validation alerts. In-app notifications are always on.":
+      "S'applique aux alertes de dépassement et de validation en retard. Les notifications dans l'application sont toujours actives.",
+    "Automatically open a finding on hard breach":
+      "Ouvrir automatiquement un constat en cas de dépassement critique",
+    "One finding per model and metric while it stays open; warnings never open findings.":
+      "Un constat par modèle et par métrique tant qu'il reste ouvert ; les avertissements n'ouvrent jamais de constats.",
+    "Additional recipients": "Destinataires supplémentaires",
+    "These people are alerted for every model, on top of the model's roles.":
+      "Ces personnes sont alertées pour chaque modèle, en plus des rôles du modèle.",
+    "Save alert settings": "Enregistrer les paramètres d'alerte",
+    "Alert settings saved": "Paramètres d'alerte enregistrés",
+    "Failed to save alert settings": "Échec de l'enregistrement des paramètres d'alerte",
+    "Notifications are delivered in-app, and by email when email alerts are enabled. A threshold set to notify and flag for revalidation also marks the model as due for a fresh validation.":
+      "Les notifications sont envoyées dans l'application, et par e-mail lorsque les alertes par e-mail sont activées. Un seuil configuré pour notifier et signaler une revalidation marque également le modèle comme devant faire l'objet d'une nouvelle validation.",
     "A finding must be verified before it can be closed.":
       "Une constatation doit être vérifiée avant de pouvoir être clôturée.",
     "Assign tier": "Attribuer un niveau",
@@ -9001,6 +9092,15 @@ export const translations: Record<string, Record<string, string>> = {
     "Roles & independence": "Rôles et indépendance",
     "Save report": "Enregistrer le rapport",
     "Save roles": "Enregistrer les rôles",
+    "Benign monitoring points older than the retention window are removed by a daily job. Breach and evaluation history is never deleted.":
+      "Les points de surveillance sans incident plus anciens que la fenêtre de rétention sont supprimés par une tâche quotidienne. L'historique des dépassements et des évaluations n'est jamais supprimé.",
+    "Breach and evaluation history is always retained; this only ages out benign monitoring points.":
+      "L'historique des dépassements et des évaluations est toujours conservé ; seuls les points de surveillance sans incident sont purgés.",
+    "Failed to save retention": "Échec de l'enregistrement de la rétention",
+    "Monitoring data retention (months)": "Rétention des données de surveillance (mois)",
+    "Retention must be at least 13 months": "La rétention doit être d'au moins 13 mois",
+    "Retention saved": "Rétention enregistrée",
+    "Save retention": "Enregistrer la rétention",
     "Select a model to view and assign its roles.":
       "Sélectionnez un modèle pour afficher et attribuer ses rôles.",
     "Select a tier": "Sélectionner un niveau",
@@ -17690,8 +17790,51 @@ export const translations: Record<string, Record<string, string>> = {
     "Failed to load invocation details.": "Échec du chargement des détails de l'invocation.",
     "Refresh": "Actualiser",
     "Select a log to view details.": "Sélectionnez un journal pour voir les détails.",
+    // Use case classification
+    "Applicable regulations (optional)": "Réglementations applicables (optionnel)",
+    "Audience": "Public cible",
+    "Both": "Les deux",
+    "Cloud": "Cloud",
+    "Computer Vision": "Computer Vision",
+    "Customer service": "Service client",
+    "Deployment context": "Contexte de déploiement",
+    "Edge": "Edge",
+    "External": "Externe",
+    "Generative AI": "IA générative",
+    "How is the AI use case deployed?": "Comment le cas d'usage d'IA est-il déployé ?",
+    "Hybrid": "Hybride",
+    "ISO 42001, ISO 27001, and NIST AI RMF (company-wide project)":
+      "ISO 42001, ISO 27001 et NIST AI RMF (projet à l'échelle de l'entreprise)",
+    "Internal operations": "Opérations internes",
+    "Marketing and sales": "Marketing et ventes",
+    "Natural Language Processing": "Natural Language Processing",
+    "Predictive Analytics": "Predictive Analytics",
+    "Product/feature enhancement": "Amélioration produit/fonctionnalité",
+    "Recommendation Systems": "Systèmes de recommandation",
+    "Research and development": "Recherche et développement",
+    "Risk and compliance": "Risque et conformité",
+    "Robotics": "Robotique",
+    "Select a category": "Sélectionner une catégorie",
+    "Select a context": "Sélectionner un contexte",
+    "Select a purpose": "Sélectionner un objectif",
+    "Select an audience": "Sélectionner un public",
+    "Select the category that best describes the use case.":
+      "Sélectionnez la catégorie qui décrit le mieux le cas d'usage.",
+    "Third-party API": "API tierce",
+    "Use case audience": "Public du cas d'usage",
+    "Use case category": "Catégorie du cas d'usage",
+    "Use case classification (optional)": "Classification du cas d'usage (optionnel)",
+    "Use case purpose": "Objectif du cas d'usage",
+    "Use-case level regulations (optional)": "Réglementations au niveau du cas d'usage (optionnel)",
+    "What business purpose does the use case serve?":
+      "Quel objectif commercial sert le cas d'usage ?",
+    "Who is the intended audience for the use case?": "Quel est le public cible du cas d'usage ?",
   },
   es: {
+    // AsyncBoundary
+    "Loading": "Cargando...",
+    "Retry loading data": "Reintentar cargar datos",
+    "Something went wrong. Please try again.": "Algo salió mal. Por favor, inténtelo de nuevo.",
     // Rich text renderer
     "Rich text content": "Contenido de texto enriquecido",
     // Settings — help text
@@ -17748,7 +17891,23 @@ export const translations: Record<string, Record<string, string>> = {
     "Threshold at evaluation": "Umbral en el momento de la evaluación",
     "Token name": "Nombre del token",
     "Trend": "Tendencia",
-    "Yes, in-app": "Sí, en la aplicación",
+    "Who hears about a breach. When an ingested metric breaches its threshold, VerifyWise notifies the people assigned to the model's MRM roles, plus any additional recipients configured below. Email delivery and automatic findings are off until you enable them here.":
+      "Quién se entera de un incumplimiento. Cuando una métrica ingerida supera su umbral, VerifyWise notifica a las personas asignadas a los roles MRM del modelo, además de los destinatarios adicionales configurados abajo. El envío de correos y los hallazgos automáticos están desactivados hasta que los habilite aquí.",
+    "Send email alerts": "Enviar alertas por correo electrónico",
+    "Applies to breach and overdue-validation alerts. In-app notifications are always on.":
+      "Se aplica a las alertas de incumplimiento y de validación vencida. Las notificaciones en la aplicación siempre están activas.",
+    "Automatically open a finding on hard breach":
+      "Abrir automáticamente un hallazgo ante un incumplimiento grave",
+    "One finding per model and metric while it stays open; warnings never open findings.":
+      "Un hallazgo por modelo y métrica mientras permanezca abierto; las advertencias nunca abren hallazgos.",
+    "Additional recipients": "Destinatarios adicionales",
+    "These people are alerted for every model, on top of the model's roles.":
+      "Estas personas reciben alertas de todos los modelos, además de los roles del modelo.",
+    "Save alert settings": "Guardar configuración de alertas",
+    "Alert settings saved": "Configuración de alertas guardada",
+    "Failed to save alert settings": "No se pudo guardar la configuración de alertas",
+    "Notifications are delivered in-app, and by email when email alerts are enabled. A threshold set to notify and flag for revalidation also marks the model as due for a fresh validation.":
+      "Las notificaciones se entregan en la aplicación y por correo electrónico cuando las alertas por correo están habilitadas. Un umbral configurado para notificar y marcar para revalidación también marca el modelo como pendiente de una nueva validación.",
     "A finding must be verified before it can be closed.":
       "Un hallazgo debe verificarse antes de poder cerrarse.",
     "Assign tier": "Asignar nivel",
@@ -17812,6 +17971,15 @@ export const translations: Record<string, Record<string, string>> = {
     "Roles & independence": "Roles e independencia",
     "Save report": "Guardar informe",
     "Save roles": "Guardar roles",
+    "Benign monitoring points older than the retention window are removed by a daily job. Breach and evaluation history is never deleted.":
+      "Los puntos de monitoreo sin incidencias anteriores a la ventana de retención se eliminan mediante una tarea diaria. El historial de incumplimientos y evaluaciones nunca se elimina.",
+    "Breach and evaluation history is always retained; this only ages out benign monitoring points.":
+      "El historial de incumplimientos y evaluaciones siempre se conserva; esto solo depura puntos de monitoreo sin incidencias.",
+    "Failed to save retention": "No se pudo guardar la retención",
+    "Monitoring data retention (months)": "Retención de datos de monitoreo (meses)",
+    "Retention must be at least 13 months": "La retención debe ser de al menos 13 meses",
+    "Retention saved": "Retención guardada",
+    "Save retention": "Guardar retención",
     "Select a model to view and assign its roles.":
       "Seleccione un modelo para ver y asignar sus roles.",
     "Select a tier": "Seleccionar un nivel",
@@ -26419,5 +26587,45 @@ export const translations: Record<string, Record<string, string>> = {
     "Failed to load invocation details.": "No se pudieron cargar los detalles de la invocación.",
     "Refresh": "Actualizar",
     "Select a log to view details.": "Seleccione un registro para ver los detalles.",
+    // Use case classification
+    "Applicable regulations (optional)": "Regulaciones aplicables (opcional)",
+    "Audience": "Audiencia",
+    "Both": "Ambos",
+    "Cloud": "Nube",
+    "Computer Vision": "Computer Vision",
+    "Customer service": "Atención al cliente",
+    "Deployment context": "Contexto de implementación",
+    "Edge": "Edge",
+    "External": "Externo",
+    "Generative AI": "IA generativa",
+    "How is the AI use case deployed?": "¿Cómo se implementa el caso de uso de IA?",
+    "Hybrid": "Híbrido",
+    "ISO 42001, ISO 27001, and NIST AI RMF (company-wide project)":
+      "ISO 42001, ISO 27001 y NIST AI RMF (proyecto a nivel empresarial)",
+    "Internal operations": "Operaciones internas",
+    "Marketing and sales": "Marketing y ventas",
+    "Natural Language Processing": "Natural Language Processing",
+    "Predictive Analytics": "Predictive Analytics",
+    "Product/feature enhancement": "Mejora de producto/función",
+    "Recommendation Systems": "Sistemas de recomendación",
+    "Research and development": "Investigación y desarrollo",
+    "Risk and compliance": "Riesgo y cumplimiento",
+    "Robotics": "Robótica",
+    "Select a category": "Seleccionar una categoría",
+    "Select a context": "Seleccionar un contexto",
+    "Select a purpose": "Seleccionar un propósito",
+    "Select an audience": "Seleccionar una audiencia",
+    "Select the category that best describes the use case.":
+      "Seleccione la categoría que mejor describa el caso de uso.",
+    "Third-party API": "API de terceros",
+    "Use case audience": "Audiencia del caso de uso",
+    "Use case category": "Categoría del caso de uso",
+    "Use case classification (optional)": "Clasificación del caso de uso (opcional)",
+    "Use case purpose": "Propósito del caso de uso",
+    "Use-case level regulations (optional)": "Regulaciones a nivel de caso de uso (opcional)",
+    "What business purpose does the use case serve?":
+      "¿Qué propósito empresarial cumple el caso de uso?",
+    "Who is the intended audience for the use case?":
+      "¿Quién es la audiencia prevista para el caso de uso?",
   },
 };

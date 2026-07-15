@@ -3,6 +3,7 @@ import {
   getDueRevalidationsQuery,
   triggerRevalidation,
 } from "../../../utils/mrmRevalidation.utils";
+import { notifyRevalidationDue } from "../../../utils/mrmAlerts.utils";
 import { MrmRevalidationTriggerSource } from "../../../domain.layer/enums/mrmMonitoring.enum";
 import logger from "../../../utils/logger/fileLogger";
 
@@ -46,6 +47,24 @@ export async function runRevalidationSweep(
         opened += 1;
       } else {
         annotated += 1;
+      }
+
+      // Once-per-lifecycle overdue nudge (claimed via overdue_notified_at) —
+      // its failure must never fail the sweep for the remaining models.
+      if (result.validation_id != null) {
+        try {
+          await notifyRevalidationDue(
+            organizationId,
+            row.model_inventory_id,
+            result.validation_id,
+            row.next_due,
+          );
+        } catch (error) {
+          logger.error(
+            `❌ Overdue-validation alert failed for org ${organizationId} model ${row.model_inventory_id}:`,
+            error,
+          );
+        }
       }
     } catch (error) {
       logger.error(

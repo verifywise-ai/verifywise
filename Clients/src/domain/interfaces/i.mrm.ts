@@ -353,3 +353,20 @@ export interface IMrmAttestationSummary {
   per_tier: IMrmAttestationTierRow[];
   attestation_status: MrmAttestationStatus;
 }
+
+// ---- Org-wide MRM settings ----
+
+export interface IMrmOrgSettings {
+  organization_id: number;
+  retention_months: number;
+  alert_email_enabled: boolean;
+  breach_auto_open_finding: boolean;
+  alert_recipients: number[];
+}
+
+export interface IMrmOrgSettingsUpdate {
+  retention_months?: number;
+  alert_email_enabled?: boolean;
+  breach_auto_open_finding?: boolean;
+  alert_recipients?: number[];
+}

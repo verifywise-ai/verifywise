@@ -320,7 +320,7 @@ export async function createNewModelInventory(req: Request, res: Response) {
         {
           description: modelDetails || undefined,
         },
-      ).catch((err) => console.error("Failed to send approver notification:", err));
+      ).catch((err) => logger.error("Failed to send approver notification:", err));
     }
 
     logStructured(
@@ -529,7 +529,7 @@ export async function updateModelInventoryById(req: Request, res: Response) {
         {
           description: modelDetails || undefined,
         },
-      ).catch((err) => console.error("Failed to send approver notification:", err));
+      ).catch((err) => logger.error("Failed to send approver notification:", err));
     }
 
     logStructured(

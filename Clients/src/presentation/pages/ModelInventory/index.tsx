@@ -152,6 +152,7 @@ const ModelInventory: React.FC = () => {
   const hasProcessedUrlParam = useRef(false);
   const [modelInventoryData, setModelInventoryData] = useState<IModelInventory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [modelInventoryError, setModelInventoryError] = useState<Error | string | unknown>(null);
   const [isNewModelInventoryModalOpen, setIsNewModelInventoryModalOpen] = useState(false);
   // Note: Lifecycle config is now provided by the model-lifecycle plugin via plugin slots
 
@@ -820,6 +821,7 @@ const ModelInventory: React.FC = () => {
     if (showLoading) {
       setIsLoading(true);
     }
+    setModelInventoryError(null);
     try {
       const response = await getAllEntities({ routeUrl: "/modelInventory" });
       if (response?.data) {
@@ -835,11 +837,7 @@ const ModelInventory: React.FC = () => {
         type: "error",
         message: `Failed to fetch model inventory data: ${error}`,
       });
-      setAlert({
-        variant: "error",
-        body: "Failed to load model inventory data. Please try again later.",
-      });
-      setShowAlert(true);
+      setModelInventoryError(error);
     } finally {
       if (showLoading) {
         setIsLoading(false);
@@ -2283,6 +2281,8 @@ const ModelInventory: React.FC = () => {
                   key={tableKey}
                   data={data}
                   isLoading={isLoading}
+                  error={modelInventoryError}
+                  onRetry={() => fetchModelInventoryData()}
                   onEdit={handleEditModelInventory}
                   onDelete={handleDeleteModelInventory}
                   onCheckModelHasRisks={handleCheckModelHasRisks}

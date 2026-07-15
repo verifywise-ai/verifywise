@@ -18,10 +18,9 @@ describe("evalModelsService", () => {
       expect(result).toEqual([{ id: "m1", name: "GPT-4", provider: "openai" }]);
     });
 
-    it("returns empty array on error", async () => {
+    it("throws on error", async () => {
       server.use(http.get("/api/deepeval/models", () => HttpResponse.error()));
-      const result = await evalModelsService.listModels();
-      expect(result).toEqual([]);
+      await expect(evalModelsService.listModels()).rejects.toThrow();
     });
   });
 
@@ -39,10 +38,9 @@ describe("evalModelsService", () => {
       expect(result?.name).toBe("Claude");
     });
 
-    it("returns null on error", async () => {
+    it("throws on error", async () => {
       server.use(http.post("/api/deepeval/models", () => HttpResponse.error()));
-      const result = await evalModelsService.createModel({ name: "X", provider: "y" });
-      expect(result).toBeNull();
+      await expect(evalModelsService.createModel({ name: "X", provider: "y" })).rejects.toThrow();
     });
   });
 
@@ -60,26 +58,23 @@ describe("evalModelsService", () => {
       expect(result?.name).toBe("Updated");
     });
 
-    it("returns null on error", async () => {
+    it("throws on error", async () => {
       server.use(http.put("/api/deepeval/models/:id", () => HttpResponse.error()));
-      const result = await evalModelsService.updateModel("m1", { name: "X" });
-      expect(result).toBeNull();
+      await expect(evalModelsService.updateModel("m1", { name: "X" })).rejects.toThrow();
     });
   });
 
   describe("deleteModel", () => {
-    it("returns true on success", async () => {
+    it("resolves on success", async () => {
       server.use(
         http.delete("/api/deepeval/models/:id", () => HttpResponse.json({ message: "deleted" })),
       );
-      const result = await evalModelsService.deleteModel("m1");
-      expect(result).toBe(true);
+      await expect(evalModelsService.deleteModel("m1")).resolves.toBeUndefined();
     });
 
-    it("returns false on error", async () => {
+    it("throws on error", async () => {
       server.use(http.delete("/api/deepeval/models/:id", () => HttpResponse.error()));
-      const result = await evalModelsService.deleteModel("m1");
-      expect(result).toBe(false);
+      await expect(evalModelsService.deleteModel("m1")).rejects.toThrow();
     });
   });
 });
