@@ -65,7 +65,9 @@ export const test = base.extend<{
     }
 
     // Wait for the project form modal to appear
-    const formTitle = page.getByText(/create new use case/i).or(page.getByText(/create new project/i));
+    const formTitle = page
+      .getByText(/create new use case/i)
+      .or(page.getByText(/create new project/i));
     await expect(formTitle.first()).toBeVisible({ timeout: 10_000 });
 
     // Fill project title using the stable id from ProjectForm
@@ -202,7 +204,9 @@ export const test = base.extend<{
     }
 
     // Wait for the project form modal to appear
-    const formTitle = page.getByText(/create new use case/i).or(page.getByText(/create new project/i));
+    const formTitle = page
+      .getByText(/create new use case/i)
+      .or(page.getByText(/create new project/i));
     await expect(formTitle.first()).toBeVisible({ timeout: 10_000 });
 
     // Fill project title

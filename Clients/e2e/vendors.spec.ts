@@ -44,7 +44,9 @@ test.describe("Vendors Page", () => {
     await expect(searchInput.first()).toBeVisible({ timeout: 10_000 });
   });
 
-  test("page has no critical or serious accessibility violations", async ({ authedPage: page }, testInfo) => {
+  test("page has no critical or serious accessibility violations", async ({
+    authedPage: page,
+  }, testInfo) => {
     await page.goto("/vendors");
     await expect(page.getByText(/vendor/i).first()).toBeVisible({ timeout: 10_000 });
 

@@ -10,7 +10,9 @@ test.describe("Policies", () => {
     await expect(page.getByText(/polic/i).first()).toBeVisible({ timeout: 10_000 });
   });
 
-  test("page has no critical or serious accessibility violations", async ({ authedPage: page }, testInfo) => {
+  test("page has no critical or serious accessibility violations", async ({
+    authedPage: page,
+  }, testInfo) => {
     await page.goto("/policies");
     await expect(page.getByText(/polic/i).first()).toBeVisible({ timeout: 10_000 });
 

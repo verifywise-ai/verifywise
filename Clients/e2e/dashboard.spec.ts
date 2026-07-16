@@ -17,7 +17,9 @@ test.describe("Dashboard", () => {
     await expect(heading.first()).toBeVisible({ timeout: 10_000 });
   });
 
-  test("page has no critical or serious accessibility violations", async ({ authedPage: page }, testInfo) => {
+  test("page has no critical or serious accessibility violations", async ({
+    authedPage: page,
+  }, testInfo) => {
     await page.waitForLoadState("domcontentloaded");
 
     const violations = await runA11yCheck(page, testInfo);

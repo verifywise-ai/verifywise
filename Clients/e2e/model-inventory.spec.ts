@@ -16,7 +16,9 @@ test.describe("Model Inventory", () => {
     await expect(page.getByText(/model/i).first()).toBeVisible({ timeout: 10_000 });
   });
 
-  test("page has no critical or serious accessibility violations", async ({ authedPage: page }, testInfo) => {
+  test("page has no critical or serious accessibility violations", async ({
+    authedPage: page,
+  }, testInfo) => {
     await page.goto("/model-inventory");
     await expect(page.getByText(/model/i).first()).toBeVisible({ timeout: 10_000 });
 

@@ -16,7 +16,9 @@ test.describe("Tasks", () => {
     await expect(page.getByText(/task/i).first()).toBeVisible({ timeout: 10_000 });
   });
 
-  test("page has no critical or serious accessibility violations", async ({ authedPage: page }, testInfo) => {
+  test("page has no critical or serious accessibility violations", async ({
+    authedPage: page,
+  }, testInfo) => {
     await page.goto("/tasks");
     await expect(page.getByText(/task/i).first()).toBeVisible({ timeout: 10_000 });
 
