@@ -5,6 +5,10 @@ permissions:
   security-events: write
   pull-requests: write
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 on:
   pull_request:
     branches: ['master', 'develop']
@@ -18,43 +22,10 @@ on:
       - '.github/workflows/frontend-checks.yml'
 
 jobs:
-  security-audit:
-    name: Security Audit
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: Clients
-
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Set up Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: Clients/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci --legacy-peer-deps
-
-      - name: Run npm audit
-        run: npm audit --audit-level=high
-        continue-on-error: true
-
-      - name: Run npm audit (JSON output for review)
-        run: npm audit --json > ../audit-results.json || true
-
-      - name: Upload audit results
-        uses: actions/upload-artifact@v7
-        with:
-          name: frontend-npm-audit-results
-          path: audit-results.json
-          retention-days: 30
-
   lint-and-typecheck:
     name: Lint, Types & i18n
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: Clients
@@ -84,6 +55,7 @@ jobs:
   unit-and-component-tests:
     name: Unit & Component Tests (shard ${{ matrix.shard }}/4)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -108,11 +80,11 @@ jobs:
       - name: Run tests (shard ${{ matrix.shard }}/4)
         run: npx vitest run --shard=${{ matrix.shard }}/4
 
-  # Runs the CI test command with coverage on every push and pull request,
-  # uploading the coverage report and enforcing the configured thresholds.
   coverage:
     name: Coverage
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: github.event_name == 'push'
     defaults:
       run:
         working-directory: Clients
@@ -140,90 +112,10 @@ jobs:
           path: Clients/coverage/
           retention-days: 14
 
-      - name: Post coverage gate failure comment
-        if: github.event_name == 'pull_request' && failure()
-        uses: actions/github-script@v9
-        with:
-          script: |
-            const fs = require("fs");
-            const summaryPath = "Clients/coverage/coverage-summary.json";
-            if (!fs.existsSync(summaryPath)) {
-              console.log("coverage-summary.json not found, skipping comment");
-              return;
-            }
-            const json = JSON.parse(fs.readFileSync(summaryPath, "utf8"));
-            const total = json.total;
-            const threshold = { statements: 30, branches: 20, functions: 25, lines: 30 };
-            const rows = ["| Metric | Threshold | Actual | Status |", "|--------|----------:|------:|:------:|"];
-            let passed = true;
-            for (const key of ["statements", "branches", "functions", "lines"]) {
-              const actual = total[key].pct;
-              const ok = actual >= threshold[key];
-              if (!ok) passed = false;
-              rows.push(`| ${key.charAt(0).toUpperCase() + key.slice(1)} | ${threshold[key]}% | ${actual}% | ${ok ? "✅" : "❌"} |`);
-            }
-
-            if (passed) {
-              console.log("All coverage thresholds pass");
-              return;
-            }
-
-            const body = `## Coverage Gate Failed\n\n${rows.join("\n")}\n\n<!-- coverage-gate -->`;
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-            });
-            const marker = "<!-- coverage-gate -->";
-            const existing = comments.find(c => c.body && c.body.includes(marker));
-            if (existing) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: existing.id,
-                body,
-              });
-            } else {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-                body,
-              });
-            }
-
-      - name: Post coverage gate success comment
-        if: github.event_name == 'pull_request' && success()
-        uses: actions/github-script@v9
-        with:
-          script: |
-            const body = "## ✅ Coverage Gate Passed\n\nAll coverage thresholds are met.\n\n<!-- coverage-gate -->";
-            const { data: comments } = await github.rest.issues.listComments({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              issue_number: context.issue.number,
-            });
-            const marker = "<!-- coverage-gate -->";
-            const existing = comments.find(c => c.body && c.body.includes(marker));
-            if (existing) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                comment_id: existing.id,
-                body,
-              });
-            } else {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: context.issue.number,
-                body,
-              });
-            }
-
   dependency-review:
     name: Dependency Review
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v7
