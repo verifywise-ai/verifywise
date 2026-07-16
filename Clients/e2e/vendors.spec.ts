@@ -128,13 +128,13 @@ test.describe("Vendors Page", () => {
 // --- Tier 4: CRUD (requires project) ---
 
 projectTest.describe("Vendors CRUD", () => {
-  projectTest.beforeEach(async ({ projectPage: page }) => {
+  projectTest.beforeEach(async ({ adminProjectPage: page }) => {
     await page.evaluate(() => {
       localStorage.setItem("vendor-tour", "true");
     });
   });
 
-  projectTest("CRUD: create and delete vendor", async ({ projectPage: page, projectName }) => {
+  projectTest("CRUD: create and delete vendor", async ({ adminProjectPage: page, projectName }) => {
     await page.goto("/vendors");
     const vendorName = `E2E Test Vendor ${Date.now()}`;
 
