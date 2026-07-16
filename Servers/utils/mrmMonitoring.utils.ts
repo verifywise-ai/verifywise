@@ -7,6 +7,7 @@ import {
   MrmThresholdOp,
   MrmThresholdSeverity,
 } from "../domain.layer/enums/mrmMonitoring.enum";
+import { MrmModelRole } from "../domain.layer/enums/mrm.enum";
 import { MrmThresholdModel } from "../domain.layer/models/mrm/mrmThreshold.model";
 import { MrmMetricKeyModel } from "../domain.layer/models/mrm/mrmMetricKey.model";
 import { MrmThresholdSnapshot } from "../domain.layer/interfaces/i.mrmMetricEvaluation";
@@ -535,6 +536,33 @@ export const flagModelForRevalidationQuery = async (
       transaction,
     },
   );
+};
+
+/**
+ * The user id assigned to one of the model's MRM roles, or null when
+ * unassigned. Deterministic: lowest id wins if somehow duplicated.
+ */
+export const getModelRoleUserIdQuery = async (
+  organizationId: number,
+  modelInventoryId: number,
+  role: MrmModelRole,
+  transaction?: Transaction,
+): Promise<number | null> => {
+  const rows = (await sequelize.query(
+    `SELECT user_id FROM mrm_model_roles
+      WHERE organization_id = :organizationId
+        AND model_inventory_id = :modelInventoryId
+        AND role = :role
+        AND user_id IS NOT NULL
+      ORDER BY id ASC
+      LIMIT 1`,
+    {
+      replacements: { organizationId, modelInventoryId, role },
+      type: QueryTypes.SELECT,
+      transaction,
+    },
+  )) as { user_id: number }[];
+  return rows[0]?.user_id ?? null;
 };
 
 /**

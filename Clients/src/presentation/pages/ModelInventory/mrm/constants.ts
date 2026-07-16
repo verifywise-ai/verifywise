@@ -24,6 +24,9 @@ import {
 } from "../../../../domain/enums/mrm.enum";
 import { IMrmThreshold } from "../../../../domain/interfaces/i.mrm";
 
+/** Retention floor (months) — mirrors the server-enforced minimum (SR 26-2 / SS1/23 / OSFI E-23 examiner cycle + margin). */
+export const MIN_RETENTION_MONTHS = 13;
+
 // ---- Tier ----
 
 export const TIER_OPTIONS: { value: MrmTier; label: string }[] = [

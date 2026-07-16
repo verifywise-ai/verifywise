@@ -429,9 +429,18 @@ export async function handleBreaches(
   // Alert side effects: auto-open findings (hard breaches, org toggle), then
   // notify the model's MRM stakeholders (roles ∪ org-wide extra recipients),
   // in-app always and by email when the org enabled it.
+  let settings;
   try {
-    const settings = await getMrmOrgSettings(organizationId);
+    settings = await getMrmOrgSettings(organizationId);
+  } catch (error) {
+    logger.error(
+      "❌ Failed to read MRM alert settings — skipping breach alerts and auto-findings:",
+      error,
+    );
+    return;
+  }
 
+  try {
     // Auto-findings run BEFORE recipient resolution and regardless of it —
     // and AFTER the triggerRevalidation block above, so a just-opened
     // validation is available for the finding to link to.
@@ -461,6 +470,9 @@ export async function handleBreaches(
         ? `Metric breach: ${breach.point.metric}`
         : `Metric warning: ${breach.point.metric}`;
       const message = `${label} — "${breach.point.metric}" = ${breach.point.value} breached its monitoring threshold.`;
+      const thresholdSeverity = breach.evaluation!.threshold?.severity ?? MrmThresholdSeverity.HIGH;
+      const displaySeverity =
+        thresholdSeverity === MrmThresholdSeverity.WARN ? "warning" : thresholdSeverity;
       await dispatchAlerts(
         organizationId,
         recipients,
@@ -480,7 +492,7 @@ export async function handleBreaches(
             model_label: label,
             metric: breach.point.metric,
             value: String(breach.point.value),
-            severity: breach.evaluation!.threshold?.severity ?? "high",
+            severity: displaySeverity,
             model_url: `${baseUrl}/model-inventory/models/${modelInventoryId}`,
           },
         },

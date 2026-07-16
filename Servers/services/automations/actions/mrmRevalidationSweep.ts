@@ -3,7 +3,11 @@ import {
   getDueRevalidationsQuery,
   triggerRevalidation,
 } from "../../../utils/mrmRevalidation.utils";
-import { notifyRevalidationDue } from "../../../utils/mrmAlerts.utils";
+import {
+  loadMrmAlertContext,
+  MrmAlertContext,
+  notifyRevalidationDue,
+} from "../../../utils/mrmAlerts.utils";
 import { MrmRevalidationTriggerSource } from "../../../domain.layer/enums/mrmMonitoring.enum";
 import logger from "../../../utils/logger/fileLogger";
 
@@ -34,6 +38,11 @@ export async function runRevalidationSweep(
   let opened = 0;
   let annotated = 0;
 
+  // Org-constant alert inputs (settings + extra recipients) load at most once
+  // per sweep run, and only when a row actually wins the overdue claim.
+  let alertContext: Promise<MrmAlertContext> | null = null;
+  const loadAlertContext = () => (alertContext ??= loadMrmAlertContext(organizationId));
+
   for (const row of due) {
     try {
       const result = await triggerRevalidation(
@@ -58,6 +67,7 @@ export async function runRevalidationSweep(
             row.model_inventory_id,
             result.validation_id,
             row.next_due,
+            loadAlertContext,
           );
         } catch (error) {
           logger.error(

@@ -6,6 +6,28 @@ import { mockAssessments, createMockAssessment } from "./data/assessments";
 import { mockLoginResponse } from "./data/auth";
 import { mockTasks, createMockTask } from "./data/tasks";
 import { mockUsers, createMockUser } from "./data/users";
+import { mockPolicies, createMockPolicy } from "./data/policies";
+import { mockFiles, createMockFile, mockFolders, createMockFolder } from "./data/files";
+import {
+  mockApprovalWorkflows,
+  createMockApprovalWorkflow,
+  mockApprovalRequests,
+  createMockApprovalRequest,
+} from "./data/approvalWorkflows";
+import { mockVendorRisks, createMockVendorRisk } from "./data/vendorRisks";
+import {
+  mockIntakeForms,
+  createMockIntakeForm,
+  createMockIntakeSubmission,
+} from "./data/publicIntake";
+import {
+  mockPrompts,
+  createMockPrompt,
+  mockMcpServers,
+  createMockMcpServer,
+  mockMcpRuns,
+  createMockMcpRun,
+} from "./data/aiGateway";
 
 export const handlers = [
   // Health check
@@ -587,5 +609,226 @@ export const handlers = [
         offset,
       },
     });
+  }),
+
+  // ==================== Policies ====================
+  http.get("/api/policies/:id", ({ params }) => {
+    const policy = mockPolicies.find((p) => String(p.id) === params.id);
+    if (!policy) return new HttpResponse(null, { status: 404 });
+    return HttpResponse.json({ data: policy });
+  }),
+  http.post("/api/policies", async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({ data: createMockPolicy(body as any) }, { status: 201 });
+  }),
+  http.patch("/api/policies/:id", async ({ params, request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    const policy = mockPolicies.find((p) => String(p.id) === params.id);
+    if (!policy) return new HttpResponse(null, { status: 404 });
+    return HttpResponse.json({ data: { ...policy, ...body } });
+  }),
+  http.delete("/api/policies/:id", ({ params }) => {
+    const policy = mockPolicies.find((p) => String(p.id) === params.id);
+    if (!policy) return new HttpResponse(null, { status: 404 });
+    return new HttpResponse(null, { status: 204 });
+  }),
+
+  // ==================== Files ====================
+  http.get("/api/file-manager/with-metadata", ({ request }) => {
+    const url = new URL(request.url);
+    const page = parseInt(url.searchParams.get("page") || "1", 10);
+    const pageSize = parseInt(url.searchParams.get("pageSize") || "10", 10);
+    return HttpResponse.json({
+      data: {
+        files: mockFiles.map((f) => ({
+          id: f.id,
+          filename: f.name,
+          size: f.size,
+          mimetype: f.mimeType,
+          upload_date: f.createdAt,
+          uploaded_by: f.uploadedBy,
+        })),
+        pagination: { page, pageSize, total: mockFiles.length },
+      },
+    });
+  }),
+  http.get("/api/files/folders", () => HttpResponse.json({ data: mockFolders })),
+  http.post("/api/files/folders", async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({ data: createMockFolder(body as any) }, { status: 201 });
+  }),
+  http.get("/api/files/folders/:id", ({ params }) => {
+    const folder = mockFolders.find((f) => String(f.id) === params.id);
+    if (!folder) return new HttpResponse(null, { status: 404 });
+    return HttpResponse.json({ data: folder });
+  }),
+  http.patch("/api/files/folders/:id", async ({ params, request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    const folder = mockFolders.find((f) => String(f.id) === params.id);
+    if (!folder) return new HttpResponse(null, { status: 404 });
+    return HttpResponse.json({ data: { ...folder, ...body } });
+  }),
+  http.delete("/api/files/folders/:id", ({ params }) => {
+    const folder = mockFolders.find((f) => String(f.id) === params.id);
+    if (!folder) return new HttpResponse(null, { status: 404 });
+    return new HttpResponse(null, { status: 204 });
+  }),
+  http.get("/api/files/:id", ({ params }) => {
+    const file = mockFiles.find((f) => String(f.id) === params.id);
+    if (!file) return new HttpResponse(null, { status: 404 });
+    return HttpResponse.json({ data: file });
+  }),
+  http.post("/api/files", async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({ data: createMockFile(body as any) }, { status: 201 });
+  }),
+  http.patch("/api/files/:id", async ({ params, request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    const file = mockFiles.find((f) => String(f.id) === params.id);
+    if (!file) return new HttpResponse(null, { status: 404 });
+    return HttpResponse.json({ data: { ...file, ...body } });
+  }),
+  http.delete("/api/files/:id", ({ params }) => {
+    const file = mockFiles.find((f) => String(f.id) === params.id);
+    if (!file) return new HttpResponse(null, { status: 404 });
+    return new HttpResponse(null, { status: 204 });
+  }),
+
+  // ==================== Approval Workflows ====================
+  http.get("/api/approval-workflows", () => HttpResponse.json({ data: mockApprovalWorkflows })),
+  http.post("/api/approval-workflows", async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({ data: createMockApprovalWorkflow(body as any) }, { status: 201 });
+  }),
+  http.get("/api/approval-workflows/:id", ({ params }) => {
+    const workflow = mockApprovalWorkflows.find((w) => String(w.id) === params.id);
+    if (!workflow) return new HttpResponse(null, { status: 404 });
+    return HttpResponse.json({ data: workflow });
+  }),
+  http.patch("/api/approval-workflows/:id", async ({ params, request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    const workflow = mockApprovalWorkflows.find((w) => String(w.id) === params.id);
+    if (!workflow) return new HttpResponse(null, { status: 404 });
+    return HttpResponse.json({ data: { ...workflow, ...body } });
+  }),
+  http.delete("/api/approval-workflows/:id", ({ params }) => {
+    const workflow = mockApprovalWorkflows.find((w) => String(w.id) === params.id);
+    if (!workflow) return new HttpResponse(null, { status: 404 });
+    return new HttpResponse(null, { status: 204 });
+  }),
+
+  // ==================== Approval Requests ====================
+  http.get("/api/approval-requests", () => HttpResponse.json({ data: mockApprovalRequests })),
+  http.post("/api/approval-requests", async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({ data: createMockApprovalRequest(body as any) }, { status: 201 });
+  }),
+  http.get("/api/approval-requests/:id", ({ params }) => {
+    const reqItem = mockApprovalRequests.find((r) => String(r.id) === params.id);
+    if (!reqItem) return new HttpResponse(null, { status: 404 });
+    return HttpResponse.json({ data: reqItem });
+  }),
+  http.patch("/api/approval-requests/:id", async ({ params, request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    const reqItem = mockApprovalRequests.find((r) => String(r.id) === params.id);
+    if (!reqItem) return new HttpResponse(null, { status: 404 });
+    return HttpResponse.json({ data: { ...reqItem, ...body } });
+  }),
+
+  // ==================== Vendor Risks ====================
+  http.get("/api/vendor-risks", () => HttpResponse.json({ data: mockVendorRisks })),
+  http.post("/api/vendor-risks", async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({ data: createMockVendorRisk(body as any) }, { status: 201 });
+  }),
+  http.get("/api/vendor-risks/:id", ({ params }) => {
+    const risk = mockVendorRisks.find((r) => String(r.id) === params.id);
+    if (!risk) return new HttpResponse(null, { status: 404 });
+    return HttpResponse.json({ data: risk });
+  }),
+  http.patch("/api/vendor-risks/:id", async ({ params, request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    const risk = mockVendorRisks.find((r) => String(r.id) === params.id);
+    if (!risk) return new HttpResponse(null, { status: 404 });
+    return HttpResponse.json({ data: { ...risk, ...body } });
+  }),
+  http.delete("/api/vendor-risks/:id", ({ params }) => {
+    const risk = mockVendorRisks.find((r) => String(r.id) === params.id);
+    if (!risk) return new HttpResponse(null, { status: 404 });
+    return new HttpResponse(null, { status: 204 });
+  }),
+
+  // ==================== Public Intake ====================
+  http.get("/api/intake/forms", () => HttpResponse.json({ data: mockIntakeForms })),
+  http.post("/api/intake/forms", async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({ data: createMockIntakeForm(body as any) }, { status: 201 });
+  }),
+  http.get("/api/intake/forms/:id", ({ params }) => {
+    const form = mockIntakeForms.find((f) => String(f.id) === params.id);
+    if (!form) return new HttpResponse(null, { status: 404 });
+    return HttpResponse.json({ data: form });
+  }),
+  http.post("/api/intake/forms/:id/submit", async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({ data: createMockIntakeSubmission(body as any) }, { status: 201 });
+  }),
+
+  // ==================== AI Gateway — Prompts ====================
+  http.get("/api/ai-gateway/prompts", () => HttpResponse.json({ data: mockPrompts })),
+  http.post("/api/ai-gateway/prompts", async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({ data: createMockPrompt(body as any) }, { status: 201 });
+  }),
+  http.get("/api/ai-gateway/prompts/:id", ({ params }) => {
+    const prompt = mockPrompts.find((p) => String(p.id) === params.id);
+    if (!prompt) return new HttpResponse(null, { status: 404 });
+    return HttpResponse.json({ data: prompt });
+  }),
+  http.patch("/api/ai-gateway/prompts/:id", async ({ params, request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    const prompt = mockPrompts.find((p) => String(p.id) === params.id);
+    if (!prompt) return new HttpResponse(null, { status: 404 });
+    return HttpResponse.json({ data: { ...prompt, ...body } });
+  }),
+  http.delete("/api/ai-gateway/prompts/:id", ({ params }) => {
+    const prompt = mockPrompts.find((p) => String(p.id) === params.id);
+    if (!prompt) return new HttpResponse(null, { status: 404 });
+    return new HttpResponse(null, { status: 204 });
+  }),
+
+  // ==================== AI Gateway — MCP Servers ====================
+  http.get("/api/ai-gateway/mcp/servers", () => HttpResponse.json({ data: mockMcpServers })),
+  http.post("/api/ai-gateway/mcp/servers", async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({ data: createMockMcpServer(body as any) }, { status: 201 });
+  }),
+  http.get("/api/ai-gateway/mcp/servers/:id", ({ params }) => {
+    const server = mockMcpServers.find((s) => String(s.id) === params.id);
+    if (!server) return new HttpResponse(null, { status: 404 });
+    return HttpResponse.json({ data: server });
+  }),
+  http.patch("/api/ai-gateway/mcp/servers/:id", async ({ params, request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    const server = mockMcpServers.find((s) => String(s.id) === params.id);
+    if (!server) return new HttpResponse(null, { status: 404 });
+    return HttpResponse.json({ data: { ...server, ...body } });
+  }),
+  http.delete("/api/ai-gateway/mcp/servers/:id", ({ params }) => {
+    const server = mockMcpServers.find((s) => String(s.id) === params.id);
+    if (!server) return new HttpResponse(null, { status: 404 });
+    return new HttpResponse(null, { status: 204 });
+  }),
+
+  // ==================== AI Gateway — MCP Runs ====================
+  http.get("/api/ai-gateway/mcp/runs", () => HttpResponse.json({ data: mockMcpRuns })),
+  http.post("/api/ai-gateway/mcp/runs", async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({ data: createMockMcpRun(body as any) }, { status: 201 });
+  }),
+  http.get("/api/ai-gateway/mcp/runs/:id", ({ params }) => {
+    const run = mockMcpRuns.find((r) => String(r.id) === params.id);
+    if (!run) return new HttpResponse(null, { status: 404 });
+    return HttpResponse.json({ data: run });
   }),
 ];

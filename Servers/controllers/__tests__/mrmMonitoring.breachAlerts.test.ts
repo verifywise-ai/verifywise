@@ -104,7 +104,7 @@ describe("handleBreaches alert dispatch", () => {
     expect(notification.title).toBe("Metric warning: psi");
     expect(emailEnabled).toBe(true);
     expect(email.template).toBe("mrm-breach-alert.mjml");
-    expect(email.variables.severity).toBe("warn");
+    expect(email.variables.severity).toBe("warning");
     expect(mockDispatch.mock.calls[1][2].title).toBe("Metric breach: auc");
   });
 
@@ -137,5 +137,14 @@ describe("handleBreaches alert dispatch", () => {
     await expect(
       handleBreaches(1, 7, [outcome("psi", MrmEvalStatus.BREACH, MrmThresholdSeverity.HIGH)]),
     ).resolves.toBeUndefined();
+  });
+
+  it("skips breach alerts and auto-findings when the settings read fails", async () => {
+    mockSettings.mockRejectedValue(new Error("db down"));
+    await expect(
+      handleBreaches(1, 7, [outcome("psi", MrmEvalStatus.BREACH, MrmThresholdSeverity.HIGH)]),
+    ).resolves.toBeUndefined();
+    expect(mockAutoFinding).not.toHaveBeenCalled();
+    expect(mockDispatch).not.toHaveBeenCalled();
   });
 });
