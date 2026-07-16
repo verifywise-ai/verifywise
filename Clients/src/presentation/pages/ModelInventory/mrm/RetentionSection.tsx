@@ -3,15 +3,13 @@ import { Box, Typography } from "@mui/material";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import Field from "../../../components/Inputs/Field";
 import { useMrmSettings, useUpdateMrmSettings } from "../../../../application/hooks/useMrm";
-import { mrmErrorMessage } from "./constants";
+import { MIN_RETENTION_MONTHS, mrmErrorMessage } from "./constants";
 import { mrmSectionIntroStyle } from "./mrmStyles";
 
 interface RetentionSectionProps {
   onError: (message: string) => void;
   onSuccess: (message: string) => void;
 }
-
-const MIN_RETENTION_MONTHS = 13;
 
 const RetentionSection = ({ onError, onSuccess }: RetentionSectionProps) => {
   const { data: settings } = useMrmSettings();
