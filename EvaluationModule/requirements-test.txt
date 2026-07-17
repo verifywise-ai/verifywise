@@ -1,0 +1,4 @@
+# Test-only dependencies for EvaluationModule.
+# These are intentionally separate from requirements.txt so production images stay slim.
+
+respx==0.22.0
