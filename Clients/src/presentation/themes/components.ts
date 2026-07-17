@@ -1,4 +1,5 @@
 import { SxProps, Theme } from "@mui/material";
+import { fontSize, textStyles } from "./typography";
 
 /**
  * Standardized component styles to be used across the application
@@ -8,9 +9,9 @@ import { SxProps, Theme } from "@mui/material";
 // Common sizing constants
 export const COMPONENT_SIZES = {
   button: {
-    small: { height: 28, fontSize: 12 },
-    medium: { height: 34, fontSize: 13 },
-    large: { height: 40, fontSize: 14 },
+    small: { height: 28, fontSize: fontSize.sm },
+    medium: { height: 34, fontSize: fontSize.base },
+    large: { height: 40, fontSize: fontSize.md },
   },
   input: {
     small: { height: 32 },
@@ -103,7 +104,7 @@ export const modalStyles = {
   description: (theme: Theme): SxProps<Theme> => ({
     color: theme.palette.text.tertiary,
     marginBottom: theme.spacing(3),
-    fontSize: 14,
+    fontSize: fontSize.md,
     textAlign: "left",
   }),
 
@@ -259,20 +260,19 @@ export const formStyles = {
 
   label: (theme: Theme): SxProps<Theme> => ({
     color: theme.palette.text.secondary,
-    fontSize: "14px",
-    fontWeight: 500,
+    ...textStyles.formLabel,
     marginBottom: theme.spacing(0.5),
   }),
 
   helperText: (theme: Theme): SxProps<Theme> => ({
     color: theme.palette.text.tertiary,
-    fontSize: "12px",
+    fontSize: fontSize.sm,
     marginTop: theme.spacing(0.5),
   }),
 
   errorText: (theme: Theme): SxProps<Theme> => ({
     color: theme.palette.status?.error?.text || "#f04438",
-    fontSize: "12px",
+    ...textStyles.error,
     marginTop: theme.spacing(0.5),
   }),
 };

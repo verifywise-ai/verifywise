@@ -10,7 +10,10 @@ This guide documents the design tokens, theme configuration, and visual standard
 Clients/src/presentation/themes/
 ├── index.ts           # Central export hub
 ├── light.ts           # Main MUI theme configuration
-├── v1SingleTheme.ts   # Standardized patterns
+├── palette.ts         # Semantic color tokens
+├── primitives.ts      # Color ramps (when present on branch)
+├── typography.ts      # Type scale + semantic textStyles (Phase 2)
+├── v1SingleTheme.ts   # Legacy style bag (derives from tokens)
 ├── theme.d.ts         # TypeScript type definitions
 ├── components.ts      # Reusable component styles
 ├── mixins.ts          # Style mixins
@@ -122,59 +125,77 @@ export const alertStyles = {
 
 ## Typography
 
+Source of truth: [`Clients/src/presentation/themes/typography.ts`](../../../Clients/src/presentation/themes/typography.ts)  
+Rules: [`CodeRules/09-design-system/typography.md`](../../../CodeRules/09-design-system/typography.md)
+
+Allowed sizes only: **11, 12, 13, 14, 16, 18, 24**. Do not invent sizes outside this scale.
+
 ### Font Families
 
 ```typescript
-const fontFamily = [
-  "Geist",
-  "Inter",
-  "system-ui",
-  "-apple-system",
-  "BlinkMacSystemFont",
-  "Helvetica",
-  "Arial",
-  "sans-serif",
-].join(", ");
+import { fontFamily } from "@/presentation/themes/typography";
 
-const monoFontFamily = [
-  "Geist Mono",
-  "Fira Code",
-  "Consolas",
-  "monospace",
-].join(", ");
+fontFamily.sans // 'Geist', system-ui, -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif
+fontFamily.mono // 'Fira Code', 'Consolas', monospace
 ```
 
-### Font Sizes
+### Font Sizes (`fontSize.*`)
 
 | Token | Size | Usage |
 |-------|------|-------|
-| `xs` / `sm` | 12px | Small labels, captions |
-| `base` | 13px | Default body text |
-| `md` | 14px | Emphasized body text |
-| `lg` | 15px | Large body text |
-| `xl` | 16px | Small headings |
-| `2xl` | 20px | Section headings |
-| `3xl` | 22px | Page headings |
-| `4xl` | 26px | Large headings |
-| `5xl` | 30px | Display headings |
+| `caption` | 11px | Captions, footnotes, error text |
+| `sm` | 12px | Body small, badges, table headers |
+| `base` | 13px | Default UI / body / tabs / modal description |
+| `md` | 14px | Emphasized body, subsection titles |
+| `lg` | 16px | Card / modal / drawer titles |
+| `xl` | 18px | Section titles |
+| `2xl` | 24px | Page titles |
 
-### Font Weights
+### Font Weights (`fontWeight.*`)
 
 | Token | Weight | Usage |
 |-------|--------|-------|
-| `normal` | 400 | Body text |
-| `medium` | 500 | Emphasized text, buttons |
-| `semibold` | 600 | Headings, labels |
-| `bold` | 700 | Strong emphasis |
+| `regular` | 400 | Body text |
+| `medium` | 500 | Labels, buttons, badges |
+| `semibold` | 600 | Headings |
+| `bold` | 700 | Strong emphasis (rare) |
 
-### Line Heights
+### Line Heights (`lineHeight.*`)
 
 | Token | Value | Usage |
 |-------|-------|-------|
-| `tight` | 1.2 | Headings |
-| `snug` | 1.3 | Compact text |
-| `normal` | 1.4 | Default body |
-| `relaxed` | 1.5 | Readable paragraphs |
+| `tight` | 1.2 | Buttons, badges |
+| `snug` | 1.3 | Page titles |
+| `normal` | 1.4 | Captions, section/card titles |
+| `relaxed` | 1.5 | Body text |
+| `loose` | 1.75 | Long-form content |
+
+### Semantic text styles (`textStyles.*`)
+
+Prefer roles over raw sizes in UI code:
+
+| Style | Size / weight | Typical use |
+|-------|---------------|-------------|
+| `pageTitle` | 24 / 600 | Page H1 |
+| `sectionTitle` | 18 / 600 | In-page section |
+| `cardTitle` | 16 / 600 | Card, modal, drawer title |
+| `subsectionTitle` | 14 / 600 | Nested heading |
+| `body` | 13 / 400 | Default copy, modal description, sidebar/tab labels |
+| `bodyLarge` / `bodySmall` / `caption` | 14 / 12 / 11 | Emphasized / secondary / meta |
+| `formLabel` / `input` / `error` | 13 / 13 / 11 | Forms |
+| `button` / `badge` / `tooltip` | 13 / 12 / 13 | Controls |
+| `tableHeader` / `tableCell` | 12 / 13 | Tables |
+
+```typescript
+import { textStyles, fontSize } from "@/presentation/themes/typography";
+
+<Typography sx={textStyles.cardTitle}>Modal title</Typography>
+<Typography sx={textStyles.body}>Modal description</Typography>
+```
+
+### Phase 2 note
+
+Typography foundation (tokens + theme helpers) is in place. Broad replacement of hardcoded `fontSize` literals across feature pages remains a later migration.
 
 ## Spacing
 
@@ -395,13 +416,13 @@ sx={cardMixins.interactive}
 import { typographyMixins } from "../themes/mixins";
 
 // Page title
-sx={typographyMixins.pageTitle}
+sx={typographyMixins.pageTitle(theme)}
 
-// Section heading
-sx={typographyMixins.sectionHeading}
+// Section title
+sx={typographyMixins.sectionTitle(theme)}
 
 // Body text
-sx={typographyMixins.body}
+sx={typographyMixins.body(theme)}
 ```
 
 ### Status Mixins
@@ -523,7 +544,7 @@ function MyComponent() {
 import { cardMixins, typographyMixins } from "../themes/mixins";
 
 <Card sx={{ ...cardMixins.standard, padding: 3 }}>
-  <Typography sx={typographyMixins.sectionHeading}>
+  <Typography sx={typographyMixins.sectionTitle(theme)}>
     Section Title
   </Typography>
 </Card>
@@ -559,6 +580,8 @@ import { cardMixins, typographyMixins } from "../themes/mixins";
 | File | Purpose |
 |------|---------|
 | `Clients/src/presentation/themes/light.ts` | Main MUI theme |
+| `Clients/src/presentation/themes/typography.ts` | Type scale + semantic textStyles |
+| `Clients/src/presentation/themes/palette.ts` | Semantic color tokens |
 | `Clients/src/presentation/themes/components.ts` | Reusable component styles |
 | `Clients/src/presentation/themes/mixins.ts` | Style mixins |
 | `Clients/src/presentation/themes/alerts.ts` | Alert status styles |

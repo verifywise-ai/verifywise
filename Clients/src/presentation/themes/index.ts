@@ -22,6 +22,15 @@ export {
   pink,
   default as grayScale,
 } from "./primitives";
+export {
+  typography,
+  fontFamily,
+  fontSize,
+  fontWeight,
+  lineHeight,
+  textStyles,
+  default as typographyTokens,
+} from "./typography";
 
 export * from "./mixins";
 export * from "./components";

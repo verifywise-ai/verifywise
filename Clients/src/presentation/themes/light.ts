@@ -1,5 +1,6 @@
 import { createTheme } from "@mui/material/styles";
 import { text, background, border, status, brand } from "./palette";
+import { fontFamily, fontSize, fontWeight } from "./typography";
 
 declare module "@mui/material/Button" {
   interface ButtonPropsVariantOverrides {
@@ -7,13 +8,10 @@ declare module "@mui/material/Button" {
   }
 }
 
-const fontFamilyDefault =
-  "'Geist', system-ui, -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif";
-
 const shadow = "0px 4px 24px -4px rgba(16, 24, 40, 0.08), 0px 3px 3px -3px rgba(16, 24, 40, 0.03)";
 
 const light = createTheme({
-  typography: { fontFamily: fontFamilyDefault, fontSize: 13 },
+  typography: { fontFamily: fontFamily.sans, fontSize: fontSize.base },
   spacing: 2,
   palette: {
     primary: { main: brand.primary },
@@ -122,7 +120,7 @@ const light = createTheme({
               },
             },
           ],
-          "fontWeight": 400,
+          "fontWeight": fontWeight.regular,
           "borderRadius": 4,
           "boxShadow": "none",
           "textTransform": "none",
@@ -200,7 +198,7 @@ const light = createTheme({
           "backgroundColor": "inherit",
           "padding": "4px 6px",
           "color": text.secondary,
-          "fontSize": 13,
+          "fontSize": fontSize.base,
           "margin": 2,
           "marginBottom": 0,
           "minWidth": 100,
@@ -331,7 +329,7 @@ const light = createTheme({
     MuiTooltip: {
       styleOverrides: {
         tooltip: {
-          fontSize: "13px",
+          fontSize: fontSize.base,
           backgroundColor: "#1F2937",
           padding: "8px 12px",
           borderRadius: "4px",
