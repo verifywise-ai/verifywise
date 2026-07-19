@@ -10,6 +10,11 @@
  */
 
 import { apiServices } from "../../infrastructure/api/networkServices";
+import type {
+  GenerateReportRequestBody,
+  GenerateReportResponse,
+  ReportRun,
+} from "../../domain/interfaces/i.reporting";
 
 // Backend responses are wrapped as { data: <payload> }; apiServices already
 // returns { data: response.data, ... }, so the payload is at r.data.data.
@@ -44,4 +49,16 @@ export async function getRuns(params?: { scheduledReportId?: number }): Promise<
 export async function downloadReportRun(id: number): Promise<Blob> {
   const r: any = await apiServices.get(`/reporting/runs/${id}/download`, { responseType: "blob" });
   return r.data as Blob;
+}
+
+// Enqueue an async report generation; returns the run id to poll.
+export async function generateReportV2(
+  body: GenerateReportRequestBody,
+): Promise<GenerateReportResponse> {
+  return extract(await apiServices.post("/reporting/v2/generate-report", body));
+}
+
+// Fetch a single run (org-scoped) for status polling.
+export async function getReportRun(id: number): Promise<ReportRun> {
+  return extract(await apiServices.get(`/reporting/runs/${id}`));
 }
