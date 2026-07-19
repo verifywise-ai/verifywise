@@ -1,6 +1,5 @@
 import { Request, Response } from "express";
 import { STATUS_CODE } from "../utils/statusCode.utils";
-import { uploadFile } from "../utils/fileUpload.utils";
 import {
   deleteReportByIdQuery,
   getGeneratedReportsQuery,
@@ -14,7 +13,10 @@ import logger from "../utils/logger/fileLogger";
 
 import { translateError } from "../utils/i18n.utils";
 // Reporting system imports (v2 - HTML/EJS based)
-import { generateReport as generateReportV2, ReportFormat } from "../services/reporting";
+import { ReportFormat } from "../services/reporting";
+import { createRunQuery, updateRunStatusQuery } from "../utils/reportRun.utils";
+import { enqueueAutomationAction } from "../services/automations/automationProducer";
+import { MANUAL_REPORT_JOB } from "../services/reporting/reportJobConstants";
 
 export function mapReportTypeToFileSource(
   reportType: string | string[],
@@ -88,8 +90,9 @@ export function mapReportTypeToFileSource(
 }
 
 /**
- * Legacy endpoint wrapper - redirects to v2 system
- * Kept for backward compatibility with old API calls
+ * Legacy /generate-report endpoint wrapper — delegates to generateReportsV2.
+ * As of the async pipeline, this returns 202 { runId } like v2 (no longer a
+ * synchronous blob). Kept only so the old route path keeps resolving.
  */
 export async function generateReports(req: Request, res: Response): Promise<any> {
   return generateReportsV2(req, res);
@@ -230,7 +233,7 @@ export async function generateReportsV2(req: Request, res: Response): Promise<an
     frameworkId: frameworkIdRaw,
     reportName,
     projectFrameworkId: projectFrameworkIdRaw,
-    format = "docx", // Default to docx for backward compatibility
+    format = "docx",
     aiEnhanced,
     llmKeyId,
   } = req.body;
@@ -242,14 +245,14 @@ export async function generateReportsV2(req: Request, res: Response): Promise<an
   const reportFormat: ReportFormat = format === "pdf" ? "pdf" : "docx";
 
   logProcessing({
-    description: `starting generateReportsV2 for project ID ${projectId}, report type: ${reportType}, format: ${reportFormat}`,
+    description: `enqueueing generateReportsV2 for project ID ${projectId}, report type: ${reportType}, format: ${reportFormat}`,
     functionName: "generateReportsV2",
     fileName: "reporting.ctrl.ts",
     userId: req.userId!,
     organizationId: req.organizationId!,
   });
-  logger.debug(`📄 Generating ${reportType} report (${reportFormat}) for project ID ${projectId}`);
 
+  let run: any = null;
   try {
     const user = await getUserByIdQuery(userId!);
     if (!user) {
@@ -268,105 +271,64 @@ export async function generateReportsV2(req: Request, res: Response): Promise<an
     const organization = await getOrganizationByIdQuery(user.organization_id!);
     const organizationName = organization?.name || "VerifyWise";
 
-    // Generate report using new system
-    const result = await generateReportV2(
-      {
-        projectId,
-        frameworkId,
-        projectFrameworkId,
-        reportType,
-        reportName,
-        format: reportFormat,
-        branding: {
-          organizationName,
-        },
-        aiEnhanced: aiEnhanced === true,
-        llmKeyId: llmKeyId ? parseInt(llmKeyId) : undefined,
-      },
-      userId!,
-      req.organizationId!,
-    );
-
-    if (!result.success) {
-      await logFailure({
-        eventType: "Create",
-        description: `Failed to generate ${reportType} report: ${result.error}`,
-        functionName: "generateReportsV2",
-        fileName: "reporting.ctrl.ts",
-        error: new Error(result.error || "Unknown error"),
-        userId: req.userId!,
-        organizationId: req.organizationId!,
-      });
-      return res.status(500).json(STATUS_CODE[500](result.error || "Failed to generate report"));
-    }
-
-    // Upload file to storage
-    const docFile = {
-      originalname: result.filename,
-      buffer: result.content,
-      fieldname: "file",
-      mimetype: result.mimeType,
+    const request = {
+      projectId,
+      frameworkId,
+      projectFrameworkId,
+      reportType,
+      reportName,
+      format: reportFormat,
+      branding: { organizationName },
+      aiEnhanced: aiEnhanced === true,
+      llmKeyId: llmKeyId ? parseInt(llmKeyId) : undefined,
     };
 
-    let uploadedFile;
-    try {
-      uploadedFile = await uploadFile(
-        docFile,
-        userId!,
-        projectId,
-        mapReportTypeToFileSource(reportType),
-        req.organizationId!,
-      );
-    } catch (error) {
-      console.error("File upload error:", error);
-      await logFailure({
-        eventType: "Create",
-        description: `Error uploading report file for project ID ${projectId}`,
-        functionName: "generateReportsV2",
-        fileName: "reporting.ctrl.ts",
-        error: error as Error,
-        userId: req.userId!,
-        organizationId: req.organizationId!,
-      });
-      return res.status(500).json(STATUS_CODE[500](req.t!("Error uploading report file")));
-    }
+    run = await createRunQuery({
+      organization_id: req.organizationId!,
+      scheduled_report_id: null,
+      template_id: null,
+      template_version_id: null,
+      triggered_by: "manual",
+      triggered_by_user_id: userId!,
+      // Manual runs have no template to decompose; store the assembled request
+      // itself. (Scheduled runs store { sections_config, ai_blocks_config, ... }.)
+      config_snapshot: { request },
+      scheduled_for: null,
+    });
 
-    if (uploadedFile) {
-      await logSuccess({
-        eventType: "Create",
-        description: `Successfully generated ${reportType} report (${reportFormat}) for project ID ${projectId}`,
-        functionName: "generateReportsV2",
-        fileName: "reporting.ctrl.ts",
-        userId: req.userId!,
-        organizationId: req.organizationId!,
-      });
+    await enqueueAutomationAction(MANUAL_REPORT_JOB, {
+      runId: run.id,
+      request,
+      userId: userId!,
+      organizationId: req.organizationId!,
+    });
 
-      res.setHeader("Content-Disposition", `attachment; filename="${uploadedFile.filename}"`);
-      res.setHeader("Content-Type", result.mimeType);
-      res.setHeader("Access-Control-Expose-Headers", "Content-Disposition");
-      return res.status(200).send(uploadedFile.content);
-    } else {
-      await logFailure({
-        eventType: "Create",
-        description: `Failed to upload report file for project ID ${projectId}`,
-        functionName: "generateReportsV2",
-        fileName: "reporting.ctrl.ts",
-        error: new Error("Upload failed"),
-        userId: req.userId!,
-        organizationId: req.organizationId!,
-      });
-      return res.status(500).json(STATUS_CODE[500](req.t!("Error uploading report file")));
-    }
+    await logSuccess({
+      eventType: "Create",
+      description: `Queued ${reportType} report (${reportFormat}) as run ${run.id} for project ID ${projectId}`,
+      functionName: "generateReportsV2",
+      fileName: "reporting.ctrl.ts",
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+
+    return res.status(202).json(STATUS_CODE[202]({ runId: run.id }));
   } catch (error) {
     await logFailure({
       eventType: "Create",
-      description: `Failed to generate ${reportType} report for project ID ${projectId}`,
+      description: `Failed to queue ${reportType} report for project ID ${projectId}`,
       functionName: "generateReportsV2",
       fileName: "reporting.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
       organizationId: req.organizationId!,
     });
+    if (run?.id) {
+      await updateRunStatusQuery(run.id, {
+        status: "failed",
+        error_message: error instanceof Error ? error.message : "Failed to queue report",
+      }).catch(() => {});
+    }
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }

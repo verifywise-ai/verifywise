@@ -7715,6 +7715,8 @@ tags:
   -
     name: Notifications
   -
+    name: Observability
+  -
     name: Organizations
   -
     name: Plugins
@@ -7732,6 +7734,12 @@ tags:
     name: Readiness
   -
     name: Reporting
+  -
+    name: Reporting/Runs
+  -
+    name: 'Reporting/Scheduled Reports'
+  -
+    name: Reporting/Templates
   -
     name: 'Risk Benchmarks'
   -
@@ -13542,6 +13550,164 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
+  /reporting/templates:
+    get:
+      summary: 'List Templates'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Reporting/Templates
+      operationId: listTemplates
+      security:
+        -
+          bearerAuth: []
+  '/reporting/templates/{id}':
+    get:
+      summary: 'Get Template'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Reporting/Templates
+      operationId: getTemplate
+      security:
+        -
+          bearerAuth: []
+  /reporting/scheduled-reports:
+    get:
+      summary: 'List Scheduled Reports'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Reporting/Scheduled Reports'
+      operationId: listScheduledReports
+      security:
+        -
+          bearerAuth: []
+    post:
+      summary: 'Create Scheduled Report'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Reporting/Scheduled Reports'
+      operationId: createScheduledReport
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or Editor'
+  '/reporting/scheduled-reports/{id}/pause':
+    post:
+      summary: 'Pause Scheduled Report'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Reporting/Scheduled Reports'
+      operationId: pauseScheduledReport
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or Editor'
+  '/reporting/scheduled-reports/{id}/resume':
+    post:
+      summary: 'Resume Scheduled Report'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Reporting/Scheduled Reports'
+      operationId: resumeScheduledReport
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or Editor'
+  '/reporting/scheduled-reports/{id}/run-now':
+    post:
+      summary: 'Run Scheduled Report Now'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Reporting/Scheduled Reports'
+      operationId: runScheduledReportNow
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or Editor'
+  '/reporting/scheduled-reports/{id}':
+    delete:
+      summary: 'Delete Scheduled Report'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Reporting/Scheduled Reports'
+      operationId: deleteScheduledReport
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or Editor'
+  /reporting/runs:
+    get:
+      summary: 'List Runs'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Reporting/Runs
+      operationId: listRuns
+      security:
+        -
+          bearerAuth: []
+  '/reporting/runs/{id}':
+    get:
+      summary: 'Get Run'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Reporting/Runs
+      operationId: getRun
+      security:
+        -
+          bearerAuth: []
+  '/reporting/runs/{id}/download':
+    get:
+      summary: 'Download Run'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Reporting/Runs
+      operationId: downloadRun
+      security:
+        -
+          bearerAuth: []
   /reporting/generate-report:
     post:
       tags:
@@ -16712,6 +16878,62 @@ paths:
       tags:
         - 'AI Audit'
       operationId: getAuditLog
+      security:
+        -
+          bearerAuth: []
+  /observability/traces:
+    get:
+      summary: 'Get Traces'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Observability
+      operationId: getTraces
+      security:
+        -
+          bearerAuth: []
+  '/observability/traces/{id}':
+    get:
+      summary: 'Get Trace Detail'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Observability
+      operationId: getTraceDetail
+      security:
+        -
+          bearerAuth: []
+  /observability/costs:
+    get:
+      summary: 'Get Costs'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Observability
+      operationId: getCosts
+      security:
+        -
+          bearerAuth: []
+  /observability/performance:
+    get:
+      summary: 'Get Performance'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Observability
+      operationId: getPerformance
       security:
         -
           bearerAuth: []
