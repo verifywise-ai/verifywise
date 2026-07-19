@@ -94,7 +94,7 @@ Verified against the tree during planning. Rebuilding any of these is a plan fai
 
    Cost note: this is **not** all seven blocks per manual report. `sectionSummaries` fans out over present sections at concurrency 3 exactly as `aiSummarizer` does today, and the other four are one call each — the same order of spend as the current code, not an increase.
 
-4. **System-template defaults do not enable the two new project-scoped blocks.** Per spec Risks. The seed sets the five behaviour-preserving blocks `true` (`sectionSummaries`, `executiveSummary`, `keyFindings`, `recommendedActions`, `riskAnalysis`) and the two new project-scoped ones — `complianceGap`, `vendorRisk` — `false`.
+4. **New blocks are off by default when backfilling, but on where a template is named for them.** Per spec Risks, existing rows backfill the two new project-scoped analyzers to `false` — nobody should wake up paying for analysis they never configured. The **seed** is a separate decision: a system template gets an analyzer enabled when its own sections are that analyzer's input, so `compliance-evidence-gap` seeds `complianceGap: true` and a template carrying a vendors section seeds `vendorRisk: true`. Shipping a template with the analyzer it is named after switched off, unreachable because the wizard hardcodes three checkboxes, is not caution — it is a broken template.
 
 5. **`sanitizeRecommendedActions` is ported *and wired*.** It is currently dead code — defined at `aiSummarizer.ts:372`, imported only by its own test, never called by `generateAISummaries`. Its intent (never attribute an action to a person who is not an org member) is exactly spec §3's anti-fabrication rule, so the `recommendedActions` analyzer calls it on its output. Porting it unwired would just relocate the bug.
 
@@ -2048,14 +2048,15 @@ Run `date +%Y%m%d%H%M%S` for a fresh `<stamp>`, then create `Servers/database/mi
  *
  * No column change — ai_blocks_config is unconstrained JSONB.
  */
+const LEGACY_ON = `
+  (ai_blocks_config @> '{"executiveSummary":true}'::jsonb
+   OR ai_blocks_config @> '{"keyFindings":true}'::jsonb
+   OR ai_blocks_config @> '{"recommendedActions":true}'::jsonb)`;
+
 const NEW_KEYS = `
   jsonb_build_object(
-    'sectionSummaries', COALESCE((ai_blocks_config->>'executiveSummary')::boolean, false)
-                     OR COALESCE((ai_blocks_config->>'keyFindings')::boolean, false)
-                     OR COALESCE((ai_blocks_config->>'recommendedActions')::boolean, false),
-    'riskAnalysis',     COALESCE((ai_blocks_config->>'executiveSummary')::boolean, false)
-                     OR COALESCE((ai_blocks_config->>'keyFindings')::boolean, false)
-                     OR COALESCE((ai_blocks_config->>'recommendedActions')::boolean, false),
+    'sectionSummaries', ${LEGACY_ON},
+    'riskAnalysis',     ${LEGACY_ON},
     'complianceGap', false,
     'vendorRisk',    false
   )`;
@@ -2086,15 +2087,18 @@ module.exports = {
 
 Three details that each cause a silent failure if changed:
 - **`<computed> || ai_blocks_config` operand order.** The **right** operand wins on key collision, so a row that already carries an explicit `riskAnalysis: false` keeps it and only genuinely missing keys take the computed default.
-- **`->>` plus `COALESCE(...)::boolean`** rather than `->`. A row whose `ai_blocks_config` is `'{}'` yields SQL `NULL` from `->>`, and `NULL OR NULL` is `NULL`, not `false` — `COALESCE` on each operand is what keeps the result a real boolean.
+- **`@>` containment, never a `::boolean` cast.** `ai_blocks_config` is unvalidated tenant input — `JSONB NOT NULL DEFAULT '{}'` with no CHECK, typed `aiBlocksConfig: any` in `scheduledReportService.ts`, and written with a bare `JSON.stringify`. `(... ->>'executiveSummary')::boolean` raises `invalid input syntax for type boolean` on a value like `"maybe"`, which aborts the migration for **every organization on the install** — and since `1`/`0` cast cleanly, it survives staging and fails on one customer's production. Containment is total: it never raises and returns `false` for a missing or non-`true` value. Do not substitute `ai_blocks_config->'key' = 'true'::jsonb` either — that yields SQL `NULL` for a missing key, which `jsonb_build_object` stores as JSON `null` rather than `false`.
+  One accepted consequence: a row storing `{"executiveSummary": 1}` is treated as *not* enabled here, where the resolver's `!!` would call it truthy. Such a row still receives AI content (Task 6 produces summaries whenever a Stage 2 consumer needs them); it only forgoes its own recorded `sectionSummaries` block. That is strictly better than a migration that refuses to run.
 - **The `jsonb_typeof(...) = 'object'` guard.** The column is `NOT NULL DEFAULT '{}'` but is otherwise unconstrained, so a row could hold a JSON array or scalar; `||` against a non-object would corrupt it. The guard skips those rather than mangling them.
 
 - [ ] **Step 6a: Update the seed migration's system templates**
 
-The seed at `20260619191640-seed-reporting-system-templates.js:23` binds **one** shared AI constant to all three system templates. Update that constant to the seven-key shape, enabling only what Locked decision 4 allows:
+The seed at `20260619191640-seed-reporting-system-templates.js:23` binds **one** shared AI constant to all three system templates. That sharing is itself the bug: one of the three is `compliance-evidence-gap` ("Audit readiness and framework evidence gaps"), and a blanket `complianceGap: false` ships that template with the exact analyzer it is named for switched off — unreachable on a fresh install, because the wizard hardcodes the three legacy checkboxes.
+
+Locked decision 4's "nobody wakes up paying for analysis they never asked for" governs the **backfill of existing rows**. It does not transfer to the **seed default of a template named after an analyzer**. So give each template its own config:
 
 ```javascript
-const AI = JSON.stringify({
+const AI_BASE = {
   sectionSummaries: true,
   executiveSummary: true,
   keyFindings: true,
@@ -2102,8 +2106,16 @@ const AI = JSON.stringify({
   riskAnalysis: true,
   complianceGap: false,
   vendorRisk: false,
-});
+};
+// Per-template overrides: a template gets an analyzer when its own sections
+// are that analyzer's input.
+//   compliance-evidence-gap -> complianceGap: true
+//   any template carrying a vendors section -> vendorRisk: true
 ```
+
+and attach the per-template object to each entry in the `TEMPLATES` array.
+
+**Do not wrap this in `JSON.stringify`.** The seeding site already calls `JSON.stringify(...)` on the value. Wrapping it here double-stringifies, so `ai_blocks_config` lands as a JSON *string scalar* rather than an object; the resolver then reads `ai.executiveSummary` off a string, gets `undefined`, and every block resolves false — the system templates ship with AI entirely off. The backfill above cannot repair it either, because its `jsonb_typeof(...) = 'object'` guard skips a scalar. Check the seeding site before you write this.
 
 Edit the seed in place rather than adding a new migration — it is idempotent seed data, and the backfill above already covers rows created from the old shape.
 
