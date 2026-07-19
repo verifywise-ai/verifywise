@@ -92,6 +92,8 @@ import {
   runAuditPreparationScan,
 } from "../workflows/triggers";
 import { handleReportSchedulerTick } from "../reporting/reportSchedulerJobs";
+import { handleManualReportGeneration } from "./reportJobHandlers";
+import { MANUAL_REPORT_JOB, ManualReportJobData } from "../reporting/reportJobConstants";
 import {
   NotificationType,
   NotificationEntityType,
@@ -705,6 +707,8 @@ export const createAutomationWorker = () => {
           await runAuditPreparationScan();
         } else if (name === "report_scheduler_tick") {
           await handleReportSchedulerTick();
+        } else if (name === MANUAL_REPORT_JOB) {
+          await handleManualReportGeneration(job.data as ManualReportJobData);
         } else if (name === "send_pmm_notification") {
           // PMM notification handling - send email using MJML templates
           const { type, data } = job.data;
