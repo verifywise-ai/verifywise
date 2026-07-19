@@ -2851,7 +2851,7 @@ export async function persistAnalyses(
   runId: number,
   organizationId: number,
   userId: number | null,
-  analyses: Record<string, any> | undefined,
+  analyses: ReportGenerationResult["analyses"],
 ): Promise<Record<string, string> | null> {
   if (!analyses || Object.keys(analyses).length === 0) return null;
 
@@ -2894,7 +2894,14 @@ export async function persistAnalyses(
   // once per section — the run is the entity a reviewer sees a badge on.
   // Only when at least one section actually produced LLM output: an all-abstained
   // run wrote no AI content and must not be badged as though it did.
-  const produced = Object.entries(analyses).filter(([, r]) => r && !r.abstained);
+  // Gate on aiStatus, not just on the analyzer result: if the tenant guard in
+  // upsertRunAnalysisQuery rejected the run/org pair, every section is
+  // write_failed, and badging anyway would insert an ai_content_metadata row
+  // keyed to the caller's org with another org's run id — the same leak the
+  // guard exists to stop, reintroduced in the sibling table.
+  const produced = Object.entries(analyses).filter(
+    ([k, r]) => r && !r.abstained && aiStatus[k] === "ok",
+  );
   if (produced.length > 0) {
     trackAIContent(
       organizationId,
@@ -2910,7 +2917,11 @@ export async function persistAnalyses(
           .join(", ")}`,
       },
       userId,
-    ).catch(() => {});
+    );
+    // Awaited, not fire-and-forget: this runs inside a BullMQ worker, so the
+    // job can complete and the process be reaped with the INSERT still in
+    // flight. trackAIContent swallows its own errors and returns null, so
+    // awaiting is safe and the trailing .catch() was redundant.
   }
 
   return aiStatus;
@@ -2924,7 +2935,7 @@ Note `modelProvider: "llm"` — **not** `"verifywise"`. The readiness batch path
 In `Servers/services/reporting/manualReportRunner.ts`, after the successful `uploadFile` and **before** the final `updateRunStatusQuery`, add:
 
 ```typescript
-    const aiStatus = await persistAnalyses(runId, organizationId, userId, (result as any).analyses);
+    const aiStatus = await persistAnalyses(runId, organizationId, userId, result.analyses);
 ```
 
 and add `ai_status: aiStatus ?? undefined,` to the success-branch `updateRunStatusQuery` object. Import at the top:
@@ -2942,7 +2953,7 @@ In `Servers/services/reporting/reportRunOrchestrator.ts`, after the generation s
       run.id,
       sched.organization_id,
       sched.owner_id ?? sched.created_by ?? null,
-      (result as any).analyses,
+      result.analyses,
     );
 ```
 
@@ -2968,6 +2979,8 @@ git commit -m "feat(reporting): persist analyzer output to report_run_analyses f
 - Modify: `Servers/templates/reports/report-pdf.ejs`
 
 Reuse the existing classes — `.group-header`, `.group-title`, `.subsection`, `.subsection-header`, `.subsection-title`, `.ai-analysis-box`, `.ai-analysis-label`, `.ai-analysis-content`, `.ai-findings-list`. They are defined **inline in this file's own `<style>` block** (lines 10-94). Add no new CSS.
+
+**Do not render an abstention as a finding of "none".** An abstained section can mean the data was genuinely empty OR that the provider call failed — `runAnalyzers` turns a thrown call into an abstain, so the two are indistinguishable in `ai_status` (the distinction survives one join away, in `report_run_analyses.audit_metadata.abstain_reason`). Both renderers therefore **omit** an abstained block entirely rather than printing "no gaps identified" or an empty heading. `mapAnalysesToSummaries` already enforces this by contributing nothing for an abstained section, so the guards below — which test for the field's presence — are correct as written. Do not "improve" them into empty-state messages.
 
 - [ ] **Step 1: Render `recommendedActions` under its OWN top-level guard**
 
