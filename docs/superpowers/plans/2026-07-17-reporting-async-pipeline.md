@@ -537,10 +537,11 @@ Expected: FAIL — `generateReportsV2` still returns the old blob response (no 2
 
 In `Servers/controllers/reporting.ctrl.ts`, add to the import block (L1-21):
 ```ts
-import { createRunQuery } from "../utils/reportRun.utils";
+import { createRunQuery, updateRunStatusQuery } from "../utils/reportRun.utils";
 import { enqueueAutomationAction } from "../services/automations/automationProducer";
 import { MANUAL_REPORT_JOB } from "../services/reporting/reportJobConstants";
 ```
+(`updateRunStatusQuery` is used in the catch block to mark an orphaned run failed — see below.)
 
 - [ ] **Step 4: Replace the body of `generateReportsV2`**
 
@@ -573,6 +574,8 @@ export async function generateReportsV2(req: Request, res: Response): Promise<an
     organizationId: req.organizationId!,
   });
 
+  let run: any = null;
+
   try {
     const user = await getUserByIdQuery(userId!);
     if (!user) {
@@ -603,13 +606,15 @@ export async function generateReportsV2(req: Request, res: Response): Promise<an
       llmKeyId: llmKeyId ? parseInt(llmKeyId) : undefined,
     };
 
-    const run = await createRunQuery({
+    run = await createRunQuery({
       organization_id: req.organizationId!,
       scheduled_report_id: null,
       template_id: null,
       template_version_id: null,
       triggered_by: "manual",
       triggered_by_user_id: userId!,
+      // Manual runs have no template to decompose; store the assembled request
+      // itself. (Scheduled runs store { sections_config, ai_blocks_config, ... }.)
       config_snapshot: { request },
       scheduled_for: null,
     });
@@ -632,6 +637,15 @@ export async function generateReportsV2(req: Request, res: Response): Promise<an
 
     return res.status(202).json(STATUS_CODE[202]({ runId: run.id }));
   } catch (error) {
+    // If the run row was created before the failure (e.g. enqueue threw), mark it
+    // failed so it doesn't sit 'running' forever in the archive. Never let a
+    // failure-while-recording-failure mask the original 500.
+    if (run?.id) {
+      await updateRunStatusQuery(run.id, {
+        status: "failed",
+        error_message: error instanceof Error ? error.message : "Failed to queue report",
+      }).catch(() => {});
+    }
     await logFailure({
       eventType: "Create",
       description: `Failed to queue ${reportType} report for project ID ${projectId}`,
@@ -645,6 +659,8 @@ export async function generateReportsV2(req: Request, res: Response): Promise<an
   }
 }
 ```
+
+`run` is declared `let run: any = null;` immediately before the `try` so the catch can see it. The 404 (user-not-found) path returns before `createRunQuery`, so `run` stays null there and nothing is marked.
 
 Clean up the imports the rewrite orphaned. Both `uploadFile` (from `../utils/fileUpload.utils`) and the `generateReport as generateReportV2` value (from `../services/reporting`) were used **only** in the old `generateReportsV2` body and are now file-wide unused — `executeManualRun` owns that work in the worker now. Confirm and remove:
 
@@ -863,6 +879,8 @@ git commit -m "feat(reporting): add useGenerateReport mutation and useReportRun 
 ## Task 7: Rewrite the Generate modal — enqueue → poll → download
 
 This replaces the sync `handleAutoDownload` blob flow. The modal enqueues, polls the run with `useReportRun`, shows real progress driven by run status, and on `success` downloads via the existing `downloadReportRun(runId)` blob endpoint using `run.output_filename` for the filename (the GET download endpoint returns no headers).
+
+**Hard sequencing constraint:** Task 4 already changed `POST /reporting/v2/generate-report` (and the legacy `/generate-report` passthrough) to return `202` instead of a `200` blob. The old `handleAutoDownload` (`Clients/src/application/tools/fileDownload.ts`) branches on `status === 200`, so between Task 4 and Task 7 the shipped Generate button shows a false error toast on every click. **Task 7 must land in the same PR as Task 4** — it removes/replaces the `handleAutoDownload` submit path. Do not merge Phase 1 with Task 7 incomplete.
 
 **Files:**
 - Modify: `Clients/src/presentation/components/Reporting/GenerateReport/index.tsx`
