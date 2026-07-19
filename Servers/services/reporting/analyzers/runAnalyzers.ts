@@ -184,10 +184,10 @@ export async function runAnalyzers(input: RunAnalyzersInput): Promise<AnalyzerRe
 
   // Summaries are an input DEPENDENCY of Stage 2, not a peer block. The block
   // flag governs whether they are RECORDED as their own result (and rendered
-  // as the 24 sectionSummaries blocks), not whether they are produced. Every
-  // stored config today has blocks.sectionSummaries undefined (AiBlocksConfig
-  // has no such key yet), so gating production on that flag alone would make
-  // every executiveSummary/keyFindings/recommendedActions call abstain.
+  // as the 24 sectionSummaries blocks), not whether they are produced. Gating
+  // production on that flag alone would make every executiveSummary/
+  // keyFindings/recommendedActions call abstain whenever a consumer wants
+  // summaries but the sectionSummaries block itself is off.
   const needSummaries = !!blocks.sectionSummaries || stage2Keys.length > 0;
 
   const [summaries, stage1] = await Promise.all([

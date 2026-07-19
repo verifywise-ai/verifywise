@@ -8,7 +8,19 @@ export function resolveReportRequest(sched: any, llmKeyId?: number): ReportGener
     new Set(sections.map((s: any) => String(s.reportSectionKey))),
   );
   const ai = sched.ai_blocks_config ?? {};
-  const aiEnhanced = !!(ai.executiveSummary || ai.keyFindings || ai.recommendedActions);
+  const aiBlocks = {
+    sectionSummaries: !!ai.sectionSummaries,
+    executiveSummary: !!ai.executiveSummary,
+    keyFindings: !!ai.keyFindings,
+    recommendedActions: !!ai.recommendedActions,
+    riskAnalysis: !!ai.riskAnalysis,
+    complianceGap: !!ai.complianceGap,
+    vendorRisk: !!ai.vendorRisk,
+  };
+  // aiEnhanced stays as the coarse "did the user want any AI at all" flag that
+  // the renderers and the filename marker already key off. aiBlocks carries the
+  // per-analyzer detail that used to be lost here.
+  const aiEnhanced = Object.values(aiBlocks).some(Boolean);
   return {
     projectId: sched.project_id ?? 0,
     frameworkId: sched.framework_id ?? 0,
@@ -17,6 +29,7 @@ export function resolveReportRequest(sched: any, llmKeyId?: number): ReportGener
     reportName: sched.name,
     format: sched.format,
     aiEnhanced,
+    aiBlocks,
     llmKeyId,
   };
 }

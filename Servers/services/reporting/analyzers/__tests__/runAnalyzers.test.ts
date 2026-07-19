@@ -167,11 +167,11 @@ describe("runAnalyzers", () => {
   });
 
   it("produces section summaries as a Stage 2 dependency even when the sectionSummaries block itself is off", async () => {
-    // Every stored AiBlocksConfig today has no `sectionSummaries` key at all,
-    // so blocks.sectionSummaries is undefined for every real template. If
-    // production were gated on that flag, executiveSummary would always
-    // abstain — summaries must be produced because Stage 2 needs them, not
-    // because the block flag says so.
+    // summaries are an input dependency of Stage 2, so they must be produced
+    // whenever a consumer needs them, regardless of the sectionSummaries
+    // block flag. That flag only governs whether summaries are recorded as
+    // their own result — gating production on it would make executiveSummary
+    // always abstain whenever sectionSummaries itself is off.
     const out = await runAnalyzers({ reportData, llmKey, blocks: only("executiveSummary") });
 
     expect(mockSectionSummaries).toHaveBeenCalledTimes(1);

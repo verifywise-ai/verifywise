@@ -42,6 +42,20 @@ export interface ReportGenerationRequest {
   branding?: Partial<ReportBranding>;
   sections?: ReportSection[];
   aiEnhanced?: boolean;
+  /**
+   * Per-block gating for the seven AI blocks. When omitted (manual runs, which
+   * have no template) `aiEnhanced: true` resolves to the five blocks that
+   * reproduce today's aiSummarizer output — see LEGACY_BLOCKS.
+   */
+  aiBlocks?: {
+    sectionSummaries: boolean;
+    executiveSummary: boolean;
+    keyFindings: boolean;
+    recommendedActions: boolean;
+    riskAnalysis: boolean;
+    complianceGap: boolean;
+    vendorRisk: boolean;
+  };
   llmKeyId?: number;
 }
 
@@ -103,6 +117,22 @@ export interface AISummaries {
     priority?: "low" | "medium" | "high" | "critical";
     sourceSignal?: string;
   }>;
+  /** Structured output of the riskAnalysis analyzer. */
+  riskAnalysis?: {
+    narrative: string;
+    top_risks: Array<{ name: string; level: string; why: string }>;
+  };
+  /** Structured output of the complianceGap analyzer. */
+  complianceGap?: {
+    narrative: string;
+    gaps: Array<{ control: string; gap: string; priority: string }>;
+    scores_caveat?: string | null;
+  };
+  /** Structured output of the vendorRisk analyzer. */
+  vendorRisk?: {
+    narrative: string;
+    concerns: Array<{ vendor: string; concern: string; severity: string }>;
+  };
 }
 
 // Unified report data structure

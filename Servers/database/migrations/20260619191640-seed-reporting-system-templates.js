@@ -20,15 +20,29 @@ const SECTIONS = {
     { key: "incomplete_assessments", reportSectionKey: "assessment", label: "Incomplete assessments", core: true, defaultEnabled: true, supportedScopes: ["project","organization"] }
   ],
 };
-const AI = { executiveSummary: true, keyFindings: true, recommendedActions: true };
+// Behaviour-preserving base: the five blocks aiSummarizer already produced pre-Phase-2.
+const AI_BASE = {
+  sectionSummaries: true,
+  executiveSummary: true,
+  keyFindings: true,
+  recommendedActions: true,
+  riskAnalysis: true,
+  complianceGap: false,
+  vendorRisk: false,
+};
 
 const TEMPLATES = [
+  // Has a vendor_reviews (vendors) section -> vendorRisk analyzer is what covers it.
   { name: "Daily Governance Pulse", slug: "daily-governance-pulse", category: "operational", default_scope: "project", recommended_frequency: "daily", sections: SECTIONS.daily,
-    desc: "Daily operational governance digest: current high risks, overdue tasks, open incidents." },
+    desc: "Daily operational governance digest: current high risks, overdue tasks, open incidents.",
+    ai: { ...AI_BASE, vendorRisk: true } },
   { name: "Weekly Executive Brief", slug: "weekly-executive-brief", category: "executive", default_scope: "organization", recommended_frequency: "weekly", sections: SECTIONS.weekly,
-    desc: "Weekly AI governance posture for leadership." },
+    desc: "Weekly AI governance posture for leadership.",
+    ai: { ...AI_BASE } },
+  // Named after and described as the complianceGap analyzer's own purpose -> ship it on.
   { name: "Compliance Evidence Gap", slug: "compliance-evidence-gap", category: "compliance", default_scope: "project", recommended_frequency: "weekly", sections: SECTIONS.compliance,
-    desc: "Audit readiness and framework evidence gaps." },
+    desc: "Audit readiness and framework evidence gaps.",
+    ai: { ...AI_BASE, complianceGap: true } },
 ];
 
 module.exports = {
@@ -55,7 +69,7 @@ module.exports = {
           { replacements: {
               tid: templateId,
               sections: JSON.stringify({ sections: tpl.sections }),
-              ai: JSON.stringify(AI),
+              ai: JSON.stringify(tpl.ai),
               sched: JSON.stringify({ frequency: tpl.recommended_frequency, hour: 9, minute: 0, timezone: "UTC" }),
             }, type: queryInterface.sequelize.QueryTypes.INSERT, transaction: t });
       }

@@ -12,9 +12,14 @@ export interface TemplateSectionConfig {
 }
 
 export interface AiBlocksConfig {
-  executiveSummary: boolean;
-  keyFindings: boolean;
-  recommendedActions: boolean;
+  /** Per-section AI prose. Ported from aiSummarizer; feeds the 24 sectionSummaries render blocks. */
+  sectionSummaries?: boolean;
+  executiveSummary?: boolean;
+  keyFindings?: boolean;
+  recommendedActions?: boolean;
+  riskAnalysis?: boolean;
+  complianceGap?: boolean;
+  vendorRisk?: boolean;
 }
 
 export interface ScheduleConfig {

@@ -22,4 +22,66 @@ describe("resolveReportRequest", () => {
       ai_blocks_config: { executiveSummary: false, keyFindings: false, recommendedActions: false } } as any, 99);
     expect(req.aiEnhanced).toBe(false);
   });
+  it("passes the seven blocks through instead of collapsing them", () => {
+    const req = resolveReportRequest(
+      {
+        project_id: 3, framework_id: 1, project_framework_id: 2, name: "Quarterly", format: "pdf",
+        sections_config: { sections: [{ reportSectionKey: "compliance" }] },
+        // keyFindings and recommendedActions deliberately differ so a resolver
+        // that swaps the two (keyFindings <- recommendedActions and vice versa)
+        // cannot pass this test by accident.
+        ai_blocks_config: { executiveSummary: true, keyFindings: true, recommendedActions: false, riskAnalysis: true, complianceGap: false, vendorRisk: false, sectionSummaries: true },
+      },
+      9,
+    );
+    expect(req.aiBlocks!.keyFindings).toBe(true);
+    expect(req.aiBlocks!.recommendedActions).toBe(false);
+    expect(req.aiBlocks).toEqual({
+      sectionSummaries: true,
+      executiveSummary: true,
+      keyFindings: true,
+      recommendedActions: false,
+      riskAnalysis: true,
+      complianceGap: false,
+      vendorRisk: false,
+    });
+  });
+
+  it("keeps aiEnhanced true when only a new block is on", () => {
+    const req = resolveReportRequest(
+      {
+        project_id: 3, framework_id: 1, project_framework_id: 2, name: "Q", format: "pdf",
+        sections_config: { sections: [{ reportSectionKey: "compliance" }] },
+        ai_blocks_config: { complianceGap: true },
+      },
+      9,
+    );
+    expect(req.aiEnhanced).toBe(true);
+    expect(req.aiBlocks!.complianceGap).toBe(true);
+    expect(req.aiBlocks!.executiveSummary).toBe(false);
+  });
+
+  it("reads an un-backfilled legacy three-key config without inventing new blocks", () => {
+    const req = resolveReportRequest(
+      {
+        project_id: 3, framework_id: 1, project_framework_id: 2, name: "Q", format: "pdf",
+        sections_config: { sections: [{ reportSectionKey: "compliance" }] },
+        ai_blocks_config: { executiveSummary: true, keyFindings: true, recommendedActions: true },
+      },
+      9,
+    );
+    // The resolver reports exactly what is stored. Turning the legacy shape into
+    // the seven-key shape is the migration's job, not the resolver's — so a row
+    // that somehow escaped the backfill degrades to fewer blocks, never to
+    // unexpected LLM spend.
+    expect(req.aiBlocks).toEqual({
+      sectionSummaries: false,
+      executiveSummary: true,
+      keyFindings: true,
+      recommendedActions: true,
+      riskAnalysis: false,
+      complianceGap: false,
+      vendorRisk: false,
+    });
+  });
 });
