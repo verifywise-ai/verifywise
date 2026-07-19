@@ -54,3 +54,23 @@ export const useSetActive = () => {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["reporting", "scheduled"] }),
   });
 };
+
+// Poll a single report run until it leaves the "running" state.
+// v5 refetchInterval: return false to stop polling once terminal.
+export const useReportRun = (id: number | undefined, enabled: boolean) =>
+  useQuery({
+    queryKey: ["reporting", "run", id],
+    queryFn: () => repo.getReportRun(id as number),
+    enabled: enabled && id != null,
+    refetchInterval: (query) =>
+      query.state.data && query.state.data.status !== "running" ? false : 2000,
+  });
+
+// Enqueue an async report generation; returns { runId }.
+export const useGenerateReport = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: repo.generateReportV2,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["reporting", "runs"] }),
+  });
+};
