@@ -274,15 +274,28 @@ export interface RunAnalysisInput {
  * Upsert one analysis row per (run, section, org). Re-analysis bumps the
  * version in place rather than inserting a duplicate. ON CONFLICT (not
  * check-then-write) because the six analyzers write concurrently.
+ *
+ * The `WHERE EXISTS` guard is a tenant-isolation control, not an optimisation.
+ * Both FKs only check existence — neither proves the run belongs to the given
+ * org — and the unique index would happily give an inconsistent
+ * (orgA's run, orgB) pair its own row. Without the guard, one caller that pairs
+ * a run id with the wrong organization_id makes getRunAnalysesQuery serve org
+ * A's analysis to org B.
+ *
+ * Returns `undefined` when the run does not belong to `organization_id`. The
+ * caller MUST treat that as a failed write, not a silent success.
  */
 export const upsertRunAnalysisQuery = async (input: RunAnalysisInput) => {
   const result = (await sequelize.query(
     `INSERT INTO report_run_analyses
        (report_run_id, section_key, organization_id, payload,
         analysis_model, analysis_version, analyzed_at, analyzed_by, audit_metadata)
-     VALUES
-       (:report_run_id, :section_key, :organization_id, :payload,
-        :analysis_model, 1, NOW(), :analyzed_by, :audit_metadata)
+     SELECT :report_run_id, :section_key, :organization_id, :payload,
+            :analysis_model, 1, NOW(), :analyzed_by, :audit_metadata
+      WHERE EXISTS (
+        SELECT 1 FROM report_runs
+         WHERE id = :report_run_id AND organization_id = :organization_id
+      )
      ON CONFLICT (report_run_id, section_key, organization_id)
      DO UPDATE SET
        payload = EXCLUDED.payload,
@@ -2654,7 +2667,7 @@ export async function persistAnalyses(
     Object.entries(analyses).map(async ([sectionKey, result]) => {
       aiStatus[sectionKey] = result?.abstained ? "abstained" : "ok";
       try {
-        await upsertRunAnalysisQuery({
+        const written = await upsertRunAnalysisQuery({
           report_run_id: runId,
           section_key: sectionKey,
           organization_id: organizationId,
@@ -2668,6 +2681,14 @@ export async function persistAnalyses(
             attempts: result?.attempts ?? 0,
           },
         });
+        // undefined means the WHERE EXISTS tenant guard rejected the pair —
+        // the run does not belong to this org. Never let that read as success.
+        if (!written) {
+          logger.warn(
+            `Analysis "${sectionKey}" rejected: run ${runId} does not belong to org ${organizationId}`,
+          );
+          aiStatus[sectionKey] = "write_failed";
+        }
       } catch (error) {
         logger.warn(`Failed to persist analysis "${sectionKey}" for run ${runId}`, error);
         aiStatus[sectionKey] = "write_failed";
