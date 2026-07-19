@@ -2214,7 +2214,7 @@ describe("collectAnalyzerInputs", () => {
     await collectReadinessInput(3, 1, 5, 11);
     expect(mockControlScores).toHaveBeenCalledWith("eu_ai_act", 5, 3, 11);
     expect(mockFrameworkScore).toHaveBeenCalledWith("eu_ai_act", 5, 3, 11);
-    expect(mockWeakest).toHaveBeenCalledWith(5, 10, 3, 11, undefined, "eu_ai_act");
+    expect(mockWeakest).toHaveBeenCalledWith(5, 100, 3, 11);
   });
 
   it("returns an empty, non-throwing result for an unknown frameworkId", async () => {
@@ -2286,7 +2286,6 @@ import type {
   ReportGenerationRequest,
 } from "../../../domain.layer/interfaces/i.reportGeneration";
 import {
-  READINESS_FRAMEWORK_IDS,
   getControlScoresQuery,
   getFrameworkScoreByTypeQuery,
   getWeakestControlsQuery,
@@ -2294,6 +2293,33 @@ import {
 import { getEvidenceGapsQuery } from "../../../utils/evidenceAi.utils";
 import logger from "../../../utils/logger/fileLogger";
 import type { AiBlocks } from "./runAnalyzers";
+
+/**
+ * frameworks.id -> readiness framework_type.
+ *
+ * Deliberately LOCAL, not imported from readiness.utils. An equivalent const
+ * lives there only in uncommitted working-tree changes, so importing it makes
+ * this file fail to compile on a clean checkout — green locally, TS2305 in CI.
+ * Values come from the committed frameworks seed
+ * (20260226234301-public-schema-tables.js:208-211).
+ */
+const READINESS_FRAMEWORK_IDS: Record<string, number> = {
+  eu_ai_act: 1,
+  iso_42001: 2,
+  iso_27001: 3,
+  nist_ai_rmf: 4,
+};
+
+/**
+ * HEAD's getWeakestControlsQuery takes 5 params and cannot filter by framework
+ * — that 6th param also exists only in uncommitted work. Its SELECT does
+ * return framework_type per row, so we over-fetch and narrow client-side.
+ * Over-fetching matters: the query returns the weakest across ALL frameworks,
+ * so requesting 10 then filtering could leave two or three rows and have the
+ * analyzer assert "almost no weak controls" in a compliance artifact.
+ */
+const WEAKEST_LIMIT = 10;
+const WEAKEST_FETCH = 100;
 
 /**
  * Manual runs carry no template, so aiEnhanced maps to the blocks that
@@ -2369,12 +2395,14 @@ export async function collectReadinessInput(
   try {
     const [controlScores, weakestControls, frameworkScore] = await Promise.all([
       getControlScoresQuery(frameworkType, organizationId, projectId, userId),
-      getWeakestControlsQuery(organizationId, 10, projectId, userId, undefined, frameworkType),
+      getWeakestControlsQuery(organizationId, WEAKEST_FETCH, projectId, userId),
       getFrameworkScoreByTypeQuery(frameworkType, organizationId, projectId, userId),
     ]);
     return {
       controlScores: controlScores ?? [],
-      weakestControls: weakestControls ?? [],
+      weakestControls: (weakestControls ?? [])
+        .filter((r: any) => r.framework_type === frameworkType)
+        .slice(0, WEAKEST_LIMIT),
       frameworkScore: frameworkScore ?? null,
       // Nothing recalculates readiness at report time, so stored rows may
       // predate the data in this report. Always flag it.
@@ -2453,7 +2481,7 @@ export function collectAllowedOwners(reportData: ReportData): string[] {
 - [ ] **Step 4: Run the test**
 
 Run: `cd Servers && npx jest services/reporting/analyzers/__tests__/collectAnalyzerInputs.test.ts`
-Expected: PASS, 11 tests.
+Expected: PASS, 12 tests.
 
 - [ ] **Step 5: Add `analyses` to the result interface**
 
@@ -3357,6 +3385,22 @@ git commit -m "docs(reporting): document the analyzer pipeline and correct the d
 
 Run: `cd Servers && npm run build && npm run test`
 Expected: build clean; the new analyzer, utils and resolver suites green; no suite references `aiSummarizer`.
+
+- [ ] **Clean-checkout build — the branch must compile without anyone's uncommitted work**
+
+This repo's working tree carries ~74 pre-existing modified files belonging to other in-flight work. `npm run build` compiles the **working tree**, so a commit can import a symbol that exists only in someone else's unstaged edit and still look green locally while failing in CI and for every other developer. That happened twice in Task 8 — `READINESS_FRAMEWORK_IDS` and a 6th `frameworkType` parameter on `getWeakestControlsQuery`, both of which live only in an uncommitted edit to `readiness.utils.ts`. Neither `jest` (ts-jest runs `diagnostics: false`) nor the working-tree build can see it.
+
+```bash
+cd <repo root>
+git worktree add /tmp/phase2-clean HEAD --detach
+ln -s "$(pwd)/Servers/node_modules" /tmp/phase2-clean/Servers/node_modules
+cd /tmp/phase2-clean/Servers && npm run build 2>&1 | grep -E "services/reporting/|advisor/" 
+cd - && git worktree remove /tmp/phase2-clean --force
+```
+
+Expected: no errors in `services/reporting/` or `advisor/` other than the known pre-existing ones in `advisor/sandbox/*` and `utils/validations/fileManagerValidation.utils.ts`.
+
+Anything Phase 2 needs from `readiness.utils.ts` must exist at HEAD or be defined locally — see the framework-id map and the weakest-controls narrowing in `collectAnalyzerInputs.ts`.
 
 - [ ] **Migrations round-trip**
 
