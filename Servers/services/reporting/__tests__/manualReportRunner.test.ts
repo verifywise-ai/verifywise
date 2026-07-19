@@ -53,4 +53,14 @@ describe("executeManualRun", () => {
 
     expect(mockUpdate).toHaveBeenCalledWith(99, expect.objectContaining({ status: "failed", error_message: "kaboom" }));
   });
+
+  it("marks the run failed when upload returns no file id", async () => {
+    mockGenerate.mockResolvedValue({ success: true, filename: "r.pdf", content: Buffer.from("x"), mimeType: "application/pdf" } as any);
+    mockUpload.mockResolvedValue({ filename: "r.pdf" } as any);
+
+    await executeManualRun(99, request, 3, 5);
+
+    expect(mockUpdate).toHaveBeenCalledWith(99, expect.objectContaining({ status: "failed", error_message: "file upload returned no id" }));
+    expect(mockUpdate).not.toHaveBeenCalledWith(99, expect.objectContaining({ status: "success" }));
+  });
 });

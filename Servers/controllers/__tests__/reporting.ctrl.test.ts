@@ -30,12 +30,14 @@ import { createRunQuery, updateRunStatusQuery } from "../../utils/reportRun.util
 import { enqueueAutomationAction } from "../../services/automations/automationProducer";
 import { getUserByIdQuery } from "../../utils/user.utils";
 import { getOrganizationByIdQuery } from "../../utils/organization.utils";
+import { logSuccess } from "../../utils/logger/logHelper";
 
 const mockCreateRun = createRunQuery as jest.MockedFunction<typeof createRunQuery>;
 const mockUpdate = updateRunStatusQuery as jest.MockedFunction<typeof updateRunStatusQuery>;
 const mockEnqueue = enqueueAutomationAction as jest.MockedFunction<typeof enqueueAutomationAction>;
 const mockUser = getUserByIdQuery as jest.MockedFunction<typeof getUserByIdQuery>;
 const mockOrg = getOrganizationByIdQuery as jest.MockedFunction<typeof getOrganizationByIdQuery>;
+const mockLogSuccess = logSuccess as jest.MockedFunction<typeof logSuccess>;
 
 function createMockReq(body: any = {}): Partial<Request> {
   return { body, organizationId: 5, userId: 3, t: (k: string) => k } as Partial<Request>;
@@ -95,6 +97,25 @@ describe("generateReportsV2 (async)", () => {
     await generateReportsV2(req as Request, res as Response);
 
     expect(mockUpdate).toHaveBeenCalledWith(77, expect.objectContaining({ status: "failed" }));
+    expect(res.status).toHaveBeenCalledWith(500);
+  });
+
+  it("leaves the run untouched when a post-enqueue step throws (worker owns it)", async () => {
+    mockUser.mockResolvedValue({ id: 3, organization_id: 5 } as any);
+    mockOrg.mockResolvedValue({ name: "Acme" } as any);
+    mockCreateRun.mockResolvedValue({ id: 77 } as any);
+    // enqueue succeeds; logSuccess (after enqueue) throws.
+    // (clearAllMocks resets calls, not implementations — override the prior test's rejection.)
+    mockEnqueue.mockResolvedValue(undefined as any);
+    mockLogSuccess.mockRejectedValue(new Error("log sink down") as never);
+
+    const req = createMockReq({ projectId: "7", frameworkId: "1", projectFrameworkId: "2", reportType: "project", format: "pdf" });
+    const res = createMockRes();
+
+    await generateReportsV2(req as Request, res as Response);
+
+    expect(mockEnqueue).toHaveBeenCalled();
+    expect(mockUpdate).not.toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(500);
   });
 });

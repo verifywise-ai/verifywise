@@ -1,0 +1,92 @@
+import { describe, it, expect, jest, beforeEach } from "@jest/globals";
+import { Request, Response } from "express";
+
+jest.mock("../../database/db", () => ({
+  sequelize: { query: jest.fn().mockResolvedValue([]) },
+}));
+jest.mock("../../utils/reportRun.utils", () => ({
+  listRunsQuery: jest.fn(),
+  getRunQuery: jest.fn(),
+}));
+jest.mock("../../utils/fileUpload.utils", () => ({ getFileById: jest.fn() }));
+jest.mock("../../utils/statusCode.utils", () => ({
+  STATUS_CODE: {
+    200: (d: any) => ({ message: "OK", data: d }),
+    404: (d: any) => ({ message: "Not Found", data: d }),
+    500: (d: any) => ({ message: "Internal Server Error", data: d }),
+  },
+}));
+
+import { getRun, downloadRun } from "../reportRun.ctrl";
+import { getRunQuery } from "../../utils/reportRun.utils";
+import { getFileById } from "../../utils/fileUpload.utils";
+
+const mockGetRun = getRunQuery as jest.MockedFunction<typeof getRunQuery>;
+const mockGetFile = getFileById as jest.MockedFunction<typeof getFileById>;
+
+// req.organizationId is the authed tenant (5). params.id/body carry an
+// attacker-supplied value; the handler must scope by the authed org, never trust input.
+function createMockReq(params: any = {}): Partial<Request> {
+  return { params, query: {}, organizationId: 5, userId: 3 } as Partial<Request>;
+}
+function createMockRes(): Partial<Response> {
+  const res: any = {};
+  res.status = jest.fn().mockReturnValue(res);
+  res.json = jest.fn().mockReturnValue(res);
+  res.send = jest.fn().mockReturnValue(res);
+  res.setHeader = jest.fn().mockReturnValue(res);
+  return res;
+}
+
+describe("reportRun.ctrl tenant isolation", () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it("getRun returns 404 and leaks no data when the run is not in the caller's org", async () => {
+    mockGetRun.mockResolvedValue(null as any); // run belongs to another org / absent
+
+    const req = createMockReq({ id: "77" });
+    const res = createMockRes();
+
+    await getRun(req as Request, res as Response);
+
+    expect(res.status).toHaveBeenCalledWith(404);
+    // No run body handed back.
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ message: "Not Found" }));
+  });
+
+  it("getRun scopes the lookup by the authed organizationId, not a client value", async () => {
+    mockGetRun.mockResolvedValue({ id: 77, organization_id: 5 } as any);
+
+    const req = createMockReq({ id: "77" });
+    const res = createMockRes();
+
+    await getRun(req as Request, res as Response);
+
+    expect(mockGetRun).toHaveBeenCalledWith(77, 5);
+  });
+
+  it("downloadRun returns 404 and never fetches a file when the run is not in the caller's org", async () => {
+    mockGetRun.mockResolvedValue(null as any);
+
+    const req = createMockReq({ id: "77" });
+    const res = createMockRes();
+
+    await downloadRun(req as Request, res as Response);
+
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(mockGetFile).not.toHaveBeenCalled();
+  });
+
+  it("downloadRun scopes both the run and the file fetch by the authed organizationId", async () => {
+    mockGetRun.mockResolvedValue({ id: 77, organization_id: 5, file_id: 9, output_filename: "r.pdf", output_mime_type: "application/pdf" } as any);
+    mockGetFile.mockResolvedValue({ content: Buffer.from("x") } as any);
+
+    const req = createMockReq({ id: "77" });
+    const res = createMockRes();
+
+    await downloadRun(req as Request, res as Response);
+
+    expect(mockGetRun).toHaveBeenCalledWith(77, 5);
+    expect(mockGetFile).toHaveBeenCalledWith(9, 5);
+  });
+});

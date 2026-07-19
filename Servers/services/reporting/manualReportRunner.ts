@@ -35,6 +35,17 @@ export async function executeManualRun(
       organizationId,
     );
 
+    // No file id means the download path has nothing to serve — record a
+    // failure, not a success the frontend would render with a broken link.
+    if (!uploaded?.id) {
+      await updateRunStatusQuery(runId, {
+        status: "failed",
+        error_message: "file upload returned no id",
+        duration_ms: Date.now() - startedAt,
+      });
+      return;
+    }
+
     await updateRunStatusQuery(runId, {
       status: "success",
       file_id: uploaded?.id ?? null,

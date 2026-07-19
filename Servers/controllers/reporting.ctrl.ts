@@ -253,6 +253,7 @@ export async function generateReportsV2(req: Request, res: Response): Promise<an
   });
 
   let run: any = null;
+  let enqueued = false;
   try {
     const user = await getUserByIdQuery(userId!);
     if (!user) {
@@ -302,6 +303,7 @@ export async function generateReportsV2(req: Request, res: Response): Promise<an
       userId: userId!,
       organizationId: req.organizationId!,
     });
+    enqueued = true;
 
     await logSuccess({
       eventType: "Create",
@@ -323,7 +325,10 @@ export async function generateReportsV2(req: Request, res: Response): Promise<an
       userId: req.userId!,
       organizationId: req.organizationId!,
     });
-    if (run?.id) {
+    // Only unwind the run if the job never made it onto the queue. Once
+    // enqueued, the worker owns the run's terminal status — a later failure
+    // here (e.g. logSuccess throwing) must not race it back to 'failed'.
+    if (run?.id && !enqueued) {
       await updateRunStatusQuery(run.id, {
         status: "failed",
         error_message: error instanceof Error ? error.message : "Failed to queue report",
