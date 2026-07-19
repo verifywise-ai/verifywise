@@ -8,6 +8,24 @@
 
 **Tech Stack:** Node 22, TypeScript, Sequelize 6 (raw SQL), PostgreSQL (`verifywise` schema), zod, Vercel AI SDK (`@ai-sdk/openai`, `@ai-sdk/anthropic`), `docx` 9.7.0, EJS, Jest (ts-jest).
 
+> **`npm run build` DOES NOT TYPECHECK THIS CODE.** `Servers/tsconfig.json`'s `include` list (lines 105-122) covers `utils/`, `controllers/`, `routes/`, `domain.layer/` and others — but **not** `./services/**`. Files under `services/` are compiled only when transitively imported from an included file, and nothing imports `services/reporting/analyzers/` until Task 8 wires it into `generateReport()`. Combined with ts-jest's `diagnostics: false`, that means green tests AND a clean build can both coexist with real type errors in every file Tasks 4-6a create.
+>
+> Until Task 8 lands, typecheck these paths explicitly:
+>
+> ```bash
+> cd Servers
+> cat > tsconfig.analyzers.json <<'EOF'
+> {
+>   "extends": "./tsconfig.json",
+>   "include": ["./services/reporting/analyzers/**/*.ts", "./advisor/**/*.ts", "./utils/**/*.ts", "./domain.layer/**/*.ts", "./types/**/*.d.ts"]
+> }
+> EOF
+> npx tsc --noEmit -p tsconfig.analyzers.json 2>&1 | grep -E "analyzers/|llmModelFactory"
+> rm tsconfig.analyzers.json
+> ```
+>
+> Expected: no output. Pre-existing errors in `advisor/sandbox/*` and `utils/validations/fileManagerValidation.utils.ts` are not yours — the grep above filters them out.
+
 **This is Phase 2 of 4.** Phase 1 (async pipeline) is merged — every report now runs through `report_runs` with a run id, which is what makes a per-run analysis sidecar possible. Phases 3 (custom templates) and 4 (delivery truthfulness) get their own plans. Spec: `docs/superpowers/specs/2026-07-17-reporting-agent-analysis-design.md`. Issue: `verifywise-ai/verifywise#4280`.
 
 ---
@@ -1200,7 +1218,9 @@ git commit -m "feat(reporting): port analyzer prompts and add the six-analyzer r
 
 ---
 
-## Task 6: `runAnalyzers()` — gated, parallel, abstain-on-failure
+## Task 6: `runAnalyzers()` — gated, two-stage, abstain-on-failure
+
+> **RUN TASK 6a FIRST.** This task imports `runSectionSummaries` from `./sectionSummaries`, which Task 6a creates, and stages its whole flow around it. Starting here leaves an unresolvable import and a suite that cannot load. 6a is numbered out of order only because it was added after the plan's first draft.
 
 **Files:**
 - Create: `Servers/services/reporting/analyzers/runAnalyzers.ts`
@@ -1214,73 +1234,123 @@ Create `Servers/services/reporting/analyzers/__tests__/runAnalyzers.test.ts`:
 
 ```typescript
 const mockGenerate = jest.fn();
+const mockSectionSummaries = jest.fn();
+
 jest.mock("../../../../advisor/llmSelfCorrect", () => ({
   generateObjectWithSelfCorrection: (...a: any[]) => mockGenerate(...a),
 }));
 jest.mock("../../../../advisor/llmModelFactory", () => ({
   createModelFromKey: jest.fn(() => "model"),
 }));
+jest.mock("../sectionSummaries", () => ({
+  runSectionSummaries: (...a: any[]) => mockSectionSummaries(...a),
+}));
 
-import { runAnalyzers } from "../runAnalyzers";
+import { runAnalyzers, type AiBlocks } from "../runAnalyzers";
 
 const reportData: any = {
   metadata: { frameworkName: "EU AI Act", projectTitle: "Acme", organizationId: 5 },
-  sections: { projectRisks: { totalRisks: 1, risks: [{ name: "R1" }] }, compliance: { controls: [{ id: 1 }] } },
+  sections: {
+    projectRisks: { totalRisks: 1, risks: [{ name: "R1" }] },
+    vendorRisks: { risks: [{ riskName: "VR1" }] },
+    vendors: { vendors: [{ name: "Acme Corp" }] },
+    compliance: { controls: [{ id: 1 }] },
+  },
 };
 const llmKey: any = { id: 9, name: "openai", key: "sk", url: null, model: "gpt-4o-mini" };
+
+const NONE: AiBlocks = {
+  sectionSummaries: false,
+  executiveSummary: false,
+  keyFindings: false,
+  recommendedActions: false,
+  riskAnalysis: false,
+  complianceGap: false,
+  vendorRisk: false,
+};
+const only = (...on: (keyof AiBlocks)[]): AiBlocks =>
+  on.reduce((acc, k) => ({ ...acc, [k]: true }), { ...NONE });
 
 describe("runAnalyzers", () => {
   beforeEach(() => {
     mockGenerate.mockReset();
     mockGenerate.mockResolvedValue({ object: { summary: "ok", abstain_reason: null }, attempts: 1, selfCorrected: false });
+    mockSectionSummaries.mockReset();
+    mockSectionSummaries.mockResolvedValue({ projectRisks: "Risks look thin." });
   });
 
   it("runs only the blocks the config enables", async () => {
-    const out = await runAnalyzers({
-      reportData,
-      llmKey,
-      blocks: { sectionSummaries: false, executiveSummary: true, keyFindings: false, recommendedActions: false, riskAnalysis: false, complianceGap: false, vendorRisk: false },
-    });
+    const out = await runAnalyzers({ reportData, llmKey, blocks: only("riskAnalysis") });
     expect(mockGenerate).toHaveBeenCalledTimes(1);
-    expect(Object.keys(out)).toEqual(["executiveSummary"]);
+    expect(Object.keys(out)).toEqual(["riskAnalysis"]);
+    expect(mockSectionSummaries).not.toHaveBeenCalled();
   });
 
   it("one analyzer failing does not lose the others", async () => {
     mockGenerate
       .mockRejectedValueOnce(new Error("llm exploded"))
-      .mockResolvedValue({ object: { summary: "ok", abstain_reason: null }, attempts: 1, selfCorrected: false });
+      .mockResolvedValue({ object: { narrative: "ok", abstain_reason: null }, attempts: 1, selfCorrected: false });
 
-    const out = await runAnalyzers({
-      reportData,
-      llmKey,
-      blocks: { sectionSummaries: false, executiveSummary: true, keyFindings: true, recommendedActions: false, riskAnalysis: false, complianceGap: false, vendorRisk: false },
-    });
+    const out = await runAnalyzers({ reportData, llmKey, blocks: only("riskAnalysis", "vendorRisk") });
 
-    expect(out.executiveSummary.abstained).toBe(true);
-    expect(out.executiveSummary.abstain_reason).toContain("llm exploded");
-    expect(out.keyFindings.abstained).toBe(false);
+    const failed = [out.riskAnalysis!, out.vendorRisk!].find((r) => r.abstained)!;
+    const survived = [out.riskAnalysis!, out.vendorRisk!].find((r) => !r.abstained)!;
+    expect(failed.abstain_reason).toContain("llm exploded");
+    expect(survived.abstained).toBe(false);
   });
 
   it("abstains without calling the LLM when a block has no input data", async () => {
     const empty: any = { metadata: reportData.metadata, sections: {} };
-    const out = await runAnalyzers({
-      reportData: empty,
-      llmKey,
-      blocks: { sectionSummaries: false, executiveSummary: true, keyFindings: false, recommendedActions: false, riskAnalysis: false, complianceGap: false, vendorRisk: false },
-    });
+    const out = await runAnalyzers({ reportData: empty, llmKey, blocks: only("riskAnalysis") });
     expect(mockGenerate).not.toHaveBeenCalled();
-    expect(out.executiveSummary.abstained).toBe(true);
+    expect(out.riskAnalysis!.abstained).toBe(true);
   });
 
   it("abstains every enabled block when there is no LLM key", async () => {
     const out = await runAnalyzers({
       reportData,
       llmKey: null,
-      blocks: { sectionSummaries: false, executiveSummary: true, keyFindings: true, recommendedActions: false, riskAnalysis: false, complianceGap: false, vendorRisk: false },
+      blocks: only("executiveSummary", "keyFindings", "sectionSummaries"),
     });
     expect(mockGenerate).not.toHaveBeenCalled();
-    expect(out.executiveSummary.abstain_reason).toContain("no LLM key");
-    expect(out.keyFindings.abstain_reason).toContain("no LLM key");
+    expect(mockSectionSummaries).not.toHaveBeenCalled();
+    expect(out.executiveSummary!.abstain_reason).toContain("no LLM key");
+    expect(out.keyFindings!.abstain_reason).toContain("no LLM key");
+    expect(out.sectionSummaries!.abstain_reason).toContain("no LLM key");
+  });
+
+  // ---- the two-stage contract ------------------------------------------
+  // These three are the reason runAnalyzers is staged at all: the summary
+  // consumers read Stage 1's output, never raw sections.
+
+  it("feeds Stage 1 summaries to the Stage 2 consumers", async () => {
+    mockSectionSummaries.mockResolvedValue({ projectRisks: "Risk coverage is thin.", compliance: "Half the controls lack evidence." });
+
+    const out = await runAnalyzers({ reportData, llmKey, blocks: only("sectionSummaries", "executiveSummary") });
+
+    expect(mockSectionSummaries).toHaveBeenCalledTimes(1);
+    expect(mockGenerate).toHaveBeenCalledTimes(1);
+    const prompt = mockGenerate.mock.calls[0][0].prompt as string;
+    expect(prompt).toContain("Risk coverage is thin.");
+    expect(prompt).toContain("Half the controls lack evidence.");
+    expect(out.executiveSummary!.abstained).toBe(false);
+    expect(out.sectionSummaries!.payload.summaries.projectRisks).toBe("Risk coverage is thin.");
+  });
+
+  it("summary consumers abstain without spending a call when there are no summaries", async () => {
+    // sectionSummaries disabled -> Stage 2 gets {} -> buildUserPrompt returns ""
+    // This mirrors aiSummarizer.ts:227, which returned "" for the same reason.
+    const out = await runAnalyzers({ reportData, llmKey, blocks: only("executiveSummary", "keyFindings") });
+    expect(mockGenerate).not.toHaveBeenCalled();
+    expect(out.executiveSummary!.abstained).toBe(true);
+    expect(out.keyFindings!.abstained).toBe(true);
+  });
+
+  it("records sectionSummaries as abstained when it produces nothing", async () => {
+    mockSectionSummaries.mockResolvedValue({});
+    const out = await runAnalyzers({ reportData, llmKey, blocks: only("sectionSummaries") });
+    expect(out.sectionSummaries!.abstained).toBe(true);
+    expect(out.sectionSummaries!.payload).toBeNull();
   });
 
   it("nulls a suggestedOwner that is not an allowed org member", async () => {
@@ -1296,15 +1366,17 @@ describe("runAnalyzers", () => {
       selfCorrected: false,
     });
 
+    // recommendedActions is a Stage 2 consumer, so sectionSummaries must be on
+    // or it abstains before the owner sanitizer is ever reached.
     const out = await runAnalyzers({
       reportData,
       llmKey,
-      blocks: { sectionSummaries: false, executiveSummary: false, keyFindings: false, recommendedActions: true, riskAnalysis: false, complianceGap: false, vendorRisk: false },
+      blocks: only("sectionSummaries", "recommendedActions"),
       allowedOwners: ["alice@acme.com"],
     });
 
-    expect(out.recommendedActions.payload.actions[0].suggestedOwner).toBeNull();
-    expect(out.recommendedActions.payload.actions[1].suggestedOwner).toBe("alice@acme.com");
+    expect(out.recommendedActions!.payload.actions[0].suggestedOwner).toBeNull();
+    expect(out.recommendedActions!.payload.actions[1].suggestedOwner).toBe("alice@acme.com");
   });
 });
 ```
@@ -1424,7 +1496,10 @@ export async function runAnalyzers(input: RunAnalyzersInput): Promise<AnalyzerRe
   const model = createModelFromKey(llmKey);
   const modelLabel = llmKey.model ?? null;
 
-  const runOne = async (key: AnalysisSectionKey, stageExtras: AnalyzerExtras) => {
+  const runOne = async (
+    key: AnalysisSectionKey,
+    stageExtras: AnalyzerExtras,
+  ): Promise<readonly [AnalysisSectionKey, AnalyzerRunResult]> => {
     const def = ANALYZERS[key];
     const userPrompt = def.buildUserPrompt(reportData, stageExtras);
     if (!userPrompt) {
@@ -1455,11 +1530,14 @@ export async function runAnalyzers(input: RunAnalyzersInput): Promise<AnalyzerRe
     ] as const;
   };
 
-  const collect = (settled: PromiseSettledResult<any>[], keys: AnalysisSectionKey[]) => {
+  type RunOutcome = readonly [AnalysisSectionKey, AnalyzerRunResult];
+
+  const collect = (settled: PromiseSettledResult<RunOutcome>[], keys: AnalysisSectionKey[]) => {
     settled.forEach((outcome, i) => {
       const key = keys[i];
       if (outcome.status === "fulfilled") {
-        results[outcome.value[0]] = outcome.value[1];
+        const [k, v] = outcome.value;
+        results[k] = v;
         return;
       }
       const message = outcome.reason instanceof Error ? outcome.reason.message : "unknown error";
@@ -1473,7 +1551,7 @@ export async function runAnalyzers(input: RunAnalyzersInput): Promise<AnalyzerRe
 
   const [summaries, stage1] = await Promise.all([
     blocks.sectionSummaries
-      ? runSectionSummaries(model, reportData).catch((e) => {
+      ? runSectionSummaries(model, reportData).catch((e: unknown) => {
           logger.warn("Section summaries failed wholesale", e);
           return {} as Record<string, string>;
         })
@@ -1515,17 +1593,18 @@ export async function runAnalyzers(input: RunAnalyzersInput): Promise<AnalyzerRe
 }
 ```
 
-Add these imports at the top of the file alongside the existing ones:
+Add ONE import at the top of the file alongside the existing ones:
 
 ```typescript
 import { runSectionSummaries } from "./sectionSummaries";
-import type { AnalyzerExtras } from "./registry";
 ```
+
+Do **not** also add `import type { AnalyzerExtras } from "./registry"` — the base import block above already pulls `AnalyzerExtras` in, and a second import of the same name is TS2300 (duplicate identifier).
 
 - [ ] **Step 4: Run the test**
 
 Run: `cd Servers && npx jest services/reporting/analyzers/__tests__/runAnalyzers.test.ts`
-Expected: PASS, 5 tests.
+Expected: PASS, 8 tests.
 
 - [ ] **Step 5: Commit**
 
