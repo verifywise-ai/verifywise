@@ -31,7 +31,9 @@ describe("reportRunAnalysis.utils", () => {
     expect(result).toEqual({ id: 1 });
   });
 
-  it("upsert refuses to write when the run does not belong to the org", async () => {
+  // Names what this actually proves: sequelize is mocked, so this verifies the
+  // ownership gate is present in the SQL, not that Postgres enforces refusal.
+  it("upsert SQL gates the write on run/org ownership", async () => {
     await upsertRunAnalysisQuery({
       report_run_id: 7,
       section_key: "executiveSummary",
