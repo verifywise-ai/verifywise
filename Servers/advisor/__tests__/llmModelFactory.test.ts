@@ -1,10 +1,12 @@
-const mockChat = jest.fn(() => "chat-model");
-const mockOpenAIFactory = jest.fn(() => {
-  const f: any = jest.fn(() => "responses-model");
+const mockChat = jest.fn((..._a: any[]) => "chat-model");
+// Typed as rest-parameter fns so the spread call sites below typecheck: a
+// zero-arg jest.fn() cannot receive `...a: any[]` (TS2556).
+const mockOpenAIFactory = jest.fn((..._a: any[]) => {
+  const f: any = jest.fn((..._m: any[]) => "responses-model");
   f.chat = mockChat;
   return f;
 });
-const mockAnthropicFactory = jest.fn(() => jest.fn(() => "anthropic-model"));
+const mockAnthropicFactory = jest.fn((..._a: any[]) => jest.fn((..._m: any[]) => "anthropic-model"));
 
 jest.mock("@ai-sdk/openai", () => ({ createOpenAI: (...a: any[]) => mockOpenAIFactory(...a) }));
 jest.mock("@ai-sdk/anthropic", () => ({ createAnthropic: (...a: any[]) => mockAnthropicFactory(...a) }));
