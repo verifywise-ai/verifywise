@@ -13,7 +13,7 @@ const MAX_DATA_ITEMS = 50;
  * caps below — nested structures (assessment questions, NIST subcategories)
  * can still add up past a tenant's context window even when each level is
  * individually capped. */
-const MAX_PROMPT_CHARS = 60000;
+export const MAX_PROMPT_CHARS = 60000;
 
 /** Ported verbatim from aiSummarizer.ts:131-144. */
 export const SECTION_LABELS: Record<string, string> = {
@@ -136,7 +136,7 @@ export function prepareSectionData(key: string, data: any): string {
  * risks: [] }), which is truthy — a plain presence check never filters those
  * out (Fix 2).
  */
-const hasContent = (v: any): boolean =>
+export const hasContent = (v: any): boolean =>
   Array.isArray(v)
     ? v.length > 0
     : v && typeof v === "object"
