@@ -100,6 +100,8 @@ export const mlflowQueue = new Queue("mlflow-sync", {
 
 ### Job Schedule Summary
 
+Recurring (cron) jobs only — see [On-Demand Jobs](#on-demand-jobs) below for jobs enqueued one-off in response to a user action.
+
 | Job Name | Cron Pattern | Time | Purpose |
 |----------|--------------|------|---------|
 | `send_vendor_notification` | `0 0 * * *` | Daily at midnight | Vendor review date notifications |
@@ -216,6 +218,21 @@ await automationQueue.add(
 
 Handled in `automationWorker.ts` alongside the other automation job types.
 
+### On-Demand Jobs
+
+Not every job on the `automation-actions` queue is scheduled. Some are enqueued once, on demand, in direct response to a user action — no `repeat` pattern, no cron.
+
+| Job Name | Queue | Enqueued By | Handler |
+|----------|-------|-------------|---------|
+| `generate_report_manual` | `automation-actions` | `generateReportsV2` / `generateReports` controller, when a user requests a manual report (see [Reporting Domain](../domains/reporting.md)) | `handleManualReportGeneration` → `executeManualRun` |
+
+**Processing Logic:**
+1. Controller creates a `report_runs` row (`status: "running"`) and enqueues `generate_report_manual` with `{ runId, request, userId, organizationId }`
+2. Worker picks up the job and runs `executeManualRun`, which reuses the same `generateReport` service as scheduled runs
+3. `report_runs` is updated to a terminal status (`success` or `failed`) on completion — `executeManualRun` never produces `partial_success` (that state applies only to scheduled runs with multiple delivery targets)
+
+This job only runs while a worker process (`npm run worker`) is up — with no worker running, the run stays `status: "running"` indefinitely and the frontend poll never resolves.
+
 ## Workers
 
 ### Automation Worker
@@ -244,6 +261,9 @@ export const createAutomationWorker = () => {
 
         case "report_scheduler_tick":
           return await processReportSchedulerTick();
+
+        case "generate_report_manual":  // one-shot, not scheduled — see On-Demand Jobs
+          return await handleManualReportGeneration(job.data);
 
         case "send_pmm_notification":
           return await sendPMMNotification(job.data);

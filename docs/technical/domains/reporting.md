@@ -1,5 +1,7 @@
 # Reporting Domain
 
+> **Last Updated:** 2026-07-19
+
 ## Overview
 
 The Reporting domain in VerifyWise provides comprehensive report generation capabilities for compliance documentation, risk analysis, and organizational oversight. It supports multiple output formats (PDF, DOCX), framework-specific sections, custom branding, and integration with all major domains.
@@ -63,10 +65,15 @@ Reports are organized into three groups:
 
 ## API Endpoints
 
+Manual generation is **asynchronous**: `POST` queues the job and returns a `runId` immediately; the caller polls the run and downloads the file once it's done. `/reporting/generate-report` (POST) is a legacy alias that delegates straight to the v2 controller and returns the same `202 { runId }` shape — neither endpoint generates the file synchronously anymore.
+
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| POST | `/reporting/v2/generate-report` | Generate report |
+| POST | `/reporting/v2/generate-report` | Queue report generation. Returns `202 { runId }` |
+| POST | `/reporting/generate-report` | Legacy alias for the above (same async behavior) |
 | GET | `/reporting/generate-report` | List generated reports |
+| GET | `/reporting/runs/:id` | Poll a run's status (see [Template-First Reporting Layer](#template-first-reporting-layer)) |
+| GET | `/reporting/runs/:id/download` | Download the finished file once the run reaches a terminal status |
 | DELETE | `/reporting/:id` | Delete report |
 
 ### Generate Report Request
@@ -91,9 +98,17 @@ POST /reporting/v2/generate-report
 
 ### Response
 
-Binary file attachment with appropriate Content-Type header:
+`202 Accepted`:
+
+```json
+{ "runId": 123 }
+```
+
+Poll `GET /reporting/runs/:id` until `status` is terminal — `success` or `failed` for a manual run (`partial_success` is only produced by scheduled runs with multiple delivery targets) — then fetch the file from `GET /reporting/runs/:id/download`. The download response carries a binary attachment with the appropriate Content-Type header:
 - `application/pdf` for PDF
 - `application/vnd.openxmlformats-officedocument.wordprocessingml.document` for DOCX
+
+A **BullMQ worker process must be running** (`npm run worker`) for the job to ever execute — without it the run stays `status: "running"` forever. See [Automations & Job Scheduling](../infrastructure/automations.md) for queue/worker setup.
 
 ## Architecture
 
@@ -113,7 +128,13 @@ Binary file attachment with appropriate Content-Type header:
 ```
 User Request
     ↓
-Controller (generateReportsV2)
+Controller (generateReportsV2 / generateReports)
+    ├── Create `report_runs` row (status: "running")
+    └── Enqueue `generate_report_manual` job on the automation-actions queue
+    ↓
+202 { runId }               (client polls GET /reporting/runs/:id)
+    ↓
+BullMQ Worker → handleManualReportGeneration → executeManualRun
     ↓
 Service (generateReport)
     ├── DataCollector.collectAllData()
@@ -121,10 +142,12 @@ Service (generateReport)
     ├── EJS Template Rendering
     └── pdfGenerator or docxGenerator
     ↓
-File Storage (upload)
+File Storage (upload) + report_runs updated to a terminal status
     ↓
-Binary Response
+Client downloads via GET /reporting/runs/:id/download
 ```
+
+Manual and scheduled reports now share this same `report_runs` execution pipeline — see [Template-First Reporting Layer](#template-first-reporting-layer) below.
 
 ## Data Collection
 
@@ -182,7 +205,7 @@ class ReportDataCollector {
 ```
 templates/reports/
 ├── report-pdf.ejs    - Main PDF template
-├── report-docx.ejs   - DOCX template
+├── report-docx.ejs   - Dead file, not used by any generator (see DOCX Generation below)
 ├── pmm-report.ejs    - PMM-specific template
 └── styles/
     ├── pdf.css       - PDF styling
@@ -407,7 +430,9 @@ return getMemberProjectReports(userId);
 
 ## Template-First Reporting Layer
 
-The template-first reporting layer sits **on top of** the existing report engine (`generateReport`) described above — it does not replace it. It adds reusable system templates, scheduled deliveries, and run tracking. The manual generation endpoints and services above remain unchanged.
+The template-first reporting layer sits **on top of** the existing report engine (`generateReport`) described above — it does not replace it. It adds reusable system templates, scheduled deliveries, and run tracking.
+
+Manual generation (`/generate-report`, `/v2/generate-report`) now runs through this same `report_runs` pipeline instead of generating synchronously: the controller creates a `report_runs` row and enqueues a `generate_report_manual` job (worker-side `executeManualRun`), same as a scheduled run does. See [Data Flow](#data-flow) above.
 
 ### Domain Tables
 
