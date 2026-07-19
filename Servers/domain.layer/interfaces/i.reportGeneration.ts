@@ -65,6 +65,18 @@ export interface ReportGenerationResult {
   content: Buffer;
   mimeType: string;
   error?: string;
+  /**
+   * Structured analyzer output, keyed by section key. The runner persists this
+   * to report_run_analyses; the renderers read the flattened copy on
+   * ReportData.aiSummaries instead.
+   */
+  analyses?: Record<string, {
+    payload: any;
+    abstained: boolean;
+    abstain_reason: string | null;
+    model: string | null;
+    attempts: number;
+  }>;
 }
 
 // Chart data interfaces for report visualizations

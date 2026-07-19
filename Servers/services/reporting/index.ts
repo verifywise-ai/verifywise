@@ -14,6 +14,15 @@ import { createDataCollector } from "./dataCollector";
 import { generatePDF, closeBrowser } from "./pdfGenerator";
 import { generateDOCX } from "./docxGenerator";
 import logger from "../../utils/logger/fileLogger";
+import { runAnalyzers } from "./analyzers/runAnalyzers";
+import {
+  collectAllowedOwners,
+  collectEvidenceGapsInput,
+  collectReadinessInput,
+  resolveBlocks,
+} from "./analyzers/collectAnalyzerInputs";
+import { mapAnalysesToSummaries } from "./analyzers/mapToSummaries";
+import { getLLMKeysWithKeyQuery } from "../../utils/llmKey.utils";
 
 /**
  * Valid section keys that can be passed directly from the frontend
@@ -108,17 +117,45 @@ export async function generateReport(
     // Collect all report data
     const reportData = await dataCollector.collectAllData(sections);
 
-    // AI Enhancement (optional)
+    // AI analysis (optional, per-block gated)
+    let analyses: Record<string, any> | undefined;
     if (request.aiEnhanced) {
       try {
-        const { generateAISummaries } = await import("./aiSummarizer");
-        reportData.aiSummaries = await generateAISummaries(
+        const blocks = resolveBlocks(request);
+        const keys = await getLLMKeysWithKeyQuery(reportData.metadata.organizationId);
+        const llmKey =
+          (request.llmKeyId ? keys?.find((k: any) => k.id === request.llmKeyId) : null) ??
+          keys?.[0] ??
+          null;
+
+        // Two independent inputs, fetched in parallel and kept separate.
+        const extras = blocks.complianceGap
+          ? await (async () => {
+              const [readiness, evidenceGaps] = await Promise.all([
+                collectReadinessInput(
+                  request.projectId,
+                  request.frameworkId,
+                  reportData.metadata.organizationId,
+                  userId,
+                ),
+                collectEvidenceGapsInput(request.frameworkId, reportData.metadata.organizationId),
+              ]);
+              return { readiness, evidenceGaps };
+            })()
+          : {};
+
+        analyses = await runAnalyzers({
           reportData,
-          reportData.metadata.organizationId,
-          request.llmKeyId,
-        );
+          llmKey: llmKey as any,
+          blocks,
+          extras,
+          allowedOwners: collectAllowedOwners(reportData),
+        });
+
+        reportData.aiSummaries = mapAnalysesToSummaries(analyses, reportData.aiSummaries);
       } catch (error) {
-        logger.warn("AI summarization failed, continuing with standard report:", error);
+        // Analysis is never allowed to lose the report.
+        logger.warn("Report analysis failed, continuing with standard report:", error);
       }
     }
 
@@ -154,7 +191,7 @@ export async function generateReport(
       result.filename = `${baseName}_AI_${ext}`;
     }
 
-    return result;
+    return { ...result, analyses };
   } catch (error) {
     console.error("Error generating report:", error);
     return {
