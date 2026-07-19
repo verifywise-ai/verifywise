@@ -140,6 +140,24 @@
         </li>
         <% } %>
 
+        <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.recommendedActions && aiSummaries.recommendedActions.length > 0) { %>
+        <li class="toc-item">
+          <span><span class="toc-item-number"><%= sectionNum++ %>.</span> Recommended actions</span>
+        </li>
+        <% } %>
+
+        <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.complianceGap) { %>
+        <li class="toc-item">
+          <span><span class="toc-item-number"><%= sectionNum++ %>.</span> Compliance gap analysis</span>
+        </li>
+        <% } %>
+
+        <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.vendorRisk) { %>
+        <li class="toc-item">
+          <span><span class="toc-item-number"><%= sectionNum++ %>.</span> Third-party risk analysis</span>
+        </li>
+        <% } %>
+
         <% if (hasRiskAnalysis) { %>
         <li class="toc-item">
           <span><span class="toc-item-number"><%= sectionNum++ %>.</span> Risk analysis</span>
@@ -196,6 +214,76 @@
           <li><%= rec %></li>
           <% }); %>
         </ul>
+      </div>
+      <% } %>
+    </div>
+    <% } %>
+
+      <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.recommendedActions && aiSummaries.recommendedActions.length > 0) { %>
+      <div class="subsection avoid-break">
+        <div class="subsection-header">
+          <h3 class="subsection-title">Recommended actions</h3>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Action</th>
+              <th>Priority</th>
+              <th>Suggested owner</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% aiSummaries.recommendedActions.forEach(function(a) { %>
+            <tr>
+              <td><%= a.action %></td>
+              <td><%= a.priority || '—' %></td>
+              <td><%= a.suggestedOwner || 'Unassigned' %></td>
+            </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+      <% } %>
+
+    <!-- ============================================ -->
+    <!-- COMPLIANCE GAP ANALYSIS (AI-Generated) -->
+    <!-- ============================================ -->
+    <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.complianceGap) { %>
+    <div class="avoid-break">
+      <div class="group-header">
+        <h2 class="group-title">Compliance Gap Analysis</h2>
+      </div>
+      <div class="ai-analysis-box">
+        <div class="ai-analysis-label">AI-Generated Analysis</div>
+        <div class="ai-analysis-content"><%= aiSummaries.complianceGap.narrative %></div>
+      </div>
+
+      <% if (aiSummaries.complianceGap.scores_caveat) { %>
+      <div class="ai-risk-highlights-box">
+        <div class="ai-analysis-label">Scope note</div>
+        <div class="ai-analysis-content"><%= aiSummaries.complianceGap.scores_caveat %></div>
+      </div>
+      <% } %>
+
+      <% if (aiSummaries.complianceGap.gaps && aiSummaries.complianceGap.gaps.length > 0) { %>
+      <div class="subsection">
+        <div class="subsection-header">
+          <h3 class="subsection-title">Prioritised gaps</h3>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr><th>Control</th><th>Gap</th><th>Priority</th></tr>
+          </thead>
+          <tbody>
+            <% aiSummaries.complianceGap.gaps.forEach(function(g) { %>
+            <tr>
+              <td><strong><%= g.control %></strong></td>
+              <td><%= g.gap %></td>
+              <td><span class="chip chip-<%= String(g.priority).toLowerCase() %>"><%= g.priority %></span></td>
+            </tr>
+            <% }); %>
+          </tbody>
+        </table>
       </div>
       <% } %>
     </div>
@@ -367,6 +455,25 @@
     <div class="ai-risk-highlights-box">
       <div class="ai-analysis-label" style="color: #DC6803;">Risk Highlights</div>
       <div class="ai-analysis-content"><%= aiSummaries.riskHighlights %></div>
+    </div>
+    <% } %>
+
+    <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.vendorRisk) { %>
+    <div class="subsection avoid-break">
+      <div class="subsection-header">
+        <h3 class="subsection-title">Third-party risk analysis</h3>
+      </div>
+      <div class="ai-analysis-box">
+        <div class="ai-analysis-label">AI-Generated Analysis</div>
+        <div class="ai-analysis-content"><%= aiSummaries.vendorRisk.narrative %></div>
+      </div>
+      <% if (aiSummaries.vendorRisk.concerns && aiSummaries.vendorRisk.concerns.length > 0) { %>
+      <ul class="ai-findings-list">
+        <% aiSummaries.vendorRisk.concerns.forEach(function(c) { %>
+        <li><strong><%= c.vendor %>:</strong> <%= c.concern %> (<%= c.severity %>)</li>
+        <% }); %>
+      </ul>
+      <% } %>
     </div>
     <% } %>
 
