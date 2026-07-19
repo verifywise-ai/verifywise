@@ -57,7 +57,11 @@ vi.mock("../../../Modals/StandardModal", () => ({
 }));
 
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
+import { setShowAlertCallback } from "../../../../../infrastructure/api/customAxios";
 import GenerateReport from "../index";
+
+// Observe toasts via the real global alert callback (what showAlert routes to).
+let alerts: { variant: string; body: string }[] = [];
 
 describe("GenerateReport", () => {
   beforeEach(() => {
@@ -69,7 +73,11 @@ describe("GenerateReport", () => {
     // jsdom doesn't implement these on the blob-download path.
     URL.createObjectURL = vi.fn(() => "blob:test");
     URL.revokeObjectURL = vi.fn();
+    alerts = [];
+    setShowAlertCallback((a) => alerts.push(a as { variant: string; body: string }));
   });
+
+  afterEach(() => setShowAlertCallback(() => {}));
 
   it("renders without crashing", () => {
     renderWithProviders(<GenerateReport onClose={vi.fn()} reportType="project" />);
@@ -90,10 +98,16 @@ describe("GenerateReport", () => {
     expect(screen.getByTestId("ai-key-banner")).toBeInTheDocument();
   });
 
-  // Drives the terminal-run effect directly: a successful run must download
-  // exactly once, even when the effect re-runs with the same run.data because
-  // the parent handed down fresh onClose/onReportGenerated identities.
-  it("downloads a successful run exactly once despite re-renders", async () => {
+  // The real bug: a parent re-render with a fresh onClose identity while the
+  // download blob-fetch is still in flight must NOT cancel it. Holds the
+  // download pending across the re-render, then resolves it.
+  it("keeps the in-flight download alive across a re-render and downloads exactly once", async () => {
+    let resolveDownload!: (b: Blob) => void;
+    mockDownload.fn.mockReturnValue(
+      new Promise<Blob>((r) => {
+        resolveDownload = r;
+      }),
+    );
     mockReporting.reportRun = {
       data: {
         id: 5,
@@ -103,17 +117,51 @@ describe("GenerateReport", () => {
         error_message: null,
       },
     };
+
+    const onClose1 = vi.fn();
     const { rerender } = renderWithProviders(
-      <GenerateReport onClose={vi.fn()} reportType="project" />,
+      <GenerateReport onClose={onClose1} reportType="project" />,
     );
 
+    // Effect fired, download requested once — still pending, nothing finalized.
     await waitFor(() => expect(mockDownload.fn).toHaveBeenCalledTimes(1));
     expect(mockDownload.fn).toHaveBeenCalledWith(5);
+    expect(onClose1).not.toHaveBeenCalled();
 
-    // Re-render with new callback identities → effect deps change, same run.data.
-    rerender(<GenerateReport onClose={vi.fn()} onReportGenerated={vi.fn()} reportType="project" />);
-    await Promise.resolve();
+    // Parent re-renders with a FRESH onClose while the download is pending.
+    // Same run id/status → effect must NOT re-run and must NOT cancel the fetch.
+    const onClose2 = vi.fn();
+    rerender(<GenerateReport onClose={onClose2} onReportGenerated={vi.fn()} reportType="project" />);
 
-    expect(mockDownload.fn).toHaveBeenCalledTimes(1);
+    // Complete the download; it must run to completion using the latest onClose.
+    resolveDownload(new Blob(["pdf"]));
+    await waitFor(() => expect(onClose2).toHaveBeenCalledTimes(1));
+
+    expect(mockDownload.fn).toHaveBeenCalledTimes(1); // never re-requested
+    expect(onClose1).not.toHaveBeenCalled(); // stale callback never used
+    expect(alerts).toContainEqual(
+      expect.objectContaining({ variant: "success", body: "Report successfully downloaded." }),
+    );
+  });
+
+  it("shows the error toast and does not download on a failed run", async () => {
+    mockReporting.reportRun = {
+      data: {
+        id: 7,
+        status: "failed",
+        file_id: null,
+        output_filename: null,
+        error_message: "boom",
+      },
+    };
+
+    renderWithProviders(<GenerateReport onClose={vi.fn()} reportType="project" />);
+
+    await waitFor(() =>
+      expect(alerts).toContainEqual(expect.objectContaining({ variant: "error", body: "boom" })),
+    );
+    expect(mockDownload.fn).not.toHaveBeenCalled();
+    // Not stuck on the generating/status view.
+    expect(screen.queryByText(/Generating report/i)).not.toBeInTheDocument();
   });
 });

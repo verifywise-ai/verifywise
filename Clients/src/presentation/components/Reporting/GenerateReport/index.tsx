@@ -47,9 +47,15 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
   const generate = useGenerateReport();
   const [runId, setRunId] = useState<number | undefined>(undefined);
   const run = useReportRun(runId, runId != null);
-  // Guard so each terminal run is handled exactly once even if the effect
-  // re-runs with the same run.data (deps include unstable parent callbacks).
+  // Guard so each terminal run is handled exactly once.
   const handledRunIdRef = useRef<number | null>(null);
+  // Parent passes fresh inline arrows every render; hold them in refs so the
+  // terminal effect can depend only on run identity (not callback identity)
+  // and never re-run — and thus never cancel — an in-flight download.
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
+  const onReportGeneratedRef = useRef(onReportGenerated);
+  onReportGeneratedRef.current = onReportGenerated;
 
   // Form values from Page 1
   const [basicFormValues, setBasicFormValues] = useState<BasicFormValues>({
@@ -166,8 +172,8 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
           a.remove();
           URL.revokeObjectURL(url);
           toast("success", "Report successfully downloaded.");
-          onReportGenerated?.();
-          onClose();
+          onReportGeneratedRef.current?.();
+          onCloseRef.current();
         })
         .catch(() => {
           if (cancelled) return;
@@ -191,7 +197,9 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
     }
     setRunId(undefined);
     setCurrentPage("basic");
-  }, [run.data, onClose, onReportGenerated, toast]);
+    // Depend only on run identity/status — callbacks are read via refs so an
+    // incidental parent re-render never re-runs (and never cancels) this effect.
+  }, [run.data?.id, run.data?.status]);
 
   const handleOnCloseModal = () => {
     onClose();
