@@ -13,11 +13,10 @@
  * LLM. There is no deterministic weighted formula anymore.
  */
 
-import { createAnthropic } from "@ai-sdk/anthropic";
-import { createOpenAI } from "@ai-sdk/openai";
 import type { QualityGrade } from "../../domain.layer/interfaces/i.evidenceAi";
 import logger from "../../utils/logger/fileLogger";
 import { generateObjectWithSelfCorrection } from "../llmSelfCorrect";
+import { createModelFromKey } from "../llmModelFactory";
 import { llmAnalysisSchema, type LLMAnalysisOutput } from "./schema";
 import { buildAnalyzerSystemPrompt, buildAnalyzerUserPrompt, ANALYZER_VERSION } from "./prompts";
 import { matchControlsSemantic, type MatchedControl } from "./controlMatcher";
@@ -127,18 +126,15 @@ function normalizeDocument(raw: string): {
 /* ------------------------------------------------------------------ */
 
 function createModel(key: AnalyzerInput["llmKey"]) {
-  if (key.provider === "Anthropic") {
-    return createAnthropic({
-      apiKey: key.apiKey,
-      baseURL: key.baseURL || undefined,
-      headers: key.headers,
-    })(key.model);
-  }
-  return createOpenAI({
-    apiKey: key.apiKey,
-    baseURL: key.baseURL,
-    headers: key.headers,
-  })(key.model);
+  return createModelFromKey({
+    // The analyzer's own input type carries an explicit provider; map it back
+    // onto the name-detection contract the shared factory uses.
+    name: key.provider === "Anthropic" ? "anthropic" : "openai",
+    key: key.apiKey,
+    url: key.baseURL,
+    model: key.model,
+    custom_headers: key.headers ?? null,
+  });
 }
 
 /* ------------------------------------------------------------------ */
