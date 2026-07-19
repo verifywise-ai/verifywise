@@ -1378,16 +1378,36 @@ export function sanitizeOwners(actions: any[] | undefined, allowedOwners: string
   }));
 }
 
+/** Analyzers that consume per-section summaries rather than raw section data. */
+const SUMMARY_CONSUMERS: AnalysisSectionKey[] = [
+  "executiveSummary",
+  "keyFindings",
+  "recommendedActions",
+];
+
 /**
- * Run every enabled analyzer in parallel. Pure: no DB, no req/res.
+ * Run every enabled analyzer. Pure: no DB, no req/res.
  *
- * Promise.allSettled, not Promise.all — six analyzers must not become six ways
- * to lose a report. A failure abstains that one section.
+ * TWO STAGES, and the ordering is load-bearing. `aiSummarizer` (the shipped
+ * code this replaces) fed the executive summary, key findings and recommended
+ * actions from already-compressed per-section summaries, not from raw section
+ * JSON — see aiSummarizer.ts:215-254 and :260-310. Feeding them raw sections
+ * instead measured ~38k tokens per prompt against ~6k, sent three times per
+ * report, which can exceed a tenant's context window and lose all three
+ * sections at once. So:
+ *
+ *   Stage 1 — sectionSummaries (fans out per section, concurrency 3) plus
+ *             riskAnalysis / complianceGap / vendorRisk, which read raw
+ *             sections and readiness and have no such dependency.
+ *   Stage 2 — the three summary consumers, fed Stage 1's summaries.
+ *
+ * Promise.allSettled within each stage, never Promise.all — analyzers must not
+ * become ways to lose a report. A failure abstains that one section.
  */
 export async function runAnalyzers(input: RunAnalyzersInput): Promise<AnalyzerResults> {
   const { reportData, llmKey, blocks, extras = {}, allowedOwners = [] } = input;
   const enabled = (Object.keys(ANALYZERS) as AnalysisSectionKey[]).filter((k) => blocks?.[k]);
-  if (enabled.length === 0) return {};
+  if (enabled.length === 0 && !blocks?.sectionSummaries) return {};
 
   const results: AnalyzerResults = {};
 
@@ -1404,52 +1424,102 @@ export async function runAnalyzers(input: RunAnalyzersInput): Promise<AnalyzerRe
   const model = createModelFromKey(llmKey);
   const modelLabel = llmKey.model ?? null;
 
-  const settled = await Promise.allSettled(
-    enabled.map(async (key) => {
-      const def = ANALYZERS[key];
-      const userPrompt = def.buildUserPrompt(reportData, extras);
-      if (!userPrompt) {
-        return [key, abstain("insufficient data for this section", modelLabel)] as const;
-      }
-
-      const result = await generateObjectWithSelfCorrection({
-        model,
-        schema: def.schema,
-        system: def.buildSystemPrompt(),
-        prompt: userPrompt,
-      });
-
-      let payload: any = result.object;
-      if (key === "recommendedActions") {
-        payload = { ...payload, actions: sanitizeOwners(payload.actions, allowedOwners) };
-      }
-
-      return [
-        key,
-        {
-          payload,
-          abstained: !!payload?.abstain_reason,
-          abstain_reason: payload?.abstain_reason ?? null,
-          model: modelLabel,
-          attempts: result.attempts,
-        },
-      ] as const;
-    }),
-  );
-
-  settled.forEach((outcome, i) => {
-    const key = enabled[i];
-    if (outcome.status === "fulfilled") {
-      results[outcome.value[0]] = outcome.value[1];
-      return;
+  const runOne = async (key: AnalysisSectionKey, stageExtras: AnalyzerExtras) => {
+    const def = ANALYZERS[key];
+    const userPrompt = def.buildUserPrompt(reportData, stageExtras);
+    if (!userPrompt) {
+      return [key, abstain("insufficient data for this section", modelLabel)] as const;
     }
-    const message = outcome.reason instanceof Error ? outcome.reason.message : "unknown error";
-    logger.warn(`Report analyzer "${key}" failed (${ANALYZER_VERSION}): ${message}`);
-    results[key] = abstain(`analyzer failed: ${message}`, modelLabel);
-  });
+
+    const result = await generateObjectWithSelfCorrection({
+      model,
+      schema: def.schema,
+      system: def.buildSystemPrompt(),
+      prompt: userPrompt,
+    });
+
+    let payload: any = result.object;
+    if (key === "recommendedActions") {
+      payload = { ...payload, actions: sanitizeOwners(payload.actions, allowedOwners) };
+    }
+
+    return [
+      key,
+      {
+        payload,
+        abstained: !!payload?.abstain_reason,
+        abstain_reason: payload?.abstain_reason ?? null,
+        model: modelLabel,
+        attempts: result.attempts,
+      },
+    ] as const;
+  };
+
+  const collect = (settled: PromiseSettledResult<any>[], keys: AnalysisSectionKey[]) => {
+    settled.forEach((outcome, i) => {
+      const key = keys[i];
+      if (outcome.status === "fulfilled") {
+        results[outcome.value[0]] = outcome.value[1];
+        return;
+      }
+      const message = outcome.reason instanceof Error ? outcome.reason.message : "unknown error";
+      logger.warn(`Report analyzer "${key}" failed (${ANALYZER_VERSION}): ${message}`);
+      results[key] = abstain(`analyzer failed: ${message}`, modelLabel);
+    });
+  };
+
+  // ---- Stage 1: section summaries + the raw-section analyzers -------------
+  const stage1Keys = enabled.filter((k) => !SUMMARY_CONSUMERS.includes(k));
+
+  const [summaries, stage1] = await Promise.all([
+    blocks.sectionSummaries
+      ? runSectionSummaries(model, reportData).catch((e) => {
+          logger.warn("Section summaries failed wholesale", e);
+          return {} as Record<string, string>;
+        })
+      : Promise.resolve({} as Record<string, string>),
+    Promise.allSettled(stage1Keys.map((k) => runOne(k, extras))),
+  ]);
+
+  collect(stage1, stage1Keys);
+
+  if (blocks.sectionSummaries) {
+    const count = Object.keys(summaries).length;
+    // Always record a result when the block was enabled, even if it produced
+    // nothing — ai_status silently missing a key it was asked to run reads as
+    // "never requested" rather than "produced nothing".
+    results.sectionSummaries = {
+      payload: count > 0 ? { summaries } : null,
+      abstained: count === 0,
+      abstain_reason: count === 0 ? "no section produced a summary" : null,
+      model: modelLabel,
+      attempts: count,
+    };
+  }
+
+  // ---- Stage 2: the summary consumers ------------------------------------
+  // They read extras.sectionSummaries. With no summaries their buildUserPrompt
+  // returns "" and they abstain without spending a call — which is exactly the
+  // behaviour of the code being replaced (aiSummarizer.ts:227 returns "" when
+  // summariesText is empty).
+  const stage2Keys = enabled.filter((k) => SUMMARY_CONSUMERS.includes(k));
+  if (stage2Keys.length > 0) {
+    const stage2Extras: AnalyzerExtras = { ...extras, sectionSummaries: summaries };
+    collect(
+      await Promise.allSettled(stage2Keys.map((k) => runOne(k, stage2Extras))),
+      stage2Keys,
+    );
+  }
 
   return results;
 }
+```
+
+Add these imports at the top of the file alongside the existing ones:
+
+```typescript
+import { runSectionSummaries } from "./sectionSummaries";
+import type { AnalyzerExtras } from "./registry";
 ```
 
 - [ ] **Step 4: Run the test**
@@ -1468,10 +1538,13 @@ git commit -m "feat(reporting): add gated parallel analyzer runner with abstain-
 
 ## Task 6a: Port the per-section summarizer (prevents a 24-block regression)
 
+> **EXECUTE THIS BEFORE TASK 6.** Task 6's `runAnalyzers` imports `runSectionSummaries` from the module this task creates, and stages its two-phase flow around it. Running Task 6 first leaves an unresolvable import. The task is numbered 6a only because it was added after the plan's first draft.
+
 **Files:**
 - Create: `Servers/services/reporting/analyzers/sectionSummaries.ts`
-- Modify: `Servers/services/reporting/analyzers/runAnalyzers.ts` (Step 4 wiring)
 - Test: `Servers/services/reporting/analyzers/__tests__/sectionSummaries.test.ts`
+
+This task creates the module only. Task 6 does all the wiring.
 
 **Why this task exists.** `aiSummarizer.ts:424` is the **only** producer of `AISummaries.sectionSummaries` in the repo. Twenty-four render blocks read it — 12 in `report-pdf.ejs` (lines 219, 283, 328, 388, 455, 521, 581, 645, 688, 733, 776, 821) and 12 in `docxGenerator.ts` (lines 626, 672, 696, 755, 791, 839, 908, 990, 1013, 1040, 1067, 1095). Delete `aiSummarizer` (Task 12) without this task and all 24 go permanently dark: the templates still compile, reports still generate, and twelve AI boxes vanish from every report with nothing failing. That is the single most dangerous change in this phase.
 
@@ -1638,69 +1711,23 @@ export async function runSectionSummaries(
 }
 ```
 
-- [ ] **Step 4: Wire it into `runAnalyzers`**
+- [ ] **Step 4: Confirm the module stands alone**
 
 `sectionSummaries` is deliberately **not** in the `ANALYZERS` registry — its output is `Record<string, string>` rather than a schema-validated object, so it does not fit `AnalyzerDefinition`.
 
-**No type changes are needed here.** Task 6 already declared `AnalyzedKey = AnalysisSectionKey | "sectionSummaries"` and keyed both `AiBlocks` and `AnalyzerResults` off it, precisely so this task is pure runtime wiring. If you find yourself widening a type or reaching for `as any` in this step, stop — Task 6 was not applied correctly. (`ts-jest` runs with `diagnostics: false`, so a type error here stays green in the tests and only surfaces at `npm run build` several tasks later; casting it away there would silently disconnect the producer and re-open the 24-block hole this task exists to close.)
+There is **no wiring in this task.** Task 6 imports `runSectionSummaries` and stages the whole flow around it. If you find yourself editing `runAnalyzers.ts` here, stop — that file does not exist yet, because this task runs first.
 
-In `Servers/services/reporting/analyzers/runAnalyzers.ts`, after the `const model = createModelFromKey(llmKey);` line, kick the section summaries off in parallel with the analyzers:
-
-```typescript
-  const sectionSummariesPromise = blocks.sectionSummaries
-    ? runSectionSummaries(model, reportData).catch((e) => {
-        logger.warn("Section summaries failed wholesale", e);
-        return {} as Record<string, string>;
-      })
-    : Promise.resolve({} as Record<string, string>);
-```
-
-and immediately before `return results;`, attach it:
-
-```typescript
-  if (blocks.sectionSummaries) {
-    const sectionSummaries = await sectionSummariesPromise;
-    const count = Object.keys(sectionSummaries).length;
-    // Always record a result when the block was enabled, even if it produced
-    // nothing — every other block does, and ai_status silently missing a key it
-    // was asked to run reads as "never requested" rather than "produced nothing".
-    results.sectionSummaries = {
-      payload: count > 0 ? { summaries: sectionSummaries } : null,
-      abstained: count === 0,
-      abstain_reason: count === 0 ? "no section produced a summary" : null,
-      model: modelLabel,
-      attempts: count,
-    };
-  }
-```
-
-Import it at the top: `import { runSectionSummaries } from "./sectionSummaries";`
-
-Also widen the early-return guard so `sectionSummaries` alone still runs — change:
-
-```typescript
-  const enabled = (Object.keys(ANALYZERS) as AnalysisSectionKey[]).filter((k) => blocks?.[k]);
-  if (enabled.length === 0) return {};
-```
-
-to:
-
-```typescript
-  const enabled = (Object.keys(ANALYZERS) as AnalysisSectionKey[]).filter((k) => blocks?.[k]);
-  if (enabled.length === 0 && !blocks?.sectionSummaries) return {};
-```
-
-The `if (!llmKey)` abstain loop already covers `sectionSummaries` — Task 6 wrote it against `AnalyzedKey` for this reason. No change needed there.
+Verify the module is self-contained: it must import only from `./prompts`, `../../../domain.layer/interfaces/i.reportGeneration`, `../../../utils/logger/fileLogger` and the `ai` package. It must NOT import from `./registry` or `./runAnalyzers`.
 
 - [ ] **Step 5: Run both suites**
 
 Run: `cd Servers && npx jest services/reporting/analyzers/`
-Expected: the new `sectionSummaries` tests plus the existing `runAnalyzers` tests all green.
+Expected: the new `sectionSummaries` tests green, alongside the already-passing `schemas` and `registry` suites. `runAnalyzers` does not exist yet — Task 6 creates it.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add Servers/services/reporting/analyzers/sectionSummaries.ts Servers/services/reporting/analyzers/__tests__/sectionSummaries.test.ts Servers/services/reporting/analyzers/runAnalyzers.ts
+git add Servers/services/reporting/analyzers/sectionSummaries.ts Servers/services/reporting/analyzers/__tests__/sectionSummaries.test.ts
 git commit -m "feat(reporting): port the per-section summarizer so the 24 sectionSummaries blocks keep rendering"
 ```
 
