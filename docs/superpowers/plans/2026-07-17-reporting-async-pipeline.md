@@ -79,6 +79,14 @@ module.exports = {
     await queryInterface.sequelize.query(`
       ALTER TABLE verifywise.report_runs
         DROP CONSTRAINT IF EXISTS report_runs_file_id_fkey;
+      -- Null out orphaned pointers before validating the constraint. file_id has
+      -- never had referential integrity, and files are hard-deleted through paths
+      -- unaware of report_runs, so ADD CONSTRAINT would otherwise fail on any env
+      -- with existing report-run history. Nulling matches the ON DELETE SET NULL intent.
+      UPDATE verifywise.report_runs
+         SET file_id = NULL
+       WHERE file_id IS NOT NULL
+         AND NOT EXISTS (SELECT 1 FROM verifywise.files f WHERE f.id = report_runs.file_id);
       ALTER TABLE verifywise.report_runs
         ADD CONSTRAINT report_runs_file_id_fkey
         FOREIGN KEY (file_id) REFERENCES verifywise.files(id) ON DELETE SET NULL;
