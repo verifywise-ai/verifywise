@@ -2,6 +2,7 @@ import { generateReport } from "./index";
 import { resolveReportRequest } from "./reportTemplateResolver";
 import { deliverReport } from "./reportDeliveryService";
 import { createRunQuery, updateRunStatusQuery } from "../../utils/reportRun.utils";
+import { persistAnalyses } from "./analyzers/persistAnalyses";
 
 // Runs one scheduled report end-to-end: create run (running) -> resolve request
 // -> generateReport -> deliver -> compute final status -> update run. An AI
@@ -29,9 +30,15 @@ export async function runScheduledReport(sched: any, opts: { triggeredBy: "sched
     const channels = [delivery.storage, delivery.emailLink, delivery.attachment];
     const anyFailed = channels.some((c: any) => c?.status === "failed");
     const status = anyFailed ? "partial_success" : "success";
+    const aiStatus = await persistAnalyses(
+      run.id,
+      sched.organization_id,
+      sched.owner_id ?? sched.created_by ?? null,
+      result.analyses,
+    );
     await updateRunStatusQuery(run.id, {
       status, file_id: delivery.fileId, output_filename: result.filename, output_mime_type: result.mimeType,
-      delivery_status: delivery, duration_ms: Date.now() - startedAt,
+      delivery_status: delivery, ai_status: aiStatus ?? undefined, duration_ms: Date.now() - startedAt,
     });
   } catch (e: any) {
     await updateRunStatusQuery(run.id, { status: "failed", error_message: e.message, duration_ms: Date.now() - startedAt });

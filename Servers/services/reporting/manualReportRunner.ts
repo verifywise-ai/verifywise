@@ -4,6 +4,7 @@ import { uploadFile } from "../../utils/fileUpload.utils";
 import { mapReportTypeToFileSource } from "../../controllers/reporting.ctrl";
 import type { ReportGenerationRequest } from "../../domain.layer/interfaces/i.reportGeneration";
 import logger from "../../utils/logger/fileLogger";
+import { persistAnalyses } from "./analyzers/persistAnalyses";
 
 // Worker-side executor for a manual (non-scheduled) report run. The run row was
 // already created (status 'running') by the controller so it could return an id;
@@ -46,11 +47,14 @@ export async function executeManualRun(
       return;
     }
 
+    const aiStatus = await persistAnalyses(runId, organizationId, userId, result.analyses);
+
     await updateRunStatusQuery(runId, {
       status: "success",
       file_id: uploaded?.id ?? null,
       output_filename: uploaded?.filename ?? result.filename,
       output_mime_type: result.mimeType,
+      ai_status: aiStatus ?? undefined,
       duration_ms: Date.now() - startedAt,
     });
   } catch (e: any) {
