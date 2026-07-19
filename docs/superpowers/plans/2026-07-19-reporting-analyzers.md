@@ -1629,6 +1629,12 @@ This task creates the module only. Task 6 does all the wiring.
 
 This is a **port, not a redesign**: same per-section fan-out, same concurrency limit of 3, same output shape (`Record<string, string>`). It does not use `generateObjectWithSelfCorrection` — its output is free prose keyed by section, not a structured object, so it stays on `generateText` exactly as today.
 
+**The prompt body must be copied character-for-character from `aiSummarizer.ts:186-195`**, including the em dash in "bullet points — write flowing paragraphs only". The only permitted addition is the grounding sentence ("Use only the data provided…"). This is not pedantry: the first attempt at this task quietly rewrote the prompt — 150-250 words became "2-4 sentences", the "strengths and areas of good practice" and "context for decision-makers" bullets were dropped, and the third-person instruction disappeared. That turns an auditor-facing summary into a gap-only one, and because these summaries are the sole input to the executive summary, key findings and recommended actions, it thins the three headline sections of every report. `aiSummarizer.ts` is deleted in Task 12, after which the original wording is unrecoverable in review. Diff the two prompts before committing.
+
+Two deviations from the original are deliberate and each has a reason:
+- The section filter uses `hasContent` (exported from `prompts.ts`), not the original's `!= null`. `dataCollector` assigns a section object even for an empty project and returns that same shape from its catch blocks, so the original filter both wastes a call and lets the model state "no vendor risks have been recorded" when the query actually threw.
+- `prepareSectionData`'s output is clamped to `MAX_PROMPT_CHARS` with the same `[TRUNCATED: …]` marker `renderSections` uses. Without it one oversized section blows the context window, the call throws, the error is swallowed, and that AI box vanishes from the report with no marker.
+
 - [ ] **Step 1: Write the failing test**
 
 Create `Servers/services/reporting/analyzers/__tests__/sectionSummaries.test.ts`:
@@ -1709,7 +1715,7 @@ Create `Servers/services/reporting/analyzers/sectionSummaries.ts`. The prompt bo
 import { generateText } from "ai";
 import type { ReportData } from "../../../domain.layer/interfaces/i.reportGeneration";
 import logger from "../../../utils/logger/fileLogger";
-import { prepareSectionData, SECTION_LABELS } from "./prompts";
+import { hasContent, MAX_PROMPT_CHARS, prepareSectionData, SECTION_LABELS } from "./prompts";
 
 const LLM_TIMEOUT_MS = 30_000;
 export const MAX_CONCURRENT = 3;
@@ -1737,17 +1743,25 @@ async function summariseSection(
 ): Promise<string> {
   try {
     const label = SECTION_LABELS[key] || key;
-    const prompt = `You are an AI governance analyst reviewing the "${label}" section of a ${frameworkName} compliance report for the project "${projectTitle}".
+    const prompt = `You are an AI governance analyst writing the "${label}" section analysis for a ${frameworkName} compliance report on the project "${projectTitle}".
 
-Write a concise analytical summary (2-4 sentences) of what this data shows. Focus on posture, notable gaps and anything requiring attention. Use only the data provided — never introduce a fact that does not appear in it. Do not use markdown formatting or bullet points.
+Analyze the following data and write a concise summary (150-250 words) that:
+- Highlights key observations and patterns
+- Identifies areas of concern or non-compliance
+- Notes strengths and areas of good practice
+- Provides context for decision-makers
 
-Section data:
-${prepareSectionData(key, data)}`;
+Write in professional third-person tone. Do not use markdown formatting. Do not include headers or bullet points — write flowing paragraphs only.
+
+Use only the data provided — never introduce a fact that does not appear in it.
+
+Data:
+${clampSectionData(key, data)}`;
 
     const result = await generateText({
       model,
       prompt,
-      maxOutputTokens: 400,
+      maxOutputTokens: 500,
       abortSignal: AbortSignal.timeout(LLM_TIMEOUT_MS),
     });
     return result.text.trim();
@@ -1769,8 +1783,12 @@ export async function runSectionSummaries(
   model: any,
   reportData: ReportData,
 ): Promise<Record<string, string>> {
+  // hasContent, not a null check: dataCollector assigns a section object even
+  // when the project has no data, AND returns that same empty shape from its
+  // catch blocks. A null check would spend a call summarising {} and let the
+  // model assert "no vendor risks recorded" when the query actually threw.
   const entries = Object.entries((reportData?.sections ?? {}) as Record<string, any>).filter(
-    ([, data]) => data !== undefined && data !== null,
+    ([, data]) => hasContent(data),
   );
   if (entries.length === 0) return {};
 
