@@ -939,6 +939,8 @@ React.useEffect(() => {
 
 Use `showAlert` from `infrastructure/api/customAxios` (the toast mechanism the Reporting tabs already use) — pick this one, drop the local `<Alert isToast>` path, so the modal has one alert mechanism.
 
+**Keep the modal closable at all times** (normal X / escape) — do NOT trap the user during generation. A hung run (e.g. no worker) must not be unclosable; closing mid-run abandons the local poll and the `report_runs` row still finishes in the background, appearing in the Reports table / Archive. **Make the terminal effect idempotent and unmount-safe:** it can re-fire with the same terminal `run.data` on unrelated parent re-renders (deps include unstable callbacks) before `setRunId(undefined)` clears it — guard with a `handledRunIdRef` (download each run id exactly once), and set a `cancelled` flag in the effect cleanup that the download `.then` checks before firing `onClose`/toast/state, so closing mid-download can't touch an unmounting component. (An earlier attempt instead trapped the modal by hiding its close affordances — that was a UX regression; the corrected design is a closable modal + an idempotent, cancel-safe effect.)
+
 - [ ] **Step 3: Drive the progress display from status, not a timer**
 
 In `DownloadReportFrom/index.tsx`, replace the `// Simulated progress` timer with a status-driven indicator: `running` → indeterminate `CircularProgress` (per the design rules' loading spec), `success`/`failed` handled by the parent effect above. Remove the 10s/30s easing constants. Keep it minimal — an indeterminate spinner with the label "Generating report…" is sufficient; there is no real percentage to show.
