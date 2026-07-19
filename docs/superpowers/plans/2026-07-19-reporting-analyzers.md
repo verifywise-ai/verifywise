@@ -1392,7 +1392,7 @@ Create `Servers/services/reporting/analyzers/runAnalyzers.ts`:
 
 ```typescript
 import type { ReportData } from "../../../domain.layer/interfaces/i.reportGeneration";
-import { createModelFromKey, type LLMKeyRow } from "../../../advisor/llmModelFactory";
+import { createModelFromKey, resolveModelId, type LLMKeyRow } from "../../../advisor/llmModelFactory";
 import { generateObjectWithSelfCorrection } from "../../../advisor/llmSelfCorrect";
 import logger from "../../../utils/logger/fileLogger";
 import { ANALYZERS, ANALYZER_VERSION, type AnalysisSectionKey, type AnalyzerExtras } from "./registry";
@@ -1494,7 +1494,10 @@ export async function runAnalyzers(input: RunAnalyzersInput): Promise<AnalyzerRe
   }
 
   const model = createModelFromKey(llmKey);
-  const modelLabel = llmKey.model ?? null;
+  // resolveModelId, not llmKey.model: createModelFromKey substitutes a default
+  // when the row's model is empty, so recording the raw column would persist
+  // "unknown model" for an analysis a known model actually produced.
+  const modelLabel = resolveModelId(llmKey);
 
   const runOne = async (
     key: AnalysisSectionKey,
@@ -1511,6 +1514,13 @@ export async function runAnalyzers(input: RunAnalyzersInput): Promise<AnalyzerRe
       schema: def.schema,
       system: def.buildSystemPrompt(),
       prompt: userPrompt,
+      // aiSummarizer put a timeout on every call (lines 201, 246, 295, 358).
+      // Without one the budget compounds — 2 self-corrections x 2 inner retries
+      // is up to 9 provider requests per analyzer, ~54 per report — bounded only
+      // by undici's 300s default, while the run sits at status 'running' and
+      // BullMQ's stalled check may re-dispatch a duplicate.
+      maxSelfCorrectionAttempts: 1,
+      extra: { abortSignal: AbortSignal.timeout(LLM_TIMEOUT_MS) },
     });
 
     let payload: any = result.object;
@@ -1542,15 +1552,31 @@ export async function runAnalyzers(input: RunAnalyzersInput): Promise<AnalyzerRe
       }
       const message = outcome.reason instanceof Error ? outcome.reason.message : "unknown error";
       logger.warn(`Report analyzer "${key}" failed (${ANALYZER_VERSION}): ${message}`);
-      results[key] = abstain(`analyzer failed: ${message}`, modelLabel);
+      // Generic in the artifact-facing field. The SDK's verbatim error can carry
+      // the gateway host, request path and upstream ids for custom-baseURL
+      // tenants, and abstain_reason is persisted and renderable to a regulator.
+      // The detail stays in the log line above.
+      results[key] = abstain(
+        "this analysis could not be produced because the AI service call failed",
+        modelLabel,
+      );
     });
   };
 
   // ---- Stage 1: section summaries + the raw-section analyzers -------------
   const stage1Keys = enabled.filter((k) => !SUMMARY_CONSUMERS.includes(k));
+  const stage2Keys = enabled.filter((k) => SUMMARY_CONSUMERS.includes(k));
+
+  // Summaries are an INPUT DEPENDENCY of Stage 2, not a peer block. The block
+  // flag governs whether they are RECORDED as their own result (and rendered as
+  // the 24 sectionSummaries blocks) — never whether they are produced.
+  // Without this, every stored template (which carries only the three legacy
+  // keys, so blocks.sectionSummaries is undefined) yields no summaries, all
+  // three consumers abstain, and the report ships with no AI content at all.
+  const needSummaries = !!blocks.sectionSummaries || stage2Keys.length > 0;
 
   const [summaries, stage1] = await Promise.all([
-    blocks.sectionSummaries
+    needSummaries
       ? runSectionSummaries(model, reportData).catch((e: unknown) => {
           logger.warn("Section summaries failed wholesale", e);
           return {} as Record<string, string>;
@@ -1604,7 +1630,7 @@ Do **not** also add `import type { AnalyzerExtras } from "./registry"` — the b
 - [ ] **Step 4: Run the test**
 
 Run: `cd Servers && npx jest services/reporting/analyzers/__tests__/runAnalyzers.test.ts`
-Expected: PASS, 8 tests.
+Expected: PASS, 14 tests.
 
 - [ ] **Step 5: Commit**
 
