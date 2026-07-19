@@ -1,19 +1,19 @@
-import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Box, Stack, Typography } from "@mui/material";
 import StandardModal from "../../Modals/StandardModal";
 import { CustomizableButton } from "../../button/customizable-button";
 import GenerateReportFrom from "./GenerateReportFrom";
 import SectionSelector from "./SectionSelector";
 import DownloadReportForm from "./DownloadReportFrom";
-import { handleAutoDownload } from "../../../../application/tools/fileDownload";
-import { handleAlert } from "../../../../application/tools/alertUtils";
-import Alert from "../../Alert";
+import { useGenerateReport, useReportRun } from "../../../../application/hooks/useReporting";
+import { downloadReportRun } from "../../../../application/repository/reporting.repository";
+import { showAlert } from "../../../../infrastructure/api/customAxios";
 import { useProjects } from "../../../../application/hooks/useProjects";
-import useUsers from "../../../../application/hooks/useUsers";
 import { useIsAdmin } from "../../../../application/hooks/useIsAdmin";
 import { useLLMKeyStatus } from "../../../../application/hooks/useLLMKeyStatus";
 import AIKeyBanner from "./AIKeyBanner";
 import { IGenerateReportProps, ReportFormat } from "../../../../domain/interfaces/i.widget";
+import type { GenerateReportRequestBody } from "../../../../domain/interfaces/i.reporting";
 import {
   getDefaultSectionSelection,
   loadSectionPreferences,
@@ -38,18 +38,18 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
   reportType,
 }) => {
   const [currentPage, setCurrentPage] = useState<ModalPage>("basic");
-  const [responseStatusCode, setResponseStatusCode] = useState<number>(200);
-  const { users } = useUsers();
   const { data: projects } = useProjects();
   const isAdmin = useIsAdmin();
   const { hasKeys } = useLLMKeyStatus();
-  const [alert, setAlert] = useState<{
-    variant: "success" | "info" | "warning" | "error";
-    title?: string;
-    body: string;
-  } | null>(null);
-  const clearTimerRef = useRef<NodeJS.Timeout | null>(null);
   const validateFormRef = useRef<(() => boolean) | null>(null);
+
+  // Async generate: enqueue a run, then poll it until it leaves "running".
+  const generate = useGenerateReport();
+  const [runId, setRunId] = useState<number | undefined>(undefined);
+  const run = useReportRun(runId, runId != null);
+  // Guard so each terminal run is handled exactly once even if the effect
+  // re-runs with the same run.data (deps include unstable parent callbacks).
+  const handledRunIdRef = useRef<number | null>(null);
 
   // Form values from Page 1
   const [basicFormValues, setBasicFormValues] = useState<BasicFormValues>({
@@ -91,28 +91,14 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
     return Object.values(sectionSelection).some((v) => v === true);
   }, [sectionSelection]);
 
-  const handleToast = useCallback(
-    (type: "success" | "info" | "warning" | "error", message: string) => {
-      handleAlert({
-        variant: type,
-        body: message,
-        setAlert,
-      });
-      clearTimerRef.current = setTimeout(() => {
-        setAlert(null);
-        // Only close modal on success, not on errors
-        if (type === "success") {
-          onClose();
-        }
-      }, 3000);
-    },
-    [onClose],
-  );
+  const toast = useCallback((variant: "success" | "error", body: string) => {
+    showAlert({ variant, body, isToast: true });
+  }, []);
 
-  const handleGenerateReport = useCallback(async () => {
+  const handleGenerateReport = useCallback(() => {
     // Handle null project case
     if (!basicFormValues.project) {
-      handleToast("error", "Use case not selected");
+      toast("error", "Use case not selected");
       return;
     }
 
@@ -121,14 +107,9 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
     );
 
     if (!currentProject) {
-      handleToast("error", "Use case not found");
+      toast("error", "Use case not found");
       return;
     }
-
-    setCurrentPage("status");
-
-    const owner = users.find((user: { id: number }) => user.id === currentProject.owner);
-    const currentProjectOwner = owner ? `${owner.name} ${owner.surname}` : "";
 
     // Convert section selection to backend format
     const selectedSections = selectionToBackendFormat(
@@ -140,11 +121,11 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
     // Save preferences to localStorage
     saveSectionPreferences(sectionSelection);
 
-    const body = {
+    setCurrentPage("status");
+
+    const body: GenerateReportRequestBody = {
       projectId: basicFormValues.project,
-      projectTitle: currentProject.project_title,
-      projectOwner: currentProjectOwner,
-      reportType: selectedSections, // Now sends array of section keys
+      reportType: selectedSections, // Array of section keys
       reportName: basicFormValues.reportName,
       frameworkId: basicFormValues.framework,
       projectFrameworkId: basicFormValues.projectFrameworkId,
@@ -152,34 +133,67 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
       aiEnhanced: basicFormValues.aiEnhanced,
     };
 
-    const reportDownloadResponse = await handleAutoDownload(body);
-    setResponseStatusCode(reportDownloadResponse);
+    generate.mutate(body, {
+      onSuccess: (res) => setRunId(res.runId),
+      onError: () => {
+        toast("error", "Failed to start report generation.");
+        setCurrentPage("basic");
+      },
+    });
+  }, [basicFormValues, sectionSelection, projects, isOrganizational, generate, toast]);
 
-    if (reportDownloadResponse === 200) {
-      handleToast("success", "Report successfully downloaded.");
-      if (onReportGenerated) {
-        onReportGenerated();
-      }
-    } else if (reportDownloadResponse === 403) {
-      handleToast("warning", "Access denied: Unauthorized user to download the report.");
-    } else {
-      handleToast("error", "Unexpected error occurs while downloading the report.");
+  // Poll result: download on success, toast + go back to the form on failure.
+  useEffect(() => {
+    if (!run.data || run.data.status === "running") return;
+    if (handledRunIdRef.current === run.data.id) return; // already handled this run
+    handledRunIdRef.current = run.data.id;
+
+    // If the user closes mid-download the component unmounts; don't fire
+    // onClose/toast/state on it.
+    let cancelled = false;
+
+    if (run.data.status === "success" && run.data.file_id != null) {
+      const finishedRun = run.data;
+      downloadReportRun(finishedRun.id)
+        .then((blob) => {
+          if (cancelled) return;
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = finishedRun.output_filename ?? "report";
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+          toast("success", "Report successfully downloaded.");
+          onReportGenerated?.();
+          onClose();
+        })
+        .catch(() => {
+          if (cancelled) return;
+          toast("error", "Failed to download the generated report.");
+          setCurrentPage("basic");
+        })
+        .finally(() => {
+          if (!cancelled) setRunId(undefined);
+        });
+      return () => {
+        cancelled = true;
+      };
     }
-  }, [
-    basicFormValues,
-    sectionSelection,
-    projects,
-    users,
-    isOrganizational,
-    onReportGenerated,
-    handleToast,
-  ]);
+
+    if (run.data.status === "success") {
+      // Terminal success but no file was produced.
+      toast("error", "Report generated, but the file is not available to download.");
+    } else {
+      // failed | partial_success
+      toast("error", run.data.error_message ?? "Report generation failed.");
+    }
+    setRunId(undefined);
+    setCurrentPage("basic");
+  }, [run.data, onClose, onReportGenerated, toast]);
 
   const handleOnCloseModal = () => {
-    if (clearTimerRef.current) {
-      clearTimeout(clearTimerRef.current);
-      clearTimerRef.current = null;
-    }
     onClose();
   };
 
@@ -366,18 +380,6 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
 
   return (
     <Stack>
-      {alert && (
-        <Box>
-          <Alert
-            variant={alert.variant}
-            title={alert.title}
-            body={alert.body}
-            isToast={true}
-            onClick={() => setAlert(null)}
-          />
-        </Box>
-      )}
-
       <StandardModal
         isOpen={true}
         onClose={handleOnCloseModal}
@@ -389,10 +391,7 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
       >
         <Stack sx={{ minHeight: currentPage === "status" ? "200px" : "auto" }}>
           {currentPage === "status" ? (
-            <DownloadReportForm
-              statusCode={responseStatusCode}
-              aiEnhanced={basicFormValues.aiEnhanced}
-            />
+            <DownloadReportForm aiEnhanced={basicFormValues.aiEnhanced} />
           ) : currentPage === "sections" ? (
             <SectionSelector
               frameworkId={basicFormValues.framework}
