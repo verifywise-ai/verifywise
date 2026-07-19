@@ -18,6 +18,17 @@ export function detectProvider(name: string | null | undefined): LLMProvider {
 }
 
 /**
+ * The model id `createModelFromKey` will actually call out to: `row.model`
+ * when set, else the provider's default. Exported so callers that need to
+ * *record* which model produced a result (e.g. traceability fields) use the
+ * same id the SDK used, rather than persisting `row.model ?? null` and
+ * silently losing the default-substitution case.
+ */
+export function resolveModelId(row: LLMKeyRow): string {
+  return row.model || (detectProvider(row.name) === "Anthropic" ? "claude-sonnet-4-20250514" : "gpt-4o-mini");
+}
+
+/**
  * Build an AI SDK model from a raw llm_keys row.
  *
  * The openai.chat() branch is load-bearing: only native OpenAI implements the
@@ -34,16 +45,16 @@ export function detectProvider(name: string | null | undefined): LLMProvider {
 export function createModelFromKey(row: LLMKeyRow) {
   const headers = row.custom_headers || undefined;
   const baseURL = row.url || undefined;
+  const modelId = resolveModelId(row);
 
   if (detectProvider(row.name) === "Anthropic") {
     return createAnthropic({
       apiKey: row.key,
       baseURL,
       headers,
-    })(row.model || "claude-sonnet-4-20250514");
+    })(modelId);
   }
 
   const openai = createOpenAI({ apiKey: row.key, baseURL, headers });
-  const modelId = row.model || "gpt-4o-mini";
   return baseURL ? openai.chat(modelId) : openai(modelId);
 }
