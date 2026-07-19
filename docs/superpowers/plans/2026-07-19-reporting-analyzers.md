@@ -644,14 +644,16 @@ const abstainReason = z
 
 const severity = z
   .enum(["low", "medium", "high", "critical"])
-  .describe("Severity judged only from the supplied data.");
+  .describe(
+    "Severity judged only from the supplied data. The input's risk vocabulary is wider than this enum: map 'Very High' to critical, 'Very Low' to low. Never invent a level for an item whose severity the input does not state.",
+  );
 
 export const executiveSummarySchema = z
   .object({
     summary: z
       .string()
       .min(40)
-      .max(2500)
+      .max(3500)
       .describe(
         "Three to five paragraphs, professional third-person, flowing prose. No markdown, no bullet points, no headers. Cover: overall compliance and governance posture; critical findings needing immediate attention; top areas needing improvement; recommended next steps.",
       ),
@@ -708,7 +710,9 @@ export const recommendedActionsSchema = z
               ),
             priority: z
               .enum(["low", "medium", "high", "critical"])
-              .describe("Priority judged only from the supplied data."),
+              .describe(
+                "Priority judged only from the supplied data. The input's vocabulary is wider than this enum: map 'Very High' to critical, 'Very Low' to low. Never invent a priority the input does not support.",
+              ),
             rationale: z
               .string()
               .min(10)
@@ -729,7 +733,7 @@ export const riskAnalysisSchema = z
     narrative: z
       .string()
       .min(40)
-      .max(1800)
+      .max(2500)
       .describe("Two to four paragraphs on the risk posture across use-case, vendor and model risks. Flowing prose, no markdown."),
     top_risks: z
       .array(
@@ -753,7 +757,7 @@ export const complianceGapSchema = z
     narrative: z
       .string()
       .min(40)
-      .max(1800)
+      .max(2500)
       .describe(
         "Two to four paragraphs explaining and prioritising the supplied readiness scores. Explain the stored scores; do NOT recompute or re-score them.",
       ),
@@ -786,7 +790,7 @@ export const vendorRiskSchema = z
     narrative: z
       .string()
       .min(40)
-      .max(1800)
+      .max(2500)
       .describe("Two to four paragraphs on third-party risk exposure. Flowing prose, no markdown."),
     concerns: z
       .array(
@@ -3232,3 +3236,4 @@ Temporarily point an org's LLM key at an unreachable base URL and generate with 
 - `report_runs.ai_tokens_used` and `ai_cost` exist but stay unpopulated — `generateObjectWithSelfCorrection` does not currently surface token usage. Wiring cost tracking is its own piece of work.
 - `updateRunStatusQuery` (`reportRun.utils.ts:19-31`) has **no `organization_id` in its WHERE clause**. Phase 2 writes `ai_status` through it, so it is worth restating: the run id currently comes only from trusted worker context, so this is defence-in-depth rather than a live hole, but it should be tightened when that file is next touched. Carried over from Phase 1.
 - `updateRunStatusQuery` also hardcodes `completed_at = NOW()` on every call, so any future intermediate-progress update through it would falsely mark the run complete. Phase 2 only calls it at terminal state, so this is latent, not active.
+- **Provenance is prompt-enforced, not code-enforced, for every field except `suggestedOwner`.** zod validates shape, not origin: a fabricated `complianceGap.gaps[].control`, `vendorRisk.concerns[].vendor` or `riskAnalysis.top_risks[].name` passes `.strict()` cleanly even though the prompt says to copy it verbatim from the input. `suggestedOwner` *is* guarded — `sanitizeOwners` (Task 6) nulls any owner not present in the report's own data. The shipped `evidenceAnalyzer` has the identical prompt-only gap on `evidence_quote`, so this matches repo precedent rather than regressing it, but the consequence is worse here: an invented control id or vendor name lands in a formal audit artifact. A cheap generic fix exists — post-parse, substring-search the raw analyzer input for each field marked "verbatim" and null or reject on miss. Belongs next to `sanitizeOwners` in `runAnalyzers.ts`, not in the schemas. Deferred deliberately, not overlooked.
