@@ -1,0 +1,147 @@
+name: ZAP Baseline Scan
+
+# OWASP ZAP baseline (passive) scans of the running app.
+# - Nightly: catches regressions on develop
+# - PRs touching Servers/Clients: informational signal (does not block)
+# Reports are uploaded as artifacts.
+
+permissions:
+  contents: read
+
+on:
+  schedule:
+    - cron: '0 4 * * *' # nightly, after the test-image build
+  pull_request:
+    branches: [master, develop]
+    paths:
+      - 'Servers/**'
+      - 'Clients/**'
+  workflow_dispatch:
+
+jobs:
+  zap-baseline:
+    name: ZAP baseline (passive) scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: verifywise_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+
+      # ---- Backend setup ----
+      - name: Install backend dependencies
+        working-directory: Servers
+        run: npm ci --legacy-peer-deps
+
+      - name: Build backend
+        working-directory: Servers
+        run: npm run build
+
+      - name: Run migrations
+        working-directory: Servers
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: verifywise_test
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          SUPERADMIN_EMAIL: admin@verifywise-test.com
+          SUPERADMIN_PASSWORD: TestAdmin!Str0ng
+        run: npx sequelize db:migrate
+
+      - name: Start backend
+        working-directory: Servers
+        env:
+          PORT: 3000
+          NODE_ENV: test
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: verifywise_test
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+          JWT_SECRET: test-jwt-secret-for-e2e
+          REFRESH_TOKEN_SECRET: test-refresh-secret-for-e2e
+          ENCRYPTION_KEY: test-encryption-key-32chars!!
+          MULTI_TENANCY_ENABLED: false
+          AI_GATEWAY_URL: http://localhost:8100
+          AI_GATEWAY_INTERNAL_KEY: test-ai-gateway-key-for-e2e
+          EVAL_SERVER_INTERNAL_KEY: test-eval-server-key-for-zap
+        run: |
+          node dist/index.js &
+          for i in $(seq 1 30); do
+            curl -s http://localhost:3000/api/users/check/exists && break
+            sleep 1
+          done
+
+      # ---- Frontend setup ----
+      - name: Install frontend dependencies
+        working-directory: Clients
+        run: npm ci --legacy-peer-deps
+
+      - name: Start frontend
+        working-directory: Clients
+        env:
+          VITE_APP_API_BASE_URL: http://localhost:3000
+        run: |
+          npm run dev:vite &
+          for i in $(seq 1 30); do
+            curl -s http://localhost:5173 && break
+            sleep 1
+          done
+
+      # ---- ZAP baseline scans (passive only) ----
+      - name: ZAP baseline — frontend
+        run: |
+          mkdir -p zap-reports && chmod 777 zap-reports
+          docker run --rm --network host \
+            -v ${{ github.workspace }}/zap-reports:/zap/wrk:rw \
+            ghcr.io/zaproxy/zaproxy:stable \
+            zap-baseline.py -t http://localhost:5173 \
+            -r baseline-frontend.html -J baseline-frontend.json -I || true
+
+      - name: ZAP baseline — backend API
+        run: |
+          docker run --rm --network host \
+            -v ${{ github.workspace }}/zap-reports:/zap/wrk:rw \
+            ghcr.io/zaproxy/zaproxy:stable \
+            zap-baseline.py -t http://localhost:3000/api \
+            -r baseline-backend.html -J baseline-backend.json -I || true
+
+      - name: Upload ZAP baseline reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: zap-baseline-reports
+          path: zap-reports/
+          retention-days: 30
