@@ -9,6 +9,9 @@ jest.mock("../../utils/reportRun.utils", () => ({
   getRunQuery: jest.fn(),
 }));
 jest.mock("../../utils/fileUpload.utils", () => ({ getFileById: jest.fn() }));
+jest.mock("../../utils/reportRunAnalysis.utils", () => ({
+  getRunAnalysesQuery: jest.fn(),
+}));
 jest.mock("../../utils/statusCode.utils", () => ({
   STATUS_CODE: {
     200: (d: any) => ({ message: "OK", data: d }),
@@ -17,12 +20,14 @@ jest.mock("../../utils/statusCode.utils", () => ({
   },
 }));
 
-import { getRun, downloadRun } from "../reportRun.ctrl";
+import { getRun, downloadRun, getRunAnalyses } from "../reportRun.ctrl";
 import { getRunQuery } from "../../utils/reportRun.utils";
 import { getFileById } from "../../utils/fileUpload.utils";
+import { getRunAnalysesQuery } from "../../utils/reportRunAnalysis.utils";
 
 const mockGetRun = getRunQuery as jest.MockedFunction<typeof getRunQuery>;
 const mockGetFile = getFileById as jest.MockedFunction<typeof getFileById>;
+const mockGetAnalyses = getRunAnalysesQuery as jest.MockedFunction<typeof getRunAnalysesQuery>;
 
 // req.organizationId is the authed tenant (5). params.id/body carry an
 // attacker-supplied value; the handler must scope by the authed org, never trust input.
@@ -88,5 +93,46 @@ describe("reportRun.ctrl tenant isolation", () => {
 
     expect(mockGetRun).toHaveBeenCalledWith(77, 5);
     expect(mockGetFile).toHaveBeenCalledWith(9, 5);
+  });
+
+  it("getRunAnalyses returns 404 and never queries analyses when the run is not in the caller's org", async () => {
+    mockGetRun.mockResolvedValue(null as any);
+
+    const req = createMockReq({ id: "77" });
+    const res = createMockRes();
+
+    await getRunAnalyses(req as Request, res as Response);
+
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(mockGetAnalyses).not.toHaveBeenCalled();
+  });
+
+  it("getRunAnalyses scopes both the run and the analyses by the authed organizationId", async () => {
+    mockGetRun.mockResolvedValue({ id: 77, organization_id: 5 } as any);
+    mockGetAnalyses.mockResolvedValue([
+      { section_key: "executiveSummary", payload: { summary: "x" } },
+    ] as any);
+
+    const req = createMockReq({ id: "77" });
+    const res = createMockRes();
+
+    await getRunAnalyses(req as Request, res as Response);
+
+    expect(mockGetRun).toHaveBeenCalledWith(77, 5);
+    expect(mockGetAnalyses).toHaveBeenCalledWith(77, 5);
+    expect(res.status).toHaveBeenCalledWith(200);
+  });
+
+  it("getRunAnalyses returns an empty array for a run with no analyses", async () => {
+    mockGetRun.mockResolvedValue({ id: 77, organization_id: 5 } as any);
+    mockGetAnalyses.mockResolvedValue([] as any);
+
+    const req = createMockReq({ id: "77" });
+    const res = createMockRes();
+
+    await getRunAnalyses(req as Request, res as Response);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: [] }));
   });
 });

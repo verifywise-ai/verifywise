@@ -16,6 +16,7 @@ import { Request, Response } from "express";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { listRunsQuery, getRunQuery } from "../utils/reportRun.utils";
 import { getFileById } from "../utils/fileUpload.utils";
+import { getRunAnalysesQuery } from "../utils/reportRunAnalysis.utils";
 
 export async function listRuns(req: Request, res: Response): Promise<any> {
   try {
@@ -53,6 +54,21 @@ export async function downloadRun(req: Request, res: Response): Promise<any> {
     res.setHeader("Content-Type", run.output_mime_type || "application/octet-stream");
     res.setHeader("Content-Disposition", `attachment; filename="${run.output_filename}"`);
     return res.send(file.content);
+  } catch (e) {
+    return res.status(500).json(STATUS_CODE[500]((e as Error).message));
+  }
+}
+
+// Doubly org-scoped, matching downloadRun: the run row is fetched org-scoped
+// first (404 on miss), and getRunAnalysesQuery filters on organization_id
+// again. A run id from another org can never yield analysis rows.
+export async function getRunAnalyses(req: Request, res: Response): Promise<any> {
+  try {
+    const id = Number(req.params.id);
+    const run = await getRunQuery(id, req.organizationId!);
+    if (!run) return res.status(404).json(STATUS_CODE[404]("not found"));
+    const analyses = await getRunAnalysesQuery(id, req.organizationId!);
+    return res.status(200).json(STATUS_CODE[200](analyses));
   } catch (e) {
     return res.status(500).json(STATUS_CODE[500]((e as Error).message));
   }
