@@ -10,6 +10,7 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as repo from "../repository/reporting.repository";
+import type { ReportTemplateWriteBody } from "../../domain/interfaces/i.reporting";
 
 export const useTemplates = () =>
   useQuery({
@@ -74,3 +75,45 @@ export const useGenerateReport = () => {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["reporting", "runs"] }),
   });
 };
+
+// The catalog is static server-side data; cache it hard.
+export const useSectionCatalog = () =>
+  useQuery({
+    queryKey: ["reporting", "sections"],
+    queryFn: repo.getSectionCatalog,
+    staleTime: 60 * 60 * 1000,
+  });
+
+export const useCreateTemplate = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: repo.createTemplate,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["reporting", "templates"] }),
+  });
+};
+
+export const useUpdateTemplate = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: number; body: ReportTemplateWriteBody }) =>
+      repo.updateTemplate(id, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["reporting", "templates"] }),
+  });
+};
+
+export const useArchiveTemplate = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => repo.archiveTemplate(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["reporting", "templates"] }),
+  });
+};
+
+// Analyses are written once when the run completes and never change after,
+// so there is nothing to poll for.
+export const useRunAnalyses = (runId: number | undefined) =>
+  useQuery({
+    queryKey: ["reporting", "run-analyses", runId],
+    queryFn: () => repo.getRunAnalyses(runId as number),
+    enabled: runId != null,
+  });

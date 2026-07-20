@@ -14,6 +14,10 @@ import type {
   GenerateReportRequestBody,
   GenerateReportResponse,
   ReportRun,
+  ReportRunAnalysis,
+  ReportSectionCatalogEntry,
+  ReportTemplate,
+  ReportTemplateWriteBody,
 } from "../../domain/interfaces/i.reporting";
 
 // Backend responses are wrapped as { data: <payload> }; apiServices already
@@ -61,4 +65,29 @@ export async function generateReportV2(
 // Fetch a single run (org-scoped) for status polling.
 export async function getReportRun(id: number): Promise<ReportRun> {
   return extract(await apiServices.get(`/reporting/runs/${id}`));
+}
+
+export async function getSectionCatalog(): Promise<ReportSectionCatalogEntry[]> {
+  return extract(await apiServices.get("/reporting/sections"));
+}
+
+export async function createTemplate(
+  body: ReportTemplateWriteBody,
+): Promise<ReportTemplate> {
+  return extract(await apiServices.post("/reporting/templates", body));
+}
+
+export async function updateTemplate(
+  id: number,
+  body: ReportTemplateWriteBody,
+): Promise<ReportTemplate> {
+  return extract(await apiServices.patch(`/reporting/templates/${id}`, body));
+}
+
+export async function archiveTemplate(id: number): Promise<{ ok: boolean }> {
+  return extract(await apiServices.delete(`/reporting/templates/${id}`));
+}
+
+export async function getRunAnalyses(runId: number): Promise<ReportRunAnalysis[]> {
+  return extract(await apiServices.get(`/reporting/runs/${runId}/analyses`));
 }
