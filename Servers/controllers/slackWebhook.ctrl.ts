@@ -30,17 +30,15 @@ export async function getAllSlackWebhooks(req: Request, res: Response): Promise<
   const functionName = "getAllSlackWebhooks";
   logStructured("processing", "starting getAllSlackWebhooks", functionName, fileName);
   logger.debug("🔍 Fetching all slackWebhooks");
-  const userId = req.query.userId as string;
+  // Security: always scope to the authenticated user from the JWT.
+  // Never trust a userId supplied via query params (IDOR risk).
+  const userId = req.userId!;
   const channel = req.query.channel as string;
-  if (!userId) {
-    logStructured("error", "userId query parameter is required", functionName, fileName);
-    return res.status(400).json(STATUS_CODE[400](req.t!("userId query parameter is required")));
-  }
   try {
     let slackWebhooks: ISlackWebhook[] = [];
 
     if (channel) {
-      slackWebhooks = await getSlackWebhookByIdAndChannelQuery(parseInt(userId), channel);
+      slackWebhooks = await getSlackWebhookByIdAndChannelQuery(userId, channel);
     } else {
       slackWebhooks = await getAllSlackWebhooksQuery(userId);
     }
@@ -69,6 +67,17 @@ export async function getSlackWebhookById(req: Request, res: Response): Promise<
 
   try {
     const slackWebhook = await SlackWebhookModel.findByIdWithValidation(requestId);
+
+    // Security: webhooks contain Slack access tokens — owner only.
+    if (slackWebhook.user_id !== req.userId) {
+      logStructured(
+        "error",
+        `unauthorized access to slackWebhook ID ${requestId} by user ${req.userId}`,
+        functionName,
+        fileName,
+      );
+      return res.status(403).json(STATUS_CODE[403](req.t!("Unauthorized")));
+    }
 
     if (slackWebhook) {
       logStructured("successful", `slackWebhook found: ID ${requestId}`, functionName, fileName);
@@ -252,6 +261,24 @@ export async function updateSlackWebhookById(req: Request, res: Response): Promi
       return res.status(404).json(STATUS_CODE[404](req.t!("SlackWebhook not found")));
     }
 
+    // Security: only the owner may modify their webhook (IDOR fix).
+    if (existingSlackWebhook.user_id !== req.userId) {
+      logStructured(
+        "error",
+        `unauthorized update attempt by user ID ${req.userId} for slackWebhook ID ${slackWebhookId}`,
+        functionName,
+        fileName,
+      );
+      await logEvent(
+        "Error",
+        `Unauthorized update attempt by user ID ${req.userId} for slackWebhook ID ${slackWebhookId}`,
+        req.userId!,
+        req.organizationId!,
+      );
+      await transaction.rollback();
+      return res.status(403).json(STATUS_CODE[403](req.t!("Unauthorized")));
+    }
+
     // Update slackWebhook using the enhanced method
     await existingSlackWebhook.updateSlackWebhook({
       is_active: updateData.is_active,
@@ -366,6 +393,17 @@ export async function sendSlackMessage(req: Request, res: Response): Promise<any
 
   try {
     const slackWebhook = await SlackWebhookModel.findByIdWithValidation(requestId);
+
+    // Security: only the owner may send messages through their webhook.
+    if (slackWebhook.user_id !== req.userId) {
+      logStructured(
+        "error",
+        `unauthorized send attempt by user ID ${req.userId} for slackWebhook ID ${requestId}`,
+        functionName,
+        fileName,
+      );
+      return res.status(403).json(STATUS_CODE[403](req.t!("Unauthorized")));
+    }
 
     if (!slackWebhook.is_active) {
       throw new Error("This slack channel is no longer active");
