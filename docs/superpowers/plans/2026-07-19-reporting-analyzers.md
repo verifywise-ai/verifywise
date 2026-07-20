@@ -3342,12 +3342,16 @@ Expected: hits in `sectionSummaries.ts`, `runAnalyzers.ts` and `mapToSummaries.t
 The two files being deleted necessarily match their own names, so exclude them — otherwise the stop condition can never clear:
 
 ```bash
-grep -rn "aiSummarizer\|generateAISummaries\|sanitizeRecommendedActions" Servers/ --include="*.ts" \
+# Real references only. A bare name grep is the wrong gate: the analyzers carry
+# ~18 provenance comments ("Ported from aiSummarizer.ts:150-167") and one Jest
+# test title that legitimately cite the file, and those must NOT block deletion.
+grep -rnE "from ['\"].*aiSummarizer|require\(['\"].*aiSummarizer" Servers/ --include="*.ts" \
   | grep -v megasaver \
-  | grep -v "reporting/aiSummarizer.ts" \
   | grep -v "aiSummarizer.actions.test.ts"
 ```
-Expected: **no output.** In particular `services/reporting/index.ts:114` must be gone — Task 8 replaced it. If anything else appears, stop and wire it before deleting.
+Expected: **no output.** In particular `services/reporting/index.ts:114` must be gone — Task 8 replaced it. If anything appears, stop and wire it before deleting.
+
+The provenance comments are deliberately left in place: they record where a prompt or a concurrency limit came from, and that lineage is worth more than tidiness once the original file is gone. Task 13 documents the same lineage in prose.
 
 - [ ] **Step 3: Delete both files**
 
