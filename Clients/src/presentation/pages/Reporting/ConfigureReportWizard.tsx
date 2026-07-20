@@ -16,6 +16,7 @@ import {
 } from "@mui/material";
 import { useCreateScheduledReport } from "../../../application/hooks/useReporting";
 import { useProjects } from "../../../application/hooks/useProjects";
+import { useLLMKeyStatus } from "../../../application/hooks/useLLMKeyStatus";
 import { showAlert } from "../../../infrastructure/api/customAxios";
 import type { AiBlocksConfig } from "../../../domain/interfaces/i.reporting";
 
@@ -64,6 +65,9 @@ export default function ConfigureReportWizard({
   const [ai, setAi] = useState<AiBlocksConfig>(
     template.latestVersion?.ai_blocks_config ?? DEFAULT_AI_BLOCKS,
   );
+  // ponytail: no template carries a format in format_config today (it is
+  // persisted as {}), so there is nothing to seed from — plain "pdf" default.
+  const [format, setFormat] = useState<"pdf" | "docx">("pdf");
   const [schedule, setSchedule] = useState<any>({
     frequency: template.recommended_frequency ?? "daily",
     hour: 9,
@@ -80,6 +84,13 @@ export default function ConfigureReportWizard({
 
   const { data: projects = [] } = useProjects();
   const create = useCreateScheduledReport();
+
+  // hasKeys is optimistically true while loading (useLLMKeyStatus.ts:38), so
+  // gate on the settled value only — otherwise the blocks flicker from
+  // enabled to disabled on mount. Three prior commits chased that flicker;
+  // do not "fix" the hook.
+  const { hasKeys, loading: llmKeyLoading } = useLLMKeyStatus();
+  const aiDisabled = !llmKeyLoading && !hasKeys;
 
   const enabledSections = sections.filter((s: any) => s.defaultEnabled !== false);
 
@@ -121,7 +132,7 @@ export default function ConfigureReportWizard({
         projectId: scope === "project" ? projectId : null,
         sectionsConfig: { sections },
         aiBlocksConfig: ai,
-        format: "pdf",
+        format,
         scheduleConfig: schedule,
         deliveryConfig: { ...delivery, recipients: parseRecipients(recipientsText) },
       },
@@ -210,11 +221,17 @@ export default function ConfigureReportWizard({
           <Typography variant="body2" color="text.secondary">
             Each enabled block is one language-model call per report run.
           </Typography>
+          {aiDisabled && (
+            <Typography variant="body2" color="text.secondary">
+              Add a language-model key in Settings to enable AI insights.
+            </Typography>
+          )}
           {AI_BLOCKS.map(({ key, label }) => (
             <FormControlLabel
               key={key}
               control={
                 <Checkbox
+                  disabled={aiDisabled}
                   checked={!!ai[key]}
                   onChange={(e) =>
                     setAi((prev) => ({ ...prev, [key]: e.target.checked }))
@@ -230,6 +247,15 @@ export default function ConfigureReportWizard({
       {active === 3 && (
         <Stack spacing={2}>
           <Typography variant="h6">Schedule</Typography>
+          <TextField
+            select
+            label="Format"
+            value={format}
+            onChange={(e) => setFormat(e.target.value as "pdf" | "docx")}
+          >
+            <MenuItem value="pdf">PDF</MenuItem>
+            <MenuItem value="docx">Word (DOCX)</MenuItem>
+          </TextField>
           <TextField
             select
             label="Frequency"

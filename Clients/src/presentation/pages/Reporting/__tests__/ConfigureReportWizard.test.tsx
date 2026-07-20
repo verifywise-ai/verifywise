@@ -9,6 +9,13 @@ vi.mock("../../../../application/hooks/useProjects", () => ({
   useProjects: () => ({ data: [{ id: 1, project_title: "Project A" }], isLoading: false }),
 }));
 
+// Settled keyless org. The real hook reports hasKeys optimistically true
+// while loading, so a mock without `loading: false` would not exercise the
+// gate at all.
+vi.mock("../../../../application/hooks/useLLMKeyStatus", () => ({
+  useLLMKeyStatus: () => ({ hasKeys: false, loading: false, data: null, error: null }),
+}));
+
 import ConfigureReportWizard from "../ConfigureReportWizard";
 
 // canNext() blocks step 1 unless at least one section has
@@ -74,5 +81,20 @@ describe("ConfigureReportWizard", () => {
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
     expect(screen.queryByText("executiveSummary")).not.toBeInTheDocument();
+  });
+
+  it("offers a format choice instead of silently forcing PDF", () => {
+    render(<ConfigureReportWizard template={TEMPLATE_FIXTURE} onClose={() => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    expect(screen.getByLabelText(/format/i)).toBeInTheDocument();
+  });
+
+  it("disables the AI blocks when the org has no LLM key", () => {
+    render(<ConfigureReportWizard template={TEMPLATE_FIXTURE} onClose={() => {}} />);
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    expect(screen.getByLabelText("Executive summary")).toBeDisabled();
   });
 });
