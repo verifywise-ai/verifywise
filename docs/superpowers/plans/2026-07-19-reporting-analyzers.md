@@ -74,6 +74,7 @@ Verified against the tree during planning. Rebuilding any of these is a plan fai
 | `Servers/services/reporting/manualReportRunner.ts` | Modify | Persist analyses + `ai_status` after a successful run |
 | `Servers/services/reporting/reportRunOrchestrator.ts` | Modify | Same, for the scheduled path |
 | `Servers/templates/reports/report-pdf.ejs` | Modify | Three new analysis blocks |
+| `Servers/services/reporting/__tests__/reportPdfTemplate.test.ts` | Create | Renders the real template; pins guards, TOC agreement and compilation |
 | `Servers/services/reporting/docxGenerator.ts` | Modify (+ TOC L224-308, assembly L1168-1248) | Three new analysis sections, registered in the TOC |
 | `Servers/services/reporting/aiSummarizer.ts` | **Delete** | Superseded |
 | `Servers/services/reporting/__tests__/aiSummarizer.actions.test.ts` | **Delete** | Moves to the analyzer tests |
@@ -2977,6 +2978,11 @@ git commit -m "feat(reporting): persist analyzer output to report_run_analyses f
 
 **Files:**
 - Modify: `Servers/templates/reports/report-pdf.ejs`
+- Test: `Servers/services/reporting/__tests__/reportPdfTemplate.test.ts`
+
+The template gains ~107 lines of conditional logic guarding a compliance artifact, so it needs committed coverage — a malformed EJS tag breaks every PDF the product generates, and the abstain guards are the difference between "section absent" and "no gaps identified" printed into an audit document. The test renders the REAL file from disk with `ejs.render` (never an inlined copy, or it stops tracking what it guards) against a `ReportData`-shaped fixture with every `sections.*` falsy, and pins: each block's independent guard, TOC/section guard agreement, abstained sections rendering nothing, empty arrays still rendering the narrative, and that the template compiles at all.
+
+One fixture subtlety worth keeping: the TOC case must render each of the three new sections **alone**. With all three populated at once, a guard swapped between two siblings still produces a TOC containing both entries, and the mutation goes uncaught.
 
 Reuse the existing classes — `.group-header`, `.group-title`, `.subsection`, `.subsection-header`, `.subsection-title`, `.ai-analysis-box`, `.ai-analysis-label`, `.ai-analysis-content`, `.ai-findings-list`. They are defined **inline in this file's own `<style>` block** (lines 10-94). Add no new CSS.
 
@@ -3109,7 +3115,7 @@ In the TOC block (lines 129-147), after the existing executive-summary entry, in
 
 Each guard must be the **same condition** that governs whether its section renders, or the TOC lists a section the document does not contain. Match the exact markup of the neighbouring TOC entries — copy the surrounding entry's element and class names rather than the illustrative `div.toc-entry` above if they differ.
 
-Note the vendor-risk section itself is placed inside the risk-analysis group in the PDF (Step 3) but is a top-level section in the DOCX (Task 11 Step 3), because the DOCX risk builder early-returns on a vendors-only report. The TOC entry is correct in both.
+Note on vendor-risk placement, corrected: `riskHighlights` sits **outside** the `sections.projectRisks || sections.vendorRisks || sections.modelRisks` group — that guard closes on the line above it — so inserting after `riskHighlights` puts the vendor-risk block at top level in the PDF too. That is the correct outcome: it renders on a vendors-only report, where every risk-section toggle is off but third-party analysis is exactly what the reader wants. Both renderers therefore treat it as a top-level section, and they are symmetric. (An earlier draft of this plan claimed the PDF nested it inside the risk group and that the two renderers differed; that was wrong.)
 
 - [ ] **Step 5: Verify the template renders**
 
