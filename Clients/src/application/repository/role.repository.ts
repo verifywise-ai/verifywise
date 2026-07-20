@@ -1,4 +1,5 @@
 import { apiServices } from "../../infrastructure/api/networkServices";
+import { RoleModel } from "../../domain/models/Common/role/role.model";
 
 export async function getAllRoles({
   signal,
@@ -24,12 +25,18 @@ export async function getRoleById({
   return response.data;
 }
 
-export async function createRole({ body }: { body: any }): Promise<any> {
+export async function createRole({ body }: { body: Partial<RoleModel> }): Promise<any> {
   const response = await apiServices.post("/roles", body);
   return response;
 }
 
-export async function updateRole({ id, body }: { id: number; body: any }): Promise<any> {
+export async function updateRole({
+  id,
+  body,
+}: {
+  id: number;
+  body: Partial<RoleModel>;
+}): Promise<any> {
   const response = await apiServices.put(`/roles/${id}`, body);
   return response;
 }

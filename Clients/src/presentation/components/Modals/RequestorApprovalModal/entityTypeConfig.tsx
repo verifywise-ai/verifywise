@@ -23,7 +23,7 @@ import {
   AlertTriangle,
   Wrench,
 } from "lucide-react";
-import dayjs from "dayjs";
+import { displayFormattedDate, displayFormattedDateTime } from "../../../tools/isoDateToString";
 
 // Supported entity types
 export type EntityTypeKey =
@@ -60,8 +60,8 @@ export interface EntityTypeConfig {
 }
 
 // Format helpers
-const formatDate = (value: any) => dayjs(value).format("YYYY-MM-DD, HH:mm");
-const formatDateOnly = (value: any) => dayjs(value).format("YYYY-MM-DD");
+const formatDate = (value: any) => displayFormattedDateTime(value);
+const formatDateOnly = (value: any) => displayFormattedDate(value);
 const formatFileSize = (value: any) => {
   if (!value) return "";
   const kb = value / 1024;

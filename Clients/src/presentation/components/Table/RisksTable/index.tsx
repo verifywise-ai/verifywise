@@ -13,6 +13,7 @@ import { useCallback, useMemo } from "react";
 import singleTheme from "../../../themes/v1SingleTheme";
 import { EmptyState } from "../../EmptyState";
 import EmptyStateTip from "../../EmptyState/EmptyStateTip";
+import { TableEmptyStateLayout } from "../TableEmptyStateLayout";
 import IconButton from "../../IconButton";
 import ViewRelationshipsButton from "../../ViewRelationshipsButton";
 import Chip from "../../Chip";
@@ -451,27 +452,37 @@ const RiskTable: React.FC<IRiskTableProps> = ({
     <>
       {/* Empty state outside the table */}
       {!vendorRisks || vendorRisks.length === 0 ? (
-        <EmptyState
-          icon={ShieldAlert}
-          message="No risks identified yet. Document and track risks related to your AI systems."
-          showBorder
+        <TableEmptyStateLayout
+          header={
+            <StandardTableHead
+              columns={visibleTableColumns}
+              sortConfig={sortConfig}
+              onSort={handleSort}
+            />
+          }
         >
-          <EmptyStateTip
-            icon={TrendingDown}
-            title="Identify AI-specific risks"
-            description="Document risks related to bias, data quality, security, transparency, and model drift. Cover both technical and organizational risks."
-          />
-          <EmptyStateTip
-            icon={Grid3X3}
-            title="Assess likelihood and impact"
-            description="Rate each risk by likelihood and impact. The risk score and level help you prioritize what needs attention first."
-          />
-          <EmptyStateTip
-            icon={ListChecks}
-            title="Create treatment plans"
-            description="Define mitigation strategies for each risk and track their progress. Link treatments to specific controls for full traceability."
-          />
-        </EmptyState>
+          <EmptyState
+            icon={ShieldAlert}
+            message="No risks identified yet. Document and track risks related to your AI systems."
+            showBorder
+          >
+            <EmptyStateTip
+              icon={TrendingDown}
+              title="Identify AI-specific risks"
+              description="Document risks related to bias, data quality, security, transparency, and model drift. Cover both technical and organizational risks."
+            />
+            <EmptyStateTip
+              icon={Grid3X3}
+              title="Assess likelihood and impact"
+              description="Rate each risk by likelihood and impact. The risk score and level help you prioritize what needs attention first."
+            />
+            <EmptyStateTip
+              icon={ListChecks}
+              title="Create treatment plans"
+              description="Define mitigation strategies for each risk and track their progress. Link treatments to specific controls for full traceability."
+            />
+          </EmptyState>
+        </TableEmptyStateLayout>
       ) : (
         <TableContainer>
           <Table sx={{ ...singleTheme.tableStyles.primary.frame }}>

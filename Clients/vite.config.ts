@@ -92,13 +92,14 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: "./src/test/setup.ts",
     globals: true,
+    pool: "forks",
     exclude: ["e2e/**", "**/node_modules/**"],
     env: {
       VITE_APP_API_BASE_URL: "http://localhost:3000",
     },
     coverage: {
       provider: "v8",
-      reporter: ["text", "html"],
+      reporter: ["text", "html", "json-summary"],
       include: ["src/**/*.ts", "src/**/*.tsx"],
       exclude: [
         "src/test/**",
@@ -110,12 +111,10 @@ export default defineConfig({
         "src/i18n/**",
       ],
       thresholds: {
-        global: {
-          statements: 10,
-          branches: 10,
-          functions: 10,
-          lines: 10,
-        },
+        statements: 30,
+        branches: 20,
+        functions: 25,
+        lines: 30,
       },
     },
   },

@@ -15,7 +15,18 @@ export interface DeadlineSummary {
  * @throws Will throw an error if the request fails.
  */
 export async function getDeadlineSummary(days?: number): Promise<{ data: DeadlineSummary }> {
-  const query = typeof days === "number" ? `?days=${days}` : "";
+  const query = typeof days === "number" ? `?threshold=${days}` : "";
   const response = await apiServices.get(`/deadlines/summary${query}`);
-  return response.data as { data: DeadlineSummary };
+  const backend = response.data as {
+    message?: string;
+    data?: { tasks?: { overdue: number; dueSoon: number; threshold: number } };
+  };
+  const tasks = backend?.data?.tasks ?? { overdue: 0, dueSoon: 0, threshold: days ?? 7 };
+  return {
+    data: {
+      overdue: tasks.overdue,
+      dueSoon: tasks.dueSoon,
+      dueSoonDays: tasks.threshold,
+    },
+  };
 }

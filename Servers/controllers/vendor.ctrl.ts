@@ -43,7 +43,7 @@ export async function getAllVendors(req: Request, res: Response): Promise<any> {
     functionName: "getAllVendors",
     fileName: "vendor.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -56,7 +56,7 @@ export async function getAllVendors(req: Request, res: Response): Promise<any> {
         functionName: "getAllVendors",
         fileName: "vendor.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(200).json(STATUS_CODE[200](vendors));
     }
@@ -67,7 +67,7 @@ export async function getAllVendors(req: Request, res: Response): Promise<any> {
       functionName: "getAllVendors",
       fileName: "vendor.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(204).json(STATUS_CODE[204](vendors));
   } catch (error) {
@@ -78,7 +78,7 @@ export async function getAllVendors(req: Request, res: Response): Promise<any> {
       fileName: "vendor.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -92,7 +92,7 @@ export async function getVendorById(req: Request, res: Response): Promise<any> {
     functionName: "getVendorById",
     fileName: "vendor.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -105,7 +105,7 @@ export async function getVendorById(req: Request, res: Response): Promise<any> {
         functionName: "getVendorById",
         fileName: "vendor.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(200).json(STATUS_CODE[200](vendor));
     }
@@ -116,7 +116,7 @@ export async function getVendorById(req: Request, res: Response): Promise<any> {
       functionName: "getVendorById",
       fileName: "vendor.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(404).json(STATUS_CODE[404](vendor));
   } catch (error) {
@@ -127,7 +127,7 @@ export async function getVendorById(req: Request, res: Response): Promise<any> {
       fileName: "vendor.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -141,7 +141,7 @@ export async function getVendorByProjectId(req: Request, res: Response): Promise
     functionName: "getVendorByProjectId",
     fileName: "vendor.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -154,7 +154,7 @@ export async function getVendorByProjectId(req: Request, res: Response): Promise
         functionName: "getVendorByProjectId",
         fileName: "vendor.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(200).json(STATUS_CODE[200](vendor));
     }
@@ -165,7 +165,7 @@ export async function getVendorByProjectId(req: Request, res: Response): Promise
       functionName: "getVendorByProjectId",
       fileName: "vendor.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(404).json(STATUS_CODE[404]([]));
   } catch (error) {
@@ -176,7 +176,7 @@ export async function getVendorByProjectId(req: Request, res: Response): Promise
       fileName: "vendor.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -191,7 +191,7 @@ export async function createVendor(req: Request, res: Response): Promise<any> {
     functionName: "createVendor",
     fileName: "vendor.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -243,7 +243,7 @@ export async function createVendor(req: Request, res: Response): Promise<any> {
         functionName: "createVendor",
         fileName: "vendor.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
 
       // Send assignment notifications (fire-and-forget)
@@ -300,7 +300,7 @@ export async function createVendor(req: Request, res: Response): Promise<any> {
       functionName: "createVendor",
       fileName: "vendor.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(503).json(STATUS_CODE[503]({}));
   } catch (error) {
@@ -314,7 +314,7 @@ export async function createVendor(req: Request, res: Response): Promise<any> {
         fileName: "vendor.ctrl.ts",
         error: error as Error,
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
     }
@@ -327,7 +327,7 @@ export async function createVendor(req: Request, res: Response): Promise<any> {
         fileName: "vendor.ctrl.ts",
         error: error as Error,
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
     }
@@ -339,7 +339,7 @@ export async function createVendor(req: Request, res: Response): Promise<any> {
       fileName: "vendor.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -355,12 +355,13 @@ export async function updateVendorById(req: Request, res: Response): Promise<any
     functionName: "updateVendorById",
     fileName: "vendor.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
     const { userId, role } = req;
     if (!userId || !role) {
+      await transaction.rollback();
       await logFailure({
         eventType: "Update",
         description: "Unauthorized access attempt to update vendor",
@@ -368,22 +369,23 @@ export async function updateVendorById(req: Request, res: Response): Promise<any
         fileName: "vendor.ctrl.ts",
         error: new Error("Unauthorized"),
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
-      return res.status(401).json({ message: req.t!("Unauthorized") });
+      return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
 
     // Find existing vendor
     const existingVendor = await getVendorByIdQuery(vendorId, req.organizationId!);
 
     if (!existingVendor) {
+      await transaction.rollback();
       await logSuccess({
         eventType: "Update",
         description: `Vendor not found for update: ID ${vendorId}`,
         functionName: "updateVendorById",
         fileName: "vendor.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(404).json(STATUS_CODE[404]({}));
     }
@@ -447,7 +449,7 @@ export async function updateVendorById(req: Request, res: Response): Promise<any
         functionName: "updateVendorById",
         fileName: "vendor.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
 
       // Send assignment notifications for newly assigned users (fire-and-forget)
@@ -502,13 +504,14 @@ export async function updateVendorById(req: Request, res: Response): Promise<any
       return res.status(202).json(STATUS_CODE[202](vendor));
     }
 
+    await transaction.rollback();
     await logSuccess({
       eventType: "Update",
       description: `Vendor not found for update: ID ${vendorId}`,
       functionName: "updateVendorById",
       fileName: "vendor.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(404).json(STATUS_CODE[404]({}));
   } catch (error) {
@@ -522,7 +525,7 @@ export async function updateVendorById(req: Request, res: Response): Promise<any
         fileName: "vendor.ctrl.ts",
         error: error as Error,
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
     }
@@ -535,7 +538,7 @@ export async function updateVendorById(req: Request, res: Response): Promise<any
         fileName: "vendor.ctrl.ts",
         error: error as Error,
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
     }
@@ -547,7 +550,7 @@ export async function updateVendorById(req: Request, res: Response): Promise<any
       fileName: "vendor.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -562,7 +565,7 @@ export async function deleteVendorById(req: Request, res: Response): Promise<any
     functionName: "deleteVendorById",
     fileName: "vendor.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -576,18 +579,19 @@ export async function deleteVendorById(req: Request, res: Response): Promise<any
         functionName: "deleteVendorById",
         fileName: "vendor.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(202).json(STATUS_CODE[202](deletedVendor));
     }
 
+    await transaction.rollback();
     await logSuccess({
       eventType: "Delete",
       description: `Vendor not found for deletion: ID ${vendorId}`,
       functionName: "deleteVendorById",
       fileName: "vendor.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(404).json(STATUS_CODE[404]({}));
   } catch (error) {
@@ -599,7 +603,7 @@ export async function deleteVendorById(req: Request, res: Response): Promise<any
       fileName: "vendor.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }

@@ -30,7 +30,7 @@ export async function getAllTrainingRegistar(req: Request, res: Response): Promi
     functionName: "getAllTrainingRegistar",
     fileName: "trainingRegistar.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
   logger.debug("📚 Fetching all training registrars");
 
@@ -43,7 +43,7 @@ export async function getAllTrainingRegistar(req: Request, res: Response): Promi
         functionName: "getAllTrainingRegistar",
         fileName: "trainingRegistar.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(200).json(STATUS_CODE[200](trainingRegistars));
     }
@@ -54,7 +54,7 @@ export async function getAllTrainingRegistar(req: Request, res: Response): Promi
       functionName: "getAllTrainingRegistar",
       fileName: "trainingRegistar.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(204).json(STATUS_CODE[204](trainingRegistars));
   } catch (error) {
@@ -65,7 +65,7 @@ export async function getAllTrainingRegistar(req: Request, res: Response): Promi
       fileName: "trainingRegistar.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -82,7 +82,7 @@ export async function getTrainingRegistarById(req: Request, res: Response): Prom
     functionName: "getTrainingRegistarById",
     fileName: "trainingRegistar.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
   logger.debug(`🔍 Looking up training registrar ID ${trainingRegistarId}`);
 
@@ -99,7 +99,7 @@ export async function getTrainingRegistarById(req: Request, res: Response): Prom
         functionName: "getTrainingRegistarById",
         fileName: "trainingRegistar.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(200).json(STATUS_CODE[200](trainingRegistar));
     }
@@ -110,7 +110,7 @@ export async function getTrainingRegistarById(req: Request, res: Response): Prom
       functionName: "getTrainingRegistarById",
       fileName: "trainingRegistar.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(404).json(STATUS_CODE[404](trainingRegistar));
   } catch (error) {
@@ -121,7 +121,7 @@ export async function getTrainingRegistarById(req: Request, res: Response): Prom
       fileName: "trainingRegistar.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -136,7 +136,7 @@ export async function createNewTrainingRegistar(req: Request, res: Response): Pr
     functionName: "createNewTrainingRegistar",
     fileName: "trainingRegistar.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
   logger.debug("🛠️ Creating new training registrar");
 
@@ -178,7 +178,7 @@ export async function createNewTrainingRegistar(req: Request, res: Response): Pr
         functionName: "createNewTrainingRegistar",
         fileName: "trainingRegistar.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
 
       // Send training assigned notifications to org admins
@@ -221,7 +221,7 @@ export async function createNewTrainingRegistar(req: Request, res: Response): Pr
       fileName: "trainingRegistar.ctrl.ts",
       error: new Error("Creation failed"),
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(503).json(STATUS_CODE[503]({}));
   } catch (error) {
@@ -233,7 +233,7 @@ export async function createNewTrainingRegistar(req: Request, res: Response): Pr
       fileName: "trainingRegistar.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -252,7 +252,7 @@ export async function updateTrainingRegistarById(req: Request, res: Response): P
     functionName: "updateTrainingRegistarById",
     fileName: "trainingRegistar.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
   logger.debug(`✏️ Updating training registrar ID ${trainingRegistarId}`);
 
@@ -304,7 +304,7 @@ export async function updateTrainingRegistarById(req: Request, res: Response): P
         functionName: "updateTrainingRegistarById",
         fileName: "trainingRegistar.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(202).json(STATUS_CODE[202](trainingRegistar));
     }
@@ -317,7 +317,7 @@ export async function updateTrainingRegistarById(req: Request, res: Response): P
       fileName: "trainingRegistar.ctrl.ts",
       error: new Error("Training registrar not found"),
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(404).json(STATUS_CODE[404]({}));
   } catch (error) {
@@ -329,7 +329,7 @@ export async function updateTrainingRegistarById(req: Request, res: Response): P
       fileName: "trainingRegistar.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
@@ -346,7 +346,7 @@ export async function deleteTrainingRegistarById(req: Request, res: Response): P
     functionName: "deleteTrainingRegistarById",
     fileName: "trainingRegistar.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
   logger.debug(`🗑️ Deleting training registrar ID ${trainingRegistarId}`);
 
@@ -376,7 +376,7 @@ export async function deleteTrainingRegistarById(req: Request, res: Response): P
         functionName: "deleteTrainingRegistarById",
         fileName: "trainingRegistar.ctrl.ts",
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(202).json(STATUS_CODE[202](deleteTrainingRegistar));
     }
@@ -389,7 +389,7 @@ export async function deleteTrainingRegistarById(req: Request, res: Response): P
       fileName: "trainingRegistar.ctrl.ts",
       error: new Error("Training registrar not found"),
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(404).json(STATUS_CODE[404]({}));
   } catch (error) {
@@ -401,7 +401,7 @@ export async function deleteTrainingRegistarById(req: Request, res: Response): P
       fileName: "trainingRegistar.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }

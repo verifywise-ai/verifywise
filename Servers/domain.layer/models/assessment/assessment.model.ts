@@ -6,7 +6,7 @@ import { ValidationException } from "../../exceptions/custom.exception";
 
 @Table({
   tableName: "assessments",
-  timestamps: true,
+  timestamps: false,
   underscored: true,
 })
 export class AssessmentModel extends Model<AssessmentModel> implements IAssessment {
@@ -16,6 +16,12 @@ export class AssessmentModel extends Model<AssessmentModel> implements IAssessme
     primaryKey: true,
   })
   id?: number;
+
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: true,
+  })
+  organization_id?: number;
 
   @ForeignKey(() => ProjectModel)
   @Column({
@@ -36,12 +42,6 @@ export class AssessmentModel extends Model<AssessmentModel> implements IAssessme
     allowNull: false,
   })
   created_at?: Date;
-
-  @Column({
-    type: DataType.DATE,
-    allowNull: false,
-  })
-  updated_at?: Date;
 
   /**
    * Create a new assessment with validation

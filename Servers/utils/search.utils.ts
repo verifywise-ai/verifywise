@@ -25,6 +25,11 @@ export const SEARCH_CONSTANTS = {
   MIN_QUERY_LENGTH: 3,
   DEFAULT_LIMIT: 20,
   MAX_LIMIT: 100,
+  // Hard cap on access-control lookup result sets. A single user
+  // shouldn't have memberships in more than a few hundred projects /
+  // a few thousand vendors; these are defensive ceilings.
+  MAX_PROJECT_MEMBERSHIPS: 5000,
+  MAX_VENDOR_ACCESS: 10000,
 };
 
 /**
@@ -316,9 +321,16 @@ async function getUserProjectIds(organizationId: number, userId: number): Promis
   try {
     validateOrganizationId(organizationId);
     const result = await sequelize.query<{ project_id: number }>(
-      `SELECT project_id FROM projects_members WHERE user_id = :userId AND organization_id = :organizationId`,
+      `SELECT project_id FROM projects_members
+       WHERE user_id = :userId AND organization_id = :organizationId
+       ORDER BY project_id ASC
+       LIMIT :maxProjects`,
       {
-        replacements: { userId, organizationId },
+        replacements: {
+          userId,
+          organizationId,
+          maxProjects: SEARCH_CONSTANTS.MAX_PROJECT_MEMBERSHIPS,
+        },
         type: QueryTypes.SELECT,
       },
     );
@@ -338,9 +350,16 @@ async function getUserVendorIds(organizationId: number, projectIds: number[]): P
   try {
     validateOrganizationId(organizationId);
     const result = await sequelize.query<{ vendor_id: number }>(
-      `SELECT DISTINCT vendor_id FROM vendors_projects WHERE project_id IN (:projectIds) AND organization_id = :organizationId`,
+      `SELECT DISTINCT vendor_id FROM vendors_projects
+       WHERE project_id IN (:projectIds) AND organization_id = :organizationId
+       ORDER BY vendor_id ASC
+       LIMIT :maxVendors`,
       {
-        replacements: { projectIds, organizationId },
+        replacements: {
+          projectIds,
+          organizationId,
+          maxVendors: SEARCH_CONSTANTS.MAX_VENDOR_ACCESS,
+        },
         type: QueryTypes.SELECT,
       },
     );
@@ -448,9 +467,12 @@ async function searchEntity(
 
   // Build and execute query
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
+  // ORDER BY id keeps results deterministic across calls. All searchable
+  // tables expose a numeric `id` primary key.
   const sql = `
     SELECT DISTINCT * FROM ${safeTableName}
     ${whereClause}
+    ORDER BY id ASC
     LIMIT :limit
   `;
   replacements.limit = Math.min(limit, SEARCH_CONSTANTS.MAX_LIMIT);

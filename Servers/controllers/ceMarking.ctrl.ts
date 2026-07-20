@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { STATUS_CODE } from "../utils/statusCode.utils";
 import { sequelize } from "../database/db";
 import { QueryTypes } from "sequelize";
 import { countSubControlsEUByProjectId, countAnswersEUByProjectId } from "../utils/eu.utils";
@@ -36,7 +37,9 @@ export const getCEMarking = async (req: Request, res: Response) => {
     );
 
     if (!projectResult || projectResult.length === 0) {
-      return res.status(404).json({ error: "Project not found or you do not have access to it" });
+      return res
+        .status(404)
+        .json(STATUS_CODE[404]("Project not found or you do not have access to it"));
     }
 
     // Check if CE Marking record exists
@@ -287,10 +290,12 @@ export const getCEMarking = async (req: Request, res: Response) => {
       req.userId!,
       req.organizationId!,
     );
-    return res.status(500).json({
-      error: "Failed to get CE Marking data",
-      details: (error as Error).message,
-    });
+    return res.status(500).json(
+      STATUS_CODE[500]({
+        error: "Failed to get CE Marking data",
+        details: (error as Error).message,
+      }),
+    );
   }
 };
 
@@ -317,7 +322,9 @@ export const updateCEMarking = async (req: Request, res: Response) => {
 
     if (!projectResult || projectResult.length === 0) {
       await transaction.rollback();
-      return res.status(404).json({ error: "Project not found or you do not have access to it" });
+      return res
+        .status(404)
+        .json(STATUS_CODE[404]("Project not found or you do not have access to it"));
     }
 
     // Get existing CE Marking record
@@ -332,7 +339,7 @@ export const updateCEMarking = async (req: Request, res: Response) => {
 
     if (!existingResult[0]) {
       await transaction.rollback();
-      return res.status(404).json({ error: req.t!("CE Marking record not found") });
+      return res.status(404).json(STATUS_CODE[404](req.t!("CE Marking record not found")));
     }
 
     const existing: any = existingResult[0];
@@ -699,9 +706,11 @@ export const updateCEMarking = async (req: Request, res: Response) => {
       req.userId!,
       req.organizationId!,
     );
-    return res.status(500).json({
-      error: "Failed to update CE Marking data",
-      details: (error as Error).message,
-    });
+    return res.status(500).json(
+      STATUS_CODE[500]({
+        error: "Failed to update CE Marking data",
+        details: (error as Error).message,
+      }),
+    );
   }
 };

@@ -8,6 +8,16 @@ import {
   deleteApiKey,
 } from "../controllers/shadowAiApiKey.ctrl";
 import {
+  validateCreateRule,
+  validateCreateSyslogConfig,
+  validateShadowAiIdParam,
+  validateStartGovernance,
+  validateUpdateRule,
+  validateUpdateSettings,
+  validateUpdateSyslogConfig,
+  validateUpdateToolStatus,
+} from "../middleware/validators/shadowAi.validator";
+import {
   getInsightsSummary,
   getToolsByEvents,
   getToolsByUsers,
@@ -53,25 +63,30 @@ router.get("/departments", authenticateJWT, getDepartmentActivity);
 
 // ─── Tools ──────────────────────────────────────────────────────────────
 router.get("/tools", authenticateJWT, getTools);
-router.get("/tools/:id", authenticateJWT, getToolById);
-router.patch("/tools/:id/status", authenticateJWT, updateToolStatus);
-router.post("/tools/:id/start-governance", authenticateJWT, startGovernance);
+router.get("/tools/:id", authenticateJWT, validateShadowAiIdParam, getToolById);
+router.patch("/tools/:id/status", authenticateJWT, validateUpdateToolStatus, updateToolStatus);
+router.post(
+  "/tools/:id/start-governance",
+  authenticateJWT,
+  validateStartGovernance,
+  startGovernance,
+);
 
 // ─── Rules ──────────────────────────────────────────────────────────────
 router.get("/rules", authenticateJWT, getRules);
-router.post("/rules", authenticateJWT, createRule);
-router.patch("/rules/:id", authenticateJWT, updateRule);
-router.delete("/rules/:id", authenticateJWT, deleteRule);
+router.post("/rules", authenticateJWT, validateCreateRule, createRule);
+router.patch("/rules/:id", authenticateJWT, validateUpdateRule, updateRule);
+router.delete("/rules/:id", authenticateJWT, validateShadowAiIdParam, deleteRule);
 router.get("/rules/alert-history", authenticateJWT, getAlertHistory);
 
 // ─── Configuration ──────────────────────────────────────────────────────
 router.get("/config/syslog", authenticateJWT, getSyslogConfigs);
-router.post("/config/syslog", authenticateJWT, createSyslogConfig);
-router.patch("/config/syslog/:id", authenticateJWT, updateSyslogConfig);
-router.delete("/config/syslog/:id", authenticateJWT, deleteSyslogConfig);
+router.post("/config/syslog", authenticateJWT, validateCreateSyslogConfig, createSyslogConfig);
+router.patch("/config/syslog/:id", authenticateJWT, validateUpdateSyslogConfig, updateSyslogConfig);
+router.delete("/config/syslog/:id", authenticateJWT, validateShadowAiIdParam, deleteSyslogConfig);
 
 // ─── Settings (Rate Limiting & Data Retention) ─────────────────────────
 router.get("/settings", authenticateJWT, getSettings);
-router.patch("/settings", authenticateJWT, updateSettings);
+router.patch("/settings", authenticateJWT, validateUpdateSettings, updateSettings);
 
 export default router;

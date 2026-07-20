@@ -18,8 +18,10 @@ import {
   trackModelInventoryChanges,
   recordMultipleFieldChanges,
 } from "../utils/modelInventoryChangeHistory.utils";
+import { modelHasMrmHistoryQuery } from "../utils/mrm.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import logger, { logStructured } from "../utils/logger/fileLogger";
+import { logRollbackFailure } from "../utils/logger/logHelper";
 
 import { translateError } from "../utils/i18n.utils";
 // Helper function to get user name
@@ -233,6 +235,7 @@ export async function createNewModelInventory(req: Request, res: Response) {
     hosting_provider,
     security_assessment_data,
     is_demo,
+    external_key,
     projects,
     frameworks,
   } = req.body;
@@ -265,6 +268,7 @@ export async function createNewModelInventory(req: Request, res: Response) {
       hosting_provider,
       security_assessment_data,
       is_demo,
+      external_key,
     });
 
     // Create transaction and use the existing database query approach
@@ -316,7 +320,7 @@ export async function createNewModelInventory(req: Request, res: Response) {
         {
           description: modelDetails || undefined,
         },
-      ).catch((err) => console.error("Failed to send approver notification:", err));
+      ).catch((err) => logger.error("Failed to send approver notification:", err));
     }
 
     logStructured(
@@ -332,9 +336,27 @@ export async function createNewModelInventory(req: Request, res: Response) {
       try {
         await transaction.rollback();
       } catch (rollbackError) {
-        // Transaction might already be committed, ignore rollback errors
-        console.warn("Transaction rollback failed:", rollbackError);
+        await logRollbackFailure({
+          req,
+          functionName: "createNewModelInventory",
+          fileName: "modelInventory.ctrl.ts",
+          eventType: "Create",
+          originalError: error,
+          rollbackError,
+        });
       }
+    }
+
+    // A duplicate external_key within the org violates the partial unique index.
+    const code =
+      (error as { parent?: { code?: string }; original?: { code?: string } })?.parent?.code ??
+      (error as { original?: { code?: string } })?.original?.code;
+    if (code === "23505") {
+      return res
+        .status(409)
+        .json(
+          STATUS_CODE[409]("A model with this external key already exists in your organization."),
+        );
     }
 
     logStructured(
@@ -379,6 +401,7 @@ export async function updateModelInventoryById(req: Request, res: Response) {
     hosting_provider,
     security_assessment_data,
     is_demo,
+    external_key,
     projects,
     frameworks,
     deleteProjects,
@@ -448,6 +471,7 @@ export async function updateModelInventoryById(req: Request, res: Response) {
       hosting_provider,
       security_assessment_data,
       is_demo,
+      external_key,
     });
 
     // Use the existing database query approach for updating
@@ -505,7 +529,7 @@ export async function updateModelInventoryById(req: Request, res: Response) {
         {
           description: modelDetails || undefined,
         },
-      ).catch((err) => console.error("Failed to send approver notification:", err));
+      ).catch((err) => logger.error("Failed to send approver notification:", err));
     }
 
     logStructured(
@@ -521,8 +545,14 @@ export async function updateModelInventoryById(req: Request, res: Response) {
       try {
         await transaction.rollback();
       } catch (rollbackError) {
-        // Transaction might already be committed, ignore rollback errors
-        console.warn("Transaction rollback failed:", rollbackError);
+        await logRollbackFailure({
+          req,
+          functionName: "updateModelInventoryById",
+          fileName: "modelInventory.ctrl.ts",
+          eventType: "Update",
+          originalError: error,
+          rollbackError,
+        });
       }
     }
 
@@ -549,7 +579,6 @@ export async function deleteModelInventoryById(req: Request, res: Response) {
     "deleteModelInventoryById",
     "modelInventory.ctrl.ts",
   );
-  logger.debug("🔍 Deleting model inventory by id");
 
   let transaction: Transaction | null = null;
 
@@ -568,6 +597,29 @@ export async function deleteModelInventoryById(req: Request, res: Response) {
         "modelInventory.ctrl.ts",
       );
       return res.status(404).json(STATUS_CODE[404](req.t!("Model inventory not found")));
+    }
+
+    // MRM protection (§7b): a model with validation or finding history cannot be
+    // hard-deleted — it must be decommissioned so the audit trail survives. The
+    // DB's ON DELETE RESTRICT is the backstop; this returns a friendly message
+    // instead of a raw FK error.
+    const hasMrmHistory = await modelHasMrmHistoryQuery(modelInventoryId, req.organizationId!);
+    if (hasMrmHistory) {
+      logStructured(
+        "error",
+        `model ${modelInventoryId} has MRM history — delete blocked`,
+        "deleteModelInventoryById",
+        "modelInventory.ctrl.ts",
+      );
+      return res
+        .status(409)
+        .json(
+          STATUS_CODE[409](
+            req.t!(
+              "This model has model risk management validations or findings and cannot be deleted. Decommission it instead to preserve the audit record.",
+            ),
+          ),
+        );
     }
 
     // Use the existing database query approach for deleting
@@ -602,8 +654,14 @@ export async function deleteModelInventoryById(req: Request, res: Response) {
       try {
         await transaction.rollback();
       } catch (rollbackError) {
-        // Transaction might already be committed, ignore rollback errors
-        console.warn("Transaction rollback failed:", rollbackError);
+        await logRollbackFailure({
+          req,
+          functionName: "deleteModelInventoryById",
+          fileName: "modelInventory.ctrl.ts",
+          eventType: "Delete",
+          originalError: error,
+          rollbackError,
+        });
       }
     }
 

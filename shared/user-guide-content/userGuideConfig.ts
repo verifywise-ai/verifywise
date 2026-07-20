@@ -12,7 +12,8 @@ export type IconName =
   | 'FlaskConical'
   | 'ScanSearch'
   | 'EyeOff'
-  | 'Router';
+  | 'Router'
+  | 'Gauge';
 
 export interface Article {
   id: string;
@@ -77,7 +78,7 @@ export const collections: Collection[] = [
     title: 'AI governance',
     description: 'Manage your AI models, track their lifecycle, and maintain comprehensive documentation.',
     icon: 'Brain',
-    articleCount: 17,
+    articleCount: 19,
     articles: [
       {
         id: 'use-cases',
@@ -108,6 +109,12 @@ export const collections: Collection[] = [
         title: 'Model lifecycle management',
         description: 'Track models from development through deployment and retirement.',
         keywords: ['lifecycle', 'development', 'deployment', 'retirement'],
+      },
+      {
+        id: 'mrm',
+        title: 'Model risk management',
+        description: 'Tier models, run independent validations, track findings, monitor metrics against thresholds, and produce a board-level attestation for SR 26-2, SS1/23, and OSFI E-23.',
+        keywords: ['mrm', 'model risk', 'tiering', 'tier', 'validation', 'validate', 'findings', 'remediation', 'independence', 'validator', 'monitoring', 'metrics', 'ingestion', 'threshold', 'breach', 'revalidation', 'attestation', 'sr 26-2', 'ss1/23', 'osfi e-23', 'materiality', 'banking'],
       },
       {
         id: 'task-management',
@@ -619,12 +626,16 @@ export const collections: Collection[] = [
         description: 'View, filter, and inspect every request that flows through the AI Gateway.',
         keywords: ['logs', 'request', 'response', 'audit', 'filter', 'search', 'status', 'error', 'auto-refresh', 'conversation'],
       },
-      {
-        id: 'prompts',
-        title: 'Prompts',
-        description: 'Create versioned prompt templates with variables, test them with streaming responses, and bind them to endpoints.',
-        keywords: ['prompt', 'template', 'variable', 'version', 'publish', 'draft', 'system prompt', 'message', 'test', 'editor'],
-      },
+      // Prompts is hidden in the app behind the SHOW_AI_GATEWAY_PROMPTS flag
+      // (Clients/src/application/config/featureFlags.ts). This shared package
+      // cannot import that flag, so the article stays unregistered here while
+      // the feature is hidden. Restore both together to bring it back.
+      // {
+      //   id: 'prompts',
+      //   title: 'Prompts',
+      //   description: 'Create versioned prompt templates with variables, test them with streaming responses, and bind them to endpoints.',
+      //   keywords: ['prompt', 'template', 'variable', 'version', 'publish', 'draft', 'system prompt', 'message', 'test', 'editor'],
+      // },
       {
         id: 'models',
         title: 'Models',
@@ -723,9 +734,9 @@ export const collections: Collection[] = [
   {
     id: 'developers',
     title: 'Developer guide',
-    description: 'Build on VerifyWise. Today the guide covers Agent Control: connect any terminal agent, see how decisions work and use the API reference. More developer topics are coming.',
+    description: 'Build on VerifyWise. The guide covers Agent Control (connect any terminal agent and govern its tool calls) and the platform REST API for reading and writing your governance data. More developer topics are coming.',
     icon: 'Plug',
-    articleCount: 6,
+    articleCount: 13,
     articles: [
       {
         id: 'overview',
@@ -762,6 +773,81 @@ export const collections: Collection[] = [
         title: 'API reference',
         description: 'Endpoints, headers, auth and error codes for the tool-call hook.',
         keywords: ['developer', 'api', 'reference', 'endpoint', 'hook', 'curl', 'json-rpc', 'authentication', 'agent key'],
+      },
+      {
+        id: 'platform-rest-api',
+        title: 'Platform REST API',
+        description: 'Authenticate with a token and read or write your governance data over REST.',
+        keywords: ['developer', 'api', 'rest', 'platform', 'token', 'bearer', 'authentication', 'endpoint', 'swagger', 'openapi', 'pagination', 'integration', 'curl'],
+      },
+      {
+        id: 'working-with-resources',
+        title: 'Working with resources',
+        description: 'The CRUD pattern for projects, risks, vendors and other resources, with the few places they differ.',
+        keywords: ['developer', 'api', 'rest', 'crud', 'create', 'update', 'delete', 'list', 'resources', 'projects', 'risks', 'vendors', 'patch', 'put', 'filter', 'curl', 'integration'],
+      },
+      {
+        id: 'bulk-import-datasets',
+        title: 'Bulk importing datasets',
+        description: 'Upload a CSV or spreadsheet to register a dataset through the API.',
+        keywords: ['developer', 'api', 'dataset', 'bulk', 'upload', 'import', 'csv', 'xlsx', 'multipart', 'file', 'plugin', 'metadata', 'integration'],
+      },
+      {
+        id: 'automations-api',
+        title: 'Automations API',
+        description: 'Create and manage automations programmatically, with the list of triggers and actions.',
+        keywords: ['developer', 'api', 'automation', 'trigger', 'action', 'rule', 'email', 'event', 'crud', 'integration'],
+      },
+      {
+        id: 'compliance-and-reports',
+        title: 'Compliance, reports and exports',
+        description: 'Fetch compliance progress, generate reports and use the document export endpoints.',
+        keywords: ['developer', 'api', 'compliance', 'progress', 'report', 'export', 'pdf', 'docx', 'csv', 'grc', 'assessment', 'framework', 'integration'],
+      },
+      {
+        id: 'inbound-integrations',
+        title: 'Inbound integrations',
+        description: 'Create incidents from another system and submit public intake forms.',
+        keywords: ['developer', 'api', 'incident', 'intake', 'form', 'public', 'submission', 'webhook', 'integration', 'monitoring'],
+      },
+      {
+        id: 'mrm-metric-ingestion',
+        title: 'Model metrics ingestion',
+        description: 'Push model monitoring metrics with an ingestion token — payloads, dedup, errors and retries.',
+        keywords: ['developer', 'api', 'mrm', 'model risk', 'metrics', 'ingestion', 'monitoring', 'push', 'token', 'threshold', 'breach', 'drift', 'psi', 'idempotency', 'batch', 'curl', 'integration'],
+      },
+    ],
+  },
+  {
+    id: 'ai-trust-index',
+    title: 'AI Trust Index',
+    description: 'Browse independent privacy and transparency scores for AI apps, track the tools your organisation uses, and receive weekly change digests when scores or policies update.',
+    icon: 'Gauge',
+    articleCount: 4,
+    articles: [
+      {
+        id: 'dashboard',
+        title: 'AI Trust Index overview',
+        description: 'How the index works, what scores and grades mean, and how to navigate the module.',
+        keywords: ['ai trust index', 'overview', 'score', 'grade', 'privacy', 'transparency', 'feed', 'weekly', 'digest', 'dealbreaker'],
+      },
+      {
+        id: 'browse',
+        title: 'Browsing and tracking apps',
+        description: 'Search and filter the full app catalog, view details, and track apps individually or in bulk.',
+        keywords: ['browse', 'search', 'filter', 'catalog', 'track', 'bulk', 'grade', 'score', 'category', 'app detail', 'highlights', 'dealbreaker', 'policy url'],
+      },
+      {
+        id: 'tracked',
+        title: 'Your tracked apps',
+        description: 'Manage your organisation\'s tracking list and understand "no longer in index" notices.',
+        keywords: ['tracked', 'watch list', 'no longer in index', 'removed', 'untrack', 'digest', 'material change', 'email', 'notification'],
+      },
+      {
+        id: 'settings',
+        title: 'Configuring email recipients',
+        description: 'Choose which users and email addresses receive the weekly AI Trust Index change digest.',
+        keywords: ['settings', 'recipients', 'email', 'digest', 'admin', 'configure', 'notify', 'weekly', 'user', 'external'],
       },
     ],
   },

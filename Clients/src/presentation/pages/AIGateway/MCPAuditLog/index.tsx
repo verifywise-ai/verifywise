@@ -1,6 +1,15 @@
 import { useState, useEffect, useCallback } from "react";
 import { Box, Typography, Stack } from "@mui/material";
-import { Activity, AlertTriangle, Clock, Wrench, BarChart3, Info } from "lucide-react";
+import {
+  Activity,
+  AlertTriangle,
+  Clock,
+  Wrench,
+  BarChart3,
+  Info,
+  RotateCcw,
+  SearchX,
+} from "lucide-react";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 import { chartTooltipStyle } from "../../../components/Charts/chartEnhancements";
 import Select from "../../../components/Inputs/Select";
@@ -15,6 +24,7 @@ import { Tooltip as MuiTooltip } from "@mui/material";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import palette from "../../../themes/palette";
 import { sectionTitleSx, useCardSx, MCP_STATUS_COLORS, MCP_STATUS_FALLBACK } from "../shared";
+import CustomizableSkeleton from "../../../components/Skeletons";
 import MCPTable from "../MCPTable";
 import MCPInvocationDrawer from "../MCPInvocationDrawer";
 import { displayFormattedDate } from "../../../tools/isoDateToString";
@@ -65,6 +75,7 @@ export default function MCPAuditLogPage() {
     { tool_name: string; count: number; avg_latency_ms: number }[]
   >([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [days, setDays] = useState("7");
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -73,6 +84,7 @@ export default function MCPAuditLogPage() {
   const [drawerLogId, setDrawerLogId] = useState<number | null>(null);
 
   const loadStats = useCallback(async () => {
+    setLoadError(null);
     try {
       const [statsRes, toolRes] = await Promise.all([
         apiServices.get<Record<string, any>>(`/ai-gateway/mcp/audit/stats?days=${days}`),
@@ -82,12 +94,13 @@ export default function MCPAuditLogPage() {
       const allTools = toolRes?.data?.data || [];
       setToolStats(allTools.sort((a: any, b: any) => b.count - a.count).slice(0, 10));
     } catch {
-      // silent
+      setLoadError("Failed to load audit activity. Please try again.");
     }
   }, [days]);
 
   const loadLogs = useCallback(
     async (pageNum: number) => {
+      setLoadError(null);
       try {
         const newOffset = (pageNum - 1) * PAGE_SIZE;
         let url = `/ai-gateway/mcp/audit/logs?limit=${PAGE_SIZE}&offset=${newOffset}`;
@@ -100,7 +113,7 @@ export default function MCPAuditLogPage() {
         setLogs(data);
         setTotal(totalCount);
       } catch {
-        // silent
+        setLoadError("Failed to load audit logs. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -143,7 +156,22 @@ export default function MCPAuditLogPage() {
         </Box>
       }
     >
-      {isFirstTime ? (
+      {loading ? (
+        <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
+      ) : loadError ? (
+        <EmptyState icon={AlertTriangle} message={loadError}>
+          <CustomizableButton
+            variant="outlined"
+            text="Retry"
+            icon={<RotateCcw size={16} />}
+            onClick={() => {
+              loadStats();
+              setPage(1);
+              loadLogs(1);
+            }}
+          />
+        </EmptyState>
+      ) : isFirstTime ? (
         <Box sx={{ px: 3, pt: 4 }}>
           <EmptyState icon={Activity} message="No audit logs yet" showBorder>
             <EmptyStateTip
@@ -299,14 +327,12 @@ export default function MCPAuditLogPage() {
           <Typography sx={{ ...sectionTitleSx, px: 3, pt: 2, pb: 1 }}>Recent tool calls</Typography>
 
           <Stack spacing={1.5} sx={{ px: 3, pb: 3 }}>
-            {loading ? (
-              <Typography color="text.secondary" sx={{ py: 2 }}>
-                Loading...
-              </Typography>
-            ) : noFilterResults ? (
-              <Typography color="text.secondary" sx={{ py: 3, textAlign: "center" }}>
-                No results matching the current filters.
-              </Typography>
+            {noFilterResults ? (
+              <EmptyState
+                icon={SearchX}
+                message="No results matching the current filters."
+                showBorder={false}
+              />
             ) : (
               <>
                 <MCPTable

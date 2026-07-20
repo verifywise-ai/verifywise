@@ -1,4 +1,5 @@
 import { SxProps, Theme } from "@mui/material";
+import { fontSize, textStyles } from "./typography";
 
 /**
  * Standardized component styles to be used across the application
@@ -8,9 +9,9 @@ import { SxProps, Theme } from "@mui/material";
 // Common sizing constants
 export const COMPONENT_SIZES = {
   button: {
-    small: { height: 28, fontSize: 12 },
-    medium: { height: 34, fontSize: 13 },
-    large: { height: 40, fontSize: 14 },
+    small: { height: 28, fontSize: fontSize.sm },
+    medium: { height: 34, fontSize: fontSize.base },
+    large: { height: 40, fontSize: fontSize.md },
   },
   input: {
     small: { height: 32 },
@@ -103,7 +104,7 @@ export const modalStyles = {
   description: (theme: Theme): SxProps<Theme> => ({
     color: theme.palette.text.tertiary,
     marginBottom: theme.spacing(3),
-    fontSize: 14,
+    fontSize: fontSize.md,
     textAlign: "left",
   }),
 
@@ -259,20 +260,19 @@ export const formStyles = {
 
   label: (theme: Theme): SxProps<Theme> => ({
     color: theme.palette.text.secondary,
-    fontSize: "14px",
-    fontWeight: 500,
+    ...textStyles.formLabel,
     marginBottom: theme.spacing(0.5),
   }),
 
   helperText: (theme: Theme): SxProps<Theme> => ({
     color: theme.palette.text.tertiary,
-    fontSize: "12px",
+    fontSize: fontSize.sm,
     marginTop: theme.spacing(0.5),
   }),
 
   errorText: (theme: Theme): SxProps<Theme> => ({
     color: theme.palette.status?.error?.text || "#f04438",
-    fontSize: "12px",
+    ...textStyles.error,
     marginTop: theme.spacing(0.5),
   }),
 };
@@ -431,56 +431,5 @@ export const layoutStyles = {
   gridContainer: (theme: Theme): SxProps<Theme> => ({
     display: "grid",
     gap: theme.spacing(2),
-  }),
-};
-
-// Empty state styles
-export const emptyStateStyles = {
-  container: (theme: Theme): SxProps<Theme> => ({
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    textAlign: "center",
-    marginTop: theme.spacing(10),
-    marginX: "auto",
-    padding: theme.spacing(5),
-    border: `1px solid ${theme.palette.divider}`,
-    borderRadius: theme.shape.borderRadius,
-    width: { xs: "90%", sm: "90%", md: "1056px" },
-    maxWidth: "100%",
-    height: { xs: "100%", md: "418px" },
-    backgroundColor: "#FFFFFF", // Explicitly ensure white background
-  }),
-
-  // Compact version for table placeholders
-  tableContainer: (theme: Theme): SxProps<Theme> => ({
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    textAlign: "center",
-    padding: theme.spacing(15, 5),
-    paddingBottom: theme.spacing(20),
-    gap: theme.spacing(10),
-    border: "1px solid #EEEEEE",
-    borderRadius: "4px",
-    minHeight: 200,
-    backgroundColor: "#FFFFFF", // Explicitly ensure white background
-  }),
-
-  image: (): SxProps<Theme> => ({
-    "marginBottom": (theme) => theme.spacing(4),
-    "& img": {
-      maxWidth: "100%",
-      height: "auto",
-      objectFit: "contain",
-    },
-  }),
-
-  description: (theme: Theme): SxProps<Theme> => ({
-    marginBottom: theme.spacing(6),
-    color: theme.palette.text.secondary,
-    fontSize: theme.typography.fontSize,
   }),
 };

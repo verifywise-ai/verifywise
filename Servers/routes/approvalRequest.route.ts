@@ -33,13 +33,18 @@ import {
 
 import authenticateJWT from "../middleware/auth.middleware";
 import authorize from "../middleware/accessControl.middleware";
+import {
+  validateApprovalActionBody,
+  validateApprovalIdParam,
+  validateCreateApprovalRequest,
+} from "../middleware/validators/approvalRequest.validator";
 
 /**
  * POST /approval-requests
  * Create new approval request
  * @access All authenticated users
  */
-router.post("/", authenticateJWT, createApprovalRequest);
+router.post("/", authenticateJWT, validateCreateApprovalRequest, createApprovalRequest);
 
 /**
  * GET /approval-requests/my-requests
@@ -67,27 +72,27 @@ router.get("/all", authenticateJWT, authorize(["Admin"]), getAllApprovalRequests
  * Get approval request by ID with timeline
  * @access All authenticated users
  */
-router.get("/:id", authenticateJWT, getApprovalRequestById);
+router.get("/:id", authenticateJWT, validateApprovalIdParam, getApprovalRequestById);
 
 /**
  * POST /approval-requests/:id/approve
  * Approve a request
  * @access Approvers only
  */
-router.post("/:id/approve", authenticateJWT, approveRequest);
+router.post("/:id/approve", authenticateJWT, validateApprovalActionBody, approveRequest);
 
 /**
  * POST /approval-requests/:id/reject
  * Reject a request
  * @access Approvers only
  */
-router.post("/:id/reject", authenticateJWT, rejectRequest);
+router.post("/:id/reject", authenticateJWT, validateApprovalActionBody, rejectRequest);
 
 /**
  * POST /approval-requests/:id/withdraw
  * Withdraw a request
  * @access Requestor only
  */
-router.post("/:id/withdraw", authenticateJWT, withdrawRequest);
+router.post("/:id/withdraw", authenticateJWT, validateApprovalIdParam, withdrawRequest);
 
 export default router;

@@ -29,6 +29,8 @@ import iso27001Routes from "./routes/iso27001.route";
 import modelInventoryRoutes from "./routes/modelInventory.route";
 import modelInventoryHistoryRoutes from "./routes/modelInventoryHistory.route";
 import modelInventoryChangeHistoryRoutes from "./routes/modelInventoryChangeHistory.route";
+import mrmRoutes from "./routes/mrm.route";
+import mrmIngestionRoutes from "./routes/mrmIngestion.route";
 import datasetBulkUploadRoutes from "./routes/datasetBulkUpload.route";
 import datasetRoutes from "./routes/dataset.route";
 import riskHistoryRoutes from "./routes/riskHistory.route";
@@ -108,6 +110,7 @@ import { i18nMiddleware } from "./middleware/i18n.middleware";
 import { sequelize } from "./database/db";
 import redisClient from "./database/redis";
 import ssoConfigRoutes from "./routes/ssoConfig.route";
+import aiTrustIndexRoutes from "./routes/aiTrustIndex.route";
 
 const swaggerDoc = YAML.load("./swagger.yaml");
 
@@ -233,6 +236,11 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
   app.use("/api/modelInventoryHistory", modelInventoryHistoryRoutes);
   app.use("/api/dataset-bulk-upload", datasetBulkUploadRoutes);
   app.use("/api/model-inventory-change-history", modelInventoryChangeHistoryRoutes);
+  app.use("/api/mrm", mrmRoutes);
+  // Token-authed machine ingestion surface, mounted on the same base path.
+  // Its route (POST /models/:externalModelKey/metrics) does not collide with
+  // any JWT mrm route and uses its own token middleware + rate limiter.
+  app.use("/api/mrm", mrmIngestionRoutes);
   app.use("/api/datasets", datasetRoutes);
   app.use("/api/riskHistory", riskHistoryRoutes);
   app.use("/api/modelRisks", modelRiskRoutes);
@@ -242,7 +250,9 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
   app.use("/api/subscriptions", subscriptionRoutes);
   app.use("/api/tasks", taskRoutes);
   app.use("/api/deadlines", deadlineRoutes);
-  app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerDoc));
+  if (process.env.NODE_ENV !== "production") {
+    app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerDoc));
+  }
   app.use("/api/policies", policyRoutes);
   app.use("/api/policies", policyFolderRoutes);
   app.use("/api/slackWebhooks", slackWebhookRoutes);
@@ -311,6 +321,7 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
   app.use("/api/internal", internalRoutes);
   app.use("/v1", virtualKeyProxyRoutes());
   app.use("/api/ssoConfig", ssoConfigRoutes);
+  app.use("/api/ai-trust-index", aiTrustIndexRoutes);
 
   return app;
 }

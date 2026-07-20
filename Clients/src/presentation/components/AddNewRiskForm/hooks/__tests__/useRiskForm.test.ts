@@ -81,7 +81,7 @@ vi.mock("../../../tools/riskCalculator", () => ({
 }));
 
 vi.mock("../../CustomFieldsSection/RequiredCustomFieldsGate", () => ({
-  useRequiredCustomFieldsGate: () => ({ blocked: false }),
+  useRequiredCustomFieldsGate: () => ({ blocked: false, onPendingChange: () => {} }),
 }));
 
 vi.mock("../../QuantitativeRiskForm", () => ({

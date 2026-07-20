@@ -30,7 +30,6 @@ import { Request, Response, NextFunction } from "express";
 interface AuthenticatedRequest extends Request {
   userId?: number;
   role?: string;
-  tenantId?: number;
   organizationId?: number;
 }
 

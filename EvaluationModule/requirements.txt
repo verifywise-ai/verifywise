@@ -2,17 +2,17 @@
 numpy>=1.26.4,<3.0.0
 pandas>=3.0.3
 pydantic>=2.11.0
-pyyaml>=6.0.0
+pyyaml>=6.0.3
 
 # Machine learning and fairness
 scikit-learn>=1.9.0
-fairlearn>=0.13.0
+fairlearn>=0.14.0
 langfair>=0.8.0
 
 # Deep learning and transformers
 torch>=2.7.0
-transformers>=5.12.0
-sentence-transformers>=5.5.1
+transformers>=5.12.1
+sentence-transformers>=5.6.0
 huggingface-hub>=1.16.1
 
 # Data handling
@@ -20,21 +20,21 @@ datasets>=4.8.5
 pyarrow>=24.0.0
 
 # Utilities
-tqdm>=4.68.2
+tqdm>=4.69.0
 textblob>=0.20.0
 python-dotenv>=1.2.2
 
 # LLM API Clients
 httpx>=0.27.0
-openai>=2.41.0
-anthropic>=0.105.2
+openai>=2.44.0
+anthropic>=0.117.0
 google-generativeai>=0.8.6
 ollama>=0.6.2
 xai-sdk>=1.15.0
-mistralai>=2.4.9
+mistralai>=2.7.0
 
 # DeepEval for comprehensive LLM evaluation
-deepeval>=4.0.3
+deepeval>=4.1.1
 
 # Optional: GPU support (uncomment if using CUDA)
 # torch>=2.7.0+cu118 --extra-index-url https://download.pytorch.org/whl/cu118

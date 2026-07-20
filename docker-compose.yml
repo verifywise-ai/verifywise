@@ -7,7 +7,7 @@ services:
       - db:/var/lib/postgresql/data
     environment:
       - POSTGRES_USER=$DB_USER
-      - POSTGRES_PASSWORD=$DB_PASSWORD
+      - POSTGRES_PASSWORD=${DB_PASSWORD:?DB_PASSWORD must be set in the env file before starting}
       - POSTGRES_DB=$DB_NAME
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "$DB_USER", "-d", "$DB_NAME"]
@@ -39,19 +39,19 @@ services:
       - DB_HOST=postgresdb
       - DB_USER=$DB_USER
       - DB_PORT=$DB_PORT
-      - DB_PASSWORD=$DB_PASSWORD
+      - DB_PASSWORD=${DB_PASSWORD:?DB_PASSWORD must be set in the env file before starting}
       - DB_NAME=$DB_NAME
       - MOCK_DATA_ON=$MOCK_DATA_ON
-      - JWT_SECRET=$JWT_SECRET
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET must be set in the env file before starting}
       - SMTP_HOST=smtp.gmail.com
       - SMTP_PORT=587
       - LLM_EVALS_URL=http://eval_server:8000
       - REDIS_URL=redis://redis:6379/0
       - ENCRYPTION_KEY=$ENCRYPTION_KEY
       - AI_GATEWAY_URL=http://ai_gateway:8100
-      - AI_GATEWAY_INTERNAL_KEY=$AI_GATEWAY_INTERNAL_KEY
+      - AI_GATEWAY_INTERNAL_KEY=${AI_GATEWAY_INTERNAL_KEY:?AI_GATEWAY_INTERNAL_KEY must be set in the env file before starting}
       - SUPERADMIN_EMAIL=$SUPERADMIN_EMAIL
-      - SUPERADMIN_PASSWORD=$SUPERADMIN_PASSWORD
+      - SUPERADMIN_PASSWORD=${SUPERADMIN_PASSWORD:?SUPERADMIN_PASSWORD must be set in the env file before starting}
   frontend:
     depends_on:
       - backend
@@ -70,9 +70,9 @@ services:
       - DB_HOST=postgresdb
       - DB_USER=$DB_USER
       - DB_PORT=$DB_PORT
-      - DB_PASSWORD=$DB_PASSWORD
+      - DB_PASSWORD=${DB_PASSWORD:?DB_PASSWORD must be set in the env file before starting}
       - DB_NAME=$DB_NAME
-      - JWT_SECRET=$JWT_SECRET
+      - JWT_SECRET=${JWT_SECRET:?JWT_SECRET must be set in the env file before starting}
       - REDIS_URL=redis://redis:6379/0
       - ENCRYPTION_KEY=$ENCRYPTION_KEY
     restart: unless-stopped
@@ -90,13 +90,13 @@ services:
       - DB_HOST=postgresdb
       - DB_USER=$DB_USER
       - DB_PORT=$DB_PORT
-      - DB_PASSWORD=$DB_PASSWORD
+      - DB_PASSWORD=${DB_PASSWORD:?DB_PASSWORD must be set in the env file before starting}
       - DB_NAME=$DB_NAME
       - BACKEND_URL=http://backend:$BACKEND_PORT
       - REDIS_URL=redis://redis:6379/0
       - ENCRYPTION_KEY=$ENCRYPTION_KEY
       - AI_GATEWAY_URL=http://ai_gateway:8100
-      - AI_GATEWAY_INTERNAL_KEY=$AI_GATEWAY_INTERNAL_KEY
+      - AI_GATEWAY_INTERNAL_KEY=${AI_GATEWAY_INTERNAL_KEY:?AI_GATEWAY_INTERNAL_KEY must be set in the env file before starting}
   ai_gateway:
     depends_on:
       postgresdb:
@@ -110,9 +110,9 @@ services:
       - DB_HOST=postgresdb
       - DB_PORT=$DB_PORT
       - DB_USER=$DB_USER
-      - DB_PASSWORD=$DB_PASSWORD
+      - DB_PASSWORD=${DB_PASSWORD:?DB_PASSWORD must be set in the env file before starting}
       - DB_NAME=$DB_NAME
-      - AI_GATEWAY_INTERNAL_KEY=$AI_GATEWAY_INTERNAL_KEY
+      - AI_GATEWAY_INTERNAL_KEY=${AI_GATEWAY_INTERNAL_KEY:?AI_GATEWAY_INTERNAL_KEY must be set in the env file before starting}
       - AI_GATEWAY_PORT=8100
     restart: unless-stopped
 

@@ -1,5 +1,5 @@
 // React imports
-import { FC, useState, useContext, useEffect, useCallback, useMemo } from "react";
+import { FC, useState, useContext, useEffect, useCallback, useMemo, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 
 // MUI imports
@@ -34,6 +34,11 @@ import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.cont
 import useUsers from "../../../application/hooks/useUsers";
 import useFrameworks from "../../../application/hooks/useFrameworks";
 import { handleAlert } from "../../../application/tools/alertUtils";
+import {
+  VENDOR_RISK_FORM_FIELD_IDS,
+  VENDOR_RISK_FORM_FIELD_ORDER,
+} from "../../constants/formValidationFieldMaps";
+import { focusFormFieldById } from "../../../application/utils/formValidationFocus";
 
 // Internal imports - types
 import { AlertProps } from "../../types/alert.types";
@@ -127,6 +132,8 @@ const AddNewVendorRiskForm: FC<RiskSectionProps> = ({ closePopup, onSuccess, pop
   const projectId = searchParams.get("projectId");
 
   const [values, setValues] = useState<FormValues>(INITIAL_FORM_STATE);
+  const valuesRef = useRef(values);
+  valuesRef.current = values;
   const [selectedFrameworks, setSelectedFrameworks] = useState<number[]>([]);
   const [errors, setErrors] = useState<FormErrors>({});
   const [alert, setAlert] = useState<AlertProps | null>(null);
@@ -200,62 +207,93 @@ const AddNewVendorRiskForm: FC<RiskSectionProps> = ({ closePopup, onSuccess, pop
     [],
   );
 
-  const validateForm = useCallback((): boolean => {
+  const buildFieldError = useCallback(
+    (prop: keyof FormValues, currentValues: FormValues): string => {
+      switch (prop) {
+        case "riskName": {
+          const result = checkStringValidation(
+            "Risk name",
+            currentValues.riskName,
+            VALIDATION_LIMITS.RISK_NAME.MIN,
+            VALIDATION_LIMITS.RISK_NAME.MAX,
+          );
+          return result.accepted ? "" : result.message;
+        }
+        case "riskDescription": {
+          const result = checkStringValidation(
+            "Risk description",
+            currentValues.riskDescription,
+            VALIDATION_LIMITS.DESCRIPTION.MIN,
+            VALIDATION_LIMITS.DESCRIPTION.MAX,
+          );
+          return result.accepted ? "" : result.message;
+        }
+        case "reviewDate": {
+          const result = checkStringValidation(
+            "Review date",
+            currentValues.reviewDate,
+            VALIDATION_LIMITS.REVIEW_DATE.MIN,
+          );
+          return result.accepted ? "" : result.message;
+        }
+        case "vendorName": {
+          const result = selectValidation("Vendor name", currentValues.vendorName);
+          return result.accepted ? "" : result.message;
+        }
+        case "actionOwner": {
+          const result = selectValidation("Action owner", currentValues.actionOwner);
+          return result.accepted ? "" : result.message;
+        }
+        default:
+          return "";
+      }
+    },
+    [],
+  );
+
+  const handleFieldBlur = useCallback(
+    (prop: keyof FormValues) => () => {
+      const error = buildFieldError(prop, valuesRef.current);
+      setErrors((prevErrors) => ({ ...prevErrors, [prop]: error }));
+    },
+    [buildFieldError],
+  );
+
+  const validateForm = useCallback((): {
+    valid: boolean;
+    errors: FormErrors;
+    firstInvalidField?: keyof FormValues;
+  } => {
     const newErrors: FormErrors = {};
 
-    // Risk name validation
-    const riskName = checkStringValidation(
-      "Risk name",
-      values.riskName,
-      VALIDATION_LIMITS.RISK_NAME.MIN,
-      VALIDATION_LIMITS.RISK_NAME.MAX,
-    );
-    if (!riskName.accepted) {
-      newErrors.riskName = riskName.message;
-    }
-
-    // Risk description validation
-    const riskDescription = checkStringValidation(
-      "Risk description",
-      values.riskDescription,
-      VALIDATION_LIMITS.DESCRIPTION.MIN,
-      VALIDATION_LIMITS.DESCRIPTION.MAX,
-    );
-    if (!riskDescription.accepted) {
-      newErrors.riskDescription = riskDescription.message;
-    }
-
-    // Review date validation
-    const reviewDate = checkStringValidation(
-      "Review date",
-      values.reviewDate,
-      VALIDATION_LIMITS.REVIEW_DATE.MIN,
-    );
-    if (!reviewDate.accepted) {
-      newErrors.reviewDate = reviewDate.message;
-    }
-
-    // Vendor name validation
-    const vendorName = selectValidation("Vendor name", values.vendorName);
-    if (!vendorName.accepted) {
-      newErrors.vendorName = vendorName.message;
-    }
-
-    // Action owner validation
-    const actionOwner = selectValidation("Action owner", values.actionOwner);
-    if (!actionOwner.accepted) {
-      newErrors.actionOwner = actionOwner.message;
+    for (const field of VENDOR_RISK_FORM_FIELD_ORDER) {
+      const error = buildFieldError(field, values);
+      if (error) {
+        newErrors[field] = error;
+      }
     }
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  }, [values]);
+    const firstInvalidField = VENDOR_RISK_FORM_FIELD_ORDER.find((field) => newErrors[field]);
+    return {
+      valid: Object.keys(newErrors).length === 0,
+      errors: newErrors,
+      firstInvalidField,
+    };
+  }, [buildFieldError, values]);
 
   const handleSubmit = useCallback(
     async (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault();
 
-      if (!validateForm()) {
+      const validation = validateForm();
+      if (!validation.valid) {
+        const fieldId = validation.firstInvalidField
+          ? VENDOR_RISK_FORM_FIELD_IDS[validation.firstInvalidField]
+          : undefined;
+        if (fieldId) {
+          focusFormFieldById(fieldId);
+        }
         return;
       }
 
@@ -452,6 +490,7 @@ const AddNewVendorRiskForm: FC<RiskSectionProps> = ({ closePopup, onSuccess, pop
             placeholder="Select vendor"
             value={values.vendorName === 0 ? "" : values.vendorName}
             onChange={handleOnSelectChange("vendorName")}
+            onBlur={handleFieldBlur("vendorName")}
             items={vendorOptions}
             sx={{
               width: { xs: "100%", md: FORM_CONFIG.FIELD_WIDTH },
@@ -467,6 +506,7 @@ const AddNewVendorRiskForm: FC<RiskSectionProps> = ({ closePopup, onSuccess, pop
             placeholder="Select owner"
             value={values.actionOwner === 0 ? "" : values.actionOwner}
             onChange={handleOnSelectChange("actionOwner")}
+            onBlur={handleFieldBlur("actionOwner")}
             items={userOptions}
             sx={{
               width: { xs: "100%", md: FORM_CONFIG.FIELD_WIDTH },
@@ -483,6 +523,7 @@ const AddNewVendorRiskForm: FC<RiskSectionProps> = ({ closePopup, onSuccess, pop
             width={FORM_CONFIG.FIELD_WIDTH}
             value={values.riskName}
             onChange={handleOnTextFieldChange("riskName")}
+            onBlur={handleFieldBlur("riskName")}
             error={errors.riskName}
             sx={{
               ...fieldStyle,
@@ -491,9 +532,11 @@ const AddNewVendorRiskForm: FC<RiskSectionProps> = ({ closePopup, onSuccess, pop
             isRequired
           />
           <DatePicker
+            id="vendor-review-date-input"
             label="Review date"
             date={values.reviewDate ? dayjs(values.reviewDate) : null}
             handleDateChange={handleDateChange}
+            onBlur={handleFieldBlur("reviewDate")}
             sx={{
               "width": { xs: "100%", md: FORM_CONFIG.DATE_PICKER_WIDTH },
               "& input": {
@@ -579,6 +622,7 @@ const AddNewVendorRiskForm: FC<RiskSectionProps> = ({ closePopup, onSuccess, pop
             type="description"
             value={values.riskDescription}
             onChange={handleOnTextFieldChange("riskDescription")}
+            onBlur={handleFieldBlur("riskDescription")}
             sx={{ backgroundColor: theme.palette.background.main }}
             isRequired
             error={errors.riskDescription}

@@ -33,7 +33,7 @@ export const getAllAutomationActionsByTriggerId = async (req: Request, res: Resp
     10,
   );
   if (isNaN(triggerId)) {
-    return res.status(400).json({ message: req.t!("Invalid trigger ID") });
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid trigger ID")));
   }
 
   try {
@@ -59,7 +59,7 @@ export const getAutomationById = async (req: Request, res: Response) => {
   const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
 
   if (isNaN(id)) {
-    return res.status(400).json({ message: req.t!("Invalid automation ID") });
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid automation ID")));
   }
 
   try {

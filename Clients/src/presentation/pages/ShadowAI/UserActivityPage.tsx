@@ -51,6 +51,7 @@ import {
   SortableTableHead,
 } from "./constants";
 import { palette } from "../../themes/palette";
+import { displayFormattedDate } from "../../tools/isoDateToString";
 
 interface UserDetailData {
   email: string;
@@ -360,7 +361,7 @@ export default function UserActivityPage() {
                           {t.event_count}
                         </TableCell>
                         <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                          {new Date(t.last_used).toLocaleDateString()}
+                          {displayFormattedDate(t.last_used)}
                         </TableCell>
                       </TableRow>
                     ))}

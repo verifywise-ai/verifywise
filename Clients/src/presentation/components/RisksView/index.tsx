@@ -28,6 +28,8 @@ const RisksView = ({
   headerContent,
   refreshTrigger,
   readOnly = false,
+  emptyMessage,
+  showEmptyTips = false,
 }: IRisksViewProps) => {
   const { users, loading: usersLoading } = useUsers();
   const { userRoleName } = useAuth();
@@ -332,6 +334,8 @@ const RisksView = ({
               flashRow={null}
               canRunBulkActions={canRunBulkActions}
               onBulkActionSuccess={() => setRefreshKey((k) => k + 1)}
+              emptyMessage={emptyMessage}
+              showEmptyTips={showEmptyTips}
             />
           )}
         </Stack>

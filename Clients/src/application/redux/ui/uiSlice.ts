@@ -6,6 +6,7 @@ export type AppModule =
   | "ai-detection"
   | "shadow-ai"
   | "ai-gateway"
+  | "ai-trust-index"
   | "super-admin";
 
 const initialState = {

@@ -46,6 +46,7 @@ import TablePaginationActions from "../../components/TablePagination";
 import GovernanceWizardModal from "./GovernanceWizardModal";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import Alert from "../../components/Alert";
+import { displayFormattedDate } from "../../tools/isoDateToString";
 import {
   SelectorVertical,
   SortableColumn,
@@ -322,7 +323,7 @@ export default function AIToolsPage() {
                 title="First detected"
                 count={
                   selectedTool.first_detected_at
-                    ? new Date(selectedTool.first_detected_at).toLocaleDateString()
+                    ? displayFormattedDate(selectedTool.first_detected_at)
                     : "—"
                 }
                 disableNavigation
@@ -330,9 +331,7 @@ export default function AIToolsPage() {
               <DashboardHeaderCard
                 title="Last seen"
                 count={
-                  selectedTool.last_seen_at
-                    ? new Date(selectedTool.last_seen_at).toLocaleDateString()
-                    : "—"
+                  selectedTool.last_seen_at ? displayFormattedDate(selectedTool.last_seen_at) : "—"
                 }
                 disableNavigation
               />
@@ -586,7 +585,7 @@ export default function AIToolsPage() {
                       {t.risk_score ?? 0}
                     </TableCell>
                     <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                      {t.last_seen_at ? new Date(t.last_seen_at).toLocaleDateString() : "—"}
+                      {t.last_seen_at ? displayFormattedDate(t.last_seen_at) : "—"}
                     </TableCell>
                   </TableRow>
                 );

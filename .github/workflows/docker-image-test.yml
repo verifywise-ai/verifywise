@@ -2,12 +2,17 @@ name: Build and Deploy to Testing
 
 on:
   schedule:
-    # Run every hour
-    - cron: '0 * * * *'
+    # Run nightly at 02:00 UTC
+    - cron: '0 2 * * *'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     environment: Build
 
     permissions:
@@ -16,7 +21,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           ref: develop
 
@@ -26,7 +31,7 @@ jobs:
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v4
         with:
-          registry: ghcr.io
+          registry: ghcr
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
@@ -38,7 +43,8 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/verifywise-frontend:test
-          no-cache: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
           build-args: |
             VITE_SLACK_CLIENT_ID=${{ secrets.SLACK_CLIENT_ID }}
             VITE_APP_VERSION=develop

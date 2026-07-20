@@ -33,6 +33,7 @@ import SearchBox from "../../../components/Search/SearchBox";
 import { EmptyState } from "../../../components/EmptyState";
 import Select from "../../../components/Inputs/Select";
 import singleTheme from "../../../themes/v1SingleTheme";
+import { displayFormattedDate } from "../../../tools/isoDateToString";
 import { getSelectStyles } from "../../../utils/inputStyles";
 
 const DeleteUserModal = ({
@@ -182,13 +183,7 @@ const EditUserModal = ({
             Joined
           </Typography>
           <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
-            {target
-              ? new Date(target.created_at).toLocaleDateString("en-US", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })
-              : "—"}
+            {target ? displayFormattedDate(target.created_at) : "—"}
           </Typography>
         </Stack>
         <Stack spacing={0.5}>
@@ -196,13 +191,7 @@ const EditUserModal = ({
             Last login
           </Typography>
           <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
-            {target?.last_login
-              ? new Date(target.last_login).toLocaleDateString("en-US", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })
-              : "Never"}
+            {target?.last_login ? displayFormattedDate(target.last_login) : "Never"}
           </Typography>
         </Stack>
         {error && <Typography sx={{ fontSize: 13, color: "#D32F2F" }}>{error}</Typography>}
@@ -629,11 +618,7 @@ const AllUsers = () => {
                       </Box>
                     </TableCell>
                     <TableCell sx={tableStyles.body.cell}>
-                      {new Date(user.created_at).toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "short",
-                        day: "numeric",
-                      })}
+                      {displayFormattedDate(user.created_at)}
                     </TableCell>
                     <TableCell sx={{ ...tableStyles.body.cell, textAlign: "right" }}>
                       <Button

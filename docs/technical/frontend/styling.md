@@ -10,11 +10,13 @@ VerifyWise uses Material-UI (MUI) v7 with Emotion for CSS-in-JS styling. The des
 Clients/src/presentation/
 ├── themes/
 │   ├── light.ts          # Main theme & MUI overrides
+│   ├── typography.ts     # Type scale + textStyles
+│   ├── palette.ts        # Semantic color tokens
 │   ├── components.ts     # Component style exports
 │   ├── mixins.ts         # Reusable style functions
 │   ├── alerts.ts         # Alert color definitions
 │   ├── tables.ts         # Table styling standards
-│   └── v1SingleTheme.ts  # Design constants
+│   └── v1SingleTheme.ts  # Legacy style bag (derives from tokens)
 ├── styles/
 │   └── colors.ts         # Dashboard color palette
 ├── App.css               # Global styles
@@ -111,31 +113,38 @@ grid: "#a2a3a3"
 
 ## Typography
 
+Source of truth: `Clients/src/presentation/themes/typography.ts`  
+Full reference: [Design Tokens — Typography](../guides/design-tokens.md#typography)
+
 ### Font Stack
 
 ```css
-font-family: "Geist", "Inter", system-ui, -apple-system,
+font-family: 'Geist', system-ui, -apple-system,
              BlinkMacSystemFont, Helvetica, Arial, sans-serif;
 ```
 
 ### Font Sizes
 
-| Size | Value | Usage |
-|------|-------|-------|
-| Base | 13px | Default text |
-| Small | 11px | Labels, captions |
-| Medium | 13px | Body text |
-| Large | 16px | Headings |
-| XLarge | 24px | Page titles |
+Allowed: **11, 12, 13, 14, 16, 18, 24** (`fontSize.caption` … `fontSize["2xl"]`).
+
+| Token | Value | Usage |
+|-------|-------|-------|
+| `caption` | 11px | Captions, errors |
+| `sm` | 12px | Secondary, badges |
+| `base` | 13px | Default UI / body |
+| `md` | 14px | Emphasized body |
+| `lg` / `xl` / `2xl` | 16 / 18 / 24 | Card / section / page titles |
+
+Prefer `textStyles.*` (e.g. `textStyles.body`, `textStyles.cardTitle`) over raw sizes.
 
 ### Font Weights
 
-| Weight | Value | Usage |
-|--------|-------|-------|
-| Normal | 400 | Body text |
-| Medium | 500 | Labels |
-| Semibold | 600 | Headings |
-| Bold | 700 | Emphasis |
+| Token | Value | Usage |
+|-------|-------|-------|
+| `regular` | 400 | Body text |
+| `medium` | 500 | Labels |
+| `semibold` | 600 | Headings |
+| `bold` | 700 | Emphasis |
 
 ### Text Styles (from colors.ts)
 
@@ -244,9 +253,9 @@ import { buttonMixins, cardMixins, layoutMixins } from "@/presentation/themes/mi
 <Box sx={layoutMixins.flexBetween()} />
 <Box sx={layoutMixins.container()} />
 
-// Typography styles
-<Typography sx={typographyMixins.pageTitle()} />
-<Typography sx={typographyMixins.cardDescription()} />
+// Typography styles (or import textStyles from themes/typography)
+<Typography sx={typographyMixins.pageTitle(theme)} />
+<Typography sx={typographyMixins.cardTitle(theme)} />
 
 // Status styles
 <Chip sx={statusMixins.success()} />
@@ -536,14 +545,16 @@ disableRipple  // Already disabled globally
 | Border radius | `4px` (buttons/cards), `2px` (inputs) |
 | Button height | `34px` (medium) |
 | Base spacing | `2px` multiplier |
-| Base font size | `13px` |
-| Font family | Geist, Inter, system |
+| Base font size | `13px` (`fontSize.base`) |
+| Font family | Geist + system (`fontFamily.sans`) |
 
 ## Key Files
 
 | File | Purpose |
 |------|---------|
 | `themes/light.ts` | Theme configuration, MUI overrides |
+| `themes/typography.ts` | Type scale + semantic textStyles |
+| `themes/palette.ts` | Semantic color tokens |
 | `themes/components.ts` | Component style exports |
 | `themes/mixins.ts` | Reusable style functions |
 | `themes/alerts.ts` | Alert color definitions |

@@ -1,14 +1,14 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Stack, Box, Skeleton, Typography } from "@mui/material";
-import { Plus, Bot, ShieldCheck, ScanSearch, ClipboardCheck } from "lucide-react";
+import { Stack, Box, Typography } from "@mui/material";
+import CustomizableSkeleton from "../../components/Skeletons";
+import { Plus } from "lucide-react";
 
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { SearchBox } from "../../components/Search";
 import Select from "../../components/Inputs/Select";
 import { EmptyState } from "../../components/EmptyState";
-import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import { useAiApps, useDeleteAiApp } from "../../../application/hooks/useAiApps";
 import { AiAppStatus } from "../../../domain/enums/aiApp.enum";
 import { IAIApp } from "../../../domain/interfaces/i.aiApp";
@@ -155,45 +155,19 @@ export default function AIApps() {
         </Box>
 
         {isLoading ? (
-          <Skeleton variant="rectangular" height={300} sx={{ borderRadius: "4px" }} />
+          <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
         ) : error ? (
           <EmptyState message="Failed to load AI apps. Please try again." showBorder />
-        ) : filteredApps.length === 0 ? (
-          <EmptyState
-            icon={Bot}
-            message={
-              hasNoApps
-                ? "This is your inventory of the AI apps your teams use. Record who owns each one and how it was found, then manage it from here. Add your first AI app to get started."
-                : "No AI apps match your search or filter criteria."
-            }
-            showBorder
-          >
-            {hasNoApps && (
-              <>
-                <EmptyStateTip
-                  icon={ScanSearch}
-                  title="Keep one list of every AI app"
-                  description="Record the AI tools your teams use, including shadow AI you promote from a discovered tool, with its owner, vendor and how you found it."
-                />
-                <EmptyStateTip
-                  icon={ShieldCheck}
-                  title="Map models, policies and data access"
-                  description="Link each app to the models it runs on, the policies that apply to it and the data types it is allowed to touch, so you have a clear record for every tool."
-                />
-                <EmptyStateTip
-                  icon={ClipboardCheck}
-                  title="Run approvals and risk assessments"
-                  description="Take an app from draft to approved, score its risk and assign the training people need before they use it."
-                />
-              </>
-            )}
-          </EmptyState>
         ) : (
           <AIAppsTable
             apps={filteredApps}
             onEditApp={handleEditApp}
             onViewApp={handleViewApp}
             onDeleteApp={handleRequestDelete}
+            emptyMessage={
+              hasNoApps ? undefined : "No AI apps match your search or filter criteria."
+            }
+            showEmptyTips={hasNoApps}
           />
         )}
 

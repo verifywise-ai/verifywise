@@ -12,7 +12,7 @@ export const validateTokenCreation = async (
     });
   }
 
-  const numberOfTokens = await getNumberOfApiTokensQuery(req.tenantId!);
+  const numberOfTokens = await getNumberOfApiTokensQuery(req.organizationId!);
   if (numberOfTokens >= 10) {
     return res.status(403).json({
       message: req.t!("Token limit reached. Maximum 10 tokens allowed."),

@@ -36,6 +36,7 @@ import CustomAxios from "../../../infrastructure/api/customAxios";
 import { getAllExperiments } from "../../../application/repository/deepEval.repository";
 import { palette } from "../../themes/palette";
 import singleTheme from "../../themes/v1SingleTheme";
+import { displayFormattedDateTime } from "../../tools/isoDateToString";
 
 interface ReportPageProps {
   projectId: string;
@@ -297,13 +298,7 @@ export default function ReportPage({
 
   const formatDate = (iso: string) => {
     try {
-      return new Date(iso).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      });
+      return displayFormattedDateTime(iso);
     } catch {
       return iso;
     }

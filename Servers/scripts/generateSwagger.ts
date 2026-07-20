@@ -1,104 +1,171 @@
 /**
  * Swagger/OpenAPI Generator
  *
- * Reads all route files, extracts endpoints, and generates an OpenAPI 3.0 YAML spec.
- * Run: npx ts-node scripts/generateSwagger.ts
+ * Reads all registered route files, extracts endpoints, and generates an OpenAPI 3.0 YAML spec.
+ * Run: npm run generate:swagger  (or: npx ts-node scripts/generateSwagger.ts)
  *
  * What it does:
- * 1. Reads index.ts to get the base path -> route file mapping
- * 2. Reads each route file to extract method, path, middleware, handler name
- * 3. Groups endpoints by tag (derived from base path)
- * 4. Outputs a complete OpenAPI 3.0 spec to swagger.generated.yaml
+ * 1. Parses app.ts to get the base path -> route file mapping.
+ * 2. Reads each route file to extract method, path, middleware, and handler name.
+ * 3. Infers bearerAuth security for routes protected by authenticateJWT / superAdminOnly.
+ * 4. Merges the discovered endpoints into the existing swagger.yaml, preserving rich
+ *    metadata (descriptions, request/response schemas, examples) for operations that
+ *    already exist.
+ * 5. Outputs the merged spec to Servers/swagger.yaml.
  */
 
 import * as fs from "fs";
 import * as path from "path";
+import YAML from "yamljs";
 
-interface Endpoint {
+const SERVERS_DIR = path.resolve(__dirname, "..");
+const APP_FILE = path.join(SERVERS_DIR, "app.ts");
+const ROUTES_DIR = path.join(SERVERS_DIR, "routes");
+const SWAGGER_FILE = path.join(SERVERS_DIR, "swagger.yaml");
+
+interface RawEndpoint {
   method: string;
-  path: string;
+  routePath: string;
   handlerName: string;
   auth: boolean;
   roles: string[];
+}
+
+export interface Endpoint extends RawEndpoint {
+  path: string;
+  openApiPath: string;
   tag: string;
   basePath: string;
   routeFile: string;
 }
 
-interface RouteMapping {
+interface RouteRegistration {
   basePath: string;
-  variableName: string;
+  importName: string;
+  isFactory: boolean;
+  line: number;
 }
 
-const SERVERS_DIR = path.resolve(__dirname, "..");
-const ROUTES_DIR = path.join(SERVERS_DIR, "routes");
-const INDEX_FILE = path.join(SERVERS_DIR, "index.ts");
-const OUTPUT_FILE = path.join(SERVERS_DIR, "swagger.generated.yaml");
+// ---------------------------------------------------------------------------
+// Parse app.ts for route registrations
+// ---------------------------------------------------------------------------
+export function parseAppFile(): RouteRegistration[] {
+  const content = fs.readFileSync(APP_FILE, "utf-8");
+  const lines = content.split("\n");
+  const registrations: RouteRegistration[] = [];
 
-// Step 1: Parse index.ts to get base path mappings
-function parseIndexFile(): RouteMapping[] {
-  const content = fs.readFileSync(INDEX_FILE, "utf-8");
-  const mappings: RouteMapping[] = [];
+  // Matches:
+  //   app.use("/api/users", userRoutes);
+  //   app.use("/api/deepeval", deepEvalRoutes());
+  //   app.use("/api/automations", automation);
+  const useRegex = /app\.use\s*\(\s*"([^"]+)"\s*,\s*(\w+)(?:\s*\(\s*\))?\s*\)/g;
 
-  const regex = /app\.use\("(\/api\/[^"]+)",\s*(\w+)(?:\(\))?\)/g;
-  let match;
-
-  while ((match = regex.exec(content)) !== null) {
-    mappings.push({
-      basePath: match[1],
-      variableName: match[2],
-    });
-  }
-
-  if (content.includes('app.get("/health"')) {
-    mappings.push({ basePath: "/health", variableName: "_inline_health" });
-  }
-
-  return mappings;
-}
-
-// Step 2: Parse a route file to extract endpoints
-function parseRouteFile(filePath: string): {
-  endpoints: Array<{
-    method: string;
-    routePath: string;
-    handlerName: string;
-    middlewares: string[];
-  }>;
-  routerLevelMiddlewares: string[];
-} {
-  const content = fs.readFileSync(filePath, "utf-8");
-  const endpoints: Array<{
-    method: string;
-    routePath: string;
-    handlerName: string;
-    middlewares: string[];
-  }> = [];
-
-  // Detect router-level middleware
-  const routerLevelMiddlewares: string[] = [];
-  const routerUseRegex = /router\.use\(([^)]+)\)/g;
-  let useMatch;
-  while ((useMatch = routerUseRegex.exec(content)) !== null) {
-    const args = useMatch[1];
-    if (args.includes("authenticateJWT")) routerLevelMiddlewares.push("authenticateJWT");
-    if (args.includes("superAdminOnly")) routerLevelMiddlewares.push("superAdminOnly");
-    if (args.includes("authorize")) {
-      const rolesMatch = args.match(/authorize\(\[([^\]]+)\]\)/);
-      if (rolesMatch) routerLevelMiddlewares.push("authorize([" + rolesMatch[1] + "])");
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    let match: RegExpExecArray | null;
+    while ((match = useRegex.exec(line)) !== null) {
+      registrations.push({
+        basePath: match[1],
+        importName: match[2],
+        isFactory: line.includes(`${match[2]}()`),
+        line: i + 1,
+      });
     }
   }
 
-  // Match router.method( ... ) including multi-line definitions
-  // Strategy: find each router.method( then manually balance parens to find the closing )
-  const routerCallRegex = /router\.(get|post|put|patch|delete)\s*\(/g;
-  let routerCallMatch;
+  // Inline health endpoint
+  if (content.includes('app.get("/health"')) {
+    registrations.push({
+      basePath: "/health",
+      importName: "_inline_health",
+      isFactory: false,
+      line: 0,
+    });
+  }
 
-  while ((routerCallMatch = routerCallRegex.exec(content)) !== null) {
-    const method = routerCallMatch[1];
-    const startIdx = routerCallMatch.index + routerCallMatch[0].length;
+  return registrations;
+}
 
-    // Balance parens to find the matching closing )
+// ---------------------------------------------------------------------------
+// Find the route file that corresponds to an import name in app.ts
+// ---------------------------------------------------------------------------
+export function findRouteFile(importName: string): string | null {
+  const content = fs.readFileSync(APP_FILE, "utf-8");
+  const importPathRegex = /from\s+"\.\/routes\/([^"]+)";/g;
+
+  const allImportLines = content
+    .split("\n")
+    .filter((line) => line.includes("import") && line.includes("./routes/"));
+
+  for (const line of allImportLines) {
+    if (line.includes(importName)) {
+      let fileRef: string | undefined;
+      let match: RegExpExecArray | null;
+      while ((match = importPathRegex.exec(line)) !== null) {
+        fileRef = match[1];
+      }
+      if (!fileRef) continue;
+      if (fileRef.endsWith(".js")) fileRef = fileRef.slice(0, -3);
+      const candidate = path.join(ROUTES_DIR, fileRef + ".ts");
+      if (fs.existsSync(candidate)) return candidate;
+    }
+  }
+
+  // Fallback: match import name against route file names
+  const possibleFiles = fs.readdirSync(ROUTES_DIR).filter((f) => f.endsWith(".route.ts"));
+  const normalizedImport = importName.toLowerCase().replace("routes", "");
+
+  for (const f of possibleFiles) {
+    const baseName = f.replace(".route.ts", "").toLowerCase();
+    if (normalizedImport.includes(baseName) || baseName.includes(normalizedImport)) {
+      return path.join(ROUTES_DIR, f);
+    }
+  }
+
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Remove single-line comments from route file content
+// ---------------------------------------------------------------------------
+function removeComments(content: string): string {
+  // Naive but sufficient for route files: strip // comments unless preceded by :
+  return content.replace(/(^|[^:])\/\/.*$/gm, "$1");
+}
+
+// ---------------------------------------------------------------------------
+// Parse a route file for endpoints
+// ---------------------------------------------------------------------------
+export function parseRouteFile(filePath: string): RawEndpoint[] {
+  const rawContent = fs.readFileSync(filePath, "utf-8");
+  const content = removeComments(rawContent);
+  const endpoints: RawEndpoint[] = [];
+
+  // Detect router-level auth middleware
+  let routerAuth = false;
+  let routerRoles: string[] = [];
+  const routerUseRegex = /router\.use\s*\(\s*([^)]+)\s*\)/g;
+  let useMatch: RegExpExecArray | null;
+
+  while ((useMatch = routerUseRegex.exec(content)) !== null) {
+    const args = useMatch[1];
+    if (args.includes("authenticateJWT") || args.includes("superAdminOnly")) {
+      routerAuth = true;
+    }
+    const authRoles = extractRoles(args);
+    for (const r of authRoles) {
+      if (!routerRoles.includes(r)) routerRoles.push(r);
+    }
+  }
+
+  const routeCallRegex = /router\.(get|post|put|patch|delete)\s*\(/g;
+  let routeMatch: RegExpExecArray | null;
+
+  while ((routeMatch = routeCallRegex.exec(content)) !== null) {
+    const method = routeMatch[1];
+    const startIdx = routeMatch.index + routeMatch[0].length;
+
+    // Balance parentheses to find the matching closing )
     let depth = 1;
     let endIdx = startIdx;
     while (endIdx < content.length && depth > 0) {
@@ -108,40 +175,17 @@ function parseRouteFile(filePath: string): {
     }
 
     const innerContent = content.substring(startIdx, endIdx - 1).trim();
-
-    // Extract path (first quoted string)
     const pathMatch = innerContent.match(/^"([^"]*)"/);
     if (!pathMatch) continue;
+
     const routePath = pathMatch[1];
     const argsStr = innerContent.substring(pathMatch[0].length);
 
-    // Split on commas that are NOT inside parentheses/brackets
-    const args: string[] = [];
-    let argDepth = 0;
-    let current = "";
-    for (const ch of argsStr) {
-      if (ch === "(" || ch === "[") argDepth++;
-      if (ch === ")" || ch === "]") argDepth--;
-      if (ch === "," && argDepth === 0) {
-        const trimmed = current.trim();
-        if (trimmed) args.push(trimmed);
-        current = "";
-      } else {
-        current += ch;
-      }
-    }
-    const lastTrimmed = current.trim();
-    if (lastTrimmed) args.push(lastTrimmed);
-
-    const middlewares: string[] = [];
-    let handlerName = "unknown";
-
-    // Known middleware patterns to skip
-    // Use word-boundary-aware matching for patterns that could be substrings of handler names
+    const args = splitArgs(argsStr);
     const middlewarePatterns = [
       "authenticateJWT",
-      "authorize",
       "superAdminOnly",
+      "authorize",
       "multer",
       "upload.",
       "express",
@@ -156,133 +200,143 @@ function parseRouteFile(filePath: string): {
       "cacheResponse",
     ];
 
-    // The last non-middleware argument is typically the handler.
-    // Process in reverse to find the handler first, then collect middlewares.
+    let auth = routerAuth;
+    let handlerName = "unknown";
+    const roles = [...routerRoles];
+
     for (let i = args.length - 1; i >= 0; i--) {
       const arg = args[i];
       const isMiddleware = middlewarePatterns.some((mw) => arg.includes(mw));
 
       if (isMiddleware) {
-        if (arg.includes("authenticateJWT")) middlewares.push("authenticateJWT");
-        if (arg.includes("authorize")) middlewares.push(arg);
-        if (arg.includes("superAdminOnly")) middlewares.push("superAdminOnly");
-        if (arg.includes("upload")) middlewares.push("fileUpload");
+        if (arg.includes("authenticateJWT") || arg.includes("superAdminOnly")) {
+          auth = true;
+        }
+        const argRoles = extractRoles(arg);
+        for (const r of argRoles) {
+          if (!roles.includes(r)) roles.push(r);
+        }
       } else if (handlerName === "unknown") {
-        // Try to identify the handler
-        if (/^[a-zA-Z_]\w*$/.test(arg)) {
-          // Simple identifier — this is the handler
+        if (/^[a-zA-Z_]\w*(?:\.[a-zA-Z_]\w*)*$/.test(arg)) {
           handlerName = arg;
         } else if (arg.includes("=>") || arg.includes("function")) {
-          // Inline/anonymous handler — try to derive name from route path
           handlerName = "anonymous";
         }
       }
     }
 
-    endpoints.push({ method, routePath, handlerName, middlewares });
+    endpoints.push({ method, routePath, handlerName, auth, roles });
   }
 
-  return { endpoints, routerLevelMiddlewares };
+  return endpoints;
 }
 
-// Step 3: Convert to full endpoint objects
-function buildEndpoints(): Endpoint[] {
-  const mappings = parseIndexFile();
-  const allEndpoints: Endpoint[] = [];
-  const indexContent = fs.readFileSync(INDEX_FILE, "utf-8");
+function splitArgs(argsStr: string): string[] {
+  const args: string[] = [];
+  let depth = 0;
+  let current = "";
 
-  for (const mapping of mappings) {
-    if (mapping.variableName === "_inline_health") {
-      allEndpoints.push({
+  for (const ch of argsStr) {
+    if (ch === "(" || ch === "[") depth++;
+    if (ch === ")" || ch === "]") depth--;
+    if (ch === "," && depth === 0) {
+      const trimmed = current.trim();
+      if (trimmed) args.push(trimmed);
+      current = "";
+    } else {
+      current += ch;
+    }
+  }
+
+  const lastTrimmed = current.trim();
+  if (lastTrimmed) args.push(lastTrimmed);
+
+  return args;
+}
+
+function extractRoles(args: string): string[] {
+  const roles: string[] = [];
+  const rolesMatch = args.match(/authorize\(\[([^\]]+)\]\)/);
+  if (rolesMatch) {
+    rolesMatch[1]
+      .split(",")
+      .map((r) => r.trim().replace(/"/g, ""))
+      .forEach((r) => {
+        if (r && !roles.includes(r)) roles.push(r);
+      });
+  }
+  if (args.includes("superAdminOnly") && !roles.includes("Super Admin")) {
+    roles.push("Super Admin");
+  }
+  return roles;
+}
+
+// ---------------------------------------------------------------------------
+// Build full endpoint inventory
+// ---------------------------------------------------------------------------
+export function buildEndpoints(): Endpoint[] {
+  const registrations = parseAppFile();
+  const endpoints: Endpoint[] = [];
+
+  for (const reg of registrations) {
+    if (reg.importName === "_inline_health") {
+      endpoints.push({
         method: "get",
-        path: "/health",
+        routePath: "/",
         handlerName: "healthCheck",
         auth: false,
         roles: [],
+        path: "/health",
+        openApiPath: "/health",
         tag: "System",
-        basePath: "",
-        routeFile: "index.ts",
+        basePath: "/health",
+        routeFile: "app.ts",
       });
       continue;
     }
 
-    // Find which file this variable imports from
-    let routeFilePath: string | null = null;
-    const importLines = indexContent.match(
-      new RegExp("(?:import|const).*" + mapping.variableName + '.*from.*"\\./routes/([^"]+)"'),
-    );
-
-    if (importLines) {
-      const fileRef = importLines[1];
-      routeFilePath = path.join(SERVERS_DIR, "routes", fileRef);
-      if (!routeFilePath.endsWith(".ts")) routeFilePath += ".ts";
-      routeFilePath = routeFilePath.replace(".js.ts", ".ts").replace(".js", ".ts");
-    }
-
+    const routeFilePath = findRouteFile(reg.importName);
     if (!routeFilePath || !fs.existsSync(routeFilePath)) {
-      // Try finding by variable name pattern
-      const possibleFiles = fs.readdirSync(ROUTES_DIR).filter((f) => f.endsWith(".route.ts"));
-      for (const f of possibleFiles) {
-        const baseName = f.replace(".route.ts", "");
-        if (
-          mapping.variableName.toLowerCase().includes(baseName.toLowerCase()) ||
-          baseName.toLowerCase().includes(mapping.variableName.toLowerCase().replace("routes", ""))
-        ) {
-          routeFilePath = path.join(ROUTES_DIR, f);
-          break;
-        }
-      }
-    }
-
-    if (!routeFilePath || !fs.existsSync(routeFilePath)) {
-      console.warn(
-        "  Could not find route file for: " + mapping.basePath + " (" + mapping.variableName + ")",
-      );
+      console.warn(`  Could not find route file for: ${reg.basePath} (${reg.importName})`);
       continue;
     }
 
-    const { endpoints, routerLevelMiddlewares } = parseRouteFile(routeFilePath);
-    const hasRouterAuth = routerLevelMiddlewares.includes("authenticateJWT");
-    const hasSuperAdmin = routerLevelMiddlewares.includes("superAdminOnly");
-    const tag = deriveTag(mapping.basePath);
+    const rawEndpoints = parseRouteFile(routeFilePath);
+    const tag = deriveTag(reg.basePath);
 
-    for (const ep of endpoints) {
-      const fullPath = mapping.basePath + ep.routePath;
-      const auth = hasRouterAuth || ep.middlewares.includes("authenticateJWT") || hasSuperAdmin;
+    for (const ep of rawEndpoints) {
+      const fullPath = reg.basePath + ep.routePath;
+      const openApiPath = expressPathToOpenApiPath(fullPath);
 
-      const roles: string[] = [];
-      if (hasSuperAdmin) roles.push("Super Admin");
-
-      const allMiddlewares = [...routerLevelMiddlewares, ...ep.middlewares];
-      for (const mw of allMiddlewares) {
-        const rolesMatch = mw.match(/authorize\(\[([^\]]+)\]\)/);
-        if (rolesMatch) {
-          rolesMatch[1]
-            .split(",")
-            .map((r: string) => r.trim().replace(/"/g, ""))
-            .forEach((r: string) => {
-              if (!roles.includes(r)) roles.push(r);
-            });
-        }
-      }
-
-      allEndpoints.push({
+      endpoints.push({
         method: ep.method,
-        path: fullPath,
+        routePath: ep.routePath,
         handlerName: ep.handlerName,
-        auth,
-        roles,
+        auth: ep.auth,
+        roles: ep.roles,
+        path: fullPath,
+        openApiPath,
         tag,
-        basePath: mapping.basePath,
-        routeFile: path.basename(routeFilePath!),
+        basePath: reg.basePath,
+        routeFile: path.basename(routeFilePath),
       });
     }
   }
 
-  return allEndpoints;
+  return endpoints;
 }
 
-function deriveTag(basePath: string): string {
+export function expressPathToOpenApiPath(expressPath: string): string {
+  let p = expressPath.replace(/^\/api/, "").replace(/\/:(\w+)/g, "/{$1}");
+
+  if (p.length > 1 && p.endsWith("/")) {
+    p = p.slice(0, -1);
+  }
+
+  return p || "/";
+}
+
+export function deriveTag(basePath: string): string {
   const tagMap: Record<string, string> = {
     "/api/users": "Users",
     "/api/projects": "Projects",
@@ -359,6 +413,17 @@ function deriveTag(basePath: string): string {
     "/api/quantitative-risks": "Quantitative Risks",
     "/api/risk-benchmarks": "Risk Benchmarks",
     "/api/riskHistory": "Risk History",
+    "/api/readiness": "Readiness",
+    "/api/ssoConfig": "SSO Config",
+    "/api/ai-approvals": "AI Approvals",
+    "/api/ai-approval-rules": "AI Approval Rules",
+    "/api/ai-apps": "AI Apps",
+    "/api/ai-audit": "AI Audit",
+    "/api/ai-content": "AI Content",
+    "/api/ai-confirmation": "AI Confirmation",
+    "/api/custom-fields": "Custom Fields",
+    "/api/evidence-ai": "Evidence AI",
+    "/api/governance-os": "Governance OS",
   };
 
   if (basePath.includes("change-history")) {
@@ -374,142 +439,6 @@ function deriveTag(basePath: string): string {
   );
 }
 
-// Step 4: Generate OpenAPI YAML
-function generateYaml(endpoints: Endpoint[]): string {
-  const lines: string[] = [];
-
-  lines.push("openapi: 3.0.0");
-  lines.push("info:");
-  lines.push("  title: VerifyWise API");
-  lines.push("  description: AI Governance Platform API");
-  lines.push("  version: 2.0.0");
-  lines.push("servers:");
-  lines.push("  - url: /api");
-  lines.push("    description: Main API server");
-  lines.push("");
-  lines.push("components:");
-  lines.push("  securitySchemes:");
-  lines.push("    bearerAuth:");
-  lines.push("      type: http");
-  lines.push("      scheme: bearer");
-  lines.push("      bearerFormat: JWT");
-  lines.push("  schemas:");
-  lines.push("    Error:");
-  lines.push("      type: object");
-  lines.push("      properties:");
-  lines.push("        data:");
-  lines.push("          type: string");
-  lines.push("");
-
-  const tags = [...new Set(endpoints.map((e) => e.tag))].sort();
-  lines.push("tags:");
-  for (const tag of tags) {
-    lines.push("  - name: " + tag);
-  }
-  lines.push("");
-
-  // Group by path (strip trailing slashes)
-  const pathMap = new Map<string, Endpoint[]>();
-  for (const ep of endpoints) {
-    let openApiPath = ep.path.replace(/\/:(\w+)/g, "/{$1}").replace(/^\/api/, "");
-
-    // Strip trailing slash (but keep "/" itself)
-    if (openApiPath.length > 1 && openApiPath.endsWith("/")) {
-      openApiPath = openApiPath.slice(0, -1);
-    }
-
-    if (!pathMap.has(openApiPath)) {
-      pathMap.set(openApiPath, []);
-    }
-    pathMap.get(openApiPath)!.push(ep);
-  }
-
-  const sortedPaths = [...pathMap.keys()].sort();
-  const usedOperationIds = new Set<string>();
-
-  lines.push("paths:");
-  for (const pathKey of sortedPaths) {
-    const eps = pathMap.get(pathKey)!;
-    lines.push("  " + pathKey + ":");
-
-    for (const ep of eps) {
-      const summary = humanizeHandlerName(ep.handlerName);
-
-      // Make operationId unique by prefixing with base path segment when needed
-      let operationId = ep.handlerName;
-      if (usedOperationIds.has(operationId)) {
-        const prefix = ep.basePath.replace("/api/", "").replace(/[^a-zA-Z0-9]/g, "_");
-        operationId = prefix + "_" + ep.handlerName;
-      }
-      usedOperationIds.add(operationId);
-
-      lines.push("    " + ep.method + ":");
-      lines.push("      tags:");
-      lines.push("        - " + ep.tag);
-      lines.push("      summary: " + summary);
-      lines.push("      operationId: " + operationId);
-
-      if (ep.auth) {
-        lines.push("      security:");
-        lines.push("        - bearerAuth: []");
-      }
-
-      if (ep.roles.length > 0) {
-        lines.push('      description: "Requires role: ' + ep.roles.join(" or ") + '"');
-      }
-
-      // Path parameters
-      const paramMatches = [...pathKey.matchAll(/\{(\w+)\}/g)];
-      if (paramMatches.length > 0) {
-        lines.push("      parameters:");
-        for (const param of paramMatches) {
-          lines.push("        - name: " + param[1]);
-          lines.push("          in: path");
-          lines.push("          required: true");
-          lines.push("          schema:");
-          const isId = param[1].toLowerCase().includes("id") || param[1] === "version";
-          lines.push("            type: " + (isId ? "integer" : "string"));
-        }
-      }
-
-      // Request body
-      if (["post", "put", "patch"].includes(ep.method)) {
-        lines.push("      requestBody:");
-        lines.push("        content:");
-        lines.push("          application/json:");
-        lines.push("            schema:");
-        lines.push("              type: object");
-      }
-
-      // Responses
-      lines.push("      responses:");
-      if (ep.method === "post") {
-        lines.push('        "201":');
-        lines.push("          description: Created successfully");
-      } else if (ep.method === "delete") {
-        lines.push('        "200":');
-        lines.push("          description: Deleted successfully");
-      } else {
-        lines.push('        "200":');
-        lines.push("          description: Success");
-      }
-
-      if (ep.auth) {
-        lines.push('        "401":');
-        lines.push("          description: Unauthorized");
-      }
-      if (ep.roles.length > 0) {
-        lines.push('        "403":');
-        lines.push("          description: Forbidden - insufficient role");
-      }
-      lines.push('        "500":');
-      lines.push("          description: Internal server error");
-    }
-  }
-
-  return lines.join("\n") + "\n";
-}
-
 function humanizeHandlerName(name: string): string {
   return name
     .replace(/([A-Z])/g, " $1")
@@ -517,38 +446,135 @@ function humanizeHandlerName(name: string): string {
     .trim();
 }
 
-// Main
-function main() {
-  console.log("Parsing index.ts for route mappings...");
-  const endpoints = buildEndpoints();
-  console.log("Found " + endpoints.length + " endpoints");
+// ---------------------------------------------------------------------------
+// Merge discovered endpoints into existing swagger.yaml
+// ---------------------------------------------------------------------------
+export function mergeSwagger(endpoints: Endpoint[], existing: any): any {
+  const doc = JSON.parse(JSON.stringify(existing));
 
-  const tags = [...new Set(endpoints.map((e) => e.tag))];
-  console.log("Tags: " + tags.length);
-  console.log(
-    "Methods: GET=" +
-      endpoints.filter((e) => e.method === "get").length +
-      ", POST=" +
-      endpoints.filter((e) => e.method === "post").length +
-      ", PUT=" +
-      endpoints.filter((e) => e.method === "put").length +
-      ", PATCH=" +
-      endpoints.filter((e) => e.method === "patch").length +
-      ", DELETE=" +
-      endpoints.filter((e) => e.method === "delete").length,
-  );
+  // Ensure top-level structure
+  doc.openapi = doc.openapi || "3.0.0";
+  doc.info = doc.info || { title: "VerifyWise API", version: "2.0.0" };
+  doc.paths = doc.paths || {};
+  doc.components = doc.components || {};
+  doc.components.securitySchemes = doc.components.securitySchemes || {
+    bearerAuth: { type: "http", scheme: "bearer", bearerFormat: "JWT" },
+  };
+
+  const existingPaths = doc.paths;
+  const newPaths: Record<string, Record<string, any>> = {};
+  const usedOperationIds = new Set<string>();
+  const allTags = new Set<string>();
+
+  for (const ep of endpoints) {
+    const method = ep.method.toLowerCase();
+    const openApiPath = ep.openApiPath;
+
+    if (!newPaths[openApiPath]) {
+      newPaths[openApiPath] = {};
+    }
+
+    const existingOp = existingPaths[openApiPath]?.[method];
+    let operation: any;
+
+    if (existingOp) {
+      // Preserve existing metadata but refresh tags, operationId, and security
+      operation = JSON.parse(JSON.stringify(existingOp));
+    } else {
+      // Create a minimal operation
+      operation = {
+        summary: humanizeHandlerName(ep.handlerName),
+        responses: {
+          "200": { description: "Success" },
+          "500": { description: "Internal server error" },
+        },
+      };
+    }
+
+    operation.tags = [ep.tag];
+
+    // Unique operationId
+    let operationId = ep.handlerName;
+    if (usedOperationIds.has(operationId)) {
+      const prefix = ep.basePath.replace("/api/", "").replace(/[^a-zA-Z0-9]/g, "_");
+      operationId = `${prefix}_${ep.handlerName}`;
+    }
+    operation.operationId = operationId;
+    usedOperationIds.add(operationId);
+
+    if (ep.auth) {
+      operation.security = [{ bearerAuth: [] }];
+    } else {
+      delete operation.security;
+    }
+
+    if (ep.roles.length > 0) {
+      operation.description = `Requires role: ${ep.roles.join(" or ")}`;
+    }
+
+    allTags.add(ep.tag);
+
+    newPaths[openApiPath][method] = operation;
+  }
+
+  // Preserve shared path-level parameters if any
+  for (const [p, methods] of Object.entries(existingPaths)) {
+    if (newPaths[p] && (methods as any).parameters) {
+      newPaths[p].parameters = (methods as any).parameters;
+    }
+  }
+
+  doc.paths = newPaths;
+
+  // Update tags list
+  doc.tags = [...allTags].sort().map((name) => ({ name }));
+
+  return doc;
+}
+
+// ---------------------------------------------------------------------------
+// Main
+// ---------------------------------------------------------------------------
+if (require.main === module) {
+  main();
+}
+
+function main() {
+  console.log("Parsing app.ts for route mappings...");
+  const endpoints = buildEndpoints();
+  console.log(`Found ${endpoints.length} endpoints`);
+
+  const methods = ["get", "post", "put", "patch", "delete"];
+  for (const m of methods) {
+    const count = endpoints.filter((e) => e.method === m).length;
+    console.log(`  ${m.toUpperCase()}: ${count}`);
+  }
 
   const unresolved = endpoints.filter((e) => e.handlerName === "unknown");
   if (unresolved.length > 0) {
-    console.warn("\nWarning: " + unresolved.length + " endpoints with unresolved handlers:");
-    unresolved.forEach((e) => console.warn("  " + e.method.toUpperCase() + " " + e.path));
+    console.warn(`\nWarning: ${unresolved.length} endpoints with unresolved handlers:`);
+    unresolved.forEach((e) => console.warn(`  ${e.method.toUpperCase()} ${e.path}`));
   }
 
-  console.log("\nGenerating OpenAPI YAML...");
-  const yaml = generateYaml(endpoints);
-  fs.writeFileSync(OUTPUT_FILE, yaml);
-  console.log("Written to " + OUTPUT_FILE);
-  console.log("Total paths: " + new Set(endpoints.map((e) => e.path)).size);
-}
+  console.log("\nLoading existing swagger.yaml...");
+  let existing: any;
+  if (fs.existsSync(SWAGGER_FILE)) {
+    existing = YAML.load(SWAGGER_FILE);
+  } else {
+    existing = {};
+  }
 
-main();
+  console.log("Merging endpoints into OpenAPI spec...");
+  const merged = mergeSwagger(endpoints, existing);
+
+  console.log("Writing swagger.yaml...");
+  fs.writeFileSync(SWAGGER_FILE, YAML.stringify(merged, 10, 2), "utf-8");
+  console.log(`Written to ${SWAGGER_FILE}`);
+
+  const pathCount = Object.keys(merged.paths).length;
+  let opCount = 0;
+  for (const methods of Object.values(merged.paths)) {
+    opCount += Object.keys(methods as any).length;
+  }
+  console.log(`Total paths: ${pathCount}, operations: ${opCount}`);
+}

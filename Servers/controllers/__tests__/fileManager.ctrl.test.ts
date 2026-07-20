@@ -9,7 +9,6 @@ jest.mock("../../repositories/file.repository", () => ({
   deleteFileById: jest.fn(),
   updateFileMetadata: jest.fn(),
   getFileWithMetadata: jest.fn(),
-  getHighlightedFiles: jest.fn(),
   getFilePreview: jest.fn(),
   getFileVersionHistory: jest.fn(),
   searchFilesByContent: jest.fn(),
@@ -70,7 +69,6 @@ import {
   getFilePreview,
   getFileVersionHistory as getFileVersionHistoryRepo,
   getFileWithMetadata,
-  getHighlightedFiles,
   getOrganizationFiles,
   getOrganizationFilesWithMetadata,
   searchFilesByContent,
@@ -93,7 +91,6 @@ import {
   downloadFile,
   getFileMetadata,
   getFileVersionHistory,
-  getHighlighted,
   listFiles,
   listFilesWithMetadata,
   previewFile,
@@ -114,7 +111,6 @@ const mockGetOrgFilesMeta = getOrganizationFilesWithMetadata as jest.MockedFunct
 const mockDeleteFile = deleteFileById as jest.MockedFunction<typeof deleteFileById>;
 const mockUpdateMeta = updateFileMetadata as jest.MockedFunction<typeof updateFileMetadata>;
 const mockGetFileMeta = getFileWithMetadata as jest.MockedFunction<typeof getFileWithMetadata>;
-const mockGetHighlighted = getHighlightedFiles as jest.MockedFunction<typeof getHighlightedFiles>;
 const mockGetPreview = getFilePreview as jest.MockedFunction<typeof getFilePreview>;
 const mockGetVersions = getFileVersionHistoryRepo as jest.MockedFunction<
   typeof getFileVersionHistoryRepo
@@ -142,7 +138,6 @@ function createReq(overrides?: Record<string, any>): any {
     userId: 1,
     organizationId: 1,
     role: "Admin",
-    tenantId: "t1",
     t: (k: string) => k,
     body: {},
     params: {},
@@ -780,35 +775,6 @@ describe("fileManager.ctrl", () => {
     });
   });
 
-  describe("getHighlighted", () => {
-    it("should return 400 when userId is invalid", async () => {
-      const req = createReq({ userId: undefined });
-      const res = createRes();
-      await getHighlighted(req, res);
-      expect(res.status).toHaveBeenCalledWith(400);
-    });
-
-    it("should return 200 with highlighted files", async () => {
-      mockGetHighlighted.mockResolvedValue({
-        dueForUpdate: [],
-        pendingApproval: [],
-        recentlyModified: [],
-      });
-      const req = createReq();
-      const res = createRes();
-      await getHighlighted(req, res);
-      expect(res.status).toHaveBeenCalledWith(200);
-    });
-
-    it("should return 500 on error", async () => {
-      mockGetHighlighted.mockRejectedValue(new Error("DB error"));
-      const req = createReq();
-      const res = createRes();
-      await getHighlighted(req, res);
-      expect(res.status).toHaveBeenCalledWith(500);
-    });
-  });
-
   describe("previewFile", () => {
     it("should return 400 for invalid file ID", async () => {
       const req = createReq({ params: { id: "abc" } });
@@ -909,7 +875,7 @@ describe("fileManager.ctrl", () => {
 
     it("should return 200 with versions when file_group_id exists", async () => {
       mockGetFileMeta.mockResolvedValue(makeDbFile({ file_group_id: 10 }) as any);
-      mockGetVersions.mockResolvedValue([makeDbFile()]);
+      mockGetVersions.mockResolvedValue({ versions: [makeDbFile()], total: 1 } as any);
       const req = createReq({ params: { id: "1" } });
       const res = createRes();
       await getFileVersionHistory(req, res);

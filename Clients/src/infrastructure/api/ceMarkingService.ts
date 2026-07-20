@@ -4,8 +4,43 @@ import {
   LinkedResourcesUpdatePayload,
 } from "../../domain/types/ceMarking";
 import CustomAxios from "./customAxios";
+import type { ApiSuccessEnvelope } from "./api.types";
 
 const CE_MARKING_API = `/ce-marking`;
+
+/** Payload shapes accepted by the CE Marking update endpoint. */
+type CEMarkingUpdatePayload =
+  | Partial<CEMarkingData>
+  | ConformityStepsUpdatePayload
+  | LinkedResourcesUpdatePayload;
+
+/** Policy option returned by the linkable-policies lookup. */
+export interface CEMarkingPolicyOption {
+  id: number;
+  title: string;
+  status: string;
+  tags?: string[];
+}
+
+/** Evidence/file option returned by the linkable-evidence lookup. */
+export interface CEMarkingEvidenceOption {
+  id: number;
+  filename: string;
+  source: string;
+  project_title?: string;
+  uploaded_time?: string;
+}
+
+/** Incident option returned by the linkable-incidents lookup. */
+export interface CEMarkingIncidentOption {
+  id: number;
+  incident_id?: string;
+  type: string;
+  severity: string;
+  status: string;
+  occurred_date?: string;
+  description?: string;
+}
 
 /**
  * CE Marking API Service
@@ -23,7 +58,7 @@ export const ceMarkingService = {
   /**
    * Update CE Marking data for a project
    */
-  async updateCEMarking(projectId: string, data: Partial<CEMarkingData>): Promise<CEMarkingData> {
+  async updateCEMarking(projectId: string, data: CEMarkingUpdatePayload): Promise<CEMarkingData> {
     const response = await CustomAxios.put<CEMarkingData>(`${CE_MARKING_API}/${projectId}`, data);
     return response.data;
   },
@@ -54,7 +89,7 @@ export const ceMarkingService = {
       ],
     };
 
-    return await this.updateCEMarking(projectId, updateData as any);
+    return await this.updateCEMarking(projectId, updateData);
   },
 
   /**
@@ -104,11 +139,13 @@ export const ceMarkingService = {
   /**
    * Get all available policies
    */
-  async getAllPolicies(): Promise<any[]> {
-    const response = await CustomAxios.get("/policies");
+  async getAllPolicies(): Promise<CEMarkingPolicyOption[]> {
+    const response = await CustomAxios.get<
+      ApiSuccessEnvelope<CEMarkingPolicyOption[]> | CEMarkingPolicyOption[]
+    >("/policies");
     // The policies API returns { message: "OK", data: [...] }
     // Extract the data array from the wrapped response
-    if (response.data && response.data.data) {
+    if (!Array.isArray(response.data) && response.data?.data) {
       return response.data.data;
     }
     // Fallback in case the response format is different
@@ -118,8 +155,10 @@ export const ceMarkingService = {
   /**
    * Get all available evidence/files
    */
-  async getAllEvidences(): Promise<any[]> {
-    const response = await CustomAxios.get("/files");
+  async getAllEvidences(): Promise<CEMarkingEvidenceOption[]> {
+    const response = await CustomAxios.get<
+      ApiSuccessEnvelope<CEMarkingEvidenceOption[]> | CEMarkingEvidenceOption[]
+    >("/files");
     // The files API returns the array directly (not wrapped)
     return Array.isArray(response.data) ? response.data : response.data?.data || [];
   },
@@ -149,10 +188,12 @@ export const ceMarkingService = {
   /**
    * Get all available incidents
    */
-  async getAllIncidents(): Promise<any[]> {
-    const response = await CustomAxios.get("/ai-incident-managements");
+  async getAllIncidents(): Promise<CEMarkingIncidentOption[]> {
+    const response = await CustomAxios.get<
+      ApiSuccessEnvelope<CEMarkingIncidentOption[]> | CEMarkingIncidentOption[]
+    >("/ai-incident-managements");
     // The incidents API returns { message: "OK", data: [...] }
-    if (response.data && response.data.data) {
+    if (!Array.isArray(response.data) && response.data?.data) {
       return response.data.data;
     }
     // Fallback in case the response format is different

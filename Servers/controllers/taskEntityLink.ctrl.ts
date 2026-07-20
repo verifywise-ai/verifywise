@@ -26,14 +26,14 @@ export async function addTaskEntityLink(req: Request, res: Response): Promise<an
     functionName: "addTaskEntityLink",
     fileName: "taskEntityLink.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   const transaction = await sequelize.transaction();
   try {
     const { userId, role } = req;
     if (!userId || !role) {
-      return res.status(401).json({ message: req.t!("Unauthorized") });
+      return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
 
     const { entity_id, entity_type, entity_name } = req.body;
@@ -115,7 +115,7 @@ export async function addTaskEntityLink(req: Request, res: Response): Promise<an
       functionName: "addTaskEntityLink",
       fileName: "taskEntityLink.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(201).json(STATUS_CODE[201](link));
@@ -129,7 +129,7 @@ export async function addTaskEntityLink(req: Request, res: Response): Promise<an
       fileName: "taskEntityLink.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
@@ -148,13 +148,13 @@ export async function getTaskEntityLinks(req: Request, res: Response): Promise<a
     functionName: "getTaskEntityLinks",
     fileName: "taskEntityLink.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
     const { userId, role } = req;
     if (!userId || !role) {
-      return res.status(401).json({ message: req.t!("Unauthorized") });
+      return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
 
     // Check if task exists
@@ -172,7 +172,7 @@ export async function getTaskEntityLinks(req: Request, res: Response): Promise<a
       functionName: "getTaskEntityLinks",
       fileName: "taskEntityLink.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(200).json(STATUS_CODE[200](links));
@@ -184,7 +184,7 @@ export async function getTaskEntityLinks(req: Request, res: Response): Promise<a
       fileName: "taskEntityLink.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
@@ -206,14 +206,14 @@ export async function removeTaskEntityLink(req: Request, res: Response): Promise
     functionName: "removeTaskEntityLink",
     fileName: "taskEntityLink.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   const transaction = await sequelize.transaction();
   try {
     const { userId, role } = req;
     if (!userId || !role) {
-      return res.status(401).json({ message: req.t!("Unauthorized") });
+      return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
 
     // Check if task exists
@@ -244,7 +244,7 @@ export async function removeTaskEntityLink(req: Request, res: Response): Promise
       functionName: "removeTaskEntityLink",
       fileName: "taskEntityLink.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res
@@ -260,7 +260,7 @@ export async function removeTaskEntityLink(req: Request, res: Response): Promise
       fileName: "taskEntityLink.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));

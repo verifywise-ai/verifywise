@@ -75,6 +75,10 @@ export interface IVWProjectRisksTable {
   canRunBulkActions?: boolean;
   /** Called after a successful bulk action so the parent can refetch and surface a notification. */
   onBulkActionSuccess?: (action: "set_owner" | "set_category" | "archive", count: number) => void;
+  /** Custom empty-state message (e.g. framework vs use-case risks). */
+  emptyMessage?: string;
+  /** Show contextual EmptyStateTip blocks below the empty message. */
+  showEmptyTips?: boolean;
 }
 
 /**
@@ -121,4 +125,8 @@ export interface IRisksViewProps {
   refreshTrigger?: number;
   // When true, hides edit/delete actions and shows guidance to use centralized risk management
   readOnly?: boolean;
+  /** Custom empty-state message for the risks table. */
+  emptyMessage?: string;
+  /** Show contextual tips in the risks table empty state. */
+  showEmptyTips?: boolean;
 }

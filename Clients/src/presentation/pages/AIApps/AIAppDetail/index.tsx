@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Box, Skeleton, Stack } from "@mui/material";
+import { Box, Stack } from "@mui/material";
+import CustomizableSkeleton from "../../../components/Skeletons";
 import { Bot } from "lucide-react";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
 import { EmptyState } from "../../../components/EmptyState";
@@ -54,7 +55,7 @@ export default function AIAppDetail() {
   if (isLoading) {
     return (
       <PageHeaderExtended title="AI app details" description="Approval center and governance">
-        <Skeleton variant="rectangular" height={400} sx={{ borderRadius: "4px" }} />
+        <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
       </PageHeaderExtended>
     );
   }

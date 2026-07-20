@@ -12,6 +12,15 @@ dotenv.config({ quiet: true });
  *   3. Backend running: cd Servers && npm run watch
  *   4. Frontend dev server started automatically via webServer block below
  */
+
+const CRITICAL_PATH_SPECS = /(use-cases|risk-management|tasks|critical-journey)\.spec\.ts/;
+const SUPER_ADMIN_SPECS = /super-admin\.spec\.ts/;
+const ACCESSIBILITY_SPECS = /(^|\/)(dashboard|model-inventory|vendors|policies)\.spec\.ts/;
+
+// When Playwright's bundled Chromium is not available (e.g. restricted CDN),
+// set PLAYWRIGHT_USE_SYSTEM_CHROME=1 to use the locally installed Google Chrome.
+const browserChannel = process.env.PLAYWRIGHT_USE_SYSTEM_CHROME ? "chrome" : undefined;
+
 export default defineConfig({
   testDir: "./e2e",
   fullyParallel: false, // Run sequentially — tests may depend on DB state
@@ -36,6 +45,10 @@ export default defineConfig({
     {
       name: "setup",
       testMatch: /global\.setup\.ts/,
+      use: {
+        ...devices["Desktop Chrome"],
+        channel: browserChannel,
+      },
     },
     // Main tests: auth tests run without stored auth state
     {
@@ -43,13 +56,36 @@ export default defineConfig({
       testMatch: /auth\.spec\.ts/,
       use: { ...devices["Desktop Chrome"] },
     },
-    // Authenticated tests: reuse the stored auth state (no repeated logins)
+    // Super-admin tests: reuse the stored super-admin auth state
     {
       name: "chromium",
-      testIgnore: /auth\.spec\.ts|global\.setup\.ts/,
+      testMatch: SUPER_ADMIN_SPECS,
       dependencies: ["setup"],
       use: {
         ...devices["Desktop Chrome"],
+        channel: browserChannel,
+        storageState: "e2e/.auth/user.json",
+      },
+    },
+    // Critical-journey tests: reuse the stored admin auth state
+    {
+      name: "admin",
+      testMatch: CRITICAL_PATH_SPECS,
+      dependencies: ["setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        channel: browserChannel,
+        storageState: "e2e/.auth/admin.json",
+      },
+    },
+    // Accessibility tests: scan key pages for critical/serious a11y violations
+    {
+      name: "accessibility",
+      testMatch: ACCESSIBILITY_SPECS,
+      dependencies: ["setup"],
+      use: {
+        ...devices["Desktop Chrome"],
+        channel: browserChannel,
         storageState: "e2e/.auth/user.json",
       },
     },

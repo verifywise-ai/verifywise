@@ -6,6 +6,8 @@ export class ApiTokenModel {
   created_at!: string;
   created_by!: number;
   is_demo?: boolean;
+  revoked?: boolean;
+  last_used_at?: string | null;
 
   constructor(data: ApiTokenModel) {
     this.id = data.id;
@@ -15,6 +17,8 @@ export class ApiTokenModel {
     this.created_at = data.created_at;
     this.created_by = data.created_by;
     this.is_demo = data.is_demo;
+    this.revoked = data.revoked;
+    this.last_used_at = data.last_used_at;
   }
 
   static createNewApiToken(data: ApiTokenModel): ApiTokenModel {
@@ -48,15 +52,31 @@ export class ApiTokenModel {
     });
   }
 
-  getStatus(): "Active" | "Expired" {
+  isRevoked(): boolean {
+    return this.revoked === true;
+  }
+
+  getStatus(): "Active" | "Expired" | "Revoked" {
+    if (this.isRevoked()) return "Revoked";
     return this.isExpired() ? "Expired" : "Active";
   }
 
   getStatusColor(): string {
+    if (this.isRevoked()) return "#f2f4f7";
     return this.isExpired() ? "#ffebee" : "#c8e6c9";
   }
 
   getStatusTextColor(): string {
+    if (this.isRevoked()) return "#667085";
     return this.isExpired() ? "#d32f2f" : "#388e3c";
+  }
+
+  getFormattedLastUsed(): string {
+    if (!this.last_used_at) return "Never";
+    return new Date(this.last_used_at).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
   }
 }

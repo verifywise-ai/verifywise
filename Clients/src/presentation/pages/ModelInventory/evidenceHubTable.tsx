@@ -41,6 +41,7 @@ import { User } from "../../../domain/types/User";
 import { getAllEntities } from "../../../application/repository/entity.repository";
 import { EmptyState } from "../../components/EmptyState";
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
+import { TableEmptyStateLayout } from "../../components/Table/TableEmptyStateLayout";
 import { FileIcon } from "../../components/FileIcon";
 import EvidenceQualityBadge from "../../components/EvidenceQualityBadge";
 import EvidenceAnalysisPanel from "../../components/EvidenceAnalysisPanel";
@@ -413,300 +414,281 @@ const EvidenceHubTable: React.FC<EvidenceHubTableProps> = ({
     return `${start} - ${end}`;
   }, [page, rowsPerPage, sortedData?.length]);
 
+  const tableHeader = useMemo(
+    () => (
+      <SortableTableHead
+        columns={visibleTableColumns}
+        sortConfig={sortConfig}
+        onSort={handleSort}
+        theme={theme}
+      />
+    ),
+    [visibleTableColumns, sortConfig, handleSort, theme],
+  );
+
   const tableBody = useMemo(
     () => (
       <TableBody>
-        {sortedData?.length ? (
-          sortedData
-            .slice(
-              hidePagination ? 0 : page * rowsPerPage,
-              hidePagination ? Math.min(sortedData.length, 100) : page * rowsPerPage + rowsPerPage,
-            )
-            .map((evidence) => (
-              <TableRow
-                key={evidence.id}
-                sx={{
-                  ...singleTheme.tableStyles.primary.body.row,
-                  ...tableRowHoverStyle,
-                  ...(deletingId === evidence.id && tableRowDeletingStyle),
-                }}
-                // onClick={(e) => {
-                //   e.stopPropagation();
-                //   onEdit?.(Number(evidence.id));
-                // }}
-              >
-                {isColVisible("evidence_name") && (
-                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                    <Stack direction="column" spacing={0.5}>
+        {sortedData
+          ?.slice(
+            hidePagination ? 0 : page * rowsPerPage,
+            hidePagination ? Math.min(sortedData.length, 100) : page * rowsPerPage + rowsPerPage,
+          )
+          .map((evidence) => (
+            <TableRow
+              key={evidence.id}
+              sx={{
+                ...singleTheme.tableStyles.primary.body.row,
+                ...tableRowHoverStyle,
+                ...(deletingId === evidence.id && tableRowDeletingStyle),
+              }}
+              // onClick={(e) => {
+              //   e.stopPropagation();
+              //   onEdit?.(Number(evidence.id));
+              // }}
+            >
+              {isColVisible("evidence_name") && (
+                <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                  <Stack direction="column" spacing={0.5}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "8px",
+                      }}
+                    >
+                      <FileIcon
+                        fileName={
+                          evidence.evidence_files && evidence.evidence_files.length > 0
+                            ? ((evidence.evidence_files[0] as any).filename ??
+                              (evidence.evidence_files[0] as any).fileName ??
+                              "")
+                            : ""
+                        }
+                      />
+                      {evidence.evidence_name}
+                    </Box>
+                    {evidence.evidence_files && evidence.evidence_files.length > 1 && (
                       <Box
                         sx={{
                           display: "flex",
-                          alignItems: "center",
-                          gap: "8px",
+                          flexWrap: "wrap",
+                          gap: "4px",
+                          pl: "24px",
                         }}
                       >
-                        <FileIcon
-                          fileName={
-                            evidence.evidence_files && evidence.evidence_files.length > 0
-                              ? ((evidence.evidence_files[0] as any).filename ??
-                                (evidence.evidence_files[0] as any).fileName ??
-                                "")
-                              : ""
-                          }
-                        />
-                        {evidence.evidence_name}
+                        {evidence.evidence_files.map((f: any, idx: number) => {
+                          const name = f.filename ?? f.fileName ?? `File ${idx + 1}`;
+                          return (
+                            <Tooltip key={`${f.id}-${idx}`} title={`Preview ${name}`}>
+                              <Chip
+                                label={name}
+                                size="small"
+                                clickable
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onPreview?.(evidence.id || 0, idx);
+                                }}
+                                sx={{
+                                  "height": 20,
+                                  "fontSize": 11,
+                                  "maxWidth": 180,
+                                  "& .MuiChip-label": {
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                  },
+                                }}
+                              />
+                            </Tooltip>
+                          );
+                        })}
                       </Box>
-                      {evidence.evidence_files && evidence.evidence_files.length > 1 && (
-                        <Box
-                          sx={{
-                            display: "flex",
-                            flexWrap: "wrap",
-                            gap: "4px",
-                            pl: "24px",
-                          }}
-                        >
-                          {evidence.evidence_files.map((f: any, idx: number) => {
-                            const name = f.filename ?? f.fileName ?? `File ${idx + 1}`;
-                            return (
-                              <Tooltip key={`${f.id}-${idx}`} title={`Preview ${name}`}>
-                                <Chip
-                                  label={name}
-                                  size="small"
-                                  clickable
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    onPreview?.(evidence.id || 0, idx);
-                                  }}
-                                  sx={{
-                                    "height": 20,
-                                    "fontSize": 11,
-                                    "maxWidth": 180,
-                                    "& .MuiChip-label": {
-                                      overflow: "hidden",
-                                      textOverflow: "ellipsis",
-                                    },
-                                  }}
-                                />
-                              </Tooltip>
-                            );
-                          })}
-                        </Box>
-                      )}
-                    </Stack>
-                  </TableCell>
-                )}
-                {isColVisible("evidence_type") && (
-                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                    <TooltipCell value={evidence.evidence_type} />
-                  </TableCell>
-                )}
-                {isColVisible("mapped_models") && (
-                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                    <TooltipCell
-                      value={
-                        evidence.mapped_model_ids?.length
-                          ? evidence.mapped_model_ids
-                              .map((id) => modelMap.get(id) || `Model ${id}`)
-                              .join(", ")
-                          : "-"
-                      }
-                    />
-                  </TableCell>
-                )}
-                {isColVisible("mapped_trainings") && (
-                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                    <TooltipCell
-                      value={
-                        evidence.mapped_training_ids?.length
-                          ? evidence.mapped_training_ids
-                              .map((id) => trainingMap.get(id) || `Training ${id}`)
-                              .join(", ")
-                          : "-"
-                      }
-                    />
-                  </TableCell>
-                )}
-                {isColVisible("tags") && (
-                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                    {evidence.tags && evidence.tags.length > 0 ? (
-                      <Box sx={{ display: "flex", flexWrap: "wrap", gap: "2px" }}>
-                        {evidence.tags.slice(0, 2).map((tag) => (
+                    )}
+                  </Stack>
+                </TableCell>
+              )}
+              {isColVisible("evidence_type") && (
+                <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                  <TooltipCell value={evidence.evidence_type} />
+                </TableCell>
+              )}
+              {isColVisible("mapped_models") && (
+                <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                  <TooltipCell
+                    value={
+                      evidence.mapped_model_ids?.length
+                        ? evidence.mapped_model_ids
+                            .map((id) => modelMap.get(id) || `Model ${id}`)
+                            .join(", ")
+                        : "-"
+                    }
+                  />
+                </TableCell>
+              )}
+              {isColVisible("mapped_trainings") && (
+                <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                  <TooltipCell
+                    value={
+                      evidence.mapped_training_ids?.length
+                        ? evidence.mapped_training_ids
+                            .map((id) => trainingMap.get(id) || `Training ${id}`)
+                            .join(", ")
+                        : "-"
+                    }
+                  />
+                </TableCell>
+              )}
+              {isColVisible("tags") && (
+                <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                  {evidence.tags && evidence.tags.length > 0 ? (
+                    <Box sx={{ display: "flex", flexWrap: "wrap", gap: "2px" }}>
+                      {evidence.tags.slice(0, 2).map((tag) => (
+                        <Chip
+                          key={tag}
+                          label={tag}
+                          size="small"
+                          sx={{ height: 20, fontSize: 11 }}
+                        />
+                      ))}
+                      {evidence.tags.length > 2 && (
+                        <Tooltip title={evidence.tags.slice(2).join(", ")}>
                           <Chip
-                            key={tag}
-                            label={tag}
+                            label={`+${evidence.tags.length - 2}`}
                             size="small"
                             sx={{ height: 20, fontSize: 11 }}
                           />
-                        ))}
-                        {evidence.tags.length > 2 && (
-                          <Tooltip title={evidence.tags.slice(2).join(", ")}>
-                            <Chip
-                              label={`+${evidence.tags.length - 2}`}
-                              size="small"
-                              sx={{ height: 20, fontSize: 11 }}
-                            />
-                          </Tooltip>
-                        )}
-                      </Box>
-                    ) : (
-                      "-"
-                    )}
-                  </TableCell>
-                )}
-                {isColVisible("frameworks") && (
-                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                    {evidence.framework_ids && evidence.framework_ids.length > 0 ? (
-                      <TooltipCell value={evidence.framework_ids.join(", ")} />
-                    ) : (
-                      "-"
-                    )}
-                  </TableCell>
-                )}
-                {isColVisible("reviewer") && (
-                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                    {evidence.reviewer_id
-                      ? userMap.get(evidence.reviewer_id.toString()) || "-"
-                      : "-"}
-                  </TableCell>
-                )}
-                {isColVisible("retention_policy") && (
-                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                    {evidence.retention_policy ? evidence.retention_policy.replace(/_/g, " ") : "-"}
-                  </TableCell>
-                )}
-                {isColVisible("uploaded_by") && (
-                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                    <TooltipCell
-                      value={
-                        evidence.evidence_files && evidence.evidence_files.length > 0
-                          ? userMap.get(evidence.evidence_files[0].uploaded_by.toString()) || "-"
-                          : "-"
-                      }
-                    />
-                  </TableCell>
-                )}
-                {isColVisible("uploaded_on") && (
-                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                    {(() => {
-                      const f = evidence.evidence_files?.[0] as any;
-                      const d = f?.upload_date ?? f?.uploaded_time;
-                      return d ? displayFormattedDate(d) : "-";
-                    })()}
-                  </TableCell>
-                )}
-                {isColVisible("expiry_date") && (
-                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                    {evidence.expiry_date ? displayFormattedDate(evidence.expiry_date) : "-"}
-                  </TableCell>
-                )}
-                {isColVisible("quality") && (
-                  <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                    {(() => {
-                      const fileId = evidence.evidence_files?.[0]?.id;
-                      const score = fileId ? qualityMap.get(Number(fileId)) : undefined;
-                      const analysis = fileId ? qualityAnalysisMap.get(Number(fileId)) : undefined;
-                      return score != null ? (
-                        <EvidenceQualityBadge
-                          score={score}
-                          onClick={
-                            analysis
-                              ? (e) => {
-                                  e.stopPropagation();
-                                  setSelectedAnalysis(analysis);
-                                }
-                              : undefined
-                          }
-                        />
-                      ) : (
-                        <Typography sx={{ fontSize: 11, color: palette.text.disabled }}>
-                          -
-                        </Typography>
-                      );
-                    })()}
-                  </TableCell>
-                )}
-                <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                  <Stack direction="row" spacing={1}>
-                    {evidence.evidence_files?.[0]?.id && (
-                      <Tooltip
-                        title={
-                          qualityMap.has(Number(evidence.evidence_files[0].id))
-                            ? "Re-analyze with AI"
-                            : "Analyze with AI"
-                        }
-                      >
-                        <Box
-                          component="button"
-                          onClick={(e: React.MouseEvent) => {
-                            e.stopPropagation();
-                            const fileId = Number(evidence.evidence_files[0].id);
-                            if (fileId) triggerAnalysis.mutate(fileId);
-                          }}
-                          sx={{
-                            "display": "flex",
-                            "alignItems": "center",
-                            "justifyContent": "center",
-                            "width": 28,
-                            "height": 28,
-                            "borderRadius": "6px",
-                            "border": "1px solid",
-                            "borderColor": triggerAnalysis.isPending ? "#ccc" : "#7C3AED",
-                            "backgroundColor": triggerAnalysis.isPending ? "#f5f5f5" : "#F5F3FF",
-                            "color": triggerAnalysis.isPending ? "#999" : "#7C3AED",
-                            "cursor": triggerAnalysis.isPending ? "wait" : "pointer",
-                            "padding": 0,
-                            "&:hover": {
-                              backgroundColor: triggerAnalysis.isPending ? "#f5f5f5" : "#EDE9FE",
-                            },
-                          }}
-                          disabled={triggerAnalysis.isPending}
-                        >
-                          <Sparkles size={14} />
-                        </Box>
-                      </Tooltip>
-                    )}
-                    <CustomIconButton
-                      id={evidence.id || 0}
-                      onDelete={() => onDelete?.(evidence.id || 0)}
-                      onEdit={() => {
-                        onEdit?.(evidence.id || 0);
-                      }}
-                      onPreview={onPreview ? () => onPreview(evidence.id || 0) : undefined}
-                      type=""
-                      warningTitle="Delete this evidence?"
-                      warningMessage="When you delete this evidence, all data related to this evidence will be removed. This action is non-recoverable."
-                      onMouseEvent={() => {}}
-                    />
-                  </Stack>
+                        </Tooltip>
+                      )}
+                    </Box>
+                  ) : (
+                    "-"
+                  )}
                 </TableCell>
-              </TableRow>
-            ))
-        ) : (
-          <TableRow>
-            <TableCell colSpan={visibleTableColumns.length} align="center">
-              <EmptyState
-                message="No evidence yet. Upload documents that prove compliance with each requirement."
-                icon={FileCheck}
-              >
-                <EmptyStateTip
-                  icon={FolderOpen}
-                  title="Organize by control category"
-                  description="Group evidence by the controls they support. This makes audit preparation faster and keeps your evidence library structured."
-                />
-                <EmptyStateTip
-                  icon={Shield}
-                  title="What counts as evidence?"
-                  description="Policies, meeting minutes, configuration screenshots, training records, risk assessments, vendor agreements, and change logs."
-                />
-                <EmptyStateTip
-                  icon={Clock}
-                  title="Track expiry dates"
-                  description="Set expiry dates on evidence so you're reminded to update or re-certify documents before they become stale."
-                />
-              </EmptyState>
-            </TableCell>
-          </TableRow>
-        )}
+              )}
+              {isColVisible("frameworks") && (
+                <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                  {evidence.framework_ids && evidence.framework_ids.length > 0 ? (
+                    <TooltipCell value={evidence.framework_ids.join(", ")} />
+                  ) : (
+                    "-"
+                  )}
+                </TableCell>
+              )}
+              {isColVisible("reviewer") && (
+                <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                  {evidence.reviewer_id ? userMap.get(evidence.reviewer_id.toString()) || "-" : "-"}
+                </TableCell>
+              )}
+              {isColVisible("retention_policy") && (
+                <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                  {evidence.retention_policy ? evidence.retention_policy.replace(/_/g, " ") : "-"}
+                </TableCell>
+              )}
+              {isColVisible("uploaded_by") && (
+                <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                  <TooltipCell
+                    value={
+                      evidence.evidence_files && evidence.evidence_files.length > 0
+                        ? userMap.get(evidence.evidence_files[0].uploaded_by.toString()) || "-"
+                        : "-"
+                    }
+                  />
+                </TableCell>
+              )}
+              {isColVisible("uploaded_on") && (
+                <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                  {(() => {
+                    const f = evidence.evidence_files?.[0] as any;
+                    const d = f?.upload_date ?? f?.uploaded_time;
+                    return d ? displayFormattedDate(d) : "-";
+                  })()}
+                </TableCell>
+              )}
+              {isColVisible("expiry_date") && (
+                <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                  {evidence.expiry_date ? displayFormattedDate(evidence.expiry_date) : "-"}
+                </TableCell>
+              )}
+              {isColVisible("quality") && (
+                <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                  {(() => {
+                    const fileId = evidence.evidence_files?.[0]?.id;
+                    const score = fileId ? qualityMap.get(Number(fileId)) : undefined;
+                    const analysis = fileId ? qualityAnalysisMap.get(Number(fileId)) : undefined;
+                    return score != null ? (
+                      <EvidenceQualityBadge
+                        score={score}
+                        onClick={
+                          analysis
+                            ? (e) => {
+                                e.stopPropagation();
+                                setSelectedAnalysis(analysis);
+                              }
+                            : undefined
+                        }
+                      />
+                    ) : (
+                      <Typography sx={{ fontSize: 11, color: palette.text.disabled }}>-</Typography>
+                    );
+                  })()}
+                </TableCell>
+              )}
+              <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                <Stack direction="row" spacing={1}>
+                  {evidence.evidence_files?.[0]?.id && (
+                    <Tooltip
+                      title={
+                        qualityMap.has(Number(evidence.evidence_files[0].id))
+                          ? "Re-analyze with AI"
+                          : "Analyze with AI"
+                      }
+                    >
+                      <Box
+                        component="button"
+                        onClick={(e: React.MouseEvent) => {
+                          e.stopPropagation();
+                          const fileId = Number(evidence.evidence_files[0].id);
+                          if (fileId) triggerAnalysis.mutate(fileId);
+                        }}
+                        sx={{
+                          "display": "flex",
+                          "alignItems": "center",
+                          "justifyContent": "center",
+                          "width": 28,
+                          "height": 28,
+                          "borderRadius": "6px",
+                          "border": "1px solid",
+                          "borderColor": triggerAnalysis.isPending ? "#ccc" : "#7C3AED",
+                          "backgroundColor": triggerAnalysis.isPending ? "#f5f5f5" : "#F5F3FF",
+                          "color": triggerAnalysis.isPending ? "#999" : "#7C3AED",
+                          "cursor": triggerAnalysis.isPending ? "wait" : "pointer",
+                          "padding": 0,
+                          "&:hover": {
+                            backgroundColor: triggerAnalysis.isPending ? "#f5f5f5" : "#EDE9FE",
+                          },
+                        }}
+                        disabled={triggerAnalysis.isPending}
+                      >
+                        <Sparkles size={14} />
+                      </Box>
+                    </Tooltip>
+                  )}
+                  <CustomIconButton
+                    id={evidence.id || 0}
+                    onDelete={() => onDelete?.(evidence.id || 0)}
+                    onEdit={() => {
+                      onEdit?.(evidence.id || 0);
+                    }}
+                    onPreview={onPreview ? () => onPreview(evidence.id || 0) : undefined}
+                    type=""
+                    warningTitle="Delete this evidence?"
+                    warningMessage="When you delete this evidence, all data related to this evidence will be removed. This action is non-recoverable."
+                    onMouseEvent={() => {}}
+                  />
+                </Stack>
+              </TableCell>
+            </TableRow>
+          ))}
       </TableBody>
     ),
     [
@@ -736,16 +718,38 @@ const EvidenceHubTable: React.FC<EvidenceHubTableProps> = ({
     );
   }
 
+  if (!data || data.length === 0) {
+    return (
+      <TableEmptyStateLayout header={tableHeader}>
+        <EmptyState
+          message="No evidence yet. Upload documents that prove compliance with each requirement."
+          icon={FileCheck}
+        >
+          <EmptyStateTip
+            icon={FolderOpen}
+            title="Organize by control category"
+            description="Group evidence by the controls they support. This makes audit preparation faster and keeps your evidence library structured."
+          />
+          <EmptyStateTip
+            icon={Shield}
+            title="What counts as evidence?"
+            description="Policies, meeting minutes, configuration screenshots, training records, risk assessments, vendor agreements, and change logs."
+          />
+          <EmptyStateTip
+            icon={Clock}
+            title="Track expiry dates"
+            description="Set expiry dates on evidence so you're reminded to update or re-certify documents before they become stale."
+          />
+        </EmptyState>
+      </TableEmptyStateLayout>
+    );
+  }
+
   return (
     <>
       <TableContainer sx={{ overflowX: "auto" }}>
         <Table sx={singleTheme.tableStyles.primary.frame}>
-          <SortableTableHead
-            columns={visibleTableColumns}
-            sortConfig={sortConfig}
-            onSort={handleSort}
-            theme={theme}
-          />
+          {tableHeader}
           {tableBody}
           {paginated && !hidePagination && data && data.length > 0 && (
             <TableFooter>

@@ -378,9 +378,6 @@ function deepEvalRoutes() {
       proxyReq: (proxyReq, req) => {
         // Forward custom headers to the proxy target
         const expressReq = req as Request;
-        if (expressReq.tenantId) {
-          proxyReq.setHeader("x-tenant-id", expressReq.tenantId);
-        }
         if (expressReq.organizationId) {
           proxyReq.setHeader("x-organization-id", expressReq.organizationId.toString());
         }

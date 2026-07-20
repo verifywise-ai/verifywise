@@ -454,12 +454,11 @@ Empty state placeholder.
 
 ```tsx
 // File: Clients/src/presentation/components/EmptyState/index.tsx
+import { Database } from "lucide-react";
 
 <EmptyState
-  message="No risks found"
-  imageAlt="No data"
-  showHalo={true}
-  showBorder={true}
+  icon={Database}
+  message="No datasets found. Add a dataset to get started."
 />
 ```
 

@@ -14,6 +14,7 @@ import singleTheme from "../../../themes/v1SingleTheme";
 import { ModelRow } from "./index";
 import { CustomizableButton } from "../../button/customizable-button";
 import { text, background, border as borderPalette, status } from "../../../themes/palette";
+import { displayFormattedDateTime } from "../../../tools/isoDateToString";
 
 interface ModelsTableBodyProps {
   rows: ModelRow[];
@@ -25,19 +26,7 @@ interface ModelsTableBodyProps {
 
 const formatDate = (dateStr?: string | null): string => {
   if (!dateStr) return "-";
-  const date = new Date(dateStr);
-  return (
-    date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    }) +
-    ", " +
-    date.toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-    })
-  );
+  return displayFormattedDateTime(dateStr);
 };
 
 // Provider color mapping for chips

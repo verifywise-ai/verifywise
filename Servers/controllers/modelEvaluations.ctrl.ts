@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { STATUS_CODE } from "../utils/statusCode.utils";
 import {
   getEvaluationsByModelInventoryId,
   getAllLinkedEvaluations,
@@ -31,7 +32,7 @@ export async function getAllModelEvaluations(req: Request, res: Response): Promi
       organizationId,
     });
 
-    return res.status(200).json(data);
+    return res.status(200).json(STATUS_CODE[200](data));
   } catch (error) {
     await logFailure({
       description: "getAllModelEvaluations failed",
@@ -43,7 +44,7 @@ export async function getAllModelEvaluations(req: Request, res: Response): Promi
       error: error as Error,
     });
 
-    return res.status(500).json({ error: req.t!("Failed to fetch evaluations") });
+    return res.status(500).json(STATUS_CODE[500](req.t!("Failed to fetch evaluations")));
   }
 }
 
@@ -63,7 +64,7 @@ export async function getModelEvaluations(req: Request, res: Response): Promise<
     const modelInventoryId = parseInt(req.params.id as string, 10);
 
     if (isNaN(modelInventoryId)) {
-      return res.status(400).json({ error: req.t!("Invalid model inventory ID") });
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid model inventory ID")));
     }
 
     const data = await getEvaluationsByModelInventoryId(modelInventoryId, organizationId);
@@ -77,7 +78,7 @@ export async function getModelEvaluations(req: Request, res: Response): Promise<
       organizationId,
     });
 
-    return res.status(200).json(data);
+    return res.status(200).json(STATUS_CODE[200](data));
   } catch (error) {
     await logFailure({
       description: "getModelEvaluations failed",
@@ -89,6 +90,6 @@ export async function getModelEvaluations(req: Request, res: Response): Promise<
       error: error as Error,
     });
 
-    return res.status(500).json({ error: req.t!("Failed to fetch evaluations") });
+    return res.status(500).json(STATUS_CODE[500](req.t!("Failed to fetch evaluations")));
   }
 }

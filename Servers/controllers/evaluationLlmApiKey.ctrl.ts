@@ -10,6 +10,7 @@
  */
 
 import { Request, Response } from "express";
+import { STATUS_CODE } from "../utils/statusCode.utils";
 import { LLMProvider } from "../domain.layer/models/evaluationLlmApiKey/evaluationLlmApiKey.model";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 import {
@@ -37,11 +38,13 @@ export const getAllKeys = async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error("Error fetching LLM API keys:", error);
 
-    return res.status(500).json({
-      success: false,
-      message: "Failed to fetch API keys",
-      error: error.message,
-    });
+    return res.status(500).json(
+      STATUS_CODE[500]({
+        success: false,
+        message: "Failed to fetch API keys",
+        error: error.message,
+      }),
+    );
   }
 };
 
@@ -80,7 +83,7 @@ export const addKey = async (req: Request, res: Response) => {
       functionName: "addKey",
       fileName: "evaluationLlmApiKey.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     await transaction.commit();
@@ -93,18 +96,22 @@ export const addKey = async (req: Request, res: Response) => {
     console.error("Error adding/updating LLM API key:", error);
     await transaction.rollback();
     if (error instanceof ValidationException) {
-      return res.status(400).json({
-        success: false,
-        message: error.message,
-        field: error.metadata.field,
-      });
+      return res.status(400).json(
+        STATUS_CODE[400]({
+          success: false,
+          message: error.message,
+          field: error.metadata.field,
+        }),
+      );
     }
 
-    return res.status(500).json({
-      success: false,
-      message: "Failed to save API key",
-      error: error.message,
-    });
+    return res.status(500).json(
+      STATUS_CODE[500]({
+        success: false,
+        message: "Failed to save API key",
+        error: error.message,
+      }),
+    );
   }
 };
 
@@ -129,11 +136,13 @@ export const getDecryptedKeys = async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error("Error fetching decrypted LLM API keys:", error);
 
-    return res.status(500).json({
-      success: false,
-      message: "Failed to fetch API keys",
-      error: error.message,
-    });
+    return res.status(500).json(
+      STATUS_CODE[500]({
+        success: false,
+        message: "Failed to fetch API keys",
+        error: error.message,
+      }),
+    );
   }
 };
 
@@ -152,19 +161,23 @@ export const verifyKey = async (req: Request, res: Response) => {
     const { provider, apiKey } = req.body;
 
     if (!provider) {
-      return res.status(400).json({
-        success: false,
-        valid: false,
-        message: "Provider is required",
-      });
+      return res.status(400).json(
+        STATUS_CODE[400]({
+          success: false,
+          valid: false,
+          message: "Provider is required",
+        }),
+      );
     }
 
     if (!apiKey) {
-      return res.status(400).json({
-        success: false,
-        valid: false,
-        message: "API key is required",
-      });
+      return res.status(400).json(
+        STATUS_CODE[400]({
+          success: false,
+          valid: false,
+          message: "API key is required",
+        }),
+      );
     }
 
     // Provider-specific verification endpoints
@@ -276,12 +289,14 @@ export const verifyKey = async (req: Request, res: Response) => {
     }
   } catch (error: any) {
     console.error("Error in verifyKey controller:", error);
-    return res.status(500).json({
-      success: false,
-      valid: false,
-      message: "Failed to verify API key",
-      error: error.message,
-    });
+    return res.status(500).json(
+      STATUS_CODE[500]({
+        success: false,
+        valid: false,
+        message: "Failed to verify API key",
+        error: error.message,
+      }),
+    );
   }
 };
 
@@ -302,10 +317,12 @@ export const deleteKey = async (req: Request, res: Response) => {
     const deleted = await deleteKeyQuery(req.organizationId!, provider as LLMProvider);
 
     if (!deleted) {
-      return res.status(404).json({
-        success: false,
-        message: `No API key found for provider: ${provider}`,
-      });
+      return res.status(404).json(
+        STATUS_CODE[404]({
+          success: false,
+          message: `No API key found for provider: ${provider}`,
+        }),
+      );
     }
 
     logSuccess({
@@ -314,7 +331,7 @@ export const deleteKey = async (req: Request, res: Response) => {
       functionName: "deleteKey",
       fileName: "evaluationLlmApiKey.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(200).json({
@@ -325,17 +342,21 @@ export const deleteKey = async (req: Request, res: Response) => {
     console.error("Error deleting LLM API key:", error);
 
     if (error instanceof ValidationException) {
-      return res.status(400).json({
-        success: false,
-        message: error.message,
-        field: error.metadata.field,
-      });
+      return res.status(400).json(
+        STATUS_CODE[400]({
+          success: false,
+          message: error.message,
+          field: error.metadata.field,
+        }),
+      );
     }
 
-    return res.status(500).json({
-      success: false,
-      message: "Failed to delete API key",
-      error: error.message,
-    });
+    return res.status(500).json(
+      STATUS_CODE[500]({
+        success: false,
+        message: "Failed to delete API key",
+        error: error.message,
+      }),
+    );
   }
 };

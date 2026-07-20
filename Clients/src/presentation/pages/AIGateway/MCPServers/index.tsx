@@ -1,6 +1,15 @@
 import { useState, useEffect, useCallback } from "react";
 import { Box, Typography, Stack, IconButton, Tooltip } from "@mui/material";
-import { CirclePlus, Server, Trash2, Pencil, Search, Activity } from "lucide-react";
+import {
+  CirclePlus,
+  Server,
+  Trash2,
+  Pencil,
+  Search,
+  Activity,
+  AlertTriangle,
+  RotateCcw,
+} from "lucide-react";
 import Toggle from "../../../components/Inputs/Toggle";
 import { EmptyState } from "../../../components/EmptyState";
 import EmptyStateTip from "../../../components/EmptyState/EmptyStateTip";
@@ -12,8 +21,9 @@ import StandardModal from "../../../components/Modals/StandardModal";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import palette from "../../../themes/palette";
-import { useCardSx, slugify } from "../shared";
+import { slugify } from "../shared";
 import MCPTable from "../MCPTable";
+import CustomizableSkeleton from "../../../components/Skeletons";
 import { displayFormattedDate } from "../../../tools/isoDateToString";
 
 interface ServerForm {
@@ -59,9 +69,9 @@ interface MCPServer {
 }
 
 export default function MCPServersPage() {
-  const cardSx = useCardSx();
   const [servers, setServers] = useState<MCPServer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -72,11 +82,13 @@ export default function MCPServersPage() {
   const [form, setForm] = useState<ServerForm>({ ...EMPTY_FORM });
 
   const loadData = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
     try {
       const res = await apiServices.get<Record<string, any>>("/ai-gateway/mcp/servers");
       setServers(res?.data?.servers || []);
     } catch {
-      // Silently handle
+      setLoadError("Failed to load MCP servers. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -216,11 +228,16 @@ export default function MCPServersPage() {
       }
     >
       {loading ? (
-        <Box sx={cardSx}>
-          <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
-            Loading servers...
-          </Typography>
-        </Box>
+        <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
+      ) : loadError ? (
+        <EmptyState icon={AlertTriangle} message={loadError}>
+          <CustomizableButton
+            variant="outlined"
+            text="Retry"
+            icon={<RotateCcw size={16} />}
+            onClick={loadData}
+          />
+        </EmptyState>
       ) : servers.length === 0 ? (
         <EmptyState
           icon={Server}

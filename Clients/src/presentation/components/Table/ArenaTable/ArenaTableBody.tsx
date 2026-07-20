@@ -30,6 +30,7 @@ import singleTheme from "../../../themes/v1SingleTheme";
 import { ArenaRow } from "./index";
 import ConfirmationModal from "../../Dialogs/ConfirmationModal";
 import { CustomizableButton } from "../../button/customizable-button";
+import { displayFormattedDateTime } from "../../../tools/isoDateToString";
 
 interface ArenaTableBodyProps {
   rows: ArenaRow[];
@@ -45,19 +46,7 @@ interface ArenaTableBodyProps {
 
 const formatDate = (dateStr?: string | null): string => {
   if (!dateStr) return "-";
-  const date = new Date(dateStr);
-  return (
-    date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    }) +
-    ", " +
-    date.toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
-    })
-  );
+  return displayFormattedDateTime(dateStr);
 };
 
 // Helper to get contestant name from string or object

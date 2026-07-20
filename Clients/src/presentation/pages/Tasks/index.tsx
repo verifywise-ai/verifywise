@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, useEffect, useContext, useMemo, useCallback, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { Box, Stack, Typography, Fade } from "@mui/material";
 import TabContext from "@mui/lab/TabContext";
 import { useSearchParams } from "react-router-dom";
@@ -13,15 +14,12 @@ import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.cont
 import { storageService } from "../../../infrastructure/storage";
 import { ITask, TaskSummary } from "../../../domain/interfaces/i.task";
 import {
-  getAllTasks,
   createTask,
   updateTask,
   deleteTask,
-  updateTaskStatus,
   getTaskById,
   restoreTask,
   hardDeleteTask,
-  updateTaskPriority,
 } from "../../../application/repository/task.repository";
 import {
   addTaskEntityLink,
@@ -31,6 +29,9 @@ import {
 import TaskSummaryCards from "./TaskSummaryCards";
 import CreateTask from "../../components/Modals/CreateTask";
 import useUsers from "../../../application/hooks/useUsers";
+import { useTasks, taskQueryKeys } from "../../../application/hooks/useTasks";
+import { useUpdateTaskStatus } from "../../../application/hooks/useUpdateTaskStatus";
+import { useUpdateTaskPriority } from "../../../application/hooks/useUpdateTaskPriority";
 
 import Toggle from "../../components/Inputs/Toggle";
 import { TaskPriority, TaskStatus } from "../../../domain/enums/task.enum";
@@ -84,14 +85,21 @@ const TASKS_TABLE_COLUMNS: ColumnConfig<TaskColumnKey>[] = [
 
 const Tasks: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [tasks, setTasks] = useState<TaskModel[]>([]);
-  const [refreshKey, setRefreshKey] = useState(0);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [includeArchived, setIncludeArchived] = useState(false);
+  const queryClient = useQueryClient();
+  const {
+    data: rawTasks = [],
+    isLoading,
+    error: queryError,
+    refetch,
+  } = useTasks({ includeArchived });
+  const tasks = useMemo(() => rawTasks.map((task) => new TaskModel(task)), [rawTasks]);
+  const updateTaskStatusMutation = useUpdateTaskStatus();
+  const updateTaskPriorityMutation = useUpdateTaskPriority();
+  const error = queryError ? "Failed to load tasks. Please try again later." : null;
   const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<ITask | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [includeArchived, setIncludeArchived] = useState(false);
   const [alert, setAlert] = useState<{
     variant: "success" | "error" | "warning" | "info";
     title: string;
@@ -155,32 +163,6 @@ const Tasks: React.FC = () => {
     [tasks],
   );
 
-  // Fetch all tasks (no server-side filtering - we use client-side FilterBy)
-  useEffect(() => {
-    const fetchTasks = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-
-        const response = await getAllTasks({
-          include_archived: includeArchived || undefined,
-          sort_by: "created_at",
-          sort_order: "DESC",
-        });
-
-        const fetchedTasks = response?.data?.tasks || [];
-        setTasks(fetchedTasks);
-      } catch (err: any) {
-        console.error("Error fetching tasks:", err);
-        setError("Failed to load tasks. Please try again later.");
-        setTasks([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    fetchTasks();
-  }, [includeArchived, refreshKey]);
-
   // Listen for AI action approvals for any task-lifecycle tool. Covers
   // create, update, and delete — all trigger a table refresh.
   useEffect(() => {
@@ -195,7 +177,7 @@ const Tasks: React.FC = () => {
         detail?.toolName &&
         TASK_TOOL_NAMES.has(detail.toolName)
       ) {
-        setRefreshKey((k) => k + 1);
+        refetch();
       }
     });
   }, []);
@@ -396,8 +378,11 @@ const Tasks: React.FC = () => {
           }
         }
 
-        // Add the new task to the list
-        setTasks((prev) => [response.data, ...prev]);
+        // Add the new task to the cache
+        queryClient.setQueryData(
+          taskQueryKeys.list({ includeArchived }),
+          (old: ITask[] | undefined) => (old ? [response.data, ...old] : [response.data]),
+        );
         setAlert({
           variant: "success",
           title: "Task created successfully",
@@ -432,7 +417,10 @@ const Tasks: React.FC = () => {
 
     try {
       await deleteTask({ id: taskId });
-      setTasks((prev) => prev.filter((t) => t.id !== taskId));
+      queryClient.setQueryData(
+        taskQueryKeys.list({ includeArchived }),
+        (old: ITask[] | undefined) => old?.filter((t) => t.id !== taskId) ?? [],
+      );
       setAlert({
         variant: "success",
         title: "Task archived successfully",
@@ -512,14 +500,16 @@ const Tasks: React.FC = () => {
           }
         }
 
-        // Update task in state with new entity links
+        // Update task in cache with new entity links
         const updatedTaskWithLinks = {
           ...response.data,
           entity_links: newEntityLinks || [],
         };
 
-        setTasks((prev) =>
-          prev.map((task) => (task.id === editingTask.id ? updatedTaskWithLinks : task)),
+        queryClient.setQueryData(
+          taskQueryKeys.list({ includeArchived }),
+          (old: ITask[] | undefined) =>
+            old?.map((task) => (task.id === editingTask.id ? updatedTaskWithLinks : task)) ?? [],
         );
 
         // Flash the updated row
@@ -551,28 +541,27 @@ const Tasks: React.FC = () => {
     (taskId: number) =>
     async (newStatus: string): Promise<boolean> => {
       try {
-        const response = await updateTaskStatus({
+        await updateTaskStatusMutation.mutateAsync({
           id: taskId,
           status: newStatus as TaskStatus,
+          filters: { includeArchived },
         });
-        if (response && response.data) {
-          setTasks((prev) =>
-            prev.map((task) =>
-              task.id === taskId ? { ...task, status: newStatus as TaskStatus } : task,
-            ),
-          );
 
-          // Flash the updated row
-          setFlashRowId(taskId);
-          setTimeout(() => {
-            setFlashRowId(null);
-          }, 3000);
+        // Flash the updated row
+        setFlashRowId(taskId);
+        setTimeout(() => {
+          setFlashRowId(null);
+        }, 3000);
 
-          return true;
-        }
-        return false;
+        return true;
       } catch (error) {
         console.error("Error updating task status:", error);
+        setAlert({
+          variant: "error",
+          title: "Error updating task status",
+          body: "Failed to update the task status. Please try again.",
+        });
+        setTimeout(() => setAlert(null), 4000);
         return false;
       }
     };
@@ -581,28 +570,27 @@ const Tasks: React.FC = () => {
     (taskId: number) =>
     async (newPriority: string): Promise<boolean> => {
       try {
-        const response = await updateTaskPriority({
+        await updateTaskPriorityMutation.mutateAsync({
           id: taskId,
           priority: newPriority as TaskPriority,
+          filters: { includeArchived },
         });
-        if (response && response.data) {
-          setTasks((prev) =>
-            prev.map((task) =>
-              task.id === taskId ? { ...task, priority: newPriority as TaskPriority } : task,
-            ),
-          );
 
-          // Flash the updated row
-          setFlashRowId(taskId);
-          setTimeout(() => {
-            setFlashRowId(null);
-          }, 3000);
+        // Flash the updated row
+        setFlashRowId(taskId);
+        setTimeout(() => {
+          setFlashRowId(null);
+        }, 3000);
 
-          return true;
-        }
-        return false;
+        return true;
       } catch (error) {
         console.error("Error updating task priority:", error);
+        setAlert({
+          variant: "error",
+          title: "Error updating task priority",
+          body: "Failed to update the task priority. Please try again.",
+        });
+        setTimeout(() => setAlert(null), 4000);
         return false;
       }
     };
@@ -613,9 +601,13 @@ const Tasks: React.FC = () => {
       // Repository returns response.data directly, so check for response.data (the actual task)
       if (response?.data) {
         const restoredTask = response.data;
-        // Update the task in the list with restored status
-        setTasks((prev) =>
-          prev.map((task) => (task.id === taskId ? { ...task, status: TaskStatus.OPEN } : task)),
+        // Update the task in the cache with restored status
+        queryClient.setQueryData(
+          taskQueryKeys.list({ includeArchived }),
+          (old: ITask[] | undefined) =>
+            old?.map((task) =>
+              task.id === taskId ? { ...task, status: TaskStatus.OPEN } : task,
+            ) ?? [],
         );
         setAlert({
           variant: "success",
@@ -639,8 +631,11 @@ const Tasks: React.FC = () => {
     const taskToHardDelete = tasks.find((t) => t.id === taskId);
     try {
       await hardDeleteTask({ id: taskId });
-      // Remove the task from the list completely
-      setTasks((prev) => prev.filter((task) => task.id !== taskId));
+      // Remove the task from the cache completely
+      queryClient.setQueryData(
+        taskQueryKeys.list({ includeArchived }),
+        (old: ITask[] | undefined) => old?.filter((task) => task.id !== taskId) ?? [],
+      );
       setAlert({
         variant: "success",
         title: "Task deleted permanently",
@@ -1000,7 +995,6 @@ const Tasks: React.FC = () => {
                 visibleColumns={visibleColumns}
                 canRunBulkActions={!isCreatingDisabled}
                 onBulkActionSuccess={(action, count) => {
-                  setRefreshKey((k) => k + 1);
                   setAlert({
                     variant: "success",
                     title:

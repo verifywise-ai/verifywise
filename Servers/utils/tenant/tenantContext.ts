@@ -3,7 +3,6 @@ import path from "path";
 import fs from "fs";
 
 export interface TenantContext {
-  tenantId?: number; // Now stores organizationId (number) instead of tenant hash (string)
   organizationId?: number;
   userId?: number;
 }
@@ -15,21 +14,19 @@ export interface TenantContext {
 export function getCurrentTenantContext(): TenantContext {
   const store = asyncLocalStorage.getStore();
   return {
-    tenantId: store?.tenantId,
     organizationId: store?.organizationId,
     userId: store?.userId,
   };
 }
 
 /**
- * Get the tenant ID for logging purposes
- * Falls back to 'default' if no tenant context is available
+ * Get the tenant scope identifier (organizationId as string) for logging directory names.
+ * Falls back to 'default' if no tenant context is available.
  */
 export function getTenantIdForLogging(): string {
   try {
     const context = getCurrentTenantContext();
-    // Convert organizationId to string for logging directory
-    return context.organizationId?.toString() || context.tenantId?.toString() || "default";
+    return context.organizationId?.toString() || "default";
   } catch (error) {
     // If we're outside of a request context, use 'default'
     return "default";
@@ -46,20 +43,20 @@ export function getLogBaseDirectory(): string {
 
 /**
  * Get the tenant-specific log directory path
- * @param tenantId - The tenant ID, if not provided will use current context
+ * @param tenant - The tenant scope (string). If not provided uses current context.
  */
-export function getTenantLogDirectory(tenantId?: string): string {
-  const tenant = tenantId || getTenantIdForLogging();
+export function getTenantLogDirectory(tenant?: string): string {
+  const resolved = tenant || getTenantIdForLogging();
   const logBaseDir = getLogBaseDirectory();
-  return path.join(logBaseDir, tenant);
+  return path.join(logBaseDir, resolved);
 }
 
 /**
  * Ensure tenant log directory exists and return the path
- * @param tenantId - The tenant ID, if not provided will use current context
+ * @param tenant - The tenant scope (string). If not provided uses current context.
  */
-export function ensureTenantLogDirectory(tenantId?: string): string {
-  const tenantLogDir = getTenantLogDirectory(tenantId);
+export function ensureTenantLogDirectory(tenant?: string): string {
+  const tenantLogDir = getTenantLogDirectory(tenant);
 
   if (!fs.existsSync(tenantLogDir)) {
     fs.mkdirSync(tenantLogDir, { recursive: true });

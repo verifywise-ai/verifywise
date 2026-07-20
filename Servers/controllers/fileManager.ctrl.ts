@@ -25,7 +25,6 @@ import {
   deleteFileById,
   updateFileMetadata,
   getFileWithMetadata,
-  getHighlightedFiles,
   getFilePreview,
   getFileVersionHistory as getFileVersionHistoryRepo,
   FileSource,
@@ -214,7 +213,7 @@ export const uploadFile = async (req: Request, res: Response): Promise<any> => {
     functionName: "uploadFile",
     fileName: "fileManager.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -244,7 +243,7 @@ export const uploadFile = async (req: Request, res: Response): Promise<any> => {
         fileName: "fileManager.ctrl.ts",
         error: new Error("No file provided"),
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(400).json(STATUS_CODE[400](req.t!("No file provided")));
     }
@@ -267,7 +266,7 @@ export const uploadFile = async (req: Request, res: Response): Promise<any> => {
         fileName: "fileManager.ctrl.ts",
         error: new Error(validation.error),
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(400).json(STATUS_CODE[400](validation.error));
     }
@@ -432,7 +431,7 @@ export const uploadFile = async (req: Request, res: Response): Promise<any> => {
       functionName: "uploadFile",
       fileName: "fileManager.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(201).json(
@@ -457,7 +456,7 @@ export const uploadFile = async (req: Request, res: Response): Promise<any> => {
       fileName: "fileManager.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](req.t!("Internal server error")));
   }
@@ -503,7 +502,7 @@ export const listFiles = async (req: Request, res: Response): Promise<any> => {
     functionName: "listFiles",
     fileName: "fileManager.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -518,7 +517,7 @@ export const listFiles = async (req: Request, res: Response): Promise<any> => {
       functionName: "listFiles",
       fileName: "fileManager.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(200).json(
@@ -552,7 +551,7 @@ export const listFiles = async (req: Request, res: Response): Promise<any> => {
       fileName: "fileManager.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](req.t!("Internal server error")));
   }
@@ -677,7 +676,7 @@ export const downloadFile = async (req: Request, res: Response): Promise<any> =>
         fileName: "fileManager.ctrl.ts",
         error: new Error("File not found"),
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(404).json(STATUS_CODE[404](req.t!("File not found")));
     }
@@ -697,7 +696,7 @@ export const downloadFile = async (req: Request, res: Response): Promise<any> =>
           fileName: "fileManager.ctrl.ts",
           error: new Error("Access denied"),
           userId: req.userId!,
-          tenantId: req.organizationId!,
+          organizationId: req.organizationId!,
         });
         return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
       }
@@ -726,7 +725,7 @@ export const downloadFile = async (req: Request, res: Response): Promise<any> =>
           fileName: "fileManager.ctrl.ts",
           error: new Error("Access denied"),
           userId: req.userId!,
-          tenantId: req.organizationId!,
+          organizationId: req.organizationId!,
         });
         return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
       }
@@ -751,7 +750,7 @@ export const downloadFile = async (req: Request, res: Response): Promise<any> =>
         fileName: "fileManager.ctrl.ts",
         error: new Error("File content missing"),
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res
         .status(404)
@@ -778,7 +777,7 @@ export const downloadFile = async (req: Request, res: Response): Promise<any> =>
       functionName: "downloadFile",
       fileName: "fileManager.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     // Send file content from database (after logging to avoid async interference)
@@ -791,7 +790,7 @@ export const downloadFile = async (req: Request, res: Response): Promise<any> =>
       fileName: "fileManager.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](req.t!("Internal server error")));
   }
@@ -834,7 +833,7 @@ export const removeFile = async (req: Request, res: Response): Promise<any> => {
       fileName: "fileManager.ctrl.ts",
       error: new Error("Insufficient permissions"),
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res
       .status(403)
@@ -846,7 +845,7 @@ export const removeFile = async (req: Request, res: Response): Promise<any> => {
     functionName: "removeFile",
     fileName: "fileManager.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -861,7 +860,7 @@ export const removeFile = async (req: Request, res: Response): Promise<any> => {
         fileName: "fileManager.ctrl.ts",
         error: new Error("File not found"),
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(404).json(STATUS_CODE[404](req.t!("File not found")));
     }
@@ -881,7 +880,7 @@ export const removeFile = async (req: Request, res: Response): Promise<any> => {
           fileName: "fileManager.ctrl.ts",
           error: new Error("Access denied"),
           userId: req.userId!,
-          tenantId: req.organizationId!,
+          organizationId: req.organizationId!,
         });
         return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
       }
@@ -910,7 +909,7 @@ export const removeFile = async (req: Request, res: Response): Promise<any> => {
           fileName: "fileManager.ctrl.ts",
           error: new Error("Access denied"),
           userId: req.userId!,
-          tenantId: req.organizationId!,
+          organizationId: req.organizationId!,
         });
         return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
       }
@@ -956,7 +955,7 @@ export const removeFile = async (req: Request, res: Response): Promise<any> => {
         fileName: "fileManager.ctrl.ts",
         error: new Error("File not found during deletion"),
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       return res.status(404).json(STATUS_CODE[404](req.t!("File not found")));
     }
@@ -967,7 +966,7 @@ export const removeFile = async (req: Request, res: Response): Promise<any> => {
       functionName: "removeFile",
       fileName: "fileManager.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(200).json(
@@ -984,7 +983,7 @@ export const removeFile = async (req: Request, res: Response): Promise<any> => {
       fileName: "fileManager.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](req.t!("Internal server error")));
   }
@@ -1061,7 +1060,7 @@ export const getFileMetadata = async (req: Request, res: Response): Promise<any>
       functionName: "getFileMetadata",
       fileName: "fileManager.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(200).json(STATUS_CODE[200](file));
@@ -1073,7 +1072,7 @@ export const getFileMetadata = async (req: Request, res: Response): Promise<any>
       fileName: "fileManager.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](req.t!("Internal server error")));
   }
@@ -1117,7 +1116,7 @@ export const updateMetadata = async (req: Request, res: Response): Promise<any> 
     functionName: "updateMetadata",
     fileName: "fileManager.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -1249,7 +1248,7 @@ export const updateMetadata = async (req: Request, res: Response): Promise<any> 
       functionName: "updateMetadata",
       fileName: "fileManager.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(200).json(STATUS_CODE[200](updatedFile));
@@ -1261,7 +1260,7 @@ export const updateMetadata = async (req: Request, res: Response): Promise<any> 
       fileName: "fileManager.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](req.t!("Internal server error")));
   }
@@ -1292,6 +1291,16 @@ export const listFilesWithMetadata = async (req: Request, res: Response): Promis
   const pageSize = req.query.pageSize
     ? Number(Array.isArray(req.query.pageSize) ? req.query.pageSize[0] : req.query.pageSize)
     : undefined;
+  const daysUntilExpiry = req.query.daysUntilExpiry
+    ? Number(
+        Array.isArray(req.query.daysUntilExpiry)
+          ? req.query.daysUntilExpiry[0]
+          : req.query.daysUntilExpiry,
+      )
+    : undefined;
+  const recentDays = req.query.recentDays
+    ? Number(Array.isArray(req.query.recentDays) ? req.query.recentDays[0] : req.query.recentDays)
+    : undefined;
 
   // Validate pagination
   const paginationResult = validatePagination(page, pageSize);
@@ -1305,13 +1314,15 @@ export const listFilesWithMetadata = async (req: Request, res: Response): Promis
     functionName: "listFilesWithMetadata",
     fileName: "fileManager.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
     const { files, total } = await getOrganizationFilesWithMetadata(req.organizationId!, {
       limit: validPageSize,
       offset,
+      daysUntilExpiry,
+      recentDays,
     });
 
     await logSuccess({
@@ -1320,7 +1331,7 @@ export const listFilesWithMetadata = async (req: Request, res: Response): Promis
       functionName: "listFilesWithMetadata",
       fileName: "fileManager.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
 
     return res.status(200).json(
@@ -1342,72 +1353,7 @@ export const listFilesWithMetadata = async (req: Request, res: Response): Promis
       fileName: "fileManager.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
-    });
-    return res.status(500).json(STATUS_CODE[500](req.t!("Internal server error")));
-  }
-};
-
-/**
- * Get highlighted files (due for update, pending approval, recently modified)
- *
- * GET /file-manager/highlighted
- *
- * Query parameters:
- * - daysUntilExpiry: Days before expiry to flag (default 30)
- * - recentDays: Days to consider as recent (default 7)
- *
- * @param {Request} req - Express request
- * @param {Response} res - Express response
- * @returns {Promise<Response>} Categorized file IDs
- */
-export const getHighlighted = async (req: Request, res: Response): Promise<any> => {
-  const auth = validateAndParseAuth(req, res);
-  if (!auth) return;
-
-  const { orgId } = auth;
-
-  const daysUntilExpiry = req.query.daysUntilExpiry
-    ? Number(
-        Array.isArray(req.query.daysUntilExpiry)
-          ? req.query.daysUntilExpiry[0]
-          : req.query.daysUntilExpiry,
-      )
-    : 30;
-  const recentDays = req.query.recentDays
-    ? Number(Array.isArray(req.query.recentDays) ? req.query.recentDays[0] : req.query.recentDays)
-    : 7;
-
-  logProcessing({
-    description: `Getting highlighted files for organization ${orgId}`,
-    functionName: "getHighlighted",
-    fileName: "fileManager.ctrl.ts",
-    userId: req.userId!,
-    tenantId: req.organizationId!,
-  });
-
-  try {
-    const highlighted = await getHighlightedFiles(req.organizationId!, daysUntilExpiry, recentDays);
-
-    await logSuccess({
-      eventType: "Read",
-      description: `Retrieved highlighted files for organization ${orgId}`,
-      functionName: "getHighlighted",
-      fileName: "fileManager.ctrl.ts",
-      userId: req.userId!,
-      tenantId: req.organizationId!,
-    });
-
-    return res.status(200).json(STATUS_CODE[200](highlighted));
-  } catch (error) {
-    await logFailure({
-      eventType: "Error",
-      description: "Failed to get highlighted files",
-      functionName: "getHighlighted",
-      fileName: "fileManager.ctrl.ts",
-      error: error as Error,
-      userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](req.t!("Internal server error")));
   }
@@ -1444,7 +1390,7 @@ export const previewFile = async (req: Request, res: Response): Promise<any> => 
     functionName: "previewFile",
     fileName: "fileManager.ctrl.ts",
     userId: req.userId!,
-    tenantId: req.organizationId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -1552,7 +1498,7 @@ export const previewFile = async (req: Request, res: Response): Promise<any> => 
       functionName: "previewFile",
       fileName: "fileManager.ctrl.ts",
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
   } catch (error) {
     await logFailure({
@@ -1562,7 +1508,7 @@ export const previewFile = async (req: Request, res: Response): Promise<any> => 
       fileName: "fileManager.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](req.t!("Internal server error")));
   }
@@ -1602,6 +1548,21 @@ export const getFileVersionHistory = async (req: Request, res: Response): Promis
     organizationId: orgId,
   });
 
+  // Parse pagination — page defaults to 1, pageSize defaults to 20.
+  const rawPage = req.query.page
+    ? Number(Array.isArray(req.query.page) ? req.query.page[0] : req.query.page)
+    : undefined;
+  const rawPageSize = req.query.pageSize
+    ? Number(Array.isArray(req.query.pageSize) ? req.query.pageSize[0] : req.query.pageSize)
+    : undefined;
+  const paginationResult = validatePagination(rawPage ?? 1, rawPageSize ?? 20);
+  if ("error" in paginationResult) {
+    return res.status(400).json(STATUS_CODE[400](paginationResult.error));
+  }
+  const validPage = paginationResult.page ?? 1;
+  const validPageSize = paginationResult.pageSize ?? 20;
+  const offset = (validPage - 1) * validPageSize;
+
   try {
     // Get the file to extract file_group_id
     const file = await getFileWithMetadata(fileId, orgId);
@@ -1611,22 +1572,41 @@ export const getFileVersionHistory = async (req: Request, res: Response): Promis
     }
 
     if (!file.file_group_id) {
-      // No group ID means no version history — return just this file
-      return res.status(200).json(STATUS_CODE[200]({ versions: [file] }));
+      // No group ID means no version history — return just this file as a
+      // single-row page so the response shape stays consistent.
+      return res.status(200).json(
+        STATUS_CODE[200]({
+          versions: [file],
+          pagination: { total: 1, page: 1, pageSize: validPageSize, totalPages: 1 },
+        }),
+      );
     }
 
-    const versions = await getFileVersionHistoryRepo(file.file_group_id, orgId);
+    const { versions, total } = await getFileVersionHistoryRepo(file.file_group_id, orgId, {
+      limit: validPageSize,
+      offset,
+    });
 
     await logSuccess({
       eventType: "Read",
-      description: `Retrieved ${versions.length} versions for file group: ${file.file_group_id}`,
+      description: `Retrieved ${versions.length} of ${total} versions for file group: ${file.file_group_id}`,
       functionName: "getFileVersionHistory",
       fileName: "fileManager.ctrl.ts",
       userId,
       organizationId: orgId,
     });
 
-    return res.status(200).json(STATUS_CODE[200]({ versions }));
+    return res.status(200).json(
+      STATUS_CODE[200]({
+        versions,
+        pagination: {
+          total,
+          page: validPage,
+          pageSize: validPageSize,
+          totalPages: Math.max(1, Math.ceil(total / validPageSize)),
+        },
+      }),
+    );
   } catch (error) {
     await logFailure({
       eventType: "Error",
@@ -1635,7 +1615,7 @@ export const getFileVersionHistory = async (req: Request, res: Response): Promis
       fileName: "fileManager.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
-      tenantId: req.organizationId!,
+      organizationId: req.organizationId!,
     });
     return res.status(500).json(STATUS_CODE[500](req.t!("Internal server error")));
   }

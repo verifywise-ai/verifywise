@@ -1,5 +1,5 @@
 import { test, expect } from "./fixtures/auth.fixture";
-import { analyzeCriticalAndSeriousViolations } from "./helpers/axe";
+import { runA11yCheck } from "./helpers/axe";
 
 test.describe("Tasks", () => {
   test.beforeEach(async ({ authedPage: page }) => {
@@ -16,11 +16,13 @@ test.describe("Tasks", () => {
     await expect(page.getByText(/task/i).first()).toBeVisible({ timeout: 10_000 });
   });
 
-  test("page has no critical or serious accessibility violations", async ({ authedPage: page }) => {
+  test("page has no critical or serious accessibility violations", async ({
+    authedPage: page,
+  }, testInfo) => {
     await page.goto("/tasks");
     await expect(page.getByText(/task/i).first()).toBeVisible({ timeout: 10_000 });
 
-    const violations = await analyzeCriticalAndSeriousViolations(page);
+    const violations = await runA11yCheck(page, testInfo);
     expect(violations).toEqual([]);
   });
 
@@ -141,10 +143,7 @@ test.describe("Tasks", () => {
     await page.goto("/tasks");
     const addBtn = page.getByRole("button", { name: /add new task/i });
 
-    if (!(await addBtn.isVisible().catch(() => false))) {
-      test.skip();
-      return;
-    }
+    await expect(addBtn).toBeVisible({ timeout: 15_000 });
     await addBtn.click();
     await page.waitForTimeout(500);
 
@@ -180,10 +179,7 @@ test.describe("Tasks", () => {
 
     // Create: Click "Add new task"
     const addBtn = page.getByRole("button", { name: /add new task/i });
-    if (!(await addBtn.isVisible().catch(() => false))) {
-      test.skip();
-      return;
-    }
+    await expect(addBtn).toBeVisible({ timeout: 15_000 });
     await addBtn.click();
 
     // Fill in the task title

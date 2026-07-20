@@ -25,6 +25,196 @@ export type Lang = "en" | "de" | "fr" | "es";
 
 export const translations: Record<string, Record<string, string>> = {
   de: {
+    // AsyncBoundary
+    "Loading": "Wird geladen...",
+    "Retry loading data": "Daten erneut laden",
+    "Something went wrong. Please try again.":
+      "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
+    // Rich text renderer
+    "Rich text content": "Rich-Text-Inhalt",
+    // Settings — help text
+    // Model risk management (MRM) module
+    "Add threshold": "Schwellenwert hinzufügen",
+    "Alerts & notifications": "Warnungen & Benachrichtigungen",
+    "Assigned to": "Zugewiesen an",
+    "Breach history": "Verlauf der Überschreitungen",
+    "Copy token": "Token kopieren",
+    "Copy your token now": "Kopieren Sie Ihren Token jetzt",
+    "Create an ingestion token below (per-org, machine-to-machine, revocable).":
+      "Erstellen Sie unten einen Ingestion-Token (pro Organisation, Maschine-zu-Maschine, widerrufbar).",
+    "Create ingestion token": "Ingestion-Token erstellen",
+    "Default thresholds": "Standard-Schwellenwerte",
+    "Example request": "Beispielanfrage",
+    "How to send metrics": "So senden Sie Metriken",
+    "Ingestion tokens": "Ingestion-Token",
+    "Last received": "Zuletzt empfangen",
+    "Latest": "Aktuell",
+    "Maximum": "Maximum",
+    "Metric": "Metrik",
+    "Metric date": "Metrikdatum",
+    "Metric trend": "Metriktrend",
+    "Metrics feed & tokens": "Metrik-Feed & Token",
+    "Minimum": "Minimum",
+    "Name a machine-to-machine token your pipeline will use to push metrics.":
+      "Benennen Sie einen Maschine-zu-Maschine-Token, den Ihre Pipeline zum Senden von Metriken verwendet.",
+    "No breaches recorded. Every metric is within its threshold.":
+      "Keine Überschreitungen erfasst. Jede Metrik liegt innerhalb ihres Schwellenwerts.",
+    "No data yet. This model is awaiting its first metric from your monitoring feed.":
+      "Noch keine Daten. Dieses Modell wartet auf seine erste Metrik aus Ihrem Monitoring-Feed.",
+    "No ingestion tokens yet. Create one to start pushing metrics.":
+      "Noch keine Ingestion-Token. Erstellen Sie einen, um mit dem Senden von Metriken zu beginnen.",
+    "No threshold defined": "Kein Schwellenwert definiert",
+    "No thresholds defined yet. Add one so ingested metrics can be evaluated.":
+      "Noch keine Schwellenwerte definiert. Fügen Sie einen hinzu, damit eingehende Metriken ausgewertet werden können.",
+    "Notified on breach": "Bei Überschreitung benachrichtigt",
+    "Notify and flag for revalidation": "Benachrichtigen und zur erneuten Validierung markieren",
+    "Notify only": "Nur benachrichtigen",
+    "On breach": "Bei Überschreitung",
+    "POST a metric event to the model&apos;s URL, per metric, on your own cadence.":
+      "Senden Sie ein Metrik-Ereignis per POST an die URL des Modells, pro Metrik, in Ihrem eigenen Rhythmus.",
+    "Payload schema": "Payload-Schema",
+    "Rotate": "Rotieren",
+    "Select a model to see who is notified of its breaches.":
+      "Wählen Sie ein Modell, um zu sehen, wer über dessen Überschreitungen benachrichtigt wird.",
+    "Select a model to view its monitored metrics.":
+      "Wählen Sie ein Modell, um dessen überwachte Metriken anzuzeigen.",
+    "Select a shape": "Form auswählen",
+    "Set the metric, shape and severity VerifyWise evaluates ingested points against.":
+      "Legen Sie Metrik, Form und Schweregrad fest, anhand derer VerifyWise eingehende Punkte auswertet.",
+    "Shape": "Form",
+    "Threshold": "Schwellenwert",
+    "Threshold at evaluation": "Schwellenwert zum Auswertungszeitpunkt",
+    "Token name": "Token-Name",
+    "Trend": "Trend",
+    "Who hears about a breach. When an ingested metric breaches its threshold, VerifyWise notifies the people assigned to the model's MRM roles, plus any additional recipients configured below. Email delivery and automatic findings are off until you enable them here.":
+      "Wer von einem Verstoß erfährt. Wenn eine erfasste Metrik ihren Schwellenwert verletzt, benachrichtigt VerifyWise die den MRM-Rollen des Modells zugewiesenen Personen sowie alle unten konfigurierten zusätzlichen Empfänger. E-Mail-Versand und automatische Feststellungen sind deaktiviert, bis Sie sie hier aktivieren.",
+    "Send email alerts": "E-Mail-Benachrichtigungen senden",
+    "Applies to breach and overdue-validation alerts. In-app notifications are always on.":
+      "Gilt für Verstoß- und überfällige Validierungsbenachrichtigungen. In-App-Benachrichtigungen sind immer aktiv.",
+    "Automatically open a finding on hard breach":
+      "Bei hartem Verstoß automatisch eine Feststellung öffnen",
+    "One finding per model and metric while it stays open; warnings never open findings.":
+      "Eine Feststellung pro Modell und Metrik, solange sie offen ist; Warnungen öffnen nie Feststellungen.",
+    "Additional recipients": "Zusätzliche Empfänger",
+    "These people are alerted for every model, on top of the model's roles.":
+      "Diese Personen werden für jedes Modell benachrichtigt, zusätzlich zu den Rollen des Modells.",
+    "Save alert settings": "Benachrichtigungseinstellungen speichern",
+    "Alert settings saved": "Benachrichtigungseinstellungen gespeichert",
+    "Failed to save alert settings":
+      "Benachrichtigungseinstellungen konnten nicht gespeichert werden",
+    "Notifications are delivered in-app, and by email when email alerts are enabled. A threshold set to notify and flag for revalidation also marks the model as due for a fresh validation.":
+      "Benachrichtigungen werden in der App zugestellt und per E-Mail, wenn E-Mail-Benachrichtigungen aktiviert sind. Ein Schwellenwert mit Benachrichtigung und Revalidierungs-Kennzeichnung markiert das Modell zusätzlich als fällig für eine neue Validierung.",
+    "A finding must be verified before it can be closed.":
+      "Eine Feststellung muss verifiziert sein, bevor sie geschlossen werden kann.",
+    "Assign tier": "Stufe zuweisen",
+    "Conceptual soundness": "Konzeptionelle Belastbarkeit",
+    "Conclusion & sign-off": "Schlussfolgerung & Freigabe",
+    "Create finding": "Feststellung erstellen",
+    "Data review": "Datenprüfung",
+    "Developer": "Entwickler",
+    "Does": "Aufgabe",
+    "Due": "Fällig",
+    "Findings": "Feststellungen",
+    "Findings & limitations": "Feststellungen & Einschränkungen",
+    "How will this finding be remediated?": "Wie wird diese Feststellung behoben?",
+    "In validation": "In Validierung",
+    "Last validated": "Zuletzt validiert",
+    "Materiality drivers": "Wesentlichkeitsfaktoren",
+    "Model risk management": "Modellrisikomanagement",
+    // MRM Branch 3 — portfolio summary & attestation
+    "Attestation": "Attestierung",
+    "Could not load the portfolio summary. Try again shortly.":
+      "Portfolioübersicht konnte nicht geladen werden. Bitte versuchen Sie es in Kürze erneut.",
+    "Fleet attestation status": "Attestierungsstatus des Bestands",
+    "Generate attestation report": "Attestierungsbericht erstellen",
+    "Advance this validation to In validation to begin writing the report.":
+      "Setzen Sie diese Validierung auf In Validierung, um mit dem Bericht zu beginnen.",
+    "Models by tier": "Modelle nach Stufe",
+    "Monitoring active": "Überwachung aktiv",
+    "No models in the inventory yet. Add models and assign tiers to build the portfolio summary.":
+      "Noch keine Modelle im Inventar. Fügen Sie Modelle hinzu und weisen Sie Stufen zu, um die Portfolioübersicht zu erstellen.",
+    "No tiered models yet. Assign tiers on the Tiering tab.":
+      "Noch keine eingestuften Modelle. Weisen Sie Stufen im Tab „Einstufung“ zu.",
+    "Open findings": "Offene Feststellungen",
+    "Overdue validations": "Überfällige Validierungen",
+    "Past their next due date": "Über das nächste Fälligkeitsdatum hinaus",
+    "Tiering up to date": "Einstufung aktuell",
+    "Validation coverage": "Validierungsabdeckung",
+    "Tier increase": "Stufenerhöhung",
+    "First use": "Erstnutzung",
+    "Breach": "Überschreitung",
+    "Change": "Änderung",
+    "Scheduled": "Geplant",
+    "Next due": "Nächste Fälligkeit",
+    "No findings raised yet. Findings are created from a validation.":
+      "Noch keine Feststellungen erfasst. Feststellungen werden aus einer Validierung erstellt.",
+    "No models to tier yet. Add models to your inventory first.":
+      "Noch keine Modelle zum Einstufen. Fügen Sie zuerst Modelle zu Ihrem Inventar hinzu.",
+    "No validations yet. Start a validation to open a report.":
+      "Noch keine Validierungen. Starten Sie eine Validierung, um einen Bericht zu öffnen.",
+    "Not validated": "Nicht validiert",
+    "On this model": "Für dieses Modell",
+    "Open a new validation cycle for a model. Only one validation can be in progress per model.":
+      "Starten Sie einen neuen Validierungszyklus für ein Modell. Pro Modell kann nur eine Validierung laufen.",
+    "Outcomes analysis": "Ergebnisanalyse",
+    "Purpose & scope": "Zweck & Umfang",
+    "Raise a finding against a validation. It joins the register and tracks to closure.":
+      "Erfassen Sie eine Feststellung zu einer Validierung. Sie wird ins Register aufgenommen und bis zum Abschluss verfolgt.",
+    "Record the validation outcome. This marks the validation as validated and closes the active cycle.":
+      "Erfassen Sie das Validierungsergebnis. Damit wird die Validierung als validiert markiert und der aktive Zyklus geschlossen.",
+    "Record the validator": "Erfassen Sie den Validator",
+    "Remediation plan": "Maßnahmenplan",
+    "Roles & independence": "Rollen & Unabhängigkeit",
+    "Save report": "Bericht speichern",
+    "Save roles": "Rollen speichern",
+    "Benign monitoring points older than the retention window are removed by a daily job. Breach and evaluation history is never deleted.":
+      "Unauffällige Überwachungspunkte, die älter als das Aufbewahrungsfenster sind, werden durch einen täglichen Job entfernt. Verstoß- und Bewertungshistorie wird nie gelöscht.",
+    "Breach and evaluation history is always retained; this only ages out benign monitoring points.":
+      "Verstoß- und Bewertungshistorie wird immer aufbewahrt; hiermit werden nur unauffällige Überwachungspunkte ausgesondert.",
+    "Failed to save retention": "Aufbewahrung konnte nicht gespeichert werden",
+    "Monitoring data retention (months)": "Aufbewahrung von Überwachungsdaten (Monate)",
+    "Retention must be at least 13 months": "Die Aufbewahrung muss mindestens 13 Monate betragen",
+    "Retention saved": "Aufbewahrung gespeichert",
+    "Save retention": "Aufbewahrung speichern",
+    "Select a model to view and assign its roles.":
+      "Wählen Sie ein Modell, um dessen Rollen anzuzeigen und zuzuweisen.",
+    "Select a tier": "Stufe auswählen",
+    "Select a validation": "Validierung auswählen",
+    "Select an outcome": "Ergebnis auswählen",
+    "Select stage": "Phase auswählen",
+    "Short description of the finding": "Kurzbeschreibung der Feststellung",
+    "Sign off": "Freigeben",
+    "Sign off validation": "Validierung freigeben",
+    "Stage": "Phase",
+    "Start": "Starten",
+    "Start validation": "Validierung starten",
+    "Tier": "Stufe",
+    "Tier 1": "Stufe 1",
+    "Tier 2": "Stufe 2",
+    "Tier 3": "Stufe 3",
+    "Tiered on": "Eingestuft am",
+    "Tiering": "Einstufung",
+    "Tiering rules": "Einstufungsregeln",
+    "Tiering, validation, findings and roles for model risk management":
+      "Einstufung, Validierung, Feststellungen und Rollen für das Modellrisikomanagement",
+    "Validated": "Validiert",
+    "Validated with findings": "Validiert mit Feststellungen",
+    "Validation depth & revalidation cadence": "Validierungstiefe & Revalidierungszyklus",
+    "Validation report": "Validierungsbericht",
+    "Validator": "Validator",
+    "Why this tier? e.g. capital impact, regulatory reporting, customer exposure":
+      "Warum diese Stufe? z. B. Kapitalauswirkung, aufsichtsrechtliches Reporting, Kundenexposition",
+    "Enabled — risks include monetary estimates based on the FAIR model: annual loss expectancy, residual risk after controls, and return on mitigation investment.":
+      "Aktiviert — Risiken enthalten monetäre Schätzungen auf Basis des FAIR-Modells: erwarteter Jahresverlust, Restrisiko nach Maßnahmen und Rendite der Risikominderung.",
+    "Disabled — risks use qualitative scoring only, based on severity and likelihood.":
+      "Deaktiviert — Risiken verwenden nur eine qualitative Bewertung auf Basis von Schweregrad und Eintrittswahrscheinlichkeit.",
+    "Invite people and set each member's role. Admins manage the whole workspace and its settings. Editors can create and edit governance records. Reviewers can review and approve or reject. Auditors have read-only access.":
+      "Laden Sie Personen ein und legen Sie die Rolle jedes Mitglieds fest. Admins verwalten den gesamten Arbeitsbereich und seine Einstellungen. Editoren können Governance-Datensätze erstellen und bearbeiten. Reviewer können prüfen und genehmigen oder ablehnen. Auditoren haben nur Lesezugriff.",
+    // AI Trust Index
+    "App details": "App-Details",
+    "Changes are saved automatically.": "Änderungen werden automatisch gespeichert.",
+    "Full assessment for a specific AI Trust Index app":
+      "Vollständige Bewertung einer bestimmten AI-Trust-Index-App",
     // AI Apps (MO-362)
     "AI app": "KI-App",
     "AI app deleted successfully": "KI-App erfolgreich gelöscht",
@@ -662,6 +852,7 @@ export const translations: Record<string, Record<string, string>> = {
     "COMPANY NAME": "UNTERNEHMENSNAME",
     "Company email": "Unternehmens-E-Mail",
     "Company description and values": "Unternehmensbeschreibung und Werte",
+    "External key": "Externer Schlüssel",
     "Hosting provider": "Hosting-Anbieter",
     "Dataset name": "Name des Datensatzes",
     "Risk name": "Risikoname",
@@ -784,10 +975,12 @@ export const translations: Record<string, Record<string, string>> = {
     "SOC2 Type I": "SOC 2 Typ I",
     "SOC2 Type II": "SOC 2 Typ II",
     "AI regulation in the Middle East": "KI-Regulierung im Nahen Osten",
-    "US AI regulations 2026": "KI-Regulierungen in den USA 2026",
-    "EU AI Act omnibus: what changed": "EU-KI-Verordnung Omnibus: Was sich geändert hat",
-    "VerifyWise YouTube channel launched": "VerifyWise YouTube-Kanal gestartet",
-    "Why LLM evaluations matter": "Warum LLM-Evaluierungen wichtig sind",
+    "We graded 205 AI apps on data transparency":
+      "Wir haben 205 KI-Apps zur Datentransparenz bewertet",
+    "OSFI Guideline E-23: AI model risk rules": "OSFI-Leitlinie E-23: Regeln für KI-Modellrisiken",
+    "What we found running GRS across 15 AI models":
+      "Was wir bei der Anwendung von GRS auf 15 KI-Modelle herausfanden",
+    "AI governance salaries 2026": "Gehälter im Bereich KI-Governance 2026",
     "Clauses": "Klauseln",
     "Annexes": "Anhänge",
     "AI models mapped to this framework": "Diesem Rahmenwerk zugeordnete KI-Modelle",
@@ -914,6 +1107,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Error loading controls": "Fehler beim Laden der Kontrollen",
     "Error restoring task": "Fehler beim Wiederherstellen der Aufgabe",
     "Error updating task": "Fehler beim Aktualisieren der Aufgabe",
+    "Error updating task priority": "Fehler beim Aktualisieren der Aufgabenpriorität",
+    "Error updating task status": "Fehler beim Aktualisieren des Aufgabenstatus",
     "Cannot update training without ID": "Schulung kann ohne ID nicht aktualisiert werden",
     "Please select a project to view assessments":
       "Wählen Sie ein Projekt, um Bewertungen anzuzeigen",
@@ -1411,6 +1606,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Close editor": "Editor schließen",
     "Close entity graph modal": "Entitätsgraph-Modal schließen",
     "Close icon": "Schließen-Symbol",
+    "Close image lightbox": "Bild-Lightbox schließen",
     "Close notification": "Benachrichtigung schließen",
     "Close tooltip": "Tooltip schließen",
     "Close tour": "Tour schließen",
@@ -1477,6 +1673,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Delete account": "Konto löschen",
     "Delete API key": "API-Schlüssel löschen",
     "Delete API Key": "API-Schlüssel löschen",
+    "Revoke API Key": "API-Schlüssel widerrufen",
     "Delete Arena Battle": "Arena-Vergleich löschen",
     "Delete automation": "Automatisierung löschen",
     "Delete bias audit": "Verzerrungs-Audit löschen",
@@ -4784,6 +4981,7 @@ export const translations: Record<string, Record<string, string>> = {
       "Keine Ordner verfügbar. Erstellen Sie zuerst einen Ordner.",
     "No folders yet": "Noch keine Ordner",
     "No framework plugins available.": "Keine Rahmenwerk-Plugins verfügbar.",
+    "No framework risks yet": "Noch keine Rahmenwerksrisiken",
     "No frameworks available. Please contact support if this issue persists.":
       "Keine Rahmenwerke verfügbar. Bitte wenden Sie sich an den Support, falls das Problem bestehen bleibt.",
     "No frameworks enabled for this organization.":
@@ -5325,6 +5523,8 @@ export const translations: Record<string, Record<string, string>> = {
     "AI Chatbot for Customer Support": "KI-Chatbot für den Kundensupport",
     "AI Gateway": "AI Gateway",
     "AI Gateway, Policy Radar, and CI/CD scanning": "AI Gateway, Policy Radar und CI/CD-Scanning",
+    "AI Trust Index, AI Apps inventory, and Agent Control":
+      "AI Trust Index, AI Apps inventory und Agent Control",
     "EU AI Act control workflow, clearable selects, and AI advisor fix":
       "EU-KI-Verordnungs-Kontroll-Workflow, löschbare Auswahlfelder und KI-Berater-Fix",
     "Training evidence uploads, governance score helper, and policy ownership":
@@ -5466,6 +5666,7 @@ export const translations: Record<string, Record<string, string>> = {
     "An error occured while deleting the project.":
       "Beim Löschen des Projekts ist ein Fehler aufgetreten.",
     "An error occurred": "Ein Fehler ist aufgetreten",
+    "An unknown error occurred": "Ein unbekannter Fehler ist aufgetreten",
     "An error occurred while adding the framework.":
       "Beim Hinzufügen des Rahmenwerks ist ein Fehler aufgetreten.",
     "An error occurred while removing the framework.":
@@ -5864,7 +6065,7 @@ export const translations: Record<string, Record<string, string>> = {
       "Datensatz, Bewertermodell, aktivierte Metriken und Schwellenwerte",
     "Datasets Used Documentation": "Dokumentation der verwendeten Datensätze",
     "Date picker": "Datumsauswahl",
-    "David Pinkney": "David Pinkney",
+    "Dr. Gorkem Cetin": "Dr. Gorkem Cetin",
     "Day of Month (for Monthly)": "Tag des Monats (für Monatlich)",
     "Day of Week (for Weekly)": "Wochentag (für Wöchentlich)",
     "Days Before Review Date": "Tage vor Überprüfungsdatum",
@@ -6301,6 +6502,10 @@ export const translations: Record<string, Record<string, string>> = {
       "Aktualisieren des Status fehlgeschlagen. Bitte erneut versuchen.",
     "Failed to update the task. Please try again.":
       "Aktualisieren der Aufgabe fehlgeschlagen. Bitte erneut versuchen.",
+    "Failed to update the task priority. Please try again.":
+      "Aktualisieren der Aufgabenpriorität fehlgeschlagen. Bitte erneut versuchen.",
+    "Failed to update the task status. Please try again.":
+      "Aktualisieren des Aufgabenstatus fehlgeschlagen. Bitte erneut versuchen.",
     "Failed to update the vendor risk. Please try again.":
       "Aktualisieren des Anbieterrisikos fehlgeschlagen. Bitte erneut versuchen.",
     "Failed to upload": "Hochladen fehlgeschlagen",
@@ -8634,9 +8839,308 @@ export const translations: Record<string, Record<string, string>> = {
     "Run estimate": "Schätzung ausführen",
     "Total leaf-level controls from the selected framework inventories":
       "Gesamtzahl der Blattkontrollen aus den ausgewählten Framework-Inventaren",
+    // AI Trust Index
+    "AI Trust Index": "KI-Vertrauensindex",
+    "AI Trust Index notification settings.":
+      "Benachrichtigungseinstellungen für den KI-Vertrauensindex.",
+    "AI applications your organization is tracking. We":
+      "KI-Anwendungen, die Ihre Organisation verfolgt. Wir",
+    "Choose who receives a notification when a tracked app":
+      "Wählen Sie, wer eine Benachrichtigung erhält, wenn eine verfolgte App",
+    "We couldn": "Wir konnten",
+    "You": "Sie",
+    "AI applications your organization is tracking. We'll notify recipients when a tracked app's assessment changes materially.":
+      "KI-Anwendungen, die Ihre Organisation verfolgt. Wir benachrichtigen Empfänger, wenn sich die Bewertung einer verfolgten App wesentlich ändert.",
+    "Additional emails": "Weitere E-Mail-Adressen",
+    "All categories": "Alle Kategorien",
+    "All grades": "Alle Bewertungen",
+    "Best score first": "Beste Bewertung zuerst",
+    "Tracked first": "Verfolgte zuerst",
+    "Worst score first": "Schlechteste Bewertung zuerst",
+    "Dealbreaker flag": "Ausschlusskriterium",
+    "Back to Browse": "Zurück zur Übersicht",
+    "Browse": "Durchsuchen",
+    "Browse AI app risk scores and track the apps you use":
+      "KI-App-Risikobewertungen durchsuchen und genutzte Apps verfolgen",
+    "Browse independently assessed AI applications and track the ones that matter to your organization.":
+      "Unabhängig bewertete KI-Anwendungen durchsuchen und die für Ihre Organisation relevanten verfolgen.",
+    "Choose who receives a notification when a tracked app's assessment changes materially. If no recipients are set, organization admins are notified by default.":
+      "Wählen Sie, wer eine Benachrichtigung erhält, wenn sich die Bewertung einer verfolgten App wesentlich ändert. Wenn keine Empfänger festgelegt sind, werden standardmäßig Organisationsadministratoren benachrichtigt.",
+    "Dealbreaker flags": "Ausschlusskriterien",
+    "Highest score": "Höchste Punktzahl",
+    "Highlights": "Highlights",
+    "Modalities": "Modalitäten",
+    "No apps match your filters.": "Keine Apps entsprechen Ihren Filtern.",
+    "No longer in index": "Nicht mehr im Index",
+    "Only administrators can change AI Trust Index notification settings.":
+      "Nur Administratoren können die Benachrichtigungseinstellungen des KI-Vertrauensindex ändern.",
+    "Policy details": "Richtliniendetails",
+    "Policy last updated": "Richtlinie zuletzt aktualisiert",
+    "Processes biometrics": "Verarbeitet biometrische Daten",
+    "Search apps or vendors": "Apps oder Anbieter suchen",
+    "Select team members": "Teammitglieder auswählen",
+    "Tracked": "Verfolgt",
+    "Tracked apps": "Verfolgte Apps",
+    "Trust score:": "Vertrauenswert:",
+    "Type an email and press Enter": "E-Mail eingeben und Enter drücken",
+    "Untrack": "Nicht mehr verfolgen",
+    "View policy": "Richtlinie anzeigen",
+    "We couldn't find this app in the AI Trust Index.":
+      "Diese App wurde im KI-Vertrauensindex nicht gefunden.",
+    "We couldn't load the AI Trust Index right now. Please try again later.":
+      "Der KI-Vertrauensindex konnte momentan nicht geladen werden. Bitte versuchen Sie es später erneut.",
+    "We couldn't load your tracked apps right now. Please try again later.":
+      "Ihre verfolgten Apps konnten momentan nicht geladen werden. Bitte versuchen Sie es später erneut.",
+    "You're not tracking any apps yet. Track apps from the Browse tab to monitor changes to their privacy and transparency assessments.":
+      'Sie verfolgen noch keine Apps. Fügen Sie Apps über die Registerkarte "Durchsuchen" hinzu, um Änderungen an ihren Datenschutz- und Transparenzbewertungen zu überwachen.',
+    "Find apps in Browse": "Apps in der Übersicht finden",
+    "Open the Browse tab to explore the full catalogue, then track the apps your teams use with the Track button on each card.":
+      'Öffnen Sie die Registerkarte "Durchsuchen", um den vollständigen Katalog zu erkunden, und verfolgen Sie die von Ihren Teams genutzten Apps über die Schaltfläche "Verfolgen" auf jeder Karte.',
+    "Get notified when assessments change": "Benachrichtigung bei Änderungen der Bewertungen",
+    "Tracked apps are included in the weekly change digest, so configured recipients hear about score, grade, or policy changes.":
+      "Verfolgte Apps sind in der wöchentlichen Änderungsübersicht enthalten, sodass konfigurierte Empfänger über Änderungen an Punktzahl, Note oder Richtlinie informiert werden.",
+    // AI Gateway empty/error states
+    "Click Save draft to create your first version.":
+      "Klicken Sie auf Entwurf speichern, um Ihre erste Version zu erstellen.",
+    "Could not load this run.": "Dieser Lauf konnte nicht geladen werden.",
+    "Create your first version": "Erstellen Sie Ihre erste Version",
+    "Error loading AI Trust Center settings. Please try again.":
+      "Fehler beim Laden der AI Trust Center-Einstellungen. Bitte versuchen Sie es erneut.",
+    "Failed to load invocation details.": "Aufrufdetails konnten nicht geladen werden.",
+    "Refresh": "Aktualisieren",
+    "Select a log to view details.": "Wählen Sie ein Protokoll aus, um Details anzuzeigen.",
+    // Use case classification
+    "Applicable regulations (optional)": "Anwendbare Regulierungen (optional)",
+    "Audience": "Zielgruppe",
+    "Both": "Beides",
+    "Cloud": "Cloud",
+    "Computer Vision": "Computer Vision",
+    "Customer service": "Kundenservice",
+    "Deployment context": "Bereitstellungskontext",
+    "Edge": "Edge",
+    "External": "Extern",
+    "Generative AI": "Generative KI",
+    "How is the AI use case deployed?": "Wie wird der KI-Anwendungsfall bereitgestellt?",
+    "Hybrid": "Hybrid",
+    "ISO 42001, ISO 27001, and NIST AI RMF (company-wide project)":
+      "ISO 42001, ISO 27001 und NIST AI RMF (unternehmensweites Projekt)",
+    "Internal operations": "Interne Abläufe",
+    "Marketing and sales": "Marketing und Vertrieb",
+    "Natural Language Processing": "Natural Language Processing",
+    "Predictive Analytics": "Predictive Analytics",
+    "Product/feature enhancement": "Produkt-/Funktionsverbesserung",
+    "Recommendation Systems": "Empfehlungssysteme",
+    "Research and development": "Forschung und Entwicklung",
+    "Risk and compliance": "Risiko und Compliance",
+    "Robotics": "Robotik",
+    "Select a category": "Kategorie auswählen",
+    "Select a context": "Kontext auswählen",
+    "Select a purpose": "Zweck auswählen",
+    "Select an audience": "Zielgruppe auswählen",
+    "Select the category that best describes the use case.":
+      "Wählen Sie die Kategorie, die den Anwendungsfall am besten beschreibt.",
+    "Third-party API": "API eines Drittanbieters",
+    "Use case audience": "Zielgruppe des Anwendungsfalls",
+    "Use case category": "Kategorie des Anwendungsfalls",
+    "Use case classification (optional)": "Klassifizierung des Anwendungsfalls (optional)",
+    "Use case purpose": "Zweck des Anwendungsfalls",
+    "Use-case level regulations (optional)": "Anwendungsfallbezogene Regulierungen (optional)",
+    "What business purpose does the use case serve?":
+      "Welchem geschäftlichen Zweck dient der Anwendungsfall?",
+    "Who is the intended audience for the use case?":
+      "Wer ist die gewünschte Zielgruppe für den Anwendungsfall?",
   },
 
   fr: {
+    // AsyncBoundary
+    "Loading": "Chargement...",
+    "Retry loading data": "Réessayer le chargement des données",
+    "Something went wrong. Please try again.": "Une erreur s'est produite. Veuillez réessayer.",
+    // Rich text renderer
+    "Rich text content": "Contenu de texte enrichi",
+    // Settings — help text
+    // Model risk management (MRM) module
+    "Add threshold": "Ajouter un seuil",
+    "Alerts & notifications": "Alertes et notifications",
+    "Assigned to": "Attribué à",
+    "Breach history": "Historique des dépassements",
+    "Copy token": "Copier le jeton",
+    "Copy your token now": "Copiez votre jeton maintenant",
+    "Create an ingestion token below (per-org, machine-to-machine, revocable).":
+      "Créez un jeton d'ingestion ci-dessous (par organisation, machine à machine, révocable).",
+    "Create ingestion token": "Créer un jeton d'ingestion",
+    "Default thresholds": "Seuils par défaut",
+    "Example request": "Exemple de requête",
+    "How to send metrics": "Comment envoyer des métriques",
+    "Ingestion tokens": "Jetons d'ingestion",
+    "Last received": "Dernière réception",
+    "Latest": "Dernier",
+    "Maximum": "Maximum",
+    "Metric": "Métrique",
+    "Metric date": "Date de la métrique",
+    "Metric trend": "Tendance de la métrique",
+    "Metrics feed & tokens": "Flux de métriques et jetons",
+    "Minimum": "Minimum",
+    "Name a machine-to-machine token your pipeline will use to push metrics.":
+      "Nommez un jeton machine à machine que votre pipeline utilisera pour envoyer des métriques.",
+    "No breaches recorded. Every metric is within its threshold.":
+      "Aucun dépassement enregistré. Chaque métrique respecte son seuil.",
+    "No data yet. This model is awaiting its first metric from your monitoring feed.":
+      "Aucune donnée pour le moment. Ce modèle attend sa première métrique de votre flux de surveillance.",
+    "No ingestion tokens yet. Create one to start pushing metrics.":
+      "Aucun jeton d'ingestion pour le moment. Créez-en un pour commencer à envoyer des métriques.",
+    "No threshold defined": "Aucun seuil défini",
+    "No thresholds defined yet. Add one so ingested metrics can be evaluated.":
+      "Aucun seuil défini pour le moment. Ajoutez-en un pour que les métriques ingérées puissent être évaluées.",
+    "Notified on breach": "Notifié en cas de dépassement",
+    "Notify and flag for revalidation": "Notifier et signaler pour revalidation",
+    "Notify only": "Notifier uniquement",
+    "On breach": "En cas de dépassement",
+    "POST a metric event to the model&apos;s URL, per metric, on your own cadence.":
+      "Envoyez un événement de métrique en POST à l'URL du modèle, par métrique, à votre propre rythme.",
+    "Payload schema": "Schéma de la charge utile",
+    "Rotate": "Renouveler",
+    "Select a model to see who is notified of its breaches.":
+      "Sélectionnez un modèle pour voir qui est notifié de ses dépassements.",
+    "Select a model to view its monitored metrics.":
+      "Sélectionnez un modèle pour afficher ses métriques surveillées.",
+    "Select a shape": "Sélectionner une forme",
+    "Set the metric, shape and severity VerifyWise evaluates ingested points against.":
+      "Définissez la métrique, la forme et la gravité selon lesquelles VerifyWise évalue les points ingérés.",
+    "Shape": "Forme",
+    "Threshold": "Seuil",
+    "Threshold at evaluation": "Seuil au moment de l'évaluation",
+    "Token name": "Nom du jeton",
+    "Trend": "Tendance",
+    "Who hears about a breach. When an ingested metric breaches its threshold, VerifyWise notifies the people assigned to the model's MRM roles, plus any additional recipients configured below. Email delivery and automatic findings are off until you enable them here.":
+      "Qui est informé d'un dépassement. Lorsqu'une métrique ingérée dépasse son seuil, VerifyWise notifie les personnes affectées aux rôles MRM du modèle, ainsi que les destinataires supplémentaires configurés ci-dessous. L'envoi d'e-mails et les constats automatiques sont désactivés tant que vous ne les activez pas ici.",
+    "Send email alerts": "Envoyer des alertes par e-mail",
+    "Applies to breach and overdue-validation alerts. In-app notifications are always on.":
+      "S'applique aux alertes de dépassement et de validation en retard. Les notifications dans l'application sont toujours actives.",
+    "Automatically open a finding on hard breach":
+      "Ouvrir automatiquement un constat en cas de dépassement critique",
+    "One finding per model and metric while it stays open; warnings never open findings.":
+      "Un constat par modèle et par métrique tant qu'il reste ouvert ; les avertissements n'ouvrent jamais de constats.",
+    "Additional recipients": "Destinataires supplémentaires",
+    "These people are alerted for every model, on top of the model's roles.":
+      "Ces personnes sont alertées pour chaque modèle, en plus des rôles du modèle.",
+    "Save alert settings": "Enregistrer les paramètres d'alerte",
+    "Alert settings saved": "Paramètres d'alerte enregistrés",
+    "Failed to save alert settings": "Échec de l'enregistrement des paramètres d'alerte",
+    "Notifications are delivered in-app, and by email when email alerts are enabled. A threshold set to notify and flag for revalidation also marks the model as due for a fresh validation.":
+      "Les notifications sont envoyées dans l'application, et par e-mail lorsque les alertes par e-mail sont activées. Un seuil configuré pour notifier et signaler une revalidation marque également le modèle comme devant faire l'objet d'une nouvelle validation.",
+    "A finding must be verified before it can be closed.":
+      "Une constatation doit être vérifiée avant de pouvoir être clôturée.",
+    "Assign tier": "Attribuer un niveau",
+    "Conceptual soundness": "Solidité conceptuelle",
+    "Conclusion & sign-off": "Conclusion et validation",
+    "Create finding": "Créer une constatation",
+    "Data review": "Revue des données",
+    "Developer": "Développeur",
+    "Does": "Rôle",
+    "Due": "Échéance",
+    "Findings": "Constatations",
+    "Findings & limitations": "Constatations et limites",
+    "How will this finding be remediated?": "Comment cette constatation sera-t-elle corrigée ?",
+    "In validation": "En validation",
+    "Last validated": "Dernière validation",
+    "Materiality drivers": "Facteurs de matérialité",
+    "Model risk management": "Gestion du risque de modèle",
+    // MRM Branch 3 — portfolio summary & attestation
+    "Attestation": "Attestation",
+    "Could not load the portfolio summary. Try again shortly.":
+      "Impossible de charger le résumé du portefeuille. Réessayez sous peu.",
+    "Fleet attestation status": "Statut d’attestation du parc",
+    "Generate attestation report": "Générer le rapport d’attestation",
+    "Advance this validation to In validation to begin writing the report.":
+      "Faites passer cette validation à En validation pour commencer à rédiger le rapport.",
+    "Models by tier": "Modèles par niveau",
+    "Monitoring active": "Surveillance active",
+    "No models in the inventory yet. Add models and assign tiers to build the portfolio summary.":
+      "Aucun modèle dans l’inventaire pour l’instant. Ajoutez des modèles et attribuez des niveaux pour créer le résumé du portefeuille.",
+    "No tiered models yet. Assign tiers on the Tiering tab.":
+      "Aucun modèle classé pour l’instant. Attribuez des niveaux dans l’onglet « Classement ».",
+    "Open findings": "Constatations ouvertes",
+    "Overdue validations": "Validations en retard",
+    "Past their next due date": "Au-delà de leur prochaine échéance",
+    "Tiering up to date": "Classement à jour",
+    "Validation coverage": "Couverture de validation",
+    "Tier increase": "Augmentation de niveau",
+    "First use": "Première utilisation",
+    "Breach": "Dépassement",
+    "Change": "Changement",
+    "Scheduled": "Planifié",
+    "Next due": "Prochaine échéance",
+    "No findings raised yet. Findings are created from a validation.":
+      "Aucune constatation pour le moment. Les constatations sont créées à partir d'une validation.",
+    "No models to tier yet. Add models to your inventory first.":
+      "Aucun modèle à classer pour le moment. Ajoutez d'abord des modèles à votre inventaire.",
+    "No validations yet. Start a validation to open a report.":
+      "Aucune validation pour le moment. Démarrez une validation pour ouvrir un rapport.",
+    "Not validated": "Non validé",
+    "On this model": "Sur ce modèle",
+    "Open a new validation cycle for a model. Only one validation can be in progress per model.":
+      "Ouvrez un nouveau cycle de validation pour un modèle. Une seule validation peut être en cours par modèle.",
+    "Outcomes analysis": "Analyse des résultats",
+    "Purpose & scope": "Objet et périmètre",
+    "Raise a finding against a validation. It joins the register and tracks to closure.":
+      "Enregistrez une constatation liée à une validation. Elle rejoint le registre et est suivie jusqu'à sa clôture.",
+    "Record the validation outcome. This marks the validation as validated and closes the active cycle.":
+      "Enregistrez le résultat de la validation. Cela marque la validation comme validée et clôt le cycle actif.",
+    "Record the validator": "Enregistrez le validateur",
+    "Remediation plan": "Plan de remédiation",
+    "Roles & independence": "Rôles et indépendance",
+    "Save report": "Enregistrer le rapport",
+    "Save roles": "Enregistrer les rôles",
+    "Benign monitoring points older than the retention window are removed by a daily job. Breach and evaluation history is never deleted.":
+      "Les points de surveillance sans incident plus anciens que la fenêtre de rétention sont supprimés par une tâche quotidienne. L'historique des dépassements et des évaluations n'est jamais supprimé.",
+    "Breach and evaluation history is always retained; this only ages out benign monitoring points.":
+      "L'historique des dépassements et des évaluations est toujours conservé ; seuls les points de surveillance sans incident sont purgés.",
+    "Failed to save retention": "Échec de l'enregistrement de la rétention",
+    "Monitoring data retention (months)": "Rétention des données de surveillance (mois)",
+    "Retention must be at least 13 months": "La rétention doit être d'au moins 13 mois",
+    "Retention saved": "Rétention enregistrée",
+    "Save retention": "Enregistrer la rétention",
+    "Select a model to view and assign its roles.":
+      "Sélectionnez un modèle pour afficher et attribuer ses rôles.",
+    "Select a tier": "Sélectionner un niveau",
+    "Select a validation": "Sélectionner une validation",
+    "Select an outcome": "Sélectionner un résultat",
+    "Select stage": "Sélectionner une étape",
+    "Short description of the finding": "Brève description de la constatation",
+    "Sign off": "Valider",
+    "Sign off validation": "Valider la validation",
+    "Stage": "Étape",
+    "Start": "Démarrer",
+    "Start validation": "Démarrer la validation",
+    "Tier": "Niveau",
+    "Tier 1": "Niveau 1",
+    "Tier 2": "Niveau 2",
+    "Tier 3": "Niveau 3",
+    "Tiered on": "Classé le",
+    "Tiering": "Classement",
+    "Tiering rules": "Règles de classement",
+    "Tiering, validation, findings and roles for model risk management":
+      "Classement, validation, constatations et rôles pour la gestion du risque de modèle",
+    "Validated": "Validé",
+    "Validated with findings": "Validé avec constatations",
+    "Validation depth & revalidation cadence":
+      "Profondeur de validation et fréquence de revalidation",
+    "Validation report": "Rapport de validation",
+    "Validator": "Validateur",
+    "Why this tier? e.g. capital impact, regulatory reporting, customer exposure":
+      "Pourquoi ce niveau ? p. ex. impact en capital, reporting réglementaire, exposition client",
+    "Enabled — risks include monetary estimates based on the FAIR model: annual loss expectancy, residual risk after controls, and return on mitigation investment.":
+      "Activé — les risques incluent des estimations monétaires basées sur le modèle FAIR : perte annuelle attendue, risque résiduel après contrôles et retour sur l'investissement de mitigation.",
+    "Disabled — risks use qualitative scoring only, based on severity and likelihood.":
+      "Désactivé — les risques utilisent uniquement une notation qualitative, basée sur la gravité et la probabilité.",
+    "Invite people and set each member's role. Admins manage the whole workspace and its settings. Editors can create and edit governance records. Reviewers can review and approve or reject. Auditors have read-only access.":
+      "Invitez des personnes et définissez le rôle de chaque membre. Les administrateurs gèrent l'ensemble de l'espace de travail et ses paramètres. Les éditeurs peuvent créer et modifier les enregistrements de gouvernance. Les relecteurs peuvent examiner et approuver ou rejeter. Les auditeurs disposent d'un accès en lecture seule.",
+    // AI Trust Index
+    "App details": "Détails de l'application",
+    "Changes are saved automatically.": "Les modifications sont enregistrées automatiquement.",
+    "Full assessment for a specific AI Trust Index app":
+      "Évaluation complète d'une application spécifique de l'AI Trust Index",
     // AI Apps (MO-362)
     "AI app": "Application IA",
     "AI app deleted successfully": "Application IA supprimée avec succès",
@@ -9590,6 +10094,7 @@ export const translations: Record<string, Record<string, string>> = {
     "VISIBILITY": "VISIBILITÉ",
     "COMPANY NAME": "NOM DE L'ENTREPRISE",
     "Company description and values": "Description et valeurs de l'entreprise",
+    "External key": "Clé externe",
     "Hosting provider": "Hébergeur",
     "Risk Name": "Nom du risque",
     "Risk Level": "Niveau de risque",
@@ -9670,10 +10175,13 @@ export const translations: Record<string, Record<string, string>> = {
     "SOC2 Type I": "SOC 2 Type I",
     "SOC2 Type II": "SOC 2 Type II",
     "AI regulation in the Middle East": "Réglementation IA au Moyen-Orient",
-    "US AI regulations 2026": "Réglementations IA aux États-Unis en 2026",
-    "EU AI Act omnibus: what changed": "Règlement IA de l'UE — omnibus : ce qui a changé",
-    "VerifyWise YouTube channel launched": "Lancement de la chaîne YouTube VerifyWise",
-    "Why LLM evaluations matter": "Pourquoi les évaluations LLM sont importantes",
+    "We graded 205 AI apps on data transparency":
+      "Nous avons évalué 205 applications d'IA sur la transparence des données",
+    "OSFI Guideline E-23: AI model risk rules":
+      "Ligne directrice E-23 du BSIF : règles sur le risque des modèles d'IA",
+    "What we found running GRS across 15 AI models":
+      "Ce que nous avons constaté en appliquant le GRS à 15 modèles d'IA",
+    "AI governance salaries 2026": "Salaires en gouvernance de l'IA 2026",
     "AI models mapped to this framework": "Modèles IA rattachés à ce référentiel",
     "Organizational Frameworks": "Référentiels organisationnels",
     "Organizational policies": "Politiques organisationnelles",
@@ -9763,6 +10271,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Error loading controls": "Erreur lors du chargement des contrôles",
     "Error restoring task": "Erreur lors de la restauration de la tâche",
     "Error updating task": "Erreur lors de la mise à jour de la tâche",
+    "Error updating task priority": "Erreur lors de la mise à jour de la priorité de la tâche",
+    "Error updating task status": "Erreur lors de la mise à jour du statut de la tâche",
     "Cannot update training without ID": "Impossible de mettre à jour une formation sans ID",
     "Please select a project to view assessments":
       "Sélectionnez un projet pour voir les évaluations",
@@ -10164,6 +10674,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Close editor": "Fermer l'éditeur",
     "Close entity graph modal": "Fermer la fenêtre du graphe d'entités",
     "Close icon": "Icône de fermeture",
+    "Close image lightbox": "Fermer la lightbox d'image",
     "Close notification": "Fermer la notification",
     "Close tooltip": "Fermer l'infobulle",
     "Close tour": "Fermer la visite",
@@ -10229,6 +10740,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Delete account": "Supprimer le compte",
     "Delete API key": "Supprimer la clé API",
     "Delete API Key": "Supprimer la clé API",
+    "Revoke API Key": "Révoquer la clé API",
     "Delete Arena Battle": "Supprimer la comparaison d'arène",
     "Delete automation": "Supprimer l'automatisation",
 
@@ -13347,6 +13859,7 @@ export const translations: Record<string, Record<string, string>> = {
       "Aucun dossier disponible. Créez d'abord un dossier.",
     "No folders yet": "Pas encore de dossiers",
     "No framework plugins available.": "Aucun plugin de référentiel disponible.",
+    "No framework risks yet": "Pas encore de risques du référentiel",
     "No frameworks available. Please contact support if this issue persists.":
       "Aucun référentiel disponible. Veuillez contacter le support si le problème persiste.",
     "No frameworks enabled for this organization.":
@@ -13888,6 +14401,8 @@ export const translations: Record<string, Record<string, string>> = {
     "AI Chatbot for Customer Support": "Chatbot IA pour le support client",
     "AI Gateway": "AI Gateway",
     "AI Gateway, Policy Radar, and CI/CD scanning": "AI Gateway, Policy Radar et analyse CI/CD",
+    "AI Trust Index, AI Apps inventory, and Agent Control":
+      "AI Trust Index, AI Apps inventory et Agent Control",
     "EU AI Act control workflow, clearable selects, and AI advisor fix":
       "Workflow des contrôles du Règlement IA de l'UE, sélections effaçables et correctif de l'assistant IA",
     "Training evidence uploads, governance score helper, and policy ownership":
@@ -14027,6 +14542,7 @@ export const translations: Record<string, Record<string, string>> = {
     "An error occured while deleting the project.":
       "Une erreur s'est produite lors de la suppression du projet.",
     "An error occurred": "Une erreur s'est produite",
+    "An unknown error occurred": "Une erreur inconnue s'est produite",
     "An error occurred while adding the framework.":
       "Une erreur s'est produite lors de l'ajout du référentiel.",
     "An error occurred while removing the framework.":
@@ -14423,7 +14939,7 @@ export const translations: Record<string, Record<string, string>> = {
       "Jeu de données, modèle juge, métriques activées et seuils",
     "Datasets Used Documentation": "Documentation des jeux de données utilisés",
     "Date picker": "Sélecteur de date",
-    "David Pinkney": "David Pinkney",
+    "Dr. Gorkem Cetin": "Dr. Gorkem Cetin",
     "Day of Month (for Monthly)": "Jour du mois (pour mensuel)",
     "Day of Week (for Weekly)": "Jour de la semaine (pour hebdomadaire)",
     "Days Before Review Date": "Jours avant la date d'examen",
@@ -14861,6 +15377,10 @@ export const translations: Record<string, Record<string, string>> = {
       "Échec de la mise à jour du statut. Veuillez réessayer.",
     "Failed to update the task. Please try again.":
       "Échec de la mise à jour de la tâche. Veuillez réessayer.",
+    "Failed to update the task priority. Please try again.":
+      "Échec de la mise à jour de la priorité de la tâche. Veuillez réessayer.",
+    "Failed to update the task status. Please try again.":
+      "Échec de la mise à jour du statut de la tâche. Veuillez réessayer.",
     "Failed to update the vendor risk. Please try again.":
       "Échec de la mise à jour du risque fournisseur. Veuillez réessayer.",
     "Failed to upload": "Échec du téléversement",
@@ -17200,8 +17720,306 @@ export const translations: Record<string, Record<string, string>> = {
     "Run estimate": "Lancer l'estimation",
     "Total leaf-level controls from the selected framework inventories":
       "Total des contrôles feuille des inventaires de cadres sélectionnés",
+    // AI Trust Index
+    "AI Trust Index": "Index de confiance IA",
+    "AI Trust Index notification settings.":
+      "Paramètres de notification de l'index de confiance IA.",
+    "AI applications your organization is tracking. We":
+      "Applications IA que votre organisation suit. Nous",
+    "Choose who receives a notification when a tracked app":
+      "Choisissez qui reçoit une notification lorsqu'une application suivie",
+    "We couldn": "Nous n'avons pas pu",
+    "You": "Vous",
+    "AI applications your organization is tracking. We'll notify recipients when a tracked app's assessment changes materially.":
+      "Applications IA que votre organisation suit. Nous notifierons les destinataires lorsque l'évaluation d'une application suivie change de manière significative.",
+    "Additional emails": "E-mails supplémentaires",
+    "All categories": "Toutes les catégories",
+    "All grades": "Toutes les notes",
+    "Best score first": "Meilleur score d'abord",
+    "Tracked first": "Suivies d'abord",
+    "Worst score first": "Pire score d'abord",
+    "Dealbreaker flag": "Critère rédhibitoire",
+    "Back to Browse": "Retour à la navigation",
+    "Browse": "Parcourir",
+    "Browse AI app risk scores and track the apps you use":
+      "Parcourir les scores de risque des applications IA et suivre les applications utilisées",
+    "Browse independently assessed AI applications and track the ones that matter to your organization.":
+      "Parcourir les applications IA évaluées indépendamment et suivre celles qui comptent pour votre organisation.",
+    "Choose who receives a notification when a tracked app's assessment changes materially. If no recipients are set, organization admins are notified by default.":
+      "Choisissez qui reçoit une notification lorsque l'évaluation d'une application suivie change de manière significative. Si aucun destinataire n'est défini, les administrateurs de l'organisation sont notifiés par défaut.",
+    "Dealbreaker flags": "Indicateurs rédhibitoires",
+    "Highest score": "Score le plus élevé",
+    "Highlights": "Points clés",
+    "Modalities": "Modalités",
+    "No apps match your filters.": "Aucune application ne correspond à vos filtres.",
+    "No longer in index": "Plus dans l'index",
+    "Only administrators can change AI Trust Index notification settings.":
+      "Seuls les administrateurs peuvent modifier les paramètres de notification de l'index de confiance IA.",
+    "Policy details": "Détails de la politique",
+    "Policy last updated": "Politique mise à jour le",
+    "Processes biometrics": "Traite des données biométriques",
+    "Search apps or vendors": "Rechercher des applications ou des fournisseurs",
+    "Select team members": "Sélectionner des membres de l'équipe",
+    "Tracked": "Suivis",
+    "Tracked apps": "Applications suivies",
+    "Trust score:": "Score de confiance :",
+    "Type an email and press Enter": "Saisissez un e-mail et appuyez sur Entrée",
+    "Untrack": "Ne plus suivre",
+    "View policy": "Voir la politique",
+    "We couldn't find this app in the AI Trust Index.":
+      "Cette application est introuvable dans l'index de confiance IA.",
+    "We couldn't load the AI Trust Index right now. Please try again later.":
+      "L'index de confiance IA n'a pas pu être chargé pour l'instant. Veuillez réessayer ultérieurement.",
+    "We couldn't load your tracked apps right now. Please try again later.":
+      "Vos applications suivies n'ont pas pu être chargées pour l'instant. Veuillez réessayer ultérieurement.",
+    "You're not tracking any apps yet. Track apps from the Browse tab to monitor changes to their privacy and transparency assessments.":
+      "Vous ne suivez encore aucune application. Ajoutez des applications depuis l'onglet Parcourir pour surveiller les modifications de leurs évaluations de confidentialité et de transparence.",
+    "Find apps in Browse": "Trouver des applications dans Parcourir",
+    "Open the Browse tab to explore the full catalogue, then track the apps your teams use with the Track button on each card.":
+      "Ouvrez l'onglet Parcourir pour explorer le catalogue complet, puis suivez les applications utilisées par vos équipes à l'aide du bouton Suivre sur chaque carte.",
+    "Get notified when assessments change": "Être averti lorsque les évaluations changent",
+    "Tracked apps are included in the weekly change digest, so configured recipients hear about score, grade, or policy changes.":
+      "Les applications suivies sont incluses dans le récapitulatif hebdomadaire des modifications, afin que les destinataires configurés soient informés des changements de score, de note ou de politique.",
+    // AI Gateway empty/error states
+    "Click Save draft to create your first version.":
+      "Cliquez sur Enregistrer le brouillon pour créer votre première version.",
+    "Could not load this run.": "Impossible de charger cette exécution.",
+    "Create your first version": "Créer votre première version",
+    "Error loading AI Trust Center settings. Please try again.":
+      "Erreur lors du chargement des paramètres du AI Trust Center. Veuillez réessayer.",
+    "Failed to load invocation details.": "Échec du chargement des détails de l'invocation.",
+    "Refresh": "Actualiser",
+    "Select a log to view details.": "Sélectionnez un journal pour voir les détails.",
+    // Use case classification
+    "Applicable regulations (optional)": "Réglementations applicables (optionnel)",
+    "Audience": "Public cible",
+    "Both": "Les deux",
+    "Cloud": "Cloud",
+    "Computer Vision": "Computer Vision",
+    "Customer service": "Service client",
+    "Deployment context": "Contexte de déploiement",
+    "Edge": "Edge",
+    "External": "Externe",
+    "Generative AI": "IA générative",
+    "How is the AI use case deployed?": "Comment le cas d'usage d'IA est-il déployé ?",
+    "Hybrid": "Hybride",
+    "ISO 42001, ISO 27001, and NIST AI RMF (company-wide project)":
+      "ISO 42001, ISO 27001 et NIST AI RMF (projet à l'échelle de l'entreprise)",
+    "Internal operations": "Opérations internes",
+    "Marketing and sales": "Marketing et ventes",
+    "Natural Language Processing": "Natural Language Processing",
+    "Predictive Analytics": "Predictive Analytics",
+    "Product/feature enhancement": "Amélioration produit/fonctionnalité",
+    "Recommendation Systems": "Systèmes de recommandation",
+    "Research and development": "Recherche et développement",
+    "Risk and compliance": "Risque et conformité",
+    "Robotics": "Robotique",
+    "Select a category": "Sélectionner une catégorie",
+    "Select a context": "Sélectionner un contexte",
+    "Select a purpose": "Sélectionner un objectif",
+    "Select an audience": "Sélectionner un public",
+    "Select the category that best describes the use case.":
+      "Sélectionnez la catégorie qui décrit le mieux le cas d'usage.",
+    "Third-party API": "API tierce",
+    "Use case audience": "Public du cas d'usage",
+    "Use case category": "Catégorie du cas d'usage",
+    "Use case classification (optional)": "Classification du cas d'usage (optionnel)",
+    "Use case purpose": "Objectif du cas d'usage",
+    "Use-case level regulations (optional)": "Réglementations au niveau du cas d'usage (optionnel)",
+    "What business purpose does the use case serve?":
+      "Quel objectif commercial sert le cas d'usage ?",
+    "Who is the intended audience for the use case?": "Quel est le public cible du cas d'usage ?",
   },
   es: {
+    // AsyncBoundary
+    "Loading": "Cargando...",
+    "Retry loading data": "Reintentar cargar datos",
+    "Something went wrong. Please try again.": "Algo salió mal. Por favor, inténtelo de nuevo.",
+    // Rich text renderer
+    "Rich text content": "Contenido de texto enriquecido",
+    // Settings — help text
+    // Model risk management (MRM) module
+    "Add threshold": "Añadir umbral",
+    "Alerts & notifications": "Alertas y notificaciones",
+    "Assigned to": "Asignado a",
+    "Breach history": "Historial de incumplimientos",
+    "Copy token": "Copiar token",
+    "Copy your token now": "Copie su token ahora",
+    "Create an ingestion token below (per-org, machine-to-machine, revocable).":
+      "Cree un token de ingesta a continuación (por organización, de máquina a máquina, revocable).",
+    "Create ingestion token": "Crear token de ingesta",
+    "Default thresholds": "Umbrales predeterminados",
+    "Example request": "Solicitud de ejemplo",
+    "How to send metrics": "Cómo enviar métricas",
+    "Ingestion tokens": "Tokens de ingesta",
+    "Last received": "Última recepción",
+    "Latest": "Último",
+    "Maximum": "Máximo",
+    "Metric": "Métrica",
+    "Metric date": "Fecha de la métrica",
+    "Metric trend": "Tendencia de la métrica",
+    "Metrics feed & tokens": "Flujo de métricas y tokens",
+    "Minimum": "Mínimo",
+    "Name a machine-to-machine token your pipeline will use to push metrics.":
+      "Asigne un nombre a un token de máquina a máquina que su canalización usará para enviar métricas.",
+    "No breaches recorded. Every metric is within its threshold.":
+      "No se registraron incumplimientos. Cada métrica está dentro de su umbral.",
+    "No data yet. This model is awaiting its first metric from your monitoring feed.":
+      "Aún no hay datos. Este modelo está esperando su primera métrica de su flujo de monitoreo.",
+    "No ingestion tokens yet. Create one to start pushing metrics.":
+      "Aún no hay tokens de ingesta. Cree uno para empezar a enviar métricas.",
+    "No threshold defined": "Sin umbral definido",
+    "No thresholds defined yet. Add one so ingested metrics can be evaluated.":
+      "Aún no se han definido umbrales. Añada uno para que las métricas ingeridas puedan evaluarse.",
+    "Notified on breach": "Notificado en caso de incumplimiento",
+    "Notify and flag for revalidation": "Notificar y marcar para revalidación",
+    "Notify only": "Solo notificar",
+    "On breach": "En caso de incumplimiento",
+    "POST a metric event to the model&apos;s URL, per metric, on your own cadence.":
+      "Envíe un evento de métrica mediante POST a la URL del modelo, por métrica, a su propio ritmo.",
+    "Payload schema": "Esquema de la carga útil",
+    "Rotate": "Rotar",
+    "Select a model to see who is notified of its breaches.":
+      "Seleccione un modelo para ver quién recibe notificaciones de sus incumplimientos.",
+    "Select a model to view its monitored metrics.":
+      "Seleccione un modelo para ver sus métricas monitoreadas.",
+    "Select a shape": "Seleccionar una forma",
+    "Set the metric, shape and severity VerifyWise evaluates ingested points against.":
+      "Defina la métrica, la forma y la gravedad con las que VerifyWise evalúa los puntos ingeridos.",
+    "Shape": "Forma",
+    "Threshold": "Umbral",
+    "Threshold at evaluation": "Umbral en el momento de la evaluación",
+    "Token name": "Nombre del token",
+    "Trend": "Tendencia",
+    "Who hears about a breach. When an ingested metric breaches its threshold, VerifyWise notifies the people assigned to the model's MRM roles, plus any additional recipients configured below. Email delivery and automatic findings are off until you enable them here.":
+      "Quién se entera de un incumplimiento. Cuando una métrica ingerida supera su umbral, VerifyWise notifica a las personas asignadas a los roles MRM del modelo, además de los destinatarios adicionales configurados abajo. El envío de correos y los hallazgos automáticos están desactivados hasta que los habilite aquí.",
+    "Send email alerts": "Enviar alertas por correo electrónico",
+    "Applies to breach and overdue-validation alerts. In-app notifications are always on.":
+      "Se aplica a las alertas de incumplimiento y de validación vencida. Las notificaciones en la aplicación siempre están activas.",
+    "Automatically open a finding on hard breach":
+      "Abrir automáticamente un hallazgo ante un incumplimiento grave",
+    "One finding per model and metric while it stays open; warnings never open findings.":
+      "Un hallazgo por modelo y métrica mientras permanezca abierto; las advertencias nunca abren hallazgos.",
+    "Additional recipients": "Destinatarios adicionales",
+    "These people are alerted for every model, on top of the model's roles.":
+      "Estas personas reciben alertas de todos los modelos, además de los roles del modelo.",
+    "Save alert settings": "Guardar configuración de alertas",
+    "Alert settings saved": "Configuración de alertas guardada",
+    "Failed to save alert settings": "No se pudo guardar la configuración de alertas",
+    "Notifications are delivered in-app, and by email when email alerts are enabled. A threshold set to notify and flag for revalidation also marks the model as due for a fresh validation.":
+      "Las notificaciones se entregan en la aplicación y por correo electrónico cuando las alertas por correo están habilitadas. Un umbral configurado para notificar y marcar para revalidación también marca el modelo como pendiente de una nueva validación.",
+    "A finding must be verified before it can be closed.":
+      "Un hallazgo debe verificarse antes de poder cerrarse.",
+    "Assign tier": "Asignar nivel",
+    "Conceptual soundness": "Solidez conceptual",
+    "Conclusion & sign-off": "Conclusión y aprobación",
+    "Create finding": "Crear hallazgo",
+    "Data review": "Revisión de datos",
+    "Developer": "Desarrollador",
+    "Does": "Función",
+    "Due": "Vence",
+    "Findings": "Hallazgos",
+    "Findings & limitations": "Hallazgos y limitaciones",
+    "How will this finding be remediated?": "¿Cómo se remediará este hallazgo?",
+    "In validation": "En validación",
+    "Last validated": "Última validación",
+    "Materiality drivers": "Factores de materialidad",
+    "Model risk management": "Gestión del riesgo de modelos",
+    // MRM Branch 3 — portfolio summary & attestation
+    "Attestation": "Atestación",
+    "Could not load the portfolio summary. Try again shortly.":
+      "No se pudo cargar el resumen de la cartera. Vuelva a intentarlo en breve.",
+    "Fleet attestation status": "Estado de atestación de la flota",
+    "Generate attestation report": "Generar informe de atestación",
+    "Advance this validation to In validation to begin writing the report.":
+      "Avance esta validación a En validación para comenzar a redactar el informe.",
+    "Models by tier": "Modelos por nivel",
+    "Monitoring active": "Supervisión activa",
+    "No models in the inventory yet. Add models and assign tiers to build the portfolio summary.":
+      "Aún no hay modelos en el inventario. Agregue modelos y asigne niveles para crear el resumen de la cartera.",
+    "No tiered models yet. Assign tiers on the Tiering tab.":
+      "Aún no hay modelos clasificados. Asigne niveles en la pestaña «Clasificación».",
+    "Open findings": "Hallazgos abiertos",
+    "Overdue validations": "Validaciones vencidas",
+    "Past their next due date": "Después de su próxima fecha de vencimiento",
+    "Tiering up to date": "Clasificación actualizada",
+    "Validation coverage": "Cobertura de validación",
+    "Tier increase": "Aumento de nivel",
+    "First use": "Primer uso",
+    "Breach": "Incumplimiento",
+    "Change": "Cambio",
+    "Scheduled": "Programado",
+    "Next due": "Próximo vencimiento",
+    "No findings raised yet. Findings are created from a validation.":
+      "Aún no hay hallazgos. Los hallazgos se crean a partir de una validación.",
+    "No models to tier yet. Add models to your inventory first.":
+      "Aún no hay modelos que clasificar. Añada primero modelos a su inventario.",
+    "No validations yet. Start a validation to open a report.":
+      "Aún no hay validaciones. Inicie una validación para abrir un informe.",
+    "Not validated": "No validado",
+    "On this model": "En este modelo",
+    "Open a new validation cycle for a model. Only one validation can be in progress per model.":
+      "Abra un nuevo ciclo de validación para un modelo. Solo puede haber una validación en curso por modelo.",
+    "Outcomes analysis": "Análisis de resultados",
+    "Purpose & scope": "Propósito y alcance",
+    "Raise a finding against a validation. It joins the register and tracks to closure.":
+      "Registre un hallazgo asociado a una validación. Se incorpora al registro y se sigue hasta su cierre.",
+    "Record the validation outcome. This marks the validation as validated and closes the active cycle.":
+      "Registre el resultado de la validación. Esto marca la validación como validada y cierra el ciclo activo.",
+    "Record the validator": "Registre al validador",
+    "Remediation plan": "Plan de remediación",
+    "Roles & independence": "Roles e independencia",
+    "Save report": "Guardar informe",
+    "Save roles": "Guardar roles",
+    "Benign monitoring points older than the retention window are removed by a daily job. Breach and evaluation history is never deleted.":
+      "Los puntos de monitoreo sin incidencias anteriores a la ventana de retención se eliminan mediante una tarea diaria. El historial de incumplimientos y evaluaciones nunca se elimina.",
+    "Breach and evaluation history is always retained; this only ages out benign monitoring points.":
+      "El historial de incumplimientos y evaluaciones siempre se conserva; esto solo depura puntos de monitoreo sin incidencias.",
+    "Failed to save retention": "No se pudo guardar la retención",
+    "Monitoring data retention (months)": "Retención de datos de monitoreo (meses)",
+    "Retention must be at least 13 months": "La retención debe ser de al menos 13 meses",
+    "Retention saved": "Retención guardada",
+    "Save retention": "Guardar retención",
+    "Select a model to view and assign its roles.":
+      "Seleccione un modelo para ver y asignar sus roles.",
+    "Select a tier": "Seleccionar un nivel",
+    "Select a validation": "Seleccionar una validación",
+    "Select an outcome": "Seleccionar un resultado",
+    "Select stage": "Seleccionar una etapa",
+    "Short description of the finding": "Breve descripción del hallazgo",
+    "Sign off": "Aprobar",
+    "Sign off validation": "Aprobar la validación",
+    "Stage": "Etapa",
+    "Start": "Iniciar",
+    "Start validation": "Iniciar validación",
+    "Tier": "Nivel",
+    "Tier 1": "Nivel 1",
+    "Tier 2": "Nivel 2",
+    "Tier 3": "Nivel 3",
+    "Tiered on": "Clasificado el",
+    "Tiering": "Clasificación",
+    "Tiering rules": "Reglas de clasificación",
+    "Tiering, validation, findings and roles for model risk management":
+      "Clasificación, validación, hallazgos y roles para la gestión del riesgo de modelos",
+    "Validated": "Validado",
+    "Validated with findings": "Validado con hallazgos",
+    "Validation depth & revalidation cadence":
+      "Profundidad de validación y frecuencia de revalidación",
+    "Validation report": "Informe de validación",
+    "Validator": "Validador",
+    "Why this tier? e.g. capital impact, regulatory reporting, customer exposure":
+      "¿Por qué este nivel? p. ej. impacto de capital, informes regulatorios, exposición de clientes",
+    "Enabled — risks include monetary estimates based on the FAIR model: annual loss expectancy, residual risk after controls, and return on mitigation investment.":
+      "Activado — los riesgos incluyen estimaciones monetarias basadas en el modelo FAIR: pérdida anual esperada, riesgo residual tras los controles y retorno de la inversión en mitigación.",
+    "Disabled — risks use qualitative scoring only, based on severity and likelihood.":
+      "Desactivado — los riesgos usan solo una puntuación cualitativa, basada en la gravedad y la probabilidad.",
+    "Invite people and set each member's role. Admins manage the whole workspace and its settings. Editors can create and edit governance records. Reviewers can review and approve or reject. Auditors have read-only access.":
+      "Invita a personas y asigna el rol de cada miembro. Los administradores gestionan todo el espacio de trabajo y su configuración. Los editores pueden crear y editar registros de gobernanza. Los revisores pueden revisar y aprobar o rechazar. Los auditores tienen acceso de solo lectura.",
+    // AI Trust Index
+    "App details": "Detalles de la aplicación",
+    "Changes are saved automatically.": "Los cambios se guardan automáticamente.",
+    "Full assessment for a specific AI Trust Index app":
+      "Evaluación completa de una aplicación específica del AI Trust Index",
     // AI Apps (MO-362)
     "AI app": "Aplicación de IA",
     "AI app deleted successfully": "Aplicación de IA eliminada correctamente",
@@ -17611,6 +18429,7 @@ export const translations: Record<string, Record<string, string>> = {
     "COMPANY NAME": "NOMBRE DE LA EMPRESA",
     "Company email": "Correo de la empresa",
     "Company description and values": "Descripción y valores de la empresa",
+    "External key": "Clave externa",
     "Hosting provider": "Proveedor de alojamiento",
     "Dataset name": "Nombre del conjunto de datos",
     "Risk name": "Nombre del riesgo",
@@ -17729,10 +18548,13 @@ export const translations: Record<string, Record<string, string>> = {
     "SOC2 Type I": "SOC2 Type I",
     "SOC2 Type II": "SOC2 Type II",
     "AI regulation in the Middle East": "Regulación de la IA en Oriente Medio",
-    "US AI regulations 2026": "Regulaciones de IA en EE. UU. 2026",
-    "EU AI Act omnibus: what changed": "Ómnibus de la EU AI Act: qué ha cambiado",
-    "VerifyWise YouTube channel launched": "Lanzado el canal de YouTube de VerifyWise",
-    "Why LLM evaluations matter": "Por qué importan las evaluaciones de LLM",
+    "We graded 205 AI apps on data transparency":
+      "Evaluamos 205 aplicaciones de IA en transparencia de datos",
+    "OSFI Guideline E-23: AI model risk rules":
+      "Directriz E-23 del OSFI: reglas de riesgo de modelos de IA",
+    "What we found running GRS across 15 AI models":
+      "Lo que encontramos al aplicar GRS a 15 modelos de IA",
+    "AI governance salaries 2026": "Salarios en gobernanza de IA 2026",
     "Clauses": "Cláusulas",
     "Annexes": "Anexos",
     "AI models mapped to this framework": "Modelos de IA mapeados a este marco",
@@ -17829,6 +18651,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Error loading controls": "Error al cargar los controles",
     "Error restoring task": "Error al restaurar la tarea",
     "Error updating task": "Error al actualizar la tarea",
+    "Error updating task priority": "Error al actualizar la prioridad de la tarea",
+    "Error updating task status": "Error al actualizar el estado de la tarea",
     "Cannot update training without ID": "No se puede actualizar la formación sin un ID",
     "Welcome to VerifyWise": "Te damos la bienvenida a VerifyWise",
     "Welcome": "Bienvenido",
@@ -18126,6 +18950,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Close editor": "Cerrar editor",
     "Close entity graph modal": "Cerrar la ventana del gráfico de entidades",
     "Close icon": "Icono de cerrar",
+    "Close image lightbox": "Cerrar lightbox de imagen",
     "Close notification": "Cerrar notificación",
     "Close tooltip": "Cerrar tooltip",
     "Close tour": "Cerrar recorrido",
@@ -18186,6 +19011,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Delete account": "Eliminar cuenta",
     "Delete API key": "Eliminar clave de API",
     "Delete API Key": "Eliminar clave de API",
+    "Revoke API Key": "Revocar clave de API",
     "Delete Arena Battle": "Eliminar batalla de arena",
     "Delete automation": "Eliminar automatización",
     "Delete bias audit": "Eliminar auditoría de sesgo",
@@ -20155,6 +20981,7 @@ export const translations: Record<string, Record<string, string>> = {
     "No feedback files attached yet": "Aún no hay archivos de comentarios adjuntos",
     "No folders yet": "Aún no hay carpetas",
     "No framework plugins available.": "No hay complementos de marcos disponibles.",
+    "No framework risks yet": "Aún no hay riesgos del marco",
     "No frameworks installed": "No hay marcos instalados",
     "No local providers configured yet": "Aún no hay proveedores locales configurados",
     "No log data available.": "No hay datos de registro disponibles.",
@@ -20443,6 +21270,8 @@ export const translations: Record<string, Record<string, string>> = {
     "AI Chatbot for Customer Support": "Chatbot de IA para atención al cliente",
     "AI Gateway": "AI Gateway",
     "AI Gateway, Policy Radar, and CI/CD scanning": "AI Gateway, Policy Radar y análisis de CI/CD",
+    "AI Trust Index, AI Apps inventory, and Agent Control":
+      "AI Trust Index, AI Apps inventory y Agent Control",
     "AI Lifecycle Risk Management": "Gestión de riesgos del ciclo de vida de la IA",
     "AI Literacy and Responsible AI Training": "Alfabetización en IA y formación en IA responsable",
     "AI Management System": "Sistema de gestión de IA",
@@ -20529,6 +21358,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Allow request (fail-open)": "Permitir la solicitud (fallo abierto)",
     "Almost there, finalizing score": "Casi listo, finalizando la puntuación",
     "An error occurred": "Se ha producido un error",
+    "An unknown error occurred": "Se ha producido un error desconocido",
     "Annex I product": "Producto del Anexo I",
     "Annex III use case": "Caso de uso del Anexo III",
     "Annex category saved successfully": "Categoría del anexo guardada correctamente",
@@ -20711,7 +21541,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Dataset updated successfully!": "¡Conjunto de datos actualizado correctamente!",
     "Datasets Used Documentation": "Documentación de los conjuntos de datos utilizados",
     "Date picker": "Selector de fecha",
-    "David Pinkney": "David Pinkney",
+    "Dr. Gorkem Cetin": "Dr. Gorkem Cetin",
     "Day of Month (for Monthly)": "Día del mes (para mensual)",
     "Day of Week (for Weekly)": "Día de la semana (para semanal)",
     "Days Before Review Date": "Días antes de la fecha de revisión",
@@ -24191,6 +25021,10 @@ export const translations: Record<string, Record<string, string>> = {
       "No se pudo actualizar el estado. Inténtelo de nuevo.",
     "Failed to update the task. Please try again.":
       "No se pudo actualizar la tarea. Inténtelo de nuevo.",
+    "Failed to update the task priority. Please try again.":
+      "No se pudo actualizar la prioridad de la tarea. Inténtelo de nuevo.",
+    "Failed to update the task status. Please try again.":
+      "No se pudo actualizar el estado de la tarea. Inténtelo de nuevo.",
     "Failed to update the vendor risk. Please try again.":
       "No se pudo actualizar el riesgo del proveedor. Inténtelo de nuevo.",
     "File marked for deletion. Please save to apply changes.":
@@ -25683,5 +26517,115 @@ export const translations: Record<string, Record<string, string>> = {
     "Run estimate": "Ejecutar estimación",
     "Total leaf-level controls from the selected framework inventories":
       "Total de controles de nivel hoja de los inventarios de marcos seleccionados",
+    // AI Trust Index
+    "AI Trust Index": "Índice de confianza de IA",
+    "AI Trust Index notification settings.":
+      "Configuración de notificaciones del índice de confianza de IA.",
+    "AI applications your organization is tracking. We":
+      "Aplicaciones de IA que su organización está siguiendo. Le",
+    "Choose who receives a notification when a tracked app":
+      "Elija quién recibe una notificación cuando una aplicación seguida",
+    "We couldn": "No pudimos",
+    "You": "Usted",
+    "AI applications your organization is tracking. We'll notify recipients when a tracked app's assessment changes materially.":
+      "Aplicaciones de IA que su organización está siguiendo. Notificaremos a los destinatarios cuando la evaluación de una aplicación seguida cambie de forma significativa.",
+    "Additional emails": "Correos electrónicos adicionales",
+    "All categories": "Todas las categorías",
+    "All grades": "Todas las calificaciones",
+    "Best score first": "Mejor puntuación primero",
+    "Tracked first": "Seguidas primero",
+    "Worst score first": "Peor puntuación primero",
+    "Dealbreaker flag": "Factor decisivo",
+    "Back to Browse": "Volver a Explorar",
+    "Browse": "Explorar",
+    "Browse AI app risk scores and track the apps you use":
+      "Explorar las puntuaciones de riesgo de las aplicaciones de IA y seguir las que utiliza",
+    "Browse independently assessed AI applications and track the ones that matter to your organization.":
+      "Explorar aplicaciones de IA evaluadas de forma independiente y seguir las que importan a su organización.",
+    "Choose who receives a notification when a tracked app's assessment changes materially. If no recipients are set, organization admins are notified by default.":
+      "Elija quién recibe una notificación cuando la evaluación de una aplicación seguida cambie de forma significativa. Si no se establecen destinatarios, se notifica a los administradores de la organización de forma predeterminada.",
+    "Dealbreaker flags": "Indicadores decisivos",
+    "Highest score": "Puntuación más alta",
+    "Highlights": "Aspectos destacados",
+    "Modalities": "Modalidades",
+    "No apps match your filters.": "Ninguna aplicación coincide con sus filtros.",
+    "No longer in index": "Ya no está en el índice",
+    "Only administrators can change AI Trust Index notification settings.":
+      "Solo los administradores pueden cambiar la configuración de notificaciones del índice de confianza de IA.",
+    "Policy details": "Detalles de la política",
+    "Policy last updated": "Política actualizada por última vez",
+    "Processes biometrics": "Procesa datos biométricos",
+    "Search apps or vendors": "Buscar aplicaciones o proveedores",
+    "Select team members": "Seleccionar miembros del equipo",
+    "Tracked": "Seguidas",
+    "Tracked apps": "Aplicaciones seguidas",
+    "Trust score:": "Puntuación de confianza:",
+    "Type an email and press Enter": "Escriba un correo electrónico y pulse Intro",
+    "Untrack": "Dejar de seguir",
+    "View policy": "Ver política",
+    "We couldn't find this app in the AI Trust Index.":
+      "No se encontró esta aplicación en el índice de confianza de IA.",
+    "We couldn't load the AI Trust Index right now. Please try again later.":
+      "No se pudo cargar el índice de confianza de IA en este momento. Inténtelo de nuevo más tarde.",
+    "We couldn't load your tracked apps right now. Please try again later.":
+      "No se pudieron cargar las aplicaciones seguidas en este momento. Inténtelo de nuevo más tarde.",
+    "You're not tracking any apps yet. Track apps from the Browse tab to monitor changes to their privacy and transparency assessments.":
+      "Aún no está siguiendo ninguna aplicación. Añada aplicaciones desde la pestaña Explorar para supervisar los cambios en sus evaluaciones de privacidad y transparencia.",
+    "Find apps in Browse": "Buscar aplicaciones en Explorar",
+    "Open the Browse tab to explore the full catalogue, then track the apps your teams use with the Track button on each card.":
+      "Abra la pestaña Explorar para ver el catálogo completo y, a continuación, siga las aplicaciones que usan sus equipos con el botón Seguir de cada tarjeta.",
+    "Get notified when assessments change": "Reciba avisos cuando cambien las evaluaciones",
+    "Tracked apps are included in the weekly change digest, so configured recipients hear about score, grade, or policy changes.":
+      "Las aplicaciones seguidas se incluyen en el resumen semanal de cambios, de modo que los destinatarios configurados se enteran de los cambios de puntuación, calificación o política.",
+    // AI Gateway empty/error states
+    "Click Save draft to create your first version.":
+      "Haga clic en Guardar borrador para crear su primera versión.",
+    "Could not load this run.": "No se pudo cargar esta ejecución.",
+    "Create your first version": "Crear su primera versión",
+    "Error loading AI Trust Center settings. Please try again.":
+      "Error al cargar la configuración de AI Trust Center. Inténtelo de nuevo.",
+    "Failed to load invocation details.": "No se pudieron cargar los detalles de la invocación.",
+    "Refresh": "Actualizar",
+    "Select a log to view details.": "Seleccione un registro para ver los detalles.",
+    // Use case classification
+    "Applicable regulations (optional)": "Regulaciones aplicables (opcional)",
+    "Audience": "Audiencia",
+    "Both": "Ambos",
+    "Cloud": "Nube",
+    "Computer Vision": "Computer Vision",
+    "Customer service": "Atención al cliente",
+    "Deployment context": "Contexto de implementación",
+    "Edge": "Edge",
+    "External": "Externo",
+    "Generative AI": "IA generativa",
+    "How is the AI use case deployed?": "¿Cómo se implementa el caso de uso de IA?",
+    "Hybrid": "Híbrido",
+    "ISO 42001, ISO 27001, and NIST AI RMF (company-wide project)":
+      "ISO 42001, ISO 27001 y NIST AI RMF (proyecto a nivel empresarial)",
+    "Internal operations": "Operaciones internas",
+    "Marketing and sales": "Marketing y ventas",
+    "Natural Language Processing": "Natural Language Processing",
+    "Predictive Analytics": "Predictive Analytics",
+    "Product/feature enhancement": "Mejora de producto/función",
+    "Recommendation Systems": "Sistemas de recomendación",
+    "Research and development": "Investigación y desarrollo",
+    "Risk and compliance": "Riesgo y cumplimiento",
+    "Robotics": "Robótica",
+    "Select a category": "Seleccionar una categoría",
+    "Select a context": "Seleccionar un contexto",
+    "Select a purpose": "Seleccionar un propósito",
+    "Select an audience": "Seleccionar una audiencia",
+    "Select the category that best describes the use case.":
+      "Seleccione la categoría que mejor describa el caso de uso.",
+    "Third-party API": "API de terceros",
+    "Use case audience": "Audiencia del caso de uso",
+    "Use case category": "Categoría del caso de uso",
+    "Use case classification (optional)": "Clasificación del caso de uso (opcional)",
+    "Use case purpose": "Propósito del caso de uso",
+    "Use-case level regulations (optional)": "Regulaciones a nivel de caso de uso (opcional)",
+    "What business purpose does the use case serve?":
+      "¿Qué propósito empresarial cumple el caso de uso?",
+    "Who is the intended audience for the use case?":
+      "¿Quién es la audiencia prevista para el caso de uso?",
   },
 };

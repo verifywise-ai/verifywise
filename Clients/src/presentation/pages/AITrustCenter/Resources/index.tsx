@@ -1,10 +1,15 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, Suspense, useCallback, useEffect, useRef, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Box, Typography, TableCell, Stack, Tooltip } from "@mui/material";
+import { Box, Typography, TableCell, Stack, Tooltip, Alert as MuiAlert } from "@mui/material";
 import Alert from "../../../components/Alert";
-import { Eye as VisibilityIcon, EyeOff as VisibilityOffIcon } from "lucide-react";
-import { CirclePlus as AddCircleOutlineIcon } from "lucide-react";
+import {
+  Eye as VisibilityIcon,
+  EyeOff as VisibilityOffIcon,
+  CirclePlus as AddCircleOutlineIcon,
+  RotateCcw,
+  FileText,
+} from "lucide-react";
 import Toggle from "../../../components/Inputs/Toggle";
 import { useStyles } from "./styles";
 import { CustomizableButton } from "../../../components/button/customizable-button";
@@ -177,12 +182,14 @@ const TrustCenterResources: React.FC = () => {
     data: overviewData,
     isLoading: overviewLoading,
     error: overviewError,
+    refetch: refetchOverview,
   } = useAITrustCentreOverviewQuery();
   const updateOverviewMutation = useAITrustCentreOverviewMutation();
   const {
     data: resources,
     isLoading: resourcesLoading,
     error: resourcesError,
+    refetch: refetchResources,
   } = useAITrustCentreResourcesQuery();
   const createResourceMutation = useCreateAITrustCentreResourceMutation();
   const updateResourceMutation = useUpdateAITrustCentreResourceMutation();
@@ -631,9 +638,20 @@ const TrustCenterResources: React.FC = () => {
           {isTableLoading ? (
             <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
           ) : tableError ? (
-            <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
-              <Typography color="error">{tableError?.message || "An error occurred"}</Typography>
-            </Box>
+            <Stack alignItems="center" spacing={2} sx={{ py: 4 }}>
+              <MuiAlert severity="error" sx={{ width: "100%", maxWidth: 600 }}>
+                {tableError?.message || "An error occurred loading resources."}
+              </MuiAlert>
+              <CustomizableButton
+                variant="outlined"
+                text="Retry"
+                icon={<RotateCcw size={16} />}
+                onClick={() => {
+                  refetchOverview();
+                  refetchResources();
+                }}
+              />
+            </Stack>
           ) : (
             <GroupedTableView
               groupedData={groupedResources}
@@ -646,6 +664,7 @@ const TrustCenterResources: React.FC = () => {
                   paginated={true}
                   disabled={!formData?.info?.resources_visible}
                   emptyStateText="No resources found. Add your first resource to get started."
+                  emptyStateIcon={FileText}
                   renderRow={(resource, sortConfig) => (
                     <ResourceTableRow
                       key={resource.id}
@@ -848,7 +867,7 @@ const TrustCenterResources: React.FC = () => {
       </Box>
 
       {alert && (
-        <Suspense fallback={<div>Loading...</div>}>
+        <Suspense fallback={<></>}>
           <Alert
             variant={alert.variant}
             title={alert.title}
@@ -861,7 +880,7 @@ const TrustCenterResources: React.FC = () => {
 
       {/* Error notification for add resource */}
       {addResourceError && (
-        <Suspense fallback={<div>Loading...</div>}>
+        <Suspense fallback={<></>}>
           <Alert
             variant="error"
             body={addResourceError}
@@ -873,7 +892,7 @@ const TrustCenterResources: React.FC = () => {
 
       {/* Error notification for delete resource */}
       {deleteResourceError && (
-        <Suspense fallback={<div>Loading...</div>}>
+        <Suspense fallback={<></>}>
           <Alert
             variant="error"
             body={deleteResourceError}
@@ -885,7 +904,7 @@ const TrustCenterResources: React.FC = () => {
 
       {/* Error notification for edit resource */}
       {editResourceError && (
-        <Suspense fallback={<div>Loading...</div>}>
+        <Suspense fallback={<></>}>
           <Alert
             variant="error"
             body={editResourceError}

@@ -58,7 +58,9 @@ describe("AIGatewaySidebarContext", () => {
       await waitFor(() => {
         expect(result.current.endpointsCount).toBe(2); // 2 active
       });
-      expect(result.current.promptsCount).toBe(2);
+      // Prompts is hidden behind SHOW_AI_GATEWAY_PROMPTS (currently off), so the
+      // provider does not fetch the prompts count and it stays at 0.
+      expect(result.current.promptsCount).toBe(0);
       expect(result.current.virtualKeysCount).toBe(1); // 1 active
     });
 

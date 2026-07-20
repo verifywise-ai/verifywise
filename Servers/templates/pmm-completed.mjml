@@ -1,33 +1,68 @@
 <mjml>
-  <mj-head>
-    <mj-font name="Roboto" href="https://fonts.googleapis.com/css?family=Roboto:300,500"></mj-font>
-    <mj-attributes>
-      <mj-all font-family="Roboto, Helvetica, sans-serif"></mj-all>
-      <mj-text font-weight="300" font-size="14px" color="#616161" line-height="24px"></mj-text>
-      <mj-section padding="0px"></mj-section>
-    </mj-attributes>
-  </mj-head>
-  <mj-body>
-    <mj-section text-align="left" padding="0px">
-      <mj-column width="100%" vertical-align="top">
-        <mj-text align="left">
-          <h2 style="color: #27ae60; margin-bottom: 20px;">Post-market monitoring completed</h2>
-          <p>Hi {{stakeholder_name}},</p>
-          <p>The post-market monitoring for <strong>{{use_case_title}}</strong> (Cycle #{{cycle_number}}) has been successfully completed.</p>
-          <p style="background-color: #f0fdf4; border-left: 4px solid #27ae60; padding: 15px; margin: 20px 0;">
-            <strong>Completed by:</strong> {{completed_by_name}}<br>
-            <strong>Completed on:</strong> {{completed_at}}<br>
-            <strong>Flagged concerns:</strong> {{flagged_count}}
-          </p>
-          <p>A PDF report has been generated and is attached to this email for your records. This report documents the compliance status at the time of monitoring and can be used for audit purposes.</p>
-          <p style="margin-top: 20px;"><strong>Next monitoring cycle:</strong></p>
-          <p>The next monitoring cycle will be due on <strong>{{next_due_date}}</strong>. You will receive a notification when it is time to complete the next review.</p>
-          <p style="margin: 20px 0;">
-            <a href="{{report_link}}" style="background-color: #13715B; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">View report archive</a>
-          </p>
-          <p style="margin-top: 30px; color: #7f8c8d; font-size: 12px;">
-            Sent from VerifyWise on behalf of {{organization_name}}
-          </p>
+<mj-head>
+  <mj-font name="Inter" href="https://fonts.googleapis.com/css?family=Inter:400,500,600"></mj-font>
+  <mj-attributes>
+    <mj-all font-family="Geist, Inter, system-ui, -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" color="#344054"></mj-all>
+    <mj-text font-size="15px" line-height="24px" color="#344054" padding="0"></mj-text>
+    <mj-section padding="0px"></mj-section>
+    <mj-column padding="0px"></mj-column>
+    <mj-button background-color="#13715B" color="#ffffff" border-radius="4px" font-size="14px" font-weight="500" padding="0" height="44px"></mj-button>
+  </mj-attributes>
+  <mj-style inline="inline">
+    .email-card { background-color: #ffffff; border: 1px solid #eaecf0; border-radius: 10px; overflow: hidden; }
+    .email-heading { color: #1c2130; font-size: 22px; font-weight: 600; line-height: 1.35; margin: 0 0 24px 0; letter-spacing: -0.2px; }
+    .email-body { color: #344054; font-size: 15px; line-height: 24px; margin: 0 0 20px 0; }
+    .email-muted { color: #475467; font-size: 14px; line-height: 22px; margin: 0; }
+    .email-footer { color: #838c99; font-size: 13px; line-height: 20px; text-align: center; }
+    .box { padding: 20px; border-radius: 6px; margin: 24px 0; }
+    .box-info { background-color: #f9fafb; }
+    .box-success { background-color: #E6F4EA; }
+    .box-error { background-color: #FFD6D6; }
+    .box-warning { background-color: #FFF8E1; }
+    .box-primary { background-color: #E6F0EC; }
+    .box-title { color: #1c2130; font-weight: 600; font-size: 15px; margin: 0 0 10px 0; }
+    .box-subtitle { color: #475467; font-size: 14px; line-height: 22px; margin: 0; }
+    .box-status-success { color: #138A5E; font-size: 14px; font-weight: 600; margin: 0; }
+    .box-status-error { color: #D32F2F; font-size: 14px; font-weight: 600; margin: 0; }
+    .data-table { width: 100%; font-size: 14px; border-collapse: collapse; margin: 24px 0; }
+    .data-table td { padding: 10px 0; vertical-align: top; }
+    .data-label { color: #475467; width: 140px; padding-right: 20px; }
+    .data-value { color: #1c2130; font-weight: 500; }
+    ul { margin: 0 0 20px 0; padding-left: 24px; color: #344054; }
+    li { margin-bottom: 10px; line-height: 22px; }
+    a { color: #13715B; text-decoration: none; }
+    .btn { display: inline-block; padding: 12px 24px; border-radius: 4px; text-decoration: none; font-size: 14px; font-weight: 500; color: #ffffff; }
+    .btn-primary { background-color: #13715B; }
+    .btn-success { background-color: #138A5E; }
+    .btn-error { background-color: #D32F2F; }
+    .btn-warning { background-color: #795548; }
+    .btn-info { background-color: #1565C0; }
+    .spacer { height: 8px; }
+  </mj-style>
+</mj-head>
+  <mj-body background-color="#f4f6f8">
+    <mj-section padding="32px 20px 20px">
+      <mj-column width="100%">
+        <mj-text align="center" padding="0 0 24px 0">
+          <span style="color: #13715B; font-size: 22px; font-weight: 600; letter-spacing: -0.5px;">VerifyWise</span>
+        </mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-wrapper css-class="email-card" padding="40px">
+      <mj-section>
+        <mj-column width="100%">
+          <mj-text>
+                <h2 class="email-heading">Post-market monitoring completed</h2><p class="email-body">Hi {{stakeholder_name}},</p><p class="email-body">The post-market monitoring for <strong>{{use_case_title}}</strong> (Cycle #{{cycle_number}}) has been successfully completed.</p><div class="box box-success"><p class="box-subtitle" style="margin-bottom: 6px;"><strong>Completed by:</strong> {{completed_by_name}}</p>
+                <p class="box-subtitle" style="margin-bottom: 6px;"><strong>Completed on:</strong> {{completed_at}}</p>
+                <p class="box-subtitle"><strong>Flagged concerns:</strong> {{flagged_count}}</p></div><p class="email-body">A PDF report has been generated and is attached to this email for your records. This report documents the compliance status at the time of monitoring and can be used for audit purposes.</p><p class="email-body"><strong>Next monitoring cycle:</strong></p><p class="email-body">The next monitoring cycle will be due on <strong>{{next_due_date}}</strong>. You will receive a notification when it is time to complete the next review.</p><p style="margin: 28px 0 24px 0;"><a href="{{report_link}}" class="btn btn-primary">View report archive</a></p>
+          </mj-text>
+        </mj-column>
+      </mj-section>
+    </mj-wrapper>
+    <mj-section padding="32px 20px">
+      <mj-column width="100%">
+        <mj-text css-class="email-footer" align="center">
+          Sent with care from VerifyWise
         </mj-text>
       </mj-column>
     </mj-section>

@@ -6,11 +6,6 @@ export const textfieldStyle = {
   },
 };
 
-export const dropdownStyle = {
-  width: "350px",
-  backgroundColor: `${background.main}`,
-};
-
 export const createProjectButtonStyle = {
   backgroundColor: `${brand.primary}`,
   border: `1px solid ${brand.primary}`,
@@ -19,16 +14,6 @@ export const createProjectButtonStyle = {
 
 export const datePickerStyle = {
   width: "130px",
-};
-
-export const teamMembersRenderInputStyle = {
-  "& .MuiOutlinedInput-root": {
-    paddingTop: "3.8px !important",
-    paddingBottom: "3.8px !important",
-  },
-  "& ::placeholder": {
-    fontSize: "13px",
-  },
 };
 
 export const teamMembersSxStyle = {

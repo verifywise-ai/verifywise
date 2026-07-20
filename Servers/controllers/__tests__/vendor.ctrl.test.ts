@@ -51,7 +51,6 @@ const mockGetVendorByIdQuery = getVendorByIdQuery as jest.MockedFunction<typeof 
 function createMockReq(partial: Partial<Request> = {}): Partial<Request> {
   return {
     organizationId: 1,
-    tenantId: 1,
     userId: 1,
     t: (key: string) => key,
     ...partial,

@@ -96,6 +96,7 @@ describe("invitation.ctrl", () => {
 
       expect(res.status).toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({
+        message: "Internal Server Error",
         error: "Failed to fetch invitations",
       });
     });
@@ -123,7 +124,8 @@ describe("invitation.ctrl", () => {
       expect(mockRevoke).not.toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({
-        error: "Invalid invitation ID",
+        message: "Bad Request",
+        data: "Invalid invitation ID",
       });
     });
 
@@ -137,7 +139,8 @@ describe("invitation.ctrl", () => {
       expect(mockRevoke).toHaveBeenCalledWith(1, 1);
       expect(res.status).toHaveBeenCalledWith(404);
       expect(res.json).toHaveBeenCalledWith({
-        error: "Invitation not found",
+        message: "Not Found",
+        data: "Invitation not found",
       });
     });
 
@@ -150,6 +153,7 @@ describe("invitation.ctrl", () => {
 
       expect(res.status).toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({
+        message: "Internal Server Error",
         error: "Failed to revoke invitation",
       });
     });
@@ -234,7 +238,8 @@ describe("invitation.ctrl", () => {
       expect(mockGetById).not.toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(400);
       expect(res.json).toHaveBeenCalledWith({
-        error: "Invalid invitation ID",
+        message: "Bad Request",
+        data: "Invalid invitation ID",
       });
     });
 
@@ -249,7 +254,8 @@ describe("invitation.ctrl", () => {
       expect(mockSendEmail).not.toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(404);
       expect(res.json).toHaveBeenCalledWith({
-        error: "Invitation not found",
+        message: "Not Found",
+        data: "Invitation not found",
       });
     });
 
@@ -262,6 +268,7 @@ describe("invitation.ctrl", () => {
 
       expect(res.status).toHaveBeenCalledWith(500);
       expect(res.json).toHaveBeenCalledWith({
+        message: "Internal Server Error",
         error: "Failed to resend invitation",
       });
     });

@@ -1,4 +1,5 @@
 import { apiServices } from "../../infrastructure/api/networkServices";
+import { SubControlModel } from "../../domain/models/EU-AI-Act/subcontrol/subControl.model";
 
 export async function getSubcontrolById({
   id,
@@ -16,12 +17,18 @@ export async function getSubcontrolById({
   return response.data;
 }
 
-export async function createSubcontrol({ body }: { body: any }): Promise<any> {
+export async function createSubcontrol({ body }: { body: Partial<SubControlModel> }): Promise<any> {
   const response = await apiServices.post("/subcontrols", body);
   return response;
 }
 
-export async function updateSubcontrol({ id, body }: { id: number; body: any }): Promise<any> {
+export async function updateSubcontrol({
+  id,
+  body,
+}: {
+  id: number;
+  body: Partial<SubControlModel>;
+}): Promise<any> {
   const response = await apiServices.patch(`/subcontrols/${id}`, body);
   return response;
 }

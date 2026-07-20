@@ -311,7 +311,7 @@ export async function getScansListQuery(
     FROM ai_detection_scans s
     LEFT JOIN users u ON s.triggered_by = u.id
     ${whereClause}
-    ORDER BY s.created_at DESC
+    ORDER BY s.created_at DESC, s.id DESC
     LIMIT :limit OFFSET :offset;
   `;
 
@@ -651,17 +651,6 @@ export async function createFindingsBatchQuery(
 }
 
 /**
- * Get findings for a scan
- *
- * @param scanId - Scan ID
- * @param tenantId - Tenant schema hash
- * @param page - Page number (1-indexed)
- * @param limit - Items per page
- * @param confidence - Optional confidence filter
- * @returns Findings and total count
- */
-
-/**
  * Create model security findings in batch
  *
  * @param inputs - Array of model security finding inputs
@@ -843,7 +832,8 @@ export async function getFindingsForScanQuery(
         WHEN 'low' THEN 3
       END,
       f.file_count DESC,
-      f.name ASC
+      f.name ASC,
+      f.id ASC
     LIMIT :limit OFFSET :offset;
   `;
 
@@ -934,7 +924,8 @@ export async function getAllFindingsForExportQuery(
           WHEN 'low' THEN 3
         END,
         f.file_count DESC,
-        f.name ASC
+        f.name ASC,
+        f.id ASC
       LIMIT :limit OFFSET :offset;
     `;
 
@@ -975,13 +966,18 @@ export async function getFindingsSummaryQuery(
   };
 }> {
   validateOrganizationId(organizationId);
+  // GROUP BY result sets are naturally bounded by enum/finite domains
+  // (confidence: 3 values, finding_type: ~7 values). Provider is free-form so
+  // we cap it. ORDER BY + LIMIT make every dashboard query deterministic.
   const confidenceQuery = `
     SELECT
       confidence,
       COUNT(*) as count
     FROM ai_detection_findings
     WHERE scan_id = :scanId AND organization_id = :organizationId
-    GROUP BY confidence;
+    GROUP BY confidence
+    ORDER BY confidence ASC
+    LIMIT 10;
   `;
 
   const providerQuery = `
@@ -990,7 +986,9 @@ export async function getFindingsSummaryQuery(
       COUNT(*) as count
     FROM ai_detection_findings
     WHERE scan_id = :scanId AND organization_id = :organizationId
-    GROUP BY provider;
+    GROUP BY provider
+    ORDER BY count DESC, provider ASC
+    LIMIT 200;
   `;
 
   const findingTypeQuery = `
@@ -999,7 +997,9 @@ export async function getFindingsSummaryQuery(
       COUNT(*) as count
     FROM ai_detection_findings
     WHERE scan_id = :scanId AND organization_id = :organizationId
-    GROUP BY finding_type;
+    GROUP BY finding_type
+    ORDER BY finding_type ASC
+    LIMIT 20;
   `;
 
   const [confidenceResults, providerResults, findingTypeResults] = await Promise.all([
@@ -1100,17 +1100,27 @@ export async function getScansWithCacheQuery(
   // Validate olderThanDays to prevent SQL injection
   const sanitizedDays = Math.max(1, Math.min(365, Math.floor(Number(olderThanDays) || 7)));
 
+  // Hard cap on the per-call cleanup batch. The caller is expected to invoke
+  // this periodically; large backlogs are drained over multiple ticks.
+  const CACHE_CLEANUP_BATCH = 1000;
+
   const query = `
     SELECT id, cache_path
     FROM ai_detection_scans
     WHERE organization_id = :organizationId
       AND cache_path IS NOT NULL
       AND created_at < NOW() - INTERVAL '1 day' * :olderThanDays
-      AND status IN ('completed', 'failed', 'cancelled');
+      AND status IN ('completed', 'failed', 'cancelled')
+    ORDER BY created_at ASC, id ASC
+    LIMIT :batchSize;
   `;
 
   const results = await sequelize.query(query, {
-    replacements: { organizationId, olderThanDays: sanitizedDays },
+    replacements: {
+      organizationId,
+      olderThanDays: sanitizedDays,
+      batchSize: CACHE_CLEANUP_BATCH,
+    },
     type: QueryTypes.SELECT,
   });
 
@@ -1319,7 +1329,7 @@ export async function getAIDetectionStatsQuery(organizationId: number): Promise<
     JOIN ai_detection_scans s ON f.scan_id = s.id
     WHERE s.organization_id = :organizationId AND s.status = 'completed' AND provider IS NOT NULL AND provider != ''
     GROUP BY provider
-    ORDER BY count DESC
+    ORDER BY count DESC, provider ASC
     LIMIT 5;
   `;
 
@@ -1334,7 +1344,8 @@ export async function getAIDetectionStatsQuery(organizationId: number): Promise<
       AND s.created_at >= CURRENT_DATE - INTERVAL '7 days'
       AND s.status = 'completed'
     GROUP BY DATE(s.created_at)
-    ORDER BY date DESC;
+    ORDER BY date DESC
+    LIMIT 31;
   `;
 
   const replacements = { organizationId };
@@ -1491,13 +1502,32 @@ export async function getBaselineFindingsQuery(
 ): Promise<IFinding[]> {
   validateOrganizationId(organizationId);
 
-  return sequelize.query<IFinding>(
+  // Carry-forward logic needs every baseline finding, but we still cap the
+  // result set at the same ceiling as exports to prevent memory blowups
+  // on pathological scans. Anything above the cap is treated as an error
+  // (mirrors getAllFindingsForExportQuery).
+  const results = await sequelize.query<IFinding>(
     `SELECT * FROM ai_detection_findings
      WHERE scan_id = :baselineScanId
-       AND organization_id = :organizationId`,
+       AND organization_id = :organizationId
+     ORDER BY id ASC
+     LIMIT :maxFindings`,
     {
-      replacements: { baselineScanId, organizationId },
+      replacements: {
+        baselineScanId,
+        organizationId,
+        maxFindings: MAX_EXPORT_FINDINGS + 1,
+      },
       type: QueryTypes.SELECT,
     },
   );
+
+  if (results.length > MAX_EXPORT_FINDINGS) {
+    throw new Error(
+      `Baseline scan ${baselineScanId} has more than ${MAX_EXPORT_FINDINGS} findings, ` +
+        `which exceeds the carry-forward limit. Run a full scan to reset the baseline.`,
+    );
+  }
+
+  return results;
 }

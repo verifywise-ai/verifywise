@@ -25,6 +25,7 @@ import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtende
 import SearchBox from "../../../components/Search/SearchBox";
 import { EmptyState } from "../../../components/EmptyState";
 import singleTheme from "../../../themes/v1SingleTheme";
+import { displayFormattedDate } from "../../../tools/isoDateToString";
 
 /** Isolated create modal — its input state won't re-render the parent table */
 const CreateOrgModal = ({
@@ -286,11 +287,7 @@ const Organizations = () => {
                     <Typography sx={{ fontSize: 13 }}>{org.user_count ?? 0}</Typography>
                   </TableCell>
                   <TableCell sx={tableStyles.body.cell}>
-                    {new Date(org.created_at).toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                    })}
+                    {displayFormattedDate(org.created_at)}
                   </TableCell>
                   <TableCell sx={{ ...tableStyles.body.cell, textAlign: "right" }}>
                     <Stack direction="row" justifyContent="flex-end" gap="8px">

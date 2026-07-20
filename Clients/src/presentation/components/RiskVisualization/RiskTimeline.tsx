@@ -1,7 +1,9 @@
 import React, { useMemo } from "react";
 import { Box, Typography, Stack, Chip } from "@mui/material";
+import { format } from "date-fns";
 import { IRiskTimelineProps } from "../../types/interfaces/i.risk";
 import { ITimelineEvent } from "../../../domain/interfaces/i.widget";
+import { displayFormattedDate } from "../../tools/isoDateToString";
 
 const RiskTimeline: React.FC<IRiskTimelineProps> = ({ risks, onRiskSelect }) => {
   const getRiskLevelFromString = (level: string | number): number => {
@@ -72,10 +74,7 @@ const RiskTimeline: React.FC<IRiskTimelineProps> = ({ risks, onRiskSelect }) => 
   }, [risks]);
 
   const formatTime = (date: Date) => {
-    return date.toLocaleDateString(undefined, {
-      month: "short",
-      day: "numeric",
-    });
+    return displayFormattedDate(date);
   };
 
   // Group events by month for better organization
@@ -83,10 +82,7 @@ const RiskTimeline: React.FC<IRiskTimelineProps> = ({ risks, onRiskSelect }) => 
     const groups: { [key: string]: ITimelineEvent[] } = {};
 
     timelineEvents.forEach((event) => {
-      const monthKey = event.date.toLocaleDateString(undefined, {
-        year: "numeric",
-        month: "long",
-      });
+      const monthKey = format(event.date, "MMMM yyyy");
 
       if (!groups[monthKey]) {
         groups[monthKey] = [];

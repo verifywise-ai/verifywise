@@ -109,7 +109,7 @@ export async function createUserPreferences(req: Request, res: Response) {
         functionName,
         fileName,
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       logStructured("successful", `Created user preferences`, functionName, fileName);
       await logEvent(
@@ -187,7 +187,7 @@ export async function updateUserPreferences(req: Request, res: Response) {
         functionName,
         fileName,
         userId: req.userId!,
-        tenantId: req.organizationId!,
+        organizationId: req.organizationId!,
       });
       logStructured("successful", `Updated user preferences`, functionName, fileName);
       await logEvent(

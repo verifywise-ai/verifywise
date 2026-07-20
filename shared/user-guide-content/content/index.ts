@@ -8,6 +8,7 @@ import { intakeFormsContent } from './ai-governance/intake-forms';
 import { modelInventoryContent } from './ai-governance/model-inventory';
 import { aiAppsContent } from './ai-governance/ai-apps';
 import { modelLifecycleContent } from './ai-governance/model-lifecycle';
+import { mrmContent } from './ai-governance/mrm';
 import { taskManagementContent } from './ai-governance/task-management';
 import { incidentManagementContent } from './ai-governance/incident-management';
 import { evidenceCollectionContent } from './ai-governance/evidence-collection';
@@ -83,7 +84,9 @@ import { guardrailsContent as aiGatewayGuardrailsContent } from './ai-gateway/gu
 import { aiGatewaySettingsContent } from './ai-gateway/settings';
 import { virtualKeysContent as aiGatewayVirtualKeysContent } from './ai-gateway/virtual-keys';
 import { logsContent as aiGatewayLogsContent } from './ai-gateway/logs';
-import { promptsContent as aiGatewayPromptsContent } from './ai-gateway/prompts';
+// Prompts is hidden behind SHOW_AI_GATEWAY_PROMPTS in the app; its content is
+// unregistered here while the feature is hidden (see userGuideConfig.ts).
+// import { promptsContent as aiGatewayPromptsContent } from './ai-gateway/prompts';
 import { aiGatewayModelsContent } from './ai-gateway/models';
 import { mcpOverviewContent } from './ai-gateway/mcp-overview';
 import { mcpServersContent } from './ai-gateway/mcp-servers';
@@ -99,6 +102,17 @@ import { connectYourAgentContent } from './developers/connect-your-agent';
 import { connectAnyAgentContent } from './developers/connect-any-agent';
 import { governingToolCallsContent } from './developers/governing-tool-calls';
 import { agentControlApiContent } from './developers/agent-control-api';
+import { platformRestApiContent } from './developers/platform-rest-api';
+import { workingWithResourcesContent } from './developers/working-with-resources';
+import { bulkImportDatasetsContent } from './developers/bulk-import-datasets';
+import { automationsApiContent } from './developers/automations-api';
+import { complianceAndReportsContent } from './developers/compliance-and-reports';
+import { inboundIntegrationsContent } from './developers/inbound-integrations';
+import { mrmMetricIngestionContent } from './developers/mrm-metric-ingestion';
+import { aiTrustIndexDashboardContent } from './ai-trust-index/dashboard';
+import { aiTrustIndexBrowseContent } from './ai-trust-index/browse';
+import { aiTrustIndexTrackedContent } from './ai-trust-index/tracked';
+import { aiTrustIndexSettingsContent } from './ai-trust-index/settings';
 
 // Map of article IDs to their content
 // Format: 'collectionId/articleId': ArticleContent
@@ -114,6 +128,7 @@ export const articleContentMap: Record<string, ArticleContent> = {
   'ai-governance/model-inventory': modelInventoryContent,
   'ai-governance/ai-apps': aiAppsContent,
   'ai-governance/model-lifecycle': modelLifecycleContent,
+  'ai-governance/mrm': mrmContent,
   'ai-governance/task-management': taskManagementContent,
   'ai-governance/incident-management': incidentManagementContent,
   'ai-governance/evidence-collection': evidenceCollectionContent,
@@ -200,7 +215,8 @@ export const articleContentMap: Record<string, ArticleContent> = {
   'ai-gateway/settings': aiGatewaySettingsContent,
   'ai-gateway/virtual-keys': aiGatewayVirtualKeysContent,
   'ai-gateway/logs': aiGatewayLogsContent,
-  'ai-gateway/prompts': aiGatewayPromptsContent,
+  // Prompts feature hidden from the UI.
+  // 'ai-gateway/prompts': aiGatewayPromptsContent,
   'ai-gateway/models': aiGatewayModelsContent,
   // Agent Control
   'ai-gateway/mcp-overview': mcpOverviewContent,
@@ -218,6 +234,18 @@ export const articleContentMap: Record<string, ArticleContent> = {
   'developers/connect-any-agent': connectAnyAgentContent,
   'developers/governing-tool-calls': governingToolCallsContent,
   'developers/agent-control-api': agentControlApiContent,
+  'developers/platform-rest-api': platformRestApiContent,
+  'developers/working-with-resources': workingWithResourcesContent,
+  'developers/bulk-import-datasets': bulkImportDatasetsContent,
+  'developers/automations-api': automationsApiContent,
+  'developers/compliance-and-reports': complianceAndReportsContent,
+  'developers/inbound-integrations': inboundIntegrationsContent,
+  'developers/mrm-metric-ingestion': mrmMetricIngestionContent,
+  // AI Trust Index
+  'ai-trust-index/dashboard': aiTrustIndexDashboardContent,
+  'ai-trust-index/browse': aiTrustIndexBrowseContent,
+  'ai-trust-index/tracked': aiTrustIndexTrackedContent,
+  'ai-trust-index/settings': aiTrustIndexSettingsContent,
 };
 
 // Helper to get article content

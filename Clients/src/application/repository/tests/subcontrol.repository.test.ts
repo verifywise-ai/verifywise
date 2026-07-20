@@ -87,7 +87,7 @@ describe("Test Subcontrol Repository", () => {
 
   describe("createSubcontrol", () => {
     it("should call post and return full response", async () => {
-      const body = { name: "New Subcontrol" };
+      const body = { title: "New Subcontrol" };
       const mockResponse = {
         status: 201,
         statusText: "Created",
@@ -106,7 +106,7 @@ describe("Test Subcontrol Repository", () => {
   describe("updateSubcontrol", () => {
     it("should call patch and return full response", async () => {
       const id = 10;
-      const body = { name: "Updated Subcontrol" };
+      const body = { title: "Updated Subcontrol" };
       const mockResponse = {
         status: 200,
         statusText: "OK",

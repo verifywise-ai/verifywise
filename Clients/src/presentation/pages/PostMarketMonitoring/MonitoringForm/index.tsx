@@ -29,9 +29,9 @@ import {
   PMMQuestion,
   PMMResponseSave,
 } from "../../../../domain/types/PostMarketMonitoring";
-import dayjs from "dayjs";
 import { AlertState } from "../../../../application/interfaces/appStates";
 import { brand } from "../../../themes/palette";
+import { displayFormattedDate, displayFormattedTime } from "../../../tools/isoDateToString";
 
 interface LocalAlertState extends AlertState {
   isToast: boolean;
@@ -297,7 +297,7 @@ const MonitoringForm: React.FC = () => {
                 Due date
               </Typography>
               <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-                {dayjs(cycle.due_at).format("MMM D, YYYY")}
+                {displayFormattedDate(cycle.due_at)}
               </Typography>
             </Stack>
 
@@ -313,7 +313,7 @@ const MonitoringForm: React.FC = () => {
           {/* Autosave indicator */}
           {lastSaved && (
             <Typography sx={{ fontSize: 11, color: theme.palette.other.icon }}>
-              Last saved: {dayjs(lastSaved).format("HH:mm:ss")}
+              Last saved: {displayFormattedTime(lastSaved, { includeSeconds: true })}
             </Typography>
           )}
         </Stack>
@@ -333,7 +333,7 @@ const MonitoringForm: React.FC = () => {
             <CheckCircle size={20} color={theme.palette.status.success.main} />
             <Typography sx={{ fontSize: 13, color: theme.palette.status.success.text }}>
               This monitoring cycle was completed on{" "}
-              {dayjs(cycle.completed_at).format("MMMM D, YYYY")}
+              {cycle.completed_at ? displayFormattedDate(cycle.completed_at) : ""}
               {cycle.completed_by_name && ` by ${cycle.completed_by_name}`}.
             </Typography>
           </Stack>

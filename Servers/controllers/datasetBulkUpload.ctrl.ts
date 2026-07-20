@@ -7,6 +7,7 @@ import { recordDatasetCreation } from "../utils/datasetChangeHistory.utils";
 import { uploadOrganizationFile, createFileEntityLink } from "../repositories/file.repository";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { logStructured } from "../utils/logger/fileLogger";
+import { logRollbackFailure } from "../utils/logger/logHelper";
 
 import { translateError } from "../utils/i18n.utils";
 /**
@@ -125,7 +126,14 @@ export async function uploadDatasetFile(req: Request, res: Response) {
       try {
         await transaction.rollback();
       } catch (rollbackError) {
-        console.warn("Transaction rollback failed:", rollbackError);
+        await logRollbackFailure({
+          req,
+          functionName: "uploadDatasetFile",
+          fileName: "datasetBulkUpload.ctrl.ts",
+          eventType: "Create",
+          originalError: error,
+          rollbackError,
+        });
       }
     }
 

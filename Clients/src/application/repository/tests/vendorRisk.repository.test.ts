@@ -234,7 +234,7 @@ describe("vendorRisk.repository", () => {
         statusText: "Created",
       };
 
-      const body = { name: "New Risk", description: "Test" };
+      const body = { risk_description: "New Risk", impact_description: "Test" };
 
       vi.mocked(apiServices.post).mockResolvedValue(mockResponse);
 
@@ -255,7 +255,7 @@ describe("vendorRisk.repository", () => {
 
       vi.mocked(apiServices.post).mockRejectedValue(mockError);
 
-      await expect(createVendorRisk({ body: { name: "" } })).rejects.toThrow();
+      await expect(createVendorRisk({ body: { risk_description: "" } })).rejects.toThrow();
     });
 
     it("should throw error without response property for network errors", async () => {
@@ -263,7 +263,9 @@ describe("vendorRisk.repository", () => {
 
       vi.mocked(apiServices.post).mockRejectedValue(networkError);
 
-      await expect(createVendorRisk({ body: { name: "Test" } })).rejects.toThrow("Network timeout");
+      await expect(createVendorRisk({ body: { risk_description: "Test" } })).rejects.toThrow(
+        "Network timeout",
+      );
     });
   });
 
@@ -275,7 +277,7 @@ describe("vendorRisk.repository", () => {
         statusText: "OK",
       };
 
-      const body = { name: "Updated Risk" };
+      const body = { risk_description: "Updated Risk" };
 
       vi.mocked(apiServices.patch).mockResolvedValue(mockResponse);
 
@@ -296,7 +298,9 @@ describe("vendorRisk.repository", () => {
 
       vi.mocked(apiServices.patch).mockRejectedValue(mockError);
 
-      await expect(updateVendorRisk({ id: 999, body: { name: "Test" } })).rejects.toThrow();
+      await expect(
+        updateVendorRisk({ id: 999, body: { risk_description: "Test" } }),
+      ).rejects.toThrow();
     });
 
     it("should throw error without response property for network errors", async () => {
@@ -304,7 +308,7 @@ describe("vendorRisk.repository", () => {
 
       vi.mocked(apiServices.patch).mockRejectedValue(networkError);
 
-      await expect(updateVendorRisk({ id: 1, body: { name: "Test" } })).rejects.toThrow(
+      await expect(updateVendorRisk({ id: 1, body: { risk_description: "Test" } })).rejects.toThrow(
         "Connection refused",
       );
     });

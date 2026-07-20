@@ -1,13 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { Suspense } from "react";
-import {
-  Box,
-  Typography,
-  Stack,
-  FormControlLabel,
-  useTheme,
-  CircularProgress,
-} from "@mui/material";
+import React from "react";
+import { Box, Typography, Stack, FormControlLabel, useTheme } from "@mui/material";
+import CustomizableSkeleton from "../../../components/Skeletons";
 import Alert from "../../../components/Alert";
 import Toggle from "../../../components/Inputs/Toggle";
 import ToggleCard from "../../../components/Inputs/ToggleCard";
@@ -18,7 +12,7 @@ import {
   useAITrustCentreOverviewMutation,
 } from "../../../../application/hooks/useAITrustCentreOverviewQuery";
 import { handleAlert } from "../../../../application/tools/alertUtils";
-import { Save as SaveIcon } from "lucide-react";
+import { Save as SaveIcon, RotateCcw } from "lucide-react";
 import Field from "../../../components/Inputs/Field";
 
 import { SectionPaper, PrivacyFields, styles, getFormControlLabelStyles } from "./styles";
@@ -74,7 +68,7 @@ const ComplianceBadge: React.FC<{
 );
 
 const AITrustCenterOverview: React.FC = () => {
-  const { data: formData, isLoading: loading, error } = useAITrustCentreOverviewQuery();
+  const { data: formData, isLoading: loading, error, refetch } = useAITrustCentreOverviewQuery();
   const updateOverviewMutation = useAITrustCentreOverviewMutation();
 
   // Local state for form data and notifications
@@ -200,26 +194,29 @@ const AITrustCenterOverview: React.FC = () => {
   };
 
   if (loading || !localFormData) {
-    return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress />
-      </Box>
-    );
+    return <CustomizableSkeleton variant="rectangular" width="100%" height={400} />;
   }
 
   return (
     <Box>
       {error && (
-        <Suspense fallback={<div>Loading...</div>}>
-          <Alert
-            variant="error"
-            body={error.message || "An error occurred"}
-            isToast={true}
-            onClick={() => {}}
-          />
-        </Suspense>
+        <Alert
+          variant="error"
+          body={error.message || "An error occurred loading the AI Trust Center overview."}
+          isToast={true}
+          onClick={() => {}}
+        />
       )}
-
+      {error && (
+        <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 2 }}>
+          <CustomizableButton
+            variant="outlined"
+            text="Retry"
+            icon={<RotateCcw size={16} />}
+            onClick={() => refetch()}
+          />
+        </Box>
+      )}
       {/* Introduction Section */}
       <SectionPaper sx={{ opacity: localFormData.info?.intro_visible ? 1 : 0.5 }}>
         <SectionHeader
@@ -580,15 +577,13 @@ const AITrustCenterOverview: React.FC = () => {
       </Stack>
 
       {alert && (
-        <Suspense fallback={<div>Loading...</div>}>
-          <Alert
-            variant={alert.variant}
-            title={alert.title}
-            body={alert.body}
-            isToast={true}
-            onClick={() => setAlert(null)}
-          />
-        </Suspense>
+        <Alert
+          variant={alert.variant}
+          title={alert.title}
+          body={alert.body}
+          isToast={true}
+          onClick={() => setAlert(null)}
+        />
       )}
     </Box>
   );
