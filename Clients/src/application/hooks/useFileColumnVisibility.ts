@@ -51,7 +51,11 @@ export const DEFAULT_COLUMNS: ColumnConfig[] = [
 
 // Bumped to 4 when the "quality" column was added, so existing users get it
 // visible by default instead of keeping their stored (pre-quality) set.
-const SCHEMA_VERSION = 4;
+//
+// Exported so tests can seed "the current version" without hardcoding a number.
+// The previous bump broke the migration test precisely because the test carried
+// its own copy of this value and was not updated alongside it.
+export const SCHEMA_VERSION = 4;
 const STORAGE_KEY = "verifywise_file_column_visibility";
 const VERSION_KEY = "verifywise_file_column_visibility_version";
 // Old un-namespaced keys, migrated once via the StorageService legacy-key mechanism.
