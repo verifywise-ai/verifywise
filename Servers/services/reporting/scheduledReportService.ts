@@ -2,6 +2,7 @@ import {
   getTemplateByIdQuery,
   getVersionByIdQuery,
 } from "../../utils/reportTemplate.utils";
+import { isValidEmail } from "../email/types";
 
 export interface ScheduledReportInput {
   templateId: number; templateVersionId: number; name: string;
@@ -19,7 +20,15 @@ export function validateScheduledReportInput(input: ScheduledReportInput): strin
   if (!input.sectionsConfig?.sections?.length) errs.push("at least one section is required");
   const d = input.deliveryConfig || {};
   if (!d.saveToStorage && !d.sendEmailLink && !d.attachFile) errs.push("at least one delivery option is required");
-  if ((d.sendEmailLink || d.attachFile) && !(d.recipients?.length)) errs.push("recipients required when email delivery is enabled");
+  if ((d.sendEmailLink || d.attachFile) && !(d.recipients?.length)) {
+    errs.push("recipients required when email delivery is enabled");
+  } else if ((d.sendEmailLink || d.attachFile) && d.recipients?.length) {
+    // Format-check at creation. sendAutomationEmail validates again at send
+    // time, but by then the person who typed the address is long gone and the
+    // failure is buried in a worker log.
+    const bad = (d.recipients as string[]).filter((r) => !isValidEmail(r));
+    if (bad.length) errs.push(`invalid recipient address: ${bad.join(", ")}`);
+  }
   return errs;
 }
 
