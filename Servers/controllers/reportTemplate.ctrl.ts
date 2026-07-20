@@ -30,7 +30,7 @@ export async function getTemplate(req: Request, res: Response): Promise<any> {
   try {
     const tpl = await getTemplateByIdQuery(Number(req.params.id), req.organizationId!);
     if (!tpl) return res.status(404).json(STATUS_CODE[404]("not found"));
-    const version = await getLatestVersionQuery(tpl.id);
+    const version = await getLatestVersionQuery(tpl.id, req.organizationId!);
     return res.status(200).json(STATUS_CODE[200]({ ...tpl, latestVersion: version }));
   } catch (e) {
     return res.status(500).json(STATUS_CODE[500]((e as Error).message));
