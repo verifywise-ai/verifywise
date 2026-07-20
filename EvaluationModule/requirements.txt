@@ -34,7 +34,7 @@ xai-sdk>=1.15.0
 mistralai>=2.7.0
 
 # DeepEval for comprehensive LLM evaluation
-deepeval>=4.0.3
+deepeval>=4.1.1
 
 # Optional: GPU support (uncomment if using CUDA)
 # torch>=2.7.0+cu118 --extra-index-url https://download.pytorch.org/whl/cu118
