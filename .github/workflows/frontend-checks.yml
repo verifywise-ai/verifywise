@@ -105,6 +105,9 @@ jobs:
       - name: Run tests with coverage
         run: npm run test:ci
 
+      - name: Dependency vulnerability audit
+        run: npm audit --audit-level=high --omit=dev
+
       - name: Upload coverage report
         uses: actions/upload-artifact@v7
         with:
