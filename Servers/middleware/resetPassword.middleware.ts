@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { getTokenPayload } from "../utils/jwt.utils";
+import { consumeOneTimeToken } from "../utils/oneTimeToken.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 
 const resetPassword = async (
@@ -50,6 +51,17 @@ const resetPassword = async (
       return res.status(400).json(
         STATUS_CODE[400]({
           message: req.t!("Token email does not match request email"),
+        }),
+      );
+    }
+
+    // Single-use enforcement: atomically consume the token. A replayed,
+    // unknown or expired link is rejected here.
+    const consumed = await consumeOneTimeToken(token, "password_reset");
+    if (!consumed) {
+      return res.status(401).json(
+        STATUS_CODE[401]({
+          message: req.t!("This password reset link has already been used or is invalid"),
         }),
       );
     }
