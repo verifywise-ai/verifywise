@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { Box, Tabs, Tab, Drawer } from "@mui/material";
+import { Box, Tabs, Tab, Drawer, Button } from "@mui/material";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import GenerateReport from "./GenerateReport";
 import ReportLists from "./Reports";
@@ -9,6 +9,7 @@ import TemplatesTab from "./TemplatesTab";
 import ScheduledReportsTab from "./ScheduledReportsTab";
 import ArchiveTab from "./ArchiveTab";
 import ConfigureReportWizard from "./ConfigureReportWizard";
+import TemplateBuilder from "./TemplateBuilder";
 import { getTemplate } from "../../../application/repository/reporting.repository";
 import { showAlert } from "../../../infrastructure/api/customAxios";
 
@@ -17,6 +18,7 @@ const Reporting = () => {
   const [activeTab, setActiveTab] = useState(0);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [wizardTemplate, setWizardTemplate] = useState<any | null>(null);
+  const [builderOpen, setBuilderOpen] = useState(false);
 
   const handleReportGenerated = useCallback(() => {
     // Increment refresh key to trigger re-render of Reports component
@@ -80,6 +82,11 @@ const Reporting = () => {
 
       {activeTab === 1 && (
         <Box>
+          <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 2 }}>
+            <Button variant="contained" onClick={() => setBuilderOpen(true)}>
+              New template
+            </Button>
+          </Box>
           <TemplatesTab onUse={handleUseTemplate} />
         </Box>
       )}
@@ -100,6 +107,10 @@ const Reporting = () => {
         {wizardTemplate && (
           <ConfigureReportWizard template={wizardTemplate} onClose={handleWizardClose} />
         )}
+      </Drawer>
+
+      <Drawer anchor="right" open={builderOpen} onClose={() => setBuilderOpen(false)}>
+        {builderOpen && <TemplateBuilder onClose={() => setBuilderOpen(false)} />}
       </Drawer>
 
       <PageTour steps={ReportingSteps} run={true} tourKey="reporting-tour" />
