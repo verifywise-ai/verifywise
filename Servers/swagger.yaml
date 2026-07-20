@@ -13564,6 +13564,20 @@ paths:
       security:
         -
           bearerAuth: []
+    post:
+      summary: 'Create Template'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Reporting/Templates
+      operationId: createTemplate
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or Editor'
   '/reporting/templates/{id}':
     get:
       summary: 'Get Template'
@@ -13578,6 +13592,34 @@ paths:
       security:
         -
           bearerAuth: []
+    patch:
+      summary: 'Update Template'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Reporting/Templates
+      operationId: updateTemplate
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or Editor'
+    delete:
+      summary: 'Archive Template'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Reporting/Templates
+      operationId: archiveTemplate
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or Editor'
   /reporting/scheduled-reports:
     get:
       summary: 'List Scheduled Reports'
@@ -13708,6 +13750,20 @@ paths:
       security:
         -
           bearerAuth: []
+  '/reporting/runs/{id}/analyses':
+    get:
+      summary: 'Get Run Analyses'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Reporting/Runs
+      operationId: getRunAnalyses
+      security:
+        -
+          bearerAuth: []
   /reporting/generate-report:
     post:
       tags:
@@ -13771,6 +13827,20 @@ paths:
           description: 'Forbidden - insufficient role'
         '500':
           description: 'Internal server error'
+  /reporting/sections:
+    get:
+      summary: 'List Sections'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Reporting
+      operationId: listSections
+      security:
+        -
+          bearerAuth: []
   '/reporting/{id}':
     delete:
       tags:

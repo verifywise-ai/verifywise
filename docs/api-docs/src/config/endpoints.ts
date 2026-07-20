@@ -8110,6 +8110,17 @@ export const reportingEndpoints: Endpoint[] = [
     tag: "Reporting",
   },
   {
+    method: 'GET',
+    path: '/reporting/sections',
+    summary: "List Sections",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting",
+  },
+  {
     method: 'DELETE',
     path: '/reporting/{id}',
     summary: "Delete Generated Report By Id",
@@ -8154,6 +8165,17 @@ export const reportingrunsEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/reporting/runs/{id}/download',
     summary: "Download Run",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Runs",
+  },
+  {
+    method: 'GET',
+    path: '/reporting/runs/{id}/analyses',
+    summary: "Get Run Analyses",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -8252,9 +8274,45 @@ export const reportingtemplatesEndpoints: Endpoint[] = [
     tag: "Reporting/Templates",
   },
   {
+    method: 'POST',
+    path: '/reporting/templates',
+    summary: "Create Template",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Templates",
+  },
+  {
     method: 'GET',
     path: '/reporting/templates/{id}',
     summary: "Get Template",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Templates",
+  },
+  {
+    method: 'PATCH',
+    path: '/reporting/templates/{id}',
+    summary: "Update Template",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Templates",
+  },
+  {
+    method: 'DELETE',
+    path: '/reporting/templates/{id}',
+    summary: "Archive Template",
+    description: "Requires role: Admin or Editor",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },

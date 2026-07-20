@@ -1,6 +1,6 @@
 # Servers — Backend Development Guide
 
-> **Last Updated:** 2026-05-05
+> **Last Updated:** 2026-07-20
 
 ---
 
@@ -181,9 +181,10 @@ risk while keeping the generated spec available for the frontend build pipeline.
 
 ### CI enforcement
 
-The `api-docs-drift` CI job regenerates the spec and registry, runs
-`npm run check:api-drift`, and fails if the committed generated files are out of
-sync with the route layer.
+**There is no `api-docs-drift` CI job today.** `npm run check:api-drift` exists
+and works, but no workflow in `.github/workflows/` runs it, so a missed
+regeneration will not be caught automatically. Run steps 3 and 4 above by hand
+before opening a PR that changes the route layer.
 
 ---
 
