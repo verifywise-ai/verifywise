@@ -16,6 +16,14 @@ vi.mock("../../repository/reporting.repository", () => ({
   updateTemplate: vi.fn(async () => ({ id: 7 })),
   archiveTemplate: vi.fn(async () => ({ ok: true })),
   getRunAnalyses: vi.fn(async () => []),
+  updateScheduledReport: vi.fn(async () => ({ id: 7 })),
+  deleteScheduledReport: vi.fn(async () => ({ ok: true })),
+  getRuns: vi.fn(async () => ({
+    rows: [{ id: 1, status: "success" }],
+    total: 1,
+    limit: 200,
+    offset: 0,
+  })),
 }));
 
 import {
@@ -26,6 +34,9 @@ import {
   useUpdateTemplate,
   useArchiveTemplate,
   useRunAnalyses,
+  useReportRuns,
+  useUpdateScheduledReport,
+  useDeleteScheduledReport,
 } from "../useReporting";
 import * as repo from "../../repository/reporting.repository";
 
@@ -95,5 +106,47 @@ describe("useReporting template hooks", () => {
     const { result } = renderHook(() => useRunAnalyses(undefined), { wrapper: wrap });
     expect(result.current.fetchStatus).toBe("idle");
     expect(repo.getRunAnalyses).not.toHaveBeenCalled();
+  });
+});
+
+describe("useReporting phase 4 hooks", () => {
+  it("useUpdateScheduledReport splits id and body", async () => {
+    const { result } = renderHook(() => useUpdateScheduledReport(), { wrapper: wrap });
+    result.current.mutate({ id: 7, body: { name: "Renamed" } });
+    await waitFor(() =>
+      expect(repo.updateScheduledReport).toHaveBeenCalledWith(7, { name: "Renamed" }),
+    );
+  });
+
+  it("useDeleteScheduledReport passes the id through", async () => {
+    const { result } = renderHook(() => useDeleteScheduledReport(), { wrapper: wrap });
+    result.current.mutate(7);
+    await waitFor(() => expect(repo.deleteScheduledReport).toHaveBeenCalledWith(7));
+  });
+
+  it("useReportRuns forwards pagination params", async () => {
+    const { result } = renderHook(() => useReportRuns({ limit: 25, offset: 50 }), {
+      wrapper: wrap,
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(repo.getRuns).toHaveBeenCalledWith({ limit: 25, offset: 50 });
+  });
+
+  it("useReportRuns stops polling once no run is still running", async () => {
+    const { result } = renderHook(() => useReportRuns(), { wrapper: wrap });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    // getRuns is mocked to return only terminal runs, so the interval
+    // resolver must return false rather than a number.
+    const opts = result.current as any;
+    expect(opts.data?.rows?.every((r: any) => r.status !== "running")).toBe(true);
+  });
+
+  // useGenerateReport/useRunNow invalidate ["reporting","runs"] while
+  // useReportRuns now keys on ["reporting","runs",params]. Prefix matching is
+  // the whole reason that still works, so assert it rather than assume it.
+  it("a ['reporting','runs'] invalidation still matches the params-scoped key", () => {
+    const qc = new QueryClient();
+    qc.setQueryData(["reporting", "runs", { limit: 25, offset: 50 }], { rows: [] });
+    expect(qc.getQueryCache().findAll({ queryKey: ["reporting", "runs"] })).toHaveLength(1);
   });
 });

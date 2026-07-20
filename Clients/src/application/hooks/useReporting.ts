@@ -10,7 +10,10 @@
 
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as repo from "../repository/reporting.repository";
-import type { ReportTemplateWriteBody } from "../../domain/interfaces/i.reporting";
+import type {
+  ReportTemplateWriteBody,
+  ScheduledReportUpdateBody,
+} from "../../domain/interfaces/i.reporting";
 
 export const useTemplates = () =>
   useQuery({
@@ -22,10 +25,21 @@ export const useTemplates = () =>
 export const useScheduledReports = () =>
   useQuery({ queryKey: ["reporting", "scheduled"], queryFn: repo.getScheduledReports });
 
-export const useReportRuns = (scheduledReportId?: number) =>
+// Polls while any run in the page is still running, then stops. A report can
+// take minutes, and without this the archive silently shows a stale "running"
+// forever.
+export const useReportRuns = (params?: {
+  scheduledReportId?: number;
+  limit?: number;
+  offset?: number;
+}) =>
   useQuery({
-    queryKey: ["reporting", "runs", scheduledReportId],
-    queryFn: () => repo.getRuns({ scheduledReportId }),
+    queryKey: ["reporting", "runs", params ?? {}],
+    queryFn: () => repo.getRuns(params),
+    refetchInterval: (query) => {
+      const rows = query.state.data?.rows ?? [];
+      return rows.some((r) => r.status === "running") ? 5000 : false;
+    },
   });
 
 export const useCreateScheduledReport = () => {
@@ -117,3 +131,20 @@ export const useRunAnalyses = (runId: number | undefined) =>
     queryFn: () => repo.getRunAnalyses(runId as number),
     enabled: runId != null,
   });
+
+export const useUpdateScheduledReport = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: number; body: ScheduledReportUpdateBody }) =>
+      repo.updateScheduledReport(id, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["reporting", "scheduled"] }),
+  });
+};
+
+export const useDeleteScheduledReport = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: number) => repo.deleteScheduledReport(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["reporting", "scheduled"] }),
+  });
+};

@@ -221,3 +221,22 @@ export interface ReportRunAnalysis {
   analyzed_by: number | null;
   audit_metadata: Record<string, unknown> | null;
 }
+
+/** Paginated envelope returned by GET /api/reporting/runs. */
+export interface ReportRunPage {
+  rows: ReportRun[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+export interface ScheduledReportUpdateBody {
+  name?: string;
+  scope?: ReportScope;
+  projectId?: number | null;
+  sectionsConfig?: SectionsConfig;
+  aiBlocksConfig?: AiBlocksConfig;
+  format?: "pdf" | "docx";
+  scheduleConfig?: Record<string, unknown>;
+  deliveryConfig?: Record<string, unknown>;
+}

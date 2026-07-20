@@ -15,9 +15,11 @@ import type {
   GenerateReportResponse,
   ReportRun,
   ReportRunAnalysis,
+  ReportRunPage,
   ReportSectionCatalogEntry,
   ReportTemplate,
   ReportTemplateWriteBody,
+  ScheduledReportUpdateBody,
 } from "../../domain/interfaces/i.reporting";
 
 // Backend responses are wrapped as { data: <payload> }; apiServices already
@@ -44,9 +46,30 @@ export async function setScheduledReportActive(id: number, active: boolean): Pro
     await apiServices.post(`/reporting/scheduled-reports/${id}/${active ? "resume" : "pause"}`, {}),
   );
 }
-export async function getRuns(params?: { scheduledReportId?: number }): Promise<any[]> {
-  const qs = params?.scheduledReportId ? `?scheduledReportId=${params.scheduledReportId}` : "";
-  return extract(await apiServices.get(`/reporting/runs${qs}`));
+export async function updateScheduledReport(
+  id: number,
+  body: ScheduledReportUpdateBody,
+): Promise<unknown> {
+  return extract(await apiServices.patch(`/reporting/scheduled-reports/${id}`, body));
+}
+
+// The backend soft-delete endpoint has existed since the reporting MVP with no
+// frontend caller, so a scheduled report could never be removed from the UI.
+export async function deleteScheduledReport(id: number): Promise<{ ok: boolean }> {
+  return extract(await apiServices.delete(`/reporting/scheduled-reports/${id}`));
+}
+
+export async function getRuns(params?: {
+  scheduledReportId?: number;
+  limit?: number;
+  offset?: number;
+}): Promise<ReportRunPage> {
+  const qs = new URLSearchParams();
+  if (params?.scheduledReportId) qs.set("scheduledReportId", String(params.scheduledReportId));
+  if (params?.limit != null) qs.set("limit", String(params.limit));
+  if (params?.offset != null) qs.set("offset", String(params.offset));
+  const suffix = qs.toString() ? `?${qs}` : "";
+  return extract(await apiServices.get(`/reporting/runs${suffix}`));
 }
 
 // Org-scoped report file download (NOT file-manager, which has its own RBAC and 403s here).
