@@ -171,4 +171,5 @@ export {
   generateRefreshToken,
   generateApiToken,
   ONE_WEEK_MS,
+  THIRTY_DAYS_MS,
 };
