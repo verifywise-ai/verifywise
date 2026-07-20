@@ -193,6 +193,51 @@ class ReportDataCollector {
 | policyManager | policies | title, version, status |
 | incidentManagement | ai_incident_managements | type, severity, status |
 
+## AI Analysis
+
+Report AI output is produced by schema-validated analyzers in `services/reporting/analyzers/`. Each analyzer returns a zod-validated object (`schemas.ts`), never free text, so the renderers can lay it out as a formal compliance artifact instead of a prose blob.
+
+### Analyzers
+
+| Section key | Output | Input |
+|-------------|--------|-------|
+| `executiveSummary` | Multi-paragraph posture summary | Section summaries |
+| `keyFindings` | 5–8 findings, each attributed to a section key | Section summaries |
+| `recommendedActions` | 3–5 prioritised actions | Section summaries |
+| `riskAnalysis` | Risk narrative + up to 6 named risks | `projectRisks`, `vendorRisks`, `modelRisks` |
+| `complianceGap` | Explanation of STORED readiness scores + evidence gaps | Readiness scores, evidence gaps, compliance sections |
+| `vendorRisk` | Third-party risk narrative + named vendor concerns | `vendors`, `vendorRisks` |
+
+`sectionSummaries` (ported from the removed `aiSummarizer.ts`) is a seventh gateable block, but it is **not** a registry entry in `ANALYZERS`: its output is `Record<string, string>` prose rather than a schema-validated object, so it does not fit `AnalyzerDefinition`. It runs as a separate stage whose output the first three analyzers consume — feeding them raw section JSON instead measured ~38k tokens per prompt against ~6k, three times per report.
+
+Two stages, ordering is load-bearing: Stage 1 runs `sectionSummaries` plus the raw-section analyzers (`riskAnalysis`, `complianceGap`, `vendorRisk`); Stage 2 runs the three summary consumers. Summaries are produced whenever a Stage 2 consumer is enabled, regardless of the `sectionSummaries` block flag — that flag governs whether summaries are *recorded and rendered* as their own blocks.
+
+`complianceGap` receives readiness scores and evidence gaps as two independent inputs that are never joined: they disagree on framework coverage, project scoping and key space, so a join silently mislabels rows.
+
+### Gating
+
+`ai_blocks_config` on the template/schedule row selects which blocks run (`AiBlocksConfig` in `domain.layer/interfaces/i.reportTemplate.ts`, resolved by `reportTemplateResolver.ts`). Manual runs carry no template, so `resolveBlocks` (`analyzers/collectAnalyzerInputs.ts`) maps `aiEnhanced: true` to five blocks — `sectionSummaries`, `executiveSummary`, `keyFindings`, `recommendedActions`, `riskAnalysis` — reproducing the previous `aiSummarizer` output. `complianceGap` and `vendorRisk` stay off for manual runs to avoid unbudgeted spend; the wizard will expose them in Phase 3.
+
+### Persistence
+
+Each analyzed section is written to `report_run_analyses`, a per-run sidecar keyed by `(report_run_id, section_key, organization_id)`. `upsertRunAnalysisQuery` (`utils/reportRunAnalysis.utils.ts`) upserts with `ON CONFLICT` and bumps `analysis_version` in place, so re-analysis never inserts a duplicate. A `WHERE EXISTS` guard refuses writes when the run does not belong to the given organization; the caller must treat an `undefined` return as a failed write. `persistAnalyses` never throws — a report that generated successfully is not marked failed because its audit sidecar could not be written — and reports per-section status (`ok` / `abstained` / `write_failed`) into `report_runs.ai_status`.
+
+### Abstention
+
+An analyzer that cannot produce grounded output **abstains** rather than inventing one. The report still generates; the section renders its abstention reason. Abstention causes:
+
+- No LLM key configured for the organization
+- Insufficient data for the section (raw-section analyzers)
+- No section summaries available (summary consumers)
+- The AI service call failed — the persisted reason is generic; provider detail (custom base URLs, request paths) stays in the log, out of the regulator-facing field
+- The model itself set `abstain_reason` in its schema-validated payload
+
+Absence of scores is never presented as absence of gaps.
+
+### Versioning
+
+`ANALYZER_VERSION` (`analyzers/prompts.ts`) is stamped into `report_run_analyses.audit_metadata`. **Bump it on any prompt or schema change** — it is how a stored analysis is traced back to the prompt and schema that produced it.
+
 ## PDF Generation
 
 ### Technology
@@ -205,7 +250,9 @@ class ReportDataCollector {
 ```
 templates/reports/
 ├── report-pdf.ejs    - Main PDF template
-├── report-docx.ejs   - Dead file, not used by any generator (see DOCX Generation below)
+├── report-docx.ejs   - DEAD FILE. Not a live template: no generator loads it,
+│                      docxGenerator.ts imports no EJS at all, and DOCX is built
+│                      programmatically with the `docx` library (see below).
 ├── pmm-report.ejs    - PMM-specific template
 └── styles/
     ├── pdf.css       - PDF styling
@@ -239,6 +286,7 @@ templates/reports/
 ### Technology
 
 - **docx** npm library for native Word documents
+- No templating: `docxGenerator.ts` builds the document programmatically and imports no EJS. `templates/reports/report-docx.ejs` is dead (501 lines, referenced by nothing under `Servers/`).
 
 ### Document Structure
 
