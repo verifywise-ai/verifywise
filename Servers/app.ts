@@ -120,6 +120,10 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
   const app = express();
   const host = process.env.HOST || DEFAULT_HOST;
 
+  // Trust the first reverse proxy (nginx) so req.ip, req.secure and
+  // X-Forwarded-Proto are honored for rate limiting and cookie logic.
+  app.set("trust proxy", 1);
+
   app.use(
     cors({
       origin: (origin, callback) => {
