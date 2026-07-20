@@ -56,6 +56,7 @@ import resetPasswordMiddleware from "../middleware/resetPassword.middleware";
 import authenticateJWT from "../middleware/auth.middleware";
 import registerJWT from "../middleware/register.middleware";
 import { selfOnly } from "../middleware/selfOnly.middleware";
+import authorize from "../middleware/accessControl.middleware";
 
 /**
  * GET /users
@@ -190,7 +191,7 @@ router.patch("/:id", authenticateJWT, updateUserById);
  * @param {express.Request} req - Express request object
  * @param {express.Response} res - Express response object
  */
-router.delete("/:id", authenticateJWT, deleteUserById);
+router.delete("/:id", authenticateJWT, authorize(["Admin", "SuperAdmin"]), deleteUserById);
 
 /**
  * GET /users/check-user-exists
