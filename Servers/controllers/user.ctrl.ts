@@ -884,6 +884,38 @@ async function updateUserById(req: Request, res: Response) {
         .json(STATUS_CODE[403](req.t!("Forbidden: Access to this user is denied")));
     }
 
+    // Authorization: only Admins/SuperAdmins may edit other users.
+    // Non-privileged users may only edit their own profile and may never
+    // change a role (prevents privilege escalation via roleId in the body).
+    const isPrivileged = req.role === "Admin" || req.role === "SuperAdmin";
+    const isSelf = req.userId === id;
+
+    if (!isPrivileged && !isSelf) {
+      logStructured(
+        "error",
+        `non-admin user ${req.userId} attempted to update user ID ${id}`,
+        "updateUserById",
+        "user.ctrl.ts",
+      );
+      await transaction.rollback();
+      return res
+        .status(403)
+        .json(STATUS_CODE[403](req.t!("Forbidden: Only admins can update other users")));
+    }
+
+    if (!isPrivileged && roleId !== undefined && roleId !== user.role_id) {
+      logStructured(
+        "error",
+        `user ${req.userId} attempted to change role of user ID ${id}`,
+        "updateUserById",
+        "user.ctrl.ts",
+      );
+      await transaction.rollback();
+      return res
+        .status(403)
+        .json(STATUS_CODE[403](req.t!("Forbidden: Only admins can change user roles")));
+    }
+
     if (user) {
       // Capture the old role before updating (if roleId is being changed)
       const oldRoleId = user.role_id;
