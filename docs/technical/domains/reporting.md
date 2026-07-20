@@ -610,9 +610,19 @@ The existing **Admin-only** manual generate endpoints are preserved.
 ### Known MVP Limitations
 
 - Structured `recommendedActions` emission is **scaffolding only** — runs currently render the existing recommendations rather than emitting structured actions.
-- Template editing and archiving from `TemplatesTab` is still deferred — `TemplateBuilder` is reachable only from the "New template" button on the Reporting page. Scheduled-report editing and deletion *are* wired (see [Frontend Schedule Management](#frontend-schedule-management)).
-- `ReportAnalysisPanel` is **not built**. `GET /api/reporting/runs/:id/analyses`, the `useRunAnalyses` hook and the response types all exist, but nothing renders them yet.
 - A `PATCH` carrying **both** metadata and config performs two un-transacted writes. If the version insert fails, the metadata update is already committed.
+- `ScheduledReportUpdateBody` (frontend) omits `frameworkId` and `projectFrameworkId`, which the backend `UPDATABLE_FIELDS` allowlist does accept. The frontend type is a strict subset of the API — harmless today, but it means those two fields cannot be edited from the UI.
+
+### Frontend surface (complete)
+
+The UI half of the templates/schedules/runs stack is wired:
+
+- **`TemplatesTab`** — edit (name, description, category) and archive, over `useUpdateTemplate` / `useArchiveTemplate`. **System templates get neither**: writes match on `organization_id = :org AND is_system_template = false`, so the backend returns 404 for them and the UI omits the buttons rather than offering an action that cannot succeed. They carry a `System` chip so the absence reads as intentional. A 409 surfaces as a duplicate-name message.
+- **`ScheduledReportsTab`** — edit (name, format, schedule) and delete, over `useUpdateScheduledReport` / `useDeleteScheduledReport`. Both destructive paths require a confirmation naming the schedule. Edits always send `scheduleConfig`, because `updateScheduledReportQuery` only recomputes `next_run_at` when that key is present.
+- **`ArchiveTab`** — server-side pagination over the paginated runs endpoint via `useReportRunsPage`, reusing `StandardTablePagination`. It deliberately does **not** use the `useStandardTable` companion, which slices client-side and would report the current page's length as the total. The empty state keys on `total`, not page length, so paging past the end does not claim there are no runs. Each row opens `ReportAnalysisPanel` in a drawer.
+- **`ReportAnalysisPanel`** — presentational (`{analyses, isLoading}`), caller owns `useRunAnalyses`. Renders all seven section keys including `sectionSummaries`, handles a `null` payload (a real runtime case — `runAnalyzers` writes `payload: null` when a section produced nothing) and surfaces `abstain_reason`.
+
+> Every field the panel renders has a verified backend producer. `EvidenceAnalysisPanel` is the cautionary case: it declares `rationales` and `document_signals`, neither of which any code in `Servers/` has ever emitted, so one renders permanently empty and ~85 lines of chip UI gated on the other are unreachable. Do not add a field to this panel without confirming something writes it.
 
 ## Related Documentation
 
