@@ -18,16 +18,25 @@ import { listRunsQuery, getRunQuery } from "../utils/reportRun.utils";
 import { getFileById } from "../utils/fileUpload.utils";
 import { getRunAnalysesQuery } from "../utils/reportRunAnalysis.utils";
 
+const MAX_PAGE = 200;
+
 export async function listRuns(req: Request, res: Response): Promise<any> {
   try {
-    return res.status(200).json(
-      STATUS_CODE[200](
-        await listRunsQuery(req.organizationId!, {
-          scheduledReportId: req.query.scheduledReportId,
-          status: req.query.status,
-        }),
-      ),
-    );
+    // Clamp rather than trust: an unclamped limit is a cheap way for a client
+    // to ask the database for everything.
+    const rawLimit = Number(req.query.limit);
+    const rawOffset = Number(req.query.offset);
+    const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, MAX_PAGE) : MAX_PAGE;
+    const offset = Number.isFinite(rawOffset) && rawOffset > 0 ? rawOffset : 0;
+
+    const { rows, total } = await listRunsQuery(req.organizationId!, {
+      scheduledReportId: req.query.scheduledReportId,
+      status: req.query.status,
+      limit,
+      offset,
+    });
+
+    return res.status(200).json(STATUS_CODE[200]({ rows, total, limit, offset }));
   } catch (e) {
     return res.status(500).json(STATUS_CODE[500]((e as Error).message));
   }

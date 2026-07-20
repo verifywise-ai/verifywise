@@ -20,8 +20,8 @@ jest.mock("../../utils/statusCode.utils", () => ({
   },
 }));
 
-import { getRun, downloadRun, getRunAnalyses } from "../reportRun.ctrl";
-import { getRunQuery } from "../../utils/reportRun.utils";
+import { listRuns, getRun, downloadRun, getRunAnalyses } from "../reportRun.ctrl";
+import { getRunQuery, listRunsQuery } from "../../utils/reportRun.utils";
 import { getFileById } from "../../utils/fileUpload.utils";
 import { getRunAnalysesQuery } from "../../utils/reportRunAnalysis.utils";
 
@@ -134,5 +134,40 @@ describe("reportRun.ctrl tenant isolation", () => {
 
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: [] }));
+  });
+
+  it("listRuns passes limit and offset through to the query", async () => {
+    (listRunsQuery as jest.Mock).mockResolvedValue({ rows: [], total: 0 } as never);
+
+    const req = { query: { limit: "25", offset: "50" }, organizationId: 5 } as any;
+    const res = createMockRes();
+    await listRuns(req, res as Response);
+
+    const [org, opts] = (listRunsQuery as jest.Mock).mock.calls[0] as any[];
+    expect(org).toBe(5);
+    expect(opts.limit).toBe(25);
+    expect(opts.offset).toBe(50);
+  });
+
+  it("listRuns clamps an absurd limit rather than trusting the client", async () => {
+    (listRunsQuery as jest.Mock).mockResolvedValue({ rows: [], total: 0 } as never);
+
+    const req = { query: { limit: "100000" }, organizationId: 5 } as any;
+    const res = createMockRes();
+    await listRuns(req, res as Response);
+
+    expect(((listRunsQuery as jest.Mock).mock.calls[0] as any[])[1].limit).toBe(200);
+  });
+
+  it("listRuns defaults to the pre-pagination behaviour when given nothing", async () => {
+    (listRunsQuery as jest.Mock).mockResolvedValue({ rows: [], total: 0 } as never);
+
+    const req = { query: {}, organizationId: 5 } as any;
+    const res = createMockRes();
+    await listRuns(req, res as Response);
+
+    const opts = ((listRunsQuery as jest.Mock).mock.calls[0] as any[])[1];
+    expect(opts.limit).toBe(200);
+    expect(opts.offset).toBe(0);
   });
 });

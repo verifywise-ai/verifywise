@@ -30,13 +30,43 @@ export async function updateRunStatusQuery(id: number, fields: any): Promise<voi
       }, type: QueryTypes.UPDATE });
 }
 
-export async function listRunsQuery(organization_id: number, filters: any): Promise<any[]> {
-  return sequelize.query(
-    `SELECT * FROM report_runs WHERE organization_id = :organization_id
-       AND (:scheduledReportId IS NULL OR scheduled_report_id = :scheduledReportId)
-       AND (:status IS NULL OR status = :status)
-     ORDER BY created_at DESC LIMIT 200`,
-    { replacements: { organization_id, scheduledReportId: filters.scheduledReportId ?? null, status: filters.status ?? null }, type: QueryTypes.SELECT });
+// Pagination replaces a hard LIMIT 200. The default limit is still 200 and
+// offset 0, so a caller that passes nothing sees exactly what it saw before.
+// `total` lets a UI page without a second endpoint.
+export async function listRunsQuery(
+  organization_id: number,
+  filters: { scheduledReportId?: any; status?: any; limit?: number; offset?: number } = {},
+): Promise<{ rows: any[]; total: number }> {
+  const where: string[] = ["organization_id = :organization_id"];
+  const replacements: any = { organization_id };
+
+  if (filters.scheduledReportId) {
+    where.push("scheduled_report_id = :scheduledReportId");
+    replacements.scheduledReportId = Number(filters.scheduledReportId);
+  }
+  if (filters.status) {
+    where.push("status = :status");
+    replacements.status = String(filters.status);
+  }
+
+  const whereSql = where.join(" AND ");
+
+  const countRows: any[] = await sequelize.query(
+    `SELECT COUNT(*)::int AS total FROM report_runs WHERE ${whereSql}`,
+    { replacements, type: QueryTypes.SELECT },
+  );
+
+  const rows: any[] = await sequelize.query(
+    `SELECT * FROM report_runs WHERE ${whereSql}
+      ORDER BY created_at DESC
+      LIMIT :limit OFFSET :offset`,
+    {
+      replacements: { ...replacements, limit: filters.limit ?? 200, offset: filters.offset ?? 0 },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  return { rows, total: countRows[0]?.total ?? 0 };
 }
 
 export async function getRunQuery(id: number, organization_id: number): Promise<any> {
