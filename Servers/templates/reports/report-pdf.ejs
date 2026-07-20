@@ -289,6 +289,25 @@
     </div>
     <% } %>
 
+    <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.vendorRisk) { %>
+    <div class="subsection avoid-break">
+      <div class="subsection-header">
+        <h3 class="subsection-title">Third-party risk analysis</h3>
+      </div>
+      <div class="ai-analysis-box">
+        <div class="ai-analysis-label">AI-Generated Analysis</div>
+        <div class="ai-analysis-content"><%= aiSummaries.vendorRisk.narrative %></div>
+      </div>
+      <% if (aiSummaries.vendorRisk.concerns && aiSummaries.vendorRisk.concerns.length > 0) { %>
+      <ul class="ai-findings-list">
+        <% aiSummaries.vendorRisk.concerns.forEach(function(c) { %>
+        <li><strong><%= c.vendor %>:</strong> <%= c.concern %> (<%= c.severity %>)</li>
+        <% }); %>
+      </ul>
+      <% } %>
+    </div>
+    <% } %>
+
     <!-- ============================================ -->
     <!-- RISK ANALYSIS GROUP -->
     <!-- ============================================ -->
@@ -455,25 +474,6 @@
     <div class="ai-risk-highlights-box">
       <div class="ai-analysis-label" style="color: #DC6803;">Risk Highlights</div>
       <div class="ai-analysis-content"><%= aiSummaries.riskHighlights %></div>
-    </div>
-    <% } %>
-
-    <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.vendorRisk) { %>
-    <div class="subsection avoid-break">
-      <div class="subsection-header">
-        <h3 class="subsection-title">Third-party risk analysis</h3>
-      </div>
-      <div class="ai-analysis-box">
-        <div class="ai-analysis-label">AI-Generated Analysis</div>
-        <div class="ai-analysis-content"><%= aiSummaries.vendorRisk.narrative %></div>
-      </div>
-      <% if (aiSummaries.vendorRisk.concerns && aiSummaries.vendorRisk.concerns.length > 0) { %>
-      <ul class="ai-findings-list">
-        <% aiSummaries.vendorRisk.concerns.forEach(function(c) { %>
-        <li><strong><%= c.vendor %>:</strong> <%= c.concern %> (<%= c.severity %>)</li>
-        <% }); %>
-      </ul>
-      <% } %>
     </div>
     <% } %>
 

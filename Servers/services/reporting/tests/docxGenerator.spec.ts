@@ -16,6 +16,12 @@ async function docxText(content: Buffer): Promise<string> {
     .join("\n");
 }
 
+/** Raw document.xml, for asserting on OOXML elements docxText discards (e.g. <w:br/>). */
+async function docxXml(content: Buffer): Promise<string> {
+  const zip = await JSZip.loadAsync(content);
+  return zip.file("word/document.xml")!.async("string");
+}
+
 describe("DOCX Generator", () => {
   const mockReportData: ReportData = {
     metadata: {
@@ -333,6 +339,52 @@ describe("DOCX Generator", () => {
       expect(text).toContain("2. Recommended actions");
       expect(text).toContain("3. Compliance gap analysis");
       expect(text).toContain("4. Third-party risk analysis");
+
+      // The TOC promises this order; the body must actually follow it.
+      expect(text.indexOf("RECOMMENDED ACTIONS")).toBeLessThan(
+        text.indexOf("COMPLIANCE GAP ANALYSIS"),
+      );
+      expect(text.indexOf("COMPLIANCE GAP ANALYSIS")).toBeLessThan(
+        text.indexOf("THIRD-PARTY RISK ANALYSIS"),
+      );
+    });
+
+    it("splits a multi-paragraph narrative into separate runs joined by explicit breaks", async () => {
+      const result = await generateDOCX(
+        withSummaries({
+          sectionSummaries: {},
+          complianceGap: {
+            narrative: "First paragraph.\n\nSecond paragraph.",
+            gaps: [],
+            scores_caveat: null,
+          },
+        }),
+      );
+      const xml = await docxXml(result.content);
+
+      // A literal newline surviving inside a single <w:t> is the bug: OOXML
+      // treats it as ordinary whitespace, so Word renders it as one run-on blob.
+      expect(xml).not.toMatch(/<w:t[^>]*>[^<]*\n[^<]*<\/w:t>/);
+
+      const firstIdx = xml.indexOf("First paragraph.");
+      const breakIdx = xml.indexOf("<w:br", firstIdx);
+      const secondIdx = xml.indexOf("Second paragraph.", firstIdx);
+      expect(firstIdx).toBeGreaterThan(-1);
+      expect(breakIdx).toBeGreaterThan(firstIdx);
+      expect(breakIdx).toBeLessThan(secondIdx);
+    });
+
+    it("renders the narrative but no 'Prioritised gaps' heading when gaps is empty", async () => {
+      const result = await generateDOCX(
+        withSummaries({
+          sectionSummaries: {},
+          complianceGap: { narrative: "Nothing to flag right now.", gaps: [], scores_caveat: null },
+        }),
+      );
+      const text = await docxText(result.content);
+
+      expect(text).toContain("Nothing to flag right now.");
+      expect(text).not.toContain("Prioritised gaps");
     });
 
     it("stays silent when every analyzer abstained", async () => {

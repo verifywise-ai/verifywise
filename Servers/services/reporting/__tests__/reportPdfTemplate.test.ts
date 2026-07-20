@@ -141,6 +141,19 @@ describe("report-pdf.ejs template", () => {
     }
   });
 
+  it("body order matches the TOC order: vendorRisk renders before the risk-analysis group, right after compliance gap", () => {
+    const html = render(FULL);
+    const body = html.slice(html.indexOf("</ul>"));
+    // "RISK ANALYSIS GROUP" is an HTML comment outside the sections guard, so
+    // it always prints — a stable anchor even when every section is falsy.
+    expect(body.indexOf("Compliance Gap Analysis")).toBeLessThan(
+      body.indexOf("Third-party risk analysis"),
+    );
+    expect(body.indexOf("Third-party risk analysis")).toBeLessThan(
+      body.indexOf("RISK ANALYSIS GROUP"),
+    );
+  });
+
   it("abstained sections render nothing at all", () => {
     const html = render({ sectionSummaries: {} });
     for (const s of [

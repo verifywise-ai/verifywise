@@ -547,13 +547,17 @@ function createAIAnalysisBox(
         fill: bgColor,
         type: ShadingType.CLEAR,
       },
-      children: [
-        new TextRun({
-          text: content,
-          size: 20,
-          color: COLORS.textPrimary,
-        }),
-      ],
+      children: content
+        .split("\n")
+        .map(
+          (line, i) =>
+            new TextRun({
+              text: line,
+              size: 20,
+              color: COLORS.textPrimary,
+              ...(i > 0 && { break: 1 }),
+            }),
+        ),
     }),
   ];
 }
@@ -623,14 +627,15 @@ function createExecutiveSummarySection(aiSummaries: AISummaries): (Paragraph | T
  * Recommended Actions section. Standalone rather than nested in the executive
  * summary: the two analyzers are gated and abstain independently.
  */
-function createRecommendedActionsSection(aiSummaries: AISummaries): (Paragraph | Table)[] {
+function createRecommendedActionsSection(reportData: ReportData): (Paragraph | Table)[] {
+  const recommendedActions = reportData.aiSummaries?.recommendedActions;
   const elements: (Paragraph | Table)[] = [];
-  if (!aiSummaries.recommendedActions || aiSummaries.recommendedActions.length === 0) {
+  if (!recommendedActions || recommendedActions.length === 0) {
     return [];
   }
 
   elements.push(createSectionHeader("Recommended Actions"));
-  aiSummaries.recommendedActions.forEach((a) => {
+  recommendedActions.forEach((a) => {
     elements.push(
       new Paragraph({
         spacing: { before: 60, after: 60 },
@@ -1301,9 +1306,7 @@ export async function generateDOCX(reportData: ReportData): Promise<ReportGenera
       ...coverPage,
       ...toc,
       ...aiExecutiveSummary,
-      ...createRecommendedActionsSection(
-        reportData.aiSummaries ?? ({ sectionSummaries: {} } as AISummaries),
-      ),
+      ...createRecommendedActionsSection(reportData),
       ...createComplianceGapSection(reportData),
       ...createVendorRiskSection(reportData),
       ...riskSection,
