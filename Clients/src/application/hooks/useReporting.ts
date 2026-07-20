@@ -11,6 +11,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import * as repo from "../repository/reporting.repository";
 import type {
+  ReportRun,
   ReportTemplateWriteBody,
   ScheduledReportUpdateBody,
 } from "../../domain/interfaces/i.reporting";
@@ -25,21 +26,41 @@ export const useTemplates = () =>
 export const useScheduledReports = () =>
   useQuery({ queryKey: ["reporting", "scheduled"], queryFn: repo.getScheduledReports });
 
-// Polls while any run in the page is still running, then stops. A report can
-// take minutes, and without this the archive silently shows a stale "running"
-// forever.
-export const useReportRuns = (params?: {
+type RunPageParams = {
   scheduledReportId?: number;
   limit?: number;
   offset?: number;
-}) =>
+};
+
+// Poll while any run in the page is still running, then stop. A report can take
+// minutes, and without this the archive silently shows a stale "running"
+// forever.
+const runsRefetchInterval = (query: { state: { data?: { rows?: ReportRun[] } } }) =>
+  (query.state.data?.rows ?? []).some((r) => r.status === "running") ? 5000 : false;
+
+/**
+ * Runs as a plain array.
+ *
+ * GET /reporting/runs became paginated in Phase 4 and now returns
+ * {rows, total, limit, offset}. `select` unwraps it so existing consumers that
+ * do `runs.length` / `runs.map` keep working — the endpoint changed shape, the
+ * hook's contract deliberately did not. Use useReportRunsPage when you need the
+ * total.
+ */
+export const useReportRuns = (params?: RunPageParams) =>
   useQuery({
     queryKey: ["reporting", "runs", params ?? {}],
     queryFn: () => repo.getRuns(params),
-    refetchInterval: (query) => {
-      const rows = query.state.data?.rows ?? [];
-      return rows.some((r) => r.status === "running") ? 5000 : false;
-    },
+    select: (page) => page.rows,
+    refetchInterval: runsRefetchInterval,
+  });
+
+/** Runs with pagination metadata, for callers that render a pager. */
+export const useReportRunsPage = (params?: RunPageParams) =>
+  useQuery({
+    queryKey: ["reporting", "runs", params ?? {}],
+    queryFn: () => repo.getRuns(params),
+    refetchInterval: runsRefetchInterval,
   });
 
 export const useCreateScheduledReport = () => {

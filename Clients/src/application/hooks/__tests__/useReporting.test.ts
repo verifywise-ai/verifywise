@@ -137,8 +137,11 @@ describe("useReporting phase 4 hooks", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     // getRuns is mocked to return only terminal runs, so the interval
     // resolver must return false rather than a number.
+    // useReportRuns unwraps the paginated envelope via `select`, so data is
+    // the rows array itself — the endpoint paginated, the hook's contract did
+    // not change. useReportRunsPage is the one that exposes the envelope.
     const opts = result.current as any;
-    expect(opts.data?.rows?.every((r: any) => r.status !== "running")).toBe(true);
+    expect(opts.data?.every((r: any) => r.status !== "running")).toBe(true);
   });
 
   // useGenerateReport/useRunNow invalidate ["reporting","runs"] while
