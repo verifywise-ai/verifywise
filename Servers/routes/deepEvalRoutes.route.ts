@@ -383,6 +383,12 @@ function deepEvalRoutes() {
         // Service-to-service shared secret (overwrites any client-supplied value)
         proxyReq.setHeader("x-internal-key", EVAL_SERVER_KEY);
 
+        // Strip client-supplied tenant headers: the eval server trusts these,
+        // so they must only ever come from the authenticated JWT context.
+        proxyReq.removeHeader("x-organization-id");
+        proxyReq.removeHeader("x-user-id");
+        proxyReq.removeHeader("x-role");
+
         if (expressReq.organizationId) {
           proxyReq.setHeader("x-organization-id", expressReq.organizationId.toString());
         }
