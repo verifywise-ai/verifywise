@@ -33,7 +33,9 @@ services:
     image: ghcr.io/verifywise-ai/verifywise-backend:latest
     pull_policy: always
     ports:
-      - $BACKEND_PORT:$BACKEND_PORT
+      # Bind to localhost only: the plain-HTTP API must not be reachable from
+      # the network directly. The TLS-terminating host nginx proxies to it.
+      - 127.0.0.1:$BACKEND_PORT:$BACKEND_PORT
     environment:
       - PORT=$BACKEND_PORT
       - DB_HOST=postgresdb
