@@ -4,6 +4,11 @@ import {
   getTemplatesQuery,
   getLatestVersionQuery,
   getVersionByIdQuery,
+  createTemplateQuery,
+  updateTemplateQuery,
+  archiveTemplateQuery,
+  createTemplateVersionQuery,
+  slugify,
 } from "../reportTemplate.utils";
 
 const q = sequelize.query as jest.Mock;
@@ -53,5 +58,71 @@ describe("reportTemplate.utils", () => {
     await getVersionByIdQuery(10, 42);
     const [sql] = q.mock.calls[0];
     expect(sql).toContain("organization_id IS NULL");
+  });
+
+  it("createTemplateQuery inserts org-scoped, non-system, with a derived slug", async () => {
+    q.mockResolvedValueOnce([{ id: 7, slug: "quarterly-board-pack" }]);
+    const row = await createTemplateQuery(
+      { name: "Quarterly board pack", category: "governance", default_scope: "organization" },
+      42,
+      9,
+    );
+    expect(row.id).toBe(7);
+    const [sql, opts] = q.mock.calls[0];
+    expect(opts.replacements.organization_id).toBe(42);
+    expect(opts.replacements.created_by).toBe(9);
+    expect(opts.replacements.slug).toBe("quarterly-board-pack");
+    // is_system_template is a SQL literal, never a replacement — so a caller
+    // cannot set it. Assert the literal, not a bare "false", which would also
+    // match half a dozen unrelated substrings.
+    expect(sql).toMatch(/is_system_template[\s\S]*VALUES[\s\S]*false/);
+    expect(opts.replacements).not.toHaveProperty("is_system_template");
+  });
+
+  it("createTemplateQuery ignores a caller-supplied is_system_template", async () => {
+    q.mockResolvedValueOnce([{ id: 8 }]);
+    await createTemplateQuery(
+      { name: "Sneaky", category: "governance", default_scope: "project", is_system_template: true },
+      42,
+      9,
+    );
+    const [, opts] = q.mock.calls[0];
+    expect(opts.replacements.is_system_template).toBeUndefined();
+  });
+
+  it("updateTemplateQuery refuses system templates in the WHERE clause", async () => {
+    q.mockResolvedValueOnce([[{ id: 7 }], 1]);
+    await updateTemplateQuery(7, 42, { name: "Renamed" });
+    const [sql, opts] = q.mock.calls[0];
+    expect(opts.replacements.organization_id).toBe(42);
+    expect(sql).toContain("is_system_template = false");
+    // Not "organization_id IS NULL OR ..." — writes never match a system row.
+    expect(sql).not.toContain("organization_id IS NULL");
+  });
+
+  it("archiveTemplateQuery soft-deletes via is_active", async () => {
+    q.mockResolvedValueOnce([[{ id: 7 }], 1]);
+    await archiveTemplateQuery(7, 42);
+    const [sql, opts] = q.mock.calls[0];
+    expect(sql).toContain("is_active = false");
+    expect(sql).not.toContain("DELETE");
+    expect(sql).toContain("is_system_template = false");
+    expect(opts.replacements.organization_id).toBe(42);
+  });
+
+  it("createTemplateVersionQuery appends at MAX(version) + 1", async () => {
+    q.mockResolvedValueOnce([{ id: 30, version: 4 }]);
+    const v = await createTemplateVersionQuery(7, 42, { sections_config: { sections: [] } }, 9);
+    expect(v.version).toBe(4);
+    const [sql, opts] = q.mock.calls[0];
+    expect(sql).toContain("COALESCE(MAX(version), 0) + 1");
+    expect(opts.replacements.template_id).toBe(7);
+    expect(opts.replacements.organization_id).toBe(42);
+  });
+
+  it("slugify collapses punctuation and trims separators", () => {
+    expect(slugify("Quarterly Board Pack!")).toBe("quarterly-board-pack");
+    expect(slugify("  --Weird__Name--  ")).toBe("weird-name");
+    expect(slugify("!!!")).toBe("template");
   });
 });
