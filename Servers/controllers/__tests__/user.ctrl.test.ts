@@ -29,6 +29,20 @@ jest.mock("../../utils/jwt.utils", () => ({
 jest.mock("../../utils/auth.utils", () => ({
   generateUserTokens: jest.fn().mockReturnValue({ accessToken: "token" }),
 }));
+jest.mock("../../utils/refreshToken.utils", () => ({
+  findRefreshToken: jest.fn().mockResolvedValue({
+    id: 1,
+    user_id: 1,
+    organization_id: 1,
+    token_hash: "hash",
+    family_id: "family-1",
+    expires_at: new Date(Date.now() + 10000),
+    revoked_at: null,
+  }),
+  revokeRefreshTokenByHash: jest.fn().mockResolvedValue(undefined),
+  revokeTokenFamily: jest.fn().mockResolvedValue(undefined),
+  revokeAllUserTokens: jest.fn().mockResolvedValue(undefined),
+}));
 jest.mock("../../utils/logger/fileLogger", () => ({
   __esModule: true,
   default: { debug: jest.fn(), error: jest.fn(), info: jest.fn() },
@@ -114,6 +128,7 @@ import {
   deleteUserById,
   checkUserExists,
   refreshAccessToken,
+  logoutUser,
   ChangePassword,
   updateUserRole,
   getUserProfilePhoto,
@@ -159,6 +174,7 @@ function createRes(): any {
   res.json = jest.fn<any>().mockReturnValue(res);
   res.send = jest.fn<any>().mockReturnValue(res);
   res.cookie = jest.fn<any>().mockReturnValue(res);
+  res.clearCookie = jest.fn<any>().mockReturnValue(res);
   return res;
 }
 
@@ -492,6 +508,52 @@ describe("user.ctrl", () => {
       const res = createRes();
       await refreshAccessToken(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
+    });
+    it("should return 401 when the refresh token is unknown", async () => {
+      const { findRefreshToken } = require("../../utils/refreshToken.utils");
+      (findRefreshToken as jest.Mock).mockResolvedValueOnce(null);
+      const req = createReq({ cookies: { refresh_token: "valid" } });
+      const res = createRes();
+      await refreshAccessToken(req, res);
+      expect(res.status).toHaveBeenCalledWith(401);
+    });
+    it("should revoke the family and return 401 on token reuse", async () => {
+      const { findRefreshToken, revokeTokenFamily } = require("../../utils/refreshToken.utils");
+      (findRefreshToken as jest.Mock).mockResolvedValueOnce({
+        id: 1,
+        user_id: 1,
+        organization_id: 1,
+        token_hash: "hash",
+        family_id: "family-1",
+        expires_at: new Date(Date.now() + 10000),
+        revoked_at: new Date(),
+      });
+      const req = createReq({ cookies: { refresh_token: "valid" } });
+      const res = createRes();
+      await refreshAccessToken(req, res);
+      expect(revokeTokenFamily).toHaveBeenCalledWith("family-1");
+      expect(res.status).toHaveBeenCalledWith(401);
+    });
+  });
+
+  describe("logoutUser", () => {
+    it("should revoke the token, clear the cookie and return 200", async () => {
+      const { revokeRefreshTokenByHash } = require("../../utils/refreshToken.utils");
+      const req = createReq({ cookies: { refresh_token: "valid" } });
+      const res = createRes();
+      await logoutUser(req, res);
+      expect(revokeRefreshTokenByHash).toHaveBeenCalledWith("hash");
+      expect(res.clearCookie).toHaveBeenCalledWith(
+        "refresh_token",
+        expect.objectContaining({ path: "/api/users" }),
+      );
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+    it("should return 200 even without a refresh cookie", async () => {
+      const req = createReq({ cookies: {} });
+      const res = createRes();
+      await logoutUser(req, res);
+      expect(res.status).toHaveBeenCalledWith(200);
     });
   });
 
