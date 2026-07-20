@@ -43,7 +43,7 @@ jobs:
             EvalServer/requirements-test.txt
 
       - name: Cache EvalServer virtualenv
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: EvalServer/.venv
           key: evalserver-venv-${{ runner.os }}-3.12-${{ hashFiles('EvalServer/requirements.txt', 'EvalServer/requirements-test.txt') }}
@@ -92,7 +92,7 @@ jobs:
             EvaluationModule/requirements-test.txt
 
       - name: Cache EvaluationModule virtualenv
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: EvaluationModule/.venv
           key: evaluationmodule-venv-${{ runner.os }}-3.12-${{ hashFiles('EvaluationModule/requirements.txt', 'EvaluationModule/requirements-test.txt') }}
