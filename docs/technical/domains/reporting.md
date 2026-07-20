@@ -1,6 +1,6 @@
 # Reporting Domain
 
-> **Last Updated:** 2026-07-19
+> **Last Updated:** 2026-07-20
 
 ## Overview
 
@@ -216,7 +216,7 @@ Two stages, ordering is load-bearing: Stage 1 runs `sectionSummaries` plus the r
 
 ### Gating
 
-`ai_blocks_config` on the template/schedule row selects which blocks run (`AiBlocksConfig` in `domain.layer/interfaces/i.reportTemplate.ts`, resolved by `reportTemplateResolver.ts`). Manual runs carry no template, so `resolveBlocks` (`analyzers/collectAnalyzerInputs.ts`) maps `aiEnhanced: true` to five blocks — `sectionSummaries`, `executiveSummary`, `keyFindings`, `recommendedActions`, `riskAnalysis` — reproducing the previous `aiSummarizer` output. `complianceGap` and `vendorRisk` stay off for manual runs to avoid unbudgeted spend; the wizard will expose them in Phase 3.
+`ai_blocks_config` on the template/schedule row selects which blocks run (`AiBlocksConfig` in `domain.layer/interfaces/i.reportTemplate.ts`, resolved by `reportTemplateResolver.ts`). Manual runs carry no template, so `resolveBlocks` (`analyzers/collectAnalyzerInputs.ts`) maps `aiEnhanced: true` to five blocks — `sectionSummaries`, `executiveSummary`, `keyFindings`, `recommendedActions`, `riskAnalysis` — reproducing the previous `aiSummarizer` output. `complianceGap` and `vendorRisk` stay off for manual runs to avoid unbudgeted spend. `ConfigureReportWizard` now offers all seven blocks, with `complianceGap` and `vendorRisk` defaulting **off** for the same reason — each enabled block is one LLM call per run.
 
 ### Persistence
 
@@ -507,8 +507,12 @@ All endpoints are auth-protected and org-scoped.
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
+| GET | `/api/reporting/sections` | Section catalog (the 12-section taxonomy) |
 | GET | `/api/reporting/templates` | List available templates |
 | GET | `/api/reporting/templates/:id` | Get a template |
+| POST | `/api/reporting/templates` | Create a template |
+| PATCH | `/api/reporting/templates/:id` | Update a template (see [Template Write Path](#template-write-path)) |
+| DELETE | `/api/reporting/templates/:id` | Archive a template (`is_active = false`) |
 | GET | `/api/reporting/scheduled-reports` | List scheduled reports |
 | POST | `/api/reporting/scheduled-reports` | Create a scheduled report |
 | POST | `/api/reporting/scheduled-reports/:id/run-now` | Trigger an immediate run |
@@ -518,6 +522,23 @@ All endpoints are auth-protected and org-scoped.
 | GET | `/api/reporting/runs` | List report runs |
 | GET | `/api/reporting/runs/:id` | Get a run |
 | GET | `/api/reporting/runs/:id/download` | Download a run's output (org-scoped) |
+| GET | `/api/reporting/runs/:id/analyses` | Stored `report_run_analyses` rows for a run (doubly org-scoped: the run and the analyses are both filtered by `organization_id`) |
+
+### Template Write Path
+
+**System templates are read-only for every org.** `organization_id IS NULL` marks a seeded template. The guard lives in the query WHERE clause — `organization_id = :org AND is_system_template = false` — not in a controller branch, so a write against a system template matches zero rows and the controller returns **404**. There is no code path that can be reordered into a bypass.
+
+**DELETE is a soft delete.** It sets `is_active = false`. `scheduled_reports.template_id` is a NOT NULL FK with no `ON DELETE` clause, so hard-deleting a referenced template fails at the database; archiving is the only safe removal.
+
+**Template versions are append-only.** A `PATCH` carrying any of `sections_config`, `ai_blocks_config`, `format_config`, `branding_config`, `schedule_defaults` or `delivery_defaults` inserts a **new** `report_template_versions` row at `MAX(version) + 1`. Metadata fields (name, description, and the like) update the `report_templates` row in place. Existing scheduled reports keep pointing at the version they were created against.
+
+**Slugs are derived server-side** from the template name. Uniqueness is enforced by `uq_report_templates_org_slug` on `(COALESCE(organization_id, 0), slug)`, which makes system templates share the org-0 namespace. A collision returns **409**.
+
+**Cross-org protection.** `getLatestVersionQuery` / `getVersionByIdQuery` are org-scoped via a JOIN to `report_templates`, so a version id from another org resolves to nothing. Scheduled-report creation additionally validates that the supplied `templateVersionId` belongs both to `templateId` and to the caller's org. Report templates are covered by the tenant-isolation suite (`Servers/tests/integration/tenant-isolation/report-templates.isolation.test.ts`), and the three reporting tables are registered in the isolation registry.
+
+### Section Catalog
+
+`Servers/services/reporting/sectionCatalog.ts` is the single owner of the 12-section taxonomy; it backs `GET /api/reporting/sections` and `VALID_SECTION_KEYS` derives from it (catalog keys plus the `all` wildcard). A test pins the catalog against the frontend's `REPORT_SECTION_GROUPS` backend-key set, so drift between the two fails CI rather than silently rejecting a section the wizard can still offer.
 
 ### Services
 
@@ -533,8 +554,9 @@ All endpoints are auth-protected and org-scoped.
 | Operation | Access |
 |-----------|--------|
 | Writes (create/run-now/pause/resume/delete scheduled reports) | Admin / Editor (via `authorize` middleware) |
-| Reads (templates, scheduled reports, runs) | Any authenticated user (JWT) |
-| Run download | Authenticated + org-scoped |
+| Template writes (create / update / archive) | Admin / Editor (via `authorize` middleware) |
+| Reads (section catalog, templates, scheduled reports, runs) | Any authenticated user (JWT) |
+| Run download, run analyses | Authenticated + org-scoped |
 
 The existing **Admin-only** manual generate endpoints are preserved.
 
@@ -542,6 +564,9 @@ The existing **Admin-only** manual generate endpoints are preserved.
 
 - Email/attachment delivery is **not yet wired** — storage persistence works, but email link/attachment send is a guarded no-op TODO.
 - Structured `recommendedActions` emission is **scaffolding only** — runs currently render the existing recommendations rather than emitting structured actions.
+- `TemplatesTab`, `ScheduledReportsTab` and `ArchiveTab` have **no CRUD affordances** yet. `TemplateBuilder` is reachable only from the "New template" button on the Reporting page; editing and archiving an existing template from the tabs is deferred to a follow-up.
+- `ReportAnalysisPanel` is **not built**. `GET /api/reporting/runs/:id/analyses`, the `useRunAnalyses` hook and the response types all exist, but nothing renders them yet.
+- A `PATCH` carrying **both** metadata and config performs two un-transacted writes. If the version insert fails, the metadata update is already committed.
 
 ## Related Documentation
 
