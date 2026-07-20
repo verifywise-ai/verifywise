@@ -183,20 +183,21 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
         .finally(() => {
           if (!cancelled) setRunId(undefined);
         });
-      return () => {
-        cancelled = true;
-      };
+    } else {
+      if (run.data.status === "success") {
+        // Terminal success but no file was produced.
+        toast("error", "Report generated, but the file is not available to download.");
+      } else {
+        // failed | partial_success
+        toast("error", run.data.error_message ?? "Report generation failed.");
+      }
+      setRunId(undefined);
+      setCurrentPage("basic");
     }
 
-    if (run.data.status === "success") {
-      // Terminal success but no file was produced.
-      toast("error", "Report generated, but the file is not available to download.");
-    } else {
-      // failed | partial_success
-      toast("error", run.data.error_message ?? "Report generation failed.");
-    }
-    setRunId(undefined);
-    setCurrentPage("basic");
+    return () => {
+      cancelled = true;
+    };
     // Depend only on run identity/status — callbacks are read via refs so an
     // incidental parent re-render never re-runs (and never cancels) this effect.
   }, [run.data?.id, run.data?.status]);

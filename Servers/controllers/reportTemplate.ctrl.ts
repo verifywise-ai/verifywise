@@ -25,6 +25,7 @@ import {
   createTemplateVersionQuery,
 } from "../utils/reportTemplate.utils";
 import { REPORT_SECTION_CATALOG } from "../services/reporting/sectionCatalog";
+import { NotFoundException } from "../domain.layer/exceptions/custom.exception";
 
 export async function listTemplates(req: Request, res: Response): Promise<any> {
   try {
@@ -164,24 +165,33 @@ export async function updateTemplate(req: Request, res: Response): Promise<any> 
       "is_active",
     ].some((f) => req.body?.[f] !== undefined);
 
-    let tpl: any = null;
-    if (metadataChanged) {
-      tpl = await updateTemplateQuery(id, req.organizationId!, req.body);
-      if (!tpl) return res.status(404).json(STATUS_CODE[404]("not found"));
-    }
-
-    let version: any = null;
-    if (hasVersionConfig(req.body)) {
-      version = await createTemplateVersionQuery(id, req.organizationId!, req.body, req.userId!);
-      // createTemplateVersionQuery returns undefined when its WHERE EXISTS
-      // tenant guard matched nothing — treat that as a failed write, never
-      // as a success with a null body.
-      if (!version) return res.status(404).json(STATUS_CODE[404]("not found"));
-    }
-
-    if (!metadataChanged && !version) {
+    const versionChanged = hasVersionConfig(req.body);
+    if (!metadataChanged && !versionChanged) {
       return res.status(400).json(STATUS_CODE[400]("no updatable fields supplied"));
     }
+
+    // A PATCH carrying both metadata and config is two writes; they share one
+    // transaction so a failing version insert (e.g. the 23505 version race)
+    // cannot leave the metadata update committed on its own. The 404s throw
+    // rather than return so they roll back — NotFoundException already carries
+    // statusCode 404, which respondWithError maps.
+    const { tpl, version } = await sequelize.transaction(async (t) => {
+      let tpl: any = null;
+      if (metadataChanged) {
+        tpl = await updateTemplateQuery(id, req.organizationId!, req.body, t);
+        if (!tpl) throw new NotFoundException("not found", "report_template", id);
+      }
+
+      let version: any = null;
+      if (versionChanged) {
+        version = await createTemplateVersionQuery(id, req.organizationId!, req.body, req.userId!, t);
+        // createTemplateVersionQuery returns undefined when its WHERE EXISTS
+        // tenant guard matched nothing — treat that as a failed write, never
+        // as a success with a null body.
+        if (!version) throw new NotFoundException("not found", "report_template", id);
+      }
+      return { tpl, version };
+    });
 
     await logSuccess({
       eventType: "Update",

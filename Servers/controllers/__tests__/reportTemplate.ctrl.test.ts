@@ -107,8 +107,48 @@ describe("updateTemplate", () => {
       mockReq({ params: { id: "7" }, body: { ai_blocks_config: { executiveSummary: true } } }) as any,
       res,
     );
-    expect(createTemplateVersionQuery).toHaveBeenCalledWith(7, 42, expect.any(Object), 9);
+    expect(createTemplateVersionQuery).toHaveBeenCalledWith(7, 42, expect.any(Object), 9, "TX");
     expect(res.status).toHaveBeenCalledWith(200);
+  });
+
+  it("runs the metadata update and the version insert on the SAME transaction", async () => {
+    // These mocks are shared across the whole file; without an explicit clear
+    // an earlier test's call satisfies the mock.calls[0] assertions below and
+    // this test passes for the wrong reason.
+    (updateTemplateQuery as jest.Mock).mockClear();
+    (createTemplateVersionQuery as jest.Mock).mockClear();
+    (updateTemplateQuery as jest.Mock).mockResolvedValue({ id: 7 });
+    (createTemplateVersionQuery as jest.Mock).mockResolvedValue({ id: 31, version: 2 });
+    const res = mockRes();
+    await updateTemplate(
+      mockReq({ params: { id: "7" }, body: { name: "Renamed", sections_config: { sections: [] } } }) as any,
+      res,
+    );
+    const metadataTx = (updateTemplateQuery as jest.Mock).mock.calls[0][3];
+    const versionTx = (createTemplateVersionQuery as jest.Mock).mock.calls[0][4];
+    expect(metadataTx).toBe("TX");
+    expect(versionTx).toBe(metadataTx);
+    expect(res.status).toHaveBeenCalledWith(200);
+  });
+
+  it("rolls back the metadata update when the version insert finds no row", async () => {
+    (updateTemplateQuery as jest.Mock).mockResolvedValue({ id: 7 });
+    // WHERE EXISTS tenant guard matched nothing.
+    (createTemplateVersionQuery as jest.Mock).mockResolvedValue(undefined);
+    const res = mockRes();
+    await updateTemplate(
+      mockReq({ params: { id: "7" }, body: { name: "Renamed", sections_config: { sections: [] } } }) as any,
+      res,
+    );
+    // Throwing out of the transaction callback is what triggers the rollback;
+    // a plain `return res.status(404)` would have committed the rename.
+    expect(res.status).toHaveBeenCalledWith(404);
+  });
+
+  it("400s when neither metadata nor config fields are supplied", async () => {
+    const res = mockRes();
+    await updateTemplate(mockReq({ params: { id: "7" }, body: {} }) as any, res);
+    expect(res.status).toHaveBeenCalledWith(400);
   });
 
   it("does not append a version for a metadata-only change", async () => {

@@ -20,7 +20,7 @@ export async function executeManualRun(
   try {
     const result = await generateReport(request, userId, organizationId);
     if (!result.success) {
-      await updateRunStatusQuery(runId, {
+      await updateRunStatusQuery(runId, organizationId, {
         status: "failed",
         error_message: result.error ?? "generation failed",
         duration_ms: Date.now() - startedAt,
@@ -39,7 +39,7 @@ export async function executeManualRun(
     // No file id means the download path has nothing to serve — record a
     // failure, not a success the frontend would render with a broken link.
     if (!uploaded?.id) {
-      await updateRunStatusQuery(runId, {
+      await updateRunStatusQuery(runId, organizationId, {
         status: "failed",
         error_message: "file upload returned no id",
         duration_ms: Date.now() - startedAt,
@@ -49,7 +49,7 @@ export async function executeManualRun(
 
     const aiStatus = await persistAnalyses(runId, organizationId, userId, result.analyses);
 
-    await updateRunStatusQuery(runId, {
+    await updateRunStatusQuery(runId, organizationId, {
       status: "success",
       file_id: uploaded?.id ?? null,
       output_filename: uploaded?.filename ?? result.filename,
@@ -59,7 +59,7 @@ export async function executeManualRun(
     });
   } catch (e: any) {
     logger.error("executeManualRun failed", e);
-    await updateRunStatusQuery(runId, {
+    await updateRunStatusQuery(runId, organizationId, {
       status: "failed",
       error_message: e?.message ?? "unknown error",
       duration_ms: Date.now() - startedAt,

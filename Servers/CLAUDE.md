@@ -181,10 +181,12 @@ risk while keeping the generated spec available for the frontend build pipeline.
 
 ### CI enforcement
 
-**There is no `api-docs-drift` CI job today.** `npm run check:api-drift` exists
-and works, but no workflow in `.github/workflows/` runs it, so a missed
-regeneration will not be caught automatically. Run steps 3 and 4 above by hand
-before opening a PR that changes the route layer.
+The `api-docs-drift` job in `.github/workflows/backend-checks.yml` runs on every
+push and PR touching `Servers/**`. It regenerates `swagger.yaml` and
+`endpoints.ts`, fails via `git diff --exit-code` if the committed files differ
+from the regenerated output, then runs `npm run check:api-drift` as a semantic
+backstop. Skipping step 3 above will therefore break CI — regenerate and commit
+the generated files with your route change.
 
 ---
 

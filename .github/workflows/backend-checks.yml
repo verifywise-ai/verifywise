@@ -167,6 +167,37 @@ jobs:
           ENCRYPTION_KEY: default-key-change-this-in-production-32chars!!
         run: npx ts-node scripts/auditTenantIsolationCoverage.ts
 
+  api-docs-drift:
+    name: API Docs Drift
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Servers
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Regenerate OpenAPI spec and endpoint registry
+        run: |
+          npm run generate:swagger
+          npm run generate:endpoints
+
+      - name: Fail if the committed generated files are stale
+        run: |
+          git diff --exit-code -- swagger.yaml ../docs/api-docs/src/config/endpoints.ts \
+            || { echo "::error::swagger.yaml / endpoints.ts are out of sync with the route layer. Run 'npm run generate:swagger && npm run generate:endpoints' in Servers/ and commit the result."; exit 1; }
+
+      - name: Check route/spec drift
+        run: npm run check:api-drift
+
   dependency-review:
     name: Dependency Review
     runs-on: ubuntu-latest

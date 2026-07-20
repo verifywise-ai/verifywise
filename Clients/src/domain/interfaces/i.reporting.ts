@@ -234,6 +234,8 @@ export interface ScheduledReportUpdateBody {
   name?: string;
   scope?: ReportScope;
   projectId?: number | null;
+  frameworkId?: number | null;
+  projectFrameworkId?: number | null;
   sectionsConfig?: SectionsConfig;
   aiBlocksConfig?: AiBlocksConfig;
   format?: "pdf" | "docx";

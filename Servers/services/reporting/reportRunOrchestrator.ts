@@ -23,7 +23,7 @@ export async function runScheduledReport(sched: any, opts: { triggeredBy: "sched
     const request = resolveReportRequest(sched, sched.llm_key_id);
     const result = await generateReport(request, sched.owner_id ?? sched.created_by, sched.organization_id);
     if (!result.success) {
-      await updateRunStatusQuery(run.id, { status: "failed", error_message: result.error ?? "generation failed", duration_ms: Date.now() - startedAt });
+      await updateRunStatusQuery(run.id, sched.organization_id, { status: "failed", error_message: result.error ?? "generation failed", duration_ms: Date.now() - startedAt });
       return;
     }
     const delivery = await deliverReport(sched.delivery_config, { content: result.content, filename: result.filename, mimeType: result.mimeType }, { organizationId: sched.organization_id, userId: sched.owner_id ?? sched.created_by, runId: run.id });
@@ -36,11 +36,11 @@ export async function runScheduledReport(sched: any, opts: { triggeredBy: "sched
       sched.owner_id ?? sched.created_by ?? null,
       result.analyses,
     );
-    await updateRunStatusQuery(run.id, {
+    await updateRunStatusQuery(run.id, sched.organization_id, {
       status, file_id: delivery.fileId, output_filename: result.filename, output_mime_type: result.mimeType,
       delivery_status: delivery, ai_status: aiStatus ?? undefined, duration_ms: Date.now() - startedAt,
     });
   } catch (e: any) {
-    await updateRunStatusQuery(run.id, { status: "failed", error_message: e.message, duration_ms: Date.now() - startedAt });
+    await updateRunStatusQuery(run.id, sched.organization_id, { status: "failed", error_message: e.message, duration_ms: Date.now() - startedAt });
   }
 }

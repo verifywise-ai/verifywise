@@ -96,7 +96,7 @@ describe("generateReportsV2 (async)", () => {
 
     await generateReportsV2(req as Request, res as Response);
 
-    expect(mockUpdate).toHaveBeenCalledWith(77, expect.objectContaining({ status: "failed" }));
+    expect(mockUpdate).toHaveBeenCalledWith(77, 5, expect.objectContaining({ status: "failed" }));
     expect(res.status).toHaveBeenCalledWith(500);
   });
 

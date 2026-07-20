@@ -122,6 +122,7 @@ export async function updateTemplateQuery(
   id: number,
   organization_id: number,
   input: any,
+  transaction?: Transaction,
 ): Promise<any> {
   // Must stay in sync with metadataChanged in reportTemplate.ctrl.ts and with
   // ReportTemplateWriteBody in i.reporting.ts. default_scope and
@@ -158,7 +159,7 @@ export async function updateTemplateQuery(
         AND organization_id = :organization_id
         AND is_system_template = false
       RETURNING *`,
-    { replacements, type: QueryTypes.UPDATE },
+    { replacements, type: QueryTypes.UPDATE, transaction },
   );
   return result[0]?.[0] ?? null;
 }

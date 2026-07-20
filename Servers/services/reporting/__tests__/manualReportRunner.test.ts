@@ -40,7 +40,7 @@ describe("executeManualRun", () => {
     await executeManualRun(99, request, 3, 5);
 
     expect(mockGenerate).toHaveBeenCalledWith(request, 3, 5);
-    expect(mockUpdate).toHaveBeenCalledWith(99, expect.objectContaining({
+    expect(mockUpdate).toHaveBeenCalledWith(99, 5, expect.objectContaining({
       status: "success", file_id: 42, output_filename: "r.pdf", output_mime_type: "application/pdf",
     }));
   });
@@ -51,7 +51,7 @@ describe("executeManualRun", () => {
     await executeManualRun(99, request, 3, 5);
 
     expect(mockUpload).not.toHaveBeenCalled();
-    expect(mockUpdate).toHaveBeenCalledWith(99, expect.objectContaining({ status: "failed", error_message: "boom" }));
+    expect(mockUpdate).toHaveBeenCalledWith(99, 5, expect.objectContaining({ status: "failed", error_message: "boom" }));
   });
 
   it("marks the run failed when generation throws", async () => {
@@ -59,7 +59,7 @@ describe("executeManualRun", () => {
 
     await executeManualRun(99, request, 3, 5);
 
-    expect(mockUpdate).toHaveBeenCalledWith(99, expect.objectContaining({ status: "failed", error_message: "kaboom" }));
+    expect(mockUpdate).toHaveBeenCalledWith(99, 5, expect.objectContaining({ status: "failed", error_message: "kaboom" }));
   });
 
   it("marks the run failed when upload returns no file id", async () => {
@@ -68,8 +68,8 @@ describe("executeManualRun", () => {
 
     await executeManualRun(99, request, 3, 5);
 
-    expect(mockUpdate).toHaveBeenCalledWith(99, expect.objectContaining({ status: "failed", error_message: "file upload returned no id" }));
-    expect(mockUpdate).not.toHaveBeenCalledWith(99, expect.objectContaining({ status: "success" }));
+    expect(mockUpdate).toHaveBeenCalledWith(99, 5, expect.objectContaining({ status: "failed", error_message: "file upload returned no id" }));
+    expect(mockUpdate).not.toHaveBeenCalledWith(99, 5, expect.objectContaining({ status: "success" }));
   });
 
   it("persists one row per analyzed section and records ai_status on the run", async () => {
@@ -104,6 +104,7 @@ describe("executeManualRun", () => {
     );
     expect(updateRunStatusQuery).toHaveBeenCalledWith(
       77,
+      5,
       expect.objectContaining({
         status: "success",
         ai_status: expect.objectContaining({ executiveSummary: "ok", keyFindings: "abstained" }),
@@ -126,6 +127,7 @@ describe("executeManualRun", () => {
 
     expect(updateRunStatusQuery).toHaveBeenCalledWith(
       77,
+      5,
       expect.objectContaining({
         status: "success",
         ai_status: expect.objectContaining({ executiveSummary: "write_failed" }),
@@ -151,6 +153,7 @@ describe("executeManualRun", () => {
 
     expect(updateRunStatusQuery).toHaveBeenCalledWith(
       77,
+      5,
       expect.objectContaining({
         status: "success",
         ai_status: { executiveSummary: "write_failed" },

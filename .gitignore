@@ -106,6 +106,8 @@ Desktop.ini
 .claude/scheduled-tasks/
 .omc/
 graphify-out/
+.megasaver/
+**/.megasaver/
 
 # AI agent temp files
 agent.md

@@ -16,14 +16,20 @@ export async function createRunQuery(input: any): Promise<any> {
   return rows[0];
 }
 
-export async function updateRunStatusQuery(id: number, fields: any): Promise<void> {
+const TERMINAL_RUN_STATUSES = ["success", "failed", "partial_success"];
+
+// completed_at is only stamped for terminal statuses. Setting it
+// unconditionally would mark a run complete on any future intermediate-progress
+// update through this same function.
+export async function updateRunStatusQuery(id: number, organization_id: number, fields: any): Promise<void> {
+  const completedAt = TERMINAL_RUN_STATUSES.includes(fields.status) ? "completed_at = NOW(), " : "";
   await sequelize.query(
-    `UPDATE report_runs SET status = :status, completed_at = NOW(), file_id = :file_id, output_filename = :output_filename,
+    `UPDATE report_runs SET status = :status, ${completedAt}file_id = :file_id, output_filename = :output_filename,
        output_mime_type = :output_mime_type, delivery_status = :delivery_status, ai_status = :ai_status,
        ai_tokens_used = :ai_tokens_used, ai_cost = :ai_cost, duration_ms = :duration_ms, error_message = :error_message, updated_at = NOW()
-     WHERE id = :id`,
+     WHERE id = :id AND organization_id = :organization_id`,
     { replacements: {
-        id, status: fields.status, file_id: fields.file_id ?? null, output_filename: fields.output_filename ?? null,
+        id, organization_id, status: fields.status, file_id: fields.file_id ?? null, output_filename: fields.output_filename ?? null,
         output_mime_type: fields.output_mime_type ?? null, delivery_status: JSON.stringify(fields.delivery_status ?? {}),
         ai_status: JSON.stringify(fields.ai_status ?? {}), ai_tokens_used: fields.ai_tokens_used ?? null,
         ai_cost: fields.ai_cost ?? null, duration_ms: fields.duration_ms ?? null, error_message: fields.error_message ?? null,

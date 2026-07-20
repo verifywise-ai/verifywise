@@ -34,18 +34,18 @@ describe("runScheduledReport", () => {
     generateReport.mockResolvedValue({ success: true, content: Buffer.from("x"), filename: "r.pdf", mimeType: "application/pdf" });
     deliverReport.mockResolvedValue({ storage: { status: "success", fileId: 5 }, emailLink: { status: "skipped" }, attachment: { status: "skipped" }, fileId: 5 });
     await runScheduledReport(sched as any, { triggeredBy: "scheduler", scheduledFor: new Date() });
-    expect(updateRunStatusQuery).toHaveBeenCalledWith(77, expect.objectContaining({ status: "success" }));
+    expect(updateRunStatusQuery).toHaveBeenCalledWith(77, sched.organization_id, expect.objectContaining({ status: "success" }));
   });
   it("delivery partial failure -> partial_success", async () => {
     generateReport.mockResolvedValue({ success: true, content: Buffer.from("x"), filename: "r.pdf", mimeType: "application/pdf" });
     deliverReport.mockResolvedValue({ storage: { status: "failed" }, emailLink: { status: "skipped" }, attachment: { status: "skipped" } });
     await runScheduledReport(sched as any, { triggeredBy: "scheduler", scheduledFor: new Date() });
-    expect(updateRunStatusQuery).toHaveBeenCalledWith(77, expect.objectContaining({ status: "partial_success" }));
+    expect(updateRunStatusQuery).toHaveBeenCalledWith(77, sched.organization_id, expect.objectContaining({ status: "partial_success" }));
   });
   it("generation failure -> failed", async () => {
     generateReport.mockResolvedValue({ success: false, error: "boom" });
     await runScheduledReport(sched as any, { triggeredBy: "scheduler", scheduledFor: new Date() });
-    expect(updateRunStatusQuery).toHaveBeenCalledWith(77, expect.objectContaining({ status: "failed" }));
+    expect(updateRunStatusQuery).toHaveBeenCalledWith(77, sched.organization_id, expect.objectContaining({ status: "failed" }));
   });
   it("persists analyzer output and records ai_status on the run", async () => {
     generateReport.mockResolvedValue({
@@ -61,6 +61,7 @@ describe("runScheduledReport", () => {
     );
     expect(updateRunStatusQuery).toHaveBeenCalledWith(
       77,
+      sched.organization_id,
       expect.objectContaining({
         status: "success",
         ai_status: expect.objectContaining({ executiveSummary: "ok" }),

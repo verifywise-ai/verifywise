@@ -251,4 +251,162 @@ describe("runAnalyzers", () => {
 
     expect(out.recommendedActions!.payload.actions[0].suggestedOwner).toBe("Alice@Acme.com");
   });
+
+  // ---- provenance guard -------------------------------------------------
+  // zod validates shape, not origin: a fabricated control id / vendor name /
+  // risk name passes .strict() cleanly. These check that such a row is dropped
+  // post-parse while everything genuine survives.
+
+  const gapRow = (control: string) => ({
+    control,
+    gap: "No evidence attached to this control.",
+    priority: "high",
+  });
+
+  it("drops a complianceGap gap whose control is absent from the input, keeping the rest", async () => {
+    mockGenerate.mockResolvedValue({
+      object: {
+        narrative: "Readiness is uneven across the control set.",
+        gaps: [gapRow("AC-12 Access Review"), gapRow("SC-99 Invented Control")],
+        scores_caveat: null,
+        abstain_reason: null,
+      },
+      attempts: 1,
+      selfCorrected: false,
+    });
+
+    const withControls: any = {
+      ...reportData,
+      sections: { compliance: { controls: [{ id: 1, title: "AC-12 Access Review" }] } },
+    };
+
+    const out = await runAnalyzers({
+      reportData: withControls,
+      llmKey,
+      blocks: only("complianceGap"),
+    });
+
+    expect(out.complianceGap!.payload.gaps).toHaveLength(1);
+    expect(out.complianceGap!.payload.gaps[0].control).toBe("AC-12 Access Review");
+    // The rest of the payload must survive the strip untouched.
+    expect(out.complianceGap!.payload.narrative).toBe("Readiness is uneven across the control set.");
+    expect(out.complianceGap!.abstained).toBe(false);
+  });
+
+  it("passes a control through untouched when it differs from the input only by case and whitespace", async () => {
+    // Mutation guard: dropping the normalisation makes this fail while the
+    // exact-match test above still passes.
+    mockGenerate.mockResolvedValue({
+      object: {
+        narrative: "Readiness is uneven across the control set.",
+        gaps: [gapRow("  ac-12   ACCESS   review ")],
+        scores_caveat: null,
+        abstain_reason: null,
+      },
+      attempts: 1,
+      selfCorrected: false,
+    });
+
+    const withControls: any = {
+      ...reportData,
+      sections: { compliance: { controls: [{ id: 1, title: "AC-12 Access Review" }] } },
+    };
+
+    const out = await runAnalyzers({
+      reportData: withControls,
+      llmKey,
+      blocks: only("complianceGap"),
+    });
+
+    expect(out.complianceGap!.payload.gaps).toHaveLength(1);
+    expect(out.complianceGap!.payload.gaps[0].control).toBe("  ac-12   ACCESS   review ");
+  });
+
+  it("drops a vendorRisk concern naming a vendor that is not in the input", async () => {
+    mockGenerate.mockResolvedValue({
+      object: {
+        narrative: "Third-party exposure is concentrated in one supplier.",
+        concerns: [
+          { vendor: "acme corp", concern: "No DPA on file for this vendor.", severity: "high" },
+          { vendor: "Globex Ltd", concern: "No security review on record.", severity: "critical" },
+        ],
+        abstain_reason: null,
+      },
+      attempts: 1,
+      selfCorrected: false,
+    });
+
+    const out = await runAnalyzers({ reportData, llmKey, blocks: only("vendorRisk") });
+
+    // "Acme Corp" is in reportData.sections.vendors; "Globex Ltd" is invented.
+    expect(out.vendorRisk!.payload.concerns).toHaveLength(1);
+    expect(out.vendorRisk!.payload.concerns[0].vendor).toBe("acme corp");
+    expect(out.vendorRisk!.payload.narrative).toBe(
+      "Third-party exposure is concentrated in one supplier.",
+    );
+  });
+
+  it("drops a riskAnalysis top risk whose name is not in the input", async () => {
+    mockGenerate.mockResolvedValue({
+      object: {
+        narrative: "Risk coverage is thin across the register.",
+        top_risks: [
+          { name: "R1", level: "High", why: "It is the only scored use-case risk." },
+          { name: "Uncontrolled model drift", level: "Critical", why: "Invented by the model." },
+        ],
+        abstain_reason: null,
+      },
+      attempts: 1,
+      selfCorrected: false,
+    });
+
+    const out = await runAnalyzers({ reportData, llmKey, blocks: only("riskAnalysis") });
+
+    expect(out.riskAnalysis!.payload.top_risks).toHaveLength(1);
+    expect(out.riskAnalysis!.payload.top_risks[0].name).toBe("R1");
+  });
+
+  it("still produces a result when every item is stripped, rather than throwing", async () => {
+    // The Phase 2 rule: a fabricated row costs that row, never the report.
+    mockGenerate.mockResolvedValue({
+      object: {
+        narrative: "Third-party exposure could not be tied to a named supplier.",
+        concerns: [
+          { vendor: "Globex Ltd", concern: "No security review on record.", severity: "high" },
+          { vendor: "Initech", concern: "No DPA on file.", severity: "medium" },
+        ],
+        abstain_reason: null,
+      },
+      attempts: 1,
+      selfCorrected: false,
+    });
+
+    const out = await runAnalyzers({ reportData, llmKey, blocks: only("vendorRisk") });
+
+    expect(out.vendorRisk!.payload.concerns).toEqual([]);
+    expect(out.vendorRisk!.abstained).toBe(false);
+    expect(out.vendorRisk!.payload.narrative).toBe(
+      "Third-party exposure could not be tied to a named supplier.",
+    );
+  });
+
+  it("leaves analyzers with no verbatim-marked list alone", async () => {
+    // executiveSummary has no such field; the guard must not reshape its payload.
+    mockGenerate.mockResolvedValue({
+      object: { summary: "Overall posture is adequate.", abstain_reason: null },
+      attempts: 1,
+      selfCorrected: false,
+    });
+
+    const out = await runAnalyzers({
+      reportData,
+      llmKey,
+      blocks: only("sectionSummaries", "executiveSummary"),
+    });
+
+    expect(out.executiveSummary!.payload).toEqual({
+      summary: "Overall posture is adequate.",
+      abstain_reason: null,
+    });
+  });
 });

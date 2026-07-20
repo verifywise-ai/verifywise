@@ -329,7 +329,7 @@ export async function generateReportsV2(req: Request, res: Response): Promise<an
     // enqueued, the worker owns the run's terminal status — a later failure
     // here (e.g. logSuccess throwing) must not race it back to 'failed'.
     if (run?.id && !enqueued) {
-      await updateRunStatusQuery(run.id, {
+      await updateRunStatusQuery(run.id, req.organizationId!, {
         status: "failed",
         error_message: error instanceof Error ? error.message : "Failed to queue report",
       }).catch(() => {});

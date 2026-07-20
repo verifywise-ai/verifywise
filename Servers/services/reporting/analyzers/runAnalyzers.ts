@@ -58,6 +58,80 @@ export function sanitizeOwners(actions: any[] | undefined, allowedOwners: string
   }));
 }
 
+/**
+ * Fields whose .describe() promises the value is "copied verbatim from the
+ * input". zod validates SHAPE, not ORIGIN: an invented control id or vendor
+ * name satisfies .strict() cleanly and lands in a formal compliance artifact.
+ * So the check lives here, post-parse, against the exact prompt text the
+ * analyzer was actually handed.
+ *
+ * DROP the item, never null the field, for all three — unlike suggestedOwner:
+ *  - all three are non-nullable strings in schemas.ts, so nulling produces a
+ *    payload that no longer validates against its own schema, and
+ *  - each names the SUBJECT of its row. A gap with no control, a concern with
+ *    no vendor and a risk with no name are content-free; a recommended action
+ *    with no owner is still a usable action, which is why suggestedOwner is
+ *    nullable and gets nulled instead.
+ */
+const VERBATIM_FIELDS: Partial<Record<AnalysisSectionKey, { list: string; field: string }>> = {
+  complianceGap: { list: "gaps", field: "control" },
+  vendorRisk: { list: "concerns", field: "vendor" },
+  riskAnalysis: { list: "top_risks", field: "name" },
+};
+
+/**
+ * Case-insensitive, whitespace-collapsed. Tolerates the model re-casing a name
+ * or reflowing the JSON whitespace it was given, and nothing looser — matching
+ * on tokens or prefixes would let a plausible-looking fabrication through,
+ * which is the entire thing this guard exists to stop.
+ */
+const normalizeForProvenance = (s: string): string =>
+  s.toLowerCase().replace(/\s+/g, " ").trim();
+
+/**
+ * Drop rows whose verbatim-marked identifier does not appear in this
+ * analyzer's own prompt. Never throws: a fabricated row must cost that row,
+ * not the report ("six analyzers must not become six ways to lose a report").
+ *
+ * ponytail: substring match against the whole prompt, which includes the
+ * fixed instruction text. A 1-2 character or very generic value ("1",
+ * "framework") can therefore collide with boilerplate and survive. Narrowing
+ * that means having the registry hand back the data block separately from the
+ * boilerplate — do it if a collision is ever observed in practice.
+ */
+export function sanitizeProvenance(
+  key: AnalysisSectionKey,
+  payload: any,
+  rawInput: string,
+): any {
+  const spec = VERBATIM_FIELDS[key];
+  const items = spec ? payload?.[spec.list] : undefined;
+  if (!spec || !Array.isArray(items)) return payload;
+
+  const haystack = normalizeForProvenance(rawInput);
+  const kept = items.filter((item: any) => {
+    const value = item?.[spec.field];
+    if (typeof value !== "string" || !value.trim()) return false;
+    return haystack.includes(normalizeForProvenance(value));
+  });
+
+  if (kept.length !== items.length) {
+    const dropped = items
+      .filter((i: any) => !kept.includes(i))
+      .map((i: any) => JSON.stringify(i?.[spec.field]))
+      .join(", ");
+    logger.warn(
+      `Report analyzer "${key}" (${ANALYZER_VERSION}) produced ${
+        items.length - kept.length
+      } ${spec.list} entr${items.length - kept.length === 1 ? "y" : "ies"} whose ${
+        spec.field
+      } is absent from its input; dropped: ${dropped}`,
+    );
+  }
+
+  return { ...payload, [spec.list]: kept };
+}
+
 /** Analyzers that consume per-section summaries rather than raw section data. */
 const SUMMARY_CONSUMERS: AnalysisSectionKey[] = [
   "executiveSummary",
@@ -138,7 +212,9 @@ export async function runAnalyzers(input: RunAnalyzersInput): Promise<AnalyzerRe
       extra: { abortSignal: AbortSignal.timeout(LLM_TIMEOUT_MS) },
     });
 
-    let payload: any = result.object;
+    // userPrompt is exactly what this analyzer was given, so it is the only
+    // honest thing to check "copied verbatim from the input" against.
+    let payload: any = sanitizeProvenance(key, result.object, userPrompt);
     if (key === "recommendedActions") {
       payload = { ...payload, actions: sanitizeOwners(payload.actions, allowedOwners) };
     }
