@@ -251,6 +251,21 @@ function createTableOfContents(reportData: ReportData): Paragraph[] {
     paragraphs.push(createTocEntry(`${sectionNum++}. Executive summary`));
   }
 
+  // Recommended Actions (only when the analyzer produced any)
+  if (reportData.aiSummaries?.recommendedActions?.length) {
+    paragraphs.push(createTocEntry(`${sectionNum++}. Recommended actions`));
+  }
+
+  // Compliance Gap Analysis (only when the analyzer produced one)
+  if (reportData.aiSummaries?.complianceGap) {
+    paragraphs.push(createTocEntry(`${sectionNum++}. Compliance gap analysis`));
+  }
+
+  // Third-Party Risk Analysis (only when the analyzer produced one)
+  if (reportData.aiSummaries?.vendorRisk) {
+    paragraphs.push(createTocEntry(`${sectionNum++}. Third-party risk analysis`));
+  }
+
   // Risk Analysis (lowercase to match PDF)
   if (sections.projectRisks || sections.vendorRisks || sections.modelRisks) {
     paragraphs.push(createTocEntry(`${sectionNum++}. Risk analysis`));
@@ -601,6 +616,107 @@ function createExecutiveSummarySection(aiSummaries: AISummaries): (Paragraph | T
   // Page break after executive summary
   elements.push(new Paragraph({ children: [new PageBreak()] }));
 
+  return elements;
+}
+
+/**
+ * Recommended Actions section. Standalone rather than nested in the executive
+ * summary: the two analyzers are gated and abstain independently.
+ */
+function createRecommendedActionsSection(aiSummaries: AISummaries): (Paragraph | Table)[] {
+  const elements: (Paragraph | Table)[] = [];
+  if (!aiSummaries.recommendedActions || aiSummaries.recommendedActions.length === 0) {
+    return [];
+  }
+
+  elements.push(createSectionHeader("Recommended Actions"));
+  aiSummaries.recommendedActions.forEach((a) => {
+    elements.push(
+      new Paragraph({
+        spacing: { before: 60, after: 60 },
+        indent: { left: convertInchesToTwip(0.3) },
+        bullet: { level: 0 },
+        children: [
+          new TextRun({ text: a.action, size: 20, color: COLORS.textPrimary }),
+          new TextRun({
+            text: `  [${a.priority ?? "—"} · ${a.suggestedOwner ?? "Unassigned"}]`,
+            size: 18,
+            color: COLORS.textSecondary,
+          }),
+        ],
+      }),
+    );
+  });
+
+  elements.push(new Paragraph({ children: [new PageBreak()] }));
+  return elements;
+}
+
+/**
+ * Compliance Gap Analysis section (AI-generated). Explains the STORED
+ * readiness scores; it never re-scores anything.
+ */
+function createComplianceGapSection(reportData: ReportData): (Paragraph | Table)[] {
+  const gap = reportData.aiSummaries?.complianceGap;
+  if (!gap) return [];
+
+  const elements: (Paragraph | Table)[] = [];
+  elements.push(createSectionHeader("Compliance Gap Analysis"));
+  elements.push(...createAIAnalysisBox(gap.narrative, "AI-Generated Analysis"));
+
+  if (gap.scores_caveat) {
+    elements.push(
+      ...createAIAnalysisBox(gap.scores_caveat, "Scope note", COLORS.aiWarning, COLORS.aiWarningBg),
+    );
+  }
+
+  if (gap.gaps && gap.gaps.length > 0) {
+    elements.push(createSubsectionHeader("Prioritised gaps"));
+    gap.gaps.forEach((g) => {
+      elements.push(
+        new Paragraph({
+          spacing: { before: 60, after: 60 },
+          indent: { left: convertInchesToTwip(0.3) },
+          bullet: { level: 0 },
+          children: [
+            new TextRun({ text: `${g.control}: `, bold: true, size: 20, color: COLORS.textPrimary }),
+            new TextRun({ text: `${g.gap} (${g.priority})`, size: 20, color: COLORS.textPrimary }),
+          ],
+        }),
+      );
+    });
+  }
+
+  elements.push(new Paragraph({ children: [new PageBreak()] }));
+  return elements;
+}
+
+/**
+ * Third-party risk analysis. Standalone: createRiskAnalysisSection returns []
+ * when no risk section is selected, and a vendors-only report still needs this.
+ */
+function createVendorRiskSection(reportData: ReportData): (Paragraph | Table)[] {
+  const vendorRisk = reportData.aiSummaries?.vendorRisk;
+  if (!vendorRisk) return [];
+
+  const elements: (Paragraph | Table)[] = [];
+  elements.push(createSectionHeader("Third-Party Risk Analysis"));
+  elements.push(...createAIAnalysisBox(vendorRisk.narrative, "AI-Generated Analysis"));
+  (vendorRisk.concerns ?? []).forEach((c) => {
+    elements.push(
+      new Paragraph({
+        spacing: { before: 60, after: 60 },
+        indent: { left: convertInchesToTwip(0.3) },
+        bullet: { level: 0 },
+        children: [
+          new TextRun({ text: `${c.vendor}: `, bold: true, size: 20, color: COLORS.textPrimary }),
+          new TextRun({ text: `${c.concern} (${c.severity})`, size: 20, color: COLORS.textPrimary }),
+        ],
+      }),
+    );
+  });
+
+  elements.push(new Paragraph({ children: [new PageBreak()] }));
   return elements;
 }
 
@@ -1185,6 +1301,11 @@ export async function generateDOCX(reportData: ReportData): Promise<ReportGenera
       ...coverPage,
       ...toc,
       ...aiExecutiveSummary,
+      ...createRecommendedActionsSection(
+        reportData.aiSummaries ?? ({ sectionSummaries: {} } as AISummaries),
+      ),
+      ...createComplianceGapSection(reportData),
+      ...createVendorRiskSection(reportData),
       ...riskSection,
       ...complianceSection,
       ...organizationSection,

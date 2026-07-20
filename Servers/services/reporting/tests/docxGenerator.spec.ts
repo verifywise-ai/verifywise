@@ -3,8 +3,18 @@
  * Tests for native 'docx' library based generation
  */
 
+import JSZip from "jszip";
 import { generateDOCX, generateDOCXWithCharts } from "../docxGenerator";
-import { ReportData } from "../../../domain.layer/interfaces/i.reportGeneration";
+import { AISummaries, ReportData } from "../../../domain.layer/interfaces/i.reportGeneration";
+
+/** Visible text of the generated DOCX, one run per line. */
+async function docxText(content: Buffer): Promise<string> {
+  const zip = await JSZip.loadAsync(content);
+  const xml = await zip.file("word/document.xml")!.async("string");
+  return (xml.match(/<w:t[^>]*>[^<]*<\/w:t>/g) ?? [])
+    .map((run) => run.replace(/<[^>]+>/g, ""))
+    .join("\n");
+}
 
 describe("DOCX Generator", () => {
   const mockReportData: ReportData = {
@@ -239,5 +249,99 @@ describe("DOCX Generator", () => {
 
       expect(result.success).toBe(true);
     }, 15000);
+  });
+
+  describe("AI analysis sections", () => {
+    const recommendedActions: AISummaries["recommendedActions"] = [
+      { action: "Close the DPIA gap", priority: "high", suggestedOwner: "Jane Ops" },
+      { action: "Refresh vendor attestations" },
+    ];
+    const complianceGap: AISummaries["complianceGap"] = {
+      narrative: "Two clauses lack evidence.",
+      gaps: [{ control: "Clause 6.1", gap: "No documented risk criteria", priority: "high" }],
+      scores_caveat: "Scores reflect stored readiness only.",
+    };
+    const vendorRisk: AISummaries["vendorRisk"] = {
+      narrative: "One processor has no independent assurance report.",
+      concerns: [{ vendor: "Acme Cloud", concern: "No SOC 2 Type II", severity: "high" }],
+    };
+
+    const withSummaries = (aiSummaries: AISummaries): ReportData => ({
+      ...mockReportData,
+      aiSummaries,
+    });
+
+    it("renders recommended actions even when the executive summary abstained", async () => {
+      const result = await generateDOCX(
+        withSummaries({ sectionSummaries: {}, recommendedActions }),
+      );
+      const text = await docxText(result.content);
+
+      expect(text).toContain("RECOMMENDED ACTIONS");
+      expect(text).toContain("Close the DPIA gap");
+      expect(text).toContain("[high · Jane Ops]");
+      expect(text).toContain("Refresh vendor attestations");
+      expect(text).toContain("[— · Unassigned]");
+      expect(text).toContain("1. Recommended actions");
+      expect(text).not.toContain("EXECUTIVE SUMMARY");
+      expect(text).not.toContain("Compliance gap analysis");
+      expect(text).not.toContain("Third-party risk analysis");
+    });
+
+    it("renders the compliance gap narrative, caveat and prioritised gaps", async () => {
+      const result = await generateDOCX(withSummaries({ sectionSummaries: {}, complianceGap }));
+      const text = await docxText(result.content);
+
+      expect(text).toContain("COMPLIANCE GAP ANALYSIS");
+      expect(text).toContain("Two clauses lack evidence.");
+      expect(text).toContain("SCOPE NOTE");
+      expect(text).toContain("Scores reflect stored readiness only.");
+      expect(text).toContain("Prioritised gaps");
+      expect(text).toContain("Clause 6.1: ");
+      expect(text).toContain("No documented risk criteria (high)");
+      expect(text).toContain("1. Compliance gap analysis");
+      expect(text).not.toContain("Recommended actions");
+      expect(text).not.toContain("Third-party risk analysis");
+    });
+
+    it("renders third-party risk even when no risk section is selected", async () => {
+      const result = await generateDOCX(withSummaries({ sectionSummaries: {}, vendorRisk }));
+      const text = await docxText(result.content);
+
+      expect(text).toContain("THIRD-PARTY RISK ANALYSIS");
+      expect(text).toContain("One processor has no independent assurance report.");
+      expect(text).toContain("Acme Cloud: ");
+      expect(text).toContain("No SOC 2 Type II (high)");
+      expect(text).toContain("1. Third-party risk analysis");
+      expect(text).not.toContain("Recommended actions");
+      expect(text).not.toContain("Compliance gap analysis");
+    });
+
+    it("numbers the table of contents sequentially across all four AI sections", async () => {
+      const result = await generateDOCX(
+        withSummaries({
+          sectionSummaries: {},
+          executiveSummary: "Overall posture is fair.",
+          recommendedActions,
+          complianceGap,
+          vendorRisk,
+        }),
+      );
+      const text = await docxText(result.content);
+
+      expect(text).toContain("1. Executive summary");
+      expect(text).toContain("2. Recommended actions");
+      expect(text).toContain("3. Compliance gap analysis");
+      expect(text).toContain("4. Third-party risk analysis");
+    });
+
+    it("stays silent when every analyzer abstained", async () => {
+      const result = await generateDOCX(withSummaries({ sectionSummaries: {} }));
+      const text = await docxText(result.content);
+
+      expect(text).not.toContain("RECOMMENDED ACTIONS");
+      expect(text).not.toContain("COMPLIANCE GAP ANALYSIS");
+      expect(text).not.toContain("THIRD-PARTY RISK ANALYSIS");
+    });
   });
 });
