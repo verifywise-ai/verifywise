@@ -39,7 +39,7 @@ const tableCodeSnippet = `<TableContainer>
         {columns.map((col) => (
           <TableCell
             key={col.id}
-            style={singleTheme.tableStyles.primary.header.cell}
+            sx={singleTheme.tableStyles.primary.header.cell}
           >
             {col.name}
           </TableCell>

@@ -526,7 +526,7 @@ const FormInputsSection: React.FC = () => {
                 { property: "Icon position", value: "right: 12px" },
                 { property: "Icon color", value: "text.tertiary" },
                 { property: "Menu margin-top", value: "4px" },
-                { property: "Menu item padding", value: "4px 6px" },
+                { property: "Menu item padding", value: "4px 8px" },
                 { property: "Menu item margin", value: "2px" },
                 { property: "Menu item min-width", value: "100px" },
                 { property: "Menu hover bg", value: "background.accent" },
