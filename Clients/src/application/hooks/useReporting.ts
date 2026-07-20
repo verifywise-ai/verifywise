@@ -8,7 +8,7 @@
  * @module application/hooks/useReporting
  */
 
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient, keepPreviousData } from "@tanstack/react-query";
 import * as repo from "../repository/reporting.repository";
 import type {
   ReportRun,
@@ -55,11 +55,19 @@ export const useReportRuns = (params?: RunPageParams) =>
     refetchInterval: runsRefetchInterval,
   });
 
-/** Runs with pagination metadata, for callers that render a pager. */
+/**
+ * Runs with pagination metadata, for callers that render a pager.
+ *
+ * keepPreviousData: each offset is a new query key, so without it every page
+ * change drops to `isLoading` and the whole table — pager included — flashes to
+ * a spinner. Holding the previous page until the next arrives keeps the pager
+ * on screen and stable to click.
+ */
 export const useReportRunsPage = (params?: RunPageParams) =>
   useQuery({
     queryKey: ["reporting", "runs", params ?? {}],
     queryFn: () => repo.getRuns(params),
+    placeholderData: keepPreviousData,
     refetchInterval: runsRefetchInterval,
   });
 
