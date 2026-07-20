@@ -2,7 +2,8 @@ import express, { Request, Response } from "express";
 import { sendEmail } from "../services/emailService";
 import fs from "fs";
 import path from "path";
-import { generateInviteToken } from "../utils/jwt.utils";
+import { generateInviteToken, ONE_HOUR_MS } from "../utils/jwt.utils";
+import { storeOneTimeToken } from "../utils/oneTimeToken.utils";
 import { frontEndUrl } from "../config/constants";
 import { invite } from "../controllers/vwmailer.ctrl";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
@@ -55,10 +56,22 @@ router.post("/reset-password", resetPasswordLimiter, async (req: Request, res: R
       const templatePath = path.resolve(__dirname, "../templates/password-reset-email.mjml");
       const template = fs.readFileSync(templatePath, "utf8");
 
-      const token = generateInviteToken({
-        name: name,
+      // Password-reset links are short-lived (1h) and single-use: the
+      // token hash is stored so the reset middleware can consume it.
+      const token = generateInviteToken(
+        {
+          name: name,
+          email: to,
+        },
+        ONE_HOUR_MS,
+      ) as string;
+
+      await storeOneTimeToken({
+        token,
         email: to,
-      }) as string;
+        purpose: "password_reset",
+        expiresAt: new Date(Date.now() + ONE_HOUR_MS),
+      });
 
       // Data to be replaced in the template
       const url = `${frontEndUrl}/set-new-password?${new URLSearchParams({ token }).toString()}`;
