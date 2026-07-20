@@ -92,6 +92,7 @@ Read these before writing code. Each was forced by something in the schema or th
 |---|---|
 | `Servers/utils/reportTemplate.utils.ts` | Org-scope both version queries; add create/update/archive/version-insert. |
 | `Servers/controllers/reportTemplate.ctrl.ts` | Add `listSections`, `createTemplate`, `updateTemplate`, `archiveTemplate`; adopt the `respondWithError` pattern. |
+| `Servers/tests/integration/tenant-isolation/tenantIsolation.registry.ts` | Register the three reporting tables. |
 | `Servers/routes/reportTemplate.route.ts` | Add POST / PATCH / DELETE with `authorize(["Admin","Editor"])`. |
 | `Servers/routes/reporting.route.ts` | Add `GET /sections`. |
 | `Servers/routes/reportRun.route.ts` | Add `GET /:id/analyses`. |
@@ -130,9 +131,23 @@ Closes the first hole **before** Task 5 becomes its first caller. Ordering matte
 - Modify: `Servers/controllers/reportTemplate.ctrl.ts:33`
 - Test: `Servers/utils/__tests__/reportTemplate.utils.test.ts`
 
-- [ ] **Step 1: Write the failing tests**
+- [ ] **Step 1: Fix the existing one-argument call, then write the failing tests**
 
-Append to `Servers/utils/__tests__/reportTemplate.utils.test.ts`:
+`Servers/utils/__tests__/reportTemplate.utils.test.ts:20` already calls the function you are about to change:
+
+```ts
+    const v = await getLatestVersionQuery(1);
+```
+
+**This file is inside the `tsc` program.** `Servers/tsconfig.json` includes `./utils/**/*.ts` and its `exclude` lists only `controllers/__tests__` — not `utils/__tests__`. So once `organization_id` becomes required, `npm run build` fails with `TS2554: Expected 2 arguments, but got 1`, and stays failing for every later task's build step. ts-jest's `diagnostics: false` hides this from `npx jest` but **not** from `npm run build`, which is plain `tsc`.
+
+Change line 20 to pass an org id:
+
+```ts
+    const v = await getLatestVersionQuery(1, 42);
+```
+
+Then append the new tests. **Append them inside the existing `describe("reportTemplate.utils", ...)` block**, above its closing `});` on line 24 — not at module top level. The `beforeEach(() => q.mockReset())` on line 8 is describe-scoped, so tests placed outside it inherit `q.mock.calls` from the earlier tests and read the wrong call:
 
 ```ts
   it("getLatestVersionQuery passes organization_id into the query", async () => {
@@ -239,11 +254,13 @@ Expected: PASS, all tests in the file.
 
 - [ ] **Step 5: Verify no other caller broke**
 
+Quote the glob — this shell is zsh, which expands a bare `*.ts` itself and aborts with `no matches found` before grep ever runs, producing empty output that reads exactly like "no other callers":
+
 ```bash
-cd Servers && grep -rn "getLatestVersionQuery\|getVersionByIdQuery" --include=*.ts . | grep -v node_modules | grep -v /dist/
+cd Servers && grep -rn "getLatestVersionQuery\|getVersionByIdQuery" --include='*.ts' . | grep -v node_modules | grep -v /dist/
 ```
 
-Expected: definitions in `utils/reportTemplate.utils.ts`, the one call in `controllers/reportTemplate.ctrl.ts:33`, and the test file. Nothing else. If any other call site appears, it must be updated to pass `organization_id`.
+Expected: definitions in `utils/reportTemplate.utils.ts`, the one call in `controllers/reportTemplate.ctrl.ts:33`, and the calls in `utils/__tests__/reportTemplate.utils.test.ts`. Nothing else. **Every listed call must now pass two arguments** — including the one on line 20 you fixed in Step 1.
 
 - [ ] **Step 6: Build**
 
@@ -251,7 +268,7 @@ Expected: definitions in `utils/reportTemplate.utils.ts`, the one call in `contr
 cd Servers && npm run build
 ```
 
-Expected: exit 0, no TypeScript errors.
+Expected: exit 0, no TypeScript errors. If this fails with `TS2554` in a test file, a one-argument call survived Step 1.
 
 - [ ] **Step 7: Commit**
 
@@ -412,12 +429,17 @@ export const SECTION_KEYS: string[] = REPORT_SECTION_CATALOG.map((s) => s.key);
 In `Servers/services/reporting/index.ts`, replace the literal set at lines 30-44 with:
 
 ```ts
+const VALID_SECTION_KEYS = new Set([...SECTION_KEYS, "all"]);
+```
+
+Replace the existing JSDoc on lines 27-29 too — leaving it stacked above a new one gives the constant two comment blocks, the first of which ("Valid section keys that can be passed directly from the frontend") no longer describes a literal set. The replacement comment:
+
+```ts
 /**
  * Valid section keys that can be passed directly from the frontend.
  * Derived from the section catalog plus the "all" wildcard sentinel, which is
  * not a section. See services/reporting/sectionCatalog.ts.
  */
-const VALID_SECTION_KEYS = new Set([...SECTION_KEYS, "all"]);
 ```
 
 Add the import alongside the existing imports at the top of the file:
@@ -527,7 +549,7 @@ frontend's backendKey set so future drift fails rather than ships."
 date +%Y%m%d%H%M%S
 ```
 
-Use that value as `<stamp>`. It **must** sort after `20260719234948` (the Phase 2 migration, currently the newest). Verify:
+Use that value as `<stamp>`. It **must** sort after `20260720014925-widen-report-ai-blocks.js`, which is the newest migration on this branch — **not** `20260719234948`, which is the second-newest. Verify rather than trusting either number:
 
 ```bash
 cd Servers && ls database/migrations/ | sort | tail -3
@@ -702,6 +724,7 @@ export async function createTemplateQuery(
   input: any,
   organization_id: number,
   userId: number,
+  transaction?: Transaction,
 ): Promise<any> {
   if (!input?.name) throw new ValidationException("name is required", "name", input?.name);
   if (!input?.category) throw new ValidationException("category is required", "category", input?.category);
@@ -734,6 +757,7 @@ export async function createTemplateQuery(
         created_by: userId,
       },
       type: QueryTypes.SELECT,
+      transaction,
     },
   );
   return rows[0];
@@ -750,10 +774,16 @@ export async function updateTemplateQuery(
   organization_id: number,
   input: any,
 ): Promise<any> {
+  // Must stay in sync with metadataChanged in reportTemplate.ctrl.ts and with
+  // ReportTemplateWriteBody in i.reporting.ts. default_scope and
+  // supported_scopes are real columns the write type advertises as PATCH-able,
+  // so omitting them here would 400 a request the type says is valid.
   const allowed = [
     "name",
     "description",
     "category",
+    "default_scope",
+    "supported_scopes",
     "recommended_frequency",
     "is_active",
   ];
@@ -802,9 +832,14 @@ export async function archiveTemplateQuery(
   return result[0]?.[0] ?? null;
 }
 
-// Append-only: the version number is computed inside the INSERT so two
-// concurrent writers cannot both read the same MAX and collide. The unique
-// index on (template_id, version) is the backstop if they race anyway.
+// Append-only. The version number is computed inside the INSERT for brevity,
+// NOT for atomicity: under READ COMMITTED two overlapping statements both see
+// the same MAX and both compute N+1, and the second one loses to
+// idx_tpl_versions_unique with a 23505. That is the intended outcome —
+// the constraint is the correctness guarantee, the subquery is not — but it
+// means a concurrent config edit can surface as a 409 rather than silently
+// serialising. Acceptable for a template editor; do not copy this into a
+// high-write path without a lock.
 //
 // The SELECT ... WHERE EXISTS is the tenant guard: a template id belonging to
 // another org inserts zero rows and returns undefined.
@@ -813,6 +848,7 @@ export async function createTemplateVersionQuery(
   organization_id: number,
   config: any,
   userId: number,
+  transaction?: Transaction,
 ): Promise<any> {
   const rows: any = await sequelize.query(
     `INSERT INTO report_template_versions
@@ -843,10 +879,17 @@ export async function createTemplateVersionQuery(
         created_by: userId,
       },
       type: QueryTypes.SELECT,
+      transaction,
     },
   );
   return rows[0];
 }
+```
+
+Extend the file's imports for the new `Transaction` type and the exception class:
+
+```ts
+import { QueryTypes, Transaction } from "sequelize";
 ```
 
 - [ ] **Step 7: Run the tests to verify they pass**
@@ -910,6 +953,15 @@ jest.mock("../../utils/logger/logHelper", () => ({
   logSuccess: jest.fn(),
   logFailure: jest.fn(),
 }));
+// createTemplate wraps both INSERTs in a transaction. The mock runs the
+// callback immediately with a sentinel so the handler's logic is exercised
+// without a database.
+jest.mock("../../database/db", () => ({
+  sequelize: {
+    transaction: jest.fn(async (cb: any) => cb("TX")),
+    query: jest.fn(),
+  },
+}));
 
 import {
   createTemplate,
@@ -952,8 +1004,10 @@ describe("createTemplate", () => {
       res,
     );
     expect(res.status).toHaveBeenCalledWith(201);
-    expect(createTemplateQuery).toHaveBeenCalledWith(expect.any(Object), 42, 9);
-    expect(createTemplateVersionQuery).toHaveBeenCalledWith(7, 42, expect.any(Object), 9);
+    // Both writes must receive the same transaction handle, or the rollback
+    // guarantee this test exists to protect is not actually in place.
+    expect(createTemplateQuery).toHaveBeenCalledWith(expect.any(Object), 42, 9, "TX");
+    expect(createTemplateVersionQuery).toHaveBeenCalledWith(7, 42, expect.any(Object), 9, "TX");
   });
 
   it("maps a ValidationException to 400, not 500", async () => {
@@ -1068,11 +1122,16 @@ const hasVersionConfig = (body: any): boolean =>
 // customField.ctrl.ts. A Postgres unique violation (23505) becomes 409 —
 // the slug index is the only unique constraint a caller can trip.
 const respondWithError = (req: Request, res: Response, error: unknown): Response => {
-  const pgCode = (error as any)?.parent?.code ?? (error as any)?.original?.code;
-  if (pgCode === "23505") {
-    return res
-      .status(409)
-      .json(STATUS_CODE[409]("a template with this name already exists"));
+  const pgErr = (error as any)?.parent ?? (error as any)?.original;
+  if (pgErr?.code === "23505") {
+    // Two different unique indexes can raise 23505 here. Do not report a
+    // version-number race as a duplicate name — that sends the user off
+    // renaming a template that was never the problem.
+    const message =
+      pgErr?.constraint === "idx_tpl_versions_unique"
+        ? "this template was modified concurrently, please retry"
+        : "a template with this name already exists";
+    return res.status(409).json(STATUS_CODE[409](message));
   }
   const statusCode =
     error instanceof Error && "statusCode" in error
@@ -1094,15 +1153,22 @@ export async function createTemplate(req: Request, res: Response): Promise<any> 
     organizationId: req.organizationId!,
   });
   try {
-    const tpl = await createTemplateQuery(req.body, req.organizationId!, req.userId!);
-    // A template with no version is unusable — the wizard reads
-    // latestVersion.sections_config. Always seed version 1.
-    const version = await createTemplateVersionQuery(
-      tpl.id,
-      req.organizationId!,
-      req.body,
-      req.userId!,
-    );
+    // Both INSERTs share one transaction. A template with no version is
+    // unusable — the wizard reads latestVersion.sections_config and disables
+    // its submit button without one — so a failure on the second write must
+    // not leave the first committed as an undeletable-looking orphan in
+    // GET /templates.
+    const { tpl, version } = await sequelize.transaction(async (t) => {
+      const tpl = await createTemplateQuery(req.body, req.organizationId!, req.userId!, t);
+      const version = await createTemplateVersionQuery(
+        tpl.id,
+        req.organizationId!,
+        req.body,
+        req.userId!,
+        t,
+      );
+      return { tpl, version };
+    });
     await logSuccess({
       eventType: "Create",
       description: `Created report template ${tpl.id}`,
@@ -1136,8 +1202,17 @@ export async function updateTemplate(req: Request, res: Response): Promise<any> 
     organizationId: req.organizationId!,
   });
   try {
-    const metadataChanged = ["name", "description", "category", "recommended_frequency", "is_active"]
-      .some((f) => req.body?.[f] !== undefined);
+    // Same seven names as the `allowed` list in updateTemplateQuery — if these
+    // drift apart, a PATCH for the missing field 400s as "no updatable fields".
+    const metadataChanged = [
+      "name",
+      "description",
+      "category",
+      "default_scope",
+      "supported_scopes",
+      "recommended_frequency",
+      "is_active",
+    ].some((f) => req.body?.[f] !== undefined);
 
     let tpl: any = null;
     if (metadataChanged) {
@@ -1220,6 +1295,7 @@ export async function archiveTemplate(req: Request, res: Response): Promise<any>
 Extend the file's imports:
 
 ```ts
+import { sequelize } from "../database/db";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
 import { translateError } from "../utils/i18n.utils";
 import {
@@ -1418,6 +1494,7 @@ jest.mock("../../services/reporting/scheduledReportService", () => ({
     // anyway. Asserting the insert did NOT happen is what catches that.
     expect(utils.createScheduledReportQuery).not.toHaveBeenCalled();
   });
+```
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
@@ -1672,7 +1749,7 @@ import { listRuns, getRun, downloadRun, getRunAnalyses } from "../controllers/re
 cd Servers && npx jest controllers/__tests__/reportRun.ctrl.test.ts
 ```
 
-Expected: PASS, 3 tests.
+Expected: PASS, **7 tests** — the file's 4 pre-existing tenant-isolation tests plus your 3.
 
 - [ ] **Step 6: Build and commit**
 
@@ -1967,13 +2044,26 @@ export interface ReportTemplateWriteBody {
 // If that test fails, this block is what needs updating.
 // ---------------------------------------------------------------------------
 
+/**
+ * Section keys that can appear in a report_run_analyses row.
+ *
+ * `sectionSummaries` is NOT one of the six registry analyzers — it is written
+ * separately by runAnalyzers and persisted like the rest, so the endpoint
+ * returns it and any consumer must handle it. Leaving it out of this union
+ * is how a panel ends up silently ignoring a row that is really there.
+ */
 export type AnalysisSectionKey =
   | "executiveSummary"
   | "keyFindings"
   | "recommendedActions"
   | "riskAnalysis"
   | "complianceGap"
-  | "vendorRisk";
+  | "vendorRisk"
+  | "sectionSummaries";
+
+export interface SectionSummariesPayload {
+  summaries: Record<string, string>;
+}
 
 export interface ExecutiveSummaryPayload {
   summary: string;
@@ -2020,7 +2110,11 @@ export type AnalysisPayload =
   | RecommendedActionsPayload
   | RiskAnalysisPayload
   | ComplianceGapPayload
-  | VendorRiskPayload;
+  | VendorRiskPayload
+  | SectionSummariesPayload
+  // An abstained or failed analyzer persists a null payload. Consumers must
+  // narrow before reading any field.
+  | null;
 
 export interface ReportRunAnalysis {
   id: number;
@@ -2116,17 +2210,23 @@ cd Clients && grep -n "patch\|delete\|put" src/infrastructure/api/networkService
 
 Expected: both methods exist with a `(url, body?)` signature. **If `patch` is absent**, use whatever the file provides (`put`, or a generic `request`) and change the backend route in Task 4 to match the verb the client can actually send. Do not add a method to `networkServices.ts` for this.
 
-- [ ] **Step 3: Write the failing hook tests**
+- [ ] **Step 3: Extend the existing hook test file**
 
-Append to `Clients/src/application/hooks/__tests__/useReporting.test.ts` (create the file with the surrounding harness if it does not exist, copying the existing reporting test's setup):
+`Clients/src/application/hooks/__tests__/useReporting.test.ts` **already exists** (46 lines) and already does three things this task must not repeat:
+
+1. It imports `vi`, `renderHook`, `waitFor`, `QueryClient`, `QueryClientProvider` and `React` (lines 1-4). Re-importing them is a hard `SyntaxError: Identifier 'renderHook' has already been declared` and the file will not even parse.
+2. It calls `vi.mock("../../repository/reporting.repository", ...)` at line 8. **Two `vi.mock` calls for one specifier do not merge — the later registration replaces the earlier one wholesale.** A second factory silently breaks the file's existing tests: `useTemplates loads templates` (line 22) expects `getTemplates` to resolve one row, and `useReportRun` (lines 31-45) routes through the module-scoped `mockGetReportRun` spy.
+3. It defines a `wrap` helper (line 16), not `wrapper`.
+
+So: **merge into the existing mock factory, do not add a second one.** Extend the factory at line 8 to this, preserving every existing entry exactly:
 
 ```ts
-import { renderHook, waitFor } from "@testing-library/react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { vi } from "vitest";
-import React from "react";
-
 vi.mock("../../repository/reporting.repository", () => ({
+  // pre-existing — do not change these three, tests at lines 22 and 31 depend on them
+  getTemplates: vi.fn(async () => [{ id: 1, name: "Daily Governance Pulse" }]),
+  getScheduledReports: vi.fn(async () => []),
+  getReportRun: (...args: unknown[]) => mockGetReportRun(...args),
+  // added by Phase 3
   getSectionCatalog: vi.fn(async () => [
     { key: "projectRisks", label: "Use case risks", group: "Risk analysis" },
   ]),
@@ -2134,17 +2234,15 @@ vi.mock("../../repository/reporting.repository", () => ({
   updateTemplate: vi.fn(async () => ({ id: 7 })),
   archiveTemplate: vi.fn(async () => ({ ok: true })),
   getRunAnalyses: vi.fn(async () => []),
-  getTemplates: vi.fn(async () => []),
-  getScheduledReports: vi.fn(async () => []),
-  getRuns: vi.fn(async () => []),
-  getReportRun: vi.fn(async () => ({ id: 1, status: "success" })),
-  createScheduledReport: vi.fn(async () => ({})),
-  runScheduledReportNow: vi.fn(async () => ({})),
-  setScheduledReportActive: vi.fn(async () => ({})),
-  generateReportV2: vi.fn(async () => ({ runId: 1 })),
 }));
+```
 
+Extend the existing import on line 14 — do not add a second import statement:
+
+```ts
 import {
+  useTemplates,
+  useReportRun,
   useSectionCatalog,
   useCreateTemplate,
   useUpdateTemplate,
@@ -2152,27 +2250,26 @@ import {
   useRunAnalyses,
 } from "../useReporting";
 import * as repo from "../../repository/reporting.repository";
+```
 
-const wrapper = ({ children }: { children: React.ReactNode }) => {
-  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return React.createElement(QueryClientProvider, { client: qc }, children);
-};
+Then append this new `describe` block at the end of the file, reusing the file's own `wrap` helper:
 
+```ts
 describe("useReporting template hooks", () => {
   it("useSectionCatalog fetches the catalog", async () => {
-    const { result } = renderHook(() => useSectionCatalog(), { wrapper });
+    const { result } = renderHook(() => useSectionCatalog(), { wrapper: wrap });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toHaveLength(1);
   });
 
   it("useCreateTemplate calls the repository", async () => {
-    const { result } = renderHook(() => useCreateTemplate(), { wrapper });
+    const { result } = renderHook(() => useCreateTemplate(), { wrapper: wrap });
     result.current.mutate({ name: "Board pack", category: "governance" });
     await waitFor(() => expect(repo.createTemplate).toHaveBeenCalled());
   });
 
   it("useArchiveTemplate passes the id through", async () => {
-    const { result } = renderHook(() => useArchiveTemplate(), { wrapper });
+    const { result } = renderHook(() => useArchiveTemplate(), { wrapper: wrap });
     result.current.mutate(7);
     await waitFor(() => expect(repo.archiveTemplate).toHaveBeenCalledWith(7));
   });
@@ -2181,7 +2278,7 @@ describe("useReporting template hooks", () => {
   // affordance lands. It ships now so the client surface matches the PATCH
   // endpoint, and it is tested now so it is not untested dead code.
   it("useUpdateTemplate splits id and body", async () => {
-    const { result } = renderHook(() => useUpdateTemplate(), { wrapper });
+    const { result } = renderHook(() => useUpdateTemplate(), { wrapper: wrap });
     result.current.mutate({ id: 7, body: { name: "Renamed" } });
     await waitFor(() =>
       expect(repo.updateTemplate).toHaveBeenCalledWith(7, { name: "Renamed" }),
@@ -2189,7 +2286,7 @@ describe("useReporting template hooks", () => {
   });
 
   it("useRunAnalyses stays disabled without a run id", () => {
-    const { result } = renderHook(() => useRunAnalyses(undefined), { wrapper });
+    const { result } = renderHook(() => useRunAnalyses(undefined), { wrapper: wrap });
     expect(result.current.fetchStatus).toBe("idle");
     expect(repo.getRunAnalyses).not.toHaveBeenCalled();
   });
@@ -2264,7 +2361,7 @@ import type { ReportTemplateWriteBody } from "../../domain/interfaces/i.reportin
 cd Clients && npx vitest run src/application/hooks/__tests__/useReporting.test.ts
 ```
 
-Expected: PASS, 4 tests.
+Expected: PASS, **8 tests** — the file's 3 pre-existing tests plus your 5. If the pre-existing `useTemplates loads templates` or either `useReportRun` test now fails, the mock factories were added rather than merged.
 
 - [ ] **Step 7: Typecheck and commit**
 
@@ -2874,7 +2971,220 @@ deliberately unchanged."
 
 ---
 
-## Task 13: Documentation
+## Task 13: Tenant-isolation integration test
+
+Unit tests mock `sequelize.query`, so they prove the SQL *mentions* `organization_id` but never that PostgreSQL *honours* it. Phase 2 caught a missing tenant guard exactly this way. This repo already has the right mechanism, and the plan should not invent a manual substitute for it.
+
+`docs/technical/security/tenant-isolation.md` §6 mandates `Servers/tests/integration/tenant-isolation/{entity}.isolation.test.ts` for every tenant-scoped entity, and `.github/workflows/backend-checks.yml` runs both the matrix and `scripts/auditTenantIsolationCoverage.ts` in the `tenant-isolation-tests` job.
+
+**Pre-existing state, so you know what you are walking into:** that audit currently exits **1** with **45** uncovered scoped tables — `api_tokens`, `teams_webhooks`, `virtual_folders` and many more that long predate this branch. The registry was last touched by an unrelated MRM commit and this branch never modifies it, so the gate is already red repo-wide; Phases 1 and 2 did not break it. This task does not fix all 45. It registers the three reporting tables and covers the one entity Phase 3 gives a write path, which is the part this phase is responsible for.
+
+**Files:**
+- Modify: `Servers/tests/integration/tenant-isolation/tenantIsolation.registry.ts`
+- Create: `Servers/tests/integration/tenant-isolation/report-templates.isolation.test.ts`
+
+- [ ] **Step 1: Register the reporting entities**
+
+Append to the `tenantIsolationRegistry` array in `Servers/tests/integration/tenant-isolation/tenantIsolation.registry.ts`, matching the existing entry shape (`name`, `tables`, `baseRoute`):
+
+```ts
+  {
+    name: "report_templates",
+    tables: ["report_templates"],
+    baseRoute: "/api/reporting/templates",
+  },
+  {
+    name: "report_runs",
+    tables: ["report_runs", "report_run_analyses"],
+    baseRoute: "/api/reporting/runs",
+  },
+```
+
+`report_template_versions` is deliberately absent: it has no `organization_id` column of its own — it inherits tenancy by joining its parent template, which is exactly what Task 1 fixed. Adding it would claim a column the table does not have.
+
+- [ ] **Step 2: Write the isolation test**
+
+Create `Servers/tests/integration/tenant-isolation/report-templates.isolation.test.ts`, modelled on `evidence-hub.isolation.test.ts`:
+
+```ts
+jest.setTimeout(60000);
+
+import { cleanupDatabase } from "../helpers";
+import { sequelize } from "../../../database/db";
+import { QueryTypes } from "sequelize";
+import { seedTwoTenantContexts, TenantContext } from "./tenantIsolation.harness";
+
+const ROUTES = {
+  list: "/api/reporting/templates",
+  get: (id: number) => `/api/reporting/templates/${id}`,
+  create: "/api/reporting/templates",
+  update: (id: number) => `/api/reporting/templates/${id}`,
+  delete: (id: number) => `/api/reporting/templates/${id}`,
+};
+
+const VALID_BODY = {
+  name: "Quarterly board pack",
+  category: "governance",
+  default_scope: "organization",
+  sections_config: { sections: [] },
+};
+
+async function seedTemplate(ctx: TenantContext): Promise<number> {
+  const res = await ctx.request.post(ROUTES.create).send(VALID_BODY);
+  expect(res.status).toBe(201);
+  return (res.body?.data ?? res.body).id;
+}
+
+describe("Report templates tenant isolation", () => {
+  afterEach(async () => {
+    await cleanupDatabase();
+  });
+
+  it("denies cross-tenant read, update and delete", async () => {
+    const { owner, attacker } = await seedTwoTenantContexts();
+    const id = await seedTemplate(owner);
+
+    expect((await attacker.request.get(ROUTES.get(id))).status).toBe(404);
+    expect(
+      (await attacker.request.patch(ROUTES.update(id)).send({ name: "Hijacked" })).status,
+    ).toBe(404);
+    expect((await attacker.request.delete(ROUTES.delete(id))).status).toBe(404);
+
+    // The row must be genuinely untouched, not merely reported as missing.
+    const [row]: any[] = await sequelize.query(
+      `SELECT name, is_active FROM report_templates WHERE id = :id`,
+      { replacements: { id }, type: QueryTypes.SELECT },
+    );
+    expect(row.name).toBe(VALID_BODY.name);
+    expect(row.is_active).toBe(true);
+  });
+
+  it("lists only the caller's own templates alongside system templates", async () => {
+    const { owner, attacker } = await seedTwoTenantContexts();
+    await seedTemplate(owner);
+
+    const ownerItems = (await owner.request.get(ROUTES.list)).body?.data ?? [];
+    const attackerItems = (await attacker.request.get(ROUTES.list)).body?.data ?? [];
+
+    expect(ownerItems.some((t: any) => t.name === VALID_BODY.name)).toBe(true);
+    expect(attackerItems.some((t: any) => t.name === VALID_BODY.name)).toBe(false);
+    // Both orgs still see the three seeded system templates.
+    expect(attackerItems.some((t: any) => t.is_system_template)).toBe(true);
+  });
+
+  it("ignores a foreign organization_id and a forged is_system_template on create", async () => {
+    const { owner, attacker } = await seedTwoTenantContexts();
+
+    const res = await owner.request.post(ROUTES.create).send({
+      ...VALID_BODY,
+      organization_id: attacker.orgId,
+      is_system_template: true,
+    });
+    expect(res.status).toBe(201);
+
+    const created = res.body?.data ?? res.body;
+    const [row]: any[] = await sequelize.query(
+      `SELECT organization_id, is_system_template FROM report_templates WHERE id = :id`,
+      { replacements: { id: created.id }, type: QueryTypes.SELECT },
+    );
+    expect(row.organization_id).toBe(owner.orgId);
+    expect(row.is_system_template).toBe(false);
+  });
+
+  it("refuses writes to a system template even for an Admin", async () => {
+    const { owner } = await seedTwoTenantContexts();
+
+    const [sys]: any[] = await sequelize.query(
+      `SELECT id FROM report_templates WHERE is_system_template = true LIMIT 1`,
+      { type: QueryTypes.SELECT },
+    );
+    expect(sys).toBeTruthy();
+
+    expect(
+      (await owner.request.patch(ROUTES.update(sys.id)).send({ name: "Hijacked" })).status,
+    ).toBe(404);
+    expect((await owner.request.delete(ROUTES.delete(sys.id))).status).toBe(404);
+
+    const [row]: any[] = await sequelize.query(
+      `SELECT name, is_active FROM report_templates WHERE id = :id`,
+      { replacements: { id: sys.id }, type: QueryTypes.SELECT },
+    );
+    expect(row.name).not.toBe("Hijacked");
+    expect(row.is_active).toBe(true);
+  });
+
+  it("rejects a scheduled report that references another org's template version", async () => {
+    const { owner, attacker } = await seedTwoTenantContexts();
+    const ownerTemplateId = await seedTemplate(owner);
+
+    const [version]: any[] = await sequelize.query(
+      `SELECT id FROM report_template_versions WHERE template_id = :id ORDER BY version DESC LIMIT 1`,
+      { replacements: { id: ownerTemplateId }, type: QueryTypes.SELECT },
+    );
+
+    const res = await attacker.request.post("/api/reporting/scheduled-reports").send({
+      templateId: ownerTemplateId,
+      templateVersionId: version.id,
+      name: "Cross-tenant schedule",
+      scope: "organization",
+      sectionsConfig: { sections: [{ reportSectionKey: "projectRisks", defaultEnabled: true }] },
+      aiBlocksConfig: {},
+      format: "pdf",
+      scheduleConfig: { frequency: "daily", hour: 9, minute: 0, timezone: "UTC" },
+      deliveryConfig: { saveToStorage: true },
+    });
+    expect(res.status).toBe(400);
+
+    const rows: any[] = await sequelize.query(
+      `SELECT id FROM scheduled_reports WHERE organization_id = :org`,
+      { replacements: { org: attacker.orgId }, type: QueryTypes.SELECT },
+    );
+    expect(rows).toHaveLength(0);
+  });
+});
+```
+
+- [ ] **Step 3: Run the isolation matrix**
+
+This suite needs a real database — it runs under the integration config with its `globalSetup`, not the plain unit runner:
+
+```bash
+cd Servers && npm run test:integration -- --testPathPatterns=tenant-isolation
+```
+
+Expected: the new `report-templates.isolation.test.ts` passes all 5 tests. Other entities' suites should be unaffected — if any that passed before now fails, your registry edit broke the shared setup.
+
+If the run cannot reach a database in this environment, say so explicitly rather than marking the gate passed. An unrun isolation test is not evidence.
+
+- [ ] **Step 4: Re-run the coverage audit**
+
+```bash
+cd Servers && npx ts-node scripts/auditTenantIsolationCoverage.ts 2>&1 | grep -A6 uncoveredScopedTables
+```
+
+Expected: `report_templates`, `report_runs` and `report_run_analyses` are **no longer** in `uncoveredScopedTables`, and `uncoveredCount` has dropped from 45 to 42. The script still exits 1 because of the 42 unrelated pre-existing tables — that is the baseline, not your regression. Do not attempt to fix the other 42 here.
+
+- [ ] **Step 5: Commit**
+
+```bash
+git add Servers/tests/integration/tenant-isolation/tenantIsolation.registry.ts Servers/tests/integration/tenant-isolation/report-templates.isolation.test.ts
+git commit -m "test(reporting): tenant-isolation matrix coverage for report templates
+
+Unit tests mock sequelize.query, so they prove the SQL mentions
+organization_id but never that Postgres honours it. This exercises the
+real endpoints against two seeded orgs: cross-tenant read/update/delete,
+list scoping, mass-assignment of organization_id and is_system_template,
+system-template immutability, and the cross-org templateVersionId
+rejection Task 5 added.
+
+Registers the three reporting tables in the isolation registry, dropping
+the schema-drift audit's uncovered count from 45 to 42. The remaining 42
+are unrelated pre-existing tables and are out of scope here."
+```
+
+---
+
+## Task 14: Documentation
 
 **Files:**
 - Modify: `docs/technical/domains/reporting.md`
@@ -2927,14 +3237,22 @@ Expected: exit 0, zero TypeScript errors.
 
 - [ ] **Backend unit suites**
 
+The DB-backed integration suites live in `Servers/tests/integration/` — **not** `routes/__tests__/integration`, which holds only three mocked route tests. Ignoring the wrong path runs 31 suites without their `globalSetup`, so they all fail on a missing seeded database and the gate can never be green:
+
 ```bash
-cd Servers && npx jest --testPathIgnorePatterns "routes/__tests__/integration"
+cd Servers && npx jest --testPathIgnorePatterns "tests/integration"
 ```
 
-Expected: zero failures. **Baseline note:** 31 integration suites and one empty helper file fail at Phase 2 HEAD for reasons unrelated to this work. If you run the full suite, compare against that baseline rather than expecting green:
+Expected: zero failures.
+
+**Baseline note:** those 31 integration suites plus one empty helper file also fail at Phase 2 HEAD, for reasons unrelated to this work. Do **not** try to establish that baseline with `git stash` — it does not move HEAD, so the run would still exercise all your Phase 3 code and prove nothing, and it would sweep the three deferred tabs (another developer's uncommitted work) into the stash. Compare against a detached checkout instead:
 
 ```bash
-cd Servers && git stash && npx jest 2>&1 | tail -5 && git stash pop
+cd /Users/halitozger/Desktop/verifywise/.claude/worktrees/practical-euler
+git worktree add /tmp/phase3-baseline e58ca27b3 --detach
+ln -s "$(pwd)/Servers/node_modules" /tmp/phase3-baseline/Servers/node_modules
+cd /tmp/phase3-baseline/Servers && npx jest 2>&1 | tail -5
+cd - && git worktree remove /tmp/phase3-baseline --force
 ```
 
 - [ ] **Frontend typecheck**
@@ -2997,21 +3315,27 @@ Expected: `0`.
 cd /Users/halitozger/Desktop/verifywise/.claude/worktrees/practical-euler && git status --porcelain | wc -l
 ```
 
-Expected: still 74 (plus any untracked `.megasaver/` tool artifacts, which are noise). A different count means work that is not ours was staged or reverted.
+Expected: **exactly 74**. That number already includes the untracked `.megasaver/` directories and the other untracked artifacts present before this phase — it is not "74 plus extras". Any other count means work that is not ours was staged, reverted, or newly created.
 
 - [ ] **Cross-org isolation, exercised against a real database**
 
-Unit tests mock `sequelize.query`, so they prove the SQL *contains* `organization_id` but never that PostgreSQL *honours* it. Phase 2 caught a missing tenant guard exactly this way. Seed two organizations, then confirm from org B:
+```bash
+cd Servers && npm run test:integration -- --testPathPatterns=tenant-isolation
+```
 
-1. `GET /api/reporting/templates/:id` for org A's custom template → 404.
-2. `PATCH /api/reporting/templates/:id` on org A's template → 404, and org A's row is unchanged.
-3. `DELETE /api/reporting/templates/:id` on org A's template → 404, and `is_active` is still true.
-4. `PATCH` on a **system** template as an Admin → 404, and the system row is unchanged.
-5. `POST /api/reporting/scheduled-reports` with org A's `templateVersionId` → 400 with the ownership error, and no row inserted.
-6. `GET /api/reporting/runs/:id/analyses` for org A's run → 404, zero analysis rows returned.
-7. `POST /api/reporting/templates` as an **Auditor** (role 4) → 403 from `authorize`.
+Expected: `report-templates.isolation.test.ts` passes all 5 tests (Task 13). This is the gate that proves PostgreSQL actually honours the tenant filters, rather than that the SQL merely mentions them.
 
-Record the actual status codes. Clean up both organizations afterwards and re-confirm the dirty-file count.
+- [ ] **Tenant-isolation coverage audit**
+
+```bash
+cd Servers && npx ts-node scripts/auditTenantIsolationCoverage.ts 2>&1 | grep -A6 uncoveredScopedTables
+```
+
+Expected: no `report_*` table in `uncoveredScopedTables`; `uncoveredCount` 42, down from the pre-existing 45. The script exits 1 either way because of 42 unrelated pre-existing tables — that is the baseline, not a Phase 3 regression.
+
+- [ ] **RBAC, checked by hand**
+
+The isolation harness builds Admin/Editor contexts, so it does not cover the read-only role. Confirm once, manually, that `POST /api/reporting/templates` as an **Auditor** (role 4) returns **403** from `authorize`. Record the actual status code.
 
 ---
 
