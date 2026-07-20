@@ -1,4 +1,8 @@
+import fs from "fs/promises";
+import path from "path";
 import { uploadFile } from "../../utils/fileUpload.utils";
+import { sendAutomationEmail } from "../emailService";
+import { compileMjmlToHtml } from "../../tools/mjmlCompiler";
 
 export interface DeliveryArtifact { content: Buffer; filename: string; mimeType: string; }
 export interface DeliveryCtx { organizationId: number; userId: number; runId?: number; }
@@ -38,19 +42,70 @@ export async function deliverReport(delivery: any, artifact: DeliveryArtifact, c
   }
 
   if (delivery.sendEmailLink || delivery.attachFile) {
+    const recipients: string[] = Array.isArray(delivery.recipients) ? delivery.recipients : [];
+    if (!recipients.length) {
+      // Never report success for a send with nobody to send to. This was the
+      // old behaviour and it is how a misconfigured schedule looked healthy
+      // for weeks.
+      const error = "no recipients configured";
+      if (delivery.sendEmailLink) status.emailLink = { enabled: true, status: "failed", error };
+      if (delivery.attachFile) status.attachment = { enabled: true, status: "failed", error };
+      return { ...status, fileId };
+    }
+
     try {
-      // TODO(reporting): wire real email send. Link should point to
-      // /api/reporting/runs/:id/download (auth-gated); attachment optional.
-      // MVP: record success when the channel is enabled.
+      // One email carries both channels: a link when sendEmailLink is on, the
+      // file itself when attachFile is on. Two enabled channels must not mean
+      // two emails to the same people.
+      const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+      const downloadUrl =
+        delivery.sendEmailLink && ctx.runId
+          ? `${baseUrl}/api/reporting/runs/${ctx.runId}/download`
+          : "";
+      const template = await fs.readFile(
+        path.join(__dirname, "../../templates/report-ready.mjml"),
+        "utf8",
+      );
+      const html = await compileMjmlToHtml(template, {
+        reportName: artifact.filename,
+        generatedAt: new Date().toISOString().slice(0, 10),
+        downloadNote: delivery.attachFile
+          ? "The report is attached to this email."
+          : "Use the link below to download it. You will need to be signed in.",
+        // Rendered as a slot rather than a bare href so an attachment-only
+        // email does not ship a button pointing at nothing.
+        downloadButtonHtml: downloadUrl
+          ? `<p style="margin: 28px 0 0 0;"><a href="${downloadUrl}" class="btn btn-primary">Download report</a></p>`
+          : "",
+      });
+
+      await sendAutomationEmail(
+        recipients,
+        `Your report is ready: ${artifact.filename}`,
+        html,
+        delivery.attachFile
+          ? [
+              {
+                filename: artifact.filename,
+                content: artifact.content,
+                contentType: artifact.mimeType,
+              },
+            ]
+          : undefined,
+      );
+
       if (delivery.sendEmailLink) {
-        status.emailLink = { enabled: true, status: "success", recipients: delivery.recipients };
+        status.emailLink = { enabled: true, status: "success", recipients };
       }
       if (delivery.attachFile) {
-        status.attachment = { enabled: true, status: "success" };
+        status.attachment = { enabled: true, status: "success", recipients };
       }
     } catch (e: any) {
-      if (delivery.sendEmailLink) status.emailLink = { enabled: true, status: "failed", error: e.message };
-      if (delivery.attachFile) status.attachment = { enabled: true, status: "failed", error: e.message };
+      // Record the real error. A failed email does not lose the report —
+      // storage already succeeded and the run stays downloadable.
+      const error = e?.message ?? String(e);
+      if (delivery.sendEmailLink) status.emailLink = { enabled: true, status: "failed", error };
+      if (delivery.attachFile) status.attachment = { enabled: true, status: "failed", error };
     }
   }
   return { ...status, fileId };
