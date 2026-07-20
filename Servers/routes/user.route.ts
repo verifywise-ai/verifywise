@@ -51,6 +51,7 @@ import {
   getUserProfilePhoto,
   deleteUserProfilePhoto,
   resetPassword,
+  logoutUser,
 } from "../controllers/user.ctrl";
 import resetPasswordMiddleware from "../middleware/resetPassword.middleware";
 import authenticateJWT from "../middleware/auth.middleware";
@@ -136,6 +137,15 @@ router.post("/login", loginLimiter, loginUser);
 router.post("/login-microsoft", loginLimiter, loginUserWithMicrosoft);
 
 router.post("/refresh-token", tokenRefreshLimiter, refreshAccessToken);
+
+/**
+ * POST /users/logout
+ *
+ * Revokes the presented refresh token server-side and clears the cookie.
+ * No JWT required: the access token may already be expired, and the
+ * endpoint only revokes the token presented in the cookie.
+ */
+router.post("/logout", logoutUser);
 
 /**
  * POST /users/reset-password
