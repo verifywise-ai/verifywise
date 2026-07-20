@@ -8098,6 +8098,26 @@ paths:
         '500':
           description: 'Internal server error'
       operationId: refreshAccessToken
+  /users/logout:
+    post:
+      summary: 'Log out current session'
+      description: "Revokes the presented refresh token server-side and clears the\nrefresh_token cookie. No bearer token required: only the token presented\nin the cookie is revoked.\n"
+      tags:
+        - Users
+      parameters:
+        -
+          in: cookie
+          name: refresh_token
+          required: false
+          schema:
+            type: string
+          description: 'JWT refresh token set during login'
+      responses:
+        '200':
+          description: 'Logged out; refresh token revoked and cookie cleared'
+        '500':
+          description: 'Internal server error'
+      operationId: logoutUser
   /users/reset-password:
     post:
       summary: 'Reset user password'
