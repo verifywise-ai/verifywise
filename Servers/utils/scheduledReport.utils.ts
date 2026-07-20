@@ -58,3 +58,60 @@ export async function markRunEnqueuedQuery(id: number, lastRun: Date, nextRun: D
     `UPDATE scheduled_reports SET last_run_at = :lastRun, next_run_at = :nextRun, updated_at = NOW() WHERE id = :id`,
     { replacements: { id, lastRun, nextRun }, type: QueryTypes.UPDATE });
 }
+
+// Editable fields only. organization_id, template_id, template_version_id and
+// created_by are deliberately absent — a PATCH must not be able to move a
+// schedule between tenants or re-point it at another template.
+export const UPDATABLE_FIELDS: Record<string, string> = {
+  name: "name",
+  scope: "scope",
+  projectId: "project_id",
+  frameworkId: "framework_id",
+  projectFrameworkId: "project_framework_id",
+  sectionsConfig: "sections_config",
+  aiBlocksConfig: "ai_blocks_config",
+  format: "format",
+  scheduleConfig: "schedule_config",
+  deliveryConfig: "delivery_config",
+};
+
+const JSON_FIELDS = new Set([
+  "sectionsConfig",
+  "aiBlocksConfig",
+  "scheduleConfig",
+  "deliveryConfig",
+]);
+
+export async function updateScheduledReportQuery(
+  id: number,
+  organization_id: number,
+  input: any,
+): Promise<any> {
+  const sets: string[] = [];
+  const replacements: any = { id, organization_id };
+
+  for (const [key, column] of Object.entries(UPDATABLE_FIELDS)) {
+    if (input[key] === undefined) continue;
+    sets.push(`${column} = :${key}`);
+    replacements[key] = JSON_FIELDS.has(key) ? JSON.stringify(input[key]) : input[key];
+  }
+
+  if (!sets.length) return null;
+
+  // A schedule change invalidates the stored next_run_at — without this the
+  // report keeps firing on the old cadence until its next tick.
+  if (input.scheduleConfig !== undefined) {
+    sets.push("next_run_at = :nextRun");
+    replacements.nextRun = computeNextRun(input.scheduleConfig);
+  }
+
+  sets.push("updated_at = NOW()");
+
+  const result: any = await sequelize.query(
+    `UPDATE scheduled_reports SET ${sets.join(", ")}
+      WHERE id = :id AND organization_id = :organization_id AND deleted_at IS NULL
+      RETURNING *`,
+    { replacements, type: QueryTypes.UPDATE },
+  );
+  return result[0]?.[0] ?? null;
+}

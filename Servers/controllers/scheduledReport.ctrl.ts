@@ -23,6 +23,8 @@ import {
   getScheduledReportQuery,
   setActiveQuery,
   softDeleteQuery,
+  updateScheduledReportQuery,
+  UPDATABLE_FIELDS,
 } from "../utils/scheduledReport.utils";
 import { runScheduledReport } from "../services/reporting/reportRunOrchestrator";
 
@@ -93,6 +95,60 @@ export async function deleteScheduledReport(req: Request, res: Response): Promis
     await softDeleteQuery(Number(req.params.id), req.organizationId!);
     return res.status(200).json(STATUS_CODE[200]({ ok: true }));
   } catch (error) {
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+  }
+}
+
+export async function updateScheduledReport(req: Request, res: Response): Promise<any> {
+  logProcessing({
+    description: "updateScheduledReport",
+    functionName: "updateScheduledReport",
+    fileName: "scheduledReport.ctrl.ts",
+    userId: req.userId!,
+    organizationId: req.organizationId!,
+  });
+  try {
+    const body = req.body ?? {};
+    // The allowlist is applied here, not only in the query builder, so that
+    // organization_id, template_id, template_version_id and created_by never
+    // reach the UPDATE at all — a PATCH cannot move a schedule between tenants.
+    const input: Record<string, any> = {};
+    for (const key of Object.keys(UPDATABLE_FIELDS)) {
+      if (body[key] !== undefined) input[key] = body[key];
+    }
+    if (!Object.keys(input).length) {
+      return res.status(400).json(STATUS_CODE[400]({ errors: ["no updatable fields supplied"] }));
+    }
+
+    // Re-validate the delivery block if it is being replaced, so a PATCH
+    // cannot smuggle in the malformed recipients that create rejects.
+    if (input.deliveryConfig !== undefined || input.sectionsConfig !== undefined) {
+      const errors = validateScheduledReportInput({
+        scope: input.scope ?? "organization",
+        projectId: input.projectId,
+        sectionsConfig: input.sectionsConfig ?? { sections: [{ reportSectionKey: "placeholder" }] },
+        deliveryConfig: input.deliveryConfig ?? { saveToStorage: true },
+      } as any);
+      if (errors.length) return res.status(400).json(STATUS_CODE[400]({ errors }));
+    }
+
+    const row = await updateScheduledReportQuery(
+      Number(req.params.id),
+      req.organizationId!,
+      input,
+    );
+    if (!row) return res.status(404).json(STATUS_CODE[404]("not found"));
+    return res.status(200).json(STATUS_CODE[200](row));
+  } catch (error) {
+    await logFailure({
+      eventType: "Update",
+      description: "updateScheduledReport failed",
+      functionName: "updateScheduledReport",
+      fileName: "scheduledReport.ctrl.ts",
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }
