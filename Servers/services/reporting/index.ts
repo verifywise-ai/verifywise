@@ -23,25 +23,14 @@ import {
 } from "./analyzers/collectAnalyzerInputs";
 import { mapAnalysesToSummaries } from "./analyzers/mapToSummaries";
 import { getLLMKeysWithKeyQuery } from "../../utils/llmKey.utils";
+import { SECTION_KEYS } from "./sectionCatalog";
 
 /**
- * Valid section keys that can be passed directly from the frontend
+ * Valid section keys that can be passed directly from the frontend.
+ * Derived from the section catalog plus the "all" wildcard sentinel, which is
+ * not a section. See services/reporting/sectionCatalog.ts.
  */
-const VALID_SECTION_KEYS = new Set([
-  "projectRisks",
-  "vendorRisks",
-  "modelRisks",
-  "compliance",
-  "assessment",
-  "clausesAndAnnexes",
-  "nistSubcategories",
-  "vendors",
-  "models",
-  "trainingRegistry",
-  "policyManager",
-  "incidentManagement",
-  "all",
-]);
+const VALID_SECTION_KEYS = new Set([...SECTION_KEYS, "all"]);
 
 /**
  * Map report type strings to section keys

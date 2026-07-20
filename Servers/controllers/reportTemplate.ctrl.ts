@@ -17,6 +17,7 @@ import {
   getTemplateByIdQuery,
   getLatestVersionQuery,
 } from "../utils/reportTemplate.utils";
+import { REPORT_SECTION_CATALOG } from "../services/reporting/sectionCatalog";
 
 export async function listTemplates(req: Request, res: Response): Promise<any> {
   try {
@@ -35,4 +36,10 @@ export async function getTemplate(req: Request, res: Response): Promise<any> {
   } catch (e) {
     return res.status(500).json(STATUS_CODE[500]((e as Error).message));
   }
+}
+
+export async function listSections(_req: Request, res: Response): Promise<any> {
+  // Static catalog, no tenant data — no org scoping needed, but the route
+  // still requires a valid JWT like every other reporting read.
+  return res.status(200).json(STATUS_CODE[200](REPORT_SECTION_CATALOG));
 }
