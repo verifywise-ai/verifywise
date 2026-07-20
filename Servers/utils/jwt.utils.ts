@@ -128,10 +128,12 @@ const generateToken = (payload: Object) => {
 };
 
 /**
- * Generates a JWT token for invitation and password-reset emails (1 week)
+ * Generates a JWT token for invitation and password-reset emails.
+ * Defaults to 1 week (invitations); pass a shorter lifetime for
+ * password-reset links.
  */
-const generateInviteToken = (payload: Object) => {
-  return signToken(payload, ONE_WEEK_MS, process.env.JWT_SECRET as string);
+const generateInviteToken = (payload: Object, expiresInMs: number = ONE_WEEK_MS) => {
+  return signToken(payload, expiresInMs, process.env.JWT_SECRET as string);
 };
 
 /**
@@ -171,5 +173,6 @@ export {
   generateRefreshToken,
   generateApiToken,
   ONE_WEEK_MS,
+  ONE_HOUR_MS,
   THIRTY_DAYS_MS,
 };
