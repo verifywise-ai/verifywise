@@ -17,9 +17,34 @@ import {
 import { useCreateScheduledReport } from "../../../application/hooks/useReporting";
 import { useProjects } from "../../../application/hooks/useProjects";
 import { showAlert } from "../../../infrastructure/api/customAxios";
+import type { AiBlocksConfig } from "../../../domain/interfaces/i.reporting";
 
 const STEPS = ["Scope", "Sections", "AI Insights", "Schedule", "Delivery", "Review"];
 const FREQUENCIES = ["daily", "weekly", "monthly"];
+
+// The seven blocks Phase 2 shipped on the backend. Previously three of these
+// were hardcoded here and the other four were unreachable from the UI.
+const AI_BLOCKS: Array<{ key: keyof AiBlocksConfig; label: string }> = [
+  { key: "sectionSummaries", label: "Per-section summaries" },
+  { key: "executiveSummary", label: "Executive summary" },
+  { key: "keyFindings", label: "Key findings" },
+  { key: "recommendedActions", label: "Recommended actions" },
+  { key: "riskAnalysis", label: "Risk analysis" },
+  { key: "complianceGap", label: "Compliance gap analysis" },
+  { key: "vendorRisk", label: "Third-party risk analysis" },
+];
+
+// complianceGap and vendorRisk default off: each enabled block is one
+// language-model call on every scheduled run.
+const DEFAULT_AI_BLOCKS: AiBlocksConfig = {
+  sectionSummaries: true,
+  executiveSummary: true,
+  keyFindings: true,
+  recommendedActions: true,
+  riskAnalysis: true,
+  complianceGap: false,
+  vendorRisk: false,
+};
 
 export default function ConfigureReportWizard({
   template,
@@ -36,12 +61,8 @@ export default function ConfigureReportWizard({
   const [sections, setSections] = useState<any[]>(
     template.latestVersion?.sections_config?.sections ?? [],
   );
-  const [ai, setAi] = useState<any>(
-    template.latestVersion?.ai_blocks_config ?? {
-      executiveSummary: true,
-      keyFindings: true,
-      recommendedActions: true,
-    },
+  const [ai, setAi] = useState<AiBlocksConfig>(
+    template.latestVersion?.ai_blocks_config ?? DEFAULT_AI_BLOCKS,
   );
   const [schedule, setSchedule] = useState<any>({
     frequency: template.recommended_frequency ?? "daily",
@@ -185,17 +206,22 @@ export default function ConfigureReportWizard({
 
       {active === 2 && (
         <Stack spacing={1}>
-          <Typography variant="h6">AI Insights</Typography>
-          {(["executiveSummary", "keyFindings", "recommendedActions"] as const).map((k) => (
+          <Typography variant="h6">AI insights</Typography>
+          <Typography variant="body2" color="text.secondary">
+            Each enabled block is one language-model call per report run.
+          </Typography>
+          {AI_BLOCKS.map(({ key, label }) => (
             <FormControlLabel
-              key={k}
+              key={key}
               control={
                 <Checkbox
-                  checked={!!ai[k]}
-                  onChange={(e) => setAi((prev: any) => ({ ...prev, [k]: e.target.checked }))}
+                  checked={!!ai[key]}
+                  onChange={(e) =>
+                    setAi((prev) => ({ ...prev, [key]: e.target.checked }))
+                  }
                 />
               }
-              label={k}
+              label={label}
             />
           ))}
         </Stack>
