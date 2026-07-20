@@ -514,12 +514,13 @@ All endpoints are auth-protected and org-scoped.
 | PATCH | `/api/reporting/templates/:id` | Update a template (see [Template Write Path](#template-write-path)) |
 | DELETE | `/api/reporting/templates/:id` | Archive a template (`is_active = false`) |
 | GET | `/api/reporting/scheduled-reports` | List scheduled reports |
-| POST | `/api/reporting/scheduled-reports` | Create a scheduled report |
+| POST | `/api/reporting/scheduled-reports` | Create a scheduled report (recipients are format-validated here) |
+| PATCH | `/api/reporting/scheduled-reports/:id` | Update a scheduled report (see [Updating a Schedule](#updating-a-schedule)) |
 | POST | `/api/reporting/scheduled-reports/:id/run-now` | Trigger an immediate run |
 | POST | `/api/reporting/scheduled-reports/:id/pause` | Pause schedule |
 | POST | `/api/reporting/scheduled-reports/:id/resume` | Resume schedule |
-| DELETE | `/api/reporting/scheduled-reports/:id` | Delete a scheduled report |
-| GET | `/api/reporting/runs` | List report runs |
+| DELETE | `/api/reporting/scheduled-reports/:id` | Soft-delete a scheduled report |
+| GET | `/api/reporting/runs` | List report runs — **paginated**, returns `{rows, total, limit, offset}` (see [Run Listing is Paginated](#run-listing-is-paginated)) |
 | GET | `/api/reporting/runs/:id` | Get a run |
 | GET | `/api/reporting/runs/:id/download` | Download a run's output (org-scoped) |
 | GET | `/api/reporting/runs/:id/analyses` | Stored `report_run_analyses` rows for a run (doubly org-scoped: the run and the analyses are both filtered by `organization_id`) |
@@ -545,26 +546,71 @@ All endpoints are auth-protected and org-scoped.
 | Service | Responsibility |
 |---------|---------------|
 | `ReportTemplateResolver` | Resolves a template config into a `ReportGenerationRequest`, then reuses the existing `generateReport`. |
-| `reportDeliveryService` | Persists output to storage via `uploadFile`. Email link/attachment delivery is a guarded no-op TODO for MVP. |
+| `reportDeliveryService` | Persists output to storage via `uploadFile` **and sends the delivery email** (see [Email Delivery](#email-delivery)). |
 | `reportRunOrchestrator` | Drives a run end to end and records terminal status (`success` / `partial_success` / `failed`). |
 | `scheduleCalculator` | Computes `next_run` from the cron expression via `cron-parser` (`computeNextRun`). |
+
+### Email Delivery
+
+Delivery genuinely sends email. Earlier revisions recorded `status: "success"` for the email channels without calling any email function — the service carried its own TODO admitting it, so a misconfigured schedule looked healthy indefinitely.
+
+`reportDeliveryService` now reads `Servers/templates/report-ready.mjml`, compiles it with `compileMjmlToHtml` (which takes MJML **source**, not a template name), and sends via `sendAutomationEmail`.
+
+- **Both email channels share one send.** `sendEmailLink` contributes a download button, `attachFile` contributes the attachment. Two enabled channels must not mean two emails to the same people.
+- **A throw records `failed` with the provider's real error**, not a generic string, and does not lose the report — storage has already succeeded and the run stays downloadable.
+- **Empty recipients is `failed`, not `success`.** This is the case that previously made a broken schedule look fine.
+- `reportRunOrchestrator.ts:32` already mapped any failed channel to `partial_success`. That mapping was dead for email until this fix and is now live: an email failure downgrades an otherwise-successful run to `partial_success` rather than reporting `success`.
+
+**Recipients are format-validated at schedule creation** via `isValidEmail` (exported from `Servers/services/email/types.ts` for this). The validator names *every* bad address, not just the first, because the person who typed them is present at creation time and long gone by the time a worker log records the failure. Send-time validation inside `sendAutomationEmail` remains the backstop.
+
+### Run Listing is Paginated
+
+**Breaking response-shape change.** `GET /api/reporting/runs` previously returned a bare array under a hard `LIMIT 200`. It now returns an envelope:
+
+```json
+{ "rows": [], "total": 0, "limit": 200, "offset": 0 }
+```
+
+`limit` is clamped to a maximum of 200. The defaults (`limit=200`, `offset=0`) reproduce the old result set exactly, so a caller that passes nothing sees what it saw before — but the **shape** changed, and any consumer that indexed the response directly must be updated. `total` lets a UI page without a second endpoint.
+
+Frontend consumers are insulated: `useReportRuns` unwraps the envelope with a React Query `select: (page) => page.rows`, so it still yields a plain array and its contract is unchanged. `useReportRunsPage` exposes the full envelope for callers that need `total`.
+
+### Updating a Schedule
+
+`PATCH /api/reporting/scheduled-reports/:id` is restricted to Admin / Editor via `authorize(["Admin", "Editor"])`.
+
+**The field allowlist is enforced twice** — in the controller and again in the query builder (`UPDATABLE_FIELDS` in `Servers/utils/scheduledReport.utils.ts`). `organization_id`, `template_id`, `template_version_id` and `created_by` are deliberately absent from it. A PATCH therefore cannot move a schedule between tenants or re-point it at another org's template, and neither layer alone is load-bearing.
+
+**A `schedule_config` change recomputes `next_run_at`.** Without this the stored value would still reflect the old cron expression, and the schedule would keep firing on its previous cadence until the next run rewrote it.
+
+### Frontend Schedule Management
+
+The Reporting UI can now edit and delete schedules. Note that the soft-delete endpoint had existed since the reporting MVP **with no caller at all** — it was reachable only by hand-crafting a request.
+
+The wizard (`ConfigureReportWizard.tsx`) now:
+
+- **Offers PDF and DOCX.** The format was previously hardcoded with no state behind it, so the DOCX generator was unreachable from the UI.
+- **Disables AI blocks when the org has no LLM key**, gated on the *settled* value of `useLLMKeyStatus`. `hasKeys` is optimistically `true` while loading, so the gate checks `!loading && !hasKeys`; reading `hasKeys` alone would flash the controls enabled and then disable them.
 
 ### RBAC
 
 | Operation | Access |
 |-----------|--------|
-| Writes (create/run-now/pause/resume/delete scheduled reports) | Admin / Editor (via `authorize` middleware) |
+| Writes (create/update/run-now/pause/resume/delete scheduled reports) | Admin / Editor (via `authorize` middleware) |
 | Template writes (create / update / archive) | Admin / Editor (via `authorize` middleware) |
 | Reads (section catalog, templates, scheduled reports, runs) | Any authenticated user (JWT) |
 | Run download, run analyses | Authenticated + org-scoped |
 
 The existing **Admin-only** manual generate endpoints are preserved.
 
+### The `scheduled_report` Automation Trigger is Retained Deliberately
+
+> **The `scheduled_report` automation trigger is retained deliberately.** The original design called for retiring it as a vestigial third caller of `generateReport()`. It is not vestigial: the trigger type is seeded in `20260226234301-public-schema-tables.js:901`, handled by `sendReportNotification()` in `Servers/services/automations/automationWorker.ts:304-428`, and — decisively — created at runtime by the Automations UI (`ConfigurationPanel/index.tsx:665`). Any organization that built a "Scheduled Report" automation has a live row this path serves, and removing it would break them silently with no migration. It duplicates the newer `scheduled_reports` pipeline conceptually, so consolidating them is worthwhile, but that is a migration project with a data-movement story — not a deletion.
+
 ### Known MVP Limitations
 
-- Email/attachment delivery is **not yet wired** — storage persistence works, but email link/attachment send is a guarded no-op TODO.
 - Structured `recommendedActions` emission is **scaffolding only** — runs currently render the existing recommendations rather than emitting structured actions.
-- `TemplatesTab`, `ScheduledReportsTab` and `ArchiveTab` have **no CRUD affordances** yet. `TemplateBuilder` is reachable only from the "New template" button on the Reporting page; editing and archiving an existing template from the tabs is deferred to a follow-up.
+- Template editing and archiving from `TemplatesTab` is still deferred — `TemplateBuilder` is reachable only from the "New template" button on the Reporting page. Scheduled-report editing and deletion *are* wired (see [Frontend Schedule Management](#frontend-schedule-management)).
 - `ReportAnalysisPanel` is **not built**. `GET /api/reporting/runs/:id/analyses`, the `useRunAnalyses` hook and the response types all exist, but nothing renders them yet.
 - A `PATCH` carrying **both** metadata and config performs two un-transacted writes. If the version insert fails, the metadata update is already committed.
 

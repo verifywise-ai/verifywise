@@ -13648,6 +13648,35 @@ paths:
         -
           bearerAuth: []
       description: 'Requires role: Admin or Editor'
+  '/reporting/scheduled-reports/{id}':
+    patch:
+      summary: 'Update Scheduled Report'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Reporting/Scheduled Reports'
+      operationId: updateScheduledReport
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or Editor'
+    delete:
+      summary: 'Delete Scheduled Report'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Reporting/Scheduled Reports'
+      operationId: deleteScheduledReport
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or Editor'
   '/reporting/scheduled-reports/{id}/pause':
     post:
       summary: 'Pause Scheduled Report'
@@ -13689,21 +13718,6 @@ paths:
       tags:
         - 'Reporting/Scheduled Reports'
       operationId: runScheduledReportNow
-      security:
-        -
-          bearerAuth: []
-      description: 'Requires role: Admin or Editor'
-  '/reporting/scheduled-reports/{id}':
-    delete:
-      summary: 'Delete Scheduled Report'
-      responses:
-        '200':
-          description: Success
-        '500':
-          description: 'Internal server error'
-      tags:
-        - 'Reporting/Scheduled Reports'
-      operationId: deleteScheduledReport
       security:
         -
           bearerAuth: []

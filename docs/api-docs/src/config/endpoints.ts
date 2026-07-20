@@ -8211,6 +8211,30 @@ export const reportingscheduledReportsEndpoints: Endpoint[] = [
     tag: "Reporting/Scheduled Reports",
   },
   {
+    method: 'PATCH',
+    path: '/reporting/scheduled-reports/{id}',
+    summary: "Update Scheduled Report",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Scheduled Reports",
+  },
+  {
+    method: 'DELETE',
+    path: '/reporting/scheduled-reports/{id}',
+    summary: "Delete Scheduled Report",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Scheduled Reports",
+  },
+  {
     method: 'POST',
     path: '/reporting/scheduled-reports/{id}/pause',
     summary: "Pause Scheduled Report",
@@ -8238,18 +8262,6 @@ export const reportingscheduledReportsEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/reporting/scheduled-reports/{id}/run-now',
     summary: "Run Scheduled Report Now",
-    description: "Requires role: Admin or Editor",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Reporting/Scheduled Reports",
-  },
-  {
-    method: 'DELETE',
-    path: '/reporting/scheduled-reports/{id}',
-    summary: "Delete Scheduled Report",
     description: "Requires role: Admin or Editor",
     requiresAuth: true,
     responses: [
