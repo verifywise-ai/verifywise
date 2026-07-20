@@ -13,7 +13,10 @@
 import { Request, Response } from "express";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { logProcessing, logFailure } from "../utils/logger/logHelper";
-import { validateScheduledReportInput } from "../services/reporting/scheduledReportService";
+import {
+  validateScheduledReportInput,
+  validateTemplateVersionOwnership,
+} from "../services/reporting/scheduledReportService";
 import {
   createScheduledReportQuery,
   listScheduledReportsQuery,
@@ -32,7 +35,15 @@ export async function createScheduledReport(req: Request, res: Response): Promis
     organizationId: req.organizationId!,
   });
   try {
-    const errors = validateScheduledReportInput(req.body);
+    const errors = [
+      ...validateScheduledReportInput(req.body),
+      // await is load-bearing: see validateTemplateVersionOwnership's note.
+      ...(await validateTemplateVersionOwnership(
+        req.body?.templateId,
+        req.body?.templateVersionId,
+        req.organizationId!,
+      )),
+    ];
     if (errors.length) return res.status(400).json(STATUS_CODE[400]({ errors }));
     const row = await createScheduledReportQuery(req.body, req.organizationId!, req.userId!);
     return res.status(201).json(STATUS_CODE[201](row));
