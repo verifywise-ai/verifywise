@@ -44,16 +44,6 @@ const registerJWT = async (
 
     const roleIsKnown = await hasRoleId(Number(roleId));
 
-    console.log("🔍 Registration validation:", {
-      tokenRoleId: decoded.roleId,
-      requestRoleId: roleId,
-      tokenOrgId: decoded.organizationId,
-      requestOrgId: organizationId,
-      roleIdMatch: Number(decoded.roleId) === Number(roleId),
-      orgIdMatch: Number(decoded.organizationId) === Number(organizationId),
-      roleInMap: roleIsKnown,
-    });
-
     // Convert both to numbers for comparison to handle string/number mismatches
     if (
       Number(decoded.roleId) !== Number(roleId) ||

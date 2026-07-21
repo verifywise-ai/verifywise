@@ -106,8 +106,8 @@ describe("passwordValidation", () => {
   });
 
   describe("max length", () => {
-    it("should report isMaxLength false for password exceeding 32 characters", () => {
-      const result = passwordValidation("A1" + "a".repeat(31));
+    it("should report isMaxLength false for password exceeding 128 characters", () => {
+      const result = passwordValidation("A1" + "a".repeat(127));
       expect(result.isMaxLength).toBe(false);
     });
   });

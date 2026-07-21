@@ -63,8 +63,8 @@ export class FormValidationBuilder {
     return this;
   }
   withLongPassword() {
-    this.form.password = "P".repeat(33) + "1!";
-    this.form.confirmPassword = "P".repeat(33) + "1!";
+    this.form.password = "P".repeat(129) + "1!";
+    this.form.confirmPassword = "P".repeat(129) + "1!";
     return this;
   }
 

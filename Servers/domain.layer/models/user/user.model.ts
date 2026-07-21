@@ -205,7 +205,7 @@ export class UserModel extends Model<UserModel> {
     user.name = name;
     user.surname = surname;
     user.email = email;
-    user.password_hash = isSSO ? (null as unknown as string) : await bcrypt.hash(password!, 10);
+    user.password_hash = isSSO ? (null as unknown as string) : await bcrypt.hash(password!, 12);
     user.role_id = role_id;
     user.created_at = new Date();
     user.last_login = new Date();
@@ -418,7 +418,7 @@ export class UserModel extends Model<UserModel> {
     }
 
     // Hash and update the password
-    this.password_hash = await bcrypt.hash(newPassword, 10);
+    this.password_hash = await bcrypt.hash(newPassword, 12);
   }
 
   /**
