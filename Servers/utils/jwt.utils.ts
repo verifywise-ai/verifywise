@@ -53,6 +53,9 @@ const getTokenPayload = (token: any): any => {
     // `exp` claim is still present so any standard JWT library also
     // rejects expired tokens.
     return Jwt.verify(token, process.env.JWT_SECRET as string, {
+      // Pin the algorithm so a token signed with a different alg (e.g.
+      // alg-confusion / "none" downgrade attempts) is rejected outright.
+      algorithms: ["HS256"],
       ignoreExpiration: true,
     }) as {
       id: number;
@@ -94,6 +97,7 @@ const getTokenPayload = (token: any): any => {
 const getRefreshTokenPayload = (token: any): any => {
   try {
     return Jwt.verify(token, process.env.REFRESH_TOKEN_SECRET as string, {
+      algorithms: ["HS256"],
       ignoreExpiration: true,
     }) as {
       id: number;
