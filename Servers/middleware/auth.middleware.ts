@@ -40,6 +40,7 @@ import {
   hashApiToken,
   touchApiTokenLastUsedQuery,
 } from "../utils/tokens.utils";
+import { rlsEnforcement } from "./rls.middleware";
 
 /**
  * Express middleware for JWT authentication and authorization
@@ -251,7 +252,11 @@ const authenticateJWT = async (
         organizationId: req.organizationId ?? 0,
       },
       () => {
-        next();
+        // RLS Phase 2 (flag-gated, OFF by default): when
+        // RLS_ENFORCEMENT_ENABLED=true, establishes the per-request
+        // transaction + SET LOCAL app.current_org before the request
+        // reaches any route handler. Pass-through otherwise.
+        rlsEnforcement(req, res, next);
       },
     );
   } catch (error) {
