@@ -131,3 +131,48 @@ The risk concentrates in four themes:
 - **P2:** deferred-table burndown · MFA/lockout · enforced CSP · CodeQL/SBOM/CODEOWNERS · first Burp engagement · global rate limiter · generic 500s · constant-time comparisons
 
 *Remediation implementation is tracked in commit history on this branch (2026-07-21 onward).*
+
+---
+
+## Remediation Status (2026-07-21) — 24 commits on `mo-374-jul-20-advanced-security-scanning`
+
+### ✅ Remediated
+
+| Finding | Fix | Commit |
+|---|---|---|
+| 3.1/2.2 Critical secrets in git | Untracked `.env.dev`, `.env.prod`, `kubernetes/dev/secrets.env`; gitignore extended | `832df5fef` |
+| 2.1 SuperAdmin escalation (BFLA) | `roleId===5` rejected + SuperAdmin-role modification blocked + role-existence validation in `updateUserById`; 6 new tests | `ab6e09bda` |
+| 4.1 Unbounded multer uploads | Shared `createMemoryUpload()` factory (30MB/10 files/MIME allowlist) applied to all 5 routes + `file.route.ts` | `a234fbbd7` |
+| 2.3 RBAC gaps | `authorize()` enforced on aiApp/aiApproval/aiContent/aiAudit/agentDiscovery write routes | `3b963ba2a` |
+| 4.4 Raw `error.message` in 500s | Generic messages in all 7 controllers | `315afba81` |
+| 2.7/1.6 Timing-unsafe key comparisons | `crypto.timingSafeEqual` + `hmac.compare_digest` | `8dcd814f8` |
+| 5.3 Non-blocking CI gates | dependency-review + Semgrep (baseline-diff) now blocking | `e1eb5ed0d`, `75300976c` |
+| 4.2 ZAP baseline never failed | rules.tsv FAIL rules honored (backend scan); config mount fixed | `510f0afa0` |
+| 5.2 Python dep blind spot | pip-audit in all Python CI; Dependabot pip ×4 + docker ×4 | `f51dd80db` |
+| 5.1 AIGateway/GRSModule zero CI | New `aigateway-checks.yml` + `grsmodule-checks.yml` (pytest + pip-audit) | `f51dd80db` |
+| 5.5/4.3 Frontend audit + API drift | npm audit on PRs; `check:api-drift` confirmed in backend CI | `d79b26134` |
+| 5.4/5.6/5.8 CodeQL, SBOM, CODEOWNERS | New workflows + `.github/CODEOWNERS` | `633417f67` |
+| 5.9/5.10 Nightly images + registry typo | Trivy on nightly `:test` images; `ghcr.io` fixed | `c04863190` |
+| 1.1/1.2 RLS inert + superuser role | Phase 2 implemented behind `RLS_ENFORCEMENT_ENABLED` (default off): `verifywise_app` role migration, per-request `SET LOCAL app.current_org`, 11 middleware tests | `e0466153f` |
+| 4.5 No global rate limiter | `generalApi` limiter (300 req/min prod) before route mounts; webhooks/health exempt | `4d9eeb9ae` |
+| 2.8 JWT alg not pinned | `algorithms: ["HS256"]` on all verifications | `ac0bd44c6` |
+| 2.9 Password policy | Max 128 chars, bcrypt cost 12, debug logging removed (backend + frontend in sync) | `bfb74ddd5` |
+| 3.2/3.3 NodePort + wildcard CORS ingress | NodePort manifest deleted; dev-template ingress locked to app origin; placeholder example secrets | `65733b12f` |
+| 3.9 K8s hardening | `containerPort: 30` → 80; `allowPrivilegeEscalation: false` + drop ALL caps | `434055c9b` |
+| 3.6 TLS versions in docs only | TLSv1.2/1.3 pinned in ansible template + prod ingress | `93a8c9328` |
+| 3.5 CSP `connect-src http:` | Removed; Report-Only → enforced promotion path documented | `166c27d17` |
+| 1.8/1.9/1.4 Backend lows | Audit-ledger UPDATE org-scoped; compliance fail-closed; SSO exposure justified/documented | `22e18b7e9` |
+| 1.5 SuperAdmin cross-org unaudited | Fire-and-forget audit-ledger logging on every cross-org access | `1d402804c` |
+| 5.7/4.7 Pre-commit + stale spec | gitleaks staged scan in husky hook; `swagger.old.yaml` deleted | `95867aed4` |
+
+### ⏳ Remaining (requires infra/credentials or larger projects)
+
+1. **Secret rotation + history purge** (3.1): all previously committed secrets must be rotated and history purged with `git filter-repo` — requires coordination (force-push).
+2. **RLS flag activation**: before setting `RLS_ENFORCEMENT_ENABLED=true`, complete the pre-enable checklist in `docs/technical/security/rls-rollout.md` (auth-middleware lookups run before request RLS context; background jobs don't set the GUC) and provision `verifywise_app` credentials.
+3. **Deferred-table burndown** (1.3): ~150 scoped tables in `deferredScopedTables` — wave-based project.
+4. **MFA + account lockout** (2.5); **access-token storage/revocation** (2.4/2.6) — product-level changes.
+5. **Enforced CSP without `unsafe-inline`** (3.5) — needs violation-report triage.
+6. **Non-root container images** — Dockerfiles need `USER` directives before `runAsNonRoot` can be set (TODOs in `kubernetes/base/deployment.yaml`).
+7. **First manual Burp engagement** per the test plan in §4; weekly authenticated ZAP UI scan.
+8. **SHA-pinning GitHub Actions** (5.10); branch-protection/required-checks configuration on GitHub (cannot be done from the repo).
+9. **Expect initial CI failures**: the newly-blocking gates (dependency-review, Semgrep, pip-audit, npm audit) will flag the existing backlog (GitHub reports 23 high vulns on the default branch) — triage is the next operational task.
