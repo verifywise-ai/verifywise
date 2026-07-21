@@ -27,6 +27,13 @@ spec:
               name: web
               protocol: TCP
           resources: {}
+          # TODO: add `runAsNonRoot: true` once Servers/Dockerfile sets a
+          # non-root USER (the node:24-alpine3.20 image currently runs as root).
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           envFrom:
             - configMapRef:
                 name: verifywise-config
@@ -132,9 +139,20 @@ spec:
             - secretRef:
                 name: verifywise-secret
           ports:
-            - containerPort: 30
+            - containerPort: 80
               name: web
               protocol: TCP
+          # TODO: switch Clients/Dockerfile to nginxinc/nginx-unprivileged (or a
+          # non-root nginx variant) and then add `runAsNonRoot: true` here. The
+          # current image (nginx:1.31.3-alpine) starts its master process as root.
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
+              # nginx must bind port 80 as root, so keep NET_BIND_SERVICE.
+              add:
+                - NET_BIND_SERVICE
 
         - name: verifywise-redis
           image: redis:7
@@ -162,6 +180,13 @@ spec:
               name: web
               protocol: TCP
           resources: {}
+          # TODO: add `runAsNonRoot: true` once AIGateway/Dockerfile sets a
+          # non-root USER (the python:3.12-slim image currently runs as root).
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           envFrom:
             - configMapRef:
                 name: verifywise-config
@@ -205,6 +230,13 @@ spec:
               name: web
               protocol: TCP
           resources: {}
+          # TODO: add `runAsNonRoot: true` once EvalServer/Dockerfile sets a
+          # non-root USER (the python:3.12-slim image currently runs as root).
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           envFrom:
             - configMapRef:
                 name: verifywise-config
