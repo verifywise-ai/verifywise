@@ -51,7 +51,7 @@
     "@types/passport-jwt": "^4.0.1",
     "@types/uuid": "^10.0.0",
     "ai": "^6.0.177",
-    "axios": "^1.16.0",
+    "axios": "^1.18.1",
     "bcrypt": "^6.0.0",
     "bullmq": "^5.76.6",
     "cookie-parser": "^1.4.7",
