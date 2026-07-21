@@ -48,7 +48,13 @@ import Jwt from "jsonwebtoken";
  */
 const getTokenPayload = (token: any): any => {
   try {
-    return Jwt.verify(token, process.env.JWT_SECRET as string) as {
+    // ignoreExpiration: expiry is enforced via the custom `expire` claim
+    // below (preserves the established 406/401 semantics). The standard
+    // `exp` claim is still present so any standard JWT library also
+    // rejects expired tokens.
+    return Jwt.verify(token, process.env.JWT_SECRET as string, {
+      ignoreExpiration: true,
+    }) as {
       id: number;
       email: string;
       expire: number;
@@ -87,7 +93,9 @@ const getTokenPayload = (token: any): any => {
  */
 const getRefreshTokenPayload = (token: any): any => {
   try {
-    return Jwt.verify(token, process.env.REFRESH_TOKEN_SECRET as string) as {
+    return Jwt.verify(token, process.env.REFRESH_TOKEN_SECRET as string, {
+      ignoreExpiration: true,
+    }) as {
       id: number;
       email: string;
       expire: number;
@@ -113,6 +121,10 @@ const signToken = (payload: Object, expiresInMs: number, secret: string): string
         expire: Date.now() + expiresInMs,
       },
       secret,
+      // Standard exp claim: any spec-compliant verifier now rejects expired
+      // tokens even if it only checks the signature (defense in depth on
+      // top of the custom `expire` checks in our middleware).
+      { expiresIn: Math.floor(expiresInMs / 1000) },
     );
   } catch (error) {
     console.error(error);
