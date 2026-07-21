@@ -59,6 +59,11 @@ jobs:
           .venv/bin/python -m pip install -r requirements-test.txt
           .venv/bin/python -m pip install -r requirements.txt
 
+      - name: Audit EvalServer dependencies (pip-audit)
+        run: |
+          .venv/bin/python -m pip install pip-audit
+          .venv/bin/python -m pip_audit -r requirements.txt
+
       - name: Run EvalServer tests (excluding integration smoke tests)
         env:
           DB_USER: test
@@ -107,6 +112,11 @@ jobs:
           .venv/bin/python -m pip install --upgrade pip
           .venv/bin/python -m pip install -r requirements-test.txt
           .venv/bin/python -m pip install -r requirements.txt
+
+      - name: Audit EvaluationModule dependencies (pip-audit)
+        run: |
+          .venv/bin/python -m pip install pip-audit
+          .venv/bin/python -m pip_audit -r requirements.txt
 
       - name: Run EvaluationModule tests
         run: |
