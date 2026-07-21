@@ -121,7 +121,11 @@ jobs:
           done
 
       # ---- ZAP baseline scans (passive only) ----
+      # Kept non-blocking via continue-on-error (not a shell `|| true`) so the
+      # report is still generated and uploaded; CSP is currently report-only
+      # and its passive findings are being triaged.
       - name: ZAP baseline — frontend
+        continue-on-error: true
         run: |
           mkdir -p zap-reports && chmod 777 zap-reports
           docker run --rm --network host \
@@ -129,16 +133,19 @@ jobs:
             ghcr.io/zaproxy/zaproxy:stable \
             zap-baseline.py -t http://localhost:5173 \
             -c /zap/wrk/.zap/rules.tsv \
-            -r baseline-frontend.html -J baseline-frontend.json -I || true
+            -r zap-reports/baseline-frontend.html -J zap-reports/baseline-frontend.json -I
 
+      # Blocking: rules.tsv FAIL rules (SQLi/XSS/traversal) exit non-zero and
+      # fail the job. -I keeps WARN-level alerts non-fatal.
       - name: ZAP baseline — backend API
         run: |
+          mkdir -p zap-reports && chmod 777 zap-reports
           docker run --rm --network host \
-            -v ${{ github.workspace }}/zap-reports:/zap/wrk:rw \
+            -v ${{ github.workspace }}:/zap/wrk:rw \
             ghcr.io/zaproxy/zaproxy:stable \
             zap-baseline.py -t http://localhost:3000/api \
             -c /zap/wrk/.zap/rules.tsv \
-            -r baseline-backend.html -J baseline-backend.json -I || true
+            -r zap-reports/baseline-backend.html -J zap-reports/baseline-backend.json -I
 
       - name: Upload ZAP baseline reports
         if: always()
