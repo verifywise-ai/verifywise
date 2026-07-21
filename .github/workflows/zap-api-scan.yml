@@ -136,6 +136,7 @@ jobs:
             zap-api-scan.py \
             -t /zap/wrk/Servers/swagger.yaml -f openapi \
             -O http://localhost:3000/api \
+            -c /zap/wrk/.zap/rules.tsv \
             -T 50 \
             -r /zap/wrk/zap-reports/api-scan.html \
             -J /zap/wrk/zap-reports/api-scan.json \
