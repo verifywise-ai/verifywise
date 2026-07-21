@@ -1,0 +1,53 @@
+name: SAST (Semgrep)
+
+# Static application security testing with Semgrep Community Edition.
+# Completes the recommended free AppSec stack: Semgrep (SAST) + ZAP (DAST)
+# + Trivy (SCA/images/IaC).
+#
+# Rulesets:
+#   p/javascript + p/typescript — injection, XSS, crypto, SSRF (A01/A04/A05)
+#   p/python                   — Bandit-class findings for the FastAPI services
+#   p/security-audit           — cross-language security patterns
+#   p/secrets                  — hardcoded secret patterns
+#
+# Findings are uploaded to the GitHub Security tab (non-blocking while the
+# baseline is being established; flip continue-on-error to false after
+# triage).
+
+permissions:
+  contents: read
+  security-events: write
+
+on:
+  pull_request:
+    branches: [master, develop]
+  push:
+    branches: [master, develop]
+  workflow_dispatch:
+
+jobs:
+  semgrep:
+    name: Semgrep SAST scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Run Semgrep
+        uses: semgrep/semgrep-action@v1
+        continue-on-error: true # baseline establishment phase
+        with:
+          config: >-
+            p/javascript
+            p/typescript
+            p/python
+            p/security-audit
+            p/secrets
+          generateSarif: true
+
+      - name: Upload Semgrep results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: semgrep.sarif
+          category: 'semgrep-sast'
