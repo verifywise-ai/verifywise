@@ -1,5 +1,6 @@
 import { Router } from "express";
 import authenticateJWT from "../middleware/auth.middleware";
+import authorize from "../middleware/accessControl.middleware";
 import {
   listApprovalsCtrl,
   getApprovalStatsCtrl,
@@ -14,7 +15,7 @@ const router = Router();
 router.get("/stats", authenticateJWT, getApprovalStatsCtrl);
 router.get("/", authenticateJWT, listApprovalsCtrl);
 router.get("/:id", authenticateJWT, getApprovalDetailCtrl);
-router.post("/:id/approve", authenticateJWT, approveApprovalCtrl);
-router.post("/:id/reject", authenticateJWT, rejectApprovalCtrl);
+router.post("/:id/approve", authenticateJWT, authorize(["Admin"]), approveApprovalCtrl);
+router.post("/:id/reject", authenticateJWT, authorize(["Admin"]), rejectApprovalCtrl);
 
 export default router;
