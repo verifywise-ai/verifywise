@@ -28,24 +28,27 @@ const fontSizes = {
   large: `${fontSize.lg}px`,
 };
 
-// Standardized button sizes
+// Standardized button sizes — sx spacing units (× 2px)
 const buttonSizes = {
   small: {
     height: 28,
     fontSize: `${fontSize.sm}px`,
-    padding: "6px 12px",
+    py: 4,
+    px: 6,
     minHeight: 28,
   },
   medium: {
     height: 32,
     fontSize: `${fontSize.base}px`,
-    padding: "8px 16px",
+    py: 4,
+    px: 8,
     minHeight: 32,
   },
   large: {
     height: 40,
     fontSize: `${fontSize.md}px`,
-    padding: "10px 20px",
+    py: 6,
+    px: 10,
     minHeight: 40,
   },
 };
@@ -456,7 +459,7 @@ const iconButtons = {
 const iconButtonsRectangle = {
   "height": "34px",
   "width": "34px",
-  "padding": "8px",
+  "p": 4,
   "borderRadius": "4px",
   "border": "1px solid #E2E4E9",
   "backgroundColor": "#ffffff",
