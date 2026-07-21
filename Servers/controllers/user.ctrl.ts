@@ -958,6 +958,46 @@ async function updateUserById(req: Request, res: Response) {
         .json(STATUS_CODE[403](req.t!("Forbidden: Only admins can change user roles")));
     }
 
+    // Prevent privilege escalation: the SuperAdmin role (id 5) can never be
+    // assigned through this endpoint, not even by Admins/SuperAdmins.
+    if (roleId === 5) {
+      logStructured(
+        "error",
+        `user ${req.userId} attempted to assign SuperAdmin role to user ID ${id}`,
+        "updateUserById",
+        "user.ctrl.ts",
+      );
+      await transaction.rollback();
+      return res.status(403).json(STATUS_CODE[403](req.t!("Cannot assign SuperAdmin role")));
+    }
+
+    // Prevent modifying a SuperAdmin's role through this endpoint.
+    if (user.role_id === 5 && roleId !== undefined && roleId !== user.role_id) {
+      logStructured(
+        "error",
+        `user ${req.userId} attempted to change SuperAdmin role of user ID ${id}`,
+        "updateUserById",
+        "user.ctrl.ts",
+      );
+      await transaction.rollback();
+      return res.status(403).json(STATUS_CODE[403](req.t!("Cannot modify SuperAdmin role")));
+    }
+
+    // Validate that the requested role actually exists.
+    if (roleId !== undefined && roleId !== user.role_id) {
+      const targetRole = await getRoleByIdQuery(roleId);
+      if (!targetRole) {
+        logStructured(
+          "error",
+          `invalid role ID ${roleId} requested for user ID ${id}`,
+          "updateUserById",
+          "user.ctrl.ts",
+        );
+        await transaction.rollback();
+        return res.status(400).json(STATUS_CODE[400](req.t!("Invalid role ID")));
+      }
+    }
+
     if (user) {
       // Capture the old role before updating (if roleId is being changed)
       const oldRoleId = user.role_id;

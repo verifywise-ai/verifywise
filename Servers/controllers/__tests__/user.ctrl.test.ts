@@ -146,6 +146,7 @@ import {
   getUserProfilePhotoQuery,
   deleteUserProfilePhotoQuery,
 } from "../../utils/user.utils";
+import { getRoleByIdQuery } from "../../utils/role.utils";
 
 const mockGetAll = getAllUsersQuery as jest.MockedFunction<typeof getAllUsersQuery>;
 const mockGetByEmail = getUserByEmailQuery as jest.MockedFunction<typeof getUserByEmailQuery>;
@@ -423,6 +424,47 @@ describe("user.ctrl", () => {
       const res = createRes();
       await updateUserById(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
+    });
+    it("should return 403 when assigning SuperAdmin role (roleId 5)", async () => {
+      mockGetById.mockResolvedValue(mockUser(buildUser({ id: 2, organization_id: 1 })) as any);
+      const req = createReq({ params: { id: "2" }, body: { name: "X", roleId: 5 } });
+      const res = createRes();
+      await updateUserById(req, res);
+      expect(res.status).toHaveBeenCalledWith(403);
+    });
+    it("should return 403 when assigning SuperAdmin role as string ('5')", async () => {
+      mockGetById.mockResolvedValue(mockUser(buildUser({ id: 2, organization_id: 1 })) as any);
+      const req = createReq({ params: { id: "2" }, body: { name: "X", roleId: "5" } });
+      const res = createRes();
+      await updateUserById(req, res);
+      expect(res.status).toHaveBeenCalledWith(403);
+    });
+    it("should return 403 when changing the role of a SuperAdmin user", async () => {
+      mockGetById.mockResolvedValue(
+        mockUser(buildUser({ id: 2, organization_id: 1, role_id: 5 })) as any,
+      );
+      const req = createReq({ params: { id: "2" }, body: { name: "X", roleId: 1 } });
+      const res = createRes();
+      await updateUserById(req, res);
+      expect(res.status).toHaveBeenCalledWith(403);
+    });
+    it("should return 400 when the requested role does not exist", async () => {
+      const mockGetRole = getRoleByIdQuery as jest.MockedFunction<typeof getRoleByIdQuery>;
+      mockGetRole.mockResolvedValueOnce(null as any);
+      mockGetById.mockResolvedValue(
+        mockUser(buildUser({ id: 2, organization_id: 1, role_id: 1 })) as any,
+      );
+      const req = createReq({ params: { id: "2" }, body: { name: "X", roleId: 99 } });
+      const res = createRes();
+      await updateUserById(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+    });
+    it("should return 403 when a non-admin updates another user", async () => {
+      mockGetById.mockResolvedValue(mockUser(buildUser({ id: 2, organization_id: 1 })) as any);
+      const req = createReq({ params: { id: "2" }, body: { name: "X" }, role: "Reviewer" } as any);
+      const res = createRes();
+      await updateUserById(req, res);
+      expect(res.status).toHaveBeenCalledWith(403);
     });
   });
 
