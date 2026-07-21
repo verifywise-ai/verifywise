@@ -1,6 +1,7 @@
 import React from "react";
 import { Box } from "@mui/material";
 import { accent, background, risk, status, text as textPalette } from "../../themes/palette";
+import { fontSize, fontWeight } from "../../themes/typography";
 
 export interface TagChipProps {
   tag: string;
@@ -62,10 +63,11 @@ const TagChip: React.FC<TagChipProps> = ({ tag }) => {
       sx={{
         backgroundColor: style.bg,
         color: style.color,
-        padding: "4px 8px",
+        py: 2,
+        px: 4,
         borderRadius: "4px",
-        fontWeight: 500,
-        fontSize: 11,
+        fontWeight: fontWeight.medium,
+        fontSize: fontSize.caption,
         textTransform: "uppercase",
         display: "inline-block",
         whiteSpace: "nowrap",
