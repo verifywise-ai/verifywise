@@ -154,3 +154,6 @@ nul
 *.zip
 .dfmt/
 ansible/inventory.ini
+
+# Kubernetes secrets env files
+secrets.env
