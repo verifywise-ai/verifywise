@@ -1,0 +1,31 @@
+# OWASP ZAP scan rules tuning
+# Format: rule-id<TAB>threshold (IGNORE | INFO | LOW | MEDIUM | HIGH | FAIL)
+# Rule IDs and their OWASP Top 10 tags: https://www.zaproxy.org/alerttags/
+#
+# Threshold semantics: alerts at or above the rule's threshold are reported;
+# FAIL makes the scan fail on that alert. Start conservative — tighten as
+# findings are triaged.
+
+# --- Known / accepted noise -------------------------------------------------
+# Timestamp disclosure (often build hashes, not real timestamps)
+10096	IGNORE
+# Private IP disclosure in responses (internal services by design)
+2	LOW
+# X-Backend-Server / X-ChromeLogger informational leakage
+10039	INFO
+
+# --- Enforced hard (OWASP 2025 mapping in comments) --------------------------
+# A05: Injection — SQL injection must always fail the scan
+40018	FAIL
+# A05: Cross-site scripting (reflected / persistent / DOM)
+40012	FAIL
+40014	FAIL
+40026	FAIL
+# A01: Broken access control — path traversal
+6	FAIL
+# A02: Security misconfiguration — missing headers stay visible but don't fail
+10020	MEDIUM
+10021	MEDIUM
+10038	MEDIUM
+# A07: Authentication failures — session/fixation issues
+10010	HIGH
