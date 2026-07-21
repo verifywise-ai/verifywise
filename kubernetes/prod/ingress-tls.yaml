@@ -21,6 +21,9 @@ metadata:
     nginx.ingress.kubernetes.io/ssl-redirect: "true"
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
 
+    # Pin TLS protocols (disable TLSv1.0/1.1)
+    nginx.ingress.kubernetes.io/ssl-protocols: "TLSv1.2 TLSv1.3"
+
     # Automatic certificate via cert-manager (Let's Encrypt)
     cert-manager.io/cluster-issuer: "letsencrypt-prod"
 

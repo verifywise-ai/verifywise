@@ -11,6 +11,15 @@ server {
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 
+    # TLS hardening (per docs/deployment/SECURITY_HARDENING_GUIDE.md).
+    # These take effect once certbot adds the SSL listener (listen 443 ssl) to
+    # this server block. Certbot manages its own options-ssl-nginx.conf include;
+    # keep these directives here as well so the protocol/cipher policy persists
+    # even if that include is changed or removed.
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384;
+    ssl_prefer_server_ciphers off;
+
     # Custom error page for maintenance/upgrades
     error_page 502 503 504 /upgrade.html;
 
