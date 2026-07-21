@@ -10,9 +10,9 @@ name: SAST (Semgrep)
 #   p/security-audit           — cross-language security patterns
 #   p/secrets                  — hardcoded secret patterns
 #
-# Findings are uploaded to the GitHub Security tab (non-blocking while the
-# baseline is being established; flip continue-on-error to false after
-# triage).
+# Findings are uploaded to the GitHub Security tab and the scan is now an
+# enforced blocking gate. On pull requests only NEW findings (diff-aware
+# against the base branch) fail the job; pushes run a full scan.
 
 permissions:
   contents: read
@@ -32,10 +32,12 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
+        with:
+          # Full history so the action can diff against the PR base commit.
+          fetch-depth: 0
 
       - name: Run Semgrep
         uses: semgrep/semgrep-action@v1
-        continue-on-error: true # baseline establishment phase
         with:
           config: >-
             p/javascript
@@ -44,6 +46,9 @@ jobs:
             p/security-audit
             p/secrets
           generateSarif: true
+          # Diff-aware on PRs: only findings introduced since the base
+          # branch block the merge. Empty on push events (full scan).
+          baselineRef: ${{ github.base_ref }}
 
       - name: Upload Semgrep results to GitHub Security
         uses: github/codeql-action/upload-sarif@v4
