@@ -6,40 +6,40 @@ export interface TagChipProps {
   tag: string;
 }
 
-// Define color schemes for official POLICY_TAGS
+// Define color schemes for official POLICY_TAGS (palette tokens only)
 const getTagStyle = (tag: string) => {
   const tagLower = tag.toLowerCase();
 
   // Color mapping based on official POLICY_TAGS from backend
   const tagStyles: Record<string, { bg: string; color: string }> = {
-    // Ethics & Fairness - Green tones
-    "ai ethics": { bg: `${status.success.bg}`, color: `${status.success.text}` },
-    "fairness": { bg: "#E8F5E9", color: "#2E7D32" },
-    "bias mitigation": { bg: "#F1F8E9", color: "#558B2F" },
+    // Ethics & Fairness — green
+    "ai ethics": { bg: status.success.bg, color: status.success.text },
+    "fairness": { bg: status.success.bg, color: status.success.text },
+    "bias mitigation": { bg: accent.primary.bg, color: accent.primary.text },
 
-    // Transparency & Explainability - Blue tones
-    "transparency": { bg: `${status.info.bg}`, color: `${status.info.text}` },
-    "explainability": { bg: "#E1F5FE", color: "#0277BD" },
+    // Transparency & Explainability — blue
+    "transparency": { bg: status.info.bg, color: status.info.text },
+    "explainability": { bg: accent.blue.bg, color: accent.blue.text },
 
-    // Privacy & Data Governance - Purple tones
-    "privacy": { bg: "#F3E5F5", color: "#6A1B9A" },
-    "data governance": { bg: `${accent.purple.bg}`, color: "#4527A0" },
+    // Privacy & Data Governance — purple
+    "privacy": { bg: accent.purple.bg, color: accent.purple.text },
+    "data governance": { bg: accent.purple.bg, color: accent.purple.text },
 
-    // Risk & Security - Orange/Red tones
-    "model risk": { bg: `${risk.high.bg}`, color: `${risk.high.text}` },
-    "security": { bg: `${accent.amber.border}`, color: "#F57F17" },
+    // Risk & Security — orange / amber
+    "model risk": { bg: risk.high.bg, color: risk.high.text },
+    "security": { bg: accent.amber.bg, color: accent.amber.text },
 
-    // Accountability & Oversight - Deep Purple
-    "accountability": { bg: `${accent.purple.bg}`, color: `${accent.purple.text}` },
-    "human oversight": { bg: `${accent.indigo.bg}`, color: `${accent.indigo.text}` },
+    // Accountability & Oversight — purple / indigo
+    "accountability": { bg: accent.purple.bg, color: accent.purple.text },
+    "human oversight": { bg: accent.indigo.bg, color: accent.indigo.text },
 
-    // Compliance & Standards - Amber/Brown tones
-    "eu ai act": { bg: `${accent.amber.bg}`, color: "#F57C00" },
-    "iso 42001": { bg: `${accent.orange.bg}`, color: "#EF6C00" },
-    "nist rmf": { bg: `${accent.amber.border}`, color: "#F9A825" },
+    // Compliance & Standards — amber / orange
+    "eu ai act": { bg: accent.amber.bg, color: accent.amber.text },
+    "iso 42001": { bg: accent.orange.bg, color: accent.orange.text },
+    "nist rmf": { bg: accent.amber.bg, color: accent.amber.text },
 
-    // LLM Specific - Cyan
-    "llm": { bg: `${risk.veryLow.bg}`, color: "#00838F" },
+    // LLM Specific — teal
+    "llm": { bg: accent.teal.bg, color: accent.teal.text },
   };
 
   // Check for exact matches (case-insensitive)
@@ -50,7 +50,7 @@ const getTagStyle = (tag: string) => {
   }
 
   // Default style for unmatched tags
-  return { bg: `${background.surface}`, color: `${textPalette.subdued}` };
+  return { bg: background.surface, color: textPalette.subdued };
 };
 
 const TagChip: React.FC<TagChipProps> = ({ tag }) => {
