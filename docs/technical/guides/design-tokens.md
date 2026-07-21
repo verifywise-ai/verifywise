@@ -41,59 +41,59 @@ function App() {
 
 ### Brand Colors
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `primary.main` | `#13715B` | Primary actions, links, emphasis |
-| `primary.dark` | `#0A4A3A` | Hover states, dark variants |
-| `primary.light` | `#E6F2EF` | Light backgrounds, highlights |
+| Token           | Value     | Usage                            |
+| --------------- | --------- | -------------------------------- |
+| `primary.main`  | `#13715B` | Primary actions, links, emphasis |
+| `primary.dark`  | `#0A4A3A` | Hover states, dark variants      |
+| `primary.light` | `#E6F2EF` | Light backgrounds, highlights    |
 
 ### Text Colors
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `text.primary` | `#1c2130` | Main body text, headings |
-| `text.secondary` | `#344054` | Secondary text, labels |
-| `text.tertiary` | `#475467` | Muted text, placeholders |
-| `text.disabled` | `#9CA3AF` | Disabled state text |
+| Token            | Value     | Usage                    |
+| ---------------- | --------- | ------------------------ |
+| `text.primary`   | `#1c2130` | Main body text, headings |
+| `text.secondary` | `#344054` | Secondary text, labels   |
+| `text.tertiary`  | `#475467` | Muted text, placeholders |
+| `text.disabled`  | `#9CA3AF` | Disabled state text      |
 
 ### Background Colors
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `background.main` | `#FFFFFF` | Main content areas |
-| `background.alt` | `#FCFCFD` | Alternate sections |
-| `background.fill` | `#F4F4F4` | Filled areas, inputs |
-| `background.accent` | `#f9fafb` | Subtle highlights |
-| `background.hover` | `#E5E7EB` | Hover states |
+| Token               | Value     | Usage                |
+| ------------------- | --------- | -------------------- |
+| `background.main`   | `#FFFFFF` | Main content areas   |
+| `background.alt`    | `#FCFCFD` | Alternate sections   |
+| `background.fill`   | `#F4F4F4` | Filled areas, inputs |
+| `background.accent` | `#f9fafb` | Subtle highlights    |
+| `background.hover`  | `#E5E7EB` | Hover states         |
 
 ### Border Colors
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `border.dark` | `#d0d5dd` | Default borders |
-| `border.light` | `#eaecf0` | Subtle borders |
+| Token          | Value     | Usage           |
+| -------------- | --------- | --------------- |
+| `border.dark`  | `#d0d5dd` | Default borders |
+| `border.light` | `#eaecf0` | Subtle borders  |
 
 ### Status Colors
 
 #### Severity Levels
 
-| Level | Color | Usage |
-|-------|-------|-------|
-| Critical | `#DC2626` | Critical risks, errors |
-| High | `#EF4444` | High priority items |
-| Medium | `#F59E0B` | Medium priority, warnings |
-| Low | `#10B981` | Low priority items |
-| Very Low | `#22C55E` | Minimal concern |
+| Level    | Color     | Usage                     |
+| -------- | --------- | ------------------------- |
+| Critical | `#DC2626` | Critical risks, errors    |
+| High     | `#EF4444` | High priority items       |
+| Medium   | `#F59E0B` | Medium priority, warnings |
+| Low      | `#10B981` | Low priority items        |
+| Very Low | `#22C55E` | Minimal concern           |
 
 #### Implementation Status
 
-| Status | Color | Usage |
-|--------|-------|-------|
-| Implemented | `#13715B` | Completed items |
-| Awaiting Review | `#3B82F6` | Pending review |
+| Status            | Color     | Usage            |
+| ----------------- | --------- | ---------------- |
+| Implemented       | `#13715B` | Completed items  |
+| Awaiting Review   | `#3B82F6` | Pending review   |
 | Awaiting Approval | `#8B5CF6` | Pending approval |
-| Needs Rework | `#EA580C` | Requires changes |
-| Not Started | `#9CA3AF` | Not begun |
+| Needs Rework      | `#EA580C` | Requires changes |
+| Not Started       | `#9CA3AF` | Not begun        |
 
 #### Alert States
 
@@ -135,56 +135,56 @@ Allowed sizes only: **11, 12, 13, 14, 16, 18, 24**. Do not invent sizes outside 
 ```typescript
 import { fontFamily } from "@/presentation/themes/typography";
 
-fontFamily.sans // 'Geist', system-ui, -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif
-fontFamily.mono // 'Fira Code', 'Consolas', monospace
+fontFamily.sans; // 'Geist', system-ui, -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif
+fontFamily.mono; // 'Fira Code', 'Consolas', monospace
 ```
 
 ### Font Sizes (`fontSize.*`)
 
-| Token | Size | Usage |
-|-------|------|-------|
-| `caption` | 11px | Captions, footnotes, error text |
-| `sm` | 12px | Body small, badges, table headers |
-| `base` | 13px | Default UI / body / tabs / modal description |
-| `md` | 14px | Emphasized body, subsection titles |
-| `lg` | 16px | Card / modal / drawer titles |
-| `xl` | 18px | Section titles |
-| `2xl` | 24px | Page titles |
+| Token     | Size | Usage                                        |
+| --------- | ---- | -------------------------------------------- |
+| `caption` | 11px | Captions, footnotes, error text              |
+| `sm`      | 12px | Body small, badges, table headers            |
+| `base`    | 13px | Default UI / body / tabs / modal description |
+| `md`      | 14px | Emphasized body, subsection titles           |
+| `lg`      | 16px | Card / modal / drawer titles                 |
+| `xl`      | 18px | Section titles                               |
+| `2xl`     | 24px | Page titles                                  |
 
 ### Font Weights (`fontWeight.*`)
 
-| Token | Weight | Usage |
-|-------|--------|-------|
-| `regular` | 400 | Body text |
-| `medium` | 500 | Labels, buttons, badges |
-| `semibold` | 600 | Headings |
-| `bold` | 700 | Strong emphasis (rare) |
+| Token      | Weight | Usage                   |
+| ---------- | ------ | ----------------------- |
+| `regular`  | 400    | Body text               |
+| `medium`   | 500    | Labels, buttons, badges |
+| `semibold` | 600    | Headings                |
+| `bold`     | 700    | Strong emphasis (rare)  |
 
 ### Line Heights (`lineHeight.*`)
 
-| Token | Value | Usage |
-|-------|-------|-------|
-| `tight` | 1.2 | Buttons, badges |
-| `snug` | 1.3 | Page titles |
-| `normal` | 1.4 | Captions, section/card titles |
-| `relaxed` | 1.5 | Body text |
-| `loose` | 1.75 | Long-form content |
+| Token     | Value | Usage                         |
+| --------- | ----- | ----------------------------- |
+| `tight`   | 1.2   | Buttons, badges               |
+| `snug`    | 1.3   | Page titles                   |
+| `normal`  | 1.4   | Captions, section/card titles |
+| `relaxed` | 1.5   | Body text                     |
+| `loose`   | 1.75  | Long-form content             |
 
 ### Semantic text styles (`textStyles.*`)
 
 Prefer roles over raw sizes in UI code:
 
-| Style | Size / weight | Typical use |
-|-------|---------------|-------------|
-| `pageTitle` | 24 / 600 | Page H1 |
-| `sectionTitle` | 18 / 600 | In-page section |
-| `cardTitle` | 16 / 600 | Card, modal, drawer title |
-| `subsectionTitle` | 14 / 600 | Nested heading |
-| `body` | 13 / 400 | Default copy, modal description, sidebar/tab labels |
-| `bodyLarge` / `bodySmall` / `caption` | 14 / 12 / 11 | Emphasized / secondary / meta |
-| `formLabel` / `input` / `error` | 13 / 13 / 11 | Forms |
-| `button` / `badge` / `tooltip` | 13 / 12 / 13 | Controls |
-| `tableHeader` / `tableCell` | 12 / 13 | Tables |
+| Style                                 | Size / weight | Typical use                                         |
+| ------------------------------------- | ------------- | --------------------------------------------------- |
+| `pageTitle`                           | 24 / 600      | Page H1                                             |
+| `sectionTitle`                        | 18 / 600      | In-page section                                     |
+| `cardTitle`                           | 16 / 600      | Card, modal, drawer title                           |
+| `subsectionTitle`                     | 14 / 600      | Nested heading                                      |
+| `body`                                | 13 / 400      | Default copy, modal description, sidebar/tab labels |
+| `bodyLarge` / `bodySmall` / `caption` | 14 / 12 / 11  | Emphasized / secondary / meta                       |
+| `formLabel` / `input` / `error`       | 13 / 13 / 11  | Forms                                               |
+| `button` / `badge` / `tooltip`        | 13 / 12 / 13  | Controls                                            |
+| `tableHeader` / `tableCell`           | 12 / 13       | Tables                                              |
 
 ```typescript
 import { textStyles, fontSize } from "@/presentation/themes/typography";
@@ -199,39 +199,46 @@ Typography foundation (tokens + theme helpers) is in place. Broad replacement of
 
 ## Spacing
 
+VerifyWise uses a **2px base** for MUI `theme.spacing()` (`spacing: 2` in `light.ts`). This differs from MUI’s default 8px base.
+
+Documented in [CodeRules spacing](../../../CodeRules/09-design-system/spacing.md).
+
 ### Spacing Scale
 
-| Token | Size | Usage |
-|-------|------|-------|
-| `xs` | 4px | Tight spacing, icon gaps |
-| `sm` | 8px | Small gaps, padding |
-| `md` | 12px | Default spacing |
-| `lg` | 16px | Section spacing |
-| `xl` | 24px | Large gaps |
-| `2xl` | 32px | Section margins |
-| `3xl` | 40px | Page sections |
-| `4xl` | 48px | Major sections |
+| `theme.spacing(n)` | Result |
+| ------------------ | ------ |
+| `spacing(1)`       | 2px    |
+| `spacing(2)`       | 4px    |
+| `spacing(4)`       | 8px    |
+| `spacing(6)`       | 12px   |
+| `spacing(8)`       | 16px   |
+| `spacing(10)`      | 20px   |
+| `spacing(12)`      | 24px   |
+| `spacing(16)`      | 32px   |
+| `spacing(20)`      | 40px   |
 
 ### Using Theme Spacing
 
 ```typescript
-// MUI theme.spacing() uses 8px base
 sx={{
-  padding: 2,        // 16px (2 * 8)
-  marginTop: 1,      // 8px (1 * 8)
-  gap: 1.5,          // 12px (1.5 * 8)
+  p: 2,  // 4px
+  mt: 4,  // 8px
+  gap: 1, // 2px
 }}
+
+// When you need a CSS string:
+paddingTop: `${theme.spacing(1)} !important`
 ```
 
 ## Component Sizes
 
 ### Buttons
 
-| Size | Height | Font Size | Padding |
-|------|--------|-----------|---------|
-| Small | 28px | 12px | 8px 12px |
-| Medium | 34px | 13px | 10px 16px |
-| Large | 40px | 14px | 12px 20px |
+| Size   | Height | Font Size | Padding   |
+| ------ | ------ | --------- | --------- |
+| Small  | 28px   | 12px      | 8px 12px  |
+| Medium | 34px   | 13px      | 10px 16px |
+| Large  | 40px   | 14px      | 12px 20px |
 
 ```typescript
 // Standard button (medium)
@@ -249,19 +256,19 @@ sx={{
 
 ### Inputs
 
-| Size | Height | Usage |
-|------|--------|-------|
-| Small | 32px | Compact forms |
-| Medium | 40px | Default |
-| Large | 48px | Prominent inputs |
+| Size   | Height | Usage            |
+| ------ | ------ | ---------------- |
+| Small  | 32px   | Compact forms    |
+| Medium | 40px   | Default          |
+| Large  | 48px   | Prominent inputs |
 
 ### Cards
 
-| Padding | Size | Usage |
-|---------|------|-------|
-| Small | 12px | Compact cards |
-| Medium | 16px | Default cards |
-| Large | 24px | Prominent cards |
+| Padding | Size | Usage           |
+| ------- | ---- | --------------- |
+| Small   | 12px | Compact cards   |
+| Medium  | 16px | Default cards   |
+| Large   | 24px | Prominent cards |
 
 ## Shape & Borders
 
@@ -269,25 +276,25 @@ sx={{
 
 ```typescript
 // Standard border radius
-borderRadius: "4px"  // Primary standard
+borderRadius: "4px"; // Primary standard
 
 // Using theme
-borderRadius: theme.shape.borderRadius  // 4px
-borderRadius: theme.spacing(1.5)        // 12px for modals
+borderRadius: theme.shape.borderRadius; // 4px
+borderRadius: theme.spacing(1.5); // 12px for modals
 ```
 
 ### Border Styles
 
 ```typescript
 // Default border
-border: "1px solid #d0d5dd"
+border: "1px solid #d0d5dd";
 
 // Light border
-border: "1px solid #eaecf0"
+border: "1px solid #eaecf0";
 
 // Using theme
-border: `1px solid ${theme.palette.border.dark}`
-border: `1px solid ${theme.palette.border.light}`
+border: `1px solid ${theme.palette.border.dark}`;
+border: `1px solid ${theme.palette.border.light}`;
 ```
 
 ## Shadows
@@ -295,7 +302,7 @@ border: `1px solid ${theme.palette.border.light}`
 ### Primary Shadow
 
 ```typescript
-boxShadow: "0px 4px 24px -4px rgba(16, 24, 40, 0.08), 0px 3px 3px -3px rgba(16, 24, 40, 0.03)"
+boxShadow: "0px 4px 24px -4px rgba(16, 24, 40, 0.08), 0px 3px 3px -3px rgba(16, 24, 40, 0.03)";
 ```
 
 ### No Shadow (Default)
@@ -303,7 +310,7 @@ boxShadow: "0px 4px 24px -4px rgba(16, 24, 40, 0.08), 0px 3px 3px -3px rgba(16, 
 Most components use no shadow by default:
 
 ```typescript
-boxShadow: "none"
+boxShadow: "none";
 ```
 
 ## Component Style Patterns
@@ -565,28 +572,28 @@ import { cardMixins, typographyMixins } from "../themes/mixins";
 
 ### Quick Reference
 
-| Purpose | Light | Dark/Emphasis |
-|---------|-------|---------------|
-| Brand | `#13715B` | `#0A4A3A` |
-| Text | `#1c2130` | `#344054` |
-| Border | `#eaecf0` | `#d0d5dd` |
-| Background | `#FFFFFF` | `#f9fafb` |
-| Success | `#17b26a` | `#079455` |
-| Error | `#f04438` | `#d32f2f` |
-| Warning | `#fdb022` | `#DC6803` |
+| Purpose    | Light     | Dark/Emphasis |
+| ---------- | --------- | ------------- |
+| Brand      | `#13715B` | `#0A4A3A`     |
+| Text       | `#1c2130` | `#344054`     |
+| Border     | `#eaecf0` | `#d0d5dd`     |
+| Background | `#FFFFFF` | `#f9fafb`     |
+| Success    | `#17b26a` | `#079455`     |
+| Error      | `#f04438` | `#d32f2f`     |
+| Warning    | `#fdb022` | `#DC6803`     |
 
 ## Key Files
 
-| File | Purpose |
-|------|---------|
-| `Clients/src/presentation/themes/light.ts` | Main MUI theme |
+| File                                            | Purpose                          |
+| ----------------------------------------------- | -------------------------------- |
+| `Clients/src/presentation/themes/light.ts`      | Main MUI theme                   |
 | `Clients/src/presentation/themes/typography.ts` | Type scale + semantic textStyles |
-| `Clients/src/presentation/themes/palette.ts` | Semantic color tokens |
-| `Clients/src/presentation/themes/components.ts` | Reusable component styles |
-| `Clients/src/presentation/themes/mixins.ts` | Style mixins |
-| `Clients/src/presentation/themes/alerts.ts` | Alert status styles |
-| `Clients/src/presentation/themes/theme.d.ts` | TypeScript definitions |
-| `Clients/src/presentation/styles/colors.ts` | Color palette |
+| `Clients/src/presentation/themes/palette.ts`    | Semantic color tokens            |
+| `Clients/src/presentation/themes/components.ts` | Reusable component styles        |
+| `Clients/src/presentation/themes/mixins.ts`     | Style mixins                     |
+| `Clients/src/presentation/themes/alerts.ts`     | Alert status styles              |
+| `Clients/src/presentation/themes/theme.d.ts`    | TypeScript definitions           |
+| `Clients/src/presentation/styles/colors.ts`     | Color palette                    |
 
 ## Related Documentation
 

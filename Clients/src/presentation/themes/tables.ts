@@ -21,7 +21,7 @@ export const tableStyles = {
         "color": "#475467",
         "fontSize": fontSize.base,
         "fontWeight": fontWeight.regular,
-        "padding": "14px 12px",
+        "p": 6,
         "whiteSpace": "nowrap",
         "&:not(:lastChild)": {
           minWidth: "120px",
@@ -51,7 +51,7 @@ export const tableStyles = {
       },
       cell: {
         "fontSize": fontSize.base,
-        "padding": "14px 12px",
+        "p": 6,
         "whiteSpace": "nowrap",
         "&:not(:lastChild)": {
           minWidth: "120px",
@@ -60,7 +60,8 @@ export const tableStyles = {
       },
       button: {
         "fontSize": fontSize.base,
-        "padding": "2px 8px",
+        "py": 1,
+        "px": 4,
         "textTransform": "none",
         "borderRadius": "4px",
         "&:hover": {
