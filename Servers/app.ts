@@ -107,6 +107,7 @@ import virtualKeyProxyRoutes from "./routes/virtualKeyProxy.route";
 import internalRoutes from "./routes/internal.route";
 import superAdminRoutes from "./routes/superAdmin.route";
 import { i18nMiddleware } from "./middleware/i18n.middleware";
+import { generalApiLimiter } from "./middleware/rateLimit.middleware";
 import { sequelize } from "./database/db";
 import redisClient from "./database/redis";
 import ssoConfigRoutes from "./routes/ssoConfig.route";
@@ -214,6 +215,18 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
   if (preRoutesMiddleware) {
     preRoutesMiddleware.forEach((mw) => app.use(mw));
   }
+
+  // Global API rate limiter (audit 4.5): a loose per-IP ceiling mounted
+  // ahead of every route mount. Stricter per-route limiters (auth, file
+  // ops, ingestion, ...) still apply on top. Webhook/raw-body endpoints
+  // are exempt — they are signature-verified and have their own controls —
+  // and /health stays unlimited for load-balancer probes.
+  app.use((req, res, next) => {
+    if (req.url.startsWith("/api/webhooks/")) {
+      return next();
+    }
+    return generalApiLimiter(req, res, next);
+  });
 
   app.use("/api/users", userRoutes);
   app.use("/api/vendorRisks", vendorRiskRoutes);

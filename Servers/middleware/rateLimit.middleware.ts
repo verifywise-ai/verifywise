@@ -5,8 +5,10 @@
  * Uses express-rate-limit with IPv6-safe IP normalization.
  *
  * Rate Limiters:
- * - fileOperationsLimiter: 50 requests/15min (for file uploads, downloads, deletions)
- * - generalApiLimiter: 100 requests/15min (for standard API endpoints)
+ * - fileOperationsLimiter: 100 requests/15min (for file uploads, downloads, deletions)
+ * - generalApiLimiter: 300 requests/min per IP (loose global ceiling mounted
+ *   ahead of all route mounts in app.ts; stricter per-route limiters still
+ *   apply on top)
  * - authLimiter: 5 requests/15min (for login/register/reset to prevent brute force)
  * - tokenRefreshLimiter: 60 requests/15min (for automatic access-token refresh)
  *
@@ -50,10 +52,15 @@ const RATE_LIMIT_CONFIGS: Record<string, RateLimitConfig> = {
     maxRequests: 100,
     message: "Too many file operation requests from this IP, please try again after 15 minutes",
   },
+  // Loose global ceiling for all API traffic, mounted ahead of the route
+  // mounts in app.ts (audit 4.5). Deliberately generous — it only stops
+  // runaway/DoS-level volume; the stricter per-route limiters below remain
+  // the real abuse controls. Effectively unlimited in explicit dev/test so
+  // a developer hammering localhost from one IP is not locked out.
   generalApi: {
-    windowMinutes: 15,
-    maxRequests: 100,
-    message: "Too many requests from this IP, please try again after 15 minutes",
+    windowMinutes: 1,
+    maxRequests: isNonProduction ? 100000 : 300,
+    message: "Too many requests from this IP, please slow down and retry",
   },
   auth: {
     windowMinutes: 15,
@@ -135,8 +142,9 @@ const createRateLimiter = (config: RateLimitConfig) => {
 export const fileOperationsLimiter = createRateLimiter(RATE_LIMIT_CONFIGS.fileOperations);
 
 /**
- * General API rate limiter for standard CRUD endpoints
- * Moderate limits for typical operations
+ * General API rate limiter: a loose per-IP ceiling for all API traffic,
+ * mounted globally in app.ts ahead of the route mounts. Stricter per-route
+ * limiters still apply on top of it.
  */
 export const generalApiLimiter = createRateLimiter(RATE_LIMIT_CONFIGS.generalApi);
 
