@@ -30,7 +30,22 @@
 import express from "express";
 const router = express.Router();
 const multer = require("multer");
-const upload = multer({ storage: multer.memoryStorage() });
+// Profile photos: small images only (prevents memory-exhaustion DoS via
+// unbounded multipart uploads).
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB
+    files: 1,
+  },
+  fileFilter: (_req: Express.Request, file: Express.Multer.File, cb: any) => {
+    if (file.mimetype.startsWith("image/")) {
+      cb(null, true);
+    } else {
+      cb(new Error("UNSUPPORTED_FILE_TYPE"));
+    }
+  },
+});
 
 import rateLimit from "express-rate-limit";
 import { authLimiter, tokenRefreshLimiter } from "../middleware/rateLimit.middleware";
