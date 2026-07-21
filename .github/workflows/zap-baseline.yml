@@ -125,9 +125,10 @@ jobs:
         run: |
           mkdir -p zap-reports && chmod 777 zap-reports
           docker run --rm --network host \
-            -v ${{ github.workspace }}/zap-reports:/zap/wrk:rw \
+            -v ${{ github.workspace }}:/zap/wrk:rw \
             ghcr.io/zaproxy/zaproxy:stable \
             zap-baseline.py -t http://localhost:5173 \
+            -c /zap/wrk/.zap/rules.tsv \
             -r baseline-frontend.html -J baseline-frontend.json -I || true
 
       - name: ZAP baseline — backend API
@@ -136,6 +137,7 @@ jobs:
             -v ${{ github.workspace }}/zap-reports:/zap/wrk:rw \
             ghcr.io/zaproxy/zaproxy:stable \
             zap-baseline.py -t http://localhost:3000/api \
+            -c /zap/wrk/.zap/rules.tsv \
             -r baseline-backend.html -J baseline-backend.json -I || true
 
       - name: Upload ZAP baseline reports
