@@ -14,10 +14,11 @@ name: SAST (Semgrep)
 # enforced blocking gate — but only for NEW findings. The pre-existing
 # findings backlog is triaged separately (tracked outside CI); blocking on it
 # would fail every PR. Semgrep's built-in baseline diffing
-# (--baseline-commit) fails the job only on findings not present on the base
-# branch: PRs diff against the PR base ref, pushes diff against the repo
-# default branch (develop). All findings still land in the Security tab via
-# SARIF so the backlog stays visible.
+# (--baseline-commit) fails the job only on findings not present on the PR
+# base branch. On push events there is no base ref, so the full scan still
+# runs (SARIF keeps the backlog visible in the Security tab) but does not
+# fail the job — full-history triage pending; the PR gate is the enforcement
+# point.
 
 permissions:
   contents: read
@@ -52,21 +53,20 @@ jobs:
           # branch fail this job. The pre-existing backlog is triaged
           # separately; new findings block. (fetch-depth: 0 above is required
           # so the baseline commit is available locally.)
+          COMMON_ARGS="--config p/javascript --config p/typescript --config p/python --config p/security-audit --config p/secrets --sarif --output semgrep.sarif"
           if [ "${{ github.event_name }}" = "pull_request" ]; then
-            BASELINE_FLAG="--baseline-commit origin/${{ github.base_ref }}"
+            # PR gate (enforcement point): --error + --baseline-commit fails
+            # the job only on findings NOT present on the base branch.
+            # (fetch-depth: 0 above is required so the baseline commit is
+            # available locally.)
+            semgrep scan $COMMON_ARGS --error --baseline-commit "origin/${{ github.base_ref }}"
           else
-            # Pushes: diff against the repo default branch (develop).
-            BASELINE_FLAG="--baseline-commit origin/develop"
+            # Push events (no base_ref): full scan, non-blocking for now —
+            # full-history triage pending; the PR gate is the enforcement
+            # point. No --error, so findings never fail the job, but genuine
+            # scan errors still do. SARIF is still generated and uploaded.
+            semgrep scan $COMMON_ARGS
           fi
-          semgrep scan \
-            --config p/javascript \
-            --config p/typescript \
-            --config p/python \
-            --config p/security-audit \
-            --config p/secrets \
-            --sarif --output semgrep.sarif \
-            --error \
-            $BASELINE_FLAG
 
       - name: Upload Semgrep results to GitHub Security
         uses: github/codeql-action/upload-sarif@v4
