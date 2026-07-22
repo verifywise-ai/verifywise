@@ -18,6 +18,13 @@ spec:
         app: verifywise
     spec:
       automountServiceAccountToken: false
+      # Pod-level security context (KSV-0118): runtime-default seccomp profile.
+      # Container-level contexts below already drop capabilities and disable
+      # privilege escalation; runAsNonRoot is a tracked TODO pending non-root
+      # image USER directives (see per-container TODO comments).
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: verifywise-backend
           image: ghcr.io/verifywise-ai/verifywise-backend:latest
