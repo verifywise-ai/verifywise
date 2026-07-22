@@ -373,3 +373,333 @@ export async function createTestFileChangeHistory(
   );
   return (result as any[])[0].id;
 }
+
+// ── MRM (Model Risk Management) factories ──
+
+export interface CreateTestModelInventoryOptions {
+  provider?: string;
+  model?: string;
+  version?: string;
+}
+
+export async function createTestModelInventory(
+  orgId: number,
+  options: CreateTestModelInventoryOptions = {},
+): Promise<number> {
+  const suffix = Date.now();
+  const [result] = await sequelize.query(
+    `INSERT INTO model_inventories (organization_id, provider, model, version, created_at, updated_at)
+     VALUES (:orgId, :provider, :model, :version, NOW(), NOW()) RETURNING id`,
+    {
+      replacements: {
+        orgId,
+        provider: options.provider ?? `Provider ${suffix}`,
+        model: options.model ?? `Model ${suffix}`,
+        version: options.version ?? "1.0",
+      },
+    },
+  );
+  return (result as any[])[0].id;
+}
+
+export interface CreateTestMrmValidationOptions {
+  model_inventory_id?: number;
+  validator_id?: number;
+  next_due?: string | null;
+}
+
+export async function createTestMrmValidation(
+  orgId: number,
+  modelInventoryId: number,
+  options: CreateTestMrmValidationOptions = {},
+): Promise<number> {
+  const [result] = await sequelize.query(
+    `INSERT INTO mrm_validations (organization_id, model_inventory_id, stage, validator_id, next_due, report, created_at, updated_at)
+     VALUES (:orgId, :modelInventoryId, 'not_started', :validatorId, :nextDue, '{}'::jsonb, NOW(), NOW()) RETURNING id`,
+    {
+      replacements: {
+        orgId,
+        modelInventoryId: options.model_inventory_id ?? modelInventoryId,
+        validatorId: options.validator_id ?? null,
+        nextDue: options.next_due ?? null,
+      },
+    },
+  );
+  return (result as any[])[0].id;
+}
+
+export interface CreateTestMrmFindingOptions {
+  validation_id?: number;
+  title?: string;
+  owner_id?: number;
+  severity?: string;
+  stage?: string;
+}
+
+export async function createTestMrmFinding(
+  orgId: number,
+  modelInventoryId: number,
+  options: CreateTestMrmFindingOptions = {},
+): Promise<number> {
+  const suffix = Date.now();
+  const [result] = await sequelize.query(
+    `INSERT INTO mrm_findings (organization_id, model_inventory_id, validation_id, title, severity, stage, owner_id, created_at, updated_at)
+     VALUES (:orgId, :modelInventoryId, :validationId, :title, :severity, :stage, :ownerId, NOW(), NOW()) RETURNING id`,
+    {
+      replacements: {
+        orgId,
+        modelInventoryId,
+        validationId: options.validation_id ?? null,
+        title: options.title ?? `Finding ${suffix}`,
+        severity: options.severity ?? "medium",
+        stage: options.stage ?? "open",
+        ownerId: options.owner_id ?? null,
+      },
+    },
+  );
+  return (result as any[])[0].id;
+}
+
+export interface CreateTestMrmModelRoleOptions {
+  role?: string;
+}
+
+export async function createTestMrmModelRole(
+  orgId: number,
+  modelInventoryId: number,
+  userId: number,
+  options: CreateTestMrmModelRoleOptions = {},
+): Promise<number> {
+  const [result] = await sequelize.query(
+    `INSERT INTO mrm_model_roles (organization_id, model_inventory_id, role, user_id, created_at)
+     VALUES (:orgId, :modelInventoryId, :role, :userId, NOW()) RETURNING id`,
+    {
+      replacements: {
+        orgId,
+        modelInventoryId,
+        role: options.role ?? "owner",
+        userId,
+      },
+    },
+  );
+  return (result as any[])[0].id;
+}
+
+// ---------------------------------------------------------------------------
+// MRM Branch 2 (monitoring / ingestion) factories
+// ---------------------------------------------------------------------------
+
+export interface CreateTestMrmMetricKeyOptions {
+  key?: string;
+  display_name?: string;
+}
+
+export async function createTestMrmMetricKey(
+  orgId: number,
+  options: CreateTestMrmMetricKeyOptions = {},
+): Promise<number> {
+  const suffix = Date.now();
+  const [result] = await sequelize.query(
+    `INSERT INTO mrm_metric_keys (organization_id, key, display_name, created_at)
+     VALUES (:orgId, :key, :displayName, NOW()) RETURNING id`,
+    {
+      replacements: {
+        orgId,
+        key: options.key ?? `metric_${suffix}`,
+        displayName: options.display_name ?? null,
+      },
+    },
+  );
+  return (result as any[])[0].id;
+}
+
+export interface CreateTestMrmThresholdOptions {
+  metric?: string;
+  segment?: string | null;
+  window?: string | null;
+  op?: string;
+  value_num?: number | null;
+  value_lo?: number | null;
+  value_hi?: number | null;
+  severity?: string;
+  breach_action?: string;
+  active?: boolean;
+}
+
+export async function createTestMrmThreshold(
+  orgId: number,
+  modelInventoryId: number,
+  options: CreateTestMrmThresholdOptions = {},
+): Promise<number> {
+  const [result] = await sequelize.query(
+    `INSERT INTO mrm_thresholds
+       (organization_id, model_inventory_id, metric, segment, "window", op,
+        value_num, value_lo, value_hi, severity, breach_action, active, created_at, updated_at)
+     VALUES (:orgId, :modelInventoryId, :metric, :segment, :window, :op,
+             :valueNum, :valueLo, :valueHi, :severity, :breachAction, :active, NOW(), NOW())
+     RETURNING id`,
+    {
+      replacements: {
+        orgId,
+        modelInventoryId,
+        metric: options.metric ?? "psi",
+        segment: options.segment ?? null,
+        window: options.window ?? null,
+        op: options.op ?? "gt",
+        valueNum: options.value_num ?? 0.25,
+        valueLo: options.value_lo ?? null,
+        valueHi: options.value_hi ?? null,
+        severity: options.severity ?? "high",
+        breachAction: options.breach_action ?? "notify",
+        active: options.active ?? true,
+      },
+    },
+  );
+  return (result as any[])[0].id;
+}
+
+export interface CreateTestMrmIngestionTokenOptions {
+  name?: string;
+  token_hash?: string;
+  model_inventory_id?: number | null;
+  created_by?: number | null;
+  revoked_at?: string | null;
+}
+
+export async function createTestMrmIngestionToken(
+  orgId: number,
+  options: CreateTestMrmIngestionTokenOptions = {},
+): Promise<number> {
+  const suffix = Date.now();
+  const [result] = await sequelize.query(
+    `INSERT INTO mrm_ingestion_tokens
+       (organization_id, name, token_hash, model_inventory_id, revoked_at, created_by, created_at)
+     VALUES (:orgId, :name, :tokenHash, :modelInventoryId, :revokedAt, :createdBy, NOW())
+     RETURNING id`,
+    {
+      replacements: {
+        orgId,
+        name: options.name ?? `token_${suffix}`,
+        tokenHash: options.token_hash ?? `hash_${suffix}`,
+        modelInventoryId: options.model_inventory_id ?? null,
+        revokedAt: options.revoked_at ?? null,
+        createdBy: options.created_by ?? null,
+      },
+    },
+  );
+  return (result as any[])[0].id;
+}
+
+export interface CreateTestMrmMetricOptions {
+  metric?: string;
+  value?: number;
+  at?: string;
+  window?: string | null;
+  segment?: string;
+  context?: Record<string, unknown>;
+  ingestion_token_id?: number | null;
+}
+
+export async function createTestMrmMetric(
+  orgId: number,
+  modelInventoryId: number,
+  options: CreateTestMrmMetricOptions = {},
+): Promise<number> {
+  const [result] = await sequelize.query(
+    `INSERT INTO mrm_metrics
+       (organization_id, model_inventory_id, metric, value, at, "window", segment,
+        context, ingestion_token_id, received_at, created_at)
+     VALUES (:orgId, :modelInventoryId, :metric, :value,
+             date_trunc('second', :at::timestamptz), :window, :segment,
+             CAST(:context AS jsonb), :ingestionTokenId, NOW(), NOW())
+     RETURNING id`,
+    {
+      replacements: {
+        orgId,
+        modelInventoryId,
+        metric: options.metric ?? "psi",
+        value: options.value ?? 0.28,
+        at: options.at ?? "2026-07-02T00:00:00Z",
+        // window/segment are NOT NULL with sentinels ('' / 'overall') — an explicit
+        // null would violate the constraint, so mirror the ingestion normalization.
+        window: options.window ?? "",
+        segment: options.segment ?? "overall",
+        context: JSON.stringify(options.context ?? {}),
+        ingestionTokenId: options.ingestion_token_id ?? null,
+      },
+    },
+  );
+  return (result as any[])[0].id;
+}
+
+export interface CreateTestMrmMetricEvaluationOptions {
+  threshold_id?: number | null;
+  status?: string;
+  threshold_snapshot?: Record<string, unknown> | null;
+}
+
+export async function createTestMrmMetricEvaluation(
+  orgId: number,
+  metricId: number,
+  options: CreateTestMrmMetricEvaluationOptions = {},
+): Promise<number> {
+  const snapshot = options.threshold_snapshot ?? null;
+  const [result] = await sequelize.query(
+    `INSERT INTO mrm_metric_evaluations
+       (organization_id, metric_id, threshold_id, status, threshold_snapshot, evaluated_at)
+     VALUES (:orgId, :metricId, :thresholdId, :status,
+             CASE WHEN :snapshot IS NULL THEN NULL ELSE CAST(:snapshot AS jsonb) END, NOW())
+     RETURNING id`,
+    {
+      replacements: {
+        orgId,
+        metricId,
+        thresholdId: options.threshold_id ?? null,
+        status: options.status ?? "ok",
+        snapshot: snapshot === null ? null : JSON.stringify(snapshot),
+      },
+    },
+  );
+  return (result as any[])[0].id;
+}
+
+// ---------------------------------------------------------------------------
+// MRM Branch 3 (revalidation triggers) factories
+// ---------------------------------------------------------------------------
+
+export interface CreateTestMrmRevalidationEventOptions {
+  trigger_source?: string;
+  reason?: string | null;
+  resulting_validation_id?: number | null;
+  created_validation?: boolean;
+  source_ref?: Record<string, unknown> | null;
+}
+
+export async function createTestMrmRevalidationEvent(
+  orgId: number,
+  modelInventoryId: number,
+  options: CreateTestMrmRevalidationEventOptions = {},
+): Promise<number> {
+  const sourceRef = options.source_ref ?? null;
+  const [result] = await sequelize.query(
+    `INSERT INTO mrm_revalidation_events
+       (organization_id, model_inventory_id, trigger_source, reason,
+        resulting_validation_id, created_validation, source_ref, fired_at, created_at)
+     VALUES (:orgId, :modelInventoryId, :triggerSource, :reason,
+             :resultingValidationId, :createdValidation,
+             CASE WHEN :sourceRef IS NULL THEN NULL ELSE CAST(:sourceRef AS jsonb) END, NOW(), NOW())
+     RETURNING id`,
+    {
+      replacements: {
+        orgId,
+        modelInventoryId,
+        triggerSource: options.trigger_source ?? "breach",
+        reason: options.reason ?? null,
+        resultingValidationId: options.resulting_validation_id ?? null,
+        createdValidation: options.created_validation ?? false,
+        sourceRef: sourceRef === null ? null : JSON.stringify(sourceRef),
+      },
+    },
+  );
+  return (result as any[])[0].id;
+}

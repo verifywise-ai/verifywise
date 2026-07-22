@@ -29,6 +29,8 @@ import iso27001Routes from "./routes/iso27001.route";
 import modelInventoryRoutes from "./routes/modelInventory.route";
 import modelInventoryHistoryRoutes from "./routes/modelInventoryHistory.route";
 import modelInventoryChangeHistoryRoutes from "./routes/modelInventoryChangeHistory.route";
+import mrmRoutes from "./routes/mrm.route";
+import mrmIngestionRoutes from "./routes/mrmIngestion.route";
 import datasetBulkUploadRoutes from "./routes/datasetBulkUpload.route";
 import datasetRoutes from "./routes/dataset.route";
 import riskHistoryRoutes from "./routes/riskHistory.route";
@@ -241,6 +243,11 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
   app.use("/api/modelInventoryHistory", modelInventoryHistoryRoutes);
   app.use("/api/dataset-bulk-upload", datasetBulkUploadRoutes);
   app.use("/api/model-inventory-change-history", modelInventoryChangeHistoryRoutes);
+  app.use("/api/mrm", mrmRoutes);
+  // Token-authed machine ingestion surface, mounted on the same base path.
+  // Its route (POST /models/:externalModelKey/metrics) does not collide with
+  // any JWT mrm route and uses its own token middleware + rate limiter.
+  app.use("/api/mrm", mrmIngestionRoutes);
   app.use("/api/datasets", datasetRoutes);
   app.use("/api/riskHistory", riskHistoryRoutes);
   app.use("/api/modelRisks", modelRiskRoutes);

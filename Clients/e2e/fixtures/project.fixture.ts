@@ -1,5 +1,7 @@
 import { test as base, expect, type Page } from "@playwright/test";
 
+const ADMIN_AUTH_STATE = "e2e/.auth/admin.json";
+
 /**
  * Extended test fixture that provides an authenticated page with a project
  * already created. Many entities (vendors, risks, datasets) require a
@@ -8,9 +10,14 @@ import { test as base, expect, type Page } from "@playwright/test";
  * Usage:
  *   import { test, expect } from "../fixtures/project.fixture";
  *   test("my test", async ({ projectPage, projectName }) => { ... });
+ *
+ * For CRUD tests that need admin permissions (not super-admin):
+ *   import { test, expect } from "../fixtures/project.fixture";
+ *   test("my test", async ({ adminProjectPage, projectName }) => { ... });
  */
 export const test = base.extend<{
   projectPage: Page;
+  adminProjectPage: Page;
   projectName: string;
 }>({
   projectName: async ({}, use) => {
@@ -21,6 +28,13 @@ export const test = base.extend<{
     // storageState is already loaded by Playwright config.
     await page.goto("/overview");
     await expect(page).not.toHaveURL(/\/login/, { timeout: 15_000 });
+
+    // Dismiss notifications panel if open
+    const closeNotifications = page.getByRole("button", { name: /close notifications/i });
+    if (await closeNotifications.isVisible({ timeout: 2_000 }).catch(() => false)) {
+      await closeNotifications.click();
+      await page.waitForTimeout(300);
+    }
 
     // Dismiss "Welcome to VerifyWise" dialog if it appears
     const welcomeSkip = page.getByRole("button", { name: /skip for now/i });
@@ -39,9 +53,7 @@ export const test = base.extend<{
     await newProjectBtn.first().click();
 
     // Handle AI-or-Not screening modal if it appears
-    const skipBtn = page
-      .getByRole("button", { name: /skip/i })
-      .or(page.getByRole("button", { name: /no/i }));
+    const skipBtn = page.getByRole("button", { name: /skip.*screening/i });
     if (
       await skipBtn
         .first()
@@ -52,7 +64,13 @@ export const test = base.extend<{
       await page.waitForTimeout(500);
     }
 
-    // Fill project title using the stable id from CreateProjectForm
+    // Wait for the project form modal to appear
+    const formTitle = page
+      .getByText(/create new use case/i)
+      .or(page.getByText(/create new project/i));
+    await expect(formTitle.first()).toBeVisible({ timeout: 10_000 });
+
+    // Fill project title using the stable id from ProjectForm
     const titleInput = page.locator("#project-title-input");
     await expect(titleInput).toBeVisible({ timeout: 10_000 });
     await titleInput.fill(projectName);
@@ -142,6 +160,67 @@ export const test = base.extend<{
     await page.waitForTimeout(2000);
 
     await use(page);
+  },
+
+  adminProjectPage: async ({ browser, projectName }, use) => {
+    const context = await browser.newContext({ storageState: ADMIN_AUTH_STATE });
+    const page = await context.newPage();
+    await page.goto("/overview");
+    await expect(page).not.toHaveURL(/\/login/, { timeout: 15_000 });
+
+    // Dismiss notifications panel if open
+    const closeNotifications = page.getByRole("button", { name: /close notifications/i });
+    if (await closeNotifications.isVisible({ timeout: 2_000 }).catch(() => false)) {
+      await closeNotifications.click();
+      await page.waitForTimeout(300);
+    }
+
+    // Dismiss "Welcome to VerifyWise" dialog if it appears
+    const welcomeSkip = page.getByRole("button", { name: /skip for now/i });
+    if (await welcomeSkip.isVisible({ timeout: 3_000 }).catch(() => false)) {
+      await welcomeSkip.click();
+      await page.waitForTimeout(1000);
+    }
+
+    // Click the "New use case" button
+    const newProjectBtn = page
+      .locator('[data-joyride-id="new-project-button"]')
+      .or(page.getByRole("button", { name: /new use case/i }))
+      .or(page.getByRole("button", { name: /add.*project/i }))
+      .or(page.getByRole("button", { name: /new project/i }));
+    await expect(newProjectBtn.first()).toBeVisible({ timeout: 15_000 });
+    await newProjectBtn.first().click();
+
+    // Handle AI-or-Not screening modal if it appears
+    const skipBtn = page.getByRole("button", { name: /skip.*screening/i });
+    if (
+      await skipBtn
+        .first()
+        .isVisible({ timeout: 3_000 })
+        .catch(() => false)
+    ) {
+      await skipBtn.first().click();
+      await page.waitForTimeout(500);
+    }
+
+    // Wait for the project form modal to appear
+    const formTitle = page
+      .getByText(/create new use case/i)
+      .or(page.getByText(/create new project/i));
+    await expect(formTitle.first()).toBeVisible({ timeout: 10_000 });
+
+    // Fill project title
+    const titleInput = page.locator("#project-title-input");
+    await expect(titleInput).toBeVisible({ timeout: 10_000 });
+    await titleInput.fill(projectName);
+
+    // Submit the project creation form
+    const submitBtn = page.getByRole("button", { name: /create use case/i });
+    await submitBtn.click();
+    await page.waitForTimeout(2000);
+
+    await use(page);
+    await context.close();
   },
 });
 

@@ -1,5 +1,6 @@
 import { createTheme } from "@mui/material/styles";
 import { text, background, border, status, brand } from "./palette";
+import { fontFamily, fontSize, fontWeight } from "./typography";
 
 declare module "@mui/material/Button" {
   interface ButtonPropsVariantOverrides {
@@ -7,13 +8,11 @@ declare module "@mui/material/Button" {
   }
 }
 
-const fontFamilyDefault =
-  "'Geist', system-ui, -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif";
-
 const shadow = "0px 4px 24px -4px rgba(16, 24, 40, 0.08), 0px 3px 3px -3px rgba(16, 24, 40, 0.03)";
 
 const light = createTheme({
-  typography: { fontFamily: fontFamilyDefault, fontSize: 13 },
+  typography: { fontFamily: fontFamily.sans, fontSize: fontSize.base },
+  // 2px base — theme.spacing(n) = n × 2px (see CodeRules/09-design-system/spacing.md)
   spacing: 2,
   palette: {
     primary: { main: brand.primary },
@@ -122,7 +121,7 @@ const light = createTheme({
               },
             },
           ],
-          "fontWeight": 400,
+          "fontWeight": fontWeight.regular,
           "borderRadius": 4,
           "boxShadow": "none",
           "textTransform": "none",
@@ -144,8 +143,8 @@ const light = createTheme({
         disableRipple: true,
       },
       styleOverrides: {
-        root: {
-          "padding": 4,
+        root: ({ theme }) => ({
+          "padding": theme.spacing(2),
           "transition": "none",
           "&:focus:not(:focus-visible)": {
             outline: "none",
@@ -157,20 +156,20 @@ const light = createTheme({
           "&:hover": {
             backgroundColor: background.fill,
           },
-        },
+        }),
       },
     },
     MuiPaper: {
       styleOverrides: {
-        root: {
-          marginTop: 4,
+        root: ({ theme }) => ({
+          marginTop: theme.spacing(2),
           border: 1,
           borderStyle: "solid",
           borderColor: border.light,
           borderRadius: 4,
           boxShadow: shadow,
           backgroundColor: background.main,
-        },
+        }),
       },
     },
     MuiList: {
@@ -195,19 +194,19 @@ const light = createTheme({
         disableRipple: true,
       },
       styleOverrides: {
-        root: {
+        root: ({ theme }) => ({
           "borderRadius": 4,
           "backgroundColor": "inherit",
-          "padding": "4px 6px",
+          "padding": theme.spacing(2, 4), // was 4px 6px; 6px snapped to 8px
           "color": text.secondary,
-          "fontSize": 13,
-          "margin": 2,
+          "fontSize": fontSize.base,
+          "margin": theme.spacing(1),
           "marginBottom": 0,
           "minWidth": 100,
           "&:hover, &.Mui-selected, &.Mui-selected:hover, &.Mui-selected.Mui-focusVisible": {
             backgroundColor: background.fill,
           },
-        },
+        }),
       },
     },
     MuiTableCell: {
@@ -330,12 +329,12 @@ const light = createTheme({
     },
     MuiTooltip: {
       styleOverrides: {
-        tooltip: {
-          fontSize: "13px",
+        tooltip: ({ theme }) => ({
+          fontSize: fontSize.base,
           backgroundColor: "#1F2937",
-          padding: "8px 12px",
+          padding: theme.spacing(4, 6),
           borderRadius: "4px",
-        },
+        }),
         arrow: {
           color: "#1F2937",
         },

@@ -60,6 +60,7 @@ import EvidenceHubTable from "./evidenceHubTable";
 import FilePreviewPanel from "../FileManager/components/FilePreviewPanel";
 import { FileMetadata } from "../../../application/repository/file.repository";
 import ModelEvaluationsTab from "./ModelEvaluationsTab";
+import ModelRiskManagementTab from "./mrm";
 import ShareButton from "../../components/ShareViewDropdown/ShareButton";
 import ShareViewDropdown, { ShareViewSettings } from "../../components/ShareViewDropdown";
 import { useCreateShareLink, useUpdateShareLink } from "../../../application/hooks/useShare";
@@ -151,6 +152,7 @@ const ModelInventory: React.FC = () => {
   const hasProcessedUrlParam = useRef(false);
   const [modelInventoryData, setModelInventoryData] = useState<IModelInventory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [modelInventoryError, setModelInventoryError] = useState<Error | string | unknown>(null);
   const [isNewModelInventoryModalOpen, setIsNewModelInventoryModalOpen] = useState(false);
   // Note: Lifecycle config is now provided by the model-lifecycle plugin via plugin slots
 
@@ -640,6 +642,7 @@ const ModelInventory: React.FC = () => {
 
   // Determine the active tab based on the URL
   const getTabFromPath = useCallback((pathname: string, tabs: typeof pluginTabs) => {
+    if (pathname.includes("model-risk-management")) return "model-risk-management";
     if (pathname.includes("model-risks")) return "model-risks";
     if (pathname.includes("evidence-hub")) return "evidence-hub";
     if (pathname.includes("evaluations")) return "evaluations";
@@ -658,7 +661,13 @@ const ModelInventory: React.FC = () => {
 
     // If trying to access a plugin tab but plugin is not installed, redirect to models
     const isPluginTab = pluginTabs.some((t) => t.value === newTab);
-    const isBuiltInTab = ["models", "model-risks", "evidence-hub", "evaluations"].includes(newTab);
+    const isBuiltInTab = [
+      "models",
+      "model-risks",
+      "evidence-hub",
+      "evaluations",
+      "model-risk-management",
+    ].includes(newTab);
 
     if (!isBuiltInTab && !isPluginTab) {
       setActiveTab("models");
@@ -812,6 +821,7 @@ const ModelInventory: React.FC = () => {
     if (showLoading) {
       setIsLoading(true);
     }
+    setModelInventoryError(null);
     try {
       const response = await getAllEntities({ routeUrl: "/modelInventory" });
       if (response?.data) {
@@ -827,11 +837,7 @@ const ModelInventory: React.FC = () => {
         type: "error",
         message: `Failed to fetch model inventory data: ${error}`,
       });
-      setAlert({
-        variant: "error",
-        body: "Failed to load model inventory data. Please try again later.",
-      });
-      setShowAlert(true);
+      setModelInventoryError(error);
     } finally {
       if (showLoading) {
         setIsLoading(false);
@@ -1943,6 +1949,8 @@ const ModelInventory: React.FC = () => {
       navigate("/model-inventory/model-risks");
     } else if (newValue === "evidence-hub") {
       navigate("/model-inventory/evidence-hub");
+    } else if (newValue === "model-risk-management") {
+      navigate("/model-inventory/model-risk-management");
     } else {
       // Handle plugin tabs dynamically
       navigate(`/model-inventory/${newValue}`);
@@ -2165,6 +2173,12 @@ const ModelInventory: React.FC = () => {
                   isLoading: isEvidenceLoading,
                   tooltip: "Compliance evidence and documentation for audits",
                 },
+                {
+                  label: "Model risk management",
+                  value: "model-risk-management",
+                  icon: "ShieldCheck" as const,
+                  tooltip: "Tiering, validation, findings and roles for model risk management",
+                },
               ]}
               activeTab={activeTab}
               onChange={handleTabChange}
@@ -2267,6 +2281,8 @@ const ModelInventory: React.FC = () => {
                   key={tableKey}
                   data={data}
                   isLoading={isLoading}
+                  error={modelInventoryError}
+                  onRetry={() => fetchModelInventoryData()}
                   onEdit={handleEditModelInventory}
                   onDelete={handleDeleteModelInventory}
                   onCheckModelHasRisks={handleCheckModelHasRisks}
@@ -2470,6 +2486,12 @@ const ModelInventory: React.FC = () => {
         {activeTab === "evaluations" && (
           <Box sx={{ mt: "16px" }}>
             <ModelEvaluationsTab />
+          </Box>
+        )}
+
+        {activeTab === "model-risk-management" && (
+          <Box sx={{ mt: "16px" }}>
+            <ModelRiskManagementTab users={users} />
           </Box>
         )}
 

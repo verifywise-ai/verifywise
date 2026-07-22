@@ -23,13 +23,8 @@ export async function createNewUser({ routeUrl, body }: RequestParams): Promise<
  * @throws Will throw an error if the login fails.
  */
 export async function loginUser({ routeUrl, body }: RequestParams): Promise<any> {
-  try {
-    const response = await apiServices.post(routeUrl, body);
-    return response;
-  } catch (error) {
-    console.error("Error logging in user:", error);
-    throw error;
-  }
+  const response = await apiServices.post(routeUrl, body);
+  return response;
 }
 
 /**
@@ -44,19 +39,11 @@ export async function getEntityById({
   signal,
   responseType = "json",
 }: GetRequestParams): Promise<any> {
-  try {
-    const response = await apiServices.get(routeUrl, {
-      signal,
-      responseType,
-    });
-    return response.data;
-  } catch (error: any) {
-    // Don't log 404 errors as they're often expected (e.g., empty lists)
-    if (error?.status !== 404) {
-      console.error("Error getting entity by ID:", error);
-    }
-    throw error;
-  }
+  const response = await apiServices.get(routeUrl, {
+    signal,
+    responseType,
+  });
+  return response.data;
 }
 
 /**
@@ -67,14 +54,10 @@ export async function getEntityById({
  * @throws Will throw an error if the update operation fails.
  */
 export async function updateEntityById({ routeUrl, body, headers }: RequestParams): Promise<any> {
-  try {
-    const response = await apiServices.patch(routeUrl, body, {
-      headers: { ...headers },
-    });
-    return response;
-  } catch (error) {
-    console.error("", error);
-  }
+  const response = await apiServices.patch(routeUrl, body, {
+    headers: { ...headers },
+  });
+  return response;
 }
 
 /**
@@ -85,13 +68,8 @@ export async function updateEntityById({ routeUrl, body, headers }: RequestParam
  * @throws Will throw an error if the delete operation fails.
  */
 export async function deleteEntityById({ routeUrl }: RequestParams): Promise<any> {
-  try {
-    const response = await apiServices.delete(routeUrl);
-    return response;
-  } catch (error) {
-    console.error("Error deleting user by ID:", error);
-    throw error;
-  }
+  const response = await apiServices.delete(routeUrl);
+  return response;
 }
 
 /**
@@ -105,15 +83,10 @@ export async function getAllEntities({
   routeUrl,
   params,
 }: RequestParams & { params?: Record<string, any> }): Promise<any> {
-  try {
-    // Deduped: list fetches (e.g. /projects) are requested by several dashboard
-    // consumers at mount. Concurrent identical GETs share one in-flight request.
-    const response = await getDeduped(routeUrl, { params });
-    return response.data;
-  } catch (error) {
-    console.error("Error getting all users:", error);
-    throw error;
-  }
+  // Deduped: list fetches (e.g. /projects) are requested by several dashboard
+  // consumers at mount. Concurrent identical GETs share one in-flight request.
+  const response = await getDeduped(routeUrl, { params });
+  return response.data;
 }
 
 /**
@@ -124,13 +97,8 @@ export async function getAllEntities({
  * @throws Will throw an error if the request fails.
  */
 export async function checkUserExists({ routeUrl }: RequestParams): Promise<any> {
-  try {
-    const response = await apiServices.get(routeUrl);
-    return response.data;
-  } catch (error) {
-    console.error("Error checking if user exists:", error);
-    throw error;
-  }
+  const response = await apiServices.get(routeUrl);
+  return response.data;
 }
 
 /**
@@ -140,14 +108,8 @@ export async function checkUserExists({ routeUrl }: RequestParams): Promise<any>
  * @throws Will throw an error if the request fails.
  */
 export async function postAutoDrivers(): Promise<any> {
-  try {
-    const response = await apiServices.post("/autoDrivers");
-
-    return response;
-  } catch (error) {
-    console.error("Error creating demo data:", error);
-    throw error;
-  }
+  const response = await apiServices.post("/autoDrivers");
+  return response;
 }
 
 /**
@@ -170,8 +132,7 @@ export async function checkDemoDataExists(): Promise<boolean> {
     );
 
     return hasDemoProjects;
-  } catch (error) {
-    console.error("Error checking demo data:", error);
+  } catch {
     return false;
   }
 }
@@ -183,14 +144,8 @@ export async function checkDemoDataExists(): Promise<boolean> {
  * @throws Will throw an error if the request fails.
  */
 export async function deleteAutoDrivers(): Promise<any> {
-  try {
-    const response = await apiServices.delete("/autoDrivers");
-
-    return response;
-  } catch (error) {
-    console.error("Error deleting demo data:", error);
-    throw error;
-  }
+  const response = await apiServices.delete("/autoDrivers");
+  return response;
 }
 
 export async function resetPassword({ routeUrl, body }: RequestParams): Promise<any> {
@@ -206,13 +161,8 @@ export async function resetPassword({ routeUrl, body }: RequestParams): Promise<
  * @throws Will throw an error if the request fails.
  */
 export async function getAllUsers(): Promise<any> {
-  try {
-    const response = await apiServices.get("/users");
-    return response.data;
-  } catch (error) {
-    console.error("Error getting all users:", error);
-    throw error;
-  }
+  const response = await apiServices.get("/users");
+  return response.data;
 }
 
 /**
@@ -223,26 +173,17 @@ export async function getAllUsers(): Promise<any> {
  * @throws Will throw an error if the request fails.
  */
 export async function generateReport({ routeUrl, body, signal }: RequestParams): Promise<any> {
-  try {
-    const response = await apiServices.post(routeUrl, body, {
-      signal,
-      responseType: "blob",
-    });
+  const response = await apiServices.post(routeUrl, body, {
+    signal,
+    responseType: "blob",
+  });
 
-    return response;
-  } catch (error) {
-    console.error("", error);
-  }
+  return response;
 }
 
 export async function getAllFrameworks(): Promise<any> {
-  try {
-    const response = await apiServices.get("/frameworks");
-    return response.data;
-  } catch (error) {
-    console.error("Error getting all frameworks:", error);
-    throw error;
-  }
+  const response = await apiServices.get("/frameworks");
+  return response.data;
 }
 
 export const assignFrameworkToProject = async ({
@@ -252,20 +193,15 @@ export const assignFrameworkToProject = async ({
   frameworkId: number;
   projectId: string;
 }) => {
-  try {
-    const response = await apiServices.post(
-      `/frameworks/toProject?frameworkId=${frameworkId}&projectId=${projectId}`,
-      {},
-    );
+  const response = await apiServices.post(
+    `/frameworks/toProject?frameworkId=${frameworkId}&projectId=${projectId}`,
+    {},
+  );
 
-    return {
-      status: response.status,
-      data: response.data,
-    };
-  } catch (error) {
-    console.error("Error assigning framework to project:", error);
-    throw error;
-  }
+  return {
+    status: response.status,
+    data: response.data,
+  };
 };
 
 /**
@@ -280,14 +216,9 @@ export async function archiveIncidentById({
   body,
   headers,
 }: RequestParams): Promise<any> {
-  try {
-    // PATCH /incidents/:id/archive
-    const response = await apiServices.patch(`${routeUrl}/archive`, body, {
-      headers: { ...headers },
-    });
-    return response;
-  } catch (error) {
-    console.error("Error archiving incident:", error);
-    throw error;
-  }
+  // PATCH /incidents/:id/archive
+  const response = await apiServices.patch(`${routeUrl}/archive`, body, {
+    headers: { ...headers },
+  });
+  return response;
 }

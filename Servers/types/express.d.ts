@@ -37,5 +37,17 @@ declare module "express" {
       allowed_endpoint_ids: number[];
       metadata: Record<string, string>;
     };
+    /**
+     * MRM ingestion-token context, set by mrmIngestionAuth middleware on the
+     * machine-auth metric-push route. Distinct from JWT auth: pushes come from
+     * headless customer pipelines, not a logged-in user.
+     * `modelInventoryId` is null for an org-wide token, or a model id for a
+     * per-model-scoped token.
+     */
+    mrmIngestionToken?: {
+      tokenId: number;
+      organizationId: number;
+      modelInventoryId: number | null;
+    };
   }
 }

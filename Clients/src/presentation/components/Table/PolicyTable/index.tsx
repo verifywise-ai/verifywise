@@ -300,7 +300,7 @@ const CustomizablePolicyTable = ({
             }}
           >
             {data.cols.map((col) => (
-              <TableCell key={col.id} style={singleTheme.tableStyles.primary.body.cell}>
+              <TableCell key={col.id} sx={singleTheme.tableStyles.primary.body.cell}>
                 {row[col.id]}
               </TableCell>
             ))}

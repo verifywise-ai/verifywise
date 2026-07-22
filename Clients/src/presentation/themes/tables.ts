@@ -1,8 +1,4 @@
-const fontSizes = {
-  small: "11px",
-  medium: "13px",
-  large: "16px",
-};
+import { fontSize, fontWeight } from "./typography";
 
 export const tableStyles = {
   primary: {
@@ -21,10 +17,11 @@ export const tableStyles = {
         background: "linear-gradient(180deg, #f9fafb 0%, #f3f4f6 100%)",
       },
       cell: {
+        // Existing tables use base (13); textStyles.tableHeader is 12 for new work
         "color": "#475467",
-        "fontSize": fontSizes.medium,
-        "fontWeight": 400,
-        "padding": "14px 12px",
+        "fontSize": fontSize.base,
+        "fontWeight": fontWeight.regular,
+        "p": 6,
         "whiteSpace": "nowrap",
         "&:not(:lastChild)": {
           minWidth: "120px",
@@ -53,8 +50,8 @@ export const tableStyles = {
         },
       },
       cell: {
-        "fontSize": fontSizes.medium,
-        "padding": "14px 12px",
+        "fontSize": fontSize.base,
+        "p": 6,
         "whiteSpace": "nowrap",
         "&:not(:lastChild)": {
           minWidth: "120px",
@@ -62,8 +59,9 @@ export const tableStyles = {
         },
       },
       button: {
-        "fontSize": fontSizes.medium,
-        "padding": "2px 8px",
+        "fontSize": fontSize.base,
+        "py": 1,
+        "px": 4,
         "textTransform": "none",
         "borderRadius": "4px",
         "&:hover": {
@@ -77,7 +75,7 @@ export const tableStyles = {
     },
     footer: {
       cell: {
-        fontSize: fontSizes.small,
+        fontSize: fontSize.caption,
         whiteSpace: "nowrap",
         opacity: 0.7,
       },

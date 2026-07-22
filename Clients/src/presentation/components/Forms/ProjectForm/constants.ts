@@ -18,9 +18,9 @@ export interface FormValues {
   owner: number;
   members: User[];
   start_date: string;
-  ai_risk_classification: number;
+  ai_risk_classification: number | null;
   status: number;
-  type_of_high_risk_role: number;
+  type_of_high_risk_role: number | null;
   goal: string;
   enable_ai_data_insertion: boolean;
   monitored_regulations_and_standards: { _id: number; name: string }[];
@@ -29,6 +29,12 @@ export interface FormValues {
   target_industry: string;
   description: string;
   approval_workflow_id: number;
+
+  // Regulation-agnostic use-case classification (stored as item _id, mapped to string on submit)
+  use_case_category: number | null;
+  use_case_purpose: number | null;
+  use_case_audience: number | null;
+  deployment_context: number | null;
 }
 
 export interface FormErrors {
@@ -46,6 +52,10 @@ export interface FormErrors {
   targetIndustry?: string;
   description?: string;
   approvalWorkflow?: string;
+  useCaseCategory?: string;
+  useCasePurpose?: string;
+  useCaseAudience?: string;
+  deploymentContext?: string;
 }
 
 export const initialState: FormValues = {
@@ -53,9 +63,9 @@ export const initialState: FormValues = {
   members: [],
   owner: 0,
   start_date: new Date().toISOString(),
-  ai_risk_classification: 0,
+  ai_risk_classification: null,
   status: 1,
-  type_of_high_risk_role: 0,
+  type_of_high_risk_role: null,
   goal: "",
   enable_ai_data_insertion: false,
   monitored_regulations_and_standards: [],
@@ -64,6 +74,10 @@ export const initialState: FormValues = {
   target_industry: "",
   description: "",
   approval_workflow_id: 0,
+  use_case_category: null,
+  use_case_purpose: null,
+  use_case_audience: null,
+  deployment_context: null,
 };
 
 export interface ProjectFormProps {
@@ -85,11 +99,11 @@ export const frameworkOptions: FrameworkOption[] = [
   {
     value: FrameworkTypeEnum.ProjectBased,
     title: "Project-based frameworks",
-    description: "EU AI Act only (specific to an AI system/project)",
+    description: "Use-case level regulations (optional)",
   },
   {
     value: FrameworkTypeEnum.OrganizationWide,
     title: "Organization-wide framework",
-    description: "ISO 42001 and ISO 27001 (company-wide project)",
+    description: "ISO 42001, ISO 27001, and NIST AI RMF (company-wide project)",
   },
 ];

@@ -21,8 +21,8 @@ const __dirname = path.dirname(__filename);
  *                             created by the super-admin
  */
 
-const TEST_EMAIL = process.env.E2E_EMAIL || "verifywise@email.com";
-const TEST_PASSWORD = process.env.E2E_PASSWORD || "Verifywise#1";
+const TEST_EMAIL = process.env.E2E_EMAIL || "admin@verifywise.com";
+const TEST_PASSWORD = process.env.E2E_PASSWORD || "Admin!Str0ng2024";
 const BACKEND_URL = process.env.E2E_BACKEND_URL || "http://localhost:3000";
 const SERVERS_DIR = path.resolve(__dirname, "../../Servers");
 

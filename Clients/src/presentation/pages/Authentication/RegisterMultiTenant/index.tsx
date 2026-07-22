@@ -25,7 +25,7 @@ import {
   setAuthToken,
   setExpiration,
 } from "../../../../application/redux/auth/authSlice";
-import { CreateMyOrganization } from "../../../../application/repository/organization.repository";
+import { CreateFirstOrganization } from "../../../../application/repository/organization.repository";
 import useUsers from "../../../../application/hooks/useUsers";
 
 // Initial state for form values
@@ -146,8 +146,8 @@ const RegisterMultiTenant: React.FC = () => {
       userRoleId: values.roleId,
     };
 
-    const response = (await CreateMyOrganization({
-      routeUrl: "/organizations",
+    const response = (await CreateFirstOrganization({
+      routeUrl: "/organizations/setup",
       body: requestBody,
     })) as any;
     setValues(initialState);

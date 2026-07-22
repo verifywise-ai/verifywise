@@ -6023,6 +6023,362 @@ export const modelRiskEndpoints: Endpoint[] = [
   },
 ];
 
+// Mrm endpoints
+export const mrmEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/mrm/tiering',
+    summary: "Get Fleet Tiering",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'PUT',
+    path: '/mrm/models/{modelId}/tier',
+    summary: "Assign Model Tier",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'GET',
+    path: '/mrm/validations',
+    summary: "Get Validations",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'POST',
+    path: '/mrm/models/{modelId}/validations',
+    summary: "Create Validation",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'PATCH',
+    path: '/mrm/validations/{id}',
+    summary: "Update Validation",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'POST',
+    path: '/mrm/validations/{id}/signoff',
+    summary: "Signoff Validation",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'GET',
+    path: '/mrm/findings',
+    summary: "Get Findings",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'POST',
+    path: '/mrm/validations/{validationId}/findings',
+    summary: "Create Finding",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'PATCH',
+    path: '/mrm/findings/{id}',
+    summary: "Update Finding",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'GET',
+    path: '/mrm/models/{modelId}/roles',
+    summary: "Get Model Roles",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'PUT',
+    path: '/mrm/models/{modelId}/roles',
+    summary: "Set Model Roles",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'GET',
+    path: '/mrm/ingestion-tokens',
+    summary: "Get Ingestion Tokens",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'POST',
+    path: '/mrm/ingestion-tokens',
+    summary: "Create Ingestion Token",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'POST',
+    path: '/mrm/ingestion-tokens/{id}/rotate',
+    summary: "Rotate Ingestion Token",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'POST',
+    path: '/mrm/ingestion-tokens/{id}/revoke',
+    summary: "Revoke Ingestion Token",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'GET',
+    path: '/mrm/thresholds',
+    summary: "Get Thresholds",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'POST',
+    path: '/mrm/models/{modelId}/thresholds',
+    summary: "Create Threshold",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'PATCH',
+    path: '/mrm/thresholds/{id}',
+    summary: "Update Threshold",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'DELETE',
+    path: '/mrm/thresholds/{id}',
+    summary: "Delete Threshold",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'GET',
+    path: '/mrm/metric-keys',
+    summary: "Get Metric Keys",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'POST',
+    path: '/mrm/metric-keys',
+    summary: "Create Metric Key",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'GET',
+    path: '/mrm/models/{modelId}/monitoring',
+    summary: "Get Model Monitoring",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'GET',
+    path: '/mrm/models/{modelId}/monitoring/trend',
+    summary: "Get Metric Trend",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'GET',
+    path: '/mrm/models/{modelId}/monitoring/breaches',
+    summary: "Get Breach History",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'POST',
+    path: '/mrm/models/{modelId}/request-revalidation',
+    summary: "Request Revalidation",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'GET',
+    path: '/mrm/models/{modelId}/revalidation-events',
+    summary: "Get Revalidation Events",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'POST',
+    path: '/mrm/revalidation/sweep',
+    summary: "Run Revalidation Sweep For Org",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'GET',
+    path: '/mrm/attestation/summary',
+    summary: "Get Attestation Summary Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'GET',
+    path: '/mrm/attestation/report',
+    summary: "Generate Attestation Report Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'GET',
+    path: '/mrm/settings',
+    summary: "Get Mrm Settings Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'PUT',
+    path: '/mrm/settings',
+    summary: "Update Mrm Settings Handler",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+  {
+    method: 'POST',
+    path: '/mrm/models/{externalModelKey}/metrics',
+    summary: "Ingest Metrics",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Mrm",
+  },
+];
+
 // NIST AI RMF endpoints
 export const nistAiRmfEndpoints: Endpoint[] = [
   {
@@ -6375,6 +6731,17 @@ export const organizationEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/organizations/exists',
     summary: "Get Organizations Exists",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Organizations",
+  },
+  {
+    method: 'POST',
+    path: '/organizations/setup',
+    summary: "Create First Organization",
     requiresAuth: false,
     responses: [
       { status: 200, description: "Success" },
@@ -9592,6 +9959,7 @@ export const allEndpoints = {
   llmKey: llmKeyEndpoints,
   modelInventory: modelInventoryEndpoints,
   modelRisk: modelRiskEndpoints,
+  mrm: mrmEndpoints,
   nistAiRmf: nistAiRmfEndpoints,
   note: noteEndpoints,
   notification: notificationEndpoints,

@@ -13,6 +13,7 @@ jest.mock("../../services/slack/slackNotificationService", () => ({
   sendSlackNotification: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock("../../services/inAppNotification.service", () => ({
+  sendInAppNotification: jest.fn().mockResolvedValue(undefined),
   notifyUserAssigned: jest.fn().mockResolvedValue(undefined),
   notifyTaskAssigned: jest.fn().mockResolvedValue(undefined),
   notifyTaskUpdated: jest.fn().mockResolvedValue(undefined),

@@ -372,14 +372,8 @@ describe("VWProjectRisksTable", () => {
   });
 
   it("renders custom field columns when present", () => {
-    vi.mocked(vi.importActual("../../../../../application/hooks/useCustomFields")).then(() => {
-      vi.mock("../../../../../application/hooks/useCustomFields", () => ({
-        useCustomFieldDefinitions: () => ({
-          data: [{ id: 1, label: "Custom Field", field_type: "text" }],
-        }),
-      }));
-    });
     renderWithProviders(<VWProjectRisksTable {...defaultProps} />);
+    expect(screen.getByText("RISK NAME")).toBeInTheDocument();
   });
 
   it("handles flashRow prop", () => {

@@ -6,6 +6,7 @@ import { SHOW_AI_GATEWAY_PROMPTS } from "./featureFlags";
 // Eager imports — app shell, route guard, and Use cases page (mounts with layout for table skeleton UX)
 import Dashboard from "../../presentation/containers/Dashboard";
 import ProtectedRoute from "../../presentation/components/ProtectedRoute";
+import SetupGate from "../../presentation/components/SetupGate";
 import VWHome from "../../presentation/pages/Home/1.0Home";
 
 // ── Authentication routes ─────────────────────────────────────────────
@@ -27,6 +28,9 @@ const MicrosoftCallback = lazyRoute(
 );
 const RegisterUser = lazyRoute(
   () => import("../../presentation/pages/Authentication/RegisterUser"),
+);
+const RegisterMultiTenant = lazyRoute(
+  () => import("../../presentation/pages/Authentication/RegisterMultiTenant"),
 );
 
 // ── Core dashboard routes ─────────────────────────────────────────────
@@ -633,6 +637,32 @@ export const createRoutes = (
         </Suspense>
       }
     />
+    <Route
+      path="/model-inventory/model-risk-management"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <ModelInventory />
+        </Suspense>
+      }
+    />
+    {/* MRM sub-tab (overview, tiering, validation, findings, monitoring, settings) */}
+    <Route
+      path="/model-inventory/model-risk-management/:mrmTab"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <ModelInventory />
+        </Suspense>
+      }
+    />
+    {/* MRM settings section (metrics-feed, tiering-rules, thresholds, alerts, roles) */}
+    <Route
+      path="/model-inventory/model-risk-management/settings/:settingsSection"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <ModelInventory />
+        </Suspense>
+      }
+    />
     {/* Model lifecycle detail page - rendered by plugin */}
     <Route
       path="/model-inventory/models/:id"
@@ -1115,8 +1145,28 @@ export const createRoutes = (
       </Suspense>
     }
   />,
-  <Route key="register" path="/register" element={<Navigate to="/login" replace />} />,
-  <Route key="admin-reg" path="/admin-reg" element={<Navigate to="/login" replace />} />,
+  <Route
+    key="register"
+    path="/register"
+    element={
+      <Suspense fallback={<LazyFallback />}>
+        <SetupGate>
+          <RegisterMultiTenant />
+        </SetupGate>
+      </Suspense>
+    }
+  />,
+  <Route
+    key="admin-reg"
+    path="/admin-reg"
+    element={
+      <Suspense fallback={<LazyFallback />}>
+        <SetupGate>
+          <RegisterMultiTenant />
+        </SetupGate>
+      </Suspense>
+    }
+  />,
   <Route
     key="login"
     path="/login"

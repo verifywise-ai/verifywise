@@ -10,7 +10,7 @@ import {
 } from "../utils/evidenceHub.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import logger, { logStructured } from "../utils/logger/fileLogger";
-import { sanitizeUserHtml } from "../utils/sanitizeUserHtml";
+import { sanitizeUserHtml } from "../utils/sanitization.utils";
 import { translateError } from "../utils/i18n.utils";
 import {
   recordEvidenceAddedToModel,

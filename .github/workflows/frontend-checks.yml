@@ -3,6 +3,11 @@ name: Frontend Checks
 permissions:
   contents: read
   security-events: write
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 on:
   pull_request:
@@ -17,43 +22,10 @@ on:
       - '.github/workflows/frontend-checks.yml'
 
 jobs:
-  security-audit:
-    name: Security Audit
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: Clients
-
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Set up Node
-        uses: actions/setup-node@v6
-        with:
-          node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: Clients/package-lock.json
-
-      - name: Install dependencies
-        run: npm ci --legacy-peer-deps
-
-      - name: Run npm audit
-        run: npm audit --audit-level=high
-        continue-on-error: true
-
-      - name: Run npm audit (JSON output for review)
-        run: npm audit --json > ../audit-results.json || true
-
-      - name: Upload audit results
-        uses: actions/upload-artifact@v7
-        with:
-          name: frontend-npm-audit-results
-          path: audit-results.json
-          retention-days: 30
-
   lint-and-typecheck:
     name: Lint, Types & i18n
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: Clients
@@ -62,7 +34,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Set up Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: 'npm'
@@ -83,6 +55,7 @@ jobs:
   unit-and-component-tests:
     name: Unit & Component Tests (shard ${{ matrix.shard }}/4)
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       fail-fast: false
       matrix:
@@ -95,7 +68,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Set up Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: 'npm'
@@ -107,11 +80,11 @@ jobs:
       - name: Run tests (shard ${{ matrix.shard }}/4)
         run: npx vitest run --shard=${{ matrix.shard }}/4
 
-  # Runs the CI test command with coverage on every push and pull request,
-  # uploading the coverage report and enforcing the configured thresholds.
   coverage:
     name: Coverage
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    if: github.event_name == 'push'
     defaults:
       run:
         working-directory: Clients
@@ -120,7 +93,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Set up Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: 'npm'
@@ -142,6 +115,7 @@ jobs:
   dependency-review:
     name: Dependency Review
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v7

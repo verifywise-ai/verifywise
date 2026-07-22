@@ -20,9 +20,21 @@ interface TabItemProps {
 }
 
 const TabItem: React.FC<TabItemProps> = ({ label, icon, isActive, onClick }) => {
+  const handleKeyDown = (event: React.KeyboardEvent) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      onClick();
+    }
+  };
+
   return (
     <div
+      role="button"
+      tabIndex={0}
+      aria-pressed={isActive}
+      aria-label={label}
       onClick={onClick}
+      onKeyDown={handleKeyDown}
       className={`tab-item ${isActive ? "active" : ""}`}
       style={{
         display: "flex",

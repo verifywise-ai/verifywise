@@ -8,6 +8,7 @@ import { intakeFormsContent } from './ai-governance/intake-forms';
 import { modelInventoryContent } from './ai-governance/model-inventory';
 import { aiAppsContent } from './ai-governance/ai-apps';
 import { modelLifecycleContent } from './ai-governance/model-lifecycle';
+import { mrmContent } from './ai-governance/mrm';
 import { taskManagementContent } from './ai-governance/task-management';
 import { incidentManagementContent } from './ai-governance/incident-management';
 import { evidenceCollectionContent } from './ai-governance/evidence-collection';
@@ -107,6 +108,7 @@ import { bulkImportDatasetsContent } from './developers/bulk-import-datasets';
 import { automationsApiContent } from './developers/automations-api';
 import { complianceAndReportsContent } from './developers/compliance-and-reports';
 import { inboundIntegrationsContent } from './developers/inbound-integrations';
+import { mrmMetricIngestionContent } from './developers/mrm-metric-ingestion';
 import { aiTrustIndexDashboardContent } from './ai-trust-index/dashboard';
 import { aiTrustIndexBrowseContent } from './ai-trust-index/browse';
 import { aiTrustIndexTrackedContent } from './ai-trust-index/tracked';
@@ -126,6 +128,7 @@ export const articleContentMap: Record<string, ArticleContent> = {
   'ai-governance/model-inventory': modelInventoryContent,
   'ai-governance/ai-apps': aiAppsContent,
   'ai-governance/model-lifecycle': modelLifecycleContent,
+  'ai-governance/mrm': mrmContent,
   'ai-governance/task-management': taskManagementContent,
   'ai-governance/incident-management': incidentManagementContent,
   'ai-governance/evidence-collection': evidenceCollectionContent,
@@ -237,6 +240,7 @@ export const articleContentMap: Record<string, ArticleContent> = {
   'developers/automations-api': automationsApiContent,
   'developers/compliance-and-reports': complianceAndReportsContent,
   'developers/inbound-integrations': inboundIntegrationsContent,
+  'developers/mrm-metric-ingestion': mrmMetricIngestionContent,
   // AI Trust Index
   'ai-trust-index/dashboard': aiTrustIndexDashboardContent,
   'ai-trust-index/browse': aiTrustIndexBrowseContent,

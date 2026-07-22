@@ -739,11 +739,6 @@ export interface BulkUpdateFileTagsPayload {
 }
 
 export async function bulkUpdateFileTags(payload: BulkUpdateFileTagsPayload): Promise<any> {
-  try {
-    const response = await apiServices.patch("/files/bulk-tags", payload);
-    return response.data;
-  } catch (error) {
-    console.error("Error performing bulk file tag update:", error);
-    throw error;
-  }
+  const response = await apiServices.patch("/files/bulk-tags", payload);
+  return response.data;
 }

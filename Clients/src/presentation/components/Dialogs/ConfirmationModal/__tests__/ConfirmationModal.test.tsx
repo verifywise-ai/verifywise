@@ -66,6 +66,14 @@ describe("ConfirmationModal", () => {
     expect(baseProps.onCancel).toHaveBeenCalledTimes(1);
   });
 
+  it("calls onCancel when Escape is pressed", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<ConfirmationModal {...baseProps} isOpen />);
+
+    await user.keyboard("{Escape}");
+    expect(baseProps.onCancel).toHaveBeenCalledTimes(1);
+  });
+
   it("renders the dialog with correct ARIA attributes", () => {
     renderWithProviders(<ConfirmationModal {...baseProps} isOpen />);
 

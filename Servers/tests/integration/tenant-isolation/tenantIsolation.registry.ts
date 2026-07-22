@@ -97,6 +97,61 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     tables: ["file_change_history"],
     baseRoute: "/api/file-change-history",
   },
+  {
+    name: "mrm_validations",
+    tables: ["mrm_validations"],
+    baseRoute: "/api/mrm/validations",
+  },
+  {
+    name: "mrm_findings",
+    tables: ["mrm_findings"],
+    baseRoute: "/api/mrm/findings",
+  },
+  {
+    name: "mrm_model_roles",
+    tables: ["mrm_model_roles"],
+    baseRoute: "/api/mrm/model-roles",
+  },
+  {
+    name: "mrm_metric_keys",
+    tables: ["mrm_metric_keys"],
+    baseRoute: "/api/mrm/metric-keys",
+  },
+  {
+    name: "mrm_thresholds",
+    tables: ["mrm_thresholds"],
+    baseRoute: "/api/mrm/thresholds",
+  },
+  {
+    name: "mrm_metrics",
+    tables: ["mrm_metrics"],
+    baseRoute: "/api/mrm/metrics",
+  },
+  {
+    name: "mrm_metric_evaluations",
+    tables: ["mrm_metric_evaluations"],
+    baseRoute: "/api/mrm/metric-evaluations",
+  },
+  {
+    name: "mrm_ingestion_tokens",
+    tables: ["mrm_ingestion_tokens"],
+    baseRoute: "/api/mrm/ingestion-tokens",
+  },
+  {
+    name: "mrm_revalidation_events",
+    tables: ["mrm_revalidation_events"],
+    baseRoute: "/api/mrm/revalidation-events",
+  },
+  {
+    name: "mrm_org_settings",
+    tables: ["mrm_org_settings"],
+    baseRoute: "/api/mrm/settings",
+  },
+  {
+    name: "mrm_alert_recipients",
+    tables: ["mrm_alert_recipients"],
+    baseRoute: "/api/mrm/settings",
+  },
 ];
 
 /** Flat set of all tenant-scoped tables declared in the registry. */

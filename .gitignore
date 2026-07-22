@@ -7,6 +7,8 @@
 .env.*
 !.env.example
 !.env.*.example
+!ansible/templates/.env.j2
+ansible/secrets.yml
 *.key
 *.pem
 *.cert
