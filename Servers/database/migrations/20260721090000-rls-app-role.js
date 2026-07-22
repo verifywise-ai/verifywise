@@ -18,17 +18,30 @@
  * Phase 1 `tenant_isolation` policies apply to it.
  *
  * The role password is read from the DB_APP_PASSWORD env var — never
- * hardcoded. The migration fails fast with a clear error if it is missing.
+ * hardcoded. When DB_APP_PASSWORD is unset, the migration SKIPS role
+ * creation with a warning (safe: RLS enforcement defaults to off, so the
+ * role is unused) unless RLS_ENFORCEMENT_ENABLED=true, in which case it
+ * fails fast — the role is mandatory for enforcement.
  */
 module.exports = {
   async up(queryInterface) {
     const password = process.env.DB_APP_PASSWORD;
     if (!password) {
-      throw new Error(
-        "DB_APP_PASSWORD environment variable is required to create the " +
-          "verifywise_app runtime role. Set it in Servers/.env (never commit " +
-          "the value) and re-run the migration.",
+      const enforcementEnabled = process.env.RLS_ENFORCEMENT_ENABLED === "true";
+      if (enforcementEnabled) {
+        throw new Error(
+          "DB_APP_PASSWORD environment variable is required to create the " +
+            "verifywise_app runtime role when RLS_ENFORCEMENT_ENABLED=true. " +
+            "Set it in Servers/.env (never commit the value) and re-run the migration.",
+        );
+      }
+      console.warn(
+        "[rls-app-role] DB_APP_PASSWORD not set — skipping verifywise_app role " +
+          "creation (RLS enforcement is disabled; the role is unused). Set " +
+          "DB_APP_PASSWORD and re-run this migration before enabling " +
+          "RLS_ENFORCEMENT_ENABLED.",
       );
+      return;
     }
 
     // Idempotent role creation: NOLOGIN first, then LOGIN + password applied
