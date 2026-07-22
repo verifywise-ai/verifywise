@@ -36,19 +36,21 @@ jobs:
           # Full history so the action can diff against the PR base commit.
           fetch-depth: 0
 
+      # The semgrep-action@v1 is deprecated and rejects the generateSarif /
+      # baselineRef inputs, so it never produced semgrep.sarif and the upload
+      # step failed. Run the Semgrep CLI directly: it emits SARIF and blocks on
+      # findings via its own exit code.
       - name: Run Semgrep
-        uses: semgrep/semgrep-action@v1
-        with:
-          config: >-
-            p/javascript
-            p/typescript
-            p/python
-            p/security-audit
-            p/secrets
-          generateSarif: true
-          # Diff-aware on PRs: only findings introduced since the base
-          # branch block the merge. Empty on push events (full scan).
-          baselineRef: ${{ github.base_ref }}
+        run: |
+          python3 -m pip install --quiet semgrep
+          semgrep scan \
+            --config p/javascript \
+            --config p/typescript \
+            --config p/python \
+            --config p/security-audit \
+            --config p/secrets \
+            --sarif --output semgrep.sarif \
+            --error
 
       - name: Upload Semgrep results to GitHub Security
         uses: github/codeql-action/upload-sarif@v4
