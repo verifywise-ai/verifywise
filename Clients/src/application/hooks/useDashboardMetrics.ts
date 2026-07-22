@@ -388,6 +388,12 @@ export const useDashboardMetrics = () => {
   const [error, setError] = useState<string | null>(null);
   const [progressStep, setProgressStep] = useState(0);
 
+  // In-flight guard so overlapping triggers (mount + window focus +
+  // visibilitychange, which can all fire together when returning to the tab) do
+  // not launch multiple concurrent metric batches. A ref, not state, so event
+  // handlers read the current value rather than a stale closure.
+  const isFetchingRef = useRef(false);
+
   // Fetch risk metrics - using /projectRisks endpoint (same as Risk Management page)
   const fetchRiskMetrics = useCallback(async () => {
     try {
@@ -1176,10 +1182,17 @@ export const useDashboardMetrics = () => {
   // Grouped into 5 sequential stages for progress tracking
   const fetchAllMetrics = useCallback(
     async (forceRefresh = false) => {
+      // Coalesce overlapping triggers into the single in-flight batch.
+      if (isFetchingRef.current) {
+        return;
+      }
+
       // If we have fresh cache and not forcing refresh, skip fetch
       if (!forceRefresh && shouldSkipFetch()) {
         return;
       }
+
+      isFetchingRef.current = true;
 
       // Check if we have any cached data to show immediately
       const hasAnyCache = getCache() && Object.keys(getCache()).length > 0;
@@ -1251,6 +1264,7 @@ export const useDashboardMetrics = () => {
         flushCacheBuffer();
         setLoading(false);
         setIsRevalidating(false);
+        isFetchingRef.current = false;
       }
     },
     [
@@ -1272,10 +1286,31 @@ export const useDashboardMetrics = () => {
 
   fetchAllMetricsRef.current = fetchAllMetrics;
 
-  // Initialize data on mount
+  // Initialize data on mount. Force a refresh so navigating back to the
+  // dashboard (which remounts this hook) always revalidates instead of showing
+  // a stale cached count within the 30s TTL. The cache still paints instantly
+  // while the background revalidation runs (stale-while-revalidate).
   useEffect(() => {
-    fetchAllMetricsRef.current?.();
+    fetchAllMetricsRef.current?.(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Revalidate when the user returns to the dashboard tab/window. Without this,
+  // edits made elsewhere (e.g. changing a risk level on the Risk page) are not
+  // reflected until the cache TTL expires, so counts appear "stuck". Forcing a
+  // refresh on focus/visibility makes returning to the dashboard always current.
+  useEffect(() => {
+    const revalidate = () => {
+      if (document.visibilityState === "visible") {
+        fetchAllMetricsRef.current?.(true);
+      }
+    };
+    window.addEventListener("focus", revalidate);
+    document.addEventListener("visibilitychange", revalidate);
+    return () => {
+      window.removeEventListener("focus", revalidate);
+      document.removeEventListener("visibilitychange", revalidate);
+    };
   }, []);
 
   return {
