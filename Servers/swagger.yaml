@@ -7890,7 +7890,7 @@ paths:
       operationId: updateUserById
     delete:
       summary: 'Delete user by ID'
-      description: "Deletes a user and nullifies all their foreign key references across\nprojects, vendors, risks, vendor risks, files, automations, and invitations.\nAlso removes the user from projects_members. Demo users and super-admins\ncannot be deleted.\n"
+      description: 'Requires role: Admin or SuperAdmin'
       tags:
         - Users
       security:
@@ -10841,6 +10841,17 @@ paths:
           description: Success
         '500':
           description: 'Internal server error'
+  /organizations/setup:
+    post:
+      summary: 'Create First Organization'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Organizations
+      operationId: createFirstOrganization
   '/organizations/{id}':
     get:
       tags:
@@ -10891,6 +10902,7 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
+      description: 'Requires role: Admin'
   /organizations:
     post:
       tags:
@@ -10941,6 +10953,7 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
+      description: 'Requires role: Admin'
   /iso-42001/clauses:
     get:
       tags:
@@ -16375,6 +16388,7 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires role: Admin or Editor'
   '/ai-confirmation/approve/{id}':
     post:
       summary: 'Approve Confirmation'
@@ -16473,6 +16487,7 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires role: Admin'
   '/ai-approvals/{id}/reject':
     post:
       summary: 'Reject Approval Ctrl'
@@ -16487,6 +16502,7 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires role: Admin'
   /ai-approval-rules/test:
     post:
       summary: 'Test Rule Ctrl'
@@ -16582,6 +16598,7 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires role: Admin or Editor'
   /ai-apps/policy-suggestions:
     get:
       summary: 'Get Policy Suggestions'
@@ -16623,6 +16640,7 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires role: Admin or Editor'
     delete:
       summary: 'Delete Ai App By Id'
       responses:
@@ -16636,6 +16654,7 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires role: Admin'
   '/ai-apps/{id}/models':
     post:
       summary: 'Link Models To Ai App'
@@ -16650,6 +16669,7 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires role: Admin or Editor'
   '/ai-apps/{id}/policies':
     post:
       summary: 'Set Policies For Ai App'
@@ -16664,6 +16684,7 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires role: Admin or Editor'
   '/ai-apps/{id}/data-exposure':
     post:
       summary: 'Set Data Exposure For Ai App'
@@ -16678,6 +16699,7 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires role: Admin or Editor'
   '/ai-apps/from-shadow-ai/{shadowAiToolId}':
     post:
       summary: 'Promote From Shadow Ai'
@@ -16692,6 +16714,7 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires role: Admin or Editor'
   '/ai-apps/{id}/status':
     patch:
       summary: 'Update Ai App Status'
@@ -16706,6 +16729,7 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires role: Admin or Editor'
   /ai-audit/analytics:
     get:
       summary: 'Get Analytics'
@@ -16734,6 +16758,7 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires role: Admin'
   '/ai-audit/log/{actionId}':
     get:
       summary: 'Get Action Audit Trail'
@@ -20811,6 +20836,7 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
+      description: 'Requires role: Admin'
   /agent-primitives/stats:
     get:
       tags:
@@ -20909,6 +20935,7 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
+      description: 'Requires role: Admin'
     delete:
       tags:
         - 'Agent Discovery'
@@ -20931,6 +20958,7 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
+      description: 'Requires role: Admin'
   /agent-primitives/sync:
     post:
       tags:
@@ -20952,6 +20980,7 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
+      description: 'Requires role: Admin'
   '/agent-primitives/{id}/review':
     patch:
       tags:
@@ -20980,6 +21009,7 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
+      description: 'Requires role: Admin'
   '/agent-primitives/{id}/link-model':
     patch:
       tags:
@@ -21008,6 +21038,7 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
+      description: 'Requires role: Admin'
   '/agent-primitives/{id}/unlink-model':
     patch:
       tags:
@@ -21036,6 +21067,7 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
+      description: 'Requires role: Admin'
   '/agent-primitives/{id}/audit-logs':
     get:
       tags:
@@ -23071,6 +23103,7 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires role: Admin'
     put:
       summary: 'Save S S O Config'
       responses:
@@ -23084,6 +23117,7 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires role: Admin'
   /ssoConfig/enable:
     put:
       summary: 'Enable S S O'
@@ -23098,6 +23132,7 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires role: Admin'
   /ssoConfig/disable:
     put:
       summary: 'Disable S S O'
@@ -23112,6 +23147,7 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires role: Admin'
   /ai-trust-index/apps:
     get:
       summary: 'Get Apps'

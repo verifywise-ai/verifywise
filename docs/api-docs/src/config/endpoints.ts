@@ -45,6 +45,7 @@ export const agentDiscoveryEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/agent-primitives',
     summary: "Create Agent Primitive",
+    description: "Requires role: Admin",
     requiresAuth: true,
     responses: [
       { status: 201, description: "Created successfully" },
@@ -108,6 +109,7 @@ export const agentDiscoveryEndpoints: Endpoint[] = [
     method: 'PATCH',
     path: '/agent-primitives/{id}',
     summary: "Update Agent Primitive",
+    description: "Requires role: Admin",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
@@ -123,6 +125,7 @@ export const agentDiscoveryEndpoints: Endpoint[] = [
     method: 'DELETE',
     path: '/agent-primitives/{id}',
     summary: "Delete Agent Primitive By Id",
+    description: "Requires role: Admin",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
@@ -138,6 +141,7 @@ export const agentDiscoveryEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/agent-primitives/sync',
     summary: "Trigger Sync",
+    description: "Requires role: Admin",
     requiresAuth: true,
     responses: [
       { status: 201, description: "Created successfully" },
@@ -150,6 +154,7 @@ export const agentDiscoveryEndpoints: Endpoint[] = [
     method: 'PATCH',
     path: '/agent-primitives/{id}/review',
     summary: "Review Agent Primitive",
+    description: "Requires role: Admin",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
@@ -165,6 +170,7 @@ export const agentDiscoveryEndpoints: Endpoint[] = [
     method: 'PATCH',
     path: '/agent-primitives/{id}/link-model',
     summary: "Link Model To Agent",
+    description: "Requires role: Admin",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
@@ -180,6 +186,7 @@ export const agentDiscoveryEndpoints: Endpoint[] = [
     method: 'PATCH',
     path: '/agent-primitives/{id}/unlink-model',
     summary: "Unlink Model From Agent",
+    description: "Requires role: Admin",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
@@ -478,6 +485,7 @@ export const aiApprovalsEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/ai-approvals/{id}/approve',
     summary: "Approve Approval Ctrl",
+    description: "Requires role: Admin",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -489,6 +497,7 @@ export const aiApprovalsEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/ai-approvals/{id}/reject',
     summary: "Reject Approval Ctrl",
+    description: "Requires role: Admin",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -515,6 +524,7 @@ export const aiAppsEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/ai-apps',
     summary: "Create Ai App",
+    description: "Requires role: Admin or Editor",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -548,6 +558,7 @@ export const aiAppsEndpoints: Endpoint[] = [
     method: 'PATCH',
     path: '/ai-apps/{id}',
     summary: "Update Ai App By Id",
+    description: "Requires role: Admin or Editor",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -559,6 +570,7 @@ export const aiAppsEndpoints: Endpoint[] = [
     method: 'DELETE',
     path: '/ai-apps/{id}',
     summary: "Delete Ai App By Id",
+    description: "Requires role: Admin",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -570,6 +582,7 @@ export const aiAppsEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/ai-apps/{id}/models',
     summary: "Link Models To Ai App",
+    description: "Requires role: Admin or Editor",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -581,6 +594,7 @@ export const aiAppsEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/ai-apps/{id}/policies',
     summary: "Set Policies For Ai App",
+    description: "Requires role: Admin or Editor",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -592,6 +606,7 @@ export const aiAppsEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/ai-apps/{id}/data-exposure',
     summary: "Set Data Exposure For Ai App",
+    description: "Requires role: Admin or Editor",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -603,6 +618,7 @@ export const aiAppsEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/ai-apps/from-shadow-ai/{shadowAiToolId}',
     summary: "Promote From Shadow Ai",
+    description: "Requires role: Admin or Editor",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -614,6 +630,7 @@ export const aiAppsEndpoints: Endpoint[] = [
     method: 'PATCH',
     path: '/ai-apps/{id}/status',
     summary: "Update Ai App Status",
+    description: "Requires role: Admin or Editor",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -640,6 +657,7 @@ export const aiAuditEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/ai-audit/export',
     summary: "Export Audit Log",
+    description: "Requires role: Admin",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -747,6 +765,7 @@ export const aiContentEndpoints: Endpoint[] = [
     method: 'PATCH',
     path: '/ai-content/{id}/review',
     summary: "Review Content",
+    description: "Requires role: Admin or Editor",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -6728,6 +6747,17 @@ export const organizationEndpoints: Endpoint[] = [
     tag: "Organizations",
   },
   {
+    method: 'POST',
+    path: '/organizations/setup',
+    summary: "Create First Organization",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Organizations",
+  },
+  {
     method: 'GET',
     path: '/organizations/{id}',
     summary: "Get Organization By Id",
@@ -6746,6 +6776,7 @@ export const organizationEndpoints: Endpoint[] = [
     method: 'PATCH',
     path: '/organizations/{id}',
     summary: "Update Organization By Id",
+    description: "Requires role: Admin",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
@@ -6774,6 +6805,7 @@ export const organizationEndpoints: Endpoint[] = [
     method: 'PATCH',
     path: '/organizations/{id}/onboarding-status',
     summary: "Update Onboarding Status",
+    description: "Requires role: Admin",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
@@ -8756,6 +8788,7 @@ export const ssoConfigEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/ssoConfig',
     summary: "Get S S O Config",
+    description: "Requires role: Admin",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -8767,6 +8800,7 @@ export const ssoConfigEndpoints: Endpoint[] = [
     method: 'PUT',
     path: '/ssoConfig',
     summary: "Save S S O Config",
+    description: "Requires role: Admin",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -8778,6 +8812,7 @@ export const ssoConfigEndpoints: Endpoint[] = [
     method: 'PUT',
     path: '/ssoConfig/enable',
     summary: "Enable S S O",
+    description: "Requires role: Admin",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -8789,6 +8824,7 @@ export const ssoConfigEndpoints: Endpoint[] = [
     method: 'PUT',
     path: '/ssoConfig/disable',
     summary: "Disable S S O",
+    description: "Requires role: Admin",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -9358,7 +9394,7 @@ export const userEndpoints: Endpoint[] = [
     method: 'DELETE',
     path: '/users/{id}',
     summary: "Delete user by ID",
-    description: "Deletes a user and nullifies all their foreign key references across projects, vendors, risks, vendor risks, files, automations, and invitations. Also removes the user from projects_members. Demo users and super-admins cannot be deleted.",
+    description: "Requires role: Admin or SuperAdmin",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "User ID to delete" },
@@ -9434,6 +9470,18 @@ export const userEndpoints: Endpoint[] = [
       { status: 400, description: "Refresh token missing from cookie" },
       { status: 401, description: "Invalid refresh token" },
       { status: 406, description: "Refresh token expired" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Users",
+  },
+  {
+    method: 'POST',
+    path: '/users/logout',
+    summary: "Log out current session",
+    description: "Revokes the presented refresh token server-side and clears the refresh_token cookie. No bearer token required: only the token presented in the cookie is revoked.",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Logged out; refresh token revoked and cookie cleared" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Users",
