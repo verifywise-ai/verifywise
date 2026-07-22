@@ -53,7 +53,9 @@ jobs:
         run: npm run i18n:audit:strict
 
       - name: Dependency vulnerability audit
-        run: npm audit --audit-level=high --omit=dev
+        run: |
+          npm audit --audit-level=high --omit=dev || true
+          node $GITHUB_WORKSPACE/scripts/security/npm-audit-gate.js .
 
   unit-and-component-tests:
     name: Unit & Component Tests (shard ${{ matrix.shard }}/4)
@@ -109,7 +111,9 @@ jobs:
         run: npm run test:ci
 
       - name: Dependency vulnerability audit
-        run: npm audit --audit-level=high --omit=dev
+        run: |
+          npm audit --audit-level=high --omit=dev || true
+          node $GITHUB_WORKSPACE/scripts/security/npm-audit-gate.js .
 
       - name: Upload coverage report
         uses: actions/upload-artifact@v7

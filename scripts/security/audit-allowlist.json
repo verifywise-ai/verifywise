@@ -1,0 +1,11 @@
+{
+  "$comment": "Documented exceptions for the npm audit gate (scripts/security/npm-audit-gate.js). Each entry MUST include a justification. Only advisories with no upstream fix may be listed here.",
+  "allowlist": [
+    {
+      "id": "ghsa-5pgg-2g8v-p4x9",
+      "package": "xlsx",
+      "title": "SheetJS Regular Expression Denial of Service (ReDoS)",
+      "justification": "No upstream fix available (SheetJS ceased publishing fixed versions to the public npm registry; advisory affects all published versions). xlsx is only used to parse spreadsheet files uploaded by authenticated users in an authenticated server-side context, not on untrusted public input, so ReDoS exposure is limited. Replacement with an actively maintained spreadsheet library is tracked as follow-up work."
+    }
+  ]
+}

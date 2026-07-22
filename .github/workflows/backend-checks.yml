@@ -71,7 +71,9 @@ jobs:
         run: npm run check:api-drift
 
       - name: Dependency vulnerability audit
-        run: npm audit --audit-level=high --omit=dev
+        run: |
+          npm audit --audit-level=high --omit=dev || true
+          node $GITHUB_WORKSPACE/scripts/security/npm-audit-gate.js .
 
       - name: Upload coverage report
         if: always()
