@@ -74,7 +74,7 @@
     "cmdk": "^1.1.1",
     "date-fns": "^4.4.0",
     "dayjs": "^1.11.20",
-    "dompurify": "3.4.11",
+    "dompurify": "^3.4.12",
     "dotenv": "^17.4.2",
     "emoji-picker-react": "^4.19.1",
     "eslint-plugin-react-hooks": "^7.1.1",
@@ -145,10 +145,10 @@
   },
   "overrides": {
     "minimatch@3": {
-      "brace-expansion": "1.1.13"
+      "brace-expansion": "1.1.16"
     },
     "minimatch@5": {
-      "brace-expansion": "2.0.3"
+      "brace-expansion": "2.1.2"
     }
   }
 }
