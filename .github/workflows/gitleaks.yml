@@ -34,5 +34,10 @@ jobs:
       # is to block secrets present in the current code. Historical commits that
       # have already been remediated should not fail every future run. A
       # committed .gitleaks.toml can tune rules/allowlists if needed.
+      # Pass the repo-root .gitleaks.toml explicitly (gitleaks would
+      # auto-detect it in the source dir, but explicit is clearer and immune
+      # to working-directory changes). It extends the default ruleset and
+      # allowlists documented false positives (test fixtures, docs snippets,
+      # example manifests, detection-pattern literals).
       - name: Scan for secrets
-        run: gitleaks detect --no-git --source . --redact --verbose --exit-code 1
+        run: gitleaks detect --no-git --source . --config .gitleaks.toml --redact --verbose --exit-code 1

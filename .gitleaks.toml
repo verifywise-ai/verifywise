@@ -1,51 +1,57 @@
-# Gitleaks configuration.
+# Gitleaks configuration — extends the default ruleset.
 #
-# Extends the default rule set and adds an allowlist for known false positives:
-# example/sample config files with placeholder values, documentation snippets,
-# test fixtures, and security-detection pattern literals (strings that look like
-# secrets because they exist to detect secrets). These are not real secrets.
-# Keep this list tight — do not add broad patterns that would hide an actual
-# leak. gitleaks matches allowlist `regexes` against the detected secret VALUE,
-# not the surrounding code, so entries below target the placeholder values.
-
+# The global allowlist below documents known FALSE POSITIVES only; every entry
+# is justified inline. Allowlisting is primarily PATH-based so real secrets in
+# source files are still caught everywhere else. The few value regexes at the
+# bottom match exact placeholder literals that live inside real source files
+# (where a path allowlist would hide genuine leaks).
+#
+# Path separators are written as [/\\] so the same config behaves identically
+# on Windows dev machines and Linux CI runners.
 [extend]
 useDefault = true
 
 [allowlist]
-description = "Placeholder values in examples, docs, tests, and detection patterns"
-
-# Files that intentionally contain placeholder or pattern credentials.
+description = "Documented false positives: tests, fixtures, docs, examples"
 paths = [
-  '''.*\.example($|\..*)''',
-  '''.*[-_]example\.(ya?ml|env|json)$''',
-  '''.*example\.env.*''',
-  '''.*\.env\.example$''',
-  '''kubernetes/\.k8s/secrets-example\.yaml$''',
-  '''ansible/templates/example\.env\.j2$''',
-  '''.*\.test\.(t|j)sx?$''',
-  '''.*/__tests__/.*''',
-  '''docs/.*''',
-  '''Servers/documentation/.*''',
-  '''Servers/lib/ai-detection/test-patterns\.ts$''',
-  '''shared/user-guide-content/.*''',
+  # --- Build/dependency artifacts (never committed; local-run noise only) ---
+  '''node_modules''',
+  '''(^|[/\\])dist[/\\]''',
+  '''(^|[/\\])coverage[/\\]''',
+  '''(^|[/\\])venv[/\\]''',
+  '''(^|[/\\])\.venv[/\\]''',
+  '''\.tmp-sec[/\\]''',
+
+  # --- Test fixtures with intentionally fake tokens ---
+  # Frontend/backend unit & integration tests use dummy tokens/keys only.
+  '''__tests__[/\\]''',
+  '''[/\\]tests?[/\\]''',
+  # Detection FIXTURE: fake API-key patterns used to test the AI-key
+  # detection logic itself — must never be treated as real secrets.
+  '''test-patterns\.ts$''',
+
+  # --- Documentation: example curl/JWT/placeholder values ---
+  # All markdown files are docs/snippets by definition in this repo.
+  '''\.md$''',
+  '''(^|[/\\])docs[/\\]''',
+  '''[/\\]documentation[/\\]''',
+  '''user-guide-content[/\\]''',
+
+  # --- Kubernetes example manifest: values are REPLACE_ME placeholders ---
+  '''secrets-example\.yaml$''',
 ]
 
-# Regexes matching the placeholder/pattern VALUES the default rules flag as
-# secrets. gitleaks applies these against the captured secret string.
+# Value regexes: exact placeholder literals inside REAL source files.
+# gitleaks matches these against the detected secret value, not the code.
 regexes = [
-  # UI tab-key constants, not credentials.
-  '''verifywise_iso\d+_tab''',
-  '''verifywise_(nist|eu)_[a-z]+_tab''',
-  # Obvious documentation placeholders.
-  '''AKIA?EXAMPLE[0-9A-Z]*''',
-  '''your-verifywise-host''',
-  '''your-aws-ses-secret[a-z-]*''',
-  '''(?i)your-[a-z-]*(secret|key|token|password)''',
-  '''(?i)replace[- _](this|with|all)''',
-  # Detection-pattern literals: strings present to *detect* keys, not real keys.
+  # localStorage tab-state keys in Clients Framework pages — UI constants,
+  # not credentials (e.g. "verifywise_iso27001_tab").
+  '''verifywise_(iso\d+|nist_ai_rmf|eu_ai_act)_tab''',
+  # PEM header literal used as a DETECTION pattern in the AI Gateway
+  # guardrail config (Clients Guardrails page) — it detects keys, it is not
+  # one.
   '''-----BEGIN (RSA |OPENSSH |EC |DSA |PGP )?PRIVATE KEY-----''',
-  # JSDoc/swagger example response bodies use a literal "token" placeholder.
-  '''example[-_]?token''',
-  # Truncated example JWT in JSDoc/swagger comments (header only, ends in ...).
+  # Truncated example JWT in JSDoc/swagger response examples (header segment
+  # only, ends in "...") — e.g. Servers/controllers/*.ctrl.ts.
   '''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.\.\.''',
 ]
