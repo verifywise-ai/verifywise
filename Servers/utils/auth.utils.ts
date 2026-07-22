@@ -2,6 +2,7 @@ import crypto from "crypto";
 import { Response } from "express";
 import { generateToken, generateRefreshToken, THIRTY_DAYS_MS } from "./jwt.utils";
 import { storeRefreshToken } from "./refreshToken.utils";
+import { generateCsrfToken } from "../middleware/csrf.middleware";
 
 export interface UserTokenData {
   id: number;
@@ -68,6 +69,9 @@ export async function generateUserTokens(
     secure: process.env.NODE_ENV === "production",
     sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
   });
+
+  // Double-submit-cookie CSRF token for cookie-authenticated flows.
+  generateCsrfToken(res);
 
   return {
     accessToken,

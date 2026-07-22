@@ -125,6 +125,12 @@ const processQueue = (error: unknown, token: string | null = null) => {
   failedQueue = [];
 };
 
+// Read a cookie value by name (used for the non-httpOnly CSRF cookie).
+const getCookieValue = (name: string): string | null => {
+  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : null;
+};
+
 // Request interceptor to handle both authorization token and credentials
 CustomAxios.interceptors.request.use(
   (config) => {
@@ -156,6 +162,18 @@ CustomAxios.interceptors.request.use(
     // Enable credentials for auth-related endpoints
     if (config.url?.includes("/users/login") || config.url?.includes("/users/refresh-token")) {
       config.withCredentials = true;
+    }
+
+    // Double-submit-cookie CSRF: echo the csrfToken cookie in the header so
+    // cookie-authenticated state-changing requests (refresh-token, logout)
+    // pass the server-side CSRF middleware. Harmless on all other requests.
+    try {
+      const csrfToken = getCookieValue("csrfToken");
+      if (csrfToken) {
+        config.headers["x-csrf-token"] = csrfToken;
+      }
+    } catch {
+      // document.cookie unavailable in sandboxed contexts.
     }
 
     return config;

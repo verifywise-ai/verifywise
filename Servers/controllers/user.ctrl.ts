@@ -62,6 +62,7 @@ import { Transaction } from "sequelize";
 import logger, { logStructured } from "../utils/logger/fileLogger";
 import { logEvent } from "../utils/logger/dbLogger";
 import { generateUserTokens } from "../utils/auth.utils";
+import { CSRF_COOKIE_NAME } from "../middleware/csrf.middleware";
 import {
   findRefreshToken,
   revokeAllUserTokens,
@@ -1950,6 +1951,12 @@ async function logoutUser(req: Request, res: Response): Promise<any> {
 
     res.clearCookie("refresh_token", {
       httpOnly: true,
+      path: "/api/users",
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    });
+    res.clearCookie(CSRF_COOKIE_NAME, {
+      httpOnly: false,
       path: "/api/users",
       secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
