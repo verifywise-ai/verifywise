@@ -1197,8 +1197,11 @@ export const useDashboardMetrics = () => {
       // Check if we have any cached data to show immediately
       const hasAnyCache = getCache() && Object.keys(getCache()).length > 0;
 
-      // If we have cached data, show it and revalidate in background
-      if (hasAnyCache && !forceRefresh) {
+      // If we have cached data, keep showing it and revalidate quietly in the
+      // background — even on a forced refresh. Only fall back to the blocking
+      // loading state when there is nothing cached to paint, so returning to the
+      // dashboard never flashes a spinner over good data.
+      if (hasAnyCache) {
         setIsRevalidating(true);
       } else {
         setLoading(true);
