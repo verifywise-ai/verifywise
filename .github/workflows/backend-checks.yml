@@ -133,6 +133,9 @@ jobs:
           JWT_SECRET: test-jwt-secret-key-for-testing-only
           REFRESH_TOKEN_SECRET: test-refresh-secret-key-for-testing-only
           ENCRYPTION_KEY: default-key-change-this-in-production-32chars!!
+          # Required by the RLS runtime-role migration (rls-app-role.js), run via
+          # globalSetup; it fails closed without it. CI-only value.
+          DB_APP_PASSWORD: test-app-role-password-for-ci
         run: npm run test:integration -- --testPathPatterns=tenant-isolation
 
       - name: Run deadline-summary smoke test
@@ -148,6 +151,9 @@ jobs:
           JWT_SECRET: test-jwt-secret-key-for-testing-only
           REFRESH_TOKEN_SECRET: test-refresh-secret-key-for-testing-only
           ENCRYPTION_KEY: default-key-change-this-in-production-32chars!!
+          # Required by the RLS runtime-role migration (rls-app-role.js), run via
+          # globalSetup; it fails closed without it. CI-only value.
+          DB_APP_PASSWORD: test-app-role-password-for-ci
         run: npm run test:smoke
 
       - name: Run schema-drift tenant isolation audit
@@ -163,6 +169,9 @@ jobs:
           JWT_SECRET: test-jwt-secret-key-for-testing-only
           REFRESH_TOKEN_SECRET: test-refresh-secret-key-for-testing-only
           ENCRYPTION_KEY: default-key-change-this-in-production-32chars!!
+          # Required by the RLS runtime-role migration (rls-app-role.js), run via
+          # globalSetup; it fails closed without it. CI-only value.
+          DB_APP_PASSWORD: test-app-role-password-for-ci
         run: npx ts-node scripts/auditTenantIsolationCoverage.ts
 
   dependency-review:
