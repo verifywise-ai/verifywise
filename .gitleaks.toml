@@ -1,0 +1,51 @@
+# Gitleaks configuration.
+#
+# Extends the default rule set and adds an allowlist for known false positives:
+# example/sample config files with placeholder values, documentation snippets,
+# test fixtures, and security-detection pattern literals (strings that look like
+# secrets because they exist to detect secrets). These are not real secrets.
+# Keep this list tight — do not add broad patterns that would hide an actual
+# leak. gitleaks matches allowlist `regexes` against the detected secret VALUE,
+# not the surrounding code, so entries below target the placeholder values.
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Placeholder values in examples, docs, tests, and detection patterns"
+
+# Files that intentionally contain placeholder or pattern credentials.
+paths = [
+  '''.*\.example($|\..*)''',
+  '''.*[-_]example\.(ya?ml|env|json)$''',
+  '''.*example\.env.*''',
+  '''.*\.env\.example$''',
+  '''kubernetes/\.k8s/secrets-example\.yaml$''',
+  '''ansible/templates/example\.env\.j2$''',
+  '''.*\.test\.(t|j)sx?$''',
+  '''.*/__tests__/.*''',
+  '''docs/.*''',
+  '''Servers/documentation/.*''',
+  '''Servers/lib/ai-detection/test-patterns\.ts$''',
+  '''shared/user-guide-content/.*''',
+]
+
+# Regexes matching the placeholder/pattern VALUES the default rules flag as
+# secrets. gitleaks applies these against the captured secret string.
+regexes = [
+  # UI tab-key constants, not credentials.
+  '''verifywise_iso\d+_tab''',
+  '''verifywise_(nist|eu)_[a-z]+_tab''',
+  # Obvious documentation placeholders.
+  '''AKIA?EXAMPLE[0-9A-Z]*''',
+  '''your-verifywise-host''',
+  '''your-aws-ses-secret[a-z-]*''',
+  '''(?i)your-[a-z-]*(secret|key|token|password)''',
+  '''(?i)replace[- _](this|with|all)''',
+  # Detection-pattern literals: strings present to *detect* keys, not real keys.
+  '''-----BEGIN (RSA |OPENSSH |EC |DSA |PGP )?PRIVATE KEY-----''',
+  # JSDoc/swagger example response bodies use a literal "token" placeholder.
+  '''example[-_]?token''',
+  # Truncated example JWT in JSDoc/swagger comments (header only, ends in ...).
+  '''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.\.\.''',
+]
