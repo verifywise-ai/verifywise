@@ -10,9 +10,14 @@ name: SAST (Semgrep)
 #   p/security-audit           — cross-language security patterns
 #   p/secrets                  — hardcoded secret patterns
 #
-# Findings are uploaded to the GitHub Security tab and the scan is now an
-# enforced blocking gate. On pull requests only NEW findings (diff-aware
-# against the base branch) fail the job; pushes run a full scan.
+# Findings are uploaded to the GitHub Security tab and the scan is an
+# enforced blocking gate — but only for NEW findings. The pre-existing
+# findings backlog is triaged separately (tracked outside CI); blocking on it
+# would fail every PR. Semgrep's built-in baseline diffing
+# (--baseline-commit) fails the job only on findings not present on the base
+# branch: PRs diff against the PR base ref, pushes diff against the repo
+# default branch (develop). All findings still land in the Security tab via
+# SARIF so the backlog stays visible.
 
 permissions:
   contents: read
@@ -43,6 +48,16 @@ jobs:
       - name: Run Semgrep
         run: |
           python3 -m pip install --quiet semgrep
+          # Baseline diffing policy: only findings NOT present on the base
+          # branch fail this job. The pre-existing backlog is triaged
+          # separately; new findings block. (fetch-depth: 0 above is required
+          # so the baseline commit is available locally.)
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASELINE_FLAG="--baseline-commit origin/${{ github.base_ref }}"
+          else
+            # Pushes: diff against the repo default branch (develop).
+            BASELINE_FLAG="--baseline-commit origin/develop"
+          fi
           semgrep scan \
             --config p/javascript \
             --config p/typescript \
@@ -50,7 +65,8 @@ jobs:
             --config p/security-audit \
             --config p/secrets \
             --sarif --output semgrep.sarif \
-            --error
+            --error \
+            $BASELINE_FLAG
 
       - name: Upload Semgrep results to GitHub Security
         uses: github/codeql-action/upload-sarif@v4
