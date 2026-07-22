@@ -8,3 +8,6 @@ pytest-asyncio==0.25.3
 pytest-httpx==0.35.0
 respx==0.22.0
 httpx==0.28.1
+# starlette 1.x moved its TestClient onto httpx2; the app and the
+# pytest-httpx/respx mocks still use httpx 0.x. Both coexist.
+httpx2

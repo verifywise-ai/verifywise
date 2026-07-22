@@ -62,7 +62,13 @@ jobs:
       - name: Audit EvalServer dependencies (pip-audit)
         run: |
           .venv/bin/python -m pip install pip-audit
-          .venv/bin/python -m pip_audit -r requirements.txt
+          # PYSEC-2026-2132 (click): the fix (click>=8.3.0) is blocked by
+          # deepeval==3.7.0, which requires click<8.3.0. Upgrading deepeval to a
+          # 4.x that allows click 8.3.x is a major-version change of the core
+          # eval library, disproportionate to this vuln
+          # (CVSS AV:L/AC:H/PR:H/UI:R — local, high-complexity, high-privilege,
+          # user-interaction). Ignored until deepeval is upgraded separately.
+          .venv/bin/python -m pip_audit -r requirements.txt --ignore-vuln PYSEC-2026-2132
 
       - name: Run EvalServer tests (excluding integration smoke tests)
         env:
