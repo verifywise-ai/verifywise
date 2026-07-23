@@ -8,7 +8,7 @@
 
 # --- Known / accepted noise -------------------------------------------------
 # Timestamp disclosure (often build hashes, not real timestamps)
-10096	IGNORE
+10096	IGNORE	Timing disclosure false positive on async API responses (tuned during baseline triage)
 # Private IP disclosure in responses (internal services by design)
 2	LOW
 # X-Backend-Server / X-ChromeLogger informational leakage

@@ -26,6 +26,11 @@
  * @module middleware/rls
  */
 
+// Triple-slash reference: ts-node (used by scripts/*.ts) compiles files
+// lazily and does not load the tsconfig `include` set, so the global Request
+// augmentation in types/express.d.ts would otherwise be invisible here.
+/// <reference path="../types/express.d.ts" />
+
 import { NextFunction, Request, Response } from "express";
 import type { Sequelize, Transaction } from "sequelize";
 import { asyncLocalStorage } from "../utils/context/context";
