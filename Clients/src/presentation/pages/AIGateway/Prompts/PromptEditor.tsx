@@ -47,6 +47,7 @@ import { CustomizableButton } from "../../../components/button/customizable-butt
 import Chip from "../../../components/Chip";
 import Field from "../../../components/Inputs/Field";
 import Select from "../../../components/Inputs/Select";
+import AutoCompleteField from "../../../components/Inputs/Autocomplete";
 import StandardModal from "../../../components/Modals/StandardModal";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
 import { EmptyState } from "../../../components/EmptyState";
@@ -652,15 +653,16 @@ export default function PromptEditorPage() {
 
           {/* Model + config */}
           <Box sx={{ display: "flex", gap: "16px", mb: "16px", alignItems: "flex-end" }}>
-            <Select
+            <AutoCompleteField
               id="prompt-model-select"
               label="Model"
-              value={model}
-              onChange={(e) => setModel(e.target.value as string)}
-              items={allModelItems}
-              placeholder="Select model"
+              value={allModelItems.find((item) => item._id === model) ?? null}
+              onChange={(_, newValue) => setModel(newValue?._id ?? "")}
+              options={allModelItems}
+              getOptionLabel={(item) => item.name}
+              isOptionEqualToValue={(option, val) => option._id === val._id}
+              placeholder="Search models..."
               sx={{ flex: 1 }}
-              getOptionValue={(item) => item._id}
             />
             <IconButton
               size="small"
