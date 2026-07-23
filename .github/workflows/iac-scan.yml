@@ -36,6 +36,19 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      # Table-format pass purely for log visibility: the SARIF pass below
+      # uploads to the Security tab but hides findings from the job log,
+      # which made a previous failure impossible to diagnose remotely.
+      - name: Run Trivy config scan (table output to log)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: 'config'
+          scan-ref: '.'
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'
+          ignore-unfixed: true
+
       - name: Run Trivy config scan
         uses: aquasecurity/trivy-action@v0.36.0
         with:
