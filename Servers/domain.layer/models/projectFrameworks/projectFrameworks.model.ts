@@ -5,7 +5,7 @@ import { IProjectFrameworks } from "../../interfaces/i.projectFramework";
 import { ValidationException, NotFoundException } from "../../exceptions/custom.exception";
 
 @Table({
-  tableName: "project_frameworks",
+  tableName: "projects_frameworks",
   timestamps: true,
   underscored: true,
 })

@@ -73,6 +73,40 @@ const highRiskRoleItems = [
   { _id: 2, name: HighRiskRole.PROVIDER },
 ];
 
+const useCaseCategoryItems = [
+  { _id: 1, name: "Generative AI" },
+  { _id: 2, name: "Computer Vision" },
+  { _id: 3, name: "Predictive Analytics" },
+  { _id: 4, name: "Natural Language Processing" },
+  { _id: 5, name: "Robotics" },
+  { _id: 6, name: "Recommendation Systems" },
+  { _id: 7, name: "Other" },
+];
+
+const useCasePurposeItems = [
+  { _id: 1, name: "Customer service" },
+  { _id: 2, name: "Internal operations" },
+  { _id: 3, name: "Product/feature enhancement" },
+  { _id: 4, name: "Research and development" },
+  { _id: 5, name: "Marketing and sales" },
+  { _id: 6, name: "Risk and compliance" },
+  { _id: 7, name: "Other" },
+];
+
+const useCaseAudienceItems = [
+  { _id: 1, name: "Internal" },
+  { _id: 2, name: "External" },
+  { _id: 3, name: "Both" },
+];
+
+const deploymentContextItems = [
+  { _id: 1, name: "Cloud" },
+  { _id: 2, name: "On-premises" },
+  { _id: 3, name: "Edge" },
+  { _id: 4, name: "Hybrid" },
+  { _id: 5, name: "Third-party API" },
+];
+
 enum ProjectStatusEnum {
   NotStarted = "Not started",
   InProgress = "In progress",
@@ -100,8 +134,8 @@ interface FormValues {
   owner: number;
   members: number[];
   startDate: string;
-  riskClassification: number;
-  typeOfHighRiskRole: number;
+  riskClassification: number | null;
+  typeOfHighRiskRole: number | null;
   geography: number;
   targetIndustry: string;
   description: string;
@@ -111,6 +145,10 @@ interface FormValues {
     project_framework_id?: number;
     framework_id?: number;
   }[];
+  useCaseCategory: number | null;
+  useCasePurpose: number | null;
+  useCaseAudience: number | null;
+  deploymentContext: number | null;
 }
 
 interface FormErrors {
@@ -126,6 +164,10 @@ interface FormErrors {
   geography?: string;
   targetIndustry?: string;
   description?: string;
+  useCaseCategory?: string;
+  useCasePurpose?: string;
+  useCaseAudience?: string;
+  deploymentContext?: string;
 }
 
 const initialState: FormValues = {
@@ -135,12 +177,16 @@ const initialState: FormValues = {
   owner: 0,
   members: [],
   startDate: "",
-  riskClassification: 0,
-  typeOfHighRiskRole: 0,
+  riskClassification: null,
+  typeOfHighRiskRole: null,
   geography: 1,
   targetIndustry: "",
   description: "",
-  monitoredRegulationsAndStandards: [{ _id: 1, name: "EU AI Act" }],
+  monitoredRegulationsAndStandards: [],
+  useCaseCategory: null,
+  useCasePurpose: null,
+  useCaseAudience: null,
+  deploymentContext: null,
 };
 
 const ProjectSettings = React.memo(
@@ -196,7 +242,11 @@ const ProjectSettings = React.memo(
         values.typeOfHighRiskRole !== initialValuesRef.current.typeOfHighRiskRole ||
         values.geography !== initialValuesRef.current.geography ||
         values.targetIndustry !== initialValuesRef.current.targetIndustry ||
-        values.description !== initialValuesRef.current.description;
+        values.description !== initialValuesRef.current.description ||
+        values.useCaseCategory !== initialValuesRef.current.useCaseCategory ||
+        values.useCasePurpose !== initialValuesRef.current.useCasePurpose ||
+        values.useCaseAudience !== initialValuesRef.current.useCaseAudience ||
+        values.deploymentContext !== initialValuesRef.current.deploymentContext;
 
       // Only consider framework changes if we're not in the middle of a framework operation
       const frameworksModified =
@@ -228,8 +278,6 @@ const ProjectSettings = React.memo(
       isFrameworkOperationInProgress,
       customFieldsGate.blocked,
     ]);
-
-    const [removedFramework, setRemovedFramework] = useState<boolean>(false);
 
     useEffect(() => {
       if (project) {
@@ -282,16 +330,33 @@ const ProjectSettings = React.memo(
             riskClassificationItems.find(
               (item) =>
                 item.name.toLowerCase() === (project.ai_risk_classification || "").toLowerCase(),
-            )?._id || 0,
+            )?._id || null,
           typeOfHighRiskRole:
             highRiskRoleItems.find(
               (item) =>
                 item.name.toLowerCase() === (project.type_of_high_risk_role || "").toLowerCase(),
-            )?._id || 0,
+            )?._id || null,
           geography: project.geography ?? 1,
           targetIndustry: project.target_industry ?? "",
           description: project.description ?? "",
           monitoredRegulationsAndStandards: frameworksForProject,
+          useCaseCategory:
+            useCaseCategoryItems.find(
+              (item) => item.name.toLowerCase() === (project.use_case_category || "").toLowerCase(),
+            )?._id || null,
+          useCasePurpose:
+            useCasePurposeItems.find(
+              (item) => item.name.toLowerCase() === (project.use_case_purpose || "").toLowerCase(),
+            )?._id || null,
+          useCaseAudience:
+            useCaseAudienceItems.find(
+              (item) => item.name.toLowerCase() === (project.use_case_audience || "").toLowerCase(),
+            )?._id || null,
+          deploymentContext:
+            deploymentContextItems.find(
+              (item) =>
+                item.name.toLowerCase() === (project.deployment_context || "").toLowerCase(),
+            )?._id || null,
         };
         initialValuesRef.current = returnedData;
         setShowCustomizableSkeleton(false);
@@ -369,14 +434,13 @@ const ProjectSettings = React.memo(
         if (prop === "monitoredRegulationsAndStandards") {
           // If removing a framework (newValue has fewer items than current value)
           if (newValue.length < values.monitoredRegulationsAndStandards.length) {
-            const removedFramework = values.monitoredRegulationsAndStandards.find(
+            const frameworkBeingRemoved = values.monitoredRegulationsAndStandards.find(
               (fw) => !newValue.some((nv) => nv._id === fw._id),
             );
-            setRemovedFramework(prop === "monitoredRegulationsAndStandards");
-            if (removedFramework) {
+            if (frameworkBeingRemoved) {
               setIsFrameworkOperationInProgress(true);
-              setFrameworkToRemove(removedFramework);
-              setIsFrameworkRemoveModalOpen(values.monitoredRegulationsAndStandards.length > 1);
+              setFrameworkToRemove(frameworkBeingRemoved);
+              setIsFrameworkRemoveModalOpen(true);
               // Don't update values state yet
               return;
             }
@@ -534,7 +598,6 @@ const ProjectSettings = React.memo(
         setIsFrameworkOperationInProgress(false);
         setIsFrameworkRemoveModalOpen(false);
         setFrameworkToRemove(null);
-        setRemovedFramework(false);
         setTimeout(() => {
           setAlert(null);
         }, 3000);
@@ -545,7 +608,6 @@ const ProjectSettings = React.memo(
       setIsFrameworkRemoveModalOpen(false);
       setFrameworkToRemove(null);
       setIsFrameworkOperationInProgress(false);
-      setRemovedFramework(false);
     }, []);
 
     const validateForm = useCallback((): boolean => {
@@ -573,14 +635,17 @@ const ProjectSettings = React.memo(
         newErrors.owner = owner.message;
       }
 
-      // Skip framework validation if use-case has pending approval (no frameworks created yet)
-      if (!hasPendingApproval) {
-        const monitoredRegulationsAndStandards = selectValidation(
-          "Applicable regulations",
-          values.monitoredRegulationsAndStandards.length,
-        );
-        if (!monitoredRegulationsAndStandards.accepted) {
-          newErrors.monitoredRegulationsAndStandards = monitoredRegulationsAndStandards.message;
+      // Framework selection is optional for use cases
+      // Risk tier and role are required only when EU AI Act (ID 1) is selected
+      const hasEuAiAct = values.monitoredRegulationsAndStandards.some((fw) => fw._id === 1);
+      if (hasEuAiAct) {
+        if (!values.riskClassification) {
+          newErrors.riskClassification =
+            "AI risk classification is required when EU AI Act is selected.";
+        }
+        if (!values.typeOfHighRiskRole) {
+          newErrors.typeOfHighRiskRole =
+            "Type of high risk role is required when EU AI Act is selected.";
         }
       }
 
@@ -590,6 +655,7 @@ const ProjectSettings = React.memo(
 
     function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
       event.preventDefault();
+      if (customFieldsGate.blocked) return;
       if (validateForm()) {
         handleSaveConfirm();
       } else {
@@ -624,10 +690,14 @@ const ProjectSettings = React.memo(
     }, []);
     // saves the project
     const handleSaveConfirm = useCallback(async () => {
-      const selectedRiskClass =
-        riskClassificationItems.find((item) => item._id === values.riskClassification)?.name || "";
-      const selectedHighRiskRole =
-        highRiskRoleItems.find((item) => item._id === values.typeOfHighRiskRole)?.name || "";
+      const hasEuAiAct = values.monitoredRegulationsAndStandards.some((fw) => fw._id === 1);
+      const selectedRiskClass = hasEuAiAct
+        ? riskClassificationItems.find((item) => item._id === values.riskClassification)?.name ||
+          null
+        : null;
+      const selectedHighRiskRole = hasEuAiAct
+        ? highRiskRoleItems.find((item) => item._id === values.typeOfHighRiskRole)?.name || null
+        : null;
       const selectedStatus =
         projectStatusItems.find((item) => item._id === values.status)?.name || "";
       const selectedRegulations = values.monitoredRegulationsAndStandards.map((reg) => reg.name);
@@ -653,6 +723,15 @@ const ProjectSettings = React.memo(
           monitored_regulations_and_standards: selectedRegulations,
           last_updated: new Date().toISOString(),
           last_updated_by: userId,
+          use_case_category:
+            useCaseCategoryItems.find((item) => item._id === values.useCaseCategory)?.name || null,
+          use_case_purpose:
+            useCasePurposeItems.find((item) => item._id === values.useCasePurpose)?.name || null,
+          use_case_audience:
+            useCaseAudienceItems.find((item) => item._id === values.useCaseAudience)?.name || null,
+          deployment_context:
+            deploymentContextItems.find((item) => item._id === values.deploymentContext)?.name ||
+            null,
           framework: values.monitoredRegulationsAndStandards.map((fw) => ({
             project_framework_id: fw._id,
             framework_id: fw._id,
@@ -996,7 +1075,7 @@ const ProjectSettings = React.memo(
                       {/* Applicable regulations Row */}
                       <Box>
                         <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-                          Applicable regulations *
+                          Applicable regulations (optional)
                         </Typography>
                         <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
                           Add all monitored regulations and standards of the use case.
@@ -1172,15 +1251,6 @@ const ProjectSettings = React.memo(
                             />
                           </span>
                         </Tooltip>
-                        {removedFramework &&
-                          values.monitoredRegulationsAndStandards.length === 1 && (
-                            <Typography
-                              variant="caption"
-                              sx={{ color: "warning.main", fontWeight: 300, mt: 1 }}
-                            >
-                              Framework cannot be empty.
-                            </Typography>
-                          )}
                       </Stack>
                     </>
                   )}
@@ -1309,59 +1379,153 @@ const ProjectSettings = React.memo(
                     }}
                   />
 
-                  {/* AI risk classification Row */}
-                  <Box>
-                    <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-                      AI risk classification
-                    </Typography>
-                    <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
-                      Not sure about your risk level?&nbsp;
-                      <VWLink onClick={() => setIsRiskModalOpen(true)}>
-                        Calculate your AI risk classification
-                      </VWLink>
-                    </Typography>
-                  </Box>
-                  <Stack gap={1}>
-                    <Select
-                      id="risk-classification-input"
-                      label=""
-                      value={values?.riskClassification || 1}
-                      onChange={handleOnSelectChange("riskClassification")}
-                      items={riskClassificationItems}
-                      sx={{
-                        width: 400,
-                        backgroundColor: theme.palette.background.main,
-                      }}
-                      error={errors.riskClassification}
-                    />
-                  </Stack>
+                  {values.monitoredRegulationsAndStandards.some((fw) => fw._id === 1) && (
+                    <>
+                      {/* AI risk classification Row */}
+                      <Box>
+                        <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
+                          AI risk classification *
+                        </Typography>
+                        <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
+                          Not sure about your risk level?&nbsp;
+                          <VWLink onClick={() => setIsRiskModalOpen(true)}>
+                            Calculate your AI risk classification
+                          </VWLink>
+                        </Typography>
+                      </Box>
+                      <Stack gap={1}>
+                        <Select
+                          id="risk-classification-input"
+                          label=""
+                          value={values?.riskClassification || ""}
+                          onChange={handleOnSelectChange("riskClassification")}
+                          items={riskClassificationItems}
+                          sx={{
+                            width: 400,
+                            backgroundColor: theme.palette.background.main,
+                          }}
+                          error={errors.riskClassification}
+                        />
+                      </Stack>
 
-                  {/* Type of high risk role Row */}
+                      {/* Type of high risk role Row */}
+                      <Box>
+                        <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
+                          Type of high risk role *
+                        </Typography>
+                        <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
+                          If you are not sure about the high risk role,&nbsp;
+                          <VWLink
+                            url="https://artificialintelligenceact.eu/high-level-summary/"
+                            openInNewTab={true}
+                          >
+                            please see this link
+                          </VWLink>
+                        </Typography>
+                      </Box>
+                      <Select
+                        id="risk-classification-input"
+                        label=""
+                        value={values?.typeOfHighRiskRole || ""}
+                        onChange={handleOnSelectChange("typeOfHighRiskRole")}
+                        items={highRiskRoleItems}
+                        sx={{
+                          width: 400,
+                          backgroundColor: theme.palette.background.main,
+                        }}
+                        error={errors.typeOfHighRiskRole}
+                      />
+                    </>
+                  )}
+
+                  {/* Use case category Row */}
                   <Box>
                     <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-                      Type of high risk role
+                      Use case category
                     </Typography>
                     <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
-                      If you are not sure about the high risk role,&nbsp;
-                      <VWLink
-                        url="https://artificialintelligenceact.eu/high-level-summary/"
-                        openInNewTab={true}
-                      >
-                        please see this link
-                      </VWLink>
+                      Select the category that best describes the use case.
                     </Typography>
                   </Box>
                   <Select
-                    id="risk-classification-input"
+                    id="use-case-category-input"
                     label=""
-                    value={values?.typeOfHighRiskRole || 1}
-                    onChange={handleOnSelectChange("typeOfHighRiskRole")}
-                    items={highRiskRoleItems}
+                    value={values?.useCaseCategory || ""}
+                    onChange={handleOnSelectChange("useCaseCategory")}
+                    items={useCaseCategoryItems}
+                    isOptional
                     sx={{
                       width: 400,
                       backgroundColor: theme.palette.background.main,
                     }}
-                    error={errors.typeOfHighRiskRole}
+                    error={errors.useCaseCategory}
+                  />
+
+                  {/* Use case purpose Row */}
+                  <Box>
+                    <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Use case purpose</Typography>
+                    <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
+                      What business purpose does the use case serve?
+                    </Typography>
+                  </Box>
+                  <Select
+                    id="use-case-purpose-input"
+                    label=""
+                    value={values?.useCasePurpose || ""}
+                    onChange={handleOnSelectChange("useCasePurpose")}
+                    items={useCasePurposeItems}
+                    isOptional
+                    sx={{
+                      width: 400,
+                      backgroundColor: theme.palette.background.main,
+                    }}
+                    error={errors.useCasePurpose}
+                  />
+
+                  {/* Use case audience Row */}
+                  <Box>
+                    <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
+                      Use case audience
+                    </Typography>
+                    <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
+                      Who is the intended audience for the use case?
+                    </Typography>
+                  </Box>
+                  <Select
+                    id="use-case-audience-input"
+                    label=""
+                    value={values?.useCaseAudience || ""}
+                    onChange={handleOnSelectChange("useCaseAudience")}
+                    items={useCaseAudienceItems}
+                    isOptional
+                    sx={{
+                      width: 400,
+                      backgroundColor: theme.palette.background.main,
+                    }}
+                    error={errors.useCaseAudience}
+                  />
+
+                  {/* Deployment context Row */}
+                  <Box>
+                    <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
+                      Deployment context
+                    </Typography>
+                    <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
+                      How is the AI use case deployed?
+                    </Typography>
+                  </Box>
+                  <Select
+                    id="deployment-context-input"
+                    label=""
+                    value={values?.deploymentContext || ""}
+                    onChange={handleOnSelectChange("deploymentContext")}
+                    items={deploymentContextItems}
+                    isOptional
+                    sx={{
+                      width: 400,
+                      backgroundColor: theme.palette.background.main,
+                    }}
+                    error={errors.deploymentContext}
                   />
                 </Box>
               </Box>
@@ -1375,6 +1539,7 @@ const ProjectSettings = React.memo(
                   ref={customFieldsRef}
                   entityType="project"
                   entityId={parseInt(projectId, 10) || null}
+                  onPendingChange={customFieldsGate.onPendingChange}
                 />
               </Box>
 

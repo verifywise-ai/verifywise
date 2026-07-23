@@ -34,6 +34,7 @@ import {
 import { singleTheme } from "../../themes";
 import { useUserMap } from "../../../presentation/hooks/userMap";
 import { text } from "../../themes/palette";
+import { displayFormattedDate } from "../../tools/isoDateToString";
 
 interface LinkedObjectsTableProps {
   items: any[];
@@ -327,9 +328,7 @@ const LinkedObjectsTable: React.FC<LinkedObjectsTableProps> = ({
                 </TableCell>
                 {type === "risk" && (
                   <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                    {row.due_date !== "-"
-                      ? new Date(row.due_date).toLocaleDateString("en-GB")
-                      : "-"}
+                    {row.due_date !== "-" ? displayFormattedDate(row.due_date) : "-"}
                   </TableCell>
                 )}
 

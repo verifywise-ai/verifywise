@@ -338,7 +338,12 @@ export default function AIApprovalRules() {
               multiline
               rows={6}
               InputProps={{ sx: { fontFamily: "monospace", fontSize: 13 } }}
-              helperText='Use {"all": [...]} or {"any": [...]}. Facts: operation_type, risk_level, tool_category, user_role, entity_count, is_bulk'
+              helperText={
+                'Wrap conditions in {"all": [...]} (every condition must match) or {"any": [...]} (one match is enough). ' +
+                'Each condition is {"fact": ..., "operator": ..., "value": ...}. ' +
+                'Example: {"all": [{"fact": "risk_level", "operator": "equal", "value": "high"}]}. ' +
+                "Available facts: operation_type, risk_level, tool_category, user_role, entity_count, is_bulk."
+              }
             />
           </Stack>
         </DialogContent>

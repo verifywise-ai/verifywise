@@ -175,10 +175,7 @@ projectTest.describe("Risk Management CRUD", () => {
 
     // Open "Add new risk" dropdown
     const addBtn = page.getByRole("button", { name: /add new risk/i });
-    if (!(await addBtn.isVisible().catch(() => false))) {
-      projectTest.skip();
-      return;
-    }
+    await expect(addBtn).toBeVisible({ timeout: 15_000 });
     await addBtn.click();
     await page.waitForTimeout(300);
 

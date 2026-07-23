@@ -50,6 +50,7 @@ export async function createTask(req: Request, res: Response): Promise<any> {
   try {
     const { userId } = req;
     if (!userId) {
+      await transaction.rollback();
       return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
 
@@ -409,6 +410,7 @@ export async function updateTask(req: Request, res: Response): Promise<any> {
   try {
     const { userId, role } = req;
     if (!userId || !role) {
+      await transaction.rollback();
       return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
 
@@ -637,6 +639,7 @@ export async function deleteTask(req: Request, res: Response): Promise<any> {
   try {
     const { userId, role } = req;
     if (!userId || !role) {
+      await transaction.rollback();
       return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
 
@@ -718,6 +721,7 @@ export async function restoreTask(req: Request, res: Response): Promise<any> {
   try {
     const { userId, role } = req;
     if (!userId || !role) {
+      await transaction.rollback();
       return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
 
@@ -837,6 +841,7 @@ export async function hardDeleteTask(req: Request, res: Response): Promise<any> 
   try {
     const { userId, role } = req;
     if (!userId || !role) {
+      await transaction.rollback();
       return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
 

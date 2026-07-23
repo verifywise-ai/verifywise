@@ -117,17 +117,24 @@ export const canAddFrameworkToProjectQuery = async (
     return false; // Framework already added
   }
 
-  const [[{ is_framework_organizational }]] = (await sequelize.query(
+  const frameworkRows = (await sequelize.query(
     `SELECT is_organizational AS is_framework_organizational FROM frameworks WHERE id = :frameworkId;`,
     { replacements: { frameworkId }, transaction },
-  )) as [[{ is_framework_organizational: boolean }], number];
-  const [[{ is_project_organizational }]] = (await sequelize.query(
+  )) as [{ is_framework_organizational: boolean }[], number];
+  const projectRows = (await sequelize.query(
     `SELECT is_organizational AS is_project_organizational FROM projects WHERE organization_id = :organizationId AND id = :projectId;`,
     { replacements: { projectId, organizationId }, transaction },
-  )) as [[{ is_project_organizational: boolean }], number];
+  )) as [{ is_project_organizational: boolean }[], number];
 
-  if (is_framework_organizational !== is_project_organizational) {
-    return false; // Cannot add organizational framework to non-organizational project
+  const is_framework_organizational = frameworkRows[0]?.[0]?.is_framework_organizational;
+  const is_project_organizational = projectRows[0]?.[0]?.is_project_organizational;
+
+  if (
+    is_framework_organizational === undefined ||
+    is_project_organizational === undefined ||
+    is_framework_organizational !== is_project_organizational
+  ) {
+    return false; // Framework or project not found, or organizational mismatch
   }
 
   return true; // Framework can be added

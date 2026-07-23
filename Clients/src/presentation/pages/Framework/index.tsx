@@ -59,6 +59,7 @@ import NISTAIRMFMeasure from "./NIST-AI-RMF/Measure";
 import NISTAIRMFManage from "./NIST-AI-RMF/Manage";
 import { brand } from "../../themes/palette";
 import GovernanceIntelligenceContextBar from "../../components/GovernanceOS/GovernanceIntelligenceContextBar";
+import { storageService } from "../../../infrastructure/storage";
 
 // Tab styles following ProjectFrameworks pattern
 const tabStyle = {
@@ -84,12 +85,6 @@ const tabListStyle = {
     columnGap: "34px",
   },
 };
-
-// localStorage keys for persisting tab state
-const FRAMEWORK_SELECTED_KEY = "verifywise_framework_selected";
-const ISO27001_TAB_KEY = "verifywise_iso27001_tab";
-const ISO42001_TAB_KEY = "verifywise_iso42001_tab";
-const NIST_AI_RMF_TAB_KEY = "verifywise_nist_ai_rmf_tab";
 
 const Framework = () => {
   const [searchParams] = useSearchParams();
@@ -270,18 +265,18 @@ const Framework = () => {
   // Default to "dashboard"
   const [mainTabValue, setMainTabValue] = useState(tab || "dashboard");
   const [selectedFramework, setSelectedFramework] = useState<number>(() => {
-    const saved = localStorage.getItem(FRAMEWORK_SELECTED_KEY);
+    const saved = storageService.get("frameworkSelected", "0");
     return saved ? parseInt(saved, 10) : 0;
   });
-  const [iso27001TabValue, setIso27001TabValue] = useState(() => {
-    return localStorage.getItem(ISO27001_TAB_KEY) || "clause";
-  });
-  const [iso42001TabValue, setIso42001TabValue] = useState(() => {
-    return localStorage.getItem(ISO42001_TAB_KEY) || "clauses";
-  });
-  const [nistAiRmfTabValue, setNistAiRmfTabValue] = useState(() => {
-    return localStorage.getItem(NIST_AI_RMF_TAB_KEY) || "govern";
-  });
+  const [iso27001TabValue, setIso27001TabValue] = useState(() =>
+    storageService.get("iso27001Tab", "clause"),
+  );
+  const [iso42001TabValue, setIso42001TabValue] = useState(() =>
+    storageService.get("iso42001Tab", "clauses"),
+  );
+  const [nistAiRmfTabValue, setNistAiRmfTabValue] = useState(() =>
+    storageService.get("nistAiRmfTab", "govern"),
+  );
 
   const [risksFrameworkIndex, setRisksFrameworkIndex] = useState(0);
   const [linkedModelsFrameworkIndex, setLinkedModelsFrameworkIndex] = useState(0);
@@ -292,9 +287,9 @@ const Framework = () => {
     if (newTabValue !== mainTabValue) {
       setMainTabValue(newTabValue);
 
-      // When navigating to controls, re-read localStorage for framework/tab selection
+      // When navigating to controls, re-read storage for framework/tab selection
       if (newTabValue === "controls") {
-        const savedFramework = localStorage.getItem(FRAMEWORK_SELECTED_KEY);
+        const savedFramework = storageService.get("frameworkSelected", "0");
         if (savedFramework !== null) {
           const frameworkIndex = parseInt(savedFramework, 10);
           if (!isNaN(frameworkIndex) && frameworkIndex !== selectedFramework) {
@@ -302,18 +297,18 @@ const Framework = () => {
           }
         }
 
-        // Re-read sub-tab values from localStorage
-        const savedIso27001Tab = localStorage.getItem(ISO27001_TAB_KEY);
+        // Re-read sub-tab values from storage
+        const savedIso27001Tab = storageService.get("iso27001Tab", "clause");
         if (savedIso27001Tab && savedIso27001Tab !== iso27001TabValue) {
           setIso27001TabValue(savedIso27001Tab);
         }
 
-        const savedIso42001Tab = localStorage.getItem(ISO42001_TAB_KEY);
+        const savedIso42001Tab = storageService.get("iso42001Tab", "clauses");
         if (savedIso42001Tab && savedIso42001Tab !== iso42001TabValue) {
           setIso42001TabValue(savedIso42001Tab);
         }
 
-        const savedNistTab = localStorage.getItem(NIST_AI_RMF_TAB_KEY);
+        const savedNistTab = storageService.get("nistAiRmfTab", "govern");
         if (savedNistTab && savedNistTab !== nistAiRmfTabValue) {
           setNistAiRmfTabValue(savedNistTab);
         }
@@ -462,23 +457,23 @@ const Framework = () => {
         resetFilters();
       }
       setSelectedFramework(index);
-      localStorage.setItem(FRAMEWORK_SELECTED_KEY, index.toString());
+      storageService.set("frameworkSelected", index.toString());
     }
   };
 
   const handleIso27001TabChange = (_: React.SyntheticEvent, newValue: string) => {
     setIso27001TabValue(newValue);
-    localStorage.setItem(ISO27001_TAB_KEY, newValue);
+    storageService.set("iso27001Tab", newValue);
   };
 
   const handleIso42001TabChange = (_: React.SyntheticEvent, newValue: string) => {
     setIso42001TabValue(newValue);
-    localStorage.setItem(ISO42001_TAB_KEY, newValue);
+    storageService.set("iso42001Tab", newValue);
   };
 
   const handleNistAiRmfTabChange = (_: React.SyntheticEvent, newValue: string) => {
     setNistAiRmfTabValue(newValue);
-    localStorage.setItem(NIST_AI_RMF_TAB_KEY, newValue);
+    storageService.set("nistAiRmfTab", newValue);
   };
 
   const handleMainTabChange = (_: React.SyntheticEvent, newValue: string) => {

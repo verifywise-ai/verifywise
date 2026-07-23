@@ -21,6 +21,7 @@ import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/us
 import CustomizableSkeleton from "../Skeletons";
 
 import { projectWrapperStyle, noProjectsTextStyle, vwhomeBodyProjectsGrid } from "./style";
+import { displayFormattedDate } from "../../tools/isoDateToString";
 
 const ProjectList = ({
   projects,
@@ -316,10 +317,8 @@ const ProjectList = ({
         project_title: project.project_title || "-",
         ai_risk_classification: project.ai_risk_classification || "-",
         type_of_high_risk_role: project.type_of_high_risk_role?.replace(/_/g, " ") || "-",
-        start_date: project.start_date ? new Date(project.start_date).toLocaleDateString() : "-",
-        last_updated: project.last_updated
-          ? new Date(project.last_updated).toLocaleDateString()
-          : "-",
+        start_date: project.start_date ? displayFormattedDate(project.start_date) : "-",
+        last_updated: project.last_updated ? displayFormattedDate(project.last_updated) : "-",
         owner: ownerName,
         status: project.status || "-",
       };

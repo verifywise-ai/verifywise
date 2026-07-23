@@ -72,26 +72,14 @@ test.describe("Super Admin", () => {
     test("create organization button opens modal", async ({ authedPage: page }) => {
       await page.goto("/super-admin");
 
-      if (!page.url().includes("/super-admin")) {
-        test.skip();
-        return;
-      }
+      await expect(page).toHaveURL(/\/super-admin/);
 
       const createBtn = page
         .getByRole("button", { name: /create.*organization/i })
         .or(page.getByRole("button", { name: /add.*organization/i }))
         .or(page.getByRole("button", { name: /new.*organization/i }));
 
-      if (
-        !(await createBtn
-          .first()
-          .isVisible()
-          .catch(() => false))
-      ) {
-        test.skip();
-        return;
-      }
-
+      await expect(createBtn.first()).toBeVisible({ timeout: 15_000 });
       await createBtn.first().click();
 
       // Modal should open with organization name input

@@ -28,7 +28,7 @@ import {
   BusinessLogicException,
 } from "../domain.layer/exceptions/custom.exception";
 import { logFailure, logProcessing, logSuccess } from "../utils/logger/logHelper";
-import { sanitizeUserHtml } from "../utils/sanitizeUserHtml";
+import { sanitizeUserHtml } from "../utils/sanitization.utils";
 
 export class NotesService {
   /**

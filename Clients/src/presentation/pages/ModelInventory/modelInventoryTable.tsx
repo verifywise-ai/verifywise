@@ -40,6 +40,7 @@ import { useStandardTable } from "../../../application/hooks/useStandardTable";
 import type { StandardColumn } from "../../../domain/types/standardTable";
 import StandardTableHead from "../../components/Table/StandardTableHead";
 import StandardTablePagination from "../../components/Table/StandardTablePagination";
+import { TableEmptyStateLayout } from "../../components/Table/TableEmptyStateLayout";
 import { useCustomFieldDefinitions } from "../../../application/hooks/useCustomFields";
 import { formatCustomFieldValue } from "../../components/CustomFieldsSection/formatCustomFieldValue";
 
@@ -539,26 +540,36 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
 
   if (!data || data.length === 0) {
     return (
-      <EmptyState
-        icon={Cpu}
-        message="No models registered yet. Maintain a complete inventory of all AI models your organization uses."
+      <TableEmptyStateLayout
+        header={
+          <StandardTableHead
+            columns={visibleTableColumns}
+            sortConfig={sortConfig}
+            onSort={handleSort}
+          />
+        }
       >
-        <EmptyStateTip
-          icon={Layers}
-          title="What counts as a model?"
-          description="Any machine learning model, large language model, computer vision system, or automated decision-making tool. Include both internal and third-party models."
-        />
-        <EmptyStateTip
-          icon={BarChart3}
-          title="Track model status"
-          description="Record each model's status: approved, restricted, pending, blocked, or rejected. This gives auditors visibility into your governance coverage."
-        />
-        <EmptyStateTip
-          icon={Link2}
-          title="Link to vendors and risks"
-          description="Connect each model to its provider and associated risks. This creates a full traceability map for your audit."
-        />
-      </EmptyState>
+        <EmptyState
+          icon={Cpu}
+          message="No models registered yet. Maintain a complete inventory of all AI models your organization uses."
+        >
+          <EmptyStateTip
+            icon={Layers}
+            title="What counts as a model?"
+            description="Any machine learning model, large language model, computer vision system, or automated decision-making tool. Include both internal and third-party models."
+          />
+          <EmptyStateTip
+            icon={BarChart3}
+            title="Track model status"
+            description="Record each model's status: approved, restricted, pending, blocked, or rejected. This gives auditors visibility into your governance coverage."
+          />
+          <EmptyStateTip
+            icon={Link2}
+            title="Link to vendors and risks"
+            description="Connect each model to its provider and associated risks. This creates a full traceability map for your audit."
+          />
+        </EmptyState>
+      </TableEmptyStateLayout>
     );
   }
 

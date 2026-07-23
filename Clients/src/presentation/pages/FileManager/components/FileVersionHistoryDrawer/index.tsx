@@ -31,6 +31,7 @@ import StatusBadge from "../StatusBadge";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import { text } from "../../../../themes/palette";
+import { displayFormattedDate, displayFormattedDateTime } from "../../../../tools/isoDateToString";
 
 dayjs.extend(relativeTime);
 
@@ -42,7 +43,7 @@ interface FileVersionHistoryDrawerProps {
 
 const formatDate = (dateStr?: string): string => {
   if (!dateStr) return "Unknown date";
-  return dayjs(dateStr).format("MMM D, YYYY [at] h:mm A");
+  return displayFormattedDateTime(dateStr, { separator: " at " });
 };
 
 const formatRelativeTime = (date: string): string => {
@@ -56,7 +57,7 @@ const formatRelativeTime = (date: string): string => {
   if (diffHours < 24) return `${diffHours}h ago`;
   const diffDays = Math.abs(now.diff(target, "day"));
   if (diffDays < 7) return `${diffDays}d ago`;
-  return target.format("MMM D, YYYY");
+  return displayFormattedDate(date);
 };
 
 const VERSIONS_PAGE_SIZE = 20;

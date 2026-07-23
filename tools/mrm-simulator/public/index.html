@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MRM monitoring — simulator</title>
+    <link rel="stylesheet" href="style.css" />
+    <script
+      src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"
+      integrity="sha384-Sse/HDqcypGpyTDpvZOJNnG0TT3feGQUkF9H+mnRvic+LjR+K1NhTt8f51KIQ3v3"
+      crossorigin="anonymous"
+      referrerpolicy="no-referrer"
+    ></script>
+  </head>
+  <body>
+    <header id="topbar">
+      <div class="brand">MRM monitoring</div>
+      <div class="status"><span id="run-status">connecting…</span> · <span id="target"></span></div>
+    </header>
+    <div id="error-banner" hidden></div>
+    <main>
+      <section id="fleet" class="panel"><h2>Fleet</h2><div id="fleet-cards"></div></section>
+      <section id="charts" class="panel"><h2 id="charts-title">Select a model</h2><div id="chart-grid"></div></section>
+      <aside id="feed" class="panel"><h2>Events</h2><ul id="feed-list"></ul></aside>
+    </main>
+    <footer id="ingest">
+      <span>computed <b id="t-computed">0</b></span>
+      <span>pushed <b id="t-pushed">0</b></span>
+      <span>accepted <b id="t-accepted">0</b></span>
+      <span>breaches <b id="t-breaches">0</b></span>
+    </footer>
+    <script src="app.js"></script>
+  </body>
+</html>

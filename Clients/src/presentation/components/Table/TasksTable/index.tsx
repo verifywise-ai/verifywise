@@ -34,6 +34,7 @@ import { taskTableStyles } from "./styles";
 import { useStandardTable } from "../../../../application/hooks/useStandardTable";
 import { useBulkSelection } from "../../../../application/hooks/useBulkSelection";
 import { useBulkUpdateTasks } from "../../../../application/hooks/useBulkUpdateTasks";
+import { taskQueryKeys } from "../../../../application/hooks/useTasks";
 import StandardTableHead from "../StandardTableHead";
 import StandardTablePagination from "../StandardTablePagination";
 import type { StandardColumn } from "../../../../domain/types/standardTable";
@@ -208,6 +209,7 @@ const TasksTable: React.FC<ITasksTableProps> = ({
   const [pendingCategories, setPendingCategories] = useState<string[]>([]);
 
   const bulkMutation = useBulkUpdateTasks({
+    invalidateKeys: [taskQueryKeys.lists()],
     onSuccess: (payload) => {
       clearSelection();
       onBulkActionSuccess?.(payload.action, payload.ids.length);

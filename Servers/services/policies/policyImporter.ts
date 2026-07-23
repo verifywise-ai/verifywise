@@ -8,7 +8,7 @@
  */
 
 import mammoth from "mammoth";
-import { sanitizeUserHtml } from "../../utils/sanitizeUserHtml";
+import { sanitizeUserHtml } from "../../utils/sanitization.utils";
 
 /** Maximum permitted upload size (must match multer limit in policy.route.ts). */
 export const DOCX_MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10 MB

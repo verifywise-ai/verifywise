@@ -15,10 +15,55 @@ import { QueryTypes, Transaction } from "sequelize";
 import { FileModel, FileSource } from "../domain.layer/models/file/file.model";
 import { ProjectModel } from "../domain.layer/models/project/project.model";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
+import { FILE_GROUP_LABEL_CASE_SQL } from "../utils/files/fileGroupLabel.sql";
+import {
+  attachLinkProjections,
+  FileEntityLinkProjection,
+} from "../utils/files/attachLinkProjections";
 import sanitizeFilename from "sanitize-filename";
 
 // Re-export FileSource for backward compatibility
 export { FileSource };
+
+/**
+ * Shared SQL fragment that aggregates a file's links from `file_entity_links`
+ * into the File Manager's "Source" representation.
+ *
+ * Maps each link's (framework_type, entity_type) to the group label the
+ * original upload paths write into `files.source` (see controllers/iso27001,
+ * iso42001, eu, nist_ai_rmf). When the file has:
+ *   - 0 links  -> source resolves to the legacy `f.source` column
+ *   - 1 group  -> source is that group's label (matches legacy upload value)
+ *   - N groups -> source is the string "N groups"
+ *
+ * Always exposes the distinct labels as a `link_groups` array so the UI can
+ * expand the aggregated cell.
+ *
+ * The LATERAL is bounded by the outer query's LIMIT, so it runs at most
+ * `limit` times per request.
+ */
+const FILE_LINK_GROUPS_JOIN_SQL = `
+    LEFT JOIN LATERAL (
+      SELECT
+        COUNT(DISTINCT label) AS group_count,
+        MIN(label) AS first_label,
+        COALESCE(array_agg(DISTINCT label ORDER BY label), ARRAY[]::text[]) AS labels
+      FROM (
+        SELECT ${FILE_GROUP_LABEL_CASE_SQL} AS label
+        FROM file_entity_links fel
+        WHERE fel.organization_id = f.organization_id AND fel.file_id = f.id
+      ) labels
+      WHERE label IS NOT NULL
+    ) fg ON true`;
+
+/** Goes in the SELECT list to project the resolved source string. */
+const FILE_LINK_GROUPS_SOURCE_EXPR_SQL = `
+      CASE
+        WHEN fg.group_count = 1 THEN fg.first_label
+        WHEN fg.group_count > 1 THEN fg.group_count::text || ' groups'
+        ELSE f.source
+      END AS source,
+      COALESCE(fg.labels, ARRAY[]::text[]) AS link_groups`;
 
 export interface UploadedFile {
   originalname: string;
@@ -46,6 +91,15 @@ export interface OrganizationFileMetadata {
   project_id?: number | null;
   model_id?: number;
   source?: string;
+  // Distinct group labels this file is linked to via file_entity_links.
+  // Empty when the file isn't attached to any entity. Used by the UI to
+  // expand the aggregated "N groups" cell into the actual list.
+  link_groups?: string[];
+  // Per-link projections — one entry per row in file_entity_links for this
+  // file, with the entity hierarchy needed to deep-link into each attachment.
+  // Populated by attachLinkProjections so the UI can render a popover when a
+  // file is attached in multiple places.
+  entity_links?: FileEntityLinkProjection[];
   uploader_name?: string;
   uploader_surname?: string;
   // New metadata fields
@@ -475,6 +529,7 @@ export async function getOrganizationFiles(
 
   // Show all files regardless of approval status - UI handles display
   // Use organization_id for tenant isolation (org_id may be NULL on migrated files)
+  // Source/link_groups resolved from file_entity_links — see FILE_LINK_GROUPS_*.
   let query = `
     SELECT
       f.id,
@@ -484,14 +539,13 @@ export async function getOrganizationFiles(
       f.uploaded_time AS upload_date,
       f.uploaded_by,
       f.org_id,
-      f.model_id,
-      f.source,
+      f.model_id,${FILE_LINK_GROUPS_SOURCE_EXPR_SQL},
       f.review_status,
       f.approval_workflow_id,
       u.name AS uploader_name,
       u.surname AS uploader_surname
     FROM files f
-    JOIN users u ON f.uploaded_by = u.id
+    JOIN users u ON f.uploaded_by = u.id${FILE_LINK_GROUPS_JOIN_SQL}
     WHERE f.organization_id = :organizationId
       AND (f.source IS NULL OR f.source != 'policy_editor')
     ORDER BY f.uploaded_time DESC, f.id DESC
@@ -518,7 +572,10 @@ export async function getOrganizationFiles(
   const countRow = countResult[0] as { count: string } | undefined;
   const total = countRow ? parseInt(countRow.count, 10) : 0;
 
-  return { files: files as OrganizationFileMetadata[], total };
+  const typedFiles = files as OrganizationFileMetadata[];
+  await attachLinkProjections(organizationId, typedFiles as any);
+
+  return { files: typedFiles, total };
 }
 
 // ============================================================================
@@ -763,6 +820,7 @@ export async function getFileWithMetadata(
 ): Promise<OrganizationFileMetadata | null> {
   validateOrganizationId(organizationId);
 
+  // Source/link_groups resolved from file_entity_links — see FILE_LINK_GROUPS_*.
   const query = `
     SELECT
       f.id,
@@ -773,8 +831,7 @@ export async function getFileWithMetadata(
       f.uploaded_by,
       f.org_id,
       f.project_id,
-      f.model_id,
-      f.source,
+      f.model_id,${FILE_LINK_GROUPS_SOURCE_EXPR_SQL},
       f.tags,
       f.review_status,
       f.version,
@@ -791,7 +848,7 @@ export async function getFileWithMetadata(
     FROM files f
     JOIN users u ON f.uploaded_by = u.id
     LEFT JOIN users m ON f.last_modified_by = m.id
-    LEFT JOIN approval_workflows aw ON aw.organization_id = f.organization_id AND f.approval_workflow_id = aw.id
+    LEFT JOIN approval_workflows aw ON aw.organization_id = f.organization_id AND f.approval_workflow_id = aw.id${FILE_LINK_GROUPS_JOIN_SQL}
     WHERE f.organization_id = :organizationId AND f.id = :fileId`;
 
   const result = await sequelize.query(query, {
@@ -829,7 +886,8 @@ export async function getOrganizationFilesWithMetadata(
   const safeDaysUntilExpiry = Math.max(1, Math.min(365, Math.floor(Number(daysUntilExpiry) || 30)));
   const safeRecentDays = Math.max(1, Math.min(365, Math.floor(Number(recentDays) || 7)));
 
-  // Use organization_id for tenant isolation (org_id may be NULL on migrated files)
+  // Use organization_id for tenant isolation (org_id may be NULL on migrated files).
+  // Source/link_groups are derived from file_entity_links — see FILE_LINK_GROUPS_*.
   let query = `
     SELECT
       f.id,
@@ -839,8 +897,7 @@ export async function getOrganizationFilesWithMetadata(
       f.uploaded_time AS upload_date,
       f.uploaded_by,
       f.org_id,
-      f.model_id,
-      f.source,
+      f.model_id,${FILE_LINK_GROUPS_SOURCE_EXPR_SQL},
       f.tags,
       f.review_status,
       f.version,
@@ -870,7 +927,7 @@ export async function getOrganizationFilesWithMetadata(
     FROM files f
     JOIN users u ON f.uploaded_by = u.id
     LEFT JOIN users m ON f.last_modified_by = m.id
-    LEFT JOIN approval_workflows aw ON aw.organization_id = f.organization_id AND f.approval_workflow_id = aw.id
+    LEFT JOIN approval_workflows aw ON aw.organization_id = f.organization_id AND f.approval_workflow_id = aw.id${FILE_LINK_GROUPS_JOIN_SQL}
     WHERE f.organization_id = :organizationId
       AND (f.source IS NULL OR f.source != 'policy_editor')
     ORDER BY f.uploaded_time DESC, f.id DESC
@@ -903,7 +960,10 @@ export async function getOrganizationFilesWithMetadata(
   const countRow = countResult[0] as { count: string } | undefined;
   const total = countRow ? parseInt(countRow.count, 10) : 0;
 
-  return { files: files as OrganizationFileMetadata[], total };
+  const typedFiles = files as OrganizationFileMetadata[];
+  await attachLinkProjections(organizationId, typedFiles as any);
+
+  return { files: typedFiles, total };
 }
 
 /**

@@ -66,7 +66,7 @@ describe("ModelsTableBody", () => {
         <ModelsTableBody {...defaultProps} />
       </table>,
     );
-    expect(screen.getByText(/Jun 1, 2025/)).toBeInTheDocument();
+    expect(screen.getByText(/01-06-2025/)).toBeInTheDocument();
   });
 
   it("calls onRowClick when a row is clicked", async () => {

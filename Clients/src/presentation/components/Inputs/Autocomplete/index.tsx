@@ -75,15 +75,6 @@ function AutoCompleteField<
     );
   })();
 
-  if (import.meta.env?.DEV) {
-    // eslint-disable-next-line no-console
-    console.debug("[AutoCompleteField] layout", {
-      label,
-      extractedLayoutProps,
-      sxKeysOnAutocomplete: Object.keys(sxWithoutLayoutProps ?? {}),
-    });
-  }
-
   return (
     <Stack gap={theme.spacing(2)} sx={extractedLayoutProps}>
       {label && (

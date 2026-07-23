@@ -48,6 +48,7 @@ import {
   getEntityFiles,
 } from "../../../../application/repository/file.repository";
 import StandardModal from "../../Modals/StandardModal";
+import { drawerAccessibilityProps, DRAWER_TITLE_ID } from "../drawerAccessibility";
 import allowedRoles from "../../../../application/constants/permissions";
 import { FilePickerModal } from "../../FilePickerModal";
 import AuditRiskPopup from "../../RiskPopup/AuditRiskPopup";
@@ -762,6 +763,7 @@ const VWISO27001ClauseDrawerDialog = ({
       <Drawer
         open={open}
         onClose={onClose}
+        {...drawerAccessibilityProps}
         sx={{
           "width": 850,
           "margin": 0,
@@ -794,6 +796,7 @@ const VWISO27001ClauseDrawerDialog = ({
         className="vw-iso-27001-clause-drawer-dialog"
         open={open}
         onClose={onClose}
+        {...drawerAccessibilityProps}
         sx={{
           "width": 850,
           "margin": 0,
@@ -822,7 +825,7 @@ const VWISO27001ClauseDrawerDialog = ({
               alignItems: "center",
             }}
           >
-            <Typography fontSize={15} fontWeight={700}>
+            <Typography id={DRAWER_TITLE_ID} fontSize={15} fontWeight={700}>
               {clause?.order_no + "." + (index + 1)} {displayData?.title}
             </Typography>
             <CustomizableButton

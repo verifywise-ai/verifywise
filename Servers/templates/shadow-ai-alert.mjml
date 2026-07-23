@@ -1,42 +1,71 @@
 <mjml>
-  <mj-head>
-    <mj-font name="Roboto" href="https://fonts.googleapis.com/css?family=Roboto:300,500"></mj-font>
-    <mj-attributes>
-      <mj-all font-family="Roboto, Helvetica, sans-serif"></mj-all>
-      <mj-text font-weight="300" font-size="14px" color="#616161" line-height="24px"></mj-text>
-      <mj-section padding="0px"></mj-section>
-    </mj-attributes>
-  </mj-head>
-  <mj-body width="100%">
-    <mj-section text-align="left" padding="0px">
-      <mj-column width="100%" vertical-align="top">
-        <mj-text align="left">
-          <h2 style="color: #2c3e50; margin-bottom: 20px;">Shadow AI alert: {{alert_title}}</h2>
-          <p>A Shadow AI rule has been triggered:</p>
-          <div style="background-color: #FEF2F2; padding: 16px; border-radius: 4px; margin: 20px 0; border-left: 4px solid #DC2626;">
-            <p style="margin: 0 0 8px 0; font-weight: 500; color: #2c3e50;">{{rule_name}}</p>
-            <p style="margin: 0; color: #667085; font-size: 13px;">{{alert_description}}</p>
-          </div>
-          <table style="width: 100%; margin: 16px 0; font-size: 13px;">
-            <tr>
-              <td style="color: #667085; padding: 4px 0;">Trigger:</td>
-              <td style="color: #344054; padding: 4px 0;"><strong>{{trigger_type}}</strong></td>
-            </tr>
-            <tr>
-              <td style="color: #667085; padding: 4px 0;">Tool:</td>
-              <td style="color: #344054; padding: 4px 0;"><strong>{{tool_name}}</strong></td>
-            </tr>
-            <tr>
-              <td style="color: #667085; padding: 4px 0;">Time:</td>
-              <td style="color: #344054; padding: 4px 0;"><strong>{{fired_at}}</strong></td>
-            </tr>
-          </table>
-          <p style="margin: 20px 0;">
-            <a href="{{action_url}}" style="background-color: #13715B; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; display: inline-block;">View in Shadow AI</a>
-          </p>
-          <p style="margin-top: 30px; color: #7f8c8d; font-size: 12px;">
-            Sent from VerifyWise
-          </p>
+<mj-head>
+  <mj-font name="Inter" href="https://fonts.googleapis.com/css?family=Inter:400,500,600"></mj-font>
+  <mj-attributes>
+    <mj-all font-family="Geist, Inter, system-ui, -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" color="#344054"></mj-all>
+    <mj-text font-size="15px" line-height="24px" color="#344054" padding="0"></mj-text>
+    <mj-section padding="0px"></mj-section>
+    <mj-column padding="0px"></mj-column>
+    <mj-button background-color="#13715B" color="#ffffff" border-radius="4px" font-size="14px" font-weight="500" padding="0" height="44px"></mj-button>
+  </mj-attributes>
+  <mj-style inline="inline">
+    .email-card { background-color: #ffffff; border: 1px solid #eaecf0; border-radius: 10px; overflow: hidden; }
+    .email-heading { color: #1c2130; font-size: 22px; font-weight: 600; line-height: 1.35; margin: 0 0 24px 0; letter-spacing: -0.2px; }
+    .email-body { color: #344054; font-size: 15px; line-height: 24px; margin: 0 0 20px 0; }
+    .email-muted { color: #475467; font-size: 14px; line-height: 22px; margin: 0; }
+    .email-footer { color: #838c99; font-size: 13px; line-height: 20px; text-align: center; }
+    .box { padding: 20px; border-radius: 6px; margin: 24px 0; }
+    .box-info { background-color: #f9fafb; }
+    .box-success { background-color: #E6F4EA; }
+    .box-error { background-color: #FFD6D6; }
+    .box-warning { background-color: #FFF8E1; }
+    .box-primary { background-color: #E6F0EC; }
+    .box-title { color: #1c2130; font-weight: 600; font-size: 15px; margin: 0 0 10px 0; }
+    .box-subtitle { color: #475467; font-size: 14px; line-height: 22px; margin: 0; }
+    .box-status-success { color: #138A5E; font-size: 14px; font-weight: 600; margin: 0; }
+    .box-status-error { color: #D32F2F; font-size: 14px; font-weight: 600; margin: 0; }
+    .data-table { width: 100%; font-size: 14px; border-collapse: collapse; margin: 24px 0; }
+    .data-table td { padding: 10px 0; vertical-align: top; }
+    .data-label { color: #475467; width: 140px; padding-right: 20px; }
+    .data-value { color: #1c2130; font-weight: 500; }
+    ul { margin: 0 0 20px 0; padding-left: 24px; color: #344054; }
+    li { margin-bottom: 10px; line-height: 22px; }
+    a { color: #13715B; text-decoration: none; }
+    .btn { display: inline-block; padding: 12px 24px; border-radius: 4px; text-decoration: none; font-size: 14px; font-weight: 500; color: #ffffff; }
+    .btn-primary { background-color: #13715B; }
+    .btn-success { background-color: #138A5E; }
+    .btn-error { background-color: #D32F2F; }
+    .btn-warning { background-color: #795548; }
+    .btn-info { background-color: #1565C0; }
+    .spacer { height: 8px; }
+  </mj-style>
+</mj-head>
+  <mj-body background-color="#f4f6f8">
+    <mj-section padding="32px 20px 20px">
+      <mj-column width="100%">
+        <mj-text align="center" padding="0 0 24px 0">
+          <span style="color: #13715B; font-size: 22px; font-weight: 600; letter-spacing: -0.5px;">VerifyWise</span>
+        </mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-wrapper css-class="email-card" padding="40px">
+      <mj-section>
+        <mj-column width="100%">
+          <mj-text>
+                <h2 class="email-heading">Shadow AI alert: {{alert_title}}</h2><p class="email-body">A Shadow AI rule has been triggered in your environment.</p><div class="box box-error"><p class="box-title">{{rule_name}}</p>
+                <p class="box-subtitle">{{alert_description}}</p></div><table class="data-table">
+                <tr><td class="data-label">Trigger</td><td class="data-value">{{trigger_type}}</td></tr>
+                <tr><td class="data-label">Tool</td><td class="data-value">{{tool_name}}</td></tr>
+                <tr><td class="data-label">Time</td><td class="data-value">{{fired_at}}</td></tr>
+                </table><p style="margin: 28px 0 24px 0;"><a href="{{action_url}}" class="btn btn-error">View in Shadow AI</a></p>
+          </mj-text>
+        </mj-column>
+      </mj-section>
+    </mj-wrapper>
+    <mj-section padding="32px 20px">
+      <mj-column width="100%">
+        <mj-text css-class="email-footer" align="center">
+          Sent with care from VerifyWise
         </mj-text>
       </mj-column>
     </mj-section>

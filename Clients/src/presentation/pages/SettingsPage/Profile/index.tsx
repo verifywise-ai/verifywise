@@ -12,7 +12,6 @@ import Field from "../../../components/Inputs/Field";
 import { checkStringValidation } from "../../../../application/validations/stringValidation";
 import validator from "validator";
 import { logEngine } from "../../../../application/tools/log.engine";
-import localStorage from "redux-persist/es/storage";
 import ConfirmationModal from "../../../components/Dialogs/ConfirmationModal";
 import Alert from "../../../components/Alert";
 import { store } from "../../../../application/redux/store";
@@ -322,10 +321,9 @@ const ProfileForm: React.FC = () => {
       const response = await deleteUserById({ userId: Number(id) });
 
       if (response?.status === 202) {
-        // Clear storage only on success
-        await localStorage.removeItem("userId");
-        await localStorage.removeItem("authToken");
-
+        // Auth tokens live in redux-persist (persist:root). Use the logout
+        // flow to clear application state rather than removing non-existent
+        // localStorage keys.
         logout();
 
         showAlert("success", "Success", "Account deleted successfully.");

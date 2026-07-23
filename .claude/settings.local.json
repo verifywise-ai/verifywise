@@ -110,12 +110,7 @@
       "Bash(xargs -I{} grep -n \"organization_id\" {})",
       "Bash(npx jest *)",
       "Bash(xargs cat)",
-      "Bash(npm test *)",
-      "Bash(npm --version)",
-      "Bash(bash -n install.sh)",
-      "Bash(bash -c ' *)",
-      "Bash(printf 'DB_PASSWORD=s3cret#notacomment\\\\nJWT_SECRET=abc123\\\\n')",
-      "Bash(docker compose *)"
+      "Bash(npm test *)"
     ]
   }
 }

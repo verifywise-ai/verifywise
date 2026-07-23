@@ -33,6 +33,7 @@ import { CustomizableButton } from "../../../components/button/customizable-butt
 import StandardModal from "../../../components/Modals/StandardModal";
 import Field from "../../../components/Inputs/Field";
 import DatePicker from "../../../components/Inputs/Datepicker";
+import { displayFormattedDate } from "../../../tools/isoDateToString";
 import VWTooltip from "../../../components/VWTooltip";
 import Checkbox from "../../../components/Inputs/Checkbox";
 import {
@@ -1903,7 +1904,7 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                               •
                             </Typography>
                             <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
-                              Uploaded: {dayjs(evidence.uploaded_time).format("MMM DD, YYYY")}
+                              Uploaded: {displayFormattedDate(evidence.uploaded_time)}
                             </Typography>
                           </>
                         )}
@@ -2000,7 +2001,7 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                               •
                             </Typography>
                             <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
-                              Occurred: {dayjs(incident.occurred_date).format("MMM DD, YYYY")}
+                              Occurred: {displayFormattedDate(incident.occurred_date)}
                             </Typography>
                           </>
                         )}

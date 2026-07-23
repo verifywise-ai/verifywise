@@ -1,13 +1,23 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { formatDate, displayFormattedDate, formatDateTime } from "../isoDateToString";
+import {
+  displayFormattedDate,
+  displayFormattedDateTime,
+  displayFormattedTime,
+  formatDate,
+  formatDateTime,
+} from "../isoDateToString";
 
 describe("formatDate", () => {
-  it("formats an ISO date to 'day month year'", () => {
-    expect(formatDate("2024-11-01")).toBe("1 November 2024");
+  beforeEach(() => {
+    localStorage.clear();
   });
 
-  it("formats another date correctly", () => {
-    expect(formatDate("2023-03-15T00:00:00Z")).toBe("15 March 2023");
+  it("formats an ISO date using the default preference", () => {
+    expect(formatDate("2024-11-01")).toBe("01-11-2024");
+  });
+
+  it("formats another date using the default preference", () => {
+    expect(formatDate("2023-03-15T00:00:00Z")).toBe("15-03-2023");
   });
 
   it("throws for empty string", () => {
@@ -35,6 +45,17 @@ describe("displayFormattedDate", () => {
     expect(result).toBe("11-01-2024");
   });
 
+  it.each([
+    ["DD-MM-YYYY", "01-11-2024"],
+    ["MM-DD-YYYY", "11-01-2024"],
+    ["DD/MM/YY", "01/11/24"],
+    ["MM/DD/YY", "11/01/24"],
+  ])("respects localStorage preference for %s", (dateFormat, expected) => {
+    localStorage.setItem("verifywise_preferences", JSON.stringify({ date_format: dateFormat }));
+    const result = displayFormattedDate("2024-11-01");
+    expect(result).toBe(expected);
+  });
+
   it("handles Date objects", () => {
     // Construct a LOCAL-midnight date so round-trip via toISOString → dayjs
     // (which formats in local) renders the same calendar day in every TZ.
@@ -56,13 +77,43 @@ describe("displayFormattedDate", () => {
   });
 });
 
+describe("displayFormattedTime", () => {
+  it("formats time without seconds by default", () => {
+    expect(displayFormattedTime("2024-11-01T14:30:25")).toBe("14:30");
+  });
+
+  it("formats time with seconds when requested", () => {
+    expect(displayFormattedTime("2024-11-01T14:30:25", { includeSeconds: true })).toBe("14:30:25");
+  });
+});
+
+describe("displayFormattedDateTime", () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it("formats date and time using the preferred date format", () => {
+    localStorage.setItem("verifywise_preferences", JSON.stringify({ date_format: "MM/DD/YY" }));
+    expect(displayFormattedDateTime("2024-11-01T14:30:25")).toBe("11/01/24, 14:30");
+  });
+
+  it("includes seconds when requested", () => {
+    expect(displayFormattedDateTime("2024-11-01T14:30:25", { includeSeconds: true })).toBe(
+      "01-11-2024, 14:30:25",
+    );
+  });
+
+  it("supports a custom separator", () => {
+    expect(displayFormattedDateTime("2024-11-01T14:30:25", { separator: " at " })).toBe(
+      "01-11-2024 at 14:30",
+    );
+  });
+});
+
 describe("formatDateTime", () => {
   it("formats date with time components", () => {
-    // Use a UTC midnight date, but formatDateTime uses local time
-    // so we test the pattern rather than exact values
-    const result = formatDateTime("2024-11-01T14:30:25Z");
-    // Should contain the date parts and time separated by comma
-    expect(result).toMatch(/\d+ \w+ \d{4}, \d{2}:\d{2}:\d{2}/);
+    const result = formatDateTime("2024-11-01T14:30:25");
+    expect(result).toBe("01-11-2024, 14:30:25");
   });
 
   it("throws for empty string", () => {
@@ -74,9 +125,7 @@ describe("formatDateTime", () => {
   });
 
   it("includes hours, minutes, and seconds", () => {
-    // Use a date where local time will have identifiable components
-    const result = formatDateTime("2024-06-15T00:00:00Z");
-    // Result should match the pattern "day Month year, HH:MM:SS"
-    expect(result).toMatch(/^\d{1,2} \w+ \d{4}, \d{2}:\d{2}:\d{2}$/);
+    const result = formatDateTime("2024-06-15T00:00:00");
+    expect(result).toMatch(/^\d{2}-\d{2}-\d{4}, \d{2}:\d{2}:\d{2}$/);
   });
 });

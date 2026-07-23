@@ -44,7 +44,7 @@ import { NotificationEntityType } from "../domain.layer/interfaces/i.notificatio
 import logger from "../utils/logger/fileLogger";
 import { translateError } from "../utils/i18n.utils";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
-import { sanitizeUserHtml } from "../utils/sanitizeUserHtml";
+import { sanitizeUserHtml } from "../utils/sanitization.utils";
 
 export class PolicyController {
   // Get all policies
