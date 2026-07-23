@@ -268,12 +268,25 @@ export const uploadCompanyLogoQuery = async (
     `SELECT logo FROM ai_trust_center WHERE organization_id = :organizationId LIMIT 1;`,
     { replacements: { organizationId }, transaction },
   )) as [{ logo: number }[], number];
-  const deleteFileId = currentLogo[0][0]?.logo;
+  const existingRow = currentLogo[0][0];
+  const deleteFileId = existingRow?.logo;
 
-  const result = (await sequelize.query(
-    `UPDATE ai_trust_center SET logo = :fileId WHERE organization_id = :organizationId RETURNING logo;`,
-    { replacements: { organizationId, fileId: file }, transaction },
-  )) as [{ file_id: number }[], number];
+  // The ai_trust_center base row is not seeded on org creation, so it may not
+  // exist yet the first time a logo is uploaded. A bare UPDATE would then match
+  // zero rows and return undefined, which the controller reports as a 503
+  // "failed to upload company logo". Insert the row when it is missing so the
+  // first logo upload for an org succeeds, and update it otherwise.
+  const result = (
+    existingRow === undefined
+      ? await sequelize.query(
+          `INSERT INTO ai_trust_center (organization_id, logo) VALUES (:organizationId, :fileId) RETURNING logo;`,
+          { replacements: { organizationId, fileId: file }, transaction },
+        )
+      : await sequelize.query(
+          `UPDATE ai_trust_center SET logo = :fileId WHERE organization_id = :organizationId RETURNING logo;`,
+          { replacements: { organizationId, fileId: file }, transaction },
+        )
+  ) as [{ logo: number }[], number];
 
   if (deleteFileId) {
     await deleteFileById(deleteFileId, organizationId, transaction);
