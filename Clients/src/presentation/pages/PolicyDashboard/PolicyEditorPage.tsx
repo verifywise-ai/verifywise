@@ -36,6 +36,7 @@ import {
   Snackbar,
   Alert,
   TextField,
+  GlobalStyles,
 } from "@mui/material";
 import {
   Underline as UnderlineIcon,
@@ -117,6 +118,7 @@ import {
   searchHighlightKey,
 } from "./PolicyEditor/searchHighlightExtension";
 import { type ToolbarKey, defaultToolbarState } from "./PolicyEditor/toolbarTypes";
+import { policyEditorStyles } from "./PolicyEditor/editorStyles";
 
 // ── Component ─────────────────────────────────────────────────────────
 export default function PolicyEditorPage() {
@@ -1979,191 +1981,7 @@ export default function PolicyEditorPage() {
                   </Box>
                 </BubbleMenu>
               )}
-              <style>{`
-              .policy-tiptap-editor .ProseMirror {
-                height: 100%;
-                min-height: 300px;
-                overflow-y: auto;
-                padding: 20px 24px;
-                border: none;
-                border-radius: 4px;
-                background-color: #FFFFFF;
-                font-size: ${theme.typography.fontSize}px;
-                color: ${theme.palette.text.primary};
-                outline: none;
-              }
-              .policy-tiptap-editor .ProseMirror:focus {
-                outline: none;
-              }
-              .policy-tiptap-editor .ProseMirror p.is-editor-empty:first-child::before {
-                content: attr(data-placeholder);
-                float: left;
-                color: #adb5bd;
-                pointer-events: none;
-                height: 0;
-              }
-              .policy-tiptap-editor .ProseMirror mark {
-                background-color: #fef08a;
-                padding: 0 2px;
-                border-radius: 2px;
-              }
-              .policy-tiptap-editor .ProseMirror blockquote {
-                border-left: 3px solid #d0d5dd;
-                margin: 8px 0;
-                padding: 8px 16px;
-                color: #475467;
-                background-color: #f9fafb;
-                border-radius: 0 4px 4px 0;
-              }
-              .policy-tiptap-editor .ProseMirror pre {
-                background-color: #1e1e1e;
-                color: #d4d4d4;
-                padding: 12px 16px;
-                border-radius: 6px;
-                font-family: 'JetBrains Mono', 'Fira Code', monospace;
-                font-size: 0.9em;
-                overflow-x: auto;
-                margin: 12px 0;
-              }
-              .policy-tiptap-editor .ProseMirror pre code {
-                background: none;
-                color: inherit;
-                padding: 0;
-              }
-              .policy-tiptap-editor .ProseMirror code {
-                background-color: #f1f3f5;
-                padding: 2px 4px;
-                border-radius: 3px;
-                font-size: 0.9em;
-              }
-              .policy-tiptap-editor .ProseMirror hr {
-                border: none;
-                border-top: 1px solid #d0d5dd;
-                margin: 16px 0;
-              }
-              .policy-tiptap-editor .ProseMirror table {
-                border-collapse: collapse;
-                width: 100%;
-                margin: 12px 0;
-                table-layout: fixed;
-                overflow: hidden;
-              }
-              .policy-tiptap-editor .ProseMirror th,
-              .policy-tiptap-editor .ProseMirror td {
-                border: 1px solid #d0d5dd;
-                padding: 8px 12px;
-                text-align: left;
-                vertical-align: top;
-                min-width: 80px;
-                position: relative;
-                box-sizing: border-box;
-              }
-              .policy-tiptap-editor .ProseMirror th {
-                background-color: #f0f4f2;
-                font-weight: 600;
-              }
-              /* Selected cell highlight */
-              .policy-tiptap-editor .ProseMirror .selectedCell {
-                background-color: #e6f0ec !important;
-                border-color: #13715B !important;
-              }
-              .policy-tiptap-editor .ProseMirror .selectedCell::after {
-                content: '';
-                position: absolute;
-                inset: 0;
-                background: rgba(19, 113, 91, 0.08);
-                pointer-events: none;
-              }
-              /* Column resize handle */
-              .policy-tiptap-editor .ProseMirror .column-resize-handle {
-                position: absolute;
-                right: -2px;
-                top: 0;
-                bottom: -2px;
-                width: 4px;
-                background-color: #13715B;
-                cursor: col-resize;
-                z-index: 10;
-              }
-              .policy-tiptap-editor .ProseMirror.resize-cursor {
-                cursor: col-resize;
-              }
-              /* Subtle hover on rows (only when no cell is selected) */
-              .policy-tiptap-editor .ProseMirror td:hover {
-                background-color: #fafbfc;
-              }
-              .policy-tiptap-editor .ProseMirror img {
-                max-width: 100%;
-                border-radius: 8px;
-                margin: 12px 0;
-              }
-              .policy-tiptap-editor .ProseMirror a {
-                color: #3182ce;
-                text-decoration: underline;
-                cursor: pointer;
-              }
-              .policy-tiptap-editor .ProseMirror ul,
-              .policy-tiptap-editor .ProseMirror ol {
-                padding-left: 24px;
-              }
-              .policy-tiptap-editor .ProseMirror h1 {
-                font-size: 1.75em;
-                font-weight: 700;
-                margin: 16px 0 8px;
-              }
-              .policy-tiptap-editor .ProseMirror h2 {
-                font-size: 1.4em;
-                font-weight: 600;
-                margin: 12px 0 6px;
-              }
-              .policy-tiptap-editor .ProseMirror h3 {
-                font-size: 1.15em;
-                font-weight: 600;
-                margin: 10px 0 4px;
-              }
-              .policy-tiptap-editor .ProseMirror ul[data-type="taskList"] {
-                list-style: none;
-                padding-left: 4px;
-              }
-              .policy-tiptap-editor .ProseMirror ul[data-type="taskList"] li {
-                display: flex;
-                align-items: flex-start;
-                gap: 8px;
-                margin: 4px 0;
-              }
-              .policy-tiptap-editor .ProseMirror ul[data-type="taskList"] li label {
-                display: flex;
-                align-items: center;
-                flex-shrink: 0;
-                margin-top: 2px;
-              }
-              .policy-tiptap-editor .ProseMirror ul[data-type="taskList"] li label input[type="checkbox"] {
-                width: 16px;
-                height: 16px;
-                cursor: pointer;
-                accent-color: #13715B;
-              }
-              .policy-tiptap-editor .ProseMirror ul[data-type="taskList"] li > div {
-                flex: 1;
-              }
-              .policy-tiptap-editor .ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div > p {
-                text-decoration: line-through;
-                color: #98A2B3;
-              }
-              .policy-tiptap-editor .ProseMirror sup {
-                font-size: 0.75em;
-                vertical-align: super;
-              }
-              .policy-tiptap-editor .ProseMirror sub {
-                font-size: 0.75em;
-                vertical-align: sub;
-              }
-              .policy-tiptap-editor .ProseMirror .search-highlight {
-                background-color: #fef08a;
-                border-radius: 2px;
-                box-shadow: 0 0 0 1px #eab308;
-              }
-            `}</style>
+              <GlobalStyles styles={policyEditorStyles} />
             </Box>
 
             {displayErrors.content && (
