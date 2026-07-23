@@ -180,6 +180,7 @@ function makeDbFile(overrides?: any) {
     size: 1024,
     content: Buffer.from("dummy content"),
     org_id: 1,
+    organization_id: 1,
     project_id: null,
     uploaded_by: 1,
     upload_date: new Date().toISOString(),
@@ -425,7 +426,7 @@ describe("fileManager.ctrl", () => {
     });
 
     it("should return 403 when org_id does not match", async () => {
-      mockGetFileById.mockResolvedValue(makeDbFile({ org_id: 2 }) as any);
+      mockGetFileById.mockResolvedValue(makeDbFile({ organization_id: 2 }) as any);
       const req = createReq({ params: { id: "1" } });
       const res = createRes();
       await downloadFile(req, res);
@@ -517,7 +518,7 @@ describe("fileManager.ctrl", () => {
     });
 
     it("should return 403 when org_id does not match", async () => {
-      mockGetFileById.mockResolvedValue(makeDbFile({ org_id: 2 }) as any);
+      mockGetFileById.mockResolvedValue(makeDbFile({ organization_id: 2 }) as any);
       const req = createReq({ params: { id: "1" } });
       const res = createRes();
       await removeFile(req, res);
@@ -593,7 +594,7 @@ describe("fileManager.ctrl", () => {
     });
 
     it("should return 403 when org_id does not match", async () => {
-      mockGetFileMeta.mockResolvedValue(makeDbFile({ org_id: 2 }) as any);
+      mockGetFileMeta.mockResolvedValue(makeDbFile({ organization_id: 2 }) as any);
       const req = createReq({ params: { id: "1" } });
       const res = createRes();
       await getFileMetadata(req, res);
@@ -648,7 +649,7 @@ describe("fileManager.ctrl", () => {
     });
 
     it("should return 403 when org_id does not match", async () => {
-      mockGetFileById.mockResolvedValue(makeDbFile({ org_id: 2 }) as any);
+      mockGetFileById.mockResolvedValue(makeDbFile({ organization_id: 2 }) as any);
       const req = createReq({ params: { id: "1" } });
       const res = createRes();
       await updateMetadata(req, res);
@@ -792,7 +793,7 @@ describe("fileManager.ctrl", () => {
     });
 
     it("should return 403 when org_id does not match", async () => {
-      mockGetFileById.mockResolvedValue(makeDbFile({ org_id: 2 }) as any);
+      mockGetFileById.mockResolvedValue(makeDbFile({ organization_id: 2 }) as any);
       const req = createReq({ params: { id: "1" } });
       const res = createRes();
       await previewFile(req, res);
