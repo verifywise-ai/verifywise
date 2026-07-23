@@ -19,6 +19,22 @@ export interface AgentPrimitiveRow {
   updated_at: string;
 }
 
+export interface AgentAuditLogEntry {
+  id: number;
+  agent_primitive_id: number;
+  action: string;
+  field_changed: string | null;
+  old_value: string | null;
+  new_value: string | null;
+  performed_by: number | null;
+  created_at: string;
+}
+
+// The lifecycle a single agent moves through, derived from review_status +
+// is_stale (no dedicated backend column). Rejected is terminal; stale is a
+// warning branch off the active (confirmed) state.
+export type AgentLifecycleStage = "added" | "under_review" | "confirmed" | "active" | "rejected";
+
 export interface AgentTableProps {
   agents: AgentPrimitiveRow[];
   isLoading: boolean;

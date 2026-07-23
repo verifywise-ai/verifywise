@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { Box, Stack, Fade } from "@mui/material";
 import { RefreshCw, CirclePlus } from "lucide-react";
 import { SearchBox } from "../../components/Search";
@@ -31,6 +32,7 @@ interface AgentStats {
 }
 
 const AgentDiscovery: React.FC = () => {
+  const navigate = useNavigate();
   const [agents, setAgents] = useState<AgentPrimitiveRow[]>([]);
   const [stats, setStats] = useState<AgentStats>({
     total: 0,
@@ -304,8 +306,9 @@ const AgentDiscovery: React.FC = () => {
   };
 
   const handleRowClick = (agent: AgentPrimitiveRow) => {
-    setSelectedAgent(agent);
-    setIsReviewModalOpen(true);
+    // Row click opens the full detail page (lifecycle, ownership, activity).
+    // Quick review stays available via the row action menu (onEdit → review).
+    navigate(`/agent-discovery/${agent.id}`);
   };
 
   const handleReviewSuccess = () => {

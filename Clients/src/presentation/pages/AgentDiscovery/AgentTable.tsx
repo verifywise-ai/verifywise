@@ -12,6 +12,7 @@ import {
   Stack,
   Chip as MuiChip,
   Box,
+  Tooltip,
   useTheme,
 } from "@mui/material";
 import {
@@ -35,6 +36,7 @@ import { CustomizableButton } from "../../components/button/customizable-button"
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import { getInstalledPlugins } from "../../../application/repository/plugin.repository";
 import Chip from "../../components/Chip";
+import { getAgentLifecycleStatus } from "./agentLifecycle";
 import TablePaginationActions from "../../components/TablePagination";
 import { singleTheme } from "../../themes";
 import {
@@ -57,7 +59,7 @@ const TABLE_COLUMNS = [
   { id: "permissions", label: "PERMISSIONS", sortable: false },
   { id: "last_activity", label: "LAST ACTIVITY", sortable: true },
   { id: "review_status", label: "STATUS", sortable: true },
-  { id: "stale", label: "", sortable: false },
+  { id: "stale", label: "STALE", sortable: false },
   { id: "actions", label: "", sortable: false },
 ];
 
@@ -382,12 +384,25 @@ const AgentTable: React.FC<AgentTableProps> = ({
           )}
           {isColVisible("review_status") && (
             <TableCell sx={cellStyle}>
-              <Chip label={agent.review_status} />
+              {(() => {
+                const s = getAgentLifecycleStatus(agent);
+                return <Chip label={s.label} variant={s.variant} />;
+              })()}
             </TableCell>
           )}
           {isColVisible("stale") && (
             <TableCell sx={{ ...cellStyle, width: 40 }}>
-              {agent.is_stale && <AlertTriangle size={14} strokeWidth={1.5} color="#F9A825" />}
+              {agent.is_stale && (
+                <Tooltip
+                  title="Stale: no activity from this agent for 30+ days. Re-sync or review whether it is still in use."
+                  arrow
+                  placement="top"
+                >
+                  <Box component="span" sx={{ display: "inline-flex", cursor: "help" }}>
+                    <AlertTriangle size={14} strokeWidth={1.5} color="#F9A825" />
+                  </Box>
+                </Tooltip>
+              )}
             </TableCell>
           )}
           {isColVisible("actions") && (
