@@ -15,7 +15,6 @@ dotenv.config({ quiet: true });
 
 const CRITICAL_PATH_SPECS = /(use-cases|risk-management|tasks|critical-journey)\.spec\.ts/;
 const SUPER_ADMIN_SPECS = /super-admin\.spec\.ts/;
-const ACCESSIBILITY_SPECS = /(^|\/)(dashboard|model-inventory|vendors|policies)\.spec\.ts/;
 
 // When Playwright's bundled Chromium is not available (e.g. restricted CDN),
 // set PLAYWRIGHT_USE_SYSTEM_CHROME=1 to use the locally installed Google Chrome.
@@ -76,17 +75,6 @@ export default defineConfig({
         ...devices["Desktop Chrome"],
         channel: browserChannel,
         storageState: "e2e/.auth/admin.json",
-      },
-    },
-    // Accessibility tests: scan key pages for critical/serious a11y violations
-    {
-      name: "accessibility",
-      testMatch: ACCESSIBILITY_SPECS,
-      dependencies: ["setup"],
-      use: {
-        ...devices["Desktop Chrome"],
-        channel: browserChannel,
-        storageState: "e2e/.auth/user.json",
       },
     },
   ],

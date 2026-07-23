@@ -5179,6 +5179,13 @@ components:
           type: integer
         date_format:
           type: string
+          example: 'DD-MM-YYYY'
+        language:
+          type: string
+          example: 'en'
+        theme:
+          type: string
+          example: 'light'
         created_at:
           type: string
           format: date-time
@@ -8221,6 +8228,35 @@ paths:
         '500':
           description: 'Internal server error'
       operationId: ChangePassword
+  /users/preferences:
+    get:
+      summary: 'Get current user preferences'
+      description: |
+        Returns the authenticated user's persisted preferences (date_format,
+        language) from user_preferences. If no row exists, returns safe
+        defaults including a transient theme default.
+      tags:
+        - Users
+      security:
+        -
+          bearerAuth: []
+      responses:
+        '200':
+          description: 'Preferences found or defaults returned'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: 'OK'
+                  data:
+                    $ref: '#/components/schemas/UserPreference'
+        '401':
+          description: Unauthorized
+        '500':
+          description: 'Internal server error'
   /users/check/exists:
     get:
       summary: 'Check if any user exists'

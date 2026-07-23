@@ -7,7 +7,6 @@ on:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
     environment: Build
 
     permissions:
@@ -43,8 +42,6 @@ jobs:
           push: false
           load: true
           tags: verifywise-frontend:scan
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
           build-args: |
             VITE_SLACK_CLIENT_ID=${{ secrets.SLACK_CLIENT_ID }}
             VITE_APP_VERSION=${{ env.TAG }}
@@ -74,8 +71,6 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository_owner }}/verifywise-frontend:${{ env.TAG }}
             ghcr.io/${{ github.repository_owner }}/verifywise-frontend:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
           build-args: |
             VITE_SLACK_CLIENT_ID=${{ secrets.SLACK_CLIENT_ID }}
             VITE_APP_VERSION=${{ env.TAG }}

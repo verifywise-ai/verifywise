@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
 import { Box, Stack, Fade } from "@mui/material";
 import { RefreshCw, CirclePlus } from "lucide-react";
 import { SearchBox } from "../../components/Search";
@@ -32,7 +31,6 @@ interface AgentStats {
 }
 
 const AgentDiscovery: React.FC = () => {
-  const navigate = useNavigate();
   const [agents, setAgents] = useState<AgentPrimitiveRow[]>([]);
   const [stats, setStats] = useState<AgentStats>({
     total: 0,
@@ -306,9 +304,8 @@ const AgentDiscovery: React.FC = () => {
   };
 
   const handleRowClick = (agent: AgentPrimitiveRow) => {
-    // Row click opens the full detail page (lifecycle, ownership, activity).
-    // Quick review stays available via the row action menu (onEdit → review).
-    navigate(`/agent-discovery/${agent.id}`);
+    setSelectedAgent(agent);
+    setIsReviewModalOpen(true);
   };
 
   const handleReviewSuccess = () => {
@@ -355,7 +352,7 @@ const AgentDiscovery: React.FC = () => {
 
   return (
     <PageHeaderExtended
-      title="AI Agents"
+      title="Agent discovery"
       description="Automatically discover and inventory AI agents across your organization. Review discovered agents, confirm or reject them, and link them to your model inventory for governance tracking."
       helpArticlePath="ai-governance/agent-discovery"
       summaryCards={
@@ -455,7 +452,6 @@ const AgentDiscovery: React.FC = () => {
             onEdit={handleEditAgent}
             onDelete={handleDeleteAgent}
             onSync={handleSync}
-            onAddAgent={() => setIsManualModalOpen(true)}
             isSyncing={isSyncing}
             visibleColumns={visibleColumns}
           />
@@ -468,11 +464,6 @@ const AgentDiscovery: React.FC = () => {
         setIsOpen={setIsReviewModalOpen}
         agent={selectedAgent}
         onSuccess={handleReviewSuccess}
-        onEdit={(agent) => {
-          setSelectedAgent(null);
-          setEditAgent(agent);
-          setIsManualModalOpen(true);
-        }}
       />
 
       {/* Manual entry modal */}

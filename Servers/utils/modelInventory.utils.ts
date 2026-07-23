@@ -277,7 +277,12 @@ export const createNewModelInventoryQuery = async (
     }
 
     // Record history snapshot for status changes
-    await recordSnapshotIfChanged("status", organizationId, undefined, transaction);
+    try {
+      await recordSnapshotIfChanged("status", organizationId, undefined, transaction);
+    } catch (historyError) {
+      console.error("Error recording history snapshot:", historyError);
+      // Don't throw - history recording failure shouldn't block model creation
+    }
 
     return createdModel;
   } catch (error) {
@@ -457,8 +462,13 @@ export const updateModelInventoryByIdQuery = async (
     }
 
     // Record history snapshot if status changed
-    if (oldModel && oldModel.status !== updatedModel.status) {
-      await recordSnapshotIfChanged("status", organizationId, undefined, transaction);
+    try {
+      if (oldModel && oldModel.status !== updatedModel.status) {
+        await recordSnapshotIfChanged("status", organizationId, undefined, transaction);
+      }
+    } catch (historyError) {
+      console.error("Error recording history snapshot:", historyError);
+      // Don't throw - history recording failure shouldn't block model update
     }
 
     return updatedModel;
@@ -544,7 +554,12 @@ export const deleteModelInventoryByIdQuery = async (
     }
 
     // Record history snapshot after deletion
-    await recordSnapshotIfChanged("status", organizationId, undefined, transaction);
+    try {
+      await recordSnapshotIfChanged("status", organizationId, undefined, transaction);
+    } catch (historyError) {
+      console.error("Error recording history snapshot:", historyError);
+      // Don't throw - history recording failure shouldn't block model deletion
+    }
 
     return deletedModel;
   } catch (error) {

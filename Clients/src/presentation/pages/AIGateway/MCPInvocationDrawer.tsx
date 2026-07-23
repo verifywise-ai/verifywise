@@ -34,8 +34,6 @@ interface AuditLogDetail {
   agent_key_name?: string | null;
   result_status: string;
   result_summary: string | null;
-  matched_rule_id?: number | null;
-  matched_rule_name?: string | null;
   tool_use_id: string | null;
   session_id: string | null;
   arguments: Record<string, unknown> | null;
@@ -141,29 +139,6 @@ export default function MCPInvocationDrawer({ logId, open, onClose }: Invocation
           </Stack>
 
           <Divider />
-
-          {/* Decision provenance — which rule produced a block / approval. */}
-          {row.matched_rule_name && (
-            <Box
-              sx={{
-                p: "12px",
-                borderRadius: "4px",
-                border: `1px solid ${palette.status.warning.border}`,
-                backgroundColor: palette.status.warning.bg,
-              }}
-            >
-              <Typography sx={labelSx}>
-                {row.result_status === "approval_required"
-                  ? "APPROVAL REQUIRED BY RULE"
-                  : "BLOCKED BY RULE"}
-              </Typography>
-              <Typography
-                sx={{ fontSize: 13, fontWeight: 600, color: palette.status.warning.text }}
-              >
-                {row.matched_rule_name}
-              </Typography>
-            </Box>
-          )}
 
           <Box>
             <Typography sx={labelSx}>TOOL USE ID</Typography>

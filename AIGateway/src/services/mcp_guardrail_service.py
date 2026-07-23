@@ -54,11 +54,7 @@ def _check_prompt_injection(input_text: str) -> list[str]:
 # ─── MCP Tool Input Scanning ───────────────────────────────────────────────
 
 async def scan_tool_input(
-    org_id: int,
-    tool_name: str,
-    arguments: dict,
-    field_aware: bool = False,
-    agent_key_id: Optional[int] = None,
+    org_id: int, tool_name: str, arguments: dict, field_aware: bool = False
 ) -> ScanResult:
     """
     Scan MCP tool call arguments through org guardrail rules.
@@ -101,13 +97,9 @@ async def scan_tool_input(
                       OR array_length(applies_to_tools, 1) IS NULL
                       OR :tool_name = ANY(applies_to_tools)
                   )
-                  AND (
-                      array_length(applies_to_agent_keys, 1) IS NULL
-                      OR :agent_key_id = ANY(applies_to_agent_keys)
-                  )
                 ORDER BY created_at
             """),
-            {"org_id": org_id, "tool_name": tool_name, "agent_key_id": agent_key_id},
+            {"org_id": org_id, "tool_name": tool_name},
         )
         mcp_rules = [dict(r) for r in rules_result.mappings().fetchall()]
 

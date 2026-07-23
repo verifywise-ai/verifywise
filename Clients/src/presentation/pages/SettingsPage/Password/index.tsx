@@ -24,6 +24,7 @@ const PasswordForm: React.FC = () => {
   const [newPassword, setNewPassword] = useState<string>("");
   const [confirmPassword, setConfirmPassword] = useState<string>("");
 
+  const [currentPasswordError, setCurrentPasswordError] = useState<string | null>(null);
   const [newPasswordError, setNewPasswordError] = useState<string | null>(null);
   const [confirmPasswordError, setConfirmPasswordError] = useState<string | null>(null);
 
@@ -45,8 +46,22 @@ const PasswordForm: React.FC = () => {
     visible: false,
   });
 
+  // Handle current password validation
   const handleCurrentPasswordChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    setCurrentPassword(e.target.value);
+    const value = e.target.value;
+    setCurrentPassword(value);
+
+    const validation = checkStringValidation(
+      "Current password",
+      value,
+      8,
+      128,
+      true, // hasUpperCase
+      true, // hasLowerCase
+      true, // hasNumber
+      true, // hasSpecialCharacter
+    );
+    setCurrentPasswordError(validation.accepted ? null : validation.message);
   }, []);
 
   // Handle new password validation
@@ -75,6 +90,7 @@ const PasswordForm: React.FC = () => {
 
   // Handle save
   const handleSave = useCallback(async () => {
+    setCurrentPasswordError(null);
     setNewPasswordError(null);
     setConfirmPasswordError(null);
 
@@ -159,6 +175,7 @@ const PasswordForm: React.FC = () => {
     !currentPassword ||
     !newPassword ||
     !confirmPassword ||
+    !!currentPasswordError ||
     !!newPasswordError ||
     !!confirmPasswordError;
 
@@ -195,6 +212,11 @@ const PasswordForm: React.FC = () => {
               type="password"
               sx={{ mb: 5, backgroundColor: `${background.main}` }}
             />
+            {currentPasswordError && (
+              <Typography color="error" variant="caption">
+                {currentPasswordError}
+              </Typography>
+            )}
 
             <Field
               id="New password"

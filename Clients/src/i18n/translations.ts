@@ -25,11 +25,6 @@ export type Lang = "en" | "de" | "fr" | "es";
 
 export const translations: Record<string, Record<string, string>> = {
   de: {
-    // AsyncBoundary
-    "Loading": "Wird geladen...",
-    "Retry loading data": "Daten erneut laden",
-    "Something went wrong. Please try again.":
-      "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
     // Rich text renderer
     "Rich text content": "Rich-Text-Inhalt",
     // Settings — help text
@@ -520,23 +515,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Model Inventory": "Modellinventar",
     "Datasets": "Datensätze",
     "Agent discovery": "Agentenerkennung",
-    "AI Agents": "KI-Agenten",
-    "Lifecycle": "Lebenszyklus",
-    "From intake through review to active governance":
-      "Von der Aufnahme über die Prüfung bis zur aktiven Governance",
-    "Each stage shows who is in charge and when it happened":
-      "Jede Phase zeigt, wer verantwortlich ist und wann sie stattfand",
-    "Ownership & capabilities": "Verantwortung & Fähigkeiten",
-    "Who is accountable, and what this agent can access":
-      "Wer verantwortlich ist und worauf dieser Agent zugreifen kann",
-    "Accountable owner": "Verantwortlicher Eigentümer",
-    "No owner assigned": "Kein Eigentümer zugewiesen",
-    "Access categories": "Zugriffskategorien",
-    "None recorded": "Keine erfasst",
-    "Governance actions taken on this agent": "Governance-Aktionen für diesen Agenten",
-    "No activity recorded yet.": "Noch keine Aktivität erfasst.",
-    "Agent not found": "Agent nicht gefunden",
-    "Back to AI Agents": "Zurück zu KI-Agenten",
     "ASSURANCE": "SICHERHEIT",
     "Risk management": "Risikomanagement",
     "Risk Management": "Risikomanagement",
@@ -772,7 +750,6 @@ export const translations: Record<string, Record<string, string>> = {
     "NAME": "NAME",
     "Description": "Beschreibung",
     "Owner": "Verantwortlicher",
-    "Owners": "Verantwortliche",
     "OWNER": "VERANTWORTLICHER",
     "Owner name": "Name des Verantwortlichen",
     "Status": "Status",
@@ -1429,7 +1406,6 @@ export const translations: Record<string, Record<string, string>> = {
       "KI-Agenten in Ihrer Organisation automatisch erkennen und inventarisieren. Erkannte Agenten prüfen, bestätigen oder ablehnen und für die Governance-Verfolgung mit Ihrem Modellinventar verknüpfen.",
     "Avg Latency": "Durchschnittliche Latenz",
     "Avg input tokens": "Durchschnittliche Eingabe-Tokens",
-    "Avg tool calls / run": "Durchschnittliche Tool-Aufrufe / Lauf",
     "Avg latency": "Durchschnittliche Latenz",
     "Avg latency, top 10 tools": "Durchschnittliche Latenz, Top 10 Tools",
     "Avg output tokens": "Durchschnittliche Ausgabe-Tokens",
@@ -1895,17 +1871,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Agent": "Agent",
     "Agent key created": "Agentenschlüssel erstellt",
     "Agent keys": "Agentenschlüssel",
-    "Agent activity": "Agentenaktivität",
-    "View agent activity": "Agentenaktivität anzeigen",
-    "All agents": "Alle Agenten",
-    "Applies to agents": "Gilt für Agenten",
-    "Restrict this rule to specific agents. Leave empty to apply to every agent.":
-      "Diese Regel auf bestimmte Agenten beschränken. Leer lassen, um sie auf alle Agenten anzuwenden.",
-    "No activity recorded for this agent yet":
-      "Für diesen Agenten wurde noch keine Aktivität erfasst",
-    "Failed to load agent activity": "Aktivität dieses Agenten konnte nicht geladen werden",
-    "RECENT ACTIVITY": "LETZTE AKTIVITÄT",
-    "TOOLS USED": "VERWENDETE TOOLS",
     "AI advisor": "KI-Berater",
     "AI analysis": "KI-Analyse",
     "AI Detection": "KI-Erkennung",
@@ -2521,7 +2486,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Tool-level access control": "Zugriffskontrolle auf Tool-Ebene",
     "Total applicants": "Bewerber insgesamt",
     "Total Calls": "Gesamtaufrufe",
-    "Total runs": "Läufe insgesamt",
     "Total cost": "Gesamtkosten",
     "Total events": "Ereignisse insgesamt",
     "Total findings": "Erkenntnisse insgesamt",
@@ -2538,11 +2502,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Total tokens": "Tokens insgesamt",
     "Total tool invocations in the selected period":
       "Gesamte Tool-Aufrufe im ausgewählten Zeitraum",
-    "Distinct agent runs in the selected period":
-      "Eindeutige Agentenläufe im ausgewählten Zeitraum",
-    "Mean number of tool calls per run": "Durchschnittliche Anzahl an Tool-Aufrufen pro Lauf",
-    "Share of runs where at least one tool call was blocked by a policy or guardrail":
-      "Anteil der Läufe, bei denen mindestens ein Tool-Aufruf durch eine Richtlinie oder ein Guardrail blockiert wurde",
     "Total users": "Benutzer insgesamt",
     "Traffic controls": "Verkehrskontrollen",
     "Transparency measures": "Transparenzmaßnahmen",
@@ -2556,7 +2515,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Unique apps": "Eindeutige Apps",
     "Unique repos scanned": "Eindeutige gescannte Repositories",
     "Unique Tools": "Eindeutige Tools",
-    "Runs with a block": "Läufe mit einer Blockierung",
     "Unknown": "Unbekannt",
     "Unlinked": "Nicht verknüpft",
     "Untitled audit": "Unbenannte Prüfung",
@@ -3124,7 +3082,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Select organization": "Organisation auswählen",
     "Select outcome column": "Ergebnisspalte auswählen",
     "Select owner": "Verantwortlichen auswählen",
-    "Select owners": "Verantwortliche auswählen",
     "Select past issues level": "Stufe vergangener Probleme auswählen",
     "Select person": "Person auswählen",
     "Select phase": "Phase auswählen",
@@ -8990,10 +8947,6 @@ export const translations: Record<string, Record<string, string>> = {
   },
 
   fr: {
-    // AsyncBoundary
-    "Loading": "Chargement...",
-    "Retry loading data": "Réessayer le chargement des données",
-    "Something went wrong. Please try again.": "Une erreur s'est produite. Veuillez réessayer.",
     // Rich text renderer
     "Rich text content": "Contenu de texte enrichi",
     // Settings — help text
@@ -9484,23 +9437,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Model Inventory": "Inventaire des modèles",
     "Datasets": "Jeux de données",
     "Agent discovery": "Découverte d'agents",
-    "AI Agents": "Agents IA",
-    "Lifecycle": "Cycle de vie",
-    "From intake through review to active governance":
-      "De l'admission à la gouvernance active en passant par l'examen",
-    "Each stage shows who is in charge and when it happened":
-      "Chaque étape indique qui en est responsable et quand elle a eu lieu",
-    "Ownership & capabilities": "Responsabilité et capacités",
-    "Who is accountable, and what this agent can access":
-      "Qui est responsable et à quoi cet agent peut accéder",
-    "Accountable owner": "Propriétaire responsable",
-    "No owner assigned": "Aucun propriétaire attribué",
-    "Access categories": "Catégories d'accès",
-    "None recorded": "Aucune enregistrée",
-    "Governance actions taken on this agent": "Actions de gouvernance effectuées sur cet agent",
-    "No activity recorded yet.": "Aucune activité enregistrée pour le moment.",
-    "Agent not found": "Agent introuvable",
-    "Back to AI Agents": "Retour aux agents IA",
     "ASSURANCE": "ASSURANCE",
     "Risk management": "Gestion des risques",
     "Risk Management": "Gestion des risques",
@@ -9726,7 +9662,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Name": "Nom",
     "Description": "Description",
     "Owner": "Responsable",
-    "Owners": "Responsables",
     "Owner name": "Nom du responsable",
     "Status": "Statut",
     "Action": "Action",
@@ -10541,7 +10476,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Découvrez et inventoriez automatiquement les agents IA dans votre organisation. Examinez les agents découverts, confirmez-les ou rejetez-les, et reliez-les à votre inventaire de modèles pour le suivi de gouvernance.",
     "Avg Latency": "Latence moyenne",
     "Avg input tokens": "Tokens d'entrée moyens",
-    "Avg tool calls / run": "Appels d'outils moyens / exécution",
     "Avg latency": "Latence moyenne",
     "Avg latency, top 10 tools": "Latence moyenne, top 10 outils",
     "Avg output tokens": "Tokens de sortie moyens",
@@ -10978,17 +10912,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Agent": "Agent",
     "Agent key created": "Clé d'agent créée",
     "Agent keys": "Clés d'agent",
-    "Agent activity": "Activité de l'agent",
-    "View agent activity": "Voir l'activité de l'agent",
-    "All agents": "Tous les agents",
-    "Applies to agents": "S'applique aux agents",
-    "Restrict this rule to specific agents. Leave empty to apply to every agent.":
-      "Limiter cette règle à des agents spécifiques. Laisser vide pour l'appliquer à tous les agents.",
-    "No activity recorded for this agent yet":
-      "Aucune activité enregistrée pour cet agent pour le moment",
-    "Failed to load agent activity": "Échec du chargement de l'activité de cet agent",
-    "RECENT ACTIVITY": "ACTIVITÉ RÉCENTE",
-    "TOOLS USED": "OUTILS UTILISÉS",
     "AI advisor": "Conseiller IA",
     "AI analysis": "Analyse IA",
     "AI Frameworks": "Référentiels IA",
@@ -11602,7 +11525,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Total applicants": "Candidats au total",
     "Total Calls": "Appels totaux",
     "Total cost": "Coût total",
-    "Total runs": "Exécutions totales",
     "Total events": "Événements au total",
     "Total findings": "Constats au total",
     "Total LLM vulnerability findings across all OWASP Top 10 for LLM types":
@@ -11618,11 +11540,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Total tokens": "Tokens au total",
     "Total tool invocations in the selected period":
       "Invocations totales d'outils sur la période sélectionnée",
-    "Distinct agent runs in the selected period":
-      "Exécutions d'agents distinctes sur la période sélectionnée",
-    "Mean number of tool calls per run": "Nombre moyen d'appels d'outils par exécution",
-    "Share of runs where at least one tool call was blocked by a policy or guardrail":
-      "Part des exécutions où au moins un appel d'outil a été bloqué par une politique ou un garde-fou",
     "Total users": "Utilisateurs au total",
     "Traffic controls": "Contrôles de trafic",
     "Transparency measures": "Mesures de transparence",
@@ -11636,7 +11553,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Unique apps": "Applications uniques",
     "Unique repos scanned": "Dépôts uniques analysés",
     "Unique Tools": "Outils uniques",
-    "Runs with a block": "Exécutions avec un blocage",
     "Unlinked": "Non relié",
     "Untitled audit": "Audit sans titre",
     "Untitled form": "Formulaire sans titre",
@@ -12205,7 +12121,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Select organization": "Sélectionner une organisation",
     "Select outcome column": "Sélectionner la colonne de résultat",
     "Select owner": "Sélectionner un responsable",
-    "Select owners": "Sélectionner des responsables",
     "Select past issues level": "Sélectionner le niveau de problèmes passés",
     "Select person": "Sélectionner une personne",
     "Select phase": "Sélectionner une phase",
@@ -17906,10 +17821,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Who is the intended audience for the use case?": "Quel est le public cible du cas d'usage ?",
   },
   es: {
-    // AsyncBoundary
-    "Loading": "Cargando...",
-    "Retry loading data": "Reintentar cargar datos",
-    "Something went wrong. Please try again.": "Algo salió mal. Por favor, inténtelo de nuevo.",
     // Rich text renderer
     "Rich text content": "Contenido de texto enriquecido",
     // Settings — help text
@@ -18189,23 +18100,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Model Inventory": "Inventario de modelos",
     "Datasets": "Conjuntos de datos",
     "Agent discovery": "Descubrimiento de agentes",
-    "AI Agents": "Agentes de IA",
-    "Lifecycle": "Ciclo de vida",
-    "From intake through review to active governance":
-      "Desde la incorporación hasta la gobernanza activa, pasando por la revisión",
-    "Each stage shows who is in charge and when it happened":
-      "Cada etapa muestra quién es responsable y cuándo ocurrió",
-    "Ownership & capabilities": "Responsabilidad y capacidades",
-    "Who is accountable, and what this agent can access":
-      "Quién es responsable y a qué puede acceder este agente",
-    "Accountable owner": "Propietario responsable",
-    "No owner assigned": "Ningún propietario asignado",
-    "Access categories": "Categorías de acceso",
-    "None recorded": "Ninguna registrada",
-    "Governance actions taken on this agent": "Acciones de gobernanza realizadas sobre este agente",
-    "No activity recorded yet.": "Aún no se ha registrado ninguna actividad.",
-    "Agent not found": "Agente no encontrado",
-    "Back to AI Agents": "Volver a Agentes de IA",
     "ASSURANCE": "GARANTÍA",
     "Risk management": "Gestión de riesgos",
     "Risk Management": "Gestión de riesgos",
@@ -18424,8 +18318,6 @@ export const translations: Record<string, Record<string, string>> = {
     "NAME": "NOMBRE",
     "Description": "Descripción",
     "Owner": "Responsable",
-    "Owners": "Responsables",
-    "Select owners": "Seleccionar responsables",
     "OWNER": "RESPONSABLE",
     "Owner name": "Nombre del responsable",
     "Status": "Estado",
@@ -18911,7 +18803,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Associated model (optional)": "Modelo asociado (opcional)",
     "Avg Latency": "Latencia media",
     "Avg input tokens": "Tokens de entrada medios",
-    "Avg tool calls / run": "Llamadas a herramientas medias / ejecución",
     "Avg latency": "Latencia media",
     "Avg latency, top 10 tools": "Latencia media, 10 herramientas principales",
     "Avg output tokens": "Tokens de salida medios",
@@ -19303,16 +19194,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Agent": "Agente",
     "Agent key created": "Clave de agente creada",
     "Agent keys": "Claves de agente",
-    "Agent activity": "Actividad del agente",
-    "View agent activity": "Ver actividad del agente",
-    "All agents": "Todos los agentes",
-    "Applies to agents": "Se aplica a los agentes",
-    "Restrict this rule to specific agents. Leave empty to apply to every agent.":
-      "Restringir esta regla a agentes específicos. Dejar vacío para aplicarla a todos los agentes.",
-    "No activity recorded for this agent yet": "Aún no se ha registrado actividad para este agente",
-    "Failed to load agent activity": "No se pudo cargar la actividad de este agente",
-    "RECENT ACTIVITY": "ACTIVIDAD RECIENTE",
-    "TOOLS USED": "HERRAMIENTAS UTILIZADAS",
     "AI advisor": "Asesor de IA",
     "AI analysis": "Análisis de IA",
     "AI Detection": "Detección de IA",
@@ -19897,7 +19778,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Total applicants": "Total de solicitantes",
     "Total Calls": "Total de llamadas",
     "Total cost": "Coste total",
-    "Total runs": "Ejecuciones totales",
     "Total events": "Total de eventos",
     "Total findings": "Total de hallazgos",
     "Total number of source files analyzed": "Número total de archivos de origen analizados",
@@ -19918,7 +19798,6 @@ export const translations: Record<string, Record<string, string>> = {
     "Unique apps": "Aplicaciones únicas",
     "Unique repos scanned": "Repositorios únicos analizados",
     "Unique Tools": "Herramientas únicas",
-    "Runs with a block": "Ejecuciones con un bloqueo",
     "Unknown": "Desconocido",
     "Unlinked": "Sin vincular",
     "Untitled audit": "Auditoría sin título",
@@ -23188,11 +23067,6 @@ export const translations: Record<string, Record<string, string>> = {
       "Gasto total en todos los endpoints durante este periodo",
     "Total tool invocations in the selected period":
       "Total de invocaciones de herramientas en el periodo seleccionado",
-    "Distinct agent runs in the selected period":
-      "Ejecuciones de agentes distintas en el periodo seleccionado",
-    "Mean number of tool calls per run": "Número medio de llamadas a herramientas por ejecución",
-    "Share of runs where at least one tool call was blocked by a policy or guardrail":
-      "Proporción de ejecuciones en las que al menos una llamada a una herramienta fue bloqueada por una política o barrera de protección",
     "What your guardrails caught in this period":
       "Lo que sus barreras de protección detectaron en este periodo",
     "Whose name and role appear on the declaration document":

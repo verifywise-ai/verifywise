@@ -96,6 +96,9 @@ jest.mock("../../utils/role.utils", () => ({
 jest.mock("../../utils/invitation.utils", () => ({
   markInvitationAcceptedQuery: jest.fn().mockResolvedValue(undefined),
 }));
+jest.mock("../../utils/userPreference.utils", () => ({
+  getPreferencesByUserQuery: jest.fn(),
+}));
 jest.mock("../../domain.layer/exceptions/custom.exception", () => ({
   ValidationException: class ValidationException extends Error {},
   BusinessLogicException: class BusinessLogicException extends Error {},
@@ -107,6 +110,7 @@ import {
   getAllUsers,
   getUserByEmail,
   getUserById,
+  getPreferencesForCurrentUser,
   createNewUser,
   loginUser,
   resetPassword,
@@ -131,6 +135,7 @@ import {
   getUserProfilePhotoQuery,
   deleteUserProfilePhotoQuery,
 } from "../../utils/user.utils";
+import { getPreferencesByUserQuery } from "../../utils/userPreference.utils";
 
 const mockGetAll = getAllUsersQuery as jest.MockedFunction<typeof getAllUsersQuery>;
 const mockGetByEmail = getUserByEmailQuery as jest.MockedFunction<typeof getUserByEmailQuery>;
@@ -138,6 +143,9 @@ const mockGetById = getUserByIdQuery as jest.MockedFunction<typeof getUserByIdQu
 const mockCreate = createNewUserQuery as jest.MockedFunction<typeof createNewUserQuery>;
 const mockUpdate = updateUserByIdQuery as jest.MockedFunction<typeof updateUserByIdQuery>;
 const mockDelete = deleteUserByIdQuery as jest.MockedFunction<typeof deleteUserByIdQuery>;
+const mockGetPreferences = getPreferencesByUserQuery as jest.MockedFunction<
+  typeof getPreferencesByUserQuery
+>;
 
 function createReq(overrides?: Partial<Request>): any {
   return {
@@ -627,6 +635,77 @@ describe("user.ctrl", () => {
       const req = createReq({ params: { id: "1" } });
       const res = createRes();
       await deleteUserProfilePhoto(req, res);
+      expect(res.status).toHaveBeenCalledWith(500);
+    });
+  });
+
+  describe("getPreferencesForCurrentUser", () => {
+    const mockPreferences = {
+      toJSON: () => ({
+        id: 1,
+        user_id: 1,
+        date_format: "MM-DD-YYYY",
+        language: "de",
+      }),
+    };
+
+    it("should return stored preferences for the current user", async () => {
+      mockGetById.mockResolvedValue(mockUser(buildUser()) as any);
+      mockGetPreferences.mockResolvedValue(mockPreferences as any);
+      const req = createReq();
+      const res = createRes();
+      await getPreferencesForCurrentUser(req, res);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            date_format: "MM-DD-YYYY",
+            language: "de",
+          }),
+        }),
+      );
+    });
+
+    it("should return defaults when no preferences row exists", async () => {
+      mockGetById.mockResolvedValue(mockUser(buildUser()) as any);
+      mockGetPreferences.mockResolvedValue(null as any);
+      const req = createReq();
+      const res = createRes();
+      await getPreferencesForCurrentUser(req, res);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            date_format: "DD-MM-YYYY",
+            language: "en",
+            theme: "light",
+          }),
+        }),
+      );
+    });
+
+    it("should return 404 when the user is not found", async () => {
+      mockGetById.mockResolvedValue(null as any);
+      const req = createReq();
+      const res = createRes();
+      await getPreferencesForCurrentUser(req, res);
+      expect(res.status).toHaveBeenCalledWith(404);
+    });
+
+    it("should return 403 for cross-organization access", async () => {
+      mockGetById.mockResolvedValue(mockUser(buildUser({ organization_id: 99 })) as any);
+      const req = createReq({ userId: 2 });
+      const res = createRes();
+      await getPreferencesForCurrentUser(req, res);
+      expect(res.status).toHaveBeenCalledWith(403);
+    });
+
+    it("should return 500 on query error", async () => {
+      mockGetById.mockResolvedValue(mockUser(buildUser()) as any);
+      mockGetPreferences.mockRejectedValue(new Error("DB error"));
+      const req = createReq();
+      const res = createRes();
+      await getPreferencesForCurrentUser(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
     });
   });

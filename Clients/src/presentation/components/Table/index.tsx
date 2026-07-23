@@ -132,7 +132,7 @@ const CustomizableBasicTable = ({
           >
             <TableRow sx={singleTheme.tableStyles.primary.header.row}>
               {data.cols.map((col) => (
-                <TableCell key={col.id} sx={singleTheme.tableStyles.primary.header.cell}>
+                <TableCell key={col.id} style={singleTheme.tableStyles.primary.header.cell}>
                   {col.name}
                 </TableCell>
               ))}

@@ -3,7 +3,6 @@ import { Drawer, Stack, Typography, Divider, IconButton, useTheme } from "@mui/m
 import { X } from "lucide-react";
 import Field from "../../Inputs/Field";
 import SelectComponent from "../../Inputs/Select";
-import MultiSelect from "../../Inputs/MultiSelect";
 import { CustomizableButton } from "../../button/customizable-button";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import { getAllEntities } from "../../../../application/repository/entity.repository";
@@ -37,11 +36,11 @@ const ManualAgentModal: React.FC<ManualAgentModalProps> = ({
   const theme = useTheme();
   const isEditMode = Boolean(agent);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [users, setUsers] = useState<{ _id: number; name: string }[]>([]);
-  const [ownerIds, setOwnerIds] = useState<number[]>([]);
+  const [users, setUsers] = useState<{ _id: string; name: string }[]>([]);
   const [formData, setFormData] = useState({
     display_name: "",
     primitive_type: "",
+    owner_id: "",
     notes: "",
   });
 
@@ -64,7 +63,7 @@ const ManualAgentModal: React.FC<ManualAgentModalProps> = ({
       const usersData = Array.isArray(response?.data) ? response.data : [];
       setUsers(
         usersData.map((u: { id: number; name: string; surname: string }) => ({
-          _id: u.id,
+          _id: String(u.id),
           name: `${u.name} ${u.surname}`.trim(),
         })),
       );
@@ -80,24 +79,16 @@ const ManualAgentModal: React.FC<ManualAgentModalProps> = ({
         setFormData({
           display_name: agent.display_name || "",
           primitive_type: agent.primitive_type || "",
+          owner_id: agent.owner_id || "",
           notes: agent.metadata?.notes || "",
         });
-        // Prefer the full owner set; fall back to the legacy single owner_id.
-        const initialOwners =
-          agent.owner_ids && agent.owner_ids.length > 0
-            ? agent.owner_ids
-            : agent.owner_id
-              ? [parseInt(agent.owner_id, 10)].filter((n) => !Number.isNaN(n))
-              : [];
-        setOwnerIds(initialOwners);
       }
     }
   }, [isOpen, fetchUsers, agent]);
 
   const handleClose = () => {
     setIsOpen(false);
-    setFormData({ display_name: "", primitive_type: "", notes: "" });
-    setOwnerIds([]);
+    setFormData({ display_name: "", primitive_type: "", owner_id: "", notes: "" });
     resetErrors();
   };
 
@@ -109,7 +100,7 @@ const ManualAgentModal: React.FC<ManualAgentModalProps> = ({
       const payload = {
         display_name: formData.display_name.trim(),
         primitive_type: formData.primitive_type,
-        owner_ids: ownerIds,
+        owner_id: formData.owner_id.trim() || undefined,
         metadata: formData.notes.trim() ? { notes: formData.notes.trim() } : {},
       };
 
@@ -185,13 +176,18 @@ const ManualAgentModal: React.FC<ManualAgentModalProps> = ({
           }}
         />
 
-        <MultiSelect
-          id="owner_ids"
-          label="Owners"
-          placeholder="Select owners"
-          value={ownerIds}
+        <SelectComponent
+          id="owner_id"
+          label="Owner"
+          placeholder="Select owner"
+          value={formData.owner_id}
           items={users}
-          onChange={(e) => setOwnerIds(e.target.value as number[])}
+          onChange={(e) =>
+            setFormData((prev) => ({
+              ...prev,
+              owner_id: e.target.value as string,
+            }))
+          }
         />
 
         <Field

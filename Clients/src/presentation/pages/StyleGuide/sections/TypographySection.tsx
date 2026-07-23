@@ -2,24 +2,6 @@ import React, { useState } from "react";
 import { Box, Stack, Typography, useTheme, Divider, Snackbar } from "@mui/material";
 import { Copy } from "lucide-react";
 import { brand, text, background } from "../../../themes/palette";
-import {
-  fontFamily,
-  fontSize,
-  fontWeight,
-  lineHeight,
-  textStyles,
-} from "../../../themes/typography";
-
-/** Format a textStyles entry for StyleGuide display chips */
-const styleMeta = (style: {
-  fontSize: number;
-  fontWeight: number;
-  lineHeight: number | string;
-}) => ({
-  fontSize: `${style.fontSize}px`,
-  fontWeight: String(style.fontWeight),
-  lineHeight: String(style.lineHeight),
-});
 
 const TypographySection: React.FC = () => {
   const theme = useTheme();
@@ -45,7 +27,8 @@ const TypographySection: React.FC = () => {
       <Box sx={{ mb: "32px" }}>
         <Typography
           sx={{
-            ...textStyles.pageTitle,
+            fontSize: 24,
+            fontWeight: 600,
             color: theme.palette.text.primary,
             mb: "8px",
           }}
@@ -54,13 +37,13 @@ const TypographySection: React.FC = () => {
         </Typography>
         <Typography
           sx={{
-            ...textStyles.bodyLarge,
+            fontSize: 14,
             color: theme.palette.text.tertiary,
             maxWidth: 600,
           }}
         >
-          Typography styles and text hierarchy from <code>themes/typography.ts</code>. Primary stack
-          is Geist with system fallbacks (no Inter).
+          Typography styles and text hierarchy used in VerifyWise. All text uses the Geist font
+          family with Inter as fallback, with consistent sizing and weights.
         </Typography>
       </Box>
 
@@ -81,14 +64,14 @@ const TypographySection: React.FC = () => {
           />
           <SpecCard
             title="Font stack"
-            value={fontFamily.sans}
-            note="fontFamily.sans"
+            value="'Geist', system-ui, -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif"
+            note="Full fallback chain"
             onCopy={handleCopy}
           />
           <SpecCard
             title="Monospace"
-            value={fontFamily.mono}
-            note="fontFamily.mono"
+            value="'Fira Code', 'Consolas', monospace"
+            note="Code blocks"
             onCopy={handleCopy}
           />
         </Box>
@@ -98,37 +81,43 @@ const TypographySection: React.FC = () => {
 
       {/* Heading Styles */}
       <SpecSection title="Headings">
-        <Typography
-          sx={{ fontSize: fontSize.base, color: theme.palette.text.tertiary, mb: "24px" }}
-        >
-          Semantic styles: textStyles.pageTitle, sectionTitle, cardTitle, subsectionTitle
+        <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
+          Page and section headings with consistent sizing and weights.
         </Typography>
 
         <Stack spacing="24px">
           <TypographyExample
-            label="Page title (textStyles.pageTitle)"
-            {...styleMeta(textStyles.pageTitle)}
+            label="Page title"
+            fontSize="24px"
+            fontWeight="600"
+            lineHeight="1.3"
             color="#1c2130"
             example="Dashboard overview"
             onCopy={handleCopy}
           />
           <TypographyExample
-            label="Section title (textStyles.sectionTitle)"
-            {...styleMeta(textStyles.sectionTitle)}
+            label="Section title"
+            fontSize="18px"
+            fontWeight="600"
+            lineHeight="1.4"
             color="#1c2130"
             example="Risk management"
             onCopy={handleCopy}
           />
           <TypographyExample
-            label="Card title (textStyles.cardTitle)"
-            {...styleMeta(textStyles.cardTitle)}
+            label="Card title"
+            fontSize="16px"
+            fontWeight="600"
+            lineHeight="1.4"
             color="#1c2130"
             example="Compliance status"
             onCopy={handleCopy}
           />
           <TypographyExample
-            label="Subsection title (textStyles.subsectionTitle)"
-            {...styleMeta(textStyles.subsectionTitle)}
+            label="Subsection title"
+            fontSize="14px"
+            fontWeight="600"
+            lineHeight="1.5"
             color="#1c2130"
             example="Filter options"
             onCopy={handleCopy}
@@ -140,38 +129,43 @@ const TypographySection: React.FC = () => {
 
       {/* Body Text */}
       <SpecSection title="Body text">
-        <Typography
-          sx={{ fontSize: fontSize.base, color: theme.palette.text.tertiary, mb: "24px" }}
-        >
-          Standard text sizes for body content. Modal descriptions and sidebar/tab labels use body
-          (13), not bodySmall.
+        <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
+          Standard text sizes for body content, labels, and supporting text.
         </Typography>
 
         <Stack spacing="24px">
           <TypographyExample
-            label="Body large (textStyles.bodyLarge)"
-            {...styleMeta(textStyles.bodyLarge)}
+            label="Body large"
+            fontSize="14px"
+            fontWeight="400"
+            lineHeight="1.5"
             color={text.secondary}
             example="This is body text used for longer form content and descriptions that require more space."
             onCopy={handleCopy}
           />
           <TypographyExample
-            label="Body default (textStyles.body)"
-            {...styleMeta(textStyles.body)}
+            label="Body default"
+            fontSize="13px"
+            fontWeight="400"
+            lineHeight="1.5"
             color={text.secondary}
-            example="Standard body text for most UI content, modal descriptions, and tab labels."
+            example="Standard body text for most UI content and form labels."
             onCopy={handleCopy}
           />
           <TypographyExample
-            label="Body small (textStyles.bodySmall)"
-            {...styleMeta(textStyles.bodySmall)}
+            label="Body small"
+            fontSize="12px"
+            fontWeight="400"
+            lineHeight="1.5"
             color={text.tertiary}
             example="Smaller text for secondary information and metadata."
             onCopy={handleCopy}
           />
           <TypographyExample
-            label="Caption (textStyles.caption)"
-            {...styleMeta(textStyles.caption)}
+            label="Caption"
+            fontSize="11px"
+            fontWeight="400"
+            lineHeight="1.4"
             color="#838c99"
             example="Caption text for hints, timestamps, and footnotes"
             onCopy={handleCopy}
@@ -183,10 +177,8 @@ const TypographySection: React.FC = () => {
 
       {/* Font Weights */}
       <SpecSection title="Font weights">
-        <Typography
-          sx={{ fontSize: fontSize.base, color: theme.palette.text.tertiary, mb: "24px" }}
-        >
-          Tokens: fontWeight.regular / medium / semibold / bold
+        <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
+          Standard font weights used across the application.
         </Typography>
 
         <Box
@@ -199,30 +191,10 @@ const TypographySection: React.FC = () => {
             },
           }}
         >
-          <WeightCard
-            weight={String(fontWeight.regular)}
-            name="Regular"
-            usage="Body text"
-            onCopy={handleCopy}
-          />
-          <WeightCard
-            weight={String(fontWeight.medium)}
-            name="Medium"
-            usage="Labels, buttons"
-            onCopy={handleCopy}
-          />
-          <WeightCard
-            weight={String(fontWeight.semibold)}
-            name="Semibold"
-            usage="Headings, emphasis"
-            onCopy={handleCopy}
-          />
-          <WeightCard
-            weight={String(fontWeight.bold)}
-            name="Bold"
-            usage="Strong emphasis"
-            onCopy={handleCopy}
-          />
+          <WeightCard weight="400" name="Regular" usage="Body text" onCopy={handleCopy} />
+          <WeightCard weight="500" name="Medium" usage="Labels, buttons" onCopy={handleCopy} />
+          <WeightCard weight="600" name="Semibold" usage="Headings, emphasis" onCopy={handleCopy} />
+          <WeightCard weight="700" name="Bold" usage="Strong emphasis" onCopy={handleCopy} />
         </Box>
       </SpecSection>
 
@@ -230,74 +202,90 @@ const TypographySection: React.FC = () => {
 
       {/* Common UI Text */}
       <SpecSection title="Common UI text styles">
-        <Typography
-          sx={{ fontSize: fontSize.base, color: theme.palette.text.tertiary, mb: "24px" }}
-        >
-          Specific text styles used for common UI elements (from textStyles.*).
+        <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
+          Specific text styles used for common UI elements.
         </Typography>
 
         <Stack spacing="24px">
           <TypographyExample
-            label="Button text (textStyles.button)"
-            {...styleMeta(textStyles.button)}
+            label="Button text"
+            fontSize="13px"
+            fontWeight="500"
+            lineHeight="1"
             color={background.main}
             example="Save changes"
             onCopy={handleCopy}
             bgColor={brand.primary}
           />
           <TypographyExample
-            label="Form label (textStyles.formLabel)"
-            {...styleMeta(textStyles.formLabel)}
+            label="Form label"
+            fontSize="13px"
+            fontWeight="500"
+            lineHeight="22px"
             color={text.secondary}
             example="Email address"
             onCopy={handleCopy}
           />
           <TypographyExample
-            label="Input text (textStyles.input)"
-            {...styleMeta(textStyles.input)}
+            label="Input text"
+            fontSize="13px"
+            fontWeight="400"
+            lineHeight="1.5"
             color="#1c2130"
             example="user@example.com"
             onCopy={handleCopy}
           />
           <TypographyExample
             label="Placeholder"
-            {...styleMeta(textStyles.input)}
+            fontSize="13px"
+            fontWeight="400"
+            lineHeight="1.5"
             color="#838c99"
             example="Enter your email..."
             onCopy={handleCopy}
           />
           <TypographyExample
-            label="Error message (textStyles.error)"
-            {...styleMeta(textStyles.error)}
+            label="Error message"
+            fontSize="11px"
+            fontWeight="400"
+            lineHeight="1.4"
             color="#f04438"
             example="This field is required"
             onCopy={handleCopy}
           />
           <TypographyExample
-            label="Table header (textStyles.tableHeader)"
-            {...styleMeta(textStyles.tableHeader)}
+            label="Table header"
+            fontSize="12px"
+            fontWeight="500"
+            lineHeight="1.5"
             color={text.tertiary}
             example="NAME"
             textTransform="uppercase"
             onCopy={handleCopy}
           />
           <TypographyExample
-            label="Table cell (textStyles.tableCell)"
-            {...styleMeta(textStyles.tableCell)}
+            label="Table cell"
+            fontSize="13px"
+            fontWeight="400"
+            lineHeight="1.5"
             color={text.secondary}
             example="John Doe"
             onCopy={handleCopy}
           />
           <TypographyExample
-            label="Badge text (textStyles.badge)"
-            {...styleMeta(textStyles.badge)}
+            label="Badge text"
+            fontSize="12px"
+            fontWeight="500"
+            lineHeight="1"
             color="#079455"
             example="Active"
             onCopy={handleCopy}
           />
           <TypographyExample
-            label="Tooltip (textStyles.tooltip)"
-            {...styleMeta(textStyles.tooltip)}
+            label="Tooltip"
+            fontSize="13px"
+            fontWeight="400"
+            lineHeight="1.4"
             color={background.main}
             example="Click to view details"
             onCopy={handleCopy}
@@ -310,52 +298,24 @@ const TypographySection: React.FC = () => {
 
       {/* Line Heights */}
       <SpecSection title="Line heights">
-        <Typography
-          sx={{ fontSize: fontSize.base, color: theme.palette.text.tertiary, mb: "24px" }}
-        >
-          Tokens from lineHeight.* in typography.ts
+        <Typography sx={{ fontSize: 13, color: theme.palette.text.tertiary, mb: "24px" }}>
+          Standard line height values for different text contexts.
         </Typography>
 
         <Box
           sx={{
             "display": "grid",
-            "gridTemplateColumns": "repeat(5, 1fr)",
+            "gridTemplateColumns": "repeat(4, 1fr)",
             "gap": "16px",
             "@media (max-width: 900px)": {
               gridTemplateColumns: "repeat(2, 1fr)",
             },
           }}
         >
-          <SpecCard
-            title="Tight"
-            value={String(lineHeight.tight)}
-            note="lineHeight.tight"
-            onCopy={handleCopy}
-          />
-          <SpecCard
-            title="Snug"
-            value={String(lineHeight.snug)}
-            note="Page titles"
-            onCopy={handleCopy}
-          />
-          <SpecCard
-            title="Normal"
-            value={String(lineHeight.normal)}
-            note="Default for most text"
-            onCopy={handleCopy}
-          />
-          <SpecCard
-            title="Relaxed"
-            value={String(lineHeight.relaxed)}
-            note="Body text, paragraphs"
-            onCopy={handleCopy}
-          />
-          <SpecCard
-            title="Loose"
-            value={String(lineHeight.loose)}
-            note="Long-form content"
-            onCopy={handleCopy}
-          />
+          <SpecCard title="Tight" value="1.2" note="Headings, titles" onCopy={handleCopy} />
+          <SpecCard title="Normal" value="1.4" note="Default for most text" onCopy={handleCopy} />
+          <SpecCard title="Relaxed" value="1.5" note="Body text, paragraphs" onCopy={handleCopy} />
+          <SpecCard title="Loose" value="1.75" note="Long-form content" onCopy={handleCopy} />
         </Box>
       </SpecSection>
 
@@ -371,8 +331,8 @@ const TypographySection: React.FC = () => {
       >
         <Typography
           sx={{
-            fontSize: fontSize.md,
-            fontWeight: fontWeight.semibold,
+            fontSize: 14,
+            fontWeight: 600,
             color: theme.palette.text.primary,
             mb: "16px",
           }}
@@ -381,14 +341,13 @@ const TypographySection: React.FC = () => {
         </Typography>
         <Stack spacing="8px">
           {[
-            "Import tokens from themes/typography.ts (fontSize, textStyles) — do not invent sizes",
-            `Base UI text is fontSize.base (${fontSize.base}px); modal description and sidebar/tab labels use textStyles.body`,
-            "Use fontWeight.medium for labels/buttons, fontWeight.semibold for headings",
-            "Font stack is Geist via fontFamily.sans / theme.typography.fontFamily (no Inter)",
+            "Base font size is 13px for most UI text",
+            "Use fontWeight 500 for labels and buttons, 600 for headings",
+            "Always use Inter font family via theme.typography.fontFamily",
             "Text colors should come from theme.palette.text.*",
-            "Error text: textStyles.error + theme.palette.status.error.text",
-            "Never use MUI Typography variants (h1-h6) — use textStyles or fontSize/fontWeight tokens",
-            "Form labels: textStyles.formLabel with color text.secondary",
+            "Error text: fontSize 11px, color theme.palette.status.error.text",
+            "Never use MUI Typography variants (h1-h6) - use custom fontSize/fontWeight",
+            "Form labels: fontSize 13px, fontWeight 500, color text.secondary",
           ].map((item, index) => (
             <Box
               key={index}
