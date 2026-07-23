@@ -17,6 +17,9 @@ export interface AgentPrimitiveRow {
   is_manual: boolean;
   created_at: string;
   updated_at: string;
+  // All accountable owners (user ids). The first is the primary owner, mirrored
+  // in owner_id for backward compatibility.
+  owner_ids?: number[];
 }
 
 export interface AgentAuditLogEntry {

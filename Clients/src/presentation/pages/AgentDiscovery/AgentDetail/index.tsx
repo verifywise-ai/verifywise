@@ -150,8 +150,18 @@ export default function AgentDetail() {
     );
   }
 
-  const ownerName = agent.owner_id ? usersMap[agent.owner_id] || agent.owner_id : null;
-  const [ownerFirst, ...ownerRest] = (ownerName || "").split(" ");
+  // Resolve all owners (fall back to the legacy single owner_id).
+  const ownerIdList =
+    agent.owner_ids && agent.owner_ids.length > 0
+      ? agent.owner_ids.map(String)
+      : agent.owner_id
+        ? [agent.owner_id]
+        : [];
+  const owners = ownerIdList.map((oid) => {
+    const name = usersMap[oid] || oid;
+    const [firstname, ...rest] = name.split(" ");
+    return { id: oid, name, firstname: firstname || "", lastname: rest.join(" ") };
+  });
   const linkedModelName = agent.linked_model_inventory_id
     ? modelsMap[String(agent.linked_model_inventory_id)] ||
       `Model #${agent.linked_model_inventory_id}`
@@ -204,12 +214,10 @@ export default function AgentDetail() {
             subtitle="Who is accountable, and what this agent can access"
           />
 
-          {/* Owner — the accountability anchor, given prominence */}
+          {/* Owners — the accountability anchor, given prominence. The first is
+              the primary owner; any others are additional accountable owners. */}
           <Box
             sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: "12px",
               p: "16px",
               mb: "20px",
               borderRadius: "4px",
@@ -217,26 +225,39 @@ export default function AgentDetail() {
               border: `1px solid ${palette.border.light}`,
             }}
           >
-            <VWAvatar
-              user={{ firstname: ownerFirst || "", lastname: ownerRest.join(" ") }}
-              size="small"
-            />
-            <Box>
-              <Typography sx={{ fontSize: 12, fontWeight: 600, color: palette.text.secondary }}>
-                Accountable owner
+            <Typography
+              sx={{ fontSize: 12, fontWeight: 600, color: palette.text.secondary, mb: "12px" }}
+            >
+              {owners.length > 1 ? "Accountable owners" : "Accountable owner"}
+            </Typography>
+            {owners.length > 0 ? (
+              <Stack direction="row" flexWrap="wrap" gap="20px">
+                {owners.map((o, idx) => (
+                  <Stack key={o.id} direction="row" alignItems="center" spacing={1}>
+                    <VWAvatar
+                      user={{ firstname: o.firstname, lastname: o.lastname }}
+                      size="small"
+                    />
+                    <Box>
+                      <Typography
+                        sx={{ fontSize: 14, fontWeight: 600, color: palette.text.primary }}
+                      >
+                        {o.name}
+                      </Typography>
+                      {idx === 0 && owners.length > 1 && (
+                        <Typography sx={{ fontSize: 11, color: palette.text.secondary }}>
+                          Primary
+                        </Typography>
+                      )}
+                    </Box>
+                  </Stack>
+                ))}
+              </Stack>
+            ) : (
+              <Typography sx={{ fontSize: 13, color: palette.text.secondary, fontStyle: "italic" }}>
+                No owner assigned
               </Typography>
-              {ownerName ? (
-                <Typography sx={{ fontSize: 14, fontWeight: 600, color: palette.text.primary }}>
-                  {ownerName}
-                </Typography>
-              ) : (
-                <Typography
-                  sx={{ fontSize: 13, color: palette.text.secondary, fontStyle: "italic" }}
-                >
-                  No owner assigned
-                </Typography>
-              )}
-            </Box>
+            )}
           </Box>
 
           <Stack direction="row" flexWrap="wrap" gap="24px" mb="20px">
