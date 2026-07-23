@@ -452,6 +452,7 @@ const AgentDiscovery: React.FC = () => {
             onEdit={handleEditAgent}
             onDelete={handleDeleteAgent}
             onSync={handleSync}
+            onAddAgent={() => setIsManualModalOpen(true)}
             isSyncing={isSyncing}
             visibleColumns={visibleColumns}
           />

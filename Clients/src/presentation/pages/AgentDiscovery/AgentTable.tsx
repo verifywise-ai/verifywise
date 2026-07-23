@@ -24,6 +24,7 @@ import {
   Plug,
   ShieldCheck,
   Settings,
+  CirclePlus,
 } from "lucide-react";
 import IconButton from "../../components/IconButton";
 import { ReactComponent as SelectorVertical } from "../../assets/icons/selector-vertical.svg";
@@ -69,6 +70,7 @@ const AgentTable: React.FC<AgentTableProps> = ({
   onEdit,
   onDelete,
   onSync,
+  onAddAgent,
   isSyncing,
   visibleColumns,
 }) => {
@@ -232,6 +234,15 @@ const AgentTable: React.FC<AgentTableProps> = ({
               variant="contained"
               onClick={() => navigate("/plugins/azure-ai-foundry/manage")}
               startIcon={<Plug size={14} />}
+              sx={{ height: 34 }}
+            />
+          )}
+          {onAddAgent && (
+            <CustomizableButton
+              text="Add agent"
+              variant="outlined"
+              onClick={onAddAgent}
+              startIcon={<CirclePlus size={14} />}
               sx={{ height: 34 }}
             />
           )}
