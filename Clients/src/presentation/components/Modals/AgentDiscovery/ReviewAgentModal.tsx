@@ -42,6 +42,7 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [usersMap, setUsersMap] = useState<Record<string, string>>({});
+  const [modelsMap, setModelsMap] = useState<Record<string, string>>({});
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -57,15 +58,39 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
     }
   }, []);
 
+  const fetchModels = useCallback(async () => {
+    try {
+      const response = await getAllEntities({ routeUrl: "/modelInventory" });
+      const modelsData = Array.isArray(response?.data) ? response.data : [];
+      const map: Record<string, string> = {};
+      modelsData.forEach((m: any) => {
+        const modelName = m.model || m.provider_model || m.model_name || m.name;
+        map[String(m.id)] = modelName
+          ? m.provider
+            ? `${m.provider} · ${modelName}`
+            : modelName
+          : `Model #${m.id}`;
+      });
+      setModelsMap(map);
+    } catch (error) {
+      console.error("Failed to fetch models:", error);
+    }
+  }, []);
+
   useEffect(() => {
     if (isOpen) {
       fetchUsers();
+      fetchModels();
     }
-  }, [isOpen, fetchUsers]);
+  }, [isOpen, fetchUsers, fetchModels]);
 
   if (!agent) return null;
 
   const ownerName = agent.owner_id ? usersMap[agent.owner_id] || agent.owner_id : "—";
+  const linkedModelName = agent.linked_model_inventory_id
+    ? modelsMap[String(agent.linked_model_inventory_id)] ||
+      `Model #${agent.linked_model_inventory_id}`
+    : null;
   const reviewedByName = agent.reviewed_by
     ? usersMap[String(agent.reviewed_by)] || `User #${agent.reviewed_by}`
     : null;
@@ -241,7 +266,7 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
             </Typography>
             {agent.linked_model_inventory_id ? (
               <Stack direction="row" alignItems="center" gap="8px">
-                <Typography fontSize={13}>Model #{agent.linked_model_inventory_id}</Typography>
+                <Typography fontSize={13}>{linkedModelName}</Typography>
                 <IconButton size="small" onClick={handleUnlink} title="Unlink model">
                   <Unlink size={14} strokeWidth={1.5} />
                 </IconButton>
