@@ -101,7 +101,8 @@ describe("ManualAgentModal", () => {
     renderWithProviders(<ManualAgentModal isOpen={true} setIsOpen={vi.fn()} onSuccess={vi.fn()} />);
     expect(screen.getByTestId("field-display_name")).toBeInTheDocument();
     expect(screen.getByTestId("select-primitive_type")).toBeInTheDocument();
-    expect(screen.getByTestId("select-owner_id")).toBeInTheDocument();
+    // Owners is now a multi-select (an agent can have several accountable owners).
+    expect(screen.getByText("Owners")).toBeInTheDocument();
     expect(screen.getByTestId("field-notes")).toBeInTheDocument();
   });
 
