@@ -352,7 +352,7 @@ const AgentDiscovery: React.FC = () => {
 
   return (
     <PageHeaderExtended
-      title="Agent discovery"
+      title="AI Agents"
       description="Automatically discover and inventory AI agents across your organization. Review discovered agents, confirm or reject them, and link them to your model inventory for governance tracking."
       helpArticlePath="ai-governance/agent-discovery"
       summaryCards={
