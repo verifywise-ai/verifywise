@@ -4,7 +4,7 @@ from fastapi import APIRouter, Request, status, HTTPException
 
 from middlewares.auth import verify_internal_key
 from utils.auth import get_org_id
-from crud.mcp_runs import list_runs, get_run
+from crud.mcp_runs import list_runs, get_run, get_run_stats
 
 router = APIRouter(prefix="/mcp/runs", tags=["mcp-runs"])
 
@@ -21,6 +21,14 @@ async def runs_list(request: Request, limit: int = 50, offset: int = 0):
         "limit": result["limit"],
         "offset": result["offset"],
     }
+
+
+@router.get("/stats", status_code=status.HTTP_200_OK)
+async def runs_stats(request: Request, days: int = 7):
+    verify_internal_key(request)
+    org_id = get_org_id(request)
+    stats = await get_run_stats(org_id, days=days)
+    return {"status": "success", "data": stats}
 
 
 @router.get("/{run_id}", status_code=status.HTTP_200_OK)

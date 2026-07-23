@@ -65,6 +65,48 @@ async def list_runs(org_id: int, limit: int = 50, offset: int = 0) -> dict:
     return {"data": data, "total": total, "limit": limit, "offset": offset}
 
 
+async def get_run_stats(org_id: int, days: int = 7) -> dict:
+    """Run-grain aggregates over the last N days: total runs, avg tool calls
+    per run, and the share of runs that hit at least one blocked tool call.
+
+    Runs are counted from the tool-call side (ai_gateway_mcp_audit_logs grouped
+    by agent_run_id). A run consisting solely of model calls with zero tool
+    calls is intentionally excluded — all three metrics are about tool activity.
+    """
+    days = int(days)  # validate before interpolating into INTERVAL
+
+    sql = f"""
+        WITH runs AS (
+            SELECT agent_run_id,
+                   COUNT(*) AS tool_count,
+                   COUNT(*) FILTER (WHERE result_status = 'blocked') AS blocked_count
+            FROM ai_gateway_mcp_audit_logs
+            WHERE organization_id = :org_id
+              AND agent_run_id IS NOT NULL
+              AND created_at >= NOW() - INTERVAL '{days} days'
+            GROUP BY agent_run_id
+        )
+        SELECT
+            COUNT(*) AS total_runs,
+            COALESCE(AVG(tool_count), 0) AS avg_tool_calls_per_run,
+            COALESCE(
+                100.0 * COUNT(*) FILTER (WHERE blocked_count > 0) / NULLIF(COUNT(*), 0),
+                0
+            ) AS pct_runs_with_block
+        FROM runs
+    """
+
+    async with get_db() as db:
+        row = (await db.execute(text(sql), {"org_id": org_id})).mappings().first()
+        if row is None:
+            return {"total_runs": 0, "avg_tool_calls_per_run": 0.0, "pct_runs_with_block": 0.0}
+        return {
+            "total_runs": int(row["total_runs"]),
+            "avg_tool_calls_per_run": round(float(row["avg_tool_calls_per_run"]), 1),
+            "pct_runs_with_block": round(float(row["pct_runs_with_block"]), 1),
+        }
+
+
 async def get_run(org_id: int, run_id: str) -> dict:
     """Interleaved entries (model + tool) for one run, ordered by created_at."""
     params = {"org_id": org_id, "run_id": run_id}
