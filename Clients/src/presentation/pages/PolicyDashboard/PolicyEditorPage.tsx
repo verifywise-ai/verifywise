@@ -37,43 +37,18 @@ import {
   GlobalStyles,
 } from "@mui/material";
 import {
-  Underline as UnderlineIcon,
-  Bold,
-  Italic,
   SaveIcon,
-  Strikethrough,
-  ListOrdered,
-  List,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
-  Link,
-  Unlink,
-  Image,
-  Redo2,
-  Undo2,
   History as HistoryIcon,
-  Quote,
-  Highlighter,
-  Table,
   FileText,
   FileDown,
   Loader2,
-  Code,
-  Minus,
   X,
   ArrowLeft,
-  ListChecks,
-  SuperscriptIcon,
-  SubscriptIcon,
   Check,
   Pencil,
-  Palette,
-  Search,
   Upload,
 } from "lucide-react";
 
-import Select from "../../components/Inputs/Select";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { HistorySidebar } from "../../components/Common/HistorySidebar";
 import CustomFieldsSection, {
@@ -102,11 +77,11 @@ import { PageBreadcrumbs } from "../../components/breadcrumbs/PageBreadcrumbs";
 import { AuthImageExtension } from "./PolicyEditor/AuthImage";
 import { normalizeSlateHtml } from "./PolicyEditor/normalizeSlateHtml";
 import { createSearchHighlightExtension } from "./PolicyEditor/searchHighlightExtension";
-import { type ToolbarKey, defaultToolbarState } from "./PolicyEditor/toolbarTypes";
 import { policyEditorStyles } from "./PolicyEditor/editorStyles";
 import { usePolicyFindReplace } from "./PolicyEditor/usePolicyFindReplace";
 import { FindReplacePopover } from "./PolicyEditor/FindReplacePopover";
 import { PolicyTableBubbleMenu } from "./PolicyEditor/PolicyTableBubbleMenu";
+import { PolicyEditorToolbar } from "./PolicyEditor/PolicyEditorToolbar";
 
 // ── Component ─────────────────────────────────────────────────────────
 export default function PolicyEditorPage() {
@@ -162,15 +137,10 @@ export default function PolicyEditorPage() {
   const [editedTitle, setEditedTitle] = useState("");
   const [isSavingTitle, setIsSavingTitle] = useState(false);
   const [titleSaveError, setTitleSaveError] = useState<string | null>(null);
-  const [toolbarState, setToolbarState] = useState(defaultToolbarState);
-  const [currentBlockType, setCurrentBlockType] = useState<string>("p");
   const imageInputRef = useRef<HTMLInputElement>(null);
   const isLoadingContentRef = useRef(false);
   const formRef = useRef<HTMLDivElement>(null);
   const [validationSnackbar, setValidationSnackbar] = useState(false);
-
-  // Color picker state
-  const [colorAnchorEl, setColorAnchorEl] = useState<HTMLElement | null>(null);
 
   const validators = useMemo(
     () => ({
@@ -352,48 +322,6 @@ export default function PolicyEditorPage() {
     }
   }, [policy, template, users]);
 
-  // ── Toolbar state sync ────────────────────────────────────────────
-  const updateToolbarState = useCallback(() => {
-    if (!editor) return;
-    try {
-      let blockType = "p";
-      if (editor.isActive("heading", { level: 1 })) blockType = "h1";
-      else if (editor.isActive("heading", { level: 2 })) blockType = "h2";
-      else if (editor.isActive("heading", { level: 3 })) blockType = "h3";
-      else if (editor.isActive("blockquote")) blockType = "blockquote";
-
-      setCurrentBlockType(blockType);
-      setToolbarState({
-        "bold": editor.isActive("bold"),
-        "italic": editor.isActive("italic"),
-        "underline": editor.isActive("underline"),
-        "strike": editor.isActive("strike"),
-        "ol": editor.isActive("orderedList"),
-        "ul": editor.isActive("bulletList"),
-        "align-left": editor.isActive({ textAlign: "left" }),
-        "align-center": editor.isActive({ textAlign: "center" }),
-        "align-right": editor.isActive({ textAlign: "right" }),
-        "link": editor.isActive("link"),
-        "highlight": editor.isActive("highlight"),
-        "blockquote": blockType === "blockquote",
-        "code": editor.isActive("codeBlock"),
-        "undo": false,
-        "redo": false,
-        "image": false,
-        "table": editor.isActive("table"),
-        "hr": false,
-        "taskList": editor.isActive("taskList"),
-        "superscript": editor.isActive("superscript"),
-        "subscript": editor.isActive("subscript"),
-        "color": false,
-        "search": false,
-      });
-    } catch {
-      // ignore
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   // ── Compute initial editor content ──────────────────────────────
   const initialContent = (() => {
     const raw = policy?.content_html || template?.content || "";
@@ -435,9 +363,7 @@ export default function PolicyEditorPage() {
       onUpdate: ({ editor: e }) => {
         if (isLoadingContentRef.current) return;
         setFormData((prev) => ({ ...prev, content: e.getHTML() }));
-        updateToolbarState();
       },
-      onSelectionUpdate: () => updateToolbarState(),
       editorProps: {
         handleDrop: (view, event, _slice, moved) => {
           if (moved || !event.dataTransfer?.files?.length) return false;
@@ -533,38 +459,6 @@ export default function PolicyEditorPage() {
     }
   };
 
-  // ── Block type change ─────────────────────────────────────────────
-  const handleBlockTypeChange = (event: { target: { value: string | number } }) => {
-    const newType = String(event.target.value);
-    setCurrentBlockType(newType);
-    if (!editor) return;
-    if (newType === "p") editor.chain().focus().setParagraph().run();
-    else if (newType === "h1") editor.chain().focus().toggleHeading({ level: 1 }).run();
-    else if (newType === "h2") editor.chain().focus().toggleHeading({ level: 2 }).run();
-    else if (newType === "h3") editor.chain().focus().toggleHeading({ level: 3 }).run();
-    setTimeout(() => updateToolbarState(), 0);
-  };
-
-  // ── Color palette ────────────────────────────────────────────────
-  const colorPalette = [
-    "text.black",
-    "text.secondary",
-    "text.tertiary",
-    "text.icon",
-    "#dc2626",
-    "#ea580c",
-    "#d97706",
-    "#ca8a04",
-    "#16a34a",
-    "#059669",
-    "#0d9488",
-    "#0891b2",
-    "#2563eb",
-    "#4f46e5",
-    "#7c3aed",
-    "#9333ea",
-  ];
-
   const {
     searchAnchorEl,
     openFindReplace,
@@ -579,165 +473,6 @@ export default function PolicyEditorPage() {
     handleReplaceCurrent,
     handleReplaceAll,
   } = usePolicyFindReplace(editor);
-
-  // ── Toolbar config ────────────────────────────────────────────────
-  const toolbarConfig: Array<{
-    key: ToolbarKey;
-    title: string;
-    icon: React.ReactNode;
-    action: () => void;
-  }> = [
-    {
-      key: "undo",
-      title: "Undo",
-      icon: <Undo2 size={16} />,
-      action: () => editor?.chain().focus().undo().run(),
-    },
-    {
-      key: "redo",
-      title: "Redo",
-      icon: <Redo2 size={16} />,
-      action: () => editor?.chain().focus().redo().run(),
-    },
-    {
-      key: "bold",
-      title: "Bold",
-      icon: <Bold size={16} />,
-      action: () => editor?.chain().focus().toggleBold().run(),
-    },
-    {
-      key: "italic",
-      title: "Italic",
-      icon: <Italic size={16} />,
-      action: () => editor?.chain().focus().toggleItalic().run(),
-    },
-    {
-      key: "underline",
-      title: "Underline",
-      icon: <UnderlineIcon size={16} />,
-      action: () => editor?.chain().focus().toggleUnderline().run(),
-    },
-    {
-      key: "strike",
-      title: "Strikethrough",
-      icon: <Strikethrough size={16} />,
-      action: () => editor?.chain().focus().toggleStrike().run(),
-    },
-    {
-      key: "superscript",
-      title: "Superscript",
-      icon: <SuperscriptIcon size={16} />,
-      action: () => editor?.chain().focus().toggleSuperscript().run(),
-    },
-    {
-      key: "subscript",
-      title: "Subscript",
-      icon: <SubscriptIcon size={16} />,
-      action: () => editor?.chain().focus().toggleSubscript().run(),
-    },
-    {
-      key: "highlight",
-      title: "Highlight",
-      icon: <Highlighter size={16} />,
-      action: () => editor?.chain().focus().toggleHighlight().run(),
-    },
-    {
-      key: "code",
-      title: "Code block",
-      icon: <Code size={16} />,
-      action: () => editor?.chain().focus().toggleCodeBlock().run(),
-    },
-    {
-      key: "ol",
-      title: "Numbered list",
-      icon: <ListOrdered size={16} />,
-      action: () => editor?.chain().focus().toggleOrderedList().run(),
-    },
-    {
-      key: "ul",
-      title: "Bulleted list",
-      icon: <List size={16} />,
-      action: () => editor?.chain().focus().toggleBulletList().run(),
-    },
-    {
-      key: "taskList",
-      title: "Task list",
-      icon: <ListChecks size={16} />,
-      action: () => editor?.chain().focus().toggleTaskList().run(),
-    },
-    {
-      key: "blockquote",
-      title: "Blockquote",
-      icon: <Quote size={16} />,
-      action: () => editor?.chain().focus().toggleBlockquote().run(),
-    },
-    {
-      key: "hr",
-      title: "Horizontal rule",
-      icon: <Minus size={16} />,
-      action: () => editor?.chain().focus().setHorizontalRule().run(),
-    },
-    {
-      key: "align-left",
-      title: "Align left",
-      icon: <AlignLeft size={16} />,
-      action: () => editor?.chain().focus().setTextAlign("left").run(),
-    },
-    {
-      key: "align-center",
-      title: "Align center",
-      icon: <AlignCenter size={16} />,
-      action: () => editor?.chain().focus().setTextAlign("center").run(),
-    },
-    {
-      key: "align-right",
-      title: "Align right",
-      icon: <AlignRight size={16} />,
-      action: () => editor?.chain().focus().setTextAlign("right").run(),
-    },
-    {
-      key: "link",
-      title: editor?.isActive("link") ? "Remove link" : "Insert link",
-      icon: editor?.isActive("link") ? <Unlink size={16} /> : <Link size={16} />,
-      action: () => {
-        if (!editor) return;
-        if (editor.isActive("link")) {
-          editor.chain().focus().unsetLink().run();
-          return;
-        }
-        const { from, to } = editor.state.selection;
-        setSelectedTextForLink(from !== to ? editor.state.doc.textBetween(from, to) : "");
-        setOpenLink(true);
-      },
-    },
-    {
-      key: "image",
-      title: isUploadingImage ? "Uploading..." : "Insert image",
-      icon: <Image size={16} />,
-      action: () => {
-        if (!isUploadingImage) imageInputRef.current?.click();
-      },
-    },
-    {
-      key: "table",
-      title: "Insert table",
-      icon: <Table size={16} />,
-      action: () =>
-        editor?.chain().focus().insertTable({ rows: 3, cols: 4, withHeaderRow: true }).run(),
-    },
-    {
-      key: "color",
-      title: "Text color",
-      icon: <Palette size={16} />,
-      action: () => {}, // handled via popover click
-    },
-    {
-      key: "search",
-      title: "Find & replace",
-      icon: <Search size={16} />,
-      action: () => {}, // handled via popover click
-    },
-  ];
 
   // ── Save ──────────────────────────────────────────────────────────
   const save = async () => {
@@ -1384,131 +1119,16 @@ export default function PolicyEditorPage() {
             />
           </Stack>
 
-          {/* ── Toolbar ──────────────────────────────────────────────── */}
-          <Box
-            sx={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: 0.5,
-              mb: "8px",
-              alignItems: "center",
-              flexShrink: 0,
+          <PolicyEditorToolbar
+            editor={editor}
+            isUploadingImage={isUploadingImage}
+            onInsertImage={() => imageInputRef.current?.click()}
+            onOpenLink={(selectedText) => {
+              setSelectedTextForLink(selectedText);
+              setOpenLink(true);
             }}
-          >
-            {/* Block type dropdown */}
-            <Box sx={{ mr: 2 }}>
-              <Select
-                id="block-type-select"
-                value={currentBlockType}
-                onChange={handleBlockTypeChange}
-                items={[
-                  { _id: "p", name: "Text" },
-                  { _id: "h1", name: "Header 1" },
-                  { _id: "h2", name: "Header 2" },
-                  { _id: "h3", name: "Header 3" },
-                ]}
-                sx={{ width: 120, height: "34px" }}
-              />
-            </Box>
-
-            {toolbarConfig.map(({ key, title, icon, action }) => (
-              <Tooltip key={key} title={title}>
-                <IconButton
-                  onClick={(e) => {
-                    if (key === "color") {
-                      setColorAnchorEl(e.currentTarget);
-                      return;
-                    }
-                    if (key === "search") {
-                      openFindReplace(e.currentTarget);
-                      return;
-                    }
-                    action?.();
-                    setTimeout(() => updateToolbarState(), 0);
-                  }}
-                  size="small"
-                  sx={{
-                    "padding": "6px",
-                    "borderRadius": "3px",
-                    "backgroundColor": toolbarState[key] ? "#E0F7FA" : "background.main",
-                    "border": "1px solid",
-                    "borderColor": toolbarState[key] ? "brand.primary" : "transparent",
-                    "&:hover": { backgroundColor: "background.surface" },
-                  }}
-                >
-                  {icon}
-                </IconButton>
-              </Tooltip>
-            ))}
-
-            {/* Character / word count */}
-            {editor && (
-              <Box sx={{ ml: "auto", display: "flex", gap: 2, alignItems: "center" }}>
-                <Typography sx={{ fontSize: 11, color: "text.muted" }}>
-                  {editor.storage.characterCount.words()} words
-                </Typography>
-                <Typography sx={{ fontSize: 11, color: "text.muted" }}>
-                  {editor.storage.characterCount.characters()} characters
-                </Typography>
-              </Box>
-            )}
-          </Box>
-
-          {/* ── Color picker popover ────────────────────────────────── */}
-          <Popover
-            open={Boolean(colorAnchorEl)}
-            anchorEl={colorAnchorEl}
-            onClose={() => setColorAnchorEl(null)}
-            anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
-            transformOrigin={{ vertical: "top", horizontal: "left" }}
-            slotProps={{
-              paper: {
-                sx: {
-                  p: 1.5,
-                  borderRadius: "6px",
-                  border: "1px solid #d0d5dd",
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-                },
-              },
-            }}
-          >
-            <Box sx={{ display: "grid", gridTemplateColumns: "repeat(8, 1fr)", gap: "4px" }}>
-              {colorPalette.map((c) => (
-                <Box
-                  key={c}
-                  onClick={() => {
-                    editor?.chain().focus().setColor(c).run();
-                    setColorAnchorEl(null);
-                  }}
-                  sx={{
-                    "width": 24,
-                    "height": 24,
-                    "borderRadius": "4px",
-                    "backgroundColor": c,
-                    "cursor": "pointer",
-                    "border": "1px solid rgba(0,0,0,0.1)",
-                    "&:hover": { transform: "scale(1.15)", transition: "transform 0.1s" },
-                  }}
-                />
-              ))}
-            </Box>
-            <Box
-              onClick={() => {
-                editor?.chain().focus().unsetColor().run();
-                setColorAnchorEl(null);
-              }}
-              sx={{
-                "mt": 1,
-                "textAlign": "center",
-                "fontSize": 11,
-                "color": "text.icon",
-                "cursor": "pointer",
-                "&:hover": { color: "text.secondary" },
-              }}
-            >
-              Reset to default
-            </Box>
-          </Popover>
+            onOpenFindReplace={openFindReplace}
+          />
 
           <FindReplacePopover
             anchorEl={searchAnchorEl}
