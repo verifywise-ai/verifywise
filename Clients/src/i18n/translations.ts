@@ -247,10 +247,10 @@ export const translations: Record<string, Record<string, string>> = {
     "Impact on operations if the app becomes unavailable or wrong":
       "Auswirkungen auf den Betrieb, wenn die App ausfällt oder fehlerhaft arbeitet",
     "Keep one list of every AI app": "Eine zentrale Liste aller KI-Apps führen",
-    "Link each app to the models it runs on, the policies that apply to it and the data types it is allowed to touch, so you have a clear record for every tool.":
-      "Verknüpfen Sie jede App mit den Modellen, auf denen sie läuft, den geltenden Richtlinien und den Datentypen, auf die sie zugreifen darf – so haben Sie für jedes Tool einen klaren Nachweis.",
+    "Link each app to the models it runs on and the policies that apply to it, so you have a clear record for every tool.":
+      "Verknüpfen Sie jede App mit den Modellen, auf denen sie läuft, und den geltenden Richtlinien – so haben Sie für jedes Tool einen klaren Nachweis.",
     "Manual": "Manuell",
-    "Map models, policies and data access": "Modelle, Richtlinien und Datenzugriff zuordnen",
+    "Map models and policies": "Modelle und Richtlinien zuordnen",
     "Model dependencies": "Modellabhängigkeiten",
     "Add models": "Modelle hinzufügen",
     "Model dependencies updated": "Modellabhängigkeiten aktualisiert",
@@ -9211,11 +9211,10 @@ export const translations: Record<string, Record<string, string>> = {
     "Impact on operations if the app becomes unavailable or wrong":
       "Impact sur les opérations si l'application devient indisponible ou défaillante",
     "Keep one list of every AI app": "Tenez une seule liste de toutes les applications IA",
-    "Link each app to the models it runs on, the policies that apply to it and the data types it is allowed to touch, so you have a clear record for every tool.":
-      "Reliez chaque application aux modèles qu'elle utilise, aux politiques qui s'y appliquent et aux types de données auxquels elle peut accéder, afin de disposer d'un enregistrement clair pour chaque outil.",
+    "Link each app to the models it runs on and the policies that apply to it, so you have a clear record for every tool.":
+      "Reliez chaque application aux modèles qu'elle utilise et aux politiques qui s'y appliquent, afin de disposer d'un enregistrement clair pour chaque outil.",
     "Manual": "Manuel",
-    "Map models, policies and data access":
-      "Associer les modèles, les politiques et l'accès aux données",
+    "Map models and policies": "Associer les modèles et les politiques",
     "Model dependencies": "Dépendances de modèles",
     "Add models": "Ajouter des modèles",
     "Model dependencies updated": "Dépendances de modèles mises à jour",
@@ -18128,10 +18127,10 @@ export const translations: Record<string, Record<string, string>> = {
     "Impact on operations if the app becomes unavailable or wrong":
       "Impacto en las operaciones si la aplicación deja de estar disponible o falla",
     "Keep one list of every AI app": "Mantén una sola lista de todas las aplicaciones de IA",
-    "Link each app to the models it runs on, the policies that apply to it and the data types it is allowed to touch, so you have a clear record for every tool.":
-      "Vincula cada aplicación con los modelos que ejecuta, las políticas que le aplican y los tipos de datos a los que puede acceder, para tener un registro claro de cada herramienta.",
+    "Link each app to the models it runs on and the policies that apply to it, so you have a clear record for every tool.":
+      "Vincula cada aplicación con los modelos que ejecuta y las políticas que le aplican, para tener un registro claro de cada herramienta.",
     "Manual": "Manual",
-    "Map models, policies and data access": "Asignar modelos, políticas y acceso a datos",
+    "Map models and policies": "Asignar modelos y políticas",
     "Model dependencies": "Dependencias de modelos",
     "Add models": "Agregar modelos",
     "Model dependencies updated": "Dependencias de modelos actualizadas",
