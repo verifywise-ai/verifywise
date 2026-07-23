@@ -36,17 +36,19 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # Table-format pass purely for log visibility: the SARIF pass below
-      # uploads to the Security tab but hides findings from the job log,
-      # which made a previous failure impossible to diagnose remotely.
-      - name: Run Trivy config scan (table output to log)
+      # This is the GATE. The table format honors .trivyignore for the exit code;
+      # the SARIF format below does NOT (a known trivy-action quirk where
+      # limit-severities-for-sarif + exit-code computes the code on the
+      # unfiltered result, so ignored AVD-DS-0002 / AVD-KSV-0014 still fail it).
+      # So we fail the job here (table) and make the SARIF step upload-only.
+      - name: Run Trivy config scan (gate)
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: 'config'
           scan-ref: '.'
           format: 'table'
           severity: 'CRITICAL,HIGH'
-          exit-code: '0'
+          exit-code: '1'
           ignore-unfixed: true
           # Skip vendored/third-party and local tooling directories — their
           # Dockerfiles (e.g. node_modules/bcrypt) are not our IaC to harden.
@@ -56,11 +58,11 @@ jobs:
           # AVD-KSV-0014, justified in that file) fail the gate.
           trivyignores: '.trivyignore'
 
-      # NOTE: limit-severities-for-sarif is required — without it the action
-      # builds the SARIF report with ALL severities (dropping the severity
-      # filter), and exit-code 1 then fails the job on LOW/MEDIUM findings
-      # too, which contradicts the CRITICAL,HIGH gate above.
-      - name: Run Trivy config scan
+      # Upload-only: exit-code 0 so a SARIF-format quirk can't fail the job (the
+      # table step above is the authoritative gate). always() so the report is
+      # still uploaded even when the gate fails.
+      - name: Run Trivy config scan (SARIF for Security tab)
+        if: always()
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: 'config'
@@ -69,14 +71,9 @@ jobs:
           output: 'trivy-config-results.sarif'
           severity: 'CRITICAL,HIGH'
           limit-severities-for-sarif: 'CRITICAL,HIGH'
-          exit-code: '1'
+          exit-code: '0'
           ignore-unfixed: true
-          # Skip vendored/third-party and local tooling directories — their
-          # Dockerfiles (e.g. node_modules/bcrypt) are not our IaC to harden.
           skip-dirs: 'node_modules,**/node_modules,.claude'
-          # The action does NOT auto-load the repo-root .trivyignore; it must be
-          # pointed at explicitly, or the accepted findings (AVD-DS-0002,
-          # AVD-KSV-0014, justified in that file) fail the gate.
           trivyignores: '.trivyignore'
 
       - name: Upload Trivy config results to GitHub Security
