@@ -22,7 +22,11 @@ export const KEYS = {
   language: { key: "vw_lang_prototype", raw: true },
 
   // Theme toggle state (transient)
-  darkMode: { key: "vw_dark_mode", raw: true },
+  // NOT raw: booleans JSON-serialize to "true"/"false" (same strings as before,
+  // so the pre-paint script in index.html keeps working), while reads return a
+  // real boolean. With raw: true a stored "false" comes back as a truthy string
+  // and dark mode wrongly becomes the default.
+  darkMode: { key: "vw_dark_mode" },
 
   // Dashboard demo data button dismissal
   dashboardDemoHidden: {
