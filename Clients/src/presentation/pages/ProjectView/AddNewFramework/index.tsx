@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Box, Typography, Stack, Button } from "@mui/material";
 import { Check as CheckGreenIcon } from "lucide-react";
 import StandardModal from "../../../components/Modals/StandardModal";
@@ -46,28 +46,6 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
   const [alert, setAlert] = useState<AlertProps | null>(null);
   const [frameworkToRemove, setFrameworkToRemove] = useState<Framework | null>(null);
   const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
-  const [customFrameworkCount, setCustomFrameworkCount] = useState(0);
-
-  // Listen for custom framework count changes from plugins (event-based communication)
-  useEffect(() => {
-    const handleCustomFrameworkCount = (event: CustomEvent) => {
-      if (event.detail?.projectId === project.id) {
-        setCustomFrameworkCount(event.detail.count || 0);
-      }
-    };
-
-    window.addEventListener(
-      "customFrameworkCountChanged" as any,
-      handleCustomFrameworkCount as EventListener,
-    );
-
-    return () => {
-      window.removeEventListener(
-        "customFrameworkCountChanged" as any,
-        handleCustomFrameworkCount as EventListener,
-      );
-    };
-  }, [project.id]);
 
   const showToast = (variant: AlertProps["variant"], body: string) => {
     handleAlert({ variant, body, setAlert, alertTimeout: 3000 });
@@ -181,9 +159,6 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
         >
           {frameworks.map((fw) => {
             const isAdded = isFrameworkAdded(fw);
-            // Total frameworks = system frameworks + custom frameworks (from plugin events)
-            const totalFrameworkCount = (project.framework?.length || 0) + customFrameworkCount;
-            const onlyOneFramework = totalFrameworkCount === 1 && isAdded;
             return (
               <Box key={fw.id} sx={frameworkCardStyle}>
                 <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
@@ -201,7 +176,7 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
                     <Button
                       variant="outlined"
                       size="small"
-                      disabled={isLoading || onlyOneFramework}
+                      disabled={isLoading}
                       onClick={() => {
                         setFrameworkToRemove(fw);
                         setIsRemoveModalOpen(true);

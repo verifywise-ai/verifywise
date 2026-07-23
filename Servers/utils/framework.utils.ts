@@ -74,31 +74,10 @@ const canRemoveFrameworkFromProjectQuery = async (
   organizationId: number,
   transaction: Transaction,
 ): Promise<boolean> => {
-  const exists = await checkFrameworkExistsQuery(
-    frameworkId,
-    projectId,
-    organizationId,
-    transaction,
-  );
-  if (!exists) {
-    return false; // Framework not found in the project
-  }
-
-  // Count both system frameworks and custom frameworks (from plugin if installed) for the project
-  // A framework can only be removed if total count > 1
-  // Use safe query that handles missing plugin table
-  const [[{ can_remove }]] = (await sequelize.query(
-    `SELECT (
-      (SELECT COUNT(*) FROM projects_frameworks WHERE organization_id = :organizationId AND project_id = :projectId) +
-      CASE
-        WHEN EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'verifywise' AND table_name = 'custom_framework_projects')
-        THEN (SELECT COUNT(*) FROM custom_framework_projects WHERE organization_id = :organizationId AND project_id = :projectId)
-        ELSE 0
-      END
-    ) > 1 AND EXISTS (SELECT 1 FROM projects_frameworks WHERE organization_id = :organizationId AND project_id = :projectId AND framework_id = :frameworkId) AS can_remove;`,
-    { replacements: { projectId, frameworkId, organizationId }, transaction },
-  )) as [[{ can_remove: boolean }], number];
-  return can_remove;
+  // A framework can be removed as long as it is attached to the project.
+  // A use case is allowed to have zero frameworks (frameworks are optional at creation),
+  // so removing the last remaining framework is permitted.
+  return checkFrameworkExistsQuery(frameworkId, projectId, organizationId, transaction);
 };
 
 export const canAddFrameworkToProjectQuery = async (
