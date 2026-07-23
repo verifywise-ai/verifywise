@@ -1,10 +1,8 @@
 import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { sanitizeRichText } from "../../../application/utils/richTextSanitizer";
-import { useEditor, EditorContent, Extension } from "@tiptap/react";
+import { useEditor, EditorContent } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
-import { Plugin, PluginKey } from "@tiptap/pm/state";
-import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import StarterKit from "@tiptap/starter-kit";
 import TipTapUnderline from "@tiptap/extension-underline";
 import Highlight from "@tiptap/extension-highlight";
@@ -114,112 +112,11 @@ import { store } from "../../../application/redux/store";
 import { PageBreadcrumbs } from "../../components/breadcrumbs/PageBreadcrumbs";
 import { AuthImageExtension } from "./PolicyEditor/AuthImage";
 import { normalizeSlateHtml } from "./PolicyEditor/normalizeSlateHtml";
-
-// ── Toolbar key type ──────────────────────────────────────────────────
-type ToolbarKey =
-  | "bold"
-  | "italic"
-  | "underline"
-  | "undo"
-  | "redo"
-  | "strike"
-  | "ol"
-  | "ul"
-  | "align-left"
-  | "align-center"
-  | "align-right"
-  | "link"
-  | "image"
-  | "highlight"
-  | "blockquote"
-  | "table"
-  | "code"
-  | "hr"
-  | "taskList"
-  | "superscript"
-  | "subscript"
-  | "color"
-  | "search";
-
-const defaultToolbarState: Record<ToolbarKey, boolean> = {
-  "bold": false,
-  "italic": false,
-  "underline": false,
-  "undo": false,
-  "redo": false,
-  "strike": false,
-  "ol": false,
-  "ul": false,
-  "align-left": false,
-  "align-center": false,
-  "align-right": false,
-  "link": false,
-  "image": false,
-  "highlight": false,
-  "blockquote": false,
-  "table": false,
-  "code": false,
-  "hr": false,
-  "taskList": false,
-  "superscript": false,
-  "subscript": false,
-  "color": false,
-  "search": false,
-};
-
-// ── Search highlight extension ─────────────────────────────────────────
-const searchHighlightKey = new PluginKey("searchHighlight");
-
-function createSearchHighlightExtension() {
-  return Extension.create({
-    name: "searchHighlight",
-    addProseMirrorPlugins() {
-      return [
-        new Plugin({
-          key: searchHighlightKey,
-          state: {
-            init() {
-              return { term: "", decorations: DecorationSet.empty };
-            },
-            apply(tr, prev) {
-              const meta = tr.getMeta(searchHighlightKey);
-              if (meta !== undefined) {
-                const term = meta as string;
-                if (!term) return { term: "", decorations: DecorationSet.empty };
-                const decorations: Decoration[] = [];
-                const searchLower = term.toLowerCase();
-                tr.doc.descendants((node, pos) => {
-                  if (!node.isText || !node.text) return;
-                  const text = node.text.toLowerCase();
-                  let idx = text.indexOf(searchLower);
-                  while (idx !== -1) {
-                    decorations.push(
-                      Decoration.inline(pos + idx, pos + idx + term.length, {
-                        class: "search-highlight",
-                      }),
-                    );
-                    idx = text.indexOf(searchLower, idx + term.length);
-                  }
-                });
-                return { term, decorations: DecorationSet.create(tr.doc, decorations) };
-              }
-              // Remap existing decorations on doc change
-              if (tr.docChanged && prev.decorations !== DecorationSet.empty) {
-                return { ...prev, decorations: prev.decorations.map(tr.mapping, tr.doc) };
-              }
-              return prev;
-            },
-          },
-          props: {
-            decorations(state) {
-              return this.getState(state)?.decorations ?? DecorationSet.empty;
-            },
-          },
-        }),
-      ];
-    },
-  });
-}
+import {
+  createSearchHighlightExtension,
+  searchHighlightKey,
+} from "./PolicyEditor/searchHighlightExtension";
+import { type ToolbarKey, defaultToolbarState } from "./PolicyEditor/toolbarTypes";
 
 // ── Component ─────────────────────────────────────────────────────────
 export default function PolicyEditorPage() {
