@@ -49,6 +49,10 @@ jobs:
           exit-code: '0'
           ignore-unfixed: true
 
+      # NOTE: limit-severities-for-sarif is required — without it the action
+      # builds the SARIF report with ALL severities (dropping the severity
+      # filter), and exit-code 1 then fails the job on LOW/MEDIUM findings
+      # too, which contradicts the CRITICAL,HIGH gate above.
       - name: Run Trivy config scan
         uses: aquasecurity/trivy-action@v0.36.0
         with:
@@ -57,6 +61,7 @@ jobs:
           format: 'sarif'
           output: 'trivy-config-results.sarif'
           severity: 'CRITICAL,HIGH'
+          limit-severities-for-sarif: 'CRITICAL,HIGH'
           exit-code: '1'
           ignore-unfixed: true
 
