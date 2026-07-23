@@ -863,8 +863,14 @@ async function resetPassword(req: Request, res: Response) {
     if (user) {
       await user.updatePassword(newPassword);
 
+      // Update by the canonical stored email, not the raw request email. The
+      // lookup above (getUserByEmailQuery) is case-insensitive, but
+      // resetPasswordQuery's UPDATE matches `email` exactly. If the stored value
+      // differs in case or whitespace from what the user typed, passing the
+      // request email would match zero rows and silently leave the password
+      // unchanged. _user.email is the value actually in the database.
       const updatedUser = (await resetPasswordQuery(
-        email,
+        _user.email,
         user.password_hash,
         transaction,
       )) as UserModel;
