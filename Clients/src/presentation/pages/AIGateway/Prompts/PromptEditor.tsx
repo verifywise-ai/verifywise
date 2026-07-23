@@ -231,8 +231,13 @@ export default function PromptEditorPage() {
   const [model, setModel] = useState("");
   const [config, setConfig] = useState<Record<string, any>>({});
   const { providers: gwProviders, getModelsForProvider: gwModelsFor } = useGatewayModels();
-  // Build flat model list from all providers for the model metadata dropdown
-  const allModelItems = gwProviders.flatMap((p) => gwModelsFor(p));
+  // Build flat model list from all providers for the model metadata dropdown.
+  // Memoized so the (potentially 2,500+ item) array keeps a stable identity
+  // across unrelated re-renders — the Autocomplete below relies on this.
+  const allModelItems = useMemo(
+    () => gwProviders.flatMap((p) => gwModelsFor(p)),
+    [gwProviders, gwModelsFor],
+  );
   const [currentVersion, setCurrentVersion] = useState<number | null>(null);
   const [currentStatus, setCurrentStatus] = useState<"draft" | "published">("draft");
   const [isSaving, setIsSaving] = useState(false);
@@ -285,6 +290,15 @@ export default function PromptEditorPage() {
 
   const detectedVars = useMemo(() => extractVars(messages), [messages]);
   const detectedRefs = useMemo(() => extractPromptRefs(messages), [messages]);
+
+  // Resolve the currently-selected model to an option object. Fall back to a
+  // synthetic option when the saved model is not in the catalogue (still
+  // loading, deprecated, or its provider was filtered out) so the field keeps
+  // showing the saved value instead of silently going blank.
+  const selectedModelOption = useMemo(() => {
+    if (!model) return null;
+    return allModelItems.find((item) => item._id === model) ?? { _id: model, name: model };
+  }, [model, allModelItems]);
 
   const loadVersionIntoEditor = (v: Version) => {
     setMessages(
@@ -656,11 +670,11 @@ export default function PromptEditorPage() {
             <AutoCompleteField
               id="prompt-model-select"
               label="Model"
-              value={allModelItems.find((item) => item._id === model) ?? null}
+              value={selectedModelOption}
               onChange={(_, newValue) => setModel(newValue?._id ?? "")}
               options={allModelItems}
-              getOptionLabel={(item) => item.name}
-              isOptionEqualToValue={(option, val) => option._id === val._id}
+              getOptionLabel={(item) => item._id}
+              isOptionEqualToValue={(option, val) => option._id === val?._id}
               placeholder="Search models..."
               sx={{ flex: 1 }}
             />
