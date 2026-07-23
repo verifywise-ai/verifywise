@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException, Request, status
 
 from crud.mcp_audit import (
     delete_expired_audit_logs,
+    get_agent_activity,
     get_audit_log_by_id,
     get_audit_logs,
     get_audit_stats,
@@ -107,6 +108,16 @@ async def audit_stats_by_agent(request: Request, days: int = 7):
 
     stats = await get_audit_stats_by_agent(org_id, days=days)
     return {"status": "success", "data": stats}
+
+
+@router.get("/agent/{agent_key_id}", status_code=status.HTTP_200_OK)
+async def agent_activity(agent_key_id: int, request: Request, days: int = 30):
+    """Everything one agent has been doing: summary + per-tool + recent calls."""
+    verify_internal_key(request)
+    org_id = get_org_id(request)
+
+    activity = await get_agent_activity(org_id, agent_key_id, days=days)
+    return {"status": "success", "data": activity}
 
 
 # ---------------------------------------------------------------------------

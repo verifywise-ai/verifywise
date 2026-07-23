@@ -183,6 +183,70 @@ async def get_audit_stats_by_agent(org_id: int, days: int = 7) -> list[dict]:
         ]
 
 
+async def get_agent_activity(org_id: int, agent_key_id: int, days: int = 30) -> dict:
+    """Everything one agent has been doing over the last N days: a summary
+    (total calls, denials, approvals, avg latency, distinct tools) plus the tools
+    it used and its most recent tool calls. Powers the per-agent activity view."""
+    days = int(days)
+    window = f"created_at >= NOW() - INTERVAL '{days} days'"
+
+    async with get_db() as db:
+        summary = (await db.execute(
+            text(f"""
+                SELECT
+                    COUNT(*) AS total_calls,
+                    COUNT(*) FILTER (WHERE result_status = 'blocked') AS denied,
+                    COUNT(*) FILTER (WHERE result_status = 'approval_required') AS approvals,
+                    COUNT(*) FILTER (WHERE is_error) AS errors,
+                    COUNT(DISTINCT tool_name) AS unique_tools,
+                    COUNT(DISTINCT agent_run_id) AS runs,
+                    COALESCE(AVG(latency_ms), 0) AS avg_latency_ms,
+                    MAX(created_at) AS last_active
+                FROM ai_gateway_mcp_audit_logs
+                WHERE organization_id = :org_id AND agent_key_id = :akid AND {window}
+            """),
+            {"org_id": org_id, "akid": agent_key_id},
+        )).mappings().fetchone()
+
+        by_tool = (await db.execute(
+            text(f"""
+                SELECT tool_name, COUNT(*) AS count,
+                       COUNT(*) FILTER (WHERE result_status = 'blocked') AS denied
+                FROM ai_gateway_mcp_audit_logs
+                WHERE organization_id = :org_id AND agent_key_id = :akid AND {window}
+                GROUP BY tool_name ORDER BY count DESC
+            """),
+            {"org_id": org_id, "akid": agent_key_id},
+        )).mappings().all()
+
+        recent = (await db.execute(
+            text(f"""
+                SELECT id, tool_name, result_status, matched_rule_name,
+                       latency_ms, created_at
+                FROM ai_gateway_mcp_audit_logs
+                WHERE organization_id = :org_id AND agent_key_id = :akid AND {window}
+                ORDER BY created_at DESC LIMIT 50
+            """),
+            {"org_id": org_id, "akid": agent_key_id},
+        )).mappings().all()
+
+    s = dict(summary) if summary else {}
+    return {
+        "summary": {
+            "total_calls": s.get("total_calls", 0),
+            "denied": s.get("denied", 0),
+            "approvals": s.get("approvals", 0),
+            "errors": s.get("errors", 0),
+            "unique_tools": s.get("unique_tools", 0),
+            "runs": s.get("runs", 0),
+            "avg_latency_ms": round(float(s.get("avg_latency_ms", 0) or 0), 2),
+            "last_active": s.get("last_active"),
+        },
+        "by_tool": [dict(r) for r in by_tool],
+        "recent": [dict(r) for r in recent],
+    }
+
+
 async def get_audit_log_by_id(org_id: int, log_id: int) -> dict | None:
     async with get_db() as db:
         row = (await db.execute(
@@ -191,6 +255,7 @@ async def get_audit_log_by_id(org_id: int, log_id: int) -> dict | None:
                        al.result_status, al.result_summary, al.is_error, al.latency_ms,
                        al.session_id, al.tool_use_id, al.result_response, al.result_truncated,
                        al.events, al.created_at,
+                       al.matched_rule_id, al.matched_rule_name,
                        ak.name AS agent_key_name
                 FROM ai_gateway_mcp_audit_logs al
                 LEFT JOIN ai_gateway_mcp_agent_keys ak ON ak.id = al.agent_key_id

@@ -18,6 +18,7 @@ import { CustomizableButton } from "../../../components/button/customizable-butt
 import Chip from "../../../components/Chip";
 import Field from "../../../components/Inputs/Field";
 import Select from "../../../components/Inputs/Select";
+import MultiSelect from "../../../components/Inputs/MultiSelect";
 import StandardModal from "../../../components/Modals/StandardModal";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
@@ -34,6 +35,7 @@ interface MCPGuardrail {
   action: "block" | "mask" | "require_approval";
   scope: string;
   applies_to_tools: string[];
+  applies_to_agent_keys: number[];
   config: Record<string, any> | null;
   is_active: boolean;
   created_at: string;
@@ -45,6 +47,7 @@ interface GuardrailForm {
   action: string;
   scope: string;
   applies_to_tools: string;
+  applies_to_agent_keys: number[];
   config: string;
   is_active: boolean;
 }
@@ -55,6 +58,7 @@ const EMPTY_FORM: GuardrailForm = {
   action: "block",
   scope: "tool_input",
   applies_to_tools: "",
+  applies_to_agent_keys: [],
   config: "",
   is_active: true,
 };
@@ -105,12 +109,20 @@ export default function MCPGuardrailsPage() {
   const [deleteTarget, setDeleteTarget] = useState<MCPGuardrail | null>(null);
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
 
+  // Agent keys — for scoping a rule to specific agents.
+  const [agentKeys, setAgentKeys] = useState<{ _id: number; name: string }[]>([]);
+
   const loadData = useCallback(async () => {
     setLoading(true);
     setLoadError(null);
     try {
-      const res = await apiServices.get<Record<string, any>>("/ai-gateway/mcp/guardrails");
-      setRules(res?.data?.data || []);
+      const [rulesRes, keysRes] = await Promise.all([
+        apiServices.get<Record<string, any>>("/ai-gateway/mcp/guardrails"),
+        apiServices.get<Record<string, any>>("/ai-gateway/mcp/agent-keys"),
+      ]);
+      setRules(rulesRes?.data?.data || []);
+      const keys = keysRes?.data?.data || [];
+      setAgentKeys(keys.map((k: { id: number; name: string }) => ({ _id: k.id, name: k.name })));
     } catch {
       setLoadError("Failed to load guardrails. Please try again.");
     } finally {
@@ -149,6 +161,9 @@ export default function MCPGuardrailsPage() {
       applies_to_tools: Array.isArray(rule.applies_to_tools)
         ? rule.applies_to_tools.join(", ")
         : "",
+      applies_to_agent_keys: Array.isArray(rule.applies_to_agent_keys)
+        ? rule.applies_to_agent_keys
+        : [],
       config: rule.config ? JSON.stringify(rule.config, null, 2) : "",
       is_active: rule.is_active ?? true,
     });
@@ -191,6 +206,7 @@ export default function MCPGuardrailsPage() {
       action: isApprovalRule ? "require_approval" : form.action,
       scope: form.scope,
       applies_to_tools: toolsList,
+      applies_to_agent_keys: form.applies_to_agent_keys,
       config: parsedConfig,
       is_active: form.is_active,
     };
@@ -478,6 +494,20 @@ export default function MCPGuardrailsPage() {
           />
           <Typography sx={{ fontSize: 11, color: palette.text.disabled, mt: "-12px" }}>
             Comma-separated tool names. Leave empty to apply to all MCP tools.
+          </Typography>
+
+          <MultiSelect
+            id="applies_to_agent_keys"
+            label="Applies to agents"
+            placeholder="All agents"
+            value={form.applies_to_agent_keys}
+            items={agentKeys}
+            onChange={(e) =>
+              setForm((p) => ({ ...p, applies_to_agent_keys: e.target.value as number[] }))
+            }
+          />
+          <Typography sx={{ fontSize: 11, color: palette.text.disabled, mt: "-12px" }}>
+            Restrict this rule to specific agents. Leave empty to apply to every agent.
           </Typography>
 
           <Field
