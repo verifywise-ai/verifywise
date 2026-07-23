@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { storageService } from "../../../infrastructure/storage";
 import {
   Box,
   Stack,
@@ -196,11 +197,6 @@ function validateApiKeyFormat(provider: string, apiKey: string): string | null {
   return null; // Valid
 }
 
-const LAST_PROJECT_KEY = "evals_last_project_id";
-const RECENT_EXPERIMENTS_KEY = "evals_recent_experiments";
-const RECENT_PROJECTS_KEY = "evals_recent_projects";
-const LOCAL_PROVIDERS_KEY = "evals_local_providers";
-
 interface RecentExperiment {
   id: string;
   name: string;
@@ -247,10 +243,10 @@ export default function EvalsDashboard() {
     setTab(hash || "overview");
   }, [location.hash, projectId]);
 
-  // Persist projectId to localStorage when it changes
+  // Persist projectId to storage when it changes
   useEffect(() => {
     if (projectId) {
-      localStorage.setItem(LAST_PROJECT_KEY, projectId);
+      storageService.set("evalsLastProjectId", projectId);
     }
   }, [projectId]);
 
@@ -276,22 +272,12 @@ export default function EvalsDashboard() {
   const [initialLoading, setInitialLoading] = useState(!shouldSkipLoading);
   const [selectedExperimentId, setSelectedExperimentId] = useState<string | null>(null);
   const [selectedBiasAuditId, setSelectedBiasAuditId] = useState<string | null>(null);
-  const [recentExperiments, setRecentExperiments] = useState<RecentExperiment[]>(() => {
-    try {
-      const stored = localStorage.getItem(RECENT_EXPERIMENTS_KEY);
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
-  });
-  const [recentProjects, setRecentProjects] = useState<RecentProject[]>(() => {
-    try {
-      const stored = localStorage.getItem(RECENT_PROJECTS_KEY);
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [recentExperiments, setRecentExperiments] = useState<RecentExperiment[]>(() =>
+    storageService.get("evalsRecentExperiments", []),
+  );
+  const [recentProjects, setRecentProjects] = useState<RecentProject[]>(() =>
+    storageService.get("evalsRecentProjects", []),
+  );
 
   // API key modal state
   const [apiKeyModalOpen, setApiKeyModalOpen] = useState(false);
@@ -311,14 +297,9 @@ export default function EvalsDashboard() {
   const [deletingKeyProvider, setDeletingKeyProvider] = useState<string | null>(null);
 
   // Local providers state
-  const [localProviders, setLocalProviders] = useState<LocalProvider[]>(() => {
-    try {
-      const stored = localStorage.getItem(LOCAL_PROVIDERS_KEY);
-      return stored ? JSON.parse(stored) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [localProviders, setLocalProviders] = useState<LocalProvider[]>(() =>
+    storageService.get("evalsLocalProviders", []),
+  );
   const [localProviderModalOpen, setLocalProviderModalOpen] = useState(false);
   const [selectedLocalProviderType, setSelectedLocalProviderType] = useState<
     "ollama" | "local" | ""
@@ -369,7 +350,7 @@ export default function EvalsDashboard() {
     setRecentExperiments((prev) => {
       const filtered = prev.filter((e) => e.id !== experiment.id);
       const updated = [experiment, ...filtered].slice(0, 10); // Keep max 10
-      localStorage.setItem(RECENT_EXPERIMENTS_KEY, JSON.stringify(updated));
+      storageService.set("evalsRecentExperiments", updated);
       return updated;
     });
   }, []);
@@ -379,7 +360,7 @@ export default function EvalsDashboard() {
     setRecentProjects((prev) => {
       const filtered = prev.filter((p) => p.id !== project.id);
       const updated = [project, ...filtered].slice(0, 10); // Keep max 10
-      localStorage.setItem(RECENT_PROJECTS_KEY, JSON.stringify(updated));
+      storageService.set("evalsRecentProjects", updated);
       return updated;
     });
   };
@@ -448,7 +429,7 @@ export default function EvalsDashboard() {
             const fix = needsUpdate.find((n) => n.id === exp.id);
             return fix || exp;
           });
-          localStorage.setItem(RECENT_EXPERIMENTS_KEY, JSON.stringify(updated));
+          storageService.set("evalsRecentExperiments", updated);
           return updated;
         });
       }
@@ -534,7 +515,7 @@ export default function EvalsDashboard() {
 
       const updatedProviders = [...localProviders, newProvider];
       setLocalProviders(updatedProviders);
-      localStorage.setItem(LOCAL_PROVIDERS_KEY, JSON.stringify(updatedProviders));
+      storageService.set("evalsLocalProviders", updatedProviders);
 
       setApiKeyAlert({ variant: "success", body: `${newProvider.name} added successfully` });
       setTimeout(() => setApiKeyAlert(null), 3000);
@@ -557,7 +538,7 @@ export default function EvalsDashboard() {
     setTimeout(() => {
       const updatedProviders = localProviders.filter((p) => p.id !== providerId);
       setLocalProviders(updatedProviders);
-      localStorage.setItem(LOCAL_PROVIDERS_KEY, JSON.stringify(updatedProviders));
+      storageService.set("evalsLocalProviders", updatedProviders);
       setDeletingLocalProviderId(null);
       setApiKeyAlert({ variant: "success", body: "Local provider removed" });
       setTimeout(() => setApiKeyAlert(null), 3000);
@@ -614,7 +595,7 @@ export default function EvalsDashboard() {
         }
 
         // Check for last project - try to redirect regardless of org association
-        const lastProjectId = localStorage.getItem(LAST_PROJECT_KEY);
+        const lastProjectId = storageService.get("evalsLastProjectId", "");
         if (lastProjectId) {
           // Verify the project still exists
           try {
@@ -625,8 +606,8 @@ export default function EvalsDashboard() {
               return;
             }
           } catch {
-            // Project doesn't exist anymore, clear from localStorage
-            localStorage.removeItem(LAST_PROJECT_KEY);
+            // Project doesn't exist anymore, clear from storage
+            storageService.removeKey("evalsLastProjectId");
           }
         }
 
@@ -685,7 +666,7 @@ export default function EvalsDashboard() {
         setRecentProjects((prev) => {
           const filtered = prev.filter((p) => existingProjectIds.has(p.id));
           if (filtered.length !== prev.length) {
-            localStorage.setItem(RECENT_PROJECTS_KEY, JSON.stringify(filtered));
+            storageService.set("evalsRecentProjects", filtered);
           }
           return filtered;
         });
@@ -694,7 +675,7 @@ export default function EvalsDashboard() {
         setRecentExperiments((prev) => {
           const filtered = prev.filter((e) => existingProjectIds.has(e.projectId));
           if (filtered.length !== prev.length) {
-            localStorage.setItem(RECENT_EXPERIMENTS_KEY, JSON.stringify(filtered));
+            storageService.set("evalsRecentExperiments", filtered);
           }
           return filtered;
         });
@@ -810,9 +791,9 @@ export default function EvalsDashboard() {
       if (newProjectId === "create_new") {
         setCreateProjectModalOpen(true);
       } else if (newProjectId === "all_projects") {
-        // Clear last project from localStorage and navigate to projects list
+        // Clear last project from storage and navigate to projects list
         // Use #projects hash to bypass auto-redirect logic
-        localStorage.removeItem(LAST_PROJECT_KEY);
+        storageService.removeKey("evalsLastProjectId");
         navigate("/evals#projects");
       } else {
         navigate(`/evals/${newProjectId}#${tab}`);
@@ -878,7 +859,7 @@ export default function EvalsDashboard() {
       // Remove deleted project from recent projects
       setRecentProjects((prev) => {
         const filtered = prev.filter((p) => p.id !== deleteProjectId);
-        localStorage.setItem(RECENT_PROJECTS_KEY, JSON.stringify(filtered));
+        storageService.set("evalsRecentProjects", filtered);
         return filtered;
       });
 

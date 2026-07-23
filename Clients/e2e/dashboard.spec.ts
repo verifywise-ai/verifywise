@@ -1,5 +1,5 @@
 import { test, expect } from "./fixtures/auth.fixture";
-import { runA11yCheck } from "./helpers/axe";
+import { analyzeCriticalAndSeriousViolations } from "./helpers/axe";
 
 test.describe("Dashboard", () => {
   test("renders the dashboard with key widgets", async ({ authedPage: page }) => {
@@ -17,12 +17,10 @@ test.describe("Dashboard", () => {
     await expect(heading.first()).toBeVisible({ timeout: 10_000 });
   });
 
-  test("page has no critical or serious accessibility violations", async ({
-    authedPage: page,
-  }, testInfo) => {
+  test("page has no critical or serious accessibility violations", async ({ authedPage: page }) => {
     await page.waitForLoadState("domcontentloaded");
 
-    const violations = await runA11yCheck(page, testInfo);
+    const violations = await analyzeCriticalAndSeriousViolations(page);
     expect(violations).toEqual([]);
   });
 

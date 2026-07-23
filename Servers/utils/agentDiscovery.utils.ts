@@ -78,33 +78,11 @@ export const getAllAgentPrimitivesQuery = async (
 
   const whereClause = `WHERE ${conditions.join(" AND ")}`;
 
-  const results = (await sequelize.query(
+  const results = await sequelize.query(
     `SELECT * FROM agent_primitives ${whereClause} ORDER BY created_at DESC, id ASC`,
     { replacements, type: QueryTypes.SELECT },
-  )) as AgentPrimitive[];
-
-  // Attach the full owner set to each row in a single grouped query, so a
-  // multi-owner agent surfaces all its owners without N+1 lookups.
-  if (results.length > 0) {
-    const ids = results.map((r) => (r as any).id);
-    const ownerRows = (await sequelize.query(
-      `SELECT agent_primitive_id, user_id FROM agent_primitive_owners
-       WHERE organization_id = :organizationId AND agent_primitive_id IN (:ids)
-       ORDER BY id ASC`,
-      { replacements: { organizationId, ids }, type: QueryTypes.SELECT },
-    )) as { agent_primitive_id: number; user_id: number }[];
-    const byAgent = new Map<number, number[]>();
-    ownerRows.forEach((row) => {
-      const list = byAgent.get(row.agent_primitive_id) || [];
-      list.push(row.user_id);
-      byAgent.set(row.agent_primitive_id, list);
-    });
-    results.forEach((r) => {
-      (r as any).owner_ids = byAgent.get((r as any).id) || [];
-    });
-  }
-
-  return results;
+  );
+  return results as AgentPrimitive[];
 };
 
 export const getAgentPrimitiveByIdQuery = async (
@@ -115,68 +93,7 @@ export const getAgentPrimitiveByIdQuery = async (
     `SELECT * FROM agent_primitives WHERE organization_id = :organizationId AND id = :id`,
     { replacements: { organizationId, id }, type: QueryTypes.SELECT },
   );
-  const agent = (results as AgentPrimitive[])[0] || null;
-  if (agent) {
-    (agent as any).owner_ids = await getAgentOwnersQuery(id, organizationId);
-  }
-  return agent;
-};
-
-/**
- * Return the user ids that own an agent primitive (all owners, including the
- * primary). Scoped to the tenant.
- */
-export const getAgentOwnersQuery = async (
-  agentId: number,
-  organizationId: number,
-): Promise<number[]> => {
-  const rows = (await sequelize.query(
-    `SELECT user_id FROM agent_primitive_owners
-     WHERE organization_id = :organizationId AND agent_primitive_id = :agentId
-     ORDER BY id ASC`,
-    { replacements: { organizationId, agentId }, type: QueryTypes.SELECT },
-  )) as { user_id: number }[];
-  return rows.map((r) => r.user_id);
-};
-
-/**
- * Replace the full owner set for an agent primitive. The first id in `userIds`
- * is also written back to agent_primitives.owner_id as the primary owner (or
- * NULL when the list is empty), keeping the legacy single-owner column in sync.
- */
-export const setAgentOwnersQuery = async (
-  agentId: number,
-  userIds: number[],
-  organizationId: number,
-  transaction?: any,
-): Promise<void> => {
-  await sequelize.query(
-    `DELETE FROM agent_primitive_owners
-     WHERE organization_id = :organizationId AND agent_primitive_id = :agentId`,
-    { replacements: { organizationId, agentId }, transaction },
-  );
-
-  for (const userId of userIds) {
-    await sequelize.query(
-      `INSERT INTO agent_primitive_owners (organization_id, agent_primitive_id, user_id, created_at)
-       VALUES (:organizationId, :agentId, :userId, NOW())
-       ON CONFLICT (organization_id, agent_primitive_id, user_id) DO NOTHING`,
-      { replacements: { organizationId, agentId, userId }, transaction },
-    );
-  }
-
-  await sequelize.query(
-    `UPDATE agent_primitives SET owner_id = :primary, updated_at = NOW()
-     WHERE organization_id = :organizationId AND id = :agentId`,
-    {
-      replacements: {
-        organizationId,
-        agentId,
-        primary: userIds.length > 0 ? String(userIds[0]) : null,
-      },
-      transaction,
-    },
-  );
+  return (results as AgentPrimitive[])[0] || null;
 };
 
 export const createAgentPrimitiveQuery = async (

@@ -12,7 +12,6 @@ import {
   Stack,
   Chip as MuiChip,
   Box,
-  Tooltip,
   useTheme,
 } from "@mui/material";
 import {
@@ -25,8 +24,6 @@ import {
   Plug,
   ShieldCheck,
   Settings,
-  CirclePlus,
-  UserPen,
 } from "lucide-react";
 import IconButton from "../../components/IconButton";
 import { ReactComponent as SelectorVertical } from "../../assets/icons/selector-vertical.svg";
@@ -36,7 +33,6 @@ import { CustomizableButton } from "../../components/button/customizable-button"
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import { getInstalledPlugins } from "../../../application/repository/plugin.repository";
 import Chip from "../../components/Chip";
-import { getAgentLifecycleStatus } from "./agentLifecycle";
 import TablePaginationActions from "../../components/TablePagination";
 import { singleTheme } from "../../themes";
 import {
@@ -59,26 +55,12 @@ const TABLE_COLUMNS = [
   { id: "permissions", label: "PERMISSIONS", sortable: false },
   { id: "last_activity", label: "LAST ACTIVITY", sortable: true },
   { id: "review_status", label: "STATUS", sortable: true },
-  { id: "stale", label: "STALE", sortable: false },
+  { id: "stale", label: "", sortable: false },
   { id: "actions", label: "", sortable: false },
 ];
 
 type SortDirection = "asc" | "desc" | null;
 type SortConfig = { key: string; direction: SortDirection };
-
-// Friendly display names for known discovery sources. Falls back to the raw
-// source_system key (title-cased) for any source not listed here.
-const SOURCE_LABELS: Record<string, string> = {
-  "azure-ai-foundry": "Azure AI Foundry",
-};
-
-function formatSourceLabel(sourceSystem: string): string {
-  if (SOURCE_LABELS[sourceSystem]) return SOURCE_LABELS[sourceSystem];
-  return sourceSystem
-    .split(/[-_]/)
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
-}
 
 const AgentTable: React.FC<AgentTableProps> = ({
   agents,
@@ -87,7 +69,6 @@ const AgentTable: React.FC<AgentTableProps> = ({
   onEdit,
   onDelete,
   onSync,
-  onAddAgent,
   isSyncing,
   visibleColumns,
 }) => {
@@ -254,15 +235,6 @@ const AgentTable: React.FC<AgentTableProps> = ({
               sx={{ height: 34 }}
             />
           )}
-          {onAddAgent && (
-            <CustomizableButton
-              text="Add agent"
-              variant="outlined"
-              onClick={onAddAgent}
-              startIcon={<CirclePlus size={14} />}
-              sx={{ height: 34 }}
-            />
-          )}
         </Box>
       </EmptyState>
     );
@@ -347,18 +319,7 @@ const AgentTable: React.FC<AgentTableProps> = ({
             <TableCell sx={cellStyle}>{agent.display_name}</TableCell>
           )}
           {isColVisible("source_system") && (
-            <TableCell sx={cellStyle}>
-              <Stack direction="row" alignItems="center" spacing={0.75}>
-                {agent.is_manual ? (
-                  <UserPen size={14} strokeWidth={1.5} color="#667085" />
-                ) : (
-                  <Plug size={14} strokeWidth={1.5} color="#667085" />
-                )}
-                <span>
-                  {agent.is_manual ? "Manually entered" : formatSourceLabel(agent.source_system)}
-                </span>
-              </Stack>
-            </TableCell>
+            <TableCell sx={cellStyle}>{agent.source_system}</TableCell>
           )}
           {isColVisible("primitive_type") && (
             <TableCell sx={cellStyle}>{agent.primitive_type}</TableCell>
@@ -384,25 +345,12 @@ const AgentTable: React.FC<AgentTableProps> = ({
           )}
           {isColVisible("review_status") && (
             <TableCell sx={cellStyle}>
-              {(() => {
-                const s = getAgentLifecycleStatus(agent);
-                return <Chip label={s.label} variant={s.variant} />;
-              })()}
+              <Chip label={agent.review_status} />
             </TableCell>
           )}
           {isColVisible("stale") && (
             <TableCell sx={{ ...cellStyle, width: 40 }}>
-              {agent.is_stale && (
-                <Tooltip
-                  title="Stale: no activity from this agent for 30+ days. Re-sync or review whether it is still in use."
-                  arrow
-                  placement="top"
-                >
-                  <Box component="span" sx={{ display: "inline-flex", cursor: "help" }}>
-                    <AlertTriangle size={14} strokeWidth={1.5} color="#F9A825" />
-                  </Box>
-                </Tooltip>
-              )}
+              {agent.is_stale && <AlertTriangle size={14} strokeWidth={1.5} color="#F9A825" />}
             </TableCell>
           )}
           {isColVisible("actions") && (

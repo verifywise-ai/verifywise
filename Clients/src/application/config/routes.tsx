@@ -6,7 +6,6 @@ import { SHOW_AI_GATEWAY_PROMPTS } from "./featureFlags";
 // Eager imports — app shell, route guard, and Use cases page (mounts with layout for table skeleton UX)
 import Dashboard from "../../presentation/containers/Dashboard";
 import ProtectedRoute from "../../presentation/components/ProtectedRoute";
-import SetupGate from "../../presentation/components/SetupGate";
 import VWHome from "../../presentation/pages/Home/1.0Home";
 
 // ── Authentication routes ─────────────────────────────────────────────
@@ -28,9 +27,6 @@ const MicrosoftCallback = lazyRoute(
 );
 const RegisterUser = lazyRoute(
   () => import("../../presentation/pages/Authentication/RegisterUser"),
-);
-const RegisterMultiTenant = lazyRoute(
-  () => import("../../presentation/pages/Authentication/RegisterMultiTenant"),
 );
 
 // ── Core dashboard routes ─────────────────────────────────────────────
@@ -73,7 +69,6 @@ const DatasetEditorPage = lazyRoute(
   () => import("../../presentation/pages/EvalsDashboard/DatasetEditorPage"),
 );
 const AgentDiscovery = lazyRoute(() => import("../../presentation/pages/AgentDiscovery"));
-const AgentDetail = lazyRoute(() => import("../../presentation/pages/AgentDiscovery/AgentDetail"));
 const ModelInventory = lazyRoute(() => import("../../presentation/pages/ModelInventory"));
 const AIApps = lazyRoute(() => import("../../presentation/pages/AIApps"));
 const ModelLifecycleDetail = lazyRoute(
@@ -723,14 +718,6 @@ export const createRoutes = (
       }
     />
     <Route
-      path="/agent-discovery/:id"
-      element={
-        <Suspense fallback={<LazyFallback />}>
-          <AgentDetail />
-        </Suspense>
-      }
-    />
-    <Route
       path="/approval-workflows"
       element={
         <Suspense fallback={<LazyFallback />}>
@@ -1154,28 +1141,8 @@ export const createRoutes = (
       </Suspense>
     }
   />,
-  <Route
-    key="register"
-    path="/register"
-    element={
-      <Suspense fallback={<LazyFallback />}>
-        <SetupGate>
-          <RegisterMultiTenant />
-        </SetupGate>
-      </Suspense>
-    }
-  />,
-  <Route
-    key="admin-reg"
-    path="/admin-reg"
-    element={
-      <Suspense fallback={<LazyFallback />}>
-        <SetupGate>
-          <RegisterMultiTenant />
-        </SetupGate>
-      </Suspense>
-    }
-  />,
+  <Route key="register" path="/register" element={<Navigate to="/login" replace />} />,
+  <Route key="admin-reg" path="/admin-reg" element={<Navigate to="/login" replace />} />,
   <Route
     key="login"
     path="/login"

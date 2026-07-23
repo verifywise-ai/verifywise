@@ -139,7 +139,7 @@
     "jsdom": "^29.1.1",
     "msw": "^2.14.6",
     "prettier": "^3.8.4",
-    "typescript": "^7.0.2",
+    "typescript": "^6.0.3",
     "url-loader": "^4.1.1",
     "vitest": "^4.1.9"
   },

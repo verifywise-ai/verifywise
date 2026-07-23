@@ -52,7 +52,7 @@ describe("Sidebar", () => {
     expect(screen.getByText("Use cases")).toBeInTheDocument();
     expect(screen.getByText("Model inventory")).toBeInTheDocument();
     expect(screen.getByText("Datasets")).toBeInTheDocument();
-    expect(screen.getByText("AI Agents")).toBeInTheDocument();
+    expect(screen.getByText("Agent discovery")).toBeInTheDocument();
   });
 
   it("should render ASSURANCE group items", () => {

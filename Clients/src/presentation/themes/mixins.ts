@@ -1,5 +1,4 @@
 import { SxProps, Theme } from "@mui/material";
-import { fontSize, fontWeight, textStyles } from "./typography";
 
 /**
  * Common style mixins to prevent duplication across components
@@ -251,46 +250,28 @@ export const iconMixins = {
   }),
 };
 
-// Typography mixins — sizes/weights from typography.ts textStyles
+// Typography mixins
 export const typographyMixins = {
   pageTitle: (theme: Theme): SxProps<Theme> => ({
     color: theme.palette.text.primary,
-    ...textStyles.pageTitle,
-  }),
-
-  sectionTitle: (theme: Theme): SxProps<Theme> => ({
-    color: theme.palette.text.primary,
-    ...textStyles.sectionTitle,
+    fontSize: "16px",
+    fontWeight: 600,
   }),
 
   pageDescription: (theme: Theme): SxProps<Theme> => ({
     color: theme.palette.text.secondary,
-    ...textStyles.body,
+    fontSize: theme.typography.fontSize,
   }),
 
   cardTitle: (theme: Theme): SxProps<Theme> => ({
+    fontWeight: 500,
     color: theme.palette.text.primary,
-    ...textStyles.cardTitle,
+    fontSize: "16px",
   }),
 
   cardDescription: (theme: Theme): SxProps<Theme> => ({
     color: theme.palette.text.tertiary,
-    ...textStyles.bodyLarge,
-  }),
-
-  body: (theme: Theme): SxProps<Theme> => ({
-    color: theme.palette.text.primary,
-    ...textStyles.body,
-  }),
-
-  bodySmall: (theme: Theme): SxProps<Theme> => ({
-    color: theme.palette.text.secondary,
-    ...textStyles.bodySmall,
-  }),
-
-  caption: (theme: Theme): SxProps<Theme> => ({
-    color: theme.palette.text.tertiary,
-    ...textStyles.caption,
+    fontSize: "14px",
   }),
 };
 
@@ -302,8 +283,8 @@ export const statusMixins = {
     border: `1px solid ${theme.palette.status?.success?.main || "#17b26a"}`,
     borderRadius: theme.shape.borderRadius,
     padding: theme.spacing(0.5, 1),
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.medium,
+    fontSize: "12px",
+    fontWeight: 500,
   }),
 
   error: (theme: Theme): SxProps<Theme> => ({
@@ -312,8 +293,8 @@ export const statusMixins = {
     border: `1px solid ${theme.palette.status?.error?.border || "#f04438"}`,
     borderRadius: theme.shape.borderRadius,
     padding: theme.spacing(0.5, 1),
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.medium,
+    fontSize: "12px",
+    fontWeight: 500,
   }),
 
   warning: (theme: Theme): SxProps<Theme> => ({
@@ -322,8 +303,8 @@ export const statusMixins = {
     border: `1px solid ${theme.palette.status?.warning?.border || "#fec84b"}`,
     borderRadius: theme.shape.borderRadius,
     padding: theme.spacing(0.5, 1),
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.medium,
+    fontSize: "12px",
+    fontWeight: 500,
   }),
 
   info: (theme: Theme): SxProps<Theme> => ({
@@ -332,7 +313,7 @@ export const statusMixins = {
     border: `1px solid ${theme.palette.status?.info?.border || "#d0d5dd"}`,
     borderRadius: theme.shape.borderRadius,
     padding: theme.spacing(0.5, 1),
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.medium,
+    fontSize: "12px",
+    fontWeight: 500,
   }),
 };

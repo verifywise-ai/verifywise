@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Drawer, Stack, Box, Typography, Divider, IconButton, useTheme } from "@mui/material";
-import { X, Link as LinkIcon, Unlink, Pencil } from "lucide-react";
+import { X, Link as LinkIcon, Unlink } from "lucide-react";
 import VWChip from "../../Chip";
 import { CustomizableButton } from "../../button/customizable-button";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
@@ -9,26 +9,11 @@ import { displayFormattedDateTime } from "../../../tools/isoDateToString";
 import { getAllEntities } from "../../../../application/repository/entity.repository";
 import LinkModelModal from "./LinkModelModal";
 
-// Friendly display names for known discovery sources. Falls back to the raw
-// source_system key (title-cased) for any source not listed here.
-const SOURCE_LABELS: Record<string, string> = {
-  "azure-ai-foundry": "Azure AI Foundry",
-};
-
-function formatSourceLabel(sourceSystem: string): string {
-  if (SOURCE_LABELS[sourceSystem]) return SOURCE_LABELS[sourceSystem];
-  return sourceSystem
-    .split(/[-_]/)
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
-}
-
 interface ReviewAgentModalProps {
   isOpen: boolean;
   setIsOpen: (open: boolean) => void;
   agent: AgentPrimitiveRow | null;
   onSuccess: () => void;
-  onEdit?: (agent: AgentPrimitiveRow) => void;
 }
 
 const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
@@ -36,13 +21,11 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
   setIsOpen,
   agent,
   onSuccess,
-  onEdit,
 }) => {
   const theme = useTheme();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [usersMap, setUsersMap] = useState<Record<string, string>>({});
-  const [modelsMap, setModelsMap] = useState<Record<string, string>>({});
 
   const fetchUsers = useCallback(async () => {
     try {
@@ -58,39 +41,15 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
     }
   }, []);
 
-  const fetchModels = useCallback(async () => {
-    try {
-      const response = await getAllEntities({ routeUrl: "/modelInventory" });
-      const modelsData = Array.isArray(response?.data) ? response.data : [];
-      const map: Record<string, string> = {};
-      modelsData.forEach((m: any) => {
-        const modelName = m.model || m.provider_model || m.model_name || m.name;
-        map[String(m.id)] = modelName
-          ? m.provider
-            ? `${m.provider} · ${modelName}`
-            : modelName
-          : `Model #${m.id}`;
-      });
-      setModelsMap(map);
-    } catch (error) {
-      console.error("Failed to fetch models:", error);
-    }
-  }, []);
-
   useEffect(() => {
     if (isOpen) {
       fetchUsers();
-      fetchModels();
     }
-  }, [isOpen, fetchUsers, fetchModels]);
+  }, [isOpen, fetchUsers]);
 
   if (!agent) return null;
 
   const ownerName = agent.owner_id ? usersMap[agent.owner_id] || agent.owner_id : "—";
-  const linkedModelName = agent.linked_model_inventory_id
-    ? modelsMap[String(agent.linked_model_inventory_id)] ||
-      `Model #${agent.linked_model_inventory_id}`
-    : null;
   const reviewedByName = agent.reviewed_by
     ? usersMap[String(agent.reviewed_by)] || `User #${agent.reviewed_by}`
     : null;
@@ -157,30 +116,12 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
 
         {/* Content */}
         <Stack sx={{ p: "24px", gap: "20px", flex: 1, overflow: "auto" }}>
-          {/* Entry type — makes manual vs. discovered explicit up top */}
-          <Box>
-            <Typography fontSize={12} fontWeight={600} color="text.secondary" mb="4px">
-              Entry type
-            </Typography>
-            <VWChip
-              label={agent.is_manual ? "Manual" : formatSourceLabel(agent.source_system)}
-              variant="info"
-              size="small"
-            />
-          </Box>
-
           <DetailRow label="Display name" value={agent.display_name} />
+          <DetailRow label="Source system" value={agent.source_system} />
           <DetailRow label="Type" value={agent.primitive_type} />
+          <DetailRow label="External ID" value={agent.external_id} />
           <DetailRow label="Owner" value={ownerName} />
-          {/* Discovery-only fields — hidden for manually added agents, which have
-              no source/external id/activity data to show. */}
-          {!agent.is_manual && (
-            <>
-              <DetailRow label="Source system" value={formatSourceLabel(agent.source_system)} />
-              <DetailRow label="External ID" value={agent.external_id} />
-              <DetailRow label="Last activity" value={formatDate(agent.last_activity)} />
-            </>
-          )}
+          <DetailRow label="Last activity" value={formatDate(agent.last_activity)} />
           <DetailRow label="Created" value={formatDate(agent.created_at)} />
 
           {/* Review status with audit info */}
@@ -210,54 +151,47 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
           {agent.is_stale && (
             <DetailRow label="Stale" value="This agent has been inactive for 30+ days" />
           )}
+          {agent.is_manual && <DetailRow label="Entry type" value="Manually added" />}
 
-          {/* Notes — shown for manually added agents (their metadata.notes). */}
-          {agent.is_manual && agent.metadata?.notes && (
-            <DetailRow label="Notes" value={agent.metadata.notes} />
-          )}
-
-          {/* Permissions — discovery-derived, so hidden for manual agents. */}
-          {!agent.is_manual && (
-            <>
-              <Box>
-                <Typography fontSize={12} fontWeight={600} color="text.secondary" mb="4px">
-                  Categories
+          {/* Permissions - Categories */}
+          <Box>
+            <Typography fontSize={12} fontWeight={600} color="text.secondary" mb="4px">
+              Categories
+            </Typography>
+            <Stack direction="row" flexWrap="wrap" gap="4px">
+              {(agent.permission_categories || []).length > 0 ? (
+                agent.permission_categories.map((cat: string) => (
+                  <VWChip key={cat} label={cat} variant="info" size="small" />
+                ))
+              ) : (
+                <Typography fontSize={13} color="text.secondary">
+                  None
                 </Typography>
-                <Stack direction="row" flexWrap="wrap" gap="4px">
-                  {(agent.permission_categories || []).length > 0 ? (
-                    agent.permission_categories.map((cat: string) => (
-                      <VWChip key={cat} label={cat} variant="info" size="small" />
-                    ))
-                  ) : (
-                    <Typography fontSize={13} color="text.secondary">
-                      None
-                    </Typography>
-                  )}
-                </Stack>
-              </Box>
+              )}
+            </Stack>
+          </Box>
 
-              <Box>
-                <Typography fontSize={12} fontWeight={600} color="text.secondary" mb="4px">
-                  Raw permissions
+          {/* Permissions - Raw */}
+          <Box>
+            <Typography fontSize={12} fontWeight={600} color="text.secondary" mb="4px">
+              Raw permissions
+            </Typography>
+            <Stack direction="row" flexWrap="wrap" gap="4px">
+              {(agent.permissions || []).length > 0 ? (
+                agent.permissions.map((perm: any, idx: number) => (
+                  <VWChip
+                    key={idx}
+                    label={typeof perm === "string" ? perm : JSON.stringify(perm)}
+                    size="small"
+                  />
+                ))
+              ) : (
+                <Typography fontSize={13} color="text.secondary">
+                  None
                 </Typography>
-                <Stack direction="row" flexWrap="wrap" gap="4px">
-                  {(agent.permissions || []).length > 0 ? (
-                    agent.permissions.map((perm: any, idx: number) => (
-                      <VWChip
-                        key={idx}
-                        label={typeof perm === "string" ? perm : JSON.stringify(perm)}
-                        size="small"
-                      />
-                    ))
-                  ) : (
-                    <Typography fontSize={13} color="text.secondary">
-                      None
-                    </Typography>
-                  )}
-                </Stack>
-              </Box>
-            </>
-          )}
+              )}
+            </Stack>
+          </Box>
 
           {/* Model link */}
           <Box>
@@ -266,7 +200,7 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
             </Typography>
             {agent.linked_model_inventory_id ? (
               <Stack direction="row" alignItems="center" gap="8px">
-                <Typography fontSize={13}>{linkedModelName}</Typography>
+                <Typography fontSize={13}>Model #{agent.linked_model_inventory_id}</Typography>
                 <IconButton size="small" onClick={handleUnlink} title="Unlink model">
                   <Unlink size={14} strokeWidth={1.5} />
                 </IconButton>
@@ -282,9 +216,8 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
             )}
           </Box>
 
-          {/* Raw metadata — discovery-derived (region/project/etc). Hidden for
-              manual agents, whose only metadata (notes) is shown above. */}
-          {!agent.is_manual && Object.keys(agent.metadata || {}).length > 0 && (
+          {/* Metadata */}
+          {Object.keys(agent.metadata || {}).length > 0 && (
             <Box>
               <Typography fontSize={12} fontWeight={600} color="text.secondary" mb="8px">
                 Metadata
@@ -311,55 +244,33 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
 
         {/* Footer */}
         <Divider />
-        <Stack
-          direction="row"
-          justifyContent="space-between"
-          alignItems="center"
-          sx={{ p: "16px 24px" }}
-        >
-          {/* Edit — only for manually added agents (synced agents aren't editable). */}
-          <Box>
-            {agent.is_manual && onEdit && (
-              <CustomizableButton
-                variant="outlined"
-                sx={{ border: "1px solid #d0d5dd" }}
-                icon={<Pencil size={14} strokeWidth={1.5} />}
-                text="Edit"
-                onClick={() => {
-                  setIsOpen(false);
-                  onEdit(agent);
-                }}
-              />
-            )}
-          </Box>
-          <Stack direction="row" gap="8px">
+        <Stack direction="row" justifyContent="flex-end" gap="8px" sx={{ p: "16px 24px" }}>
+          <CustomizableButton
+            variant="outlined"
+            sx={{ border: "1px solid #d0d5dd" }}
+            onClick={() => setIsOpen(false)}
+          >
+            Cancel
+          </CustomizableButton>
+          {agent.review_status !== "rejected" && (
             <CustomizableButton
               variant="outlined"
-              sx={{ border: "1px solid #d0d5dd" }}
-              onClick={() => setIsOpen(false)}
+              sx={{ border: "1px solid #d32f2f", color: "#d32f2f" }}
+              onClick={() => handleReview("rejected")}
+              isDisabled={isSubmitting}
             >
-              Cancel
+              Reject
             </CustomizableButton>
-            {agent.review_status !== "rejected" && (
-              <CustomizableButton
-                variant="outlined"
-                sx={{ border: "1px solid #d32f2f", color: "#d32f2f" }}
-                onClick={() => handleReview("rejected")}
-                isDisabled={isSubmitting}
-              >
-                Reject
-              </CustomizableButton>
-            )}
-            {agent.review_status !== "confirmed" && (
-              <CustomizableButton
-                variant="contained"
-                onClick={() => handleReview("confirmed")}
-                isDisabled={isSubmitting}
-              >
-                Confirm
-              </CustomizableButton>
-            )}
-          </Stack>
+          )}
+          {agent.review_status !== "confirmed" && (
+            <CustomizableButton
+              variant="contained"
+              onClick={() => handleReview("confirmed")}
+              isDisabled={isSubmitting}
+            >
+              Confirm
+            </CustomizableButton>
+          )}
         </Stack>
       </Drawer>
 

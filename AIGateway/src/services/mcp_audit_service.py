@@ -39,15 +39,8 @@ async def log_tool_call(
     metadata: Optional[dict] = None,
     tool_use_id: Optional[str] = None,
     events: Optional[list] = None,
-    matched_rule_id: Optional[int] = None,
-    matched_rule_name: Optional[str] = None,
 ) -> None:
-    """Insert an MCP audit log entry. Fire-and-forget with error catch.
-
-    matched_rule_id / matched_rule_name record which guardrail or require_approval
-    rule produced a block / approval decision (decision provenance), so the
-    Activity log can show *why* a tool call was stopped.
-    """
+    """Insert an MCP audit log entry. Fire-and-forget with error catch."""
     try:
         # Truncate result_summary to 500 chars
         if result_summary and len(result_summary) > 500:
@@ -60,13 +53,13 @@ async def log_tool_call(
                         (organization_id, agent_key_id, server_id, tool_name,
                          arguments, result_status, result_summary, is_error,
                          latency_ms, session_id, metadata, tool_use_id, events,
-                         agent_run_id, matched_rule_id, matched_rule_name)
+                         agent_run_id)
                     VALUES
                         (:org_id, :agent_key_id, :server_id, :tool_name,
                          CAST(:arguments AS jsonb), :result_status, :result_summary, :is_error,
                          :latency_ms, :session_id, CAST(:metadata AS jsonb),
                          :tool_use_id, CAST(:events AS jsonb),
-                         :agent_run_id, :matched_rule_id, :matched_rule_name)
+                         :agent_run_id)
                 """),
                 {
                     "org_id": organization_id,
@@ -83,8 +76,6 @@ async def log_tool_call(
                     "tool_use_id": tool_use_id,
                     "events": json.dumps(events or []),
                     "agent_run_id": session_id,
-                    "matched_rule_id": matched_rule_id,
-                    "matched_rule_name": matched_rule_name,
                 },
             )
             await db.commit()
