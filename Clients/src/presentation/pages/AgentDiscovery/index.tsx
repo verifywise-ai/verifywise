@@ -465,6 +465,11 @@ const AgentDiscovery: React.FC = () => {
         setIsOpen={setIsReviewModalOpen}
         agent={selectedAgent}
         onSuccess={handleReviewSuccess}
+        onEdit={(agent) => {
+          setSelectedAgent(null);
+          setEditAgent(agent);
+          setIsManualModalOpen(true);
+        }}
       />
 
       {/* Manual entry modal */}

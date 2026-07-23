@@ -25,6 +25,7 @@ import {
   ShieldCheck,
   Settings,
   CirclePlus,
+  UserPen,
 } from "lucide-react";
 import IconButton from "../../components/IconButton";
 import { ReactComponent as SelectorVertical } from "../../assets/icons/selector-vertical.svg";
@@ -62,6 +63,20 @@ const TABLE_COLUMNS = [
 
 type SortDirection = "asc" | "desc" | null;
 type SortConfig = { key: string; direction: SortDirection };
+
+// Friendly display names for known discovery sources. Falls back to the raw
+// source_system key (title-cased) for any source not listed here.
+const SOURCE_LABELS: Record<string, string> = {
+  "azure-ai-foundry": "Azure AI Foundry",
+};
+
+function formatSourceLabel(sourceSystem: string): string {
+  if (SOURCE_LABELS[sourceSystem]) return SOURCE_LABELS[sourceSystem];
+  return sourceSystem
+    .split(/[-_]/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
 
 const AgentTable: React.FC<AgentTableProps> = ({
   agents,
@@ -330,7 +345,18 @@ const AgentTable: React.FC<AgentTableProps> = ({
             <TableCell sx={cellStyle}>{agent.display_name}</TableCell>
           )}
           {isColVisible("source_system") && (
-            <TableCell sx={cellStyle}>{agent.source_system}</TableCell>
+            <TableCell sx={cellStyle}>
+              <Stack direction="row" alignItems="center" spacing={0.75}>
+                {agent.is_manual ? (
+                  <UserPen size={14} strokeWidth={1.5} color="#667085" />
+                ) : (
+                  <Plug size={14} strokeWidth={1.5} color="#667085" />
+                )}
+                <span>
+                  {agent.is_manual ? "Manually entered" : formatSourceLabel(agent.source_system)}
+                </span>
+              </Stack>
+            </TableCell>
           )}
           {isColVisible("primitive_type") && (
             <TableCell sx={cellStyle}>{agent.primitive_type}</TableCell>
