@@ -123,6 +123,18 @@ async def create_guardrail(request: Request):
                 detail="applies_to_tools must be an array of strings",
             )
 
+    # Validate applies_to_agent_keys (optional, must be array of agent-key ids).
+    # Empty/omitted means the rule applies to every agent (org-wide).
+    applies_to_agent_keys = body.get("applies_to_agent_keys")
+    if applies_to_agent_keys is not None:
+        if not isinstance(applies_to_agent_keys, list) or not all(
+            isinstance(k, int) for k in applies_to_agent_keys
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="applies_to_agent_keys must be an array of agent-key ids",
+            )
+
     # Validate is_active (optional, defaults to true)
     is_active = body.get("is_active", True)
     if not isinstance(is_active, bool):
@@ -141,6 +153,7 @@ async def create_guardrail(request: Request):
         "scope": scope,
         "action": action,
         "applies_to_tools": applies_to_tools or [],
+        "applies_to_agent_keys": applies_to_agent_keys or [],
         "is_active": is_active,
         "created_by": user_id,
     }
@@ -257,6 +270,21 @@ async def update_guardrail(rule_id: int, request: Request):
                     detail="applies_to_tools must be an array of strings",
                 )
         updates["applies_to_tools"] = applies_to_tools if applies_to_tools is not None else []
+
+    # applies_to_agent_keys
+    if "applies_to_agent_keys" in body:
+        applies_to_agent_keys = body["applies_to_agent_keys"]
+        if applies_to_agent_keys is not None and (
+            not isinstance(applies_to_agent_keys, list)
+            or not all(isinstance(k, int) for k in applies_to_agent_keys)
+        ):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="applies_to_agent_keys must be an array of agent-key ids",
+            )
+        updates["applies_to_agent_keys"] = (
+            applies_to_agent_keys if applies_to_agent_keys is not None else []
+        )
 
     # is_active
     if "is_active" in body:
