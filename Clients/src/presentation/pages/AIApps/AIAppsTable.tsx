@@ -9,7 +9,7 @@ import {
   Stack,
   Tooltip,
 } from "@mui/material";
-import { Bot, Eye, SquarePen, Trash2 } from "lucide-react";
+import { Bot, Eye, SquarePen, Trash2, ScanSearch, ShieldCheck, ClipboardCheck } from "lucide-react";
 import Chip from "../../components/Chip";
 import { IAIApp } from "../../../domain/interfaces/i.aiApp";
 import singleTheme from "../../themes/v1SingleTheme";
@@ -19,12 +19,17 @@ import StandardTablePagination from "../../components/Table/StandardTablePaginat
 import { useStandardTable } from "../../../application/hooks/useStandardTable";
 import type { StandardColumn } from "../../../domain/types/standardTable";
 import { statusToChipProps, formatDiscoveredSource } from "./utils";
+import { TableEmptyStateLayout } from "../../components/Table/TableEmptyStateLayout";
+import { EmptyState } from "../../components/EmptyState";
+import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 
 interface AIAppsTableProps {
   apps: IAIApp[];
   onEditApp: (app: IAIApp) => void;
   onViewApp: (app: IAIApp) => void;
   onDeleteApp: (app: IAIApp) => void;
+  emptyMessage?: string;
+  showEmptyTips?: boolean;
 }
 
 const TABLE_COLUMNS: StandardColumn[] = [
@@ -36,7 +41,14 @@ const TABLE_COLUMNS: StandardColumn[] = [
   { id: "actions", label: "Actions", sortable: false, align: "right" },
 ];
 
-export default function AIAppsTable({ apps, onEditApp, onViewApp, onDeleteApp }: AIAppsTableProps) {
+export default function AIAppsTable({
+  apps,
+  onEditApp,
+  onViewApp,
+  onDeleteApp,
+  emptyMessage = "This is your inventory of the AI apps your teams use. Record who owns each one and how it was found, then manage it from here. Add your first AI app to get started.",
+  showEmptyTips = false,
+}: AIAppsTableProps) {
   const sortComparator = useCallback((a: IAIApp, b: IAIApp, key: string): number => {
     switch (key) {
       case "name":
@@ -70,10 +82,42 @@ export default function AIAppsTable({ apps, onEditApp, onViewApp, onDeleteApp }:
     sortComparator,
   });
 
+  const tableHeader = (
+    <StandardTableHead columns={TABLE_COLUMNS} sortConfig={sortConfig} onSort={handleSort} />
+  );
+
+  if (!sortedRows || sortedRows.length === 0) {
+    return (
+      <TableEmptyStateLayout header={tableHeader}>
+        <EmptyState icon={Bot} message={emptyMessage}>
+          {showEmptyTips && (
+            <>
+              <EmptyStateTip
+                icon={ScanSearch}
+                title="Keep one list of every AI app"
+                description="Record the AI tools your teams use, including shadow AI you promote from a discovered tool, with its owner, vendor and how you found it."
+              />
+              <EmptyStateTip
+                icon={ShieldCheck}
+                title="Map models and policies"
+                description="Link each app to the models it runs on and the policies that apply to it, so you have a clear record for every tool."
+              />
+              <EmptyStateTip
+                icon={ClipboardCheck}
+                title="Run approvals and risk assessments"
+                description="Take an app from draft to approved, score its risk and assign the training people need before they use it."
+              />
+            </>
+          )}
+        </EmptyState>
+      </TableEmptyStateLayout>
+    );
+  }
+
   return (
     <TableContainer sx={{ overflowX: "auto" }}>
       <Table sx={singleTheme.tableStyles.primary.frame}>
-        <StandardTableHead columns={TABLE_COLUMNS} sortConfig={sortConfig} onSort={handleSort} />
+        {tableHeader}
         <TableBody>
           {sortedRows
             .slice(validPage * rowsPerPage, validPage * rowsPerPage + rowsPerPage)

@@ -59,8 +59,8 @@ const Features: React.FC = () => {
               </Typography>
               <Typography sx={{ fontSize: 13, color: theme.palette.text.secondary }}>
                 {isQuantitative
-                  ? "Enabled — risks include FAIR-based monetary estimates (ALE, residual risk, ROI)."
-                  : "Disabled — risks use qualitative scoring only (severity, likelihood)."}
+                  ? "Enabled — risks include monetary estimates based on the FAIR model: annual loss expectancy, residual risk after controls, and return on mitigation investment."
+                  : "Disabled — risks use qualitative scoring only, based on severity and likelihood."}
               </Typography>
               {!isAdmin && (
                 <Typography

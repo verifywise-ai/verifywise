@@ -109,9 +109,11 @@ export async function createAssessment(req: Request, res: Response): Promise<any
 
   try {
     const assessmentData = req.body;
+    assessmentData.organization_id = req.organizationId!;
 
     // Validate required fields
     if (!assessmentData.project_id) {
+      await transaction.rollback();
       return res.status(400).json(
         STATUS_CODE[400]({
           message: req.t!("project_id is required"),
@@ -194,6 +196,7 @@ export async function updateAssessmentById(req: Request, res: Response): Promise
     const assessmentData = req.body;
 
     if (!assessmentData.project_id) {
+      await transaction.rollback();
       return res.status(400).json(
         STATUS_CODE[400]({
           message: req.t!("project_id is required"),
@@ -298,6 +301,7 @@ export async function deleteAssessmentById(req: Request, res: Response): Promise
       return res.status(202).json(STATUS_CODE[202](deletedAssessment));
     }
 
+    await transaction.rollback();
     await logSuccess({
       eventType: "Delete",
       description: `Assessment not found for deletion: ID ${assessmentId}`,

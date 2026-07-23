@@ -1,0 +1,32 @@
+# Managed by Ansible
+server {
+    server_name {{ server_name_value }};
+
+    client_max_body_size 200M;
+
+    # Custom error page for maintenance/upgrades
+    error_page 502 503 504 /upgrade.html;
+
+    location = /upgrade.html {
+        root /var/www/verifywise;
+        internal;
+    }
+
+    location / {
+        proxy_pass http://localhost:{{ frontend_port }};
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    location /api/ {
+        proxy_pass http://localhost:{{ backend_port }};
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+}

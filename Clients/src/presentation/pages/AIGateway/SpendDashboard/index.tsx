@@ -47,12 +47,16 @@ import { sectionTitleSx, useCardSx, GUARDRAIL_ACTION_COLORS, formatEntityType } 
 import { useUserGuideSidebarContext } from "../../../components/UserGuide/UserGuideSidebarContext";
 import MockDashboard from "./MockDashboard";
 import OnboardingOverlay from "./OnboardingOverlay";
+import { displayFormattedDate } from "../../../tools/isoDateToString";
+import { storageService } from "../../../../infrastructure/storage";
+
+const numberFormatter = new Intl.NumberFormat("en-US");
 
 /** Shared date tick formatter for all time-series charts */
 const formatDayTick = (v: string, period: string) => {
   if (period === "1d") return v;
   const d = new Date(v + "T00:00:00");
-  return isNaN(d.getTime()) ? v : d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return isNaN(d.getTime()) ? v : displayFormattedDate(d);
 };
 
 const PERIOD_OPTIONS = [
@@ -65,9 +69,7 @@ const PERIOD_OPTIONS = [
 export default function SpendDashboardPage() {
   const cardSx = useCardSx();
   const userGuideSidebar = useUserGuideSidebarContext();
-  const [period, setPeriod] = useState(() => {
-    return localStorage.getItem("vw_ai_gateway_analytics_period") || "1d";
-  });
+  const [period, setPeriod] = useState(() => storageService.get("aiGatewayAnalyticsPeriod", "1d"));
   const [data, setData] = useState<any>(null);
   const [byEndpoint, setByEndpoint] = useState<any[]>([]);
   const [byUser, setByUser] = useState<any[]>([]);
@@ -281,7 +283,7 @@ export default function SpendDashboardPage() {
           onChange={(e) => {
             const val = e.target.value as string;
             setPeriod(val);
-            localStorage.setItem("vw_ai_gateway_analytics_period", val);
+            storageService.set("aiGatewayAnalyticsPeriod", val);
           }}
           sx={{ width: 140 }}
         />
@@ -766,7 +768,7 @@ export default function SpendDashboardPage() {
                         const v = Number(value) || 0;
                         const n = String(name ?? "");
                         return [
-                          v.toLocaleString(),
+                          numberFormatter.format(v),
                           n === "avg_prompt_tokens" ? "Prompt" : "Completion",
                         ];
                       }}

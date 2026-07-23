@@ -5,13 +5,34 @@
   serial: 1  # one server at a time; remove for parallel
 
   tasks:
+    - name: Detect available Compose command (v2 plugin or legacy binary)
+      ansible.builtin.shell: |
+        if docker compose version >/dev/null 2>&1; then
+          echo "docker compose"
+        elif command -v docker-compose >/dev/null 2>&1; then
+          echo "docker-compose"
+        else
+          echo "MISSING"
+          exit 1
+        fi
+      register: compose_detect
+      changed_when: false
+
+    - name: Set compose_cmd fact
+      ansible.builtin.set_fact:
+        compose_cmd: "{{ compose_detect.stdout }}"
+
     - name: Read existing .env.prod from server
       ansible.builtin.slurp:
         src: "{{ install_dir }}/.env.prod"
       register: existing_env
 
-    - name: Preserve existing secrets (don't regenerate on update)
+    - name: Preserve existing secrets and DB creds (don't regenerate on update)
       ansible.builtin.set_fact:
+        db_host: "{{ existing_env.content | b64decode | regex_search('^DB_HOST=(.*)$', '\\1', multiline=True) | first }}"
+        db_port: "{{ existing_env.content | b64decode | regex_search('^DB_PORT=(.*)$', '\\1', multiline=True) | first }}"
+        db_name: "{{ existing_env.content | b64decode | regex_search('^DB_NAME=(.*)$', '\\1', multiline=True) | first }}"
+        db_user: "{{ existing_env.content | b64decode | regex_search('^DB_USER=(.*)$', '\\1', multiline=True) | first }}"
         db_password: "{{ existing_env.content | b64decode | regex_search('^DB_PASSWORD=(.*)$', '\\1', multiline=True) | first }}"
         superadmin_password: "{{ existing_env.content | b64decode | regex_search('^SUPERADMIN_PASSWORD=(.*)$', '\\1', multiline=True) | first }}"
         jwt_secret: "{{ existing_env.content | b64decode | regex_search('^JWT_SECRET=(.*)$', '\\1', multiline=True) | first }}"
@@ -35,24 +56,27 @@
         mode: "0600"
 
     - name: Pull latest images
-      ansible.builtin.command:
-        cmd: docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod pull
+      ansible.builtin.shell: "{{ compose_cmd }} -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod pull"
+      args:
         chdir: "{{ install_dir }}"
       changed_when: true
 
     - name: Recreate containers with new images / config
-      ansible.builtin.command:
-        cmd: docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod up -d
+      ansible.builtin.shell: "{{ compose_cmd }} -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod up -d"
+      args:
         chdir: "{{ install_dir }}"
       register: compose_up
       changed_when: "'Recreated' in compose_up.stderr or 'Started' in compose_up.stderr"
 
-    - name: Wait for backend to respond on port {{ backend_port }}
-      ansible.builtin.wait_for:
-        host: 127.0.0.1
-        port: "{{ backend_port }}"
-        delay: 5
-        timeout: 120
+    - name: Wait for backend health endpoint
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ backend_port }}/health"
+        method: GET
+        status_code: 200
+      register: result
+      until: result.status == 200
+      retries: 24
+      delay: 5
 
     - name: Prune unused images
       ansible.builtin.command: docker image prune -f

@@ -80,6 +80,7 @@ export const validateStartDate = (value: any): ValidationResult => {
 export const validateAiRiskClassification = (
   value: any,
   isOrganizational?: boolean,
+  frameworkIds?: number[],
 ): ValidationResult => {
   // For organizational projects, ai_risk_classification should be null
   if (isOrganizational) {
@@ -93,7 +94,20 @@ export const validateAiRiskClassification = (
     return { isValid: true };
   }
 
-  // For non-organizational projects, validation is required
+  // For non-organizational projects, AI risk classification is only required when EU AI Act (1) is selected
+  const hasEuAiAct = frameworkIds === undefined || frameworkIds.includes(1);
+  if (!hasEuAiAct) {
+    if (value !== null && value !== undefined && value !== "") {
+      return {
+        isValid: false,
+        message: "AI risk classification must be null when EU AI Act is not selected",
+        code: "AI_RISK_WITHOUT_EU_AI_ACT",
+      };
+    }
+    return { isValid: true };
+  }
+
+  // EU AI Act is selected: validate the risk classification
   return validateEnum(value, "AI risk classification", AI_RISK_CLASSIFICATION_ENUM, true);
 };
 
@@ -104,6 +118,7 @@ export const validateAiRiskClassification = (
 export const validateTypeOfHighRiskRole = (
   value: any,
   isOrganizational?: boolean,
+  frameworkIds?: number[],
 ): ValidationResult => {
   // For organizational projects, type_of_high_risk_role should be null
   if (isOrganizational) {
@@ -117,7 +132,20 @@ export const validateTypeOfHighRiskRole = (
     return { isValid: true };
   }
 
-  // For non-organizational projects, validation is required
+  // For non-organizational projects, high-risk role is only required when EU AI Act (1) is selected
+  const hasEuAiAct = frameworkIds === undefined || frameworkIds.includes(1);
+  if (!hasEuAiAct) {
+    if (value !== null && value !== undefined && value !== "") {
+      return {
+        isValid: false,
+        message: "Type of high risk role must be null when EU AI Act is not selected",
+        code: "HIGH_RISK_ROLE_WITHOUT_EU_AI_ACT",
+      };
+    }
+    return { isValid: true };
+  }
+
+  // EU AI Act is selected: validate the high-risk role
   return validateEnum(value, "Type of high risk role", HIGH_RISK_ROLE_ENUM, true);
 };
 
@@ -155,13 +183,9 @@ export const validateIsOrganizational = (value: any): ValidationResult => {
  * 2. Update: [{project_framework_id: 1, framework_id: 1}] (array of objects)
  */
 export const validateFramework = (value: any): ValidationResult => {
-  // Framework field is required
-  if (value === undefined || value === null || (Array.isArray(value) && value.length === 0)) {
-    return {
-      isValid: false,
-      message: "Framework is required and must contain at least one framework ID",
-      code: "REQUIRED_FIELD",
-    };
+  // Framework field is optional for use cases; an empty array is valid
+  if (value === undefined || value === null) {
+    return { isValid: true };
   }
 
   // Must be an array
@@ -173,8 +197,13 @@ export const validateFramework = (value: any): ValidationResult => {
     };
   }
 
-  // Valid framework IDs: 1=EU AI Act, 2=ISO 42001, 3=ISO 27001
-  const validFrameworkIds = [1, 2, 3];
+  // Empty array is valid (framework-free use case)
+  if (value.length === 0) {
+    return { isValid: true };
+  }
+
+  // Valid framework IDs: 1=EU AI Act, 2=ISO 42001, 3=ISO 27001, 4=NIST AI RMF
+  const validFrameworkIds = [1, 2, 3, 4];
 
   // Extract framework IDs based on format
   const frameworkIds: number[] = [];
@@ -218,7 +247,7 @@ export const validateFramework = (value: any): ValidationResult => {
     if (!validFrameworkIds.includes(frameworkId)) {
       return {
         isValid: false,
-        message: `Framework ID ${frameworkId} is not valid. Valid IDs are: 1 (EU AI Act), 2 (ISO 42001), 3 (ISO 27001)`,
+        message: `Framework ID ${frameworkId} is not valid. Valid IDs are: 1 (EU AI Act), 2 (ISO 42001), 3 (ISO 27001), 4 (NIST AI RMF)`,
         code: "INVALID_FRAMEWORK_ID",
       };
     }
@@ -339,13 +368,15 @@ export const updateProjectSchema = {
 export const validateCompleteProject = (data: any): ValidationError[] => {
   const errors = validateSchema(data, createProjectSchema);
 
-  // Conditional validation for AI risk fields based on organizational status
+  // Conditional validation for AI risk fields based on organizational status and selected frameworks
   const isOrganizational = data.is_organizational;
+  const frameworkIds = extractFrameworkIds(data.framework || []);
 
   // Validate ai_risk_classification conditionally
   const aiRiskValidation = validateAiRiskClassification(
     data.ai_risk_classification,
     isOrganizational,
+    frameworkIds,
   );
   if (!aiRiskValidation.isValid) {
     errors.push({
@@ -359,6 +390,7 @@ export const validateCompleteProject = (data: any): ValidationError[] => {
   const highRiskRoleValidation = validateTypeOfHighRiskRole(
     data.type_of_high_risk_role,
     isOrganizational,
+    frameworkIds,
   );
   if (!highRiskRoleValidation.isValid) {
     errors.push({
@@ -417,18 +449,22 @@ export const validateUpdateProject = (data: any, currentProject?: any): Validati
 
   const errors = validateSchema(data, updateProjectSchema);
 
-  // Conditional validation for AI risk fields based on organizational status
+  // Conditional validation for AI risk fields based on organizational status and selected frameworks
   // Use updated organizational status if provided, otherwise use current project status
   const isOrganizational =
     data.is_organizational !== undefined
       ? data.is_organizational
       : currentProject?.is_organizational;
+  const frameworkIds = extractFrameworkIds(
+    data.framework !== undefined ? data.framework : currentProject?.framework || [],
+  );
 
   // Only validate AI risk fields if they are being updated
   if (data.ai_risk_classification !== undefined) {
     const aiRiskValidation = validateAiRiskClassification(
       data.ai_risk_classification,
       isOrganizational,
+      frameworkIds,
     );
     if (!aiRiskValidation.isValid) {
       errors.push({
@@ -443,6 +479,7 @@ export const validateUpdateProject = (data: any, currentProject?: any): Validati
     const highRiskRoleValidation = validateTypeOfHighRiskRole(
       data.type_of_high_risk_role,
       isOrganizational,
+      frameworkIds,
     );
     if (!highRiskRoleValidation.isValid) {
       errors.push({
@@ -559,33 +596,29 @@ export const validateOrganizationalFrameworkConsistency = (
   isOrganizational: boolean,
   frameworks: number[],
 ): ValidationResult => {
-  // Framework validation is mandatory
+  // Frameworks are optional for use cases; empty is valid
   if (!frameworks || frameworks.length === 0) {
-    return {
-      isValid: false,
-      message: "Framework array is required and cannot be empty",
-      code: "REQUIRED_FRAMEWORKS",
-    };
+    return { isValid: true };
   }
 
-  // Organizational frameworks: ISO-42001 (2), ISO-27001 (3)
-  const organizationalFrameworks = [2, 3];
-  // Non-organizational framework: EU-AI-Act (1)
+  // Organizational frameworks: ISO-42001 (2), ISO-27001 (3), NIST AI RMF (4)
+  const organizationalFrameworks = [2, 3, 4];
+  // Non-organizational frameworks are data-driven; today this is only EU-AI-Act (1)
   const nonOrganizationalFrameworks = [1];
 
   if (isOrganizational) {
-    // For organizational projects, only allow frameworks 2 and 3
+    // For organizational projects, only allow organizational frameworks
     const hasInvalidFramework = frameworks.some((id) => !organizationalFrameworks.includes(id));
     if (hasInvalidFramework) {
       const invalidFrameworks = frameworks.filter((id) => !organizationalFrameworks.includes(id));
       return {
         isValid: false,
-        message: `Organizational projects can only use organizational frameworks: ISO 42001 (2) or ISO 27001 (3). Invalid framework IDs: ${invalidFrameworks.join(", ")}`,
+        message: `Organizational projects can only use organizational frameworks: ISO 42001 (2), ISO 27001 (3), or NIST AI RMF (4). Invalid framework IDs: ${invalidFrameworks.join(", ")}`,
         code: "INVALID_ORGANIZATIONAL_FRAMEWORK",
       };
     }
   } else {
-    // For non-organizational (AI) projects, only allow framework 1
+    // For non-organizational (AI/use-case) projects, only allow non-organizational frameworks
     const hasInvalidFramework = frameworks.some((id) => !nonOrganizationalFrameworks.includes(id));
     if (hasInvalidFramework) {
       const invalidFrameworks = frameworks.filter(
@@ -593,7 +626,7 @@ export const validateOrganizationalFrameworkConsistency = (
       );
       return {
         isValid: false,
-        message: `Non-organizational (AI) projects can only use EU AI Act framework (1). Invalid framework IDs: ${invalidFrameworks.join(", ")}`,
+        message: `Non-organizational (AI) projects can only use use-case-level frameworks. Invalid framework IDs: ${invalidFrameworks.join(", ")}`,
         code: "INVALID_NON_ORGANIZATIONAL_FRAMEWORK",
       };
     }

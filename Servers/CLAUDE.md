@@ -15,6 +15,8 @@ Shared-schema isolation with `organization_id` column on all tenant-scoped table
 
 **Access:** `req.organizationId` from auth middleware. Queries use unqualified table names (resolved by `search_path`): `SELECT * FROM projects WHERE organization_id = :orgId AND id = :id`.
 
+**Security runbook:** `docs/technical/security/tenant-isolation.md` defines the deny-by-default policy, SuperAdmin exception rules, context propagation rules, and the isolation test matrix. Read it before adding or modifying tenant-scoped endpoints.
+
 **Legacy data migration (existing installs only):** `scripts/migrateToSharedSchema.ts` migrates data from old schema-per-tenant (`{tenantHash}`) format to the shared `verifywise` schema. This only runs for organizations that still have data in old tenant schemas. Fresh installs don't need it. Config in `scripts/migrationConfig.ts`.
 
 ---
@@ -223,5 +225,6 @@ Read the relevant file BEFORE implementing changes in that area:
 | Middleware (rate limit, RBAC, JWT, Redis) | `docs/claude/middleware.md`                       |
 | Database schema                           | `docs/technical/architecture/database-schema.md`  |
 | Multi-tenancy architecture                | `docs/technical/architecture/multi-tenancy.md`    |
+| Tenant isolation security runbook         | `docs/technical/security/tenant-isolation.md`     |
 
 > All `docs/` paths are relative to the repository root.

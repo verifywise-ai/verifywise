@@ -17,7 +17,9 @@ import {
   Medal,
   Trophy,
   Award,
+  RotateCcw,
 } from "lucide-react";
+import { Alert as MuiAlert } from "@mui/material";
 import Field from "../../../components/Inputs/Field";
 import Select from "../../../components/Inputs/Select";
 import TabBar from "../../../components/TabBar";
@@ -26,6 +28,8 @@ import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtende
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import palette from "../../../themes/palette";
 import { sectionTitleSx, useCardSx, ProviderIcon } from "../shared";
+import CustomizableSkeleton from "../../../components/Skeletons";
+import { EmptyState } from "../../../components/EmptyState";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -118,6 +122,8 @@ export default function ModelsPage() {
   ]);
 
   const loadModels = useCallback(async () => {
+    setLoading(true);
+    setError("");
     try {
       const res = await apiServices.get<Record<string, any>>("/ai-gateway/models/catalog");
       setModels(res?.data?.data?.models || res?.data?.models || []);
@@ -421,17 +427,25 @@ export default function ModelsPage() {
 
                 {/* Rows */}
                 {error ? (
-                  <Typography sx={{ p: "16px", fontSize: 13, color: palette.status.error.text }}>
-                    {error}
-                  </Typography>
+                  <Stack alignItems="center" spacing={2} sx={{ py: 4 }}>
+                    <MuiAlert severity="error" sx={{ width: "100%", maxWidth: 600 }}>
+                      {error}
+                    </MuiAlert>
+                    <CustomizableButton
+                      variant="outlined"
+                      text="Retry"
+                      icon={<RotateCcw size={16} />}
+                      onClick={loadModels}
+                    />
+                  </Stack>
                 ) : loading ? (
-                  <Typography sx={{ p: "16px", fontSize: 13, color: palette.text.tertiary }}>
-                    Loading models...
-                  </Typography>
+                  <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
                 ) : pageModels.length === 0 ? (
-                  <Typography sx={{ p: "16px", fontSize: 13, color: palette.text.tertiary }}>
-                    No models match your filters.
-                  </Typography>
+                  <EmptyState
+                    icon={Database}
+                    message="No models match your filters."
+                    showBorder={false}
+                  />
                 ) : (
                   <Stack gap="0px">
                     {pageModels.map((m) => (

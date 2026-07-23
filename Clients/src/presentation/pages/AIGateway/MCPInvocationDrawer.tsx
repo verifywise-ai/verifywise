@@ -1,9 +1,12 @@
 import { Box, Drawer, Typography, Stack, IconButton, Divider } from "@mui/material";
-import { X } from "lucide-react";
+import { X, AlertTriangle, RotateCcw } from "lucide-react";
 import { useState, useEffect } from "react";
 import Chip from "../../components/Chip";
+import { CustomizableButton } from "../../components/button/customizable-button";
+import { EmptyState } from "../../components/EmptyState";
 import { apiServices } from "../../../infrastructure/api/networkServices";
 import palette from "../../themes/palette";
+import CustomizableSkeleton from "../../components/Skeletons";
 import {
   MCP_STATUS_COLORS,
   MCP_STATUS_FALLBACK,
@@ -42,16 +45,21 @@ interface AuditLogDetail {
 
 export default function MCPInvocationDrawer({ logId, open, onClose }: InvocationDrawerProps) {
   const [row, setRow] = useState<AuditLogDetail | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
   const [showRaw, setShowRaw] = useState(false);
 
   useEffect(() => {
     if (!open || !logId) return;
     setRow(null);
+    setError(false);
+    setLoading(true);
     setShowRaw(false);
     apiServices
       .get<Record<string, any>>(`/ai-gateway/mcp/audit/logs/${logId}`)
       .then((res) => setRow((res?.data?.data as AuditLogDetail) || null))
-      .catch(() => setRow(null));
+      .catch(() => setError(true))
+      .finally(() => setLoading(false));
   }, [open, logId]);
 
   const colors = row
@@ -82,9 +90,28 @@ export default function MCPInvocationDrawer({ logId, open, onClose }: Invocation
       onClose={onClose}
       sx={{ "& .MuiDrawer-paper": { width: 520, px: "16px", py: "20px" } }}
     >
-      {!row ? (
-        <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>Loading…</Typography>
-      ) : (
+      {loading ? (
+        <CustomizableSkeleton variant="rectangular" width="100%" height={200} />
+      ) : error ? (
+        <EmptyState icon={AlertTriangle} message="Failed to load invocation details.">
+          <CustomizableButton
+            variant="outlined"
+            text="Retry"
+            icon={<RotateCcw size={16} />}
+            onClick={() => {
+              if (logId) {
+                setError(false);
+                setLoading(true);
+                apiServices
+                  .get<Record<string, any>>(`/ai-gateway/mcp/audit/logs/${logId}`)
+                  .then((res) => setRow((res?.data?.data as AuditLogDetail) || null))
+                  .catch(() => setError(true))
+                  .finally(() => setLoading(false));
+              }
+            }}
+          />
+        </EmptyState>
+      ) : row ? (
         <Stack gap="20px">
           {/* Header */}
           <Stack direction="row" justifyContent="space-between" alignItems="flex-start" gap="8px">
@@ -200,6 +227,10 @@ export default function MCPInvocationDrawer({ logId, open, onClose }: Invocation
             )}
           </Box>
         </Stack>
+      ) : (
+        <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
+          Select a log to view details.
+        </Typography>
       )}
     </Drawer>
   );

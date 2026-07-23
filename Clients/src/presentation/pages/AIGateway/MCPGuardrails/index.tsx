@@ -1,6 +1,16 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { Box, Typography, Stack, IconButton } from "@mui/material";
-import { CirclePlus, ShieldCheck, Trash2, Pencil, Shield, ScanLine, Lock } from "lucide-react";
+import {
+  CirclePlus,
+  ShieldCheck,
+  Trash2,
+  Pencil,
+  Shield,
+  ScanLine,
+  Lock,
+  AlertTriangle,
+  RotateCcw,
+} from "lucide-react";
 import Toggle from "../../../components/Inputs/Toggle";
 import { EmptyState } from "../../../components/EmptyState";
 import EmptyStateTip from "../../../components/EmptyState/EmptyStateTip";
@@ -12,8 +22,8 @@ import StandardModal from "../../../components/Modals/StandardModal";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import palette from "../../../themes/palette";
-import { useCardSx } from "../shared";
 import MCPTable from "../MCPTable";
+import CustomizableSkeleton from "../../../components/Skeletons";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -80,9 +90,9 @@ const RULE_TYPE_LABELS: Record<string, string> = {
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function MCPGuardrailsPage() {
-  const cardSx = useCardSx();
   const [rules, setRules] = useState<MCPGuardrail[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Create / Edit modal
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -96,11 +106,13 @@ export default function MCPGuardrailsPage() {
   const [deleteSubmitting, setDeleteSubmitting] = useState(false);
 
   const loadData = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
     try {
       const res = await apiServices.get<Record<string, any>>("/ai-gateway/mcp/guardrails");
       setRules(res?.data?.data || []);
     } catch {
-      // Silently handle
+      setLoadError("Failed to load guardrails. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -269,11 +281,16 @@ export default function MCPGuardrailsPage() {
       }
     >
       {loading ? (
-        <Box sx={cardSx}>
-          <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
-            Loading guardrails...
-          </Typography>
-        </Box>
+        <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
+      ) : loadError ? (
+        <EmptyState icon={AlertTriangle} message={loadError}>
+          <CustomizableButton
+            variant="outlined"
+            text="Retry"
+            icon={<RotateCcw size={16} />}
+            onClick={loadData}
+          />
+        </EmptyState>
       ) : rules.length === 0 ? (
         <EmptyState
           icon={Shield}

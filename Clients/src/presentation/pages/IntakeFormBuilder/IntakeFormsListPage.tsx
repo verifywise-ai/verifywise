@@ -24,6 +24,7 @@ import {
 } from "@mui/material";
 import TabContext from "@mui/lab/TabContext";
 import TabBar from "../../components/TabBar";
+import { displayFormattedDate } from "../../tools/isoDateToString";
 import {
   Plus,
   Settings,
@@ -73,11 +74,7 @@ import {
 function formatDate(date: Date | string): string {
   const d = new Date(date);
   if (isNaN(d.getTime())) return "—";
-  return d.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-  });
+  return displayFormattedDate(d);
 }
 
 const ENTITY_LABELS: Record<string, string> = {

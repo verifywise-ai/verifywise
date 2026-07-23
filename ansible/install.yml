@@ -24,11 +24,22 @@
       args:
         creates: /usr/bin/docker
 
-    - name: Verify Docker is installed
-      ansible.builtin.command: docker compose version
-      register: docker_check
+    - name: Detect available Compose command (v2 plugin or legacy binary)
+      ansible.builtin.shell: |
+        if docker compose version >/dev/null 2>&1; then
+          echo "docker compose"
+        elif command -v docker-compose >/dev/null 2>&1; then
+          echo "docker-compose"
+        else
+          echo "MISSING"
+          exit 1
+        fi
+      register: compose_detect
       changed_when: false
-      failed_when: docker_check.rc != 0
+
+    - name: Set compose_cmd fact
+      ansible.builtin.set_fact:
+        compose_cmd: "{{ compose_detect.stdout }}"
 
     - name: Create install directory
       ansible.builtin.file:
@@ -52,15 +63,18 @@
         mode: "0600"
 
     - name: Pull images and start the stack
-      ansible.builtin.command:
-        cmd: docker compose -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod up -d
+      ansible.builtin.shell: "{{ compose_cmd }} -f docker-compose.yml -f docker-compose.prod.yml --env-file .env.prod up -d"
+      args:
         chdir: "{{ install_dir }}"
       register: compose_up
       changed_when: "'Started' in compose_up.stdout or 'Created' in compose_up.stdout"
 
-    - name: Wait for backend to respond on port {{ backend_port }}
-      ansible.builtin.wait_for:
-        host: 127.0.0.1
-        port: "{{ backend_port }}"
-        delay: 5
-        timeout: 120
+    - name: Wait for backend health endpoint
+      ansible.builtin.uri:
+        url: "http://127.0.0.1:{{ backend_port }}/health"
+        method: GET
+        status_code: 200
+      register: result
+      until: result.status == 200
+      retries: 24
+      delay: 5

@@ -71,6 +71,8 @@ import { ConfidentialClientApplication } from "@azure/msal-node";
 import { getAzureADConfigForLoginQuery, isSSOFeatureEnabled } from "../utils/ssoConfig.utils";
 
 import { translateError } from "../utils/i18n.utils";
+import { getPreferencesByUserQuery } from "../utils/userPreference.utils";
+import { UserDateFormat } from "../domain.layer/enums/user-preferences.enum";
 /**
  * Retrieves all users within the authenticated user's organization
  *
@@ -97,6 +99,75 @@ import { translateError } from "../utils/i18n.utils";
  *   "data": [{ "id": 1, "email": "user@example.com", "name": "John", ... }]
  * }
  */
+/**
+ * Retrieves the currently authenticated user's preferences.
+ *
+ * Returns persisted date_format and language from `user_preferences`. If no
+ * preferences row exists yet, returns safe defaults so the client can hydrate
+ * without an error.
+ *
+ * @async
+ * @param {Request} req - Express request with userId from JWT middleware
+ * @param {Response} res - Express response object
+ * @returns {Promise<Response>} User preferences or defaults
+ */
+async function getPreferencesForCurrentUser(req: Request, res: Response): Promise<any> {
+  logStructured(
+    "processing",
+    "starting getPreferencesForCurrentUser",
+    "getPreferencesForCurrentUser",
+    "user.ctrl.ts",
+  );
+
+  try {
+    const user = (await getUserByIdQuery(req.userId!)) as UserModel;
+    if (!user) {
+      return res.status(404).json(STATUS_CODE[404](req.t!("User not found")));
+    }
+
+    const isSelfLookup = req.userId === user.id;
+    if (!req.isSuperAdmin && !isSelfLookup && user.organization_id !== req.organizationId) {
+      return res
+        .status(403)
+        .json(STATUS_CODE[403](req.t!("Forbidden: Access to this user is denied")));
+    }
+
+    const userPreference = await getPreferencesByUserQuery(req.userId!);
+    if (userPreference) {
+      logStructured(
+        "successful",
+        `Preferences found for user ${req.userId}`,
+        "getPreferencesForCurrentUser",
+        "user.ctrl.ts",
+      );
+      return res.status(200).json(STATUS_CODE[200](userPreference.toJSON()));
+    }
+
+    logStructured(
+      "successful",
+      `No preferences found for user ${req.userId}, returning defaults`,
+      "getPreferencesForCurrentUser",
+      "user.ctrl.ts",
+    );
+    return res.status(200).json(
+      STATUS_CODE[200]({
+        date_format: UserDateFormat.DD_MM_YYYY_DASH,
+        language: "en",
+        theme: "light",
+      }),
+    );
+  } catch (error) {
+    logStructured(
+      "error",
+      "failed to retrieve current user preferences",
+      "getPreferencesForCurrentUser",
+      "user.ctrl.ts",
+    );
+    logger.error("❌ Error in getPreferencesForCurrentUser:", error);
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
 async function getAllUsers(req: Request, res: Response): Promise<any> {
   logStructured("processing", "starting getAllUsers", "getAllUsers", "user.ctrl.ts");
   logger.debug("🔍 Fetching all users");
@@ -792,8 +863,14 @@ async function resetPassword(req: Request, res: Response) {
     if (user) {
       await user.updatePassword(newPassword);
 
+      // Update by the canonical stored email, not the raw request email. The
+      // lookup above (getUserByEmailQuery) is case-insensitive, but
+      // resetPasswordQuery's UPDATE matches `email` exactly. If the stored value
+      // differs in case or whitespace from what the user typed, passing the
+      // request email would match zero rows and silently leave the password
+      // unchanged. _user.email is the value actually in the database.
       const updatedUser = (await resetPasswordQuery(
-        email,
+        _user.email,
         user.password_hash,
         transaction,
       )) as UserModel;
@@ -1817,6 +1894,7 @@ export {
   getAllUsers,
   getUserByEmail,
   getUserById,
+  getPreferencesForCurrentUser,
   createNewUserWrapper,
   createNewUser,
   loginUser,

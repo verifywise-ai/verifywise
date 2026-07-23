@@ -181,8 +181,8 @@ export const createNewEvidenceQuery = async (
           organizationId,
           evidence_name: evidence.evidence_name,
           evidence_type: evidence.evidence_type,
-          description: evidence.description,
-          expiry_date: evidence.expiry_date,
+          description: evidence.description ?? null,
+          expiry_date: evidence.expiry_date ?? null,
           mapped_model_ids: evidence.mapped_model_ids
             ? `{${evidence.mapped_model_ids.join(",")}}`
             : null,

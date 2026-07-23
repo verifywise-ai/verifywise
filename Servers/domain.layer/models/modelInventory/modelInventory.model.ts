@@ -1,6 +1,7 @@
 import { Column, DataType, Model, Table } from "sequelize-typescript";
 import { Filedata, IModelInventory } from "../../interfaces/i.modelInventory";
 import { ModelInventoryStatus } from "../../enums/model-inventory-status.enum";
+import { MrmTier } from "../../enums/mrm.enum";
 import { ValidationException } from "../../exceptions/custom.exception";
 
 @Table({
@@ -109,6 +110,63 @@ export class ModelInventoryModel extends Model<ModelInventoryModel> implements I
     defaultValue: false,
   })
   is_demo?: boolean;
+
+  // ── MRM (Model Risk Management) — manual tiering + external key ──
+  // All nullable/additive. Tiering is manual in v1 (human-chosen tier only).
+
+  @Column({
+    type: DataType.STRING,
+    allowNull: true,
+  })
+  external_key?: string;
+
+  @Column({
+    type: DataType.ENUM(...Object.values(MrmTier)),
+    allowNull: true,
+  })
+  mrm_tier?: MrmTier;
+
+  @Column({
+    type: DataType.TEXT,
+    allowNull: true,
+  })
+  mrm_materiality_drivers?: string;
+
+  @Column({
+    type: DataType.DATE,
+    allowNull: true,
+  })
+  mrm_tiered_at?: Date;
+
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: true,
+  })
+  mrm_tiered_by?: number;
+
+  // ── MRM (Model Risk Management) — Branch 2 revalidation seed flag ──
+  // Set when a monitored metric breaches a threshold whose breach_action is
+  // notify_flag_revalidation. Branch 2 only sets the seed; the full
+  // revalidation-task workflow is Branch 3.
+
+  @Column({
+    type: DataType.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+  })
+  mrm_revalidation_flagged?: boolean;
+
+  @Column({
+    type: DataType.DATE,
+    allowNull: true,
+  })
+  mrm_revalidation_flagged_at?: Date;
+
+  @Column({
+    type: DataType.TEXT,
+    allowNull: true,
+  })
+  mrm_revalidation_reason?: string;
 
   @Column({
     type: DataType.DATE,
@@ -272,6 +330,7 @@ export class ModelInventoryModel extends Model<ModelInventoryModel> implements I
       security_assessment_data:
         this.security_assessment_data != undefined ? this.security_assessment_data : [],
       is_demo: this.is_demo,
+      external_key: this.external_key ?? null,
       created_at: (this.createdAt ?? this.created_at)?.toISOString(),
       updated_at: (this.updatedAt ?? this.updated_at)?.toISOString(),
       projects: dataValues.projects || [],
@@ -311,6 +370,7 @@ export class ModelInventoryModel extends Model<ModelInventoryModel> implements I
       security_assessment_data:
         this.security_assessment_data != undefined ? this.security_assessment_data : [],
       is_demo: this.is_demo,
+      external_key: this.external_key ?? null,
       created_at: (this.createdAt ?? this.created_at)?.toISOString(),
       updated_at: (this.updatedAt ?? this.updated_at)?.toISOString(),
       projects: dataValues.projects || [],
@@ -385,6 +445,7 @@ export class ModelInventoryModel extends Model<ModelInventoryModel> implements I
       hosting_provider: data.hosting_provider || "",
       security_assessment_data: data.security_assessment_data || [],
       is_demo: data.is_demo || false,
+      external_key: data.external_key ?? undefined,
       created_at: new Date(),
       updated_at: new Date(),
     });
@@ -446,6 +507,9 @@ export class ModelInventoryModel extends Model<ModelInventoryModel> implements I
     }
     if (data.is_demo !== undefined) {
       existingModel.is_demo = data.is_demo;
+    }
+    if (data.external_key !== undefined) {
+      existingModel.external_key = data.external_key;
     }
 
     // Always update the updated_at timestamp

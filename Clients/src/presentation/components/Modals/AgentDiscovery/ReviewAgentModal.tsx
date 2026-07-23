@@ -5,6 +5,7 @@ import VWChip from "../../Chip";
 import { CustomizableButton } from "../../button/customizable-button";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import { AgentPrimitiveRow } from "../../../../domain/interfaces/i.agentDiscovery";
+import { displayFormattedDateTime } from "../../../tools/isoDateToString";
 import { getAllEntities } from "../../../../application/repository/entity.repository";
 import LinkModelModal from "./LinkModelModal";
 
@@ -83,13 +84,7 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "—";
-    return new Date(dateStr).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    return displayFormattedDateTime(dateStr);
   };
 
   return (

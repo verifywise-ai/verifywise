@@ -1,36 +1,35 @@
-import { useEffect } from "react";
+import { RefObject } from "react";
+import { useOverlayAccessibility } from "./useOverlayAccessibility";
 
 interface UseModalKeyHandlingProps {
   isOpen: boolean;
   onClose: () => void;
   onEscapeKey?: () => void;
+  /** When provided, Tab focus is trapped inside the container and focus is restored on close. */
+  containerRef?: RefObject<HTMLElement | null>;
+  trapFocus?: boolean;
+  restoreFocus?: boolean;
 }
 
 /**
- * Custom hook for handling ESC key press and focus trapping in modals
- *
- * @param isOpen - Whether the modal is currently open
- * @param onClose - Function to call when modal should be closed
- * @param onEscapeKey - Optional function to call when ESC key is pressed (defaults to onClose)
+ * Handles ESC key press and optional focus trapping for modals and custom overlays.
+ * MUI Modal/Dialog/Drawer components handle focus automatically — use this hook
+ * only for custom portal-based overlays or pass containerRef for explicit trapping.
  */
-export const useModalKeyHandling = ({ isOpen, onClose, onEscapeKey }: UseModalKeyHandlingProps) => {
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && isOpen) {
-        if (onEscapeKey) {
-          onEscapeKey();
-        } else {
-          onClose();
-        }
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener("keydown", handleKeyDown);
-    }
-
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isOpen, onClose, onEscapeKey]);
+export const useModalKeyHandling = ({
+  isOpen,
+  onClose,
+  onEscapeKey,
+  containerRef,
+  trapFocus = Boolean(containerRef),
+  restoreFocus = Boolean(containerRef),
+}: UseModalKeyHandlingProps) => {
+  useOverlayAccessibility({
+    isOpen,
+    onClose,
+    onEscapeKey,
+    containerRef,
+    trapFocus: containerRef ? trapFocus : false,
+    restoreFocus: containerRef ? restoreFocus : false,
+  });
 };

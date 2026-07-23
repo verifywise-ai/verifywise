@@ -36,9 +36,11 @@ export interface UseFormValidationReturn<TValues extends object> {
   /**
    * Runs all validators against the provided values, updates errors state,
    * and returns true if the form is valid (no errors).
-   * Use the return value to gate form submission.
+   * Pass fieldOrder to track which invalid field should receive focus first.
    */
-  validateAll: (values: TValues) => boolean;
+  validateAll: (values: TValues, fieldOrder?: (keyof TValues)[]) => boolean;
+  /** Returns the first invalid field from the most recent validateAll call. */
+  getFirstInvalidField: () => keyof TValues | undefined;
   /** True if any field currently has an error. */
   hasErrors: boolean;
   /** True when there are no current errors — use to enable the submit button. */
@@ -66,6 +68,7 @@ export function useFormValidation<TValues extends object>(
   // Keep a stable ref to the latest validators so callbacks never need to be
   // recreated when the caller passes an inline object literal (new ref each render).
   const validatorsRef = useRef(validators);
+  const lastFirstInvalidFieldRef = useRef<keyof TValues | undefined>(undefined);
   useEffect(() => {
     validatorsRef.current = validators;
   }, [validators]);
@@ -84,7 +87,7 @@ export function useFormValidation<TValues extends object>(
     setErrors((prev) => ({ ...prev, [field]: "" }));
   }, []);
 
-  const validateAll = useCallback((values: TValues): boolean => {
+  const validateAll = useCallback((values: TValues, fieldOrder?: (keyof TValues)[]): boolean => {
     const newErrors: Partial<Record<keyof TValues, string>> = {};
     let valid = true;
     for (const field of Object.keys(validatorsRef.current) as (keyof TValues)[]) {
@@ -94,8 +97,13 @@ export function useFormValidation<TValues extends object>(
       if (error) valid = false;
     }
     setErrors(newErrors);
+    lastFirstInvalidFieldRef.current = fieldOrder
+      ? fieldOrder.find((field) => newErrors[field])
+      : (Object.keys(newErrors) as (keyof TValues)[]).find((field) => newErrors[field]);
     return valid;
   }, []);
+
+  const getFirstInvalidField = useCallback(() => lastFirstInvalidFieldRef.current, []);
 
   const hasErrors = useMemo(() => Object.values(errors).some(Boolean), [errors]);
 
@@ -103,5 +111,14 @@ export function useFormValidation<TValues extends object>(
 
   const resetErrors = useCallback(() => setErrors({}), []);
 
-  return { errors, validateField, clearFieldError, validateAll, hasErrors, canSubmit, resetErrors };
+  return {
+    errors,
+    validateField,
+    clearFieldError,
+    validateAll,
+    getFirstInvalidField,
+    hasErrors,
+    canSubmit,
+    resetErrors,
+  };
 }

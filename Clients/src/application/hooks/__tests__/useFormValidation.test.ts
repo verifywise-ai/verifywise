@@ -118,6 +118,20 @@ describe("useFormValidation", () => {
     expect(result.current.errors.confirmPassword).toBe("Passwords must match");
   });
 
+  it("getFirstInvalidField returns the first invalid field from field order", () => {
+    const { result } = renderHook(() => useFormValidation<TestForm>(validators));
+    const fieldOrder: (keyof TestForm)[] = ["email", "name", "confirmPassword"];
+
+    act(() => {
+      result.current.validateAll(
+        { name: "x", email: "bad", confirmPassword: "", password: "" },
+        fieldOrder,
+      );
+    });
+
+    expect(result.current.getFirstInvalidField()).toBe("email");
+  });
+
   it("resetErrors clears all errors", () => {
     const { result } = renderHook(() => useFormValidation<TestForm>(validators));
 

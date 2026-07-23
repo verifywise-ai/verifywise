@@ -16,6 +16,7 @@ import {
   Check,
   X,
   Play,
+  RotateCcw,
 } from "lucide-react";
 import { EmptyState } from "../../../components/EmptyState";
 import EmptyStateTip from "../../../components/EmptyState/EmptyStateTip";
@@ -29,8 +30,10 @@ import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtende
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import palette from "../../../themes/palette";
 import { sectionTitleSx, useCardSx, ProviderIcon, TOP_PROVIDERS } from "../shared";
+import CustomizableSkeleton from "../../../components/Skeletons";
 import VirtualKeysTab from "../VirtualKeys/index";
 import { validateApiKeyFormat } from "../../../../application/utils/apiKeyValidation";
+import { displayFormattedDate } from "../../../tools/isoDateToString";
 
 const TOP_IDS = new Set(TOP_PROVIDERS.map((p) => p._id));
 
@@ -131,6 +134,7 @@ export default function AIGatewaySettingsPage() {
   const [apiKeys, setApiKeys] = useState<any[]>([]);
   const [budget, setBudget] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [providerItems, setProviderItems] = useState(TOP_PROVIDERS);
 
   // API Key modal state
@@ -194,8 +198,12 @@ export default function AIGatewaySettingsPage() {
   const [dismissModalOpen, setDismissModalOpen] = useState(false);
   const [dismissReason, setDismissReason] = useState("");
   const [dismissSubmitting, setDismissSubmitting] = useState(false);
+  const [riskLoading, setRiskLoading] = useState(false);
+  const [riskError, setRiskError] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
     try {
       const [keysRes, budgetRes, providersRes, gsRes] = await Promise.all([
         apiServices.get<Record<string, any>>("/ai-gateway/keys"),
@@ -240,13 +248,15 @@ export default function AIGatewaySettingsPage() {
         }
       }
     } catch {
-      // Silently handle
+      setLoadError("Failed to load AI Gateway settings. Please try again.");
     } finally {
       setLoading(false);
     }
   }, []);
 
   const loadRiskData = useCallback(async () => {
+    setRiskLoading(true);
+    setRiskError(null);
     try {
       const [settingsRes, suggestionsRes] = await Promise.all([
         apiServices.get<Record<string, any>>("/ai-gateway/risk-settings").catch(() => null),
@@ -260,7 +270,9 @@ export default function AIGatewaySettingsPage() {
         setSuggestions(suggestionsRes.data?.suggestions || suggestionsRes.data);
       }
     } catch {
-      // Silently handle
+      setRiskError("Failed to load risk suggestions. Please try again.");
+    } finally {
+      setRiskLoading(false);
     }
   }, []);
 
@@ -524,734 +536,767 @@ export default function AIGatewaySettingsPage() {
           onChange={(_, v) => navigate(`/ai-gateway/settings/${v}`, { replace: true })}
         />
 
-        <Box sx={{ mt: "16px" }}>
-          {/* ─── API Keys tab ─────────────────────────────────────────── */}
-          {activeTab === "api-keys" && (
-            <Box sx={cardSx}>
-              <Stack gap="12px">
-                <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-                  <Box>
-                    <Typography sx={sectionTitleSx}>API keys</Typography>
-                    <Typography sx={{ fontSize: 13, color: palette.text.tertiary, mt: "4px" }}>
-                      Provider API keys are encrypted at rest (AES-256-CBC) and only decrypted when
-                      proxying a request.
-                    </Typography>
-                  </Box>
-                  <CustomizableButton
-                    text="Add key"
-                    icon={<CirclePlus size={14} strokeWidth={1.5} />}
-                    onClick={() => {
-                      setKeyForm({ key_name: "", provider: "", api_key: "" });
-                      setKeyError("");
-                      setIsKeyModalOpen(true);
-                    }}
-                  />
-                </Stack>
-
-                {loading ? null : apiKeys.length === 0 ? (
-                  <EmptyState
-                    icon={Key}
-                    message="No API keys configured. Add a provider API key to start creating endpoints."
-                    showBorder
-                  >
-                    <EmptyStateTip
-                      icon={Lock}
-                      title="Keys are encrypted at rest"
-                      description="Your provider API keys are encrypted using AES-256-CBC before being stored. They are only decrypted when proxying a request and are never exposed in logs."
-                    />
-                    <EmptyStateTip
-                      icon={Router}
-                      title="Each endpoint references an API key"
-                      description="After adding a key, create endpoints in the Endpoints tab. Each endpoint uses one API key to authenticate with the LLM provider."
-                    />
-                  </EmptyState>
-                ) : (
-                  <Stack gap="8px">
-                    {apiKeys.map((key) => (
-                      <Stack
-                        key={key.id}
-                        direction="row"
-                        justifyContent="space-between"
-                        alignItems="center"
-                        sx={{
-                          p: "12px 16px",
-                          border: `1px solid ${palette.border.dark}`,
-                          borderRadius: "4px",
-                        }}
-                      >
-                        <Stack direction="row" alignItems="center" gap="10px">
-                          <ProviderIcon provider={key.provider} size={20} />
-                          <Box>
-                            <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-                              {key.key_name}
-                            </Typography>
-                            <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
-                              {key.provider} &middot; {key.masked_key}
-                            </Typography>
-                          </Box>
-                        </Stack>
-                        <Stack direction="row" alignItems="center" gap="8px">
-                          <Typography
-                            sx={{
-                              fontSize: 12,
-                              color: key.is_active
-                                ? palette.status.success.text
-                                : palette.text.disabled,
-                              fontWeight: 500,
-                            }}
-                          >
-                            {key.is_active ? "Active" : "Inactive"}
-                          </Typography>
-                          <IconButton
-                            size="small"
-                            onClick={() => setKeyDeleteTarget(key)}
-                            sx={{ p: 0.5 }}
-                          >
-                            <Trash2 size={14} strokeWidth={1.5} color={palette.text.tertiary} />
-                          </IconButton>
-                        </Stack>
-                      </Stack>
-                    ))}
-                  </Stack>
-                )}
-              </Stack>
-            </Box>
-          )}
-
-          {/* ─── Budget tab ───────────────────────────────────────────── */}
-          {activeTab === "budget" && (
-            <Box sx={cardSx}>
-              <Stack gap="12px">
-                <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
-                  <Box>
-                    <Typography sx={sectionTitleSx}>Budget</Typography>
-                    <Typography sx={{ fontSize: 13, color: palette.text.tertiary, mt: "4px" }}>
-                      Set a monthly spending limit. When hard limit is enabled, requests are
-                      rejected once exceeded.
-                    </Typography>
-                  </Box>
-                  <CustomizableButton
-                    text={budget ? "Edit budget" : "Set budget"}
-                    icon={<Pencil size={14} strokeWidth={1.5} />}
-                    onClick={openBudgetModal}
-                  />
-                </Stack>
-
-                {loading ? null : budget ? (
-                  <Stack gap="12px">
-                    <Stack direction="row" justifyContent="space-between">
-                      <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
-                        Monthly limit
-                      </Typography>
-                      <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-                        ${Number(budget.monthly_limit_usd).toFixed(2)}
-                      </Typography>
-                    </Stack>
-                    <Stack direction="row" justifyContent="space-between">
-                      <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
-                        Current spend
-                      </Typography>
-                      <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-                        ${Number(budget.current_spend_usd).toFixed(4)}
-                      </Typography>
-                    </Stack>
-                    {Number(budget.monthly_limit_usd) > 0 && (
-                      <Box
-                        sx={{
-                          height: 6,
-                          borderRadius: 3,
-                          backgroundColor: palette.border.light,
-                          overflow: "hidden",
-                        }}
-                      >
-                        <Box
-                          sx={{
-                            height: "100%",
-                            width: `${Math.min(100, (Number(budget.current_spend_usd) / Number(budget.monthly_limit_usd)) * 100)}%`,
-                            backgroundColor:
-                              (Number(budget.current_spend_usd) /
-                                Number(budget.monthly_limit_usd)) *
-                                100 >=
-                              budget.alert_threshold_pct
-                                ? palette.status.error.text
-                                : palette.brand.primary,
-                            borderRadius: 3,
-                            transition: "width 0.3s",
-                          }}
-                        />
-                      </Box>
-                    )}
-                    <Stack direction="row" justifyContent="space-between">
-                      <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
-                        Alert threshold
-                      </Typography>
-                      <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-                        {budget.alert_threshold_pct}%
-                      </Typography>
-                    </Stack>
-                    <Stack direction="row" justifyContent="space-between">
-                      <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
-                        Hard limit
-                      </Typography>
-                      <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-                        {budget.is_hard_limit ? "Yes (requests rejected)" : "No (alert only)"}
-                      </Typography>
-                    </Stack>
-                  </Stack>
-                ) : (
-                  <EmptyState
-                    icon={Wallet}
-                    message="No budget configured. All requests are allowed without cost limits."
-                    showBorder
-                  />
-                )}
-              </Stack>
-            </Box>
-          )}
-
-          {/* ─── Virtual keys tab ─────────────────────────────────────── */}
-          {activeTab === "virtual-keys" && <VirtualKeysTab embedded />}
-
-          {/* ─── Guardrail settings tab ───────────────────────────────── */}
-          {activeTab === "guardrails" && (
-            <Stack gap="16px">
-              {/* Save button */}
-              <Stack direction="row" justifyContent="flex-end">
-                <CustomizableButton
-                  text={gsSaving ? "Saving..." : "Save settings"}
-                  onClick={handleSaveGuardrailSettings}
-                  isDisabled={gsSaving}
-                />
-              </Stack>
-
-              {/* Error behavior card */}
-              <Box sx={cardSx}>
-                <Stack gap="8px">
-                  <Typography sx={sectionTitleSx}>Error behavior</Typography>
-                  <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
-                    What happens when the guardrail scanner itself fails. "Fail-closed" blocks all
-                    requests for safety. "Fail-open" allows requests through.
-                  </Typography>
-                  <Stack direction="row" gap="16px" mt="8px">
-                    <Box flex={1}>
-                      <Select
-                        id="pii-on-error"
-                        label="PII scan on error"
-                        value={gsForm.pii_on_error}
-                        items={[
-                          { _id: "block", name: "Block request (fail-closed)" },
-                          { _id: "allow", name: "Allow request (fail-open)" },
-                        ]}
-                        onChange={(e) =>
-                          setGsForm((p) => ({ ...p, pii_on_error: e.target.value as string }))
-                        }
-                        getOptionValue={(item) => item._id}
-                      />
-                    </Box>
-                    <Box flex={1}>
-                      <Select
-                        id="cf-on-error"
-                        label="Content filter on error"
-                        value={gsForm.content_filter_on_error}
-                        items={[
-                          { _id: "allow", name: "Allow request (fail-open)" },
-                          { _id: "block", name: "Block request (fail-closed)" },
-                        ]}
-                        onChange={(e) =>
-                          setGsForm((p) => ({
-                            ...p,
-                            content_filter_on_error: e.target.value as string,
-                          }))
-                        }
-                        getOptionValue={(item) => item._id}
-                      />
-                    </Box>
-                  </Stack>
-                </Stack>
-              </Box>
-
-              {/* Replacement text card */}
-              <Box sx={cardSx}>
-                <Stack gap="8px">
-                  <Typography sx={sectionTitleSx}>Replacement text</Typography>
-                  <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
-                    When a guardrail masks content, this text replaces the detected value. Use
-                    ENTITY_TYPE in the PII format to include the detected type (e.g.,
-                    &lt;EMAIL_ADDRESS&gt;).
-                  </Typography>
-                  <Stack direction="row" gap="16px" mt="8px">
-                    <Box flex={1}>
-                      <Field
-                        label="PII replacement format"
-                        placeholder="<ENTITY_TYPE>"
-                        value={gsForm.pii_replacement_format}
-                        onChange={(e) =>
-                          setGsForm((p) => ({ ...p, pii_replacement_format: e.target.value }))
-                        }
-                      />
-                    </Box>
-                    <Box flex={1}>
-                      <Field
-                        label="Content filter replacement"
-                        placeholder="[REDACTED]"
-                        value={gsForm.content_filter_replacement}
-                        onChange={(e) =>
-                          setGsForm((p) => ({ ...p, content_filter_replacement: e.target.value }))
-                        }
-                      />
-                    </Box>
-                  </Stack>
-                </Stack>
-              </Box>
-
-              {/* Audit log retention card */}
-              <Box sx={cardSx}>
-                <Stack gap="8px">
-                  <Typography sx={sectionTitleSx}>Audit log retention</Typography>
-                  <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
-                    How long to keep guardrail detection logs. These logs record every blocked or
-                    masked request for compliance auditing (EU AI Act Art. 12).
-                  </Typography>
-                  <Box sx={{ maxWidth: 200, mt: "8px" }}>
-                    <Field
-                      label="Retention period (days)"
-                      placeholder="90"
-                      value={gsForm.log_retention_days}
-                      onChange={(e) =>
-                        setGsForm((p) => ({ ...p, log_retention_days: e.target.value }))
-                      }
-                    />
-                  </Box>
-                  <Box sx={{ mt: "8px" }}>
-                    <CustomizableButton
-                      text="Purge old logs"
-                      variant="outlined"
-                      onClick={async () => {
-                        try {
-                          await apiServices.post("/ai-gateway/guardrails/logs/purge");
-                        } catch {
-                          // Silently handle
-                        }
-                      }}
-                    />
-                  </Box>
-                </Stack>
-              </Box>
-
-              {/* Request body logging card */}
-              <Box sx={cardSx}>
-                <Stack gap="8px">
-                  <Typography sx={sectionTitleSx}>Request body logging</Typography>
-                  <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
-                    When enabled, full request prompts and LLM responses are stored in the spend
-                    logs. Disabled by default for privacy. Bodies are truncated to 2,048 characters.
-                  </Typography>
-                  <Stack gap="12px" mt="8px">
-                    <Stack direction="row" justifyContent="space-between" alignItems="center">
-                      <Typography sx={{ fontSize: 13 }}>Log request body (prompts)</Typography>
-                      <Toggle
-                        checked={gsForm.log_request_body}
-                        onChange={() =>
-                          setGsForm((p) => ({ ...p, log_request_body: !p.log_request_body }))
-                        }
-                      />
-                    </Stack>
-                    <Stack direction="row" justifyContent="space-between" alignItems="center">
-                      <Typography sx={{ fontSize: 13 }}>Log response body (LLM output)</Typography>
-                      <Toggle
-                        checked={gsForm.log_response_body}
-                        onChange={() =>
-                          setGsForm((p) => ({ ...p, log_response_body: !p.log_response_body }))
-                        }
-                      />
-                    </Stack>
-                  </Stack>
-                </Stack>
-              </Box>
-
-              {/* Spend log cleanup card */}
-              <Box sx={cardSx}>
-                <Stack gap="8px">
-                  <Typography sx={sectionTitleSx}>Spend log cleanup</Typography>
-                  <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
-                    Delete old spend log entries based on the retention period above.
-                  </Typography>
-                  <Box sx={{ mt: "8px" }}>
-                    <CustomizableButton
-                      text={spendPurgeResult || "Purge old spend logs"}
-                      variant="outlined"
-                      onClick={async () => {
-                        setSpendPurgeResult("Purging...");
-                        try {
-                          const res = await apiServices.post<Record<string, any>>(
-                            "/ai-gateway/spend/logs/purge",
-                          );
-                          const count = res?.data?.deleted ?? res?.data?.data?.deleted_count ?? 0;
-                          setSpendPurgeResult(
-                            count > 0 ? `Deleted ${count} logs` : "No old logs to purge",
-                          );
-                          if (count > 0) await loadData();
-                          setTimeout(() => setSpendPurgeResult(""), 3000);
-                        } catch {
-                          setSpendPurgeResult("Failed to purge");
-                          setTimeout(() => setSpendPurgeResult(""), 3000);
-                        }
-                      }}
-                    />
-                  </Box>
-                </Stack>
-              </Box>
-              {/* Response cache settings card */}
-              <Box sx={cardSx}>
-                <Stack gap="12px">
-                  <Typography sx={sectionTitleSx}>Response caching</Typography>
-                  <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
-                    Cache identical LLM requests to reduce cost and latency. Enable caching globally
-                    here, then toggle it per-endpoint in the Endpoints tab.
-                  </Typography>
-
-                  <Stack direction="row" justifyContent="space-between" alignItems="center">
-                    <Typography sx={{ fontSize: 13 }}>Enable caching globally</Typography>
-                    <Toggle
-                      checked={cacheSettings.cache_global_enabled}
-                      onChange={() =>
-                        setCacheSettings((p) => ({
-                          ...p,
-                          cache_global_enabled: !p.cache_global_enabled,
-                        }))
-                      }
-                    />
-                  </Stack>
-
-                  <Stack direction="row" gap="16px">
-                    <Box sx={{ flex: 1 }}>
-                      <Field
-                        label="Default TTL (seconds)"
-                        placeholder="14400"
-                        value={cacheSettings.cache_default_ttl_seconds}
-                        onChange={(e) =>
-                          setCacheSettings((p) => ({
-                            ...p,
-                            cache_default_ttl_seconds: e.target.value,
-                          }))
-                        }
-                      />
-                    </Box>
-                    <Box sx={{ flex: 1 }}>
-                      <Field
-                        label="Max entries per org"
-                        placeholder="50000"
-                        value={cacheSettings.cache_max_entries_per_org}
-                        onChange={(e) =>
-                          setCacheSettings((p) => ({
-                            ...p,
-                            cache_max_entries_per_org: e.target.value,
-                          }))
-                        }
-                      />
-                    </Box>
-                  </Stack>
-
-                  <Stack direction="row" gap="8px" sx={{ mt: "8px" }}>
-                    <CustomizableButton
-                      text={cacheSaving ? "Saving..." : "Save cache settings"}
-                      variant="contained"
-                      onClick={handleSaveCacheSettings}
-                    />
-                    <CustomizableButton
-                      text={cachePurgeResult || "Purge expired entries"}
-                      variant="outlined"
-                      onClick={async () => {
-                        setCachePurgeResult("Purging...");
-                        try {
-                          const res =
-                            await apiServices.post<Record<string, any>>("/ai-gateway/cache/purge");
-                          const count = res?.data?.deleted ?? 0;
-                          setCachePurgeResult(
-                            count > 0 ? `Deleted ${count} entries` : "No expired entries",
-                          );
-                          setTimeout(() => setCachePurgeResult(""), 3000);
-                        } catch {
-                          setCachePurgeResult("Failed");
-                          setTimeout(() => setCachePurgeResult(""), 3000);
-                        }
-                      }}
-                    />
-                  </Stack>
-                </Stack>
-              </Box>
-            </Stack>
-          )}
-
-          {/* ─── Suggested risks tab ──────────────────────────────────── */}
-          {activeTab === "risks" && (
-            <Stack gap="16px">
-              {/* Detection settings card */}
+        {!loading && !loadError && (
+          <Box sx={{ mt: "16px" }}>
+            {/* ─── API Keys tab ─────────────────────────────────────────── */}
+            {activeTab === "api-keys" && (
               <Box sx={cardSx}>
                 <Stack gap="12px">
                   <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
                     <Box>
-                      <Typography sx={sectionTitleSx}>Risk detection settings</Typography>
+                      <Typography sx={sectionTitleSx}>API keys</Typography>
                       <Typography sx={{ fontSize: 13, color: palette.text.tertiary, mt: "4px" }}>
-                        Configure which risk conditions to monitor. Detection runs daily at 6 AM or
-                        manually below.
+                        Provider API keys are encrypted at rest (AES-256-CBC) and only decrypted
+                        when proxying a request.
                       </Typography>
                     </Box>
-                    <Stack direction="row" gap="8px" alignItems="center">
-                      {detectResult && (
-                        <Typography
-                          sx={{
-                            fontSize: 12,
-                            color: detectResult.includes("found")
-                              ? palette.status.success.text
-                              : palette.text.tertiary,
-                            mr: "4px",
-                          }}
-                        >
-                          {detectResult}
-                        </Typography>
-                      )}
-                      <CustomizableButton
-                        text={detecting ? "Detecting..." : "Run detection now"}
-                        variant="outlined"
-                        icon={<Play size={14} strokeWidth={1.5} />}
-                        onClick={handleRunDetection}
-                        isDisabled={detecting}
-                      />
-                      <CustomizableButton
-                        text={riskSettingsSaving ? "Saving..." : "Save settings"}
-                        onClick={handleSaveRiskSettings}
-                        isDisabled={riskSettingsSaving || !riskSettingsDirty}
-                      />
-                    </Stack>
+                    <CustomizableButton
+                      text="Add key"
+                      icon={<CirclePlus size={14} strokeWidth={1.5} />}
+                      onClick={() => {
+                        setKeyForm({ key_name: "", provider: "", api_key: "" });
+                        setKeyError("");
+                        setIsKeyModalOpen(true);
+                      }}
+                    />
                   </Stack>
 
-                  <Stack gap="0px" mt="4px">
-                    {riskSettings.map((s, idx) => {
-                      const meta = CONDITION_META[s.condition_id];
-                      const thresholdKeys = Object.keys(s.default_threshold);
-                      return (
-                        <Stack
-                          key={s.condition_id}
-                          direction="row"
-                          alignItems="flex-start"
-                          gap="12px"
-                          sx={{
-                            p: "12px 0",
-                            borderTop: idx > 0 ? `1px solid ${palette.border.light}` : "none",
-                            opacity: s.is_enabled ? 1 : 0.55,
-                          }}
-                        >
-                          <Box sx={{ pt: "2px" }}>
-                            <Toggle
-                              checked={s.is_enabled}
-                              onChange={() => handleToggleCondition(s.condition_id, !s.is_enabled)}
-                            />
-                          </Box>
-                          <Box flex={1} minWidth={0}>
-                            <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
-                              {s.label}
-                            </Typography>
-                            {meta?.description && (
-                              <Typography
-                                sx={{
-                                  fontSize: 12,
-                                  color: palette.text.tertiary,
-                                  mt: "2px",
-                                  lineHeight: 1.4,
-                                }}
-                              >
-                                {meta.description}
-                              </Typography>
-                            )}
-                            {thresholdKeys.length > 0 && (
-                              <Box sx={{ display: "flex", flexDirection: "row", mt: "8px" }}>
-                                {thresholdKeys.map((key, ki) => (
-                                  <Box
-                                    key={key}
-                                    sx={{ width: "110px", ml: ki > 0 ? "8px" : "0px" }}
-                                  >
-                                    <Field
-                                      label={meta?.thresholdLabels[key] || key.replace(/_/g, " ")}
-                                      value={String(
-                                        s.threshold[key] ?? s.default_threshold[key] ?? "",
-                                      )}
-                                      onChange={(e) =>
-                                        handleThresholdChange(s.condition_id, key, e.target.value)
-                                      }
-                                      sx={{ minWidth: "unset", width: "100%" }}
-                                    />
-                                  </Box>
-                                ))}
-                              </Box>
-                            )}
-                          </Box>
-                        </Stack>
-                      );
-                    })}
-                  </Stack>
-                </Stack>
-              </Box>
-
-              {/* Pending suggestions */}
-              {pendingSuggestions.length > 0 ? (
-                <Box>
-                  <Typography sx={{ ...sectionTitleSx, mb: "12px" }}>
-                    Pending suggestions ({pendingSuggestions.length})
-                  </Typography>
-                  <Stack gap="12px">
-                    {pendingSuggestions.map((s) => (
-                      <Box key={s.id} sx={cardSx}>
-                        <Stack gap="8px">
-                          <Stack direction="row" alignItems="center" gap="8px">
-                            <Typography
-                              sx={{
-                                fontSize: 11,
-                                fontWeight: 600,
-                                color: SEVERITY_COLORS[s.severity] || palette.text.tertiary,
-                                backgroundColor: `${SEVERITY_COLORS[s.severity] || palette.text.tertiary}1a`,
-                                px: "8px",
-                                py: "2px",
-                                borderRadius: "4px",
-                                textTransform: "uppercase",
-                              }}
-                            >
-                              {s.severity}
-                            </Typography>
-                            <Typography sx={{ fontSize: 14, fontWeight: 500 }}>
-                              {s.title}
-                            </Typography>
-                          </Stack>
-
-                          <Typography sx={{ fontSize: 13, color: palette.text.secondary }}>
-                            {s.description}
-                          </Typography>
-
-                          {s.suggested_mitigation && (
-                            <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
-                              <strong>Suggested:</strong> {s.suggested_mitigation}
-                            </Typography>
-                          )}
-
-                          {s.compliance_tags.length > 0 && (
-                            <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
-                              {s.compliance_tags.join(" \u00b7 ")}
-                            </Typography>
-                          )}
-
-                          {s.evidence && Object.keys(s.evidence).length > 0 && (
-                            <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
-                              Evidence:{" "}
-                              {Object.entries(s.evidence)
-                                .filter(([k]) => !k.startsWith("threshold"))
-                                .slice(0, 4)
-                                .map(
-                                  ([k, v]) =>
-                                    `${k.replace(/_/g, " ")}: ${Array.isArray(v) ? v.join(", ") : v}`,
-                                )
-                                .join(" \u00b7 ")}
-                            </Typography>
-                          )}
-
-                          <Stack direction="row" justifyContent="flex-end" gap="8px" mt="4px">
-                            <CustomizableButton
-                              text="Dismiss"
-                              variant="outlined"
-                              icon={<X size={14} strokeWidth={1.5} />}
-                              onClick={() => openDismissModal(s)}
-                            />
-                            <CustomizableButton
-                              text="Accept as risk"
-                              icon={<Check size={14} strokeWidth={1.5} />}
-                              onClick={() => openAcceptModal(s)}
-                            />
-                          </Stack>
-                        </Stack>
-                      </Box>
-                    ))}
-                  </Stack>
-                </Box>
-              ) : (
-                <EmptyState
-                  icon={AlertTriangle}
-                  message="No pending risk suggestions. Run detection or wait for the next scheduled check."
-                  showBorder
-                />
-              )}
-
-              {/* History (collapsed) */}
-              {historySuggestions.length > 0 && (
-                <Box>
-                  <Stack
-                    direction="row"
-                    alignItems="center"
-                    gap="4px"
-                    sx={{ cursor: "pointer", mb: "8px" }}
-                    onClick={() => setShowHistory(!showHistory)}
-                  >
-                    {showHistory ? (
-                      <ChevronDown size={16} strokeWidth={1.5} />
-                    ) : (
-                      <ChevronRight size={16} strokeWidth={1.5} />
-                    )}
-                    <Typography
-                      sx={{ fontSize: 13, fontWeight: 500, color: palette.text.secondary }}
+                  {apiKeys.length === 0 ? (
+                    <EmptyState
+                      icon={Key}
+                      message="No API keys configured. Add a provider API key to start creating endpoints."
+                      showBorder
                     >
-                      History ({historySuggestions.length})
-                    </Typography>
-                  </Stack>
-                  <Collapse in={showHistory}>
+                      <EmptyStateTip
+                        icon={Lock}
+                        title="Keys are encrypted at rest"
+                        description="Your provider API keys are encrypted using AES-256-CBC before being stored. They are only decrypted when proxying a request and are never exposed in logs."
+                      />
+                      <EmptyStateTip
+                        icon={Router}
+                        title="Each endpoint references an API key"
+                        description="After adding a key, create endpoints in the Endpoints tab. Each endpoint uses one API key to authenticate with the LLM provider."
+                      />
+                    </EmptyState>
+                  ) : (
                     <Stack gap="8px">
-                      {historySuggestions.map((s) => (
+                      {apiKeys.map((key) => (
                         <Stack
-                          key={s.id}
+                          key={key.id}
                           direction="row"
                           justifyContent="space-between"
                           alignItems="center"
                           sx={{
-                            p: "8px 12px",
-                            border: `1px solid ${palette.border.light}`,
+                            p: "12px 16px",
+                            border: `1px solid ${palette.border.dark}`,
                             borderRadius: "4px",
-                            opacity: 0.7,
                           }}
                         >
+                          <Stack direction="row" alignItems="center" gap="10px">
+                            <ProviderIcon provider={key.provider} size={20} />
+                            <Box>
+                              <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
+                                {key.key_name}
+                              </Typography>
+                              <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
+                                {key.provider} &middot; {key.masked_key}
+                              </Typography>
+                            </Box>
+                          </Stack>
                           <Stack direction="row" alignItems="center" gap="8px">
                             <Typography
                               sx={{
-                                fontSize: 11,
-                                fontWeight: 600,
-                                color:
-                                  s.status === "accepted"
-                                    ? palette.status.success.text
-                                    : palette.text.tertiary,
-                                textTransform: "uppercase",
+                                fontSize: 12,
+                                color: key.is_active
+                                  ? palette.status.success.text
+                                  : palette.text.disabled,
+                                fontWeight: 500,
                               }}
                             >
-                              {s.status}
+                              {key.is_active ? "Active" : "Inactive"}
                             </Typography>
-                            <Typography sx={{ fontSize: 13 }}>{s.title}</Typography>
-                          </Stack>
-                          <Stack direction="row" alignItems="center" gap="8px">
-                            {s.reviewed_by_name && (
-                              <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
-                                by {s.reviewed_by_name}
-                              </Typography>
-                            )}
-                            {s.reviewed_at && (
-                              <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
-                                {new Date(s.reviewed_at).toLocaleDateString()}
-                              </Typography>
-                            )}
+                            <IconButton
+                              size="small"
+                              onClick={() => setKeyDeleteTarget(key)}
+                              sx={{ p: 0.5 }}
+                            >
+                              <Trash2 size={14} strokeWidth={1.5} color={palette.text.tertiary} />
+                            </IconButton>
                           </Stack>
                         </Stack>
                       ))}
                     </Stack>
-                  </Collapse>
+                  )}
+                </Stack>
+              </Box>
+            )}
+
+            {/* ─── Budget tab ───────────────────────────────────────────── */}
+            {activeTab === "budget" && (
+              <Box sx={cardSx}>
+                <Stack gap="12px">
+                  <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                    <Box>
+                      <Typography sx={sectionTitleSx}>Budget</Typography>
+                      <Typography sx={{ fontSize: 13, color: palette.text.tertiary, mt: "4px" }}>
+                        Set a monthly spending limit. When hard limit is enabled, requests are
+                        rejected once exceeded.
+                      </Typography>
+                    </Box>
+                    <CustomizableButton
+                      text={budget ? "Edit budget" : "Set budget"}
+                      icon={<Pencil size={14} strokeWidth={1.5} />}
+                      onClick={openBudgetModal}
+                    />
+                  </Stack>
+
+                  {budget ? (
+                    <Stack gap="12px">
+                      <Stack direction="row" justifyContent="space-between">
+                        <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
+                          Monthly limit
+                        </Typography>
+                        <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
+                          ${Number(budget.monthly_limit_usd).toFixed(2)}
+                        </Typography>
+                      </Stack>
+                      <Stack direction="row" justifyContent="space-between">
+                        <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
+                          Current spend
+                        </Typography>
+                        <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
+                          ${Number(budget.current_spend_usd).toFixed(4)}
+                        </Typography>
+                      </Stack>
+                      {Number(budget.monthly_limit_usd) > 0 && (
+                        <Box
+                          sx={{
+                            height: 6,
+                            borderRadius: 3,
+                            backgroundColor: palette.border.light,
+                            overflow: "hidden",
+                          }}
+                        >
+                          <Box
+                            sx={{
+                              height: "100%",
+                              width: `${Math.min(100, (Number(budget.current_spend_usd) / Number(budget.monthly_limit_usd)) * 100)}%`,
+                              backgroundColor:
+                                (Number(budget.current_spend_usd) /
+                                  Number(budget.monthly_limit_usd)) *
+                                  100 >=
+                                budget.alert_threshold_pct
+                                  ? palette.status.error.text
+                                  : palette.brand.primary,
+                              borderRadius: 3,
+                              transition: "width 0.3s",
+                            }}
+                          />
+                        </Box>
+                      )}
+                      <Stack direction="row" justifyContent="space-between">
+                        <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
+                          Alert threshold
+                        </Typography>
+                        <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
+                          {budget.alert_threshold_pct}%
+                        </Typography>
+                      </Stack>
+                      <Stack direction="row" justifyContent="space-between">
+                        <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
+                          Hard limit
+                        </Typography>
+                        <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
+                          {budget.is_hard_limit ? "Yes (requests rejected)" : "No (alert only)"}
+                        </Typography>
+                      </Stack>
+                    </Stack>
+                  ) : (
+                    <EmptyState
+                      icon={Wallet}
+                      message="No budget configured. All requests are allowed without cost limits."
+                      showBorder
+                    />
+                  )}
+                </Stack>
+              </Box>
+            )}
+
+            {/* ─── Virtual keys tab ─────────────────────────────────────── */}
+            {activeTab === "virtual-keys" && <VirtualKeysTab embedded />}
+
+            {/* ─── Guardrail settings tab ───────────────────────────────── */}
+            {activeTab === "guardrails" && (
+              <Stack gap="16px">
+                {/* Save button */}
+                <Stack direction="row" justifyContent="flex-end">
+                  <CustomizableButton
+                    text={gsSaving ? "Saving..." : "Save settings"}
+                    onClick={handleSaveGuardrailSettings}
+                    isDisabled={gsSaving}
+                  />
+                </Stack>
+
+                {/* Error behavior card */}
+                <Box sx={cardSx}>
+                  <Stack gap="8px">
+                    <Typography sx={sectionTitleSx}>Error behavior</Typography>
+                    <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
+                      What happens when the guardrail scanner itself fails. "Fail-closed" blocks all
+                      requests for safety. "Fail-open" allows requests through.
+                    </Typography>
+                    <Stack direction="row" gap="16px" mt="8px">
+                      <Box flex={1}>
+                        <Select
+                          id="pii-on-error"
+                          label="PII scan on error"
+                          value={gsForm.pii_on_error}
+                          items={[
+                            { _id: "block", name: "Block request (fail-closed)" },
+                            { _id: "allow", name: "Allow request (fail-open)" },
+                          ]}
+                          onChange={(e) =>
+                            setGsForm((p) => ({ ...p, pii_on_error: e.target.value as string }))
+                          }
+                          getOptionValue={(item) => item._id}
+                        />
+                      </Box>
+                      <Box flex={1}>
+                        <Select
+                          id="cf-on-error"
+                          label="Content filter on error"
+                          value={gsForm.content_filter_on_error}
+                          items={[
+                            { _id: "allow", name: "Allow request (fail-open)" },
+                            { _id: "block", name: "Block request (fail-closed)" },
+                          ]}
+                          onChange={(e) =>
+                            setGsForm((p) => ({
+                              ...p,
+                              content_filter_on_error: e.target.value as string,
+                            }))
+                          }
+                          getOptionValue={(item) => item._id}
+                        />
+                      </Box>
+                    </Stack>
+                  </Stack>
                 </Box>
-              )}
-            </Stack>
-          )}
-        </Box>
+
+                {/* Replacement text card */}
+                <Box sx={cardSx}>
+                  <Stack gap="8px">
+                    <Typography sx={sectionTitleSx}>Replacement text</Typography>
+                    <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
+                      When a guardrail masks content, this text replaces the detected value. Use
+                      ENTITY_TYPE in the PII format to include the detected type (e.g.,
+                      &lt;EMAIL_ADDRESS&gt;).
+                    </Typography>
+                    <Stack direction="row" gap="16px" mt="8px">
+                      <Box flex={1}>
+                        <Field
+                          label="PII replacement format"
+                          placeholder="<ENTITY_TYPE>"
+                          value={gsForm.pii_replacement_format}
+                          onChange={(e) =>
+                            setGsForm((p) => ({ ...p, pii_replacement_format: e.target.value }))
+                          }
+                        />
+                      </Box>
+                      <Box flex={1}>
+                        <Field
+                          label="Content filter replacement"
+                          placeholder="[REDACTED]"
+                          value={gsForm.content_filter_replacement}
+                          onChange={(e) =>
+                            setGsForm((p) => ({ ...p, content_filter_replacement: e.target.value }))
+                          }
+                        />
+                      </Box>
+                    </Stack>
+                  </Stack>
+                </Box>
+
+                {/* Audit log retention card */}
+                <Box sx={cardSx}>
+                  <Stack gap="8px">
+                    <Typography sx={sectionTitleSx}>Audit log retention</Typography>
+                    <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
+                      How long to keep guardrail detection logs. These logs record every blocked or
+                      masked request for compliance auditing (EU AI Act Art. 12).
+                    </Typography>
+                    <Box sx={{ maxWidth: 200, mt: "8px" }}>
+                      <Field
+                        label="Retention period (days)"
+                        placeholder="90"
+                        value={gsForm.log_retention_days}
+                        onChange={(e) =>
+                          setGsForm((p) => ({ ...p, log_retention_days: e.target.value }))
+                        }
+                      />
+                    </Box>
+                    <Box sx={{ mt: "8px" }}>
+                      <CustomizableButton
+                        text="Purge old logs"
+                        variant="outlined"
+                        onClick={async () => {
+                          try {
+                            await apiServices.post("/ai-gateway/guardrails/logs/purge");
+                          } catch {
+                            // Silently handle
+                          }
+                        }}
+                      />
+                    </Box>
+                  </Stack>
+                </Box>
+
+                {/* Request body logging card */}
+                <Box sx={cardSx}>
+                  <Stack gap="8px">
+                    <Typography sx={sectionTitleSx}>Request body logging</Typography>
+                    <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
+                      When enabled, full request prompts and LLM responses are stored in the spend
+                      logs. Disabled by default for privacy. Bodies are truncated to 2,048
+                      characters.
+                    </Typography>
+                    <Stack gap="12px" mt="8px">
+                      <Stack direction="row" justifyContent="space-between" alignItems="center">
+                        <Typography sx={{ fontSize: 13 }}>Log request body (prompts)</Typography>
+                        <Toggle
+                          checked={gsForm.log_request_body}
+                          onChange={() =>
+                            setGsForm((p) => ({ ...p, log_request_body: !p.log_request_body }))
+                          }
+                        />
+                      </Stack>
+                      <Stack direction="row" justifyContent="space-between" alignItems="center">
+                        <Typography sx={{ fontSize: 13 }}>
+                          Log response body (LLM output)
+                        </Typography>
+                        <Toggle
+                          checked={gsForm.log_response_body}
+                          onChange={() =>
+                            setGsForm((p) => ({ ...p, log_response_body: !p.log_response_body }))
+                          }
+                        />
+                      </Stack>
+                    </Stack>
+                  </Stack>
+                </Box>
+
+                {/* Spend log cleanup card */}
+                <Box sx={cardSx}>
+                  <Stack gap="8px">
+                    <Typography sx={sectionTitleSx}>Spend log cleanup</Typography>
+                    <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
+                      Delete old spend log entries based on the retention period above.
+                    </Typography>
+                    <Box sx={{ mt: "8px" }}>
+                      <CustomizableButton
+                        text={spendPurgeResult || "Purge old spend logs"}
+                        variant="outlined"
+                        onClick={async () => {
+                          setSpendPurgeResult("Purging...");
+                          try {
+                            const res = await apiServices.post<Record<string, any>>(
+                              "/ai-gateway/spend/logs/purge",
+                            );
+                            const count = res?.data?.deleted ?? res?.data?.data?.deleted_count ?? 0;
+                            setSpendPurgeResult(
+                              count > 0 ? `Deleted ${count} logs` : "No old logs to purge",
+                            );
+                            if (count > 0) await loadData();
+                            setTimeout(() => setSpendPurgeResult(""), 3000);
+                          } catch {
+                            setSpendPurgeResult("Failed to purge");
+                            setTimeout(() => setSpendPurgeResult(""), 3000);
+                          }
+                        }}
+                      />
+                    </Box>
+                  </Stack>
+                </Box>
+                {/* Response cache settings card */}
+                <Box sx={cardSx}>
+                  <Stack gap="12px">
+                    <Typography sx={sectionTitleSx}>Response caching</Typography>
+                    <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
+                      Cache identical LLM requests to reduce cost and latency. Enable caching
+                      globally here, then toggle it per-endpoint in the Endpoints tab.
+                    </Typography>
+
+                    <Stack direction="row" justifyContent="space-between" alignItems="center">
+                      <Typography sx={{ fontSize: 13 }}>Enable caching globally</Typography>
+                      <Toggle
+                        checked={cacheSettings.cache_global_enabled}
+                        onChange={() =>
+                          setCacheSettings((p) => ({
+                            ...p,
+                            cache_global_enabled: !p.cache_global_enabled,
+                          }))
+                        }
+                      />
+                    </Stack>
+
+                    <Stack direction="row" gap="16px">
+                      <Box sx={{ flex: 1 }}>
+                        <Field
+                          label="Default TTL (seconds)"
+                          placeholder="14400"
+                          value={cacheSettings.cache_default_ttl_seconds}
+                          onChange={(e) =>
+                            setCacheSettings((p) => ({
+                              ...p,
+                              cache_default_ttl_seconds: e.target.value,
+                            }))
+                          }
+                        />
+                      </Box>
+                      <Box sx={{ flex: 1 }}>
+                        <Field
+                          label="Max entries per org"
+                          placeholder="50000"
+                          value={cacheSettings.cache_max_entries_per_org}
+                          onChange={(e) =>
+                            setCacheSettings((p) => ({
+                              ...p,
+                              cache_max_entries_per_org: e.target.value,
+                            }))
+                          }
+                        />
+                      </Box>
+                    </Stack>
+
+                    <Stack direction="row" gap="8px" sx={{ mt: "8px" }}>
+                      <CustomizableButton
+                        text={cacheSaving ? "Saving..." : "Save cache settings"}
+                        variant="contained"
+                        onClick={handleSaveCacheSettings}
+                      />
+                      <CustomizableButton
+                        text={cachePurgeResult || "Purge expired entries"}
+                        variant="outlined"
+                        onClick={async () => {
+                          setCachePurgeResult("Purging...");
+                          try {
+                            const res =
+                              await apiServices.post<Record<string, any>>(
+                                "/ai-gateway/cache/purge",
+                              );
+                            const count = res?.data?.deleted ?? 0;
+                            setCachePurgeResult(
+                              count > 0 ? `Deleted ${count} entries` : "No expired entries",
+                            );
+                            setTimeout(() => setCachePurgeResult(""), 3000);
+                          } catch {
+                            setCachePurgeResult("Failed");
+                            setTimeout(() => setCachePurgeResult(""), 3000);
+                          }
+                        }}
+                      />
+                    </Stack>
+                  </Stack>
+                </Box>
+              </Stack>
+            )}
+
+            {/* ─── Suggested risks tab ──────────────────────────────────── */}
+            {activeTab === "risks" && !riskLoading && !riskError && (
+              <Stack gap="16px">
+                {/* Detection settings card */}
+                <Box sx={cardSx}>
+                  <Stack gap="12px">
+                    <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+                      <Box>
+                        <Typography sx={sectionTitleSx}>Risk detection settings</Typography>
+                        <Typography sx={{ fontSize: 13, color: palette.text.tertiary, mt: "4px" }}>
+                          Configure which risk conditions to monitor. Detection runs daily at 6 AM
+                          or manually below.
+                        </Typography>
+                      </Box>
+                      <Stack direction="row" gap="8px" alignItems="center">
+                        {detectResult && (
+                          <Typography
+                            sx={{
+                              fontSize: 12,
+                              color: detectResult.includes("found")
+                                ? palette.status.success.text
+                                : palette.text.tertiary,
+                              mr: "4px",
+                            }}
+                          >
+                            {detectResult}
+                          </Typography>
+                        )}
+                        <CustomizableButton
+                          text={detecting ? "Detecting..." : "Run detection now"}
+                          variant="outlined"
+                          icon={<Play size={14} strokeWidth={1.5} />}
+                          onClick={handleRunDetection}
+                          isDisabled={detecting}
+                        />
+                        <CustomizableButton
+                          text={riskSettingsSaving ? "Saving..." : "Save settings"}
+                          onClick={handleSaveRiskSettings}
+                          isDisabled={riskSettingsSaving || !riskSettingsDirty}
+                        />
+                      </Stack>
+                    </Stack>
+
+                    <Stack gap="0px" mt="4px">
+                      {riskSettings.map((s, idx) => {
+                        const meta = CONDITION_META[s.condition_id];
+                        const thresholdKeys = Object.keys(s.default_threshold);
+                        return (
+                          <Stack
+                            key={s.condition_id}
+                            direction="row"
+                            alignItems="flex-start"
+                            gap="12px"
+                            sx={{
+                              p: "12px 0",
+                              borderTop: idx > 0 ? `1px solid ${palette.border.light}` : "none",
+                              opacity: s.is_enabled ? 1 : 0.55,
+                            }}
+                          >
+                            <Box sx={{ pt: "2px" }}>
+                              <Toggle
+                                checked={s.is_enabled}
+                                onChange={() =>
+                                  handleToggleCondition(s.condition_id, !s.is_enabled)
+                                }
+                              />
+                            </Box>
+                            <Box flex={1} minWidth={0}>
+                              <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
+                                {s.label}
+                              </Typography>
+                              {meta?.description && (
+                                <Typography
+                                  sx={{
+                                    fontSize: 12,
+                                    color: palette.text.tertiary,
+                                    mt: "2px",
+                                    lineHeight: 1.4,
+                                  }}
+                                >
+                                  {meta.description}
+                                </Typography>
+                              )}
+                              {thresholdKeys.length > 0 && (
+                                <Box sx={{ display: "flex", flexDirection: "row", mt: "8px" }}>
+                                  {thresholdKeys.map((key, ki) => (
+                                    <Box
+                                      key={key}
+                                      sx={{ width: "110px", ml: ki > 0 ? "8px" : "0px" }}
+                                    >
+                                      <Field
+                                        label={meta?.thresholdLabels[key] || key.replace(/_/g, " ")}
+                                        value={String(
+                                          s.threshold[key] ?? s.default_threshold[key] ?? "",
+                                        )}
+                                        onChange={(e) =>
+                                          handleThresholdChange(s.condition_id, key, e.target.value)
+                                        }
+                                        sx={{ minWidth: "unset", width: "100%" }}
+                                      />
+                                    </Box>
+                                  ))}
+                                </Box>
+                              )}
+                            </Box>
+                          </Stack>
+                        );
+                      })}
+                    </Stack>
+                  </Stack>
+                </Box>
+
+                {/* Pending suggestions */}
+                {pendingSuggestions.length > 0 ? (
+                  <Box>
+                    <Typography sx={{ ...sectionTitleSx, mb: "12px" }}>
+                      Pending suggestions ({pendingSuggestions.length})
+                    </Typography>
+                    <Stack gap="12px">
+                      {pendingSuggestions.map((s) => (
+                        <Box key={s.id} sx={cardSx}>
+                          <Stack gap="8px">
+                            <Stack direction="row" alignItems="center" gap="8px">
+                              <Typography
+                                sx={{
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                  color: SEVERITY_COLORS[s.severity] || palette.text.tertiary,
+                                  backgroundColor: `${SEVERITY_COLORS[s.severity] || palette.text.tertiary}1a`,
+                                  px: "8px",
+                                  py: "2px",
+                                  borderRadius: "4px",
+                                  textTransform: "uppercase",
+                                }}
+                              >
+                                {s.severity}
+                              </Typography>
+                              <Typography sx={{ fontSize: 14, fontWeight: 500 }}>
+                                {s.title}
+                              </Typography>
+                            </Stack>
+
+                            <Typography sx={{ fontSize: 13, color: palette.text.secondary }}>
+                              {s.description}
+                            </Typography>
+
+                            {s.suggested_mitigation && (
+                              <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
+                                <strong>Suggested:</strong> {s.suggested_mitigation}
+                              </Typography>
+                            )}
+
+                            {s.compliance_tags.length > 0 && (
+                              <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
+                                {s.compliance_tags.join(" \u00b7 ")}
+                              </Typography>
+                            )}
+
+                            {s.evidence && Object.keys(s.evidence).length > 0 && (
+                              <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
+                                Evidence:{" "}
+                                {Object.entries(s.evidence)
+                                  .filter(([k]) => !k.startsWith("threshold"))
+                                  .slice(0, 4)
+                                  .map(
+                                    ([k, v]) =>
+                                      `${k.replace(/_/g, " ")}: ${Array.isArray(v) ? v.join(", ") : v}`,
+                                  )
+                                  .join(" \u00b7 ")}
+                              </Typography>
+                            )}
+
+                            <Stack direction="row" justifyContent="flex-end" gap="8px" mt="4px">
+                              <CustomizableButton
+                                text="Dismiss"
+                                variant="outlined"
+                                icon={<X size={14} strokeWidth={1.5} />}
+                                onClick={() => openDismissModal(s)}
+                              />
+                              <CustomizableButton
+                                text="Accept as risk"
+                                icon={<Check size={14} strokeWidth={1.5} />}
+                                onClick={() => openAcceptModal(s)}
+                              />
+                            </Stack>
+                          </Stack>
+                        </Box>
+                      ))}
+                    </Stack>
+                  </Box>
+                ) : (
+                  <EmptyState
+                    icon={AlertTriangle}
+                    message="No pending risk suggestions. Run detection or wait for the next scheduled check."
+                    showBorder
+                  />
+                )}
+
+                {/* History (collapsed) */}
+                {historySuggestions.length > 0 && (
+                  <Box>
+                    <Stack
+                      direction="row"
+                      alignItems="center"
+                      gap="4px"
+                      sx={{ cursor: "pointer", mb: "8px" }}
+                      onClick={() => setShowHistory(!showHistory)}
+                    >
+                      {showHistory ? (
+                        <ChevronDown size={16} strokeWidth={1.5} />
+                      ) : (
+                        <ChevronRight size={16} strokeWidth={1.5} />
+                      )}
+                      <Typography
+                        sx={{ fontSize: 13, fontWeight: 500, color: palette.text.secondary }}
+                      >
+                        History ({historySuggestions.length})
+                      </Typography>
+                    </Stack>
+                    <Collapse in={showHistory}>
+                      <Stack gap="8px">
+                        {historySuggestions.map((s) => (
+                          <Stack
+                            key={s.id}
+                            direction="row"
+                            justifyContent="space-between"
+                            alignItems="center"
+                            sx={{
+                              p: "8px 12px",
+                              border: `1px solid ${palette.border.light}`,
+                              borderRadius: "4px",
+                              opacity: 0.7,
+                            }}
+                          >
+                            <Stack direction="row" alignItems="center" gap="8px">
+                              <Typography
+                                sx={{
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                  color:
+                                    s.status === "accepted"
+                                      ? palette.status.success.text
+                                      : palette.text.tertiary,
+                                  textTransform: "uppercase",
+                                }}
+                              >
+                                {s.status}
+                              </Typography>
+                              <Typography sx={{ fontSize: 13 }}>{s.title}</Typography>
+                            </Stack>
+                            <Stack direction="row" alignItems="center" gap="8px">
+                              {s.reviewed_by_name && (
+                                <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
+                                  by {s.reviewed_by_name}
+                                </Typography>
+                              )}
+                              {s.reviewed_at && (
+                                <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
+                                  {displayFormattedDate(s.reviewed_at)}
+                                </Typography>
+                              )}
+                            </Stack>
+                          </Stack>
+                        ))}
+                      </Stack>
+                    </Collapse>
+                  </Box>
+                )}
+              </Stack>
+            )}
+            {activeTab === "risks" && riskLoading && (
+              <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
+            )}
+            {activeTab === "risks" && riskError && (
+              <EmptyState icon={AlertTriangle} message={riskError}>
+                <CustomizableButton
+                  variant="outlined"
+                  text="Retry"
+                  icon={<RotateCcw size={16} />}
+                  onClick={loadRiskData}
+                />
+              </EmptyState>
+            )}
+          </Box>
+        )}
+        {loading && <CustomizableSkeleton variant="rectangular" width="100%" height={400} />}
+        {loadError && (
+          <EmptyState icon={AlertTriangle} message={loadError}>
+            <CustomizableButton
+              variant="outlined"
+              text="Retry"
+              icon={<RotateCcw size={16} />}
+              onClick={loadData}
+            />
+          </EmptyState>
+        )}
       </TabContext>
 
       {/* Add API Key Modal */}
