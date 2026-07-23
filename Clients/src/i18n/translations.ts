@@ -1429,6 +1429,7 @@ export const translations: Record<string, Record<string, string>> = {
       "KI-Agenten in Ihrer Organisation automatisch erkennen und inventarisieren. Erkannte Agenten prüfen, bestätigen oder ablehnen und für die Governance-Verfolgung mit Ihrem Modellinventar verknüpfen.",
     "Avg Latency": "Durchschnittliche Latenz",
     "Avg input tokens": "Durchschnittliche Eingabe-Tokens",
+    "Avg tool calls / run": "Durchschnittliche Tool-Aufrufe / Lauf",
     "Avg latency": "Durchschnittliche Latenz",
     "Avg latency, top 10 tools": "Durchschnittliche Latenz, Top 10 Tools",
     "Avg output tokens": "Durchschnittliche Ausgabe-Tokens",
@@ -2520,6 +2521,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Tool-level access control": "Zugriffskontrolle auf Tool-Ebene",
     "Total applicants": "Bewerber insgesamt",
     "Total Calls": "Gesamtaufrufe",
+    "Total runs": "Läufe insgesamt",
     "Total cost": "Gesamtkosten",
     "Total events": "Ereignisse insgesamt",
     "Total findings": "Erkenntnisse insgesamt",
@@ -2536,6 +2538,11 @@ export const translations: Record<string, Record<string, string>> = {
     "Total tokens": "Tokens insgesamt",
     "Total tool invocations in the selected period":
       "Gesamte Tool-Aufrufe im ausgewählten Zeitraum",
+    "Distinct agent runs in the selected period":
+      "Eindeutige Agentenläufe im ausgewählten Zeitraum",
+    "Mean number of tool calls per run": "Durchschnittliche Anzahl an Tool-Aufrufen pro Lauf",
+    "Share of runs where at least one tool call was blocked by a policy or guardrail":
+      "Anteil der Läufe, bei denen mindestens ein Tool-Aufruf durch eine Richtlinie oder ein Guardrail blockiert wurde",
     "Total users": "Benutzer insgesamt",
     "Traffic controls": "Verkehrskontrollen",
     "Transparency measures": "Transparenzmaßnahmen",
@@ -2549,6 +2556,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Unique apps": "Eindeutige Apps",
     "Unique repos scanned": "Eindeutige gescannte Repositories",
     "Unique Tools": "Eindeutige Tools",
+    "Runs with a block": "Läufe mit einer Blockierung",
     "Unknown": "Unbekannt",
     "Unlinked": "Nicht verknüpft",
     "Untitled audit": "Unbenannte Prüfung",
@@ -10534,6 +10542,7 @@ export const translations: Record<string, Record<string, string>> = {
       "Découvrez et inventoriez automatiquement les agents IA dans votre organisation. Examinez les agents découverts, confirmez-les ou rejetez-les, et reliez-les à votre inventaire de modèles pour le suivi de gouvernance.",
     "Avg Latency": "Latence moyenne",
     "Avg input tokens": "Tokens d'entrée moyens",
+    "Avg tool calls / run": "Appels d'outils moyens / exécution",
     "Avg latency": "Latence moyenne",
     "Avg latency, top 10 tools": "Latence moyenne, top 10 outils",
     "Avg output tokens": "Tokens de sortie moyens",
@@ -11594,6 +11603,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Total applicants": "Candidats au total",
     "Total Calls": "Appels totaux",
     "Total cost": "Coût total",
+    "Total runs": "Exécutions totales",
     "Total events": "Événements au total",
     "Total findings": "Constats au total",
     "Total LLM vulnerability findings across all OWASP Top 10 for LLM types":
@@ -11609,6 +11619,11 @@ export const translations: Record<string, Record<string, string>> = {
     "Total tokens": "Tokens au total",
     "Total tool invocations in the selected period":
       "Invocations totales d'outils sur la période sélectionnée",
+    "Distinct agent runs in the selected period":
+      "Exécutions d'agents distinctes sur la période sélectionnée",
+    "Mean number of tool calls per run": "Nombre moyen d'appels d'outils par exécution",
+    "Share of runs where at least one tool call was blocked by a policy or guardrail":
+      "Part des exécutions où au moins un appel d'outil a été bloqué par une politique ou un garde-fou",
     "Total users": "Utilisateurs au total",
     "Traffic controls": "Contrôles de trafic",
     "Transparency measures": "Mesures de transparence",
@@ -11622,6 +11637,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Unique apps": "Applications uniques",
     "Unique repos scanned": "Dépôts uniques analysés",
     "Unique Tools": "Outils uniques",
+    "Runs with a block": "Exécutions avec un blocage",
     "Unlinked": "Non relié",
     "Untitled audit": "Audit sans titre",
     "Untitled form": "Formulaire sans titre",
@@ -18896,6 +18912,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Associated model (optional)": "Modelo asociado (opcional)",
     "Avg Latency": "Latencia media",
     "Avg input tokens": "Tokens de entrada medios",
+    "Avg tool calls / run": "Llamadas a herramientas medias / ejecución",
     "Avg latency": "Latencia media",
     "Avg latency, top 10 tools": "Latencia media, 10 herramientas principales",
     "Avg output tokens": "Tokens de salida medios",
@@ -19881,6 +19898,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Total applicants": "Total de solicitantes",
     "Total Calls": "Total de llamadas",
     "Total cost": "Coste total",
+    "Total runs": "Ejecuciones totales",
     "Total events": "Total de eventos",
     "Total findings": "Total de hallazgos",
     "Total number of source files analyzed": "Número total de archivos de origen analizados",
@@ -19901,6 +19919,7 @@ export const translations: Record<string, Record<string, string>> = {
     "Unique apps": "Aplicaciones únicas",
     "Unique repos scanned": "Repositorios únicos analizados",
     "Unique Tools": "Herramientas únicas",
+    "Runs with a block": "Ejecuciones con un bloqueo",
     "Unknown": "Desconocido",
     "Unlinked": "Sin vincular",
     "Untitled audit": "Auditoría sin título",
@@ -23170,6 +23189,11 @@ export const translations: Record<string, Record<string, string>> = {
       "Gasto total en todos los endpoints durante este periodo",
     "Total tool invocations in the selected period":
       "Total de invocaciones de herramientas en el periodo seleccionado",
+    "Distinct agent runs in the selected period":
+      "Ejecuciones de agentes distintas en el periodo seleccionado",
+    "Mean number of tool calls per run": "Número medio de llamadas a herramientas por ejecución",
+    "Share of runs where at least one tool call was blocked by a policy or guardrail":
+      "Proporción de ejecuciones en las que al menos una llamada a una herramienta fue bloqueada por una política o barrera de protección",
     "What your guardrails caught in this period":
       "Lo que sus barreras de protección detectaron en este periodo",
     "Whose name and role appear on the declaration document":

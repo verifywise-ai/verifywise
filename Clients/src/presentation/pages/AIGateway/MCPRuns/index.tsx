@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from "react";
 import { Box, Stack, Typography } from "@mui/material";
-import { Activity, AlertTriangle, RotateCcw } from "lucide-react";
+import { Activity, AlertTriangle, RotateCcw, Wrench } from "lucide-react";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
 import MCPTable, { MCPTableColumn } from "../MCPTable";
@@ -9,6 +9,8 @@ import RunDetailDrawer from "./RunDetailDrawer";
 import palette from "../../../themes/palette";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import CustomizableSkeleton from "../../../components/Skeletons";
+import Select from "../../../components/Inputs/Select";
+import { StatCard } from "../../../components/Cards/StatCard";
 
 interface RunRow {
   agent_run_id: string;
@@ -21,6 +23,18 @@ interface RunRow {
   started_at: string;
   last_at: string;
 }
+
+interface RunStats {
+  total_runs: number;
+  avg_tool_calls_per_run: number;
+  pct_runs_with_block: number;
+}
+
+const PERIOD_ITEMS = [
+  { _id: "7", name: "Last 7 days" },
+  { _id: "14", name: "Last 14 days" },
+  { _id: "30", name: "Last 30 days" },
+];
 
 const RUNS_LIMIT = 50;
 
@@ -38,6 +52,8 @@ export default function MCPRuns() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
+  const [stats, setStats] = useState<RunStats | null>(null);
+  const [days, setDays] = useState("7");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -58,6 +74,21 @@ export default function MCPRuns() {
     load();
   }, [load]);
 
+  const loadStats = useCallback(async () => {
+    try {
+      const res = await apiServices.get<Record<string, any>>(
+        `/ai-gateway/mcp/runs/stats?days=${days}`,
+      );
+      setStats(res?.data?.data ?? null);
+    } catch {
+      setStats(null);
+    }
+  }, [days]);
+
+  useEffect(() => {
+    loadStats();
+  }, [loadStats]);
+
   return (
     <PageHeaderExtended
       title="Runs"
@@ -65,6 +96,46 @@ export default function MCPRuns() {
       helpArticlePath="ai-gateway/mcp-runs"
     >
       <Box sx={{ px: 3, pt: 2 }}>
+        <Stack direction="row" sx={{ justifyContent: "flex-end", mb: "16px" }}>
+          <Box sx={{ width: 180 }}>
+            <Select
+              id="runs-period"
+              value={days}
+              items={PERIOD_ITEMS}
+              onChange={(e) => setDays(e.target.value as string)}
+            />
+          </Box>
+        </Stack>
+        {stats && (
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: "repeat(3, 1fr)",
+              gap: "16px",
+              mb: "16px",
+            }}
+          >
+            <StatCard
+              title="Total runs"
+              value={stats.total_runs}
+              Icon={Activity}
+              tooltip="Distinct agent runs in the selected period"
+            />
+            <StatCard
+              title="Avg tool calls / run"
+              value={stats.avg_tool_calls_per_run}
+              Icon={Wrench}
+              tooltip="Mean number of tool calls per run"
+            />
+            <StatCard
+              title="Runs with a block"
+              value={`${stats.pct_runs_with_block}%`}
+              Icon={AlertTriangle}
+              highlight={stats.pct_runs_with_block > 0}
+              tooltip="Share of runs where at least one tool call was blocked by a policy or guardrail"
+            />
+          </Box>
+        )}
         {loading ? (
           <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
         ) : loadError ? (
