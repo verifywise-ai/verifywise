@@ -523,6 +523,11 @@ describe("analyzer registry", () => {
       expect(system).not.toContain(
         "overall compliance and governance posture; critical findings requiring immediate attention",
       );
+      // The .describe() text is serialised into the JSON schema handed to the
+      // provider, so an outline left there reaches the model in the same call
+      // and contradicts the system prompt.
+      const summaryDescription = (ANALYZERS.executiveSummary.schema as any).shape.summary.description;
+      expect(summaryDescription).not.toContain("overall compliance and governance posture");
     });
 
     it("puts the framework and subject NAMES into the instruction, not only the header", () => {

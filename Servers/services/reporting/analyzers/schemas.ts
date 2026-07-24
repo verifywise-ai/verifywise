@@ -29,7 +29,10 @@ export const executiveSummarySchema = z
       .min(40)
       .max(3500)
       .describe(
-        "Three to five paragraphs, professional third-person, flowing prose. No markdown, no bullet points, no headers. Cover: overall compliance and governance posture; critical findings needing immediate attention; top areas needing improvement; recommended next steps.",
+        // Shape only. The four-part outline that used to live here reached the
+        // model as part of the JSON schema and contradicted the system prompt's
+        // "do not work through a fixed outline" — structure is the prompt's job.
+        "Three to five paragraphs, professional third-person, flowing prose. No markdown, no bullet points, no headers.",
       ),
     abstain_reason: abstainReason,
   })

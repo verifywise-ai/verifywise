@@ -66,10 +66,18 @@ export interface AnalyzerDefinition {
 const RISK_SECTIONS = ["projectRisks", "vendorRisks", "modelRisks"];
 const VENDOR_SECTIONS = ["vendors", "vendorRisks"];
 
+/** The two names a prompt refers to, with their fallbacks in ONE place: the
+ *  header and the instruction body must never disagree about them. */
+function subjectOf(reportData: ReportData): { fw: string; subject: string } {
+  return {
+    fw: reportData.metadata?.frameworkName ?? "AI governance",
+    subject: reportData.metadata?.projectTitle ?? "the organization",
+  };
+}
+
 function header(reportData: ReportData): string {
-  const fw = reportData.metadata?.frameworkName ?? "AI governance";
-  const project = reportData.metadata?.projectTitle ?? "the organization";
-  return `Framework: ${fw}\nSubject: ${project}`;
+  const { fw, subject } = subjectOf(reportData);
+  return `Framework: ${fw}\nSubject: ${subject}`;
 }
 
 /**
@@ -106,8 +114,7 @@ export const ANALYZERS: Record<AnalysisSectionKey, AnalyzerDefinition> = {
     buildUserPrompt: (rd, extras) => {
       const body = renderSummaries(extras.sectionSummaries);
       if (!body) return "";
-      const fw = rd.metadata?.frameworkName ?? "AI governance";
-      const subject = rd.metadata?.projectTitle ?? "the organization";
+      const { fw, subject } = subjectOf(rd);
       return `${header(rd)}\n\n${factsBlock(extras)}Section analyses:\n${body}\n\nWrite the executive summary for ${subject} against ${fw}.`;
     },
   },
