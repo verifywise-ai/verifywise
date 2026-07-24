@@ -9,6 +9,7 @@ import * as ejs from "ejs";
 import * as fs from "fs";
 import * as path from "path";
 import { AISummaries, ReportData } from "../../../domain.layer/interfaces/i.reportGeneration";
+import { ANALYSIS_LABELS } from "../analyzers/mapToSummaries";
 
 const TEMPLATE_PATH = path.join(__dirname, "../../../templates/reports/report-pdf.ejs");
 const template = fs.readFileSync(TEMPLATE_PATH, "utf-8");
@@ -39,8 +40,14 @@ function render(aiSummaries?: AISummaries): string {
     // Falsy stand-ins for every section so only the AI blocks render.
     sections: Object.fromEntries(SECTION_KEYS.map((k) => [k, false])) as unknown as ReportData["sections"],
     aiSummaries,
+    // The renderer supplies these; the template must not declare its own copy.
+    analysisLabels: ANALYSIS_LABELS,
     include: () => "",
-  } satisfies Omit<ReportData, "aiSummaries"> & { aiSummaries?: AISummaries; include: (p: string) => string };
+  } satisfies Omit<ReportData, "aiSummaries"> & {
+    aiSummaries?: AISummaries;
+    analysisLabels: Record<string, string>;
+    include: (p: string) => string;
+  };
   return ejs.render(template, data);
 }
 
@@ -314,6 +321,27 @@ describe("report-pdf.ejs template", () => {
     expect(html).toContain(">absent<");
     expect(html).toContain("Closes when: A dated review record against Art. 9");
     expect(html).toContain("(high, inferred)");
+  });
+
+  it("prints abstention reasons instead of leaving a silent hole", () => {
+    const html = render({
+      sectionSummaries: {},
+      abstentions: {
+        vendorRisk: "No vendors were in scope for this report.",
+        riskAnalysis: "No risk rows were supplied.",
+      },
+    });
+
+    expect(html).toContain("Analyses not produced");
+    // Labels come from ANALYSIS_LABELS via render data, not from the template.
+    expect(html).toContain("Third-party risk analysis");
+    expect(html).toContain("No vendors were in scope for this report.");
+    expect(html).toContain("Risk analysis");
+    expect(html).toContain("No risk rows were supplied.");
+  });
+
+  it("prints no abstention block when every enabled analyzer produced output", () => {
+    expect(render(FULL)).not.toContain("Analyses not produced");
   });
 
   it("the template compiles at all", () => {

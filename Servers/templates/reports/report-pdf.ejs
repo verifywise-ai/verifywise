@@ -360,6 +360,22 @@
     <% } %>
 
     <!-- ============================================ -->
+    <!-- ANALYSES NOT PRODUCED (AI abstentions) -->
+    <!-- ============================================ -->
+    <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.abstentions && Object.keys(aiSummaries.abstentions).length > 0) { %>
+    <div class="subsection">
+      <div class="subsection-header">
+        <h3 class="subsection-title">Analyses not produced</h3>
+      </div>
+      <ul class="ai-findings-list">
+        <% Object.keys(aiSummaries.abstentions).forEach(function(k) { %>
+        <li><strong><%= (typeof analysisLabels !== 'undefined' && analysisLabels[k]) || k %>:</strong> <%= aiSummaries.abstentions[k] %></li>
+        <% }); %>
+      </ul>
+    </div>
+    <% } %>
+
+    <!-- ============================================ -->
     <!-- RISK ANALYSIS GROUP -->
     <!-- ============================================ -->
     <% if (sections.projectRisks || sections.vendorRisks || sections.modelRisks) { %>

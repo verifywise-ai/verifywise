@@ -12,6 +12,7 @@ import {
   ReportData,
   ReportGenerationResult,
 } from "../../domain.layer/interfaces/i.reportGeneration";
+import { ANALYSIS_LABELS } from "./analyzers/mapToSummaries";
 
 // Browser instance singleton for reuse
 let browserInstance: Browser | null = null;
@@ -62,6 +63,8 @@ async function renderTemplate(reportData: ReportData): Promise<string> {
   // Render with EJS
   const html = ejs.render(templateContent, {
     ...reportData,
+    // One analyzer-label map, shared with docxGenerator.
+    analysisLabels: ANALYSIS_LABELS,
     // Include helper for CSS inclusion
     include: (filePath: string) => {
       if (filePath.includes("pdf.css")) {
