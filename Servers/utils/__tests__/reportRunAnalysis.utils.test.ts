@@ -1,4 +1,8 @@
-import { upsertRunAnalysisQuery, getRunAnalysesQuery } from "../reportRunAnalysis.utils";
+import {
+  upsertRunAnalysisQuery,
+  getRunAnalysesQuery,
+  getPriorFactsSnapshotQuery,
+} from "../reportRunAnalysis.utils";
 import { sequelize } from "../../database/db";
 
 jest.mock("../../database/db", () => ({
@@ -91,5 +95,46 @@ describe("reportRunAnalysis.utils", () => {
       organization_id: 5,
     });
     expect(rows).toEqual([{ id: 1, section_key: "executiveSummary" }]);
+  });
+
+  it("prior facts lookup scopes to the schedule and filters organization_id on BOTH tables", async () => {
+    const stored = {
+      generatedAt: "2026-06-01T00:00:00.000Z",
+      framework: "EU AI Act",
+      subject: "Test Project",
+      sections: { projectRisks: { totalRisks: 41 } },
+    };
+    mockQuery.mockResolvedValue([[{ facts: stored }], 1]);
+
+    const facts = await getPriorFactsSnapshotQuery(12, 5);
+
+    const sql = mockQuery.mock.calls[0][0] as string;
+    expect(sql).toContain("FROM report_run_analyses ra");
+    expect(sql).toContain("JOIN report_runs r ON r.id = ra.report_run_id");
+    expect(sql).toContain("r.scheduled_report_id = :scheduled_report_id");
+    // Both sides. A filter on only the joined table is the shape that leaks
+    // the moment somebody rewrites the join.
+    expect(sql).toContain("r.organization_id = :organization_id");
+    expect(sql).toContain("ra.organization_id = :organization_id");
+    expect(sql).toContain("ORDER BY ra.analyzed_at DESC");
+    expect(sql).toContain("LIMIT 1");
+    expect(mockQuery.mock.calls[0][1].replacements).toEqual({
+      scheduled_report_id: 12,
+      organization_id: 5,
+    });
+    expect(facts).toEqual(stored);
+  });
+
+  it("prior facts lookup returns null when no earlier run stored one", async () => {
+    mockQuery.mockResolvedValue([[], 0]);
+    expect(await getPriorFactsSnapshotQuery(12, 5)).toBeNull();
+  });
+
+  it("prior facts lookup skips rows whose audit_metadata carries no facts key", async () => {
+    mockQuery.mockResolvedValue([[{ facts: null }], 1]);
+    expect(await getPriorFactsSnapshotQuery(12, 5)).toBeNull();
+    expect(mockQuery.mock.calls[0][0] as string).toContain(
+      "ra.audit_metadata -> 'facts' IS NOT NULL",
+    );
   });
 });

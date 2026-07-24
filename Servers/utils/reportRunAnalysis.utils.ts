@@ -69,3 +69,51 @@ export const getRunAnalysesQuery = async (reportRunId: number, organizationId: n
   )) as [any[], number];
   return result[0];
 };
+
+/**
+ * The most recent facts snapshot stored for a schedule — the input to
+ * prior-run comparison (design §10). One extra read, no LLM call.
+ *
+ * persistAnalyses writes the same snapshot onto every section row of a run, so
+ * any row answers "what did the last run see"; newest-first plus LIMIT 1 picks
+ * one without caring which section's write succeeded.
+ *
+ * Tenant isolation: organization_id is filtered on report_runs AND on
+ * report_run_analyses. report_runs alone would be enough today — the sidecar
+ * cannot outlive its run — but a guard on only one side of a join is the shape
+ * that leaks when the join is later rewritten.
+ *
+ * The caller's own run cannot match itself: analyses are persisted after
+ * generation, so at read time the current run has no rows. If an
+ * analyse-in-place path is ever added, pass the run id and exclude it here.
+ *
+ * `-> 'facts'` (not `->>`) returns JSONB, which pg hands back as a parsed
+ * object. `IS NOT NULL` is SQL NULL only, so a row that stored a JSON `null`
+ * would slip through — persistAnalyses therefore omits the key entirely rather
+ * than writing null.
+ *
+ * No explicit return type, matching the two exports above.
+ */
+export const getPriorFactsSnapshotQuery = async (
+  scheduledReportId: number,
+  organizationId: number,
+) => {
+  const result = (await sequelize.query(
+    `SELECT ra.audit_metadata -> 'facts' AS facts
+       FROM report_run_analyses ra
+       JOIN report_runs r ON r.id = ra.report_run_id
+      WHERE r.scheduled_report_id = :scheduled_report_id
+        AND r.organization_id = :organization_id
+        AND ra.organization_id = :organization_id
+        AND ra.audit_metadata -> 'facts' IS NOT NULL
+      ORDER BY ra.analyzed_at DESC
+      LIMIT 1;`,
+    {
+      replacements: {
+        scheduled_report_id: scheduledReportId,
+        organization_id: organizationId,
+      },
+    },
+  )) as [any[], number];
+  return result[0][0]?.facts ?? null;
+};
