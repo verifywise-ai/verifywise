@@ -18,6 +18,7 @@ import { runAnalyzers } from "./analyzers/runAnalyzers";
 import {
   collectAllowedOwners,
   collectEvidenceGapsInput,
+  collectFactsInput,
   collectReadinessInput,
   resolveBlocks,
 } from "./analyzers/collectAnalyzerInputs";
@@ -117,6 +118,11 @@ export async function generateReport(
           keys?.[0] ??
           null;
 
+        // Deterministic whole-estate aggregates, for every analyzer and every
+        // block combination. No LLM call, no query — computed from the
+        // ReportData already in hand.
+        const { facts } = collectFactsInput(reportData);
+
         // Two independent inputs, fetched in parallel and kept separate.
         const extras = blocks.complianceGap
           ? await (async () => {
@@ -129,9 +135,9 @@ export async function generateReport(
                 ),
                 collectEvidenceGapsInput(request.frameworkId, reportData.metadata.organizationId),
               ]);
-              return { readiness, evidenceGaps };
+              return { readiness, evidenceGaps, facts };
             })()
-          : {};
+          : { facts };
 
         analyses = await runAnalyzers({
           reportData,

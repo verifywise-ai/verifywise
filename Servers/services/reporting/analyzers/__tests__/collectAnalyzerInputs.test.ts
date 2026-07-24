@@ -16,10 +16,15 @@ jest.mock("../../../../utils/evidenceAi.utils", () => ({
   getEvidenceGapsQuery: (...a: any[]) => mockGaps(...a),
 }));
 
+// collectAnalyzerInputs now imports ./facts, which imports isoDate from
+// dataCollector, which imports the real sequelize instance at module load.
+jest.mock("../../../../database/db", () => ({ sequelize: {} }));
+
 import {
   collectReadinessInput,
   collectEvidenceGapsInput,
   collectAllowedOwners,
+  collectFactsInput,
   resolveBlocks,
 } from "../collectAnalyzerInputs";
 
@@ -144,5 +149,47 @@ describe("collectAnalyzerInputs", () => {
 
   it("enables nothing when aiEnhanced is false", () => {
     expect(Object.values(resolveBlocks({ aiEnhanced: false } as any)).every((v) => v === false)).toBe(true);
+  });
+
+  it("§1 — builds the facts block and returns the snapshot for a later run to diff against", () => {
+    const out = collectFactsInput({
+      metadata: {
+        // Local components: isoDate reads local components, so this fixture
+        // expects the same day in every timezone the suite runs in.
+        generatedAt: new Date(2026, 6, 22),
+        frameworkName: "ISO 42001",
+        projectTitle: "Acme",
+      },
+      charts: {},
+      sections: {
+        policyManager: {
+          totalPolicies: 2,
+          policies: [
+            { policyName: "Acceptable use", status: "Draft", owner: "Bob" },
+            { policyName: "Model release", status: "Approved", reviewDate: "1/1/2026", owner: "Bob" },
+          ],
+        },
+      },
+    } as any);
+
+    // The snapshot is what §10 persists to audit_metadata, so the caller needs
+    // it alongside the rendered text.
+    expect(out.snapshot.generatedAt).toBe("2026-07-22");
+    expect(out.snapshot.sections.policyManager.status_Draft).toBe(1);
+    expect(out.facts).toContain("Reference date: 2026-07-22");
+    expect(out.facts).toContain("[Policy Manager]");
+    expect(out.facts).toContain("Acceptable use");
+  });
+
+  it("§10 — renders the delta when a prior snapshot is supplied", () => {
+    const rd: any = {
+      metadata: { generatedAt: new Date(2026, 6, 22), frameworkName: "ISO 42001", projectTitle: "Acme" },
+      charts: {},
+      sections: { policyManager: { totalPolicies: 2, policies: [{ policyName: "A" }, { policyName: "B" }] } },
+    };
+    const prior = collectFactsInput({ ...rd, sections: { policyManager: { totalPolicies: 1, policies: [{ policyName: "A" }] } } }).snapshot;
+
+    expect(collectFactsInput(rd, prior).facts).toContain("totalPolicies: 2 (was 1, +1)");
+    expect(collectFactsInput(rd).facts).not.toContain("Change since");
   });
 });

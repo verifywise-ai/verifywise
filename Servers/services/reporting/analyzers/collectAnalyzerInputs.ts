@@ -10,6 +10,7 @@ import {
 import { getEvidenceGapsQuery } from "../../../utils/evidenceAi.utils";
 import logger from "../../../utils/logger/fileLogger";
 import type { AiBlocks } from "./runAnalyzers";
+import { collectFacts, renderFacts, type FactsSnapshot } from "./facts";
 
 /**
  * frameworks.id -> readiness framework_type.
@@ -193,4 +194,21 @@ export function collectAllowedOwners(reportData: ReportData): string[] {
   harvest(sections.policyManager?.policies, ["owner", "reviewer"]);
 
   return Array.from(owners);
+}
+
+/**
+ * The deterministic facts substrate every analyzer receives (design §1).
+ *
+ * Returns the snapshot alongside its rendered form: §10 persists the snapshot
+ * to report_run_analyses.audit_metadata and diffs the next run against it, so
+ * the caller needs both. `prior` is that stored snapshot; with none supplied
+ * the rendered block simply carries no change lines. The parameter exists from
+ * the start so §10 is a one-argument change at the call site, not a rewrite.
+ */
+export function collectFactsInput(
+  reportData: ReportData,
+  prior?: FactsSnapshot | null,
+): { snapshot: FactsSnapshot; facts: string } {
+  const snapshot = collectFacts(reportData);
+  return { snapshot, facts: renderFacts(snapshot, prior) };
 }
