@@ -694,19 +694,36 @@ function createRecommendedActionsSection(reportData: ReportData): (Paragraph | T
   recommendedActions.forEach((a) => {
     elements.push(
       new Paragraph({
-        spacing: { before: 60, after: 60 },
+        spacing: { before: 60, after: 20 },
         indent: { left: convertInchesToTwip(0.3) },
         bullet: { level: 0 },
         children: [
           new TextRun({ text: a.action, size: 20, color: COLORS.textPrimary }),
           new TextRun({
-            text: `  [${a.priority ?? "—"} · ${a.suggestedOwner ?? "Unassigned"}]`,
+            text: `  [${a.priority ?? "—"} · ${a.suggestedOwner ?? "Unassigned"}${a.basis ? ` · ${a.basis}` : ""}]`,
             size: 18,
             color: COLORS.textSecondary,
           }),
         ],
       }),
     );
+
+    // The analyzer's one sentence tying this action to a signal in the input.
+    if (a.sourceSignal) {
+      elements.push(
+        new Paragraph({
+          spacing: { after: 60 },
+          indent: { left: convertInchesToTwip(0.6) },
+          children: [
+            new TextRun({
+              text: `Why: ${a.sourceSignal}`,
+              size: 18,
+              color: COLORS.textSecondary,
+            }),
+          ],
+        }),
+      );
+    }
   });
 
   elements.push(new Paragraph({ children: [new PageBreak()] }));

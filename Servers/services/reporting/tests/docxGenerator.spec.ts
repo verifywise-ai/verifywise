@@ -437,5 +437,26 @@ describe("DOCX Generator", () => {
 
       expect(text).toContain("flat fallback text");
     });
+
+    it("renders the action rationale and basis label", async () => {
+      const result = await generateDOCX(
+        withSummaries({
+          sectionSummaries: {},
+          recommendedActions: [
+            {
+              action: "Assign owners to the 22 ownerless models",
+              priority: "high",
+              suggestedOwner: "Jane Ops",
+              sourceSignal: "22 of 25 model rows have no owner",
+              basis: "observed",
+            },
+          ],
+        }),
+      );
+      const text = await docxText(result.content);
+
+      expect(text).toContain("[high · Jane Ops · observed]");
+      expect(text).toContain("Why: 22 of 25 model rows have no owner");
+    });
   });
 });
