@@ -252,18 +252,29 @@ describe("analyzer registry", () => {
     expect(Object.keys(SECTION_INSTRUCTIONS).sort()).toEqual(Object.keys(SECTION_LABELS).sort());
     Object.entries(SECTION_INSTRUCTIONS).forEach(([key, body]) => {
       expect(body.length).toBeGreaterThan(120);
-      // The raw key must never appear in prose the model is shown — the human
-      // label is what the prompt uses.
-      expect(body).not.toContain(key);
+      // A camelCase identifier must never appear in prose the model is shown —
+      // the human label is what the prompt uses. Only identifier-shaped keys are
+      // checked: banning the literal "vendors"/"models" would ban the domain
+      // words themselves and shape the prose rather than test anything.
+      if (/[A-Z]/.test(key)) expect(body).not.toContain(key);
     });
 
-    // The three the design names as the pattern.
-    expect(SECTION_INSTRUCTIONS.projectRisks).toContain("unmitigated high and critical");
-    expect(SECTION_INSTRUCTIONS.policyManager).toContain("reference date");
+    // The three the design names as the pattern. 'Critical' belongs to the model
+    // risk vocabulary alone; project and vendor risk levels top out at
+    // 'Very high risk', so asking for a critical bucket there counts an empty one.
+    expect(SECTION_INSTRUCTIONS.projectRisks).toContain("unmitigated high and very high");
+    expect(SECTION_INSTRUCTIONS.modelRisks).toContain("unmitigated high and critical");
     expect(SECTION_INSTRUCTIONS.compliance).toContain("completion rate");
 
-    // An unmapped key must degrade to today's behaviour, not lose its summary.
-    expect(SECTION_INSTRUCTIONS.somethingNew).toBeUndefined();
+    // Day arithmetic is asked for only where the collector emits ISO dates.
+    // policy reviewDate and incident reportedDate are toLocaleDateString()
+    // renderings — "03/04/2026" is a different day per locale, and an "overdue
+    // by N days" claim built on one is wrong silently.
+    expect(SECTION_INSTRUCTIONS.compliance).toContain("reference date");
+    expect(SECTION_INSTRUCTIONS.policyManager).not.toContain("reference date");
+    expect(SECTION_INSTRUCTIONS.incidentManagement).not.toContain("reference date");
+
+    // A section key with no entry falls back to this rather than losing its summary.
     expect(GENERIC_SECTION_INSTRUCTION).toContain("Highlights key observations and patterns");
   });
 

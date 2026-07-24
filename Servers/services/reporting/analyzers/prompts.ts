@@ -38,16 +38,27 @@ export const SECTION_LABELS: Record<string, string> = {
  * section types — the reason every section summary reads interchangeably. Each
  * body asks for the ratios, distributions and named items that only exist in
  * THAT section's data (see dataCollector.ts for what each one actually holds).
+ *
+ * A question with no backing field is worse than no question: the model answers
+ * it truthfully from absence ("no training record carries a completion date")
+ * and a confident false finding lands in a compliance artifact. Every question
+ * below names a field the section's projection actually populates, and the
+ * three vocabularies below are NOT interchangeable — 'Critical' exists only for
+ * model risks (see levelRank's comment), so project and vendor risks say "high
+ * and very high" instead.
  */
 export const SECTION_INSTRUCTIONS: Record<string, string> = {
-  projectRisks: `- How many risks are unmitigated high and critical, and what share of the register is that?
+  projectRisks: `- How many risks are unmitigated high and very high, and what share of the register is that?
 - Which rows carry no named owner, and which combination of impact and likelihood is the worst in the set?
 - Does the level distribution match the raw count, or is a large register scored almost entirely at one level?
 - Name the single risk that carries the most exposure and say what makes it worse than the next one.`,
 
-  vendorRisks: `- How many vendor risks are unmitigated high and critical, and what share of the register is that?
+  // No mitigation or status field reaches this projection (id, vendorName,
+  // riskName, riskLevel, actionOwner, actionPlan), so "unmitigated" is not
+  // askable here — the action plan carries the remediation angle instead.
+  vendorRisks: `- How many vendor risks sit at high or very high level, and what share of the register is that?
 - Which rows have no action owner, and which have no action plan recorded at all?
-- Is the exposure spread across suppliers or concentrated in one or two named vendors?
+- Is the exposure spread across vendors or concentrated in one or two named ones?
 - Compare the level distribution against the raw count rather than reporting the count on its own.`,
 
   modelRisks: `- How many model risks are unmitigated high and critical, and what share of the register is that?
@@ -55,10 +66,14 @@ export const SECTION_INSTRUCTIONS: Record<string, string> = {
 - Compare the level distribution against the raw count rather than reporting the count on its own.
 - Name the model whose risk profile is the worst and say what distinguishes it from the rest.`,
 
-  compliance: `- Which control family has the weakest completion rate within its category, and how does that rate compare with the overall progress figure?
-- How many controls have no owner, and do the unowned ones cluster in one family?
-- Name the specific control identifiers that are furthest from done.
-- Say whether overall progress is being carried by one strong family while another lags well behind it.`,
+  // `category` is the projection's ONE grouping level — there is no family
+  // beneath it. `dueDate` goes through isoDate(), unlike the locale-rendered
+  // dates in policyManager and incidentManagement, so this is the one body that
+  // may ask for day arithmetic against the reference date.
+  compliance: `- Which control category has the weakest completion rate, and how does that rate compare with the overall progress figure?
+- How many controls have no owner, and do the unowned ones cluster in one category?
+- Name the specific control identifiers that are furthest from done, and any whose due date is already past the reference date.
+- Say whether overall progress is being carried by one strong category while another lags well behind it.`,
 
   assessment: `- What share of questions is answered, and which topics sit furthest below that share?
 - Do the unanswered questions cluster in one topic, or are they spread evenly across the tracker?
@@ -75,29 +90,42 @@ export const SECTION_INSTRUCTIONS: Record<string, string> = {
 - Name the specific subcategory identifiers that are furthest behind.
 - Say whether the gaps concentrate in one function or run across all of them.`,
 
-  vendors: `- What is the distribution of review status across the list, and how many suppliers are unreviewed?
+  // The projection carries no risk count, so the vendor list cannot be compared
+  // against the vendor risk register from inside this section.
+  vendors: `- What is the distribution of review status across the list, and how many vendors are unreviewed?
 - How many have no assignee, and how many have no named contact person?
-- Name the suppliers a reader should chase first, and say why those and not the others.
-- Compare the number of suppliers against the number that carry a recorded risk.`,
+- Name the vendors a reader should chase first, and say why those and not the others.
+- Do the unreviewed ones concentrate among the vendors with no assignee, or are the two independent?`,
 
-  models: `- What is the status distribution across the inventory, and how many entries are not in a reviewed state?
+  // model_inventories.status is Approved | Restricted | Pending | Blocked |
+  // Rejected (model-inventory-status.enum.ts) — no "reviewed" state to ask for.
+  models: `- What is the status distribution across the inventory, and how many models are not Approved?
 - How many distinct owners cover the inventory? If one person owns most of it, say so and name the concentration.
-- Which entries carry no owner, and which carry no version?
-- Name the entries a reader should look at first and say what makes them urgent.`,
+- Which models carry no owner, and which carry no version?
+- Name the models a reader should look at first and say what makes them urgent.`,
 
-  trainingRegistry: `- What share of records is complete, and how many carry no completion date at all?
-- How many records have no assignee?
+  // Deliberately silent on completion dates and assignees: collectTrainingRegistry
+  // selects both as literal NULL, so every row lacks them and any question about
+  // them returns a 100% gap for every tenant. `status` and `trainingName` are the
+  // projection's only live fields. Restore the questions with the SELECT, not before.
+  trainingRegistry: `- What share of records is complete, and how does that compare with the number still planned or in progress?
 - Do the incomplete records concentrate in one training, or are they spread across many?
+- Name the trainings furthest from complete and say what that leaves uncovered.
 - Say plainly whether the registry demonstrates coverage or only demonstrates that rows exist.`,
 
+  // No date arithmetic here or in incidentManagement: `reviewDate` and
+  // `reportedDate` reach the model through toLocaleDateString(), so "03/04/2026"
+  // is March 4 or April 3 depending on the server locale. An "overdue by N days"
+  // claim built on that is wrong silently, since a wrong date is still a valid
+  // one — the same reason dateOf refuses to rank on reviewDate.
   policyManager: `- What is the ratio of draft to approved policies, stated as a ratio and not only as two counts?
-- Which policies have a review date already past the reference date, and by how long?
 - Which policies carry no review date, and which carry no owner?
+- Does one status dominate the library, or is the work spread across several states?
 - Name the policies that need attention first and say what puts them first.`,
 
   incidentManagement: `- How many incidents are still open, broken down by severity?
-- How long has each open incident been open, measured against the reference date?
-- Does one type recur, and is it tied to a named model, supplier or project?
+- Which severities are over-represented among the open ones compared with the register as a whole?
+- Does one type recur, and how many incidents does it account for?
 - Name the incident a reader should look at first and say why.`,
 };
 
