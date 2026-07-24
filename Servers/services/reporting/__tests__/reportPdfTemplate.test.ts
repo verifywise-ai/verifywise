@@ -178,6 +178,52 @@ describe("report-pdf.ejs template", () => {
     expect(html).toContain("No vendors of concern.");
   });
 
+  it("renders structured findings with severity, basis, counterfactual and related sections", () => {
+    const html = render({
+      sectionSummaries: {},
+      executiveSummary: "Posture is uneven.",
+      keyFindings: ["flat fallback text"],
+      keyFindingsDetailed: [
+        {
+          text: "Only 3 of 25 models name an owner",
+          section: "models",
+          severity: "high",
+          basis: "observed",
+          related_sections: ["modelRisks", "policyManager"],
+          what_would_close_this: "An owner recorded on every model inventory row",
+        },
+      ],
+    });
+
+    expect(html).toContain("Only 3 of 25 models name an owner");
+    expect(html).toContain("chip chip-high");
+    expect(html).toContain("observed");
+    expect(html).toContain("Closes when: An owner recorded on every model inventory row");
+    expect(html).toContain("modelRisks, policyManager");
+    // The structured list replaces the flat one rather than printing both.
+    expect(html).not.toContain("flat fallback text");
+  });
+
+  it("falls back to the flat keyFindings list when no structured findings exist", () => {
+    const html = render({
+      sectionSummaries: {},
+      executiveSummary: "Posture is uneven.",
+      keyFindings: ["flat fallback text"],
+    });
+    expect(html).toContain("flat fallback text");
+  });
+
+  it("avoids page breaks per finding, not around the whole executive summary block", () => {
+    const html = render({ sectionSummaries: {}, executiveSummary: "Posture is uneven." });
+    // include() returns "" in this harness, so the <style> slice is the
+    // template's own inline CSS and nothing from pdf.css.
+    const css = html.slice(html.indexOf("<style>"), html.indexOf("</style>"));
+    expect(css.replace(/\s+/g, " ")).toContain(".ai-finding { page-break-inside: avoid;");
+    // A block taller than a page cannot honour the rule; it only pushes a blank
+    // page ahead of itself.
+    expect(css).not.toContain(".ai-executive-summary");
+  });
+
   it("the template compiles at all", () => {
     expect(() => render()).not.toThrow();
   });

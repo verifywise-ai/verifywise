@@ -79,9 +79,12 @@
       margin: 16px 0 24px 0;
       border-radius: 0 4px 4px 0;
     }
-    .ai-executive-summary {
-      page-break-inside: avoid;
-    }
+    /* Page-break avoidance sits on the individual finding, never on the whole
+       AI block: an executive summary plus eight findings is taller than a
+       page, and avoiding a break on a block that cannot fit only pushes a
+       blank page ahead of it. The executive-summary wrapper div in the body
+       keeps its class — it is the block's structural hook — it just no
+       longer carries a break rule. */
     .ai-findings-list {
       padding-left: 20px;
       margin: 8px 0;
@@ -90,6 +93,23 @@
       margin-bottom: 6px;
       font-size: 12px;
       color: #344054;
+      page-break-inside: avoid;
+    }
+    .ai-finding {
+      page-break-inside: avoid;
+      margin: 0 0 12px 0;
+      padding-left: 10px;
+      border-left: 2px solid var(--color-border);
+    }
+    .ai-finding-text {
+      font-size: 12px;
+      line-height: 1.5;
+      color: #344054;
+    }
+    .ai-finding-meta {
+      font-size: 10px;
+      color: #667085;
+      margin-top: 3px;
     }
   </style>
 </head>
@@ -191,7 +211,28 @@
         <div class="ai-analysis-content"><%= aiSummaries.executiveSummary %></div>
       </div>
 
-      <% if (aiSummaries.keyFindings && aiSummaries.keyFindings.length > 0) { %>
+      <% if (aiSummaries.keyFindingsDetailed && aiSummaries.keyFindingsDetailed.length > 0) { %>
+      <div class="subsection">
+        <div class="subsection-header">
+          <h3 class="subsection-title">Key Findings</h3>
+        </div>
+        <% aiSummaries.keyFindingsDetailed.forEach(function(f) { %>
+        <div class="ai-finding">
+          <div>
+            <span class="chip chip-<%= String(f.severity || 'default').toLowerCase() %>"><%= f.severity || 'unrated' %></span>
+            <span class="ai-finding-meta"><%= f.section %><% if (f.basis) { %> &middot; <%= f.basis %><% } %></span>
+          </div>
+          <div class="ai-finding-text"><%= f.text %></div>
+          <% if (f.what_would_close_this) { %>
+          <div class="ai-finding-meta">Closes when: <%= f.what_would_close_this %></div>
+          <% } %>
+          <% if (f.related_sections && f.related_sections.length > 0) { %>
+          <div class="ai-finding-meta">Related sections: <%= f.related_sections.join(', ') %></div>
+          <% } %>
+        </div>
+        <% }); %>
+      </div>
+      <% } else if (aiSummaries.keyFindings && aiSummaries.keyFindings.length > 0) { %>
       <div class="subsection">
         <div class="subsection-header">
           <h3 class="subsection-title">Key Findings</h3>
