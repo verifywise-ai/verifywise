@@ -539,5 +539,25 @@ describe("DOCX Generator", () => {
       expect(text).toContain("25 of 25 models share one owner");
       expect(text).toContain("Why it ranks here");
     });
+
+    it("prints why an analyzer abstained instead of leaving a silent hole", async () => {
+      const result = await generateDOCX(
+        withSummaries({
+          sectionSummaries: {},
+          abstentions: {
+            vendorRisk: "No vendors were in scope for this report.",
+            riskAnalysis: "No risk rows were supplied.",
+          },
+        }),
+      );
+      const text = await docxText(result.content);
+
+      expect(text).toContain("Analyses not produced");
+      // Same label strings as the PDF: both read ANALYSIS_LABELS.
+      expect(text).toContain("Third-party risk analysis: ");
+      expect(text).toContain("No vendors were in scope for this report.");
+      expect(text).toContain("Risk analysis: ");
+      expect(text).toContain("No risk rows were supplied.");
+    });
   });
 });

@@ -28,6 +28,7 @@ import {
   ReportGenerationResult,
   AISummaries,
 } from "../../domain.layer/interfaces/i.reportGeneration";
+import { ANALYSIS_LABELS } from "./analyzers/mapToSummaries";
 
 // Color constants matching VerifyWise theme
 const COLORS = {
@@ -823,6 +824,46 @@ function createVendorRiskSection(reportData: ReportData): (Paragraph | Table)[] 
 }
 
 /**
+ * Analyzer abstentions. Until now an abstention was completely silent in the
+ * document: a missing block with no explanation, indistinguishable from a
+ * block that was never enabled.
+ *
+ * The reasons arrive already filtered for presentation by
+ * mapAnalysesToSummaries — an operational failure has been replaced there, in
+ * one place, so this renderer and the PDF cannot disagree about what a reader
+ * is told. Headings come from the shared ANALYSIS_LABELS map for the same
+ * reason.
+ */
+function createAbstentionsSection(reportData: ReportData): (Paragraph | Table)[] {
+  const abstentions = reportData.aiSummaries?.abstentions;
+  if (!abstentions || Object.keys(abstentions).length === 0) return [];
+
+  const elements: (Paragraph | Table)[] = [];
+  elements.push(createSubsectionHeader("Analyses not produced"));
+  Object.entries(abstentions).forEach(([key, reason]) => {
+    elements.push(
+      new Paragraph({
+        spacing: { before: 60, after: 60 },
+        indent: { left: convertInchesToTwip(0.3) },
+        bullet: { level: 0 },
+        children: [
+          new TextRun({
+            text: `${ANALYSIS_LABELS[key] ?? key}: `,
+            bold: true,
+            size: 20,
+            color: COLORS.textPrimary,
+          }),
+          new TextRun({ text: reason, size: 20, color: COLORS.textPrimary }),
+        ],
+      }),
+    );
+  });
+
+  elements.push(new Paragraph({ children: [new PageBreak()] }));
+  return elements;
+}
+
+/**
  * Create Risk Analysis section
  */
 function createRiskAnalysisSection(reportData: ReportData): (Paragraph | Table)[] {
@@ -1420,6 +1461,7 @@ export async function generateDOCX(reportData: ReportData): Promise<ReportGenera
       ...createRecommendedActionsSection(reportData),
       ...createComplianceGapSection(reportData),
       ...createVendorRiskSection(reportData),
+      ...createAbstentionsSection(reportData),
       ...riskSection,
       ...complianceSection,
       ...organizationSection,
