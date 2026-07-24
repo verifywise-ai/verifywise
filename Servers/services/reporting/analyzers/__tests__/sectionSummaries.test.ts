@@ -5,7 +5,8 @@ jest.mock("ai", () => ({ generateText: (...a: any[]) => mockGenerateText(...a) }
 // load. Unmocked, that opens a DB connection during a unit test.
 jest.mock("../../../../database/db", () => ({ sequelize: {} }));
 
-import { runSectionSummaries, MAX_CONCURRENT } from "../sectionSummaries";
+import { runSectionSummaries, MAX_CONCURRENT, SECTION_SUMMARY_MAX_TOKENS } from "../sectionSummaries";
+import logger from "../../../../utils/logger/fileLogger";
 
 const sections = {
   projectRisks: { totalRisks: 2, risks: [{ name: "R1" }] },
@@ -54,7 +55,7 @@ describe("runSectionSummaries", () => {
     expect(firstPrompt).toContain("EU AI Act");
     expect(firstPrompt).toContain("Acme Project");
     expect(firstPrompt).toContain("Use only the data provided — never introduce a fact that does not appear in it.");
-    expect(firstPrompt).toContain("150-250 words");
+    expect(firstPrompt).toContain("300-450 words");
     // §1: Stage 1 needs the same "today" the facts block declares, or a date
     // in the data has nothing to be compared against.
     expect(firstPrompt).toMatch(/Reference date: \d{4}-\d{2}-\d{2}/);
@@ -134,5 +135,49 @@ describe("runSectionSummaries", () => {
     for (let i = 0; i < 12; i++) many[`s${i}`] = { rows: [1] };
     await runSectionSummaries("model" as any, { sections: many } as any);
     expect(peak).toBeLessThanOrEqual(MAX_CONCURRENT);
+  });
+
+  it("asks for a word count the output budget can actually hold", async () => {
+    // Run 2 asked for 150-250 words against a 500-token ceiling and was cut
+    // off at 997 characters mid-sentence; the executive summary then finished
+    // the sentence for it. The ask and the cap have to move together.
+    await runSectionSummaries("model" as any, reportData as any);
+    expect(SECTION_SUMMARY_MAX_TOKENS).toBe(900);
+    expect(mockGenerateText.mock.calls[0][0].maxOutputTokens).toBe(SECTION_SUMMARY_MAX_TOKENS);
+  });
+
+  it("warns when the model stopped because it ran out of output budget", async () => {
+    const warnSpy = jest.spyOn(logger as any, "warn").mockImplementation(() => undefined);
+    try {
+      mockGenerateText.mockResolvedValue({
+        text: "The policy register contains fourteen policies, of which nine remain in draft and",
+        finishReason: "length",
+      });
+
+      const out = await runSectionSummaries("model" as any, {
+        sections: { projectRisks: { totalRisks: 2, risks: [{ name: "R1" }] } },
+      } as any);
+
+      // The truncated text is still kept — a cut-off summary beats no summary.
+      expect(out.projectRisks).toContain("nine remain in draft");
+      const warned = warnSpy.mock.calls.map((c) => String(c[0])).join(" | ");
+      expect(warned).toContain("projectRisks");
+      expect(warned).toContain("truncated");
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it("does not warn when the model finished on its own", async () => {
+    const warnSpy = jest.spyOn(logger as any, "warn").mockImplementation(() => undefined);
+    try {
+      mockGenerateText.mockResolvedValue({ text: "A complete summary.", finishReason: "stop" });
+      await runSectionSummaries("model" as any, {
+        sections: { projectRisks: { totalRisks: 2, risks: [{ name: "R1" }] } },
+      } as any);
+      expect(warnSpy).not.toHaveBeenCalled();
+    } finally {
+      warnSpy.mockRestore();
+    }
   });
 });

@@ -15,6 +15,16 @@ import {
  *  path calls generateText directly, not generateObjectWithSelfCorrection, so
  *  there is no per-attempt retry to budget for. */
 const LLM_TIMEOUT_MS = 30_000;
+
+/**
+ * Was an inline 500 against a "150-250 words" ask. Run 2 hit that ceiling and
+ * was cut off at 997 characters mid-sentence, and because nothing looked at
+ * finishReason the executive summary silently finished the sentence for it.
+ * 900 tokens holds the 300-450 word ask below with the same 2x headroom the
+ * old pairing had.
+ */
+export const SECTION_SUMMARY_MAX_TOKENS = 900;
+
 export const MAX_CONCURRENT = 3;
 
 /** Ported from aiSummarizer.ts:150-167. No third-party dependency. */
@@ -53,7 +63,7 @@ async function summariseSection(
 
 Reference date: ${referenceDate} — treat this as today when comparing any date in the data.
 
-Analyze the following data and write a concise summary (150-250 words) that answers these questions:
+Analyze the following data and write a section analysis (300-450 words) that answers these questions:
 ${SECTION_INSTRUCTIONS[key] ?? GENERIC_SECTION_INSTRUCTION}
 
 Every claim must carry the value it rests on: a count, a share, a status, a name or a date. A sentence that would read the same for any other organization is not an analysis.
@@ -68,9 +78,18 @@ ${clampSectionData(key, data)}`;
     const result = await generateText({
       model,
       prompt,
-      maxOutputTokens: 500,
+      maxOutputTokens: SECTION_SUMMARY_MAX_TOKENS,
       abortSignal: AbortSignal.timeout(LLM_TIMEOUT_MS),
     });
+    if (result.finishReason === "length") {
+      // These summaries are the INPUT to the executive summary, key findings
+      // and recommended actions, so a sentence cut off here propagates into
+      // three headline blocks. Keep the text — a truncated summary beats none
+      // — but stop it happening silently.
+      logger.warn(
+        `Section summary for "${key}" was truncated: the model hit the ${SECTION_SUMMARY_MAX_TOKENS}-token output cap`,
+      );
+    }
     return result.text.trim();
   } catch (error) {
     logger.warn(`Section summary failed for "${key}":`, error);
