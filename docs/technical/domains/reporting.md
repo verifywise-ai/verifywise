@@ -1,6 +1,6 @@
 # Reporting Domain
 
-> **Last Updated:** 2026-07-20
+> **Last Updated:** 2026-07-22
 
 ## Overview
 
@@ -197,6 +197,8 @@ class ReportDataCollector {
 
 Report AI output is produced by schema-validated analyzers in `services/reporting/analyzers/`. Each analyzer returns a zod-validated object (`schemas.ts`), never free text, so the renderers can lay it out as a formal compliance artifact instead of a prose blob.
 
+Every row-level claim carries a `basis` label — `observed` (stated directly by the supplied data), `inferred` (follows from it by reasoning the data does not state) or `absent` (the claim is that something required is missing). Findings and gaps additionally carry `what_would_close_this`, the counterfactual that says what would have to be true for the item to stop being a finding. Both fields are **nullable**: a model that omits one must not turn a produced analysis into a lost one. Nothing defaults `basis` — an unstated basis renders no label, because a defaulted `observed` is a fabricated provenance claim. The label describes the *claim*; it does not relax `sanitizeProvenance`, which still drops any `gaps[].control`, `concerns[].vendor` or `top_risks[].name` that is not a verbatim substring of that analyzer's own prompt.
+
 ### Analyzers
 
 | Section key | Output | Input |
@@ -224,7 +226,7 @@ Each analyzed section is written to `report_run_analyses`, a per-run sidecar key
 
 ### Abstention
 
-An analyzer that cannot produce grounded output **abstains** rather than inventing one. The report still generates; the section renders its abstention reason. Abstention causes:
+An analyzer that cannot produce grounded output **abstains** rather than inventing one. The report still generates. `mapAnalysesToSummaries` collects every stated reason onto `aiSummaries.abstentions`, keyed by analyzer key, and both renderers print them in an *Analyses not produced* list — an abstention with no stated reason contributes nothing rather than an empty line. Two of the reasons below describe the *service* rather than the data ("no LLM key…", "the AI service call failed"); `isOperationalAbstention` (`analyzers/mapToSummaries.ts`) replaces those with the neutral sentence "This analysis was not produced." before either renderer sees them, because our infrastructure is not a governance finding. Every other reason prints verbatim, because it is one. Abstention causes:
 
 - No LLM key configured for the organization
 - Insufficient data for the section (raw-section analyzers)
@@ -234,9 +236,28 @@ An analyzer that cannot produce grounded output **abstains** rather than inventi
 
 Absence of scores is never presented as absence of gaps.
 
+### Render
+
+`mapAnalysesToSummaries` (`analyzers/mapToSummaries.ts`) flattens analyzer payloads onto `AISummaries`, which both renderers consume. Everything below renders identically in `templates/reports/report-pdf.ejs` and `services/reporting/docxGenerator.ts` — **change the two together or the formats diverge**:
+
+| Payload | Rendered as |
+|---------|-------------|
+| `keyFindingsDetailed[]` | Severity chip, section, `basis`, the finding text, `Closes when:` and related section keys. Falls back to the flat `keyFindings` string list when absent. |
+| `recommendedActions[]` | Action, `Why:` (the analyzer's `rationale`), priority, `basis`, suggested owner. |
+| `riskAnalysis.top_risks[]` | *Most material risks* table: name, verbatim level, why it ranks there. |
+| `complianceGap.gaps[]` | Control, gap, `basis`, priority, `Closes when:`. |
+| `vendorRisk.concerns[]` | Vendor, concern, severity and `basis`. |
+| `abstentions` | *Analyses not produced* list, one line per abstained analyzer. |
+
+Three standing rendering constraints:
+
+- **One analyzer-label map.** `ANALYSIS_LABELS` is exported from `analyzers/mapToSummaries.ts`. `docxGenerator.ts` imports it; `pdfGenerator.ts` passes it into the EJS render data as `analysisLabels`. Neither renderer declares its own copy — a second copy drifts the first time a block is added, and the mismatch only shows up when someone diffs a PDF against a DOCX of the same run.
+- **No markdown renderer exists on any surface.** Asterisks and backticks print literally in both formats. Prompts must keep prose plain.
+- **Page-break avoidance is per finding and per table row, never per block.** `page-break-inside: avoid` on an AI block taller than a page cannot be honoured and only pushes a blank page ahead of it, which is what longer prose produces.
+
 ### Versioning
 
-`ANALYZER_VERSION` (`analyzers/prompts.ts`) is stamped into `report_run_analyses.audit_metadata`. **Bump it on any prompt or schema change** — it is how a stored analysis is traced back to the prompt and schema that produced it.
+`ANALYZER_VERSION` (`analyzers/prompts.ts`) is stamped into `report_run_analyses.audit_metadata`; it currently reads `report-analyzer-v2`. **Bump it on any prompt or schema change** — it is how a stored analysis is traced back to the prompt and schema that produced it.
 
 ## PDF Generation
 
