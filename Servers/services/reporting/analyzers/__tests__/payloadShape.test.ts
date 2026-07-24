@@ -42,3 +42,34 @@ describe("analyzer payload shapes (frontend type contract)", () => {
     });
   }
 });
+
+/**
+ * The row objects are the half of the contract the top-level pin above never
+ * saw. Phase 3 adds basis / what_would_close_this / related_sections here, and
+ * the same hand-mirrored frontend interface has to follow (Task 51).
+ */
+const EXPECTED_ROW_KEYS: Record<string, { list: string; keys: string[] }> = {
+  keyFindings: {
+    list: "findings",
+    keys: ["text", "section", "severity", "basis", "what_would_close_this", "related_sections"],
+  },
+  recommendedActions: {
+    list: "actions",
+    keys: ["action", "suggestedOwner", "priority", "rationale", "basis"],
+  },
+  riskAnalysis: { list: "top_risks", keys: ["name", "level", "why"] },
+  complianceGap: {
+    list: "gaps",
+    keys: ["control", "gap", "priority", "basis", "what_would_close_this"],
+  },
+  vendorRisk: { list: "concerns", keys: ["vendor", "concern", "severity", "basis"] },
+};
+
+describe("analyzer row shapes (frontend type contract)", () => {
+  for (const [name, { list, keys }] of Object.entries(EXPECTED_ROW_KEYS)) {
+    it(`${name}.${list}[] exposes exactly ${keys.join(", ")}`, () => {
+      const element = (SCHEMAS[name].shape[list] as any).element;
+      expect(Object.keys(element.shape).sort()).toEqual([...keys].sort());
+    });
+  }
+});

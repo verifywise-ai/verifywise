@@ -22,6 +22,35 @@ const severity = z
     "Severity judged only from the supplied data. The input's risk vocabulary is wider than this enum: map 'Very High' to critical, 'Very Low' to low. Never invent a level for an item whose severity the input does not state.",
   );
 
+/**
+ * Provenance label. It describes the CLAIM, never the SUBJECT: sanitizeProvenance
+ * in runAnalyzers.ts still drops any control, vendor or risk name that is not
+ * present verbatim in that analyzer's own prompt, whatever basis the model
+ * attaches to the row.
+ *
+ * .nullable(), not required-non-null — the same shape abstain_reason already
+ * uses in this file. The key must be present so the model makes an explicit
+ * statement; the value may be null so that one omission does not throw the
+ * parse, abstain the analyzer and persist "this analysis could not be produced
+ * because the AI service call failed" over an analysis that was in fact
+ * produced.
+ */
+const basis = z
+  .enum(["observed", "inferred", "absent"])
+  .nullable()
+  .describe(
+    "Declare how this claim relates to the supplied data. Use \"observed\" when the data states the claim directly. Use \"inferred\" when the claim follows from the supplied data by reasoning the data does not itself state — a ratio, a comparison against the reference date, a pattern running across two sections. Use \"absent\" when the claim is that something required is missing from the data. This label describes the claim only: every control, vendor, risk or person you name must still appear verbatim in the supplied data, whichever label you choose. Use null only when none of the three fits, which should be rare.",
+  );
+
+const whatWouldCloseThis = z
+  .string()
+  .min(10)
+  .max(300)
+  .nullable()
+  .describe(
+    "The counterfactual: state what would specifically have to become true for this to stop being an issue — a status reaching a named value, an owner recorded, a document attached, a date met. Write it so the next report could check it against the same fields. Do not restate the problem and do not write a generic instruction such as \"review and update\". Use null only when the supplied data gives you no concrete condition to name.",
+  );
+
 export const executiveSummarySchema = z
   .object({
     summary: z
@@ -57,6 +86,17 @@ export const keyFindingsSchema = z
                 "The section key this finding came from (e.g. 'compliance', 'projectRisks'). Must be one of the section keys present in the input.",
               ),
             severity,
+            basis,
+            what_would_close_this: whatWouldCloseThis,
+            // Not nullable, unlike its two siblings: an empty array is already
+            // the natural "none" answer, so null would add a second way to say
+            // the same thing and a null case to every consumer.
+            related_sections: z
+              .array(z.string())
+              .max(6)
+              .describe(
+                "Other section keys this finding also draws on, written exactly as they appear in the input (e.g. ['policyManager', 'compliance']). Never invent a label. Use an empty array when the finding sits inside a single section.",
+              ),
           })
           .strict(),
       )
@@ -95,6 +135,7 @@ export const recommendedActionsSchema = z
               .min(10)
               .max(300)
               .describe("One sentence tying this action to a specific signal in the input."),
+            basis,
           })
           .strict(),
       )
@@ -145,6 +186,8 @@ export const complianceGapSchema = z
             control: z.string().min(1).max(200).describe("Control identifier or title, copied verbatim from the input."),
             gap: z.string().min(10).max(300).describe("What is missing, grounded in the supplied score fields."),
             priority: severity,
+            basis,
+            what_would_close_this: whatWouldCloseThis,
           })
           .strict(),
       )
@@ -176,6 +219,7 @@ export const vendorRiskSchema = z
             vendor: z.string().min(1).max(200).describe("Vendor name, copied verbatim from the input."),
             concern: z.string().min(10).max(300).describe("The specific concern, grounded in the input."),
             severity,
+            basis,
           })
           .strict(),
       )

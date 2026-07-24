@@ -16,6 +16,7 @@ jest.mock("../sectionSummaries", () => ({
 }));
 
 import { runAnalyzers, type AiBlocks } from "../runAnalyzers";
+import { complianceGapSchema } from "../schemas";
 
 const reportData: any = {
   metadata: { frameworkName: "EU AI Act", projectTitle: "Acme", organizationId: 5 },
@@ -324,6 +325,53 @@ describe("runAnalyzers", () => {
 
     expect(out.complianceGap!.payload.gaps).toHaveLength(1);
     expect(out.complianceGap!.payload.gaps[0].control).toBe("  ac-12   ACCESS   review ");
+  });
+
+  it("still drops an invented control when the model labels the claim basis 'inferred'", async () => {
+    // The CRITICAL Phase 3 invariant. `basis` labels the CLAIM; it does not
+    // relax the requirement that the row's SUBJECT appear verbatim in the
+    // analyzer's own prompt. Built through the real schema so the fixture
+    // cannot drift from what the model is actually allowed to emit.
+    const object = complianceGapSchema.parse({
+      narrative: "Readiness is uneven across the control set and two families lag the rest.",
+      gaps: [
+        {
+          control: "AC-12 Access Review",
+          gap: "No evidence is attached to this control.",
+          priority: "high",
+          basis: "observed",
+          what_would_close_this: "An approved access-review record is attached to AC-12.",
+        },
+        {
+          control: "SC-99 Invented Control",
+          gap: "The control family appears to lack a documented owner.",
+          priority: "critical",
+          basis: "inferred",
+          what_would_close_this: "A named owner is recorded against the control family.",
+        },
+      ],
+      scores_caveat: null,
+      abstain_reason: null,
+    });
+    mockGenerate.mockResolvedValue({ object, attempts: 1, selfCorrected: false });
+
+    const withControls: any = {
+      ...reportData,
+      sections: { compliance: { controls: [{ id: 1, title: "AC-12 Access Review" }] } },
+    };
+
+    const out = await runAnalyzers({
+      reportData: withControls,
+      llmKey,
+      blocks: only("complianceGap"),
+    });
+
+    expect(out.complianceGap!.payload.gaps).toHaveLength(1);
+    expect(out.complianceGap!.payload.gaps[0].control).toBe("AC-12 Access Review");
+    expect(out.complianceGap!.payload.gaps[0].basis).toBe("observed");
+    expect(out.complianceGap!.payload.gaps[0].what_would_close_this).toBe(
+      "An approved access-review record is attached to AC-12.",
+    );
   });
 
   it("drops a vendorRisk concern naming a vendor that is not in the input", async () => {
