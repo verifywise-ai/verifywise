@@ -20,7 +20,14 @@ export async function runScheduledReport(sched: any, opts: { triggeredBy: "sched
   });
 
   try {
-    const request = resolveReportRequest(sched, sched.llm_key_id);
+    // The schedule id is what makes a prior-run comparison possible: this run's
+    // predecessor is the last run of the same schedule. Attached here rather
+    // than in resolveReportRequest, which maps template config and knows
+    // nothing about runs.
+    const request = {
+      ...resolveReportRequest(sched, sched.llm_key_id),
+      scheduledReportId: sched.id ?? undefined,
+    };
     const result = await generateReport(request, sched.owner_id ?? sched.created_by, sched.organization_id);
     if (!result.success) {
       await updateRunStatusQuery(run.id, sched.organization_id, { status: "failed", error_message: result.error ?? "generation failed", duration_ms: Date.now() - startedAt });
@@ -35,6 +42,7 @@ export async function runScheduledReport(sched: any, opts: { triggeredBy: "sched
       sched.organization_id,
       sched.owner_id ?? sched.created_by ?? null,
       result.analyses,
+      result.factsSnapshot,
     );
     await updateRunStatusQuery(run.id, sched.organization_id, {
       status, file_id: delivery.fileId, output_filename: result.filename, output_mime_type: result.mimeType,

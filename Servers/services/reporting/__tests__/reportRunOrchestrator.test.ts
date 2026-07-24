@@ -68,4 +68,44 @@ describe("runScheduledReport", () => {
       }),
     );
   });
+
+  it("tells the generator which schedule this run belongs to", async () => {
+    // Without it generateReport cannot find the previous run, and every
+    // scheduled report is written as if it were the first.
+    generateReport.mockResolvedValue({ success: true, content: Buffer.from("x"), filename: "r.pdf", mimeType: "application/pdf" });
+    deliverReport.mockResolvedValue({ storage: { status: "success", fileId: 5 }, emailLink: { status: "skipped" }, attachment: { status: "skipped" }, fileId: 5 });
+
+    await runScheduledReport(sched as any, { triggeredBy: "scheduler", scheduledFor: new Date() });
+
+    expect(generateReport).toHaveBeenCalledWith(
+      expect.objectContaining({ scheduledReportId: 3 }),
+      sched.owner_id,
+      sched.organization_id,
+    );
+  });
+
+  it("persists this run's facts snapshot so the next run can diff against it", async () => {
+    const snapshot = {
+      generatedAt: "2026-07-01T00:00:00.000Z",
+      framework: "EU AI Act",
+      subject: "Test Project",
+      sections: { projectRisks: { totalRisks: 5 } },
+    };
+    generateReport.mockResolvedValue({
+      success: true, content: Buffer.from("x"), filename: "r.pdf", mimeType: "application/pdf",
+      factsSnapshot: snapshot,
+      analyses: {
+        executiveSummary: { payload: { summary: "s" }, abstained: false, abstain_reason: null, model: "gpt-4o-mini", attempts: 1 },
+      },
+    });
+    deliverReport.mockResolvedValue({ storage: { status: "success", fileId: 5 }, emailLink: { status: "skipped" }, attachment: { status: "skipped" }, fileId: 5 });
+
+    await runScheduledReport(sched as any, { triggeredBy: "scheduler", scheduledFor: new Date() });
+
+    expect(upsertRunAnalysisQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        audit_metadata: expect.objectContaining({ facts: snapshot }),
+      }),
+    );
+  });
 });
