@@ -57,6 +57,28 @@ const RISK_LEVEL_COLORS: Record<string, string> = {
   "Very Low": "#026AA2",
 };
 
+/**
+ * ISO `YYYY-MM-DD`, or undefined when there is no usable date.
+ *
+ * EXPORTED deliberately: this is the report pipeline's ONE date
+ * normalisation. The analyzers' facts substrate (§1/§3) hands the model a
+ * reference date and asks it to compare due dates against it, so both sides of
+ * that comparison must be sliced the same way or they disagree by a day.
+ *
+ * Locale-independent on purpose: `toLocaleDateString()` renders whatever the
+ * server's locale happens to be. Built from LOCAL components rather than
+ * `toISOString()` — pg hands back a DATE column as local midnight, and
+ * UTC-shifting that reports the previous day anywhere west of Greenwich.
+ */
+export const isoDate = (value: unknown): string | undefined => {
+  if (!value) return undefined;
+  if (typeof value === "string") return value.slice(0, 10);
+  const d = value instanceof Date ? value : new Date(value as string | number);
+  if (Number.isNaN(d.getTime())) return undefined;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
+
 // Status color mapping (for future use with charts)
 // const STATUS_COLORS: Record<string, string> = {
 //   Compliant: "#027A48",
@@ -817,7 +839,16 @@ export class ReportDataCollector {
           modelName: mr.model_name || "Unknown Model",
           riskName: mr.risk_name || "Unnamed Risk",
           riskLevel: mr.risk_level || "Unknown",
-          mitigationStatus: mr.mitigation_status || "Unknown",
+          // model_risks has `status`, not `mitigation_status`. The old read
+          // resolved to undefined for every row, so every model risk in every
+          // report rendered as "Unknown".
+          mitigationStatus: mr.status || "Unknown",
+          // All four are already fetched by the SELECT mr.* above and were
+          // being discarded here.
+          mitigationPlan: mr.mitigation_plan || undefined,
+          targetDate: isoDate(mr.target_date),
+          impact: mr.impact || undefined,
+          likelihood: mr.likelihood || undefined,
         })),
       };
     } catch (error) {

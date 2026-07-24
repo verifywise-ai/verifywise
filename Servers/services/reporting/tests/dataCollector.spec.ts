@@ -217,4 +217,48 @@ describe("dataCollector", () => {
       expect(result.branding.primaryColor).toBe("#13715B");
     });
   });
+
+  describe("collector column corrections", () => {
+    it("reads model_risks.status (not the non-existent mitigation_status) and surfaces plan/date/impact/likelihood", async () => {
+      // verifywise.model_risks has no `mitigation_status` column, so the old
+      // read made every model risk in every report literally "Unknown".
+      mockQuery.mockResolvedValue([
+        {
+          id: 3,
+          model_name: "gpt-4o",
+          risk_name: "Prompt injection",
+          risk_level: "High",
+          status: "In Progress",
+          mitigation_plan: "Add an input classifier in front of the endpoint.",
+          target_date: new Date(2026, 7, 14),
+          impact: "Data exfiltration from the retrieval store.",
+          likelihood: "Likely",
+        },
+      ] as any);
+
+      const collector = createDataCollector(10, 1, 1, 100, 5);
+      const result = await collector.collectAllData(["modelRisks"]);
+
+      const risk = result.sections.modelRisks!.risks[0];
+      expect(risk.mitigationStatus).toBe("In Progress");
+      expect(risk.mitigationPlan).toBe("Add an input classifier in front of the endpoint.");
+      expect(risk.targetDate).toBe("2026-08-14");
+      expect(risk.impact).toBe("Data exfiltration from the retrieval store.");
+      expect(risk.likelihood).toBe("Likely");
+    });
+
+    it("leaves the optional model-risk fields undefined rather than inventing them", async () => {
+      mockQuery.mockResolvedValue([
+        { id: 4, model_name: "claude", risk_name: "Drift", risk_level: "Low" },
+      ] as any);
+
+      const collector = createDataCollector(10, 1, 1, 100, 5);
+      const result = await collector.collectAllData(["modelRisks"]);
+
+      const risk = result.sections.modelRisks!.risks[0];
+      expect(risk.mitigationStatus).toBe("Unknown");
+      expect(risk.mitigationPlan).toBeUndefined();
+      expect(risk.targetDate).toBeUndefined();
+    });
+  });
 });

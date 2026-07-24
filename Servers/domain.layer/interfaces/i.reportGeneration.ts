@@ -296,7 +296,14 @@ export interface ModelRisksSectionData {
     modelName: string;
     riskName: string;
     riskLevel: string;
+    /** model_risks.status. Read from a non-existent `mitigation_status`
+     *  column until 2026-07, so every row rendered as "Unknown". */
     mitigationStatus: string;
+    mitigationPlan?: string;
+    /** ISO YYYY-MM-DD. */
+    targetDate?: string;
+    impact?: string;
+    likelihood?: string;
   }>;
 }
 
