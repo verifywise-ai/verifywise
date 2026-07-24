@@ -16,8 +16,12 @@ describe("analyzer registry", () => {
     expect(ANALYSIS_SECTION_KEYS).toHaveLength(6);
   });
 
-  it("carries a version string", () => {
+  it("carries a version string, pinned to the prompt generation that produced it", () => {
     expect(ANALYZER_VERSION).toMatch(/^report-analyzer-v\d+$/);
+    // Stamped into report_run_analyses.audit_metadata: stored analyses must
+    // stay traceable to the prompts that produced them, so this is pinned
+    // exactly and bumped deliberately alongside a prompt or schema change.
+    expect(ANALYZER_VERSION).toBe("report-analyzer-v2");
   });
 
   it("every analyzer builds a non-empty system and user prompt when its own sections/summaries are present", () => {

@@ -6,7 +6,7 @@
  * to the prompt that produced them.
  */
 
-export const ANALYZER_VERSION = "report-analyzer-v1";
+export const ANALYZER_VERSION = "report-analyzer-v2";
 
 const MAX_DATA_ITEMS = 50;
 /** Hard backstop on the joined section body, independent of the per-array
