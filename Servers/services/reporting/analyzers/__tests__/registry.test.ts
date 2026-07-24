@@ -1,5 +1,5 @@
 import { ANALYZERS, ANALYZER_VERSION, ANALYSIS_SECTION_KEYS } from "../registry";
-import { prepareSectionData, renderSections, SECTION_LABELS } from "../prompts";
+import { GROUNDING_RULES, prepareSectionData, renderSections, SECTION_LABELS } from "../prompts";
 
 describe("analyzer registry", () => {
   it("exposes exactly the six analyzers", () => {
@@ -236,6 +236,20 @@ describe("analyzer registry", () => {
   it("keeps the twelve human-readable section labels", () => {
     expect(SECTION_LABELS.projectRisks).toBe("Use Case Risks");
     expect(Object.keys(SECTION_LABELS)).toHaveLength(12);
+  });
+
+  it("§3 — grounding rules permit arithmetic over supplied values without loosening the ban on invented ones", () => {
+    // The live corpus contains not one percentage, not one date comparison and
+    // not one ratio: taken literally, "never introduce a number that does not
+    // appear in the data" forbids dividing two numbers that do.
+    expect(GROUNDING_RULES).toContain("Compute ratios, percentages, shares, counts and differences");
+    expect(GROUNDING_RULES).toContain("compare any date in the data against the supplied reference date");
+    expect(GROUNDING_RULES).toContain("neither supplied nor derivable");
+    // The anti-fabrication rule itself must survive the carve-out verbatim.
+    expect(GROUNDING_RULES).toContain(
+      "Use ONLY the data supplied below. Never introduce a fact, name, number, control, vendor or risk that does not appear in it.",
+    );
+    expect(GROUNDING_RULES).toContain("An honest abstention is correct");
   });
 
   describe("Fix 1 — summary-consuming analyzers read extras.sectionSummaries, not raw sections", () => {
