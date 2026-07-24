@@ -102,10 +102,13 @@ export const ANALYZERS: Record<AnalysisSectionKey, AnalyzerDefinition> = {
     key: "executiveSummary",
     schema: executiveSummarySchema,
     buildSystemPrompt: () =>
-      `${GROUNDING_RULES}\n\nYou are writing the Executive Summary. Write three to five paragraphs covering: overall compliance and governance posture; critical findings requiring immediate attention; top areas needing improvement; recommended next steps.`,
+      `${GROUNDING_RULES}\n\nYou are writing the Executive Summary, in three to five paragraphs.\n\nRequired lead: open with the single most consequential finding in this report and the specific evidence that supports it — a count, a share, a date or a named item. Everything after the lead follows from it: why it matters under this framework, what else in the estate it connects to, and what the reader should do about it. Do not work through a fixed outline, and do not give a paragraph to a topic the data does not support.\n\nName the framework and the subject explicitly wherever you would otherwise write "the framework" or "the organization" — never write "the framework" when the input names it.`,
     buildUserPrompt: (rd, extras) => {
       const body = renderSummaries(extras.sectionSummaries);
-      return body ? `${header(rd)}\n\n${factsBlock(extras)}Section analyses:\n${body}` : "";
+      if (!body) return "";
+      const fw = rd.metadata?.frameworkName ?? "AI governance";
+      const subject = rd.metadata?.projectTitle ?? "the organization";
+      return `${header(rd)}\n\n${factsBlock(extras)}Section analyses:\n${body}\n\nWrite the executive summary for ${subject} against ${fw}.`;
     },
   },
 
@@ -113,7 +116,7 @@ export const ANALYZERS: Record<AnalysisSectionKey, AnalyzerDefinition> = {
     key: "keyFindings",
     schema: keyFindingsSchema,
     buildSystemPrompt: () =>
-      `${GROUNDING_RULES}\n\nYou are extracting Key Findings: five to eight of the most important observations across the supplied sections. Attribute each finding to the section key it came from.`,
+      `${GROUNDING_RULES}\n\nYou are extracting Key Findings: five to eight of the most important observations across the supplied sections. Attribute each finding to the section key it came from.\n\nA finding must carry the evidence that makes it a finding — a count, a share, a status, a date or a named item — and must not simply restate a sentence from the section analyses. Where the estate facts show the same weakness in more than one section, say so in the finding text and name the sections it spans; one finding that connects two sections is worth more than two findings that repeat each other.`,
     buildUserPrompt: (rd, extras) => {
       const body = renderSummaries(extras.sectionSummaries);
       return body ? `${header(rd)}\n\n${factsBlock(extras)}Section analyses:\n${body}` : "";

@@ -507,4 +507,40 @@ describe("analyzer registry", () => {
       expect(withoutFacts.startsWith("Framework: EU AI Act\nSubject: Acme\n\nRisk data:")).toBe(true);
     });
   });
+
+  describe("§3 — the executive summary stops being an outline", () => {
+    const reportData: any = {
+      metadata: { frameworkName: "EU AI Act", projectTitle: "Acme", organizationId: 5 },
+      sections: {},
+    };
+    const extras = { sectionSummaries: { projectRisks: "One high-severity item dominates the register." } };
+
+    it("asks for a lead finding with its evidence instead of the fixed four-part outline", () => {
+      const system = ANALYZERS.executiveSummary.buildSystemPrompt();
+      expect(system).toContain("open with the single most consequential finding");
+      expect(system).toContain("Do not work through a fixed outline");
+      // Both live runs reproduced this outline in order, paragraph by paragraph.
+      expect(system).not.toContain(
+        "overall compliance and governance posture; critical findings requiring immediate attention",
+      );
+    });
+
+    it("puts the framework and subject NAMES into the instruction, not only the header", () => {
+      // The live corpus literally says "align all policies with the framework's
+      // requirements" — the name never reached the instruction body.
+      const prompt = ANALYZERS.executiveSummary.buildUserPrompt(reportData, extras);
+      expect(prompt).toContain("Write the executive summary for Acme against EU AI Act.");
+      expect(ANALYZERS.executiveSummary.buildSystemPrompt()).toContain('never write "the framework"');
+    });
+
+    it("still spends nothing when there are no summaries to work from", () => {
+      expect(ANALYZERS.executiveSummary.buildUserPrompt(reportData, {})).toBe("");
+    });
+
+    it("§2 — key findings are told to name the sections a finding spans", () => {
+      const system = ANALYZERS.keyFindings.buildSystemPrompt();
+      expect(system).toContain("name the sections it spans");
+      expect(system).toContain("must not simply restate a sentence");
+    });
+  });
 });
