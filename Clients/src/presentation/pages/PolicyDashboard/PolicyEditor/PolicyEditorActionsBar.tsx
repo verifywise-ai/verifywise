@@ -10,7 +10,7 @@ import {
   Upload,
 } from "lucide-react";
 import { CustomizableButton } from "../../../components/button/customizable-button";
-import { background, border, brand, palette } from "../../../themes/palette";
+import { brand, palette } from "../../../themes/palette";
 import { textStyles } from "../../../themes/typography";
 
 /** History active fill — prior `#E6F4F1` chrome. */
@@ -63,8 +63,8 @@ export function PolicyEditorActionsBar({
         <Typography
           sx={{
             ...textStyles.caption,
-            color: palette.status?.error?.text || "#f04438",
-            backgroundColor: palette.status?.error?.bg || "#f9eced",
+            color: palette.status.error.text,
+            backgroundColor: palette.status.error.bg,
             px: 1.5,
             py: 0.75,
             borderRadius: "4px",
@@ -80,7 +80,7 @@ export function PolicyEditorActionsBar({
             onClick={onToggleHistorySidebar}
             size="small"
             sx={{
-              "color": isHistorySidebarOpen ? brand.primary : "text.muted",
+              "color": isHistorySidebarOpen ? brand.primary : palette.text.muted,
               "padding": "4px",
               "borderRadius": "4px",
               "backgroundColor": isHistorySidebarOpen ? HISTORY_ACTIVE_BG : "transparent",
@@ -236,15 +236,15 @@ export function PolicyEditorActionsBar({
         text={saveButtonText}
         isDisabled={isSaveDisabled}
         sx={{
-          "backgroundColor": saveSuccess ? SAVE_SUCCESS_BG : palette.accent.primary,
-          "border": `1px solid ${saveSuccess ? SAVE_SUCCESS_BG : palette.accent.primary}`,
+          "backgroundColor": saveSuccess ? SAVE_SUCCESS_BG : brand.primary,
+          "border": `1px solid ${saveSuccess ? SAVE_SUCCESS_BG : brand.primary}`,
           "gap": 2,
           "&:hover": {
-            backgroundColor: saveSuccess ? SAVE_SUCCESS_BG : palette.accent.primary,
-            borderColor: saveSuccess ? SAVE_SUCCESS_BG : palette.accent.primary.border,
+            backgroundColor: saveSuccess ? SAVE_SUCCESS_BG : brand.primaryHover,
+            borderColor: saveSuccess ? SAVE_SUCCESS_BG : brand.primaryHover,
           },
           "&:disabled": {
-            backgroundColor: palette.accent.primary,
+            backgroundColor: brand.primary,
             opacity: 0.7,
           },
         }}
