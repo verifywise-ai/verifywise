@@ -92,10 +92,17 @@ const TERMINAL_STATUS = new Set(["done", "answered", "implemented", "audited", "
  * Completed work is the least material thing in a gap analysis, so it ranks
  * behind open work. This is what orders the sections that carry no level at
  * all — compliance controls above all, where without it the cap kept the 50
- * earliest due dates and those skew towards long-closed rows. Every section it
- * touches is capped below its real row count (controls at 50, clauses at 30,
- * sub-clauses and annex categories at 20, questions at 5 per subtopic), so
- * without it the finished rows crowd the open ones out of the prompt entirely.
+ * earliest due dates and those skew towards long-closed rows. Every array it
+ * actually orders is capped below its real row count (controls at 50,
+ * sub-clauses and annex categories at 20, assessment questions at 5 per
+ * subtopic — those arrive rewritten to 'Answered'/'Pending'), so without it the
+ * finished rows crowd the open ones out of the prompt entirely.
+ *
+ * The TOP-LEVEL clause and annex arrays are NOT among them, despite being
+ * capped at 30. `clauses_struct_iso` and `annex_struct_iso` have no `status`
+ * column at all, so the collector's `clause.status || "Unknown"` is always
+ * literally "Unknown": the status lives one level down, on `subclauses_iso` and
+ * `annexcategories_iso`, whose enums do carry 'Implemented' and 'Audited'.
  *
  * Rows whose status is not terminal — and rows with no `status` at all — score
  * 0 uniformly and are unaffected, including every risk section, whose collector
@@ -135,14 +142,16 @@ const dateOf = (row: any): number => {
  * none of them compare equal and the stable sort keeps them in their original
  * query order.
  *
- * Four sections still land in that no-op, and NOT for want of a `status` key —
- * most sections have one, so grepping for the field answers nothing. Vendors
- * (the projection names it `riskStatus`) and assessment topics/subtopics carry
- * no `status`; models and policies carry one whose every value is outside
- * TERMINAL_STATUS. Nothing enforces either condition — `policy_manager.status`
- * is a free VARCHAR(50) — so adding a terminal-sounding value to one of those
- * vocabularies, or a level or deadline key to one of those projections,
- * silently reorders that section here.
+ * Several arrays still land in that no-op, and NOT for want of a `status` key —
+ * most have one, so grepping for the field answers nothing. Vendors (the
+ * projection names it `riskStatus`) and assessment topics/subtopics carry no
+ * `status` at all; models and policies carry one whose every value is outside
+ * TERMINAL_STATUS; the top-level clause and annex arrays carry one that is
+ * always the literal "Unknown", because their struct tables have no status
+ * column to read. Nothing enforces any of those conditions —
+ * `policy_manager.status` is a free VARCHAR(50) — so adding a terminal-sounding
+ * value to one of those vocabularies, or a level or deadline key to one of
+ * those projections, silently reorders that section here.
  */
 function rankByMateriality<T>(arr: T[]): T[] {
   return [...arr].sort(
