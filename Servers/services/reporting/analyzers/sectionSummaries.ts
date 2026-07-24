@@ -11,9 +11,22 @@ import {
   SECTION_LABELS,
 } from "./prompts";
 
-/** Stage 1's own budget. Unrelated to runAnalyzers.ts's LLM_TIMEOUT_MS: this
- *  path calls generateText directly, not generateObjectWithSelfCorrection, so
- *  there is no per-attempt retry to budget for. */
+/**
+ * Stage 1's own budget. Sized independently of runAnalyzers.ts's
+ * LLM_TIMEOUT_MS: this path calls generateText directly, not
+ * generateObjectWithSelfCorrection, so there is no per-attempt retry to budget
+ * for — and an abort here is unrecoverable, `summariseSection` catches it into
+ * an empty string and the section is dropped from the three Stage-2 analyzers
+ * that consume it.
+ *
+ * It is not independent of SECTION_SUMMARY_MAX_TOKENS, though — the tokens that
+ * cap buys also take wall-clock time, so raising the cap moves generations
+ * closer to this wall. What keeps 30s the right number is that the cap is a
+ * CEILING, not a target: wall clock follows the tokens actually emitted, and
+ * the ask below (300-450 words) plus the measured reasoning pass is ~1.3k
+ * tokens, less than half of the 3000 the ceiling allows. Raise this if the ask
+ * itself grows, not because the ceiling did.
+ */
 const LLM_TIMEOUT_MS = 30_000;
 
 /**

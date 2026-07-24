@@ -23,9 +23,23 @@
  *   - Only Zod validation errors trigger self-correction. Other errors
  *     (auth, network, rate-limit) bubble up unchanged so the existing
  *     error mapping in advisor.ctrl.ts continues to work.
+ *   - One exception to the line above: a `NoObjectGeneratedError` (empty or
+ *     truncated completion — no object to validate, so no Zod issues) is
+ *     retried with `TRUNCATION_DIRECTIVE`. It CONSUMES an attempt and sets
+ *     `attempts` / `selfCorrected`, unlike the two transport downgrades
+ *     below, which repair what we sent and so give the budget back.
+ *   - Two transport downgrades, each one-shot and budget-neutral: the
+ *     json_schema → json_object switch (`isResponseFormatUnsupported`) and
+ *     the maxOutputTokens cap (`isMaxOutputTokensRejected`). Both are
+ *     provider 400s, never a NoObjectGeneratedError.
  */
 
-import { generateObject, NoObjectGeneratedError } from "ai";
+import {
+  generateObject,
+  NoObjectGeneratedError,
+  wrapLanguageModel,
+  type LanguageModelMiddleware,
+} from "ai";
 import { z, ZodError } from "zod";
 import logger from "../utils/logger/fileLogger";
 
@@ -125,6 +139,107 @@ export function extractValidationIssues(err: unknown): ValidationIssue[] | null 
 }
 
 /* ------------------------------------------------------------------ */
+/* JSON-object fallback for providers without json_schema support     */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Every message string reachable from an error — its own, plus the `cause` /
+ * `error` / `originalError` / `data` / `responseBody` carriers the AI SDK uses
+ * to wrap a provider's HTTP body. Cycle-safe.
+ */
+function errorMessages(err: unknown): string {
+  const messages: string[] = [];
+  const visited = new Set<unknown>();
+  const queue: unknown[] = [err];
+
+  while (queue.length > 0) {
+    const candidate = queue.shift();
+    if (!candidate || visited.has(candidate)) continue;
+    visited.add(candidate);
+
+    if (typeof candidate === "string") {
+      messages.push(candidate);
+      continue;
+    }
+    if (typeof candidate === "object") {
+      const c = candidate as Record<string, unknown>;
+      if (typeof c.message === "string") messages.push(c.message);
+      for (const k of ["cause", "error", "originalError", "data", "responseBody"]) {
+        if (c[k]) queue.push(c[k]);
+      }
+    }
+  }
+
+  return messages.join(" ");
+}
+
+/**
+ * True when the error is a provider rejecting the `json_schema` response_format
+ * that structured outputs rely on — DeepSeek and many custom / self-hosted
+ * OpenAI-compatible endpoints do this ("This response_format type is
+ * unavailable now"). Distinct from a schema-validation failure (handled by
+ * self-correction) and from auth/network errors (which bubble up).
+ */
+export function isResponseFormatUnsupported(err: unknown): boolean {
+  return /response_format|json[_ ]?schema|structured\s*output/i.test(errorMessages(err));
+}
+
+/**
+ * The output ceiling every model this product can be pointed at accepts.
+ * Anthropic's claude-3 family and OpenAI's gpt-4-turbo hard-cap `max_tokens`
+ * here and answer a larger ask with a 400, so it is the value to retry with
+ * when a provider rejects ours. Every other call site in the repo asks for
+ * exactly this (aiSdkAgent.ts, orchestrator.ts).
+ */
+export const PROVIDER_SAFE_MAX_OUTPUT_TOKENS = 4096;
+
+/**
+ * True when the provider rejected the request because the `maxOutputTokens` we
+ * asked for is above that model's ceiling. `llm_keys.model` is free-form tenant
+ * text with no allowlist, so a caller sizing its budget for one model cannot
+ * know another tenant's model caps lower. Matches Anthropic's "max_tokens: N >
+ * M, which is the maximum allowed number of output tokens" and OpenAI's
+ * "max_tokens is too large … supports at most M completion tokens".
+ */
+export function isMaxOutputTokensRejected(err: unknown): boolean {
+  return /max_tokens is too large|maximum allowed number of output tokens|supports at most \d+ completion tokens/i.test(
+    errorMessages(err),
+  );
+}
+
+/**
+ * Downgrades a structured-output call to plain JSON-object mode. Drops the
+ * schema from responseFormat (so the provider receives
+ * `response_format: { type: "json_object" }` instead of `json_schema`) and
+ * moves the schema into a system message so the model still knows the exact
+ * shape. `generateObject` still parses and validates the returned JSON against
+ * the caller's zod schema, and `llmSelfCorrect` still repairs violations — only
+ * the transport mechanism changes, not the correctness guarantees.
+ */
+const jsonObjectFallbackMiddleware: LanguageModelMiddleware = {
+  specificationVersion: "v3",
+  transformParams: async ({ params }) => {
+    const rf = params.responseFormat;
+    if (!rf || rf.type !== "json" || rf.schema == null) return params;
+
+    const guidance = {
+      role: "system" as const,
+      content:
+        "You must respond with a single JSON object that strictly conforms to " +
+        "the following JSON Schema. Output ONLY raw JSON — no prose, no " +
+        "explanation, no markdown, no code fences.\n\nJSON Schema:\n" +
+        JSON.stringify(rf.schema),
+    };
+
+    return {
+      ...params,
+      prompt: [guidance, ...params.prompt],
+      responseFormat: { type: "json" },
+    };
+  },
+};
+
+/* ------------------------------------------------------------------ */
 /* Corrective prompt                                                  */
 /* ------------------------------------------------------------------ */
 
@@ -132,6 +247,12 @@ export function extractValidationIssues(err: unknown): ValidationIssue[] | null 
  * Appended to the system prompt after a response that produced no parseable
  * object. There are no Zod issues to quote — nothing was validated — so this
  * says what actually went wrong instead.
+ *
+ * The last line trades depth for completion deliberately: asking for minimum
+ * lengths pulls against a caller whose prompt demands substance, and the
+ * recovered payload may well be thinner than the first attempt intended. A
+ * minimal complete object beats a lost section — but only as a recovery, which
+ * is why this is never sent on the first attempt.
  */
 export const TRUNCATION_DIRECTIVE = [
   "",
@@ -194,13 +315,17 @@ export async function generateObjectWithSelfCorrection<T>(
 
   let augmentedSystem = params.system;
   let lastIssues: ValidationIssue[] | undefined;
+  let model = params.model;
+  let fellBackToJsonObject = false;
+  let extra = params.extra;
+  let cappedOutputTokens = false;
 
   for (let attempt = 1; attempt <= maxAttempts + 1; attempt++) {
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const callParams: any = {
-        ...(params.extra ?? {}),
-        model: params.model,
+        ...(extra ?? {}),
+        model,
         // The runtime SDK accepts Zod schemas directly; the type is
         // intentionally loose here to avoid pinning to one SDK version.
         schema: params.schema,
@@ -236,11 +361,58 @@ export async function generateObjectWithSelfCorrection<T>(
         // against maxOutputTokens before any answer is emitted. This DOES
         // consume an attempt: a model that cannot finish will not finish on
         // the tenth try either.
+        //
+        // Checked BEFORE the two transport downgrades below, deliberately. A
+        // truncated completion arrives wrapped around a JSONParseError whose
+        // message embeds the whole raw text (`JSON parsing failed: Text: …`),
+        // so prose that merely mentions a JSON schema would satisfy
+        // isResponseFormatUnsupported and be answered by prepending the entire
+        // schema to the system prompt — enlarging the input that overran.
+        // Nothing is shadowed by the order: both downgrades below are provider
+        // 400s (APICallError), which is never a NoObjectGeneratedError.
         if (NoObjectGeneratedError.isInstance(err) && !isLastAttempt) {
           logger.warn(
             `[llmSelfCorrect] attempt ${attempt} returned no parseable object (${(err as Error).message}); retrying with a truncation directive`,
           );
           augmentedSystem = params.system + TRUNCATION_DIRECTIVE;
+          continue;
+        }
+
+        // The model caps max_tokens below what this caller asked for, and the
+        // provider answered 400 rather than clamping. `llm_keys.model` is
+        // free-form tenant text, so a caller cannot size one budget that every
+        // selectable model accepts; re-issue once at the universally-safe
+        // ceiling instead of losing the call. Repairs what we sent, so like the
+        // transport switch below it must not consume the correction budget.
+        if (
+          !cappedOutputTokens &&
+          Number(extra?.maxOutputTokens) > PROVIDER_SAFE_MAX_OUTPUT_TOKENS &&
+          isMaxOutputTokensRejected(err)
+        ) {
+          cappedOutputTokens = true;
+          extra = { ...extra, maxOutputTokens: PROVIDER_SAFE_MAX_OUTPUT_TOKENS };
+          logger.warn(
+            `[llmSelfCorrect] provider rejected maxOutputTokens=${params.extra?.maxOutputTokens}; retrying at ${PROVIDER_SAFE_MAX_OUTPUT_TOKENS}`,
+          );
+          attempt--;
+          continue;
+        }
+
+        // A provider that rejects the json_schema response_format (DeepSeek and
+        // many custom / self-hosted OpenAI-compatible endpoints) is neither a
+        // validation error nor fatal: downgrade to JSON-object mode once and
+        // retry. The schema still validates the result and self-correction
+        // still repairs it, so this only changes transport, not correctness.
+        if (!fellBackToJsonObject && isResponseFormatUnsupported(err)) {
+          fellBackToJsonObject = true;
+          model = wrapLanguageModel({
+            model: params.model,
+            middleware: jsonObjectFallbackMiddleware,
+          });
+          logger.warn(
+            "[llmSelfCorrect] provider rejected json_schema response_format; retrying in JSON-object mode",
+          );
+          attempt--; // the transport switch must not consume the self-correction budget
           continue;
         }
 

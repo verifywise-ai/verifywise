@@ -18,8 +18,25 @@ import {
   generateObjectWithSelfCorrection,
   buildCorrectionDirective,
   extractValidationIssues,
+  isMaxOutputTokensRejected,
+  isResponseFormatUnsupported,
+  PROVIDER_SAFE_MAX_OUTPUT_TOKENS,
   type GenerateObjectImpl,
 } from "../llmSelfCorrect";
+
+/**
+ * Minimal LanguageModelV3-shaped fake, valid enough for `wrapLanguageModel`
+ * to wrap it. The injected `generateImpl` ignores the model, so its methods
+ * are never actually called.
+ */
+const fakeModel = {
+  specificationVersion: "v3",
+  provider: "test",
+  modelId: "test-model",
+  supportedUrls: {},
+  doGenerate: async () => ({}),
+  doStream: async () => ({}),
+} as unknown as Record<string, unknown>;
 
 const sampleSchema = z.object({
   name: z.string().min(3),
@@ -283,6 +300,105 @@ describe("llmSelfCorrect / generateObjectWithSelfCorrection", () => {
     expect(invocation).toBe(3);
   });
 
+  it("answers a truncated completion with the retry, not the json_schema downgrade", async () => {
+    // The truncation arrives as a JSONParseError whose message embeds the raw
+    // model output (`JSON parsing failed: Text: …`). Prose that merely mentions
+    // a JSON schema — likely, since the fallback middleware itself injects
+    // "JSON Schema:" into the system prompt — satisfies
+    // isResponseFormatUnsupported, so checking that first would answer an
+    // overrun by prepending the whole schema to the input that overran.
+    const systems: string[] = [];
+    let invocation = 0;
+    const mock: GenerateObjectImpl = (async (p: any) => {
+      systems.push(p.system);
+      invocation += 1;
+      if (invocation === 1) {
+        throw new NoObjectGeneratedError({
+          message: "No object generated: could not parse the response.",
+          cause: new Error(
+            'JSON parsing failed: Text: Here is the object per the json schema you gave me: {"name": "o',
+          ),
+          text: 'Here is the object per the json schema you gave me: {"name": "o',
+          response: { id: "r", timestamp: new Date(0), modelId: "m" },
+          usage: { inputTokens: 1, outputTokens: 9, totalTokens: 10 },
+          finishReason: "length",
+        });
+      }
+      return { object: { name: "ok", count: 1 } } as any;
+    }) as unknown as GenerateObjectImpl;
+
+    const res = await generateObjectWithSelfCorrection<Sample>(
+      { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p" },
+      mock,
+    );
+
+    expect(invocation).toBe(2);
+    expect(res.attempts).toBe(2);
+    expect(systems[1]).toContain("PREVIOUS RESPONSE UNUSABLE");
+    expect(systems[1]).not.toContain("JSON Schema:");
+  });
+
+  it("re-issues at the safe ceiling when the model caps maxOutputTokens lower", async () => {
+    // llm_keys.model is free-form tenant text: claude-3-opus and gpt-4-turbo
+    // answer max_tokens > 4096 with a 400, which is neither a ZodError nor a
+    // NoObjectGeneratedError, so rethrowing it loses the whole analysis for
+    // those tenants on every run.
+    const asked: unknown[] = [];
+    let invocation = 0;
+    const mock: GenerateObjectImpl = (async (p: any) => {
+      asked.push(p.maxOutputTokens);
+      invocation += 1;
+      if (invocation === 1) {
+        throw new Error(
+          "max_tokens: 6000 > 4096, which is the maximum allowed number of output tokens for claude-3-opus-20240229",
+        );
+      }
+      return { object: { name: "ok", count: 1 } } as any;
+    }) as unknown as GenerateObjectImpl;
+
+    const res = await generateObjectWithSelfCorrection<Sample>(
+      {
+        model: {},
+        schema: sampleSchema,
+        system: "s",
+        prompt: "p",
+        extra: { maxOutputTokens: 6000 },
+      },
+      mock,
+    );
+
+    expect(res.object).toEqual({ name: "ok", count: 1 });
+    expect(asked).toEqual([6000, PROVIDER_SAFE_MAX_OUTPUT_TOKENS]);
+    // Repairing what we sent must not cost a self-correction attempt.
+    expect(res.attempts).toBe(1);
+    expect(res.selfCorrected).toBe(false);
+  });
+
+  it("does not re-issue for a max_tokens rejection it did not cause", async () => {
+    let invocation = 0;
+    const err = new Error("max_tokens is too large: 9000.");
+    const mock: GenerateObjectImpl = (async () => {
+      invocation += 1;
+      throw err;
+    }) as unknown as GenerateObjectImpl;
+
+    await expect(
+      generateObjectWithSelfCorrection<Sample>(
+        // Below the safe ceiling already — a second identical call would only
+        // burn a provider round-trip.
+        {
+          model: {},
+          schema: sampleSchema,
+          system: "s",
+          prompt: "p",
+          extra: { maxOutputTokens: 900 },
+        },
+        mock,
+      ),
+    ).rejects.toBe(err);
+    expect(invocation).toBe(1);
+  });
+
   it("disables self-correction when maxSelfCorrectionAttempts=0", async () => {
     let invocation = 0;
     const mock: GenerateObjectImpl = (async () => {
@@ -400,5 +516,103 @@ describe("llmSelfCorrect / generateObjectWithSelfCorrection", () => {
     );
     expect(captured!.abortSignal).toBeInstanceOf(AbortSignal);
     expect(captured!.abortSignal).not.toBe(stale);
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* isResponseFormatUnsupported                                        */
+/* ------------------------------------------------------------------ */
+
+describe("llmSelfCorrect / isResponseFormatUnsupported", () => {
+  it("detects DeepSeek's response_format rejection", () => {
+    expect(
+      isResponseFormatUnsupported(new Error("This response_format type is unavailable now")),
+    ).toBe(true);
+  });
+
+  it("detects a json_schema rejection nested in `.cause`", () => {
+    const inner = new Error("Invalid schema for response_format 'json_schema'");
+    const outer = Object.assign(new Error("AI SDK call failed"), { cause: inner });
+    expect(isResponseFormatUnsupported(outer)).toBe(true);
+  });
+
+  it("returns false for auth / network errors", () => {
+    expect(isResponseFormatUnsupported(new Error("401 unauthorized"))).toBe(false);
+    expect(isResponseFormatUnsupported(new Error("ECONNRESET"))).toBe(false);
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* isMaxOutputTokensRejected                                          */
+/* ------------------------------------------------------------------ */
+
+describe("llmSelfCorrect / isMaxOutputTokensRejected", () => {
+  it("detects Anthropic's ceiling rejection", () => {
+    expect(
+      isMaxOutputTokensRejected(
+        new Error(
+          "max_tokens: 6000 > 4096, which is the maximum allowed number of output tokens for claude-3-opus-20240229",
+        ),
+      ),
+    ).toBe(true);
+  });
+
+  it("detects OpenAI's ceiling rejection nested in `.responseBody`", () => {
+    const outer = Object.assign(new Error("AI SDK call failed"), {
+      responseBody:
+        "max_tokens is too large: 6000. This model supports at most 4096 completion tokens.",
+    });
+    expect(isMaxOutputTokensRejected(outer)).toBe(true);
+  });
+
+  it("returns false for a response_format rejection or a network error", () => {
+    expect(
+      isMaxOutputTokensRejected(new Error("This response_format type is unavailable now")),
+    ).toBe(false);
+    expect(isMaxOutputTokensRejected(new Error("ECONNRESET"))).toBe(false);
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* generateObjectWithSelfCorrection — json-object fallback            */
+/* ------------------------------------------------------------------ */
+
+describe("llmSelfCorrect / json-object fallback", () => {
+  it("downgrades to JSON-object mode when the provider rejects json_schema", async () => {
+    const valid: Sample = { name: "Zoe", count: 5 };
+    let invocation = 0;
+    const mock: GenerateObjectImpl = (async () => {
+      invocation += 1;
+      if (invocation === 1) {
+        throw new Error("This response_format type is unavailable now");
+      }
+      return { object: valid };
+    }) as unknown as GenerateObjectImpl;
+
+    const result = await generateObjectWithSelfCorrection<Sample>(
+      { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p" },
+      mock,
+    );
+
+    // First call rejected json_schema → wrapper retried once in json-object mode.
+    expect(result.object).toEqual(valid);
+    expect(invocation).toBe(2);
+  });
+
+  it("does not fall back more than once (rethrows if json-object mode also fails)", async () => {
+    let invocation = 0;
+    const mock: GenerateObjectImpl = (async () => {
+      invocation += 1;
+      throw new Error("This response_format type is unavailable now");
+    }) as unknown as GenerateObjectImpl;
+
+    await expect(
+      generateObjectWithSelfCorrection<Sample>(
+        { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p" },
+        mock,
+      ),
+    ).rejects.toThrow(/response_format/i);
+    // One initial attempt + exactly one fallback retry, then rethrow.
+    expect(invocation).toBe(2);
   });
 });

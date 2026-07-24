@@ -166,6 +166,14 @@ const LLM_TIMEOUT_MS = 60_000;
  * spent entirely on reasoning, "could not parse the response" is JSON cut off
  * mid-object. 6000 holds the largest payload plus room for the reasoning pass;
  * a non-reasoning model leaves the remainder unspent.
+ *
+ * 6000 is ABOVE the ceiling some selectable models enforce: claude-3-opus /
+ * -sonnet / -haiku and gpt-4-turbo hard-cap max_tokens at 4096 and answer a
+ * larger ask with a 400, and `llm_keys.model` is free-form tenant text with no
+ * allowlist, so this file cannot know which. llmSelfCorrect catches that
+ * rejection and re-issues once at PROVIDER_SAFE_MAX_OUTPUT_TOKENS without
+ * spending the correction budget — asking high here costs those tenants one
+ * extra call, not the analysis.
  */
 const ANALYZER_MAX_OUTPUT_TOKENS = 6000;
 
