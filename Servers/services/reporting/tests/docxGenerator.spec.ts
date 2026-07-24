@@ -458,5 +458,49 @@ describe("DOCX Generator", () => {
       expect(text).toContain("[high · Jane Ops · observed]");
       expect(text).toContain("Why: 22 of 25 model rows have no owner");
     });
+
+    it("renders the top_risks table alongside the risk highlights box", async () => {
+      // riskAnalysis only ever produces output when a risk section was
+      // collected, so the table lives with the highlights box inside the
+      // risk-analysis section — the same place the PDF prints it.
+      const result = await generateDOCX({
+        ...mockReportData,
+        sections: {
+          modelRisks: {
+            totalRisks: 1,
+            risks: [
+              {
+                id: 1,
+                modelName: "GPT-4",
+                riskName: "Bias Risk",
+                riskLevel: "High",
+                mitigationStatus: "Open",
+              },
+            ],
+          },
+        },
+        aiSummaries: {
+          sectionSummaries: {},
+          riskHighlights: "Concentration risk dominates.",
+          riskAnalysis: {
+            narrative: "Concentration risk dominates.",
+            top_risks: [
+              {
+                name: "Single model owner",
+                level: "Very high",
+                why: "25 of 25 models share one owner",
+              },
+            ],
+          },
+        },
+      });
+      const text = await docxText(result.content);
+
+      expect(text).toContain("Most material risks");
+      expect(text).toContain("Single model owner");
+      expect(text).toContain("Very high");
+      expect(text).toContain("25 of 25 models share one owner");
+      expect(text).toContain("Why it ranks here");
+    });
   });
 });

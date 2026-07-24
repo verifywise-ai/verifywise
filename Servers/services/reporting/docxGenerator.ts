@@ -917,6 +917,20 @@ function createRiskAnalysisSection(reportData: ReportData): (Paragraph | Table)[
     );
   }
 
+  // Most material risks. The analyzer has always produced top_risks; until now
+  // nothing rendered them in either format.
+  const topRisks = reportData.aiSummaries?.riskAnalysis?.top_risks;
+  if (topRisks && topRisks.length > 0) {
+    elements.push(createSubsectionHeader("Most material risks"));
+    elements.push(
+      createTable(
+        ["Risk", "Level", "Why it ranks here"],
+        topRisks.map((r) => [r.name, r.level || "-", r.why]),
+      ),
+    );
+    elements.push(createTableSpacing());
+  }
+
   // Add page break
   elements.push(new Paragraph({ children: [new PageBreak()] }));
 
