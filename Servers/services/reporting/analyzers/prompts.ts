@@ -91,8 +91,10 @@ export const SECTION_INSTRUCTIONS: Record<string, string> = {
 - Say whether the gaps concentrate in one function or run across all of them.`,
 
   // The projection carries no risk count, so the vendor list cannot be compared
-  // against the vendor risk register from inside this section.
-  vendors: `- What is the distribution of review status across the list, and how many vendors are unreviewed?
+  // against the vendor risk register from inside this section. `review_status`
+  // also reaches the model under the key `riskStatus` (collectVendorsList), so
+  // the prose names that key rather than leaving the model to match the two up.
+  vendors: `- What is the distribution of review status — the riskStatus field — across the list, and how many vendors are unreviewed?
 - How many have no assignee, and how many have no named contact person?
 - Name the vendors a reader should chase first, and say why those and not the others.
 - Do the unreviewed ones concentrate among the vendors with no assignee, or are the two independent?`,
@@ -108,8 +110,10 @@ export const SECTION_INSTRUCTIONS: Record<string, string> = {
   // selects both as literal NULL, so every row lacks them and any question about
   // them returns a 100% gap for every tenant. `status` and `trainingName` are the
   // projection's only live fields. Restore the questions with the SELECT, not before.
+  // No clustering question either: `trainingregistar` is one row per training, so
+  // unless training_name repeats, "do the gaps concentrate in one training" is
+  // answered by the table's shape rather than by the tenant's data.
   trainingRegistry: `- What share of records is complete, and how does that compare with the number still planned or in progress?
-- Do the incomplete records concentrate in one training, or are they spread across many?
 - Name the trainings furthest from complete and say what that leaves uncovered.
 - Say plainly whether the registry demonstrates coverage or only demonstrates that rows exist.`,
 

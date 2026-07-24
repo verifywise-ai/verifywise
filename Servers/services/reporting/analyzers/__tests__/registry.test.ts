@@ -274,6 +274,14 @@ describe("analyzer registry", () => {
     expect(SECTION_INSTRUCTIONS.policyManager).not.toContain("reference date");
     expect(SECTION_INSTRUCTIONS.incidentManagement).not.toContain("reference date");
 
+    // No question may name a field its own projection cannot populate — the
+    // model answers truthfully from absence and the false finding ships.
+    // collectTrainingRegistry selects completion_date and assignee_name as
+    // literal NULL, so either question reports a 100% gap for every tenant; the
+    // vendor risk projection carries no mitigation or status field at all.
+    expect(SECTION_INSTRUCTIONS.trainingRegistry).not.toMatch(/completion date|assignee/i);
+    expect(SECTION_INSTRUCTIONS.vendorRisks).not.toContain("unmitigated");
+
     // A section key with no entry falls back to this rather than losing its summary.
     expect(GENERIC_SECTION_INSTRUCTION).toContain("Highlights key observations and patterns");
   });
