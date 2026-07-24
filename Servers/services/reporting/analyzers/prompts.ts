@@ -36,22 +36,32 @@ export const SECTION_LABELS: Record<string, string> = {
 const LEVEL_RANK: Record<string, number> = {
   critical: 0,
   "very high": 1,
+  "very serious": 1,
   high: 2,
+  serious: 2,
   medium: 3,
   low: 4,
+  minor: 4,
   "very low": 5,
 };
 
 /**
- * Two level vocabularies reach this function and both must rank:
- * - project risks (and the NIST subcategory risks read from the same
- *   `risk_level_autocalculated` column) carry the enum WITH a " risk" suffix —
- *   'No risk' | 'Very low risk' | 'Low risk' | 'Medium risk' | 'High risk' |
- *   'Very high risk' — and so do vendor risks, whose free-text `risk_level` the
- *   UI fills from the same labels;
- * - model risks use the bare words 'Low' | 'Medium' | 'High' | 'Critical'.
- * Stripping the suffix before lookup lets one table cover both. 'No risk' maps
- * to 'no', which is deliberately absent from the table and so ranks last.
+ * Three level vocabularies reach this function and all three must rank:
+ * - project risks carry the `risk_level_autocalculated` enum WITH a " risk"
+ *   suffix — 'No risk' | 'Very low risk' | 'Low risk' | 'Medium risk' |
+ *   'High risk' | 'Very high risk' — and so do vendor risks, whose free-text
+ *   `risk_level` the UI fills from the same labels;
+ * - model risks use the bare words 'Low' | 'Medium' | 'High' | 'Critical';
+ * - incidents use their own severity words 'Minor' | 'Serious' | 'Very serious'
+ *   (ai-incident-management.enum.ts), and carry no deadline field at all, so
+ *   the level is the only thing that orders them.
+ * Stripping the suffix before lookup lets one table cover all three. 'No risk'
+ * maps to 'no', which is deliberately absent from the table and so ranks last.
+ *
+ * Not covered: the NIST subcategory risks. They read the same suffixed column
+ * but never reach here — only `category.subcategories` is ranked, and a
+ * subcategory row carries no level of its own; its nested `risks` array is
+ * neither ranked nor capped.
  */
 const levelOf = (row: any): number => {
   const raw = row?.riskLevel ?? row?.severity ?? row?.level;

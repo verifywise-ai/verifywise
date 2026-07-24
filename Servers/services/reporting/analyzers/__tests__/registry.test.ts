@@ -90,6 +90,23 @@ describe("analyzer registry", () => {
     expect(out._risksTruncated).toBe("showing 50 of 62");
   });
 
+  it("ranks incidents by their own severity vocabulary — the only thing ordering them", () => {
+    // ai_incident_managements.severity is 'Minor' | 'Serious' | 'Very serious',
+    // and the section carries no deadline field, so without those three words in
+    // LEVEL_RANK the comparator is a no-op and the slice keeps the 50 newest by
+    // created_at DESC.
+    const incidents = [
+      ...Array.from({ length: 60 }, (_, i) => ({ title: `Minor${i}`, severity: "Minor" })),
+      { title: "VerySeriousLate", severity: "Very serious" },
+      { title: "SeriousLate", severity: "Serious" },
+    ];
+    const out = JSON.parse(prepareSectionData("incidentManagement", { incidents }));
+    expect(out.incidents).toHaveLength(50);
+    expect(out.incidents[0].title).toBe("VerySeriousLate");
+    expect(out.incidents[1].title).toBe("SeriousLate");
+    expect(out._incidentsTruncated).toBe("showing 50 of 62");
+  });
+
   it("breaks severity ties by deadline and leaves unrankable rows in query order", () => {
     // modelRisks is the risk section that actually carries targetDate.
     const risks = [
