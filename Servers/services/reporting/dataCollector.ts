@@ -174,14 +174,23 @@ export class ReportDataCollector {
     }
 
     // ISO 42001 and ISO 27001 specific sections (frameworkId = 2 or 3)
-    if ((this.frameworkId === 2 || this.frameworkId === 3) && !isOrganizational) {
+    //
+    // No !isOrganizational guard here, unlike EU AI Act above. frameworks.
+    // is_organizational is true for ISO 42001, ISO 27001 and NIST AI RMF, and
+    // createNewProjectQuery only lets a project take frameworks whose flag
+    // matches its own — so these three can ONLY ever sit on an organizational
+    // project. Requiring !isOrganizational made both branches unreachable and
+    // silently dropped the section from every report that asked for it.
+    // The frameworkId check is sufficient on its own: the collector is built
+    // from a real projects_frameworks row, so the pairing is already valid.
+    if (this.frameworkId === 2 || this.frameworkId === 3) {
       if (sections.includes("clausesAndAnnexes") || sections.includes("all")) {
         sectionData.clausesAndAnnexes = await this.collectClausesAndAnnexes();
       }
     }
 
-    // NIST AI RMF specific sections (frameworkId = 4)
-    if (this.frameworkId === 4 && !isOrganizational) {
+    // NIST AI RMF specific sections (frameworkId = 4) — same reasoning.
+    if (this.frameworkId === 4) {
       if (sections.includes("nistSubcategories") || sections.includes("all")) {
         sectionData.nistSubcategories = await this.collectNistSubcategories();
       }
@@ -472,7 +481,11 @@ export class ReportDataCollector {
         riskLevel: risk.risk_level_autocalculated || "Unknown",
         impact: risk.risk_severity || "Unknown",
         likelihood: risk.likelihood || "Unknown",
-        mitigationStatus: risk.approval_status || "Unknown",
+        // `risks` carries both columns and they are orthogonal — a risk can be
+        // mitigation_status 'Completed' while approval_status is 'Rejected'.
+        // Reading approval under this name made the section's "how many are
+        // unmitigated" question answer against approval state instead.
+        mitigationStatus: risk.mitigation_status || "Unknown",
         owner:
           `${risk.risk_owner_name || ""} ${risk.risk_owner_surname || ""}`.trim() || "Unassigned",
       })),
@@ -788,9 +801,9 @@ export class ReportDataCollector {
         modelsQuery = `
           SELECT mi.*, u.name as owner_name, u.surname as owner_surname
           FROM model_inventories mi
-          LEFT JOIN users u ON mi.owner = u.id
+          LEFT JOIN users u ON mi.approver = u.id
           WHERE mi.organization_id = :organizationId
-          ORDER BY mi.name ASC
+          ORDER BY mi.model ASC
         `;
         replacements = { organizationId: this.organizationId };
       } else {
@@ -799,9 +812,9 @@ export class ReportDataCollector {
           SELECT mi.*, u.name as owner_name, u.surname as owner_surname
           FROM model_inventories mi
           JOIN model_inventories_projects_frameworks mip ON mi.id = mip.model_inventory_id AND mip.organization_id = mi.organization_id
-          LEFT JOIN users u ON mi.owner = u.id
+          LEFT JOIN users u ON mi.approver = u.id
           WHERE mi.organization_id = :organizationId AND mip.project_id = :projectId
-          ORDER BY mi.name ASC
+          ORDER BY mi.model ASC
         `;
         replacements = { organizationId: this.organizationId, projectId: this.projectId };
       }
@@ -815,11 +828,11 @@ export class ReportDataCollector {
         totalModels: models.length,
         models: models.map((m) => ({
           id: m.id,
-          name: m.name || "Unnamed Model",
+          name: m.model || "Unnamed Model",
           version: m.version,
           status: m.status || "Unknown",
           owner: m.owner_name ? `${m.owner_name} ${m.owner_surname || ""}`.trim() : undefined,
-          description: m.description,
+          description: m.capabilities,
         })),
       };
     } catch (error) {
@@ -843,7 +856,7 @@ export class ReportDataCollector {
       if (isOrganizational) {
         // For organizational reports, get ALL model risks
         modelRisksQuery = `
-          SELECT mr.*, mi.name as model_name
+          SELECT mr.*, mi.model as model_name
           FROM model_risks mr
           JOIN model_inventories mi ON mr.model_id = mi.id AND mi.organization_id = mr.organization_id
           WHERE mr.organization_id = :organizationId
@@ -853,7 +866,7 @@ export class ReportDataCollector {
       } else {
         // For use case reports, filter by project
         modelRisksQuery = `
-          SELECT mr.*, mi.name as model_name
+          SELECT mr.*, mi.model as model_name
           FROM model_risks mr
           JOIN model_inventories mi ON mr.model_id = mi.id AND mi.organization_id = mr.organization_id
           JOIN model_inventories_projects_frameworks mip ON mi.id = mip.model_inventory_id AND mip.organization_id = mi.organization_id
@@ -977,18 +990,23 @@ export class ReportDataCollector {
       const subcategoriesQuery = `
         SELECT
           ns.id,
-          ns.sub_id as subcategory_id,
-          ns.name,
-          ns.function,
-          ns.category,
+          ss.subcategory_id AS subcategory_id,
+          ss.description AS name,
+          ss.function AS function,
+          cs.category_id AS category,
           ns.status,
-          nsr.id as risk_id,
-          nsr.risk_name,
-          nsr.risk_level
+          r.id AS risk_id,
+          r.risk_name,
+          r.risk_level_autocalculated AS risk_level
         FROM nist_ai_rmf_subcategories ns
-        LEFT JOIN nist_ai_rmf_subcategories_risks nsr ON ns.id = nsr.subcategory_id AND nsr.organization_id = ns.organization_id
-        WHERE ns.organization_id = :organizationId AND ns.project_framework_id = :projectFrameworkId
-        ORDER BY ns.function, ns.category, ns.sub_id
+        JOIN nist_ai_rmf_subcategories_struct ss ON ns.subcategory_meta_id = ss.id
+        JOIN nist_ai_rmf_categories_struct cs ON ss.category_struct_id = cs.id
+        LEFT JOIN nist_ai_rmf_subcategories__risks nsr
+               ON nsr.nist_ai_rmf_subcategory_id = ns.id
+              AND nsr.organization_id = ns.organization_id
+        LEFT JOIN risks r ON r.id = nsr.projects_risks_id
+        WHERE ns.organization_id = :organizationId AND ns.projects_frameworks_id = :projectFrameworkId
+        ORDER BY ss.function, cs.order_no, ss.order_no
       `;
 
       const results = (await sequelize.query(subcategoriesQuery, {
@@ -1082,23 +1100,22 @@ export class ReportDataCollector {
       if (isOrganizational) {
         // Get all incidents for organizational reports
         incidentsQuery = `
-          SELECT aim.*, u.name as assignee_name, u.surname as assignee_surname
+          SELECT aim.*
           FROM ai_incident_managements aim
-          LEFT JOIN users u ON aim.assignee = u.id
           WHERE aim.organization_id = :organizationId
           ORDER BY aim.created_at DESC
         `;
         replacements = { organizationId: this.organizationId };
       } else {
-        // Get only project-linked incidents for use case reports
+        // Get only project-linked incidents for use case reports.
+        // ai_project is a varchar column, so bind the project id as text.
         incidentsQuery = `
-          SELECT aim.*, u.name as assignee_name, u.surname as assignee_surname
+          SELECT aim.*
           FROM ai_incident_managements aim
-          LEFT JOIN users u ON aim.assignee = u.id
           WHERE aim.organization_id = :organizationId AND aim.ai_project = :projectId
           ORDER BY aim.created_at DESC
         `;
-        replacements = { organizationId: this.organizationId, projectId: this.projectId };
+        replacements = { organizationId: this.organizationId, projectId: String(this.projectId) };
       }
 
       const incidents = (await sequelize.query(incidentsQuery, {
@@ -1111,17 +1128,17 @@ export class ReportDataCollector {
         incidents: incidents.map((inc) => ({
           id: inc.id,
           incidentId: inc.incident_id || `INC-${inc.id}`,
-          title: inc.title || "Untitled Incident",
+          title: inc.type || "Untitled Incident",
           type: inc.type || "Unknown",
           severity: inc.severity || "Unknown",
           status: inc.status || "Unknown",
-          reportedDate: inc.created_at ? new Date(inc.created_at).toLocaleDateString() : undefined,
-          resolvedDate: inc.resolved_at
-            ? new Date(inc.resolved_at).toLocaleDateString()
-            : undefined,
-          assignee: inc.assignee_name
-            ? `${inc.assignee_name} ${inc.assignee_surname || ""}`.trim()
-            : undefined,
+          reportedDate: inc.date_detected
+            ? new Date(inc.date_detected).toLocaleDateString()
+            : inc.created_at
+              ? new Date(inc.created_at).toLocaleDateString()
+              : undefined,
+          resolvedDate: undefined,
+          assignee: inc.reporter || undefined,
         })),
       };
     } catch (error) {

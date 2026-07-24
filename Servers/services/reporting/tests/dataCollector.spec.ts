@@ -219,6 +219,30 @@ describe("dataCollector", () => {
   });
 
   describe("collector column corrections", () => {
+    it("reads risks.mitigation_status for projectRisks, not the orthogonal approval_status", async () => {
+      // `risks` carries BOTH columns and they are independent axes:
+      // mitigation_status is 'Not Started' | 'In Progress' | 'Completed' |
+      // 'On Hold' | 'Deferred' | 'Canceled' | 'Requires review', while
+      // approval_status is a free varchar the UI fills with 'Approved' |
+      // 'Rejected' | 'In Review' | 'Pending'. Reading the latter under the
+      // name `mitigationStatus` made the section's "how many are unmitigated"
+      // question answer against approval state instead.
+      mockGetProjectRisks.mockResolvedValue([
+        {
+          id: 11,
+          risk_name: "Unreviewed training data",
+          risk_level_autocalculated: "High risk",
+          mitigation_status: "Not Started",
+          approval_status: "Approved",
+        },
+      ] as any);
+
+      const collector = createDataCollector(10, 1, 1, 100, 5);
+      const result = await collector.collectAllData(["projectRisks"]);
+
+      expect(result.sections.projectRisks!.risks[0].mitigationStatus).toBe("Not Started");
+    });
+
     it("reads model_risks.status (not the non-existent mitigation_status) and surfaces plan/date/impact/likelihood", async () => {
       // verifywise.model_risks has no `mitigation_status` column, so the old
       // read made every model risk in every report literally "Unknown".
