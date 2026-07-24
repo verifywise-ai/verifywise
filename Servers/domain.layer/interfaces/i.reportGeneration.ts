@@ -119,6 +119,24 @@ export interface RenderedCharts {
 export interface AISummaries {
   executiveSummary?: string;
   keyFindings?: string[];
+  /** Structured findings. Renderers prefer this when present and fall back to
+   *  the flat keyFindings string list when absent.
+   *
+   *  basis is OPTIONAL: the schema field is nullable and older stored payloads
+   *  predate it entirely. The mapper passes it through rather than defaulting
+   *  it, because a defaulted "observed" is a fabricated provenance claim. */
+  keyFindingsDetailed?: Array<{
+    text: string;
+    section: string;
+    severity: "low" | "medium" | "high" | "critical";
+    basis?: "observed" | "inferred" | "absent";
+    related_sections: string[];
+    what_would_close_this: string;
+  }>;
+  /** Per-analyzer abstention reasons, keyed by analyzer key, already filtered
+   *  for presentation by mapAnalysesToSummaries. Today an abstention has no
+   *  document surface at all. */
+  abstentions?: Record<string, string>;
   recommendations?: string[];
   sectionSummaries: Record<string, string>;
   riskHighlights?: string;
@@ -128,22 +146,35 @@ export interface AISummaries {
     suggestedDueDate?: string;
     priority?: "low" | "medium" | "high" | "critical";
     sourceSignal?: string;
+    basis?: "observed" | "inferred" | "absent";
   }>;
   /** Structured output of the riskAnalysis analyzer. */
   riskAnalysis?: {
     narrative: string;
     top_risks: Array<{ name: string; level: string; why: string }>;
   };
-  /** Structured output of the complianceGap analyzer. */
+  /** Structured output of the complianceGap analyzer. Forwarded whole, so a
+   *  nullable schema field arrives here as null rather than as undefined. */
   complianceGap?: {
     narrative: string;
-    gaps: Array<{ control: string; gap: string; priority: string }>;
+    gaps: Array<{
+      control: string;
+      gap: string;
+      priority: string;
+      basis?: "observed" | "inferred" | "absent" | null;
+      what_would_close_this?: string | null;
+    }>;
     scores_caveat?: string | null;
   };
-  /** Structured output of the vendorRisk analyzer. */
+  /** Structured output of the vendorRisk analyzer. Forwarded whole; see above. */
   vendorRisk?: {
     narrative: string;
-    concerns: Array<{ vendor: string; concern: string; severity: string }>;
+    concerns: Array<{
+      vendor: string;
+      concern: string;
+      severity: string;
+      basis?: "observed" | "inferred" | "absent" | null;
+    }>;
   };
 }
 
