@@ -218,4 +218,76 @@ describe("analyzer schemas", () => {
       }),
     ).toThrow();
   });
+
+  it("gives findings, actions, rationales, gaps and concerns room for a mechanism, a value and an effect", () => {
+    const long = "x".repeat(450);
+
+    const finding = {
+      text: long,
+      section: "compliance",
+      severity: "high",
+      basis: "observed",
+      what_would_close_this: "Evidence is attached to each of the twelve controls.",
+      related_sections: [],
+    };
+    expect(keyFindingsSchema.parse({ findings: [finding], abstain_reason: null }).findings[0].text).toHaveLength(450);
+    expect(() =>
+      keyFindingsSchema.parse({ findings: [{ ...finding, text: "x".repeat(601) }], abstain_reason: null }),
+    ).toThrow();
+
+    const action = {
+      action: long,
+      suggestedOwner: null,
+      priority: "high",
+      rationale: long,
+      basis: "observed",
+    };
+    expect(recommendedActionsSchema.parse({ actions: [action], abstain_reason: null }).actions[0].rationale).toHaveLength(450);
+    expect(() =>
+      recommendedActionsSchema.parse({ actions: [{ ...action, action: "x".repeat(601) }], abstain_reason: null }),
+    ).toThrow();
+    expect(() =>
+      recommendedActionsSchema.parse({ actions: [{ ...action, rationale: "x".repeat(601) }], abstain_reason: null }),
+    ).toThrow();
+
+    const gapPayload = {
+      narrative: "Readiness is uneven across the control set and two families lag the rest.",
+      gaps: [
+        {
+          control: "AC-12 Access Review",
+          gap: long,
+          priority: "high",
+          basis: "absent",
+          what_would_close_this: "An approved access-review record is attached to AC-12.",
+        },
+      ],
+      scores_caveat: null,
+      abstain_reason: null,
+    };
+    expect(complianceGapSchema.parse(gapPayload).gaps[0].gap).toHaveLength(450);
+    expect(() =>
+      complianceGapSchema.parse({ ...gapPayload, gaps: [{ ...gapPayload.gaps[0], gap: "x".repeat(601) }] }),
+    ).toThrow();
+
+    const concernPayload = {
+      narrative: "Third-party exposure is concentrated in a single unreviewed supplier.",
+      concerns: [{ vendor: "Acme Corp", concern: long, severity: "high", basis: "observed" }],
+      abstain_reason: null,
+    };
+    expect(vendorRiskSchema.parse(concernPayload).concerns[0].concern).toHaveLength(450);
+    expect(() =>
+      vendorRiskSchema.parse({ ...concernPayload, concerns: [{ ...concernPayload.concerns[0], concern: "x".repeat(601) }] }),
+    ).toThrow();
+  });
+
+  it("leaves the prose caps alone — the row caps were what was binding", () => {
+    expect(executiveSummarySchema.parse({ summary: "x".repeat(3500), abstain_reason: null }).summary).toHaveLength(3500);
+    expect(() => executiveSummarySchema.parse({ summary: "x".repeat(3501), abstain_reason: null })).toThrow();
+    expect(
+      riskAnalysisSchema.parse({ narrative: "x".repeat(2500), top_risks: [], abstain_reason: null }).narrative,
+    ).toHaveLength(2500);
+    expect(() =>
+      riskAnalysisSchema.parse({ narrative: "x".repeat(2501), top_risks: [], abstain_reason: null }),
+    ).toThrow();
+  });
 });

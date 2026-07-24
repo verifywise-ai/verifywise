@@ -76,8 +76,10 @@ export const keyFindingsSchema = z
             text: z
               .string()
               .min(15)
-              .max(300)
-              .describe("One concise observation grounded in the supplied data."),
+              .max(600)
+              .describe(
+                "One observation grounded in the supplied data. Name the specific values it rests on — the count, ratio, date, identifier or owner — rather than characterising them; there is room for the evidence and the observation in one place.",
+              ),
             section: z
               .string()
               .min(2)
@@ -116,8 +118,10 @@ export const recommendedActionsSchema = z
             action: z
               .string()
               .min(15)
-              .max(300)
-              .describe("A specific, actionable step. Not a restatement of the problem."),
+              .max(600)
+              .describe(
+                "A specific, actionable step. Not a restatement of the problem. State the mechanism, what it applies to, and the effect expected once it is done; there is room for all three.",
+              ),
             suggestedOwner: z
               .string()
               .max(120)
@@ -133,8 +137,10 @@ export const recommendedActionsSchema = z
             rationale: z
               .string()
               .min(10)
-              .max(300)
-              .describe("One sentence tying this action to a specific signal in the input."),
+              .max(600)
+              .describe(
+                "Tie this action to a specific signal in the input, quoting the value that motivates it. One or two sentences.",
+              ),
             basis,
           })
           .strict(),
@@ -184,7 +190,13 @@ export const complianceGapSchema = z
         z
           .object({
             control: z.string().min(1).max(200).describe("Control identifier or title, copied verbatim from the input."),
-            gap: z.string().min(10).max(300).describe("What is missing, grounded in the supplied score fields."),
+            gap: z
+              .string()
+              .min(10)
+              .max(600)
+              .describe(
+                "What is missing, grounded in the supplied score fields. Name the score or field that shows it.",
+              ),
             priority: severity,
             basis,
             what_would_close_this: whatWouldCloseThis,
@@ -217,7 +229,13 @@ export const vendorRiskSchema = z
         z
           .object({
             vendor: z.string().min(1).max(200).describe("Vendor name, copied verbatim from the input."),
-            concern: z.string().min(10).max(300).describe("The specific concern, grounded in the input."),
+            concern: z
+              .string()
+              .min(10)
+              .max(600)
+              .describe(
+                "The specific concern, grounded in the input. Name the field that evidences it — review status, contract date, risk level.",
+              ),
             severity,
             basis,
           })
