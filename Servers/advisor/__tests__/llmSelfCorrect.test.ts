@@ -12,6 +12,7 @@
  */
 
 import { describe, expect, it, jest } from "@jest/globals";
+import { NoObjectGeneratedError } from "ai";
 import { z, ZodError } from "zod";
 import {
   generateObjectWithSelfCorrection,
@@ -215,6 +216,71 @@ describe("llmSelfCorrect / generateObjectWithSelfCorrection", () => {
       ),
     ).rejects.toBe(networkErr);
     expect(invocation).toBe(1); // no retry
+  });
+
+  it("retries a NoObjectGeneratedError, spending the budget rather than rethrowing at once", async () => {
+    // Run 4 of the report pipeline lost five analyses to this. A truncated or
+    // empty completion is neither a ZodError nor a response_format rejection,
+    // so it fell through to the rethrow on the FIRST attempt and every large
+    // analyzer got exactly one shot.
+    const systems: string[] = [];
+    let invocation = 0;
+    const mock: GenerateObjectImpl = (async (p: any) => {
+      systems.push(p.system);
+      invocation += 1;
+      if (invocation === 1) {
+        throw new NoObjectGeneratedError({
+          message: "No object generated: the model did not return a response.",
+          text: "",
+          response: { id: "r", timestamp: new Date(0), modelId: "m" },
+          usage: { inputTokens: 1, outputTokens: 0, totalTokens: 1 },
+          finishReason: "length",
+        });
+      }
+      return { object: { name: "ok", count: 1 } } as any;
+    }) as unknown as GenerateObjectImpl;
+
+    const res = await generateObjectWithSelfCorrection<Sample>(
+      { model: {}, schema: sampleSchema, system: "s", prompt: "p" },
+      mock,
+    );
+
+    expect(res.object).toEqual({ name: "ok", count: 1 });
+    expect(invocation).toBe(2);
+    expect(res.attempts).toBe(2);
+    expect(systems[0]).toBe("s");
+    expect(systems[1]).toContain("PREVIOUS RESPONSE UNUSABLE");
+  });
+
+  it("stops re-issuing a NoObjectGeneratedError once the budget is spent", async () => {
+    // A model that cannot finish will not finish on the tenth try either — the
+    // retry must consume an attempt, unlike the json-object transport switch.
+    let invocation = 0;
+    const err = new NoObjectGeneratedError({
+      message: "No object generated: could not parse the response.",
+      text: "{ partial",
+      response: { id: "r", timestamp: new Date(0), modelId: "m" },
+      usage: { inputTokens: 1, outputTokens: 9, totalTokens: 10 },
+      finishReason: "length",
+    });
+    const mock: GenerateObjectImpl = (async () => {
+      invocation += 1;
+      throw err;
+    }) as unknown as GenerateObjectImpl;
+
+    await expect(
+      generateObjectWithSelfCorrection<Sample>(
+        {
+          model: {},
+          schema: sampleSchema,
+          system: "s",
+          prompt: "p",
+          maxSelfCorrectionAttempts: 2, // → 3 total attempts
+        },
+        mock,
+      ),
+    ).rejects.toBe(err);
+    expect(invocation).toBe(3);
   });
 
   it("disables self-correction when maxSelfCorrectionAttempts=0", async () => {

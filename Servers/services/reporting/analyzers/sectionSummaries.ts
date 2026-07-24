@@ -20,10 +20,20 @@ const LLM_TIMEOUT_MS = 30_000;
  * Was an inline 500 against a "150-250 words" ask. Run 2 hit that ceiling and
  * was cut off at 997 characters mid-sentence, and because nothing looked at
  * finishReason the executive summary silently finished the sentence for it.
- * 900 tokens holds the 300-450 word ask below with the same 2x headroom the
- * old pairing had.
+ *
+ * 900 was the next guess, and it sized the VISIBLE answer only. Run 4 hit the
+ * cap on all eight sections and returned empty text on seven of them: the
+ * configured model (`deepseek-v4-flash`) is a reasoning model, and a provider
+ * bills reasoning tokens against `maxOutputTokens` before the first character
+ * of the answer is emitted. Measured directly against the API on a 2.5k-token
+ * section prompt: 660 reasoning + 659 answer tokens. So the budget has to hold
+ * BOTH, and the reasoning half is the part that varies with input size.
+ *
+ * 3000 holds the 300-450 word ask below (~600 tokens) plus roughly 2x the
+ * measured reasoning. A non-reasoning model simply leaves the rest unspent —
+ * this is a ceiling, not a target.
  */
-export const SECTION_SUMMARY_MAX_TOKENS = 900;
+export const SECTION_SUMMARY_MAX_TOKENS = 3000;
 
 export const MAX_CONCURRENT = 3;
 

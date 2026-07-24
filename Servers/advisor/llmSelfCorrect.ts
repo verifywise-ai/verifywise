@@ -25,7 +25,7 @@
  *     error mapping in advisor.ctrl.ts continues to work.
  */
 
-import { generateObject } from "ai";
+import { generateObject, NoObjectGeneratedError } from "ai";
 import { z, ZodError } from "zod";
 import logger from "../utils/logger/fileLogger";
 
@@ -129,6 +129,21 @@ export function extractValidationIssues(err: unknown): ValidationIssue[] | null 
 /* ------------------------------------------------------------------ */
 
 /**
+ * Appended to the system prompt after a response that produced no parseable
+ * object. There are no Zod issues to quote — nothing was validated — so this
+ * says what actually went wrong instead.
+ */
+export const TRUNCATION_DIRECTIVE = [
+  "",
+  "",
+  "## PREVIOUS RESPONSE UNUSABLE",
+  "Your previous response ended before a complete JSON object was emitted: it was empty, or cut off mid-object.",
+  "Emit the JSON object and nothing else — begin with `{` on the first character.",
+  "Do not think out loud, restate the schema, or write any prose outside the object.",
+  "Keep every string field to the shortest length that still satisfies its minimum, and every array to its minimum item count, so the object completes within the output budget.",
+].join("\n");
+
+/**
  * Build a directive appended to the system prompt for the next attempt.
  * Quotes each Zod issue with its dotted path so the LLM can locate the
  * field, plus generic guidance on how to fix common mistakes.
@@ -213,7 +228,23 @@ export async function generateObjectWithSelfCorrection<T>(
       const isLastAttempt = attempt > maxAttempts;
 
       if (!issues) {
-        // Not a validation error — let auth/rate-limit/network bubble up.
+        // No parseable object came back at all — an empty completion, or JSON
+        // cut off mid-object. That is a failed attempt, not a fatal error, and
+        // rethrowing here spends none of the correction budget: the caller gets
+        // one shot and a single truncated response loses the whole section.
+        // Common with reasoning models, whose reasoning tokens are billed
+        // against maxOutputTokens before any answer is emitted. This DOES
+        // consume an attempt: a model that cannot finish will not finish on
+        // the tenth try either.
+        if (NoObjectGeneratedError.isInstance(err) && !isLastAttempt) {
+          logger.warn(
+            `[llmSelfCorrect] attempt ${attempt} returned no parseable object (${(err as Error).message}); retrying with a truncation directive`,
+          );
+          augmentedSystem = params.system + TRUNCATION_DIRECTIVE;
+          continue;
+        }
+
+        // Otherwise let auth/rate-limit/network bubble up.
         throw err;
       }
 

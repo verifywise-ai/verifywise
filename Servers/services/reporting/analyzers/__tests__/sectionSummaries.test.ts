@@ -141,8 +141,14 @@ describe("runSectionSummaries", () => {
     // Run 2 asked for 150-250 words against a 500-token ceiling and was cut
     // off at 997 characters mid-sentence; the executive summary then finished
     // the sentence for it. The ask and the cap have to move together.
+    //
+    // 900 was the second guess and it sized the answer only. Run 4 hit the cap
+    // on all eight sections and returned EMPTY text on seven: a reasoning model
+    // spends this same budget thinking before it writes. Measured against the
+    // configured provider, a 2.5k-token section prompt costs 660 reasoning
+    // tokens on top of the ~600 the answer needs.
     await runSectionSummaries("model" as any, reportData as any);
-    expect(SECTION_SUMMARY_MAX_TOKENS).toBe(900);
+    expect(SECTION_SUMMARY_MAX_TOKENS).toBe(3000);
     expect(mockGenerateText.mock.calls[0][0].maxOutputTokens).toBe(SECTION_SUMMARY_MAX_TOKENS);
   });
 

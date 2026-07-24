@@ -137,7 +137,10 @@ describe("runAnalyzers", () => {
     // provider happened to default to — the same silence that truncated a
     // section summary mid-sentence and went unnoticed for two runs. runOne is
     // shared by both stages, so this one pin covers all six analyzers.
-    expect(params.extra).toEqual({ maxOutputTokens: 2000 });
+    // 2000 sized the JSON alone, and a reasoning model bills its reasoning
+    // against the same ceiling: run 4 lost all five large-schema analyzers to
+    // NoObjectGeneratedError before a character of JSON was emitted.
+    expect(params.extra).toEqual({ maxOutputTokens: 6000 });
   });
 
   it("abstains without calling the LLM when a block has no input data", async () => {

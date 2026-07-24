@@ -158,8 +158,16 @@ const LLM_TIMEOUT_MS = 60_000;
  * to eight findings that each now carry a counterfactual and a related-section
  * list — more than a provider's default ceiling reliably allows, and a silent
  * truncation here reads downstream as a short answer rather than a cut-off one.
+ *
+ * 2000 sized the JSON alone. A reasoning model (`deepseek-v4-flash`, the key
+ * configured here) bills its reasoning tokens against this same ceiling before
+ * emitting a character, so run 4 lost all five large-schema analyzers to
+ * NoObjectGeneratedError — "the model did not return a response" is a budget
+ * spent entirely on reasoning, "could not parse the response" is JSON cut off
+ * mid-object. 6000 holds the largest payload plus room for the reasoning pass;
+ * a non-reasoning model leaves the remainder unspent.
  */
-const ANALYZER_MAX_OUTPUT_TOKENS = 2000;
+const ANALYZER_MAX_OUTPUT_TOKENS = 6000;
 
 /**
  * Prose fields the shallowness gate checks (§6). keyFindings and
