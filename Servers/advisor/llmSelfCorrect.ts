@@ -57,6 +57,11 @@ export interface SelfCorrectingParams<T> {
    */
   innerMaxRetries?: number;
   /**
+   * When set, each attempt gets its OWN AbortSignal.timeout(timeoutMs).
+   * When absent, behaviour is unchanged (existing callers keep working).
+   */
+  timeoutMs?: number;
+  /**
    * Pass-through for any other generateObject params we don't surface
    * directly (e.g., `maxOutputTokens`, `seed`, `mode`). Merged into the
    * inner call without further validation — caller is responsible for
@@ -188,6 +193,12 @@ export async function generateObjectWithSelfCorrection<T>(
         prompt: params.prompt,
         temperature: params.temperature ?? 0,
         maxRetries: innerMaxRetries,
+        // Constructed INSIDE the loop, deliberately: a signal built once by
+        // the caller and spread in from `extra` covers the first attempt and
+        // every self-correction with one shared budget, so a slow first call
+        // leaves the correction no time at all. Spread last so it also wins
+        // over any abortSignal a caller left in `extra`.
+        ...(params.timeoutMs ? { abortSignal: AbortSignal.timeout(params.timeoutMs) } : {}),
       };
       const { object } = await gen(callParams);
 

@@ -274,4 +274,65 @@ describe("llmSelfCorrect / generateObjectWithSelfCorrection", () => {
     );
     expect(captured!.temperature).toBe(0);
   });
+
+  it("omits abortSignal entirely when timeoutMs is absent (existing callers unchanged)", async () => {
+    let captured: Record<string, unknown> | null = null;
+    const mock: GenerateObjectImpl = (async (p: Record<string, unknown>) => {
+      captured = p;
+      return { object: { name: "Erin", count: 1 } };
+    }) as unknown as GenerateObjectImpl;
+
+    await generateObjectWithSelfCorrection<Sample>(
+      { model: {}, schema: sampleSchema, system: "s", prompt: "p" },
+      mock,
+    );
+    expect(captured).not.toBeNull();
+    expect(Object.keys(captured!)).not.toContain("abortSignal");
+  });
+
+  it("gives every attempt its OWN timeout signal when timeoutMs is set", async () => {
+    const calls: Array<Record<string, unknown>> = [];
+    let invocation = 0;
+    const mock: GenerateObjectImpl = (async (p: Record<string, unknown>) => {
+      calls.push(p);
+      invocation += 1;
+      if (invocation === 1) throw makeZodError("name", "too short");
+      return { object: { name: "Frank", count: 1 } };
+    }) as unknown as GenerateObjectImpl;
+
+    const result = await generateObjectWithSelfCorrection<Sample>(
+      { model: {}, schema: sampleSchema, system: "s", prompt: "p", timeoutMs: 1000 },
+      mock,
+    );
+
+    expect(result.attempts).toBe(2);
+    expect(calls[0].abortSignal).toBeInstanceOf(AbortSignal);
+    expect(calls[1].abortSignal).toBeInstanceOf(AbortSignal);
+    // One shared signal IS the bug: the retry inherits whatever is left of
+    // the first attempt's budget, so a slow first call aborts the correction.
+    expect(calls[0].abortSignal).not.toBe(calls[1].abortSignal);
+  });
+
+  it("timeoutMs wins over an abortSignal smuggled in through extra", async () => {
+    const stale = AbortSignal.timeout(5000);
+    let captured: Record<string, unknown> | null = null;
+    const mock: GenerateObjectImpl = (async (p: Record<string, unknown>) => {
+      captured = p;
+      return { object: { name: "Gina", count: 1 } };
+    }) as unknown as GenerateObjectImpl;
+
+    await generateObjectWithSelfCorrection<Sample>(
+      {
+        model: {},
+        schema: sampleSchema,
+        system: "s",
+        prompt: "p",
+        timeoutMs: 1000,
+        extra: { abortSignal: stale },
+      },
+      mock,
+    );
+    expect(captured!.abortSignal).toBeInstanceOf(AbortSignal);
+    expect(captured!.abortSignal).not.toBe(stale);
+  });
 });
