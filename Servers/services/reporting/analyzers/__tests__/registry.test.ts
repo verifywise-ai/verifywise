@@ -48,10 +48,55 @@ describe("analyzer registry", () => {
     }
   });
 
-  it("truncates long section arrays to protect the context window", () => {
+  it("truncates long section arrays to protect the context window, and says it did", () => {
     const risks = Array.from({ length: 200 }, (_, i) => ({ name: `R${i}` }));
-    const out = prepareSectionData("projectRisks", { risks });
-    expect(JSON.parse(out).risks).toHaveLength(50);
+    const out = JSON.parse(prepareSectionData("projectRisks", { risks }));
+    expect(out.risks).toHaveLength(50);
+    // Silent truncation reads to the model as a complete set — the top-level
+    // arrays now carry the same stamp the nested ones already did.
+    expect(out._risksTruncated).toBe("showing 50 of 200");
+  });
+
+  it("ranks by materiality BEFORE truncating, so the model sees the worst rows not the oldest", () => {
+    // The collector's queries order by id ASC, so a plain slice hands the
+    // model 50 Low rows and cuts the Critical one sitting at index 60.
+    const risks = [
+      ...Array.from({ length: 60 }, (_, i) => ({ name: `Low${i}`, riskLevel: "Low" })),
+      { name: "CriticalLate", riskLevel: "Critical" },
+      { name: "HighLate", riskLevel: "High" },
+    ];
+    const out = JSON.parse(prepareSectionData("projectRisks", { risks }));
+    expect(out.risks).toHaveLength(50);
+    expect(out.risks[0].name).toBe("CriticalLate");
+    expect(out.risks[1].name).toBe("HighLate");
+    expect(out._risksTruncated).toBe("showing 50 of 62");
+  });
+
+  it("breaks severity ties by deadline and leaves unrankable rows in query order", () => {
+    const risks = [
+      { name: "LateHigh", riskLevel: "High", targetDate: "2026-12-01" },
+      { name: "EarlyHigh", riskLevel: "High", targetDate: "2026-01-05" },
+      { name: "NoLevelA" },
+      { name: "NoLevelB" },
+    ];
+    const out = JSON.parse(prepareSectionData("projectRisks", { risks }));
+    expect(out.risks.map((r: any) => r.name)).toEqual([
+      "EarlyHigh",
+      "LateHigh",
+      "NoLevelA",
+      "NoLevelB",
+    ]);
+    // Nothing was dropped, so nothing is stamped.
+    expect(out._risksTruncated).toBeUndefined();
+  });
+
+  it("does not mutate the caller's array while ranking (the renderers get the same objects)", () => {
+    const risks = [
+      { name: "Low1", riskLevel: "Low" },
+      { name: "Crit1", riskLevel: "Critical" },
+    ];
+    prepareSectionData("projectRisks", { risks });
+    expect(risks.map((r) => r.name)).toEqual(["Low1", "Crit1"]);
   });
 
   it("keeps the twelve human-readable section labels", () => {

@@ -31,22 +31,58 @@ export const SECTION_LABELS: Record<string, string> = {
   incidentManagement: "Incident Management",
 };
 
-function truncateArray<T>(arr: T[] | undefined, max: number = MAX_DATA_ITEMS): T[] {
-  if (!arr) return [];
-  return arr.slice(0, max);
+/** Materiality order for the level/severity vocabularies used across sections.
+ * Lower index = more material. */
+const LEVEL_RANK: Record<string, number> = {
+  critical: 0,
+  "very high": 1,
+  high: 2,
+  medium: 3,
+  low: 4,
+  "very low": 5,
+};
+
+const levelOf = (row: any): number => {
+  const raw = row?.riskLevel ?? row?.severity ?? row?.level;
+  const rank = typeof raw === "string" ? LEVEL_RANK[raw.trim().toLowerCase()] : undefined;
+  return rank ?? 99;
+};
+
+/** Deadline-shaped fields only. Sooner = more urgent, unambiguously; a
+ * "reported" or "completed" date does not order that way, so it is left out
+ * rather than sorted backwards. */
+const dateOf = (row: any): number => {
+  const raw = row?.targetDate ?? row?.dueDate ?? row?.reviewDate;
+  const t = raw ? new Date(raw).getTime() : NaN;
+  return Number.isNaN(t) ? Number.POSITIVE_INFINITY : t;
+};
+
+/**
+ * Rank by materiality BEFORE truncating. The collector's queries order by
+ * `id ASC` / `name ASC`, so a plain slice hands the model the OLDEST rows and
+ * it then writes confident prose about "the inventory".
+ *
+ * Copies rather than sorting in place: these arrays are the live section
+ * objects the renderers also consume. Sort is stable, so rows carrying
+ * neither a level nor a deadline keep their original query order.
+ */
+function rankByMateriality<T>(arr: T[]): T[] {
+  return [...arr].sort((a, b) => levelOf(a) - levelOf(b) || dateOf(a) - dateOf(b));
 }
 
 /**
- * Truncates obj[field] to max items in place and, only when items were
- * actually dropped, stamps a sibling `_<field>Truncated` count. Used for
- * nested arrays (assessment questions, clause/annex sub-items, NIST
- * subcategories) that have no total-count field of their own to signal
- * truncation to the model (Fix 5 — silent truncation reads as "complete").
+ * Ranks obj[field], truncates it to max items and, only when items were
+ * actually dropped, stamps a sibling `_<field>Truncated` count on obj. Used
+ * for every capped array — the top-level ones (risks, controls, vendors,
+ * models, records, policies, incidents) and the nested ones (assessment
+ * questions, clause/annex sub-items, NIST subcategories) alike, none of which
+ * have a total-count field of their own to signal truncation to the model
+ * (Fix 5 — silent truncation reads as "complete").
  */
 function truncateWithStamp(obj: any, field: string, max: number): any[] {
   const original = obj[field];
   if (!Array.isArray(original)) return [];
-  const truncated = original.slice(0, max);
+  const truncated = rankByMateriality(original).slice(0, max);
   if (truncated.length < original.length) {
     obj[`_${field}Truncated`] = `showing ${truncated.length} of ${original.length}`;
   }
@@ -67,10 +103,10 @@ export function prepareSectionData(key: string, data: any): string {
     case "projectRisks":
     case "vendorRisks":
     case "modelRisks":
-      clone.risks = truncateArray(clone.risks);
+      clone.risks = truncateWithStamp(clone, "risks", MAX_DATA_ITEMS);
       break;
     case "compliance":
-      clone.controls = truncateArray(clone.controls);
+      clone.controls = truncateWithStamp(clone, "controls", MAX_DATA_ITEMS);
       break;
     case "assessment":
       // topics/subtopics/questions nest three deep and carry free-text
@@ -111,19 +147,19 @@ export function prepareSectionData(key: string, data: any): string {
       });
       break;
     case "vendors":
-      clone.vendors = truncateArray(clone.vendors);
+      clone.vendors = truncateWithStamp(clone, "vendors", MAX_DATA_ITEMS);
       break;
     case "models":
-      clone.models = truncateArray(clone.models);
+      clone.models = truncateWithStamp(clone, "models", MAX_DATA_ITEMS);
       break;
     case "trainingRegistry":
-      clone.records = truncateArray(clone.records);
+      clone.records = truncateWithStamp(clone, "records", MAX_DATA_ITEMS);
       break;
     case "policyManager":
-      clone.policies = truncateArray(clone.policies);
+      clone.policies = truncateWithStamp(clone, "policies", MAX_DATA_ITEMS);
       break;
     case "incidentManagement":
-      clone.incidents = truncateArray(clone.incidents);
+      clone.incidents = truncateWithStamp(clone, "incidents", MAX_DATA_ITEMS);
       break;
   }
 
