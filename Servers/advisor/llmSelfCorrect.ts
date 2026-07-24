@@ -86,7 +86,11 @@ export interface SelfCorrectingParams<T> {
 
 export interface SelfCorrectingResult<T> {
   object: T;
-  /** Total number of LLM calls made (1 = succeeded first try). */
+  /**
+   * Number of self-correction attempts (1 = succeeded first try). The two
+   * transport downgrades re-issue the call without counting, so this can be
+   * lower than the number of provider calls actually made.
+   */
   attempts: number;
   /** True iff at least one retry was a self-correction (not the first call). */
   selfCorrected: boolean;
@@ -102,6 +106,14 @@ export interface ValidationIssue {
 /* ------------------------------------------------------------------ */
 /* Validation-error detection                                         */
 /* ------------------------------------------------------------------ */
+
+/**
+ * The properties an AI SDK error can hang its underlying cause off — its own
+ * `cause`, the SDK's `error` / `originalError` wrappers, and the `data` /
+ * `responseBody` carriers holding a provider's HTTP body. Both walkers below
+ * follow the same list so a future SDK version only has to be taught here.
+ */
+const ERROR_CHAIN_KEYS = ["cause", "error", "originalError", "data", "responseBody"] as const;
 
 /**
  * Walk the error chain (and AI-SDK-specific `cause` properties) looking for
@@ -129,9 +141,9 @@ export function extractValidationIssues(err: unknown): ValidationIssue[] | null 
     // defensively.
     if (typeof candidate === "object" && candidate !== null) {
       const c = candidate as Record<string, unknown>;
-      if (c.cause) queue.push(c.cause);
-      if (c.error) queue.push(c.error);
-      if (c.originalError) queue.push(c.originalError);
+      for (const k of ERROR_CHAIN_KEYS) {
+        if (c[k]) queue.push(c[k]);
+      }
     }
   }
 
@@ -143,9 +155,8 @@ export function extractValidationIssues(err: unknown): ValidationIssue[] | null 
 /* ------------------------------------------------------------------ */
 
 /**
- * Every message string reachable from an error — its own, plus the `cause` /
- * `error` / `originalError` / `data` / `responseBody` carriers the AI SDK uses
- * to wrap a provider's HTTP body. Cycle-safe.
+ * Every message string reachable from an error, following the same
+ * `ERROR_CHAIN_KEYS` carriers as `extractValidationIssues`. Cycle-safe.
  */
 function errorMessages(err: unknown): string {
   const messages: string[] = [];
@@ -164,7 +175,7 @@ function errorMessages(err: unknown): string {
     if (typeof candidate === "object") {
       const c = candidate as Record<string, unknown>;
       if (typeof c.message === "string") messages.push(c.message);
-      for (const k of ["cause", "error", "originalError", "data", "responseBody"]) {
+      for (const k of ERROR_CHAIN_KEYS) {
         if (c[k]) queue.push(c[k]);
       }
     }
@@ -216,7 +227,7 @@ export function isMaxOutputTokensRejected(err: unknown): boolean {
  * the caller's zod schema, and `llmSelfCorrect` still repairs violations — only
  * the transport mechanism changes, not the correctness guarantees.
  */
-const jsonObjectFallbackMiddleware: LanguageModelMiddleware = {
+export const jsonObjectFallbackMiddleware: LanguageModelMiddleware = {
   specificationVersion: "v3",
   transformParams: async ({ params }) => {
     const rf = params.responseFormat;
@@ -362,15 +373,17 @@ export async function generateObjectWithSelfCorrection<T>(
         // consume an attempt: a model that cannot finish will not finish on
         // the tenth try either.
         //
-        // Checked BEFORE the two transport downgrades below, deliberately. A
-        // truncated completion arrives wrapped around a JSONParseError whose
-        // message embeds the whole raw text (`JSON parsing failed: Text: …`),
-        // so prose that merely mentions a JSON schema would satisfy
-        // isResponseFormatUnsupported and be answered by prepending the entire
-        // schema to the system prompt — enlarging the input that overran.
-        // Nothing is shadowed by the order: both downgrades below are provider
-        // 400s (APICallError), which is never a NoObjectGeneratedError.
-        if (NoObjectGeneratedError.isInstance(err) && !isLastAttempt) {
+        // Handled here and nowhere else — this branch always continues or
+        // throws, so the two transport downgrades below can never see a
+        // NoObjectGeneratedError. That matters: a truncated completion arrives
+        // wrapped around a JSONParseError whose message embeds the whole raw
+        // text (`JSON parsing failed: Text: …`), so prose that merely mentions
+        // a JSON schema satisfies isResponseFormatUnsupported and would be
+        // answered by prepending the entire schema to the system prompt —
+        // enlarging the input that overran, and spending an extra provider
+        // call once the correction budget is gone.
+        if (NoObjectGeneratedError.isInstance(err)) {
+          if (isLastAttempt) throw err;
           logger.warn(
             `[llmSelfCorrect] attempt ${attempt} returned no parseable object (${(err as Error).message}); retrying with a truncation directive`,
           );

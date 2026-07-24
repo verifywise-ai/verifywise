@@ -20,6 +20,7 @@ import {
   extractValidationIssues,
   isMaxOutputTokensRejected,
   isResponseFormatUnsupported,
+  jsonObjectFallbackMiddleware,
   PROVIDER_SAFE_MAX_OUTPUT_TOKENS,
   type GenerateObjectImpl,
 } from "../llmSelfCorrect";
@@ -614,5 +615,87 @@ describe("llmSelfCorrect / json-object fallback", () => {
     ).rejects.toThrow(/response_format/i);
     // One initial attempt + exactly one fallback retry, then rethrow.
     expect(invocation).toBe(2);
+  });
+
+  it("never downgrades a truncated completion, even once the budget is spent", async () => {
+    // The two tests above only count invocations of the injected impl, which
+    // ignores the model — so the downgrade firing on the LAST attempt would be
+    // invisible there. It is not invisible here: a truncated completion whose
+    // embedded raw text mentions a json schema must be rethrown after the
+    // budget, not answered with a fourth call carrying the whole schema.
+    let invocation = 0;
+    const err = new NoObjectGeneratedError({
+      message: "No object generated: could not parse the response.",
+      cause: new Error(
+        'JSON parsing failed: Text: per the json schema you gave me: {"name": "o',
+      ),
+      text: 'per the json schema you gave me: {"name": "o',
+      response: { id: "r", timestamp: new Date(0), modelId: "m" },
+      usage: { inputTokens: 1, outputTokens: 9, totalTokens: 10 },
+      finishReason: "length",
+    });
+    const mock: GenerateObjectImpl = (async () => {
+      invocation += 1;
+      throw err;
+    }) as unknown as GenerateObjectImpl;
+
+    await expect(
+      generateObjectWithSelfCorrection<Sample>(
+        { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p" },
+        mock,
+      ),
+    ).rejects.toBe(err);
+    expect(invocation).toBe(3);
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* jsonObjectFallbackMiddleware — the repair the downgrade performs    */
+/* ------------------------------------------------------------------ */
+
+describe("llmSelfCorrect / jsonObjectFallbackMiddleware", () => {
+  /** transformParams only reads `params`; the rest of the option bag is inert. */
+  const transform = (params: Record<string, unknown>) =>
+    (jsonObjectFallbackMiddleware.transformParams as any)({
+      type: "generate",
+      model: fakeModel,
+      params,
+    });
+
+  it("drops the schema from responseFormat and restates it as a leading system message", async () => {
+    const schema = { type: "object", properties: { name: { type: "string" } } };
+    const out = await transform({
+      responseFormat: { type: "json", schema, name: "sample" },
+      prompt: [{ role: "user", content: [{ type: "text", text: "go" }] }],
+      temperature: 0,
+    });
+
+    // The provider now receives response_format: { type: "json_object" }.
+    expect(out.responseFormat).toEqual({ type: "json" });
+    // …and the shape it lost is back in the prompt, ahead of everything else.
+    expect(out.prompt[0].role).toBe("system");
+    expect(out.prompt[0].content).toContain(JSON.stringify(schema));
+    expect(out.prompt).toHaveLength(2);
+    expect(out.prompt[1].role).toBe("user");
+    // Everything else is passed through untouched.
+    expect(out.temperature).toBe(0);
+  });
+
+  it("leaves a text-mode call alone", async () => {
+    const params = {
+      responseFormat: { type: "text" },
+      prompt: [{ role: "user", content: [{ type: "text", text: "go" }] }],
+    };
+    expect(await transform(params)).toBe(params);
+  });
+
+  it("leaves a schema-less json call alone (nothing to restate)", async () => {
+    const params = {
+      responseFormat: { type: "json" },
+      prompt: [{ role: "user", content: [{ type: "text", text: "go" }] }],
+    };
+    expect(await transform(params)).toBe(params);
+    const noFormat = { prompt: [] };
+    expect(await transform(noFormat)).toBe(noFormat);
   });
 });
