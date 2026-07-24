@@ -119,12 +119,16 @@ describe("runAnalyzers", () => {
     expect(out.riskAnalysis!.attempts).toBe(2);
   });
 
-  it("bounds each call with a timeout and a single self-correction retry", async () => {
+  it("bounds each ATTEMPT with its own 60s timeout and a single self-correction retry", async () => {
     await runAnalyzers({ reportData, llmKey, blocks: only("riskAnalysis") });
 
     const params = mockGenerate.mock.calls[0][0];
     expect(params.maxSelfCorrectionAttempts).toBe(1);
-    expect(params.extra?.abortSignal).toBeInstanceOf(AbortSignal);
+    // timeoutMs, not extra.abortSignal: one pre-built signal is shared by the
+    // first call and its retry, so a deeper (slower) analysis aborts and
+    // degrades into a generic abstention.
+    expect(params.timeoutMs).toBe(60_000);
+    expect(params.extra).toBeUndefined();
   });
 
   it("abstains without calling the LLM when a block has no input data", async () => {

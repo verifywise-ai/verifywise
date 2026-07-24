@@ -139,8 +139,13 @@ const SUMMARY_CONSUMERS: AnalysisSectionKey[] = [
   "recommendedActions",
 ];
 
-/** Matches aiSummarizer's per-call budget (aiSummarizer.ts:20) — bounds a stalled provider. */
-const LLM_TIMEOUT_MS = 30_000;
+/**
+ * Per-ATTEMPT budget — llmSelfCorrect builds a fresh AbortSignal.timeout for
+ * each attempt from this, rather than one signal shared by the first call and
+ * its self-correction. Doubled from aiSummarizer's 30s because an abort here
+ * is not a retry, it is a generic abstention in a regulator-facing artifact.
+ */
+const LLM_TIMEOUT_MS = 60_000;
 
 /**
  * Run every enabled analyzer. Pure: no DB, no req/res.
@@ -209,7 +214,7 @@ export async function runAnalyzers(input: RunAnalyzersInput): Promise<AnalyzerRe
       system: def.buildSystemPrompt(),
       prompt: userPrompt,
       maxSelfCorrectionAttempts: 1,
-      extra: { abortSignal: AbortSignal.timeout(LLM_TIMEOUT_MS) },
+      timeoutMs: LLM_TIMEOUT_MS,
     });
 
     // userPrompt is exactly what this analyzer was given, so it is the only
