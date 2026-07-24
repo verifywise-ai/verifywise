@@ -109,19 +109,27 @@ test.describe("Critical end-to-end journey", () => {
     const today = new Date();
     const dueSoonDate = new Date(today);
     dueSoonDate.setDate(today.getDate() + 3);
-    const formattedDate = dueSoonDate.toLocaleDateString("en-US", {
-      month: "2-digit",
-      day: "2-digit",
-      year: "numeric",
-    });
+    const dayOfMonth = dueSoonDate.getDate();
 
-    const dateInput = page
-      .locator(".MuiPickersSectionList-root")
-      .or(page.locator(".mui-date-picker"));
-    await dateInput.first().click();
-    await page.keyboard.press("Control+a");
-    await page.keyboard.type(formattedDate);
-    await page.keyboard.press("Tab");
+    // Click the MUI DatePicker to open the calendar popup
+    const datePicker = page.locator(".mui-date-picker");
+    await datePicker.click();
+
+    // Wait for the calendar popover to appear, then click the day cell.
+    // The calendar uses a grid with <button> elements for each day.
+    const calendarPopup = page.locator('[role="dialog"], [role="presentation"]');
+    await calendarPopup.first().waitFor({ state: "visible", timeout: 5_000 });
+
+    // Click the day button — MUI renders day numbers as button text.
+    // Use a regex to match the exact day number to avoid matching "17" when looking for "7".
+    const dayButton = page
+      .locator('[role="grid"] button')
+      .filter({ hasText: new RegExp(`^${dayOfMonth}$`) });
+    await dayButton.click();
+    await page.waitForTimeout(300);
+
+    // Close calendar if still open
+    await page.keyboard.press("Escape");
 
     // Submit the task
     const submitTaskBtn = page.getByRole("button", { name: /create task/i });
