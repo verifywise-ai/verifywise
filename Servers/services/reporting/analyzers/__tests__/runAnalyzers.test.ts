@@ -120,16 +120,24 @@ describe("runAnalyzers", () => {
     expect(out.riskAnalysis!.attempts).toBe(2);
   });
 
-  it("bounds each ATTEMPT with its own 60s timeout and a single self-correction retry", async () => {
+  it("bounds each ATTEMPT with its own 60s timeout, allows two corrections, and states an output budget", async () => {
     await runAnalyzers({ reportData, llmKey, blocks: only("riskAnalysis") });
 
     const params = mockGenerate.mock.calls[0][0];
-    expect(params.maxSelfCorrectionAttempts).toBe(1);
     // timeoutMs, not extra.abortSignal: one pre-built signal is shared by the
-    // first call and its retry, so a deeper (slower) analysis aborts and
+    // first call and its retries, so a deeper (slower) analysis aborts and
     // degrades into a generic abstention.
     expect(params.timeoutMs).toBe(60_000);
-    expect(params.extra).toBeUndefined();
+    // Two, not one. basis and what_would_close_this are new required keys on
+    // four analyzers; one correction turns a second omission into
+    // "this analysis could not be produced because the AI service call
+    // failed". Each attempt now has its own 60s budget, so a second is safe.
+    expect(params.maxSelfCorrectionAttempts).toBe(2);
+    // Nothing was passed before, so the output ceiling was whatever the
+    // provider happened to default to — the same silence that truncated a
+    // section summary mid-sentence and went unnoticed for two runs. runOne is
+    // shared by both stages, so this one pin covers all six analyzers.
+    expect(params.extra).toEqual({ maxOutputTokens: 2000 });
   });
 
   it("abstains without calling the LLM when a block has no input data", async () => {

@@ -148,6 +148,14 @@ const SUMMARY_CONSUMERS: AnalysisSectionKey[] = [
 const LLM_TIMEOUT_MS = 60_000;
 
 /**
+ * Stated, not inherited. These payloads carry a 3500-character summary, or up
+ * to eight findings that each now carry a counterfactual and a related-section
+ * list — more than a provider's default ceiling reliably allows, and a silent
+ * truncation here reads downstream as a short answer rather than a cut-off one.
+ */
+const ANALYZER_MAX_OUTPUT_TOKENS = 2000;
+
+/**
  * Run every enabled analyzer. Pure: no DB, no req/res.
  *
  * TWO STAGES, and the ordering is load-bearing. `aiSummarizer` (the shipped
@@ -213,8 +221,11 @@ export async function runAnalyzers(input: RunAnalyzersInput): Promise<AnalyzerRe
       schema: def.schema,
       system: def.buildSystemPrompt(),
       prompt: userPrompt,
-      maxSelfCorrectionAttempts: 1,
+      // Two corrections, not one: Task 45 added required keys to four row
+      // objects, and a repeat omission must not cost the whole analysis.
+      maxSelfCorrectionAttempts: 2,
       timeoutMs: LLM_TIMEOUT_MS,
+      extra: { maxOutputTokens: ANALYZER_MAX_OUTPUT_TOKENS },
     });
 
     // userPrompt is exactly what this analyzer was given, so it is the only
