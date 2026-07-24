@@ -136,15 +136,20 @@ test.describe("Critical end-to-end journey", () => {
     await submitTaskBtn.click();
 
     // The deadline-warning query may be cached from before the task was
-    // created, so reload the page to force a fresh fetch.
-    await page.reload();
-
-    // Clear any persisted snooze so the banner can appear.
+    // created. Clear snooze before reloading so the banner can appear,
+    // then reload to force a fresh fetch of the deadline summary API.
     await page.evaluate(() => {
       Object.keys(localStorage)
         .filter((key) => key.includes("deadline_snooze"))
         .forEach((key) => localStorage.removeItem(key));
     });
+
+    const deadlineResponse = page.waitForResponse(
+      (resp) => resp.url().includes("/api/deadlines/summary") && resp.status() === 200,
+      { timeout: 15_000 },
+    );
+    await page.reload();
+    await deadlineResponse;
 
     await expect(page.locator('[data-testid="deadline-warning-banner"]')).toBeVisible({
       timeout: 15_000,
