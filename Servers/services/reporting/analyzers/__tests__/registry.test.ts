@@ -163,14 +163,65 @@ describe("analyzer registry", () => {
     // "06/07/2026" means 6 July, but new Date() reads it as 7 June, and
     // "31/12/2025" does not parse at all — ranking on that field would order
     // this list P2, P1, P3. dateOf does not read it, so nothing reorders.
+    // The collector also always emits `status`, so the fixture carries it: the
+    // vocabulary the UI writes has no terminal value, which is the OTHER half
+    // of why this section keeps query order.
     const policies = [
-      { policyName: "P1", reviewDate: "06/07/2026" },
-      { policyName: "P2", reviewDate: "01/02/2026" },
-      { policyName: "P3", reviewDate: "31/12/2025" },
+      { policyName: "P1", status: "Published", reviewDate: "06/07/2026" },
+      { policyName: "P2", status: "Archived", reviewDate: "01/02/2026" },
+      { policyName: "P3", status: "Draft", reviewDate: "31/12/2025" },
     ];
     const out = JSON.parse(prepareSectionData("policyManager", { policies }));
     expect(out.policies.map((p: any) => p.policyName)).toEqual(["P1", "P2", "P3"]);
     expect(out._policiesTruncated).toBeUndefined();
+  });
+
+  it("ranks the terminal ISO statuses last, so the capped sub-clause list keeps the open work", () => {
+    // subclauses_iso.status is 'Not started' | 'Draft' | 'In progress' |
+    // 'Awaiting review' | 'Awaiting approval' | 'Implemented' | 'Audited' |
+    // 'Needs rework' — no "Done" anywhere in it. Two of those are terminal and
+    // the list is capped at 20 of 27, so matching "Done" alone would let the
+    // finished rows crowd the rework out of the prompt.
+    const subClauses = [
+      ...Array.from({ length: 25 }, (_, i) => ({
+        title: `Sub${i}`,
+        status: i % 2 ? "Implemented" : "Audited",
+      })),
+      { title: "NeedsRework", status: "Needs rework" },
+      { title: "InProgress", status: "In progress" },
+    ];
+    const out = JSON.parse(
+      prepareSectionData("clausesAndAnnexes", {
+        clauses: [{ clauseId: "C1", subClauses }],
+        annexes: [],
+      }),
+    );
+
+    expect(out.clauses[0].subClauses).toHaveLength(20);
+    expect(out.clauses[0].subClauses.slice(0, 2).map((s: any) => s.title)).toEqual([
+      "NeedsRework",
+      "InProgress",
+    ]);
+    expect(out.clauses[0]._subClausesTruncated).toBe("showing 20 of 27");
+  });
+
+  it("ranks Answered questions last — the collector rewrites status before the 5-question cap", () => {
+    // dataCollector maps q.status to 'Answered' | 'Pending', so "Answered", not
+    // "Done", is the token that reaches the ranker for this section.
+    const questions = [
+      ...Array.from({ length: 6 }, (_, i) => ({ question: `A${i}`, status: "Answered" })),
+      { question: "StillOpen", status: "Pending" },
+    ];
+    const out = JSON.parse(
+      prepareSectionData("assessment", {
+        topics: [{ title: "T1", subtopics: [{ title: "S1", questions }] }],
+      }),
+    );
+
+    const kept = out.topics[0].subtopics[0].questions;
+    expect(kept).toHaveLength(5);
+    expect(kept[0].question).toBe("StillOpen");
+    expect(out.topics[0].subtopics[0]._questionsTruncated).toBe("showing 5 of 7");
   });
 
   it("does not mutate the caller's array while ranking (the renderers get the same objects)", () => {

@@ -70,19 +70,39 @@ const levelOf = (row: any): number => {
 };
 
 /**
+ * The terminal token of every `status` vocabulary that reaches this file, read
+ * off the enums rather than guessed at. No vocabulary shares one with another:
+ * - compliance controls: 'Waiting' | 'In progress' | 'Done';
+ * - assessment questions: the collector rewrites `q.status` to 'Answered' |
+ *   'Pending' before ranking (dataCollector.collectAssessment), so "Done" never
+ *   arrives here — "Answered" does;
+ * - ISO sub-clauses, annex categories and NIST subcategories: 'Not started' |
+ *   'Draft' | 'In progress' | 'Awaiting review' | 'Awaiting approval' |
+ *   'Implemented' | 'Audited' | 'Needs rework' — two terminal values, no "Done";
+ * - training records: 'Planned' | 'In Progress' | 'Completed'.
+ *
+ * Deliberately absent: the incident vocabulary ('Open' | 'Investigating' |
+ * 'Mitigated' | 'Closed'). Incidents rank on `severity`, which is their own
+ * materiality axis, and whether 'Mitigated' counts as finished is a lifecycle
+ * judgement this helper has no business making.
+ */
+const TERMINAL_STATUS = new Set(["done", "answered", "implemented", "audited", "completed"]);
+
+/**
  * Completed work is the least material thing in a gap analysis, so it ranks
  * behind open work. This is what orders the sections that carry no level at
  * all — compliance controls above all, where without it the cap kept the 50
- * earliest due dates and those skew towards long-closed rows.
+ * earliest due dates and those skew towards long-closed rows. Every section it
+ * touches is capped below its real row count (controls at 50, clauses at 30,
+ * sub-clauses and annex categories at 20, questions at 5 per subtopic), so
+ * without it the finished rows crowd the open ones out of the prompt entirely.
  *
- * Only "Done" is matched: it is the terminal token shared by the control,
- * question and sub-clause models, and inventing synonyms for the other status
- * vocabularies the collector emits would be guesswork. Rows without it score 0
- * uniformly and are unaffected — including every risk section, whose collector
+ * Rows whose status is not terminal — and rows with no `status` at all — score
+ * 0 uniformly and are unaffected, including every risk section, whose collector
  * projection names the field `mitigationStatus`, not `status`.
  */
-const doneLast = (row: any): number =>
-  typeof row?.status === "string" && row.status.trim().toLowerCase() === "done" ? 1 : 0;
+const completedLast = (row: any): number =>
+  typeof row?.status === "string" && TERMINAL_STATUS.has(row.status.trim().toLowerCase()) ? 1 : 0;
 
 /** Deadline-shaped fields only. Sooner = more urgent, unambiguously; a
  * "reported" or "completed" date does not order that way, so it is left out
@@ -94,7 +114,10 @@ const doneLast = (row: any): number =>
  * here go through, so on any server whose locale is not en-US `new Date()`
  * reads the rendering back as a different day — silently, since a wrong date
  * is still a valid one. A field this helper cannot parse reliably must not
- * order anything; policies therefore rank on nothing and keep query order.
+ * order anything. Policies do carry a `status`, but none of the values the UI
+ * writes ('Draft' | 'Under Review' | 'Approved' | 'Published' | 'Archived' |
+ * 'Deprecated') is in TERMINAL_STATUS, so with `reviewDate` out they rank on
+ * nothing and keep query order.
  */
 const dateOf = (row: any): number => {
   const raw = row?.targetDate ?? row?.dueDate;
@@ -110,14 +133,20 @@ const dateOf = (row: any): number => {
  * Copies rather than sorting in place: these arrays are the live section
  * objects the renderers also consume. Every key is finite, so rows carrying
  * none of them compare equal and the stable sort keeps them in their original
- * query order. That no-op holds only while those sections' collector
- * projections stay free of all three: give vendors, models, training records,
- * policies, assessment topics, clauses or annexes a `status`, a level or a
- * deadline field and its order changes here silently.
+ * query order.
+ *
+ * Four sections still land in that no-op, and NOT for want of a `status` key —
+ * most sections have one, so grepping for the field answers nothing. Vendors
+ * (the projection names it `riskStatus`) and assessment topics/subtopics carry
+ * no `status`; models and policies carry one whose every value is outside
+ * TERMINAL_STATUS. Nothing enforces either condition — `policy_manager.status`
+ * is a free VARCHAR(50) — so adding a terminal-sounding value to one of those
+ * vocabularies, or a level or deadline key to one of those projections,
+ * silently reorders that section here.
  */
 function rankByMateriality<T>(arr: T[]): T[] {
   return [...arr].sort(
-    (a, b) => levelOf(a) - levelOf(b) || doneLast(a) - doneLast(b) || dateOf(a) - dateOf(b),
+    (a, b) => levelOf(a) - levelOf(b) || completedLast(a) - completedLast(b) || dateOf(a) - dateOf(b),
   );
 }
 
@@ -131,7 +160,7 @@ function rankByMateriality<T>(arr: T[]): T[] {
  * (Fix 5 — silent truncation reads as "complete").
  *
  * Note the ranking half is not order-preserving. For an array with no level
- * field at all (compliance controls) `status` decides it first — a Done row
+ * field at all (compliance controls) `status` decides it first — a finished row
  * never outranks an open one — and the deadline only breaks ties within each
  * of those two groups, where an undated row still loses to a dated one and is
  * the first dropped at the cap.
