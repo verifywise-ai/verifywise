@@ -19,7 +19,15 @@ const abstainReason = z
 const severity = z
   .enum(["low", "medium", "high", "critical"])
   .describe(
-    "Severity judged only from the supplied data. The input's risk vocabulary is wider than this enum: map 'Very High' to critical, 'Very Low' to low. Never invent a level for an item whose severity the input does not state.",
+    [
+      "Severity judged only from the supplied data. The input's risk vocabulary is wider than this enum: map 'Very High' to critical, 'Very Low' to low. Never invent a level for an item whose severity the input does not state.",
+      "Calibration anchors. Each level must clear the one below it:",
+      "critical: a governing obligation is unmet now and the supplied data shows the exposure is live — an unmitigated critical-level risk, an expired or missing control on a high-risk use case, an open incident with no owner. Reserve this for items where doing nothing until the next report is indefensible.",
+      "high: the same obligation is at material risk but not yet breached — coverage is partial, a due date in the data has passed on a non-trivial item, or a single point of failure is visible across the estate.",
+      "medium: a real weakness with a bounded blast radius — one section, one owner, one document — that would not on its own fail an audit.",
+      "low: housekeeping. Correcting it improves the record without changing the organization's exposure.",
+      "Anti-inflation: when an item sits between two levels, choose the LOWER one. Volume is not severity — a hundred low items stay low, however striking the count.",
+    ].join("\n"),
   );
 
 /**
@@ -132,7 +140,15 @@ export const recommendedActionsSchema = z
             priority: z
               .enum(["low", "medium", "high", "critical"])
               .describe(
-                "Priority judged only from the supplied data. The input's risk vocabulary is wider than this enum: map 'Very High' to critical, 'Very Low' to low. Never invent a level for an item whose severity the input does not state.",
+                [
+                  "Priority judged only from the supplied data. The input's risk vocabulary is wider than this enum: map 'Very High' to critical, 'Very Low' to low. Never invent a level for an item whose severity the input does not state.",
+                  "Calibration anchors. Priority is order of work, not how bad the finding sounds:",
+                  "critical: must start before anything else in this report, because another action depends on it or because the data shows a live exposure with no owner.",
+                  "high: scheduled this cycle; it closes a material gap the supplied data actually evidences.",
+                  "medium: worth starting once the high items are underway; it improves coverage rather than removing exposure.",
+                  "low: opportunistic tidy-up.",
+                  "Anti-inflation: when an action sits between two levels, choose the LOWER one. At most one action in the list should be critical, and only when the data names a live, unowned exposure.",
+                ].join("\n"),
               ),
             rationale: z
               .string()

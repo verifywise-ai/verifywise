@@ -290,4 +290,50 @@ describe("analyzer schemas", () => {
       riskAnalysisSchema.parse({ narrative: "x".repeat(2501), top_risks: [], abstain_reason: null }),
     ).toThrow();
   });
+
+  /**
+   * In this codebase the .describe() text IS the prompt, so the calibration
+   * anchors are only real if they are in it. Modelled on
+   * advisor/evidenceAnalyzer/prompts.ts, which carries 25 written grade
+   * anchors and an explicit anti-inflation rule; this is the small version.
+   */
+  describe("severity and priority calibration", () => {
+    const severityField = (keyFindingsSchema.shape.findings as any).element.shape.severity;
+    const priorityField = (recommendedActionsSchema.shape.actions as any).element.shape.priority;
+
+    it("keeps the four levels exactly as they are", () => {
+      expect(severityField.options).toEqual(["low", "medium", "high", "critical"]);
+      expect(priorityField.options).toEqual(["low", "medium", "high", "critical"]);
+    });
+
+    it("writes one anchor per severity level plus an anti-inflation rule", () => {
+      const text = severityField.description as string;
+      for (const level of ["critical:", "high:", "medium:", "low:"]) {
+        expect(text).toContain(level);
+      }
+      expect(text).toContain("choose the LOWER");
+      // The live corpus rated "20 of 22 training records are demo-seed" as
+      // critical. Volume is not severity, and the anchor text has to say so.
+      expect(text).toContain("a hundred low items stay low");
+      // The pre-existing vocabulary mapping and anti-invention rule survive.
+      expect(text).toContain("map 'Very High' to critical");
+      expect(text).toContain("Never invent a level");
+    });
+
+    it("writes one anchor per priority level plus an anti-inflation rule", () => {
+      const text = priorityField.description as string;
+      for (const level of ["critical:", "high:", "medium:", "low:"]) {
+        expect(text).toContain(level);
+      }
+      expect(text).toContain("choose the LOWER");
+      expect(text).toContain("order of work");
+    });
+
+    it("shares the calibrated severity text with gaps[].priority and concerns[].severity", () => {
+      const gapPriority = (complianceGapSchema.shape.gaps as any).element.shape.priority;
+      const concernSeverity = (vendorRiskSchema.shape.concerns as any).element.shape.severity;
+      expect(gapPriority.description).toBe(severityField.description);
+      expect(concernSeverity.description).toBe(severityField.description);
+    });
+  });
 });
