@@ -575,8 +575,64 @@ function createExecutiveSummarySection(aiSummaries: AISummaries): (Paragraph | T
   elements.push(createSectionHeader("Executive Summary"));
   elements.push(...createAIAnalysisBox(aiSummaries.executiveSummary, "AI-Generated Analysis"));
 
-  // Key Findings
-  if (aiSummaries.keyFindings && aiSummaries.keyFindings.length > 0) {
+  // Key Findings. Prefer the structured list; the flat strings remain the
+  // fallback for a payload that carries no detail.
+  const detailed = aiSummaries.keyFindingsDetailed;
+  if (detailed && detailed.length > 0) {
+    elements.push(createSubsectionHeader("Key Findings"));
+    detailed.forEach((f) => {
+      elements.push(
+        new Paragraph({
+          spacing: { before: 60, after: 20 },
+          indent: { left: convertInchesToTwip(0.3) },
+          bullet: { level: 0 },
+          children: [
+            new TextRun({
+              text: `[${f.severity}] `,
+              bold: true,
+              size: 20,
+              color: COLORS.textPrimary,
+            }),
+            new TextRun({ text: f.text, size: 20, color: COLORS.textPrimary }),
+          ],
+        }),
+      );
+
+      // basis is optional: an older stored payload predates it and the schema
+      // field is nullable. An absent label prints nothing rather than a
+      // fabricated provenance claim.
+      const meta = [
+        `Section: ${f.section}`,
+        f.basis ? `Basis: ${f.basis}` : null,
+        f.related_sections?.length ? `Related: ${f.related_sections.join(", ")}` : null,
+      ]
+        .filter(Boolean)
+        .join(" · ");
+      elements.push(
+        new Paragraph({
+          spacing: { after: 20 },
+          indent: { left: convertInchesToTwip(0.6) },
+          children: [new TextRun({ text: meta, size: 18, color: COLORS.textSecondary })],
+        }),
+      );
+
+      if (f.what_would_close_this) {
+        elements.push(
+          new Paragraph({
+            spacing: { after: 60 },
+            indent: { left: convertInchesToTwip(0.6) },
+            children: [
+              new TextRun({
+                text: `Closes when: ${f.what_would_close_this}`,
+                size: 18,
+                color: COLORS.textSecondary,
+              }),
+            ],
+          }),
+        );
+      }
+    });
+  } else if (aiSummaries.keyFindings && aiSummaries.keyFindings.length > 0) {
     elements.push(createSubsectionHeader("Key Findings"));
     aiSummaries.keyFindings.forEach((finding) => {
       elements.push(

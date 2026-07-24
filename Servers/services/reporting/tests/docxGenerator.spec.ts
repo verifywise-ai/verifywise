@@ -395,5 +395,47 @@ describe("DOCX Generator", () => {
       expect(text).not.toContain("COMPLIANCE GAP ANALYSIS");
       expect(text).not.toContain("THIRD-PARTY RISK ANALYSIS");
     });
+
+    it("renders structured findings with severity, basis, counterfactual and related sections", async () => {
+      const result = await generateDOCX(
+        withSummaries({
+          sectionSummaries: {},
+          executiveSummary: "Posture is uneven.",
+          keyFindings: ["flat fallback text"],
+          keyFindingsDetailed: [
+            {
+              text: "Only 3 of 25 models name an owner",
+              section: "models",
+              severity: "high",
+              basis: "observed",
+              related_sections: ["modelRisks", "policyManager"],
+              what_would_close_this: "An owner recorded on every model inventory row",
+            },
+          ],
+        }),
+      );
+      const text = await docxText(result.content);
+
+      expect(text).toContain("Key Findings");
+      expect(text).toContain("[high] ");
+      expect(text).toContain("Only 3 of 25 models name an owner");
+      expect(text).toContain("Section: models · Basis: observed · Related: modelRisks, policyManager");
+      expect(text).toContain("Closes when: An owner recorded on every model inventory row");
+      // The structured list replaces the flat one rather than printing both.
+      expect(text).not.toContain("flat fallback text");
+    });
+
+    it("falls back to the flat keyFindings list when no structured findings exist", async () => {
+      const result = await generateDOCX(
+        withSummaries({
+          sectionSummaries: {},
+          executiveSummary: "Posture is uneven.",
+          keyFindings: ["flat fallback text"],
+        }),
+      );
+      const text = await docxText(result.content);
+
+      expect(text).toContain("flat fallback text");
+    });
   });
 });
