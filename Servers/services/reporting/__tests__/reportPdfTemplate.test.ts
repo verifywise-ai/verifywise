@@ -224,6 +224,19 @@ describe("report-pdf.ejs template", () => {
     expect(css).not.toContain(".ai-executive-summary");
   });
 
+  it("does not wrap a whole AI block in one page-break-avoid container", () => {
+    // FULL leaves every report section falsy, so the only avoid-break markup
+    // that could appear here is the three AI wrappers — the per-topic
+    // avoid-break inside the sections.assessment guard is deliberately kept.
+    const html = render(FULL);
+    const body = html.slice(html.indexOf("</style>"));
+    expect(body).not.toContain("avoid-break");
+    // The blocks themselves must still render.
+    expect(body).toContain("Recommended actions");
+    expect(body).toContain("Compliance Gap Analysis");
+    expect(body).toContain("Third-party risk analysis");
+  });
+
   it("the template compiles at all", () => {
     expect(() => render()).not.toThrow();
   });

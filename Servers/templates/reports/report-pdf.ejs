@@ -261,7 +261,7 @@
     <% } %>
 
       <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.recommendedActions && aiSummaries.recommendedActions.length > 0) { %>
-      <div class="subsection avoid-break">
+      <div class="subsection">
         <div class="subsection-header">
           <h3 class="subsection-title">Recommended actions</h3>
         </div>
@@ -290,7 +290,7 @@
     <!-- COMPLIANCE GAP ANALYSIS (AI-Generated) -->
     <!-- ============================================ -->
     <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.complianceGap) { %>
-    <div class="avoid-break">
+    <div>
       <div class="group-header">
         <h2 class="group-title">Compliance Gap Analysis</h2>
       </div>
@@ -331,7 +331,7 @@
     <% } %>
 
     <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.vendorRisk) { %>
-    <div class="subsection avoid-break">
+    <div class="subsection">
       <div class="subsection-header">
         <h3 class="subsection-title">Third-party risk analysis</h3>
       </div>
