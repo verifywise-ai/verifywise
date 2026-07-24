@@ -133,7 +133,7 @@ export const ANALYZERS: Record<AnalysisSectionKey, AnalyzerDefinition> = {
     key: "complianceGap",
     schema: complianceGapSchema,
     buildSystemPrompt: () =>
-      `${GROUNDING_RULES}\n\nYou are explaining and prioritising STORED readiness scores. You do not compute or re-score anything — the scores are given.\n\nTwo hard constraints:\n- If the readiness input is empty or stale, say so plainly in scores_caveat. The absence of scores is NOT evidence of an absence of gaps, and must never be presented as such.\n- Some stored score dimensions are known to be recorded as zero for every control and carry no signal. Where a caveat notes this, do not interpret those zeros as findings or turn them into prose.`,
+      `${GROUNDING_RULES}\n\nYou are explaining and prioritising STORED readiness scores. You do not recalculate the readiness scores themselves — they are given. Summarising and comparing them arithmetically (shares, ranks, counts below a threshold) is expected.\n\nTwo hard constraints:\n- If the readiness input is empty or stale, say so plainly in scores_caveat. The absence of scores is NOT evidence of an absence of gaps, and must never be presented as such.\n- Some stored score dimensions are known to be recorded as zero for every control and carry no signal. Where a caveat notes this, do not interpret those zeros as findings or turn them into prose.`,
     buildUserPrompt: (rd, extras) => {
       const readiness = extras.readiness;
       const evidenceGaps = extras.evidenceGaps;

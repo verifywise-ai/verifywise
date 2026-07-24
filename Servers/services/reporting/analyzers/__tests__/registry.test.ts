@@ -240,16 +240,25 @@ describe("analyzer registry", () => {
 
   it("§3 — grounding rules permit arithmetic over supplied values without loosening the ban on invented ones", () => {
     // The live corpus contains not one percentage, not one date comparison and
-    // not one ratio: taken literally, "never introduce a number that does not
-    // appear in the data" forbids dividing two numbers that do.
+    // not one ratio: taken literally, "Never introduce a fact, name, number...
+    // that does not appear in it" forbids dividing two numbers that do.
     expect(GROUNDING_RULES).toContain("Compute ratios, percentages, shares, counts and differences");
-    expect(GROUNDING_RULES).toContain("compare any date in the data against the supplied reference date");
+    expect(GROUNDING_RULES).toContain("compare dates in the data against the reference date when one is supplied");
     expect(GROUNDING_RULES).toContain("neither supplied nor derivable");
     // The anti-fabrication rule itself must survive the carve-out verbatim.
     expect(GROUNDING_RULES).toContain(
       "Use ONLY the data supplied below. Never introduce a fact, name, number, control, vendor or risk that does not appear in it.",
     );
     expect(GROUNDING_RULES).toContain("An honest abstention is correct");
+  });
+
+  it("§3 — complianceGap retracts re-scoring only, not the arithmetic the grounding rules just permitted", () => {
+    // complianceGap carries the densest numeric input of the six, so a flat
+    // "you do not compute anything" three lines under "compute ratios" is
+    // where the carve-out would die first.
+    const prompt = ANALYZERS.complianceGap.buildSystemPrompt();
+    expect(prompt).toContain("You do not recalculate the readiness scores themselves");
+    expect(prompt).not.toContain("You do not compute or re-score anything");
   });
 
   describe("Fix 1 — summary-consuming analyzers read extras.sectionSummaries, not raw sections", () => {
