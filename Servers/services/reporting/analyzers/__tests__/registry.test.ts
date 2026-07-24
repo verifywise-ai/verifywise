@@ -1,5 +1,12 @@
 import { ANALYZERS, ANALYZER_VERSION, ANALYSIS_SECTION_KEYS } from "../registry";
-import { GROUNDING_RULES, prepareSectionData, renderSections, SECTION_LABELS } from "../prompts";
+import {
+  GENERIC_SECTION_INSTRUCTION,
+  GROUNDING_RULES,
+  prepareSectionData,
+  renderSections,
+  SECTION_INSTRUCTIONS,
+  SECTION_LABELS,
+} from "../prompts";
 
 describe("analyzer registry", () => {
   it("exposes exactly the six analyzers", () => {
@@ -236,6 +243,28 @@ describe("analyzer registry", () => {
   it("keeps the twelve human-readable section labels", () => {
     expect(SECTION_LABELS.projectRisks).toBe("Use Case Risks");
     expect(Object.keys(SECTION_LABELS)).toHaveLength(12);
+  });
+
+  it("§3 — every section key has its own analytic instruction, with a generic fallback for anything unmapped", () => {
+    // One shared instruction for all 12 section types is why every section
+    // summary reads the same. The key set must track SECTION_LABELS exactly,
+    // or a section silently falls back to the generic text.
+    expect(Object.keys(SECTION_INSTRUCTIONS).sort()).toEqual(Object.keys(SECTION_LABELS).sort());
+    Object.entries(SECTION_INSTRUCTIONS).forEach(([key, body]) => {
+      expect(body.length).toBeGreaterThan(120);
+      // The raw key must never appear in prose the model is shown — the human
+      // label is what the prompt uses.
+      expect(body).not.toContain(key);
+    });
+
+    // The three the design names as the pattern.
+    expect(SECTION_INSTRUCTIONS.projectRisks).toContain("unmitigated high and critical");
+    expect(SECTION_INSTRUCTIONS.policyManager).toContain("reference date");
+    expect(SECTION_INSTRUCTIONS.compliance).toContain("completion rate");
+
+    // An unmapped key must degrade to today's behaviour, not lose its summary.
+    expect(SECTION_INSTRUCTIONS.somethingNew).toBeUndefined();
+    expect(GENERIC_SECTION_INSTRUCTION).toContain("Highlights key observations and patterns");
   });
 
   it("§3 — grounding rules permit arithmetic over supplied values without loosening the ban on invented ones", () => {

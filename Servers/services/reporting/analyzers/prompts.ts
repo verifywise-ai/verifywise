@@ -31,6 +31,83 @@ export const SECTION_LABELS: Record<string, string> = {
   incidentManagement: "Incident Management",
 };
 
+/**
+ * Per-section analytic questions, one entry per SECTION_LABELS key.
+ *
+ * Replaces the single generic instruction that was reused verbatim for all 12
+ * section types — the reason every section summary reads interchangeably. Each
+ * body asks for the ratios, distributions and named items that only exist in
+ * THAT section's data (see dataCollector.ts for what each one actually holds).
+ */
+export const SECTION_INSTRUCTIONS: Record<string, string> = {
+  projectRisks: `- How many risks are unmitigated high and critical, and what share of the register is that?
+- Which rows carry no named owner, and which combination of impact and likelihood is the worst in the set?
+- Does the level distribution match the raw count, or is a large register scored almost entirely at one level?
+- Name the single risk that carries the most exposure and say what makes it worse than the next one.`,
+
+  vendorRisks: `- How many vendor risks are unmitigated high and critical, and what share of the register is that?
+- Which rows have no action owner, and which have no action plan recorded at all?
+- Is the exposure spread across suppliers or concentrated in one or two named vendors?
+- Compare the level distribution against the raw count rather than reporting the count on its own.`,
+
+  modelRisks: `- How many model risks are unmitigated high and critical, and what share of the register is that?
+- Which models carry more than one risk, and which risks show no mitigation status?
+- Compare the level distribution against the raw count rather than reporting the count on its own.
+- Name the model whose risk profile is the worst and say what distinguishes it from the rest.`,
+
+  compliance: `- Which control family has the weakest completion rate within its category, and how does that rate compare with the overall progress figure?
+- How many controls have no owner, and do the unowned ones cluster in one family?
+- Name the specific control identifiers that are furthest from done.
+- Say whether overall progress is being carried by one strong family while another lags well behind it.`,
+
+  assessment: `- What share of questions is answered, and which topics sit furthest below that share?
+- Do the unanswered questions cluster in one topic, or are they spread evenly across the tracker?
+- Name the topics at or near zero progress and say what that gap means under this framework.
+- Where an answer is present but thin, say so rather than counting it as coverage.`,
+
+  clausesAndAnnexes: `- What share of clauses and what share of annex controls is complete, and which of the two lags?
+- Which clause has the most incomplete sub-clauses, by identifier?
+- Do the incomplete items cluster in one clause or annex, or are they scattered across many?
+- Name the specific clause or annex identifiers a reader should look at first.`,
+
+  nistSubcategories: `- Which of the four functions has the weakest completion rate, and by how much against the others?
+- How many subcategories carry a linked risk, and how many carry none at all?
+- Name the specific subcategory identifiers that are furthest behind.
+- Say whether the gaps concentrate in one function or run across all of them.`,
+
+  vendors: `- What is the distribution of review status across the list, and how many suppliers are unreviewed?
+- How many have no assignee, and how many have no named contact person?
+- Name the suppliers a reader should chase first, and say why those and not the others.
+- Compare the number of suppliers against the number that carry a recorded risk.`,
+
+  models: `- What is the status distribution across the inventory, and how many entries are not in a reviewed state?
+- How many distinct owners cover the inventory? If one person owns most of it, say so and name the concentration.
+- Which entries carry no owner, and which carry no version?
+- Name the entries a reader should look at first and say what makes them urgent.`,
+
+  trainingRegistry: `- What share of records is complete, and how many carry no completion date at all?
+- How many records have no assignee?
+- Do the incomplete records concentrate in one training, or are they spread across many?
+- Say plainly whether the registry demonstrates coverage or only demonstrates that rows exist.`,
+
+  policyManager: `- What is the ratio of draft to approved policies, stated as a ratio and not only as two counts?
+- Which policies have a review date already past the reference date, and by how long?
+- Which policies carry no review date, and which carry no owner?
+- Name the policies that need attention first and say what puts them first.`,
+
+  incidentManagement: `- How many incidents are still open, broken down by severity?
+- How long has each open incident been open, measured against the reference date?
+- Does one type recur, and is it tied to a named model, supplier or project?
+- Name the incident a reader should look at first and say why.`,
+};
+
+/** Fallback for a section key with no entry above: today's generic text, so an
+ *  unmapped section degrades to current behaviour instead of losing its summary. */
+export const GENERIC_SECTION_INSTRUCTION = `- Highlights key observations and patterns
+- Identifies areas of concern or non-compliance
+- Notes strengths and areas of good practice
+- Provides context for decision-makers`;
+
 /** Materiality order for the level/severity vocabularies used across sections.
  * Lower index = more material. */
 const LEVEL_RANK: Record<string, number> = {
