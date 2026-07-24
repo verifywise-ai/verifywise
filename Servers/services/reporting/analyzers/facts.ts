@@ -9,6 +9,7 @@
  */
 import type { ReportData } from "../../../domain.layer/interfaces/i.reportGeneration";
 import { isoDate } from "../dataCollector";
+import { isTerminalStatus, levelRank } from "./prompts";
 
 /** Structured, storable snapshot. Persisted to report_run_analyses.audit_metadata
  *  so a later run can diff against it without a second LLM call. */
@@ -36,24 +37,6 @@ const MAX_LABEL_CHARS = 80;
  *  keep the heaviest buckets and drop the tail rather than blow the budget. */
 const MAX_BUCKETS = 8;
 
-/**
- * Materiality of the level/severity vocabularies, HIGHER IS MORE MATERIAL.
- *
- * Deliberately NOT named LEVEL_RANK: `prompts.ts` in this same directory has a
- * `LEVEL_RANK` with the opposite polarity (a sort index where LOWER is more
- * material). Two maps, two polarities, one directory — copying a helper from
- * one file into the other silently reverses "most material", which is exactly
- * the failure §9 exists to fix.
- */
-const MATERIALITY_SCORE: Record<string, number> = {
-  critical: 5,
-  "very high": 4,
-  high: 3,
-  medium: 2,
-  low: 1,
-  "very low": 0,
-};
-
 const text = (v: unknown): string => {
   const s = String(v ?? "").trim();
   return s.length > 0 ? s : "unset";
@@ -67,20 +50,31 @@ const missing = (v: unknown): boolean => {
   return s === "" || s === "unassigned" || s === "unknown" || s === "undefined" || s === "null";
 };
 
-const materialityScore = (v: unknown): number =>
-  MATERIALITY_SCORE[
-    String(v ?? "")
-      .trim()
-      .toLowerCase()
-  ] ?? 0;
+/**
+ * Materiality of a level/severity value, HIGHER IS MORE MATERIAL — the sign
+ * inverse of prompts.ts's `levelRank`, which is a sort index where LOWER is
+ * more material. The polarities differ because the two callers sort in opposite
+ * directions; the VOCABULARY must not, so this reads the shared table rather
+ * than keeping a second one. That table covers all three level vocabularies
+ * that reach here: project/vendor risks carry the `risk_level_autocalculated`
+ * labels WITH a " risk" suffix, model risks the bare words, incidents their own
+ * 'Minor' | 'Serious' | 'Very serious' — see the comment on `levelRank`.
+ *
+ * Unrecognised values fall to -99, behind every ranked one.
+ */
+const materialityScore = (v: unknown): number => -levelRank(v);
 
-/** dataCollector treats "Done" as the completed state (dataCollector.ts:382, :609). */
-const incomplete = (v: unknown): number =>
-  String(v ?? "")
-    .trim()
-    .toLowerCase() === "done"
-    ? 0
-    : 1;
+/**
+ * 1 for open work, 0 for finished, so the sort surfaces the open rows.
+ *
+ * Every status vocabulary that reaches this file has its own terminal token —
+ * "Done" for compliance controls only (dataCollector.ts:404, :660), but
+ * 'Implemented'/'Audited' for ISO sub-clauses and NIST subcategories and
+ * 'Completed' for training records. prompts.ts enumerates all of them off the
+ * enums; matching only "Done" here would make the sort a no-op for every
+ * section except compliance.
+ */
+const incomplete = (v: unknown): number => (isTerminalStatus(v) ? 0 : 1);
 
 /**
  * The report's reference day, `YYYY-MM-DD`.
@@ -155,13 +149,15 @@ const SPECS: Record<string, SectionSpec> = {
     label: (r) => `${text(r.title)} (${typeof r.progress === "number" ? r.progress : 0}% answered)`,
   },
   clausesAndAnnexes: {
-    // One flat row set: the statuses that matter live on the leaves.
+    // Leaves only, and symmetrically so: the top-level clause and annex rows
+    // are both skipped because neither carries a status to bucket or rank on.
+    // `clauses_struct_iso` / `annex_struct_iso` have no status column
+    // (reporting.utils.ts:276), so dataCollector's `clause.status || "Unknown"`
+    // is always literally "Unknown" — counting those rows would put a large
+    // fabricated status_Unknown bucket in front of the model and let stateless
+    // rows outrank real open work in the top-3. The clause id is not lost: it
+    // is carried onto each sub-clause row below.
     rows: (s) => [
-      ...(s.clauses ?? []).map((c: any) => ({
-        _id: text(c.clauseId),
-        _title: text(c.title),
-        status: c.status,
-      })),
       ...(s.clauses ?? []).flatMap((c: any) =>
         (c.subClauses ?? []).map((sc: any) => ({
           _id: text(c.clauseId),

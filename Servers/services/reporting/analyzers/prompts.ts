@@ -62,9 +62,12 @@ const LEVEL_RANK: Record<string, number> = {
  * but never reach here — only `category.subcategories` is ranked, and a
  * subcategory row carries no level of its own; its nested `risks` array is
  * neither ranked nor capped.
+ *
+ * Exported because `facts.ts` ranks the same vocabularies. It inverts the sign
+ * rather than keeping a second table: two tables in one directory drift, and a
+ * level missing from one of them is a silent no-op sort, not an error.
  */
-const levelOf = (row: any): number => {
-  const raw = row?.riskLevel ?? row?.severity ?? row?.level;
+export const levelRank = (raw: unknown): number => {
   if (typeof raw !== "string") return 99;
   const level = raw
     .trim()
@@ -72,6 +75,8 @@ const levelOf = (row: any): number => {
     .replace(/\s+risk$/, "");
   return LEVEL_RANK[level] ?? 99;
 };
+
+const levelOf = (row: any): number => levelRank(row?.riskLevel ?? row?.severity ?? row?.level);
 
 /**
  * The terminal token of every `status` vocabulary that reaches this file, read
@@ -91,6 +96,12 @@ const levelOf = (row: any): number => {
  * judgement this helper has no business making.
  */
 const TERMINAL_STATUS = new Set(["done", "answered", "implemented", "audited", "completed"]);
+
+/** Exported for `facts.ts`, which ranks the same status vocabularies and must
+ *  recognise the same terminal tokens — a second, narrower copy there would
+ *  rank the ISO and training sections on nothing at all. */
+export const isTerminalStatus = (status: unknown): boolean =>
+  typeof status === "string" && TERMINAL_STATUS.has(status.trim().toLowerCase());
 
 /**
  * Completed work is the least material thing in a gap analysis, so it ranks
@@ -112,8 +123,7 @@ const TERMINAL_STATUS = new Set(["done", "answered", "implemented", "audited", "
  * 0 uniformly and are unaffected, including every risk section, whose collector
  * projection names the field `mitigationStatus`, not `status`.
  */
-const completedLast = (row: any): number =>
-  typeof row?.status === "string" && TERMINAL_STATUS.has(row.status.trim().toLowerCase()) ? 1 : 0;
+const completedLast = (row: any): number => (isTerminalStatus(row?.status) ? 1 : 0);
 
 /** Deadline-shaped fields only. Sooner = more urgent, unambiguously; a
  * "reported" or "completed" date does not order that way, so it is left out
