@@ -126,6 +126,53 @@ describe("analyzer registry", () => {
     expect(out._risksTruncated).toBeUndefined();
   });
 
+  it("ranks level-less compliance controls by status first, so a Done control never outranks an open one", () => {
+    // Compliance controls carry no level, so this section exercises the branch
+    // the risk tests never reach: status, then deadline, decide the whole order
+    // AND which rows survive the cap. Ranking on the deadline alone would keep
+    // the 50 earliest due dates — i.e. the long-closed ones — and drop the open
+    // work a gap analysis exists to find.
+    const controls = [
+      ...Array.from({ length: 55 }, (_, i) => ({
+        controlId: `CLOSED${i}`,
+        status: "Done",
+        dueDate: "2024-01-01",
+      })),
+      { controlId: "OpenSoon", status: "In progress", dueDate: "2026-02-01" },
+      { controlId: "OpenLater", status: "Waiting", dueDate: "2026-09-01" },
+      { controlId: "OpenUndatedA", status: "Waiting" },
+      { controlId: "OpenUndatedB", status: "Waiting" },
+    ];
+    const out = JSON.parse(prepareSectionData("compliance", { controls }));
+
+    expect(out.controls).toHaveLength(50);
+    expect(out.controls.slice(0, 4).map((c: any) => c.controlId)).toEqual([
+      "OpenSoon",
+      "OpenLater",
+      "OpenUndatedA",
+      "OpenUndatedB",
+    ]);
+    // All four open controls survive; the nine rows dropped at the cap are all Done.
+    expect(out.controls.filter((c: any) => c.status === "Done")).toHaveLength(46);
+    expect(out._controlsTruncated).toBe("showing 50 of 59");
+  });
+
+  it("leaves policies in query order — reviewDate is a locale display string, not a rankable date", () => {
+    // dataCollector emits reviewDate via toLocaleDateString(), not isoDate(),
+    // so these are the strings the ranker actually receives. On an en-GB server
+    // "06/07/2026" means 6 July, but new Date() reads it as 7 June, and
+    // "31/12/2025" does not parse at all — ranking on that field would order
+    // this list P2, P1, P3. dateOf does not read it, so nothing reorders.
+    const policies = [
+      { policyName: "P1", reviewDate: "06/07/2026" },
+      { policyName: "P2", reviewDate: "01/02/2026" },
+      { policyName: "P3", reviewDate: "31/12/2025" },
+    ];
+    const out = JSON.parse(prepareSectionData("policyManager", { policies }));
+    expect(out.policies.map((p: any) => p.policyName)).toEqual(["P1", "P2", "P3"]);
+    expect(out._policiesTruncated).toBeUndefined();
+  });
+
   it("does not mutate the caller's array while ranking (the renderers get the same objects)", () => {
     const risks = [
       { name: "Low1", riskLevel: "Low risk" },

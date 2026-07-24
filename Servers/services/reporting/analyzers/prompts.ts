@@ -69,12 +69,35 @@ const levelOf = (row: any): number => {
   return LEVEL_RANK[raw.trim().toLowerCase().replace(/\s+risk$/, "")] ?? 99;
 };
 
+/**
+ * Completed work is the least material thing in a gap analysis, so it ranks
+ * behind open work. This is what orders the sections that carry no level at
+ * all — compliance controls above all, where without it the cap kept the 50
+ * earliest due dates and those skew towards long-closed rows.
+ *
+ * Only "Done" is matched: it is the terminal token shared by the control,
+ * question and sub-clause models, and inventing synonyms for the other status
+ * vocabularies the collector emits would be guesswork. Rows without it score 0
+ * uniformly and are unaffected — including every risk section, whose collector
+ * projection names the field `mitigationStatus`, not `status`.
+ */
+const doneLast = (row: any): number =>
+  typeof row?.status === "string" && row.status.trim().toLowerCase() === "done" ? 1 : 0;
+
 /** Deadline-shaped fields only. Sooner = more urgent, unambiguously; a
  * "reported" or "completed" date does not order that way, so it is left out
  * rather than sorted backwards. Undated rows get MAX_SAFE_INTEGER — a finite
- * sentinel, so the comparator's subtraction never produces NaN. */
+ * sentinel, so the comparator's subtraction never produces NaN.
+ *
+ * `reviewDate` is deliberately NOT one of the keys. dataCollector emits it
+ * through `toLocaleDateString()` rather than the `isoDate()` its two siblings
+ * here go through, so on any server whose locale is not en-US `new Date()`
+ * reads the rendering back as a different day — silently, since a wrong date
+ * is still a valid one. A field this helper cannot parse reliably must not
+ * order anything; policies therefore rank on nothing and keep query order.
+ */
 const dateOf = (row: any): number => {
-  const raw = row?.targetDate ?? row?.dueDate ?? row?.reviewDate;
+  const raw = row?.targetDate ?? row?.dueDate;
   const t = raw ? new Date(raw).getTime() : NaN;
   return Number.isNaN(t) ? Number.MAX_SAFE_INTEGER : t;
 };
@@ -85,12 +108,17 @@ const dateOf = (row: any): number => {
  * it then writes confident prose about "the inventory".
  *
  * Copies rather than sorting in place: these arrays are the live section
- * objects the renderers also consume. Both keys are finite, so rows carrying
- * neither a level nor a deadline compare equal and the stable sort keeps them
- * in their original query order.
+ * objects the renderers also consume. Every key is finite, so rows carrying
+ * none of them compare equal and the stable sort keeps them in their original
+ * query order. That no-op holds only while those sections' collector
+ * projections stay free of all three: give vendors, models, training records,
+ * policies, assessment topics, clauses or annexes a `status`, a level or a
+ * deadline field and its order changes here silently.
  */
 function rankByMateriality<T>(arr: T[]): T[] {
-  return [...arr].sort((a, b) => levelOf(a) - levelOf(b) || dateOf(a) - dateOf(b));
+  return [...arr].sort(
+    (a, b) => levelOf(a) - levelOf(b) || doneLast(a) - doneLast(b) || dateOf(a) - dateOf(b),
+  );
 }
 
 /**
@@ -102,10 +130,11 @@ function rankByMateriality<T>(arr: T[]): T[] {
  * have a total-count field of their own to signal truncation to the model
  * (Fix 5 — silent truncation reads as "complete").
  *
- * Note the ranking half is not order-preserving: undated rows sort last and
- * are therefore the first dropped at the cap. For an array with no level field
- * at all (compliance controls) that means an undated control loses to a dated
- * one, even though an unplanned control is often the more interesting row.
+ * Note the ranking half is not order-preserving. For an array with no level
+ * field at all (compliance controls) `status` decides it first — a Done row
+ * never outranks an open one — and the deadline only breaks ties within each
+ * of those two groups, where an undated row still loses to a dated one and is
+ * the first dropped at the cap.
  */
 function rankTruncateAndStamp(obj: any, field: string, max: number): any[] {
   const original = obj[field];
