@@ -1,8 +1,19 @@
 import { generateText } from "ai";
 import type { ReportData } from "../../../domain.layer/interfaces/i.reportGeneration";
 import logger from "../../../utils/logger/fileLogger";
-import { hasContent, MAX_PROMPT_CHARS, prepareSectionData, SECTION_LABELS } from "./prompts";
+import { referenceDay } from "./facts";
+import {
+  GENERIC_SECTION_INSTRUCTION,
+  hasContent,
+  MAX_PROMPT_CHARS,
+  prepareSectionData,
+  SECTION_INSTRUCTIONS,
+  SECTION_LABELS,
+} from "./prompts";
 
+/** Stage 1's own budget. Unrelated to runAnalyzers.ts's LLM_TIMEOUT_MS: this
+ *  path calls generateText directly, not generateObjectWithSelfCorrection, so
+ *  there is no per-attempt retry to budget for. */
 const LLM_TIMEOUT_MS = 30_000;
 export const MAX_CONCURRENT = 3;
 
@@ -33,21 +44,23 @@ async function summariseSection(
   data: any,
   frameworkName: string,
   projectTitle: string,
+  referenceDate: string,
   model: any,
 ): Promise<string> {
   try {
     const label = SECTION_LABELS[key] || key;
     const prompt = `You are an AI governance analyst writing the "${label}" section analysis for a ${frameworkName} compliance report on the project "${projectTitle}".
 
-Analyze the following data and write a concise summary (150-250 words) that:
-- Highlights key observations and patterns
-- Identifies areas of concern or non-compliance
-- Notes strengths and areas of good practice
-- Provides context for decision-makers
+Reference date: ${referenceDate} — treat this as today when comparing any date in the data.
+
+Analyze the following data and write a concise summary (150-250 words) that answers these questions:
+${SECTION_INSTRUCTIONS[key] ?? GENERIC_SECTION_INSTRUCTION}
+
+Every claim must carry the value it rests on: a count, a share, a status, a name or a date. A sentence that would read the same for any other organization is not an analysis.
 
 Write in professional third-person tone. Do not use markdown formatting. Do not include headers or bullet points — write flowing paragraphs only.
 
-Use only the data provided — never introduce a fact that does not appear in it.
+Use only the data provided — never introduce a fact that does not appear in it. Counting, ranking and computing ratios or differences over the supplied values is expected.
 
 Data:
 ${clampSectionData(key, data)}`;
@@ -69,8 +82,9 @@ ${clampSectionData(key, data)}`;
  * Per-section AI summaries, keyed by section key — the producer for the 24
  * `sectionSummaries[...]` render blocks across the PDF and DOCX templates.
  *
- * Prompt ported verbatim from aiSummarizer.ts:184-195, plus one added
- * grounding sentence ("Use only the data provided..."). Free prose rather
+ * The prompt asks SECTION_INSTRUCTIONS' questions for this section's own key,
+ * falling back to GENERIC_SECTION_INSTRUCTION — aiSummarizer.ts:184-195's
+ * original four bullets — for an unmapped key. Free prose rather
  * than a structured object, so it stays on generateText; an empty string is
  * dropped so a failed section renders as no box rather than an empty one.
  */
@@ -85,9 +99,13 @@ export async function runSectionSummaries(
 
   const frameworkName = reportData.metadata?.frameworkName ?? "AI governance";
   const projectTitle = reportData.metadata?.projectTitle ?? "the organization";
+  const referenceDate = referenceDay(reportData.metadata?.generatedAt);
 
   const summaries = await runWithConcurrency(
-    entries.map(([key, data]) => () => summariseSection(key, data, frameworkName, projectTitle, model)),
+    entries.map(
+      ([key, data]) => () =>
+        summariseSection(key, data, frameworkName, projectTitle, referenceDate, model),
+    ),
     MAX_CONCURRENT,
   );
 

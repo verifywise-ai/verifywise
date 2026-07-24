@@ -1,5 +1,9 @@
 const mockGenerateText = jest.fn();
 jest.mock("ai", () => ({ generateText: (...a: any[]) => mockGenerateText(...a) }));
+// sectionSummaries imports referenceDay from ./facts, which imports isoDate
+// from dataCollector, which imports the real sequelize instance at module
+// load. Unmocked, that opens a DB connection during a unit test.
+jest.mock("../../../../database/db", () => ({ sequelize: {} }));
 
 import { runSectionSummaries, MAX_CONCURRENT } from "../sectionSummaries";
 
@@ -42,7 +46,7 @@ describe("runSectionSummaries", () => {
     expect(out.vendors).toBe("V-SUMMARY");
   });
 
-  it("prompt names the section label, framework, project, grounding sentence and word count", async () => {
+  it("prompt names the section label, framework, project, reference date, grounding sentence and word count", async () => {
     await runSectionSummaries("model" as any, reportData as any);
     const firstPrompt = mockGenerateText.mock.calls[0][0].prompt as string;
     expect(firstPrompt).toContain("Use Case Risks"); // SECTION_LABELS lookup, not the raw key
@@ -51,6 +55,28 @@ describe("runSectionSummaries", () => {
     expect(firstPrompt).toContain("Acme Project");
     expect(firstPrompt).toContain("Use only the data provided — never introduce a fact that does not appear in it.");
     expect(firstPrompt).toContain("150-250 words");
+    // §1: Stage 1 needs the same "today" the facts block declares, or a date
+    // in the data has nothing to be compared against.
+    expect(firstPrompt).toMatch(/Reference date: \d{4}-\d{2}-\d{2}/);
+  });
+
+  // calls[0] is projectRisks, so the expected question is that section's own
+  // "high and very high" wording — 'Critical' exists only for model risks.
+  it("§3 — asks the section-specific analytic questions, not the shared generic four", async () => {
+    await runSectionSummaries("model" as any, reportData as any);
+    const firstPrompt = mockGenerateText.mock.calls[0][0].prompt as string;
+    expect(firstPrompt).toContain("unmitigated high and very high");
+    expect(firstPrompt).not.toContain("Highlights key observations and patterns");
+  });
+
+  it("§3 — an unmapped section key degrades to the generic instruction instead of losing its summary", async () => {
+    const out = await runSectionSummaries("model" as any, {
+      sections: { somethingNew: { rows: [1] } },
+      metadata: { frameworkName: "EU AI Act", projectTitle: "Acme Project" },
+    } as any);
+    const prompt = mockGenerateText.mock.calls[0][0].prompt as string;
+    expect(prompt).toContain("Highlights key observations and patterns");
+    expect(out.somethingNew).toBe("A summary.");
   });
 
   it("skips sections with no data instead of calling the model", async () => {
