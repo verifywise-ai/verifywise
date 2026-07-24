@@ -105,6 +105,18 @@ describe("collectAnalyzerInputs", () => {
     expect(owners).toEqual(expect.arrayContaining(["Alice", "Bob", "Carol"]));
   });
 
+  it("harvests owners from the models section — its omission is why every action had a null owner", () => {
+    // dataCollector.collectModelsList emits `owner` as a resolved name string
+    // (dataCollector.ts:830). Leaving it out meant sanitizeOwners nulled any
+    // model owner the analyzer proposed.
+    const owners = collectAllowedOwners({
+      sections: {
+        models: { totalModels: 2, models: [{ id: 1, name: "gpt-4o", owner: "Dana Reed" }, { id: 2, name: "claude" }] },
+      },
+    } as any);
+    expect(owners).toEqual(["Dana Reed"]);
+  });
+
   it("resolves manual runs to the blocks that reproduce today's aiSummarizer output", () => {
     expect(resolveBlocks({ aiEnhanced: true } as any)).toEqual({
       sectionSummaries: true,

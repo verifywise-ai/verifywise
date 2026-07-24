@@ -185,6 +185,9 @@ export function collectAllowedOwners(reportData: ReportData): string[] {
   harvest(sections.vendorRisks?.risks, ["owner", "actionOwner"]);
   harvest(sections.modelRisks?.risks, ["owner"]);
   harvest(sections.vendors?.vendors, ["assignee", "reviewer"]);
+  // The models section was omitted here, which is why every recommended
+  // action in the live corpus came back with suggestedOwner: null.
+  harvest(sections.models?.models, ["owner"]);
   harvest(sections.compliance?.controls, ["owner", "approver"]);
   harvest(sections.trainingRegistry?.records, ["owner"]);
   harvest(sections.policyManager?.policies, ["owner", "reviewer"]);
