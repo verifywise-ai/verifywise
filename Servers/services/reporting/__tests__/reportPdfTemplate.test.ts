@@ -286,6 +286,36 @@ describe("report-pdf.ejs template", () => {
     expect(html).not.toContain("Most material risks");
   });
 
+  it("renders gap basis and counterfactual, and the concern basis label", () => {
+    const html = render({
+      sectionSummaries: {},
+      complianceGap: {
+        narrative: "Two controls lack evidence.",
+        scores_caveat: null,
+        gaps: [
+          {
+            control: "Art. 9 Risk management",
+            gap: "No documented review cadence",
+            priority: "high",
+            basis: "absent",
+            what_would_close_this: "A dated review record against Art. 9",
+          },
+        ],
+      },
+      vendorRisk: {
+        narrative: "One processor lacks a DPA.",
+        concerns: [
+          { vendor: "DataCorp", concern: "No DPA on file", severity: "high", basis: "inferred" },
+        ],
+      },
+    });
+
+    expect(html).toContain("<th>Basis</th>");
+    expect(html).toContain(">absent<");
+    expect(html).toContain("Closes when: A dated review record against Art. 9");
+    expect(html).toContain("(high, inferred)");
+  });
+
   it("the template compiles at all", () => {
     expect(() => render()).not.toThrow();
   });

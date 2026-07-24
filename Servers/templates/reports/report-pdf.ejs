@@ -317,13 +317,19 @@
         </div>
         <table class="data-table">
           <thead>
-            <tr><th>Control</th><th>Gap</th><th>Priority</th></tr>
+            <tr><th>Control</th><th>Gap</th><th>Basis</th><th>Priority</th></tr>
           </thead>
           <tbody>
             <% aiSummaries.complianceGap.gaps.forEach(function(g) { %>
             <tr>
               <td><strong><%= g.control %></strong></td>
-              <td><%= g.gap %></td>
+              <td>
+                <%= g.gap %>
+                <% if (g.what_would_close_this) { %>
+                <div class="ai-finding-meta">Closes when: <%= g.what_would_close_this %></div>
+                <% } %>
+              </td>
+              <td><%= g.basis || '—' %></td>
               <td><span class="chip chip-<%= String(g.priority).toLowerCase() %>"><%= g.priority %></span></td>
             </tr>
             <% }); %>
@@ -346,7 +352,7 @@
       <% if (aiSummaries.vendorRisk.concerns && aiSummaries.vendorRisk.concerns.length > 0) { %>
       <ul class="ai-findings-list">
         <% aiSummaries.vendorRisk.concerns.forEach(function(c) { %>
-        <li><strong><%= c.vendor %>:</strong> <%= c.concern %> (<%= c.severity %>)</li>
+        <li><strong><%= c.vendor %>:</strong> <%= c.concern %> (<%= c.severity %><%= c.basis ? ', ' + c.basis : '' %>)</li>
         <% }); %>
       </ul>
       <% } %>
