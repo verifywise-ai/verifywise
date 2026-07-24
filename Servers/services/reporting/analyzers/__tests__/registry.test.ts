@@ -552,4 +552,39 @@ describe("analyzer registry", () => {
       expect(system).toContain("must not simply restate a sentence");
     });
   });
+
+  it("names the provenance and counterfactual fields in the system prompts that have them", () => {
+    const findings = ANALYZERS.keyFindings.buildSystemPrompt();
+    // Phase 2 Task 27's §2 correlation instruction must survive this append.
+    expect(findings).toContain("name the sections it spans");
+    expect(findings).toContain("must not simply restate a sentence");
+
+    expect(findings).toContain("basis");
+    expect(findings).toContain("what_would_close_this");
+    expect(findings).toContain("related_sections");
+    // The three labels must be spelled out, not merely referenced: the model
+    // has to know what "inferred" licenses and what it does not.
+    expect(findings).toContain('"observed"');
+    expect(findings).toContain('"inferred"');
+    expect(findings).toContain('"absent"');
+
+    for (const key of ["recommendedActions", "complianceGap", "vendorRisk"] as const) {
+      expect(ANALYZERS[key].buildSystemPrompt()).toContain("basis");
+    }
+    expect(ANALYZERS.complianceGap.buildSystemPrompt()).toContain("what_would_close_this");
+  });
+
+  it("repeats the anti-fabrication rule wherever basis is introduced", () => {
+    // basis labels the CLAIM. It must never read as permission to name a
+    // control or vendor that is not in the input — sanitizeProvenance would
+    // drop the row anyway, so an unwarned model just loses content.
+    for (const key of ["keyFindings", "complianceGap", "vendorRisk", "recommendedActions"] as const) {
+      expect(ANALYZERS[key].buildSystemPrompt()).toContain("verbatim");
+    }
+  });
+
+  it("does not ask the executive summary for row fields it has no schema for", () => {
+    expect(ANALYZERS.executiveSummary.buildSystemPrompt()).not.toContain("what_would_close_this");
+    expect(ANALYZERS.executiveSummary.buildSystemPrompt()).not.toContain("related_sections");
+  });
 });
