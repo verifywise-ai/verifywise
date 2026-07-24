@@ -8,6 +8,10 @@ import type { ReportGenerationResult } from "../../../domain.layer/interfaces/i.
  * Persist one row per analyzed section and return a compact per-section status
  * map for report_runs.ai_status.
  *
+ * `facts` is this run's deterministic facts snapshot. Only the scheduled runner
+ * passes one: prior-run comparison is scoped to a schedule, so a manual run's
+ * snapshot could never be read back and is not worth the bytes.
+ *
  * Never throws: a report that generated successfully must not be marked failed
  * because its audit sidecar could not be written.
  */
@@ -16,6 +20,7 @@ export async function persistAnalyses(
   organizationId: number,
   userId: number | null,
   analyses: ReportGenerationResult["analyses"],
+  facts?: unknown,
 ): Promise<Record<string, string> | null> {
   if (!analyses || Object.keys(analyses).length === 0) return null;
 
@@ -37,6 +42,21 @@ export async function persistAnalyses(
             abstained: !!result?.abstained,
             abstain_reason: result?.abstain_reason ?? null,
             attempts: result?.attempts ?? 0,
+            // Design §6, success criterion 4: whether the shallowness gate
+            // re-issued the call. Coerced rather than conditional — an analyzer
+            // that never runs the gate (sectionSummaries) genuinely did not
+            // re-issue, and `false` says so.
+            restatement_retried: !!result?.restatementRetried,
+            // Design §10: the snapshot this run was built from, so the NEXT run
+            // of this schedule can diff against it with no second LLM call.
+            // Spread, not `facts: facts ?? null` — getPriorFactsSnapshotQuery
+            // filters on SQL NULL, which a stored JSON null would survive.
+            //
+            // ponytail: written on every section row rather than picking one.
+            // ~1-2 KB duplicated per run buys a read that does not depend on a
+            // particular section's write succeeding. Narrow it if row size ever
+            // matters.
+            ...(facts ? { facts } : {}),
           },
         });
         // undefined means the WHERE EXISTS tenant guard rejected the pair —

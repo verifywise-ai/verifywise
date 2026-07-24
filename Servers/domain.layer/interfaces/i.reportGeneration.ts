@@ -76,6 +76,12 @@ export interface ReportGenerationResult {
     abstain_reason: string | null;
     model: string | null;
     attempts: number;
+    /**
+     * True when the §6 shallowness gate fired and the call was re-issued.
+     * Optional, mirroring AnalyzerRunResult in analyzers/runAnalyzers.ts:
+     * sectionSummaries never runs the gate.
+     */
+    restatementRetried?: boolean;
   }>;
 }
 
