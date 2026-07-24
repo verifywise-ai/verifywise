@@ -158,8 +158,26 @@ export interface ExecutiveSummaryPayload {
   abstain_reason: string | null;
 }
 
+/**
+ * The three row-level fields added by report-analyzer-v2.
+ *
+ * OPTIONAL on the read side even though the backend schema requires the key:
+ * this interface describes rows already persisted in report_run_analyses, and
+ * every row written by v1 has none of them. `basis` is additionally nullable
+ * because the analyzer schema permits an explicit null rather than losing a
+ * whole analysis to one missing label.
+ */
+export type AnalysisBasis = "observed" | "inferred" | "absent";
+
 export interface KeyFindingsPayload {
-  findings: Array<{ text: string; section: string; severity: AnalysisSeverity }>;
+  findings: Array<{
+    text: string;
+    section: string;
+    severity: AnalysisSeverity;
+    basis?: AnalysisBasis | null;
+    what_would_close_this?: string | null;
+    related_sections?: string[];
+  }>;
   abstain_reason: string | null;
 }
 
@@ -169,6 +187,7 @@ export interface RecommendedActionsPayload {
     suggestedOwner: string | null;
     priority: AnalysisSeverity;
     rationale: string;
+    basis?: AnalysisBasis | null;
   }>;
   abstain_reason: string | null;
 }
@@ -183,7 +202,13 @@ export interface RiskAnalysisPayload {
 
 export interface ComplianceGapPayload {
   narrative: string;
-  gaps: Array<{ control: string; gap: string; priority: AnalysisSeverity }>;
+  gaps: Array<{
+    control: string;
+    gap: string;
+    priority: AnalysisSeverity;
+    basis?: AnalysisBasis | null;
+    what_would_close_this?: string | null;
+  }>;
   scores_caveat: string | null;
   abstain_reason: string | null;
 }
@@ -194,6 +219,7 @@ export interface VendorRiskPayload {
     vendor: string;
     concern: string;
     severity: AnalysisSeverity;
+    basis?: AnalysisBasis | null;
   }>;
   abstain_reason: string | null;
 }

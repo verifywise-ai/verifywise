@@ -252,4 +252,46 @@ describe("ReportAnalysisPanel", () => {
     expect(screen.getByText("Executive summary")).toBeInTheDocument();
     expect(screen.getByText("Per-section summaries")).toBeInTheDocument();
   });
+
+  it("accepts a v2 payload carrying basis, counterfactual and related sections", () => {
+    // Type-first test: this file is typechecked by `tsc -b` (tsconfig.test.json
+    // includes __tests__), so an interface that has not followed the analyzer
+    // schema fails the build here rather than in a panel six months later.
+    // Runtime behaviour is unchanged — the panel renders what it always did.
+    renderWithProviders(
+      <ReportAnalysisPanel
+        analyses={[
+          row("keyFindings", {
+            findings: [
+              {
+                text: "Nine of fourteen policies remain in draft.",
+                section: "policyManager",
+                severity: "high",
+                basis: "observed",
+                what_would_close_this: "Each of the nine draft policies reaches approved status.",
+                related_sections: ["compliance"],
+              },
+            ],
+            abstain_reason: null,
+          }),
+          row("complianceGap", {
+            narrative: "Readiness is uneven across the control set.",
+            gaps: [
+              {
+                control: "A.5.1",
+                gap: "No documented policy.",
+                priority: "high",
+                basis: "absent",
+                what_would_close_this: "An approved policy document is attached to A.5.1.",
+              },
+            ],
+            scores_caveat: null,
+            abstain_reason: null,
+          }, { id: 2 }),
+        ]}
+      />,
+    );
+    expect(screen.getByText("Nine of fourteen policies remain in draft.")).toBeInTheDocument();
+    expect(screen.getByText("No documented policy.")).toBeInTheDocument();
+  });
 });
