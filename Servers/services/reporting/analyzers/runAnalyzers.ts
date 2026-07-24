@@ -2,6 +2,7 @@ import type { ReportData } from "../../../domain.layer/interfaces/i.reportGenera
 import { createModelFromKey, resolveModelId, type LLMKeyRow } from "../../../advisor/llmModelFactory";
 import { generateObjectWithSelfCorrection } from "../../../advisor/llmSelfCorrect";
 import logger from "../../../utils/logger/fileLogger";
+import { isRestatement } from "./novelty";
 import { ANALYZERS, ANALYZER_VERSION, type AnalysisSectionKey, type AnalyzerExtras } from "./registry";
 import { runSectionSummaries } from "./sectionSummaries";
 
@@ -24,6 +25,11 @@ export interface AnalyzerRunResult {
   abstain_reason: string | null;
   model: string | null;
   attempts: number;
+  /** True when the shallowness gate fired and the call was re-issued (§6).
+   *  Optional so abstain() and sectionSummaries need not carry it. Persisted
+   *  into audit_metadata by persistAnalyses — that is what makes the gate's
+   *  firing observable after the run rather than only in the log. */
+  restatementRetried?: boolean;
 }
 
 export type AnalyzerResults = Partial<Record<AnalyzedKey, AnalyzerRunResult>>;
@@ -156,6 +162,23 @@ const LLM_TIMEOUT_MS = 60_000;
 const ANALYZER_MAX_OUTPUT_TOKENS = 2000;
 
 /**
+ * Prose fields the shallowness gate checks (§6). keyFindings and
+ * recommendedActions have none: structured arrays are not checked.
+ */
+const PROSE_FIELD: Partial<Record<AnalysisSectionKey, string>> = {
+  executiveSummary: "summary",
+  riskAnalysis: "narrative",
+  complianceGap: "narrative",
+  vendorRisk: "narrative",
+};
+
+/** Appended to the system prompt for the one re-issue the gate allows. */
+const RESTATEMENT_DIRECTIVE = `
+
+## RESTATEMENT DETECTED
+Your previous response reproduced its input rather than analysing it: the prose repeated the supplied text back with only cosmetic edits. Answer again from scratch. Do not reuse the input's sentences, clause order or phrasing. Say what the data implies that it does not state: which values are out of line with which others, which single item is most consequential and why, and what the supplied dates and counts mean when related to each other. If the data genuinely cannot support that, set abstain_reason and say so plainly — an honest abstention is correct and padding is not.`;
+
+/**
  * Run every enabled analyzer. Pure: no DB, no req/res.
  *
  * TWO STAGES, and the ordering is load-bearing. `aiSummarizer` (the shipped
@@ -216,23 +239,64 @@ export async function runAnalyzers(input: RunAnalyzersInput): Promise<AnalyzerRe
       return [key, abstain(reason, modelLabel)] as const;
     }
 
-    const result = await generateObjectWithSelfCorrection({
-      model,
-      schema: def.schema,
-      system: def.buildSystemPrompt(),
-      prompt: userPrompt,
-      // Two corrections, not one: Task 45 added required keys to four row
-      // objects, and a repeat omission must not cost the whole analysis.
-      maxSelfCorrectionAttempts: 2,
-      timeoutMs: LLM_TIMEOUT_MS,
-      extra: { maxOutputTokens: ANALYZER_MAX_OUTPUT_TOKENS },
-    });
+    const system = def.buildSystemPrompt();
+    const call = (systemPrompt: string) =>
+      generateObjectWithSelfCorrection({
+        model,
+        schema: def.schema,
+        system: systemPrompt,
+        prompt: userPrompt,
+        // Two corrections, not one: Task 45 added required keys to four row
+        // objects, and a repeat omission must not cost the whole analysis.
+        maxSelfCorrectionAttempts: 2,
+        timeoutMs: LLM_TIMEOUT_MS,
+        extra: { maxOutputTokens: ANALYZER_MAX_OUTPUT_TOKENS },
+      });
 
     // userPrompt is exactly what this analyzer was given, so it is the only
     // honest thing to check "copied verbatim from the input" against.
-    let payload: any = sanitizeProvenance(key, result.object, userPrompt);
-    if (key === "recommendedActions") {
-      payload = { ...payload, actions: sanitizeOwners(payload.actions, allowedOwners) };
+    const sanitize = (object: any): any => {
+      const p = sanitizeProvenance(key, object, userPrompt);
+      return key === "recommendedActions"
+        ? { ...p, actions: sanitizeOwners(p.actions, allowedOwners) }
+        : p;
+    };
+    const prose = (p: any): string => {
+      const field = PROSE_FIELD[key];
+      return field && typeof p?.[field] === "string" ? p[field] : "";
+    };
+
+    const first = await call(system);
+    let payload: any = sanitize(first.object);
+    let attempts = first.attempts;
+    let restatementRetried = false;
+
+    // Shallowness gate (§6). Skipped on an abstention: its prose is a sentence
+    // about what is missing, and re-issuing would turn a cheap honest
+    // abstention into a paid one.
+    if (!payload?.abstain_reason && isRestatement(prose(payload), userPrompt)) {
+      restatementRetried = true;
+      logger.warn(
+        `Report analyzer "${key}" (${ANALYZER_VERSION}) restated its input instead of analysing it; re-issuing once`,
+      );
+      try {
+        const retry = await call(system + RESTATEMENT_DIRECTIVE);
+        attempts += retry.attempts;
+        const retryPayload = sanitize(retry.object);
+        if (isRestatement(prose(retryPayload), userPrompt)) {
+          logger.warn(
+            `Report analyzer "${key}" (${ANALYZER_VERSION}) restated its input again; keeping the first payload`,
+          );
+        } else {
+          payload = retryPayload;
+        }
+      } catch (e) {
+        // The gate must never convert a produced analysis into a lost one.
+        logger.warn(
+          `Report analyzer "${key}" (${ANALYZER_VERSION}) re-issue failed; keeping the first payload`,
+          e,
+        );
+      }
     }
 
     return [
@@ -242,7 +306,8 @@ export async function runAnalyzers(input: RunAnalyzersInput): Promise<AnalyzerRe
         abstained: !!payload?.abstain_reason,
         abstain_reason: payload?.abstain_reason ?? null,
         model: modelLabel,
-        attempts: result.attempts,
+        attempts,
+        restatementRetried,
       },
     ] as const;
   };

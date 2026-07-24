@@ -469,4 +469,104 @@ describe("runAnalyzers", () => {
       abstain_reason: null,
     });
   });
+
+  // ---- shallowness gate (§6) -------------------------------------------
+
+  const SUMMARY_BLOCK =
+    "The Policy Manager section comprises 14 policies, of which 9 remain in draft status and 5 have been approved. Ownership is recorded for 11 of the 14 policies; the remaining 3 carry no assigned owner at all. The most recent approval was recorded on 12 March 2026, and 6 of the approved policies list a review date that has already passed. Tagging is inconsistent: 4 policies carry no tag, while the Data Protection tag is applied to 5 separate documents that differ in scope. Two policies share the same title under different identifiers, which suggests a duplicate that was never retired.";
+  // Measured against the rendered prompt block: RESTATED 0.84, ANALYSED 0.34.
+  const RESTATED = SUMMARY_BLOCK.replace("comprises", "consists of") +
+    " Overall the organization maintains a policy set that requires continued attention from governance stakeholders.";
+  const ANALYSED =
+    "Sixty-four percent of the policy set has never cleared approval, and the five that did are already ageing: six carry a review date behind the 12 March 2026 reference point, so the approved population is smaller than the raw count suggests. Every record names its own drafter as approver, which is the most economical explanation for a duplicated title surviving unretired, and the three ownerless drafts have nobody to trigger the review that would catch it.";
+
+  /** executiveSummary over one section summary — the run-2 failure's shape. */
+  const restatingRun = () => {
+    mockSectionSummaries.mockResolvedValue({ policyManager: SUMMARY_BLOCK });
+    return runAnalyzers({
+      reportData,
+      llmKey,
+      blocks: only("sectionSummaries", "executiveSummary"),
+    });
+  };
+
+  it("re-issues once with a corrective directive when the prose restates its input", async () => {
+    mockGenerate
+      .mockResolvedValueOnce({ object: { summary: RESTATED, abstain_reason: null }, attempts: 1, selfCorrected: false })
+      .mockResolvedValueOnce({ object: { summary: ANALYSED, abstain_reason: null }, attempts: 1, selfCorrected: false });
+
+    const out = await restatingRun();
+
+    expect(mockGenerate).toHaveBeenCalledTimes(2);
+    const [firstCall, secondCall] = mockGenerate.mock.calls;
+    expect(secondCall[0].system).toContain("RESTATEMENT DETECTED");
+    expect(firstCall[0].system).not.toContain("RESTATEMENT DETECTED");
+    // Same question, re-asked. Only the system prompt changes.
+    expect(secondCall[0].prompt).toBe(firstCall[0].prompt);
+    // The re-issue gets the same guardrails as the first call, including its
+    // own fresh timeout budget. Asserted relative to the first call so this
+    // test does not re-pin the values Phases 1 and 3 own.
+    expect(secondCall[0].timeoutMs).toBe(firstCall[0].timeoutMs);
+    expect(secondCall[0].maxSelfCorrectionAttempts).toBe(firstCall[0].maxSelfCorrectionAttempts);
+    expect(secondCall[0].extra).toEqual(firstCall[0].extra);
+    expect(out.executiveSummary!.payload.summary).toBe(ANALYSED);
+    expect(out.executiveSummary!.restatementRetried).toBe(true);
+    expect(out.executiveSummary!.attempts).toBe(2);
+  });
+
+  it("keeps the first payload when the re-issue restates its input as well", async () => {
+    // Invariant: the gate must never turn a produced analysis into a lost one.
+    mockGenerate
+      .mockResolvedValueOnce({ object: { summary: RESTATED, abstain_reason: null }, attempts: 1, selfCorrected: false })
+      .mockResolvedValueOnce({ object: { summary: SUMMARY_BLOCK, abstain_reason: null }, attempts: 1, selfCorrected: false });
+
+    const out = await restatingRun();
+
+    expect(mockGenerate).toHaveBeenCalledTimes(2);
+    expect(out.executiveSummary!.payload.summary).toBe(RESTATED);
+    expect(out.executiveSummary!.abstained).toBe(false);
+    expect(out.executiveSummary!.restatementRetried).toBe(true);
+  });
+
+  it("keeps the first payload when the re-issue throws", async () => {
+    mockGenerate
+      .mockResolvedValueOnce({ object: { summary: RESTATED, abstain_reason: null }, attempts: 1, selfCorrected: false })
+      .mockRejectedValueOnce(new Error("llm exploded"));
+
+    const out = await restatingRun();
+
+    expect(out.executiveSummary!.payload.summary).toBe(RESTATED);
+    expect(out.executiveSummary!.abstained).toBe(false);
+    expect(out.executiveSummary!.restatementRetried).toBe(true);
+    // Not the generic AI-service-failed abstention: the throw happened inside
+    // runOne's own try, so collect()'s rejected branch is never reached and
+    // the three verbatim abstain strings stay authoritative.
+    expect(out.executiveSummary!.abstain_reason).toBeNull();
+  });
+
+  it("does not re-issue for prose that analyses its input", async () => {
+    mockGenerate.mockResolvedValue({ object: { summary: ANALYSED, abstain_reason: null }, attempts: 1, selfCorrected: false });
+
+    const out = await restatingRun();
+
+    expect(mockGenerate).toHaveBeenCalledTimes(1);
+    expect(out.executiveSummary!.payload.summary).toBe(ANALYSED);
+    expect(out.executiveSummary!.restatementRetried).toBe(false);
+  });
+
+  it("does not re-issue an abstention, however closely it echoes the input", async () => {
+    // Invariant 5: abstention stays cheap. Paying a second call to make an
+    // honest abstention wordier is exactly the padding this must not buy.
+    mockGenerate.mockResolvedValue({
+      object: { summary: RESTATED, abstain_reason: "the policy section carries no approval dates" },
+      attempts: 1,
+      selfCorrected: false,
+    });
+
+    const out = await restatingRun();
+
+    expect(mockGenerate).toHaveBeenCalledTimes(1);
+    expect(out.executiveSummary!.abstained).toBe(true);
+    expect(out.executiveSummary!.restatementRetried).toBe(false);
+  });
 });
