@@ -113,14 +113,14 @@ export interface ValidationIssue {
  * reachable through these, so `extractValidationIssues` follows exactly this
  * list.
  */
-const CAUSE_CHAIN_KEYS = ["cause", "error", "originalError"] as const;
+const ZOD_CHAIN_KEYS = ["cause", "error", "originalError"] as const;
 
 /**
  * The same, plus the `data` / `responseBody` carriers holding a provider's raw
  * HTTP body. Text worth scanning for a message, but never a ZodError — so only
  * `errorMessages` descends into them.
  */
-const ERROR_CHAIN_KEYS = [...CAUSE_CHAIN_KEYS, "data", "responseBody"] as const;
+const MESSAGE_SCAN_KEYS = [...ZOD_CHAIN_KEYS, "data", "responseBody"] as const;
 
 /**
  * Walk the error chain (and AI-SDK-specific `cause` properties) looking for
@@ -148,7 +148,7 @@ export function extractValidationIssues(err: unknown): ValidationIssue[] | null 
     // defensively.
     if (typeof candidate === "object" && candidate !== null) {
       const c = candidate as Record<string, unknown>;
-      for (const k of CAUSE_CHAIN_KEYS) {
+      for (const k of ZOD_CHAIN_KEYS) {
         if (c[k]) queue.push(c[k]);
       }
     }
@@ -163,7 +163,7 @@ export function extractValidationIssues(err: unknown): ValidationIssue[] | null 
 
 /**
  * Every message string reachable from an error, following every
- * `ERROR_CHAIN_KEYS` carrier. Cycle-safe.
+ * `MESSAGE_SCAN_KEYS` carrier. Cycle-safe.
  */
 function errorMessages(err: unknown): string {
   const messages: string[] = [];
@@ -182,7 +182,7 @@ function errorMessages(err: unknown): string {
     if (typeof candidate === "object") {
       const c = candidate as Record<string, unknown>;
       if (typeof c.message === "string") messages.push(c.message);
-      for (const k of ERROR_CHAIN_KEYS) {
+      for (const k of MESSAGE_SCAN_KEYS) {
         if (c[k]) queue.push(c[k]);
       }
     }

@@ -101,6 +101,17 @@ describe("llmSelfCorrect / extractValidationIssues", () => {
     a.cause = b;
     expect(extractValidationIssues(a)).toBeNull();
   });
+
+  it("does not descend into a provider's raw HTTP body", () => {
+    // `data` / `responseBody` carry provider text, never a ZodError. Descending
+    // there would route a provider 400 into self-correction instead of the
+    // json_schema downgrade — errorMessages may read them, this walker may not.
+    const outer = Object.assign(new Error("AI SDK call failed"), {
+      data: makeZodError("name", "too short"),
+      responseBody: makeZodError("count", "bad"),
+    });
+    expect(extractValidationIssues(outer)).toBeNull();
+  });
 });
 
 /* ------------------------------------------------------------------ */
