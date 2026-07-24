@@ -260,5 +260,41 @@ describe("dataCollector", () => {
       expect(risk.mitigationPlan).toBeUndefined();
       expect(risk.targetDate).toBeUndefined();
     });
+
+    it("resolves the numeric control owner to a name and keeps the control family and due date", async () => {
+      // getControlByIdQuery (eu.utils.ts:467-496) selects `c.owner AS owner`
+      // (line 482) — a users FK — and no owner_name/owner_surname aliases at
+      // all. It does select `c.due_date AS due_date` (line 484), which the
+      // collector then dropped.
+      mockGetCompliance.mockResolvedValue([
+        {
+          name: "Human oversight",
+          controls: [
+            {
+              id: 7,
+              title: "Assign an oversight owner",
+              status: "In progress",
+              owner: 42,
+              due_date: new Date(2026, 8, 30),
+              description: "Named accountable person per high-risk system.",
+            },
+            { id: 8, title: "Log oversight decisions", status: "Done", owner: null, due_date: null },
+          ],
+        },
+      ] as any);
+
+      const collector = createDataCollector(10, 1, 1, 100, 5);
+      const result = await collector.collectAllData(["compliance"]);
+
+      const controls = result.sections.compliance!.controls;
+      expect(mockGetUser).toHaveBeenCalledWith(42);
+      expect(controls[0].owner).toBe("John Doe");
+      expect(controls[0].category).toBe("Human oversight");
+      expect(controls[0].dueDate).toBe("2026-09-30");
+      // No owner id, no invented owner; no due date, no invented date.
+      expect(controls[1].owner).toBeUndefined();
+      expect(controls[1].dueDate).toBeUndefined();
+      expect(controls[1].category).toBe("Human oversight");
+    });
   });
 });

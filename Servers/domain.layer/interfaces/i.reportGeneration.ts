@@ -225,7 +225,12 @@ export interface ComplianceSectionData {
     title: string;
     status: string;
     description?: string;
+    /** Resolved from the numeric controls_eu.owner FK; undefined when unset. */
     owner?: string;
+    /** Control family (control category name). */
+    category?: string;
+    /** ISO YYYY-MM-DD. */
+    dueDate?: string;
   }>;
 }
 

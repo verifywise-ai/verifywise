@@ -598,6 +598,35 @@ export class ReportDataCollector {
   }
 
   /**
+   * Resolve users.id -> "Name Surname" for the ids handed in.
+   *
+   * Controls carry a numeric `owner` FK, not a name (eu.utils.ts:482). One
+   * lookup per DISTINCT id, in parallel; a failed lookup degrades that one
+   * owner to undefined rather than failing the report.
+   */
+  private async resolveUserNames(ids: unknown[]): Promise<Map<number, string>> {
+    const distinct = Array.from(
+      new Set(ids.filter((id): id is number => typeof id === "number" && Number.isFinite(id))),
+    );
+    const entries = await Promise.all(
+      distinct.map(async (id) => {
+        try {
+          const user = await getUserByIdQuery(id);
+          const name = user ? `${user.name || ""} ${user.surname || ""}`.trim() : "";
+          return name ? ([id, name] as [number, string]) : null;
+        } catch {
+          return null;
+        }
+      }),
+    );
+    const resolved = new Map<number, string>();
+    for (const entry of entries) {
+      if (entry) resolved.set(entry[0], entry[1]);
+    }
+    return resolved;
+  }
+
+  /**
    * Collect compliance section data
    * Note: getComplianceReportQuery returns control categories with nested controls
    */
@@ -620,6 +649,7 @@ export class ReportDataCollector {
     });
 
     const completedControls = allControls.filter((c) => c.status === "Done").length;
+    const ownerNames = await this.resolveUserNames(allControls.map((c) => c.owner));
 
     return {
       overallProgress:
@@ -632,7 +662,13 @@ export class ReportDataCollector {
         title: c.title || "Untitled Control",
         status: c.status || "Unknown",
         description: c.description,
-        owner: c.owner_name ? `${c.owner_name} ${c.owner_surname || ""}`.trim() : undefined,
+        // `c.owner_name` was undefined for every control: the row carries a
+        // numeric `owner` FK, not a joined name.
+        owner: typeof c.owner === "number" ? ownerNames.get(c.owner) : undefined,
+        // categoryName was computed above and then dropped. Control family is
+        // exactly the grouping the compliance analysis needs.
+        category: c.categoryName,
+        dueDate: isoDate(c.due_date),
       })),
     };
   }
