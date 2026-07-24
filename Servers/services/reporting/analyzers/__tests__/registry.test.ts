@@ -465,4 +465,46 @@ describe("analyzer registry", () => {
     expect(out).toContain("[TRUNCATED: section data exceeded the prompt budget]");
     expect(out.length).toBeLessThan(60200);
   });
+
+  describe("§2 — the facts substrate reaches every analyzer", () => {
+    const reportData: any = {
+      metadata: { frameworkName: "EU AI Act", projectTitle: "Acme", organizationId: 5 },
+      sections: {
+        projectRisks: { totalRisks: 1, risksByLevel: [{ level: "High", count: 1 }], risks: [{ name: "R1" }] },
+        vendorRisks: { totalRisks: 1, risks: [{ riskName: "VR1" }] },
+        vendors: { totalVendors: 1, vendors: [{ name: "Acme Corp" }] },
+        compliance: { totalControls: 1, completedControls: 0, overallProgress: 0, controls: [{ id: 1 }] },
+      },
+    };
+    const extras = {
+      facts: "FACTS-MARKER totalRisks=41; ownerless=7",
+      readiness: { controlScores: [{ control_id: 1, overall_score: 25 }], weakestControls: [], frameworkScore: null, stale: true },
+      sectionSummaries: { projectRisks: "Use case risks are concentrated in one high-severity item." },
+    };
+
+    it("all six carry the facts block, so a single prompt holds the whole estate", () => {
+      // Correlation between sections is only expressible once one prompt sees
+      // more than one section. The three raw-section analyzers get it too:
+      // aggregates are exactly what they lack.
+      for (const def of Object.values(ANALYZERS)) {
+        expect(def.buildUserPrompt(reportData, extras)).toContain("FACTS-MARKER");
+      }
+    });
+
+    it("facts alone never buys an LLM call for a section with no data", () => {
+      // Invariant: abstention stays cheap and reachable. The facts block is
+      // whole-estate, so treating it as input would end every abstention.
+      const empty: any = { metadata: reportData.metadata, sections: {} };
+      for (const def of Object.values(ANALYZERS)) {
+        expect(def.buildUserPrompt(empty, { facts: "FACTS-MARKER" })).toBe("");
+      }
+    });
+
+    it("omitting facts leaves today's prompts byte-for-byte unchanged", () => {
+      const withoutFacts = ANALYZERS.riskAnalysis.buildUserPrompt(reportData, {});
+      expect(withoutFacts).toContain("Risk data:");
+      expect(withoutFacts).not.toContain("FACTS-MARKER");
+      expect(withoutFacts.startsWith("Framework: EU AI Act\nSubject: Acme\n\nRisk data:")).toBe(true);
+    });
+  });
 });

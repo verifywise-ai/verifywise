@@ -50,6 +50,9 @@ export interface AnalyzerExtras {
   };
   /** Per-section prose from the sectionSummaries producer. The three summary-consuming analyzers read this instead of raw section data, matching aiSummarizer's shipped architecture. */
   sectionSummaries?: Record<string, string>;
+  /** Rendered output of renderFacts(). Whole-estate, so a single prompt can
+   *  relate one section to another. */
+  facts?: string;
 }
 
 export interface AnalyzerDefinition {
@@ -84,6 +87,16 @@ function renderSummaries(summaries: Record<string, string> | undefined): string 
     .join("\n\n");
 }
 
+/**
+ * The deterministic facts substrate, when the caller supplied one. Rendered
+ * ahead of the prose so the model reads values before wording, and handed to
+ * ALL six analyzers: aggregates are exactly what the raw-section analyzers
+ * lack, and a whole-estate block is what makes cross-section claims possible.
+ */
+function factsBlock(extras: AnalyzerExtras): string {
+  return extras.facts ? `${extras.facts}\n\n` : "";
+}
+
 export const ANALYZERS: Record<AnalysisSectionKey, AnalyzerDefinition> = {
   executiveSummary: {
     key: "executiveSummary",
@@ -92,7 +105,7 @@ export const ANALYZERS: Record<AnalysisSectionKey, AnalyzerDefinition> = {
       `${GROUNDING_RULES}\n\nYou are writing the Executive Summary. Write three to five paragraphs covering: overall compliance and governance posture; critical findings requiring immediate attention; top areas needing improvement; recommended next steps.`,
     buildUserPrompt: (rd, extras) => {
       const body = renderSummaries(extras.sectionSummaries);
-      return body ? `${header(rd)}\n\nSection analyses:\n${body}` : "";
+      return body ? `${header(rd)}\n\n${factsBlock(extras)}Section analyses:\n${body}` : "";
     },
   },
 
@@ -103,7 +116,7 @@ export const ANALYZERS: Record<AnalysisSectionKey, AnalyzerDefinition> = {
       `${GROUNDING_RULES}\n\nYou are extracting Key Findings: five to eight of the most important observations across the supplied sections. Attribute each finding to the section key it came from.`,
     buildUserPrompt: (rd, extras) => {
       const body = renderSummaries(extras.sectionSummaries);
-      return body ? `${header(rd)}\n\nSection analyses:\n${body}` : "";
+      return body ? `${header(rd)}\n\n${factsBlock(extras)}Section analyses:\n${body}` : "";
     },
   },
 
@@ -114,7 +127,7 @@ export const ANALYZERS: Record<AnalysisSectionKey, AnalyzerDefinition> = {
       `${GROUNDING_RULES}\n\nYou are producing three to five prioritised, actionable recommendations.\n\nOwner rule: set suggestedOwner ONLY when that exact person or role name appears verbatim in the supplied data. Otherwise it MUST be null. Never infer an owner from context and never invent one.`,
     buildUserPrompt: (rd, extras) => {
       const body = renderSummaries(extras.sectionSummaries);
-      return body ? `${header(rd)}\n\nSection analyses:\n${body}` : "";
+      return body ? `${header(rd)}\n\n${factsBlock(extras)}Section analyses:\n${body}` : "";
     },
   },
 
@@ -123,9 +136,9 @@ export const ANALYZERS: Record<AnalysisSectionKey, AnalyzerDefinition> = {
     schema: riskAnalysisSchema,
     buildSystemPrompt: () =>
       `${GROUNDING_RULES}\n\nYou are writing the Risk Analysis narrative across use-case, vendor and model risks, and naming up to six of the most material risks. Every named risk must appear verbatim in the supplied data.`,
-    buildUserPrompt: (rd) => {
+    buildUserPrompt: (rd, extras) => {
       const body = renderSections(rd.sections as any, RISK_SECTIONS);
-      return body ? `${header(rd)}\n\nRisk data:\n${body}` : "";
+      return body ? `${header(rd)}\n\n${factsBlock(extras)}Risk data:\n${body}` : "";
     },
   },
 
@@ -172,7 +185,7 @@ export const ANALYZERS: Record<AnalysisSectionKey, AnalyzerDefinition> = {
           ? JSON.stringify(evidenceGaps.gaps.slice(0, 30), null, 2)
           : "No evidence gaps were returned for this organization.";
 
-      return `${header(rd)}\n\nStored readiness scores (project-scoped):\n${scores}\n\nEvidence-gap analysis (organization + framework scoped — a SEPARATE dataset; do not assume a row here corresponds to a row above):\n${gapsBlock}\n\nCompliance section data:\n${compliance || "None."}`;
+      return `${header(rd)}\n\n${factsBlock(extras)}Stored readiness scores (project-scoped):\n${scores}\n\nEvidence-gap analysis (organization + framework scoped — a SEPARATE dataset; do not assume a row here corresponds to a row above):\n${gapsBlock}\n\nCompliance section data:\n${compliance || "None."}`;
     },
   },
 
@@ -181,9 +194,9 @@ export const ANALYZERS: Record<AnalysisSectionKey, AnalyzerDefinition> = {
     schema: vendorRiskSchema,
     buildSystemPrompt: () =>
       `${GROUNDING_RULES}\n\nYou are writing the third-party risk narrative and naming specific vendor concerns. Every vendor you name must appear verbatim in the supplied data.`,
-    buildUserPrompt: (rd) => {
+    buildUserPrompt: (rd, extras) => {
       const body = renderSections(rd.sections as any, VENDOR_SECTIONS);
-      return body ? `${header(rd)}\n\nVendor data:\n${body}` : "";
+      return body ? `${header(rd)}\n\n${factsBlock(extras)}Vendor data:\n${body}` : "";
     },
   },
 };
