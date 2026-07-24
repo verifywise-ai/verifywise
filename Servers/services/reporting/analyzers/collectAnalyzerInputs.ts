@@ -8,6 +8,7 @@ import {
   getWeakestControlsQuery,
 } from "../../../utils/readiness.utils";
 import { getEvidenceGapsQuery } from "../../../utils/evidenceAi.utils";
+import { getPriorFactsSnapshotQuery } from "../../../utils/reportRunAnalysis.utils";
 import logger from "../../../utils/logger/fileLogger";
 import type { AiBlocks } from "./runAnalyzers";
 import { collectFacts, renderFacts, type FactsSnapshot } from "./facts";
@@ -211,4 +212,46 @@ export function collectFactsInput(
 ): { snapshot: FactsSnapshot; facts: string } {
   const snapshot = collectFacts(reportData);
   return { snapshot, facts: renderFacts(snapshot, prior) };
+}
+
+/**
+ * audit_metadata is unconstrained JSONB, written by whatever analyzer version
+ * produced that run. Check the shape before handing it to renderFacts — an
+ * older or partial object must read as "no prior", not blow up inside the
+ * analysis path.
+ */
+function isFactsSnapshot(value: any): value is FactsSnapshot {
+  return (
+    !!value &&
+    typeof value === "object" &&
+    typeof value.generatedAt === "string" &&
+    !!value.sections &&
+    typeof value.sections === "object"
+  );
+}
+
+/**
+ * The previous run's facts snapshot for this schedule (design §10), or null.
+ *
+ * Null, never a throw. This is one extra read on the report path, and the
+ * standing invariant is that analysis must not become a way to lose a report —
+ * generateReport's catch would otherwise drop every analysis because a
+ * comparison could not be made.
+ *
+ * A run with no schedule (a manual report) has no predecessor, so the query is
+ * skipped entirely and the caller renders exactly what it renders today.
+ */
+export async function collectPriorFacts(
+  scheduledReportId: number | undefined,
+  organizationId: number,
+): Promise<FactsSnapshot | null> {
+  if (!scheduledReportId) return null;
+
+  try {
+    const stored = await getPriorFactsSnapshotQuery(scheduledReportId, organizationId);
+    return isFactsSnapshot(stored) ? stored : null;
+  } catch (error) {
+    logger.warn("Report analyzers: prior facts lookup failed, degrading to no comparison", error);
+    return null;
+  }
 }

@@ -16,6 +16,13 @@ jest.mock("../../../../utils/evidenceAi.utils", () => ({
   getEvidenceGapsQuery: (...a: any[]) => mockGaps(...a),
 }));
 
+// Same reason: reportRunAnalysis.utils imports the real sequelize instance at
+// module load (reportRunAnalysis.utils.ts:1).
+const mockPriorFacts = jest.fn();
+jest.mock("../../../../utils/reportRunAnalysis.utils", () => ({
+  getPriorFactsSnapshotQuery: (...a: any[]) => mockPriorFacts(...a),
+}));
+
 // collectAnalyzerInputs now imports ./facts, which imports isoDate from
 // dataCollector, which imports the real sequelize instance at module load.
 jest.mock("../../../../database/db", () => ({ sequelize: {} }));
@@ -25,6 +32,7 @@ import {
   collectEvidenceGapsInput,
   collectAllowedOwners,
   collectFactsInput,
+  collectPriorFacts,
   resolveBlocks,
 } from "../collectAnalyzerInputs";
 
@@ -34,6 +42,7 @@ describe("collectAnalyzerInputs", () => {
     mockWeakest.mockReset().mockResolvedValue([{ control_id: 1, framework_type: "eu_ai_act" }]);
     mockFrameworkScore.mockReset().mockResolvedValue({ avg_score: 40 });
     mockGaps.mockReset().mockResolvedValue([{ control_id: 1, gap_type: "no_evidence" }]);
+    mockPriorFacts.mockReset().mockResolvedValue(null);
   });
 
   it("skips the evidence-gap query for a framework it does not cover", async () => {
@@ -191,5 +200,45 @@ describe("collectAnalyzerInputs", () => {
 
     expect(collectFactsInput(rd, prior).facts).toContain("totalPolicies: 2 (was 1, +1)");
     expect(collectFactsInput(rd).facts).not.toContain("Change since");
+  });
+
+  it("does not query for a prior snapshot when the run belongs to no schedule", async () => {
+    // A manual run has no predecessor by construction. Skipping the query is
+    // the whole of "degrade to prior = null silently".
+    expect(await collectPriorFacts(undefined, 5)).toBeNull();
+    expect(mockPriorFacts).not.toHaveBeenCalled();
+  });
+
+  it("returns the stored snapshot for the schedule, scoped to the organization", async () => {
+    const stored = {
+      generatedAt: "2026-06-01T00:00:00.000Z",
+      framework: "EU AI Act",
+      subject: "Test Project",
+      sections: { projectRisks: { totalRisks: 41 } },
+    };
+    mockPriorFacts.mockResolvedValue(stored);
+
+    expect(await collectPriorFacts(12, 5)).toEqual(stored);
+    expect(mockPriorFacts).toHaveBeenCalledWith(12, 5);
+  });
+
+  it("degrades to no comparison when the lookup throws", async () => {
+    // One extra read on the report path must never cost the report.
+    mockPriorFacts.mockRejectedValue(new Error("db down"));
+    expect(await collectPriorFacts(12, 5)).toBeNull();
+  });
+
+  it("rejects a stored value that is not a facts snapshot", async () => {
+    // audit_metadata is unconstrained JSONB written by an earlier analyzer
+    // version. A malformed prior must read as "no prior", never reach
+    // renderFacts and throw inside the analysis path.
+    mockPriorFacts.mockResolvedValue({ foo: 1 });
+    expect(await collectPriorFacts(12, 5)).toBeNull();
+
+    mockPriorFacts.mockResolvedValue("report-analyzer-v1");
+    expect(await collectPriorFacts(12, 5)).toBeNull();
+
+    mockPriorFacts.mockResolvedValue({ generatedAt: "2026-06-01T00:00:00.000Z" });
+    expect(await collectPriorFacts(12, 5)).toBeNull();
   });
 });
