@@ -329,7 +329,9 @@ export function renderFacts(facts: FactsSnapshot, prior?: FactsSnapshot | null):
 
   Object.keys(facts.sections).forEach((key) => {
     const body = Object.entries(facts.sections[key])
-      .map(([name, value]) => (typeof value === "number" ? `${name}=${value}` : `${name}="${value}"`))
+      .map(([name, value]) =>
+        typeof value === "number" ? `${name}=${value}` : `${name}="${value}"`,
+      )
       .join("; ");
     if (body) lines.push(`[${SECTION_LABELS[key] || key}] ${body}`);
   });

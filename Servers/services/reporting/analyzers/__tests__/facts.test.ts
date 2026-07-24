@@ -399,36 +399,65 @@ describe("renderFacts", () => {
   });
 
   it("§1 — stays inside its prompt budget for a full eight-section estate", () => {
-    const rows = (n: number, make: (i: number) => any) => Array.from({ length: n }, (_, i) => make(i));
+    const rows = (n: number, make: (i: number) => any) =>
+      Array.from({ length: n }, (_, i) => make(i));
     const full: any = {
       metadata: reportData.metadata,
       charts: {},
       sections: {
         projectRisks: {
           totalRisks: 60,
-          risks: rows(60, (i) => ({ name: `Risk ${i}`, riskLevel: "High", mitigationStatus: "Unknown", owner: "Alice" })),
+          risks: rows(60, (i) => ({
+            name: `Risk ${i}`,
+            riskLevel: "High",
+            mitigationStatus: "Unknown",
+            owner: "Alice",
+          })),
         },
         vendorRisks: {
           totalRisks: 40,
-          risks: rows(40, (i) => ({ riskName: `VR ${i}`, vendorName: `Vendor ${i}`, riskLevel: "Medium" })),
+          risks: rows(40, (i) => ({
+            riskName: `VR ${i}`,
+            vendorName: `Vendor ${i}`,
+            riskLevel: "Medium",
+          })),
         },
         modelRisks: {
           totalRisks: 30,
-          risks: rows(30, (i) => ({ riskName: `MR ${i}`, modelName: `Model ${i}`, riskLevel: "Low", mitigationStatus: "Unknown" })),
+          risks: rows(30, (i) => ({
+            riskName: `MR ${i}`,
+            modelName: `Model ${i}`,
+            riskLevel: "Low",
+            mitigationStatus: "Unknown",
+          })),
         },
         compliance: {
           totalControls: 80,
           completedControls: 20,
           overallProgress: 25,
-          controls: rows(80, (i) => ({ controlId: `C-${i}`, title: `Control ${i}`, status: "Waiting", owner: "" })),
+          controls: rows(80, (i) => ({
+            controlId: `C-${i}`,
+            title: `Control ${i}`,
+            status: "Waiting",
+            owner: "",
+          })),
         },
         vendors: {
           totalVendors: 25,
-          vendors: rows(25, (i) => ({ name: `Vendor ${i}`, riskStatus: "Not started", assignee: "" })),
+          vendors: rows(25, (i) => ({
+            name: `Vendor ${i}`,
+            riskStatus: "Not started",
+            assignee: "",
+          })),
         },
         models: {
           totalModels: 25,
-          models: rows(25, (i) => ({ name: `Model ${i}`, version: "1.0", status: "Approved", owner: "Alice" })),
+          models: rows(25, (i) => ({
+            name: `Model ${i}`,
+            version: "1.0",
+            status: "Approved",
+            owner: "Alice",
+          })),
         },
         policyManager: {
           totalPolicies: 20,
@@ -436,7 +465,13 @@ describe("renderFacts", () => {
         },
         incidentManagement: {
           totalIncidents: 12,
-          incidents: rows(12, (i) => ({ incidentId: `INC-${i}`, type: "Outage", severity: "High", status: "Open", reportedDate: "1/2/2026" })),
+          incidents: rows(12, (i) => ({
+            incidentId: `INC-${i}`,
+            type: "Outage",
+            severity: "High",
+            status: "Open",
+            reportedDate: "1/2/2026",
+          })),
         },
       },
     };
