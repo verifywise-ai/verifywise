@@ -459,6 +459,43 @@ describe("DOCX Generator", () => {
       expect(text).toContain("Why: 22 of 25 model rows have no owner");
     });
 
+    it("renders gap basis and counterfactual, and the concern basis label", async () => {
+      const result = await generateDOCX(
+        withSummaries({
+          sectionSummaries: {},
+          complianceGap: {
+            narrative: "Two clauses lack evidence.",
+            scores_caveat: null,
+            gaps: [
+              {
+                control: "Clause 6.1",
+                gap: "No documented risk criteria",
+                priority: "high",
+                basis: "absent",
+                what_would_close_this: "A dated risk-criteria record against Clause 6.1",
+              },
+            ],
+          },
+          vendorRisk: {
+            narrative: "One processor has no independent assurance report.",
+            concerns: [
+              {
+                vendor: "Acme Cloud",
+                concern: "No SOC 2 Type II",
+                severity: "high",
+                basis: "inferred",
+              },
+            ],
+          },
+        }),
+      );
+      const text = await docxText(result.content);
+
+      expect(text).toContain("No documented risk criteria (high, absent)");
+      expect(text).toContain("Closes when: A dated risk-criteria record against Clause 6.1");
+      expect(text).toContain("No SOC 2 Type II (high, inferred)");
+    });
+
     it("renders the top_risks table alongside the risk highlights box", async () => {
       // riskAnalysis only ever produces output when a risk section was
       // collected, so the table lives with the highlights box inside the

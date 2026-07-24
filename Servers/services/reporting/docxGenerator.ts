@@ -753,15 +753,35 @@ function createComplianceGapSection(reportData: ReportData): (Paragraph | Table)
     gap.gaps.forEach((g) => {
       elements.push(
         new Paragraph({
-          spacing: { before: 60, after: 60 },
+          spacing: { before: 60, after: 20 },
           indent: { left: convertInchesToTwip(0.3) },
           bullet: { level: 0 },
           children: [
             new TextRun({ text: `${g.control}: `, bold: true, size: 20, color: COLORS.textPrimary }),
-            new TextRun({ text: `${g.gap} (${g.priority})`, size: 20, color: COLORS.textPrimary }),
+            new TextRun({
+              text: `${g.gap} (${g.priority}${g.basis ? `, ${g.basis}` : ""})`,
+              size: 20,
+              color: COLORS.textPrimary,
+            }),
           ],
         }),
       );
+
+      if (g.what_would_close_this) {
+        elements.push(
+          new Paragraph({
+            spacing: { after: 60 },
+            indent: { left: convertInchesToTwip(0.6) },
+            children: [
+              new TextRun({
+                text: `Closes when: ${g.what_would_close_this}`,
+                size: 18,
+                color: COLORS.textSecondary,
+              }),
+            ],
+          }),
+        );
+      }
     });
   }
 
@@ -788,7 +808,11 @@ function createVendorRiskSection(reportData: ReportData): (Paragraph | Table)[] 
         bullet: { level: 0 },
         children: [
           new TextRun({ text: `${c.vendor}: `, bold: true, size: 20, color: COLORS.textPrimary }),
-          new TextRun({ text: `${c.concern} (${c.severity})`, size: 20, color: COLORS.textPrimary }),
+          new TextRun({
+            text: `${c.concern} (${c.severity}${c.basis ? `, ${c.basis}` : ""})`,
+            size: 20,
+            color: COLORS.textPrimary,
+          }),
         ],
       }),
     );
