@@ -9,7 +9,7 @@
  */
 import type { ReportData } from "../../../domain.layer/interfaces/i.reportGeneration";
 import { isoDate } from "../dataCollector";
-import { isTerminalStatus, levelRank } from "./prompts";
+import { isTerminalStatus, levelRank, SECTION_LABELS } from "./prompts";
 
 /** Structured, storable snapshot. Persisted to report_run_analyses.audit_metadata
  *  so a later run can diff against it without a second LLM call. */
@@ -315,4 +315,60 @@ export function collectFacts(reportData: ReportData): FactsSnapshot {
     subject: meta.projectTitle ?? "the organization",
     sections,
   };
+}
+
+/** Prompt-ready text. `prior` renders a delta line per changed aggregate. */
+export function renderFacts(facts: FactsSnapshot, prior?: FactsSnapshot | null): string {
+  const lines: string[] = [
+    `Reference date: ${facts.generatedAt} — treat this as today when comparing any date below.`,
+    `Framework: ${facts.framework}`,
+    `Subject: ${facts.subject}`,
+    "",
+    "Estate facts (computed directly from this report's own data — ratios, shares and differences over these values are yours to draw):",
+  ];
+
+  Object.keys(facts.sections).forEach((key) => {
+    const body = Object.entries(facts.sections[key])
+      .map(([name, value]) => (typeof value === "number" ? `${name}=${value}` : `${name}="${value}"`))
+      .join("; ");
+    if (body) lines.push(`[${SECTION_LABELS[key] || key}] ${body}`);
+  });
+
+  const deltas = changedAggregates(facts, prior);
+  if (deltas.length > 0 && prior) {
+    lines.push(
+      "",
+      // slice(0, 10) is a no-op for a snapshot written by collectFacts and
+      // tolerates one persisted before generatedAt became day-granular.
+      `Change since the previous report run (${prior.generatedAt.slice(0, 10)}):`,
+      ...deltas,
+    );
+  }
+
+  return lines.join("\n");
+}
+
+/**
+ * One line per changed NUMERIC aggregate.
+ *
+ * ponytail: numbers only. The top-N labels churn between runs without the
+ * estate having changed, so diffing them would bury the signal in noise. An
+ * aggregate the prior snapshot never recorded is not reported as a change —
+ * the facts block above already shows it.
+ */
+function changedAggregates(facts: FactsSnapshot, prior?: FactsSnapshot | null): string[] {
+  if (!prior?.sections) return [];
+  const out: string[] = [];
+  Object.keys(facts.sections).forEach((key) => {
+    const before = prior.sections[key] ?? {};
+    Object.entries(facts.sections[key]).forEach(([name, value]) => {
+      const was = before[name];
+      if (typeof value !== "number" || typeof was !== "number" || was === value) return;
+      const delta = value - was;
+      out.push(
+        `${SECTION_LABELS[key] || key} ${name}: ${value} (was ${was}, ${delta > 0 ? "+" : ""}${delta})`,
+      );
+    });
+  });
+  return out;
 }

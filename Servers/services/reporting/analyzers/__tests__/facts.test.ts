@@ -4,7 +4,7 @@
 // leaving it unmocked opens a DB connection during a unit test.
 jest.mock("../../../../database/db", () => ({ sequelize: {} }));
 
-import { collectFacts, referenceDay } from "../facts";
+import { collectFacts, referenceDay, renderFacts, type FactsSnapshot } from "../facts";
 
 // Every fixture below uses the vocabulary dataCollector ACTUALLY emits for that
 // section, not a plausible-looking one. Project and vendor risks carry the
@@ -344,5 +344,105 @@ describe("collectFacts — truncation branches", () => {
     // Truncated mid-name, so no stamp is emitted — top_showing counts ROWS
     // dropped, not characters.
     expect(facts.top_showing).toBeUndefined();
+  });
+});
+
+describe("renderFacts", () => {
+  it("§1 — leads with the reference date, framework and subject", () => {
+    const out = renderFacts(collectFacts(reportData));
+    expect(out).toContain("Reference date: 2026-07-22");
+    expect(out).toContain("Framework: ISO 42001");
+    expect(out).toContain("Subject: Acme Corp");
+  });
+
+  it("§1 — renders one labelled line per section, numbers bare and strings quoted", () => {
+    const out = renderFacts(collectFacts(reportData));
+    expect(out).toContain("[Use Case Risks] totalRisks=3;");
+    expect(out).toContain("[Policy Manager]");
+    expect(out).toContain('top1="Acceptable use (Draft, review unset, owner Bob)"');
+    // The raw section key must not leak in place of the human label.
+    expect(out).not.toContain("[projectRisks]");
+  });
+
+  it("§1 — emits no change block when there is no prior snapshot", () => {
+    expect(renderFacts(collectFacts(reportData))).not.toContain("Change since");
+    expect(renderFacts(collectFacts(reportData), null)).not.toContain("Change since");
+  });
+
+  it("§10 — emits one delta line per changed numeric aggregate, signed", () => {
+    const prior: FactsSnapshot = {
+      // A snapshot stored before this change carries a full ISO timestamp;
+      // one stored after carries a day. The header handles both.
+      generatedAt: "2026-06-22T09:00:00.000Z",
+      framework: "ISO 42001",
+      subject: "Acme Corp",
+      sections: {
+        projectRisks: { totalRisks: 1, items: 1, ownerless: 5, top1: "something else entirely" },
+      },
+    };
+
+    const out = renderFacts(collectFacts(reportData), prior);
+    const deltaBlock = out.split("Change since the previous report run")[1];
+
+    expect(out).toContain("Change since the previous report run (2026-06-22):");
+    expect(deltaBlock).toContain("Use Case Risks totalRisks: 3 (was 1, +2)");
+    expect(deltaBlock).toContain("Use Case Risks ownerless: 2 (was 5, -3)");
+    // Labels churn between runs without the estate changing; only numbers diff.
+    expect(deltaBlock).not.toContain("top1");
+    // An aggregate the prior run did not record is not a change.
+    expect(deltaBlock).not.toContain("riskLevel_Critical");
+  });
+
+  it("§10 — an unchanged estate produces no change block at all", () => {
+    const snapshot = collectFacts(reportData);
+    expect(renderFacts(snapshot, snapshot)).not.toContain("Change since");
+  });
+
+  it("§1 — stays inside its prompt budget for a full eight-section estate", () => {
+    const rows = (n: number, make: (i: number) => any) => Array.from({ length: n }, (_, i) => make(i));
+    const full: any = {
+      metadata: reportData.metadata,
+      charts: {},
+      sections: {
+        projectRisks: {
+          totalRisks: 60,
+          risks: rows(60, (i) => ({ name: `Risk ${i}`, riskLevel: "High", mitigationStatus: "Unknown", owner: "Alice" })),
+        },
+        vendorRisks: {
+          totalRisks: 40,
+          risks: rows(40, (i) => ({ riskName: `VR ${i}`, vendorName: `Vendor ${i}`, riskLevel: "Medium" })),
+        },
+        modelRisks: {
+          totalRisks: 30,
+          risks: rows(30, (i) => ({ riskName: `MR ${i}`, modelName: `Model ${i}`, riskLevel: "Low", mitigationStatus: "Unknown" })),
+        },
+        compliance: {
+          totalControls: 80,
+          completedControls: 20,
+          overallProgress: 25,
+          controls: rows(80, (i) => ({ controlId: `C-${i}`, title: `Control ${i}`, status: "Waiting", owner: "" })),
+        },
+        vendors: {
+          totalVendors: 25,
+          vendors: rows(25, (i) => ({ name: `Vendor ${i}`, riskStatus: "Not started", assignee: "" })),
+        },
+        models: {
+          totalModels: 25,
+          models: rows(25, (i) => ({ name: `Model ${i}`, version: "1.0", status: "Approved", owner: "Alice" })),
+        },
+        policyManager: {
+          totalPolicies: 20,
+          policies: rows(20, (i) => ({ policyName: `Policy ${i}`, status: "Draft", owner: "Bob" })),
+        },
+        incidentManagement: {
+          totalIncidents: 12,
+          incidents: rows(12, (i) => ({ incidentId: `INC-${i}`, type: "Outage", severity: "High", status: "Open", reportedDate: "1/2/2026" })),
+        },
+      },
+    };
+
+    const out = renderFacts(collectFacts(full));
+    expect(out.length).toBeLessThan(3000);
+    expect(out).toContain('top_showing="showing 3 of 60"');
   });
 });
