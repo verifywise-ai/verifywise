@@ -237,6 +237,25 @@ describe("report-pdf.ejs template", () => {
     expect(body).toContain("Third-party risk analysis");
   });
 
+  it("renders the action rationale and basis label", () => {
+    const html = render({
+      sectionSummaries: {},
+      recommendedActions: [
+        {
+          action: "Assign owners to the 22 ownerless models",
+          priority: "high",
+          sourceSignal: "22 of 25 model rows have no owner",
+          basis: "observed",
+        },
+      ],
+    });
+
+    expect(html).toContain("<th>Why</th>");
+    expect(html).toContain("<th>Basis</th>");
+    expect(html).toContain("22 of 25 model rows have no owner");
+    expect(html).toContain(">observed<");
+  });
+
   it("the template compiles at all", () => {
     expect(() => render()).not.toThrow();
   });

@@ -269,7 +269,9 @@
           <thead>
             <tr>
               <th>Action</th>
+              <th>Why</th>
               <th>Priority</th>
+              <th>Basis</th>
               <th>Suggested owner</th>
             </tr>
           </thead>
@@ -277,7 +279,9 @@
             <% aiSummaries.recommendedActions.forEach(function(a) { %>
             <tr>
               <td><%= a.action %></td>
+              <td><%= a.sourceSignal || '—' %></td>
               <td><%= a.priority || '—' %></td>
+              <td><%= a.basis || '—' %></td>
               <td><%= a.suggestedOwner || 'Unassigned' %></td>
             </tr>
             <% }); %>
