@@ -19,6 +19,7 @@ import {
   collectAllowedOwners,
   collectEvidenceGapsInput,
   collectFactsInput,
+  collectPriorFacts,
   collectReadinessInput,
   resolveBlocks,
 } from "./analyzers/collectAnalyzerInputs";
@@ -109,6 +110,10 @@ export async function generateReport(
 
     // AI analysis (optional, per-block gated)
     let analyses: Record<string, any> | undefined;
+    // `unknown`, matching ReportGenerationResult.factsSnapshot: nothing between
+    // here and the JSONB column inspects it, so importing FactsSnapshot into
+    // this file would buy nothing.
+    let factsSnapshot: unknown;
     if (request.aiEnhanced) {
       try {
         const blocks = resolveBlocks(request);
@@ -119,9 +124,18 @@ export async function generateReport(
           null;
 
         // Deterministic whole-estate aggregates, for every analyzer and every
-        // block combination. No LLM call, no query — computed from the
-        // ReportData already in hand.
-        const { facts } = collectFactsInput(reportData);
+        // block combination. Still no LLM call; the one query is the prior
+        // snapshot.
+        //
+        // Design §10: a scheduled run diffs against the last run of the same
+        // schedule. A manual run has no schedule, priorFacts stays null, and
+        // renderFacts emits no change block — exactly what renders today.
+        const priorFacts = await collectPriorFacts(
+          request.scheduledReportId,
+          reportData.metadata.organizationId,
+        );
+        const { facts, snapshot } = collectFactsInput(reportData, priorFacts);
+        factsSnapshot = snapshot;
 
         // Two independent inputs, fetched in parallel and kept separate.
         const extras = blocks.complianceGap
@@ -186,7 +200,7 @@ export async function generateReport(
       result.filename = `${baseName}_AI_${ext}`;
     }
 
-    return { ...result, analyses };
+    return { ...result, analyses, factsSnapshot };
   } catch (error) {
     console.error("Error generating report:", error);
     return {

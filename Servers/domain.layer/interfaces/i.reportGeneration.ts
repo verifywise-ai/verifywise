@@ -57,6 +57,12 @@ export interface ReportGenerationRequest {
     vendorRisk: boolean;
   };
   llmKeyId?: number;
+  /**
+   * The schedule this run belongs to, when it has one. Used only to find the
+   * previous run's stored facts snapshot; a manual run leaves it undefined and
+   * gets no prior-run comparison.
+   */
+  scheduledReportId?: number;
 }
 
 export interface ReportGenerationResult {
@@ -83,6 +89,17 @@ export interface ReportGenerationResult {
      */
     restatementRetried?: boolean;
   }>;
+  /**
+   * The deterministic facts snapshot this run's analyzers were built from. The
+   * runner persists it to report_run_analyses.audit_metadata so the next run of
+   * the same schedule can diff against it.
+   *
+   * Deliberately untyped here: nothing between this field and the JSONB column
+   * reads it, and this file has no imports — the domain layer should not start
+   * depending on a service module for a shape it never inspects. The real type
+   * is FactsSnapshot in services/reporting/analyzers/facts.ts.
+   */
+  factsSnapshot?: unknown;
 }
 
 // Chart data interfaces for report visualizations
