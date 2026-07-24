@@ -256,6 +256,32 @@ describe("report-pdf.ejs template", () => {
     expect(html).toContain(">observed<");
   });
 
+  it("renders the top_risks table the riskAnalysis analyzer has always produced", () => {
+    const html = render({
+      sectionSummaries: {},
+      riskHighlights: "Concentration risk dominates.",
+      riskAnalysis: {
+        narrative: "Concentration risk dominates.",
+        top_risks: [
+          { name: "Single model owner", level: "Very high", why: "25 of 25 models share one owner" },
+        ],
+      },
+    });
+
+    expect(html).toContain("Most material risks");
+    expect(html).toContain("Single model owner");
+    expect(html).toContain("chip chip-very-high");
+    expect(html).toContain("25 of 25 models share one owner");
+  });
+
+  it("prints no top-risk table when the analyzer named no risks", () => {
+    const html = render({
+      sectionSummaries: {},
+      riskAnalysis: { narrative: "Nothing material.", top_risks: [] },
+    });
+    expect(html).not.toContain("Most material risks");
+  });
+
   it("the template compiles at all", () => {
     expect(() => render()).not.toThrow();
   });

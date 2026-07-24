@@ -522,6 +522,29 @@
     </div>
     <% } %>
 
+    <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.riskAnalysis && aiSummaries.riskAnalysis.top_risks && aiSummaries.riskAnalysis.top_risks.length > 0) { %>
+    <!-- Most material risks (AI-Generated) -->
+    <div class="subsection">
+      <div class="subsection-header">
+        <h3 class="subsection-title">Most material risks</h3>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr><th>Risk</th><th>Level</th><th>Why it ranks here</th></tr>
+        </thead>
+        <tbody>
+          <% aiSummaries.riskAnalysis.top_risks.forEach(function(r) { %>
+          <tr>
+            <td><strong><%= r.name %></strong></td>
+            <td><span class="chip chip-<%= String(r.level).toLowerCase().replace(/\s+/g, '-') %>"><%= r.level %></span></td>
+            <td><%= r.why %></td>
+          </tr>
+          <% }); %>
+        </tbody>
+      </table>
+    </div>
+    <% } %>
+
     <!-- ============================================ -->
     <!-- COMPLIANCE & GOVERNANCE GROUP -->
     <!-- ============================================ -->
