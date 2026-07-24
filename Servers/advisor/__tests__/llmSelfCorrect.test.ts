@@ -626,9 +626,7 @@ describe("llmSelfCorrect / json-object fallback", () => {
     let invocation = 0;
     const err = new NoObjectGeneratedError({
       message: "No object generated: could not parse the response.",
-      cause: new Error(
-        'JSON parsing failed: Text: per the json schema you gave me: {"name": "o',
-      ),
+      cause: new Error('JSON parsing failed: Text: per the json schema you gave me: {"name": "o'),
       text: 'per the json schema you gave me: {"name": "o',
       response: { id: "r", timestamp: new Date(0), modelId: "m" },
       usage: { inputTokens: 1, outputTokens: 9, totalTokens: 10 },
@@ -695,7 +693,10 @@ describe("llmSelfCorrect / jsonObjectFallbackMiddleware", () => {
       prompt: [{ role: "user", content: [{ type: "text", text: "go" }] }],
     };
     expect(await transform(params)).toBe(params);
-    const noFormat = { prompt: [] };
-    expect(await transform(noFormat)).toBe(noFormat);
+  });
+
+  it("leaves a call with no responseFormat alone", async () => {
+    const params = { prompt: [] };
+    expect(await transform(params)).toBe(params);
   });
 });

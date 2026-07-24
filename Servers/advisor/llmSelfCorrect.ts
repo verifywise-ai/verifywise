@@ -108,12 +108,19 @@ export interface ValidationIssue {
 /* ------------------------------------------------------------------ */
 
 /**
- * The properties an AI SDK error can hang its underlying cause off — its own
- * `cause`, the SDK's `error` / `originalError` wrappers, and the `data` /
- * `responseBody` carriers holding a provider's HTTP body. Both walkers below
- * follow the same list so a future SDK version only has to be taught here.
+ * The wrapper properties an AI SDK error hangs its underlying cause off — its
+ * own `cause` plus the SDK's `error` / `originalError`. A ZodError is only ever
+ * reachable through these, so `extractValidationIssues` follows exactly this
+ * list.
  */
-const ERROR_CHAIN_KEYS = ["cause", "error", "originalError", "data", "responseBody"] as const;
+const CAUSE_CHAIN_KEYS = ["cause", "error", "originalError"] as const;
+
+/**
+ * The same, plus the `data` / `responseBody` carriers holding a provider's raw
+ * HTTP body. Text worth scanning for a message, but never a ZodError — so only
+ * `errorMessages` descends into them.
+ */
+const ERROR_CHAIN_KEYS = [...CAUSE_CHAIN_KEYS, "data", "responseBody"] as const;
 
 /**
  * Walk the error chain (and AI-SDK-specific `cause` properties) looking for
@@ -141,7 +148,7 @@ export function extractValidationIssues(err: unknown): ValidationIssue[] | null 
     // defensively.
     if (typeof candidate === "object" && candidate !== null) {
       const c = candidate as Record<string, unknown>;
-      for (const k of ERROR_CHAIN_KEYS) {
+      for (const k of CAUSE_CHAIN_KEYS) {
         if (c[k]) queue.push(c[k]);
       }
     }
@@ -155,8 +162,8 @@ export function extractValidationIssues(err: unknown): ValidationIssue[] | null 
 /* ------------------------------------------------------------------ */
 
 /**
- * Every message string reachable from an error, following the same
- * `ERROR_CHAIN_KEYS` carriers as `extractValidationIssues`. Cycle-safe.
+ * Every message string reachable from an error, following every
+ * `ERROR_CHAIN_KEYS` carrier. Cycle-safe.
  */
 function errorMessages(err: unknown): string {
   const messages: string[] = [];
