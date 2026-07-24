@@ -536,7 +536,7 @@
           <% aiSummaries.riskAnalysis.top_risks.forEach(function(r) { %>
           <tr>
             <td><strong><%= r.name %></strong></td>
-            <td><span class="chip chip-<%= String(r.level).toLowerCase().replace(/\s+/g, '-') %>"><%= r.level %></span></td>
+            <td><span class="chip chip-<%= String(r.level).toLowerCase().replace(/\s+risk$/, '').replace(/\s+/g, '-') %>"><%= r.level %></span></td>
             <td><%= r.why %></td>
           </tr>
           <% }); %>

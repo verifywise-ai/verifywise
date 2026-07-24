@@ -263,14 +263,18 @@ describe("report-pdf.ejs template", () => {
       riskAnalysis: {
         narrative: "Concentration risk dominates.",
         top_risks: [
-          { name: "Single model owner", level: "Very high", why: "25 of 25 models share one owner" },
+          { name: "Single model owner", level: "Very high risk", why: "25 of 25 models share one owner" },
         ],
       },
     });
 
     expect(html).toContain("Most material risks");
     expect(html).toContain("Single model owner");
-    expect(html).toContain("chip chip-very-high");
+    // The level is copied verbatim from the collectors, which suffix the
+    // project/vendor enum with " risk". The chip palette has no
+    // `.chip-very-high-risk`, so the suffix must come off the class name —
+    // hence the closing quote, which a `chip-very-high-risk` would fail.
+    expect(html).toContain('class="chip chip-very-high"');
     expect(html).toContain("25 of 25 models share one owner");
   });
 

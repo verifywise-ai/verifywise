@@ -336,9 +336,10 @@ body {
   color: #027A48;
 }
 
-/* "Very high" is a level the risk collectors emit and the risk-level chips
-   never had a colour for; without this the top_risks chips print uncoloured
-   next to coloured ones. */
+/* Every risk vocabulary that reaches a chip ranks "Very high" above "High"
+   (see `levelRank`, services/reporting/analyzers/prompts.ts) but the palette
+   stopped at `high`. Callers strip the " risk" suffix the project/vendor
+   `risk_level_autocalculated` enum carries before building the class name. */
 .chip-very-high {
   background: #FEF3F2;
   color: #B42318;
