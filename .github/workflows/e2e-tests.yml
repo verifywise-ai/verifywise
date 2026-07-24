@@ -4,9 +4,10 @@ permissions:
   contents: read
 
 on:
-  # Disabled: this workflow only runs when triggered manually from the
-  # Actions tab (workflow_dispatch). The pull_request trigger is
-  # intentionally omitted so PRs don't auto-run E2E tests.
+  pull_request:
+    paths:
+      - "Clients/**"
+      - "Servers/**"
   workflow_dispatch:
 
 jobs:
