@@ -182,7 +182,11 @@ describe("collectFacts — ranks every section on the vocabulary its collector e
       totalRisks: 2,
       risks: [
         { name: "Stale register", riskLevel: "Low risk", mitigationStatus: "Approved" },
-        { name: "Unbounded model access", riskLevel: "Very high risk", mitigationStatus: "Unknown" },
+        {
+          name: "Unbounded model access",
+          riskLevel: "Very high risk",
+          mitigationStatus: "Unknown",
+        },
       ],
     });
     expect(String(facts.top1)).toContain("Unbounded model access");

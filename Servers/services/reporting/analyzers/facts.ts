@@ -140,7 +140,8 @@ const SPECS: Record<string, SectionSpec> = {
     counts: ["status"],
     owner: "owner",
     rank: (r) => incomplete(r.status),
-    label: (r) => `${text(r.controlId)} ${text(r.title)} (${text(r.status)}, owner ${text(r.owner)})`,
+    label: (r) =>
+      `${text(r.controlId)} ${text(r.title)} (${text(r.status)}, owner ${text(r.owner)})`,
   },
   assessment: {
     rows: (s) => s.topics ?? [],
@@ -213,7 +214,8 @@ const SPECS: Record<string, SectionSpec> = {
     counts: ["status"],
     owner: "assignee",
     rank: (r) => incomplete(r.status),
-    label: (r) => `${text(r.trainingName)} (${text(r.status)}, completed ${text(r.completionDate)})`,
+    label: (r) =>
+      `${text(r.trainingName)} (${text(r.status)}, completed ${text(r.completionDate)})`,
   },
   policyManager: {
     rows: (s) => s.policies ?? [],
@@ -333,18 +335,17 @@ export function renderFacts(facts: FactsSnapshot, prior?: FactsSnapshot | null):
         typeof value === "number" ? `${name}=${value}` : `${name}="${value}"`,
       )
       .join("; ");
-    if (body) lines.push(`[${SECTION_LABELS[key] || key}] ${body}`);
+    lines.push(`[${SECTION_LABELS[key] || key}] ${body}`);
   });
 
   const deltas = changedAggregates(facts, prior);
-  if (deltas.length > 0 && prior) {
-    lines.push(
-      "",
-      // slice(0, 10) is a no-op for a snapshot written by collectFacts and
-      // tolerates one persisted before generatedAt became day-granular.
-      `Change since the previous report run (${prior.generatedAt.slice(0, 10)}):`,
-      ...deltas,
-    );
+  // `prior &&` is narrowing only — changedAggregates already returns [] without it.
+  if (prior && deltas.length > 0) {
+    // slice(0, 10) is a no-op for a snapshot written by collectFacts and
+    // tolerates one persisted before generatedAt became day-granular. `prior`
+    // is rehydrated JSON, so an absent generatedAt must not throw here.
+    const priorDay = String(prior.generatedAt ?? "").slice(0, 10) || "date unknown";
+    lines.push("", `Change since the previous report run (${priorDay}):`, ...deltas);
   }
 
   return lines.join("\n");
