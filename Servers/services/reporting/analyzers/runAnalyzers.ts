@@ -1,9 +1,25 @@
 import type { ReportData } from "../../../domain.layer/interfaces/i.reportGeneration";
-import { createModelFromKey, resolveModelId, type LLMKeyRow } from "../../../advisor/llmModelFactory";
+import {
+  createModelFromKey,
+  resolveModelId,
+  type LLMKeyRow,
+} from "../../../advisor/llmModelFactory";
 import { generateObjectWithSelfCorrection } from "../../../advisor/llmSelfCorrect";
 import logger from "../../../utils/logger/fileLogger";
+import {
+  INSUFFICIENT_DATA,
+  LLM_CALL_FAILED,
+  NO_LLM_KEY,
+  NO_SUMMARIES_AVAILABLE,
+  NO_SUMMARY_PRODUCED,
+} from "./abstainReasons";
 import { isRestatement } from "./novelty";
-import { ANALYZERS, ANALYZER_VERSION, type AnalysisSectionKey, type AnalyzerExtras } from "./registry";
+import {
+  ANALYZERS,
+  ANALYZER_VERSION,
+  type AnalysisSectionKey,
+  type AnalyzerExtras,
+} from "./registry";
 import { runSectionSummaries } from "./sectionSummaries";
 
 /**
@@ -60,7 +76,9 @@ export function sanitizeOwners(actions: any[] | undefined, allowedOwners: string
   return (actions ?? []).map((a) => ({
     ...a,
     suggestedOwner:
-      a.suggestedOwner && allow.has(String(a.suggestedOwner).toLowerCase()) ? a.suggestedOwner : null,
+      a.suggestedOwner && allow.has(String(a.suggestedOwner).toLowerCase())
+        ? a.suggestedOwner
+        : null,
   }));
 }
 
@@ -91,8 +109,7 @@ const VERBATIM_FIELDS: Partial<Record<AnalysisSectionKey, { list: string; field:
  * on tokens or prefixes would let a plausible-looking fabrication through,
  * which is the entire thing this guard exists to stop.
  */
-const normalizeForProvenance = (s: string): string =>
-  s.toLowerCase().replace(/\s+/g, " ").trim();
+const normalizeForProvenance = (s: string): string => s.toLowerCase().replace(/\s+/g, " ").trim();
 
 /**
  * Drop rows whose verbatim-marked identifier does not appear in this
@@ -105,11 +122,7 @@ const normalizeForProvenance = (s: string): string =>
  * that means having the registry hand back the data block separately from the
  * boilerplate — do it if a collision is ever observed in practice.
  */
-export function sanitizeProvenance(
-  key: AnalysisSectionKey,
-  payload: any,
-  rawInput: string,
-): any {
+export function sanitizeProvenance(key: AnalysisSectionKey, payload: any, rawInput: string): any {
   const spec = VERBATIM_FIELDS[key];
   const items = spec ? payload?.[spec.list] : undefined;
   if (!spec || !Array.isArray(items)) return payload;
@@ -225,7 +238,7 @@ export async function runAnalyzers(input: RunAnalyzersInput): Promise<AnalyzerRe
       ? [...enabled, "sectionSummaries"]
       : enabled;
     for (const key of allEnabled) {
-      results[key] = abstain("no LLM key is configured for this organization");
+      results[key] = abstain(NO_LLM_KEY);
     }
     return results;
   }
@@ -249,9 +262,7 @@ export async function runAnalyzers(input: RunAnalyzersInput): Promise<AnalyzerRe
       // Saying "insufficient data" for the former would be false — the data
       // may be plentiful; the summaries step just didn't run or produced
       // nothing.
-      const reason = SUMMARY_CONSUMERS.includes(key)
-        ? "no section summaries were available to summarise"
-        : "insufficient data for this section";
+      const reason = SUMMARY_CONSUMERS.includes(key) ? NO_SUMMARIES_AVAILABLE : INSUFFICIENT_DATA;
       return [key, abstain(reason, modelLabel)] as const;
     }
 
@@ -344,10 +355,7 @@ export async function runAnalyzers(input: RunAnalyzersInput): Promise<AnalyzerRe
       // key fragment (OpenRouter, vLLM, self-hosted gateways). That detail
       // stays in the log line above; the persisted, regulator-facing field
       // gets a generic, honest sentence instead.
-      results[key] = abstain(
-        "this analysis could not be produced because the AI service call failed",
-        modelLabel,
-      );
+      results[key] = abstain(LLM_CALL_FAILED, modelLabel);
     });
   };
 
@@ -383,7 +391,7 @@ export async function runAnalyzers(input: RunAnalyzersInput): Promise<AnalyzerRe
     results.sectionSummaries = {
       payload: count > 0 ? { summaries } : null,
       abstained: count === 0,
-      abstain_reason: count === 0 ? "no section produced a summary" : null,
+      abstain_reason: count === 0 ? NO_SUMMARY_PRODUCED : null,
       model: modelLabel,
       attempts: count,
     };
@@ -396,10 +404,7 @@ export async function runAnalyzers(input: RunAnalyzersInput): Promise<AnalyzerRe
   // summariesText is empty).
   if (stage2Keys.length > 0) {
     const stage2Extras: AnalyzerExtras = { ...extras, sectionSummaries: summaries };
-    collect(
-      await Promise.allSettled(stage2Keys.map((k) => runOne(k, stage2Extras))),
-      stage2Keys,
-    );
+    collect(await Promise.allSettled(stage2Keys.map((k) => runOne(k, stage2Extras))), stage2Keys);
   }
 
   return results;

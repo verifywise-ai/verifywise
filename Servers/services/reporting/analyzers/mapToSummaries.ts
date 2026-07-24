@@ -1,4 +1,5 @@
 import type { AISummaries } from "../../../domain.layer/interfaces/i.reportGeneration";
+import { OPERATIONAL_ABSTAIN_REASONS } from "./abstainReasons";
 import type { AnalyzedKey, AnalyzerResults } from "./runAnalyzers";
 
 /**
@@ -19,29 +20,25 @@ export const ANALYSIS_LABELS: Record<string, string> = {
 };
 
 /**
- * Two of the abstain_reason strings runAnalyzers can produce describe the
- * SERVICE, not the data (runAnalyzers.ts:332 and :212). In a regulator-facing
- * document "the AI service call failed" says nothing about the organization's
- * governance posture; the neutral sentence below is the honest amount of
- * information. Every other reason — "insufficient data for this section", "no
- * section produced a summary", and anything the model itself stated in
- * abstain_reason — IS a finding about the data and prints verbatim.
+ * Reasons that describe THIS PIPELINE rather than the tenant's data: no key
+ * configured, the provider failed, the summaries step produced nothing. In a
+ * regulator-facing document none of them says anything about the organization's
+ * governance posture, and printing one verbatim reads as a finding about their
+ * estate. The neutral sentence below is the honest amount of information.
+ * Anything the model itself stated in abstain_reason IS such a finding and
+ * prints verbatim.
  *
- * The literals stay verbatim so they grep against runAnalyzers.ts, and are
- * lowercased on the way in so the case-insensitive lookup below still matches
- * the "AI" and "LLM" capitals these strings carry.
+ * Imported from abstainReasons, never hand-copied — the original copy listed
+ * only two of the four, and the other two leaked their pipeline state into
+ * reports. Lowercased on the way in so the lookup still matches the "AI" and
+ * "LLM" capitals these strings carry.
  */
-const OPERATIONAL_ABSTAIN_REASONS = new Set(
-  [
-    "this analysis could not be produced because the AI service call failed",
-    "no LLM key is configured for this organization",
-  ].map((r) => r.toLowerCase()),
-);
+const OPERATIONAL_SET = new Set(OPERATIONAL_ABSTAIN_REASONS.map((r) => r.toLowerCase()));
 
 export const OPERATIONAL_ABSTENTION_TEXT = "This analysis was not produced.";
 
 export function isOperationalAbstention(reason: string): boolean {
-  return OPERATIONAL_ABSTAIN_REASONS.has(reason.trim().toLowerCase());
+  return OPERATIONAL_SET.has(reason.trim().toLowerCase());
 }
 
 /**

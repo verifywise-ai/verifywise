@@ -1,7 +1,24 @@
-import { ANALYSIS_LABELS, isOperationalAbstention, mapAnalysesToSummaries } from "../mapToSummaries";
+import {
+  ANALYSIS_LABELS,
+  isOperationalAbstention,
+  mapAnalysesToSummaries,
+} from "../mapToSummaries";
+import { ALL_ABSTAIN_REASONS, OPERATIONAL_ABSTAIN_REASONS } from "../abstainReasons";
 
-const ok = (payload: any) => ({ payload, abstained: false, abstain_reason: null, model: "m", attempts: 1 });
-const abstained = { payload: null, abstained: true, abstain_reason: "no data", model: "m", attempts: 0 };
+const ok = (payload: any) => ({
+  payload,
+  abstained: false,
+  abstain_reason: null,
+  model: "m",
+  attempts: 1,
+});
+const abstained = {
+  payload: null,
+  abstained: true,
+  abstain_reason: "no data",
+  model: "m",
+  attempts: 0,
+};
 
 describe("mapAnalysesToSummaries", () => {
   it("carries per-section summaries onto the render contract", () => {
@@ -35,7 +52,9 @@ describe("mapAnalysesToSummaries", () => {
 
   it("populates both the structured actions and the legacy string list", () => {
     const out = mapAnalysesToSummaries({
-      recommendedActions: ok({ actions: [{ action: "Do X", suggestedOwner: null, priority: "high", rationale: "R" }] }),
+      recommendedActions: ok({
+        actions: [{ action: "Do X", suggestedOwner: null, priority: "high", rationale: "R" }],
+      }),
     } as any);
     expect(out.recommendations).toEqual(["Do X"]);
     expect(out.recommendedActions?.[0].suggestedOwner).toBeUndefined();
@@ -171,23 +190,38 @@ describe("mapAnalysesToSummaries", () => {
 });
 
 describe("isOperationalAbstention", () => {
-  it("is true for the two reasons that describe the service rather than the data", () => {
-    // Both strings are pinned verbatim in runAnalyzers.test.ts; they are
-    // produced at runAnalyzers.ts:332 and :212.
-    expect(
-      isOperationalAbstention("this analysis could not be produced because the AI service call failed"),
-    ).toBe(true);
-    expect(isOperationalAbstention("no LLM key is configured for this organization")).toBe(true);
+  it("is true for every reason that describes the pipeline rather than the data", () => {
+    for (const reason of OPERATIONAL_ABSTAIN_REASONS) {
+      expect(isOperationalAbstention(reason)).toBe(true);
+    }
   });
 
-  it("is false for every reason that tells the reader something about the data", () => {
+  it("classifies the summaries-step reasons as operational, not as facts about the data", () => {
+    // Both are emitted when the sectionSummaries step did not run or returned
+    // nothing. runAnalyzers' own comment at the first of them says the data
+    // "may be plentiful" — so printing either verbatim in a regulator-facing
+    // document tells the reader their estate was deficient when it was not.
+    expect(isOperationalAbstention("no section summaries were available to summarise")).toBe(true);
+    expect(isOperationalAbstention("no section produced a summary")).toBe(true);
+  });
+
+  it("is false for reasons that genuinely tell the reader something about the data", () => {
     for (const reason of [
       "insufficient data for this section",
-      "no section summaries were available to summarise",
-      "no section produced a summary",
       "the vendor list contained no third-party processors",
     ]) {
       expect(isOperationalAbstention(reason)).toBe(false);
+    }
+  });
+
+  it("classifies every reason runAnalyzers can emit, so a new one cannot leak silently", () => {
+    // The set is imported from runAnalyzers rather than hand-copied. This
+    // asserts the two files still agree on the vocabulary: an operational
+    // reason added there without adding it to the exported set would print
+    // verbatim into the report, which is the defect this guard exists for.
+    const analytical = new Set(["insufficient data for this section"]);
+    for (const reason of ALL_ABSTAIN_REASONS) {
+      expect(isOperationalAbstention(reason)).toBe(!analytical.has(reason));
     }
   });
 });
