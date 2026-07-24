@@ -278,7 +278,13 @@ describe("dataCollector", () => {
               due_date: new Date(2026, 8, 30),
               description: "Named accountable person per high-risk system.",
             },
-            { id: 8, title: "Log oversight decisions", status: "Done", owner: null, due_date: null },
+            {
+              id: 8,
+              title: "Log oversight decisions",
+              status: "Done",
+              owner: null,
+              due_date: null,
+            },
           ],
         },
       ] as any);

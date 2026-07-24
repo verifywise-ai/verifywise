@@ -66,7 +66,11 @@ const LEVEL_RANK: Record<string, number> = {
 const levelOf = (row: any): number => {
   const raw = row?.riskLevel ?? row?.severity ?? row?.level;
   if (typeof raw !== "string") return 99;
-  return LEVEL_RANK[raw.trim().toLowerCase().replace(/\s+risk$/, "")] ?? 99;
+  const level = raw
+    .trim()
+    .toLowerCase()
+    .replace(/\s+risk$/, "");
+  return LEVEL_RANK[level] ?? 99;
 };
 
 /**
@@ -155,7 +159,8 @@ const dateOf = (row: any): number => {
  */
 function rankByMateriality<T>(arr: T[]): T[] {
   return [...arr].sort(
-    (a, b) => levelOf(a) - levelOf(b) || completedLast(a) - completedLast(b) || dateOf(a) - dateOf(b),
+    (a, b) =>
+      levelOf(a) - levelOf(b) || completedLast(a) - completedLast(b) || dateOf(a) - dateOf(b),
   );
 }
 
