@@ -63,10 +63,11 @@ describe("isRestatement", () => {
   it("still catches the restatement when its source is one block of a long prompt", () => {
     // Mutation guard, and the reason the comparison is per block: the union
     // grows with the prompt while the intersection does not, so the same
-    // verbatim copy measures 0.847 against its source block but only 0.457
-    // against this 2,139-character prompt (and 0.429 against an 8,494-character
-    // one). A whole-prompt implementation returns false here and the gate can
-    // never fire in production.
+    // verbatim copy measures 0.847 against its source block but only 0.455
+    // against this 2,144-character prompt — already under the threshold at the
+    // smallest realistic prompt size, and falling as the prompt grows. A
+    // whole-prompt implementation returns false here and the gate can never
+    // fire in production. The two assertions below are that claim, executable.
     const prompt = `Framework: ISO 42001\nSubject: Acme\n\nSection analyses:\n${SECTION_SUMMARY}\n\n${OTHER_BLOCKS}`;
 
     expect(trigramJaccard(RESTATEMENT, prompt)).toBeLessThan(NOVELTY_THRESHOLD);

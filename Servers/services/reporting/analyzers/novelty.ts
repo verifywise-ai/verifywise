@@ -41,12 +41,14 @@ export function trigramJaccard(a: string, b: string): number {
  *
  * Scored block by block (blank-line separated), never against the whole input
  * at once. Distinct trigrams saturate, so the union grows with the prompt while
- * the intersection does not: the same 870-character copy of one 829-character
- * block measures 0.847 against that block, 0.457 against a 2,139-character
- * prompt containing it and 0.429 at 8,494 characters — monotonically decreasing
- * as the prompt grows, and already under the threshold at the smallest realistic
- * prompt size. Whole-prompt Jaccard therefore cannot detect the one failure this
- * gate exists for.
+ * the intersection does not. Measured on the fixtures in novelty.test.ts, the
+ * same 870-character copy of one 829-character block scores 0.847 against that
+ * block, 0.793 once a header is prepended, 0.648 with one more section and
+ * 0.455 against the whole 2,144-character prompt — monotonically decreasing,
+ * and already under the threshold at the smallest realistic prompt size.
+ * Whole-prompt Jaccard therefore cannot detect the one failure this gate exists
+ * for; the test named "still catches the restatement when its source is one
+ * block of a long prompt" asserts exactly that.
  *
  * Blank-line splitting matches what the prompts actually look like:
  * registry.ts's renderSummaries and renderSections both `.join("\n\n")`, and
