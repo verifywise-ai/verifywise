@@ -42,19 +42,31 @@ const LEVEL_RANK: Record<string, number> = {
   "very low": 5,
 };
 
+/**
+ * Two level vocabularies reach this function and both must rank:
+ * - project risks (and the NIST subcategory risks read from the same
+ *   `risk_level_autocalculated` column) carry the enum WITH a " risk" suffix —
+ *   'No risk' | 'Very low risk' | 'Low risk' | 'Medium risk' | 'High risk' |
+ *   'Very high risk' — and so do vendor risks, whose free-text `risk_level` the
+ *   UI fills from the same labels;
+ * - model risks use the bare words 'Low' | 'Medium' | 'High' | 'Critical'.
+ * Stripping the suffix before lookup lets one table cover both. 'No risk' maps
+ * to 'no', which is deliberately absent from the table and so ranks last.
+ */
 const levelOf = (row: any): number => {
   const raw = row?.riskLevel ?? row?.severity ?? row?.level;
-  const rank = typeof raw === "string" ? LEVEL_RANK[raw.trim().toLowerCase()] : undefined;
-  return rank ?? 99;
+  if (typeof raw !== "string") return 99;
+  return LEVEL_RANK[raw.trim().toLowerCase().replace(/\s+risk$/, "")] ?? 99;
 };
 
 /** Deadline-shaped fields only. Sooner = more urgent, unambiguously; a
  * "reported" or "completed" date does not order that way, so it is left out
- * rather than sorted backwards. */
+ * rather than sorted backwards. Undated rows get MAX_SAFE_INTEGER — a finite
+ * sentinel, so the comparator's subtraction never produces NaN. */
 const dateOf = (row: any): number => {
   const raw = row?.targetDate ?? row?.dueDate ?? row?.reviewDate;
   const t = raw ? new Date(raw).getTime() : NaN;
-  return Number.isNaN(t) ? Number.POSITIVE_INFINITY : t;
+  return Number.isNaN(t) ? Number.MAX_SAFE_INTEGER : t;
 };
 
 /**
@@ -63,8 +75,9 @@ const dateOf = (row: any): number => {
  * it then writes confident prose about "the inventory".
  *
  * Copies rather than sorting in place: these arrays are the live section
- * objects the renderers also consume. Sort is stable, so rows carrying
- * neither a level nor a deadline keep their original query order.
+ * objects the renderers also consume. Both keys are finite, so rows carrying
+ * neither a level nor a deadline compare equal and the stable sort keeps them
+ * in their original query order.
  */
 function rankByMateriality<T>(arr: T[]): T[] {
   return [...arr].sort((a, b) => levelOf(a) - levelOf(b) || dateOf(a) - dateOf(b));
@@ -78,8 +91,13 @@ function rankByMateriality<T>(arr: T[]): T[] {
  * questions, clause/annex sub-items, NIST subcategories) alike, none of which
  * have a total-count field of their own to signal truncation to the model
  * (Fix 5 — silent truncation reads as "complete").
+ *
+ * Note the ranking half is not order-preserving: undated rows sort last and
+ * are therefore the first dropped at the cap. For an array with no level field
+ * at all (compliance controls) that means an undated control loses to a dated
+ * one, even though an unplanned control is often the more interesting row.
  */
-function truncateWithStamp(obj: any, field: string, max: number): any[] {
+function rankTruncateAndStamp(obj: any, field: string, max: number): any[] {
   const original = obj[field];
   if (!Array.isArray(original)) return [];
   const truncated = rankByMateriality(original).slice(0, max);
@@ -103,63 +121,63 @@ export function prepareSectionData(key: string, data: any): string {
     case "projectRisks":
     case "vendorRisks":
     case "modelRisks":
-      clone.risks = truncateWithStamp(clone, "risks", MAX_DATA_ITEMS);
+      clone.risks = rankTruncateAndStamp(clone, "risks", MAX_DATA_ITEMS);
       break;
     case "compliance":
-      clone.controls = truncateWithStamp(clone, "controls", MAX_DATA_ITEMS);
+      clone.controls = rankTruncateAndStamp(clone, "controls", MAX_DATA_ITEMS);
       break;
     case "assessment":
       // topics/subtopics/questions nest three deep and carry free-text
       // answers — bound every level, not just the top one (Fix 3).
-      clone.topics = truncateWithStamp(clone, "topics", 10).map((t: any) => {
+      clone.topics = rankTruncateAndStamp(clone, "topics", 10).map((t: any) => {
         const topic = { ...t };
-        topic.subtopics = truncateWithStamp(topic, "subtopics", 5).map((s: any) => {
+        topic.subtopics = rankTruncateAndStamp(topic, "subtopics", 5).map((s: any) => {
           const subtopic = { ...s };
-          subtopic.questions = truncateWithStamp(subtopic, "questions", 5);
+          subtopic.questions = rankTruncateAndStamp(subtopic, "questions", 5);
           return subtopic;
         });
         return topic;
       });
       break;
     case "clausesAndAnnexes":
-      clone.clauses = truncateWithStamp(clone, "clauses", 30).map((c: any) => {
+      clone.clauses = rankTruncateAndStamp(clone, "clauses", 30).map((c: any) => {
         const clause = { ...c };
-        clause.subClauses = truncateWithStamp(clause, "subClauses", 20);
+        clause.subClauses = rankTruncateAndStamp(clause, "subClauses", 20);
         return clause;
       });
-      clone.annexes = truncateWithStamp(clone, "annexes", 30).map((a: any) => {
+      clone.annexes = rankTruncateAndStamp(clone, "annexes", 30).map((a: any) => {
         const annex = { ...a };
-        annex.controls = truncateWithStamp(annex, "controls", 20);
+        annex.controls = rankTruncateAndStamp(annex, "controls", 20);
         return annex;
       });
       break;
     case "nistSubcategories":
       // functions caps at 10 but NIST only has 4 — the real growth is in
       // categories[].subcategories, which was previously unbounded.
-      clone.functions = truncateWithStamp(clone, "functions", 10).map((f: any) => {
+      clone.functions = rankTruncateAndStamp(clone, "functions", 10).map((f: any) => {
         const fn = { ...f };
         fn.categories = (fn.categories ?? []).map((c: any) => {
           const category = { ...c };
-          category.subcategories = truncateWithStamp(category, "subcategories", 20);
+          category.subcategories = rankTruncateAndStamp(category, "subcategories", 20);
           return category;
         });
         return fn;
       });
       break;
     case "vendors":
-      clone.vendors = truncateWithStamp(clone, "vendors", MAX_DATA_ITEMS);
+      clone.vendors = rankTruncateAndStamp(clone, "vendors", MAX_DATA_ITEMS);
       break;
     case "models":
-      clone.models = truncateWithStamp(clone, "models", MAX_DATA_ITEMS);
+      clone.models = rankTruncateAndStamp(clone, "models", MAX_DATA_ITEMS);
       break;
     case "trainingRegistry":
-      clone.records = truncateWithStamp(clone, "records", MAX_DATA_ITEMS);
+      clone.records = rankTruncateAndStamp(clone, "records", MAX_DATA_ITEMS);
       break;
     case "policyManager":
-      clone.policies = truncateWithStamp(clone, "policies", MAX_DATA_ITEMS);
+      clone.policies = rankTruncateAndStamp(clone, "policies", MAX_DATA_ITEMS);
       break;
     case "incidentManagement":
-      clone.incidents = truncateWithStamp(clone, "incidents", MAX_DATA_ITEMS);
+      clone.incidents = rankTruncateAndStamp(clone, "incidents", MAX_DATA_ITEMS);
       break;
   }
 

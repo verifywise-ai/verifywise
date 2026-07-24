@@ -57,30 +57,49 @@ describe("analyzer registry", () => {
     expect(out._risksTruncated).toBe("showing 50 of 200");
   });
 
-  it("ranks by materiality BEFORE truncating, so the model sees the worst rows not the oldest", () => {
-    // The collector's queries order by id ASC, so a plain slice hands the
-    // model 50 Low rows and cuts the Critical one sitting at index 60.
+  it("ranks projectRisks by materiality BEFORE truncating, using the enum the collector actually emits", () => {
+    // dataCollector sets riskLevel = risk_level_autocalculated, whose enum
+    // carries a " risk" suffix ('Very high risk', not 'Very high'). The
+    // collector's query orders by id ASC, so a plain slice hands the model 50
+    // 'Low risk' rows and cuts the 'Very high risk' one sitting at index 60.
     const risks = [
-      ...Array.from({ length: 60 }, (_, i) => ({ name: `Low${i}`, riskLevel: "Low" })),
-      { name: "CriticalLate", riskLevel: "Critical" },
-      { name: "HighLate", riskLevel: "High" },
+      ...Array.from({ length: 60 }, (_, i) => ({ name: `Low${i}`, riskLevel: "Low risk" })),
+      { name: "VeryHighLate", riskLevel: "Very high risk" },
+      { name: "HighLate", riskLevel: "High risk" },
+      { name: "NoRiskLate", riskLevel: "No risk" },
     ];
     const out = JSON.parse(prepareSectionData("projectRisks", { risks }));
     expect(out.risks).toHaveLength(50);
-    expect(out.risks[0].name).toBe("CriticalLate");
+    expect(out.risks[0].name).toBe("VeryHighLate");
     expect(out.risks[1].name).toBe("HighLate");
+    // 'No risk' is not material — it must not outrank the Low rows.
+    expect(out.risks.map((r: any) => r.name)).not.toContain("NoRiskLate");
+    expect(out._risksTruncated).toBe("showing 50 of 63");
+  });
+
+  it("ranks modelRisks by the bare-word vocabulary its own enum uses", () => {
+    const risks = [
+      ...Array.from({ length: 60 }, (_, i) => ({ riskName: `Low${i}`, riskLevel: "Low" })),
+      { riskName: "CriticalLate", riskLevel: "Critical" },
+      { riskName: "HighLate", riskLevel: "High" },
+    ];
+    const out = JSON.parse(prepareSectionData("modelRisks", { risks }));
+    expect(out.risks).toHaveLength(50);
+    expect(out.risks[0].riskName).toBe("CriticalLate");
+    expect(out.risks[1].riskName).toBe("HighLate");
     expect(out._risksTruncated).toBe("showing 50 of 62");
   });
 
   it("breaks severity ties by deadline and leaves unrankable rows in query order", () => {
+    // modelRisks is the risk section that actually carries targetDate.
     const risks = [
-      { name: "LateHigh", riskLevel: "High", targetDate: "2026-12-01" },
-      { name: "EarlyHigh", riskLevel: "High", targetDate: "2026-01-05" },
-      { name: "NoLevelA" },
-      { name: "NoLevelB" },
+      { riskName: "LateHigh", riskLevel: "High", targetDate: "2026-12-01" },
+      { riskName: "EarlyHigh", riskLevel: "High", targetDate: "2026-01-05" },
+      { riskName: "NoLevelA" },
+      { riskName: "NoLevelB" },
     ];
-    const out = JSON.parse(prepareSectionData("projectRisks", { risks }));
-    expect(out.risks.map((r: any) => r.name)).toEqual([
+    const out = JSON.parse(prepareSectionData("modelRisks", { risks }));
+    expect(out.risks.map((r: any) => r.riskName)).toEqual([
       "EarlyHigh",
       "LateHigh",
       "NoLevelA",
@@ -92,11 +111,11 @@ describe("analyzer registry", () => {
 
   it("does not mutate the caller's array while ranking (the renderers get the same objects)", () => {
     const risks = [
-      { name: "Low1", riskLevel: "Low" },
-      { name: "Crit1", riskLevel: "Critical" },
+      { name: "Low1", riskLevel: "Low risk" },
+      { name: "VeryHigh1", riskLevel: "Very high risk" },
     ];
     prepareSectionData("projectRisks", { risks });
-    expect(risks.map((r) => r.name)).toEqual(["Low1", "Crit1"]);
+    expect(risks.map((r) => r.name)).toEqual(["Low1", "VeryHigh1"]);
   });
 
   it("keeps the twelve human-readable section labels", () => {
