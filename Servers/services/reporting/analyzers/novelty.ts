@@ -50,9 +50,23 @@ export function trigramJaccard(a: string, b: string): number {
  * for; the test named "still catches the restatement when its source is one
  * block of a long prompt" asserts exactly that.
  *
- * Blank-line splitting matches what the prompts actually look like:
- * registry.ts's renderSummaries and renderSections both `.join("\n\n")`, and
- * every buildUserPrompt separates header from body with "\n\n".
+ * But blank-line blocks alone are not enough, because a section summary is
+ * ITSELF multi-paragraph prose. Splitting one summary into its own paragraphs
+ * shrinks every candidate block, so a copy of the WHOLE summary is measured
+ * against a quarter of itself and the score falls with the paragraph count:
+ * measured on a real stored summary (report_run_analyses id=28, 2,039 chars) a
+ * 100% verbatim copy scores 1.000 at one paragraph, 0.678 at two, 0.535 at
+ * three and 0.460 at four — a perfect copy evading the detector at exactly the
+ * shape a real summary has, i.e. the detector getting LESS sensitive the more
+ * of the input was copied.
+ *
+ * So the whole LABELLED ENTRY is scored too, and the higher of the two wins.
+ * That is the boundary the prompt builders actually use: registry.ts's
+ * renderSummaries and prompts.ts's renderSections both emit `[Label]\nbody`
+ * entries and `.join("\n\n")`, so one section summary is one entry however
+ * many paragraphs its body runs to. Adding candidates can only raise the
+ * maximum, so this is strictly more sensitive than blank lines alone and no
+ * previously-passing analysis starts failing.
  *
  * ponytail: most sensitive where the input block is prose — which is where the
  * observed failure was (the Stage 2 summary consumers). Against a block that is
@@ -65,5 +79,15 @@ export function isRestatement(
   threshold: number = NOVELTY_THRESHOLD,
 ): boolean {
   if (!output.trim() || !input.trim()) return false;
-  return input.split(/\n{2,}/).some((block) => trigramJaccard(output, block) >= threshold);
+  return candidateBlocks(input).some((block) => trigramJaccard(output, block) >= threshold);
+}
+
+/**
+ * Every paragraph, plus every whole `[Label]\n…` entry. The lookahead keeps
+ * the label attached to the body it introduces; a prompt with no labelled
+ * entries just yields its paragraphs twice, which costs a few trigram sets and
+ * changes no verdict.
+ */
+function candidateBlocks(input: string): string[] {
+  return [...input.split(/\n{2,}/), ...input.split(/\n{2,}(?=\[[^\]\n]+\]\n)/)];
 }

@@ -28,6 +28,32 @@ const OTHER_BLOCKS = [
   `[Compliance Controls]\nOne hundred and forty controls span nine families. Access management sits lowest at 31 percent completion, while documentation reaches 88 percent. Forty-one controls have neither an owner nor a due date recorded against them.`,
 ].join("\n\n");
 
+/**
+ * A real stored section summary: report_run_analyses id=28, the policyManager
+ * entry produced by this branch, 2,039 characters, re-flowed onto four evenly
+ * sized paragraph breaks (the stored copy breaks the third paragraph one
+ * sentence later; nothing else differs).
+ *
+ * Section summaries ARE multi-paragraph prose, which is the whole of defect 3:
+ * splitting the prompt on every blank line shreds one labelled entry into four
+ * small blocks, so a copy of the WHOLE entry is measured against a quarter of
+ * itself each time. Measured on this text, a 100% verbatim copy scores 1.000
+ * against the entry at one paragraph, 0.678 at two, 0.535 at three and 0.460
+ * at four — the detector gets LESS sensitive the more of the input was copied,
+ * and a perfect copy stops being detectable at exactly the paragraph count a
+ * real summary has.
+ */
+const MULTI_PARAGRAPH_SUMMARY = `Of the 26 total policies in the AI Recruitment Screening Platform library, the ratio of draft to approved policies is 7 to 7, which reduces to a 1:1 ratio. There are exactly 7 policies in Draft status and 7 in Approved status. No policy in the dataset carries a missing review date; every one of the 26 policies has a reviewDate string populated. Conversely, no policy carries an owner field — the dataset contains no owner attribute for any policy, meaning that all 26 policies lack an assigned owner.
+
+The work is not dominated by a single status; instead it is spread nearly evenly across four states. Draft and Approved each account for 7 policies, representing 26.9 percent of the library each. Under Review holds 6 policies, or 23.1 percent, and Published also holds 6 policies, or 23.1 percent. The library is thus balanced among the four statuses with no majority status.
+
+The policies that need attention first are those with review dates that have already passed relative to today, 2026-07-24. Two policies are overdue: [demo-seed] Data Retention Policy #15, which has status Approved and a review date of 7/23/2026, meaning its review was due yesterday; and [demo-seed] Transparency & Disclosure Policy #20, which has status Under Review and a review date of 7/22/2026, meaning it became overdue two days ago. These two are the most immediate candidates for action because their scheduled review windows have already closed. Additionally, [demo-seed] Data Retention Policy #3 has a review date of 7/25/2026, which is tomorrow, making it the next policy that will become overdue within one day.
+
+However, the policies that have already passed their review dates take precedence. Both overdue policies lack an owner in the dataset, compounding the urgency, as there is no responsible party explicitly assigned to complete the overdue review. Immediate steps should include assigning an owner to each of these two policies and conducting the scheduled review to bring them into compliance with the EU AI Act's governance requirements.`;
+
+/** The prompt renderSummaries actually builds around that entry. */
+const MULTI_PARAGRAPH_PROMPT = `Framework: EU AI Act\nSubject: AI Recruitment Screening Platform\n\nSection analyses:\n[Policy Manager]\n${MULTI_PARAGRAPH_SUMMARY}\n\n${OTHER_BLOCKS}`;
+
 describe("trigramJaccard", () => {
   it("scores identical strings 1", () => {
     expect(trigramJaccard(SECTION_SUMMARY, SECTION_SUMMARY)).toBe(1);
@@ -73,6 +99,26 @@ describe("isRestatement", () => {
     expect(trigramJaccard(RESTATEMENT, prompt)).toBeLessThan(NOVELTY_THRESHOLD);
     expect(isRestatement(RESTATEMENT, prompt)).toBe(true);
     expect(isRestatement(ANALYSIS, prompt)).toBe(false);
+  });
+
+  it("catches a 100% verbatim copy of a multi-paragraph summary entry", () => {
+    // The detector must not get LESS sensitive the more of the input was
+    // copied. Every blank-line block of the copied entry is a fraction of the
+    // copy, so the best per-paragraph score is under the threshold — the two
+    // assertions below are the defect, executable: the first says blank-line
+    // blocks cannot see this, the second says the gate fires anyway.
+    const perParagraphMax = Math.max(
+      ...MULTI_PARAGRAPH_PROMPT.split(/\n{2,}/).map((b) =>
+        trigramJaccard(MULTI_PARAGRAPH_SUMMARY, b),
+      ),
+    );
+    expect(perParagraphMax).toBeLessThan(NOVELTY_THRESHOLD);
+    expect(isRestatement(MULTI_PARAGRAPH_SUMMARY, MULTI_PARAGRAPH_PROMPT)).toBe(true);
+  });
+
+  it("still passes an analysis when the labelled entry it analyses is multi-paragraph", () => {
+    // The wider block must buy sensitivity to copies, not false positives.
+    expect(isRestatement(ANALYSIS, MULTI_PARAGRAPH_PROMPT)).toBe(false);
   });
 
   it("returns false for empty prose, so an abstention never costs a second call", () => {
