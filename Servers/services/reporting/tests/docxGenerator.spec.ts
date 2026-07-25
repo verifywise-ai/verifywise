@@ -455,7 +455,10 @@ describe("DOCX Generator", () => {
       );
       const text = await docxText(result.content);
 
-      expect(text).toContain("[high · Jane Ops · observed]");
+      // basis is a disclosure field. Bare, it reads as a third unnamed
+      // attribute next to priority and owner; labelled, it matches the
+      // "Basis: " the findings meta line and the PDF renderer both use.
+      expect(text).toContain("[high · Jane Ops · Basis: observed]");
       expect(text).toContain("Why: 22 of 25 model rows have no owner");
     });
 
@@ -491,9 +494,9 @@ describe("DOCX Generator", () => {
       );
       const text = await docxText(result.content);
 
-      expect(text).toContain("No documented risk criteria (high, absent)");
+      expect(text).toContain("No documented risk criteria (high, Basis: absent)");
       expect(text).toContain("Closes when: A dated risk-criteria record against Clause 6.1");
-      expect(text).toContain("No SOC 2 Type II (high, inferred)");
+      expect(text).toContain("No SOC 2 Type II (high, Basis: inferred)");
     });
 
     it("renders the top_risks table alongside the risk highlights box", async () => {

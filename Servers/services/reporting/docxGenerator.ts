@@ -701,7 +701,7 @@ function createRecommendedActionsSection(reportData: ReportData): (Paragraph | T
         children: [
           new TextRun({ text: a.action, size: 20, color: COLORS.textPrimary }),
           new TextRun({
-            text: `  [${a.priority ?? "—"} · ${a.suggestedOwner ?? "Unassigned"}${a.basis ? ` · ${a.basis}` : ""}]`,
+            text: `  [${a.priority ?? "—"} · ${a.suggestedOwner ?? "Unassigned"}${a.basis ? ` · Basis: ${a.basis}` : ""}]`,
             size: 18,
             color: COLORS.textSecondary,
           }),
@@ -760,7 +760,7 @@ function createComplianceGapSection(reportData: ReportData): (Paragraph | Table)
           children: [
             new TextRun({ text: `${g.control}: `, bold: true, size: 20, color: COLORS.textPrimary }),
             new TextRun({
-              text: `${g.gap} (${g.priority}${g.basis ? `, ${g.basis}` : ""})`,
+              text: `${g.gap} (${g.priority}${g.basis ? `, Basis: ${g.basis}` : ""})`,
               size: 20,
               color: COLORS.textPrimary,
             }),
@@ -810,7 +810,7 @@ function createVendorRiskSection(reportData: ReportData): (Paragraph | Table)[] 
         children: [
           new TextRun({ text: `${c.vendor}: `, bold: true, size: 20, color: COLORS.textPrimary }),
           new TextRun({
-            text: `${c.concern} (${c.severity}${c.basis ? `, ${c.basis}` : ""})`,
+            text: `${c.concern} (${c.severity}${c.basis ? `, Basis: ${c.basis}` : ""})`,
             size: 20,
             color: COLORS.textPrimary,
           }),

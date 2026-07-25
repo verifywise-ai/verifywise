@@ -204,7 +204,11 @@ describe("report-pdf.ejs template", () => {
 
     expect(html).toContain("Only 3 of 25 models name an owner");
     expect(html).toContain("chip chip-high");
-    expect(html).toContain("observed");
+    // basis is a disclosure field: it says whether the claim was read off the
+    // data or inferred from it. Two bare tokens ("models · observed") let a
+    // reader take "observed" for a property of the section, so both are
+    // labelled — the same phrasing the DOCX renderer uses.
+    expect(html).toContain("Section: models &middot; Basis: observed");
     expect(html).toContain("Closes when: An owner recorded on every model inventory row");
     expect(html).toContain("modelRisks, policyManager");
     // The structured list replaces the flat one rather than printing both.
@@ -320,7 +324,9 @@ describe("report-pdf.ejs template", () => {
     expect(html).toContain("<th>Basis</th>");
     expect(html).toContain(">absent<");
     expect(html).toContain("Closes when: A dated review record against Art. 9");
-    expect(html).toContain("(high, inferred)");
+    // The gap basis has a labelled column; the concern basis is inline, so it
+    // carries the label itself rather than trailing the severity unannounced.
+    expect(html).toContain("(high, Basis: inferred)");
   });
 
   it("prints abstention reasons instead of leaving a silent hole", () => {

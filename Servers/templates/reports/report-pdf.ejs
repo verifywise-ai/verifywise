@@ -220,7 +220,7 @@
         <div class="ai-finding">
           <div>
             <span class="chip chip-<%= String(f.severity || 'default').toLowerCase() %>"><%= f.severity || 'unrated' %></span>
-            <span class="ai-finding-meta"><%= f.section %><% if (f.basis) { %> &middot; <%= f.basis %><% } %></span>
+            <span class="ai-finding-meta">Section: <%= f.section %><% if (f.basis) { %> &middot; Basis: <%= f.basis %><% } %></span>
           </div>
           <div class="ai-finding-text"><%= f.text %></div>
           <% if (f.what_would_close_this) { %>
@@ -352,7 +352,7 @@
       <% if (aiSummaries.vendorRisk.concerns && aiSummaries.vendorRisk.concerns.length > 0) { %>
       <ul class="ai-findings-list">
         <% aiSummaries.vendorRisk.concerns.forEach(function(c) { %>
-        <li><strong><%= c.vendor %>:</strong> <%= c.concern %> (<%= c.severity %><%= c.basis ? ', ' + c.basis : '' %>)</li>
+        <li><strong><%= c.vendor %>:</strong> <%= c.concern %> (<%= c.severity %><%= c.basis ? ', Basis: ' + c.basis : '' %>)</li>
         <% }); %>
       </ul>
       <% } %>
