@@ -313,13 +313,34 @@ export async function runAnalyzers(input: RunAnalyzersInput): Promise<AnalyzerRe
       logger.warn(
         `Report analyzer "${key}" (${ANALYZER_VERSION}) restated its input instead of analysing it; re-issuing once`,
       );
+      // Counted BEFORE the call, so a re-issue that exhausts its budget and
+      // rethrows still shows up in the one field that documents what the gate
+      // cost. persistAnalyses writing restatement_retried:true beside the
+      // attempt count of a run that never re-issued is an audit record
+      // contradicting itself.
+      //
+      // ponytail: a floor of one, not the true count — llmSelfCorrect's
+      // rethrow carries no attempt count, so the corrections it spent before
+      // giving up are invisible here. Attach the count to that error if the
+      // exact figure is ever needed.
+      attempts += 1;
       try {
         const retry = await call(system + RESTATEMENT_DIRECTIVE);
-        attempts += retry.attempts;
+        attempts += retry.attempts - 1;
         const retryPayload = sanitize(retry.object);
-        if (isRestatement(prose(retryPayload), userPrompt)) {
+        // Two ways for the re-issue to produce no new analysis, treated
+        // alike. The directive explicitly invites an abstention, and an
+        // abstention's prose is far too short to trip isRestatement — so
+        // without this the gate would swap a produced payload for an
+        // abstention, which mapAnalysesToSummaries then drops out of the
+        // report entirely. The gate is only safe to leave enabled because it
+        // is strictly non-destructive.
+        const retryAbstained = !!retryPayload?.abstain_reason;
+        if (retryAbstained || isRestatement(prose(retryPayload), userPrompt)) {
           logger.warn(
-            `Report analyzer "${key}" (${ANALYZER_VERSION}) restated its input again; keeping the first payload`,
+            `Report analyzer "${key}" (${ANALYZER_VERSION}) ${
+              retryAbstained ? "abstained on re-issue" : "restated its input again"
+            }; keeping the first payload`,
           );
         } else {
           payload = retryPayload;

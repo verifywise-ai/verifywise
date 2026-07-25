@@ -531,6 +531,33 @@ describe("runAnalyzers", () => {
     expect(out.executiveSummary!.restatementRetried).toBe(true);
   });
 
+  it("keeps the first payload when the re-issue abstains", async () => {
+    // The directive invites an abstention ("If the data genuinely cannot
+    // support that, set abstain_reason and say so plainly"), and an
+    // abstention's prose is far too short to trip isRestatement — so the
+    // novelty guard alone would let it REPLACE a payload that was produced,
+    // and mapAnalysesToSummaries drops abstained payloads out of the report.
+    // A re-issue that abstains produced no new analysis; that is the same
+    // second failure as a re-issue that restates.
+    mockGenerate
+      .mockResolvedValueOnce({ object: { summary: RESTATED, abstain_reason: null }, attempts: 1, selfCorrected: false })
+      .mockResolvedValueOnce({
+        object: { summary: "The supplied data cannot support a deeper reading.", abstain_reason: "insufficient detail in the policy section" },
+        attempts: 1,
+        selfCorrected: false,
+      });
+
+    const out = await restatingRun();
+
+    expect(mockGenerate).toHaveBeenCalledTimes(2);
+    expect(out.executiveSummary!.payload.summary).toBe(RESTATED);
+    expect(out.executiveSummary!.abstained).toBe(false);
+    expect(out.executiveSummary!.abstain_reason).toBeNull();
+    expect(out.executiveSummary!.restatementRetried).toBe(true);
+    // The re-issue was still billed.
+    expect(out.executiveSummary!.attempts).toBe(2);
+  });
+
   it("keeps the first payload when the re-issue throws", async () => {
     mockGenerate
       .mockResolvedValueOnce({ object: { summary: RESTATED, abstain_reason: null }, attempts: 1, selfCorrected: false })
@@ -541,6 +568,10 @@ describe("runAnalyzers", () => {
     expect(out.executiveSummary!.payload.summary).toBe(RESTATED);
     expect(out.executiveSummary!.abstained).toBe(false);
     expect(out.executiveSummary!.restatementRetried).toBe(true);
+    // audit_metadata must not record restatement_retried:true beside the
+    // attempt count of a run that never re-issued. A re-issue that exhausts
+    // its budget and rethrows still spent provider calls.
+    expect(out.executiveSummary!.attempts).toBeGreaterThan(1);
     // Not the generic AI-service-failed abstention: the throw happened inside
     // runOne's own try, so collect()'s rejected branch is never reached and
     // the three verbatim abstain strings stay authoritative.
