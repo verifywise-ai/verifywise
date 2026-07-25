@@ -1,6 +1,6 @@
 # Reporting Domain
 
-> **Last Updated:** 2026-07-22
+> **Last Updated:** 2026-07-25
 
 ## Overview
 
@@ -178,20 +178,28 @@ class ReportDataCollector {
 
 ### Data Sources
 
-| Section | Tables | Key Fields |
-|---------|--------|-----------|
-| projectRisks | risks, projects_risks | risk_name, severity, likelihood |
-| vendorRisks | vendor_risks, vendors | risk_level, action_plan |
-| modelRisks | model_risks, model_inventory | risk_name, mitigation_status |
-| compliance | controls, control_categories | status, title |
-| assessment | assessments, topics, questions | answer, progress |
-| clausesAndAnnexes | clauses, annexes | status |
-| nistSubcategories | nist_ai_rmf_subcategories | function, category, status |
-| vendors | vendors, vendors_projects | vendor_name, review_status |
-| models | model_inventory | name, version, status |
-| trainingRegistry | training_registrar | training_name, status |
-| policyManager | policies | title, version, status |
-| incidentManagement | ai_incident_managements | type, severity, status |
+Table and column names below are the real ones. A projection that names a
+column the table does not have is not a cosmetic error here: the collector's
+output becomes the facts substrate, and an aggregate over a field that does not
+exist turns into a confident sentence about the tenant's estate. Two shipped
+examples, both fixed — `model_inventories` was joined on a non-existent `owner`
+and printed as ownership, and `trainingregistar` had `assignee` selected as a
+literal `NULL` and counted as "unowned".
+
+| Section            | Tables                                 | Key Fields                                                                                                                    |
+| ------------------ | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| projectRisks       | risks, projects_risks                  | risk_name, risk_level_autocalculated, **mitigation_status** (not `approval_status` — the two are orthogonal axes), risk_owner |
+| vendorRisks        | vendorrisks, vendors                   | risk_level, action_plan, action_owner                                                                                         |
+| modelRisks         | model_risks, model_inventories         | risk_name, risk_level, **status** (there is no `mitigation_status` column), mitigation_plan, target_date                      |
+| compliance         | controls_eu, controlcategories_eu      | status, title, owner, due_date, categoryName                                                                                  |
+| assessment         | assessments, topics, questions         | answer, progress                                                                                                              |
+| clausesAndAnnexes  | subclauses_iso, annexcategories_iso    | status (the `*_struct` parent tables carry none)                                                                              |
+| nistSubcategories  | nist_ai_rmf_subcategories + `*_struct` | function, category, status                                                                                                    |
+| vendors            | vendors, vendors_projects              | vendor_name, review_status, assignee                                                                                          |
+| models             | model_inventories                      | **model** (not `name`), version, status, **approver** (there is no `owner` column)                                            |
+| trainingRegistry   | trainingregistar                       | training_name, status (no assignee, no completion date)                                                                       |
+| policyManager      | policy_manager                         | title, status, next_review_date, policy_owner_id (no version)                                                                 |
+| incidentManagement | ai_incident_managements                | type, severity, status, **reporter** (there is no `assignee` and no `title`)                                                  |
 
 ## AI Analysis
 
@@ -199,16 +207,50 @@ Report AI output is produced by schema-validated analyzers in `services/reportin
 
 Every row-level claim carries a `basis` label — `observed` (stated directly by the supplied data), `inferred` (follows from it by reasoning the data does not state) or `absent` (the claim is that something required is missing). Findings and gaps additionally carry `what_would_close_this`, the counterfactual that says what would have to be true for the item to stop being a finding. Both fields are **nullable**: a model that omits one must not turn a produced analysis into a lost one. Nothing defaults `basis` — an unstated basis renders no label, because a defaulted `observed` is a fabricated provenance claim. The label describes the *claim*; it does not relax `sanitizeProvenance`, which still drops any `gaps[].control`, `concerns[].vendor` or `top_risks[].name` that is not a verbatim substring of that analyzer's own prompt.
 
+### Facts substrate
+
+`analyzers/facts.ts` computes a compact block from `ReportData` — **no LLM, no
+database** — and every analyzer receives it. It exists because the three summary
+consumers previously saw only Stage-1 prose: with no number, identifier, date or
+owner left in their input, the only operation available to them was re-wording,
+and a measured 86.8% of one shipped executive summary's characters came straight
+from the section summary it was given.
+
+`collectFacts` returns a storable `FactsSnapshot`; `renderFacts` turns it (plus
+an optional prior) into the prompt text. It carries:
+
+- the **reference date**, from `metadata.generatedAt` — the field that makes
+  "overdue", "imminent" and "stale" expressible at all,
+- per-section totals and the `charts` rollups the collector already computes,
+- value buckets per section (`status_Approved=7`), capped at the eight heaviest,
+- a materiality-ranked top-N per section, ranked *before* truncation,
+- explicit truncation markers on every one of those cuts.
+
+Two naming rules hold the whole thing honest. Every aggregate name is derived
+from the field it counts (`approver_missing`, not a hardcoded `ownerless`), and
+every truncation is marked — a top-N label cut without a trailing `…` stays a
+verbatim substring of the prompt, so `sanitizeProvenance` would pass a mangled
+identifier exactly as it passes a complete one.
+
+`isoDate` is imported from `dataCollector` rather than reimplemented: it builds
+from local components, and a second normalisation via `toISOString()` would put
+the reference date and the due dates it is compared against a day apart west of
+Greenwich.
+
 ### Analyzers
 
-| Section key | Output | Input |
-|-------------|--------|-------|
-| `executiveSummary` | Multi-paragraph posture summary | Section summaries |
-| `keyFindings` | 5–8 findings, each attributed to a section key | Section summaries |
-| `recommendedActions` | 3–5 prioritised actions | Section summaries |
-| `riskAnalysis` | Risk narrative + up to 6 named risks | `projectRisks`, `vendorRisks`, `modelRisks` |
-| `complianceGap` | Explanation of STORED readiness scores + evidence gaps | Readiness scores, evidence gaps, compliance sections |
-| `vendorRisk` | Third-party risk narrative + named vendor concerns | `vendors`, `vendorRisks` |
+Every analyzer receives the facts block. Because it is whole-estate, a single
+prompt now holds all sections at once, which is what makes a cross-section
+finding expressible — `keyFindings` carries `related_sections` for exactly that.
+
+| Section key          | Output                                                 | Input                                                        |
+| -------------------- | ------------------------------------------------------ | ------------------------------------------------------------ |
+| `executiveSummary`   | Multi-paragraph posture summary                        | Facts + section summaries                                    |
+| `keyFindings`        | 5–8 findings, each attributed to a section key         | Facts + section summaries                                    |
+| `recommendedActions` | 3–5 prioritised actions                                | Facts + section summaries                                    |
+| `riskAnalysis`       | Risk narrative + up to 6 named risks                   | Facts + `projectRisks`, `vendorRisks`, `modelRisks`          |
+| `complianceGap`      | Explanation of STORED readiness scores + evidence gaps | Facts + readiness scores, evidence gaps, compliance sections |
+| `vendorRisk`         | Third-party risk narrative + named vendor concerns     | Facts + `vendors`, `vendorRisks`                             |
 
 `sectionSummaries` (ported from the removed `aiSummarizer.ts`) is a seventh gateable block, but it is **not** a registry entry in `ANALYZERS`: its output is `Record<string, string>` prose rather than a schema-validated object, so it does not fit `AnalyzerDefinition`. It runs as a separate stage whose output the first three analyzers consume — feeding them raw section JSON instead measured ~38k tokens per prompt against ~6k, three times per report.
 
@@ -220,19 +262,85 @@ Two stages, ordering is load-bearing: Stage 1 runs `sectionSummaries` plus the r
 
 `ai_blocks_config` on the template/schedule row selects which blocks run (`AiBlocksConfig` in `domain.layer/interfaces/i.reportTemplate.ts`, resolved by `reportTemplateResolver.ts`). Manual runs carry no template, so `resolveBlocks` (`analyzers/collectAnalyzerInputs.ts`) maps `aiEnhanced: true` to five blocks — `sectionSummaries`, `executiveSummary`, `keyFindings`, `recommendedActions`, `riskAnalysis` — reproducing the previous `aiSummarizer` output. `complianceGap` and `vendorRisk` stay off for manual runs to avoid unbudgeted spend. `ConfigureReportWizard` now offers all seven blocks, with `complianceGap` and `vendorRisk` defaulting **off** for the same reason — each enabled block is one LLM call per run.
 
+### Shallowness gate
+
+`analyzers/novelty.ts` measures whether an analyzer restated its input instead of
+analysing it: character-trigram Jaccard of the output's prose against the prompt,
+above `NOVELTY_THRESHOLD` (0.5). On a hit the call is re-issued **once** with a
+directive naming the failure. This is the only mechanical definition of "deeper"
+in the feature, so it doubles as the regression test for the prompt work.
+
+Two properties are load-bearing:
+
+- **Strictly non-destructive.** Every exit from the re-issue — the retry restates
+  again, abstains, or throws — keeps the _first_ payload. A produced analysis is
+  never lost to the gate. The retry is accepted only when it is both non-restating
+  and non-abstaining.
+- **Skipped on an abstention.** A first payload that already abstained is left
+  alone; re-issuing would turn a cheap honest abstention into a paid one.
+
+Scoring is per _labelled entry_, not per blank line. A section summary is itself
+multi-paragraph prose, so splitting on blank lines measures a whole-summary copy
+against a quarter of itself — a 100% verbatim copy of a real 2,039-character
+summary scored 0.460 at four paragraphs and evaded the detector entirely. Both
+candidate sets are scored and the higher wins, which can only raise sensitivity.
+
+`restatementRetried` rides on the result and is persisted, so the gate's firing
+is observable after the run rather than only in the log.
+
+### Prior-run comparison
+
+A scheduled run diffs itself against the previous run **of the same schedule**.
+`getPriorFactsSnapshotQuery` (`utils/reportRunAnalysis.utils.ts`) reads the last
+stored `FactsSnapshot` for `scheduledReportId`, scoped to the organization;
+`collectPriorFacts` degrades to `null` on any failure. `renderFacts` then emits a
+change block — one line per aggregate that moved. One extra query, zero extra LLM
+calls, and it is the only thing that stops two monthly reports on a stable estate
+from being obliged to say the same thing.
+
+Manual runs carry no `scheduledReportId`, so they silently render no change block.
+
+`FACTS_SCHEMA_VERSION` (`analyzers/facts.ts`) stamps the snapshot and
+`collectPriorFacts` refuses a prior carrying any other version. **Bump it whenever
+an aggregate is renamed, removed, or changes meaning.** The delta subtracts by
+name and reads a name missing from the current side as a bucket that emptied to
+zero, so an un-versioned rename makes every orphaned key read as a measured
+improvement — "AI Models ownerless: 0 (was 7, -7)" for an estate where nothing
+changed, which is worse than a static wrong label because a delta reads as
+evidence of remediation. Refusing the prior costs one comparison and says nothing
+false.
+
 ### Persistence
 
-Each analyzed section is written to `report_run_analyses`, a per-run sidecar keyed by `(report_run_id, section_key, organization_id)`. `upsertRunAnalysisQuery` (`utils/reportRunAnalysis.utils.ts`) upserts with `ON CONFLICT` and bumps `analysis_version` in place, so re-analysis never inserts a duplicate. A `WHERE EXISTS` guard refuses writes when the run does not belong to the given organization; the caller must treat an `undefined` return as a failed write. `persistAnalyses` never throws — a report that generated successfully is not marked failed because its audit sidecar could not be written — and reports per-section status (`ok` / `abstained` / `write_failed`) into `report_runs.ai_status`.
+Each analyzed section is written to `report_run_analyses`, a per-run sidecar keyed by `(report_run_id, section_key, organization_id)`. Beyond the payload, `audit_metadata` carries `analyzer_version`, `attempts`, `restatement_retried` (did the shallowness gate fire) and `facts` (this run's `FactsSnapshot`, which is what the next run of the schedule diffs against). It is unconstrained JSONB — no migration was needed for any of them — so anything that prunes it to a documented key set must account for `facts`, or every scheduled report silently loses its change block. `upsertRunAnalysisQuery` (`utils/reportRunAnalysis.utils.ts`) upserts with `ON CONFLICT` and bumps `analysis_version` in place, so re-analysis never inserts a duplicate. A `WHERE EXISTS` guard refuses writes when the run does not belong to the given organization; the caller must treat an `undefined` return as a failed write. `persistAnalyses` never throws — a report that generated successfully is not marked failed because its audit sidecar could not be written — and reports per-section status (`ok` / `abstained` / `write_failed`) into `report_runs.ai_status`.
 
 ### Abstention
 
-An analyzer that cannot produce grounded output **abstains** rather than inventing one. The report still generates. `mapAnalysesToSummaries` collects every stated reason onto `aiSummaries.abstentions`, keyed by analyzer key, and both renderers print them in an *Analyses not produced* list — an abstention with no stated reason contributes nothing rather than an empty line. Two of the reasons below describe the *service* rather than the data ("no LLM key…", "the AI service call failed"); `isOperationalAbstention` (`analyzers/mapToSummaries.ts`) replaces those with the neutral sentence "This analysis was not produced." before either renderer sees them, because our infrastructure is not a governance finding. Every other reason prints verbatim, because it is one. Abstention causes:
+An analyzer that cannot produce grounded output **abstains** rather than inventing one. The report still generates. `mapAnalysesToSummaries` collects every stated reason onto `aiSummaries.abstentions`, keyed by analyzer key, and both renderers print them in an *Analyses not produced* list — an abstention with no stated reason contributes nothing rather than an empty line.
+
+The reasons split by **what they tell the reader**, and the split is enforced in
+one place: `analyzers/abstainReasons.ts` holds the vocabulary and both
+`runAnalyzers` (which emits) and `mapToSummaries` (which classifies) import it.
+It is its own module rather than a `runAnalyzers` export because several suites
+`jest.mock` that file, and an auto-mock handed back `undefined` at module load.
+
+An **operational** reason describes this pipeline. `isOperationalAbstention`
+replaces it with the neutral sentence "This analysis was not produced." before
+either renderer sees it, because our infrastructure is not a governance finding —
+and because printing it verbatim tells a regulator the tenant's estate was
+deficient when it may have been plentiful:
 
 - No LLM key configured for the organization
+- The AI service call failed — provider detail (custom base URLs, request paths) stays in the log, out of the regulator-facing field
+- No section summaries were available to summarise *(summary consumers; the Stage-1 step failed, not the data)*
+- No section produced a summary
+
+An **analytical** reason is a genuine statement about the data and prints verbatim:
+
 - Insufficient data for the section (raw-section analyzers)
-- No section summaries available (summary consumers)
-- The AI service call failed — the persisted reason is generic; provider detail (custom base URLs, request paths) stays in the log, out of the regulator-facing field
 - The model itself set `abstain_reason` in its schema-validated payload
+
+`mapToSummaries.test.ts` walks the whole vocabulary and asserts each reason is classified, so a new one cannot leak into a report by being added on one side only.
 
 Absence of scores is never presented as absence of gaps.
 
