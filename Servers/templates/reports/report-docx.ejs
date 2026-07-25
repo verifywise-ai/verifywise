@@ -402,18 +402,14 @@ let sectionNum = 1;
   <thead>
     <tr>
       <th>Training Name</th>
-      <th>Completion Date</th>
       <th>Status</th>
-      <th>Assignee</th>
     </tr>
   </thead>
   <tbody>
     <% sections.trainingRegistry.records.forEach(function(record) { %>
     <tr>
       <td><strong><%= record.trainingName %></strong></td>
-      <td><%= record.completionDate || '-' %></td>
       <td class="status-<%= record.status.toLowerCase().replace(/\s+/g, '-') %>"><%= record.status %></td>
-      <td><%= record.assignee || '-' %></td>
     </tr>
     <% }); %>
   </tbody>
@@ -432,7 +428,6 @@ let sectionNum = 1;
   <thead>
     <tr>
       <th>Policy Name</th>
-      <th>Version</th>
       <th>Status</th>
       <th>Review Date</th>
       <th>Owner</th>
@@ -442,7 +437,6 @@ let sectionNum = 1;
     <% sections.policyManager.policies.forEach(function(policy) { %>
     <tr>
       <td><strong><%= policy.policyName %></strong></td>
-      <td><%= policy.version || '-' %></td>
       <td class="status-<%= policy.status.toLowerCase().replace(/\s+/g, '-') %>"><%= policy.status %></td>
       <td><%= policy.reviewDate || '-' %></td>
       <td><%= policy.owner || '-' %></td>

@@ -373,9 +373,7 @@ export interface TrainingRegistrySectionData {
   records: Array<{
     id: number;
     trainingName: string;
-    completionDate?: string;
     status: string;
-    assignee?: string;
   }>;
 }
 
@@ -384,7 +382,6 @@ export interface PolicyManagerSectionData {
   policies: Array<{
     id: number;
     policyName: string;
-    version?: string;
     status: string;
     reviewDate?: string;
     owner?: string;

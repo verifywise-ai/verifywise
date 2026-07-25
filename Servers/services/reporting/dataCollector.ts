@@ -931,8 +931,7 @@ export class ReportDataCollector {
   private async collectTrainingRegistry(): Promise<TrainingRegistrySectionData> {
     try {
       const trainingQuery = `
-        SELECT tr.*, NULL::timestamp without time zone as completion_date,
-               NULL::varchar as assignee_name, NULL::varchar as assignee_surname
+        SELECT tr.*
         FROM trainingregistar tr
         WHERE tr.organization_id = :organizationId
         ORDER BY tr.id ASC
@@ -948,13 +947,7 @@ export class ReportDataCollector {
         records: records.map((r) => ({
           id: r.id,
           trainingName: r.training_name || "Unnamed Training",
-          completionDate: r.completion_date
-            ? new Date(r.completion_date).toLocaleDateString()
-            : undefined,
           status: r.status || "Unknown",
-          assignee: r.assignee_name
-            ? `${r.assignee_name} ${r.assignee_surname || ""}`.trim()
-            : undefined,
         })),
       };
     } catch (error) {
@@ -969,7 +962,7 @@ export class ReportDataCollector {
   private async collectPolicyManager(): Promise<PolicyManagerSectionData> {
     try {
       const policiesQuery = `
-        SELECT p.*, p.next_review_date as review_date, NULL::varchar as version,
+        SELECT p.*, p.next_review_date as review_date,
                u.name as owner_name, u.surname as owner_surname
         FROM policy_manager p
         LEFT JOIN users u ON p.policy_owner_id = u.id
@@ -987,7 +980,6 @@ export class ReportDataCollector {
         policies: policies.map((p) => ({
           id: p.id,
           policyName: p.title || "Unnamed Policy",
-          version: p.version,
           status: p.status || "Unknown",
           reviewDate: p.review_date ? new Date(p.review_date).toLocaleDateString() : undefined,
           owner: p.owner_name ? `${p.owner_name} ${p.owner_surname || ""}`.trim() : undefined,

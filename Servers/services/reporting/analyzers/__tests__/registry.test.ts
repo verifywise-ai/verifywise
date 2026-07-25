@@ -280,9 +280,9 @@ describe("analyzer registry", () => {
 
     // No question may name a field its own projection cannot populate — the
     // model answers truthfully from absence and the false finding ships.
-    // collectTrainingRegistry selects completion_date and assignee_name as
-    // literal NULL, so either question reports a 100% gap for every tenant; the
-    // vendor risk projection carries no mitigation or status field at all.
+    // `trainingregistar` has no completion-date or assignee column, so either
+    // question reports a 100% gap for every tenant; the vendor risk projection
+    // carries no mitigation or status field at all.
     expect(SECTION_INSTRUCTIONS.trainingRegistry).not.toMatch(/completion date|assignee/i);
     expect(SECTION_INSTRUCTIONS.vendorRisks).not.toContain("unmitigated");
     // model_inventories carries an `approver` FK and no owner column at all, so

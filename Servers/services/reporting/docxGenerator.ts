@@ -1315,12 +1315,10 @@ function createOrganizationSection(reportData: ReportData): (Paragraph | Table)[
     }
 
     if (sections.trainingRegistry.records.length > 0) {
-      const headers = ["Training Name", "Completion Date", "Status", "Assignee"];
+      const headers = ["Training Name", "Status"];
       const rows = sections.trainingRegistry.records.map((record) => [
         record.trainingName,
-        record.completionDate || "-",
         record.status || "-",
-        record.assignee || "-",
       ]);
       elements.push(createTable(headers, rows));
       elements.push(createTableSpacing());
@@ -1342,10 +1340,9 @@ function createOrganizationSection(reportData: ReportData): (Paragraph | Table)[
     }
 
     if (sections.policyManager.policies.length > 0) {
-      const headers = ["Policy Name", "Version", "Status", "Review Date", "Owner"];
+      const headers = ["Policy Name", "Status", "Review Date", "Owner"];
       const rows = sections.policyManager.policies.map((policy) => [
         policy.policyName,
-        policy.version || "-",
         policy.status || "-",
         policy.reviewDate || "-",
         policy.owner || "-",

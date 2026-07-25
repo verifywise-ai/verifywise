@@ -964,18 +964,14 @@ const riskChipClass = (level) => {
         <thead>
           <tr>
             <th>Training Name</th>
-            <th>Completion Date</th>
             <th>Status</th>
-            <th>Assignee</th>
           </tr>
         </thead>
         <tbody>
           <% sections.trainingRegistry.records.forEach(function(record) { %>
           <tr>
             <td><strong><%= record.trainingName %></strong></td>
-            <td><%= record.completionDate || '-' %></td>
             <td><span class="chip chip-<%= record.status === 'Completed' ? 'success' : record.status === 'In Progress' ? 'warning' : 'default' %>"><%= record.status %></span></td>
-            <td><%= record.assignee || '-' %></td>
           </tr>
           <% }); %>
         </tbody>
@@ -1007,7 +1003,6 @@ const riskChipClass = (level) => {
         <thead>
           <tr>
             <th>Policy Name</th>
-            <th>Version</th>
             <th>Status</th>
             <th>Review Date</th>
             <th>Owner</th>
@@ -1017,7 +1012,6 @@ const riskChipClass = (level) => {
           <% sections.policyManager.policies.forEach(function(policy) { %>
           <tr>
             <td><strong><%= policy.policyName %></strong></td>
-            <td><%= policy.version || '-' %></td>
             <td><span class="chip chip-<%= policy.status === 'Approved' ? 'success' : policy.status === 'Draft' ? 'default' : 'warning' %>"><%= policy.status %></span></td>
             <td><%= policy.reviewDate || '-' %></td>
             <td><%= policy.owner || '-' %></td>

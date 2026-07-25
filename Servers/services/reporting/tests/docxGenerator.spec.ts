@@ -166,6 +166,45 @@ describe("DOCX Generator", () => {
     });
   });
 
+  // `trainingregistar` has no assignee and no completion date; `policy_manager`
+  // has no version. A column headed "Assignee" with a dash on every row is not
+  // an empty cell, it is a statement that nobody is assigned — one the schema
+  // cannot support.
+  describe("columns with no column behind them", () => {
+    it("the training table names only fields the schema can fill", async () => {
+      const result = await generateDOCX({
+        ...mockReportData,
+        sections: {
+          trainingRegistry: {
+            totalRecords: 1,
+            records: [{ id: 1, trainingName: "AI Act awareness", status: "Completed" }],
+          },
+        },
+      });
+      const text = await docxText(result.content);
+
+      expect(text).toContain("AI Act awareness");
+      expect(text).not.toContain("Completion Date");
+      expect(text).not.toContain("Assignee");
+    });
+
+    it("the policy table names only fields the schema can fill", async () => {
+      const result = await generateDOCX({
+        ...mockReportData,
+        sections: {
+          policyManager: {
+            totalPolicies: 1,
+            policies: [{ id: 1, policyName: "Acceptable use", status: "Approved" }],
+          },
+        },
+      });
+      const text = await docxText(result.content);
+
+      expect(text).toContain("Acceptable use");
+      expect(text).not.toContain("Version");
+    });
+  });
+
   describe("Report formatting", () => {
     it("should handle organizational reports", async () => {
       const orgReportData: ReportData = {
@@ -419,7 +458,9 @@ describe("DOCX Generator", () => {
       expect(text).toContain("Key Findings");
       expect(text).toContain("[high] ");
       expect(text).toContain("Only 3 of 25 models name an owner");
-      expect(text).toContain("Section: models · Basis: observed · Related: modelRisks, policyManager");
+      expect(text).toContain(
+        "Section: models · Basis: observed · Related: modelRisks, policyManager",
+      );
       expect(text).toContain("Closes when: An owner recorded on every model inventory row");
       // The structured list replaces the flat one rather than printing both.
       expect(text).not.toContain("flat fallback text");

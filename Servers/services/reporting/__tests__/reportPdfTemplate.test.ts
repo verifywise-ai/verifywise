@@ -362,6 +362,38 @@ describe("report-pdf.ejs template", () => {
     expect(() => render()).not.toThrow();
   });
 
+  // `trainingregistar` has no assignee and no completion date; `policy_manager`
+  // has no version. A column headed "Assignee" with a dash on every row is not
+  // an empty cell, it is a statement that nobody is assigned — one the schema
+  // cannot support, printed directly under an AI Analysis box that was
+  // corrected to stop making it.
+  describe("columns with no column behind them", () => {
+    it("the training table names only fields the schema can fill", () => {
+      const html = render(undefined, {
+        trainingRegistry: {
+          totalRecords: 1,
+          records: [{ id: 1, trainingName: "AI Act awareness", status: "Completed" }],
+        },
+      } as never);
+
+      expect(html).toContain("AI Act awareness");
+      expect(html).not.toContain("<th>Completion Date</th>");
+      expect(html).not.toContain("<th>Assignee</th>");
+    });
+
+    it("the policy table names only fields the schema can fill", () => {
+      const html = render(undefined, {
+        policyManager: {
+          totalPolicies: 1,
+          policies: [{ id: 1, policyName: "Acceptable use", status: "Approved" }],
+        },
+      } as never);
+
+      expect(html).toContain("Acceptable use");
+      expect(html).not.toContain("<th>Version</th>");
+    });
+  });
+
   // The project-risk enum and the vendor-risk free text both carry a " risk"
   // suffix ('No risk' | 'Very low risk' | ... | 'Very high risk'), and the NIST
   // subcategory rows read that same project-risk column. pdf.css has no
