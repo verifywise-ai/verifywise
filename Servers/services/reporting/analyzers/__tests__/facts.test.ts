@@ -373,6 +373,70 @@ describe("collectFacts — aggregates only fields the collector populates", () =
   });
 });
 
+/**
+ * §1 requires the top-N be ranked by materiality "severity, then due date".
+ * Where a section's rank reads a single-valued status column the sort is a
+ * no-op and the top-N falls back to the collector's `id ASC` order — the exact
+ * "oldest N" failure the ranking exists to prevent.
+ */
+describe("collectFacts — the top-N breaks ties on the deadline where one exists", () => {
+  it("orders same-status controls by due date, undated ones last", () => {
+    // Query order is id ASC and every control is 'Waiting', so before the
+    // tie-break this returned C-9, C-10, C-34 — the three lowest ids.
+    const facts = factsFor("compliance", {
+      totalControls: 4,
+      controls: [
+        { controlId: "C-9", title: "Risk register", status: "Waiting", dueDate: "2026-12-01" },
+        { controlId: "C-10", title: "Post-market plan", status: "Waiting" },
+        { controlId: "C-34", title: "Incident log", status: "Waiting", dueDate: "2026-08-01" },
+        // Finished work stays behind open work however soon its date: the
+        // deadline is a TIE-break, not the primary key.
+        { controlId: "C-2", title: "Scope defined", status: "Done", dueDate: "2026-01-01" },
+      ],
+    });
+    expect(String(facts.top1)).toContain("C-34");
+    expect(String(facts.top2)).toContain("C-9");
+    expect(String(facts.top3)).toContain("C-10");
+  });
+
+  it("orders same-level model risks by target date", () => {
+    const facts = factsFor("modelRisks", {
+      totalRisks: 3,
+      risks: [
+        {
+          riskName: "Drift unmonitored",
+          modelName: "gpt-x",
+          riskLevel: "Critical",
+          targetDate: "2026-11-01",
+        },
+        {
+          riskName: "No eval baseline",
+          modelName: "gpt-y",
+          riskLevel: "Critical",
+          targetDate: "2026-09-01",
+        },
+        // Sooner than both, but two levels down — the level still wins.
+        { riskName: "Docs stale", modelName: "gpt-z", riskLevel: "Low", targetDate: "2026-07-01" },
+      ],
+    });
+    expect(String(facts.top1)).toContain("No eval baseline");
+    expect(String(facts.top3)).toContain("Docs stale");
+  });
+
+  it("does not order on reviewDate, which reaches it locale-rendered", () => {
+    // "1/3/2026" is 3 January or 1 March depending on the server locale, so it
+    // must not order anything — the same exclusion prompts.ts's dateOf makes.
+    const facts = factsFor("policyManager", {
+      totalPolicies: 2,
+      policies: [
+        { policyName: "Acceptable use", status: "Draft", reviewDate: "12/1/2026", owner: "Bob" },
+        { policyName: "Model release", status: "Draft", reviewDate: "1/3/2026", owner: "Bob" },
+      ],
+    });
+    expect(String(facts.top1)).toContain("Acceptable use");
+  });
+});
+
 describe("collectFacts — truncation branches", () => {
   it("keeps only the heaviest MAX_BUCKETS values of a high-cardinality field", () => {
     // Ten distinct statuses, S0 the heaviest at 10 rows down to S9 at one.

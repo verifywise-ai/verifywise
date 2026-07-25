@@ -77,6 +77,27 @@ const materialityScore = (v: unknown): number => -levelRank(v);
 const incomplete = (v: unknown): number => (isTerminalStatus(v) ? 0 : 1);
 
 /**
+ * A row's deadline as a timestamp, SOONER IS MORE URGENT.
+ *
+ * Unlike materialityScore above, this is deliberately NOT sign-inverted against
+ * its prompts.ts counterpart (`dateOf`): both files order deadlines
+ * soonest-first, and only the level/status keys read in opposite directions.
+ *
+ * Deadline-shaped fields only, and the same two prompts.ts uses. `reviewDate`,
+ * `reportedDate` and `completionDate` are excluded: the first two reach here
+ * through toLocaleDateString(), so "03/04/2026" is March 4 or April 3 depending
+ * on the server's locale — a field that cannot be parsed reliably must not
+ * order anything, since a wrong date is still a valid one. Undated rows get a
+ * finite sentinel rather than NaN, so they sort last without poisoning the
+ * comparator.
+ */
+const deadline = (row: any): number => {
+  const raw = row?.targetDate ?? row?.dueDate;
+  const t = raw ? new Date(raw).getTime() : NaN;
+  return Number.isNaN(t) ? Number.MAX_SAFE_INTEGER : t;
+};
+
+/**
  * The report's reference day, `YYYY-MM-DD`.
  *
  * One line over dataCollector's isoDate, which is the SAME helper that
@@ -102,7 +123,9 @@ interface SectionSpec {
   /** Row field carrying an owner; rows missing it are counted as ownerless. */
   owner?: string;
   /** Higher = more material. Applied BEFORE truncation, so the top-N is the
-   *  worst N rather than the oldest N — the queries order by id/name ASC. */
+   *  worst N rather than the oldest N — the queries order by id/name ASC.
+   *  Ties break on `deadline` below, so a spec whose rank is a single-valued
+   *  status column still orders by due/target date rather than by id. */
   rank?: (row: any) => number;
   label: (row: any) => string;
 }
@@ -300,7 +323,15 @@ export function collectFacts(reportData: ReportData): FactsSnapshot {
     }
 
     const rank = spec.rank;
-    const ranked = rank ? [...rows].sort((a, b) => rank(b) - rank(a)) : rows;
+    // §1: materiality first, then the deadline. Where a section's rank reads a
+    // single-valued status column — compliance is the case that matters, since
+    // its projection carries dueDate precisely so deadlines can be compared
+    // against the reference date — the first term is constant and the sort was
+    // a no-op, leaving the collector's `id ASC` order: the OLDEST N, which is
+    // what ranking before truncation exists to prevent.
+    const ranked = [...rows].sort(
+      (a, b) => (rank ? rank(b) - rank(a) : 0) || deadline(a) - deadline(b),
+    );
     ranked
       .slice(0, TOP_N)
       .forEach((row, i) => put(key, `top${i + 1}`, spec.label(row).slice(0, MAX_LABEL_CHARS)));
