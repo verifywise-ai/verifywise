@@ -393,6 +393,31 @@ describe("collectFacts — truncation branches", () => {
     expect(facts.mitigationStatus_S9).toBeUndefined();
   });
 
+  it("stamps a dropped bucket tail, like every other truncation in the block", () => {
+    // Without the stamp the eight surviving buckets sum to less than `items`
+    // and nothing says so. GROUNDING_RULES tells the model that counting over
+    // supplied values is grounded, so "the inventory has eight approvers" is a
+    // fabricated count that passes every guard — it IS arithmetic over what it
+    // was given. `_distinct` is the number SECTION_INSTRUCTIONS.models asks for.
+    const models = Array.from({ length: 12 }, (_, i) => i).flatMap((i) =>
+      Array.from({ length: 12 - i }, () => ({
+        name: `Model ${i}`,
+        version: "1.0",
+        status: "Approved",
+        approver: `Approver ${i}`,
+      })),
+    );
+
+    const facts = factsFor("models", { totalModels: models.length, models });
+    expect(facts["approver_Approver 0"]).toBe(12);
+    expect(facts["approver_Approver 8"]).toBeUndefined();
+    expect(facts.approver_showing).toBe("showing 8 of 12");
+    expect(facts.approver_distinct).toBe(12);
+    // The status field fits inside MAX_BUCKETS, so it is stamped with neither.
+    expect(facts.status_showing).toBeUndefined();
+    expect(facts.status_distinct).toBeUndefined();
+  });
+
   it("caps each top-N label at MAX_LABEL_CHARS", () => {
     const facts = factsFor("projectRisks", {
       totalRisks: 1,

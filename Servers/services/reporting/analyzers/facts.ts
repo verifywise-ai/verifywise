@@ -278,10 +278,20 @@ export function collectFacts(reportData: ReportData): FactsSnapshot {
         const bucket = text(row?.[field]);
         buckets[bucket] = (buckets[bucket] ?? 0) + 1;
       });
-      Object.entries(buckets)
-        .sort((a, b) => b[1] - a[1])
+      const ordered = Object.entries(buckets).sort((a, b) => b[1] - a[1]);
+      ordered
         .slice(0, MAX_BUCKETS)
         .forEach(([bucket, count]) => put(key, `${field}_${bucket}`, count));
+      // Stamped for the same reason top_showing is: the surviving buckets sum
+      // to less than `items` and nothing else says so, so a model counting over
+      // what it was given answers "eight distinct approvers" — arithmetic over
+      // supplied values, which GROUNDING_RULES calls grounded, and wrong.
+      // `_distinct` is emitted only alongside the stamp: where nothing was
+      // dropped the bucket lines already carry the count.
+      if (ordered.length > MAX_BUCKETS) {
+        put(key, `${field}_showing`, `showing ${MAX_BUCKETS} of ${ordered.length}`);
+        put(key, `${field}_distinct`, ordered.length);
+      }
     }
 
     const ownerField = spec.owner;
