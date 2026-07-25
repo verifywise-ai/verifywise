@@ -101,9 +101,12 @@ export const SECTION_INSTRUCTIONS: Record<string, string> = {
 
   // model_inventories.status is Approved | Restricted | Pending | Blocked |
   // Rejected (model-inventory-status.enum.ts) — no "reviewed" state to ask for.
+  // The table carries an `approver` FK and no owner column at all, so nothing
+  // here may ask who owns a model: a missing approver is an unsigned-off model,
+  // not an unowned one, and the two are different findings.
   models: `- What is the status distribution across the inventory, and how many models are not Approved?
-- How many distinct owners cover the inventory? If one person owns most of it, say so and name the concentration.
-- Which models carry no owner, and which carry no version?
+- How many distinct approvers signed off the inventory? If one person approved most of it, say so and name the concentration — a single approver across the whole inventory is a segregation-of-duties observation.
+- Which models carry no approver, and which carry no version?
 - Name the models a reader should look at first and say what makes them urgent.`,
 
   // Deliberately silent on completion dates and assignees: collectTrainingRegistry

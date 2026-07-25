@@ -1264,12 +1264,12 @@ function createOrganizationSection(reportData: ReportData): (Paragraph | Table)[
     }
 
     if (sections.models.models.length > 0) {
-      const headers = ["Model Name", "Version", "Status", "Owner"];
+      const headers = ["Model Name", "Version", "Status", "Approver"];
       const rows = sections.models.models.map((model) => [
         model.name,
         model.version || "-",
         model.status || "-",
-        model.owner || "-",
+        model.approver || "-",
       ]);
       elements.push(createTable(headers, rows));
       elements.push(createTableSpacing());

@@ -189,7 +189,15 @@ export function collectAllowedOwners(reportData: ReportData): string[] {
   harvest(sections.vendors?.vendors, ["assignee", "reviewer"]);
   // The models section was omitted here, which is why every recommended
   // action in the live corpus came back with suggestedOwner: null.
-  harvest(sections.models?.models, ["owner"]);
+  //
+  // Deliberate: a model's `approver` is kept as an allowed suggestedOwner. This
+  // list is an anti-invention allow-list, not a claim of accountability — it
+  // only decides whether a name the model produced already appears in the
+  // report's own data. An approver is a real person in the tenant who signed
+  // off that model and is printed in the models table, so proposing them as the
+  // owner of a follow-up action names someone the reader can actually find.
+  // They are not the model's owner, and no prompt says they are.
+  harvest(sections.models?.models, ["approver"]);
   harvest(sections.compliance?.controls, ["owner", "approver"]);
   harvest(sections.trainingRegistry?.records, ["owner"]);
   harvest(sections.policyManager?.policies, ["owner", "reviewer"]);

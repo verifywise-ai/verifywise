@@ -285,6 +285,10 @@ describe("analyzer registry", () => {
     // vendor risk projection carries no mitigation or status field at all.
     expect(SECTION_INSTRUCTIONS.trainingRegistry).not.toMatch(/completion date|assignee/i);
     expect(SECTION_INSTRUCTIONS.vendorRisks).not.toContain("unmitigated");
+    // model_inventories carries an `approver` FK and no owner column at all, so
+    // any ownership question here is answered from a field that cannot exist.
+    expect(SECTION_INSTRUCTIONS.models).not.toMatch(/owner|owns|owned/i);
+    expect(SECTION_INSTRUCTIONS.models).toContain("approver");
 
     // A section key with no entry falls back to this rather than losing its summary.
     expect(GENERIC_SECTION_INSTRUCTION).toContain("Highlights key observations and patterns");

@@ -326,5 +326,33 @@ describe("dataCollector", () => {
       expect(controls[1].dueDate).toBeUndefined();
       expect(controls[1].category).toBe("Human oversight");
     });
+
+    it("names the model_inventories join column `approver`, since there is no owner column", async () => {
+      // verifywise.model_inventories has `approver` (a users FK) and NO `owner`
+      // column at all — the UI labels the field "Approver". Projecting the
+      // joined name as `owner` made the models section assert an ownership the
+      // schema cannot support, and the facts snapshot counted "owner_<name>"
+      // buckets over it.
+      mockQuery.mockResolvedValue([
+        {
+          id: 1,
+          model: "gpt-4o",
+          version: "2026-05",
+          status: "Approved",
+          approver_name: "Jane",
+          approver_surname: "Roe",
+          capabilities: "General purpose chat.",
+        },
+        { id: 2, model: "claude", status: "Pending" },
+      ] as any);
+
+      const collector = createDataCollector(10, 1, 1, 100, 5);
+      const result = await collector.collectAllData(["models"]);
+
+      const models = result.sections.models!.models;
+      expect(models[0].approver).toBe("Jane Roe");
+      expect((models[0] as any).owner).toBeUndefined();
+      expect(models[1].approver).toBeUndefined();
+    });
   });
 });

@@ -342,7 +342,7 @@ let sectionNum = 1;
       <th>Model Name</th>
       <th>Version</th>
       <th>Status</th>
-      <th>Owner</th>
+      <th>Approver</th>
     </tr>
   </thead>
   <tbody>
@@ -351,7 +351,7 @@ let sectionNum = 1;
       <td><strong><%= model.name %></strong></td>
       <td><%= model.version || '-' %></td>
       <td><%= model.status %></td>
-      <td><%= model.owner || '-' %></td>
+      <td><%= model.approver || '-' %></td>
     </tr>
     <% }); %>
   </tbody>

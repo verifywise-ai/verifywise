@@ -799,7 +799,7 @@ export class ReportDataCollector {
       if (isOrganizational) {
         // Get all models for organizational reports
         modelsQuery = `
-          SELECT mi.*, u.name as owner_name, u.surname as owner_surname
+          SELECT mi.*, u.name as approver_name, u.surname as approver_surname
           FROM model_inventories mi
           LEFT JOIN users u ON mi.approver = u.id
           WHERE mi.organization_id = :organizationId
@@ -809,7 +809,7 @@ export class ReportDataCollector {
       } else {
         // Get only project-linked models for use case reports
         modelsQuery = `
-          SELECT mi.*, u.name as owner_name, u.surname as owner_surname
+          SELECT mi.*, u.name as approver_name, u.surname as approver_surname
           FROM model_inventories mi
           JOIN model_inventories_projects_frameworks mip ON mi.id = mip.model_inventory_id AND mip.organization_id = mi.organization_id
           LEFT JOIN users u ON mi.approver = u.id
@@ -831,7 +831,9 @@ export class ReportDataCollector {
           name: m.model || "Unnamed Model",
           version: m.version,
           status: m.status || "Unknown",
-          owner: m.owner_name ? `${m.owner_name} ${m.owner_surname || ""}`.trim() : undefined,
+          approver: m.approver_name
+            ? `${m.approver_name} ${m.approver_surname || ""}`.trim()
+            : undefined,
           description: m.capabilities,
         })),
       };

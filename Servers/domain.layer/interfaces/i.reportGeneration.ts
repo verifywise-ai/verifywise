@@ -342,7 +342,9 @@ export interface ModelsListSectionData {
     name: string;
     version?: string;
     status: string;
-    owner?: string;
+    /** Resolved from model_inventories.approver (a users FK). The table has no
+     *  `owner` column — this is the approver, and the UI labels it so. */
+    approver?: string;
     description?: string;
   }>;
 }

@@ -853,7 +853,7 @@
             <th>Model Name</th>
             <th>Version</th>
             <th>Status</th>
-            <th>Owner</th>
+            <th>Approver</th>
           </tr>
         </thead>
         <tbody>
@@ -862,7 +862,7 @@
             <td><strong><%= model.name %></strong></td>
             <td><%= model.version || '-' %></td>
             <td><span class="chip chip-<%= model.status.toLowerCase().replace(/\s+/g, '-') %>"><%= model.status %></span></td>
-            <td><%= model.owner || '-' %></td>
+            <td><%= model.approver || '-' %></td>
           </tr>
           <% }); %>
         </tbody>
