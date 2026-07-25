@@ -354,5 +354,30 @@ describe("dataCollector", () => {
       expect((models[0] as any).owner).toBeUndefined();
       expect(models[1].approver).toBeUndefined();
     });
+
+    it("names the incident person `reporter`, and does not alias `type` a second time as a title", async () => {
+      // verifywise.ai_incident_managements has `reporter` and no `assignee`,
+      // and no `title` at all. Whoever filed an incident is not accountable for
+      // it, and printing `type` under two adjacent column headings is noise.
+      mockQuery.mockResolvedValue([
+        {
+          id: 9,
+          incident_id: "INC-9",
+          type: "Data quality",
+          severity: "Serious",
+          status: "Open",
+          reporter: "Dana Reed",
+        },
+      ] as any);
+
+      const collector = createDataCollector(10, 1, 1, 100, 5);
+      const result = await collector.collectAllData(["incidentManagement"]);
+
+      const incident = result.sections.incidentManagement!.incidents[0];
+      expect(incident.reporter).toBe("Dana Reed");
+      expect((incident as any).assignee).toBeUndefined();
+      expect((incident as any).title).toBeUndefined();
+      expect(incident.type).toBe("Data quality");
+    });
   });
 });

@@ -1027,24 +1027,22 @@
         <thead>
           <tr>
             <th>Incident ID</th>
-            <th>Title</th>
             <th>Type</th>
             <th>Severity</th>
             <th>Status</th>
             <th>Reported</th>
-            <th>Assignee</th>
+            <th>Reporter</th>
           </tr>
         </thead>
         <tbody>
           <% sections.incidentManagement.incidents.forEach(function(incident) { %>
           <tr>
             <td><strong><%= incident.incidentId %></strong></td>
-            <td><%= incident.title %></td>
             <td><%= incident.type %></td>
             <td><span class="chip chip-<%= incident.severity === 'Very serious' ? 'critical' : incident.severity === 'Serious' ? 'high' : 'medium' %>"><%= incident.severity %></span></td>
             <td><span class="chip chip-<%= incident.status === 'Closed' ? 'success' : incident.status === 'Mitigated' ? 'info' : 'warning' %>"><%= incident.status %></span></td>
             <td><%= incident.reportedDate || '-' %></td>
-            <td><%= incident.assignee || '-' %></td>
+            <td><%= incident.reporter || '-' %></td>
           </tr>
           <% }); %>
         </tbody>

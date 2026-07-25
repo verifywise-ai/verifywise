@@ -1370,23 +1370,14 @@ function createOrganizationSection(reportData: ReportData): (Paragraph | Table)[
     }
 
     if (sections.incidentManagement.incidents.length > 0) {
-      const headers = [
-        "Incident ID",
-        "Title",
-        "Type",
-        "Severity",
-        "Status",
-        "Reported",
-        "Assignee",
-      ];
+      const headers = ["Incident ID", "Type", "Severity", "Status", "Reported", "Reporter"];
       const rows = sections.incidentManagement.incidents.map((incident) => [
         incident.incidentId,
-        incident.title,
         incident.type || "-",
         incident.severity || "-",
         incident.status || "-",
         incident.reportedDate || "-",
-        incident.assignee || "-",
+        incident.reporter || "-",
       ]);
       elements.push(createTable(headers, rows));
       elements.push(createTableSpacing());

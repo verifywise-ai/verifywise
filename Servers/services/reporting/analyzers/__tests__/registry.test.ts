@@ -107,14 +107,14 @@ describe("analyzer registry", () => {
     // LEVEL_RANK the comparator is a no-op and the slice keeps the 50 newest by
     // created_at DESC.
     const incidents = [
-      ...Array.from({ length: 60 }, (_, i) => ({ title: `Minor${i}`, severity: "Minor" })),
-      { title: "VerySeriousLate", severity: "Very serious" },
-      { title: "SeriousLate", severity: "Serious" },
+      ...Array.from({ length: 60 }, (_, i) => ({ type: `Minor${i}`, severity: "Minor" })),
+      { type: "VerySeriousLate", severity: "Very serious" },
+      { type: "SeriousLate", severity: "Serious" },
     ];
     const out = JSON.parse(prepareSectionData("incidentManagement", { incidents }));
     expect(out.incidents).toHaveLength(50);
-    expect(out.incidents[0].title).toBe("VerySeriousLate");
-    expect(out.incidents[1].title).toBe("SeriousLate");
+    expect(out.incidents[0].type).toBe("VerySeriousLate");
+    expect(out.incidents[1].type).toBe("SeriousLate");
     expect(out._incidentsTruncated).toBe("showing 50 of 62");
   });
 

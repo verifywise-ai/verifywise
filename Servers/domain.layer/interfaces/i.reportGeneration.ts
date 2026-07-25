@@ -419,12 +419,14 @@ export interface IncidentManagementSectionData {
   incidents: Array<{
     id: number;
     incidentId: string;
-    title: string;
+    /** No `title`: ai_incident_managements has no title column, and the only
+     *  candidate (`type`) already has its own column. */
     type: string;
     severity: string;
     status: string;
     reportedDate?: string;
     resolvedDate?: string;
-    assignee?: string;
+    /** ai_incident_managements.reporter — who filed it, not who owns it. */
+    reporter?: string;
   }>;
 }

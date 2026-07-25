@@ -1130,7 +1130,8 @@ export class ReportDataCollector {
         incidents: incidents.map((inc) => ({
           id: inc.id,
           incidentId: inc.incident_id || `INC-${inc.id}`,
-          title: inc.type || "Untitled Incident",
+          // No `title` here: ai_incident_managements has no title column, and
+          // aliasing `type` under one printed it twice in adjacent columns.
           type: inc.type || "Unknown",
           severity: inc.severity || "Unknown",
           status: inc.status || "Unknown",
@@ -1140,7 +1141,9 @@ export class ReportDataCollector {
               ? new Date(inc.created_at).toLocaleDateString()
               : undefined,
           resolvedDate: undefined,
-          assignee: inc.reporter || undefined,
+          // `reporter` is who filed the incident. There is no assignee column,
+          // and the filer is not the person accountable for the incident.
+          reporter: inc.reporter || undefined,
         })),
       };
     } catch (error) {
