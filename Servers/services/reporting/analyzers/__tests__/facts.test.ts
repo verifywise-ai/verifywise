@@ -491,7 +491,7 @@ describe("collectFacts — truncation branches", () => {
     expect(facts.status_distinct).toBeUndefined();
   });
 
-  it("caps each top-N label at MAX_LABEL_CHARS", () => {
+  it("caps each top-N label at MAX_LABEL_CHARS and MARKS the cut", () => {
     const facts = factsFor("projectRisks", {
       totalRisks: 1,
       risks: [
@@ -503,10 +503,47 @@ describe("collectFacts — truncation branches", () => {
         },
       ],
     });
-    expect(String(facts.top1)).toHaveLength(80);
-    // Truncated mid-name, so no stamp is emitted — top_showing counts ROWS
-    // dropped, not characters.
+    expect(String(facts.top1)).toHaveLength(120);
+    // The marker is INLINE rather than a sibling stamp, and that is the point:
+    // the truncated fragment is verbatim-present in the prompt, so
+    // sanitizeProvenance's substring check passes a mangled name as if it were
+    // the complete one. A name ending in "…" no longer reads as a whole
+    // identifier — to the reader or to the model. `top_showing` counts ROWS
+    // dropped, not characters, so it stays silent here.
+    expect(String(facts.top1).endsWith("…")).toBe(true);
     expect(facts.top_showing).toBeUndefined();
+  });
+
+  it("leaves a label that fits unmarked", () => {
+    const facts = factsFor("projectRisks", {
+      totalRisks: 1,
+      risks: [
+        { name: "Stale register", riskLevel: "Low risk", mitigationStatus: "Approved", owner: "" },
+      ],
+    });
+    expect(facts.top1).toBe("Stale register (Low risk, Approved, owner unset)");
+  });
+
+  it("keeps the whole of the longest label live data actually produces", () => {
+    // risks.risk_name reaches 69 characters in the dev estate, and
+    // SPECS.projectRisks.label appends " (<level>, <status>, owner <owner>)" —
+    // 117 characters in total. At the old 80 the level was severed mid-word and
+    // the owner vanished silently, which is how a top-3 row loses the two
+    // attributes that made it a top-3 row.
+    const facts = factsFor("projectRisks", {
+      totalRisks: 1,
+      risks: [
+        {
+          name: "R".repeat(69),
+          riskLevel: "Very high risk",
+          mitigationStatus: "Not Started",
+          owner: "Halit Ozger",
+        },
+      ],
+    });
+    expect(String(facts.top1)).toContain("Very high risk");
+    expect(String(facts.top1)).toContain("owner Halit Ozger");
+    expect(String(facts.top1)).not.toContain("…");
   });
 });
 

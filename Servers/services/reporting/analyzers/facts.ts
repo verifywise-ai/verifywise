@@ -27,12 +27,21 @@ export interface FactsSnapshot {
 
 type Agg = Record<string, number | string>;
 
-/** Ranked items kept per section. The block's ceiling is TOP_N x
- *  MAX_LABEL_CHARS per section; a typical six-section report renders near
- *  2,000 characters against the 60,000-character prompt budget.
+/** Ranked items kept per section. A realistic full estate renders near 2,000
+ *  characters; an adversarial one — every section present, every label over the
+ *  cap, every bucket field high-cardinality — measures 8,500, against the
+ *  60,000-character prompt budget. Raising MAX_LABEL_CHARS from 80 to 120 cost
+ *  1,400 of that worst case and nothing at all of the realistic one.
  *  ponytail: fixed N, not a per-section knob. Tune here if a section needs more. */
 const TOP_N = 3;
-const MAX_LABEL_CHARS = 80;
+/**
+ * Sized to the longest label the estate actually produces, not to a round
+ * number. `SPECS.projectRisks.label` is `<name> (<level>, <status>, owner
+ * <owner>)`; risk_name reaches 69 characters in the dev estate, so a real row
+ * renders at 117. At the old 80 that row lost its risk level mid-word and its
+ * owner entirely — the two attributes that put it in the top-3 at all.
+ */
+const MAX_LABEL_CHARS = 120;
 /** A field with more distinct values than this is a name column, not an enum —
  *  keep the heaviest buckets and drop the tail rather than blow the budget. */
 const MAX_BUCKETS = 8;
@@ -41,6 +50,23 @@ const text = (v: unknown): string => {
   const s = String(v ?? "").trim();
   return s.length > 0 ? s : "unset";
 };
+
+/**
+ * A top-N label cut to MAX_LABEL_CHARS, with the cut MARKED.
+ *
+ * The marker is not cosmetic. An unmarked cut leaves the fragment verbatim
+ * present in the prompt, so sanitizeProvenance's substring check — which is the
+ * whole anti-fabrication guard for `top_risks[].name`, `gaps[].control` and
+ * `concerns[].vendor` — passes a mangled identifier exactly as it passes a
+ * complete one, and cannot tell the two apart. A value ending in "…" reads as a
+ * fragment to the model and to whoever audits the report.
+ *
+ * Inline rather than a sibling `_showing` stamp (the shape the three other
+ * truncations here use) because the cut is per-label: the marker has to travel
+ * with the value that was cut, not sit beside the three of them.
+ */
+const truncate = (s: string): string =>
+  s.length > MAX_LABEL_CHARS ? `${s.slice(0, MAX_LABEL_CHARS - 1)}…` : s;
 
 /** True for the placeholders dataCollector writes when a lookup found nobody. */
 const missing = (v: unknown): boolean => {
@@ -344,9 +370,7 @@ export function collectFacts(reportData: ReportData): FactsSnapshot {
     const ranked = [...rows].sort(
       (a, b) => (rank ? rank(b) - rank(a) : 0) || deadline(a) - deadline(b),
     );
-    ranked
-      .slice(0, TOP_N)
-      .forEach((row, i) => put(key, `top${i + 1}`, spec.label(row).slice(0, MAX_LABEL_CHARS)));
+    ranked.slice(0, TOP_N).forEach((row, i) => put(key, `top${i + 1}`, truncate(spec.label(row))));
     if (rows.length > TOP_N) put(key, "top_showing", `showing ${TOP_N} of ${rows.length}`);
   }
 
