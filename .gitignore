@@ -154,3 +154,6 @@ nul
 *.zip
 .dfmt/
 ansible/inventory.ini
+
+# -------------------- Scratch scripts --------------------
+Servers/scripts/_*.ts
