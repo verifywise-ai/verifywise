@@ -613,28 +613,45 @@ export class ReportDataCollector {
   /**
    * Resolve users.id -> "Name Surname" for the ids handed in.
    *
-   * Controls carry a numeric `owner` FK, not a name (eu.utils.ts:482). One
-   * lookup per DISTINCT id, in parallel; a failed lookup degrades that one
-   * owner to undefined rather than failing the report.
+   * Controls carry a numeric `owner` FK, not a name (eu.utils.ts:482).
+   *
+   * `users` is tenant-scoped, so this filters on the caller's organization
+   * (docs/technical/security/tenant-isolation.md §2.1, §4.4). getUserByIdQuery
+   * is `SELECT * FROM users WHERE id = :id` with no org filter, and the names
+   * it returns reach the rendered report, the facts block sent to the tenant's
+   * LLM provider, collectAllowedOwners, and the persisted audit_metadata — an
+   * id pointing at another tenant must resolve to nothing, not to a name. Users
+   * with a NULL organization_id (SuperAdmin/seed, §2.2) are dropped for the
+   * same reason.
+   *
+   * One query for the whole set, so this is also not N sequential round-trips.
+   * `IN (:ids)` rather than `= ANY(:ids)`: sequelize expands an array
+   * replacement to a bare comma list, which is valid inside IN and not inside
+   * ANY. A failed lookup degrades every owner to undefined rather than failing
+   * the report.
    */
   private async resolveUserNames(ids: unknown[]): Promise<Map<number, string>> {
     const distinct = Array.from(
       new Set(ids.filter((id): id is number => typeof id === "number" && Number.isFinite(id))),
     );
-    const entries = await Promise.all(
-      distinct.map(async (id) => {
-        try {
-          const user = await getUserByIdQuery(id);
-          const name = user ? `${user.name || ""} ${user.surname || ""}`.trim() : "";
-          return name ? ([id, name] as [number, string]) : null;
-        } catch {
-          return null;
-        }
-      }),
-    );
     const resolved = new Map<number, string>();
-    for (const entry of entries) {
-      if (entry) resolved.set(entry[0], entry[1]);
+    if (distinct.length === 0) return resolved;
+
+    try {
+      const users = (await sequelize.query(
+        `SELECT id, name, surname FROM users
+         WHERE organization_id = :organizationId AND id IN (:ids)`,
+        {
+          replacements: { organizationId: this.organizationId, ids: distinct },
+          type: QueryTypes.SELECT,
+        },
+      )) as any[];
+      for (const user of users) {
+        const name = `${user.name || ""} ${user.surname || ""}`.trim();
+        if (name) resolved.set(user.id, name);
+      }
+    } catch (error) {
+      console.error("[ReportDataCollector] Error resolving user names:", error);
     }
     return resolved;
   }

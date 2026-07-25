@@ -312,12 +312,13 @@ describe("dataCollector", () => {
           ],
         },
       ] as any);
+      mockQuery.mockResolvedValue([{ id: 42, name: "John", surname: "Doe" }] as any);
 
       const collector = createDataCollector(10, 1, 1, 100, 5);
       const result = await collector.collectAllData(["compliance"]);
 
       const controls = result.sections.compliance!.controls;
-      expect(mockGetUser).toHaveBeenCalledWith(42);
+      expect((mockQuery.mock.calls[0] as any)[1].replacements.ids).toEqual([42]);
       expect(controls[0].owner).toBe("John Doe");
       expect(controls[0].category).toBe("Human oversight");
       expect(controls[0].dueDate).toBe("2026-09-30");
@@ -378,6 +379,41 @@ describe("dataCollector", () => {
       expect((incident as any).assignee).toBeUndefined();
       expect((incident as any).title).toBeUndefined();
       expect(incident.type).toBe("Data quality");
+    });
+
+    it("scopes the control-owner lookup to the caller's organization, in one query", async () => {
+      // `users` is tenant-scoped (docs/technical/security/tenant-isolation.md
+      // §2.1/§4.4) and getUserByIdQuery is `SELECT * FROM users WHERE id = :id`
+      // with no org filter. Control 7's owner belongs to org 10; control 8's
+      // owner belongs to another tenant. The foreign name must not reach the
+      // rendered report, the facts block sent to the tenant's LLM provider,
+      // collectAllowedOwners, or the persisted audit_metadata.
+      mockGetCompliance.mockResolvedValue([
+        {
+          name: "Human oversight",
+          controls: [
+            { id: 7, title: "In-org owner", status: "Waiting", owner: 42 },
+            { id: 8, title: "Foreign-org owner", status: "Waiting", owner: 99 },
+          ],
+        },
+      ] as any);
+      // The scoped query returns only the in-org row; 99 simply has no match.
+      mockQuery.mockResolvedValue([{ id: 42, name: "John", surname: "Doe" }] as any);
+
+      const collector = createDataCollector(10, 1, 1, 100, 5);
+      const result = await collector.collectAllData(["compliance"]);
+
+      const controls = result.sections.compliance!.controls;
+      expect(controls[0].owner).toBe("John Doe");
+      expect(controls[1].owner).toBeUndefined();
+
+      // One round-trip for both ids, filtered on the caller's organization.
+      expect(mockQuery).toHaveBeenCalledTimes(1);
+      const [sql, options] = mockQuery.mock.calls[0] as [string, any];
+      expect(sql).toContain("organization_id = :organizationId");
+      expect(options.replacements).toEqual({ organizationId: 10, ids: [42, 99] });
+      // The unscoped per-id helper is no longer used for control owners.
+      expect(mockGetUser).not.toHaveBeenCalledWith(99);
     });
   });
 });
