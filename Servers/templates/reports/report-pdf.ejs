@@ -1,4 +1,29 @@
-<!DOCTYPE html>
+<%
+/*
+ * Risk levels reach this template in three vocabularies and only one of them
+ * is bare: project risks carry the `risk_level_autocalculated` enum WITH a
+ * " risk" suffix ('No risk' | 'Very low risk' | ... | 'Very high risk'),
+ * vendor risks repeat those labels as free text, the NIST subcategory rows
+ * read the project-risk column, and model risks use bare 'Low' | 'Medium' |
+ * 'High' | 'Critical'. Hyphenating the whole string yields
+ * `chip-very-high-risk`, which styles/pdf.css has no rule for, so the chip
+ * prints as unstyled text — hence the suffix strip.
+ *
+ * Anything the palette does not cover — 'No risk', the collectors' "Unknown"
+ * fallback for a NULL, and the free-text `level` the risk analyzer copies out
+ * of its input — falls back to the grey `chip-default` rather than to a class
+ * name with nothing behind it. Keep this list in step with pdf.css.
+ */
+const RISK_CHIP_LEVELS = /^(critical|very-high|high|medium|low|very-low)$/;
+const riskChipClass = (level) => {
+  const key = String(level == null ? '' : level)
+    .trim()
+    .toLowerCase()
+    .replace(/\s+risk$/, '')
+    .replace(/\s+/g, '-');
+  return RISK_CHIP_LEVELS.test(key) ? 'chip-' + key : 'chip-default';
+};
+%><!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -434,7 +459,7 @@
             <td><%= risk.impact %></td>
             <td><%= risk.likelihood %></td>
             <td><span class="chip chip-<%= risk.mitigationStatus.toLowerCase().replace(/\s+/g, '-') %>"><%= risk.mitigationStatus %></span></td>
-            <td><span class="chip chip-<%= risk.riskLevel.toLowerCase().replace(/\s+/g, '-') %>"><%= risk.riskLevel %></span></td>
+            <td><span class="chip <%= riskChipClass(risk.riskLevel) %>"><%= risk.riskLevel %></span></td>
           </tr>
           <% }); %>
         </tbody>
@@ -477,7 +502,7 @@
           <tr>
             <td><%= risk.vendorName %></td>
             <td><%= risk.riskName %></td>
-            <td><span class="chip chip-<%= risk.riskLevel.toLowerCase().replace(/\s+/g, '-') %>"><%= risk.riskLevel %></span></td>
+            <td><span class="chip <%= riskChipClass(risk.riskLevel) %>"><%= risk.riskLevel %></span></td>
             <td><%= risk.actionOwner || '-' %></td>
             <td><%= risk.actionPlan || '-' %></td>
           </tr>
@@ -521,7 +546,7 @@
           <tr>
             <td><%= risk.modelName %></td>
             <td><%= risk.riskName %></td>
-            <td><span class="chip chip-<%= risk.riskLevel.toLowerCase().replace(/\s+/g, '-') %>"><%= risk.riskLevel %></span></td>
+            <td><span class="chip <%= riskChipClass(risk.riskLevel) %>"><%= risk.riskLevel %></span></td>
             <td><%= risk.mitigationStatus %></td>
           </tr>
           <% }); %>
@@ -558,7 +583,7 @@
           <% aiSummaries.riskAnalysis.top_risks.forEach(function(r) { %>
           <tr>
             <td><strong><%= r.name %></strong></td>
-            <td><span class="chip chip-<%= String(r.level).toLowerCase().replace(/\s+risk$/, '').replace(/\s+/g, '-') %>"><%= r.level %></span></td>
+            <td><span class="chip <%= riskChipClass(r.level) %>"><%= r.level %></span></td>
             <td><%= r.why %></td>
           </tr>
           <% }); %>
@@ -807,7 +832,7 @@
             <td>
               <% if (sub.risks.length > 0) { %>
               <% sub.risks.forEach(function(risk, idx) { %>
-              <span class="chip chip-<%= risk.riskLevel.toLowerCase().replace(/\s+/g, '-') %>"><%= risk.riskName %></span><%= idx < sub.risks.length - 1 ? ' ' : '' %>
+              <span class="chip <%= riskChipClass(risk.riskLevel) %>"><%= risk.riskName %></span><%= idx < sub.risks.length - 1 ? ' ' : '' %>
               <% }); %>
               <% } else { %>
               -

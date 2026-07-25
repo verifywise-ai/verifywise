@@ -20,7 +20,12 @@ const SECTION_KEYS: Array<keyof ReportData["sections"]> = [
   "trainingRegistry", "policyManager", "incidentManagement",
 ];
 
-function render(aiSummaries?: AISummaries): string {
+function render(
+  aiSummaries?: AISummaries,
+  // Sections default to falsy stand-ins; a test that needs a real section
+  // passes just that one and leaves its eleven siblings switched off.
+  sectionOverrides: Partial<Record<(typeof SECTION_KEYS)[number], unknown>> = {},
+): string {
   const data = {
     metadata: {
       projectId: 1,
@@ -38,7 +43,10 @@ function render(aiSummaries?: AISummaries): string {
     charts: {},
     renderedCharts: {},
     // Falsy stand-ins for every section so only the AI blocks render.
-    sections: Object.fromEntries(SECTION_KEYS.map((k) => [k, false])) as unknown as ReportData["sections"],
+    sections: {
+      ...Object.fromEntries(SECTION_KEYS.map((k) => [k, false])),
+      ...sectionOverrides,
+    } as unknown as ReportData["sections"],
     aiSummaries,
     // The renderer supplies these; the template must not declare its own copy.
     analysisLabels: ANALYSIS_LABELS,
@@ -352,5 +360,134 @@ describe("report-pdf.ejs template", () => {
 
   it("the template compiles at all", () => {
     expect(() => render()).not.toThrow();
+  });
+
+  // The project-risk enum and the vendor-risk free text both carry a " risk"
+  // suffix ('No risk' | 'Very low risk' | ... | 'Very high risk'), and the NIST
+  // subcategory rows read that same project-risk column. pdf.css has no
+  // `.chip-very-high-risk`, so a class built from the whole string colours
+  // nothing. Every risk chip goes through one expression so the four tables
+  // cannot drift apart again.
+  describe("risk chip classes", () => {
+    const projectRisks = (riskLevel: string) => ({
+      totalRisks: 1,
+      risksByLevel: [],
+      risks: [
+        {
+          name: "Model drift",
+          owner: "Jane Ops",
+          impact: "Major",
+          likelihood: "Likely",
+          mitigationStatus: "In Progress",
+          riskLevel,
+        },
+      ],
+    });
+    const vendorRisks = (riskLevel: string) => ({
+      totalRisks: 1,
+      risks: [{ vendorName: "DataCorp", riskName: "No DPA", riskLevel }],
+    });
+    const nistSubcategories = (riskLevel: string) => ({
+      functions: [
+        {
+          name: "GOVERN",
+          categories: [
+            {
+              name: "GOVERN 1",
+              subcategories: [
+                {
+                  subcategoryId: "GV-1.1",
+                  name: "Legal requirements are understood",
+                  status: "Completed",
+                  risks: [{ riskName: "Unmapped obligations", riskLevel }],
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+
+    it.each([
+      ["projectRisks", projectRisks],
+      ["vendorRisks", vendorRisks],
+      ["nistSubcategories", nistSubcategories],
+    ])("%s strips the ' risk' suffix before building the class", (key, build) => {
+      const html = render(undefined, { [key]: build("Very high risk") } as never);
+      expect(html).toContain('class="chip chip-very-high"');
+      expect(html).not.toContain("chip-very-high-risk");
+    });
+
+    // model_risks is the one bare vocabulary ('Low' | 'Medium' | 'High' |
+    // 'Critical'). It shares the expression so a fifth copy cannot drift, and
+    // the suffix strip must leave a bare level alone.
+    it("model risks keep their unsuffixed level", () => {
+      const html = render(undefined, {
+        modelRisks: {
+          totalRisks: 1,
+          risks: [
+            {
+              modelName: "gpt-4o",
+              riskName: "Prompt injection",
+              riskLevel: "Critical",
+              mitigationStatus: "In Progress",
+            },
+          ],
+        },
+      } as never);
+      expect(html).toContain('class="chip chip-critical"');
+    });
+
+    it("the AI top-risk table lands on the same class as the collector tables", () => {
+      const html = render({
+        sectionSummaries: {},
+        riskAnalysis: {
+          narrative: "Concentration risk dominates.",
+          top_risks: [{ name: "Single approver", level: "Very high risk", why: "25 of 25" }],
+        },
+      });
+      expect(html).toContain('class="chip chip-very-high"');
+    });
+
+    // The defect was never a wrong-looking class name, it was a class name with
+    // no rule behind it. Assert against the real stylesheet rather than against
+    // a second copy of the palette list.
+    it("every level in the project-risk enum lands on a class pdf.css styles", () => {
+      const css = fs.readFileSync(
+        path.join(__dirname, "../../../templates/reports/styles/pdf.css"),
+        "utf-8",
+      );
+      const levels = [
+        "No risk",
+        "Very low risk",
+        "Low risk",
+        "Medium risk",
+        "High risk",
+        "Very high risk",
+        "Unknown", // the collectors' fallback for a NULL level
+      ];
+      for (const level of levels) {
+        const html = render(undefined, { projectRisks: projectRisks(level) } as never);
+        // Anchored on the chip's own text: the mitigation-status chip sits in
+        // the same row and is not what this asserts.
+        const emitted = new RegExp(`class="chip (chip-[a-z-]+)">${level}<`).exec(html);
+        expect(emitted).not.toBeNull();
+        expect(css).toContain(`.${emitted![1]} {`);
+      }
+    });
+
+    it.each([
+      ["Very low risk", "chip-very-low"],
+      ["Medium risk", "chip-medium"],
+      // 'No risk' has no palette entry of its own, and neither does the
+      // collector's "Unknown" fallback for a NULL level. Both fall back to the
+      // grey `chip-default`, which does have a rule, rather than to a class
+      // name that renders as unstyled text.
+      ["No risk", "chip-default"],
+      ["Unknown", "chip-default"],
+    ])("%s renders as %s", (level, expected) => {
+      const html = render(undefined, { projectRisks: projectRisks(level) } as never);
+      expect(html).toContain(`class="chip ${expected}"`);
+    });
   });
 });
