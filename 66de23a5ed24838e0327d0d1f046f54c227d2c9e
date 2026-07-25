@@ -1,0 +1,26 @@
+ATTRIBUTION CORRECTION.
+
+The subject line of this commit describes one change: projectRisks reading
+approval_status under the name mitigationStatus. That change is mine.
+
+The commit also contains seven schema-correctness fixes to dataCollector.ts
+that are NOT mine and are NOT described by the message. They were uncommitted
+work sitting in the working tree; I staged the file whole instead of
+hunk-precise and swept them in:
+
+  1. Dropped the !isOrganizational guard from the ISO 42001 / ISO 27001 and
+     NIST section branches, which had made both unreachable.
+  2. model_inventories join: mi.owner -> mi.approver (mi.owner does not exist).
+  3. model_inventories: mi.name -> mi.model in ORDER BY and projection.
+  4. models projection: m.description -> m.capabilities.
+  5. model_risks join: mi.name -> mi.model for model_name.
+  6. NIST subcategory query rewritten onto the *_struct tables, with the risk
+     join re-pointed through nist_ai_rmf_subcategories__risks to risks.
+  7. ai_incident_managements: dropped the join on the non-existent
+     aim.assignee column.
+
+All seven are correct against the live schema and must not be reverted.
+The Co-Authored-By trailer on this commit does not cover them.
+
+Fixing the message itself needs an interactive rebase over 45+ later commits;
+it was left alone deliberately rather than rewritten unilaterally.
