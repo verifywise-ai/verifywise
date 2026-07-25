@@ -96,12 +96,13 @@ describe("collectFacts", () => {
     expect(risks.items).toBe(3);
   });
 
-  it("§1 — counts rows by enum-ish fields and counts ownerless rows", () => {
+  it("§1 — counts rows by enum-ish fields and counts rows missing the person column", () => {
     const risks = collectFacts(reportData).sections.projectRisks;
     expect(risks["riskLevel_Very high risk"]).toBe(1);
     expect(risks.mitigationStatus_Unknown).toBe(2);
-    // "Unassigned" (dataCollector's placeholder) and "" both count as ownerless.
-    expect(risks.ownerless).toBe(2);
+    // "Unassigned" (dataCollector's placeholder) and "" both count as missing.
+    // risks.risk_owner IS an owner column, so here the aggregate names one.
+    expect(risks.owner_missing).toBe(2);
   });
 
   it("§1 — the chart rollup overwrites the row-derived bucket rather than duplicating it", () => {
@@ -147,7 +148,7 @@ describe("collectFacts", () => {
     const policies = collectFacts(reportData).sections.policyManager;
     expect(String(policies.top1)).toContain("Acceptable use");
     expect(policies.status_Draft).toBe(1);
-    expect(policies.ownerless).toBe(0);
+    expect(policies.owner_missing).toBe(0);
   });
 
   it("§1 — keeps a present-but-empty section as an explicit zero, and omits an absent one", () => {
@@ -156,7 +157,7 @@ describe("collectFacts", () => {
       charts: {},
       sections: { vendors: { totalVendors: 0, vendors: [] } },
     } as any);
-    expect(facts.sections.vendors).toEqual({ totalVendors: 0, items: 0, ownerless: 0 });
+    expect(facts.sections.vendors).toEqual({ totalVendors: 0, items: 0, assignee_missing: 0 });
     expect(facts.sections.models).toBeUndefined();
   });
 
@@ -206,7 +207,7 @@ describe("collectFacts — ranks every section on the vocabulary its collector e
       ],
     });
     expect(String(facts.top1)).toContain("No DPA on file");
-    expect(facts.ownerless).toBe(1);
+    expect(facts.actionOwner_missing).toBe(1);
   });
 
   it("model risks rank on the bare words", () => {
@@ -319,14 +320,16 @@ describe("collectFacts — ranks every section on the vocabulary its collector e
  * ownerless" is emitted for every tenant regardless of their data, and the facts
  * block reaches executiveSummary, keyFindings and recommendedActions, which
  * never see the raw section to check it against.
+ *
+ * The aggregate's NAME is part of that contract. A count keyed `ownerless` over
+ * a column that is not an owner asserts the ownership the section has no column
+ * for, so the name is derived from the field itself and cannot drift from it.
  */
 describe("collectFacts — aggregates only fields the collector populates", () => {
   it("training records carry neither an assignee nor a completion date", () => {
-    // collectTrainingRegistry selects `NULL::varchar as assignee_name` and
-    // `NULL::timestamp as completion_date` (dataCollector.ts:934), and
-    // trainingregistar has no such columns at all — verified against the schema.
-    // So `ownerless` here could only ever equal the row count, and the label
-    // could only ever read "completed unset".
+    // `trainingregistar` has no such columns at all — verified against the
+    // schema. So a missing-person count here could only ever equal the row
+    // count, and the label could only ever read "completed unset".
     const facts = factsFor("trainingRegistry", {
       totalRecords: 2,
       records: [
@@ -334,6 +337,7 @@ describe("collectFacts — aggregates only fields the collector populates", () =
         { trainingName: "Model risk 101", status: "Planned" },
       ],
     });
+    expect(facts.owner_missing).toBeUndefined();
     expect(facts.ownerless).toBeUndefined();
     expect(facts.top1).toBe("Model risk 101 (Planned)");
   });
@@ -348,9 +352,12 @@ describe("collectFacts — aggregates only fields the collector populates", () =
     });
     expect(facts.approver_Alice).toBe(1);
     expect(facts.owner_Alice).toBeUndefined();
-    // The unsigned-off model outranks the approved one, and says so as
-    // "approver", never as an ownership the schema cannot support.
-    expect(facts.ownerless).toBe(1);
+    // The unsigned-off model outranks the approved one, and the COUNT says so
+    // as "approver" too — model_inventories has no owner column, so an
+    // `ownerless` count over it asserts an ownership nothing can back.
+    expect(facts.approver_missing).toBe(1);
+    expect(facts.ownerless).toBeUndefined();
+    expect(facts.owner_missing).toBeUndefined();
     expect(String(facts.top1)).toContain("gpt-y");
     expect(String(facts.top1)).toContain("approver unset");
   });
@@ -369,7 +376,9 @@ describe("collectFacts — aggregates only fields the collector populates", () =
         { incidentId: "INC-2", type: "Model drift", severity: "Serious", status: "Open" },
       ],
     });
-    expect(facts.ownerless).toBe(1);
+    // ai_incident_managements has neither an owner nor an assignee column.
+    expect(facts.reporter_missing).toBe(1);
+    expect(facts.ownerless).toBeUndefined();
   });
 });
 
@@ -531,7 +540,12 @@ describe("renderFacts", () => {
       framework: "ISO 42001",
       subject: "Acme Corp",
       sections: {
-        projectRisks: { totalRisks: 1, items: 1, ownerless: 5, top1: "something else entirely" },
+        projectRisks: {
+          totalRisks: 1,
+          items: 1,
+          owner_missing: 5,
+          top1: "something else entirely",
+        },
       },
     };
 
@@ -540,7 +554,7 @@ describe("renderFacts", () => {
 
     expect(out).toContain("Change since the previous report run (2026-06-22):");
     expect(deltaBlock).toContain("Use Case Risks totalRisks: 3 (was 1, +2)");
-    expect(deltaBlock).toContain("Use Case Risks ownerless: 2 (was 5, -3)");
+    expect(deltaBlock).toContain("Use Case Risks owner_missing: 2 (was 5, -3)");
     // Labels churn between runs without the estate changing; only numbers diff.
     expect(deltaBlock).not.toContain("top1");
     // An aggregate the prior run did not record is not a change.

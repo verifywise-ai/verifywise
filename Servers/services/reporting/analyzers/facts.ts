@@ -120,7 +120,20 @@ interface SectionSpec {
   totals?: string[];
   /** Row fields to bucket by value. */
   counts?: string[];
-  /** Row field carrying an owner; rows missing it are counted as ownerless. */
+  /**
+   * Row field carrying the section's accountable person. Rows missing it are
+   * counted, and the aggregate is NAMED FOR THIS FIELD (`<field>_missing`) —
+   * never a fixed "ownerless".
+   *
+   * Only four sections here have a real accountability column: `risks.risk_owner`,
+   * `controls_eu.owner`, `policy_manager.policy_owner_id` and `vendors.assignee`.
+   * The rest carry a different person entirely — model_inventories has an
+   * `approver` and no owner column, ai_incident_managements a `reporter` and
+   * neither owner nor assignee — so a count keyed `ownerless` over those asserts
+   * exactly the ownership the schema has no column for, in a regulator-facing
+   * artifact, for every tenant. Deriving the name from the field is what stops
+   * the two halves drifting apart again the next time a spec is repointed.
+   */
   owner?: string;
   /** Higher = more material. Applied BEFORE truncation, so the top-N is the
    *  worst N rather than the oldest N — the queries order by id/name ASC.
@@ -239,15 +252,14 @@ const SPECS: Record<string, SectionSpec> = {
     rows: (s) => s.records ?? [],
     totals: ["totalRecords"],
     counts: ["status"],
-    // No `owner` and no completion date. collectTrainingRegistry selects both
-    // `assignee_name` and `completion_date` as literal NULL (dataCollector.ts:934)
-    // because trainingregistar has neither column, so aggregating them would put
-    // "every record is ownerless" and "completed unset" in front of the model for
-    // EVERY tenant regardless of their data. SECTION_INSTRUCTIONS.trainingRegistry
-    // already dropped the matching questions for this exact reason; a fact with no
-    // backing column is worse than a missing one, because the model reports it
-    // truthfully from absence and a confident false finding lands in a compliance
-    // artifact. Restore both with the SELECT, not before.
+    // No `owner` and no completion date. `trainingregistar` has neither column,
+    // so aggregating them would put "every record is ownerless" and "completed
+    // unset" in front of the model for EVERY tenant regardless of their data.
+    // SECTION_INSTRUCTIONS.trainingRegistry already dropped the matching
+    // questions for this exact reason; a fact with no backing column is worse
+    // than a missing one, because the model reports it truthfully from absence
+    // and a confident false finding lands in a compliance artifact. Restore both
+    // with the columns, not before.
     rank: (r) => incomplete(r.status),
     label: (r) => `${text(r.trainingName)} (${text(r.status)})`,
   },
@@ -319,7 +331,7 @@ export function collectFacts(reportData: ReportData): FactsSnapshot {
 
     const ownerField = spec.owner;
     if (ownerField) {
-      put(key, "ownerless", rows.filter((row) => missing(row?.[ownerField])).length);
+      put(key, `${ownerField}_missing`, rows.filter((row) => missing(row?.[ownerField])).length);
     }
 
     const rank = spec.rank;
