@@ -418,8 +418,21 @@ function changedAggregates(facts: FactsSnapshot, prior?: FactsSnapshot | null): 
   const out: string[] = [];
   Object.keys(facts.sections).forEach((key) => {
     const before = prior.sections[key] ?? {};
-    Object.entries(facts.sections[key]).forEach(([name, value]) => {
+    const now = facts.sections[key];
+    // Union of both sides' aggregate names. A bucket key exists only when a row
+    // falls in it, so a bucket that emptied since the prior run is ABSENT from
+    // `now` rather than zero: six Very high risks all closing produced no line
+    // at all, making the most material improvement two runs apart the one thing
+    // the comparison could not report.
+    //
+    // SECTIONS are deliberately not unioned. One missing from `facts` was not
+    // collected for this report — a configuration change — and zeroing its
+    // aggregates would assert an estate change nothing here has data for.
+    new Set([...Object.keys(now), ...Object.keys(before)]).forEach((name) => {
       const was = before[name];
+      // Absent on the current side means the bucket emptied. Guarded by the
+      // `was` check below, so a string aggregate is still never diffed.
+      const value = now[name] ?? 0;
       if (typeof value !== "number" || typeof was !== "number" || was === value) return;
       const delta = value - was;
       out.push(

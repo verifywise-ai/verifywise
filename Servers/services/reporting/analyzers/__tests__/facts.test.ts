@@ -547,6 +547,49 @@ describe("renderFacts", () => {
     expect(deltaBlock).not.toContain("riskLevel_Critical");
   });
 
+  it("§10 — reports a bucket that emptied to zero, the improvement worth reporting", () => {
+    // A bucket key exists only when a row falls in it, so six Very high risks
+    // all closing since the prior run leaves the key ABSENT rather than zero.
+    // Iterating the current keys alone made the single most material
+    // improvement between two runs the one thing the comparison could not say.
+    const current = collectFacts({
+      metadata: reportData.metadata,
+      charts: {},
+      sections: {
+        projectRisks: {
+          totalRisks: 2,
+          risks: [
+            { name: "Stale register", riskLevel: "Low risk", mitigationStatus: "Approved" },
+            { name: "Vendor sprawl", riskLevel: "Low risk", mitigationStatus: "Approved" },
+          ],
+        },
+      },
+    } as any);
+
+    const prior: FactsSnapshot = {
+      generatedAt: "2026-06-22",
+      framework: "ISO 42001",
+      subject: "Acme Corp",
+      sections: {
+        projectRisks: {
+          totalRisks: 2,
+          items: 2,
+          "riskLevel_Very high risk": 6,
+          "riskLevel_Low risk": 2,
+        },
+        // Not collected in this run at all — a report-configuration change, not
+        // an estate change, so it must not be reported as one.
+        vendors: { totalVendors: 4, items: 4 },
+      },
+    };
+
+    const deltaBlock = renderFacts(current, prior).split("Change since the previous report run")[1];
+    expect(deltaBlock).toContain("Use Case Risks riskLevel_Very high risk: 0 (was 6, -6)");
+    // Unchanged buckets stay silent, and an absent section stays absent.
+    expect(deltaBlock).not.toContain("riskLevel_Low risk");
+    expect(deltaBlock).not.toContain("totalVendors");
+  });
+
   it("§10 — an unchanged estate produces no change block at all", () => {
     const snapshot = collectFacts(reportData);
     expect(renderFacts(snapshot, snapshot)).not.toContain("Change since");
