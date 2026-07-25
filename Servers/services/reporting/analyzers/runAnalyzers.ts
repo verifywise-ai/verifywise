@@ -277,6 +277,13 @@ export async function runAnalyzers(input: RunAnalyzersInput): Promise<AnalyzerRe
         // objects, and a repeat omission must not cost the whole analysis.
         maxSelfCorrectionAttempts: 2,
         timeoutMs: LLM_TIMEOUT_MS,
+        // This pipeline has no non-LLM fallback — a lost analyzer is a missing
+        // section in the report — and the configured model is a reasoning model
+        // whose max_tokens ceiling sits below ANALYZER_MAX_OUTPUT_TOKENS, so the
+        // truncation retry and the two transport downgrades are what keep runs
+        // whole. Callers that DO have a fallback (evidence grading, control
+        // matching, planning) deliberately leave this off.
+        extendedRecovery: true,
         extra: { maxOutputTokens: ANALYZER_MAX_OUTPUT_TOKENS },
       });
 

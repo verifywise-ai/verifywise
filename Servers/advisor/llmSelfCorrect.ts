@@ -23,15 +23,18 @@
  *   - Only Zod validation errors trigger self-correction. Other errors
  *     (auth, network, rate-limit) bubble up unchanged so the existing
  *     error mapping in advisor.ctrl.ts continues to work.
- *   - One exception to the line above: a `NoObjectGeneratedError` (empty or
- *     truncated completion — no object to validate, so no Zod issues) is
- *     retried with `TRUNCATION_DIRECTIVE`. It CONSUMES an attempt and sets
- *     `attempts` / `selfCorrected`, unlike the two transport downgrades
- *     below, which repair what we sent and so give the budget back.
- *   - Two transport downgrades, each one-shot and budget-neutral: the
- *     json_schema → json_object switch (`isResponseFormatUnsupported`) and
- *     the maxOutputTokens cap (`isMaxOutputTokensRejected`). Both are
- *     provider 400s, never a NoObjectGeneratedError.
+ *   - Three provider-repair behaviours sit behind the `extendedRecovery`
+ *     opt-in and are OFF by default, so a caller with its own fallback keeps
+ *     getting the raw error:
+ *       - a `NoObjectGeneratedError` (empty or truncated completion — no
+ *         object to validate, so no Zod issues) retried with
+ *         `TRUNCATION_DIRECTIVE`. It CONSUMES an attempt and sets `attempts` /
+ *         `selfCorrected`, unlike the two transport downgrades, which repair
+ *         what we sent and so give the budget back.
+ *       - two transport downgrades, each one-shot and budget-neutral: the
+ *         json_schema → json_object switch (`isResponseFormatUnsupported`) and
+ *         the maxOutputTokens cap (`isMaxOutputTokensRejected`). Both are
+ *         provider 400s, never a NoObjectGeneratedError.
  */
 
 import {
@@ -75,6 +78,22 @@ export interface SelfCorrectingParams<T> {
    * When absent, behaviour is unchanged (existing callers keep working).
    */
   timeoutMs?: number;
+  /**
+   * Opt in to the three provider-repair behaviours: the truncation retry, the
+   * json_schema → json_object transport downgrade, and the maxOutputTokens
+   * cap-and-retry. Off by default — each one turns an error into a degraded
+   * answer, which is the right trade only for a caller with no fallback of its
+   * own. The evidence analyzer, control matcher and planner all have one
+   * (heuristic grading, empty match list, single-plan) and are better served by
+   * the raw error, so they must not get these implicitly.
+   *
+   * An explicit flag rather than keying off `timeoutMs` (today's only opt-in
+   * caller sets both): a timeout is about wall-clock budget and says nothing
+   * about whether a caller wants degraded output, and conflating them hands the
+   * next caller that just wants a deadline all three behaviours by surprise —
+   * which is precisely the regression this flag exists to close.
+   */
+  extendedRecovery?: boolean;
   /**
    * Pass-through for any other generateObject params we don't surface
    * directly (e.g., `maxOutputTokens`, `seed`, `mode`). Merged into the
@@ -390,7 +409,7 @@ export async function generateObjectWithSelfCorrection<T>(
         // enlarging the input that overran, and spending an extra provider
         // call once the correction budget is gone.
         if (NoObjectGeneratedError.isInstance(err)) {
-          if (isLastAttempt) throw err;
+          if (!params.extendedRecovery || isLastAttempt) throw err;
           logger.warn(
             `[llmSelfCorrect] attempt ${attempt} returned no parseable object (${(err as Error).message}); retrying with a truncation directive`,
           );
@@ -405,6 +424,7 @@ export async function generateObjectWithSelfCorrection<T>(
         // ceiling instead of losing the call. Repairs what we sent, so like the
         // transport switch below it must not consume the correction budget.
         if (
+          params.extendedRecovery &&
           !cappedOutputTokens &&
           Number(extra?.maxOutputTokens) > PROVIDER_SAFE_MAX_OUTPUT_TOKENS &&
           isMaxOutputTokensRejected(err)
@@ -423,7 +443,7 @@ export async function generateObjectWithSelfCorrection<T>(
         // validation error nor fatal: downgrade to JSON-object mode once and
         // retry. The schema still validates the result and self-correction
         // still repairs it, so this only changes transport, not correctness.
-        if (!fellBackToJsonObject && isResponseFormatUnsupported(err)) {
+        if (params.extendedRecovery && !fellBackToJsonObject && isResponseFormatUnsupported(err)) {
           fellBackToJsonObject = true;
           model = wrapLanguageModel({
             model: params.model,

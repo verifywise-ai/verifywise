@@ -270,7 +270,7 @@ describe("llmSelfCorrect / generateObjectWithSelfCorrection", () => {
     }) as unknown as GenerateObjectImpl;
 
     const res = await generateObjectWithSelfCorrection<Sample>(
-      { model: {}, schema: sampleSchema, system: "s", prompt: "p" },
+      { model: {}, schema: sampleSchema, system: "s", prompt: "p", extendedRecovery: true },
       mock,
     );
 
@@ -305,6 +305,7 @@ describe("llmSelfCorrect / generateObjectWithSelfCorrection", () => {
           system: "s",
           prompt: "p",
           maxSelfCorrectionAttempts: 2, // → 3 total attempts
+          extendedRecovery: true,
         },
         mock,
       ),
@@ -340,7 +341,7 @@ describe("llmSelfCorrect / generateObjectWithSelfCorrection", () => {
     }) as unknown as GenerateObjectImpl;
 
     const res = await generateObjectWithSelfCorrection<Sample>(
-      { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p" },
+      { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p", extendedRecovery: true },
       mock,
     );
 
@@ -374,6 +375,7 @@ describe("llmSelfCorrect / generateObjectWithSelfCorrection", () => {
         schema: sampleSchema,
         system: "s",
         prompt: "p",
+        extendedRecovery: true,
         extra: { maxOutputTokens: 6000 },
       },
       mock,
@@ -403,6 +405,7 @@ describe("llmSelfCorrect / generateObjectWithSelfCorrection", () => {
           schema: sampleSchema,
           system: "s",
           prompt: "p",
+          extendedRecovery: true,
           extra: { maxOutputTokens: 900 },
         },
         mock,
@@ -532,6 +535,111 @@ describe("llmSelfCorrect / generateObjectWithSelfCorrection", () => {
 });
 
 /* ------------------------------------------------------------------ */
+/* extendedRecovery gate                                              */
+/* ------------------------------------------------------------------ */
+
+describe("llmSelfCorrect / extendedRecovery gate", () => {
+  /** The one caller that opts in (reporting) is the only one these three help. */
+  const noObject = () =>
+    new NoObjectGeneratedError({
+      message: "No object generated: could not parse the response.",
+      text: '{"name": "o',
+      response: { id: "r", timestamp: new Date(0), modelId: "m" },
+      usage: { inputTokens: 1, outputTokens: 9, totalTokens: 10 },
+      finishReason: "length",
+    });
+
+  it("propagates a NoObjectGeneratedError on the first attempt when the opt-in is absent", async () => {
+    // The evidence analyzer, control matcher and planner never opt in. Grading a
+    // truncated completion must throw straight out so advisor.ctrl.ts falls back
+    // to deterministic heuristic grading — not return minimum-length LLM prose
+    // produced under TRUNCATION_DIRECTIVE.
+    const err = noObject();
+    let invocation = 0;
+    const mock: GenerateObjectImpl = (async () => {
+      invocation += 1;
+      throw err;
+    }) as unknown as GenerateObjectImpl;
+
+    await expect(
+      generateObjectWithSelfCorrection<Sample>(
+        { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p" },
+        mock,
+      ),
+    ).rejects.toBe(err);
+    expect(invocation).toBe(1);
+  });
+
+  it("still retries the NoObjectGeneratedError when extendedRecovery is set", async () => {
+    const systems: string[] = [];
+    let invocation = 0;
+    const mock: GenerateObjectImpl = (async (p: any) => {
+      systems.push(p.system);
+      invocation += 1;
+      if (invocation === 1) throw noObject();
+      return { object: { name: "ok", count: 1 } } as any;
+    }) as unknown as GenerateObjectImpl;
+
+    const res = await generateObjectWithSelfCorrection<Sample>(
+      {
+        model: fakeModel,
+        schema: sampleSchema,
+        system: "s",
+        prompt: "p",
+        extendedRecovery: true,
+      },
+      mock,
+    );
+
+    expect(invocation).toBe(2);
+    expect(res.attempts).toBe(2);
+    expect(systems[1]).toContain("PREVIOUS RESPONSE UNUSABLE");
+  });
+
+  it("does not downgrade json_schema when the opt-in is absent", async () => {
+    const err = new Error("This response_format type is unavailable now");
+    let invocation = 0;
+    const mock: GenerateObjectImpl = (async () => {
+      invocation += 1;
+      throw err;
+    }) as unknown as GenerateObjectImpl;
+
+    await expect(
+      generateObjectWithSelfCorrection<Sample>(
+        { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p" },
+        mock,
+      ),
+    ).rejects.toBe(err);
+    expect(invocation).toBe(1);
+  });
+
+  it("does not cap maxOutputTokens when the opt-in is absent", async () => {
+    const err = new Error(
+      "max_tokens: 6000 > 4096, which is the maximum allowed number of output tokens for claude-3-opus-20240229",
+    );
+    let invocation = 0;
+    const mock: GenerateObjectImpl = (async () => {
+      invocation += 1;
+      throw err;
+    }) as unknown as GenerateObjectImpl;
+
+    await expect(
+      generateObjectWithSelfCorrection<Sample>(
+        {
+          model: fakeModel,
+          schema: sampleSchema,
+          system: "s",
+          prompt: "p",
+          extra: { maxOutputTokens: 6000 },
+        },
+        mock,
+      ),
+    ).rejects.toBe(err);
+    expect(invocation).toBe(1);
+  });
+});
+
+/* ------------------------------------------------------------------ */
 /* isResponseFormatUnsupported                                        */
 /* ------------------------------------------------------------------ */
 
@@ -602,7 +710,7 @@ describe("llmSelfCorrect / json-object fallback", () => {
     }) as unknown as GenerateObjectImpl;
 
     const result = await generateObjectWithSelfCorrection<Sample>(
-      { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p" },
+      { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p", extendedRecovery: true },
       mock,
     );
 
@@ -620,7 +728,13 @@ describe("llmSelfCorrect / json-object fallback", () => {
 
     await expect(
       generateObjectWithSelfCorrection<Sample>(
-        { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p" },
+        {
+          model: fakeModel,
+          schema: sampleSchema,
+          system: "s",
+          prompt: "p",
+          extendedRecovery: true,
+        },
         mock,
       ),
     ).rejects.toThrow(/response_format/i);
@@ -650,7 +764,13 @@ describe("llmSelfCorrect / json-object fallback", () => {
 
     await expect(
       generateObjectWithSelfCorrection<Sample>(
-        { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p" },
+        {
+          model: fakeModel,
+          schema: sampleSchema,
+          system: "s",
+          prompt: "p",
+          extendedRecovery: true,
+        },
         mock,
       ),
     ).rejects.toBe(err);
