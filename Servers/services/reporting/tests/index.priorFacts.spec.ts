@@ -34,6 +34,7 @@ jest.mock("../../../utils/logger/fileLogger", () => ({
 }));
 
 import { generateReport } from "../index";
+import { FACTS_SCHEMA_VERSION } from "../analyzers/facts";
 import { createDataCollector } from "../dataCollector";
 import { generatePDF } from "../pdfGenerator";
 
@@ -77,7 +78,11 @@ const request: any = {
   },
 };
 
+// Carries the current FACTS_SCHEMA_VERSION: collectPriorFacts refuses a prior
+// stamped with any other vocabulary, because an aggregate renamed between the
+// two runs would otherwise diff as an estate change that never happened.
 const priorSnapshot = {
+  schema: FACTS_SCHEMA_VERSION,
   generatedAt: "2026-06-01T00:00:00.000Z",
   framework: "EU AI Act",
   subject: "Test Project",

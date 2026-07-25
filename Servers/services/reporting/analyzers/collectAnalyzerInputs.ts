@@ -11,7 +11,7 @@ import { getEvidenceGapsQuery } from "../../../utils/evidenceAi.utils";
 import { getPriorFactsSnapshotQuery } from "../../../utils/reportRunAnalysis.utils";
 import logger from "../../../utils/logger/fileLogger";
 import type { AiBlocks } from "./runAnalyzers";
-import { collectFacts, renderFacts, type FactsSnapshot } from "./facts";
+import { FACTS_SCHEMA_VERSION, collectFacts, renderFacts, type FactsSnapshot } from "./facts";
 
 /**
  * frameworks.id -> readiness framework_type.
@@ -232,6 +232,10 @@ function isFactsSnapshot(value: any): value is FactsSnapshot {
   return (
     !!value &&
     typeof value === "object" &&
+    // A prior stamped with any other vocabulary version is refused rather than
+    // diffed against — an orphaned aggregate name reads as an improvement that
+    // never happened. See FACTS_SCHEMA_VERSION.
+    value.schema === FACTS_SCHEMA_VERSION &&
     typeof value.generatedAt === "string" &&
     !!value.sections &&
     typeof value.sections === "object"

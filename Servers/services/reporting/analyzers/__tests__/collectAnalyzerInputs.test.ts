@@ -27,6 +27,7 @@ jest.mock("../../../../utils/reportRunAnalysis.utils", () => ({
 // dataCollector, which imports the real sequelize instance at module load.
 jest.mock("../../../../database/db", () => ({ sequelize: {} }));
 
+import { FACTS_SCHEMA_VERSION } from "../facts";
 import {
   collectReadinessInput,
   collectEvidenceGapsInput,
@@ -156,14 +157,27 @@ describe("collectAnalyzerInputs", () => {
   });
 
   it("prefers an explicit aiBlocks over the legacy default", () => {
-    const blocks = resolveBlocks({ aiEnhanced: true, aiBlocks: { sectionSummaries: false, executiveSummary: false, keyFindings: false, recommendedActions: false, riskAnalysis: true, complianceGap: false, vendorRisk: false } } as any);
+    const blocks = resolveBlocks({
+      aiEnhanced: true,
+      aiBlocks: {
+        sectionSummaries: false,
+        executiveSummary: false,
+        keyFindings: false,
+        recommendedActions: false,
+        riskAnalysis: true,
+        complianceGap: false,
+        vendorRisk: false,
+      },
+    } as any);
     expect(blocks.riskAnalysis).toBe(true);
     expect(blocks.executiveSummary).toBe(false);
     expect(blocks.sectionSummaries).toBe(false);
   });
 
   it("enables nothing when aiEnhanced is false", () => {
-    expect(Object.values(resolveBlocks({ aiEnhanced: false } as any)).every((v) => v === false)).toBe(true);
+    expect(
+      Object.values(resolveBlocks({ aiEnhanced: false } as any)).every((v) => v === false),
+    ).toBe(true);
   });
 
   it("§1 — builds the facts block and returns the snapshot for a later run to diff against", () => {
@@ -181,7 +195,12 @@ describe("collectAnalyzerInputs", () => {
           totalPolicies: 2,
           policies: [
             { policyName: "Acceptable use", status: "Draft", owner: "Bob" },
-            { policyName: "Model release", status: "Approved", reviewDate: "1/1/2026", owner: "Bob" },
+            {
+              policyName: "Model release",
+              status: "Approved",
+              reviewDate: "1/1/2026",
+              owner: "Bob",
+            },
           ],
         },
       },
@@ -198,11 +217,20 @@ describe("collectAnalyzerInputs", () => {
 
   it("§10 — renders the delta when a prior snapshot is supplied", () => {
     const rd: any = {
-      metadata: { generatedAt: new Date(2026, 6, 22), frameworkName: "ISO 42001", projectTitle: "Acme" },
+      metadata: {
+        generatedAt: new Date(2026, 6, 22),
+        frameworkName: "ISO 42001",
+        projectTitle: "Acme",
+      },
       charts: {},
-      sections: { policyManager: { totalPolicies: 2, policies: [{ policyName: "A" }, { policyName: "B" }] } },
+      sections: {
+        policyManager: { totalPolicies: 2, policies: [{ policyName: "A" }, { policyName: "B" }] },
+      },
     };
-    const prior = collectFactsInput({ ...rd, sections: { policyManager: { totalPolicies: 1, policies: [{ policyName: "A" }] } } }).snapshot;
+    const prior = collectFactsInput({
+      ...rd,
+      sections: { policyManager: { totalPolicies: 1, policies: [{ policyName: "A" }] } },
+    }).snapshot;
 
     expect(collectFactsInput(rd, prior).facts).toContain("totalPolicies: 2 (was 1, +1)");
     expect(collectFactsInput(rd).facts).not.toContain("Change since");
@@ -217,6 +245,7 @@ describe("collectAnalyzerInputs", () => {
 
   it("returns the stored snapshot for the schedule, scoped to the organization", async () => {
     const stored = {
+      schema: FACTS_SCHEMA_VERSION,
       generatedAt: "2026-06-01T00:00:00.000Z",
       framework: "EU AI Act",
       subject: "Test Project",
@@ -226,6 +255,37 @@ describe("collectAnalyzerInputs", () => {
 
     expect(await collectPriorFacts(12, 5)).toEqual(stored);
     expect(mockPriorFacts).toHaveBeenCalledWith(12, 5);
+  });
+
+  it("rejects a prior written under a different aggregate vocabulary", async () => {
+    // The delta block subtracts a prior aggregate from the current one by NAME,
+    // and treats a name absent from the current side as a bucket that emptied
+    // to zero. That inference is only sound while both sides name things the
+    // same way. Rename an aggregate — `ownerless` became `<field>_missing`,
+    // `owner_<name>` became `approver_<name>` — and every orphaned key reads as
+    // a measured improvement that never happened: "AI Models ownerless: 0
+    // (was 7, -7)" in a regulator-facing artifact, which is worse than a static
+    // wrong label because it reads as evidence of remediation.
+    //
+    // So the snapshot carries its shape and a prior stamped with any other one
+    // is refused. Losing one run's comparison is the honest cost; the report
+    // simply carries no change block, which is what a first run renders anyway.
+    mockPriorFacts.mockResolvedValue({
+      generatedAt: "2026-06-01",
+      framework: "EU AI Act",
+      subject: "Test Project",
+      sections: { models: { items: 26, ownerless: 7 } },
+    });
+    expect(await collectPriorFacts(12, 5)).toBeNull();
+
+    mockPriorFacts.mockResolvedValue({
+      schema: FACTS_SCHEMA_VERSION + 1,
+      generatedAt: "2026-06-01",
+      framework: "EU AI Act",
+      subject: "Test Project",
+      sections: { models: { items: 26 } },
+    });
+    expect(await collectPriorFacts(12, 5)).toBeNull();
   });
 
   it("degrades to no comparison when the lookup throws", async () => {

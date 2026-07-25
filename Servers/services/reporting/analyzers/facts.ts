@@ -11,9 +11,31 @@ import type { ReportData } from "../../../domain.layer/interfaces/i.reportGenera
 import { isoDate } from "../dataCollector";
 import { isTerminalStatus, levelRank, SECTION_LABELS } from "./prompts";
 
+/**
+ * The aggregate vocabulary this file emits. BUMP IT whenever an aggregate is
+ * renamed, removed, or changes meaning.
+ *
+ * The delta block subtracts a prior aggregate from the current one BY NAME, and
+ * reads a name absent from the current side as a bucket that emptied to zero.
+ * That inference is only sound while both snapshots name things the same way.
+ * When `ownerless` became `<field>_missing` and `owner_<name>` became
+ * `approver_<name>`, every orphaned key in an already-stored snapshot started
+ * reading as a measured improvement: "AI Models ownerless: 0 (was 7, -7)" in a
+ * regulator-facing artifact, for an estate where nothing had changed. That is
+ * worse than a static wrong label, because it reads as evidence of remediation.
+ *
+ * A prior stamped with any other version is refused by `isFactsSnapshot`, so the
+ * run carries no change block at all — which is exactly what a first run
+ * renders. One comparison is the honest price of a rename.
+ */
+export const FACTS_SCHEMA_VERSION = 1;
+
 /** Structured, storable snapshot. Persisted to report_run_analyses.audit_metadata
  *  so a later run can diff against it without a second LLM call. */
 export interface FactsSnapshot {
+  /** Vocabulary version — see FACTS_SCHEMA_VERSION. Present so a prior written
+   *  under different aggregate names is refused rather than diffed against. */
+  schema: number;
   /** The report's reference DAY, `YYYY-MM-DD`. Day granularity on purpose:
    *  every date the collector emits is day-granular, and every comparison the
    *  model is asked to make against this value is a day comparison. */
@@ -109,11 +131,11 @@ const incomplete = (v: unknown): number => (isTerminalStatus(v) ? 0 : 1);
  * its prompts.ts counterpart (`dateOf`): both files order deadlines
  * soonest-first, and only the level/status keys read in opposite directions.
  *
- * Deadline-shaped fields only, and the same two prompts.ts uses. `reviewDate`,
- * `reportedDate` and `completionDate` are excluded: the first two reach here
- * through toLocaleDateString(), so "03/04/2026" is March 4 or April 3 depending
- * on the server's locale — a field that cannot be parsed reliably must not
- * order anything, since a wrong date is still a valid one. Undated rows get a
+ * Deadline-shaped fields only, and the same two prompts.ts uses. `reviewDate`
+ * and `reportedDate` are excluded: both reach here through
+ * toLocaleDateString(), so "03/04/2026" is March 4 or April 3 depending on the
+ * server's locale — a field that cannot be parsed reliably must not order
+ * anything, since a wrong date is still a valid one. Undated rows get a
  * finite sentinel rather than NaN, so they sort last without poisoning the
  * comparator.
  */
@@ -402,6 +424,7 @@ export function collectFacts(reportData: ReportData): FactsSnapshot {
   );
 
   return {
+    schema: FACTS_SCHEMA_VERSION,
     generatedAt: referenceDay(meta.generatedAt),
     framework: meta.frameworkName ?? "AI governance",
     subject: meta.projectTitle ?? "the organization",
