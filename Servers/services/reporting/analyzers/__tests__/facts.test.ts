@@ -292,12 +292,11 @@ describe("collectFacts — ranks every section on the vocabulary its collector e
     const facts = factsFor("trainingRegistry", {
       totalRecords: 2,
       records: [
-        { trainingName: "Annual AI ethics", status: "Completed", completionDate: "1/1/2026" },
-        { trainingName: "Model risk 101", status: "Planned", assignee: "Bob" },
+        { trainingName: "Annual AI ethics", status: "Completed" },
+        { trainingName: "Model risk 101", status: "Planned" },
       ],
     });
     expect(String(facts.top1)).toContain("Model risk 101");
-    expect(facts.ownerless).toBe(1);
   });
 
   it("compliance controls terminate at Done", () => {
@@ -309,6 +308,68 @@ describe("collectFacts — ranks every section on the vocabulary its collector e
       ],
     });
     expect(String(facts.top1)).toContain("C-2");
+  });
+});
+
+/**
+ * Every field a spec names must be one the collector actually populates from a
+ * real column. A spec that aggregates a field the projection hard-codes to NULL
+ * — or one that was renamed out from under it — does not produce a missing
+ * number, it produces a CONFIDENT WRONG one: "22 of 22 training records are
+ * ownerless" is emitted for every tenant regardless of their data, and the facts
+ * block reaches executiveSummary, keyFindings and recommendedActions, which
+ * never see the raw section to check it against.
+ */
+describe("collectFacts — aggregates only fields the collector populates", () => {
+  it("training records carry neither an assignee nor a completion date", () => {
+    // collectTrainingRegistry selects `NULL::varchar as assignee_name` and
+    // `NULL::timestamp as completion_date` (dataCollector.ts:934), and
+    // trainingregistar has no such columns at all — verified against the schema.
+    // So `ownerless` here could only ever equal the row count, and the label
+    // could only ever read "completed unset".
+    const facts = factsFor("trainingRegistry", {
+      totalRecords: 2,
+      records: [
+        { trainingName: "Annual AI ethics", status: "Completed" },
+        { trainingName: "Model risk 101", status: "Planned" },
+      ],
+    });
+    expect(facts.ownerless).toBeUndefined();
+    expect(facts.top1).toBe("Model risk 101 (Planned)");
+  });
+
+  it("models aggregate the approver, the only person column model_inventories has", () => {
+    const facts = factsFor("models", {
+      totalModels: 2,
+      models: [
+        { name: "gpt-x", version: "1.0", status: "Approved", approver: "Alice" },
+        { name: "gpt-y", version: "2.0", status: "Pending" },
+      ],
+    });
+    expect(facts.approver_Alice).toBe(1);
+    expect(facts.owner_Alice).toBeUndefined();
+    // The unsigned-off model outranks the approved one, and says so as
+    // "approver", never as an ownership the schema cannot support.
+    expect(facts.ownerless).toBe(1);
+    expect(String(facts.top1)).toContain("gpt-y");
+    expect(String(facts.top1)).toContain("approver unset");
+  });
+
+  it("incidents count rows with no reporter, their only person column", () => {
+    const facts = factsFor("incidentManagement", {
+      totalIncidents: 2,
+      incidents: [
+        {
+          incidentId: "INC-1",
+          type: "Misuse",
+          severity: "Minor",
+          status: "Closed",
+          reporter: "Alice",
+        },
+        { incidentId: "INC-2", type: "Model drift", severity: "Serious", status: "Open" },
+      ],
+    });
+    expect(facts.ownerless).toBe(1);
   });
 });
 
@@ -460,7 +521,7 @@ describe("renderFacts", () => {
             name: `Model ${i}`,
             version: "1.0",
             status: "Approved",
-            owner: "Alice",
+            approver: "Alice",
           })),
         },
         policyManager: {

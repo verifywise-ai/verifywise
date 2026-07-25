@@ -201,21 +201,32 @@ const SPECS: Record<string, SectionSpec> = {
   models: {
     rows: (s) => s.models ?? [],
     totals: ["totalModels"],
-    // owner is bucketed deliberately: "all 25 models are owned by one person"
-    // is a finding, and MAX_BUCKETS bounds the cost of a high-cardinality column.
-    counts: ["status", "owner"],
-    owner: "owner",
-    rank: (r) => (missing(r.owner) ? 1 : 0),
-    label: (r) => `${text(r.name)} ${text(r.version)} (${text(r.status)}, owner ${text(r.owner)})`,
+    // approver is bucketed deliberately: "all 25 models were signed off by one
+    // person" is a segregation-of-duties finding, and MAX_BUCKETS bounds the
+    // cost of a high-cardinality column. model_inventories has an `approver` FK
+    // and no owner column at all, so a missing value here is an unsigned-off
+    // model, not an unowned one — SECTION_INSTRUCTIONS.models frames it that way.
+    counts: ["status", "approver"],
+    owner: "approver",
+    rank: (r) => (missing(r.approver) ? 1 : 0),
+    label: (r) =>
+      `${text(r.name)} ${text(r.version)} (${text(r.status)}, approver ${text(r.approver)})`,
   },
   trainingRegistry: {
     rows: (s) => s.records ?? [],
     totals: ["totalRecords"],
     counts: ["status"],
-    owner: "assignee",
+    // No `owner` and no completion date. collectTrainingRegistry selects both
+    // `assignee_name` and `completion_date` as literal NULL (dataCollector.ts:934)
+    // because trainingregistar has neither column, so aggregating them would put
+    // "every record is ownerless" and "completed unset" in front of the model for
+    // EVERY tenant regardless of their data. SECTION_INSTRUCTIONS.trainingRegistry
+    // already dropped the matching questions for this exact reason; a fact with no
+    // backing column is worse than a missing one, because the model reports it
+    // truthfully from absence and a confident false finding lands in a compliance
+    // artifact. Restore both with the SELECT, not before.
     rank: (r) => incomplete(r.status),
-    label: (r) =>
-      `${text(r.trainingName)} (${text(r.status)}, completed ${text(r.completionDate)})`,
+    label: (r) => `${text(r.trainingName)} (${text(r.status)})`,
   },
   policyManager: {
     rows: (s) => s.policies ?? [],
@@ -230,7 +241,9 @@ const SPECS: Record<string, SectionSpec> = {
     rows: (s) => s.incidents ?? [],
     totals: ["totalIncidents"],
     counts: ["severity", "status"],
-    owner: "assignee",
+    // `reporter` is who filed the incident — the projection's only person field.
+    // There is no assignee column on ai_incident_managements.
+    owner: "reporter",
     rank: (r) => materialityScore(r.severity),
     label: (r) =>
       `${text(r.incidentId)} ${text(r.type)} (${text(r.severity)}, ${text(r.status)}, reported ${text(r.reportedDate)})`,
