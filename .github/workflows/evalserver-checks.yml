@@ -104,6 +104,9 @@ jobs:
           .venv/bin/python -m pip install pip-audit
           .venv/bin/python -m pip_audit -r requirements.txt
 
+      - name: Install EvaluationModule test mocks
+        run: .venv/bin/python -m pip install respx
+
       - name: Run EvaluationModule tests
         working-directory: EvaluationModule
         run: |
