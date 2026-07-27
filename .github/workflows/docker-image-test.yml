@@ -2,17 +2,12 @@ name: Build and Deploy to Testing
 
 on:
   schedule:
-    # Run nightly at 02:00 UTC
-    - cron: '0 2 * * *'
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+    # Run every hour
+    - cron: '0 * * * *'
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
     environment: Build
 
     permissions:
@@ -43,8 +38,7 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/verifywise-frontend:test
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          no-cache: true
           build-args: |
             VITE_SLACK_CLIENT_ID=${{ secrets.SLACK_CLIENT_ID }}
             VITE_APP_VERSION=develop

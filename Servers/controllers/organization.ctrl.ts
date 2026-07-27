@@ -28,11 +28,9 @@
  */
 
 import { Request, Response } from "express";
-import { Transaction } from "sequelize";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { sequelize } from "../database/db";
 import { OrganizationModel } from "../domain.layer/models/organization/organization.model";
-import { UserModel } from "../domain.layer/models/user/user.model";
 import {
   createOrganizationQuery,
   deleteOrganizationByIdQuery,
@@ -268,55 +266,6 @@ export async function getOrganizationById(req: Request, res: Response): Promise<
  *   }
  * }
  */
-async function buildOrganizationAndAdmin(
-  body: {
-    name: string;
-    logo?: string;
-    userEmail: string;
-    userName: string;
-    userSurname: string;
-    userPassword: string;
-  },
-  transaction: Transaction,
-  res: Response,
-): Promise<{
-  user: UserModel;
-  organization: OrganizationModel;
-  accessToken: string;
-}> {
-  const organizationModel = await OrganizationModel.createNewOrganization(body.name, body.logo);
-  await organizationModel.validateOrganizationData();
-  const createdOrganization = await createOrganizationQuery(organizationModel, transaction);
-
-  if (!createdOrganization) {
-    throw new ValidationException("Unable to create organization");
-  }
-
-  const organization_id = createdOrganization.id!;
-  const user = await createNewUserWrapper(
-    {
-      email: body.userEmail,
-      name: body.userName,
-      surname: body.userSurname,
-      password: body.userPassword,
-      roleId: 1, // Admin
-      organizationId: organization_id,
-    },
-    transaction,
-  );
-
-  const { accessToken } = await generateUserTokens(
-    {
-      id: user.id!,
-      email: body.userEmail,
-      roleName: "Admin",
-      organizationId: organization_id,
-    },
-    res,
-  );
-
-  return { user, organization: createdOrganization, accessToken };
-}
 
 export async function createOrganization(req: Request, res: Response): Promise<any> {
   const transaction = await sequelize.transaction();
@@ -328,45 +277,99 @@ export async function createOrganization(req: Request, res: Response): Promise<a
   );
   logger.debug("🛠️ Creating new organization");
   try {
-    const result = await buildOrganizationAndAdmin(req.body, transaction, res);
-    await transaction.commit();
+    const body = req.body as {
+      name: string;
+      logo: string;
+      userEmail: string;
+      userName: string;
+      userSurname: string;
+      userPassword: string;
+    };
+
+    // Use the OrganizationModel's createNewOrganization method with validation
+    const organizationModel = await OrganizationModel.createNewOrganization(body.name, body.logo);
+
+    // Validate the organization data before saving
+    await organizationModel.validateOrganizationData();
+
+    // Use the utility query function for database operation
+    const createdOrganization = await createOrganizationQuery(organizationModel, transaction);
+
+    if (createdOrganization) {
+      const organization_id = createdOrganization.id!;
+      // With shared-schema multi-tenancy, no tenant schema creation needed
+      // All data goes to public schema with organization_id column
+      const user = await createNewUserWrapper(
+        {
+          email: body.userEmail,
+          name: body.userName,
+          surname: body.userSurname,
+          password: body.userPassword,
+          roleId: 1, // Assuming 1 is the default role ID for Admin
+          organizationId: organization_id,
+        },
+        transaction,
+      );
+
+      // Generate tokens for the newly created user
+      const { accessToken } = await generateUserTokens(
+        {
+          id: user.id!,
+          email: body.userEmail,
+          roleName: "Admin", // roleId 1 corresponds to Admin
+          organizationId: organization_id,
+        },
+        res,
+      );
+
+      await transaction.commit();
+      logStructured(
+        "successful",
+        `organization created: ${createdOrganization.name}`,
+        "createOrganization",
+        "organization.ctrl.ts",
+      );
+      await logEvent(
+        "Create",
+        `Organization created: ${createdOrganization.name}`,
+        user.id!,
+        organization_id,
+      );
+      return res.status(201).json(
+        STATUS_CODE[201]({
+          user: user.toSafeJSON(),
+          organization: {
+            id: createdOrganization.id,
+            name: createdOrganization.name,
+          },
+          token: accessToken,
+        }),
+      );
+    }
 
     logStructured(
-      "successful",
-      `organization created: ${result.organization.name}`,
+      "error",
+      "failed to create organization",
       "createOrganization",
       "organization.ctrl.ts",
     );
-    await logEvent(
-      "Create",
-      `Organization created: ${result.organization.name}`,
-      result.user.id!,
-      result.organization.id!,
-    );
-
-    return res.status(201).json(
-      STATUS_CODE[201]({
-        user: result.user.toSafeJSON(),
-        organization: {
-          id: result.organization.id,
-          name: result.organization.name,
-        },
-        token: result.accessToken,
-      }),
-    );
+    await logEvent("Error", "Organization creation failed", req.userId!, req.organizationId!);
+    await transaction.rollback();
+    return res.status(400).json(STATUS_CODE[400](req.t!("Unable to create organization")));
   } catch (error) {
     await transaction.rollback();
 
+    // Handle specific validation errors
     if (error instanceof ValidationException) {
       logStructured(
         "error",
-        `validation failed: ${(error as Error).message}`,
+        `validation failed: ${error.message}`,
         "createOrganization",
         "organization.ctrl.ts",
       );
       await logEvent(
         "Error",
-        `Validation error during organization creation: ${(error as Error).message}`,
+        `Validation error during organization creation: ${error.message}`,
         req.userId!,
         req.organizationId!,
       );
@@ -376,13 +379,13 @@ export async function createOrganization(req: Request, res: Response): Promise<a
     if (error instanceof BusinessLogicException) {
       logStructured(
         "error",
-        `business logic error: ${(error as Error).message}`,
+        `business logic error: ${error.message}`,
         "createOrganization",
         "organization.ctrl.ts",
       );
       await logEvent(
         "Error",
-        `Business logic error during organization creation: ${(error as Error).message}`,
+        `Business logic error during organization creation: ${error.message}`,
         req.userId!,
         req.organizationId!,
       );
@@ -402,97 +405,6 @@ export async function createOrganization(req: Request, res: Response): Promise<a
       req.organizationId!,
     );
     logger.error("❌ Error in createOrganization:", error);
-    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
-  }
-}
-
-export async function createFirstOrganization(req: Request, res: Response): Promise<any> {
-  const transaction = await sequelize.transaction();
-  logStructured(
-    "processing",
-    "starting createFirstOrganization",
-    "createFirstOrganization",
-    "organization.ctrl.ts",
-  );
-  logger.debug("🛠️ Creating first organization");
-  try {
-    const result = await buildOrganizationAndAdmin(req.body, transaction, res);
-    await transaction.commit();
-
-    logStructured(
-      "successful",
-      `first organization created: ${result.organization.name}`,
-      "createFirstOrganization",
-      "organization.ctrl.ts",
-    );
-    await logEvent(
-      "Create",
-      `First organization created: ${result.organization.name}`,
-      result.user.id!,
-      result.organization.id!,
-    );
-
-    return res.status(201).json(
-      STATUS_CODE[201]({
-        user: result.user.toSafeJSON(),
-        organization: {
-          id: result.organization.id,
-          name: result.organization.name,
-        },
-        token: result.accessToken,
-      }),
-    );
-  } catch (error) {
-    await transaction.rollback();
-
-    const actorId = req.userId ?? 0;
-    const organizationId = req.organizationId ?? 0;
-
-    if (error instanceof ValidationException) {
-      logStructured(
-        "error",
-        `validation failed: ${(error as Error).message}`,
-        "createFirstOrganization",
-        "organization.ctrl.ts",
-      );
-      await logEvent(
-        "Error",
-        `Validation error during first organization creation: ${(error as Error).message}`,
-        actorId,
-        organizationId,
-      );
-      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
-    }
-
-    if (error instanceof BusinessLogicException) {
-      logStructured(
-        "error",
-        `business logic error: ${(error as Error).message}`,
-        "createFirstOrganization",
-        "organization.ctrl.ts",
-      );
-      await logEvent(
-        "Error",
-        `Business logic error during first organization creation: ${(error as Error).message}`,
-        actorId,
-        organizationId,
-      );
-      return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
-    }
-
-    logStructured(
-      "error",
-      "unexpected error during first organization creation",
-      "createFirstOrganization",
-      "organization.ctrl.ts",
-    );
-    await logEvent(
-      "Error",
-      `Unexpected error during first organization creation: ${(error as Error).message}`,
-      actorId,
-      organizationId,
-    );
-    logger.error("❌ Error in createFirstOrganization:", error);
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }

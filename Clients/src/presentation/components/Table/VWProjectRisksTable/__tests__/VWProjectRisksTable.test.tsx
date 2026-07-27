@@ -5,11 +5,19 @@ import VWProjectRisksTable from "../index";
 import type { RiskModel } from "../../../../../domain/models/Common/risks/risk.model";
 import { buildRisk } from "../../../../../test/factories/risk.factory";
 
+// Controllable stub: tests can override the definitions per-case without
+// re-importing the real module (a dynamic importActual of useCustomFields
+// pulls customField.repository -> axios into the graph and can resolve after
+// environment teardown, causing unhandled EnvironmentTeardownError).
+const customFieldsMock = vi.hoisted(() => ({
+  useCustomFieldDefinitions: vi.fn(() => ({ data: [] as any[], isLoading: false, isError: false })),
+}));
+
 vi.mock("../../../../../application/hooks/useCustomFields", () => ({
   // Stub every hook the module exports so vitest doesn't keep real
   // customField.repository (→ axios) in the live module graph, which leads
   // to "module loaded after teardown" unhandled rejections.
-  useCustomFieldDefinitions: () => ({ data: [], isLoading: false, isError: false }),
+  useCustomFieldDefinitions: customFieldsMock.useCustomFieldDefinitions,
   useCustomFieldValues: () => ({ data: [], isLoading: false }),
   useMissingRequiredCustomFields: () => ({ data: [], isLoading: false }),
   useCreateCustomFieldDefinition: () => ({ mutate: () => {}, mutateAsync: async () => undefined }),
@@ -21,6 +29,14 @@ vi.mock("../../../../../application/hooks/useCustomFields", () => ({
     missingRequired: () => ["customFields", "missingRequired"],
   },
 }));
+
+afterEach(() => {
+  customFieldsMock.useCustomFieldDefinitions.mockReturnValue({
+    data: [],
+    isLoading: false,
+    isError: false,
+  });
+});
 
 vi.mock("../../../../../application/hooks/useBulkSelection", () => ({
   useBulkSelection: () => ({
@@ -372,8 +388,13 @@ describe("VWProjectRisksTable", () => {
   });
 
   it("renders custom field columns when present", () => {
+    customFieldsMock.useCustomFieldDefinitions.mockReturnValue({
+      data: [{ id: 1, label: "Custom Field", field_type: "text" }],
+      isLoading: false,
+      isError: false,
+    });
     renderWithProviders(<VWProjectRisksTable {...defaultProps} />);
-    expect(screen.getByText("RISK NAME")).toBeInTheDocument();
+    expect(screen.getByText("CUSTOM FIELD")).toBeInTheDocument();
   });
 
   it("handles flashRow prop", () => {

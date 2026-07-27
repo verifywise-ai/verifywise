@@ -24,6 +24,7 @@ import axios, { AxiosError } from "axios";
 import { store } from "../../application/redux/store";
 import { ENV_VARs } from "../../../env.vars";
 import { clearAuthState, setAuthToken } from "../../application/redux/auth/authSlice";
+import { storageService } from "../storage";
 import { AlertProps } from "../../presentation/types/alert.types";
 import { translations, type Lang } from "../../i18n/translations";
 import { getLanguage } from "../../i18n/domTranslator";
@@ -150,13 +151,9 @@ CustomAxios.interceptors.request.use(
       config.headers["X-Organization-Id"] = String(activeOrgId);
     }
 
-    try {
-      const lang = localStorage.getItem("vw_lang_prototype");
-      if (lang) {
-        config.headers["Accept-Language"] = lang;
-      }
-    } catch {
-      // localStorage unavailable in sandboxed contexts.
+    const lang = storageService.get("language", "en");
+    if (lang) {
+      config.headers["Accept-Language"] = lang;
     }
 
     // Enable credentials for auth-related endpoints

@@ -26,7 +26,6 @@ const router = express.Router();
 
 import {
   createOrganization,
-  createFirstOrganization,
   getOrganizationById,
   updateOrganizationById,
   getOrganizationsExists,
@@ -36,7 +35,6 @@ import {
 import authenticateJWT from "../middleware/auth.middleware";
 import superAdminOnly from "../middleware/superAdminOnly.middleware";
 import authorize from "../middleware/accessControl.middleware";
-import { requireSystemNotInitialized } from "../middleware/setupGuard.middleware";
 
 /**
  * GET /organizations/exists
@@ -53,20 +51,6 @@ import { requireSystemNotInitialized } from "../middleware/setupGuard.middleware
  * @returns {boolean} True if organizations exist, false otherwise
  */
 router.get("/exists", getOrganizationsExists);
-
-/**
- * POST /organizations/setup
- *
- * Public first-time setup endpoint.
- * Creates the first organization and admin user only when the system has no
- * users yet. Once initialized, this endpoint returns 403.
- *
- * @name post/setup
- * @function
- * @memberof module:routes/organization.route
- * @inner
- */
-router.post("/setup", requireSystemNotInitialized, createFirstOrganization);
 
 /**
  * GET /organizations/:id

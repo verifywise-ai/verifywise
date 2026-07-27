@@ -11,7 +11,6 @@ import Field from "../../../components/Inputs/Field";
 import singleTheme from "../../../themes/v1SingleTheme";
 import { useNavigate, useLocation } from "react-router-dom";
 import { sendPasswordResetEmail } from "../../../../application/repository/auth.repository";
-import { handleAlert } from "../../../../application/tools/alertUtils";
 import { AlertProps } from "../../../types/alert.types";
 import Alert from "../../../components/Alert";
 import { background, border as borderPalette } from "../../../themes/palette";
@@ -41,26 +40,31 @@ const ForgotPassword: React.FC = () => {
   };
 
   // Handle form submission
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (isSubmitting) return; // guard against double-submit
     setIsSubmitting(true);
+    // Trim so a pasted address with stray whitespace still matches the stored
+    // value and passes the backend's strict address validation.
+    const email = values.email.trim();
     try {
       const formData = {
-        to: values.email,
-        email: values.email,
-        name: values.email,
+        to: email,
+        email,
+        name: email,
       };
-      sendPasswordResetEmail(formData);
-      navigate("/reset-password", { state: { email: values.email } });
-    } catch (_error) {
-      handleAlert({
-        variant: "error",
-        body: "Failed to send reset email. Please try again.",
-        setAlert,
-      });
+      // Await so the button stays disabled until the request settles, but the
+      // outcome must NOT change what the user sees: the backend deliberately
+      // returns the same generic success for both existing and unknown accounts
+      // (anti-enumeration). Surfacing send failures here would re-expose a
+      // found-vs-not-found oracle (e.g. 200 navigate vs 500 error when an
+      // account exists and SMTP fails), so we navigate to the confirmation
+      // screen regardless of how the request resolves. Genuine delivery errors
+      // are logged and handled server-side, not shown to the requester.
+      await sendPasswordResetEmail(formData).catch(() => undefined);
     } finally {
       setIsSubmitting(false);
-      setValues(initialState);
+      navigate("/reset-password", { state: { email } });
     }
   };
 

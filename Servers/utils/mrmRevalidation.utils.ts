@@ -8,7 +8,6 @@ import {
 } from "../domain.layer/enums/mrm.enum";
 import { MrmRevalidationTriggerSource } from "../domain.layer/enums/mrmMonitoring.enum";
 import { createValidationQuery } from "./mrm.utils";
-import { getModelRoleUserIdQuery } from "./mrmMonitoring.utils";
 import { ConflictException } from "../domain.layer/exceptions/custom.exception";
 
 /**
@@ -104,12 +103,25 @@ export const getModelValidatorIdQuery = async (
   modelInventoryId: number,
   transaction?: Transaction,
 ): Promise<number | null> => {
-  return getModelRoleUserIdQuery(
-    organizationId,
-    modelInventoryId,
-    MrmModelRole.VALIDATOR,
-    transaction,
-  );
+  const rows = (await sequelize.query(
+    `SELECT user_id FROM mrm_model_roles
+      WHERE organization_id = :organizationId
+        AND model_inventory_id = :modelInventoryId
+        AND role = :role
+        AND user_id IS NOT NULL
+      ORDER BY id ASC
+      LIMIT 1`,
+    {
+      replacements: {
+        organizationId,
+        modelInventoryId,
+        role: MrmModelRole.VALIDATOR,
+      },
+      type: QueryTypes.SELECT,
+      transaction,
+    },
+  )) as { user_id: number | null }[];
+  return rows[0]?.user_id ?? null;
 };
 
 /**

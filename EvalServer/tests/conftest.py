@@ -59,21 +59,6 @@ def _isolate_environment(monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.delenv(key, raising=False)
 
 
-@pytest.fixture(autouse=True)
-def _stub_ollama_subprocess(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Prevent run_evaluation() from calling the real Ollama CLI during tests."""
-    import subprocess
-
-    original_run = subprocess.run
-
-    def _run(args: Any, *a: Any, **kw: Any) -> Any:
-        if isinstance(args, (list, tuple)) and args and args[0] == "ollama":
-            return subprocess.CompletedProcess(args, returncode=0, stdout="", stderr="")
-        return original_run(args, *a, **kw)
-
-    monkeypatch.setattr(subprocess, "run", _run)
-
-
 @pytest.fixture
 def gateway_env(monkeypatch: pytest.MonkeyPatch) -> str:
     """Enable AI Gateway mode with a sentinel key (sufficient for gateway_mode_enabled())."""

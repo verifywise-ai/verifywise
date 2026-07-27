@@ -88,6 +88,69 @@ describe("StorageService", () => {
       expect(dynamicKeys.sorting("vendors")).toBe("verifywise_vendors_sorting");
       expect(dynamicKeys.columns("files")).toBe("verifywise_columns_files");
       expect(dynamicKeys.deadlineSnooze(7)).toBe("verifywise_deadline_snooze_7");
+      expect(dynamicKeys.deadlineCollapsedSections()).toBe(
+        "verifywise_deadline_collapsed_sections",
+      );
+      expect(dynamicKeys.startHereDismissed("progress")).toBe(
+        "verifywise_start_here_progress_dismissed",
+      );
+      expect(dynamicKeys.startHereDismissed("experts")).toBe(
+        "verifywise_start_here_experts_dismissed",
+      );
+      expect(dynamicKeys.aiGatewayPlaygroundEndpoint()).toBe("verifywise_playground_endpoint");
+    });
+  });
+
+  describe("migrated typed keys", () => {
+    it("stores language as a raw string under vw_lang_prototype", () => {
+      const svc = new StorageService();
+      svc.set("language", "de");
+      expect(localStorage.getItem("vw_lang_prototype")).toBe("de");
+      expect(svc.get("language", "en")).toBe("de");
+    });
+
+    it("round-trips Evals dashboard typed keys", () => {
+      const svc = new StorageService();
+      const experiments = [{ id: "1", name: "Exp", projectId: "p1" }];
+      svc.set("evalsRecentExperiments", experiments);
+      svc.set("evalsLastProjectId", "p1");
+      expect(svc.get("evalsRecentExperiments", [])).toEqual(experiments);
+      expect(localStorage.getItem("verifywise_evals_last_project_id")).toBe("p1");
+    });
+
+    it("migrates legacy un-namespaced Evals keys", () => {
+      localStorage.setItem("evals_last_project_id", "legacy-project");
+      const svc = new StorageService();
+      expect(svc.get("evalsLastProjectId", "")).toBe("legacy-project");
+      expect(localStorage.getItem("verifywise_evals_last_project_id")).toBe("legacy-project");
+      expect(localStorage.getItem("evals_last_project_id")).toBeNull();
+    });
+
+    it("round-trips Framework tab keys", () => {
+      const svc = new StorageService();
+      svc.set("frameworkSelected", "2");
+      svc.set("iso27001Tab", "annex");
+      expect(svc.get("frameworkSelected", "0")).toBe("2");
+      expect(svc.get("iso27001Tab", "clause")).toBe("annex");
+    });
+
+    it("round-trips StartHere progress", () => {
+      const svc = new StorageService();
+      svc.set("startHereProgress", [true, true, false, false, true]);
+      expect(svc.get("startHereProgress", [])).toEqual([true, true, false, false, true]);
+    });
+
+    it("round-trips Dashboard demo hidden flag", () => {
+      const svc = new StorageService();
+      svc.set("dashboardDemoHidden", true);
+      expect(svc.get("dashboardDemoHidden", false)).toBe(true);
+      expect(localStorage.getItem("verifywise_hide_demo_data_button")).toBe("true");
+    });
+
+    it("round-trips AI Gateway analytics period", () => {
+      const svc = new StorageService();
+      svc.set("aiGatewayAnalyticsPeriod", "30d");
+      expect(svc.get("aiGatewayAnalyticsPeriod", "1d")).toBe("30d");
     });
   });
 

@@ -23,6 +23,9 @@ jest.mock("../../../controllers/user.ctrl", () => ({
   deleteUserProfilePhoto: jest.fn((_req: any, res: any) => res.status(204).send()),
   resetPassword: jest.fn((_req: any, res: any) => res.status(200).json({ reset: true })),
   logoutUser: jest.fn((_req: any, res: any) => res.status(200).json({ message: "Logged out" })),
+  getPreferencesForCurrentUser: jest.fn((_req: any, res: any) =>
+    res.status(200).json({ date_format: "DD-MM-YYYY", language: "en" }),
+  ),
 }));
 
 jest.mock("../../../middleware/auth.middleware", () =>

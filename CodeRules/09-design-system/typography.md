@@ -46,7 +46,7 @@ Base font size: **13px**
 | Element | Size | Weight | Line Height | Notes |
 |---------|------|--------|-------------|-------|
 | Button text | 13px | 500 | 1 | Sentence case |
-| Form label | 13px | 500 | 1.5 | Above input fields |
+| Form label | 13px | 500 | 22px | Above input fields |
 | Input text | 13px | 400 | 1.5 | Inside text fields |
 | Placeholder | 13px | 400 | 1.5 | `text.accent` color |
 | Error message | 11px | 400 | 1.4 | Below input fields |
@@ -72,31 +72,24 @@ Do NOT use arbitrary sizes like 15px, 17px, 19px, etc.
 
 ## Usage in Code
 
-Source of truth: [`Clients/src/presentation/themes/typography.ts`](../../Clients/src/presentation/themes/typography.ts)
-
 ```tsx
-import { textStyles, fontSize, fontWeight } from "@/presentation/themes/typography";
+// Use sx prop with explicit values (not MUI Typography variants)
+<Typography sx={{ fontSize: 16, fontWeight: 600 }}>Card Title</Typography>
+<Typography sx={{ fontSize: 13, fontWeight: 400 }}>Body text</Typography>
+<Typography sx={{ fontSize: 12, fontWeight: 500 }}>Small label</Typography>
+
+// Use theme typography mixins
 import { typographyMixins } from "@/presentation/themes/mixins";
 
-// Prefer semantic text styles
-<Typography sx={textStyles.cardTitle}>Card Title</Typography>
-<Typography sx={textStyles.body}>Body text</Typography>
-<Typography sx={textStyles.formLabel}>Email</Typography>
-
-// Or mixins (adds theme colors)
 <Typography sx={typographyMixins.pageTitle(theme)}>Page Title</Typography>
 <Typography sx={typographyMixins.cardTitle(theme)}>Card Title</Typography>
-
-// Primitives when no role fits
-<Typography sx={{ fontSize: fontSize.sm, fontWeight: fontWeight.medium }}>Small label</Typography>
 ```
 
 > **Note:** Do not use MUI Typography variants (h1-h6, body1, body2) directly.
-> Use `textStyles` / mixins / `fontSize` tokens from `typography.ts`.
+> Use explicit `sx` props with the sizes defined above.
 
 ## Related Documents
 
 - [Colors](./colors.md)
 - [Spacing](./spacing.md)
 - [Component Patterns](./component-patterns.md)
-- [Design Tokens](../../docs/technical/guides/design-tokens.md#typography)

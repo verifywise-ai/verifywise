@@ -4,8 +4,9 @@ permissions:
   contents: read
 
 on:
-  # Manual trigger only — the pull_request trigger is intentionally omitted
-  # so PRs don't auto-run E2E tests (requires full stack + DB).
+  # Disabled: this workflow only runs when triggered manually from the
+  # Actions tab (workflow_dispatch). The pull_request trigger is
+  # intentionally omitted so PRs don't auto-run E2E tests.
   workflow_dispatch:
 
 jobs:
@@ -40,12 +41,12 @@ jobs:
           --health-retries 5
 
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v6
 
       - name: Set up Node
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@v6
         with:
-          node-version: '22'
+          node-version: '20'
 
       # ---- Backend setup ----
       - name: Install backend dependencies
@@ -83,7 +84,7 @@ jobs:
 
       # ---- AIGateway setup ----
       - name: Set up Python
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@v6
         with:
           python-version: '3.12'
 
@@ -182,12 +183,3 @@ jobs:
           name: playwright-results
           path: Clients/test-results/
           retention-days: 7
-
-      - name: Upload accessibility report
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: accessibility-report
-          path: Clients/test-results/accessibility-report.html
-          retention-days: 30
-          if-no-files-found: ignore

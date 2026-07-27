@@ -1,14 +1,10 @@
 import { QueryTypes, Transaction } from "sequelize";
 import { sequelize } from "../database/db";
-import {
-  getBreachNotificationRecipientsQuery,
-  getModelLabelQuery,
-  getModelRoleUserIdQuery,
-} from "./mrmMonitoring.utils";
+import { getBreachNotificationRecipientsQuery, getModelLabelQuery } from "./mrmMonitoring.utils";
 import { getOpenValidationForModelQuery } from "./mrmRevalidation.utils";
-import { getMrmOrgSettings, MrmOrgSettings } from "./mrmSettings.utils";
+import { getMrmOrgSettings } from "./mrmSettings.utils";
 import { MrmEvalStatus, MrmThresholdSeverity } from "../domain.layer/enums/mrmMonitoring.enum";
-import { MrmFindingSeverity, MrmModelRole } from "../domain.layer/enums/mrm.enum";
+import { MrmFindingSeverity } from "../domain.layer/enums/mrm.enum";
 import { sendInAppNotification } from "../services/inAppNotification.service";
 import { EMAIL_TEMPLATES } from "../constants/emailTemplates";
 import {
@@ -89,20 +85,6 @@ export const getAlertRecipientsUnion = async (
   return unionRecipients(roleRecipients, extraRecipients);
 };
 
-export interface MrmAlertContext {
-  settings: MrmOrgSettings;
-  extraRecipients: number[];
-}
-
-/** Org-constant inputs for alert dispatch, loadable once per run. */
-export const loadMrmAlertContext = async (organizationId: number): Promise<MrmAlertContext> => {
-  const [settings, extraRecipients] = await Promise.all([
-    getMrmOrgSettings(organizationId),
-    getAlertExtraRecipientsQuery(organizationId),
-  ]);
-  return { settings, extraRecipients };
-};
-
 /** Threshold severity → finding severity. warn never opens a finding. */
 export const severityToFindingSeverity = (
   severity: MrmThresholdSeverity,
@@ -115,6 +97,29 @@ export const severityToFindingSeverity = (
 /** Auto-finding trigger predicate: hard breaches only, and only when enabled. */
 export const isAutoFindingEligible = (status: MrmEvalStatus, autoOpenEnabled: boolean): boolean =>
   autoOpenEnabled && status === MrmEvalStatus.BREACH;
+
+/** The model's assigned owner role user, or null. Lowest id wins if duplicated. */
+const getModelOwnerUserIdQuery = async (
+  organizationId: number,
+  modelInventoryId: number,
+  transaction?: Transaction,
+): Promise<number | null> => {
+  const rows = (await sequelize.query(
+    `SELECT user_id FROM mrm_model_roles
+      WHERE organization_id = :organizationId
+        AND model_inventory_id = :modelInventoryId
+        AND role = 'owner'
+        AND user_id IS NOT NULL
+      ORDER BY id ASC
+      LIMIT 1`,
+    {
+      replacements: { organizationId, modelInventoryId },
+      type: QueryTypes.SELECT,
+      transaction,
+    },
+  )) as { user_id: number }[];
+  return rows[0]?.user_id ?? null;
+};
 
 /**
  * Auto-open a finding for a hard metric breach, once per (model, metric) while
@@ -182,12 +187,7 @@ export const maybeAutoOpenFindingForBreach = async (
       modelInventoryId,
       transaction,
     );
-    const ownerId = await getModelRoleUserIdQuery(
-      organizationId,
-      modelInventoryId,
-      MrmModelRole.OWNER,
-      transaction,
-    );
+    const ownerId = await getModelOwnerUserIdQuery(organizationId, modelInventoryId, transaction);
 
     const rows = (await sequelize.query(
       `INSERT INTO mrm_findings
@@ -211,10 +211,6 @@ export const maybeAutoOpenFindingForBreach = async (
         transaction,
       },
     )) as { id: number }[];
-
-    if (!rows[0]) {
-      throw new Error("mrm_findings INSERT returned no row");
-    }
 
     await transaction.commit();
     return rows[0].id;
@@ -288,19 +284,14 @@ export const notifyRevalidationDue = async (
   modelInventoryId: number,
   validationId: number,
   nextDue: Date | null,
-  loadContext: () => Promise<MrmAlertContext> = () => loadMrmAlertContext(organizationId),
 ): Promise<void> => {
   const claimed = await claimOverdueNotificationQuery(organizationId, validationId);
   if (!claimed) return;
 
-  const ctx = await loadContext();
-  const roleRecipients = await getBreachNotificationRecipientsQuery(
-    organizationId,
-    modelInventoryId,
-  );
-  const recipients = unionRecipients(roleRecipients, ctx.extraRecipients);
+  const recipients = await getAlertRecipientsUnion(organizationId, modelInventoryId);
   if (recipients.length === 0) return;
 
+  const settings = await getMrmOrgSettings(organizationId);
   const label = (await getModelLabelQuery(organizationId, modelInventoryId)) ?? "a model";
   const dueDate = nextDue ? new Date(nextDue).toISOString().slice(0, 10) : "unknown";
   const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
@@ -318,7 +309,7 @@ export const notifyRevalidationDue = async (
       entity_name: label,
       action_url: validationPath,
     },
-    ctx.settings.alert_email_enabled,
+    settings.alert_email_enabled,
     {
       template: EMAIL_TEMPLATES.MRM_REVALIDATION_DUE,
       subject: `Validation overdue: ${label}`,

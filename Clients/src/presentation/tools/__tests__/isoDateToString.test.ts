@@ -17,7 +17,7 @@ describe("formatDate", () => {
   });
 
   it("formats another date using the default preference", () => {
-    expect(formatDate("2023-03-15")).toBe("15-03-2023");
+    expect(formatDate("2023-03-15T00:00:00Z")).toBe("15-03-2023");
   });
 
   it("throws for empty string", () => {
