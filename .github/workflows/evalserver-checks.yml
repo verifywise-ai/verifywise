@@ -33,7 +33,6 @@ jobs:
           cache-dependency-path: |
             EvalServer/requirements.txt
             EvalServer/requirements-test.txt
-            EvaluationModule/requirements.txt
 
       - name: Install EvalServer runtime + test dependencies
         working-directory: EvalServer
@@ -45,14 +44,11 @@ jobs:
           # import EvalServer source modules that require them.
           pip install -r requirements.txt
 
-      - name: Install EvaluationModule runtime dependencies
-        working-directory: EvaluationModule
-        run: pip install -r requirements.txt
-
       - name: Audit EvalServer dependencies (pip-audit)
+        working-directory: EvalServer
         run: |
-          .venv/bin/python -m pip install pip-audit
-          .venv/bin/python -m pip_audit -r requirements.txt
+          python -m pip install pip-audit
+          python -m pip_audit -r requirements.txt
 
       - name: Run EvalServer tests (excluding integration smoke tests)
         working-directory: EvalServer
@@ -85,7 +81,6 @@ jobs:
           cache: 'pip'
           cache-dependency-path: |
             EvaluationModule/requirements.txt
-            EvaluationModule/requirements-test.txt
 
       - name: Cache EvaluationModule virtualenv
         uses: actions/cache@v6
@@ -101,7 +96,7 @@ jobs:
       - name: Install EvaluationModule runtime + test dependencies
         run: |
           .venv/bin/python -m pip install --upgrade pip
-          .venv/bin/python -m pip install -r requirements-test.txt
+          .venv/bin/python -m pip install pytest
           .venv/bin/python -m pip install -r requirements.txt
 
       - name: Audit EvaluationModule dependencies (pip-audit)
@@ -112,4 +107,4 @@ jobs:
       - name: Run EvaluationModule tests
         working-directory: EvaluationModule
         run: |
-          python -m pytest tests/ -v -m "not integration"
+          .venv/bin/python -m pytest tests/ -v -m "not integration"

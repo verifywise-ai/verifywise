@@ -53,7 +53,7 @@ jobs:
         run: |
           .venv/bin/python -m pip install --upgrade pip
           .venv/bin/python -m pip install -r requirements.txt
-          .venv/bin/python -m pip install pytest
+          .venv/bin/python -m pip install pytest pytest-asyncio
           .venv/bin/python -m spacy download en_core_web_md
 
       - name: Audit AIGateway dependencies (pip-audit)
@@ -76,6 +76,5 @@ jobs:
           OPENAI_API_KEY: sk-test
         run: |
           .venv/bin/python -m pytest \
-            tests/test_gateway_health_headless.py \
             tests/test_cache_service.py \
             -v

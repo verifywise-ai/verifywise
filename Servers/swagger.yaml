@@ -10877,17 +10877,6 @@ paths:
           description: Success
         '500':
           description: 'Internal server error'
-  /organizations/setup:
-    post:
-      summary: 'Create First Organization'
-      responses:
-        '200':
-          description: Success
-        '500':
-          description: 'Internal server error'
-      tags:
-        - Organizations
-      operationId: createFirstOrganization
   '/organizations/{id}':
     get:
       tags:
