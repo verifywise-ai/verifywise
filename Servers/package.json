@@ -38,7 +38,7 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.76",
-    "@ai-sdk/openai": "^3.0.63",
+    "@ai-sdk/openai": "^4.0.20",
     "@aws-sdk/client-ses": "^3.1045.0",
     "@azure/communication-email": "^1.1.0",
     "@azure/msal-node": "^3.8.10",
