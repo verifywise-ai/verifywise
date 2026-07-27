@@ -199,7 +199,7 @@ jobs:
 
       - name: Post coverage gate comment on PR
         if: github.event_name == 'pull_request' && failure()
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require("fs");
