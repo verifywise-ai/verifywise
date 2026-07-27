@@ -19,6 +19,15 @@ export const CSRF_HEADER_NAME = "x-csrf-token";
 const REFRESH_COOKIE_NAME = "refresh_token";
 const STATE_CHANGING_METHODS = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
+// Public auth endpoints are never cookie-authenticated flows; a stale
+// refresh_token cookie left in the browser must not block login/registration.
+const CSRF_EXEMPT_PATHS = new Set([
+  "/api/users/login",
+  "/api/users/login-microsoft",
+  "/api/users/register",
+  "/api/users/reset-password",
+]);
+
 /**
  * Generates a new CSRF token and sets it as a NON-httpOnly cookie so the
  * frontend can read it and echo it back in the `x-csrf-token` header.
@@ -34,7 +43,7 @@ export function generateCsrfToken(res: Response): string {
   // recognize this as a CSRF-token cookie definition.
   res.cookie("csrfToken", token, {
     httpOnly: false, // JS must be able to read this cookie
-    path: "/api/users",
+    path: "/", // must be readable from the SPA routes (e.g., /login)
     expires: new Date(Date.now() + THIRTY_DAYS_MS), // match refresh cookie
     secure: process.env.NODE_ENV === "production",
     sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
@@ -54,6 +63,12 @@ export function generateCsrfToken(res: Response): string {
  *   Missing or mismatched tokens are rejected with 403.
  */
 export function csrfProtection(req: Request, res: Response, next: NextFunction): void {
+  // Public auth endpoints are not CSRF-protected; they are the flows that
+  // create/rotate the cookies in the first place.
+  if (CSRF_EXEMPT_PATHS.has(req.path)) {
+    return next();
+  }
+
   // Only cookie-authenticated flows are CSRF-exposed; Bearer-only clients pass.
   if (!req.cookies?.[REFRESH_COOKIE_NAME]) {
     return next();

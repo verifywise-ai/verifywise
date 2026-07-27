@@ -55,7 +55,7 @@ describe("csrf.middleware", () => {
         token,
         expect.objectContaining({
           httpOnly: false,
-          path: "/api/users",
+          path: "/",
           sameSite: "lax",
           secure: false,
         }),
@@ -79,6 +79,21 @@ describe("csrf.middleware", () => {
   describe("csrfProtection", () => {
     it("should pass through requests without the refresh_token cookie (Bearer clients)", () => {
       const req = createReq({ method: "POST", cookies: {} });
+      const res = createRes();
+
+      csrfProtection(req, res, next);
+
+      expect(next).toHaveBeenCalledTimes(1);
+      expect(res.status).not.toHaveBeenCalled();
+    });
+
+    it("should pass through public auth endpoints even with a stale refresh_token cookie", () => {
+      const req = createReq({
+        method: "POST",
+        path: "/api/users/login",
+        cookies: { refresh_token: "stale", [CSRF_COOKIE_NAME]: "stale-csrf" },
+        headers: {},
+      });
       const res = createRes();
 
       csrfProtection(req, res, next);
