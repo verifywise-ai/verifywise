@@ -28,6 +28,7 @@ import { Archive, ArchiveRestore, Download, Trash2, FileText, Sparkles } from "l
 import singleTheme from "../../themes/v1SingleTheme";
 import { EmptyState } from "../../components/EmptyState";
 import ReportAnalysisPanel from "../../components/ReportAnalysisPanel";
+import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
 import {
   useReportRunsPage,
   useArchiveRun,
@@ -64,6 +65,9 @@ export default function ReportRunsTable({ variant }: { variant: "live" | "archiv
   // Which run's analyses the drawer is showing. null = drawer closed, which also
   // disables the analyses query.
   const [selectedRunId, setSelectedRunId] = useState<number | null>(null);
+  // Delete is permanent (unlike archive, which can be undone with restore), so
+  // it is gated behind an explicit confirmation instead of firing on click.
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
 
   const { data, isLoading } = useReportRunsPage({
     archived: variant === "archived",
@@ -77,6 +81,28 @@ export default function ReportRunsTable({ variant }: { variant: "live" | "archiv
   const archive = useArchiveRun();
   const restore = useRestoreRun();
   const remove = useDeleteRun();
+
+  // Mirrors ArchiveTab's original handler: turn the Blob into an object URL,
+  // trigger a save via a throwaway anchor, then revoke the URL. Without this
+  // the returned Blob is discarded and clicking Download does nothing.
+  const handleDownload = async (id: number, filename: string | null) => {
+    try {
+      const blob = await downloadReportRun(id);
+      const url = URL.createObjectURL(blob);
+      try {
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = filename ?? `report-${id}.pdf`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    } catch (error) {
+      console.error("Failed to download report run:", error);
+    }
+  };
 
   const rows: any[] = data?.rows ?? [];
   // Gate on the server total, not the page length: an empty page 2 means "you
@@ -140,7 +166,7 @@ export default function ReportRunsTable({ variant }: { variant: "live" | "archiv
                         aria-label="Download"
                         size="small"
                         disabled={!r.file_id}
-                        onClick={() => downloadReportRun(r.id)}
+                        onClick={() => handleDownload(r.id, r.output_filename ?? null)}
                       >
                         <Download size={16} />
                       </IconButton>
@@ -182,7 +208,7 @@ export default function ReportRunsTable({ variant }: { variant: "live" | "archiv
                     <IconButton
                       aria-label="Delete"
                       size="small"
-                      onClick={() => remove.mutate(r.id)}
+                      onClick={() => setPendingDeleteId(r.id)}
                     >
                       <Trash2 size={16} />
                     </IconButton>
@@ -226,6 +252,28 @@ export default function ReportRunsTable({ variant }: { variant: "live" | "archiv
           <ReportAnalysisPanel analyses={analyses} isLoading={analysesLoading} />
         </Stack>
       </Drawer>
+
+      {pendingDeleteId != null && (
+        <ConfirmationModal
+          isOpen
+          title="Delete report run permanently?"
+          body={
+            <Typography fontSize={13} color={theme.palette.text.primary}>
+              This permanently deletes the report file and run record. This
+              cannot be undone.
+            </Typography>
+          }
+          cancelText="Cancel"
+          proceedText="Delete permanently"
+          proceedButtonColor="error"
+          proceedButtonVariant="contained"
+          onCancel={() => setPendingDeleteId(null)}
+          onProceed={() => {
+            remove.mutate(pendingDeleteId);
+            setPendingDeleteId(null);
+          }}
+        />
+      )}
     </>
   );
 }

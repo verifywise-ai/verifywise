@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 
@@ -7,6 +7,7 @@ const mockArchive = vi.fn();
 const mockRestore = vi.fn();
 const mockDelete = vi.fn();
 const mockAnalyses = vi.fn();
+const mockDownloadReportRun = vi.fn();
 
 vi.mock("../../../../application/hooks/useReporting", () => ({
   useReportRunsPage: (...args: any[]) => mockRunsPage(...args),
@@ -17,6 +18,10 @@ vi.mock("../../../../application/hooks/useReporting", () => ({
     mockAnalyses(...args);
     return { data: [], isLoading: false };
   },
+}));
+
+vi.mock("../../../../application/repository/reporting.repository", () => ({
+  downloadReportRun: (...args: any[]) => mockDownloadReportRun(...args),
 }));
 
 import ReportRunsTable from "../ReportRunsTable";
@@ -116,5 +121,74 @@ describe("ReportRunsTable", () => {
     // state ("No AI analyses were generated for this report run.").
     expect(screen.getByText("AI analyses")).toBeInTheDocument();
     expect(mockAnalyses).toHaveBeenLastCalledWith(1);
+  });
+
+  it("downloads the run's file as a saved blob when Download is clicked", async () => {
+    const blob = new Blob(["pdf-bytes"], { type: "application/pdf" });
+    mockDownloadReportRun.mockResolvedValue(blob);
+
+    // jsdom does not implement Blob object URLs; stub them so the handler's
+    // createObjectURL/revokeObjectURL calls resolve instead of throwing.
+    const createObjectURL = vi.fn(() => "blob:mock-url");
+    const revokeObjectURL = vi.fn();
+    (URL as any).createObjectURL = createObjectURL;
+    (URL as any).revokeObjectURL = revokeObjectURL;
+
+    let downloadedFilename: string | undefined;
+    const clickSpy = vi
+      .spyOn(HTMLAnchorElement.prototype, "click")
+      .mockImplementation(function (this: HTMLAnchorElement) {
+        downloadedFilename = this.download;
+      });
+
+    try {
+      const user = userEvent.setup();
+      renderWithProviders(<ReportRunsTable variant="live" />);
+
+      await user.click(screen.getByRole("button", { name: "Download" }));
+
+      // The handler is async (await downloadReportRun before touching the DOM).
+      await waitFor(() => expect(clickSpy).toHaveBeenCalledOnce());
+
+      expect(mockDownloadReportRun).toHaveBeenCalledWith(1);
+      expect(createObjectURL).toHaveBeenCalledWith(blob);
+      expect(revokeObjectURL).toHaveBeenCalledWith("blob:mock-url");
+      expect(downloadedFilename).toBe("Q3 risk review.pdf");
+    } finally {
+      clickSpy.mockRestore();
+      delete (URL as any).createObjectURL;
+      delete (URL as any).revokeObjectURL;
+    }
+  });
+
+  it("asks for confirmation before deleting a run, and does not delete without it", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<ReportRunsTable variant="live" />);
+
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+
+    expect(screen.getByText("Delete report run permanently?")).toBeInTheDocument();
+    expect(mockDelete).not.toHaveBeenCalled();
+  });
+
+  it("deletes the run once the confirmation is accepted", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<ReportRunsTable variant="live" />);
+
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+    await user.click(screen.getByRole("button", { name: /delete permanently/i }));
+
+    expect(mockDelete).toHaveBeenCalledWith(1);
+  });
+
+  it("does not delete when the confirmation is cancelled", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<ReportRunsTable variant="live" />);
+
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(mockDelete).not.toHaveBeenCalled();
+    expect(screen.queryByText("Delete report run permanently?")).not.toBeInTheDocument();
   });
 });
