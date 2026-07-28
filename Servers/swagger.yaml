@@ -13620,6 +13620,21 @@ paths:
         -
           bearerAuth: []
       description: 'Requires role: Admin or Editor'
+  '/reporting/templates/{id}/run':
+    post:
+      summary: 'Run Template Now'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Reporting/Templates
+      operationId: runTemplateNow
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or Editor'
   /reporting/scheduled-reports:
     get:
       summary: 'List Scheduled Reports'
@@ -13750,6 +13765,20 @@ paths:
       security:
         -
           bearerAuth: []
+    delete:
+      summary: 'Delete Run'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Reporting/Runs
+      operationId: deleteRun
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or Editor'
   '/reporting/runs/{id}/download':
     get:
       summary: 'Download Run'
@@ -13778,6 +13807,36 @@ paths:
       security:
         -
           bearerAuth: []
+  '/reporting/runs/{id}/archive':
+    patch:
+      summary: 'Archive Run'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Reporting/Runs
+      operationId: archiveRun
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or Editor'
+  '/reporting/runs/{id}/restore':
+    patch:
+      summary: 'Restore Run'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Reporting/Runs
+      operationId: restoreRun
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or Editor'
   /reporting/generate-report:
     post:
       tags:

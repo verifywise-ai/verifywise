@@ -8162,6 +8162,18 @@ export const reportingrunsEndpoints: Endpoint[] = [
     tag: "Reporting/Runs",
   },
   {
+    method: 'DELETE',
+    path: '/reporting/runs/{id}',
+    summary: "Delete Run",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Runs",
+  },
+  {
     method: 'GET',
     path: '/reporting/runs/{id}/download',
     summary: "Download Run",
@@ -8176,6 +8188,30 @@ export const reportingrunsEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/reporting/runs/{id}/analyses',
     summary: "Get Run Analyses",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Runs",
+  },
+  {
+    method: 'PATCH',
+    path: '/reporting/runs/{id}/archive',
+    summary: "Archive Run",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Runs",
+  },
+  {
+    method: 'PATCH',
+    path: '/reporting/runs/{id}/restore',
+    summary: "Restore Run",
+    description: "Requires role: Admin or Editor",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -8324,6 +8360,18 @@ export const reportingtemplatesEndpoints: Endpoint[] = [
     method: 'DELETE',
     path: '/reporting/templates/{id}',
     summary: "Archive Template",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Templates",
+  },
+  {
+    method: 'POST',
+    path: '/reporting/templates/{id}/run',
+    summary: "Run Template Now",
     description: "Requires role: Admin or Editor",
     requiresAuth: true,
     responses: [

@@ -1,0 +1,103 @@
+import { describe, it, expect, jest, beforeEach } from "@jest/globals";
+import { Request, Response } from "express";
+
+jest.mock("../../database/db", () => ({ sequelize: { query: jest.fn() } }));
+jest.mock("../../utils/reportTemplate.utils", () => ({
+  getTemplateByIdQuery: jest.fn(),
+  getVersionByIdQuery: jest.fn(),
+}));
+jest.mock("../../services/reporting/reportRunOrchestrator", () => ({
+  runScheduledReport: jest.fn(),
+}));
+jest.mock("../../utils/statusCode.utils", () => ({
+  STATUS_CODE: {
+    200: (d: any) => ({ message: "OK", data: d }),
+    202: (d: any) => ({ message: "Accepted", data: d }),
+    404: (d: any) => ({ message: "Not Found", data: d }),
+    500: (d: any) => ({ message: "Internal Server Error", data: d }),
+  },
+}));
+
+import { runTemplateNow } from "../reportTemplate.ctrl";
+import { getTemplateByIdQuery, getVersionByIdQuery } from "../../utils/reportTemplate.utils";
+import { runScheduledReport } from "../../services/reporting/reportRunOrchestrator";
+
+const mockTemplate = getTemplateByIdQuery as jest.MockedFunction<any>;
+const mockVersion = getVersionByIdQuery as jest.MockedFunction<any>;
+const mockRun = runScheduledReport as jest.MockedFunction<any>;
+
+function createMockRes(): Partial<Response> {
+  const res: any = {};
+  res.status = jest.fn().mockReturnValue(res);
+  res.json = jest.fn().mockReturnValue(res);
+  return res;
+}
+
+const body = {
+  templateVersionId: 9,
+  name: "Q3 risk review",
+  scope: "project",
+  projectId: 4,
+  sectionsConfig: { sections: [{ reportSectionKey: "risks", defaultEnabled: true }] },
+  aiBlocksConfig: { executiveSummary: true },
+  format: "pdf",
+};
+
+describe("runTemplateNow", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockTemplate.mockResolvedValue({ id: 2, name: "Risk template", organization_id: null });
+    mockVersion.mockResolvedValue({ id: 9, template_id: 2 });
+    mockRun.mockResolvedValue(undefined);
+  });
+
+  it("runs the orchestrator with no schedule id and storage forced on", async () => {
+    const req = { params: { id: "2" }, body, organizationId: 5, userId: 3 } as any;
+    const res = createMockRes() as Response;
+
+    await runTemplateNow(req, res);
+
+    const [sched, opts] = mockRun.mock.calls[0];
+    expect(sched.id).toBeNull();
+    expect(sched.organization_id).toBe(5);
+    expect(sched.template_id).toBe(2);
+    expect(sched.template_version_id).toBe(9);
+    expect(sched.delivery_config).toEqual({ saveToStorage: true });
+    expect(sched.sections_config).toEqual(body.sectionsConfig);
+    expect(sched.project_id).toBe(4);
+    expect(opts).toEqual({ triggeredBy: "manual", userId: 3 });
+  });
+
+  it("sends no project id for an organization-scoped run", async () => {
+    const req = {
+      params: { id: "2" },
+      body: { ...body, scope: "organization", projectId: 4 },
+      organizationId: 5,
+      userId: 3,
+    } as any;
+
+    await runTemplateNow(req, createMockRes() as Response);
+
+    expect(mockRun.mock.calls[0][0].project_id).toBeNull();
+  });
+
+  it("404s when the template does not belong to the organization", async () => {
+    mockTemplate.mockResolvedValue(null);
+    const res = createMockRes() as Response;
+
+    await runTemplateNow({ params: { id: "2" }, body, organizationId: 5, userId: 3 } as any, res);
+
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(mockRun).not.toHaveBeenCalled();
+  });
+
+  it("404s when the version belongs to a different template", async () => {
+    mockVersion.mockResolvedValue({ id: 9, template_id: 77 });
+    const res = createMockRes() as Response;
+
+    await runTemplateNow({ params: { id: "2" }, body, organizationId: 5, userId: 3 } as any, res);
+
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(mockRun).not.toHaveBeenCalled();
+  });
+});

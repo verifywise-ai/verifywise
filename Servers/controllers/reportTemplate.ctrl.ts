@@ -23,9 +23,11 @@ import {
   updateTemplateQuery,
   archiveTemplateQuery,
   createTemplateVersionQuery,
+  getVersionByIdQuery,
 } from "../utils/reportTemplate.utils";
 import { REPORT_SECTION_CATALOG } from "../services/reporting/sectionCatalog";
 import { NotFoundException } from "../domain.layer/exceptions/custom.exception";
+import { runScheduledReport } from "../services/reporting/reportRunOrchestrator";
 
 export async function listTemplates(req: Request, res: Response): Promise<any> {
   try {
@@ -248,5 +250,58 @@ export async function archiveTemplate(req: Request, res: Response): Promise<any>
       organizationId: req.organizationId!,
     });
     return respondWithError(req, res, error);
+  }
+}
+
+/**
+ * POST /reporting/templates/:id/run — produce one report from a template
+ * without creating a schedule.
+ *
+ * Deliberately calls the same orchestrator a scheduled run uses, with a
+ * schedule-shaped object whose id is null (report_runs.scheduled_report_id is
+ * nullable). Generation, delivery, analysis and status handling therefore have
+ * exactly one implementation.
+ */
+export async function runTemplateNow(req: Request, res: Response): Promise<any> {
+  try {
+    const templateId = Number(req.params.id);
+    const organizationId = req.organizationId!;
+    const userId = req.userId ?? null;
+
+    const template = await getTemplateByIdQuery(templateId, organizationId);
+    if (!template) return res.status(404).json(STATUS_CODE[404]("template not found"));
+
+    const version = await getVersionByIdQuery(Number(req.body.templateVersionId), organizationId);
+    if (!version || Number(version.template_id) !== templateId) {
+      return res.status(404).json(STATUS_CODE[404]("template version not found"));
+    }
+
+    const isProjectScope = req.body.scope === "project";
+    const sched = {
+      id: null,
+      organization_id: organizationId,
+      template_id: templateId,
+      template_version_id: version.id,
+      name: req.body.name ?? template.name,
+      project_id: isProjectScope ? (req.body.projectId ?? null) : null,
+      framework_id: req.body.frameworkId ?? null,
+      project_framework_id: req.body.projectFrameworkId ?? null,
+      sections_config: req.body.sectionsConfig ?? null,
+      ai_blocks_config: req.body.aiBlocksConfig ?? null,
+      format: req.body.format ?? "pdf",
+      // Storage is what gives the run a file_id, and a run without one has
+      // nothing to download. Run now puts a report in the list; it is not a
+      // delivery mechanism.
+      delivery_config: { saveToStorage: true },
+      owner_id: userId,
+      created_by: userId,
+      llm_key_id: template.llm_key_id ?? null,
+    };
+
+    await runScheduledReport(sched, { triggeredBy: "manual", userId: userId ?? undefined });
+
+    return res.status(200).json(STATUS_CODE[200]({ started: true }));
+  } catch (e) {
+    return res.status(500).json(STATUS_CODE[500]((e as Error).message));
   }
 }

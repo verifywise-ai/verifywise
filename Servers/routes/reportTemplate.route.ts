@@ -11,6 +11,7 @@ import {
   createTemplate,
   updateTemplate,
   archiveTemplate,
+  runTemplateNow,
 } from "../controllers/reportTemplate.ctrl";
 
 const router = express.Router();
@@ -25,5 +26,8 @@ router.get("/:id", authenticateJWT, getTemplate);
 router.post("/", authenticateJWT, authorize(["Admin", "Editor"]), createTemplate);
 router.patch("/:id", authenticateJWT, authorize(["Admin", "Editor"]), updateTemplate);
 router.delete("/:id", authenticateJWT, authorize(["Admin", "Editor"]), archiveTemplate);
+
+// Ad-hoc run: same write RBAC as the rest of this router's mutating routes.
+router.post("/:id/run", authenticateJWT, authorize(["Admin", "Editor"]), runTemplateNow);
 
 export default router;
