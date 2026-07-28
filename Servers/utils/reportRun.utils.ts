@@ -91,6 +91,49 @@ function viewerVisibilitySql(viewer: ReportRunViewer): string | null {
      ))`;
 }
 
+/**
+ * May this viewer see this one run?
+ *
+ * The same rule `listRunsQuery` applies to the list, applied to a single id, so
+ * the two can never drift: both are built from `viewerVisibilitySql` over
+ * `RUN_FROM_SQL`. If a run does not appear in your list you cannot fetch,
+ * download or read the analyses of it either — run ids are sequential integers,
+ * so an organization-scoped-only per-run endpoint let any member of the
+ * organization enumerate ids and read every project's report.
+ *
+ * Deliberately *not* `canUserAccessFile`: that reads the *file's* `project_id` /
+ * `org_id`, which the delivery service does not populate the way a run's scope
+ * is derived (`config_snapshot->>'project_id'`), so it would deny a user their
+ * own organization-scoped report.
+ *
+ * A false result means "no such run, as far as you are concerned" — it does not
+ * distinguish a run in another organization, a nonexistent id and a run for a
+ * project you are not on, and callers turn all three into the same 404.
+ */
+export async function canViewRunQuery(
+  id: number,
+  organization_id: number,
+  viewer: ReportRunViewer,
+): Promise<boolean> {
+  const where: string[] = ["rr.id = :id", "rr.organization_id = :organization_id"];
+  const replacements: any = { id, organization_id };
+
+  const visibility = viewerVisibilitySql(viewer);
+  if (visibility) {
+    where.push(visibility);
+    replacements.viewerUserId = viewer.userId;
+  }
+
+  const rows: any[] = await sequelize.query(
+    `SELECT 1 AS ok
+     ${RUN_FROM_SQL}
+     WHERE ${where.join(" AND ")}
+     LIMIT 1`,
+    { replacements, type: QueryTypes.SELECT },
+  );
+  return rows.length > 0;
+}
+
 // Pagination replaces a hard LIMIT 200. The default limit is still 200 and
 // offset 0, so a caller that passes nothing sees exactly what it saw before.
 // `total` lets a UI page without a second endpoint.

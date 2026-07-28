@@ -653,9 +653,9 @@ All endpoints are auth-protected and org-scoped.
 | POST | `/api/reporting/scheduled-reports/:id/resume` | Resume schedule |
 | DELETE | `/api/reporting/scheduled-reports/:id` | Soft-delete a scheduled report |
 | GET | `/api/reporting/runs` | List report runs — **paginated**, returns `{rows, total, limit, offset}`, and filterable by `?archived=true\|false` (see [Run Listing is Paginated](#run-listing-is-paginated) and [Run Archiving](#run-archiving)) |
-| GET | `/api/reporting/runs/:id` | Get a run |
-| GET | `/api/reporting/runs/:id/download` | Download a run's output (org-scoped) |
-| GET | `/api/reporting/runs/:id/analyses` | Stored `report_run_analyses` rows for a run (doubly org-scoped: the run and the analyses are both filtered by `organization_id`) |
+| GET | `/api/reporting/runs/:id` | Get a run (org-scoped **and** membership-scoped — see [One Rule, Applied to Every Per-Run Endpoint](#one-rule-applied-to-every-per-run-endpoint)) |
+| GET | `/api/reporting/runs/:id/download` | Download a run's output (same gate, then org-scoped run and org-scoped file) |
+| GET | `/api/reporting/runs/:id/analyses` | Stored `report_run_analyses` rows for a run (same gate, then doubly org-scoped: the run and the analyses are both filtered by `organization_id`) |
 | PATCH | `/api/reporting/runs/:id/archive` | Move a run into the Archive tab (see [Run Archiving](#run-archiving)) |
 | PATCH | `/api/reporting/runs/:id/restore` | Move a run back into the Generate tab |
 | DELETE | `/api/reporting/runs/:id` | Permanently delete a run |
@@ -741,7 +741,19 @@ Admin and SuperAdmin are unrestricted. The viewer is a **required** argument to 
 
 Because the value feeds an authorization predicate, `POST /reporting/templates/:id/run` rejects a project-scoped request whose `projectId` is not a positive integer with a **400** rather than coercing it — a garbage value would snapshot as "no project" and publish the report org-wide.
 
-> Known gap: `GET /reporting/runs/:id` and `/download` are org-scoped but not membership-scoped, so a non-member who knows a run id can still fetch it directly. Closing that means gating every per-run endpoint on the same predicate and is tracked separately.
+#### One Rule, Applied to Every Per-Run Endpoint
+
+The list rule is not the list's rule — it is the run's. `canViewRunQuery(id, organization_id, viewer)` in `Servers/utils/reportRun.utils.ts` applies the identical predicate to a single id, built from the same `viewerVisibilitySql` and project-derivation SQL as `listRunsQuery` so the two cannot drift. Every per-run endpoint passes through it first: `GET /reporting/runs/:id`, `/download` and `/analyses`, plus the mutating `PATCH /:id/archive`, `PATCH /:id/restore` and `DELETE /:id`. **If a run does not appear in your list, you cannot fetch, download, read the analyses of, archive, restore or delete it either.**
+
+Organization scope alone was not enough, and the exposure was concrete rather than theoretical: run ids are sequential integers, so any authenticated member of the organization — an Auditor included — could enumerate ids and pull every project's report. `GET /reporting/runs/:id` returns `SELECT *`, which carries `config_snapshot` (including `project_id`) and `delivery_config` (including email recipients).
+
+Nor was membership gating a new restriction invented for `report_runs`: the legacy per-file download it replaced already enforced one. `getFileContentById` (`Servers/controllers/file.ctrl.ts`) calls `canUserAccessFile` (`Servers/utils/fileUpload.utils.ts`), which gates a non-Admin on `f.uploaded_by = :userId OR p.owner = :userId OR pm.user_id = :userId OR (f.project_id IS NULL AND f.org_id = :userOrgId)`. The reporting endpoints were the ones that had dropped it.
+
+`canUserAccessFile` is nonetheless **not** what the run endpoints reuse. It reads the *file's* `project_id` / `org_id`, whereas a run's scope is derived from `config_snapshot->>'project_id'` — values the delivery service does not necessarily populate the same way, so gating a run on its file's columns risks denying a user their own organization-scoped report. One rule per resource: files answer to `canUserAccessFile`, runs answer to `canViewRunQuery`.
+
+**Denial is 404, not 403.** It matches how the rest of this controller hides rows belonging to another organization, and over a sequential id space a 403 would be an id-existence oracle — it would confirm that run 812 exists and merely isn't yours. The gate also runs *before* the row is read, so a denied request never touches the run, its file or its analyses. This diverges from `file.ctrl.ts`, which returns 403 and logs the denial; that is deliberate, not an oversight.
+
+For the three mutating endpoints the practical change affects **Editors only** — Admin and SuperAdmin are unrestricted by the predicate, so what is new is that an Editor cannot archive or delete a run for a project they are not on. Organization-scoped runs (no `project_id`) stay open to every Editor, as before. The gate is a separate statement from the `UPDATE` / `DELETE`, but each of those keeps its own `organization_id` in the `WHERE` clause, so the window between them cannot widen the blast radius.
 
 ### Run Archiving
 
@@ -753,7 +765,7 @@ Because the value feeds an authorization predicate, `POST /reporting/templates/:
 | `PATCH /reporting/runs/:id/restore` | Clears both back to `NULL`. |
 | `DELETE /reporting/runs/:id` | Permanently deletes the run row and the `files` row it produced, in **one transaction** — `report_runs.file_id` is `ON DELETE SET NULL`, so a half-applied delete would strand a run pointing at nothing. File removal goes through `deleteFileById`, which also clears the file's `file_folder_mappings`. A run with no `file_id` deletes the row alone. |
 
-Every one of the three is scoped by `organization_id` in its `WHERE` clause. A run id that exists but belongs to another organization matches zero rows, and the query layer treats that the same as a nonexistent id: **404**, never a silent `200` on someone else's data. `Servers/tests/integration/tenant-isolation/report-runs.isolation.test.ts` asserts this for all three endpoints, plus that a cross-tenant attempt leaves the row untouched.
+Every one of the three is scoped by `organization_id` in its `WHERE` clause, and all three additionally pass the `canViewRunQuery` membership gate first ([above](#one-rule-applied-to-every-per-run-endpoint)) — Admin/Editor says *may mutate runs*, not *may mutate this run*. A run id that exists but belongs to another organization, or to a project the Editor is not on, matches zero rows, and the query layer treats that the same as a nonexistent id: **404**, never a silent `200` on someone else's data. `Servers/tests/integration/tenant-isolation/report-runs.isolation.test.ts` asserts this for all three endpoints, plus that a cross-tenant attempt leaves the row untouched.
 
 **The Generate tab lists `archived_at IS NULL`, the Archive tab lists `archived_at IS NOT NULL`. Both render the same `ReportRunsTable` component**, parameterized by `variant="live"` / `variant="archived"` (`Clients/src/presentation/pages/Reporting/ReportRunsTable.tsx`), which is what stops the two lists drifting apart the way the old files-based list and the runs list did. A run-now report therefore always lands in Generate first (`archived_at` starts `NULL`) and only reaches Archive once a user archives it — it is never placed there directly.
 
@@ -781,7 +793,7 @@ The wizard (`ConfigureReportWizard.tsx`) now:
 | Writes (create/update/run-now/pause/resume/delete scheduled reports) | Admin / Editor (via `authorize` middleware) |
 | Template writes (create / update / archive) | Admin / Editor (via `authorize` middleware) |
 | Reads (section catalog, templates, scheduled reports, runs) | Any authenticated user (JWT) |
-| Run download, run analyses | Authenticated + org-scoped |
+| Any single run — fetch, download, analyses, archive, restore, delete | Authenticated + org-scoped + project-membership-scoped via `canViewRunQuery` (Admin/SuperAdmin unrestricted); denial is 404 — see [One Rule, Applied to Every Per-Run Endpoint](#one-rule-applied-to-every-per-run-endpoint) |
 
 The existing **Admin-only** manual generate endpoints are preserved.
 

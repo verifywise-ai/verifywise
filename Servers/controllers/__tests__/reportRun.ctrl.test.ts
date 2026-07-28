@@ -7,6 +7,7 @@ jest.mock("../../database/db", () => ({
 jest.mock("../../utils/reportRun.utils", () => ({
   listRunsQuery: jest.fn(),
   getRunQuery: jest.fn(),
+  canViewRunQuery: jest.fn(),
   setRunArchivedQuery: jest.fn(),
   deleteRunQuery: jest.fn(),
 }));
@@ -23,18 +24,19 @@ jest.mock("../../utils/statusCode.utils", () => ({
 }));
 
 import { archiveRun, restoreRun, deleteRun, listRuns, getRun, downloadRun, getRunAnalyses } from "../reportRun.ctrl";
-import { getRunQuery, listRunsQuery, setRunArchivedQuery, deleteRunQuery } from "../../utils/reportRun.utils";
+import { getRunQuery, canViewRunQuery, listRunsQuery, setRunArchivedQuery, deleteRunQuery } from "../../utils/reportRun.utils";
 import { getFileById } from "../../utils/fileUpload.utils";
 import { getRunAnalysesQuery } from "../../utils/reportRunAnalysis.utils";
 
 const mockGetRun = getRunQuery as jest.MockedFunction<typeof getRunQuery>;
+const mockCanView = canViewRunQuery as jest.MockedFunction<typeof canViewRunQuery>;
 const mockGetFile = getFileById as jest.MockedFunction<typeof getFileById>;
 const mockGetAnalyses = getRunAnalysesQuery as jest.MockedFunction<typeof getRunAnalysesQuery>;
 
 // req.organizationId is the authed tenant (5). params.id/body carry an
 // attacker-supplied value; the handler must scope by the authed org, never trust input.
-function createMockReq(params: any = {}): Partial<Request> {
-  return { params, query: {}, organizationId: 5, userId: 3 } as Partial<Request>;
+function createMockReq(params: any = {}, role?: string): Partial<Request> {
+  return { params, query: {}, organizationId: 5, userId: 3, ...(role ? { role } : {}) } as Partial<Request>;
 }
 function createMockRes(): Partial<Response> {
   const res: any = {};
@@ -46,7 +48,11 @@ function createMockRes(): Partial<Response> {
 }
 
 describe("reportRun.ctrl tenant isolation", () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    // Visible by default; the visibility tests below override this.
+    mockCanView.mockResolvedValue(true);
+  });
 
   it("getRun returns 404 and leaks no data when the run is not in the caller's org", async () => {
     mockGetRun.mockResolvedValue(null as any); // run belongs to another org / absent
@@ -255,11 +261,108 @@ describe("reportRun.ctrl tenant isolation", () => {
   });
 });
 
+// One rule for runs, applied everywhere: if a run does not appear in your list,
+// you cannot fetch, download or read the analyses of it either. Run ids are
+// sequential integers, so an org-scoped-only per-run endpoint let any member of
+// the organization enumerate ids and read every project's report.
+describe("per-run visibility gate", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockCanView.mockResolvedValue(true);
+  });
+
+  describe("a non-member is refused, and nothing behind the gate is touched", () => {
+    beforeEach(() => mockCanView.mockResolvedValue(false));
+
+    it("getRun 404s without reading the run row", async () => {
+      const res = createMockRes();
+      await getRun(createMockReq({ id: "77" }, "Auditor") as Request, res as Response);
+
+      // 404, not 403: the rest of this controller hides other-tenant rows the
+      // same way, and a 403 would confirm the id exists.
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(mockGetRun).not.toHaveBeenCalled();
+    });
+
+    it("downloadRun 404s without reading the run row or the file", async () => {
+      const res = createMockRes();
+      await downloadRun(createMockReq({ id: "77" }, "Auditor") as Request, res as Response);
+
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(mockGetRun).not.toHaveBeenCalled();
+      expect(mockGetFile).not.toHaveBeenCalled();
+      expect(res.send).not.toHaveBeenCalled();
+    });
+
+    it("getRunAnalyses 404s without reading the run row or the analyses", async () => {
+      const res = createMockRes();
+      await getRunAnalyses(createMockReq({ id: "77" }, "Auditor") as Request, res as Response);
+
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(mockGetRun).not.toHaveBeenCalled();
+      expect(mockGetAnalyses).not.toHaveBeenCalled();
+    });
+  });
+
+  it("gates on the authed viewer, never on a value from the body or query", async () => {
+    const req = {
+      params: { id: "77" },
+      query: { userId: 999, role: "Admin" },
+      body: { userId: 999, role: "Admin" },
+      organizationId: 5,
+      userId: 3,
+      role: "Auditor",
+    } as any;
+    mockGetRun.mockResolvedValue({ id: 77, organization_id: 5 } as any);
+
+    await getRun(req, createMockRes() as Response);
+
+    expect(mockCanView).toHaveBeenCalledWith(77, 5, { userId: 3, role: "Auditor" });
+  });
+
+  it("passes nulls rather than undefined when the request carries no identity", async () => {
+    mockGetRun.mockResolvedValue({ id: 77, organization_id: 5 } as any);
+    const req = { params: { id: "77" }, query: {}, organizationId: 5 } as any;
+
+    await getRun(req, createMockRes() as Response);
+
+    expect(mockCanView).toHaveBeenCalledWith(77, 5, { userId: null, role: null });
+  });
+
+  it.each([
+    ["an Admin", "Admin"],
+    ["a project member", "Editor"],
+  ])("still serves %s the run, the download and the analyses", async (_label, role) => {
+    mockGetRun.mockResolvedValue({
+      id: 77, organization_id: 5, file_id: 9,
+      output_filename: "r.pdf", output_mime_type: "application/pdf",
+    } as any);
+    mockGetFile.mockResolvedValue({ content: Buffer.from("x") } as any);
+    mockGetAnalyses.mockResolvedValue([] as any);
+
+    const getRes = createMockRes();
+    await getRun(createMockReq({ id: "77" }, role) as Request, getRes as Response);
+    expect(getRes.status).toHaveBeenCalledWith(200);
+
+    const downloadRes = createMockRes();
+    await downloadRun(createMockReq({ id: "77" }, role) as Request, downloadRes as Response);
+    expect(downloadRes.send).toHaveBeenCalled();
+    expect(mockGetFile).toHaveBeenCalledWith(9, 5);
+
+    const analysesRes = createMockRes();
+    await getRunAnalyses(createMockReq({ id: "77" }, role) as Request, analysesRes as Response);
+    expect(analysesRes.status).toHaveBeenCalledWith(200);
+  });
+});
+
 describe("archiveRun / restoreRun / deleteRun", () => {
   const mockSetArchived = setRunArchivedQuery as jest.MockedFunction<typeof setRunArchivedQuery>;
   const mockDelete = deleteRunQuery as jest.MockedFunction<typeof deleteRunQuery>;
 
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockCanView.mockResolvedValue(true);
+  });
 
   it("archives with the authed organization and user, never the request body", async () => {
     mockSetArchived.mockResolvedValue({ id: 1, archived_at: "2026-07-28" });
@@ -307,5 +410,50 @@ describe("archiveRun / restoreRun / deleteRun", () => {
 
     expect(mockDelete).toHaveBeenCalledWith(1, 5);
     expect(res.status).toHaveBeenCalledWith(200);
+  });
+
+  // These are Admin/Editor by route middleware, but an Editor is not
+  // necessarily a member of the project a run covers.
+  describe("visibility gate", () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+      mockCanView.mockResolvedValue(false);
+    });
+
+    it("archiveRun 404s for a non-member and leaves the row alone", async () => {
+      const res = createMockRes() as Response;
+      await archiveRun(createMockReq({ id: "1" }, "Editor") as Request, res);
+
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(mockSetArchived).not.toHaveBeenCalled();
+    });
+
+    it("restoreRun 404s for a non-member and leaves the row alone", async () => {
+      const res = createMockRes() as Response;
+      await restoreRun(createMockReq({ id: "1" }, "Editor") as Request, res);
+
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(mockSetArchived).not.toHaveBeenCalled();
+    });
+
+    it("deleteRun 404s for a non-member and deletes nothing", async () => {
+      const res = createMockRes() as Response;
+      await deleteRun(createMockReq({ id: "1" }, "Editor") as Request, res);
+
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(mockDelete).not.toHaveBeenCalled();
+    });
+
+    it("still lets an Admin archive", async () => {
+      mockCanView.mockResolvedValue(true);
+      mockSetArchived.mockResolvedValue({ id: 1, archived_at: "2026-07-28" });
+      const res = createMockRes() as Response;
+
+      await archiveRun(createMockReq({ id: "1" }, "Admin") as Request, res);
+
+      expect(mockCanView).toHaveBeenCalledWith(1, 5, { userId: 3, role: "Admin" });
+      expect(mockSetArchived).toHaveBeenCalledWith(1, 5, true, 3);
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
   });
 });
