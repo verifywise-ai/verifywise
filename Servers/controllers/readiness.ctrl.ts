@@ -448,8 +448,6 @@ export async function getRecommendations(req: Request, res: Response) {
       if ((ctrl.evidence_count_score || 0) < 30) recs.push("Upload evidence documents");
       if ((ctrl.evidence_quality_score || 0) < 50) recs.push("Improve evidence quality");
       if ((ctrl.evidence_recency_score || 0) < 40) recs.push("Update outdated evidence");
-      if ((ctrl.task_completion_score || 0) < 50) recs.push("Complete pending tasks");
-      if ((ctrl.risk_mitigation_score || 0) < 50) recs.push("Address unmitigated risks");
       if (recs.length === 0) recs.push("Maintain current posture");
 
       const parsedRecs = ctrl.recommendations

@@ -24,6 +24,7 @@ import {
   getAssessmentCompletionQuery,
   upsertControlScoreQuery,
   upsertFrameworkScoreQuery,
+  getWeakestControlsQuery,
 } from "./readiness.utils";
 import { getVisibleEuCategoryIdsForProject } from "./eu.utils";
 
@@ -303,5 +304,25 @@ describe("upsertFrameworkScoreQuery", () => {
     });
 
     expect(mockQuery.mock.calls[0][1].replacements).toMatchObject({ assessmentScore: null });
+  });
+});
+
+describe("getWeakestControlsQuery", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockQuery.mockResolvedValue([[]]);
+  });
+
+  it("does not select the retired task and risk columns", async () => {
+    await getWeakestControlsQuery(1, 10, null, null, undefined);
+
+    const sql = mockQuery.mock.calls[0][0];
+    expect(sql).not.toContain("task_completion_score");
+    expect(sql).not.toContain("risk_mitigation_score");
+    // still selects the columns getRecommendations and getWeakest actually consume
+    expect(sql).toContain("evidence_quality_score");
+    expect(sql).toContain("evidence_count_score");
+    expect(sql).toContain("evidence_recency_score");
+    expect(sql).toContain("recommendations");
   });
 });

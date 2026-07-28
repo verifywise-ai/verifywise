@@ -271,7 +271,7 @@ export async function getWeakestControlsQuery(
     const [rows] = await sequelize.query(
       `SELECT control_id, framework_type, overall_score, readiness_level,
               evidence_quality_score, evidence_count_score,
-              evidence_recency_score, task_completion_score, risk_mitigation_score,
+              evidence_recency_score,
               recommendations
        FROM control_readiness_scores
        WHERE organization_id = :organizationId
