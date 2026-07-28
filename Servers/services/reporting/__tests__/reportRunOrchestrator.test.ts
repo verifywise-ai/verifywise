@@ -33,19 +33,33 @@ describe("runScheduledReport", () => {
   it("success path: generate + deliver -> success", async () => {
     generateReport.mockResolvedValue({ success: true, content: Buffer.from("x"), filename: "r.pdf", mimeType: "application/pdf" });
     deliverReport.mockResolvedValue({ storage: { status: "success", fileId: 5 }, emailLink: { status: "skipped" }, attachment: { status: "skipped" }, fileId: 5 });
-    await runScheduledReport(sched as any, { triggeredBy: "scheduler", scheduledFor: new Date() });
+    const outcome = await runScheduledReport(sched as any, { triggeredBy: "scheduler", scheduledFor: new Date() });
     expect(updateRunStatusQuery).toHaveBeenCalledWith(77, sched.organization_id, expect.objectContaining({ status: "success" }));
+    expect(outcome).toEqual({ runId: 77, status: "success" });
   });
   it("delivery partial failure -> partial_success", async () => {
     generateReport.mockResolvedValue({ success: true, content: Buffer.from("x"), filename: "r.pdf", mimeType: "application/pdf" });
     deliverReport.mockResolvedValue({ storage: { status: "failed" }, emailLink: { status: "skipped" }, attachment: { status: "skipped" } });
-    await runScheduledReport(sched as any, { triggeredBy: "scheduler", scheduledFor: new Date() });
+    const outcome = await runScheduledReport(sched as any, { triggeredBy: "scheduler", scheduledFor: new Date() });
     expect(updateRunStatusQuery).toHaveBeenCalledWith(77, sched.organization_id, expect.objectContaining({ status: "partial_success" }));
+    expect(outcome).toEqual({ runId: 77, status: "partial_success" });
   });
   it("generation failure -> failed", async () => {
     generateReport.mockResolvedValue({ success: false, error: "boom" });
-    await runScheduledReport(sched as any, { triggeredBy: "scheduler", scheduledFor: new Date() });
+    const outcome = await runScheduledReport(sched as any, { triggeredBy: "scheduler", scheduledFor: new Date() });
     expect(updateRunStatusQuery).toHaveBeenCalledWith(77, sched.organization_id, expect.objectContaining({ status: "failed" }));
+    expect(outcome).toEqual({ runId: 77, status: "failed", error: "boom" });
+  });
+  it("unexpected error (e.g. delivery throws) -> failed, with the run id still returned", async () => {
+    generateReport.mockResolvedValue({ success: true, content: Buffer.from("x"), filename: "r.pdf", mimeType: "application/pdf" });
+    deliverReport.mockRejectedValue(new Error("storage unreachable"));
+    const outcome = await runScheduledReport(sched as any, { triggeredBy: "scheduler", scheduledFor: new Date() });
+    expect(updateRunStatusQuery).toHaveBeenCalledWith(
+      77,
+      sched.organization_id,
+      expect.objectContaining({ status: "failed", error_message: "storage unreachable" }),
+    );
+    expect(outcome).toEqual({ runId: 77, status: "failed", error: "storage unreachable" });
   });
   it("persists analyzer output and records ai_status on the run", async () => {
     generateReport.mockResolvedValue({

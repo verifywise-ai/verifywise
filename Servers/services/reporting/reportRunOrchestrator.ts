@@ -4,12 +4,27 @@ import { deliverReport } from "./reportDeliveryService";
 import { createRunQuery, updateRunStatusQuery } from "../../utils/reportRun.utils";
 import { persistAnalyses } from "./analyzers/persistAnalyses";
 
+// The run status vocabulary is fixed at: queued, running, success,
+// partial_success, failed. partial_success means "generated but a delivery
+// channel failed" — it is downloadable and callers must not treat it as an
+// error.
+export type ReportRunOutcome = {
+  runId: number;
+  status: "success" | "partial_success" | "failed";
+  error?: string;
+};
+
 // Runs one scheduled report end-to-end: create run (running) -> resolve request
 // -> generateReport -> deliver -> compute final status -> update run. An AI
 // failure inside generateReport must NOT fail the run (handled there); a
 // generation failure marks the run failed, delivery channel failures downgrade
 // the run to partial_success.
-export async function runScheduledReport(sched: any, opts: { triggeredBy: "scheduler" | "manual"; userId?: number; scheduledFor?: Date }) {
+//
+// Returns the run id and final status so a synchronous caller (e.g. "run
+// template now") can report success/failure and let the user look the run
+// up. Existing callers (the scheduler, "run scheduled report now") already
+// ignore the return value, so this is purely additive.
+export async function runScheduledReport(sched: any, opts: { triggeredBy: "scheduler" | "manual"; userId?: number; scheduledFor?: Date }): Promise<ReportRunOutcome> {
   const startedAt = Date.now();
   const run = await createRunQuery({
     organization_id: sched.organization_id, scheduled_report_id: sched.id ?? null,
@@ -30,8 +45,9 @@ export async function runScheduledReport(sched: any, opts: { triggeredBy: "sched
     };
     const result = await generateReport(request, sched.owner_id ?? sched.created_by, sched.organization_id);
     if (!result.success) {
-      await updateRunStatusQuery(run.id, sched.organization_id, { status: "failed", error_message: result.error ?? "generation failed", duration_ms: Date.now() - startedAt });
-      return;
+      const error = result.error ?? "generation failed";
+      await updateRunStatusQuery(run.id, sched.organization_id, { status: "failed", error_message: error, duration_ms: Date.now() - startedAt });
+      return { runId: run.id, status: "failed", error };
     }
     const delivery = await deliverReport(sched.delivery_config, { content: result.content, filename: result.filename, mimeType: result.mimeType }, { organizationId: sched.organization_id, userId: sched.owner_id ?? sched.created_by, runId: run.id });
     const channels = [delivery.storage, delivery.emailLink, delivery.attachment];
@@ -48,7 +64,9 @@ export async function runScheduledReport(sched: any, opts: { triggeredBy: "sched
       status, file_id: delivery.fileId, output_filename: result.filename, output_mime_type: result.mimeType,
       delivery_status: delivery, ai_status: aiStatus ?? undefined, duration_ms: Date.now() - startedAt,
     });
+    return { runId: run.id, status };
   } catch (e: any) {
     await updateRunStatusQuery(run.id, sched.organization_id, { status: "failed", error_message: e.message, duration_ms: Date.now() - startedAt });
+    return { runId: run.id, status: "failed", error: e.message };
   }
 }

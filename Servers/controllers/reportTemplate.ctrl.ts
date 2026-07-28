@@ -261,6 +261,11 @@ export async function archiveTemplate(req: Request, res: Response): Promise<any>
  * schedule-shaped object whose id is null (report_runs.scheduled_report_id is
  * nullable). Generation, delivery, analysis and status handling therefore have
  * exactly one implementation.
+ *
+ * The orchestrator's returned outcome (run id + final status) is relayed to
+ * the caller: success/partial_success are 200s (partial_success is still a
+ * downloadable report — only a delivery channel failed), and failed is a 500
+ * that still carries the run id so the caller can look up what happened.
  */
 export async function runTemplateNow(req: Request, res: Response): Promise<any> {
   try {
@@ -298,9 +303,21 @@ export async function runTemplateNow(req: Request, res: Response): Promise<any> 
       llm_key_id: template.llm_key_id ?? null,
     };
 
-    await runScheduledReport(sched, { triggeredBy: "manual", userId: userId ?? undefined });
+    const outcome = await runScheduledReport(sched, { triggeredBy: "manual", userId: userId ?? undefined });
 
-    return res.status(200).json(STATUS_CODE[200]({ started: true }));
+    // success and partial_success both produced a downloadable report —
+    // partial_success only means a delivery channel (e.g. email) failed, not
+    // that the run itself is an error. Only "failed" (no report was
+    // generated) is reported as an error, and even then the run id is
+    // included so the caller can look up what happened.
+    if (outcome.status === "failed") {
+      return res.status(500).json(
+        STATUS_CODE[500]({ runId: outcome.runId, status: outcome.status, error: outcome.error }),
+      );
+    }
+    return res.status(200).json(
+      STATUS_CODE[200]({ started: true, runId: outcome.runId, status: outcome.status }),
+    );
   } catch (e) {
     return res.status(500).json(STATUS_CODE[500]((e as Error).message));
   }

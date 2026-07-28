@@ -48,10 +48,10 @@ describe("runTemplateNow", () => {
     jest.clearAllMocks();
     mockTemplate.mockResolvedValue({ id: 2, name: "Risk template", organization_id: null });
     mockVersion.mockResolvedValue({ id: 9, template_id: 2 });
-    mockRun.mockResolvedValue(undefined);
+    mockRun.mockResolvedValue({ runId: 77, status: "success" });
   });
 
-  it("runs the orchestrator with no schedule id and storage forced on", async () => {
+  it("runs the orchestrator with no schedule id and storage forced on, and reports the run id", async () => {
     const req = { params: { id: "2" }, body, organizationId: 5, userId: 3 } as any;
     const res = createMockRes() as Response;
 
@@ -66,6 +66,10 @@ describe("runTemplateNow", () => {
     expect(sched.sections_config).toEqual(body.sectionsConfig);
     expect(sched.project_id).toBe(4);
     expect(opts).toEqual({ triggeredBy: "manual", userId: 3 });
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { started: true, runId: 77, status: "success" } }),
+    );
   });
 
   it("sends no project id for an organization-scoped run", async () => {
@@ -79,6 +83,34 @@ describe("runTemplateNow", () => {
     await runTemplateNow(req, createMockRes() as Response);
 
     expect(mockRun.mock.calls[0][0].project_id).toBeNull();
+  });
+
+  it("returns 200 with the run id when the run only partially succeeds", async () => {
+    mockRun.mockResolvedValue({ runId: 78, status: "partial_success" });
+    const req = { params: { id: "2" }, body, organizationId: 5, userId: 3 } as any;
+    const res = createMockRes() as Response;
+
+    await runTemplateNow(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ data: { started: true, runId: 78, status: "partial_success" } }),
+    );
+  });
+
+  it("returns 500 with the run id when the run fails", async () => {
+    mockRun.mockResolvedValue({ runId: 79, status: "failed", error: "generation failed" });
+    const req = { params: { id: "2" }, body, organizationId: 5, userId: 3 } as any;
+    const res = createMockRes() as Response;
+
+    await runTemplateNow(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { runId: 79, status: "failed", error: "generation failed" },
+      }),
+    );
   });
 
   it("404s when the template does not belong to the organization", async () => {
