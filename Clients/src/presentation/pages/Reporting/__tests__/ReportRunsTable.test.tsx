@@ -181,6 +181,41 @@ describe("ReportRunsTable", () => {
     expect(mockDelete).toHaveBeenCalledWith(1);
   });
 
+  it("deletes only the run whose Delete action was clicked", async () => {
+    // pendingDeleteId is a single value shared across rows; this proves the
+    // confirmation fires for the clicked row, not always the first one.
+    mockRunsPage.mockReturnValue({
+      data: {
+        rows: [run(), run({ id: 2, output_filename: "Q4 risk review.pdf" })],
+        total: 2,
+      },
+      isLoading: false,
+    });
+    const user = userEvent.setup();
+    renderWithProviders(<ReportRunsTable variant="live" />);
+
+    await user.click(screen.getAllByRole("button", { name: "Delete" })[1]);
+    await user.click(screen.getByRole("button", { name: /delete permanently/i }));
+
+    expect(mockDelete).toHaveBeenCalledWith(2);
+    expect(mockDelete).not.toHaveBeenCalledWith(1);
+  });
+
+  it("asks for confirmation before deleting from the archived variant too", async () => {
+    mockRunsPage.mockReturnValue({
+      data: { rows: [run({ archived_at: "2026-07-28T11:00:00Z" })], total: 1 },
+      isLoading: false,
+    });
+    const user = userEvent.setup();
+    renderWithProviders(<ReportRunsTable variant="archived" />);
+
+    await user.click(screen.getByRole("button", { name: "Delete" }));
+    expect(mockDelete).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole("button", { name: /delete permanently/i }));
+    expect(mockDelete).toHaveBeenCalledWith(1);
+  });
+
   it("does not delete when the confirmation is cancelled", async () => {
     const user = userEvent.setup();
     renderWithProviders(<ReportRunsTable variant="live" />);
