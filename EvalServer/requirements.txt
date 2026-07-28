@@ -114,5 +114,5 @@ watchfiles==1.1.1
 wcwidth==0.8.2
 websockets==15.0.1
 wheel==0.46.2
-yarl==1.22.0
+yarl==1.24.5
 zipp==3.23.0
