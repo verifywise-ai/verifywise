@@ -67,6 +67,11 @@ const translate = (key: string): string => {
 // Show a translated error toast for server or network failures.
 // 4xx errors are intentionally left for callers/UI layers to handle.
 const showGlobalErrorAlert = (error: AxiosError) => {
+  // A canceled request carries no response, but it is not a failure: the caller
+  // unmounted or superseded it (the assessment hooks abort on effect cleanup).
+  // Without this guard, switching tabs mid-request shows a bogus error toast.
+  if (axios.isCancel(error) || error.code === "ERR_CANCELED") return;
+
   const status = error.response?.status;
   const isServerError = status != null && status >= 500;
   const isNetworkError = error.response == null;
