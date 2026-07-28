@@ -6,6 +6,7 @@
  */
 
 import { Router, Request, Response } from "express";
+import crypto from "crypto";
 import logger from "../utils/logger/fileLogger";
 import {
   notifyConfigChange,
@@ -25,7 +26,13 @@ const INTERNAL_KEY = process.env.AI_GATEWAY_INTERNAL_KEY || "";
  */
 function verifyInternalKey(req: Request, res: Response, next: () => void): void {
   const key = req.headers["x-internal-key"] as string;
-  if (!INTERNAL_KEY || key !== INTERNAL_KEY) {
+  const provided = Buffer.from(key || "", "utf8");
+  const expected = Buffer.from(INTERNAL_KEY, "utf8");
+  if (
+    !INTERNAL_KEY ||
+    provided.length !== expected.length ||
+    !crypto.timingSafeEqual(provided, expected)
+  ) {
     res.status(401).json({ error: "Unauthorized" });
     return;
   }

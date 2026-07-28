@@ -74,7 +74,7 @@
     "cmdk": "^1.1.1",
     "date-fns": "^4.4.0",
     "dayjs": "^1.11.20",
-    "dompurify": "3.4.11",
+    "dompurify": "^3.4.12",
     "dotenv": "^17.4.2",
     "emoji-picker-react": "^4.19.1",
     "eslint-plugin-react-hooks": "^7.1.1",
@@ -98,7 +98,7 @@
     "react-markdown": "^10.1.0",
     "react-plotly.js": "^4.0.0",
     "react-redux": "^9.3.0",
-    "react-router-dom": "^7.18.0",
+    "react-router-dom": "7.18.0",
     "recharts": "^3.8.1",
     "redux": "^5.0.1",
     "redux-persist": "^6.0.0",
@@ -144,11 +144,11 @@
     "vitest": "^4.1.9"
   },
   "overrides": {
-    "minimatch@3": {
-      "brace-expansion": "1.1.13"
-    },
-    "minimatch@5": {
-      "brace-expansion": "2.0.3"
-    }
+    "archiver": "^7.0.1",
+    "readdir-glob": "^3.0.0",
+    "minimatch@9": "9.0.8",
+    "uuid": "^11.1.1",
+    "postcss": "^8.5.23",
+    "unzipper": "^0.12.5"
   }
 }

@@ -50,7 +50,7 @@ import { sendMemberRoleChangedEditorToAdminNotification } from "../services/user
 import { logFailure } from "../utils/logger/logHelper";
 import bcrypt from "bcrypt";
 import { STATUS_CODE } from "../utils/statusCode.utils";
-import { generateToken, getRefreshTokenPayload } from "../utils/jwt.utils";
+import { getRefreshTokenPayload } from "../utils/jwt.utils";
 import { UserModel } from "../domain.layer/models/user/user.model";
 import { sequelize } from "../database/db";
 import {
@@ -62,6 +62,13 @@ import { Transaction } from "sequelize";
 import logger, { logStructured } from "../utils/logger/fileLogger";
 import { logEvent } from "../utils/logger/dbLogger";
 import { generateUserTokens } from "../utils/auth.utils";
+import { CSRF_COOKIE_NAME } from "../middleware/csrf.middleware";
+import {
+  findRefreshToken,
+  revokeAllUserTokens,
+  revokeRefreshTokenByHash,
+  revokeTokenFamily,
+} from "../utils/refreshToken.utils";
 import { sendSlackNotification } from "../services/slack/slackNotificationService";
 import { SlackNotificationRoutingType } from "../domain.layer/enums/slack.enum";
 import { getRoleByIdQuery } from "../utils/role.utils";
@@ -524,7 +531,7 @@ async function loginUser(req: Request, res: Response): Promise<any> {
         const isSuperAdmin = user.role_id === 5;
 
         // Generate JWT tokens (access + refresh)
-        const { accessToken } = generateUserTokens(
+        const { accessToken } = await generateUserTokens(
           {
             id: user.id!,
             email: email,
@@ -722,7 +729,7 @@ async function loginUserWithMicrosoft(req: Request, res: Response): Promise<any>
       user.role_id = roleId;
     }
 
-    const { accessToken } = generateUserTokens(
+    const { accessToken } = await generateUserTokens(
       {
         id: user!.id!,
         email: user!.email,
@@ -809,12 +816,44 @@ async function refreshAccessToken(req: Request, res: Response): Promise<any> {
       return res.status(406).json(STATUS_CODE[406]({ message: req.t!("Token expired") }));
     }
 
-    const newAccessToken = generateToken({
-      id: decoded.id,
-      email: decoded.email,
-      roleName: decoded.roleName,
-      organizationId: decoded.organizationId,
-    });
+    // Server-side validation: the token must exist and be unrevoked.
+    const stored = await findRefreshToken(refreshToken);
+
+    if (!stored) {
+      logStructured("error", "unknown refresh token", "refreshAccessToken", "user.ctrl.ts");
+      return res.status(401).json(STATUS_CODE[401](req.t!("Invalid refresh token")));
+    }
+
+    if (stored.revoked_at) {
+      // Reuse of an already-rotated token = theft signal. Kill the family.
+      logStructured(
+        "error",
+        `refresh token reuse detected for user ${stored.user_id}, revoking family`,
+        "refreshAccessToken",
+        "user.ctrl.ts",
+      );
+      await revokeTokenFamily(stored.family_id);
+      return res.status(401).json(STATUS_CODE[401](req.t!("Invalid refresh token")));
+    }
+
+    if (new Date(stored.expires_at).getTime() < Date.now()) {
+      logStructured("error", "stored refresh token expired", "refreshAccessToken", "user.ctrl.ts");
+      return res.status(406).json(STATUS_CODE[406]({ message: req.t!("Token expired") }));
+    }
+
+    // Rotate: revoke the presented token, issue a new one in the same family.
+    await revokeRefreshTokenByHash(stored.token_hash);
+
+    const { accessToken: newAccessToken } = await generateUserTokens(
+      {
+        id: decoded.id,
+        email: decoded.email,
+        roleName: decoded.roleName,
+        organizationId: decoded.organizationId,
+      },
+      res,
+      stored.family_id,
+    );
 
     logStructured(
       "successful",
@@ -863,11 +902,21 @@ async function resetPassword(req: Request, res: Response) {
     if (user) {
       await user.updatePassword(newPassword);
 
+      // Update by the canonical stored email, not the raw request email. The
+      // lookup above (getUserByEmailQuery) is case-insensitive, but
+      // resetPasswordQuery's UPDATE matches `email` exactly. If the stored value
+      // differs in case or whitespace from what the user typed, passing the
+      // request email would match zero rows and silently leave the password
+      // unchanged. _user.email is the value actually in the database.
       const updatedUser = (await resetPasswordQuery(
-        email,
+        _user.email,
         user.password_hash,
         transaction,
       )) as UserModel;
+
+      // Invalidate every existing session: a password reset must log the
+      // user out everywhere (revokes all unexpired refresh tokens).
+      await revokeAllUserTokens(_user.id!);
 
       await transaction.commit();
       logStructured("successful", `password reset for ${email}`, "resetPassword", "user.ctrl.ts");
@@ -953,6 +1002,78 @@ async function updateUserById(req: Request, res: Response) {
       return res
         .status(403)
         .json(STATUS_CODE[403](req.t!("Forbidden: Access to this user is denied")));
+    }
+
+    // Authorization: only Admins/SuperAdmins may edit other users.
+    // Non-privileged users may only edit their own profile and may never
+    // change a role (prevents privilege escalation via roleId in the body).
+    const isPrivileged = req.role === "Admin" || req.role === "SuperAdmin";
+    const isSelf = req.userId === id;
+
+    if (!isPrivileged && !isSelf) {
+      logStructured(
+        "error",
+        `non-admin user ${req.userId} attempted to update user ID ${id}`,
+        "updateUserById",
+        "user.ctrl.ts",
+      );
+      await transaction.rollback();
+      return res
+        .status(403)
+        .json(STATUS_CODE[403](req.t!("Forbidden: Only admins can update other users")));
+    }
+
+    if (!isPrivileged && roleId !== undefined && roleId !== user.role_id) {
+      logStructured(
+        "error",
+        `user ${req.userId} attempted to change role of user ID ${id}`,
+        "updateUserById",
+        "user.ctrl.ts",
+      );
+      await transaction.rollback();
+      return res
+        .status(403)
+        .json(STATUS_CODE[403](req.t!("Forbidden: Only admins can change user roles")));
+    }
+
+    // Prevent privilege escalation: the SuperAdmin role (id 5) can never be
+    // assigned through this endpoint, not even by Admins/SuperAdmins.
+    if (roleId === 5) {
+      logStructured(
+        "error",
+        `user ${req.userId} attempted to assign SuperAdmin role to user ID ${id}`,
+        "updateUserById",
+        "user.ctrl.ts",
+      );
+      await transaction.rollback();
+      return res.status(403).json(STATUS_CODE[403](req.t!("Cannot assign SuperAdmin role")));
+    }
+
+    // Prevent modifying a SuperAdmin's role through this endpoint.
+    if (user.role_id === 5 && roleId !== undefined && roleId !== user.role_id) {
+      logStructured(
+        "error",
+        `user ${req.userId} attempted to change SuperAdmin role of user ID ${id}`,
+        "updateUserById",
+        "user.ctrl.ts",
+      );
+      await transaction.rollback();
+      return res.status(403).json(STATUS_CODE[403](req.t!("Cannot modify SuperAdmin role")));
+    }
+
+    // Validate that the requested role actually exists.
+    if (roleId !== undefined && roleId !== user.role_id) {
+      const targetRole = await getRoleByIdQuery(roleId);
+      if (!targetRole) {
+        logStructured(
+          "error",
+          `invalid role ID ${roleId} requested for user ID ${id}`,
+          "updateUserById",
+          "user.ctrl.ts",
+        );
+        await transaction.rollback();
+        return res.status(400).json(STATUS_CODE[400](req.t!("Invalid role ID")));
+      }
     }
 
     if (user) {
@@ -1884,6 +2005,49 @@ async function deleteUserProfilePhoto(req: Request, res: Response) {
   }
 }
 
+/**
+ * Logs out the current session.
+ *
+ * Revokes the presented refresh token server-side and clears the cookie.
+ * No JWT authentication is required (the access token may already be
+ * expired); the endpoint only ever revokes the token presented in the
+ * cookie, so it cannot be abused to log out other users.
+ */
+async function logoutUser(req: Request, res: Response): Promise<any> {
+  logStructured("processing", "logout requested", "logoutUser", "user.ctrl.ts");
+
+  try {
+    const refreshToken = req.cookies.refresh_token;
+
+    if (refreshToken) {
+      const stored = await findRefreshToken(refreshToken);
+      if (stored) {
+        await revokeRefreshTokenByHash(stored.token_hash);
+      }
+    }
+
+    res.clearCookie("refresh_token", {
+      httpOnly: true,
+      path: "/api/users",
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    });
+    res.clearCookie(CSRF_COOKIE_NAME, {
+      httpOnly: false,
+      path: "/api/users",
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
+    });
+
+    logStructured("successful", "logout completed", "logoutUser", "user.ctrl.ts");
+    return res.status(200).json(STATUS_CODE[200]({ message: req.t!("Logged out") }));
+  } catch (error) {
+    logStructured("error", "unexpected error during logout", "logoutUser", "user.ctrl.ts");
+    logger.error("❌ Error in logoutUser:", error);
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
 export {
   getAllUsers,
   getUserByEmail,
@@ -1900,6 +2064,7 @@ export {
   calculateProgress,
   ChangePassword,
   refreshAccessToken,
+  logoutUser,
   updateUserRole,
   uploadUserProfilePhoto,
   getUserProfilePhoto,

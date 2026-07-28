@@ -266,6 +266,7 @@ export async function getOrganizationById(req: Request, res: Response): Promise<
  *   }
  * }
  */
+
 export async function createOrganization(req: Request, res: Response): Promise<any> {
   const transaction = await sequelize.transaction();
   logStructured(
@@ -311,7 +312,7 @@ export async function createOrganization(req: Request, res: Response): Promise<a
       );
 
       // Generate tokens for the newly created user
-      const { accessToken } = generateUserTokens(
+      const { accessToken } = await generateUserTokens(
         {
           id: user.id!,
           email: body.userEmail,
