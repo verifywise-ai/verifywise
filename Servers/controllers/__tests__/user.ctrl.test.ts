@@ -29,6 +29,20 @@ jest.mock("../../utils/jwt.utils", () => ({
 jest.mock("../../utils/auth.utils", () => ({
   generateUserTokens: jest.fn().mockReturnValue({ accessToken: "token" }),
 }));
+jest.mock("../../utils/refreshToken.utils", () => ({
+  findRefreshToken: jest.fn().mockResolvedValue({
+    id: 1,
+    user_id: 1,
+    organization_id: 1,
+    token_hash: "hash",
+    family_id: "family-1",
+    expires_at: new Date(Date.now() + 10000),
+    revoked_at: null,
+  }),
+  revokeRefreshTokenByHash: jest.fn().mockResolvedValue(undefined),
+  revokeTokenFamily: jest.fn().mockResolvedValue(undefined),
+  revokeAllUserTokens: jest.fn().mockResolvedValue(undefined),
+}));
 jest.mock("../../utils/logger/fileLogger", () => ({
   __esModule: true,
   default: { debug: jest.fn(), error: jest.fn(), info: jest.fn() },
@@ -96,6 +110,9 @@ jest.mock("../../utils/role.utils", () => ({
 jest.mock("../../utils/invitation.utils", () => ({
   markInvitationAcceptedQuery: jest.fn().mockResolvedValue(undefined),
 }));
+jest.mock("../../utils/userPreference.utils", () => ({
+  getPreferencesByUserQuery: jest.fn(),
+}));
 jest.mock("../../domain.layer/exceptions/custom.exception", () => ({
   ValidationException: class ValidationException extends Error {},
   BusinessLogicException: class BusinessLogicException extends Error {},
@@ -107,6 +124,7 @@ import {
   getAllUsers,
   getUserByEmail,
   getUserById,
+  getPreferencesForCurrentUser,
   createNewUser,
   loginUser,
   resetPassword,
@@ -114,6 +132,7 @@ import {
   deleteUserById,
   checkUserExists,
   refreshAccessToken,
+  logoutUser,
   ChangePassword,
   updateUserRole,
   getUserProfilePhoto,
@@ -131,6 +150,8 @@ import {
   getUserProfilePhotoQuery,
   deleteUserProfilePhotoQuery,
 } from "../../utils/user.utils";
+import { getRoleByIdQuery } from "../../utils/role.utils";
+import { getPreferencesByUserQuery } from "../../utils/userPreference.utils";
 
 const mockGetAll = getAllUsersQuery as jest.MockedFunction<typeof getAllUsersQuery>;
 const mockGetByEmail = getUserByEmailQuery as jest.MockedFunction<typeof getUserByEmailQuery>;
@@ -138,6 +159,9 @@ const mockGetById = getUserByIdQuery as jest.MockedFunction<typeof getUserByIdQu
 const mockCreate = createNewUserQuery as jest.MockedFunction<typeof createNewUserQuery>;
 const mockUpdate = updateUserByIdQuery as jest.MockedFunction<typeof updateUserByIdQuery>;
 const mockDelete = deleteUserByIdQuery as jest.MockedFunction<typeof deleteUserByIdQuery>;
+const mockGetPreferences = getPreferencesByUserQuery as jest.MockedFunction<
+  typeof getPreferencesByUserQuery
+>;
 
 function createReq(overrides?: Partial<Request>): any {
   return {
@@ -159,6 +183,7 @@ function createRes(): any {
   res.json = jest.fn<any>().mockReturnValue(res);
   res.send = jest.fn<any>().mockReturnValue(res);
   res.cookie = jest.fn<any>().mockReturnValue(res);
+  res.clearCookie = jest.fn<any>().mockReturnValue(res);
   return res;
 }
 
@@ -361,6 +386,25 @@ describe("user.ctrl", () => {
       await resetPassword(req, res);
       expect(res.status).toHaveBeenCalledWith(202);
     });
+    it("updates by the stored email, not the raw request email", async () => {
+      // Stored email is canonical "a@b.com"; the request types a different
+      // case/whitespace variant. The case-sensitive UPDATE must target the
+      // stored value, or it would match zero rows and silently no-op.
+      const userMock = mockUser(buildUser({ email: "a@b.com", password_hash: "old" }));
+      mockGetByEmail.mockResolvedValue(userMock as any);
+      const UserModel = require("../../domain.layer/models/user/user.model").UserModel;
+      UserModel.createNewUser.mockResolvedValueOnce({
+        ...userMock,
+        updatePassword: jest.fn().mockResolvedValue(undefined),
+        password_hash: "newhash",
+      });
+      const resetMock = resetPasswordQuery as jest.MockedFunction<typeof resetPasswordQuery>;
+      resetMock.mockResolvedValue(mockUser(buildUser()) as any);
+      const req = createReq({ body: { email: "  A@B.COM  ", newPassword: "newpass" } });
+      const res = createRes();
+      await resetPassword(req, res);
+      expect(resetMock).toHaveBeenCalledWith("a@b.com", expect.anything(), expect.anything());
+    });
     it("should return 500 when user is not found (null access before check)", async () => {
       mockGetByEmail.mockResolvedValue(null as any);
       const req = createReq({ body: { email: "a@b.com", newPassword: "newpass" } });
@@ -407,6 +451,47 @@ describe("user.ctrl", () => {
       const res = createRes();
       await updateUserById(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
+    });
+    it("should return 403 when assigning SuperAdmin role (roleId 5)", async () => {
+      mockGetById.mockResolvedValue(mockUser(buildUser({ id: 2, organization_id: 1 })) as any);
+      const req = createReq({ params: { id: "2" }, body: { name: "X", roleId: 5 } });
+      const res = createRes();
+      await updateUserById(req, res);
+      expect(res.status).toHaveBeenCalledWith(403);
+    });
+    it("should return 403 when assigning SuperAdmin role as string ('5')", async () => {
+      mockGetById.mockResolvedValue(mockUser(buildUser({ id: 2, organization_id: 1 })) as any);
+      const req = createReq({ params: { id: "2" }, body: { name: "X", roleId: "5" } });
+      const res = createRes();
+      await updateUserById(req, res);
+      expect(res.status).toHaveBeenCalledWith(403);
+    });
+    it("should return 403 when changing the role of a SuperAdmin user", async () => {
+      mockGetById.mockResolvedValue(
+        mockUser(buildUser({ id: 2, organization_id: 1, role_id: 5 })) as any,
+      );
+      const req = createReq({ params: { id: "2" }, body: { name: "X", roleId: 1 } });
+      const res = createRes();
+      await updateUserById(req, res);
+      expect(res.status).toHaveBeenCalledWith(403);
+    });
+    it("should return 400 when the requested role does not exist", async () => {
+      const mockGetRole = getRoleByIdQuery as jest.MockedFunction<typeof getRoleByIdQuery>;
+      mockGetRole.mockResolvedValueOnce(null as any);
+      mockGetById.mockResolvedValue(
+        mockUser(buildUser({ id: 2, organization_id: 1, role_id: 1 })) as any,
+      );
+      const req = createReq({ params: { id: "2" }, body: { name: "X", roleId: 99 } });
+      const res = createRes();
+      await updateUserById(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+    });
+    it("should return 403 when a non-admin updates another user", async () => {
+      mockGetById.mockResolvedValue(mockUser(buildUser({ id: 2, organization_id: 1 })) as any);
+      const req = createReq({ params: { id: "2" }, body: { name: "X" }, role: "Reviewer" } as any);
+      const res = createRes();
+      await updateUserById(req, res);
+      expect(res.status).toHaveBeenCalledWith(403);
     });
   });
 
@@ -492,6 +577,52 @@ describe("user.ctrl", () => {
       const res = createRes();
       await refreshAccessToken(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
+    });
+    it("should return 401 when the refresh token is unknown", async () => {
+      const { findRefreshToken } = require("../../utils/refreshToken.utils");
+      (findRefreshToken as jest.Mock).mockResolvedValueOnce(null);
+      const req = createReq({ cookies: { refresh_token: "valid" } });
+      const res = createRes();
+      await refreshAccessToken(req, res);
+      expect(res.status).toHaveBeenCalledWith(401);
+    });
+    it("should revoke the family and return 401 on token reuse", async () => {
+      const { findRefreshToken, revokeTokenFamily } = require("../../utils/refreshToken.utils");
+      (findRefreshToken as jest.Mock).mockResolvedValueOnce({
+        id: 1,
+        user_id: 1,
+        organization_id: 1,
+        token_hash: "hash",
+        family_id: "family-1",
+        expires_at: new Date(Date.now() + 10000),
+        revoked_at: new Date(),
+      });
+      const req = createReq({ cookies: { refresh_token: "valid" } });
+      const res = createRes();
+      await refreshAccessToken(req, res);
+      expect(revokeTokenFamily).toHaveBeenCalledWith("family-1");
+      expect(res.status).toHaveBeenCalledWith(401);
+    });
+  });
+
+  describe("logoutUser", () => {
+    it("should revoke the token, clear the cookie and return 200", async () => {
+      const { revokeRefreshTokenByHash } = require("../../utils/refreshToken.utils");
+      const req = createReq({ cookies: { refresh_token: "valid" } });
+      const res = createRes();
+      await logoutUser(req, res);
+      expect(revokeRefreshTokenByHash).toHaveBeenCalledWith("hash");
+      expect(res.clearCookie).toHaveBeenCalledWith(
+        "refresh_token",
+        expect.objectContaining({ path: "/api/users" }),
+      );
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+    it("should return 200 even without a refresh cookie", async () => {
+      const req = createReq({ cookies: {} });
+      const res = createRes();
+      await logoutUser(req, res);
+      expect(res.status).toHaveBeenCalledWith(200);
     });
   });
 
@@ -627,6 +758,77 @@ describe("user.ctrl", () => {
       const req = createReq({ params: { id: "1" } });
       const res = createRes();
       await deleteUserProfilePhoto(req, res);
+      expect(res.status).toHaveBeenCalledWith(500);
+    });
+  });
+
+  describe("getPreferencesForCurrentUser", () => {
+    const mockPreferences = {
+      toJSON: () => ({
+        id: 1,
+        user_id: 1,
+        date_format: "MM-DD-YYYY",
+        language: "de",
+      }),
+    };
+
+    it("should return stored preferences for the current user", async () => {
+      mockGetById.mockResolvedValue(mockUser(buildUser()) as any);
+      mockGetPreferences.mockResolvedValue(mockPreferences as any);
+      const req = createReq();
+      const res = createRes();
+      await getPreferencesForCurrentUser(req, res);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            date_format: "MM-DD-YYYY",
+            language: "de",
+          }),
+        }),
+      );
+    });
+
+    it("should return defaults when no preferences row exists", async () => {
+      mockGetById.mockResolvedValue(mockUser(buildUser()) as any);
+      mockGetPreferences.mockResolvedValue(null as any);
+      const req = createReq();
+      const res = createRes();
+      await getPreferencesForCurrentUser(req, res);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            date_format: "DD-MM-YYYY",
+            language: "en",
+            theme: "light",
+          }),
+        }),
+      );
+    });
+
+    it("should return 404 when the user is not found", async () => {
+      mockGetById.mockResolvedValue(null as any);
+      const req = createReq();
+      const res = createRes();
+      await getPreferencesForCurrentUser(req, res);
+      expect(res.status).toHaveBeenCalledWith(404);
+    });
+
+    it("should return 403 for cross-organization access", async () => {
+      mockGetById.mockResolvedValue(mockUser(buildUser({ organization_id: 99 })) as any);
+      const req = createReq({ userId: 2 });
+      const res = createRes();
+      await getPreferencesForCurrentUser(req, res);
+      expect(res.status).toHaveBeenCalledWith(403);
+    });
+
+    it("should return 500 on query error", async () => {
+      mockGetById.mockResolvedValue(mockUser(buildUser()) as any);
+      mockGetPreferences.mockRejectedValue(new Error("DB error"));
+      const req = createReq();
+      const res = createRes();
+      await getPreferencesForCurrentUser(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
     });
   });

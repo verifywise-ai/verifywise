@@ -3,10 +3,6 @@ name: EvalServer & EvaluationModule Checks
 permissions:
   contents: read
 
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
-
 on:
   pull_request:
     branches: ['master', 'develop']
@@ -22,13 +18,9 @@ on:
       - '.github/workflows/evalserver-checks.yml'
 
 jobs:
-  evalserver-tests:
-    name: EvalServer Tests (pytest)
+  python-tests:
+    name: Python Tests (pytest)
     runs-on: ubuntu-latest
-    timeout-minutes: 20
-    defaults:
-      run:
-        working-directory: EvalServer
 
     steps:
       - uses: actions/checkout@v7
@@ -42,24 +34,24 @@ jobs:
             EvalServer/requirements.txt
             EvalServer/requirements-test.txt
 
-      - name: Cache EvalServer virtualenv
-        uses: actions/cache@v6
-        with:
-          path: EvalServer/.venv
-          key: evalserver-venv-${{ runner.os }}-3.12-${{ hashFiles('EvalServer/requirements.txt', 'EvalServer/requirements-test.txt') }}
-          restore-keys: |
-            evalserver-venv-${{ runner.os }}-3.12-
-
-      - name: Create virtualenv
-        run: test -d .venv || python -m venv .venv
-
       - name: Install EvalServer runtime + test dependencies
+        working-directory: EvalServer
         run: |
-          .venv/bin/python -m pip install --upgrade pip
-          .venv/bin/python -m pip install -r requirements-test.txt
-          .venv/bin/python -m pip install -r requirements.txt
+          python -m pip install --upgrade pip
+          # Test deps are minimal and fast — install them first
+          pip install -r requirements-test.txt
+          # Runtime deps are heavy (torch, transformers, ...) but the test files
+          # import EvalServer source modules that require them.
+          pip install -r requirements.txt
+
+      - name: Audit EvalServer dependencies (pip-audit)
+        working-directory: EvalServer
+        run: |
+          python -m pip install pip-audit
+          python -m pip_audit -r requirements.txt
 
       - name: Run EvalServer tests (excluding integration smoke tests)
+        working-directory: EvalServer
         env:
           DB_USER: test
           DB_PASSWORD: test
@@ -67,7 +59,7 @@ jobs:
           DB_PORT: '5432'
           DB_NAME: verifywise_test
         run: |
-          .venv/bin/python -m pytest tests/ -v \
+          python -m pytest tests/ -v \
             --ignore=tests/test_integration_openrouter.py \
             -m "not integration"
 
@@ -89,7 +81,6 @@ jobs:
           cache: 'pip'
           cache-dependency-path: |
             EvaluationModule/requirements.txt
-            EvaluationModule/requirements-test.txt
 
       - name: Cache EvaluationModule virtualenv
         uses: actions/cache@v6
@@ -105,9 +96,18 @@ jobs:
       - name: Install EvaluationModule runtime + test dependencies
         run: |
           .venv/bin/python -m pip install --upgrade pip
-          .venv/bin/python -m pip install -r requirements-test.txt
+          .venv/bin/python -m pip install pytest
           .venv/bin/python -m pip install -r requirements.txt
 
+      - name: Audit EvaluationModule dependencies (pip-audit)
+        run: |
+          .venv/bin/python -m pip install pip-audit
+          .venv/bin/python -m pip_audit -r requirements.txt
+
+      - name: Install EvaluationModule test mocks
+        run: .venv/bin/python -m pip install respx
+
       - name: Run EvaluationModule tests
+        working-directory: EvaluationModule
         run: |
           .venv/bin/python -m pytest tests/ -v -m "not integration"

@@ -51,11 +51,13 @@ app = FastAPI(
     redirect_slashes=False,
 )
 
-# CORS: allow Express backend + any employee SDK origin
-origins = [
-    os.environ.get("BACKEND_URL", "http://localhost:3000"),
-    "*",  # Virtual key endpoints are auth-gated, CORS is safe
-]
+# CORS: allow the Express backend plus any explicitly configured origins.
+# Never use "*": key-authenticated endpoints must not be callable from
+# arbitrary websites via browser JS (a leaked virtual key would be usable
+# cross-origin). Extra SDK origins can be opted in via env var.
+origins = [os.environ.get("BACKEND_URL", "http://localhost:3000")]
+_extra_origins = os.environ.get("AI_GATEWAY_EXTRA_CORS_ORIGINS", "")
+origins.extend(o.strip() for o in _extra_origins.split(",") if o.strip())
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,

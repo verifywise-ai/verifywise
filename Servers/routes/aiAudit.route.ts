@@ -1,5 +1,6 @@
 import { Router } from "express";
 import authenticateJWT from "../middleware/auth.middleware";
+import authorize from "../middleware/accessControl.middleware";
 import {
   getAuditLog,
   getActionAuditTrail,
@@ -10,7 +11,7 @@ import {
 const router = Router();
 
 router.get("/analytics", authenticateJWT, getAnalytics);
-router.get("/export", authenticateJWT, exportAuditLog);
+router.get("/export", authenticateJWT, authorize(["Admin"]), exportAuditLog);
 router.get("/log/:actionId", authenticateJWT, getActionAuditTrail);
 router.get("/log", authenticateJWT, getAuditLog);
 

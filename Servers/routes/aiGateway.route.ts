@@ -36,6 +36,11 @@ function aiGatewayRoutes() {
         if (expressReq.requestId) {
           proxyReq.setHeader("x-request-id", expressReq.requestId);
         }
+        // Strip client-supplied tenant headers: the gateway trusts these,
+        // so they must only ever come from the authenticated JWT context.
+        proxyReq.removeHeader("x-organization-id");
+        proxyReq.removeHeader("x-user-id");
+        proxyReq.removeHeader("x-role");
 
         // Forward tenant context from JWT
         if (expressReq.organizationId) {

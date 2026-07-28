@@ -25,5 +25,5 @@ export interface ModelEvaluationsResponse {
 
 export async function getAllModelEvaluations(): Promise<ModelEvaluationsResponse> {
   const response = await apiServices.get("/modelInventory/evaluations");
-  return (response.data as { data: ModelEvaluationsResponse }).data;
+  return response.data as ModelEvaluationsResponse;
 }

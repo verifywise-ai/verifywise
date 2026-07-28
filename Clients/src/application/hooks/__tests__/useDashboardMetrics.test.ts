@@ -132,11 +132,8 @@ describe("useDashboardMetrics", () => {
     expect(result.current.error).toBeNull();
   });
 
-  it("should paint cached data immediately while revalidating on mount", async () => {
-    // Seed a fresh cache. The hook still forces a refresh on mount so the
-    // dashboard is current when the user navigates back to it (the route
-    // unmounts and remounts). The cached value must paint immediately, without
-    // a blocking spinner, while that revalidation runs in the background.
+  it("should use cached data when cache is fresh", async () => {
+    // Seed all critical keys so shouldSkipFetch returns true
     const freshTimestamp = Date.now();
     const cacheData: Record<string, any> = {};
     const criticalKeys = [
@@ -149,39 +146,24 @@ describe("useDashboardMetrics", () => {
     criticalKeys.forEach((key) => {
       cacheData[key] = { data: { total: 1 }, timestamp: freshTimestamp };
     });
+    // Also seed risk so we see it from cache
     cacheData.riskMetrics = {
       data: { total: 10, distribution: { high: 5, medium: 3, low: 2, resolved: 0 }, recent: [] },
       timestamp: freshTimestamp,
     };
     localStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
 
-    // Revalidation returns 10 risks, so the recomputed total stays 10 and the
-    // value the user sees does not flicker.
-    mockGetAllEntities.mockResolvedValue({
-      data: Array.from({ length: 10 }, () => ({
-        current_risk_level: "Medium risk",
-        mitigation_status: "In Progress",
-      })),
-    });
-
     const { result } = renderHook(() => useDashboardMetrics());
 
-    // Cached value is shown immediately and no blocking spinner appears.
-    expect(result.current.loading).toBe(false);
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    // Should load from cache without making network calls
     expect(result.current.riskMetrics).not.toBeNull();
     expect(result.current.riskMetrics!.total).toBe(10);
-
-    // Mount forces a background revalidation fetch even when the cache is fresh,
-    // so returning to the dashboard always reflects edits made elsewhere.
-    await waitFor(() => {
-      expect(mockGetAllEntities).toHaveBeenCalled();
-    });
-    await waitFor(() => {
-      expect(result.current.isRevalidating).toBe(false);
-    });
-
-    // Total is unchanged after revalidation (same 10 risks).
-    expect(result.current.riskMetrics!.total).toBe(10);
+    // No network calls should have been made when cache is fully fresh
+    expect(mockGetAllEntities).not.toHaveBeenCalled();
   });
 
   it("should expose individual fetch functions", async () => {

@@ -1,0 +1,76 @@
+name: SAST (Semgrep)
+
+# Static application security testing with Semgrep Community Edition.
+# Completes the recommended free AppSec stack: Semgrep (SAST) + ZAP (DAST)
+# + Trivy (SCA/images/IaC).
+#
+# Rulesets:
+#   p/javascript + p/typescript — injection, XSS, crypto, SSRF (A01/A04/A05)
+#   p/python                   — Bandit-class findings for the FastAPI services
+#   p/security-audit           — cross-language security patterns
+#   p/secrets                  — hardcoded secret patterns
+#
+# Findings are uploaded to the GitHub Security tab and the scan is an
+# enforced blocking gate — but only for NEW findings. The pre-existing
+# findings backlog is triaged separately (tracked outside CI); blocking on it
+# would fail every PR. Semgrep's built-in baseline diffing
+# (--baseline-commit) fails the job only on findings not present on the PR
+# base branch. On push events there is no base ref, so the full scan still
+# runs (SARIF keeps the backlog visible in the Security tab) but does not
+# fail the job — full-history triage pending; the PR gate is the enforcement
+# point.
+
+permissions:
+  contents: read
+  security-events: write
+
+on:
+  pull_request:
+    branches: [master, develop]
+  push:
+    branches: [master, develop]
+  workflow_dispatch:
+
+jobs:
+  semgrep:
+    name: Semgrep SAST scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # Full history so the action can diff against the PR base commit.
+          fetch-depth: 0
+
+      # The semgrep-action@v1 is deprecated and rejects the generateSarif /
+      # baselineRef inputs, so it never produced semgrep.sarif and the upload
+      # step failed. Run the Semgrep CLI directly: it emits SARIF and blocks on
+      # findings via its own exit code.
+      - name: Run Semgrep
+        run: |
+          python3 -m pip install --quiet semgrep
+          # Baseline diffing policy: only findings NOT present on the base
+          # branch fail this job. The pre-existing backlog is triaged
+          # separately; new findings block. (fetch-depth: 0 above is required
+          # so the baseline commit is available locally.)
+          COMMON_ARGS="--config p/javascript --config p/typescript --config p/python --config p/security-audit --config p/secrets --sarif --output semgrep.sarif"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            # PR gate (enforcement point): --error + --baseline-commit fails
+            # the job only on findings NOT present on the base branch.
+            # (fetch-depth: 0 above is required so the baseline commit is
+            # available locally.)
+            semgrep scan $COMMON_ARGS --error --baseline-commit "origin/${{ github.base_ref }}"
+          else
+            # Push events (no base_ref): full scan, non-blocking for now —
+            # full-history triage pending; the PR gate is the enforcement
+            # point. No --error, so findings never fail the job, but genuine
+            # scan errors still do. SARIF is still generated and uploaded.
+            semgrep scan $COMMON_ARGS
+          fi
+
+      - name: Upload Semgrep results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: semgrep.sarif
+          category: 'semgrep-sast'

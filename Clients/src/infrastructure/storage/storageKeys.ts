@@ -17,6 +17,77 @@ export const KEYS = {
     key: "verifywise_dashboard_metrics_cache",
     legacyKey: "dashboard_metrics_cache",
   },
+
+  // UI language (transient)
+  language: { key: "vw_lang_prototype", raw: true },
+
+  // Theme toggle state (transient)
+  // NOT raw: booleans JSON-serialize to "true"/"false" (same strings as before,
+  // so the pre-paint script in index.html keeps working), while reads return a
+  // real boolean. With raw: true a stored "false" comes back as a truthy string
+  // and dark mode wrongly becomes the default.
+  darkMode: { key: "vw_dark_mode" },
+
+  // Dashboard demo data button dismissal
+  dashboardDemoHidden: {
+    key: "verifywise_hide_demo_data_button",
+    legacyKey: "hideDemoDataButton",
+  },
+
+  // AI Gateway dashboards
+  aiGatewayAnalyticsPeriod: {
+    key: "verifywise_ai_gateway_analytics_period",
+    raw: true,
+    legacyKey: "vw_ai_gateway_analytics_period",
+  },
+
+  // Evals dashboard
+  evalsLastProjectId: {
+    key: "verifywise_evals_last_project_id",
+    raw: true,
+    legacyKey: "evals_last_project_id",
+  },
+  evalsRecentExperiments: {
+    key: "verifywise_evals_recent_experiments",
+    legacyKey: "evals_recent_experiments",
+  },
+  evalsRecentProjects: {
+    key: "verifywise_evals_recent_projects",
+    legacyKey: "evals_recent_projects",
+  },
+  evalsLocalProviders: {
+    key: "verifywise_evals_local_providers",
+    legacyKey: "evals_local_providers",
+  },
+
+  // Start here onboarding
+  startHereProgress: { key: "verifywise_start_here_progress" },
+  startHereConfettiFired: {
+    key: "verifywise_start_here_confetti_fired",
+    raw: true,
+  },
+
+  // Framework selection / tabs
+  frameworkSelected: {
+    key: "verifywise_framework_selected",
+    raw: true,
+    legacyKey: "framework_selected",
+  },
+  iso27001Tab: {
+    key: "verifywise_iso27001_tab",
+    raw: true,
+    legacyKey: "iso27001_tab",
+  },
+  iso42001Tab: {
+    key: "verifywise_iso42001_tab",
+    raw: true,
+    legacyKey: "iso42001_tab",
+  },
+  nistAiRmfTab: {
+    key: "verifywise_nist_ai_rmf_tab",
+    raw: true,
+    legacyKey: "nist_ai_rmf_tab",
+  },
 } as const satisfies Record<keyof StorageValueMap, StorageKeyConfig>;
 
 /**
@@ -34,4 +105,9 @@ export const dynamicKeys = {
   columns: (tableId: string) => `${NAMESPACE}columns_${tableId}`,
   deadlineSnooze: (userId: number | string) => `${NAMESPACE}deadline_snooze_${userId}`,
   viewMode: (key: string) => `${NAMESPACE}view_mode_${key}`,
+  deadlineCollapsedSections: () => `${NAMESPACE}deadline_collapsed_sections`,
+  startHereDismissed: (suffix: string) => `${NAMESPACE}start_here_${suffix}_dismissed`,
+  aiGatewayPlaygroundEndpoint: () => `${NAMESPACE}playground_endpoint`,
+  aiGatewayPlaygroundTemperature: () => `${NAMESPACE}playground_temperature`,
+  aiGatewayPlaygroundMaxTokens: () => `${NAMESPACE}playground_max_tokens`,
 } as const;

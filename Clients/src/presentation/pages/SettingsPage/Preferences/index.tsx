@@ -90,7 +90,9 @@ const Preferences: React.FC = () => {
         });
 
         if (created) {
-          localStorage.setItem("verifywise_preferences", JSON.stringify(created.data));
+          // Server is the source of truth; App.tsx will sync the preferences
+          // blob into StorageService. Update the transient UI language via the
+          // translator, which persists through StorageService.
           setLanguage(language);
 
           setAlert({
@@ -108,7 +110,9 @@ const Preferences: React.FC = () => {
         });
 
         if (updated) {
-          localStorage.setItem("verifywise_preferences", JSON.stringify(updated.data));
+          // Server is the source of truth; App.tsx will sync the preferences
+          // blob into StorageService. Update the transient UI language via the
+          // translator, which persists through StorageService.
           setLanguage(language);
 
           setAlert({

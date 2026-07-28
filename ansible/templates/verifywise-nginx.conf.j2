@@ -4,6 +4,22 @@ server {
 
     client_max_body_size 200M;
 
+    # Security headers. HSTS becomes effective once certbot enables TLS on
+    # this server block (it is ignored by browsers over plain HTTP).
+    add_header Strict-Transport-Security "max-age=63072000; includeSubDomains" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+
+    # TLS hardening (per docs/deployment/SECURITY_HARDENING_GUIDE.md).
+    # These take effect once certbot adds the SSL listener (listen 443 ssl) to
+    # this server block. Certbot manages its own options-ssl-nginx.conf include;
+    # keep these directives here as well so the protocol/cipher policy persists
+    # even if that include is changed or removed.
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384;
+    ssl_prefer_server_ciphers off;
+
     # Custom error page for maintenance/upgrades
     error_page 502 503 504 /upgrade.html;
 
@@ -18,6 +34,9 @@ server {
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
     }
 
@@ -27,6 +46,9 @@ server {
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
     }
 }

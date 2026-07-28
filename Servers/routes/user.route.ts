@@ -30,7 +30,22 @@
 import express from "express";
 const router = express.Router();
 const multer = require("multer");
-const upload = multer({ storage: multer.memoryStorage() });
+// Profile photos: small images only (prevents memory-exhaustion DoS via
+// unbounded multipart uploads).
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB
+    files: 1,
+  },
+  fileFilter: (_req: Express.Request, file: Express.Multer.File, cb: any) => {
+    if (file.mimetype.startsWith("image/")) {
+      cb(null, true);
+    } else {
+      cb(new Error("UNSUPPORTED_FILE_TYPE"));
+    }
+  },
+});
 
 import rateLimit from "express-rate-limit";
 import { authLimiter, tokenRefreshLimiter } from "../middleware/rateLimit.middleware";
@@ -41,6 +56,7 @@ import {
   deleteUserById,
   getAllUsers,
   getUserById,
+  getPreferencesForCurrentUser,
   loginUser,
   loginUserWithMicrosoft,
   updateUserById,
@@ -51,11 +67,13 @@ import {
   getUserProfilePhoto,
   deleteUserProfilePhoto,
   resetPassword,
+  logoutUser,
 } from "../controllers/user.ctrl";
 import resetPasswordMiddleware from "../middleware/resetPassword.middleware";
 import authenticateJWT from "../middleware/auth.middleware";
 import registerJWT from "../middleware/register.middleware";
 import { selfOnly } from "../middleware/selfOnly.middleware";
+import authorize from "../middleware/accessControl.middleware";
 
 /**
  * GET /users
@@ -97,6 +115,8 @@ router.get("/", authenticateJWT, getAllUsers);
  * @param {express.Request} req - Express request object
  * @param {express.Response} res - Express response object
  */
+router.get("/preferences", authenticateJWT, getPreferencesForCurrentUser);
+
 router.get("/:id", authenticateJWT, getUserById);
 
 /**
@@ -135,6 +155,15 @@ router.post("/login", loginLimiter, loginUser);
 router.post("/login-microsoft", loginLimiter, loginUserWithMicrosoft);
 
 router.post("/refresh-token", tokenRefreshLimiter, refreshAccessToken);
+
+/**
+ * POST /users/logout
+ *
+ * Revokes the presented refresh token server-side and clears the cookie.
+ * No JWT required: the access token may already be expired, and the
+ * endpoint only revokes the token presented in the cookie.
+ */
+router.post("/logout", logoutUser);
 
 /**
  * POST /users/reset-password
@@ -190,7 +219,7 @@ router.patch("/:id", authenticateJWT, updateUserById);
  * @param {express.Request} req - Express request object
  * @param {express.Response} res - Express response object
  */
-router.delete("/:id", authenticateJWT, deleteUserById);
+router.delete("/:id", authenticateJWT, authorize(["Admin", "SuperAdmin"]), deleteUserById);
 
 /**
  * GET /users/check-user-exists

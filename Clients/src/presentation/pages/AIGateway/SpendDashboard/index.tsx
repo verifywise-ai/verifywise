@@ -48,6 +48,7 @@ import { useUserGuideSidebarContext } from "../../../components/UserGuide/UserGu
 import MockDashboard from "./MockDashboard";
 import OnboardingOverlay from "./OnboardingOverlay";
 import { displayFormattedDate } from "../../../tools/isoDateToString";
+import { storageService } from "../../../../infrastructure/storage";
 
 const numberFormatter = new Intl.NumberFormat("en-US");
 
@@ -68,9 +69,7 @@ const PERIOD_OPTIONS = [
 export default function SpendDashboardPage() {
   const cardSx = useCardSx();
   const userGuideSidebar = useUserGuideSidebarContext();
-  const [period, setPeriod] = useState(() => {
-    return localStorage.getItem("vw_ai_gateway_analytics_period") || "1d";
-  });
+  const [period, setPeriod] = useState(() => storageService.get("aiGatewayAnalyticsPeriod", "1d"));
   const [data, setData] = useState<any>(null);
   const [byEndpoint, setByEndpoint] = useState<any[]>([]);
   const [byUser, setByUser] = useState<any[]>([]);
@@ -284,7 +283,7 @@ export default function SpendDashboardPage() {
           onChange={(e) => {
             const val = e.target.value as string;
             setPeriod(val);
-            localStorage.setItem("vw_ai_gateway_analytics_period", val);
+            storageService.set("aiGatewayAnalyticsPeriod", val);
           }}
           sx={{ width: 140 }}
         />

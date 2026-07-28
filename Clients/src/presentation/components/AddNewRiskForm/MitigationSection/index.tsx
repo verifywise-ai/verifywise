@@ -17,15 +17,7 @@ import { createFieldBlurHandler } from "../../../../application/utils/formValida
 import { checkStringValidation } from "../../../../application/validations/stringValidation";
 import selectValidation from "../../../../application/validations/selectValidation";
 import useUsers from "../../../../application/hooks/useUsers";
-import {
-  mitigationStatusItems,
-  riskLevelItems,
-  approvalStatusItems,
-  likelihoodItems,
-  riskSeverityItems,
-} from "../projectRiskValue";
-import { RiskCalculator } from "../../../tools/riskCalculator";
-import { RiskLikelihood, RiskSeverity } from "../../RiskLevel/riskValues";
+import { mitigationStatusItems, riskLevelItems, approvalStatusItems } from "../projectRiskValue";
 import { alertState } from "../../../../domain/interfaces/i.alert";
 import allowedRoles from "../../../../application/constants/permissions";
 
@@ -202,34 +194,6 @@ const MitigationSection: FC<MitigationSectionProps> = ({
     [setMitigationValues, clearFieldError],
   );
 
-  // Keep "Current risk level" in sync with the residual level computed from the
-  // mitigation likelihood and severity. Without this the field (which the
-  // dashboard and reporting read via current_risk_level) stays frozen at the
-  // pre-mitigation value, so mitigating a risk never lowers the reported level.
-  // The computed level string maps to the same options as the dropdown.
-  const computedResidualLevelId = useMemo(() => {
-    const likelihood = likelihoodItems.find((i) => i._id === mitigationValues.likelihood);
-    const severity = riskSeverityItems.find((i) => i._id === mitigationValues.riskSeverity);
-    if (!likelihood || !severity) return null;
-    const { level } = RiskCalculator.getRiskLevel(
-      likelihood.name as RiskLikelihood,
-      severity.name as RiskSeverity,
-    );
-    // getRiskLevel emits "No risk" for the lowest band; the dropdown labels it
-    // "Very Low risk", so match on the noRisk option explicitly.
-    const normalized = level === "No risk" ? "Very Low risk" : level;
-    return riskLevelItems.find((i) => i.name === normalized)?._id ?? null;
-  }, [mitigationValues.likelihood, mitigationValues.riskSeverity]);
-
-  useEffect(() => {
-    if (computedResidualLevelId == null) return;
-    setMitigationValues((prev) =>
-      prev.currentRiskLevel === computedResidualLevelId
-        ? prev
-        : { ...prev, currentRiskLevel: computedResidualLevelId },
-    );
-  }, [computedResidualLevelId, setMitigationValues]);
-
   const handleDateChange = useCallback(
     (
       field: keyof Pick<MitigationFormValues, "deadline" | "dateOfAssessment">,
@@ -291,9 +255,7 @@ const MitigationSection: FC<MitigationSectionProps> = ({
                 error={errors.mitigationStatus}
                 disabled={isEditingDisabled}
               />
-              {/* Current risk level — derived from the residual computed below
-                  (likelihood × severity). Read-only so it can never diverge from
-                  the computed residual the dashboard and reporting rely on. */}
+              {/* Current Risk Level */}
               <Select
                 id="current-risk-level-input"
                 label="Current risk level"
@@ -307,7 +269,7 @@ const MitigationSection: FC<MitigationSectionProps> = ({
                 sx={formFieldStyles}
                 isRequired
                 error={errors.currentRiskLevel}
-                disabled
+                disabled={isEditingDisabled}
               />
               {/* Deadline */}
               <DatePicker

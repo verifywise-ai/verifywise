@@ -35,3 +35,8 @@ DELETE http://localhost:3000/users/1
 ### check if any user exists
 
 GET http://localhost:3000/users/check/exists
+
+### get current user preferences
+
+GET http://localhost:3000/users/preferences
+Authorization: Bearer <jwt_token>

@@ -21,7 +21,6 @@ jest.mock("../../services/inAppNotification.service", () => ({
 jest.mock("../../utils/mrmMonitoring.utils", () => ({
   getBreachNotificationRecipientsQuery: jest.fn(),
   getModelLabelQuery: jest.fn(),
-  getModelRoleUserIdQuery: jest.fn(),
 }));
 jest.mock("../../utils/mrmRevalidation.utils", () => ({
   getOpenValidationForModelQuery: jest.fn(),

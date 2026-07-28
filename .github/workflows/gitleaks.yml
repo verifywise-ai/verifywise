@@ -1,0 +1,43 @@
+name: Secret Scanning (Gitleaks)
+
+on:
+  pull_request:
+    branches: [master, develop]
+  push:
+    branches: [master, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  gitleaks:
+    name: Scan for committed secrets
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # full history so gitleaks can scan the commit range
+
+      # The gitleaks GitHub Action (v2) requires a paid GITLEAKS_LICENSE secret
+      # for organization repositories. Run the open-source gitleaks binary
+      # directly instead — same detection engine, no license gate.
+      - name: Install gitleaks
+        run: |
+          GITLEAKS_VERSION=8.21.2
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | tar -xz -C /usr/local/bin gitleaks
+          gitleaks version
+
+      # Scan the checked-out tree (--no-git) rather than full history: the goal
+      # is to block secrets present in the current code. Historical commits that
+      # have already been remediated should not fail every future run. A
+      # committed .gitleaks.toml can tune rules/allowlists if needed.
+      # Pass the repo-root .gitleaks.toml explicitly (gitleaks would
+      # auto-detect it in the source dir, but explicit is clearer and immune
+      # to working-directory changes). It extends the default ruleset and
+      # allowlists documented false positives (test fixtures, docs snippets,
+      # example manifests, detection-pattern literals).
+      - name: Scan for secrets
+        run: gitleaks detect --no-git --source . --config .gitleaks.toml --redact --verbose --exit-code 1

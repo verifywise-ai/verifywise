@@ -26,7 +26,6 @@ const router = express.Router();
 
 import {
   createOrganization,
-  createFirstOrganization,
   getOrganizationById,
   updateOrganizationById,
   getOrganizationsExists,
@@ -35,7 +34,7 @@ import {
 
 import authenticateJWT from "../middleware/auth.middleware";
 import superAdminOnly from "../middleware/superAdminOnly.middleware";
-import { requireSystemNotInitialized } from "../middleware/setupGuard.middleware";
+import authorize from "../middleware/accessControl.middleware";
 
 /**
  * GET /organizations/exists
@@ -52,20 +51,6 @@ import { requireSystemNotInitialized } from "../middleware/setupGuard.middleware
  * @returns {boolean} True if organizations exist, false otherwise
  */
 router.get("/exists", getOrganizationsExists);
-
-/**
- * POST /organizations/setup
- *
- * Public first-time setup endpoint.
- * Creates the first organization and admin user only when the system has no
- * users yet. Once initialized, this endpoint returns 403.
- *
- * @name post/setup
- * @function
- * @memberof module:routes/organization.route
- * @inner
- */
-router.post("/setup", requireSystemNotInitialized, createFirstOrganization);
 
 /**
  * GET /organizations/:id
@@ -118,7 +103,7 @@ router.post("/", authenticateJWT, superAdminOnly, createOrganization);
  * @param {express.Response} res - Express response object
  * @returns {Object} Updated organization object
  */
-router.patch("/:id", authenticateJWT, updateOrganizationById);
+router.patch("/:id", authenticateJWT, authorize(["Admin"]), updateOrganizationById);
 
 /**
  * PATCH /organizations/:id/onboarding-status
@@ -135,7 +120,12 @@ router.patch("/:id", authenticateJWT, updateOrganizationById);
  * @param {express.Response} res - Express response object
  * @returns {Object} Updated onboarding status
  */
-router.patch("/:id/onboarding-status", authenticateJWT, updateOnboardingStatus);
+router.patch(
+  "/:id/onboarding-status",
+  authenticateJWT,
+  authorize(["Admin"]),
+  updateOnboardingStatus,
+);
 
 /**
  * DELETE /organizations/:id

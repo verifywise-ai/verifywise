@@ -99,8 +99,8 @@ export default function AIAppsTable({
               />
               <EmptyStateTip
                 icon={ShieldCheck}
-                title="Map models, policies and data access"
-                description="Link each app to the models it runs on, the policies that apply to it and the data types it is allowed to touch, so you have a clear record for every tool."
+                title="Map models and policies"
+                description="Link each app to the models it runs on and the policies that apply to it, so you have a clear record for every tool."
               />
               <EmptyStateTip
                 icon={ClipboardCheck}

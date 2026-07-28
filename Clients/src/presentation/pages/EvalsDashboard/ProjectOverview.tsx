@@ -27,7 +27,6 @@ import type { DeepEvalProject } from "./types";
 import { useNavigate } from "react-router-dom";
 import { PageHeader } from "../../components/Layout/PageHeader";
 import HelperIcon from "../../components/HelperIcon";
-import AsyncBoundary from "../../components/AsyncBoundary";
 import TipBox from "../../components/TipBox";
 import { useAuth } from "../../../application/hooks/useAuth";
 import allowedRoles from "../../../application/constants/permissions";
@@ -158,7 +157,6 @@ export default function ProjectOverview({
 }: ProjectOverviewProps) {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<Error | string | unknown>(null);
   const [experiments, setExperiments] = useState<Experiment[]>([]);
   const [evaluationLogs, setEvaluationLogs] = useState<EvaluationLog[]>([]);
   const [dashboardData, setDashboardData] = useState<MonitorDashboard | null>(null);
@@ -170,9 +168,9 @@ export default function ProjectOverview({
     allowedRoles.evals.createExperiment.includes(userRoleName) && !isSuperAdmin;
 
   const loadOverviewData = useCallback(async () => {
-    setLoading(true);
-    setLoadError(null);
     try {
+      setLoading(true);
+
       // Load project if not provided
       if (!project) {
         const projectData = await getProject(projectId);
@@ -182,15 +180,15 @@ export default function ProjectOverview({
       // Load experiments, logs, and dashboard data in parallel
       const [experimentsData, logsData, dashboardResponse] = await Promise.all([
         getExperiments({ project_id: projectId, limit: 100 }),
-        getLogs({ project_id: projectId, limit: 1000 }),
-        getMonitorDashboard(projectId),
+        getLogs({ project_id: projectId, limit: 1000 }).catch(() => ({ logs: [] })),
+        getMonitorDashboard(projectId).catch(() => ({ data: null })),
       ]);
 
       setExperiments(experimentsData.experiments || []);
       setEvaluationLogs(logsData.logs || []);
       setDashboardData(dashboardResponse.data);
     } catch (err) {
-      setLoadError(err);
+      console.error("Failed to load overview data:", err);
     } finally {
       setLoading(false);
     }
@@ -227,6 +225,14 @@ export default function ProjectOverview({
     if (score === undefined || score === null || isNaN(score)) return "-";
     return score.toFixed(2);
   };
+
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" py={8}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   const hasExperiments = experiments.length > 0;
 
@@ -389,162 +395,151 @@ export default function ProjectOverview({
   };
 
   return (
-    <AsyncBoundary
-      isLoading={loading}
-      error={loadError}
-      onRetry={loadOverviewData}
-      loadingFallback={
-        <Box display="flex" justifyContent="center" py={8}>
-          <CircularProgress />
-        </Box>
-      }
-    >
-      <Stack sx={{ width: "100%", overflow: "hidden" }}>
-        <PageHeader
-          title="Overview"
-          description="Monitor your project's evaluation performance, track key metrics, and view recent experiments at a glance."
-          rightContent={<HelperIcon articlePath="llm-evals/llm-evals-overview" />}
-        />
-        <Box sx={{ mt: "18px" }}>
-          <TipBox entityName="evals-overview" />
-        </Box>
+    <Stack sx={{ width: "100%", overflow: "hidden" }}>
+      <PageHeader
+        title="Overview"
+        description="Monitor your project's evaluation performance, track key metrics, and view recent experiments at a glance."
+        rightContent={<HelperIcon articlePath="llm-evals/llm-evals-overview" />}
+      />
+      <Box sx={{ mt: "18px" }}>
+        <TipBox entityName="evals-overview" />
+      </Box>
 
-        {/* Header with New Experiment button */}
-        <Box display="flex" justifyContent="flex-end" alignItems="center" mb={3}>
-          <CustomizableButton
-            onClick={handleNewExperiment}
-            variant="contained"
-            text="New experiment"
-            icon={<Play size={16} />}
-            isDisabled={!canCreateExperiment}
-            sx={{
-              "backgroundColor": palette.brand.primary,
-              "border": `1px solid ${palette.brand.primary}`,
-              "gap": 2,
-              "&:hover": {
-                backgroundColor: palette.brand.primaryHover,
-              },
-            }}
-          />
-        </Box>
-
-        {/* Stat cards: 3x2 grid */}
-        <Box
+      {/* Header with New Experiment button */}
+      <Box display="flex" justifyContent="flex-end" alignItems="center" mb={3}>
+        <CustomizableButton
+          onClick={handleNewExperiment}
+          variant="contained"
+          text="New experiment"
+          icon={<Play size={16} />}
+          isDisabled={!canCreateExperiment}
           sx={{
-            display: "grid",
-            gridTemplateColumns: { xs: "repeat(2, 1fr)", sm: "repeat(3, 1fr)" },
-            gap: "16px",
-            mb: "24px",
+            "backgroundColor": palette.brand.primary,
+            "border": `1px solid ${palette.brand.primary}`,
+            "gap": 2,
+            "&:hover": {
+              backgroundColor: palette.brand.primaryHover,
+            },
           }}
-        >
-          <StatCard
-            title="Experiments"
-            value={formatNumber(totalExperiments)}
-            Icon={Beaker}
-            subtitle={`${completedExperiments} completed`}
-          />
-          <StatCard
-            title="Success rate"
-            value={successRate}
-            Icon={CheckCircle}
-            subtitle={successRateSubtitle}
-          />
-          <StatCard
-            title="Avg latency"
-            value={avgLatency}
-            Icon={Clock}
-            subtitle={avgLatencySubtitle}
-          />
-          <StatCard title="Avg score" value={avgScore} Icon={Star} subtitle={avgScoreSubtitle} />
-          <StatCard
-            title="Total tokens"
-            value={totalTokens}
-            Icon={Coins}
-            subtitle={totalTokensSubtitle}
-          />
-          <StatCard
-            title="Running"
-            value={experiments.filter((e) => e.status === "running").length}
-            Icon={Activity}
-            subtitle="Experiments in progress"
-          />
+        />
+      </Box>
+
+      {/* Stat cards: 3x2 grid */}
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: { xs: "repeat(2, 1fr)", sm: "repeat(3, 1fr)" },
+          gap: "16px",
+          mb: "24px",
+        }}
+      >
+        <StatCard
+          title="Experiments"
+          value={formatNumber(totalExperiments)}
+          Icon={Beaker}
+          subtitle={`${completedExperiments} completed`}
+        />
+        <StatCard
+          title="Success rate"
+          value={successRate}
+          Icon={CheckCircle}
+          subtitle={successRateSubtitle}
+        />
+        <StatCard
+          title="Avg latency"
+          value={avgLatency}
+          Icon={Clock}
+          subtitle={avgLatencySubtitle}
+        />
+        <StatCard title="Avg score" value={avgScore} Icon={Star} subtitle={avgScoreSubtitle} />
+        <StatCard
+          title="Total tokens"
+          value={totalTokens}
+          Icon={Coins}
+          subtitle={totalTokensSubtitle}
+        />
+        <StatCard
+          title="Running"
+          value={experiments.filter((e) => e.status === "running").length}
+          Icon={Activity}
+          subtitle="Experiments in progress"
+        />
+      </Box>
+
+      {/* Recent experiments table */}
+      <Box>
+        <Box display="flex" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: "14px" }}>
+            Recent experiments
+          </Typography>
         </Box>
 
-        {/* Recent experiments table */}
-        <Box>
-          <Box display="flex" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: "14px" }}>
-              Recent experiments
-            </Typography>
-          </Box>
-
-          {!hasExperiments ? (
-            <Box
-              sx={{
-                border: `1px solid ${palette.border.dark}`,
-                borderRadius: "4px",
-                backgroundColor: palette.background.main,
-                textAlign: "center",
-                py: 4,
-                px: 2,
-              }}
-            >
-              <Box sx={{ mb: 2 }}>
-                <Beaker size={32} color={palette.text.disabled} strokeWidth={1} />
-              </Box>
-              <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, fontSize: "13px" }}>
-                No experiments yet
-              </Typography>
-              <Typography
-                variant="body2"
-                color="text.secondary"
-                sx={{ mb: 2, fontSize: "12px", maxWidth: 320, mx: "auto", lineHeight: 1.5 }}
-              >
-                Run your first experiment to start evaluating your LLM.
-              </Typography>
-              <CustomizableButton
-                onClick={handleNewExperiment}
-                variant="contained"
-                text="Run first experiment"
-                icon={<Play size={14} />}
-                isDisabled={!canCreateExperiment}
-                sx={{
-                  "backgroundColor": palette.brand.primary,
-                  "border": `1px solid ${palette.brand.primary}`,
-                  "gap": 1,
-                  "fontSize": "12px",
-                  "height": "32px",
-                  "&:hover": {
-                    backgroundColor: palette.brand.primaryHover,
-                  },
-                }}
-              />
+        {!hasExperiments ? (
+          <Box
+            sx={{
+              border: `1px solid ${palette.border.dark}`,
+              borderRadius: "4px",
+              backgroundColor: palette.background.main,
+              textAlign: "center",
+              py: 4,
+              px: 2,
+            }}
+          >
+            <Box sx={{ mb: 2 }}>
+              <Beaker size={32} color={palette.text.disabled} strokeWidth={1} />
             </Box>
-          ) : (
-            <ExperimentTable
-              rows={recentExperimentsRows}
-              onRowClick={handleViewExperiment}
-              hidePagination
-              compact
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, fontSize: "13px" }}>
+              No experiments yet
+            </Typography>
+            <Typography
+              variant="body2"
+              color="text.secondary"
+              sx={{ mb: 2, fontSize: "12px", maxWidth: 320, mx: "auto", lineHeight: 1.5 }}
+            >
+              Run your first experiment to start evaluating your LLM.
+            </Typography>
+            <CustomizableButton
+              onClick={handleNewExperiment}
+              variant="contained"
+              text="Run first experiment"
+              icon={<Play size={14} />}
+              isDisabled={!canCreateExperiment}
+              sx={{
+                "backgroundColor": palette.brand.primary,
+                "border": `1px solid ${palette.brand.primary}`,
+                "gap": 1,
+                "fontSize": "12px",
+                "height": "32px",
+                "&:hover": {
+                  backgroundColor: palette.brand.primaryHover,
+                },
+              }}
             />
-          )}
-        </Box>
-
-        {/* New Experiment Modal - only render when project useCase is available */}
-        {project?.useCase && (
-          <NewExperimentModal
-            isOpen={newExperimentModalOpen}
-            onClose={() => setNewExperimentModalOpen(false)}
-            projectId={projectId}
-            orgId={orgId}
-            existingExperimentNames={experiments
-              .map((e) => e.name)
-              .filter((n): n is string => Boolean(n))}
-            onSuccess={handleExperimentSuccess}
-            useCase={project.useCase as "chatbot" | "rag" | "agent"}
+          </Box>
+        ) : (
+          <ExperimentTable
+            rows={recentExperimentsRows}
+            onRowClick={handleViewExperiment}
+            hidePagination
+            compact
           />
         )}
-      </Stack>
-    </AsyncBoundary>
+      </Box>
+
+      {/* New Experiment Modal - only render when project useCase is available */}
+      {project?.useCase && (
+        <NewExperimentModal
+          isOpen={newExperimentModalOpen}
+          onClose={() => setNewExperimentModalOpen(false)}
+          projectId={projectId}
+          orgId={orgId}
+          existingExperimentNames={experiments
+            .map((e) => e.name)
+            .filter((n): n is string => Boolean(n))}
+          onSuccess={handleExperimentSuccess}
+          useCase={project.useCase as "chatbot" | "rag" | "agent"}
+        />
+      )}
+    </Stack>
   );
 }

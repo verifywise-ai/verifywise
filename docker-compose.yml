@@ -33,7 +33,9 @@ services:
     image: ghcr.io/verifywise-ai/verifywise-backend:latest
     pull_policy: always
     ports:
-      - $BACKEND_PORT:$BACKEND_PORT
+      # Bind to localhost only: the plain-HTTP API must not be reachable from
+      # the network directly. The TLS-terminating host nginx proxies to it.
+      - 127.0.0.1:$BACKEND_PORT:$BACKEND_PORT
     environment:
       - PORT=$BACKEND_PORT
       - DB_HOST=postgresdb
@@ -50,6 +52,7 @@ services:
       - ENCRYPTION_KEY=$ENCRYPTION_KEY
       - AI_GATEWAY_URL=http://ai_gateway:8100
       - AI_GATEWAY_INTERNAL_KEY=${AI_GATEWAY_INTERNAL_KEY:?AI_GATEWAY_INTERNAL_KEY must be set in the env file before starting}
+      - EVAL_SERVER_INTERNAL_KEY=${EVAL_SERVER_INTERNAL_KEY:?EVAL_SERVER_INTERNAL_KEY must be set in the env file before starting}
       - SUPERADMIN_EMAIL=$SUPERADMIN_EMAIL
       - SUPERADMIN_PASSWORD=${SUPERADMIN_PASSWORD:?SUPERADMIN_PASSWORD must be set in the env file before starting}
   frontend:
@@ -97,6 +100,7 @@ services:
       - ENCRYPTION_KEY=$ENCRYPTION_KEY
       - AI_GATEWAY_URL=http://ai_gateway:8100
       - AI_GATEWAY_INTERNAL_KEY=${AI_GATEWAY_INTERNAL_KEY:?AI_GATEWAY_INTERNAL_KEY must be set in the env file before starting}
+      - EVAL_SERVER_INTERNAL_KEY=${EVAL_SERVER_INTERNAL_KEY:?EVAL_SERVER_INTERNAL_KEY must be set in the env file before starting}
   ai_gateway:
     depends_on:
       postgresdb:

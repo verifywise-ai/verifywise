@@ -22,6 +22,10 @@ jest.mock("../../../controllers/user.ctrl", () => ({
   getUserProfilePhoto: jest.fn((_req: any, res: any) => res.status(200).json({ photo: "base64" })),
   deleteUserProfilePhoto: jest.fn((_req: any, res: any) => res.status(204).send()),
   resetPassword: jest.fn((_req: any, res: any) => res.status(200).json({ reset: true })),
+  logoutUser: jest.fn((_req: any, res: any) => res.status(200).json({ message: "Logged out" })),
+  getPreferencesForCurrentUser: jest.fn((_req: any, res: any) =>
+    res.status(200).json({ date_format: "DD-MM-YYYY", language: "en" }),
+  ),
 }));
 
 jest.mock("../../../middleware/auth.middleware", () =>
@@ -34,6 +38,11 @@ jest.mock("../../../middleware/register.middleware", () =>
 
 jest.mock("../../../middleware/selfOnly.middleware", () => ({
   selfOnly: jest.fn((_req: any, _res: any, next: any) => next()),
+}));
+
+jest.mock("../../../middleware/accessControl.middleware", () => ({
+  __esModule: true,
+  default: jest.fn(() => (_req: any, _res: any, next: any) => next()),
 }));
 
 jest.mock("../../../middleware/rateLimit.middleware", () => ({
@@ -114,5 +123,14 @@ describe("DELETE /api/users/:id", () => {
     const res = await request(app).delete("/api/users/1");
 
     expect(res.status).toBe(204);
+  });
+});
+
+describe("POST /api/users/logout", () => {
+  it("should return 200", async () => {
+    const app = createUserTestApp();
+    const res = await request(app).post("/api/users/logout");
+
+    expect(res.status).toBe(200);
   });
 });

@@ -12,6 +12,7 @@ from routers.deepeval_arena import router as deepeval_arena
 from routers.bias_audits import router as bias_audits
 from routers.reports import router as reports
 from middlewares.middleware import TenantMiddleware
+from middlewares.auth import is_configured, INTERNAL_KEY_ENV
 from database.redis import close_redis
 from database.config import settings
 
@@ -109,6 +110,12 @@ async def cleanup_orphaned_experiments():
 
 @app.on_event("startup")
 async def startup_event():
+    # Fail fast: refuse to boot unauthenticated (fail-closed).
+    if not is_configured():
+        raise RuntimeError(
+            f"{INTERNAL_KEY_ENV} is not set or is a placeholder. "
+            "Set it to a strong secret shared with the Express backend."
+        )
     # Alembic migrations run once in Dockerfile/CLI before uvicorn starts workers.
     await run_data_migration()
     await cleanup_orphaned_experiments()

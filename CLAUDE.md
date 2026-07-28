@@ -1,6 +1,6 @@
 # VerifyWise - Development Guide
 
-> **Last Updated:** 2026-07-05
+> **Last Updated:** 2026-07-03
 
 This document contains cross-cutting rules for the VerifyWise codebase. Directory-scoped guides load automatically when working in each area:
 
@@ -176,7 +176,6 @@ Read the relevant file BEFORE implementing changes in that area:
 | Agent Control integrator/developer docs (connect an agent, Claude Code + Cursor, generic contract, API ref) | `shared/user-guide-content/content/developers/` |
 | AI Trust Index | `docs/technical/domains/ai-trust-index.md` |
 | Model Risk Management (MRM: bank model-risk governance — tiering, validation, findings, monitoring/ingestion, threshold eval, revalidation triggers, attestation; SR 26-2 / SS1/23 / OSFI E-23) | `docs/technical/domains/mrm.md` |
-| MRM metric simulator (dev-only CLI in `tools/mrm-simulator/`: real Python compute of PSI/AUC/gini/fairness from bundled datasets, config-driven fleet, ingestion, gap-finder, live web dashboard — for demoing/exercising MRM) | `docs/technical/domains/mrm-simulator.md` |
 | AI Detection | `docs/technical/domains/ai-detection.md` |
 | Risk management | `docs/technical/domains/risk-management.md` |
 | Vendors | `docs/technical/domains/vendors.md` |

@@ -37,22 +37,6 @@ export async function CreateMyOrganization({
 }
 
 /**
- * Creates the first organization and admin user during initial system setup.
- *
- * This endpoint only succeeds when the system has no users/organizations yet.
- *
- * @param {RequestParams} params - The parameters for creating the first organization.
- * @returns {Promise<any>} A promise that resolves to the response data.
- */
-export async function CreateFirstOrganization({
-  routeUrl = "/organizations/setup",
-  body,
-}: RequestParams): Promise<any> {
-  const response = await apiServices.post(routeUrl, body);
-  return response;
-}
-
-/**
  * Updates the current user's organization details.
  *
  * @param {RequestParams} params - The parameters for updating the organization.

@@ -823,7 +823,6 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
                         label={((row as any).reviewStatus || "draft")
                           .replace(/_/g, " ")
                           .replace(/^\w/, (c: string) => c.toUpperCase())}
-                        uppercase={false}
                       />
                     </TableCell>
                   )}

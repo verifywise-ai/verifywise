@@ -92,7 +92,6 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: "./src/test/setup.ts",
     globals: true,
-    pool: "forks",
     exclude: ["e2e/**", "**/node_modules/**"],
     env: {
       VITE_APP_API_BASE_URL: "http://localhost:3000",

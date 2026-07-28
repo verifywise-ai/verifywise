@@ -1,0 +1,8 @@
+# Semgrep ignore list — documented false positives only.
+# Everything not listed here is still scanned and enforced.
+
+# Kubernetes Secret EXAMPLE manifest with placeholder values only
+# (REPLACE_ME_*). Not a real secret; flagged by
+# yaml.kubernetes.security.secrets-in-config-file. The real secrets file
+# (kubernetes/*/secrets.yaml) is gitignored and never committed.
+kubernetes/.k8s/secrets-example.yaml
