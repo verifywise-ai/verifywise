@@ -14,6 +14,7 @@ import {
   removeUser,
   getMonitoring,
   updateMonitoring,
+  generateMonitoringToken,
 } from "../controllers/superAdmin.ctrl";
 
 const router = express.Router();
@@ -35,5 +36,6 @@ router.delete("/users/:id", removeUser);
 // Observability / monitoring configuration (instance-level)
 router.get("/monitoring", getMonitoring);
 router.put("/monitoring", updateMonitoring);
+router.post("/monitoring/token", generateMonitoringToken);
 
 export default router;

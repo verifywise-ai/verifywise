@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { Box, Stack, Typography, Switch, FormControlLabel, CircularProgress } from "@mui/material";
 import { useTheme } from "@mui/material";
-import { Save as SaveIcon } from "lucide-react";
+import { Save as SaveIcon, KeyRound as KeyIcon } from "lucide-react";
 import Field from "../../../../components/Inputs/Field";
 import { CustomizableButton } from "../../../../components/button/customizable-button";
 import Alert from "../../../../components/Alert";
 import {
+  generateMonitoringToken,
   getMonitoringConfig,
   updateMonitoringConfig,
 } from "../../../../../application/repository/superAdmin.repository";
@@ -28,11 +29,14 @@ const Monitoring: React.FC = () => {
   const [enabled, setEnabled] = useState(false);
   const [url, setUrl] = useState("");
   const [deploymentName, setDeploymentName] = useState("");
-  const [authHeader, setAuthHeader] = useState("");
   const [authHeaderSet, setAuthHeaderSet] = useState(false);
+  // Deployment name last persisted server-side. The token is signed for this
+  // value, so we only allow generating once the current input is saved.
+  const [savedDeploymentName, setSavedDeploymentName] = useState("");
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [alert, setAlert] = useState<AlertState | null>(null);
   const [urlError, setUrlError] = useState<string | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
@@ -47,6 +51,7 @@ const Monitoring: React.FC = () => {
           setEnabled(Boolean(cfg.enabled));
           setUrl(cfg.otlp_endpoint || "");
           setDeploymentName(cfg.deployment_name || "");
+          setSavedDeploymentName(cfg.deployment_name || "");
           setAuthHeaderSet(Boolean(cfg.auth_header_set));
         }
       } catch {
@@ -93,14 +98,12 @@ const Monitoring: React.FC = () => {
         enabled,
         otlp_endpoint: url.trim(),
         deployment_name: deploymentName.trim(),
-        // Send the secret only when entered; blank keeps the stored value.
-        ...(authHeader.trim() ? { auth_header: authHeader.trim() } : {}),
       });
       const cfg = res.data?.data;
       if (cfg) {
         setAuthHeaderSet(Boolean(cfg.auth_header_set));
+        setSavedDeploymentName(cfg.deployment_name || "");
       }
-      setAuthHeader("");
       setAlert({
         variant: "success",
         body: "Monitoring configuration saved. Restart services to apply changes.",
@@ -111,6 +114,36 @@ const Monitoring: React.FC = () => {
       setSaving(false);
     }
   };
+
+  const handleGenerateToken = async () => {
+    setAlert(null);
+    setGenerating(true);
+    try {
+      const res = await generateMonitoringToken();
+      const cfg = res.data?.data;
+      if (cfg) {
+        setAuthHeaderSet(Boolean(cfg.auth_header_set));
+      }
+      setAlert({
+        variant: "success",
+        body: "Push token generated. Restart services to apply changes.",
+      });
+    } catch {
+      setAlert({
+        variant: "error",
+        body:
+          "Failed to generate push token. Make sure the deployment name is saved and the server has OBSERVABILITY_PRIVATE_KEY configured.",
+      });
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  // Token is signed for the saved deployment name, so require the current input
+  // to match what's persisted before allowing generation.
+  const canGenerateToken =
+    savedDeploymentName.trim().length > 0 &&
+    savedDeploymentName.trim() === deploymentName.trim();
 
   if (loading) {
     return (
@@ -177,18 +210,39 @@ const Monitoring: React.FC = () => {
         width="100%"
       />
 
-      <Field
-        id="monitoring-auth-header"
-        label="Auth header (optional)"
-        placeholder={
-          authHeaderSet ? "•••••••• (leave blank to keep)" : "Authorization: Bearer <token>"
-        }
-        value={authHeader}
-        onChange={(e) => setAuthHeader(e.target.value)}
-        disabled={!enabled}
-        isOptional
-        width="100%"
-      />
+      <Stack gap={theme.spacing(2)}>
+        <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Push token</Typography>
+        <Field
+          id="monitoring-auth-header"
+          label=""
+          placeholder={authHeaderSet ? "••••••••••••••••••••" : "No token generated yet"}
+          value=""
+          onChange={() => {}}
+          disabled
+          width="100%"
+        />
+        <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
+          The token is signed server-side with this deployment's private key and never shown here.
+          The observability server verifies it with the matching public key; regenerating replaces
+          the stored token.
+          {!canGenerateToken ? " Save the deployment name first, then generate." : ""}
+        </Typography>
+        <Box>
+          <CustomizableButton
+            variant="outlined"
+            text={
+              generating
+                ? "Generating..."
+                : authHeaderSet
+                ? "Regenerate token"
+                : "Generate token"
+            }
+            icon={<KeyIcon size={16} />}
+            onClick={handleGenerateToken}
+            isDisabled={generating || !canGenerateToken}
+          />
+        </Box>
+      </Stack>
 
       <Box>
         <CustomizableButton

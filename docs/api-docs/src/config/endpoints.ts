@@ -9057,6 +9057,18 @@ export const superAdminEndpoints: Endpoint[] = [
     ],
     tag: "Super Admin",
   },
+  {
+    method: 'POST',
+    path: '/super-admin/monitoring/token',
+    summary: "Generate Monitoring Token",
+    description: "Requires role: Super Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Super Admin",
+  },
 ];
 
 // System endpoints

@@ -23030,6 +23030,21 @@ paths:
         -
           bearerAuth: []
       description: 'Requires role: Super Admin'
+  /super-admin/monitoring/token:
+    post:
+      summary: 'Generate Monitoring Token'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Super Admin'
+      operationId: generateMonitoringToken
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Super Admin'
   /internal/ai-gateway/notify:
     post:
       tags:

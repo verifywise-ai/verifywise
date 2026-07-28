@@ -90,9 +90,6 @@ export interface MonitoringConfigInput {
   enabled: boolean;
   otlp_endpoint: string;
   deployment_name: string;
-  // Only send when the operator wants to change the stored secret. Omit to keep
-  // the existing value; send "" to clear it.
-  auth_header?: string;
 }
 
 export async function getMonitoringConfig() {
@@ -101,4 +98,16 @@ export async function getMonitoringConfig() {
 
 export async function updateMonitoringConfig(data: MonitoringConfigInput) {
   return apiServices.put<ServerResponse<MonitoringConfig>>("/super-admin/monitoring", data);
+}
+
+/**
+ * Ask the backend to mint a signed (RS256) push token for this deployment. The
+ * backend signs it with its private key; the response only reports
+ * `auth_header_set` — the raw token is never returned to the browser.
+ */
+export async function generateMonitoringToken() {
+  return apiServices.post<ServerResponse<MonitoringConfig>>(
+    "/super-admin/monitoring/token",
+    {},
+  );
 }
