@@ -1,6 +1,6 @@
 # Reporting Domain
 
-> **Last Updated:** 2026-07-25
+> **Last Updated:** 2026-07-29
 
 ## Overview
 
@@ -71,7 +71,7 @@ Manual generation is **asynchronous**: `POST` queues the job and returns a `runI
 |--------|----------|-------------|
 | POST | `/reporting/v2/generate-report` | Queue report generation. Returns `202 { runId }` |
 | POST | `/reporting/generate-report` | Legacy alias for the above (same async behavior) |
-| GET | `/reporting/generate-report` | List generated reports |
+| GET | `/reporting/generate-report` | List generated reports. **Not read by the Reporting page** — see [the note below](#the-legacy-files-based-list-is-dead-code-for-the-ui) |
 | GET | `/reporting/runs/:id` | Poll a run's status (see [Template-First Reporting Layer](#template-first-reporting-layer)) |
 | GET | `/reporting/runs/:id/download` | Download the finished file once the run reaches a terminal status |
 | DELETE | `/reporting/:id` | Delete report |
@@ -611,14 +611,16 @@ The template-first reporting layer sits **on top of** the existing report engine
 
 Manual generation (`/generate-report`, `/v2/generate-report`) now runs through this same `report_runs` pipeline instead of generating synchronously: the controller creates a `report_runs` row and enqueues a `generate_report_manual` job (worker-side `executeManualRun`), same as a scheduled run does. See [Data Flow](#data-flow) above.
 
-### Domain Tables
+### Reporting Tables
 
 | Table | Purpose |
 |-------|---------|
 | `report_templates` | Reusable report definitions (system or org-defined). |
 | `report_template_versions` | Versioned snapshots of a template's section/config payload. |
 | `scheduled_reports` | A template + schedule (cron) + delivery config for an org. |
-| `report_runs` | Execution records of a scheduled (or run-now) report. |
+| `report_runs` | **The single list of produced reports** — execution records of every scheduled or run-now report. The Reporting UI's Generate and Archive tabs are both views over this one table (see [Run Archiving](#run-archiving)); nothing reads the legacy `files`-based list ([below](#the-legacy-files-based-list-is-dead-code-for-the-ui)). |
+
+`report_runs.archived_at` / `archived_by` carry a manual, reversible archive — set by `PATCH /runs/:id/archive`, cleared by `PATCH /runs/:id/restore`. Archiving is **orthogonal to `status`**: a `failed` run can be archived, a `success` run can sit unarchived indefinitely, and archiving never touches `status`, `file_id` or any other column. It is a UI-side filing action, not a statement about whether the run worked.
 
 ### Seeded System Templates
 
@@ -642,17 +644,21 @@ All endpoints are auth-protected and org-scoped.
 | POST | `/api/reporting/templates` | Create a template |
 | PATCH | `/api/reporting/templates/:id` | Update a template (see [Template Write Path](#template-write-path)) |
 | DELETE | `/api/reporting/templates/:id` | Archive a template (`is_active = false`) |
+| POST | `/api/reporting/templates/:id/run` | Run a template once, ad hoc, with no schedule row (see [Run Now](#run-now-ad-hoc-template-runs)) |
 | GET | `/api/reporting/scheduled-reports` | List scheduled reports |
 | POST | `/api/reporting/scheduled-reports` | Create a scheduled report (recipients are format-validated here) |
 | PATCH | `/api/reporting/scheduled-reports/:id` | Update a scheduled report (see [Updating a Schedule](#updating-a-schedule)) |
-| POST | `/api/reporting/scheduled-reports/:id/run-now` | Trigger an immediate run |
+| POST | `/api/reporting/scheduled-reports/:id/run-now` | Trigger an immediate run of an existing schedule |
 | POST | `/api/reporting/scheduled-reports/:id/pause` | Pause schedule |
 | POST | `/api/reporting/scheduled-reports/:id/resume` | Resume schedule |
 | DELETE | `/api/reporting/scheduled-reports/:id` | Soft-delete a scheduled report |
-| GET | `/api/reporting/runs` | List report runs — **paginated**, returns `{rows, total, limit, offset}` (see [Run Listing is Paginated](#run-listing-is-paginated)) |
+| GET | `/api/reporting/runs` | List report runs — **paginated**, returns `{rows, total, limit, offset}`, and filterable by `?archived=true\|false` (see [Run Listing is Paginated](#run-listing-is-paginated) and [Run Archiving](#run-archiving)) |
 | GET | `/api/reporting/runs/:id` | Get a run |
 | GET | `/api/reporting/runs/:id/download` | Download a run's output (org-scoped) |
 | GET | `/api/reporting/runs/:id/analyses` | Stored `report_run_analyses` rows for a run (doubly org-scoped: the run and the analyses are both filtered by `organization_id`) |
+| PATCH | `/api/reporting/runs/:id/archive` | Move a run into the Archive tab (see [Run Archiving](#run-archiving)) |
+| PATCH | `/api/reporting/runs/:id/restore` | Move a run back into the Generate tab |
+| DELETE | `/api/reporting/runs/:id` | Permanently delete a run |
 
 ### Template Write Path
 
@@ -665,6 +671,14 @@ All endpoints are auth-protected and org-scoped.
 **Slugs are derived server-side** from the template name. Uniqueness is enforced by `uq_report_templates_org_slug` on `(COALESCE(organization_id, 0), slug)`, which makes system templates share the org-0 namespace. A collision returns **409**.
 
 **Cross-org protection.** `getLatestVersionQuery` / `getVersionByIdQuery` are org-scoped via a JOIN to `report_templates`, so a version id from another org resolves to nothing. Scheduled-report creation additionally validates that the supplied `templateVersionId` belongs both to `templateId` and to the caller's org. Report templates are covered by the tenant-isolation suite (`Servers/tests/integration/tenant-isolation/report-templates.isolation.test.ts`), and the three reporting tables are registered in the isolation registry.
+
+### Run Now (Ad Hoc Template Runs)
+
+`POST /reporting/templates/:id/run` (`runTemplateNow` in `controllers/reportTemplate.ctrl.ts`) produces **one** report from a template with no `scheduled_reports` row behind it. It builds an in-memory schedule object (`id: null`) from the requested scope/sections/format and the template's latest version, forces `delivery_config: { saveToStorage: true }` — a run-now report exists to be downloaded from the Generate tab, not delivered by email — and calls the same `runScheduledReport()` that scheduled runs use. **Scheduled runs and run-now share one execution path**; the only difference is which caller assembles the schedule object and that run-now's schedule id is always `null`.
+
+The response reflects the run's outcome rather than always claiming success: `success` / `partial_success` return `200 { started: true, runId, status }`; `failed` returns `500 { runId, status: "failed", error }` so the caller still has the run id to look up what happened. `partial_success` is still a downloadable report — only `failed` means no file was produced.
+
+The frontend wizard (`ConfigureReportWizard.tsx`, `mode="run-now"`) skips the Schedule and Delivery review steps that a scheduled run shows, and on success routes the user to the Generate tab rather than the Scheduled tab.
 
 ### Section Catalog
 
@@ -703,6 +717,22 @@ Delivery genuinely sends email. Earlier revisions recorded `status: "success"` f
 `limit` is clamped to a maximum of 200. The defaults (`limit=200`, `offset=0`) reproduce the old result set exactly, so a caller that passes nothing sees what it saw before — but the **shape** changed, and any consumer that indexed the response directly must be updated. `total` lets a UI page without a second endpoint.
 
 Frontend consumers are insulated: `useReportRuns` unwraps the envelope with a React Query `select: (page) => page.rows`, so it still yields a plain array and its contract is unchanged. `useReportRunsPage` exposes the full envelope for callers that need `total`.
+
+`GET /api/reporting/runs` also takes an `?archived=true|false` query param, tri-state on purpose: `true` returns only archived runs, `false` returns only live ones, and omitting it returns both (`listRunsQuery` in `Servers/utils/reportRun.utils.ts`). This is what the Generate and Archive tabs each pass to get their half of the list — see [Run Archiving](#run-archiving).
+
+### Run Archiving
+
+`report_runs.archived_at` is a manual, reversible archive, independent of `status` (see [Reporting Tables](#reporting-tables)). Three endpoints move a run between the two tabs or remove it permanently, all Admin/Editor (`authorize(["Admin", "Editor"])`) and org-scoped:
+
+| Endpoint | Effect |
+|----------|--------|
+| `PATCH /reporting/runs/:id/archive` | Sets `archived_at = NOW(), archived_by = :userId`. |
+| `PATCH /reporting/runs/:id/restore` | Clears both back to `NULL`. |
+| `DELETE /reporting/runs/:id` | Permanently deletes the run row. |
+
+Every one of the three is scoped by `organization_id` in its `WHERE` clause. A run id that exists but belongs to another organization matches zero rows, and the query layer treats that the same as a nonexistent id: **404**, never a silent `200` on someone else's data. `Servers/tests/integration/tenant-isolation/report-runs.isolation.test.ts` asserts this for all three endpoints, plus that a cross-tenant attempt leaves the row untouched.
+
+**The Generate tab lists `archived_at IS NULL`, the Archive tab lists `archived_at IS NOT NULL`. Both render the same `ReportRunsTable` component**, parameterized by `variant="live"` / `variant="archived"` (`Clients/src/presentation/pages/Reporting/ReportRunsTable.tsx`), which is what stops the two lists drifting apart the way the old files-based list and the runs list did. A run-now report therefore always lands in Generate first (`archived_at` starts `NULL`) and only reaches Archive once a user archives it — it is never placed there directly.
 
 ### Updating a Schedule
 
@@ -744,14 +774,22 @@ The existing **Admin-only** manual generate endpoints are preserved.
 
 ### Frontend surface (complete)
 
-The UI half of the templates/schedules/runs stack is wired:
+The UI half of the templates/schedules/runs stack is wired. The Reporting page (`Clients/src/presentation/pages/Reporting/index.tsx`) has four tabs — Generate, Templates, Scheduled, Archive:
 
-- **`TemplatesTab`** — edit (name, description, category) and archive, over `useUpdateTemplate` / `useArchiveTemplate`. **System templates get neither**: writes match on `organization_id = :org AND is_system_template = false`, so the backend returns 404 for them and the UI omits the buttons rather than offering an action that cannot succeed. They carry a `System` chip so the absence reads as intentional. A 409 surfaces as a duplicate-name message.
+- **`TemplatesTab`** — splits templates into two sections, **My templates** and **System templates**, on `is_system_template` (`Clients/src/presentation/pages/Reporting/TemplatesTab.tsx`). Every card offers **Use Template** (opens the wizard in schedule mode, `onUse(id, "schedule")`) and **Run now** (opens it in run-now mode, `onUse(id, "run-now")`, see [Run Now](#run-now-ad-hoc-template-runs)). My-templates cards additionally get **Edit** (name, description, category, over `useUpdateTemplate`) and **Archive** (over `useArchiveTemplate`, behind a confirmation). **System-template cards get neither Edit nor Archive** — writes match on `organization_id = :org AND is_system_template = false`, so the backend 404s for them and the UI omits buttons that cannot succeed. In their place, System-template cards offer **Duplicate**, which `POST`s a new org-owned `report_templates` row seeded from the source template's name (`"<name> (copy)"`), description, category, scope and section/AI-block config (`handleDuplicate`, `useCreateTemplate`) — this is how an org turns a read-only system template into something it can edit. A 409 from any of these surfaces as a duplicate-name message.
 - **`ScheduledReportsTab`** — edit (name, format, schedule) and delete, over `useUpdateScheduledReport` / `useDeleteScheduledReport`. Both destructive paths require a confirmation naming the schedule. Edits always send `scheduleConfig`, because `updateScheduledReportQuery` only recomputes `next_run_at` when that key is present.
-- **`ArchiveTab`** — server-side pagination over the paginated runs endpoint via `useReportRunsPage`, reusing `StandardTablePagination`. It deliberately does **not** use the `useStandardTable` companion, which slices client-side and would report the current page's length as the total. The empty state keys on `total`, not page length, so paging past the end does not claim there are no runs. Each row opens `ReportAnalysisPanel` in a drawer.
+- **`ReportRunsTable`** (`Clients/src/presentation/pages/Reporting/ReportRunsTable.tsx`) — the one table backing both the Generate and Archive tabs (see [Run Archiving](#run-archiving)). It takes a `variant: "live" | "archived"` prop and passes `archived: variant === "archived"` to `useReportRunsPage`, so the two tabs differ only in which half of `report_runs` they query — same columns (Report / Status / Triggered by / Created / Actions), same empty-state component, same drawer. Pagination is server-side via MUI's `TablePagination`, gated on the server-reported `total` rather than the current page's row count, so paging past the end reads as "you paged past the end", not "there is nothing here". Status renders through a fixed label/color map — `partial_success` is styled `warning`, never `error`, because a partial-success run is still downloadable (see the run-status vocabulary note below). Download re-materializes the returned Blob through a throwaway `<a>` element; Delete is gated behind a `ConfirmationModal` since, unlike Archive, it cannot be undone. Each row also opens `ReportAnalysisPanel` in a drawer, independent of variant.
 - **`ReportAnalysisPanel`** — presentational (`{analyses, isLoading}`), caller owns `useRunAnalyses`. Renders all seven section keys including `sectionSummaries`, handles a `null` payload (a real runtime case — `runAnalyzers` writes `payload: null` when a section produced nothing) and surfaces `abstain_reason`.
 
 > Every field the panel renders has a verified backend producer. `EvidenceAnalysisPanel` is the cautionary case: it declares `rationales` and `document_signals`, neither of which any code in `Servers/` has ever emitted, so one renders permanently empty and ~85 lines of chip UI gated on the other are unreachable. Do not add a field to this panel without confirming something writes it.
+
+Run status is a fixed vocabulary: `queued`, `running`, `success`, `partial_success`, `failed`. `partial_success` means the report itself generated but a delivery channel (e.g. email) failed — the file exists, `file_id` is set, and it is downloadable from either tab. Only `failed` means no file was produced.
+
+### The Legacy `files`-Based List is Dead Code for the UI
+
+`GET /reporting/generate-report` (`getGeneratedReportsQuery`) still exists and still works, but nothing under `Clients/src/presentation/pages/Reporting/` calls it — the only caller, `useGeneratedReports`, is used solely by `Clients/src/presentation/pages/Reporting/Reports/index.tsx`, which nothing imports. The Reporting page reads exclusively from `report_runs` via `ReportRunsTable` (see [Run Archiving](#run-archiving)).
+
+This is more than an unused code path: `getGeneratedReportsQuery` builds its result with `JOIN projects p ON report.project_id = p.id` — an **inner** join. Any `files` row with a `NULL` `project_id` (an organization-scoped report, as opposed to a project-scoped one) is filtered out before it ever reaches the response. That inner join is why organization-scoped reports were invisible in the legacy list, and it is one more reason the `report_runs` pipeline — which has no such join — is the one the UI reads from now.
 
 ## Related Documentation
 
