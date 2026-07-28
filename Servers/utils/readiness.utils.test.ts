@@ -22,6 +22,8 @@ jest.mock("./visibility.utils", () => ({
 import {
   getApplicableControlsWithRequirementsQuery,
   getAssessmentCompletionQuery,
+  upsertControlScoreQuery,
+  upsertFrameworkScoreQuery,
 } from "./readiness.utils";
 import { getVisibleEuCategoryIdsForProject } from "./eu.utils";
 
@@ -213,5 +215,93 @@ describe("getAssessmentCompletionQuery", () => {
     await getAssessmentCompletionQuery(1, null);
 
     expect(mockQuery.mock.calls[0][1].replacements).toMatchObject({ projectId: null });
+  });
+});
+
+describe("upsertControlScoreQuery", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockQuery.mockResolvedValue([[{ id: 1 }]]);
+  });
+
+  it("persists the requirements score", async () => {
+    await upsertControlScoreQuery(1, "eu_ai_act", 1, {
+      project_id: 7,
+      created_by: 2,
+      visibility: "public",
+      requirements_score: 75,
+      evidence_quality_score: 80,
+      evidence_count_score: 55,
+      evidence_recency_score: 100,
+      overall_score: 74,
+      readiness_level: "needs_work",
+      recommendations: ["Complete the remaining requirements for this control"],
+    });
+
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(sql).toContain("requirements_score");
+    expect(sql).toContain("requirements_score = EXCLUDED.requirements_score");
+    expect(options.replacements).toMatchObject({ requirements: 75, overallScore: 74 });
+  });
+
+  it("no longer writes the retired task and risk columns", async () => {
+    await upsertControlScoreQuery(1, "eu_ai_act", 1, {
+      requirements_score: 0,
+      evidence_quality_score: 0,
+      evidence_count_score: 0,
+      evidence_recency_score: 0,
+      overall_score: 0,
+      readiness_level: "not_started",
+    });
+
+    const sql = mockQuery.mock.calls[0][0];
+    expect(sql).not.toContain("task_completion_score");
+    expect(sql).not.toContain("risk_mitigation_score");
+  });
+});
+
+describe("upsertFrameworkScoreQuery", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockQuery.mockResolvedValue([[{ id: 1 }]]);
+  });
+
+  it("persists both layers of the framework score", async () => {
+    await upsertFrameworkScoreQuery("eu_ai_act", 1, {
+      project_id: 7,
+      total_controls: 39,
+      avg_score: 54,
+      controls_avg_score: 60,
+      assessment_score: 40,
+      ready_count: 1,
+      needs_work_count: 2,
+      at_risk_count: 3,
+      not_started_count: 4,
+      weakest_controls: [],
+    });
+
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(sql).toContain("controls_avg_score");
+    expect(sql).toContain("assessment_score");
+    expect(options.replacements).toMatchObject({
+      avgScore: 54,
+      controlsAvgScore: 60,
+      assessmentScore: 40,
+    });
+  });
+
+  it("stores a null assessment score when the framework has no questions", async () => {
+    await upsertFrameworkScoreQuery("iso_42001", 1, {
+      total_controls: 10,
+      avg_score: 60,
+      controls_avg_score: 60,
+      assessment_score: null,
+      ready_count: 0,
+      needs_work_count: 0,
+      at_risk_count: 0,
+      not_started_count: 10,
+    });
+
+    expect(mockQuery.mock.calls[0][1].replacements).toMatchObject({ assessmentScore: null });
   });
 });

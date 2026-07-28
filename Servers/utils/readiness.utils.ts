@@ -18,8 +18,7 @@ export async function upsertControlScoreQuery(
     evidence_quality_score: number;
     evidence_count_score: number;
     evidence_recency_score: number;
-    task_completion_score: number;
-    risk_mitigation_score: number;
+    requirements_score: number;
     overall_score: number;
     readiness_level: string;
     recommendations?: string[] | null;
@@ -30,13 +29,13 @@ export async function upsertControlScoreQuery(
       `INSERT INTO control_readiness_scores
         (control_id, framework_type, project_id, created_by, visibility,
          evidence_quality_score, evidence_count_score, evidence_recency_score,
-         task_completion_score, risk_mitigation_score,
+         requirements_score,
          overall_score, readiness_level, recommendations,
          calculated_at, organization_id)
        VALUES
         (:controlId, :frameworkType, :projectId, :createdBy, :visibility,
          :evidenceQuality, :evidenceCount, :evidenceRecency,
-         :taskCompletion, :riskMitigation,
+         :requirements,
          :overallScore, :readinessLevel, :recommendations,
          NOW(), :organizationId)
        ON CONFLICT (control_id, framework_type, COALESCE(project_id, 0), COALESCE(created_by, 0), organization_id)
@@ -44,8 +43,7 @@ export async function upsertControlScoreQuery(
          evidence_quality_score = EXCLUDED.evidence_quality_score,
          evidence_count_score = EXCLUDED.evidence_count_score,
          evidence_recency_score = EXCLUDED.evidence_recency_score,
-         task_completion_score = EXCLUDED.task_completion_score,
-         risk_mitigation_score = EXCLUDED.risk_mitigation_score,
+         requirements_score = EXCLUDED.requirements_score,
          overall_score = EXCLUDED.overall_score,
          readiness_level = EXCLUDED.readiness_level,
          recommendations = EXCLUDED.recommendations,
@@ -61,8 +59,7 @@ export async function upsertControlScoreQuery(
           evidenceQuality: data.evidence_quality_score,
           evidenceCount: data.evidence_count_score,
           evidenceRecency: data.evidence_recency_score,
-          taskCompletion: data.task_completion_score,
-          riskMitigation: data.risk_mitigation_score,
+          requirements: data.requirements_score,
           overallScore: data.overall_score,
           readinessLevel: data.readiness_level,
           recommendations: data.recommendations ? JSON.stringify(data.recommendations) : null,
@@ -89,6 +86,8 @@ export async function upsertFrameworkScoreQuery(
     visibility?: string;
     total_controls: number;
     avg_score: number;
+    controls_avg_score: number;
+    assessment_score: number | null;
     ready_count: number;
     needs_work_count: number;
     at_risk_count: number;
@@ -100,18 +99,20 @@ export async function upsertFrameworkScoreQuery(
     const [rows] = await sequelize.query(
       `INSERT INTO framework_readiness_scores
         (framework_type, project_id, created_by, visibility,
-         total_controls, avg_score,
+         total_controls, avg_score, controls_avg_score, assessment_score,
          ready_count, needs_work_count, at_risk_count, not_started_count,
          weakest_controls, calculated_at, organization_id)
        VALUES
         (:frameworkType, :projectId, :createdBy, :visibility,
-         :totalControls, :avgScore,
+         :totalControls, :avgScore, :controlsAvgScore, :assessmentScore,
          :readyCount, :needsWorkCount, :atRiskCount, :notStartedCount,
          :weakestControls, NOW(), :organizationId)
        ON CONFLICT (framework_type, COALESCE(project_id, 0), COALESCE(created_by, 0), organization_id)
        DO UPDATE SET
          total_controls = EXCLUDED.total_controls,
          avg_score = EXCLUDED.avg_score,
+         controls_avg_score = EXCLUDED.controls_avg_score,
+         assessment_score = EXCLUDED.assessment_score,
          ready_count = EXCLUDED.ready_count,
          needs_work_count = EXCLUDED.needs_work_count,
          at_risk_count = EXCLUDED.at_risk_count,
@@ -127,6 +128,8 @@ export async function upsertFrameworkScoreQuery(
           visibility: data.visibility || "public",
           totalControls: data.total_controls,
           avgScore: data.avg_score,
+          controlsAvgScore: data.controls_avg_score,
+          assessmentScore: data.assessment_score,
           readyCount: data.ready_count,
           needsWorkCount: data.needs_work_count,
           atRiskCount: data.at_risk_count,
