@@ -61,15 +61,30 @@ export async function deleteScheduledReport(id: number): Promise<{ ok: boolean }
 
 export async function getRuns(params?: {
   scheduledReportId?: number;
+  archived?: boolean;
   limit?: number;
   offset?: number;
 }): Promise<ReportRunPage> {
   const qs = new URLSearchParams();
   if (params?.scheduledReportId) qs.set("scheduledReportId", String(params.scheduledReportId));
+  // Explicit check: `false` is meaningful here and must still be sent.
+  if (params?.archived !== undefined) qs.set("archived", String(params.archived));
   if (params?.limit != null) qs.set("limit", String(params.limit));
   if (params?.offset != null) qs.set("offset", String(params.offset));
   const suffix = qs.toString() ? `?${qs}` : "";
   return extract(await apiServices.get(`/reporting/runs${suffix}`));
+}
+
+export async function archiveRun(id: number) {
+  return extract(await apiServices.patch(`/reporting/runs/${id}/archive`, {}));
+}
+
+export async function restoreRun(id: number) {
+  return extract(await apiServices.patch(`/reporting/runs/${id}/restore`, {}));
+}
+
+export async function deleteRun(id: number) {
+  return extract(await apiServices.delete(`/reporting/runs/${id}`));
 }
 
 // Org-scoped report file download (NOT file-manager, which has its own RBAC and 403s here).

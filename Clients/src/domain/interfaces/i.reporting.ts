@@ -16,6 +16,8 @@ export interface ReportRun {
   output_filename: string | null;
   output_mime_type: string | null;
   error_message: string | null;
+  archived_at: string | null;
+  template_id: number | null;
   created_at: string;
   completed_at: string | null;
 }

@@ -28,6 +28,7 @@ export const useScheduledReports = () =>
 
 type RunPageParams = {
   scheduledReportId?: number;
+  archived?: boolean;
   limit?: number;
   offset?: number;
 };
@@ -177,3 +178,17 @@ export const useDeleteScheduledReport = () => {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["reporting", "scheduled"] }),
   });
 };
+
+// All three invalidate the whole runs key: an archive moves a row between two
+// cached lists, so refreshing only one leaves the other stale.
+const useRunMutation = (fn: (id: number) => Promise<unknown>) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: fn,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["reporting", "runs"] }),
+  });
+};
+
+export const useArchiveRun = () => useRunMutation(repo.archiveRun);
+export const useRestoreRun = () => useRunMutation(repo.restoreRun);
+export const useDeleteRun = () => useRunMutation(repo.deleteRun);
