@@ -153,6 +153,16 @@ export const useArchiveTemplate = () => {
   });
 };
 
+export const useRunTemplateNow = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, body }: { id: number; body: Record<string, unknown> }) =>
+      repo.runTemplateNow(id, body),
+    // The new run belongs in the Generate list, so refresh runs — not schedules.
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["reporting", "runs"] }),
+  });
+};
+
 // Analyses are written once when the run completes and never change after,
 // so there is nothing to poll for.
 export const useRunAnalyses = (runId: number | undefined) =>

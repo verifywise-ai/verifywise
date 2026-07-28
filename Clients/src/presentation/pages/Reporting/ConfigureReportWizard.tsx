@@ -14,13 +14,17 @@ import {
   Stack,
   Chip,
 } from "@mui/material";
-import { useCreateScheduledReport } from "../../../application/hooks/useReporting";
+import { useCreateScheduledReport, useRunTemplateNow } from "../../../application/hooks/useReporting";
 import { useProjects } from "../../../application/hooks/useProjects";
 import { useLLMKeyStatus } from "../../../application/hooks/useLLMKeyStatus";
 import { showAlert } from "../../../infrastructure/api/customAxios";
 import type { AiBlocksConfig } from "../../../domain/interfaces/i.reporting";
 
-const STEPS = ["Scope", "Sections", "AI Insights", "Schedule", "Delivery", "Review"];
+// Run now skips Schedule and Delivery entirely: there is no recurrence to set
+// up and the run is saved to storage unconditionally (see reportTemplate.ctrl
+// runTemplateNow), so there is nothing for either step to configure.
+const SCHEDULE_STEPS = ["Scope", "Sections", "AI Insights", "Schedule", "Delivery", "Review"];
+const RUN_NOW_STEPS = ["Scope", "Sections", "AI Insights", "Review"];
 const FREQUENCIES = ["daily", "weekly", "monthly"];
 
 // The seven blocks Phase 2 shipped on the backend. Previously three of these
@@ -49,11 +53,14 @@ const DEFAULT_AI_BLOCKS: AiBlocksConfig = {
 
 export default function ConfigureReportWizard({
   template,
+  mode,
   onClose,
 }: {
   template: any;
+  mode: "schedule" | "run-now";
   onClose: () => void;
 }) {
+  const STEPS = mode === "run-now" ? RUN_NOW_STEPS : SCHEDULE_STEPS;
   const [active, setActive] = useState(0);
   const [scope, setScope] = useState<"project" | "organization">(
     template.default_scope ?? "project",
@@ -84,6 +91,7 @@ export default function ConfigureReportWizard({
 
   const { data: projects = [] } = useProjects();
   const create = useCreateScheduledReport();
+  const runNow = useRunTemplateNow();
 
   // hasKeys is optimistically true while loading (useLLMKeyStatus.ts:38), so
   // gate on the settled value only — otherwise the blocks flicker from
@@ -94,11 +102,15 @@ export default function ConfigureReportWizard({
 
   const enabledSections = sections.filter((s: any) => s.defaultEnabled !== false);
 
+  // Select the panel by step name, not numeric index — run-now mode drops
+  // Schedule and Delivery, so an index-based check would show the wrong panel.
+  const step = STEPS[active];
+
   const canNext = () => {
-    if (active === 0 && scope === "project" && !projectId) return false;
-    if (active === 1 && !sections.some((s: any) => s.defaultEnabled !== false)) return false;
+    if (step === "Scope" && scope === "project" && !projectId) return false;
+    if (step === "Sections" && !sections.some((s: any) => s.defaultEnabled !== false)) return false;
     if (
-      active === 4 &&
+      step === "Delivery" &&
       !delivery.saveToStorage &&
       !delivery.sendEmailLink &&
       !delivery.attachFile
@@ -123,16 +135,32 @@ export default function ConfigureReportWizard({
 
   const submit = () => {
     if (!template.latestVersion?.id) return;
+    const base = {
+      templateVersionId: template.latestVersion.id,
+      name: `${template.name}${scope === "project" ? " - Project" : " - Org"}`,
+      scope,
+      projectId: scope === "project" ? projectId : null,
+      sectionsConfig: { sections },
+      aiBlocksConfig: ai,
+      format,
+    };
+
+    if (mode === "run-now") {
+      runNow.mutate(
+        { id: template.id, body: base },
+        {
+          onSuccess: onClose,
+          onError: () =>
+            showAlert({ variant: "error", body: "Failed to run report", isToast: true }),
+        },
+      );
+      return;
+    }
+
     create.mutate(
       {
+        ...base,
         templateId: template.id,
-        templateVersionId: template.latestVersion?.id,
-        name: `${template.name}${scope === "project" ? " - Project" : " - Org"}`,
-        scope,
-        projectId: scope === "project" ? projectId : null,
-        sectionsConfig: { sections },
-        aiBlocksConfig: ai,
-        format,
         scheduleConfig: schedule,
         deliveryConfig: { ...delivery, recipients: parseRecipients(recipientsText) },
       },
@@ -158,7 +186,7 @@ export default function ConfigureReportWizard({
         ))}
       </Stepper>
 
-      {active === 0 && (
+      {step === "Scope" && (
         <Stack spacing={2}>
           <Typography variant="body2" color="text.secondary">
             Choose whether this report covers a single project or the whole organization.
@@ -189,7 +217,7 @@ export default function ConfigureReportWizard({
         </Stack>
       )}
 
-      {active === 1 && (
+      {step === "Sections" && (
         <Stack spacing={1}>
           <Typography variant="h6">Sections</Typography>
           {sections.length === 0 && (
@@ -215,7 +243,7 @@ export default function ConfigureReportWizard({
         </Stack>
       )}
 
-      {active === 2 && (
+      {step === "AI Insights" && (
         <Stack spacing={1}>
           <Typography variant="h6">AI insights</Typography>
           <Typography variant="body2" color="text.secondary">
@@ -244,7 +272,7 @@ export default function ConfigureReportWizard({
         </Stack>
       )}
 
-      {active === 3 && (
+      {step === "Schedule" && (
         <Stack spacing={2}>
           <Typography variant="h6">Schedule</Typography>
           <TextField
@@ -298,7 +326,7 @@ export default function ConfigureReportWizard({
         </Stack>
       )}
 
-      {active === 4 && (
+      {step === "Delivery" && (
         <Stack spacing={1}>
           <Typography variant="h6">Delivery</Typography>
           <FormControlLabel
@@ -345,7 +373,7 @@ export default function ConfigureReportWizard({
         </Stack>
       )}
 
-      {active === 5 && (
+      {step === "Review" && (
         <Stack spacing={1}>
           <Typography variant="h6">Review</Typography>
           <Typography variant="body2">
@@ -377,21 +405,29 @@ export default function ConfigureReportWizard({
               </Typography>
             )}
           </Box>
-          <Typography variant="body2">
-            <strong>Schedule:</strong> {schedule.frequency} at{" "}
-            {String(schedule.hour).padStart(2, "0")}:{String(schedule.minute).padStart(2, "0")}{" "}
-            {schedule.timezone}
-          </Typography>
-          <Typography variant="body2">
-            <strong>Delivery:</strong>{" "}
-            {[
-              delivery.saveToStorage && "storage",
-              delivery.sendEmailLink && "email link",
-              delivery.attachFile && "attachment",
-            ]
-              .filter(Boolean)
-              .join(", ")}
-          </Typography>
+          {/* Run now bypasses Schedule and Delivery (runTemplateNow hardcodes
+              delivery_config to { saveToStorage: true } server-side), so
+              showing this mode's leftover default state here would tell the
+              user delivery choices they never made and that won't happen. */}
+          {mode === "schedule" && (
+            <>
+              <Typography variant="body2">
+                <strong>Schedule:</strong> {schedule.frequency} at{" "}
+                {String(schedule.hour).padStart(2, "0")}:
+                {String(schedule.minute).padStart(2, "0")} {schedule.timezone}
+              </Typography>
+              <Typography variant="body2">
+                <strong>Delivery:</strong>{" "}
+                {[
+                  delivery.saveToStorage && "storage",
+                  delivery.sendEmailLink && "email link",
+                  delivery.attachFile && "attachment",
+                ]
+                  .filter(Boolean)
+                  .join(", ")}
+              </Typography>
+            </>
+          )}
         </Stack>
       )}
 
@@ -406,10 +442,13 @@ export default function ConfigureReportWizard({
         ) : (
           <Button
             variant="contained"
-            disabled={create.isPending || !template.latestVersion?.id}
+            disabled={
+              (mode === "run-now" ? runNow.isPending : create.isPending) ||
+              !template.latestVersion?.id
+            }
             onClick={submit}
           >
-            Create Scheduled Report
+            {mode === "run-now" ? "Run now" : "Create Scheduled Report"}
           </Button>
         )}
       </Box>

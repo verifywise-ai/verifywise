@@ -126,6 +126,10 @@ export async function archiveTemplate(id: number): Promise<{ ok: boolean }> {
   return extract(await apiServices.delete(`/reporting/templates/${id}`));
 }
 
+export async function runTemplateNow(id: number, body: Record<string, unknown>) {
+  return extract(await apiServices.post(`/reporting/templates/${id}/run`, body));
+}
+
 export async function getRunAnalyses(runId: number): Promise<ReportRunAnalysis[]> {
   return extract(await apiServices.get(`/reporting/runs/${runId}/analyses`));
 }

@@ -1,21 +1,24 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { renderWithProviders } from "../../../../test/renderWithProviders";
 
 const updateMutate = vi.fn();
 const archiveMutate = vi.fn();
+const mockCreate = vi.fn();
 
 const SYSTEM_TEMPLATE = {
-  id: 1,
-  name: "Daily Governance Pulse",
+  id: 2,
+  name: "EU AI Act pack",
   description: "Seeded system template",
-  category: "operational",
-  recommended_frequency: "daily",
+  category: "compliance",
+  recommended_frequency: "quarterly",
   is_system_template: true,
 };
 
 const CUSTOM_TEMPLATE = {
-  id: 2,
-  name: "Quarterly Board Pack",
+  id: 1,
+  name: "My quarterly review",
   description: "Org-owned custom template",
   category: "governance",
   recommended_frequency: null,
@@ -29,6 +32,7 @@ vi.mock("../../../../application/hooks/useReporting", () => ({
   }),
   useUpdateTemplate: () => ({ mutate: updateMutate, isPending: false }),
   useArchiveTemplate: () => ({ mutate: archiveMutate, isPending: false }),
+  useCreateTemplate: () => ({ mutate: mockCreate, isPending: false }),
 }));
 
 vi.mock("../../../../infrastructure/api/customAxios", () => ({
@@ -44,17 +48,18 @@ describe("TemplatesTab", () => {
   beforeEach(() => {
     updateMutate.mockReset();
     archiveMutate.mockReset();
+    mockCreate.mockReset();
   });
 
   it("renders template cards", () => {
     render(<TemplatesTab onUse={() => {}} />);
-    expect(screen.getByText("Daily Governance Pulse")).toBeInTheDocument();
+    expect(screen.getByText("EU AI Act pack")).toBeInTheDocument();
     expect(screen.getAllByText(/Use Template/i).length).toBe(2);
   });
 
   it("offers no edit or archive on a system template", () => {
     render(<TemplatesTab onUse={() => {}} />);
-    const card = cardFor("Daily Governance Pulse");
+    const card = cardFor("EU AI Act pack");
 
     expect(within(card).queryByText("Edit")).not.toBeInTheDocument();
     expect(within(card).queryByText("Archive")).not.toBeInTheDocument();
@@ -63,7 +68,7 @@ describe("TemplatesTab", () => {
 
   it("offers edit and archive on a custom template", () => {
     render(<TemplatesTab onUse={() => {}} />);
-    const card = cardFor("Quarterly Board Pack");
+    const card = cardFor("My quarterly review");
 
     expect(within(card).getByText("Edit")).toBeInTheDocument();
     expect(within(card).getByText("Archive")).toBeInTheDocument();
@@ -73,13 +78,13 @@ describe("TemplatesTab", () => {
   it("confirms before archiving, and only then calls the mutation", () => {
     render(<TemplatesTab onUse={() => {}} />);
 
-    fireEvent.click(within(cardFor("Quarterly Board Pack")).getByText("Archive"));
+    fireEvent.click(within(cardFor("My quarterly review")).getByText("Archive"));
 
     // Confirmation dialog is up and names the template; nothing sent yet.
     const dialog = screen
       .getByText("Archive template")
       .closest('[role="presentation"]') as HTMLElement;
-    expect(within(dialog).getByText(/Quarterly Board Pack/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/My quarterly review/)).toBeInTheDocument();
     expect(archiveMutate).not.toHaveBeenCalled();
 
     // The dialog's own Archive button (the card's is still in the DOM).
@@ -92,10 +97,10 @@ describe("TemplatesTab", () => {
   it("submits changed metadata through useUpdateTemplate with the right id", () => {
     render(<TemplatesTab onUse={() => {}} />);
 
-    fireEvent.click(within(cardFor("Quarterly Board Pack")).getByText("Edit"));
+    fireEvent.click(within(cardFor("My quarterly review")).getByText("Edit"));
 
-    const nameInput = screen.getByDisplayValue("Quarterly Board Pack");
-    fireEvent.change(nameInput, { target: { value: "Quarterly Board Pack v2" } });
+    const nameInput = screen.getByDisplayValue("My quarterly review");
+    fireEvent.change(nameInput, { target: { value: "My quarterly review v2" } });
 
     const descInput = screen.getByDisplayValue("Org-owned custom template");
     fireEvent.change(descInput, { target: { value: "Now with vendor risk" } });
@@ -106,10 +111,64 @@ describe("TemplatesTab", () => {
     expect(updateMutate.mock.calls[0][0]).toEqual({
       id: CUSTOM_TEMPLATE.id,
       body: {
-        name: "Quarterly Board Pack v2",
+        name: "My quarterly review v2",
         description: "Now with vendor risk",
         category: "governance",
       },
     });
+  });
+
+  it("splits templates into my templates and system templates", () => {
+    renderWithProviders(<TemplatesTab onUse={vi.fn()} />);
+
+    const mine = screen.getByRole("region", { name: /my templates/i });
+    expect(within(mine).getByText("My quarterly review")).toBeInTheDocument();
+
+    const system = screen.getByRole("region", { name: /system templates/i });
+    expect(within(system).getByText("EU AI Act pack")).toBeInTheDocument();
+  });
+
+  it("offers no edit or archive on a system template", () => {
+    renderWithProviders(<TemplatesTab onUse={vi.fn()} />);
+
+    const system = screen.getByRole("region", { name: /system templates/i });
+    expect(within(system).queryByRole("button", { name: /^edit$/i })).not.toBeInTheDocument();
+    expect(within(system).queryByRole("button", { name: /^archive$/i })).not.toBeInTheDocument();
+    expect(within(system).getByRole("button", { name: /duplicate/i })).toBeInTheDocument();
+  });
+
+  it("starts the schedule flow from Use template", async () => {
+    const onUse = vi.fn();
+    const user = userEvent.setup();
+    renderWithProviders(<TemplatesTab onUse={onUse} />);
+
+    const mine = screen.getByRole("region", { name: /my templates/i });
+    await user.click(within(mine).getByRole("button", { name: /use template/i }));
+
+    expect(onUse).toHaveBeenCalledWith(1, "schedule");
+  });
+
+  it("starts the run-now flow from Run now", async () => {
+    const onUse = vi.fn();
+    const user = userEvent.setup();
+    renderWithProviders(<TemplatesTab onUse={onUse} />);
+
+    const mine = screen.getByRole("region", { name: /my templates/i });
+    await user.click(within(mine).getByRole("button", { name: /run now/i }));
+
+    expect(onUse).toHaveBeenCalledWith(1, "run-now");
+  });
+
+  it("duplicates a system template as a copy owned by the org", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<TemplatesTab onUse={vi.fn()} />);
+
+    const system = screen.getByRole("region", { name: /system templates/i });
+    await user.click(within(system).getByRole("button", { name: /duplicate/i }));
+
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "EU AI Act pack (copy)" }),
+      expect.anything(),
+    );
   });
 });

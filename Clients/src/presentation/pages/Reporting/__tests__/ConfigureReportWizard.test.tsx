@@ -1,8 +1,11 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
+
+const runNowMutate = vi.fn();
 
 vi.mock("../../../../application/hooks/useReporting", () => ({
   useCreateScheduledReport: () => ({ mutate: vi.fn(), isPending: false }),
+  useRunTemplateNow: () => ({ mutate: runNowMutate, isPending: false }),
 }));
 
 vi.mock("../../../../application/hooks/useProjects", () => ({
@@ -43,6 +46,10 @@ const TEMPLATE_FIXTURE = {
 };
 
 describe("ConfigureReportWizard", () => {
+  beforeEach(() => {
+    runNowMutate.mockReset();
+  });
+
   it("shows scope step and disables next when project scope has no project", () => {
     render(
       <ConfigureReportWizard
@@ -51,6 +58,7 @@ describe("ConfigureReportWizard", () => {
           name: "Daily",
           latestVersion: { sections_config: { sections: [] }, ai_blocks_config: {} },
         }}
+        mode="schedule"
         onClose={() => {}}
       />,
     );
@@ -58,7 +66,7 @@ describe("ConfigureReportWizard", () => {
   });
 
   it("offers all seven AI blocks, not the legacy three", () => {
-    render(<ConfigureReportWizard template={TEMPLATE_FIXTURE} onClose={() => {}} />);
+    render(<ConfigureReportWizard template={TEMPLATE_FIXTURE} mode="schedule" onClose={() => {}} />);
     // Step 0 (Scope, org scope so no project needed) -> 1 (Sections) -> 2 (AI)
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
@@ -77,14 +85,14 @@ describe("ConfigureReportWizard", () => {
   });
 
   it("no longer renders raw camelCase keys as labels", () => {
-    render(<ConfigureReportWizard template={TEMPLATE_FIXTURE} onClose={() => {}} />);
+    render(<ConfigureReportWizard template={TEMPLATE_FIXTURE} mode="schedule" onClose={() => {}} />);
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
     expect(screen.queryByText("executiveSummary")).not.toBeInTheDocument();
   });
 
   it("offers a format choice instead of silently forcing PDF", () => {
-    render(<ConfigureReportWizard template={TEMPLATE_FIXTURE} onClose={() => {}} />);
+    render(<ConfigureReportWizard template={TEMPLATE_FIXTURE} mode="schedule" onClose={() => {}} />);
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
@@ -92,9 +100,47 @@ describe("ConfigureReportWizard", () => {
   });
 
   it("disables the AI blocks when the org has no LLM key", () => {
-    render(<ConfigureReportWizard template={TEMPLATE_FIXTURE} onClose={() => {}} />);
+    render(<ConfigureReportWizard template={TEMPLATE_FIXTURE} mode="schedule" onClose={() => {}} />);
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
     expect(screen.getByLabelText("Executive summary")).toBeDisabled();
+  });
+
+  it("run-now mode skips Schedule and Delivery and goes straight to Review", () => {
+    render(<ConfigureReportWizard template={TEMPLATE_FIXTURE} mode="run-now" onClose={() => {}} />);
+
+    expect(screen.queryByText("Schedule")).not.toBeInTheDocument();
+    expect(screen.queryByText("Delivery")).not.toBeInTheDocument();
+
+    // Scope (org, no project needed) -> Sections -> AI Insights -> Review
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+
+    expect(screen.getByRole("heading", { name: /review/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /run now/i })).toBeInTheDocument();
+
+    // runTemplateNow hardcodes delivery_config to { saveToStorage: true }
+    // server-side — no email link is ever sent, so Review must not claim one is.
+    expect(screen.queryByText(/Delivery:/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Schedule:/)).not.toBeInTheDocument();
+  });
+
+  it("runs the template now through useRunTemplateNow when mode is run-now", () => {
+    const onClose = vi.fn();
+    render(<ConfigureReportWizard template={TEMPLATE_FIXTURE} mode="run-now" onClose={onClose} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+    fireEvent.click(screen.getByRole("button", { name: /run now/i }));
+
+    expect(runNowMutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: TEMPLATE_FIXTURE.id,
+        body: expect.objectContaining({ templateVersionId: TEMPLATE_FIXTURE.latestVersion.id }),
+      }),
+      expect.anything(),
+    );
   });
 });

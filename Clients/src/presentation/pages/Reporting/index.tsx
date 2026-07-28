@@ -18,6 +18,7 @@ const Reporting = () => {
   const [activeTab, setActiveTab] = useState(0);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [wizardTemplate, setWizardTemplate] = useState<any | null>(null);
+  const [wizardMode, setWizardMode] = useState<"schedule" | "run-now">("schedule");
   const [builderOpen, setBuilderOpen] = useState(false);
 
   const handleReportGenerated = useCallback(() => {
@@ -29,23 +30,29 @@ const Reporting = () => {
     setActiveTab(value);
   };
 
-  const handleUseTemplate = useCallback(async (templateId: number) => {
-    try {
-      const template = await getTemplate(templateId);
-      setWizardTemplate(template);
-    } catch (error: any) {
-      showAlert({
-        variant: "error",
-        body: error?.message || "Failed to load template.",
-        isToast: true,
-      });
-    }
-  }, []);
+  const handleUseTemplate = useCallback(
+    async (templateId: number, mode: "schedule" | "run-now" = "schedule") => {
+      try {
+        const template = await getTemplate(templateId);
+        setWizardMode(mode);
+        setWizardTemplate(template);
+      } catch (error: any) {
+        showAlert({
+          variant: "error",
+          body: error?.message || "Failed to load template.",
+          isToast: true,
+        });
+      }
+    },
+    [],
+  );
 
   const handleWizardClose = useCallback(() => {
     setWizardTemplate(null);
-    setActiveTab(2); // jump to Scheduled tab so the new report is visible
-  }, []);
+    // A schedule belongs on the Scheduled tab; a run-now report belongs in the
+    // Generate list, so send the user where their result actually landed.
+    setActiveTab(wizardMode === "run-now" ? 0 : 2);
+  }, [wizardMode]);
 
   return (
     <PageHeaderExtended
@@ -103,7 +110,11 @@ const Reporting = () => {
 
       <Drawer anchor="right" open={!!wizardTemplate} onClose={handleWizardClose}>
         {wizardTemplate && (
-          <ConfigureReportWizard template={wizardTemplate} onClose={handleWizardClose} />
+          <ConfigureReportWizard
+            template={wizardTemplate}
+            mode={wizardMode}
+            onClose={handleWizardClose}
+          />
         )}
       </Drawer>
 
