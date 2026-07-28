@@ -214,6 +214,18 @@ export default function ConfigureReportWizard({
               ))}
             </TextField>
           )}
+          {/* Format lives on a step both modes share. It used to sit on the
+              Schedule panel, which run-now drops — so a run-now report was
+              always a PDF and the option could not be reached at all. */}
+          <TextField
+            select
+            label="Format"
+            value={format}
+            onChange={(e) => setFormat(e.target.value as "pdf" | "docx")}
+          >
+            <MenuItem value="pdf">PDF</MenuItem>
+            <MenuItem value="docx">Word (DOCX)</MenuItem>
+          </TextField>
         </Stack>
       )}
 
@@ -275,15 +287,6 @@ export default function ConfigureReportWizard({
       {step === "Schedule" && (
         <Stack spacing={2}>
           <Typography variant="h6">Schedule</Typography>
-          <TextField
-            select
-            label="Format"
-            value={format}
-            onChange={(e) => setFormat(e.target.value as "pdf" | "docx")}
-          >
-            <MenuItem value="pdf">PDF</MenuItem>
-            <MenuItem value="docx">Word (DOCX)</MenuItem>
-          </TextField>
           <TextField
             select
             label="Frequency"
@@ -384,6 +387,10 @@ export default function ConfigureReportWizard({
             {scope === "project" &&
               projectId &&
               ` (${projects.find((p: any) => p.id === projectId)?.project_title ?? projectId})`}
+          </Typography>
+          {/* Set on the Scope step in both modes, so both have to review it. */}
+          <Typography variant="body2">
+            <strong>Format:</strong> {format.toUpperCase()}
           </Typography>
           <Box>
             <Typography variant="body2" component="span" sx={{ mr: 1 }}>

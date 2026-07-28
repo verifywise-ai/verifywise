@@ -35,8 +35,12 @@ const run = (over: Record<string, unknown> = {}) => ({
   output_filename: "Q3 risk review.pdf",
   output_mime_type: "application/pdf",
   error_message: null,
+  delivery_status: null,
   archived_at: null,
   template_id: 2,
+  template_name: "Risk template",
+  scope_project_id: "7",
+  scope_project_title: "Chatbot",
   created_at: "2026-07-28T10:00:00Z",
   completed_at: "2026-07-28T10:01:00Z",
   ...over,
@@ -57,6 +61,50 @@ describe("ReportRunsTable", () => {
     renderWithProviders(<ReportRunsTable variant="archived" />);
     expect(mockRunsPage).toHaveBeenCalledWith(expect.objectContaining({ archived: true }));
   });
+
+  // Spec line 104: report name, template name, status, scope, date, triggered by.
+  it("shows every column the spec asks for", () => {
+    renderWithProviders(<ReportRunsTable variant="live" />);
+
+    for (const header of ["Report", "Template", "Status", "Scope", "Created", "Triggered by"]) {
+      expect(screen.getByRole("columnheader", { name: header })).toBeInTheDocument();
+    }
+    expect(screen.getByRole("cell", { name: "Q3 risk review.pdf" })).toBeInTheDocument();
+    expect(screen.getByRole("cell", { name: "Risk template" })).toBeInTheDocument();
+    expect(screen.getByRole("cell", { name: "Chatbot" })).toBeInTheDocument();
+    expect(screen.getByRole("cell", { name: "manual" })).toBeInTheDocument();
+  });
+
+  it("names an organization-scoped run by its scope, not a blank cell", () => {
+    mockRunsPage.mockReturnValue({
+      data: {
+        rows: [run({ scope_project_id: null, scope_project_title: null })],
+        total: 1,
+      },
+      isLoading: false,
+    });
+
+    renderWithProviders(<ReportRunsTable variant="live" />);
+
+    expect(screen.getByRole("cell", { name: "Organization" })).toBeInTheDocument();
+  });
+
+  // output_filename is NULL until a run succeeds, so these rows used to render
+  // as "— | Failed | manual | <date>" with nothing saying which report broke.
+  it.each(["queued", "running", "failed"])(
+    "gives a %s run an identity even with no output file",
+    (status) => {
+      mockRunsPage.mockReturnValue({
+        data: { rows: [run({ status, file_id: null, output_filename: null })], total: 1 },
+        isLoading: false,
+      });
+
+      renderWithProviders(<ReportRunsTable variant="live" />);
+
+      expect(screen.getByRole("cell", { name: "Run #1" })).toBeInTheDocument();
+      expect(screen.getByRole("cell", { name: "Risk template" })).toBeInTheDocument();
+    },
+  );
 
   it("shows a failed run with its status instead of hiding it", () => {
     mockRunsPage.mockReturnValue({
@@ -79,6 +127,32 @@ describe("ReportRunsTable", () => {
 
     expect(screen.getByText("Partial success")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /download/i })).toBeEnabled();
+  });
+
+  // error_message is NULL on the partial_success path; which channel failed is
+  // only recorded in delivery_status, so without this the status is a dead end.
+  it("says which delivery channel failed behind a partial success", async () => {
+    mockRunsPage.mockReturnValue({
+      data: {
+        rows: [
+          run({
+            status: "partial_success",
+            delivery_status: {
+              storage: { status: "success" },
+              emailLink: { status: "failed" },
+            },
+          }),
+        ],
+        total: 1,
+      },
+      isLoading: false,
+    });
+    const user = userEvent.setup();
+    renderWithProviders(<ReportRunsTable variant="live" />);
+
+    await user.hover(screen.getByText("Partial success"));
+
+    expect(await screen.findByText("Delivery failed: email link")).toBeInTheDocument();
   });
 
   it("archives from the live variant", async () => {
@@ -110,7 +184,8 @@ describe("ReportRunsTable", () => {
 
     expect(screen.getByText(/no archived reports/i)).toBeInTheDocument();
     // No runs means no pager either — there is nothing to page through.
-    expect(screen.queryByRole("button", { name: "Go to next page" })).not.toBeInTheDocument();
+    // ("next page" is StandardTablePagination's label, via TablePaginationActions.)
+    expect(screen.queryByRole("button", { name: "next page" })).not.toBeInTheDocument();
   });
 
   it("requests the next offset when the page changes", async () => {
@@ -120,7 +195,7 @@ describe("ReportRunsTable", () => {
 
     expect(mockRunsPage).toHaveBeenLastCalledWith(expect.objectContaining({ offset: 0 }));
 
-    await user.click(screen.getByRole("button", { name: "Go to next page" }));
+    await user.click(screen.getByRole("button", { name: "next page" }));
 
     expect(mockRunsPage).toHaveBeenLastCalledWith(expect.objectContaining({ offset: 10 }));
   });
@@ -132,7 +207,27 @@ describe("ReportRunsTable", () => {
 
     renderWithProviders(<ReportRunsTable variant="live" />);
 
-    expect(screen.getByText("1–10 of 12")).toBeInTheDocument();
+    expect(screen.getByText("Showing 1 - 10 of 12 reports")).toBeInTheDocument();
+  });
+
+  // Archiving or deleting the last row of the last page shrinks the total out
+  // from under `page`, leaving the user asking the server for an offset it has
+  // nothing at.
+  it("pulls the page back in range when the total shrinks below it", async () => {
+    mockRunsPage.mockReturnValue({ data: { rows: [run()], total: 12 }, isLoading: false });
+    const user = userEvent.setup();
+    const { rerender } = renderWithProviders(<ReportRunsTable variant="live" />);
+
+    await user.click(screen.getByRole("button", { name: "next page" }));
+    expect(mockRunsPage).toHaveBeenLastCalledWith(expect.objectContaining({ offset: 10 }));
+
+    // The 11th run is archived away: one page's worth of rows is left.
+    mockRunsPage.mockReturnValue({ data: { rows: [run()], total: 10 }, isLoading: false });
+    rerender(<ReportRunsTable variant="live" />);
+
+    await waitFor(() =>
+      expect(mockRunsPage).toHaveBeenLastCalledWith(expect.objectContaining({ offset: 0 })),
+    );
   });
 
   it("opens the analyses drawer for the run whose action was clicked", async () => {

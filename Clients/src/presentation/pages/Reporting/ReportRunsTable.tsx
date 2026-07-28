@@ -5,10 +5,9 @@
  * Keeping them one component is what stops the two lists drifting apart the way
  * the files-based list and the runs list did.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Box,
-  Chip,
   CircularProgress,
   Drawer,
   IconButton,
@@ -19,14 +18,16 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  TablePagination,
   Tooltip,
   Typography,
   useTheme,
 } from "@mui/material";
 import { Archive, ArchiveRestore, Download, Trash2, FileText, Sparkles } from "lucide-react";
 import singleTheme from "../../themes/v1SingleTheme";
+import { text as textColors } from "../../themes/palette";
+import Chip from "../../components/Chip";
 import { EmptyState } from "../../components/EmptyState";
+import StandardTablePagination from "../../components/Table/StandardTablePagination";
 import ReportAnalysisPanel from "../../components/ReportAnalysisPanel";
 import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
 import {
@@ -40,6 +41,10 @@ import { downloadReportRun } from "../../../application/repository/reporting.rep
 
 const ROWS_PER_PAGE_DEFAULT = 10;
 
+// Spec §Frontend: report name, template name, status, scope, date, triggered by,
+// and the row actions.
+const COLUMNS = ["Report", "Template", "Status", "Scope", "Created", "Triggered by", "Actions"];
+
 const STATUS_LABEL: Record<string, string> = {
   queued: "Queued",
   running: "Running",
@@ -50,12 +55,54 @@ const STATUS_LABEL: Record<string, string> = {
 
 // partial_success is a success with a delivery caveat — the file exists and is
 // downloadable, so it must not read as an error.
-const STATUS_COLOR: Record<string, "default" | "info" | "success" | "warning" | "error"> = {
+const STATUS_VARIANT: Record<string, "default" | "info" | "success" | "warning" | "error"> = {
   queued: "default",
   running: "info",
   success: "success",
   partial_success: "warning",
   failed: "error",
+};
+
+const CHANNEL_LABEL: Record<string, string> = {
+  storage: "storage",
+  emailLink: "email link",
+  attachment: "attachment",
+};
+
+/**
+ * What to show on hover over the status.
+ *
+ * error_message is only written on the failed path; a partial_success has a
+ * NULL one and records which channel broke in delivery_status instead. Without
+ * the second branch "Partial success" is a dead end for the user.
+ */
+const statusDetail = (r: any): string => {
+  if (r.error_message) return r.error_message;
+  const delivery = r.delivery_status;
+  if (!delivery || typeof delivery !== "object") return "";
+  const failed = Object.keys(CHANNEL_LABEL)
+    .filter((k) => delivery[k]?.status === "failed")
+    .map((k) => CHANNEL_LABEL[k]);
+  return failed.length ? `Delivery failed: ${failed.join(", ")}` : "";
+};
+
+/**
+ * A run has no output_filename until it succeeds — createRunQuery never sets
+ * one and the failed path writes NULL — so a queued, running or failed row
+ * would otherwise render as a bare dash. Those are exactly the rows Decision 3
+ * of the spec exists to surface, so give them the run id. The template they
+ * came from is the adjacent column; repeating it here would say nothing new.
+ */
+const reportName = (r: any): string => r.output_filename ?? `Run #${r.id}`;
+
+/**
+ * scope_project_id is the run's project (from config_snapshot, falling back to
+ * the schedule); NULL means the report covers the whole organization. The title
+ * can be missing if the project has since been deleted.
+ */
+const scopeLabel = (r: any): string => {
+  if (r.scope_project_id == null) return "Organization";
+  return r.scope_project_title ?? `Project #${r.scope_project_id}`;
 };
 
 export default function ReportRunsTable({ variant }: { variant: "live" | "archived" }) {
@@ -82,6 +129,18 @@ export default function ReportRunsTable({ variant }: { variant: "live" | "archiv
   const restore = useRestoreRun();
   const remove = useDeleteRun();
 
+  const rows: any[] = data?.rows ?? [];
+  // Gate on the server total, not the page length: an empty page 2 means "you
+  // paged past the end", not "there is nothing here".
+  const total = data?.total ?? rows.length;
+  const lastPage = Math.max(0, Math.ceil(total / rowsPerPage) - 1);
+
+  // Archiving or deleting the last row of the last page shrinks the total out
+  // from under `page`, leaving the user on an offset the server has nothing for.
+  useEffect(() => {
+    if (page > lastPage) setPage(lastPage);
+  }, [page, lastPage]);
+
   // Mirrors ArchiveTab's original handler: turn the Blob into an object URL,
   // trigger a save via a throwaway anchor, then revoke the URL. Without this
   // the returned Blob is discarded and clicking Download does nothing.
@@ -103,11 +162,6 @@ export default function ReportRunsTable({ variant }: { variant: "live" | "archiv
       console.error("Failed to download report run:", error);
     }
   };
-
-  const rows: any[] = data?.rows ?? [];
-  // Gate on the server total, not the page length: an empty page 2 means "you
-  // paged past the end", not "there is nothing here".
-  const total = data?.total ?? rows.length;
 
   if (isLoading) {
     return (
@@ -131,35 +185,63 @@ export default function ReportRunsTable({ variant }: { variant: "live" | "archiv
     );
   }
 
+  const rangeStart = page * rowsPerPage + 1;
+  const rangeEnd = Math.min(page * rowsPerPage + rowsPerPage, total);
+  const bodyCell = singleTheme.tableStyles.primary.body.cell;
+
   return (
     <>
       <TableContainer sx={singleTheme.tableStyles.primary.frame}>
         <Table>
           <TableHead>
-            <TableRow>
-              <TableCell>Report</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Triggered by</TableCell>
-              <TableCell>Created</TableCell>
-              <TableCell align="right">Actions</TableCell>
+            <TableRow sx={singleTheme.tableStyles.primary.header.row}>
+              {COLUMNS.map((h) => (
+                <TableCell
+                  key={h}
+                  sx={singleTheme.tableStyles.primary.header.cell}
+                  align={h === "Actions" ? "right" : "left"}
+                >
+                  {h}
+                </TableCell>
+              ))}
             </TableRow>
           </TableHead>
           <TableBody>
             {rows.map((r) => (
-              <TableRow key={r.id}>
-                <TableCell>{r.output_filename ?? "—"}</TableCell>
-                <TableCell>
-                  <Tooltip title={r.error_message ?? ""} disableHoverListener={!r.error_message}>
-                    <Chip
-                      size="small"
-                      label={STATUS_LABEL[r.status] ?? r.status}
-                      color={STATUS_COLOR[r.status] ?? "default"}
-                    />
-                  </Tooltip>
+              <TableRow key={r.id} sx={singleTheme.tableStyles.primary.body.row}>
+                <TableCell sx={{ ...bodyCell, color: textColors.primary }}>
+                  {reportName(r)}
                 </TableCell>
-                <TableCell>{r.triggered_by}</TableCell>
-                <TableCell>{new Date(r.created_at).toLocaleString()}</TableCell>
-                <TableCell align="right">
+                <TableCell sx={{ ...bodyCell, color: textColors.secondary }}>
+                  {r.template_name ?? "—"}
+                </TableCell>
+                <TableCell sx={bodyCell}>
+                  {(() => {
+                    const detail = statusDetail(r);
+                    return (
+                      <Tooltip title={detail} disableHoverListener={!detail}>
+                        <span>
+                          <Chip
+                            label={STATUS_LABEL[r.status] ?? r.status}
+                            variant={STATUS_VARIANT[r.status] ?? "default"}
+                            size="small"
+                            uppercase={false}
+                          />
+                        </span>
+                      </Tooltip>
+                    );
+                  })()}
+                </TableCell>
+                <TableCell sx={{ ...bodyCell, color: textColors.secondary }}>
+                  {scopeLabel(r)}
+                </TableCell>
+                <TableCell sx={{ ...bodyCell, color: textColors.secondary }}>
+                  {new Date(r.created_at).toLocaleString()}
+                </TableCell>
+                <TableCell sx={{ ...bodyCell, color: textColors.secondary }}>
+                  {r.triggered_by}
+                </TableCell>
+                <TableCell sx={bodyCell} align="right">
                   <Tooltip title="Download">
                     <span>
                       <IconButton
@@ -217,20 +299,21 @@ export default function ReportRunsTable({ variant }: { variant: "live" | "archiv
               </TableRow>
             ))}
           </TableBody>
+          <StandardTablePagination
+            totalCount={total}
+            page={page}
+            rowsPerPage={rowsPerPage}
+            onPageChange={(_, newPage) => setPage(newPage)}
+            onRowsPerPageChange={(event) => {
+              setRowsPerPage(parseInt(event.target.value, 10));
+              setPage(0);
+            }}
+            getRange={`${rangeStart} - ${rangeEnd}`}
+            entityLabel="report"
+            colSpan={COLUMNS.length}
+          />
         </Table>
       </TableContainer>
-      <TablePagination
-        component="div"
-        count={total}
-        page={page}
-        onPageChange={(_, p) => setPage(p)}
-        rowsPerPage={rowsPerPage}
-        onRowsPerPageChange={(e) => {
-          setRowsPerPage(parseInt(e.target.value, 10));
-          setPage(0);
-        }}
-        rowsPerPageOptions={[10, 25, 50]}
-      />
 
       <Drawer
         anchor="right"

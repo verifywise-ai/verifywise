@@ -22,6 +22,7 @@ import {
   useArchiveTemplate,
   useCreateTemplate,
 } from "../../../application/hooks/useReporting";
+import { getTemplate } from "../../../application/repository/reporting.repository";
 import { showAlert } from "../../../infrastructure/api/customAxios";
 
 // Same three the builder offers. Kept in sync by hand — the backend takes any
@@ -98,24 +99,44 @@ export default function TemplatesTab({
   // own run/schedule bodies use — this goes through POST /templates, not
   // POST /templates/:id/run.
   //
+  // The section config has to be fetched first: useTemplates is backed by
+  // `SELECT * FROM report_templates`, which carries no version — only
+  // GET /templates/:id attaches latestVersion. Reading it off the list row
+  // gave every copy an empty sections_config, and the wizard then refuses to
+  // leave its Sections step (canNext needs one enabled section), so the copy
+  // could never be run or scheduled and the Edit modal could not repair it.
+  //
   // createTemplateQuery (Servers/utils/reportTemplate.utils.ts) 400s unless
   // default_scope is exactly "project" or "organization"; the source
   // template always has one, but fall back to "project" defensively rather
   // than send undefined and 400 on every click.
-  const handleDuplicate = (t: any) =>
+  const handleDuplicate = async (t: any) => {
+    let source = t;
+    try {
+      source = await getTemplate(t.id);
+    } catch {
+      showAlert({
+        variant: "error",
+        body: "Failed to load the template to duplicate.",
+        isToast: true,
+      });
+      return;
+    }
+
     duplicate.mutate(
       {
-        name: `${t.name} (copy)`,
-        description: t.description ?? null,
-        category: t.category ?? CATEGORIES[0],
-        default_scope: t.default_scope ?? "project",
-        supported_scopes: t.supported_scopes ?? undefined,
-        recommended_frequency: t.recommended_frequency ?? undefined,
-        sections_config: t.latestVersion?.sections_config ?? undefined,
-        ai_blocks_config: t.latestVersion?.ai_blocks_config ?? undefined,
+        name: `${source.name} (copy)`,
+        description: source.description ?? null,
+        category: source.category ?? CATEGORIES[0],
+        default_scope: source.default_scope ?? "project",
+        supported_scopes: source.supported_scopes ?? undefined,
+        recommended_frequency: source.recommended_frequency ?? undefined,
+        sections_config: source.latestVersion?.sections_config ?? undefined,
+        ai_blocks_config: source.latestVersion?.ai_blocks_config ?? undefined,
       },
       { onError: mutationError("Failed to duplicate template") },
     );
+  };
 
   if (isLoading) {
     return (

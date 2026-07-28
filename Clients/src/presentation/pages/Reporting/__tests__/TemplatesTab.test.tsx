@@ -1,12 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, within } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 
 const updateMutate = vi.fn();
 const archiveMutate = vi.fn();
 const mockCreate = vi.fn();
+const mockGetTemplate = vi.fn();
 
+// As the list endpoint returns it: `SELECT * FROM report_templates`, with no
+// version attached. Only GET /templates/:id carries latestVersion.
 const SYSTEM_TEMPLATE = {
   id: 2,
   name: "EU AI Act pack",
@@ -16,6 +19,20 @@ const SYSTEM_TEMPLATE = {
   supported_scopes: ["project", "organization"],
   recommended_frequency: "quarterly",
   is_system_template: true,
+};
+
+const SECTIONS_CONFIG = {
+  sections: [{ reportSectionKey: "projectRisks", defaultEnabled: true }],
+};
+const AI_BLOCKS_CONFIG = { executiveSummary: true };
+
+const SYSTEM_TEMPLATE_FULL = {
+  ...SYSTEM_TEMPLATE,
+  latestVersion: {
+    id: 9,
+    sections_config: SECTIONS_CONFIG,
+    ai_blocks_config: AI_BLOCKS_CONFIG,
+  },
 };
 
 const CUSTOM_TEMPLATE = {
@@ -37,11 +54,16 @@ vi.mock("../../../../application/hooks/useReporting", () => ({
   useCreateTemplate: () => ({ mutate: mockCreate, isPending: false }),
 }));
 
+vi.mock("../../../../application/repository/reporting.repository", () => ({
+  getTemplate: (...args: unknown[]) => mockGetTemplate(...args),
+}));
+
 vi.mock("../../../../infrastructure/api/customAxios", () => ({
   showAlert: vi.fn(),
 }));
 
 import TemplatesTab from "../TemplatesTab";
+import { showAlert } from "../../../../infrastructure/api/customAxios";
 
 // Cards are not individually labelled, so find them by their heading text.
 const cardFor = (name: string) => screen.getByText(name).closest(".MuiStack-root") as HTMLElement;
@@ -51,6 +73,8 @@ describe("TemplatesTab", () => {
     updateMutate.mockReset();
     archiveMutate.mockReset();
     mockCreate.mockReset();
+    mockGetTemplate.mockReset().mockResolvedValue(SYSTEM_TEMPLATE_FULL);
+    vi.mocked(showAlert).mockClear();
   });
 
   it("renders template cards", () => {
@@ -172,12 +196,48 @@ describe("TemplatesTab", () => {
     // default_scope is exactly "project" or "organization" — an omitted
     // default_scope must not reach the request body, or every Duplicate
     // click fails.
-    expect(mockCreate).toHaveBeenCalledWith(
-      expect.objectContaining({
-        name: "EU AI Act pack (copy)",
-        default_scope: "organization",
-      }),
-      expect.anything(),
+    await waitFor(() =>
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: "EU AI Act pack (copy)",
+          default_scope: "organization",
+        }),
+        expect.anything(),
+      ),
     );
+  });
+
+  // The list row has no latestVersion, so reading the section config off it
+  // produced a copy with no sections. The wizard then refuses to leave its
+  // Sections step and the copy can never be run, scheduled or repaired.
+  it("carries the source template's section config into the copy", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<TemplatesTab onUse={vi.fn()} />);
+
+    const system = screen.getByRole("region", { name: /system templates/i });
+    await user.click(within(system).getByRole("button", { name: /duplicate/i }));
+
+    expect(mockGetTemplate).toHaveBeenCalledWith(2);
+    await waitFor(() =>
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          sections_config: SECTIONS_CONFIG,
+          ai_blocks_config: AI_BLOCKS_CONFIG,
+        }),
+        expect.anything(),
+      ),
+    );
+  });
+
+  it("does not create an unusable copy when the full template cannot be fetched", async () => {
+    mockGetTemplate.mockRejectedValue(new Error("network"));
+    const user = userEvent.setup();
+    renderWithProviders(<TemplatesTab onUse={vi.fn()} />);
+
+    const system = screen.getByRole("region", { name: /system templates/i });
+    await user.click(within(system).getByRole("button", { name: /duplicate/i }));
+
+    await waitFor(() => expect(showAlert).toHaveBeenCalled());
+    expect(mockCreate).not.toHaveBeenCalled();
   });
 });

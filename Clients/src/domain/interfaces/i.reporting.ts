@@ -1,7 +1,11 @@
 // Types for the enterprise reporting stack (templates / scheduled / runs).
 // Phase 1 introduces only what the async generate flow needs; later phases extend.
 
+// The pipeline's own vocabulary (Servers/services/reporting/reportRunOrchestrator).
+// partial_success means generated but a delivery channel failed — it is still
+// downloadable and must not be presented as an error.
 export type ReportRunStatus =
+  | "queued"
   | "running"
   | "success"
   | "failed"
@@ -16,8 +20,15 @@ export interface ReportRun {
   output_filename: string | null;
   output_mime_type: string | null;
   error_message: string | null;
+  /** Per-channel delivery outcome; carries the reason behind partial_success. */
+  delivery_status: Record<string, { status?: string; enabled?: boolean }> | null;
   archived_at: string | null;
   template_id: number | null;
+  /** Joined by listRunsQuery — the run's template still names an archived one. */
+  template_name: string | null;
+  /** The run's project, or null when it covers the whole organization. */
+  scope_project_id: string | null;
+  scope_project_title: string | null;
   created_at: string;
   completed_at: string | null;
 }

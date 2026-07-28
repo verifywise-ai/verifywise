@@ -91,13 +91,15 @@ describe("ConfigureReportWizard", () => {
     expect(screen.queryByText("executiveSummary")).not.toBeInTheDocument();
   });
 
-  it("offers a format choice instead of silently forcing PDF", () => {
-    render(<ConfigureReportWizard template={TEMPLATE_FIXTURE} mode="schedule" onClose={() => {}} />);
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
-    fireEvent.click(screen.getByRole("button", { name: /next/i }));
-    expect(screen.getByLabelText(/format/i)).toBeInTheDocument();
-  });
+  // Format sits on the Scope step, which both modes keep. On the Schedule step
+  // it was unreachable in run-now mode, so a run-now report was always a PDF.
+  it.each(["schedule", "run-now"] as const)(
+    "offers a format choice instead of silently forcing PDF in %s mode",
+    (mode) => {
+      render(<ConfigureReportWizard template={TEMPLATE_FIXTURE} mode={mode} onClose={() => {}} />);
+      expect(screen.getByLabelText(/format/i)).toBeInTheDocument();
+    },
+  );
 
   it("disables the AI blocks when the org has no LLM key", () => {
     render(<ConfigureReportWizard template={TEMPLATE_FIXTURE} mode="schedule" onClose={() => {}} />);
