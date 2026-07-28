@@ -1,6 +1,7 @@
 import { sequelize } from "../database/db";
 import logger from "./logger/fileLogger";
 import { buildVisibilityFilter } from "./visibility.utils";
+import { getVisibleEuCategoryIdsForProject } from "./eu.utils";
 
 /**
  * Upsert a control readiness score.
@@ -408,6 +409,157 @@ export async function getFrameworkControlsQuery(frameworkType: string): Promise<
     return rows as any[];
   } catch (error) {
     logger.error("Error getting framework controls:", error);
+    throw error;
+  }
+}
+
+/** readiness framework_type → frameworks.name */
+export const FRAMEWORK_NAMES: Record<string, string> = {
+  eu_ai_act: "EU AI Act",
+  iso_42001: "ISO 42001",
+};
+
+/**
+ * Resolve the projects_frameworks rows in scope: one row when a project is
+ * given, every row of that framework in the organization otherwise.
+ */
+async function getProjectFrameworkIds(
+  frameworkType: string,
+  organizationId: number,
+  projectId: number | null,
+): Promise<number[]> {
+  const frameworkName = FRAMEWORK_NAMES[frameworkType];
+  if (!frameworkName) return [];
+
+  const [rows] = await sequelize.query(
+    `SELECT pf.id
+     FROM projects_frameworks pf
+     JOIN frameworks f ON f.id = pf.framework_id
+     WHERE pf.organization_id = :organizationId
+       AND f.name = :frameworkName
+       AND (:projectId::int IS NULL OR pf.project_id = :projectId)`,
+    { replacements: { organizationId, frameworkName, projectId } },
+  );
+
+  return (rows as any[]).map((r) => Number(r.id));
+}
+
+/**
+ * Per-control requirement completion for the controls a project is actually
+ * required to implement.
+ *
+ * EU AI Act counts subcontrols marked 'Done' within the categories visible for
+ * the project's risk tier and role — the same filter the Requirements progress
+ * bar uses, so the two can never disagree. ISO 42001 counts annex categories
+ * marked 'Implemented', excluding categories marked not applicable.
+ *
+ * Organization-wide (projectId null) sums done/total per control across every
+ * project framework, so each project's own applicability still applies.
+ */
+export async function getApplicableControlsWithRequirementsQuery(
+  frameworkType: string,
+  organizationId: number,
+  projectId: number | null,
+): Promise<Array<{ control_id: number; requirements_score: number }>> {
+  try {
+    const projectFrameworkIds = await getProjectFrameworkIds(
+      frameworkType,
+      organizationId,
+      projectId,
+    );
+    if (projectFrameworkIds.length === 0) return [];
+
+    const totals = new Map<number, { done: number; total: number }>();
+
+    for (const projectFrameworkId of projectFrameworkIds) {
+      let rows: any[] = [];
+
+      if (frameworkType === "iso_42001") {
+        const [isoRows] = await sequelize.query(
+          `SELECT ac.annexcategory_meta_id AS control_id,
+                  COUNT(*) AS total,
+                  COUNT(*) FILTER (WHERE ac.status = 'Implemented') AS done
+           FROM annexcategories_iso ac
+           WHERE ac.organization_id = :organizationId
+             AND ac.projects_frameworks_id = :projectFrameworkId
+             AND ac.is_applicable = TRUE
+           GROUP BY ac.annexcategory_meta_id`,
+          { replacements: { organizationId, projectFrameworkId } },
+        );
+        rows = isoRows as any[];
+      } else {
+        const visibleCategoryIds = await getVisibleEuCategoryIdsForProject(
+          projectFrameworkId,
+          organizationId,
+        );
+        if (visibleCategoryIds.length === 0) continue;
+
+        const [euRows] = await sequelize.query(
+          `SELECT c.control_meta_id AS control_id,
+                  COUNT(sc.id) AS total,
+                  COUNT(*) FILTER (WHERE sc.status = 'Done') AS done
+           FROM controls_eu c
+           LEFT JOIN subcontrols_eu sc
+             ON c.organization_id = sc.organization_id AND c.id = sc.control_id
+           JOIN controls_struct_eu cs ON c.control_meta_id = cs.id
+           WHERE c.organization_id = :organizationId
+             AND c.projects_frameworks_id = :projectFrameworkId
+             AND cs.control_category_id IN (:visibleCategoryIds)
+           GROUP BY c.control_meta_id`,
+          { replacements: { organizationId, projectFrameworkId, visibleCategoryIds } },
+        );
+        rows = euRows as any[];
+      }
+
+      for (const row of rows) {
+        const controlId = Number(row.control_id);
+        const current = totals.get(controlId) || { done: 0, total: 0 };
+        current.done += parseInt(row.done, 10) || 0;
+        current.total += parseInt(row.total, 10) || 0;
+        totals.set(controlId, current);
+      }
+    }
+
+    return [...totals.entries()].map(([control_id, { done, total }]) => ({
+      control_id,
+      requirements_score: total > 0 ? Math.round((done / total) * 100) : 0,
+    }));
+  } catch (error) {
+    logger.error("Error getting applicable controls with requirements:", error);
+    throw error;
+  }
+}
+
+/**
+ * Assessment completion for the scope, as a percentage of questions answered
+ * 'Done'. Returns null when there are no questions at all — the caller
+ * renormalizes rather than scoring a missing input as zero.
+ */
+export async function getAssessmentCompletionQuery(
+  organizationId: number,
+  projectId: number | null,
+): Promise<number | null> {
+  try {
+    const [rows] = await sequelize.query(
+      `SELECT COUNT(*) AS total,
+              COUNT(*) FILTER (WHERE ans.status = 'Done') AS done
+       FROM assessments a
+       JOIN answers_eu ans
+         ON a.organization_id = ans.organization_id AND a.id = ans.assessment_id
+       JOIN projects_frameworks pf ON pf.id = a.projects_frameworks_id
+       WHERE a.organization_id = :organizationId
+         AND (:projectId::int IS NULL OR pf.project_id = :projectId)`,
+      { replacements: { organizationId, projectId } },
+    );
+
+    const row = (rows as any[])[0] || {};
+    const total = parseInt(row.total, 10) || 0;
+    if (total === 0) return null;
+
+    const done = parseInt(row.done, 10) || 0;
+    return Math.round((done / total) * 100);
+  } catch (error) {
+    logger.error("Error getting assessment completion:", error);
     throw error;
   }
 }
