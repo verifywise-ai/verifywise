@@ -24,11 +24,15 @@ export interface ReportRun {
   delivery_status: Record<string, { status?: string; enabled?: boolean }> | null;
   archived_at: string | null;
   template_id: number | null;
-  /** Joined by listRunsQuery — the run's template still names an archived one. */
-  template_name: string | null;
+  // The three below are joined by listRunsQuery, so they are present on
+  // GET /reporting/runs rows and absent from GET /reporting/runs/:id, which is
+  // a plain `SELECT *`. Optional rather than nullable for exactly that reason:
+  // undefined means "this endpoint did not join it", null means "there is none".
+  /** The run's template — joined, so an archived template still names its runs. */
+  template_name?: string | null;
   /** The run's project, or null when it covers the whole organization. */
-  scope_project_id: string | null;
-  scope_project_title: string | null;
+  scope_project_id?: string | null;
+  scope_project_title?: string | null;
   created_at: string;
   completed_at: string | null;
 }
