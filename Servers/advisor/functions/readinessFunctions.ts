@@ -230,12 +230,6 @@ const generateRecommendations = async (
       if ((ctrl.evidence_recency_score || 0) < 40) {
         actions.push("Update or replace outdated evidence with recent documents");
       }
-      if ((ctrl.task_completion_score || 0) < 50) {
-        actions.push("Complete pending tasks linked to this control");
-      }
-      if ((ctrl.risk_mitigation_score || 0) < 50) {
-        actions.push("Address unmitigated risks linked to this control");
-      }
       if (actions.length === 0) {
         actions.push("Continue maintaining current compliance posture");
       }
@@ -269,8 +263,6 @@ function getWeakestDimension(ctrl: any): string {
     evidence_quality: ctrl.evidence_quality_score || 0,
     evidence_count: ctrl.evidence_count_score || 0,
     evidence_recency: ctrl.evidence_recency_score || 0,
-    task_completion: ctrl.task_completion_score || 0,
-    risk_mitigation: ctrl.risk_mitigation_score || 0,
   };
 
   let min = Infinity;

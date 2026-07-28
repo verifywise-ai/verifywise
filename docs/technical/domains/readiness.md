@@ -27,7 +27,11 @@ Only controls the project is required to implement are scored:
 
 - **EU AI Act** — categories returned by `getVisibleEuCategoryIdsForProject`,
   which filters by the project's risk tier and role.
-- **ISO 42001** — annex categories with `is_applicable = true`.
+- **ISO 42001** — annex categories with `is_applicable = TRUE` or
+  `is_applicable IS NULL`. Only categories explicitly marked not applicable
+  (`is_applicable = false`) are excluded. Untriaged is the default state on a
+  real, non-demo project, so counting it as applicable means a fresh project
+  scores as zero-done instead of returning no controls at all.
 - **Organization-wide** — the union across every project framework of that type;
   a control's score is `SUM(done) / SUM(total)` across them.
 
@@ -50,11 +54,19 @@ list show layer 1; the headline score, trend chart and history show layer 2.
 
 ## Retired inputs
 
-`task_completion_score` and `risk_mitigation_score` no longer feed the score.
-Their columns remain (written as NULL) because the advisor's
-`generateRecommendations` selects them. Both were derived from an incidental
-relationship — a task or risk sharing a file with the control — not a governance
-one.
+`task_completion_score` and `risk_mitigation_score` no longer feed the score;
+`control_readiness_scores` always writes them as NULL now. Both were derived
+from an incidental relationship — a task or risk sharing a file with the
+control — not a governance one.
+
+The advisor's `generateRecommendations` still selects these two columns, but
+only passes them through in its response — no recommendation or
+weakest-dimension logic branches on them any more, since a NULL column would
+make that branch (or that "weakest" verdict) fire unconditionally. Live
+task/risk state for a control is available on demand through the separate
+`check_task_completion` / `analyze_risk_status` advisor tools, which compute
+real values from the current tasks and risks rather than reading the retired
+columns.
 
 ## Key files
 
