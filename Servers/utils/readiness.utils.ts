@@ -451,7 +451,11 @@ async function getProjectFrameworkIds(
  * EU AI Act counts subcontrols marked 'Done' within the categories visible for
  * the project's risk tier and role — the same filter the Requirements progress
  * bar uses, so the two can never disagree. ISO 42001 counts annex categories
- * marked 'Implemented', excluding categories marked not applicable.
+ * marked 'Implemented', excluding only categories explicitly marked not
+ * applicable (is_applicable = false). Categories the user has not yet
+ * triaged (is_applicable IS NULL — the state every category starts in on a
+ * real, non-demo project) are treated as applicable by default so a fresh
+ * project scores as zero-done rather than returning no controls at all.
  *
  * Organization-wide (projectId null) sums done/total per control across every
  * project framework, so each project's own applicability still applies.
@@ -482,7 +486,7 @@ export async function getApplicableControlsWithRequirementsQuery(
            FROM annexcategories_iso ac
            WHERE ac.organization_id = :organizationId
              AND ac.projects_frameworks_id = :projectFrameworkId
-             AND ac.is_applicable = TRUE
+             AND (ac.is_applicable = TRUE OR ac.is_applicable IS NULL)
            GROUP BY ac.annexcategory_meta_id`,
           { replacements: { organizationId, projectFrameworkId } },
         );

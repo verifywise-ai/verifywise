@@ -137,6 +137,25 @@ describe("getApplicableControlsWithRequirementsQuery — ISO 42001", () => {
     expect(sql).toContain("'Implemented'");
     expect(sql).toContain("is_applicable = TRUE");
   });
+
+  it("treats untriaged (is_applicable IS NULL) annex categories as applicable, not excluded", async () => {
+    // A real (non-demo) ISO 42001 project inserts every annexcategories_iso
+    // row with is_applicable = NULL (utils/iso42001.utils.ts createNewAnnexeCategoriesQuery),
+    // not the column's own DEFAULT false. If the query excluded NULL rows the
+    // same way it excludes explicit is_applicable = false rows, a fresh
+    // project would return an empty control list instead of a zero-scored one.
+    mockQuery.mockResolvedValueOnce([[{ id: 12 }]]);
+    mockQuery.mockResolvedValueOnce([
+      [{ control_id: 5, total: "3", done: "0" }], // untriaged rows counted, none Implemented yet
+    ]);
+
+    const result = await getApplicableControlsWithRequirementsQuery("iso_42001", 1, 7);
+
+    expect(result).toEqual([{ control_id: 5, requirements_score: 0 }]);
+
+    const sql = mockQuery.mock.calls[1][0];
+    expect(sql).toContain("is_applicable IS NULL");
+  });
 });
 
 describe("getApplicableControlsWithRequirementsQuery — organization-wide", () => {
