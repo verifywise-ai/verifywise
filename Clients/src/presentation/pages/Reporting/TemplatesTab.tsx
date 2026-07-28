@@ -97,12 +97,20 @@ export default function TemplatesTab({
   // TemplateBuilder's create call) rather than the camelCase the wizard's
   // own run/schedule bodies use — this goes through POST /templates, not
   // POST /templates/:id/run.
+  //
+  // createTemplateQuery (Servers/utils/reportTemplate.utils.ts) 400s unless
+  // default_scope is exactly "project" or "organization"; the source
+  // template always has one, but fall back to "project" defensively rather
+  // than send undefined and 400 on every click.
   const handleDuplicate = (t: any) =>
     duplicate.mutate(
       {
         name: `${t.name} (copy)`,
         description: t.description ?? null,
         category: t.category ?? CATEGORIES[0],
+        default_scope: t.default_scope ?? "project",
+        supported_scopes: t.supported_scopes ?? undefined,
+        recommended_frequency: t.recommended_frequency ?? undefined,
         sections_config: t.latestVersion?.sections_config ?? undefined,
         ai_blocks_config: t.latestVersion?.ai_blocks_config ?? undefined,
       },

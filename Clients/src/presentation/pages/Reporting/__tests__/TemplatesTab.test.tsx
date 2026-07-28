@@ -12,6 +12,8 @@ const SYSTEM_TEMPLATE = {
   name: "EU AI Act pack",
   description: "Seeded system template",
   category: "compliance",
+  default_scope: "organization",
+  supported_scopes: ["project", "organization"],
   recommended_frequency: "quarterly",
   is_system_template: true,
 };
@@ -166,8 +168,15 @@ describe("TemplatesTab", () => {
     const system = screen.getByRole("region", { name: /system templates/i });
     await user.click(within(system).getByRole("button", { name: /duplicate/i }));
 
+    // createTemplateQuery (Servers/utils/reportTemplate.utils.ts) 400s unless
+    // default_scope is exactly "project" or "organization" — an omitted
+    // default_scope must not reach the request body, or every Duplicate
+    // click fails.
     expect(mockCreate).toHaveBeenCalledWith(
-      expect.objectContaining({ name: "EU AI Act pack (copy)" }),
+      expect.objectContaining({
+        name: "EU AI Act pack (copy)",
+        default_scope: "organization",
+      }),
       expect.anything(),
     );
   });
