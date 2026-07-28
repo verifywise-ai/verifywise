@@ -170,4 +170,40 @@ describe("reportRun.ctrl tenant isolation", () => {
     expect(opts.limit).toBe(200);
     expect(opts.offset).toBe(0);
   });
+
+  describe("listRuns archived query parameter", () => {
+    const mockList = listRunsQuery as jest.MockedFunction<typeof listRunsQuery>;
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+      mockList.mockResolvedValue({ rows: [], total: 0 });
+    });
+
+    it("passes archived=false through as the boolean false", async () => {
+      const req = { ...createMockReq(), query: { archived: "false" } } as any;
+      const res = createMockRes() as Response;
+
+      await listRuns(req, res);
+
+      expect(mockList).toHaveBeenCalledWith(5, expect.objectContaining({ archived: false }));
+    });
+
+    it("passes archived=true through as the boolean true", async () => {
+      const req = { ...createMockReq(), query: { archived: "true" } } as any;
+      const res = createMockRes() as Response;
+
+      await listRuns(req, res);
+
+      expect(mockList).toHaveBeenCalledWith(5, expect.objectContaining({ archived: true }));
+    });
+
+    it("omits archived entirely when the parameter is absent", async () => {
+      const req = { ...createMockReq(), query: {} } as any;
+      const res = createMockRes() as Response;
+
+      await listRuns(req, res);
+
+      expect(mockList.mock.calls[0][1].archived).toBeUndefined();
+    });
+  });
 });

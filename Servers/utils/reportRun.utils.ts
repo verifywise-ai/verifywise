@@ -41,7 +41,13 @@ export async function updateRunStatusQuery(id: number, organization_id: number, 
 // `total` lets a UI page without a second endpoint.
 export async function listRunsQuery(
   organization_id: number,
-  filters: { scheduledReportId?: any; status?: any; limit?: number; offset?: number } = {},
+  filters: {
+    scheduledReportId?: any;
+    status?: any;
+    archived?: boolean;
+    limit?: number;
+    offset?: number;
+  } = {},
 ): Promise<{ rows: any[]; total: number }> {
   const where: string[] = ["organization_id = :organization_id"];
   const replacements: any = { organization_id };
@@ -53,6 +59,15 @@ export async function listRunsQuery(
   if (filters.status) {
     where.push("status = :status");
     replacements.status = String(filters.status);
+  }
+
+  // Tri-state on purpose: true → archived only, false → live only, undefined →
+  // both. An omitted flag must keep the pre-archive behaviour for any caller
+  // that has not opted in.
+  if (filters.archived === true) {
+    where.push("archived_at IS NOT NULL");
+  } else if (filters.archived === false) {
+    where.push("archived_at IS NULL");
   }
 
   const whereSql = where.join(" AND ");

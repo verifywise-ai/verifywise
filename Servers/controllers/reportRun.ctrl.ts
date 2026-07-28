@@ -29,9 +29,15 @@ export async function listRuns(req: Request, res: Response): Promise<any> {
     const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, MAX_PAGE) : MAX_PAGE;
     const offset = Number.isFinite(rawOffset) && rawOffset > 0 ? rawOffset : 0;
 
+    // Query strings are strings: only the two literals map to booleans, and
+    // anything else leaves the filter off rather than guessing.
+    const archived =
+      req.query.archived === "true" ? true : req.query.archived === "false" ? false : undefined;
+
     const { rows, total } = await listRunsQuery(req.organizationId!, {
       scheduledReportId: req.query.scheduledReportId,
       status: req.query.status,
+      archived,
       limit,
       offset,
     });
