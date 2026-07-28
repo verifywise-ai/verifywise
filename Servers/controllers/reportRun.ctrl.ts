@@ -14,7 +14,7 @@
 
 import { Request, Response } from "express";
 import { STATUS_CODE } from "../utils/statusCode.utils";
-import { listRunsQuery, getRunQuery } from "../utils/reportRun.utils";
+import { listRunsQuery, getRunQuery, setRunArchivedQuery, deleteRunQuery } from "../utils/reportRun.utils";
 import { getFileById } from "../utils/fileUpload.utils";
 import { getRunAnalysesQuery } from "../utils/reportRunAnalysis.utils";
 
@@ -84,6 +84,39 @@ export async function getRunAnalyses(req: Request, res: Response): Promise<any> 
     if (!run) return res.status(404).json(STATUS_CODE[404]("not found"));
     const analyses = await getRunAnalysesQuery(id, req.organizationId!);
     return res.status(200).json(STATUS_CODE[200](analyses));
+  } catch (e) {
+    return res.status(500).json(STATUS_CODE[500]((e as Error).message));
+  }
+}
+
+async function setArchived(req: Request, res: Response, archived: boolean): Promise<any> {
+  try {
+    const run = await setRunArchivedQuery(
+      Number(req.params.id),
+      req.organizationId!,
+      archived,
+      req.userId ?? null,
+    );
+    if (!run) return res.status(404).json(STATUS_CODE[404]("not found"));
+    return res.status(200).json(STATUS_CODE[200](run));
+  } catch (e) {
+    return res.status(500).json(STATUS_CODE[500]((e as Error).message));
+  }
+}
+
+export async function archiveRun(req: Request, res: Response): Promise<any> {
+  return setArchived(req, res, true);
+}
+
+export async function restoreRun(req: Request, res: Response): Promise<any> {
+  return setArchived(req, res, false);
+}
+
+export async function deleteRun(req: Request, res: Response): Promise<any> {
+  try {
+    const deleted = await deleteRunQuery(Number(req.params.id), req.organizationId!);
+    if (!deleted) return res.status(404).json(STATUS_CODE[404]("not found"));
+    return res.status(200).json(STATUS_CODE[200]({ id: Number(req.params.id) }));
   } catch (e) {
     return res.status(500).json(STATUS_CODE[500]((e as Error).message));
   }

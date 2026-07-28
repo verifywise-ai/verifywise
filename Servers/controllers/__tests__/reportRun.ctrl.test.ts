@@ -7,6 +7,8 @@ jest.mock("../../database/db", () => ({
 jest.mock("../../utils/reportRun.utils", () => ({
   listRunsQuery: jest.fn(),
   getRunQuery: jest.fn(),
+  setRunArchivedQuery: jest.fn(),
+  deleteRunQuery: jest.fn(),
 }));
 jest.mock("../../utils/fileUpload.utils", () => ({ getFileById: jest.fn() }));
 jest.mock("../../utils/reportRunAnalysis.utils", () => ({
@@ -20,8 +22,8 @@ jest.mock("../../utils/statusCode.utils", () => ({
   },
 }));
 
-import { listRuns, getRun, downloadRun, getRunAnalyses } from "../reportRun.ctrl";
-import { getRunQuery, listRunsQuery } from "../../utils/reportRun.utils";
+import { archiveRun, restoreRun, deleteRun, listRuns, getRun, downloadRun, getRunAnalyses } from "../reportRun.ctrl";
+import { getRunQuery, listRunsQuery, setRunArchivedQuery, deleteRunQuery } from "../../utils/reportRun.utils";
 import { getFileById } from "../../utils/fileUpload.utils";
 import { getRunAnalysesQuery } from "../../utils/reportRunAnalysis.utils";
 
@@ -205,5 +207,60 @@ describe("reportRun.ctrl tenant isolation", () => {
 
       expect(mockList.mock.calls[0][1].archived).toBeUndefined();
     });
+  });
+});
+
+describe("archiveRun / restoreRun / deleteRun", () => {
+  const mockSetArchived = setRunArchivedQuery as jest.MockedFunction<typeof setRunArchivedQuery>;
+  const mockDelete = deleteRunQuery as jest.MockedFunction<typeof deleteRunQuery>;
+
+  beforeEach(() => jest.clearAllMocks());
+
+  it("archives with the authed organization and user, never the request body", async () => {
+    mockSetArchived.mockResolvedValue({ id: 1, archived_at: "2026-07-28" });
+    const req = { params: { id: "1" }, body: { organizationId: 999 }, organizationId: 5, userId: 3 } as any;
+    const res = createMockRes() as Response;
+
+    await archiveRun(req, res);
+
+    expect(mockSetArchived).toHaveBeenCalledWith(1, 5, true, 3);
+    expect(res.status).toHaveBeenCalledWith(200);
+  });
+
+  it("restores with archived false", async () => {
+    mockSetArchived.mockResolvedValue({ id: 1, archived_at: null });
+    const res = createMockRes() as Response;
+
+    await restoreRun(createMockReq({ id: "1" }) as Request, res);
+
+    expect(mockSetArchived).toHaveBeenCalledWith(1, 5, false, 3);
+  });
+
+  it("404s when the run belongs to another organization", async () => {
+    mockSetArchived.mockResolvedValue(null);
+    const res = createMockRes() as Response;
+
+    await archiveRun(createMockReq({ id: "1" }) as Request, res);
+
+    expect(res.status).toHaveBeenCalledWith(404);
+  });
+
+  it("404s on delete when nothing matched", async () => {
+    mockDelete.mockResolvedValue(false);
+    const res = createMockRes() as Response;
+
+    await deleteRun(createMockReq({ id: "1" }) as Request, res);
+
+    expect(res.status).toHaveBeenCalledWith(404);
+  });
+
+  it("deletes org-scoped and returns 200", async () => {
+    mockDelete.mockResolvedValue(true);
+    const res = createMockRes() as Response;
+
+    await deleteRun(createMockReq({ id: "1" }) as Request, res);
+
+    expect(mockDelete).toHaveBeenCalledWith(1, 5);
+    expect(res.status).toHaveBeenCalledWith(200);
   });
 });

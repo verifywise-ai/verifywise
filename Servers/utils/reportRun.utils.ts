@@ -96,3 +96,54 @@ export async function getRunQuery(id: number, organization_id: number): Promise<
     { replacements: { id, organization_id }, type: QueryTypes.SELECT });
   return rows[0] ?? null;
 }
+
+/**
+ * Archive or restore one run. Returns the updated row, or null when the id does
+ * not belong to this organization — the caller turns that into a 404 rather
+ * than reporting a success that never happened.
+ */
+export async function setRunArchivedQuery(
+  id: number,
+  organization_id: number,
+  archived: boolean,
+  userId: number | null,
+): Promise<any | null> {
+  const setClause = archived
+    ? "archived_at = NOW(), archived_by = :userId"
+    : "archived_at = NULL, archived_by = NULL";
+
+  const rows: any[] = await sequelize.query(
+    `UPDATE report_runs SET ${setClause}, updated_at = NOW()
+     WHERE id = :id AND organization_id = :organization_id
+     RETURNING *`,
+    { replacements: { id, organization_id, userId }, type: QueryTypes.SELECT },
+  );
+  return rows[0] ?? null;
+}
+
+/**
+ * Permanently delete a run and the file it produced — the file is the report,
+ * which is what DELETE /reporting/:id meant before runs became the list. A run
+ * with no file_id (failed, or still running) deletes the row alone.
+ */
+export async function deleteRunQuery(id: number, organization_id: number): Promise<boolean> {
+  const rows: any[] = await sequelize.query(
+    `SELECT id, file_id FROM report_runs WHERE id = :id AND organization_id = :organization_id`,
+    { replacements: { id, organization_id }, type: QueryTypes.SELECT },
+  );
+  const run = rows[0];
+  if (!run) return false;
+
+  if (run.file_id) {
+    await sequelize.query(
+      `DELETE FROM files WHERE id = :file_id AND organization_id = :organization_id`,
+      { replacements: { file_id: run.file_id, organization_id }, type: QueryTypes.DELETE },
+    );
+  }
+
+  await sequelize.query(
+    `DELETE FROM report_runs WHERE id = :id AND organization_id = :organization_id`,
+    { replacements: { id, organization_id }, type: QueryTypes.DELETE },
+  );
+  return true;
+}

@@ -13,6 +13,9 @@ const ROUTES = {
   get: (id: number) => `/api/reporting/runs/${id}`,
   download: (id: number) => `/api/reporting/runs/${id}/download`,
   analyses: (id: number) => `/api/reporting/runs/${id}/analyses`,
+  archive: (id: number) => `/api/reporting/runs/${id}/archive`,
+  restore: (id: number) => `/api/reporting/runs/${id}/restore`,
+  remove: (id: number) => `/api/reporting/runs/${id}`,
 };
 
 /**
@@ -134,5 +137,75 @@ describe("Report runs tenant isolation", () => {
     const ownerRes = await owner.request.get(ROUTES.analyses(runId));
     expect(ownerRes.status).toBe(200);
     expect(ownerRes.body?.data).toHaveLength(1);
+  });
+
+  it("denies cross-tenant archive, restore and delete, leaving the row untouched", async () => {
+    const { owner, attacker } = await seedTwoTenantContexts();
+    const runId = await seedRun(owner);
+
+    const archiveRes = await attacker.request.patch(ROUTES.archive(runId));
+    expect(archiveRes.status).toBe(404);
+
+    const rowsAfterArchive: any[] = await sequelize.query(
+      `SELECT archived_at FROM report_runs WHERE id = :id`,
+      { replacements: { id: runId }, type: QueryTypes.SELECT },
+    );
+    expect(rowsAfterArchive[0].archived_at).toBeNull();
+
+    const restoreRes = await attacker.request.patch(ROUTES.restore(runId));
+    expect(restoreRes.status).toBe(404);
+
+    const removeRes = await attacker.request.delete(ROUTES.remove(runId));
+    expect(removeRes.status).toBe(404);
+
+    // The one assertion that matters: a cross-tenant delete that returns 404
+    // but still removed the row would pass a status-code-only test.
+    const countRows: any[] = await sequelize.query(
+      `SELECT count(*)::int AS count FROM report_runs WHERE id = :id`,
+      { replacements: { id: runId }, type: QueryTypes.SELECT },
+    );
+    expect(countRows[0].count).toBe(1);
+  });
+
+  // Positive control for the test above: the cross-tenant delete 404s before
+  // deleteRunQuery's DELETE statements ever run, so that test alone can't prove
+  // the owner's delete path works against the real schema (report_runs.file_id
+  // → files, ON DELETE SET NULL). This proves the happy path — run with a
+  // file, deleted by its own org — actually removes both rows.
+  it("owner can archive, restore and delete their own run, including its file", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const fileId = await createTestFile(owner.orgId, owner.userId);
+    const runId = await seedRun(owner, { file_id: fileId });
+
+    const archiveRes = await owner.request.patch(ROUTES.archive(runId));
+    expect(archiveRes.status).toBe(200);
+    const afterArchive: any[] = await sequelize.query(
+      `SELECT archived_at FROM report_runs WHERE id = :id`,
+      { replacements: { id: runId }, type: QueryTypes.SELECT },
+    );
+    expect(afterArchive[0].archived_at).not.toBeNull();
+
+    const restoreRes = await owner.request.patch(ROUTES.restore(runId));
+    expect(restoreRes.status).toBe(200);
+    const afterRestore: any[] = await sequelize.query(
+      `SELECT archived_at FROM report_runs WHERE id = :id`,
+      { replacements: { id: runId }, type: QueryTypes.SELECT },
+    );
+    expect(afterRestore[0].archived_at).toBeNull();
+
+    const removeRes = await owner.request.delete(ROUTES.remove(runId));
+    expect(removeRes.status).toBe(200);
+
+    const runRows: any[] = await sequelize.query(
+      `SELECT count(*)::int AS count FROM report_runs WHERE id = :id`,
+      { replacements: { id: runId }, type: QueryTypes.SELECT },
+    );
+    expect(runRows[0].count).toBe(0);
+
+    const fileRows: any[] = await sequelize.query(
+      `SELECT count(*)::int AS count FROM files WHERE id = :id`,
+      { replacements: { id: fileId }, type: QueryTypes.SELECT },
+    );
+    expect(fileRows[0].count).toBe(0);
   });
 });
