@@ -198,9 +198,9 @@ const generateRecommendations = async (
     const [weakest] = await sequelize.query(
       `SELECT
          control_id, overall_score, readiness_level,
-         evidence_quality_score, evidence_count_score,
-         evidence_recency_score, task_completion_score,
-         risk_mitigation_score, recommendations
+         requirements_score, evidence_quality_score,
+         evidence_count_score, evidence_recency_score,
+         task_completion_score, risk_mitigation_score, recommendations
        FROM control_readiness_scores
        WHERE framework_type = :frameworkType
          AND organization_id = :organizationId
