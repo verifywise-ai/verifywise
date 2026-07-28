@@ -82,13 +82,9 @@ function handleException(req: Request, res: Response, error: unknown): Response 
     return res.status(502).json(STATUS_CODE[502](translateError(req, error)));
   }
 
-  const errorMessage =
-    process.env.NODE_ENV === "production"
-      ? translateError(req, new Error("An internal error occurred"))
-      : error instanceof Error
-        ? translateError(req, error)
-        : "Unknown error";
-  return res.status(500).json(STATUS_CODE[500](errorMessage));
+  return res
+    .status(500)
+    .json(STATUS_CODE[500](translateError(req, new Error("An internal error occurred"))));
 }
 
 // ============================================================================

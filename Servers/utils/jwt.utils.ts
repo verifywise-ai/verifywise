@@ -48,7 +48,16 @@ import Jwt from "jsonwebtoken";
  */
 const getTokenPayload = (token: any): any => {
   try {
-    return Jwt.verify(token, process.env.JWT_SECRET as string) as {
+    // ignoreExpiration: expiry is enforced via the custom `expire` claim
+    // below (preserves the established 406/401 semantics). The standard
+    // `exp` claim is still present so any standard JWT library also
+    // rejects expired tokens.
+    return Jwt.verify(token, process.env.JWT_SECRET as string, {
+      // Pin the algorithm so a token signed with a different alg (e.g.
+      // alg-confusion / "none" downgrade attempts) is rejected outright.
+      algorithms: ["HS256"],
+      ignoreExpiration: true,
+    }) as {
       id: number;
       email: string;
       expire: number;
@@ -87,7 +96,10 @@ const getTokenPayload = (token: any): any => {
  */
 const getRefreshTokenPayload = (token: any): any => {
   try {
-    return Jwt.verify(token, process.env.REFRESH_TOKEN_SECRET as string) as {
+    return Jwt.verify(token, process.env.REFRESH_TOKEN_SECRET as string, {
+      algorithms: ["HS256"],
+      ignoreExpiration: true,
+    }) as {
       id: number;
       email: string;
       expire: number;
@@ -113,6 +125,10 @@ const signToken = (payload: Object, expiresInMs: number, secret: string): string
         expire: Date.now() + expiresInMs,
       },
       secret,
+      // Standard exp claim: any spec-compliant verifier now rejects expired
+      // tokens even if it only checks the signature (defense in depth on
+      // top of the custom `expire` checks in our middleware).
+      { expiresIn: Math.floor(expiresInMs / 1000) },
     );
   } catch (error) {
     console.error(error);
@@ -128,10 +144,12 @@ const generateToken = (payload: Object) => {
 };
 
 /**
- * Generates a JWT token for invitation and password-reset emails (1 week)
+ * Generates a JWT token for invitation and password-reset emails.
+ * Defaults to 1 week (invitations); pass a shorter lifetime for
+ * password-reset links.
  */
-const generateInviteToken = (payload: Object) => {
-  return signToken(payload, ONE_WEEK_MS, process.env.JWT_SECRET as string);
+const generateInviteToken = (payload: Object, expiresInMs: number = ONE_WEEK_MS) => {
+  return signToken(payload, expiresInMs, process.env.JWT_SECRET as string);
 };
 
 /**
@@ -171,4 +189,6 @@ export {
   generateRefreshToken,
   generateApiToken,
   ONE_WEEK_MS,
+  ONE_HOUR_MS,
+  THIRTY_DAYS_MS,
 };

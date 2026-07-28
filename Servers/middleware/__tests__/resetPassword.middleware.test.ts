@@ -4,11 +4,16 @@ import { Request, Response } from "express";
 jest.mock("../../utils/jwt.utils", () => ({
   getTokenPayload: jest.fn(),
 }));
+jest.mock("../../utils/oneTimeToken.utils", () => ({
+  consumeOneTimeToken: jest.fn(),
+}));
 
 import resetPassword from "../resetPassword.middleware";
 import { getTokenPayload } from "../../utils/jwt.utils";
+import { consumeOneTimeToken } from "../../utils/oneTimeToken.utils";
 
 const mockGetTokenPayload = getTokenPayload as jest.MockedFunction<typeof getTokenPayload>;
+const mockConsume = consumeOneTimeToken as jest.MockedFunction<typeof consumeOneTimeToken>;
 
 function createMockReq(token?: string, body?: Record<string, unknown>): Partial<Request> {
   return {
@@ -31,6 +36,7 @@ describe("resetPassword middleware", () => {
   beforeEach(() => {
     next = jest.fn();
     jest.clearAllMocks();
+    mockConsume.mockResolvedValue({ id: 1 } as any);
   });
 
   it("should return 400 when no token is provided", async () => {
@@ -107,6 +113,22 @@ describe("resetPassword middleware", () => {
 
     expect(next).toHaveBeenCalled();
     expect(res.status).not.toHaveBeenCalled();
+  });
+
+  it("should return 401 when the reset link was already used", async () => {
+    mockGetTokenPayload.mockReturnValue({
+      expire: Date.now() + 3600000,
+      email: "user@test.com",
+    } as any);
+    mockConsume.mockResolvedValue(null);
+    const req = createMockReq("used", { email: "user@test.com" }) as Request;
+    const res = createMockRes();
+
+    await resetPassword(req, res as Response, next);
+
+    expect(mockConsume).toHaveBeenCalledWith("used", "password_reset");
+    expect(res.status).toHaveBeenCalledWith(401);
+    expect(next).not.toHaveBeenCalled();
   });
 
   it("should return 500 on unexpected error", async () => {

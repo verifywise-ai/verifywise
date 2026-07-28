@@ -55,8 +55,7 @@ export async function getGitHubTokenStatusController(
       userId: req.userId!,
       organizationId: req.organizationId!,
     });
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    return res.status(500).json(STATUS_CODE[500](errorMessage));
+    return res.status(500).json(STATUS_CODE[500](req.t!("Internal server error")));
   }
 }
 
@@ -112,8 +111,7 @@ export async function saveGitHubTokenController(req: Request, res: Response): Pr
       userId: req.userId!,
       organizationId: req.organizationId!,
     });
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    return res.status(500).json(STATUS_CODE[500](errorMessage));
+    return res.status(500).json(STATUS_CODE[500](req.t!("Internal server error")));
   }
 }
 
@@ -160,8 +158,7 @@ export async function deleteGitHubTokenController(req: Request, res: Response): 
       userId: req.userId!,
       organizationId: req.organizationId!,
     });
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    return res.status(500).json(STATUS_CODE[500](errorMessage));
+    return res.status(500).json(STATUS_CODE[500](req.t!("Internal server error")));
   }
 }
 
@@ -202,7 +199,6 @@ export async function testGitHubTokenController(req: Request, res: Response): Pr
       return res.status(200).json(STATUS_CODE[200](result));
     }
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : "Unknown error";
-    return res.status(500).json(STATUS_CODE[500](errorMessage));
+    return res.status(500).json(STATUS_CODE[500](req.t!("Internal server error")));
   }
 }

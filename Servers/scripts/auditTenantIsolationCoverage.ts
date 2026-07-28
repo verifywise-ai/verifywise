@@ -672,6 +672,11 @@ const deferredScopedTables: SharedTableEntry[] = [
       "Deferred to a future isolation wave; not covered by the first-pass matrix. See runbook section 2.4.",
   },
   {
+    name: "refresh_tokens",
+    justification:
+      "Auth session store carrying organization_id; isolation coverage deferred to a future wave with the RLS Phase 2 rollout. See runbook section 2.4.",
+  },
+  {
     name: "risk_history",
     justification:
       "Deferred to a future isolation wave; not covered by the first-pass matrix. See runbook section 2.4.",

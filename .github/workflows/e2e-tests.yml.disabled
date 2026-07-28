@@ -65,6 +65,9 @@ jobs:
           DB_NAME: verifywise_test
           DB_USER: postgres
           DB_PASSWORD: postgres
+          # Required by the RLS runtime-role migration (rls-app-role.js), which
+          # fails closed without it. CI-only value; not a real credential.
+          DB_APP_PASSWORD: test-app-role-password-for-ci
           SUPERADMIN_EMAIL: admin@verifywise-test.com
           SUPERADMIN_PASSWORD: TestAdmin!Str0ng
         run: npx sequelize db:migrate

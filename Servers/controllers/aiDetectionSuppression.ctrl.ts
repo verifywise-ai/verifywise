@@ -46,13 +46,7 @@ function handleException(res: Response, error: unknown): Response {
     return res.status(502).json(STATUS_CODE[502](error.message));
   }
 
-  const errorMessage =
-    process.env.NODE_ENV === "production"
-      ? "An internal error occurred"
-      : error instanceof Error
-        ? error.message
-        : "Unknown error";
-  return res.status(500).json(STATUS_CODE[500](errorMessage));
+  return res.status(500).json(STATUS_CODE[500]("An internal error occurred"));
 }
 
 /**

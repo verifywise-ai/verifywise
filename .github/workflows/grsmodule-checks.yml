@@ -1,0 +1,59 @@
+name: GRSModule Checks
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+    branches: ['master', 'develop']
+    paths:
+      - 'GRSModule/**'
+      - '.github/workflows/grsmodule-checks.yml'
+  push:
+    branches: ['master', 'develop']
+    paths:
+      - 'GRSModule/**'
+      - '.github/workflows/grsmodule-checks.yml'
+
+jobs:
+  grsmodule-tests:
+    name: GRSModule Tests (pytest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: GRSModule
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+          cache-dependency-glob: GRSModule/uv.lock
+
+      - name: Install GRSModule dependencies
+        run: uv sync --frozen
+
+      # GRSModule is uv/pyproject-managed (no requirements.txt), so export
+      # the locked runtime deps and audit that file.
+      - name: Audit GRSModule dependencies (pip-audit)
+        run: |
+          uv export --frozen --no-hashes --no-dev -o requirements-ci.txt
+          uv run --with pip-audit pip-audit -r requirements-ci.txt
+
+      # tests/llm/test_bedrock.py requires AWS credentials/region and is
+      # excluded; all other tests are self-contained.
+      - name: Run GRSModule tests
+        run: |
+          uv run pytest tests/ -v --ignore=tests/llm/test_bedrock.py
