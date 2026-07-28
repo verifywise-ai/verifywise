@@ -7,6 +7,7 @@ const mockControlScores = vi.fn();
 const mockWeakest = vi.fn();
 const mockHistory = vi.fn();
 const mockTriggerCalculate = vi.fn();
+const mockTriggerCalculateFramework = vi.fn();
 
 vi.mock("../../../../application/hooks/useReadiness", () => ({
   useReadinessScores: (...args: any[]) => mockScores(...args),
@@ -14,6 +15,7 @@ vi.mock("../../../../application/hooks/useReadiness", () => ({
   useWeakestControls: (...args: any[]) => mockWeakest(...args),
   useReadinessHistory: (...args: any[]) => mockHistory(...args),
   useTriggerCalculateAll: (...args: any[]) => mockTriggerCalculate(...args),
+  useTriggerCalculateFramework: (...args: any[]) => mockTriggerCalculateFramework(...args),
 }));
 
 vi.mock("../../../components/ReadinessHeatmap", () => ({
@@ -66,6 +68,7 @@ describe("ReadinessDashboard", () => {
     mockWeakest.mockReturnValue({ data: [], isLoading: false });
     mockHistory.mockReturnValue({ data: [], isLoading: false });
     mockTriggerCalculate.mockReturnValue(defaultTriggerCalculate);
+    mockTriggerCalculateFramework.mockReturnValue({ mutate: vi.fn(), isPending: false });
   });
 
   it("renders the page title and description", () => {
@@ -138,5 +141,45 @@ describe("ReadinessDashboard", () => {
     renderWithProviders(<ReadinessDashboard />);
     expect(screen.getByText("Calculating...")).toBeInTheDocument();
     expect(screen.queryByText("Calculate readiness")).not.toBeInTheDocument();
+  });
+
+  describe("scoped to a use case and framework", () => {
+    const scopedProps = { projectId: 7, frameworkType: "iso_42001" };
+
+    it("scopes every query to the project and framework", () => {
+      renderWithProviders(<ReadinessDashboard {...scopedProps} />);
+      expect(mockScores).toHaveBeenCalledWith(7, undefined);
+      expect(mockControlScores).toHaveBeenCalledWith("iso_42001", {
+        projectId: 7,
+        visibility: undefined,
+      });
+      expect(mockWeakest).toHaveBeenCalledWith(10, 7, undefined);
+      expect(mockHistory).toHaveBeenCalledWith("iso_42001", 7, undefined);
+    });
+
+    it("hides the framework tabs and the page title", () => {
+      renderWithProviders(<ReadinessDashboard {...scopedProps} />);
+      expect(screen.queryAllByRole("tab")).toHaveLength(0);
+      expect(screen.queryByText("Audit readiness")).not.toBeInTheDocument();
+    });
+
+    it("shows a score card only for the pinned framework", () => {
+      renderWithProviders(<ReadinessDashboard {...scopedProps} />);
+      expect(screen.getByText("ISO 42001")).toBeInTheDocument();
+      expect(screen.queryByText("EU AI Act")).not.toBeInTheDocument();
+    });
+
+    it("recalculates only the pinned framework for this project", async () => {
+      const mutate = vi.fn();
+      mockTriggerCalculateFramework.mockReturnValue({ mutate, isPending: false });
+      const user = userEvent.setup();
+      renderWithProviders(<ReadinessDashboard {...scopedProps} />);
+      await user.click(screen.getByText("Calculate readiness"));
+      expect(mutate).toHaveBeenCalledWith({
+        frameworkType: "iso_42001",
+        projectId: 7,
+        visibility: "public",
+      });
+    });
   });
 });

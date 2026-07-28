@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   Box,
   Typography,
@@ -30,6 +30,7 @@ import {
   useWeakestControls,
   useReadinessHistory,
   useTriggerCalculateAll,
+  useTriggerCalculateFramework,
 } from "../../../application/hooks/useReadiness";
 import type { ReadinessLevel } from "../../../domain/interfaces/i.readiness";
 
@@ -37,6 +38,16 @@ const FRAMEWORK_TABS = [
   { value: "eu_ai_act", label: "EU AI Act" },
   { value: "iso_42001", label: "ISO 42001" },
 ];
+
+interface ReadinessDashboardProps {
+  /** Scope every query to a single use case. Omit for the organization-wide dashboard. */
+  projectId?: number;
+  /**
+   * Pin the dashboard to one framework (e.g. "eu_ai_act"). When set, the framework
+   * tabs are hidden and "Calculate readiness" only recalculates this framework.
+   */
+  frameworkType?: string;
+}
 
 function getLevelColor(level: ReadinessLevel | string | undefined) {
   switch (level) {
@@ -85,51 +96,78 @@ function formatFrameworkName(type: string): string {
   return names[type] || type.replace(/_/g, " ").toUpperCase();
 }
 
-export default function ReadinessDashboard() {
+export default function ReadinessDashboard({
+  projectId,
+  frameworkType,
+}: ReadinessDashboardProps = {}) {
   const theme = useTheme();
   const [selectedFramework, setSelectedFramework] = useState("eu_ai_act");
   const [visFilter, setVisFilter] = useState<VisibilityFilterValue>("all");
 
+  // Scoped mode: pinned to a single framework (and usually a single use case).
+  const isScoped = Boolean(frameworkType);
+  const activeFramework = frameworkType ?? selectedFramework;
+
   const filterParam = visFilter === "all" ? undefined : visFilter;
-  const { data: scores, isLoading: scoresLoading } = useReadinessScores(undefined, filterParam);
-  const { data: controlScores, isLoading: controlsLoading } = useControlScores(selectedFramework, {
+  const { data: scores, isLoading: scoresLoading } = useReadinessScores(projectId, filterParam);
+  const { data: controlScores, isLoading: controlsLoading } = useControlScores(activeFramework, {
+    projectId,
     visibility: filterParam,
   });
   const { data: weakest, isLoading: weakestLoading } = useWeakestControls(
     10,
-    undefined,
+    projectId,
     filterParam,
   );
   const { data: history, isLoading: historyLoading } = useReadinessHistory(
-    undefined,
-    undefined,
+    frameworkType,
+    projectId,
     filterParam,
   );
-  const triggerCalculate = useTriggerCalculateAll();
+  const triggerCalculateAll = useTriggerCalculateAll();
+  const triggerCalculateFramework = useTriggerCalculateFramework();
+  const triggerCalculate = isScoped ? triggerCalculateFramework : triggerCalculateAll;
+
+  // Only the framework this view is pinned to — an org-wide card row inside a
+  // single use case's framework tab would misrepresent the numbers.
+  const visibleScores = useMemo(() => {
+    if (!scores) return [];
+    if (!frameworkType) return scores;
+    return scores.filter((fw: any) => fw.framework_type === frameworkType);
+  }, [scores, frameworkType]);
 
   const handleCalculate = () => {
-    triggerCalculate.mutate({ visibility: visFilter === "private" ? "private" : "public" });
+    const visibility = visFilter === "private" ? "private" : "public";
+    if (isScoped && frameworkType) {
+      triggerCalculateFramework.mutate({ frameworkType, projectId, visibility });
+    } else {
+      triggerCalculateAll.mutate({ visibility });
+    }
   };
 
   return (
     <Box>
       {/* Header — matches dashboard style */}
       <Stack direction="row" justifyContent="space-between" alignItems="center" mb="8px">
-        <Box>
-          <Typography
-            sx={{
-              fontWeight: 600,
-              fontSize: 20,
-              fontFamily: "'Red Hat Display', 'Geist', sans-serif",
-              color: textColors.primary,
-            }}
-          >
-            Audit readiness
-          </Typography>
-          <Typography sx={{ fontSize: 13, color: textColors.secondary, mt: 0.25 }}>
-            Per-control readiness scores, framework aggregations, and improvement recommendations.
-          </Typography>
-        </Box>
+        {isScoped ? (
+          <Box />
+        ) : (
+          <Box>
+            <Typography
+              sx={{
+                fontWeight: 600,
+                fontSize: 20,
+                fontFamily: "'Red Hat Display', 'Geist', sans-serif",
+                color: textColors.primary,
+              }}
+            >
+              Audit readiness
+            </Typography>
+            <Typography sx={{ fontSize: 13, color: textColors.secondary, mt: 0.25 }}>
+              Per-control readiness scores, framework aggregations, and improvement recommendations.
+            </Typography>
+          </Box>
+        )}
         <Stack direction="row" alignItems="center" spacing={1.5}>
           <VisibilityChips value={visFilter} onChange={setVisFilter} />
           <Button
@@ -175,8 +213,8 @@ export default function ReadinessDashboard() {
           <Box sx={{ p: 2, textAlign: "center", width: "100%" }}>
             <CircularProgress size={20} />
           </Box>
-        ) : scores && scores.length > 0 ? (
-          scores.map((fw: any) => {
+        ) : visibleScores.length > 0 ? (
+          visibleScores.map((fw: any) => {
             const score = fw.avg_score ?? 0;
             const level = classifyLevel(score);
             return (
@@ -278,31 +316,33 @@ export default function ReadinessDashboard() {
         )}
       </Box>
 
-      {/* Framework tabs — same style as app's TabBar */}
-      <Tabs
-        value={selectedFramework}
-        onChange={(_, v) => setSelectedFramework(v)}
-        TabIndicatorProps={{
-          style: { backgroundColor: brand.primary },
-        }}
-        sx={{
-          "mb": "8px",
-          "minHeight": "20px",
-          "& .MuiTab-root": {
-            textTransform: "none",
-            fontWeight: 400,
-            minHeight: "20px",
-            padding: "16px 0 7px",
-            fontSize: 13,
-          },
-          "& .Mui-selected": { color: brand.primary },
-          "& .MuiTabs-flexContainer": { columnGap: "34px" },
-        }}
-      >
-        {FRAMEWORK_TABS.map((tab) => (
-          <Tab key={tab.value} value={tab.value} label={tab.label} />
-        ))}
-      </Tabs>
+      {/* Framework tabs — same style as app's TabBar. Hidden when the caller pins a framework. */}
+      {!isScoped && (
+        <Tabs
+          value={selectedFramework}
+          onChange={(_, v) => setSelectedFramework(v)}
+          TabIndicatorProps={{
+            style: { backgroundColor: brand.primary },
+          }}
+          sx={{
+            "mb": "8px",
+            "minHeight": "20px",
+            "& .MuiTab-root": {
+              textTransform: "none",
+              fontWeight: 400,
+              minHeight: "20px",
+              padding: "16px 0 7px",
+              fontSize: 13,
+            },
+            "& .Mui-selected": { color: brand.primary },
+            "& .MuiTabs-flexContainer": { columnGap: "34px" },
+          }}
+        >
+          {FRAMEWORK_TABS.map((tab) => (
+            <Tab key={tab.value} value={tab.value} label={tab.label} />
+          ))}
+        </Tabs>
+      )}
 
       {/* Two-column: Heatmap + Trend */}
       <Box
@@ -316,7 +356,7 @@ export default function ReadinessDashboard() {
           <CardContent sx={{ "p": 0, "&:last-child": { pb: 0 } }}>
             <ReadinessHeatmap
               controls={controlScores ?? []}
-              frameworkType={selectedFramework}
+              frameworkType={activeFramework}
               isLoading={controlsLoading}
             />
           </CardContent>
