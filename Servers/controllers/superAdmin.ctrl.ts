@@ -439,9 +439,7 @@ export async function generateMonitoringToken(req: Request, res: Response) {
     if (!privateKey) {
       return res.status(500).json(
         STATUS_CODE[500]({
-          message: req.t!(
-            "OBSERVABILITY_PRIVATE_KEY is not configured on the server",
-          ),
+          message: req.t!("OBSERVABILITY_PRIVATE_KEY is not configured on the server"),
         }),
       );
     }

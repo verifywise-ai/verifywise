@@ -106,8 +106,5 @@ export async function updateMonitoringConfig(data: MonitoringConfigInput) {
  * `auth_header_set` — the raw token is never returned to the browser.
  */
 export async function generateMonitoringToken() {
-  return apiServices.post<ServerResponse<MonitoringConfig>>(
-    "/super-admin/monitoring/token",
-    {},
-  );
+  return apiServices.post<ServerResponse<MonitoringConfig>>("/super-admin/monitoring/token", {});
 }

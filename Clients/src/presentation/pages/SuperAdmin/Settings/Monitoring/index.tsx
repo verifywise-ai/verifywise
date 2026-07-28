@@ -131,8 +131,7 @@ const Monitoring: React.FC = () => {
     } catch {
       setAlert({
         variant: "error",
-        body:
-          "Failed to generate push token. Make sure the deployment name is saved and the server has OBSERVABILITY_PRIVATE_KEY configured.",
+        body: "Failed to generate push token. Make sure the deployment name is saved and the server has OBSERVABILITY_PRIVATE_KEY configured.",
       });
     } finally {
       setGenerating(false);
@@ -142,8 +141,7 @@ const Monitoring: React.FC = () => {
   // Token is signed for the saved deployment name, so require the current input
   // to match what's persisted before allowing generation.
   const canGenerateToken =
-    savedDeploymentName.trim().length > 0 &&
-    savedDeploymentName.trim() === deploymentName.trim();
+    savedDeploymentName.trim().length > 0 && savedDeploymentName.trim() === deploymentName.trim();
 
   if (loading) {
     return (
@@ -231,11 +229,7 @@ const Monitoring: React.FC = () => {
           <CustomizableButton
             variant="outlined"
             text={
-              generating
-                ? "Generating..."
-                : authHeaderSet
-                ? "Regenerate token"
-                : "Generate token"
+              generating ? "Generating..." : authHeaderSet ? "Regenerate token" : "Generate token"
             }
             icon={<KeyIcon size={16} />}
             onClick={handleGenerateToken}
