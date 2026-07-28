@@ -1,0 +1,11 @@
+# Code ownership — these paths require maintainer review on PRs.
+
+# CI/CD workflows
+.github/workflows/ @bluewave-labs/verifywise-maintainers
+
+# Database migrations
+Servers/database/migrations/ @bluewave-labs/verifywise-maintainers
+
+# Security-sensitive backend code
+Servers/middleware/ @bluewave-labs/verifywise-maintainers
+Servers/utils/ @bluewave-labs/verifywise-maintainers

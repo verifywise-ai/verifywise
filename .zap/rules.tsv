@@ -1,0 +1,36 @@
+# OWASP ZAP scan rules tuning
+# Format: rule-id<TAB>threshold<TAB>description
+# Valid thresholds (zap-baseline only): IGNORE | INFO | WARN | FAIL
+#   (PASS is also accepted). LOW/MEDIUM/HIGH are NOT valid here — using them
+#   makes zap-baseline fail to load this file and abort with exit code 3.
+# Rule IDs and their OWASP Top 10 tags: https://www.zaproxy.org/alerttags/
+#
+# Threshold semantics: IGNORE suppresses the alert, INFO/WARN report it without
+# failing, and FAIL makes the scan fail on that alert. Start conservative —
+# tighten (move rules to FAIL) as findings are triaged.
+# NOTE: zap-baseline requires 3 tab-separated tokens per line (id, threshold,
+# description). Lines with only 2 tokens abort the scan with exit code 3.
+
+# --- Known / accepted noise -------------------------------------------------
+# Timestamp disclosure (often build hashes, not real timestamps)
+10096	IGNORE	Timing disclosure false positive on async API responses (tuned during baseline triage)
+# Private IP disclosure in responses (internal services by design)
+2	IGNORE	Private IP disclosure accepted: internal services by design
+# X-Backend-Server / X-ChromeLogger informational leakage
+10039	INFO	Informational header leakage (X-Backend-Server / X-ChromeLogger)
+
+# --- Enforced hard (OWASP 2025 mapping in comments) --------------------------
+# A05: Injection — SQL injection must always fail the scan
+40018	FAIL	SQL injection must always fail the scan (OWASP A05)
+# A05: Cross-site scripting (reflected / persistent / DOM)
+40012	FAIL	Reflected XSS must fail the scan (OWASP A05)
+40014	FAIL	Persistent XSS must fail the scan (OWASP A05)
+40026	FAIL	DOM-based XSS must fail the scan (OWASP A05)
+# A01: Broken access control — path traversal
+6	FAIL	Path traversal must fail the scan (OWASP A01)
+# A02: Security misconfiguration — missing headers stay visible but don't fail
+10020	WARN	Missing X-Frame-Options header reported but not failing (OWASP A02)
+10021	WARN	Missing X-Content-Type-Options header reported but not failing (OWASP A02)
+10038	WARN	Content-Security-Policy header findings reported but not failing (OWASP A02)
+# A07: Authentication failures — session/fixation issues
+10010	WARN	Session fixation / cookie issues reported but not failing (OWASP A07)

@@ -39,6 +39,7 @@
         refresh_token_secret: "{{ existing_env.content | b64decode | regex_search('^REFRESH_TOKEN_SECRET=(.*)$', '\\1', multiline=True) | first }}"
         encryption_key: "{{ existing_env.content | b64decode | regex_search('^ENCRYPTION_KEY=(.*)$', '\\1', multiline=True) | first }}"
         ai_gateway_internal_key: "{{ existing_env.content | b64decode | regex_search('^AI_GATEWAY_INTERNAL_KEY=(.*)$', '\\1', multiline=True) | first }}"
+        eval_server_internal_key: "{{ existing_env.content | b64decode | regex_search('^EVAL_SERVER_INTERNAL_KEY=(.*)$', '\\1', multiline=True) | first | default(lookup('password', '/dev/null length=32 chars=ascii_letters,digits'), true) }}"
 
     - name: Sync docker-compose files from local repo
       ansible.builtin.copy:

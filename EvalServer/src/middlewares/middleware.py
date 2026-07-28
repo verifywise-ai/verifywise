@@ -1,6 +1,8 @@
 from fastapi import Request, HTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 
+from middlewares.auth import verify_internal_key
+
 
 class TenantMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
@@ -17,6 +19,12 @@ class TenantMiddleware(BaseHTTPMiddleware):
           1) x-organization-id header (preferred - forwarded from backend)
           2) x-tenant-id header (backward compatibility during migration)
         """
+        # Security: tenant context headers are spoofable, so only trust them
+        # when the caller proves it is the Express backend (shared secret).
+        denial = verify_internal_key(request)
+        if denial is not None:
+            return denial
+
         organization_id = None
         tenant_id = None  # Keep for backward compatibility during migration
 

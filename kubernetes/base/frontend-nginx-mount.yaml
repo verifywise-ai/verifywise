@@ -5,6 +5,10 @@ metadata:
 spec:
   template:
     spec:
+      # Pod-level security context (KSV-0118): runtime-default seccomp profile.
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       volumes:
         - name: nginx-config
           configMap:

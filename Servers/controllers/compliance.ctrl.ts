@@ -84,8 +84,9 @@ export async function getComplianceScoreByOrganization(req: Request, res: Respon
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid organization ID")));
     }
 
-    // Authorization check: ensure user can access this organization's data
-    if (req.organizationId && req.organizationId !== organizationId) {
+    // Authorization check: ensure user can access this organization's data.
+    // Fail-closed: a missing organization context is denied, not allowed.
+    if (!req.organizationId || req.organizationId !== organizationId) {
       return res
         .status(403)
         .json(
@@ -150,8 +151,9 @@ export async function getComplianceDetails(req: Request, res: Response) {
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid organization ID")));
     }
 
-    // Authorization check: ensure user can access this organization's data
-    if (req.organizationId && req.organizationId !== organizationId) {
+    // Authorization check: ensure user can access this organization's data.
+    // Fail-closed: a missing organization context is denied, not allowed.
+    if (!req.organizationId || req.organizationId !== organizationId) {
       return res
         .status(403)
         .json(

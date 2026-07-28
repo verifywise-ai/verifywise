@@ -40,6 +40,8 @@ import {
   hashApiToken,
   touchApiTokenLastUsedQuery,
 } from "../utils/tokens.utils";
+import { rlsEnforcement } from "./rls.middleware";
+import { logEvent } from "../utils/logger/dbLogger";
 
 /**
  * Express middleware for JWT authentication and authorization
@@ -195,6 +197,20 @@ const authenticateJWT = async (
         if (!isNaN(orgId) && orgId > 0) {
           req.organizationId = orgId;
           req.tenantHash = getTenantHash(orgId);
+
+          // Audit every SuperAdmin cross-organization access (actor + target
+          // org) to the event log / audit ledger. Fire-and-forget: logging
+          // must never block or fail the request.
+          try {
+            logEvent(
+              "Read",
+              `SuperAdmin cross-org access: user ${decoded.id} accessed organization ${orgId} (${req.method} ${req.originalUrl})`,
+              decoded.id,
+              orgId,
+            ).catch((err) => console.error("Failed to audit SuperAdmin cross-org access:", err));
+          } catch (err) {
+            console.error("Failed to audit SuperAdmin cross-org access:", err);
+          }
         }
       }
       // If no X-Organization-Id header, organizationId stays undefined (super-admin-only routes)
@@ -251,7 +267,11 @@ const authenticateJWT = async (
         organizationId: req.organizationId ?? 0,
       },
       () => {
-        next();
+        // RLS Phase 2 (flag-gated, OFF by default): when
+        // RLS_ENFORCEMENT_ENABLED=true, establishes the per-request
+        // transaction + SET LOCAL app.current_org before the request
+        // reaches any route handler. Pass-through otherwise.
+        rlsEnforcement(req, res, next);
       },
     );
   } catch (error) {
