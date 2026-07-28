@@ -199,8 +199,7 @@ const generateRecommendations = async (
       `SELECT
          control_id, overall_score, readiness_level,
          requirements_score, evidence_quality_score,
-         evidence_count_score, evidence_recency_score,
-         task_completion_score, risk_mitigation_score, recommendations
+         evidence_count_score, evidence_recency_score, recommendations
        FROM control_readiness_scores
        WHERE framework_type = :frameworkType
          AND organization_id = :organizationId

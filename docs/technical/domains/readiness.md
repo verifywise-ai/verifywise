@@ -60,14 +60,14 @@ file with the control — not a governance one. The upsert no longer names eithe
 column, so a newly inserted row gets NULL; a row updated through `ON CONFLICT`
 keeps whatever value it already held. Nothing reads them either way.
 
-The advisor's `generateRecommendations` still selects these two columns, but
-nothing in the function reads them — they appear in neither the actions, the
-weakest-dimension map, nor the returned object, since a NULL column would make
-that branch (or that "weakest" verdict) fire unconditionally. Live task/risk
-state for a control is available on demand through the separate
-`check_task_completion` / `analyze_risk_status` advisor tools, which compute
-real values from the current tasks and risks rather than reading the retired
-columns.
+No query selects them any more either. The advisor's `generateRecommendations`
+dropped them from its SELECT once nothing in the function read them: a NULL
+column reached through `(col || 0) < 50` makes that branch — or that "weakest"
+verdict — fire unconditionally, so leaving the columns in the result set only
+invited the next reader to reintroduce the bug. Live task/risk state for a
+control is available on demand through the separate `check_task_completion` /
+`analyze_risk_status` advisor tools, which compute real values from the current
+tasks and risks rather than reading the retired columns.
 
 `requirements_score` is different: it carries half the control score, so the
 advisor does branch on it. Below 100 it emits "Complete the remaining

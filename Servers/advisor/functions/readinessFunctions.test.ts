@@ -167,4 +167,18 @@ describe("generate_recommendations", () => {
     const options = mockQuery.mock.calls[0][1] as { replacements: Record<string, unknown> };
     expect(options.replacements.organizationId).toBe(1);
   });
+
+  // upsertControlScoreQuery stopped writing these two columns in the
+  // requirements-scoring rewrite, and nothing in this file reads them from the
+  // result any more. Selecting them invites the next reader to branch on a
+  // column that is NULL for every row scored since.
+  it("does not select the retired task and risk columns", async () => {
+    mockQuery.mockResolvedValue([[]]);
+
+    await availableReadinessTools.generate_recommendations({ framework_type: "eu_ai_act" }, 1);
+
+    const sql = mockQuery.mock.calls[0][0] as string;
+    expect(sql).not.toContain("task_completion_score");
+    expect(sql).not.toContain("risk_mitigation_score");
+  });
 });
