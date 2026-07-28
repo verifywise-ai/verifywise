@@ -18,10 +18,6 @@ import {
   Network,
   Database,
   Rocket,
-  // Workflow,
-  // Sparkles,
-  FileSearch,
-  Activity,
 } from "lucide-react";
 import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
 import useMultipleOnScreen from "../../../application/hooks/useMultipleOnScreen";
@@ -208,36 +204,6 @@ const Sidebar: React.FC<SidebarProps> = ({
           label: "Incident management",
           icon: <AlertCircle size={16} strokeWidth={1.5} />,
           path: "/ai-incident-managements",
-        },
-      ],
-    },
-    {
-      name: "AI AGENTIC",
-      items: [
-        // Workflows and AI Skills are intentionally disabled (origin/develop).
-        // {
-        //   id: "workflows",
-        //   label: "Workflows",
-        //   icon: <Workflow size={16} strokeWidth={1.5} />,
-        //   path: "/workflows",
-        // },
-        // {
-        //   id: "skills",
-        //   label: "AI Skills",
-        //   icon: <Sparkles size={16} strokeWidth={1.5} />,
-        //   path: "/skills",
-        // },
-        {
-          id: "ai-audit",
-          label: "AI audit",
-          icon: <FileSearch size={16} strokeWidth={1.5} />,
-          path: "/ai-audit",
-        },
-        {
-          id: "ai-observability",
-          label: "AI observability",
-          icon: <Activity size={16} strokeWidth={1.5} />,
-          path: "/ai-observability",
         },
       ],
     },
