@@ -83,11 +83,76 @@ describe("generate_recommendations", () => {
 
     const rec = result.recommendations[0];
     expect(rec.actions).toEqual([
+      "Complete the remaining requirements for this control",
       "Upload evidence documents for this control",
       "Improve quality of existing evidence (add specifics, recent data)",
       "Update or replace outdated evidence with recent documents",
     ]);
     expect(rec.weakest_dimension).toBe("evidence_count");
+  });
+
+  it("recommends completing requirements for a control whose only weak dimension is requirements", async () => {
+    // 0% requirement completion with perfect evidence scores 50/100 under the
+    // 0.50/0.20/0.15/0.15 weighting. Before requirements_score was wired in,
+    // this control was told to "continue maintaining current compliance
+    // posture" and reported evidence_quality — a dimension sitting at 100 —
+    // as its weakest.
+    mockQuery.mockResolvedValue([
+      [
+        {
+          control_id: 3,
+          overall_score: 50,
+          readiness_level: "at_risk",
+          requirements_score: 0,
+          evidence_quality_score: 100,
+          evidence_count_score: 100,
+          evidence_recency_score: 100,
+          task_completion_score: null,
+          risk_mitigation_score: null,
+          recommendations: null,
+        },
+      ],
+    ]);
+
+    const result = await availableReadinessTools.generate_recommendations(
+      { framework_type: "eu_ai_act" },
+      1,
+    );
+
+    const rec = result.recommendations[0];
+    expect(rec.actions).toEqual(["Complete the remaining requirements for this control"]);
+    expect(rec.weakest_dimension).toBe("requirements");
+  });
+
+  it("does not fire the requirements action for a row whose requirements_score is NULL", async () => {
+    // Rows written before the column existed read NULL. Treating NULL as 0
+    // would make the requirements advice — and the "requirements" weakest
+    // verdict — fire unconditionally, the same defect the retired task/risk
+    // columns caused.
+    mockQuery.mockResolvedValue([
+      [
+        {
+          control_id: 4,
+          overall_score: 100,
+          readiness_level: "ready",
+          requirements_score: null,
+          evidence_quality_score: 100,
+          evidence_count_score: 100,
+          evidence_recency_score: 100,
+          task_completion_score: null,
+          risk_mitigation_score: null,
+          recommendations: null,
+        },
+      ],
+    ]);
+
+    const result = await availableReadinessTools.generate_recommendations(
+      { framework_type: "eu_ai_act" },
+      1,
+    );
+
+    const rec = result.recommendations[0];
+    expect(rec.actions).toEqual(["Continue maintaining current compliance posture"]);
   });
 
   it("still selects requirements_score and scopes by organization_id", async () => {

@@ -75,6 +75,66 @@ export async function upsertControlScoreQuery(
 }
 
 /**
+ * Delete the control readiness rows of a scope that are no longer part of its
+ * applicable control set.
+ *
+ * The applicable set is a moving target — changing a project's risk tier or
+ * high-risk role changes the visible EU categories, and marking an ISO annex
+ * category not applicable drops it — so without this a recalculation upserts
+ * the current set and leaves every previously scored control behind. Those
+ * orphans keep their stale score and outrank the live rows in every
+ * `ORDER BY overall_score ASC` consumer (weakest controls, recommendations,
+ * the heat map).
+ *
+ * Scoped by exactly the columns of `upsertControlScoreQuery`'s ON CONFLICT key
+ * (`uq_ctrl_readiness_full`) minus `control_id`, so a recalculation can only
+ * ever remove rows the same recalculation would have overwritten: one user's
+ * run cannot destroy another user's scores, and a project-scoped run cannot
+ * destroy the organization-wide (`project_id IS NULL`) rows. The `::int` casts
+ * are required — a NULL bind inside COALESCE has no inferrable type on the
+ * organization-wide path.
+ *
+ * Returns the number of rows removed.
+ */
+export async function pruneControlScoresQuery(
+  frameworkType: string,
+  organizationId: number,
+  projectId: number | null,
+  createdBy: number | null,
+  applicableControlIds: number[],
+): Promise<number> {
+  // An empty applicable set means the scope was not recalculated at all; the
+  // callers skip it. Deleting everything here would be a data loss, and an
+  // empty IN list is not valid SQL either.
+  if (applicableControlIds.length === 0) return 0;
+
+  try {
+    const [rows] = await sequelize.query(
+      `DELETE FROM control_readiness_scores
+       WHERE organization_id = :organizationId
+         AND framework_type = :frameworkType
+         AND COALESCE(project_id, 0) = COALESCE(:projectId::int, 0)
+         AND COALESCE(created_by, 0) = COALESCE(:createdBy::int, 0)
+         AND control_id NOT IN (:applicableControlIds)
+       RETURNING control_id`,
+      {
+        replacements: {
+          organizationId,
+          frameworkType,
+          projectId,
+          createdBy,
+          applicableControlIds,
+        },
+      },
+    );
+    return (rows as unknown[]).length;
+  } catch (error) {
+    logger.error("Error pruning control readiness scores:", error);
+    throw error;
+  }
+}
+
+/**
  * Upsert a framework readiness score.
  */
 export async function upsertFrameworkScoreQuery(
@@ -387,35 +447,6 @@ export async function getReadinessHistoryQuery(
   }
 }
 
-/**
- * Get all controls from a framework struct table for calculation.
- */
-export async function getFrameworkControlsQuery(frameworkType: string): Promise<any[]> {
-  try {
-    let query: string;
-    if (frameworkType === "eu_ai_act") {
-      query = `SELECT id AS control_id, title
-               FROM controls_struct_eu
-               WHERE title IS NOT NULL`;
-    } else if (frameworkType === "iso_42001") {
-      query = `SELECT id AS control_id, title
-               FROM annexcategories_struct_iso
-               WHERE title IS NOT NULL`;
-    } else {
-      // Generic — try the eu_ai_act table as fallback
-      query = `SELECT id AS control_id, title
-               FROM controls_struct_eu
-               WHERE title IS NOT NULL`;
-    }
-
-    const [rows] = await sequelize.query(query);
-    return rows as any[];
-  } catch (error) {
-    logger.error("Error getting framework controls:", error);
-    throw error;
-  }
-}
-
 /** readiness framework_type → frameworks.name */
 export const FRAMEWORK_NAMES: Record<string, string> = {
   eu_ai_act: "EU AI Act",
@@ -553,7 +584,8 @@ export async function getAssessmentCompletionQuery(
        FROM assessments a
        JOIN answers_eu ans
          ON a.organization_id = ans.organization_id AND a.id = ans.assessment_id
-       JOIN projects_frameworks pf ON pf.id = a.projects_frameworks_id
+       JOIN projects_frameworks pf
+         ON pf.id = a.projects_frameworks_id AND pf.organization_id = a.organization_id
        WHERE a.organization_id = :organizationId
          AND (:projectId::int IS NULL OR pf.project_id = :projectId)`,
       { replacements: { organizationId, projectId } },

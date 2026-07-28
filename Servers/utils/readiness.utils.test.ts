@@ -25,6 +25,7 @@ import {
   upsertControlScoreQuery,
   upsertFrameworkScoreQuery,
   getWeakestControlsQuery,
+  pruneControlScoresQuery,
 } from "./readiness.utils";
 import { getVisibleEuCategoryIdsForProject } from "./eu.utils";
 
@@ -210,6 +211,15 @@ describe("getAssessmentCompletionQuery", () => {
     expect(options.replacements).toMatchObject({ organizationId: 1, projectId: 7 });
   });
 
+  it("carries its own organization predicate on the projects_frameworks join", async () => {
+    mockQuery.mockResolvedValueOnce([[{ total: "10", done: "5" }]]);
+
+    await getAssessmentCompletionQuery(1, 7);
+
+    const sql = mockQuery.mock.calls[0][0];
+    expect(sql).toContain("pf.organization_id = a.organization_id");
+  });
+
   it("covers the whole organization when no project is given", async () => {
     mockQuery.mockResolvedValueOnce([[{ total: "10", done: "5" }]]);
 
@@ -304,6 +314,72 @@ describe("upsertFrameworkScoreQuery", () => {
     });
 
     expect(mockQuery.mock.calls[0][1].replacements).toMatchObject({ assessmentScore: null });
+  });
+});
+
+describe("pruneControlScoresQuery", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockQuery.mockResolvedValue([[{ control_id: 5 }, { control_id: 6 }]]);
+  });
+
+  it("scopes the delete by every column of the upsert's conflict key except control_id", async () => {
+    // uq_ctrl_readiness_full is
+    //   (control_id, framework_type, COALESCE(project_id, 0), COALESCE(created_by, 0), organization_id)
+    // A looser scope would let one user's recalculation destroy another user's
+    // rows, or a project-scoped run destroy the organization-wide rows.
+    await pruneControlScoresQuery("eu_ai_act", 1, 7, 2, [1, 2, 3]);
+
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(sql).toContain("DELETE FROM control_readiness_scores");
+    expect(sql).toContain("organization_id = :organizationId");
+    expect(sql).toContain("framework_type = :frameworkType");
+    expect(sql).toContain("COALESCE(project_id, 0) = COALESCE(:projectId::int, 0)");
+    expect(sql).toContain("COALESCE(created_by, 0) = COALESCE(:createdBy::int, 0)");
+    expect(options.replacements).toMatchObject({
+      organizationId: 1,
+      frameworkType: "eu_ai_act",
+      projectId: 7,
+      createdBy: 2,
+    });
+  });
+
+  it("excludes the recalculated control ids from the delete", async () => {
+    await pruneControlScoresQuery("eu_ai_act", 1, 7, 2, [1, 2, 3]);
+
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(sql).toContain("control_id NOT IN (:applicableControlIds)");
+    expect(options.replacements.applicableControlIds).toEqual([1, 2, 3]);
+  });
+
+  it("uses named replacements only — no interpolated ids", async () => {
+    await pruneControlScoresQuery("iso_42001", 1, null, null, [11, 12]);
+
+    const sql = mockQuery.mock.calls[0][0];
+    expect(sql).not.toContain("11");
+    expect(sql).not.toContain("iso_42001");
+  });
+
+  it("passes a null project and creator through as null for the organization-wide scope", async () => {
+    await pruneControlScoresQuery("eu_ai_act", 1, null, null, [1]);
+
+    expect(mockQuery.mock.calls[0][1].replacements).toMatchObject({
+      projectId: null,
+      createdBy: null,
+    });
+  });
+
+  it("deletes nothing when the applicable set is empty", async () => {
+    const removed = await pruneControlScoresQuery("eu_ai_act", 1, 7, 2, []);
+
+    expect(mockQuery).not.toHaveBeenCalled();
+    expect(removed).toBe(0);
+  });
+
+  it("returns the number of rows removed", async () => {
+    const removed = await pruneControlScoresQuery("eu_ai_act", 1, 7, 2, [1]);
+
+    expect(removed).toBe(2);
   });
 });
 

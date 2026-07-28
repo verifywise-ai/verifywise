@@ -54,19 +54,48 @@ list show layer 1; the headline score, trend chart and history show layer 2.
 
 ## Retired inputs
 
-`task_completion_score` and `risk_mitigation_score` no longer feed the score;
-`control_readiness_scores` always writes them as NULL now. Both were derived
-from an incidental relationship — a task or risk sharing a file with the
-control — not a governance one.
+`task_completion_score` and `risk_mitigation_score` no longer feed the score.
+Both were derived from an incidental relationship — a task or risk sharing a
+file with the control — not a governance one. The upsert no longer names either
+column, so a newly inserted row gets NULL; a row updated through `ON CONFLICT`
+keeps whatever value it already held. Nothing reads them either way.
 
 The advisor's `generateRecommendations` still selects these two columns, but
-only passes them through in its response — no recommendation or
-weakest-dimension logic branches on them any more, since a NULL column would
-make that branch (or that "weakest" verdict) fire unconditionally. Live
-task/risk state for a control is available on demand through the separate
+nothing in the function reads them — they appear in neither the actions, the
+weakest-dimension map, nor the returned object, since a NULL column would make
+that branch (or that "weakest" verdict) fire unconditionally. Live task/risk
+state for a control is available on demand through the separate
 `check_task_completion` / `analyze_risk_status` advisor tools, which compute
 real values from the current tasks and risks rather than reading the retired
 columns.
+
+`requirements_score` is different: it carries half the control score, so the
+advisor does branch on it. Below 100 it emits "Complete the remaining
+requirements for this control", and it is the first entry of the
+weakest-dimension map (ordered by scoring weight, so an exact tie resolves to
+the dimension that moves the overall score most). A NULL `requirements_score`
+— a row written before the column existed — defaults to 100 there, so an
+unknown dimension can never win "weakest" or fire the recommendation
+unconditionally.
+
+## Pruning
+
+The applicable control set is a moving target: changing a project's
+`ai_risk_classification` or `type_of_high_risk_role` changes what
+`getVisibleEuCategoryIdsForProject` returns, and marking an ISO annex category
+`is_applicable = false` drops it. Each recalculation therefore ends with
+`pruneControlScoresQuery`, which deletes the scope's `control_readiness_scores`
+rows whose `control_id` is not in the set just recalculated. Without it those
+orphans keep their stale score and, being lower than the live rows, monopolize
+every `ORDER BY overall_score ASC` consumer — weakest controls, recommendations
+and the heat map.
+
+The delete is scoped by exactly the columns of the upsert's `ON CONFLICT` key
+(`uq_ctrl_readiness_full`) minus `control_id` — `organization_id`,
+`framework_type`, `COALESCE(project_id, 0)`, `COALESCE(created_by, 0)` — so it
+can only ever remove rows that same recalculation would have overwritten. One
+user's run cannot destroy another user's scores, and a project-scoped run
+cannot destroy the organization-wide (`project_id IS NULL`) rows.
 
 ## Key files
 

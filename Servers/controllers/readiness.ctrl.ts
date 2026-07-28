@@ -20,14 +20,16 @@ import {
   getReadinessHistoryQuery,
   getApplicableControlsWithRequirementsQuery,
   getAssessmentCompletionQuery,
+  pruneControlScoresQuery,
 } from "../utils/readiness.utils";
 import { trackAIContent } from "../middleware/aiContentTracker.middleware";
 
 const fileName = "readiness.ctrl.ts";
 
 /**
- * Calculate readiness for a single control — fetch evidence, tasks, risks,
- * compute the weighted score, and persist.
+ * Calculate readiness for a single control — take the caller's requirement
+ * completion, fetch the control's evidence metrics, compute the weighted score,
+ * and persist. Tasks and risks no longer feed the score.
  */
 async function calculateControlReadiness(
   controlId: number,
@@ -110,6 +112,12 @@ export async function calculateAll(req: Request, res: Response) {
         organizationId,
         projectId,
       );
+      // No applicable controls means the scope has not installed this
+      // framework. Persisting total_controls = 0 / avg_score = 0 would report
+      // a real zero for a framework nobody is being measured against —
+      // calculateForFramework 404s on the same condition.
+      if (controls.length === 0) continue;
+
       const controlScores: Array<{
         control_id: number;
         overall_score: number;
@@ -132,6 +140,17 @@ export async function calculateAll(req: Request, res: Response) {
           readiness_level: score.readiness_level,
         });
       }
+
+      // Drop the rows of controls that are no longer applicable to this scope,
+      // so the weakest-controls and heat map feeds cannot serve scores the
+      // current formula never produced.
+      await pruneControlScoresQuery(
+        fw,
+        organizationId,
+        projectId,
+        userId,
+        controls.map((c) => c.control_id),
+      );
 
       const agg = aggregateFrameworkScores(controlScores, fw);
       const assessmentScore =
@@ -173,7 +192,7 @@ export async function calculateAll(req: Request, res: Response) {
             modelUsed: "readiness-calculator-v1",
             modelProvider: "verifywise",
             toolName: "readiness-calculation",
-            promptSummary: `Readiness calculated for ${fw}: ${agg.avg_score}/100 (${agg.total_controls} controls)`,
+            promptSummary: `Readiness calculated for ${fw}: ${blendedScore}/100 (${agg.total_controls} controls)`,
           },
           userId,
         ).catch(() => {});
@@ -236,6 +255,17 @@ export async function calculateForFramework(req: Request, res: Response) {
         readiness_level: score.readiness_level,
       });
     }
+
+    // Drop the rows of controls that are no longer applicable to this scope,
+    // so the weakest-controls and heat map feeds cannot serve scores the
+    // current formula never produced.
+    await pruneControlScoresQuery(
+      frameworkType,
+      organizationId,
+      projectId,
+      userId,
+      controls.map((c) => c.control_id),
+    );
 
     const agg = aggregateFrameworkScores(controlScores, frameworkType);
     const assessmentScore =

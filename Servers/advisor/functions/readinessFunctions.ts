@@ -221,6 +221,13 @@ const generateRecommendations = async (
     const recommendations = controls.map((ctrl) => {
       const actions: string[] = [];
 
+      // requirements_score carries half the control score, so an incomplete
+      // control has to say so before any evidence advice — otherwise a control
+      // sitting at 50/100 purely on unfinished requirements is told to
+      // "continue maintaining current compliance posture".
+      if ((ctrl.requirements_score ?? 100) < 100) {
+        actions.push("Complete the remaining requirements for this control");
+      }
       if ((ctrl.evidence_count_score || 0) < 30) {
         actions.push("Upload evidence documents for this control");
       }
@@ -259,7 +266,12 @@ const generateRecommendations = async (
 };
 
 function getWeakestDimension(ctrl: any): string {
+  // Ordered by scoring weight, so an exact tie resolves to the dimension that
+  // moves the overall score most. A NULL requirements_score (a row written
+  // before the column existed) defaults to 100 rather than 0 — an unknown
+  // dimension must not win "weakest" unconditionally.
   const dims: Record<string, number> = {
+    requirements: ctrl.requirements_score ?? 100,
     evidence_quality: ctrl.evidence_quality_score || 0,
     evidence_count: ctrl.evidence_count_score || 0,
     evidence_recency: ctrl.evidence_recency_score || 0,
