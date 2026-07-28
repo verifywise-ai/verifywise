@@ -37,6 +37,23 @@ describe("runScheduledReport", () => {
     expect(updateRunStatusQuery).toHaveBeenCalledWith(77, sched.organization_id, expect.objectContaining({ status: "success" }));
     expect(outcome).toEqual({ runId: 77, status: "success" });
   });
+  // report_runs has no project column: config_snapshot.project_id is the only
+  // record of a run's project for a run-now report, and listRunsQuery reads it
+  // to keep a project's report off a non-member's list.
+  it("snapshots the run's project so the list can scope it by membership", async () => {
+    generateReport.mockResolvedValue({ success: true, content: Buffer.from("x"), filename: "r.pdf", mimeType: "application/pdf" });
+    deliverReport.mockResolvedValue({ storage: { status: "success", fileId: 5 }, emailLink: { status: "skipped" }, attachment: { status: "skipped" }, fileId: 5 });
+    await runScheduledReport(sched as any, { triggeredBy: "scheduler", scheduledFor: new Date() });
+    expect(createRunQuery).toHaveBeenCalledWith(
+      expect.objectContaining({ config_snapshot: expect.objectContaining({ project_id: 5 }) }),
+    );
+  });
+  it("snapshots a null project for an organization-scoped run", async () => {
+    generateReport.mockResolvedValue({ success: true, content: Buffer.from("x"), filename: "r.pdf", mimeType: "application/pdf" });
+    deliverReport.mockResolvedValue({ storage: { status: "success", fileId: 5 }, emailLink: { status: "skipped" }, attachment: { status: "skipped" }, fileId: 5 });
+    await runScheduledReport({ ...sched, project_id: null } as any, { triggeredBy: "manual", userId: 3 });
+    expect(createRunQuery.mock.calls[0][0].config_snapshot.project_id).toBeNull();
+  });
   it("delivery partial failure -> partial_success", async () => {
     generateReport.mockResolvedValue({ success: true, content: Buffer.from("x"), filename: "r.pdf", mimeType: "application/pdf" });
     deliverReport.mockResolvedValue({ storage: { status: "failed" }, emailLink: { status: "skipped" }, attachment: { status: "skipped" } });

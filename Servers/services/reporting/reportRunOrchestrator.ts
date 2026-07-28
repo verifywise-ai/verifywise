@@ -30,7 +30,12 @@ export async function runScheduledReport(sched: any, opts: { triggeredBy: "sched
     organization_id: sched.organization_id, scheduled_report_id: sched.id ?? null,
     template_id: sched.template_id, template_version_id: sched.template_version_id,
     triggered_by: opts.triggeredBy, triggered_by_user_id: opts.userId ?? null,
-    config_snapshot: { sections_config: sched.sections_config, ai_blocks_config: sched.ai_blocks_config, delivery_config: sched.delivery_config },
+    // project_id is part of the snapshot because report_runs has no project
+    // column and a run-now report has no scheduled_reports row to fall back on
+    // (scheduled_report_id is NULL). listRunsQuery reads it to decide who may
+    // see the run: the legacy Generate list showed a non-Admin only the reports
+    // of projects they own or are a member of. NULL means organization scope.
+    config_snapshot: { project_id: sched.project_id ?? null, sections_config: sched.sections_config, ai_blocks_config: sched.ai_blocks_config, delivery_config: sched.delivery_config },
     scheduled_for: opts.scheduledFor ?? null,
   });
 

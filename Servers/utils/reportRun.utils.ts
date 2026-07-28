@@ -1,5 +1,6 @@
 import { sequelize } from "../database/db";
 import { QueryTypes } from "sequelize";
+import { deleteFileById } from "./fileUpload.utils";
 
 export async function createRunQuery(input: any): Promise<any> {
   const rows: any[] = await sequelize.query(
@@ -36,6 +37,60 @@ export async function updateRunStatusQuery(id: number, organization_id: number, 
       }, type: QueryTypes.UPDATE });
 }
 
+/**
+ * Who is asking. The runs list is not purely organization-scoped: the legacy
+ * Generate list it replaced showed a non-Admin only the reports of projects
+ * they own or are a member of (`getGeneratedReportsQuery`), and that rule has
+ * to survive the move to report_runs. Required, not optional — a caller that
+ * cannot say who the viewer is must not get an organization-wide list by
+ * default.
+ */
+export type ReportRunViewer = {
+  userId: number | null;
+  /** Role name from the JWT: Admin, Reviewer, Editor, Auditor, SuperAdmin. */
+  role: string | null;
+};
+
+/**
+ * The project a run covers, as text, or NULL when it covers the whole
+ * organization.
+ *
+ * report_runs has no project column, so the value comes from two places:
+ * config_snapshot.project_id, which runScheduledReport writes for every run it
+ * creates and the legacy backfill migration wrote for imported files; and the
+ * schedule's own project_id, which covers runs created before the snapshot
+ * carried one. Compared as text so a snapshot value that is not a number can
+ * never raise a cast error mid-query.
+ */
+const RUN_PROJECT_ID_SQL = `COALESCE(rr.config_snapshot->>'project_id', sr.project_id::text)`;
+
+// sr is joined for RUN_PROJECT_ID_SQL alone. Org-scoped on the join, like every
+// other table this file touches.
+const RUN_FROM_SQL = `FROM report_runs rr
+     LEFT JOIN scheduled_reports sr
+       ON sr.id = rr.scheduled_report_id AND sr.organization_id = :organization_id`;
+
+/**
+ * The membership predicate, or null when the viewer may see everything.
+ *
+ * Mirrors getGeneratedReportsQuery: Admin and SuperAdmin are unrestricted,
+ * everyone else sees a project's report only if they own the project or are a
+ * member of it. An organization-scoped report (no project) is visible to all —
+ * the spec calls the legacy inner join to `projects` a bug precisely because it
+ * hid those.
+ */
+function viewerVisibilitySql(viewer: ReportRunViewer): string | null {
+  if (viewer.role === "Admin" || viewer.role === "SuperAdmin") return null;
+  return `(${RUN_PROJECT_ID_SQL} IS NULL OR EXISTS (
+       SELECT 1 FROM projects p
+       LEFT JOIN projects_members pm
+         ON pm.project_id = p.id AND pm.organization_id = :organization_id
+       WHERE p.id::text = ${RUN_PROJECT_ID_SQL}
+         AND p.organization_id = :organization_id
+         AND (p.owner = :viewerUserId OR pm.user_id = :viewerUserId)
+     ))`;
+}
+
 // Pagination replaces a hard LIMIT 200. The default limit is still 200 and
 // offset 0, so a caller that passes nothing sees exactly what it saw before.
 // `total` lets a UI page without a second endpoint.
@@ -48,16 +103,17 @@ export async function listRunsQuery(
     limit?: number;
     offset?: number;
   } = {},
+  viewer: ReportRunViewer,
 ): Promise<{ rows: any[]; total: number }> {
-  const where: string[] = ["organization_id = :organization_id"];
+  const where: string[] = ["rr.organization_id = :organization_id"];
   const replacements: any = { organization_id };
 
   if (filters.scheduledReportId) {
-    where.push("scheduled_report_id = :scheduledReportId");
+    where.push("rr.scheduled_report_id = :scheduledReportId");
     replacements.scheduledReportId = Number(filters.scheduledReportId);
   }
   if (filters.status) {
-    where.push("status = :status");
+    where.push("rr.status = :status");
     replacements.status = String(filters.status);
   }
 
@@ -65,22 +121,45 @@ export async function listRunsQuery(
   // both. An omitted flag must keep the pre-archive behaviour for any caller
   // that has not opted in.
   if (filters.archived === true) {
-    where.push("archived_at IS NOT NULL");
+    where.push("rr.archived_at IS NOT NULL");
   } else if (filters.archived === false) {
-    where.push("archived_at IS NULL");
+    where.push("rr.archived_at IS NULL");
+  }
+
+  const visibility = viewerVisibilitySql(viewer);
+  if (visibility) {
+    where.push(visibility);
+    // NULL here means "no user", which matches no project owner and no member
+    // row — a viewer we cannot identify sees organization-scoped runs only.
+    replacements.viewerUserId = viewer.userId;
   }
 
   const whereSql = where.join(" AND ");
 
   const countRows: any[] = await sequelize.query(
-    `SELECT COUNT(*)::int AS total FROM report_runs WHERE ${whereSql}`,
+    `SELECT COUNT(*)::int AS total
+     ${RUN_FROM_SQL}
+     WHERE ${whereSql}`,
     { replacements, type: QueryTypes.SELECT },
   );
 
+  // template_name and the scope columns are joined here rather than resolved in
+  // the UI: the list is the only place they are needed, and a template that has
+  // since been archived still has to name its runs.
   const rows: any[] = await sequelize.query(
-    `SELECT * FROM report_runs WHERE ${whereSql}
-      ORDER BY created_at DESC
-      LIMIT :limit OFFSET :offset`,
+    `SELECT rr.*,
+            t.name AS template_name,
+            ${RUN_PROJECT_ID_SQL} AS scope_project_id,
+            p.project_title AS scope_project_title
+     ${RUN_FROM_SQL}
+     LEFT JOIN report_templates t
+       ON t.id = rr.template_id
+      AND (t.organization_id = :organization_id OR t.organization_id IS NULL)
+     LEFT JOIN projects p
+       ON p.id::text = ${RUN_PROJECT_ID_SQL} AND p.organization_id = :organization_id
+     WHERE ${whereSql}
+     ORDER BY rr.created_at DESC
+     LIMIT :limit OFFSET :offset`,
     {
       replacements: { ...replacements, limit: filters.limit ?? 200, offset: filters.offset ?? 0 },
       type: QueryTypes.SELECT,
@@ -125,25 +204,31 @@ export async function setRunArchivedQuery(
  * Permanently delete a run and the file it produced — the file is the report,
  * which is what DELETE /reporting/:id meant before runs became the list. A run
  * with no file_id (failed, or still running) deletes the row alone.
+ *
+ * One transaction, because the two deletes are not independent: report_runs
+ * .file_id is ON DELETE SET NULL, so if the file DELETE committed and the run
+ * DELETE then failed the user would be left with a run row pointing at nothing
+ * and no way to tell it had ever had a report. File removal goes through
+ * deleteFileById rather than a local DELETE so the file's folder mappings go
+ * with it — a bare `DELETE FROM files` leaves file_folder_mappings rows behind.
  */
 export async function deleteRunQuery(id: number, organization_id: number): Promise<boolean> {
-  const rows: any[] = await sequelize.query(
-    `SELECT id, file_id FROM report_runs WHERE id = :id AND organization_id = :organization_id`,
-    { replacements: { id, organization_id }, type: QueryTypes.SELECT },
-  );
-  const run = rows[0];
-  if (!run) return false;
-
-  if (run.file_id) {
-    await sequelize.query(
-      `DELETE FROM files WHERE id = :file_id AND organization_id = :organization_id`,
-      { replacements: { file_id: run.file_id, organization_id }, type: QueryTypes.DELETE },
+  return await sequelize.transaction(async (transaction) => {
+    const rows: any[] = await sequelize.query(
+      `SELECT id, file_id FROM report_runs WHERE id = :id AND organization_id = :organization_id`,
+      { replacements: { id, organization_id }, type: QueryTypes.SELECT, transaction },
     );
-  }
+    const run = rows[0];
+    if (!run) return false;
 
-  await sequelize.query(
-    `DELETE FROM report_runs WHERE id = :id AND organization_id = :organization_id`,
-    { replacements: { id, organization_id }, type: QueryTypes.DELETE },
-  );
-  return true;
+    if (run.file_id) {
+      await deleteFileById(run.file_id, organization_id, transaction);
+    }
+
+    await sequelize.query(
+      `DELETE FROM report_runs WHERE id = :id AND organization_id = :organization_id`,
+      { replacements: { id, organization_id }, type: QueryTypes.DELETE, transaction },
+    );
+    return true;
+  });
 }

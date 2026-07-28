@@ -2,6 +2,7 @@ jest.mock("../../database/db", () => ({ sequelize: { query: jest.fn() } }));
 import { sequelize } from "../../database/db";
 import { createRunQuery, updateRunStatusQuery, listRunsQuery } from "../reportRun.utils";
 const q = sequelize.query as jest.Mock;
+const ADMIN = { userId: 1, role: "Admin" };
 
 describe("reportRun.utils", () => {
   beforeEach(() => q.mockReset());
@@ -35,12 +36,12 @@ describe("reportRun.utils", () => {
   });
   it("listRunsQuery filters by org", async () => {
     q.mockResolvedValueOnce([{ total: 0 }]).mockResolvedValueOnce([]);
-    await listRunsQuery(7, {});
+    await listRunsQuery(7, {}, ADMIN);
     expect(q.mock.calls[0][1].replacements.organization_id).toBe(7);
   });
   it("listRunsQuery defaults to limit 200 offset 0 and returns rows + total", async () => {
     q.mockResolvedValueOnce([{ total: 3 }]).mockResolvedValueOnce([{ id: 1 }]);
-    const r = await listRunsQuery(7, {});
+    const r = await listRunsQuery(7, {}, ADMIN);
     expect(r).toEqual({ rows: [{ id: 1 }], total: 3 });
     expect(q.mock.calls[1][1].replacements.limit).toBe(200);
     expect(q.mock.calls[1][1].replacements.offset).toBe(0);

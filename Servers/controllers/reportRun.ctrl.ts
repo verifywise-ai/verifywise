@@ -9,6 +9,9 @@
  * org-scoped (getRunQuery), and the file is fetched org-scoped (getFileById),
  * so a run's file can never be downloaded across organizations.
  *
+ * The list is additionally narrowed by project membership for non-Admins (see
+ * listRunsQuery), matching the legacy Generate list this endpoint replaced.
+ *
  * @module controllers/reportRun
  */
 
@@ -34,13 +37,21 @@ export async function listRuns(req: Request, res: Response): Promise<any> {
     const archived =
       req.query.archived === "true" ? true : req.query.archived === "false" ? false : undefined;
 
-    const { rows, total } = await listRunsQuery(req.organizationId!, {
-      scheduledReportId: req.query.scheduledReportId,
-      status: req.query.status,
-      archived,
-      limit,
-      offset,
-    });
+    // The viewer is not optional: organization scope alone would show an
+    // Auditor every report in the organization, which is wider than the list
+    // this one replaced. listRunsQuery narrows non-Admins to the projects they
+    // own or belong to.
+    const { rows, total } = await listRunsQuery(
+      req.organizationId!,
+      {
+        scheduledReportId: req.query.scheduledReportId,
+        status: req.query.status,
+        archived,
+        limit,
+        offset,
+      },
+      { userId: req.userId ?? null, role: req.role ?? null },
+    );
 
     return res.status(200).json(STATUS_CODE[200]({ rows, total, limit, offset }));
   } catch (e) {

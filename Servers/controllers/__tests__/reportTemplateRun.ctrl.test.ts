@@ -13,6 +13,7 @@ jest.mock("../../utils/statusCode.utils", () => ({
   STATUS_CODE: {
     200: (d: any) => ({ message: "OK", data: d }),
     202: (d: any) => ({ message: "Accepted", data: d }),
+    400: (d: any) => ({ message: "Bad Request", data: d }),
     404: (d: any) => ({ message: "Not Found", data: d }),
     500: (d: any) => ({ message: "Internal Server Error", data: d }),
   },
@@ -111,6 +112,37 @@ describe("runTemplateNow", () => {
         data: { runId: 79, status: "failed", error: "generation failed" },
       }),
     );
+  });
+
+  // project_id is snapshotted into the run and read back by listRunsQuery to
+  // decide who may see the report. A value that is not a number would snapshot
+  // as "no project" and publish the report to the whole organization, so it is
+  // rejected rather than coerced.
+  it.each([undefined, null, "", "not-a-number", {}])(
+    "400s on a project-scoped run whose projectId is %p",
+    async (projectId) => {
+      const res = createMockRes() as Response;
+
+      await runTemplateNow(
+        { params: { id: "2" }, body: { ...body, projectId }, organizationId: 5, userId: 3 } as any,
+        res,
+      );
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(mockRun).not.toHaveBeenCalled();
+    },
+  );
+
+  it("accepts a numeric-string projectId", async () => {
+    const res = createMockRes() as Response;
+
+    await runTemplateNow(
+      { params: { id: "2" }, body: { ...body, projectId: "4" }, organizationId: 5, userId: 3 } as any,
+      res,
+    );
+
+    expect(mockRun.mock.calls[0][0].project_id).toBe(4);
+    expect(res.status).toHaveBeenCalledWith(200);
   });
 
   it("404s when the template does not belong to the organization", async () => {

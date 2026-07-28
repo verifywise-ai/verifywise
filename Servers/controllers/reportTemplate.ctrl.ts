@@ -254,6 +254,19 @@ export async function archiveTemplate(req: Request, res: Response): Promise<any>
 }
 
 /**
+ * A positive integer project id, or null for anything else.
+ *
+ * `Number(null)` and `Number("")` are both 0, so an emptiness check has to come
+ * before the integer check — otherwise a missing projectId would pass as
+ * project 0.
+ */
+function toProjectId(raw: unknown): number | null {
+  if (typeof raw !== "number" && typeof raw !== "string") return null;
+  const n = Number(raw);
+  return Number.isInteger(n) && n > 0 ? n : null;
+}
+
+/**
  * POST /reporting/templates/:id/run — produce one report from a template
  * without creating a schedule.
  *
@@ -282,13 +295,24 @@ export async function runTemplateNow(req: Request, res: Response): Promise<any> 
     }
 
     const isProjectScope = req.body.scope === "project";
+    // project_id is not decoration: the orchestrator snapshots it and
+    // listRunsQuery reads it back to decide which non-Admins may see the run.
+    // A non-numeric projectId would snapshot as "organization scope" and make
+    // the report visible to the whole org, so reject it instead of coercing.
+    const projectId = isProjectScope ? toProjectId(req.body.projectId) : null;
+    if (isProjectScope && projectId === null) {
+      return res
+        .status(400)
+        .json(STATUS_CODE[400]("a project-scoped run requires a numeric projectId"));
+    }
+
     const sched = {
       id: null,
       organization_id: organizationId,
       template_id: templateId,
       template_version_id: version.id,
       name: req.body.name ?? template.name,
-      project_id: isProjectScope ? (req.body.projectId ?? null) : null,
+      project_id: projectId,
       framework_id: req.body.frameworkId ?? null,
       project_framework_id: req.body.projectFrameworkId ?? null,
       sections_config: req.body.sectionsConfig ?? null,

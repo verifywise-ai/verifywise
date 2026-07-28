@@ -187,7 +187,11 @@ describe("reportRun.ctrl tenant isolation", () => {
 
       await listRuns(req, res);
 
-      expect(mockList).toHaveBeenCalledWith(5, expect.objectContaining({ archived: false }));
+      expect(mockList).toHaveBeenCalledWith(
+        5,
+        expect.objectContaining({ archived: false }),
+        expect.anything(),
+      );
     });
 
     it("passes archived=true through as the boolean true", async () => {
@@ -196,7 +200,11 @@ describe("reportRun.ctrl tenant isolation", () => {
 
       await listRuns(req, res);
 
-      expect(mockList).toHaveBeenCalledWith(5, expect.objectContaining({ archived: true }));
+      expect(mockList).toHaveBeenCalledWith(
+        5,
+        expect.objectContaining({ archived: true }),
+        expect.anything(),
+      );
     });
 
     it("omits archived entirely when the parameter is absent", async () => {
@@ -206,6 +214,43 @@ describe("reportRun.ctrl tenant isolation", () => {
       await listRuns(req, res);
 
       expect(mockList.mock.calls[0][1].archived).toBeUndefined();
+    });
+  });
+
+  // The list is narrowed by project membership for non-Admins (listRunsQuery).
+  // The controller's job is to hand it the authed viewer — an auditor whose
+  // role never reached the query would be listed everything in the org.
+  describe("listRuns viewer", () => {
+    const mockList = listRunsQuery as jest.MockedFunction<typeof listRunsQuery>;
+
+    beforeEach(() => {
+      jest.clearAllMocks();
+      mockList.mockResolvedValue({ rows: [], total: 0 });
+    });
+
+    it("passes the authed user id and role, not anything from the request body", async () => {
+      const req = {
+        params: {},
+        query: {},
+        body: { userId: 999, role: "Admin" },
+        organizationId: 5,
+        userId: 3,
+        role: "Auditor",
+      } as any;
+
+      await listRuns(req, createMockRes() as Response);
+
+      expect(mockList.mock.calls[0][2]).toEqual({ userId: 3, role: "Auditor" });
+    });
+
+    it("passes nulls rather than undefined when the request carries no identity", async () => {
+      const req = { params: {}, query: {}, organizationId: 5 } as any;
+
+      await listRuns(req, createMockRes() as Response);
+
+      // null is the fail-closed value: it matches no project owner and no
+      // membership row, so the caller sees organization-scoped runs only.
+      expect(mockList.mock.calls[0][2]).toEqual({ userId: null, role: null });
     });
   });
 });
