@@ -20,10 +20,8 @@ vi.mock("../GenerateReport", () => ({
   default: () => <div data-testid="generate-report" />,
 }));
 
-vi.mock("../Reports", () => ({
-  default: ({ generateReportButton }: any) => (
-    <div data-testid="report-lists">{generateReportButton}</div>
-  ),
+vi.mock("../ReportRunsTable", () => ({
+  default: ({ variant }: any) => <div data-testid="report-runs-table">{variant}</div>,
 }));
 
 // Mock PageTour
@@ -55,8 +53,9 @@ describe("Reporting", () => {
     ).toBeInTheDocument();
   });
 
-  it("renders the report list area", () => {
+  it("renders the Generate tab's runs table in live mode", () => {
     renderWithProviders(<Reporting />);
-    expect(screen.getByTestId("report-lists")).toBeInTheDocument();
+    expect(screen.getByTestId("report-runs-table")).toHaveTextContent("live");
+    expect(screen.getByTestId("generate-report")).toBeInTheDocument();
   });
 });

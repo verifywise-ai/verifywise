@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import { Box, Tabs, Tab, Drawer, Button } from "@mui/material";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import GenerateReport from "./GenerateReport";
-import ReportLists from "./Reports";
+import ReportRunsTable from "./ReportRunsTable";
 import PageTour from "../../components/PageTour";
 import ReportingSteps from "./ReportingSteps";
 import TemplatesTab from "./TemplatesTab";
@@ -69,14 +69,12 @@ const Reporting = () => {
 
       {activeTab === 0 && (
         <div data-joyride-id="reports-list">
-          <ReportLists
-            refreshKey={refreshKey}
-            generateReportButton={
-              <div data-joyride-id="generate-report-button">
-                <GenerateReport onReportGenerated={handleReportGenerated} />
-              </div>
-            }
-          />
+          <Box sx={{ display: "flex", justifyContent: "flex-end", my: 2 }}>
+            <div data-joyride-id="generate-report-button">
+              <GenerateReport onReportGenerated={handleReportGenerated} />
+            </div>
+          </Box>
+          <ReportRunsTable key={refreshKey} variant="live" />
         </div>
       )}
 

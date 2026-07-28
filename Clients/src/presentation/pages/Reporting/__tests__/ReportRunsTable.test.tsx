@@ -109,6 +109,30 @@ describe("ReportRunsTable", () => {
     renderWithProviders(<ReportRunsTable variant="archived" />);
 
     expect(screen.getByText(/no archived reports/i)).toBeInTheDocument();
+    // No runs means no pager either — there is nothing to page through.
+    expect(screen.queryByRole("button", { name: "Go to next page" })).not.toBeInTheDocument();
+  });
+
+  it("requests the next offset when the page changes", async () => {
+    mockRunsPage.mockReturnValue({ data: { rows: [run()], total: 12 }, isLoading: false });
+    const user = userEvent.setup();
+    renderWithProviders(<ReportRunsTable variant="live" />);
+
+    expect(mockRunsPage).toHaveBeenLastCalledWith(expect.objectContaining({ offset: 0 }));
+
+    await user.click(screen.getByRole("button", { name: "Go to next page" }));
+
+    expect(mockRunsPage).toHaveBeenLastCalledWith(expect.objectContaining({ offset: 10 }));
+  });
+
+  it("paginates by the envelope's total, not the row count on the page", () => {
+    // Only one row comes back (as a real paginated response would), but the
+    // envelope says there are 12 — the pager must reflect that, not "of 1".
+    mockRunsPage.mockReturnValue({ data: { rows: [run()], total: 12 }, isLoading: false });
+
+    renderWithProviders(<ReportRunsTable variant="live" />);
+
+    expect(screen.getByText("1–10 of 12")).toBeInTheDocument();
   });
 
   it("opens the analyses drawer for the run whose action was clicked", async () => {
@@ -121,6 +145,24 @@ describe("ReportRunsTable", () => {
     // state ("No AI analyses were generated for this report run.").
     expect(screen.getByText("AI analyses")).toBeInTheDocument();
     expect(mockAnalyses).toHaveBeenLastCalledWith(1);
+  });
+
+  it("opens the analyses of the run whose action was clicked, not the first row's", async () => {
+    // selectedRunId is a single value shared across rows; this proves the
+    // drawer fetches the clicked row's analyses, not always the first one.
+    mockRunsPage.mockReturnValue({
+      data: {
+        rows: [run(), run({ id: 2, output_filename: "Q4 risk review.pdf" })],
+        total: 2,
+      },
+      isLoading: false,
+    });
+    const user = userEvent.setup();
+    renderWithProviders(<ReportRunsTable variant="live" />);
+
+    await user.click(screen.getAllByRole("button", { name: /view analyses/i })[1]);
+
+    expect(mockAnalyses).toHaveBeenLastCalledWith(2);
   });
 
   it("downloads the run's file as a saved blob when Download is clicked", async () => {
