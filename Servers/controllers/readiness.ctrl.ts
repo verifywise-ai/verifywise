@@ -7,6 +7,7 @@ import {
   normalizeEvidenceCount,
   normalizeRecency,
   aggregateFrameworkScores,
+  blendFrameworkScore,
 } from "../advisor/scoring/readinessCalculator";
 import {
   upsertControlScoreQuery,
@@ -17,7 +18,8 @@ import {
   getControlScoresQuery,
   getWeakestControlsQuery,
   getReadinessHistoryQuery,
-  getFrameworkControlsQuery,
+  getApplicableControlsWithRequirementsQuery,
+  getAssessmentCompletionQuery,
 } from "../utils/readiness.utils";
 import { trackAIContent } from "../middleware/aiContentTracker.middleware";
 
@@ -32,6 +34,7 @@ async function calculateControlReadiness(
   frameworkType: string,
   organizationId: number,
   projectId: number | null,
+  requirementsScore: number,
   createdBy: number | null = null,
   visibility: string = "public",
 ) {
@@ -56,78 +59,24 @@ async function calculateControlReadiness(
   const avgQuality = parseFloat(ev.avg_quality) || 0;
   const daysSinceLatest = ev.days_since_latest !== null ? parseInt(ev.days_since_latest, 10) : null;
 
-  // 2) Task completion — scope via file_entity_links: tasks sharing files with this control
-  const [taskRows] = await sequelize.query(
-    `SELECT
-       COUNT(*) AS total,
-       COUNT(*) FILTER (WHERE t.status = 'Completed') AS completed
-     FROM tasks t
-     WHERE t.organization_id = :organizationId
-       AND t.id IN (
-         SELECT fel_t.entity_id FROM file_entity_links fel_t
-         WHERE fel_t.entity_type = 'task'
-           AND fel_t.organization_id = :organizationId
-           AND fel_t.file_id IN (
-             SELECT fel_c.file_id FROM file_entity_links fel_c
-             WHERE fel_c.entity_type = 'control'
-               AND fel_c.entity_id = :controlId
-               AND fel_c.framework_type = :frameworkType
-               AND fel_c.organization_id = :organizationId
-           )
-       )`,
-    { replacements: { controlId, frameworkType, organizationId } },
-  );
-  const tk = (taskRows as any[])[0] || {};
-  const totalTasks = parseInt(tk.total, 10) || 0;
-  const completedTasks = parseInt(tk.completed, 10) || 0;
-  const taskRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-
-  // 3) Risk mitigation — scope via file_entity_links: risks sharing files with this control
-  const [riskRows] = await sequelize.query(
-    `SELECT
-       COUNT(*) AS total,
-       COUNT(*) FILTER (WHERE r.final_risk_level IS NOT NULL AND LOWER(r.final_risk_level) != 'high') AS mitigated
-     FROM risks r
-     WHERE r.organization_id = :organizationId
-       AND r.id IN (
-         SELECT fel_r.entity_id FROM file_entity_links fel_r
-         WHERE fel_r.entity_type = 'risk'
-           AND fel_r.organization_id = :organizationId
-           AND fel_r.file_id IN (
-             SELECT fel_c.file_id FROM file_entity_links fel_c
-             WHERE fel_c.entity_type = 'control'
-               AND fel_c.entity_id = :controlId
-               AND fel_c.framework_type = :frameworkType
-               AND fel_c.organization_id = :organizationId
-           )
-       )`,
-    { replacements: { controlId, frameworkType, organizationId } },
-  );
-  const rk = (riskRows as any[])[0] || {};
-  const totalRisks = parseInt(rk.total, 10) || 0;
-  const mitigatedRisks = parseInt(rk.mitigated, 10) || 0;
-  const riskRate = totalRisks > 0 ? Math.round((mitigatedRisks / totalRisks) * 100) : 100;
-
   // 4) Calculate weighted score
   const result = calculateReadinessScore({
+    requirements: requirementsScore,
     evidence_quality: avgQuality,
     evidence_count: normalizeEvidenceCount(evidenceCount),
     evidence_recency: normalizeRecency(daysSinceLatest),
-    task_completion: taskRate,
-    risk_mitigation: riskRate,
   });
 
   // 5) Generate recommendations
   const recommendations: string[] = [];
+  if (result.requirements_score < 100)
+    recommendations.push("Complete the remaining requirements for this control");
   if (result.evidence_count_score < 30)
     recommendations.push("Upload evidence documents for this control");
   if (result.evidence_quality_score < 50)
     recommendations.push("Improve quality of linked evidence");
   if (result.evidence_recency_score < 40)
     recommendations.push("Update outdated evidence with recent documents");
-  if (result.task_completion_score < 50)
-    recommendations.push("Complete pending tasks for this control");
-  if (result.risk_mitigation_score < 50) recommendations.push("Address unmitigated risks");
 
   // 6) Persist
   return upsertControlScoreQuery(controlId, frameworkType, organizationId, {
@@ -156,7 +105,11 @@ export async function calculateAll(req: Request, res: Response) {
     const results: any[] = [];
 
     for (const fw of frameworkTypes) {
-      const controls = await getFrameworkControlsQuery(fw);
+      const controls = await getApplicableControlsWithRequirementsQuery(
+        fw,
+        organizationId,
+        projectId,
+      );
       const controlScores: Array<{
         control_id: number;
         overall_score: number;
@@ -169,6 +122,7 @@ export async function calculateAll(req: Request, res: Response) {
           fw,
           organizationId,
           projectId,
+          ctrl.requirements_score,
           userId,
           visibility,
         );
@@ -180,11 +134,18 @@ export async function calculateAll(req: Request, res: Response) {
       }
 
       const agg = aggregateFrameworkScores(controlScores, fw);
+      const assessmentScore =
+        fw === "eu_ai_act" ? await getAssessmentCompletionQuery(organizationId, projectId) : null;
+      const blendedScore = blendFrameworkScore(agg.avg_score, assessmentScore);
+
       const fwScore = await upsertFrameworkScoreQuery(fw, organizationId, {
         project_id: projectId,
         created_by: userId,
         visibility,
         ...agg,
+        controls_avg_score: agg.avg_score,
+        assessment_score: assessmentScore,
+        avg_score: blendedScore,
       });
       results.push(fwScore);
 
@@ -193,7 +154,7 @@ export async function calculateAll(req: Request, res: Response) {
         project_id: projectId,
         created_by: userId,
         visibility,
-        avg_score: agg.avg_score,
+        avg_score: blendedScore,
         total_controls: agg.total_controls,
         ready_count: agg.ready_count,
         needs_work_count: agg.needs_work_count,
@@ -244,7 +205,11 @@ export async function calculateForFramework(req: Request, res: Response) {
     const visibility = req.body.visibility || "public";
     const userId = req.userId ? Number(req.userId) : null;
 
-    const controls = await getFrameworkControlsQuery(frameworkType);
+    const controls = await getApplicableControlsWithRequirementsQuery(
+      frameworkType,
+      organizationId,
+      projectId,
+    );
     if (controls.length === 0) {
       return res.status(404).json(STATUS_CODE[404]("No controls found for framework"));
     }
@@ -261,6 +226,7 @@ export async function calculateForFramework(req: Request, res: Response) {
         frameworkType,
         organizationId,
         projectId,
+        ctrl.requirements_score,
         userId,
         visibility,
       );
@@ -272,11 +238,20 @@ export async function calculateForFramework(req: Request, res: Response) {
     }
 
     const agg = aggregateFrameworkScores(controlScores, frameworkType);
+    const assessmentScore =
+      frameworkType === "eu_ai_act"
+        ? await getAssessmentCompletionQuery(organizationId, projectId)
+        : null;
+    const blendedScore = blendFrameworkScore(agg.avg_score, assessmentScore);
+
     const fwScore = await upsertFrameworkScoreQuery(frameworkType, organizationId, {
       project_id: projectId,
       created_by: userId,
       visibility,
       ...agg,
+      controls_avg_score: agg.avg_score,
+      assessment_score: assessmentScore,
+      avg_score: blendedScore,
     });
 
     // Record snapshot in history table
@@ -284,7 +259,7 @@ export async function calculateForFramework(req: Request, res: Response) {
       project_id: projectId,
       created_by: userId,
       visibility,
-      avg_score: agg.avg_score,
+      avg_score: blendedScore,
       total_controls: agg.total_controls,
       ready_count: agg.ready_count,
       needs_work_count: agg.needs_work_count,
@@ -303,7 +278,7 @@ export async function calculateForFramework(req: Request, res: Response) {
           modelUsed: "readiness-calculator-v1",
           modelProvider: "verifywise",
           toolName: "readiness-calculation",
-          promptSummary: `Readiness calculated for ${frameworkType}: ${agg.avg_score}/100 (${agg.total_controls} controls)`,
+          promptSummary: `Readiness calculated for ${frameworkType}: ${blendedScore}/100 (${agg.total_controls} controls)`,
         },
         userId,
       ).catch(() => {});
