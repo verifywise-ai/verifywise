@@ -67,7 +67,7 @@ export async function resolveFrameworkTargets(
   // projects_frameworks holds native pairings only. Falling through to an
   // unfiltered query would widen the report to every framework the caller
   // explicitly did not ask for. The collector turns this into a visible
-  // no_framework_target notice rather than a silently missing section.
+  // unresolved_framework notice rather than a silently missing section.
   if (!isEmptySelection(selection) && selection.native.length === 0) return [];
   if (isEmptySelection(selection) && (frameworkIds ?? []).length > 0) return [];
 
@@ -81,7 +81,13 @@ export async function resolveFrameworkTargets(
 
   let frameworkPredicate = "";
   if (selection.native.length > 0) {
-    frameworkPredicate = " AND pf.framework_id = ANY(:nativeFrameworkIds)";
+    // `= ANY(ARRAY[:nativeFrameworkIds]::INTEGER[])` rather than the bare
+    // `= ANY(:nativeFrameworkIds)`: sequelize expands an array replacement to
+    // a comma list by string substitution, so the bare form renders
+    // `ANY(2, 3)` and is a syntax error. Same trap dataCollector.ts documents
+    // on fetchRisksForProjects (the ARRAY[] form) and resolveUserNames (the
+    // IN form); this uses the ARRAY[] form to match fetchRisksForProjects.
+    frameworkPredicate = " AND pf.framework_id = ANY(ARRAY[:nativeFrameworkIds]::INTEGER[])";
     replacements.nativeFrameworkIds = selection.native;
   }
 

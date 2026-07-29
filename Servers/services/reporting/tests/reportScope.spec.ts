@@ -14,6 +14,8 @@ jest.mock("../../../database/db", () => ({
 
 import { resolveFrameworkTargets } from "../reportScope";
 import { sequelize } from "../../../database/db";
+import { Sequelize } from "sequelize";
+import { injectReplacements } from "sequelize/lib/utils/sql";
 
 const mockQuery = sequelize.query as jest.Mock;
 
@@ -90,8 +92,25 @@ describe("resolveFrameworkTargets", () => {
     await resolveFrameworkTargets("organization", null, 10, ["native:2", "native:3"]);
 
     const [sql, options] = mockQuery.mock.calls[0];
-    expect(sql).toContain("pf.framework_id = ANY(:nativeFrameworkIds)");
+    expect(sql).toContain("pf.framework_id = ANY(ARRAY[:nativeFrameworkIds]::INTEGER[])");
     expect(options.replacements.nativeFrameworkIds).toEqual([2, 3]);
+  });
+
+  it("renders a real Postgres ANY(ARRAY[...]) fragment, not a bare comma list", async () => {
+    // jest.mock above replaces sequelize.query, which is exactly why Finding 1
+    // (the `= ANY(:ids)` bare-comma-list bug) could pass every SQL-string
+    // assertion above while producing invalid SQL: nothing ever ran the
+    // captured replacements through Sequelize's own parameter injection. This
+    // test imports the real sequelize package (only "../../../database/db" is
+    // mocked, not "sequelize" itself) and does that injection for real.
+    await resolveFrameworkTargets("organization", null, 10, ["native:2", "native:3"]);
+
+    const [sql, options] = mockQuery.mock.calls[0];
+    const dialectSequelize = new Sequelize("db", "u", "p", { dialect: "postgres", logging: false });
+    const rendered = injectReplacements(sql, dialectSequelize.dialect, options.replacements);
+
+    expect(rendered).toContain("ARRAY[2, 3]");
+    expect(rendered).not.toContain("ANY(2, 3)");
   });
 
   it("adds no framework predicate for an empty selection", async () => {
