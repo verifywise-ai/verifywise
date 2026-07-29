@@ -40,10 +40,7 @@ export async function getLatestVersionQuery(
   return rows[0] ?? null;
 }
 
-export async function getVersionByIdQuery(
-  id: number,
-  organization_id: number,
-): Promise<any> {
+export async function getVersionByIdQuery(id: number, organization_id: number): Promise<any> {
   const rows: any[] = await sequelize.query(
     `SELECT v.* FROM report_template_versions v
        JOIN report_templates t ON t.id = v.template_id
@@ -76,7 +73,8 @@ export async function createTemplateQuery(
   transaction?: Transaction,
 ): Promise<any> {
   if (!input?.name) throw new ValidationException("name is required", "name", input?.name);
-  if (!input?.category) throw new ValidationException("category is required", "category", input?.category);
+  if (!input?.category)
+    throw new ValidationException("category is required", "category", input?.category);
   if (input.default_scope !== "project" && input.default_scope !== "organization") {
     throw new ValidationException(
       "default_scope must be 'project' or 'organization'",
@@ -99,9 +97,7 @@ export async function createTemplateQuery(
         description: input.description ?? null,
         category: input.category,
         default_scope: input.default_scope,
-        supported_scopes: JSON.stringify(
-          input.supported_scopes ?? ["project", "organization"],
-        ),
+        supported_scopes: JSON.stringify(input.supported_scopes ?? ["project", "organization"]),
         recommended_frequency: input.recommended_frequency ?? null,
         created_by: userId,
       },
@@ -167,10 +163,7 @@ export async function updateTemplateQuery(
 // Soft delete. scheduled_reports.template_id is a NOT NULL FK with no
 // ON DELETE clause, so a hard DELETE of a referenced template fails at the
 // database. is_active = false already hides it from getTemplatesQuery.
-export async function archiveTemplateQuery(
-  id: number,
-  organization_id: number,
-): Promise<any> {
+export async function archiveTemplateQuery(id: number, organization_id: number): Promise<any> {
   const result: any = await sequelize.query(
     `UPDATE report_templates SET is_active = false, updated_at = NOW()
       WHERE id = :id
@@ -193,6 +186,14 @@ export async function archiveTemplateQuery(
 //
 // The SELECT ... WHERE EXISTS is the tenant guard: a template id belonging to
 // another org inserts zero rows and returns undefined.
+//
+// framework_config is carried like every other config column and is not
+// optional to thread: an empty framework_config means EVERY framework in
+// scope, so a version written without it does not merely lose a preference —
+// it silently widens what the template reports on. Duplicating a framework-
+// specific template goes through this INSERT, and dropping the column here is
+// how a copy of "ISO 42001 Internal Audit Pack" ends up reporting on
+// everything under an ISO-42001 name.
 export async function createTemplateVersionQuery(
   template_id: number,
   organization_id: number,
@@ -202,12 +203,12 @@ export async function createTemplateVersionQuery(
 ): Promise<any> {
   const rows: any = await sequelize.query(
     `INSERT INTO report_template_versions
-       (template_id, version, sections_config, ai_blocks_config, format_config,
-        branding_config, schedule_defaults, delivery_defaults, created_by)
+       (template_id, version, sections_config, ai_blocks_config, framework_config,
+        format_config, branding_config, schedule_defaults, delivery_defaults, created_by)
      SELECT :template_id,
             (SELECT COALESCE(MAX(version), 0) + 1
                FROM report_template_versions WHERE template_id = :template_id),
-            :sections_config, :ai_blocks_config, :format_config,
+            :sections_config, :ai_blocks_config, :framework_config, :format_config,
             :branding_config, :schedule_defaults, :delivery_defaults, :created_by
       WHERE EXISTS (
         SELECT 1 FROM report_templates
@@ -222,6 +223,9 @@ export async function createTemplateVersionQuery(
         organization_id,
         sections_config: JSON.stringify(config.sections_config ?? { sections: [] }),
         ai_blocks_config: JSON.stringify(config.ai_blocks_config ?? {}),
+        // {} is the column default and means "every framework in scope" —
+        // the same fallback the wizard applies when it seeds [].
+        framework_config: JSON.stringify(config.framework_config ?? {}),
         format_config: JSON.stringify(config.format_config ?? {}),
         branding_config: JSON.stringify(config.branding_config ?? {}),
         schedule_defaults: JSON.stringify(config.schedule_defaults ?? {}),

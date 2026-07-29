@@ -25,6 +25,7 @@ const SECTIONS_CONFIG = {
   sections: [{ reportSectionKey: "projectRisks", defaultEnabled: true }],
 };
 const AI_BLOCKS_CONFIG = { executiveSummary: true };
+const FRAMEWORK_CONFIG = { frameworkIds: ["native:2"] };
 
 const SYSTEM_TEMPLATE_FULL = {
   ...SYSTEM_TEMPLATE,
@@ -32,6 +33,7 @@ const SYSTEM_TEMPLATE_FULL = {
     id: 9,
     sections_config: SECTIONS_CONFIG,
     ai_blocks_config: AI_BLOCKS_CONFIG,
+    framework_config: FRAMEWORK_CONFIG,
   },
 };
 
@@ -224,6 +226,24 @@ describe("TemplatesTab", () => {
           sections_config: SECTIONS_CONFIG,
           ai_blocks_config: AI_BLOCKS_CONFIG,
         }),
+        expect.anything(),
+      ),
+    );
+  });
+
+  // An omitted framework selection is not "no preference" — the wizard seeds []
+  // from it, and empty means every framework in scope. A copy that loses it
+  // reports on everything under the original's name and description.
+  it("carries the source template's framework selection into the copy", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<TemplatesTab onUse={vi.fn()} />);
+
+    const system = screen.getByRole("region", { name: /system templates/i });
+    await user.click(within(system).getByRole("button", { name: /duplicate/i }));
+
+    await waitFor(() =>
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({ framework_config: FRAMEWORK_CONFIG }),
         expect.anything(),
       ),
     );

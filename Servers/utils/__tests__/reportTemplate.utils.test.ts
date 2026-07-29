@@ -82,7 +82,12 @@ describe("reportTemplate.utils", () => {
   it("createTemplateQuery ignores a caller-supplied is_system_template", async () => {
     q.mockResolvedValueOnce([{ id: 8 }]);
     await createTemplateQuery(
-      { name: "Sneaky", category: "governance", default_scope: "project", is_system_template: true },
+      {
+        name: "Sneaky",
+        category: "governance",
+        default_scope: "project",
+        is_system_template: true,
+      },
       42,
       9,
     );
@@ -118,6 +123,34 @@ describe("reportTemplate.utils", () => {
     expect(sql).toContain("COALESCE(MAX(version), 0) + 1");
     expect(opts.replacements.template_id).toBe(7);
     expect(opts.replacements.organization_id).toBe(42);
+  });
+
+  // Duplicating a template inserts a new version through this query. An empty
+  // framework_config means every framework in scope, so a dropped column turns
+  // a copy of a framework-specific template into an org-wide report.
+  it("createTemplateVersionQuery carries the framework selection into the new version", async () => {
+    q.mockResolvedValueOnce([{ id: 31, version: 1 }]);
+    await createTemplateVersionQuery(
+      7,
+      42,
+      {
+        sections_config: { sections: [] },
+        framework_config: { frameworkIds: ["native:2"] },
+      },
+      9,
+    );
+    const [sql, opts] = q.mock.calls[0];
+    expect(sql).toContain("framework_config");
+    expect(JSON.parse(opts.replacements.framework_config)).toEqual({
+      frameworkIds: ["native:2"],
+    });
+  });
+
+  it("createTemplateVersionQuery defaults framework_config to the column default", async () => {
+    q.mockResolvedValueOnce([{ id: 32, version: 1 }]);
+    await createTemplateVersionQuery(7, 42, { sections_config: { sections: [] } }, 9);
+    const [, opts] = q.mock.calls[0];
+    expect(opts.replacements.framework_config).toBe("{}");
   });
 
   it("slugify collapses punctuation and trims separators", () => {

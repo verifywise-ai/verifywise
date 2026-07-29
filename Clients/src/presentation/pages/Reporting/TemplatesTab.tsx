@@ -24,6 +24,18 @@ import {
 } from "../../../application/hooks/useReporting";
 import { getTemplate } from "../../../application/repository/reporting.repository";
 import { showAlert } from "../../../infrastructure/api/customAxios";
+import type {
+  FrameworkConfig,
+  ReportTemplateWriteBody,
+} from "../../../domain/interfaces/i.reporting";
+
+// The create body carries framework_config the same way it carries
+// sections_config — createTemplateVersionQuery reads all three off one body.
+// ReportTemplateWriteBody does not declare it yet, so widen here rather than
+// send the field untyped.
+type TemplateCreateBody = ReportTemplateWriteBody & {
+  framework_config?: FrameworkConfig;
+};
 
 // Same three the builder offers. Kept in sync by hand — the backend takes any
 // string, so a mismatch is a UX bug, not a type error.
@@ -110,6 +122,12 @@ export default function TemplatesTab({
   // default_scope is exactly "project" or "organization"; the source
   // template always has one, but fall back to "project" defensively rather
   // than send undefined and 400 on every click.
+  //
+  // framework_config travels with the section config for the same reason it is
+  // fetched at all: an omitted selection is not "no preference", it means every
+  // framework in scope. Dropping it turns a copy of a framework-specific
+  // template into an org-wide report carrying the original's name and
+  // description — the silent widening the run/schedule 400-gates exist to stop.
   const handleDuplicate = async (t: any) => {
     let source = t;
     try {
@@ -123,19 +141,19 @@ export default function TemplatesTab({
       return;
     }
 
-    duplicate.mutate(
-      {
-        name: `${source.name} (copy)`,
-        description: source.description ?? null,
-        category: source.category ?? CATEGORIES[0],
-        default_scope: source.default_scope ?? "project",
-        supported_scopes: source.supported_scopes ?? undefined,
-        recommended_frequency: source.recommended_frequency ?? undefined,
-        sections_config: source.latestVersion?.sections_config ?? undefined,
-        ai_blocks_config: source.latestVersion?.ai_blocks_config ?? undefined,
-      },
-      { onError: mutationError("Failed to duplicate template") },
-    );
+    const body: TemplateCreateBody = {
+      name: `${source.name} (copy)`,
+      description: source.description ?? null,
+      category: source.category ?? CATEGORIES[0],
+      default_scope: source.default_scope ?? "project",
+      supported_scopes: source.supported_scopes ?? undefined,
+      recommended_frequency: source.recommended_frequency ?? undefined,
+      sections_config: source.latestVersion?.sections_config ?? undefined,
+      ai_blocks_config: source.latestVersion?.ai_blocks_config ?? undefined,
+      framework_config: source.latestVersion?.framework_config ?? undefined,
+    };
+
+    duplicate.mutate(body, { onError: mutationError("Failed to duplicate template") });
   };
 
   if (isLoading) {
