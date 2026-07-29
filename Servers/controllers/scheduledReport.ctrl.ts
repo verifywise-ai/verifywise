@@ -27,6 +27,20 @@ import {
   UPDATABLE_FIELDS,
 } from "../utils/scheduledReport.utils";
 import { runScheduledReport } from "../services/reporting/reportRunOrchestrator";
+import { parseFrameworkSelection } from "../services/reporting/frameworkSelection";
+
+/**
+ * An unparseable framework entry must not reach the column. An empty selection
+ * means EVERY framework in scope, so a typo'd "iso42001" that got dropped
+ * silently would widen the schedule to everything with nothing in the report to
+ * say so. Returned as a message list to match this endpoint's 400 shape.
+ */
+function frameworkSelectionErrors(raw: unknown): string[] {
+  if (raw === undefined || raw === null) return [];
+  if (!Array.isArray(raw)) return ["frameworkIds must be an array"];
+  const invalid = parseFrameworkSelection(raw).invalid;
+  return invalid.length ? [`unrecognised framework selection: ${invalid.join(", ")}`] : [];
+}
 
 export async function createScheduledReport(req: Request, res: Response): Promise<any> {
   logProcessing({
@@ -39,6 +53,7 @@ export async function createScheduledReport(req: Request, res: Response): Promis
   try {
     const errors = [
       ...validateScheduledReportInput(req.body),
+      ...frameworkSelectionErrors(req.body?.frameworkIds),
       // await is load-bearing: see validateTemplateVersionOwnership's note.
       ...(await validateTemplateVersionOwnership(
         req.body?.templateId,
@@ -132,11 +147,7 @@ export async function updateScheduledReport(req: Request, res: Response): Promis
       if (errors.length) return res.status(400).json(STATUS_CODE[400]({ errors }));
     }
 
-    const row = await updateScheduledReportQuery(
-      Number(req.params.id),
-      req.organizationId!,
-      input,
-    );
+    const row = await updateScheduledReportQuery(Number(req.params.id), req.organizationId!, input);
     if (!row) return res.status(404).json(STATUS_CODE[404]("not found"));
     return res.status(200).json(STATUS_CODE[200](row));
   } catch (error) {

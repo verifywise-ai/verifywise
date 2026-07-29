@@ -50,13 +50,18 @@ export interface ReportGenerationRequest {
   /**
    * What the report covers. When set, generateReport resolves the
    * projects_frameworks pairings itself (see resolveFrameworkTargets) and the
-   * three ids above are not used to select data — templates and schedules
-   * state a scope, never a framework, because a project holds many.
+   * three ids above are not used to select data — a template or schedule states
+   * a scope and, optionally, a frameworkIds selection that narrows it.
    *
    * Omitted by the legacy manual /generate-report path, which names one
    * project and one framework outright.
    */
   scope?: "project" | "organization";
+  /**
+   * Namespaced framework selection. Empty or absent means every framework in
+   * scope, which is what every request made before this field existed means.
+   */
+  frameworkIds?: string[];
   reportType: string | string[];
   reportName?: string;
   format: ReportFormat;

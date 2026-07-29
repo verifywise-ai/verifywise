@@ -22,6 +22,12 @@ export interface AiBlocksConfig {
   vendorRisk?: boolean;
 }
 
+/** A template version's default target frameworks. Empty means all in scope. */
+export interface FrameworkConfig {
+  /** Namespaced ids — see services/reporting/frameworkSelection.ts. */
+  frameworkIds?: string[];
+}
+
 export interface ScheduleConfig {
   frequency: ReportFrequency;
   hour: number;
@@ -51,6 +57,8 @@ export interface ScheduledReportRecord {
   scope: ReportScope;
   project_id: number | null;
   framework_id: number | null;
+  /** Namespaced framework selection. NULL or [] means every framework in scope. */
+  framework_ids: string[] | null;
   project_framework_id: number | null;
   sections_config: { sections: TemplateSectionConfig[] };
   ai_blocks_config: AiBlocksConfig;

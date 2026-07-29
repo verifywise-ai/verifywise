@@ -97,7 +97,12 @@ export async function generateReport(
     // A scoped request states what the report covers and lets the pairings be
     // derived; an unscoped one (the legacy manual path) names them outright.
     const targets = request.scope
-      ? await resolveFrameworkTargets(request.scope, request.projectId || null, organizationId)
+      ? await resolveFrameworkTargets(
+          request.scope,
+          request.projectId || null,
+          organizationId,
+          request.frameworkIds,
+        )
       : [];
     const dataCollector = request.scope
       ? createScopedDataCollector(
@@ -106,6 +111,7 @@ export async function generateReport(
           request.scope,
           targets,
           request.projectId || null,
+          request.frameworkIds,
         )
       : createDataCollector(
           organizationId,
@@ -176,10 +182,7 @@ export async function generateReport(
                   reportData.metadata.organizationId,
                   userId,
                 ),
-                collectEvidenceGapsInput(
-                  analyzerFrameworkId,
-                  reportData.metadata.organizationId,
-                ),
+                collectEvidenceGapsInput(analyzerFrameworkId, reportData.metadata.organizationId),
               ]);
               return { readiness, evidenceGaps, facts };
             })()
@@ -256,7 +259,12 @@ export async function getReportData(
   // Same two paths as generateReport: a scoped request must preview what the
   // produced report would contain, or the two disagree.
   const targets = request.scope
-    ? await resolveFrameworkTargets(request.scope, request.projectId || null, organizationId)
+    ? await resolveFrameworkTargets(
+        request.scope,
+        request.projectId || null,
+        organizationId,
+        request.frameworkIds,
+      )
     : [];
   const dataCollector = request.scope
     ? createScopedDataCollector(
@@ -265,6 +273,7 @@ export async function getReportData(
         request.scope,
         targets,
         request.projectId || null,
+        request.frameworkIds,
       )
     : createDataCollector(
         organizationId,

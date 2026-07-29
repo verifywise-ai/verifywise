@@ -2,61 +2,96 @@ import { sequelize } from "../database/db";
 import { QueryTypes } from "sequelize";
 import { computeNextRun } from "../services/reporting/scheduleCalculator";
 
-export async function createScheduledReportQuery(input: any, organization_id: number, userId: number): Promise<any> {
+export async function createScheduledReportQuery(
+  input: any,
+  organization_id: number,
+  userId: number,
+): Promise<any> {
   const next = computeNextRun(input.scheduleConfig);
   const rows: any = await sequelize.query(
     `INSERT INTO scheduled_reports
-       (organization_id, template_id, template_version_id, name, scope, project_id, framework_id, project_framework_id,
+       (organization_id, template_id, template_version_id, name, scope, project_id, framework_id, framework_ids, project_framework_id,
         sections_config, ai_blocks_config, format, schedule_config, delivery_config, is_active, owner_id, created_by, next_run_at)
-     VALUES (:organization_id, :templateId, :templateVersionId, :name, :scope, :projectId, :frameworkId, :projectFrameworkId,
+     VALUES (:organization_id, :templateId, :templateVersionId, :name, :scope, :projectId, :frameworkId, :frameworkIds, :projectFrameworkId,
         :sections, :ai, :format, :schedule, :delivery, true, :userId, :userId, :nextRun)
      RETURNING *`,
-    { replacements: {
-        organization_id, templateId: input.templateId, templateVersionId: input.templateVersionId,
-        name: input.name, scope: input.scope, projectId: input.projectId ?? null,
-        frameworkId: input.frameworkId ?? null, projectFrameworkId: input.projectFrameworkId ?? null,
-        sections: JSON.stringify(input.sectionsConfig), ai: JSON.stringify(input.aiBlocksConfig),
-        format: input.format, schedule: JSON.stringify(input.scheduleConfig), delivery: JSON.stringify(input.deliveryConfig),
-        userId, nextRun: next,
-      }, type: QueryTypes.SELECT });
+    {
+      replacements: {
+        organization_id,
+        templateId: input.templateId,
+        templateVersionId: input.templateVersionId,
+        name: input.name,
+        scope: input.scope,
+        projectId: input.projectId ?? null,
+        frameworkId: input.frameworkId ?? null,
+        projectFrameworkId: input.projectFrameworkId ?? null,
+        // JSONB, like sections_config below: an array has to arrive as JSON
+        // text. NULL (not "[]") for an absent selection, so the column keeps
+        // meaning "every framework in scope" exactly as a pre-column row does.
+        frameworkIds: input.frameworkIds ? JSON.stringify(input.frameworkIds) : null,
+        sections: JSON.stringify(input.sectionsConfig),
+        ai: JSON.stringify(input.aiBlocksConfig),
+        format: input.format,
+        schedule: JSON.stringify(input.scheduleConfig),
+        delivery: JSON.stringify(input.deliveryConfig),
+        userId,
+        nextRun: next,
+      },
+      type: QueryTypes.SELECT,
+    },
+  );
   return rows[0];
 }
 
 export async function listScheduledReportsQuery(organization_id: number): Promise<any[]> {
   return sequelize.query(
     `SELECT * FROM scheduled_reports WHERE organization_id = :organization_id AND deleted_at IS NULL ORDER BY created_at DESC`,
-    { replacements: { organization_id }, type: QueryTypes.SELECT });
+    { replacements: { organization_id }, type: QueryTypes.SELECT },
+  );
 }
 
 export async function getScheduledReportQuery(id: number, organization_id: number): Promise<any> {
   const rows: any[] = await sequelize.query(
     `SELECT * FROM scheduled_reports WHERE id = :id AND organization_id = :organization_id AND deleted_at IS NULL`,
-    { replacements: { id, organization_id }, type: QueryTypes.SELECT });
+    { replacements: { id, organization_id }, type: QueryTypes.SELECT },
+  );
   return rows[0] ?? null;
 }
 
-export async function setActiveQuery(id: number, organization_id: number, active: boolean): Promise<void> {
+export async function setActiveQuery(
+  id: number,
+  organization_id: number,
+  active: boolean,
+): Promise<void> {
   await sequelize.query(
     `UPDATE scheduled_reports SET is_active = :active, updated_at = NOW() WHERE id = :id AND organization_id = :organization_id`,
-    { replacements: { id, organization_id, active }, type: QueryTypes.UPDATE });
+    { replacements: { id, organization_id, active }, type: QueryTypes.UPDATE },
+  );
 }
 
 export async function softDeleteQuery(id: number, organization_id: number): Promise<void> {
   await sequelize.query(
     `UPDATE scheduled_reports SET deleted_at = NOW(), is_active = false WHERE id = :id AND organization_id = :organization_id`,
-    { replacements: { id, organization_id }, type: QueryTypes.UPDATE });
+    { replacements: { id, organization_id }, type: QueryTypes.UPDATE },
+  );
 }
 
 export async function findDueScheduledReportsQuery(now: Date): Promise<any[]> {
   return sequelize.query(
     `SELECT * FROM scheduled_reports WHERE is_active = true AND deleted_at IS NULL AND next_run_at IS NOT NULL AND next_run_at <= :now`,
-    { replacements: { now }, type: QueryTypes.SELECT });
+    { replacements: { now }, type: QueryTypes.SELECT },
+  );
 }
 
-export async function markRunEnqueuedQuery(id: number, lastRun: Date, nextRun: Date): Promise<void> {
+export async function markRunEnqueuedQuery(
+  id: number,
+  lastRun: Date,
+  nextRun: Date,
+): Promise<void> {
   await sequelize.query(
     `UPDATE scheduled_reports SET last_run_at = :lastRun, next_run_at = :nextRun, updated_at = NOW() WHERE id = :id`,
-    { replacements: { id, lastRun, nextRun }, type: QueryTypes.UPDATE });
+    { replacements: { id, lastRun, nextRun }, type: QueryTypes.UPDATE },
+  );
 }
 
 // Editable fields only. organization_id, template_id, template_version_id and
@@ -67,6 +102,7 @@ export const UPDATABLE_FIELDS: Record<string, string> = {
   scope: "scope",
   projectId: "project_id",
   frameworkId: "framework_id",
+  frameworkIds: "framework_ids",
   projectFrameworkId: "project_framework_id",
   sectionsConfig: "sections_config",
   aiBlocksConfig: "ai_blocks_config",
@@ -76,6 +112,9 @@ export const UPDATABLE_FIELDS: Record<string, string> = {
 };
 
 const JSON_FIELDS = new Set([
+  // framework_ids is a JSONB array, so it goes through the same stringify as
+  // the JSONB objects — passing the raw array would bind a Postgres array.
+  "frameworkIds",
   "sectionsConfig",
   "aiBlocksConfig",
   "scheduleConfig",

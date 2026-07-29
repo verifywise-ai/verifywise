@@ -6,6 +6,10 @@ jest.mock("../../utils/reportTemplate.utils", () => ({
   updateTemplateQuery: jest.fn(),
   archiveTemplateQuery: jest.fn(),
   createTemplateVersionQuery: jest.fn(),
+  getVersionByIdQuery: jest.fn(),
+}));
+jest.mock("../../services/reporting/reportRunOrchestrator", () => ({
+  runScheduledReport: jest.fn(),
 }));
 jest.mock("../../utils/logger/logHelper", () => ({
   logProcessing: jest.fn(),
@@ -27,13 +31,17 @@ import {
   updateTemplate,
   archiveTemplate,
   listSections,
+  runTemplateNow,
 } from "../reportTemplate.ctrl";
 import {
   createTemplateQuery,
   updateTemplateQuery,
   archiveTemplateQuery,
   createTemplateVersionQuery,
+  getTemplateByIdQuery,
+  getVersionByIdQuery,
 } from "../../utils/reportTemplate.utils";
+import { runScheduledReport } from "../../services/reporting/reportRunOrchestrator";
 import { ValidationException } from "../../domain.layer/exceptions/custom.exception";
 
 function mockRes() {
@@ -59,7 +67,14 @@ describe("createTemplate", () => {
     (createTemplateVersionQuery as jest.Mock).mockResolvedValue({ id: 30, version: 1 });
     const res = mockRes();
     await createTemplate(
-      mockReq({ body: { name: "Board pack", category: "governance", default_scope: "organization", sections_config: { sections: [] } } }) as any,
+      mockReq({
+        body: {
+          name: "Board pack",
+          category: "governance",
+          default_scope: "organization",
+          sections_config: { sections: [] },
+        },
+      }) as any,
       res,
     );
     expect(res.status).toHaveBeenCalledWith(201);
@@ -84,7 +99,9 @@ describe("createTemplate", () => {
     (createTemplateQuery as jest.Mock).mockRejectedValue(dup);
     const res = mockRes();
     await createTemplate(
-      mockReq({ body: { name: "Board pack", category: "governance", default_scope: "project" } }) as any,
+      mockReq({
+        body: { name: "Board pack", category: "governance", default_scope: "project" },
+      }) as any,
       res,
     );
     expect(res.status).toHaveBeenCalledWith(409);
@@ -104,7 +121,10 @@ describe("updateTemplate", () => {
     (createTemplateVersionQuery as jest.Mock).mockResolvedValue({ id: 31, version: 2 });
     const res = mockRes();
     await updateTemplate(
-      mockReq({ params: { id: "7" }, body: { ai_blocks_config: { executiveSummary: true } } }) as any,
+      mockReq({
+        params: { id: "7" },
+        body: { ai_blocks_config: { executiveSummary: true } },
+      }) as any,
       res,
     );
     expect(createTemplateVersionQuery).toHaveBeenCalledWith(7, 42, expect.any(Object), 9, "TX");
@@ -121,7 +141,10 @@ describe("updateTemplate", () => {
     (createTemplateVersionQuery as jest.Mock).mockResolvedValue({ id: 31, version: 2 });
     const res = mockRes();
     await updateTemplate(
-      mockReq({ params: { id: "7" }, body: { name: "Renamed", sections_config: { sections: [] } } }) as any,
+      mockReq({
+        params: { id: "7" },
+        body: { name: "Renamed", sections_config: { sections: [] } },
+      }) as any,
       res,
     );
     const metadataTx = (updateTemplateQuery as jest.Mock).mock.calls[0][3];
@@ -137,7 +160,10 @@ describe("updateTemplate", () => {
     (createTemplateVersionQuery as jest.Mock).mockResolvedValue(undefined);
     const res = mockRes();
     await updateTemplate(
-      mockReq({ params: { id: "7" }, body: { name: "Renamed", sections_config: { sections: [] } } }) as any,
+      mockReq({
+        params: { id: "7" },
+        body: { name: "Renamed", sections_config: { sections: [] } },
+      }) as any,
       res,
     );
     // Throwing out of the transaction callback is what triggers the rollback;
@@ -183,5 +209,83 @@ describe("listSections", () => {
     expect(res.status).toHaveBeenCalledWith(200);
     const payload = res.json.mock.calls[0][0];
     expect(payload.data).toHaveLength(12);
+  });
+});
+
+describe("runTemplateNow framework selection", () => {
+  beforeEach(() => {
+    (getTemplateByIdQuery as jest.Mock).mockResolvedValue({ id: 7, name: "Board pack" });
+    (getVersionByIdQuery as jest.Mock).mockResolvedValue({ id: 30, template_id: 7 });
+    (runScheduledReport as jest.Mock).mockResolvedValue({ runId: 1, status: "success" });
+  });
+
+  it("400s rather than running with a widened selection when an entry is unparseable", async () => {
+    const res = mockRes();
+    await runTemplateNow(
+      mockReq({
+        params: { id: "7" },
+        body: {
+          templateVersionId: 30,
+          scope: "organization",
+          frameworkIds: ["native:2", "iso42001"],
+        },
+      }) as any,
+      res,
+    );
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(JSON.stringify(res.json.mock.calls[0][0])).toContain("iso42001");
+    // The point of the 400: an empty/partial selection means EVERY framework,
+    // so the run must not have started at all.
+    expect(runScheduledReport).not.toHaveBeenCalled();
+  });
+
+  it("passes a valid selection through as framework_ids", async () => {
+    const res = mockRes();
+    await runTemplateNow(
+      mockReq({
+        params: { id: "7" },
+        body: { templateVersionId: 30, scope: "organization", frameworkIds: ["native:2"] },
+      }) as any,
+      res,
+    );
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect((runScheduledReport as jest.Mock).mock.calls[0][0].framework_ids).toEqual(["native:2"]);
+  });
+
+  it("sends null, not [], when no selection was made", async () => {
+    const res = mockRes();
+    await runTemplateNow(
+      mockReq({
+        params: { id: "7" },
+        body: { templateVersionId: 30, scope: "organization" },
+      }) as any,
+      res,
+    );
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect((runScheduledReport as jest.Mock).mock.calls[0][0].framework_ids).toBeNull();
+  });
+});
+
+describe("runTemplateNow rejects a non-array selection", () => {
+  it("400s on a bare string instead of collapsing it to every framework", async () => {
+    (getTemplateByIdQuery as jest.Mock).mockResolvedValue({ id: 7, name: "Board pack" });
+    (getVersionByIdQuery as jest.Mock).mockResolvedValue({ id: 30, template_id: 7 });
+    (runScheduledReport as jest.Mock).mockResolvedValue({ runId: 1, status: "success" });
+    const res = mockRes();
+
+    await runTemplateNow(
+      mockReq({
+        params: { id: "7" },
+        // The routine client bug: one id sent unwrapped.
+        body: { templateVersionId: 30, scope: "organization", frameworkIds: "native:2" },
+      }) as any,
+      res,
+    );
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(runScheduledReport).not.toHaveBeenCalled();
   });
 });

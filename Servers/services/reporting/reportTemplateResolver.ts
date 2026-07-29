@@ -2,8 +2,9 @@ import type { ReportGenerationRequest } from "../../domain.layer/interfaces/i.re
 
 // scheduled_reports row -> existing engine request. De-dupes reportSectionKey.
 export function resolveReportRequest(sched: any, llmKeyId?: number): ReportGenerationRequest {
-  const sections: any[] = (sched.sections_config?.sections ?? [])
-    .filter((s: any) => s.defaultEnabled !== false);
+  const sections: any[] = (sched.sections_config?.sections ?? []).filter(
+    (s: any) => s.defaultEnabled !== false,
+  );
   const reportType: string[] = Array.from(
     new Set(sections.map((s: any) => String(s.reportSectionKey))),
   );
@@ -25,12 +26,14 @@ export function resolveReportRequest(sched: any, llmKeyId?: number): ReportGener
     projectId: sched.project_id ?? 0,
     frameworkId: sched.framework_id ?? 0,
     projectFrameworkId: sched.project_framework_id ?? 0,
-    // A schedule states a scope; it never states a framework, because a
-    // project holds many and the wizard has no picker. generateReport turns
-    // scope + project into the set of projects_frameworks pairings to collect
-    // from. Falling back to the project id keeps rows written before the scope
-    // column existed working.
+    // A schedule states a scope and, optionally, which frameworks it targets.
+    // generateReport turns scope + project into the set of projects_frameworks
+    // pairings and frameworkIds narrows them. Falling back to the project id
+    // keeps rows written before the scope column existed working.
     scope: sched.scope ?? (sched.project_id ? "project" : "organization"),
+    // Namespaced framework selection. Undefined (not []) for a legacy row, so
+    // resolveFrameworkTargets takes its unfiltered path unchanged.
+    frameworkIds: sched.framework_ids ?? undefined,
     reportType: reportType.length ? reportType : "all",
     reportName: sched.name,
     format: sched.format,

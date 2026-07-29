@@ -26,6 +26,7 @@ import {
   getVersionByIdQuery,
 } from "../utils/reportTemplate.utils";
 import { REPORT_SECTION_CATALOG } from "../services/reporting/sectionCatalog";
+import { parseFrameworkSelection } from "../services/reporting/frameworkSelection";
 import { NotFoundException } from "../domain.layer/exceptions/custom.exception";
 import { runScheduledReport } from "../services/reporting/reportRunOrchestrator";
 
@@ -186,7 +187,13 @@ export async function updateTemplate(req: Request, res: Response): Promise<any> 
 
       let version: any = null;
       if (versionChanged) {
-        version = await createTemplateVersionQuery(id, req.organizationId!, req.body, req.userId!, t);
+        version = await createTemplateVersionQuery(
+          id,
+          req.organizationId!,
+          req.body,
+          req.userId!,
+          t,
+        );
         // createTemplateVersionQuery returns undefined when its WHERE EXISTS
         // tenant guard matched nothing — treat that as a failed write, never
         // as a success with a null body.
@@ -306,19 +313,45 @@ export async function runTemplateNow(req: Request, res: Response): Promise<any> 
         .json(STATUS_CODE[400]("a project-scoped run requires a numeric projectId"));
     }
 
+    // Reject an unparseable entry rather than silently widening the report to
+    // every framework — a caller that asked for ISO 42001 and got everything
+    // has no way to tell from the output.
+    //
+    // A non-array is rejected for the same reason and not coerced: a client
+    // sending the single id "native:2" instead of ["native:2"] would otherwise
+    // collapse to [], which means every framework in scope.
+    if (
+      req.body.frameworkIds !== undefined &&
+      req.body.frameworkIds !== null &&
+      !Array.isArray(req.body.frameworkIds)
+    ) {
+      return res.status(400).json(STATUS_CODE[400]("frameworkIds must be an array"));
+    }
+    const frameworkIds: string[] = Array.isArray(req.body.frameworkIds)
+      ? req.body.frameworkIds
+      : [];
+    const selection = parseFrameworkSelection(frameworkIds);
+    if (selection.invalid.length > 0) {
+      return res
+        .status(400)
+        .json(
+          STATUS_CODE[400](`unrecognised framework selection: ${selection.invalid.join(", ")}`),
+        );
+    }
+
     const sched = {
       id: null,
       organization_id: organizationId,
       template_id: templateId,
       template_version_id: version.id,
       name: req.body.name ?? template.name,
-      // Scope is what selects the report's data. The framework ids stay for
-      // the schedule row's shape, but nothing reads them to collect: a project
-      // holds many frameworks, so generateReport derives the pairings from
-      // scope + project instead. See resolveFrameworkTargets.
+      // Scope selects the report's data and framework_ids narrows it. The
+      // legacy scalars below stay for the row's shape only; nothing reads them
+      // to collect. See resolveFrameworkTargets.
       scope: isProjectScope ? "project" : "organization",
       project_id: projectId,
       framework_id: req.body.frameworkId ?? null,
+      framework_ids: frameworkIds.length > 0 ? frameworkIds : null,
       project_framework_id: req.body.projectFrameworkId ?? null,
       sections_config: req.body.sectionsConfig ?? null,
       ai_blocks_config: req.body.aiBlocksConfig ?? null,
@@ -332,7 +365,10 @@ export async function runTemplateNow(req: Request, res: Response): Promise<any> 
       llm_key_id: template.llm_key_id ?? null,
     };
 
-    const outcome = await runScheduledReport(sched, { triggeredBy: "manual", userId: userId ?? undefined });
+    const outcome = await runScheduledReport(sched, {
+      triggeredBy: "manual",
+      userId: userId ?? undefined,
+    });
 
     // success and partial_success both produced a downloadable report —
     // partial_success only means a delivery channel (e.g. email) failed, not
@@ -340,13 +376,15 @@ export async function runTemplateNow(req: Request, res: Response): Promise<any> 
     // generated) is reported as an error, and even then the run id is
     // included so the caller can look up what happened.
     if (outcome.status === "failed") {
-      return res.status(500).json(
-        STATUS_CODE[500]({ runId: outcome.runId, status: outcome.status, error: outcome.error }),
-      );
+      return res
+        .status(500)
+        .json(
+          STATUS_CODE[500]({ runId: outcome.runId, status: outcome.status, error: outcome.error }),
+        );
     }
-    return res.status(200).json(
-      STATUS_CODE[200]({ started: true, runId: outcome.runId, status: outcome.status }),
-    );
+    return res
+      .status(200)
+      .json(STATUS_CODE[200]({ started: true, runId: outcome.runId, status: outcome.status }));
   } catch (e) {
     return res.status(500).json(STATUS_CODE[500]((e as Error).message));
   }
