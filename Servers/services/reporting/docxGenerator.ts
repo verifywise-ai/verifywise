@@ -1042,8 +1042,16 @@ function createComplianceSection(reportData: ReportData): (Paragraph | Table)[] 
     );
 
     if (sections.compliance.controls.length > 0) {
-      const headers = ["Control ID", "Title", "Status", "Owner"];
+      // An organization report merges this table across every use case, and
+      // control ids repeat -- each project has its own C1. mergeSections
+      // labels rows only when more than one contributed, so the column shows
+      // up exactly when it is needed. Mirrors report-pdf.ejs.
+      const showUseCase = sections.compliance.controls.some((c) => c.useCase);
+      const headers = showUseCase
+        ? ["Use case", "Control ID", "Title", "Status", "Owner"]
+        : ["Control ID", "Title", "Status", "Owner"];
       const rows = sections.compliance.controls.map((control) => [
+        ...(showUseCase ? [control.useCase || "-"] : []),
         control.controlId,
         control.title,
         control.status || "-",
@@ -1083,7 +1091,7 @@ function createComplianceSection(reportData: ReportData): (Paragraph | Table)[] 
           spacing: { before: 200, after: 100 },
           children: [
             new TextRun({
-              text: `${topic.title} (${topic.progress}%)`,
+              text: `${topic.useCase ? `${topic.useCase} — ` : ""}${topic.title} (${topic.progress}%)`,
               bold: true,
               size: 22,
               color: COLORS.textPrimary,
@@ -1128,8 +1136,14 @@ function createComplianceSection(reportData: ReportData): (Paragraph | Table)[] 
           ],
         }),
       );
-      const headers = ["Clause ID", "Title", "Status"];
+      // Merged across use cases, and across ISO 42001 and ISO 27001, which
+      // both render into this section.
+      const showClauseUseCase = sections.clausesAndAnnexes.clauses.some((c) => c.useCase);
+      const headers = showClauseUseCase
+        ? ["Use case", "Clause ID", "Title", "Status"]
+        : ["Clause ID", "Title", "Status"];
       const rows = sections.clausesAndAnnexes.clauses.map((clause) => [
+        ...(showClauseUseCase ? [clause.useCase || "-"] : []),
         clause.clauseId,
         clause.title,
         clause.status || "-",
@@ -1153,8 +1167,12 @@ function createComplianceSection(reportData: ReportData): (Paragraph | Table)[] 
           ],
         }),
       );
-      const headers = ["Annex ID", "Title", "Status"];
+      const showAnnexUseCase = sections.clausesAndAnnexes.annexes.some((a) => a.useCase);
+      const headers = showAnnexUseCase
+        ? ["Use case", "Annex ID", "Title", "Status"]
+        : ["Annex ID", "Title", "Status"];
       const rows = sections.clausesAndAnnexes.annexes.map((annex) => [
+        ...(showAnnexUseCase ? [annex.useCase || "-"] : []),
         annex.annexId,
         annex.title,
         annex.status || "-",
@@ -1205,7 +1223,7 @@ function createComplianceSection(reportData: ReportData): (Paragraph | Table)[] 
             spacing: { before: 120, after: 80 },
             children: [
               new TextRun({
-                text: category.name,
+                text: `${category.useCase ? `${category.useCase} — ` : ""}${category.name}`,
                 bold: true,
                 size: 22,
                 color: COLORS.textSecondary,

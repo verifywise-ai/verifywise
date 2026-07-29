@@ -522,4 +522,54 @@ describe("report-pdf.ejs template", () => {
       expect(html).toContain(`class="chip ${expected}"`);
     });
   });
+
+  describe("use case provenance on merged sections", () => {
+    // An organization report merges one section across every use case, and the
+    // ids repeat: every EU AI Act project has a C1, every ISO project a
+    // clause 4. mergeSections labels each row; the table has to show it or the
+    // merged report cannot be read.
+    const compliance = (useCase?: string) => ({
+      overallProgress: 0,
+      totalControls: 1,
+      completedControls: 0,
+      controls: [{ id: 1, controlId: "C1", title: "Train staff", status: "Waiting", useCase }],
+    });
+
+    const iso = (useCase?: string) => ({
+      clauses: [{ id: 1, clauseId: "4", title: "Context", status: "Done", subClauses: [], useCase }],
+      annexes: [{ id: 1, annexId: "A.1", title: "Policy", status: "Done", controls: [], useCase }],
+    });
+
+    it("adds a use case column to the compliance table when the rows are labelled", () => {
+      const html = render(undefined, { compliance: compliance("Alpha") } as never);
+
+      expect(html).toContain("<th>Use case</th>");
+      expect(html).toContain("Alpha");
+    });
+
+    it("leaves the compliance table alone for a single-use-case report", () => {
+      const html = render(undefined, { compliance: compliance() } as never);
+
+      expect(html).not.toContain("<th>Use case</th>");
+    });
+
+    it("labels merged clauses and annexes", () => {
+      const html = render(undefined, { clausesAndAnnexes: iso("Beta") } as never);
+
+      expect(html.match(/<th>Use case<\/th>/g)).toHaveLength(2);
+      expect(html).toContain("Beta");
+    });
+
+    it("labels merged assessment topics", () => {
+      const html = render(undefined, {
+        assessment: {
+          totalQuestions: 1,
+          answeredQuestions: 0,
+          topics: [{ id: 1, title: "Risk", progress: 0, subtopics: [], useCase: "Gamma" }],
+        },
+      } as never);
+
+      expect(html).toContain("Gamma");
+    });
+  });
 });

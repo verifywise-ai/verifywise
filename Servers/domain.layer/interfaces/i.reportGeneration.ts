@@ -304,6 +304,15 @@ export interface ComplianceSectionData {
     owner?: string;
     /** Control family (control category name). */
     category?: string;
+    /**
+     * Which use case (and, where two frameworks of one project both land in
+     * this section, which framework) the row came from. Set by mergeSections
+     * only when a report merges more than one projects_frameworks pairing;
+     * absent on every single-pairing report, which is what makes the renderers'
+     * extra column appear exactly when it is needed.
+     */
+    useCase?: string;
+
     /** ISO YYYY-MM-DD. */
     dueDate?: string;
   }>;
@@ -316,6 +325,9 @@ export interface AssessmentSectionData {
     id: number;
     title: string;
     progress: number;
+    /** See the note on ComplianceSectionData.controls[].useCase. */
+    useCase?: string;
+
     subtopics: Array<{
       id: number;
       title: string;
@@ -335,6 +347,9 @@ export interface ClausesAndAnnexesSectionData {
     clauseId: string;
     title: string;
     status: string;
+    /** See the note on ComplianceSectionData.controls[].useCase. */
+    useCase?: string;
+
     subClauses: Array<{
       id: number;
       title: string;
@@ -342,6 +357,8 @@ export interface ClausesAndAnnexesSectionData {
     }>;
   }>;
   annexes: Array<{
+    /** See the note on ComplianceSectionData.controls[].useCase. */
+    useCase?: string;
     id: number;
     annexId: string;
     title: string;
@@ -416,6 +433,8 @@ export interface NistSubcategoriesSectionData {
     categories: Array<{
       id: string;
       name: string;
+      /** See the note on ComplianceSectionData.controls[].useCase. */
+      useCase?: string;
       subcategories: Array<{
         id: number;
         subcategoryId: string;

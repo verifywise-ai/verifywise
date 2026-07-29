@@ -639,9 +639,17 @@ const riskChipClass = (level) => {
       </div>
 
       <% if (sections.compliance.controls.length > 0) { %>
+      <%
+        /* An organization report merges this table across every use case, and
+           control ids repeat -- each one has its own C1. mergeSections labels
+           the rows only when more than one contributed, so the column appears
+           exactly when it is needed and a single-project report is unchanged. */
+        var complianceUseCases = sections.compliance.controls.some(function (c) { return c.useCase; });
+      %>
       <table class="data-table">
         <thead>
           <tr>
+            <% if (complianceUseCases) { %><th>Use case</th><% } %>
             <th>Control ID</th>
             <th>Title</th>
             <th>Status</th>
@@ -651,6 +659,7 @@ const riskChipClass = (level) => {
         <tbody>
           <% sections.compliance.controls.forEach(function(control) { %>
           <tr>
+            <% if (complianceUseCases) { %><td><%= control.useCase || '-' %></td><% } %>
             <td><strong><%= control.controlId %></strong></td>
             <td><%= control.title %></td>
             <td>
@@ -700,7 +709,7 @@ const riskChipClass = (level) => {
 
       <% sections.assessment.topics.forEach(function(topic) { %>
       <div class="avoid-break">
-        <h4 class="section-subtitle"><%= topic.title %> (<%= topic.progress %>% complete)</h4>
+        <h4 class="section-subtitle"><% if (topic.useCase) { %><%= topic.useCase %> — <% } %><%= topic.title %> (<%= topic.progress %>% complete)</h4>
         <div class="progress-bar" style="margin-bottom: 16px;">
           <div class="progress-bar-fill" style="width: <%= topic.progress %>%"></div>
         </div>
@@ -747,11 +756,18 @@ const riskChipClass = (level) => {
       </div>
       <% } %>
 
+      <%
+        /* Merged across use cases -- and across ISO 42001 and ISO 27001, which
+           both land in this section. See the compliance table above. */
+        var clauseUseCases = sections.clausesAndAnnexes.clauses.some(function (c) { return c.useCase; });
+        var annexUseCases = sections.clausesAndAnnexes.annexes.some(function (a) { return a.useCase; });
+      %>
       <% if (sections.clausesAndAnnexes.clauses.length > 0) { %>
       <h4 class="section-subtitle">Clauses</h4>
       <table class="data-table">
         <thead>
           <tr>
+            <% if (clauseUseCases) { %><th>Use case</th><% } %>
             <th>Clause ID</th>
             <th>Title</th>
             <th>Status</th>
@@ -760,6 +776,7 @@ const riskChipClass = (level) => {
         <tbody>
           <% sections.clausesAndAnnexes.clauses.forEach(function(clause) { %>
           <tr>
+            <% if (clauseUseCases) { %><td><%= clause.useCase || '-' %></td><% } %>
             <td><strong><%= clause.clauseId %></strong></td>
             <td><%= clause.title %></td>
             <td><span class="chip chip-<%= clause.status === 'Compliant' ? 'success' : clause.status === 'In Progress' ? 'warning' : 'default' %>"><%= clause.status %></span></td>
@@ -774,6 +791,7 @@ const riskChipClass = (level) => {
       <table class="data-table">
         <thead>
           <tr>
+            <% if (annexUseCases) { %><th>Use case</th><% } %>
             <th>Annex ID</th>
             <th>Title</th>
             <th>Status</th>
@@ -782,6 +800,7 @@ const riskChipClass = (level) => {
         <tbody>
           <% sections.clausesAndAnnexes.annexes.forEach(function(annex) { %>
           <tr>
+            <% if (annexUseCases) { %><td><%= annex.useCase || '-' %></td><% } %>
             <td><strong><%= annex.annexId %></strong></td>
             <td><%= annex.title %></td>
             <td><span class="chip chip-<%= annex.status === 'Compliant' ? 'success' : annex.status === 'In Progress' ? 'warning' : 'default' %>"><%= annex.status %></span></td>
@@ -811,7 +830,7 @@ const riskChipClass = (level) => {
       <h4 class="section-subtitle"><%= func.name %></h4>
 
       <% func.categories.forEach(function(category) { %>
-      <h5 style="font-size: 12px; margin: 12px 0 8px 0; color: var(--color-text-secondary);"><%= category.name %></h5>
+      <h5 style="font-size: 12px; margin: 12px 0 8px 0; color: var(--color-text-secondary);"><% if (category.useCase) { %><%= category.useCase %> — <% } %><%= category.name %></h5>
 
       <% if (category.subcategories.length > 0) { %>
       <table class="data-table" style="font-size: 10px;">
