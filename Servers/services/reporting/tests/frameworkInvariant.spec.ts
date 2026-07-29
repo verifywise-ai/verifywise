@@ -18,10 +18,7 @@ import * as path from "path";
 
 describe("frameworks.is_organizational", () => {
   const migration = fs.readFileSync(
-    path.join(
-      __dirname,
-      "../../../database/migrations/20260226234301-public-schema-tables.js",
-    ),
+    path.join(__dirname, "../../../database/migrations/20260226234301-public-schema-tables.js"),
     "utf-8",
   );
 

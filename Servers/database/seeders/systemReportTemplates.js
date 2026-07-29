@@ -218,8 +218,7 @@ const SYSTEM_REPORT_TEMPLATES = [
   {
     name: "NIST AI RMF Profile Report",
     slug: "nist-ai-rmf-profile",
-    description:
-      "NIST AI RMF subcategory profile with the risks and models it governs.",
+    description: "NIST AI RMF subcategory profile with the risks and models it governs.",
     category: "compliance",
     defaultScope: "organization",
     recommendedFrequency: "monthly",
@@ -293,8 +292,7 @@ const SYSTEM_REPORT_TEMPLATES = [
   {
     name: "Consolidated Risk Register",
     slug: "consolidated-risk-register",
-    description:
-      "Every open risk in one register: use case, vendor and model risks together.",
+    description: "Every open risk in one register: use case, vendor and model risks together.",
     category: "risk",
     defaultScope: "organization",
     recommendedFrequency: "weekly",
@@ -325,8 +323,7 @@ const SYSTEM_REPORT_TEMPLATES = [
   {
     name: "Policy Governance Review",
     slug: "policy-governance-review",
-    description:
-      "Policy library status: approvals, owners and reviews coming due.",
+    description: "Policy library status: approvals, owners and reviews coming due.",
     category: "governance",
     defaultScope: "organization",
     recommendedFrequency: "monthly",

@@ -45,7 +45,8 @@ export function parseFrameworkSelection(raw: unknown): ParsedFrameworkSelection 
   if (!Array.isArray(raw)) return out;
 
   for (const entry of raw) {
-    const text = typeof entry === "number" ? String(entry) : typeof entry === "string" ? entry.trim() : null;
+    const text =
+      typeof entry === "number" ? String(entry) : typeof entry === "string" ? entry.trim() : null;
     if (text === null) {
       pushUnique(out.invalid, String(entry));
       continue;

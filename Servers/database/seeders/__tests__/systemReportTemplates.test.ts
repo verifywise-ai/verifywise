@@ -9,10 +9,7 @@
  * @module tests/systemReportTemplates
  */
 
-const {
-  SYSTEM_REPORT_TEMPLATES,
-  FRAMEWORK_SECTION_GATES,
-} = require("../systemReportTemplates.js");
+const { SYSTEM_REPORT_TEMPLATES, FRAMEWORK_SECTION_GATES } = require("../systemReportTemplates.js");
 
 const CANONICAL_CATEGORIES = ["executive", "compliance", "risk", "operational", "governance"];
 const FREQUENCIES = ["daily", "weekly", "monthly"];
