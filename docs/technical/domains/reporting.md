@@ -199,6 +199,18 @@ has no labels and renders exactly as it did before scope existed.
 renderers read it to drop the project line. The report's own scope is
 `metadata.scope`; do not conflate them.
 
+### Query cost
+
+Both report-facing framework queries are single flat reads, not the
+Requirements and Assessment screens' loaders. Those walk row by row pulling each
+control's or answer's evidence files and linked risks — none of which the report
+renders — and a report multiplies that by every pairing in its scope. Measured
+2026-07-29 for one pairing: 604 queries for `compliance` and 129 for
+`assessment`, against 18 for the whole eleven-section report afterwards.
+
+Keep it that way. If a section needs a new field, widen its flat query; do not
+reach for the screen's loader.
+
 ### Charts
 
 Charts are **derived from the collected sections**, not fetched again: the risk
