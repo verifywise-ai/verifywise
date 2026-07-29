@@ -1,0 +1,23 @@
+{
+  "$comment": "Documented exceptions for the npm audit gate (scripts/security/npm-audit-gate.js). Each entry MUST include a justification. Only advisories with no upstream fix may be listed here.",
+  "allowlist": [
+    {
+      "id": "ghsa-5pgg-2g8v-p4x9",
+      "package": "xlsx",
+      "title": "SheetJS Regular Expression Denial of Service (ReDoS)",
+      "justification": "No upstream fix available (SheetJS ceased publishing fixed versions to the public npm registry; advisory affects all published versions). xlsx is only used to parse spreadsheet files uploaded by authenticated users in an authenticated server-side context, not on untrusted public input, so ReDoS exposure is limited. Replacement with an actively maintained spreadsheet library is tracked as follow-up work."
+    },
+    {
+      "id": "ghsa-qwww-vcr4-c8h2",
+      "package": "react-router",
+      "title": "React Router: RSC Mode CSRF Bypass Allows Action Execution Before 400 Response",
+      "justification": "No react-router-dom 7.x release is currently available outside the affected range while remaining API-compatible; 7.18.1 is the latest 7.x patch and the application does not use RSC/server-action features. The exception will be removed once a patched 7.x release or validated major upgrade path is available."
+    },
+    {
+      "id": "ghsa-mh99-v99m-4gvg",
+      "package": "brace-expansion",
+      "title": "brace-expansion: DoS via unbounded expansion length causing an out-of-memory process crash",
+      "justification": "No patched releases exist for the minimatch@3 / minimatch@5 lines that still satisfy the transitive constraints of glob@7-based dependencies used by the server runtime (e.g., sequelize-typescript, yamljs, mjml). Upgrading those dependencies would require breaking API changes. The application does not expose brace-expansion to untrusted user input, so practical DoS exposure is limited. We will revisit once upstream releases compatible patched versions."
+    }
+  ]
+}

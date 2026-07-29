@@ -186,11 +186,16 @@ export async function appendToAuditLedger(entry: AuditLedgerEntry): Promise<void
       prev_hash: prevHash,
     });
 
-    // Step 4: UPDATE sentinel → real hash (trigger allows this one transition)
-    await sequelize.query(`UPDATE audit_ledger SET entry_hash = :realHash WHERE id = :id`, {
-      replacements: { realHash, id: newId },
-      transaction: txn,
-    });
+    // Step 4: UPDATE sentinel → real hash (trigger allows this one transition).
+    // Scope by organization_id as defense-in-depth so the hash fix can never
+    // touch another tenant's row, even if id generation/lookup ever changes.
+    await sequelize.query(
+      `UPDATE audit_ledger SET entry_hash = :realHash WHERE id = :id AND organization_id = :organizationId`,
+      {
+        replacements: { realHash, id: newId, organizationId },
+        transaction: txn,
+      },
+    );
 
     await txn.commit();
   } catch (error) {

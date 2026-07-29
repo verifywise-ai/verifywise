@@ -1,0 +1,84 @@
+name: IaC Security Scan
+
+# Trivy misconfiguration scan of infrastructure-as-code (OWASP 2025 A02):
+# Kubernetes manifests, Dockerfiles, docker-compose, Ansible, GitHub Actions.
+# Results go to the GitHub Security tab; the job fails on CRITICAL
+# misconfigurations.
+
+permissions:
+  contents: read
+  security-events: write
+
+on:
+  pull_request:
+    branches: [master, develop]
+    paths:
+      - 'kubernetes/**'
+      - 'ansible/**'
+      - '**/Dockerfile*'
+      - 'docker-compose*.yml'
+      - '.github/workflows/**'
+  push:
+    branches: [master, develop]
+    paths:
+      - 'kubernetes/**'
+      - 'ansible/**'
+      - '**/Dockerfile*'
+      - 'docker-compose*.yml'
+      - '.github/workflows/**'
+  workflow_dispatch:
+
+jobs:
+  trivy-config:
+    name: Trivy IaC misconfiguration scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      # This is the GATE. The table format honors .trivyignore for the exit code;
+      # the SARIF format below does NOT (a known trivy-action quirk where
+      # limit-severities-for-sarif + exit-code computes the code on the
+      # unfiltered result, so ignored AVD-DS-0002 / AVD-KSV-0014 still fail it).
+      # So we fail the job here (table) and make the SARIF step upload-only.
+      - name: Run Trivy config scan (gate)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: 'config'
+          scan-ref: '.'
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+          ignore-unfixed: true
+          # Skip vendored/third-party and local tooling directories — their
+          # Dockerfiles (e.g. node_modules/bcrypt) are not our IaC to harden.
+          skip-dirs: 'node_modules,**/node_modules,.claude'
+          # The action does NOT auto-load the repo-root .trivyignore; it must be
+          # pointed at explicitly, or the accepted findings (AVD-DS-0002,
+          # AVD-KSV-0014, justified in that file) fail the gate.
+          trivyignores: '.trivyignore'
+
+      # Upload-only: exit-code 0 so a SARIF-format quirk can't fail the job (the
+      # table step above is the authoritative gate). always() so the report is
+      # still uploaded even when the gate fails.
+      - name: Run Trivy config scan (SARIF for Security tab)
+        if: always()
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: 'config'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-config-results.sarif'
+          severity: 'CRITICAL,HIGH'
+          limit-severities-for-sarif: 'CRITICAL,HIGH'
+          exit-code: '0'
+          ignore-unfixed: true
+          skip-dirs: 'node_modules,**/node_modules,.claude'
+          trivyignores: '.trivyignore'
+
+      - name: Upload Trivy config results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: 'trivy-config-results.sarif'
+          category: 'iac-config'

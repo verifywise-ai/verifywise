@@ -1,6 +1,7 @@
 import express from "express";
 const router = express.Router();
 import authenticateJWT from "../middleware/auth.middleware";
+import authorize from "../middleware/accessControl.middleware";
 import {
   getAllAgentPrimitives,
   getAgentStats,
@@ -27,21 +28,21 @@ router.get("/sync/status", authenticateJWT, getSyncStatus);
 router.get("/:id", authenticateJWT, getAgentPrimitiveById);
 
 // Create + sync trigger
-router.post("/", authenticateJWT, createAgentPrimitive);
-router.post("/sync", authenticateJWT, triggerSync);
+router.post("/", authenticateJWT, authorize(["Admin"]), createAgentPrimitive);
+router.post("/sync", authenticateJWT, authorize(["Admin"]), triggerSync);
 
 // Update (manual agents only)
-router.patch("/:id", authenticateJWT, updateAgentPrimitive);
+router.patch("/:id", authenticateJWT, authorize(["Admin"]), updateAgentPrimitive);
 
 // Review + model linking
-router.patch("/:id/review", authenticateJWT, reviewAgentPrimitive);
-router.patch("/:id/link-model", authenticateJWT, linkModelToAgent);
-router.patch("/:id/unlink-model", authenticateJWT, unlinkModelFromAgent);
+router.patch("/:id/review", authenticateJWT, authorize(["Admin"]), reviewAgentPrimitive);
+router.patch("/:id/link-model", authenticateJWT, authorize(["Admin"]), linkModelToAgent);
+router.patch("/:id/unlink-model", authenticateJWT, authorize(["Admin"]), unlinkModelFromAgent);
 
 // Audit logs
 router.get("/:id/audit-logs", authenticateJWT, getAgentAuditLogs);
 
 // Delete
-router.delete("/:id", authenticateJWT, deleteAgentPrimitiveById);
+router.delete("/:id", authenticateJWT, authorize(["Admin"]), deleteAgentPrimitiveById);
 
 export default router;

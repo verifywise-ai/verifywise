@@ -12,8 +12,12 @@ import {
 } from "../controllers/file.ctrl";
 import authenticateJWT from "../middleware/auth.middleware";
 import authorize from "../middleware/accessControl.middleware";
-const multer = require("multer");
-const upload = multer({ Storage: multer.memoryStorage() });
+import { createMemoryUpload } from "../utils/upload.utils";
+
+// Security: the previous config had a typo'd `Storage` key, so multer ran
+// with zero limits and no type validation (memory-exhaustion DoS vector).
+// Use the shared bounded factory (30MB/file, 10 files, MIME allowlist).
+const upload = createMemoryUpload();
 
 const router = express.Router();
 
@@ -31,6 +35,12 @@ router.patch("/bulk-tags", authenticateJWT, authorize(["Admin", "Editor"]), bulk
 
 // File download - Admin only
 router.get("/:id", authenticateJWT, authorize(["Admin"]), getFileContentById);
-router.post("/", authenticateJWT, upload.any("files"), postFileContent);
+router.post(
+  "/",
+  authenticateJWT,
+  authorize(["Admin", "Reviewer", "Editor"]),
+  upload.any("files"),
+  postFileContent,
+);
 
 export default router;

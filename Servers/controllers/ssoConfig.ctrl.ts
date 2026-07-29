@@ -122,6 +122,11 @@ export const checkSSOStatus = async (req: Request, res: Response) => {
       return res.status(200).json(STATUS_CODE[200]({ isEnabled: false, hasConfig: !!config }));
     }
     const data = config.config_data;
+    // Minimal exposure for the pre-login flow. tenantId/clientId are NOT
+    // secrets: they are public OAuth identifiers that appear in the browser's
+    // address bar during the Microsoft authorize redirect, and the SPA needs
+    // them to build that redirect URL client-side. The client_secret is never
+    // returned here.
     return res.status(200).json(
       STATUS_CODE[200]({
         isEnabled: !!config.is_enabled,

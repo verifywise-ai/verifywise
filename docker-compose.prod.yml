@@ -17,7 +17,9 @@ services:
 
   frontend:
     ports:
-      - "0.0.0.0:${FRONTEND_PORT}:80"
+      # Bind to localhost only: direct public access would bypass the
+      # TLS-terminating host nginx (plain HTTP). Nginx proxies via localhost.
+      - "127.0.0.1:${FRONTEND_PORT}:80"
     env_file:
       - ./.env.prod
   

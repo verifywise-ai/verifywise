@@ -1,0 +1,73 @@
+# Production TLS ingress for VerifyWise.
+#
+# Prerequisites:
+#   1. ingress-nginx controller installed
+#   2. cert-manager installed with a ClusterIssuer named "letsencrypt-prod"
+#   3. Replace verifywise.yourdomain.com with the real domain (2 places)
+#
+# The all-in-one pod exposes the frontend nginx on verifywise-svc:80,
+# which proxies /api to the backend container in the same pod.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: verifywise-ingress
+  namespace: verifywise
+  labels:
+    app: verifywise
+  annotations:
+    kubernetes.io/ingress.class: nginx
+
+    # Force HTTPS
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+
+    # Pin TLS protocols (disable TLSv1.0/1.1)
+    nginx.ingress.kubernetes.io/ssl-protocols: "TLSv1.2 TLSv1.3"
+
+    # Automatic certificate via cert-manager (Let's Encrypt)
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+
+    # Large evidence uploads
+    nginx.ingress.kubernetes.io/proxy-body-size: "200m"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+
+    # Security headers (CORS is handled by the backend's allow-list)
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Frame-Options: SAMEORIGIN";
+      more_set_headers "X-Content-Type-Options: nosniff";
+      more_set_headers "Referrer-Policy: strict-origin-when-cross-origin";
+spec:
+  ingressClassName: nginx
+
+  tls:
+    - hosts:
+        - verifywise.yourdomain.com # TODO: replace with the real domain
+      secretName: verifywise-tls # created by cert-manager
+
+  rules:
+    - host: verifywise.yourdomain.com # TODO: replace with the real domain
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: verifywise-svc
+                port:
+                  number: 80
+          - path: /health
+            pathType: Prefix
+            backend:
+              service:
+                name: verifywise-svc
+                port:
+                  number: 80
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: verifywise-svc
+                port:
+                  number: 80

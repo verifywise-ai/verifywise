@@ -1,0 +1,25 @@
+# Trivy ignore list — one AVD-ID per line, each justified above it.
+# Scope: IaC misconfiguration scan (.github/workflows/iac-scan.yml).
+# Everything not listed here still fails the gate.
+
+# AVD-DS-0002 (HIGH) — Dockerfile runs as root / no non-root USER.
+# Accepted, tracked TODO: switching the images to a non-root USER is planned
+# hardening (see per-container TODO comments in kubernetes/base/deployment.yaml
+# referencing Servers/, Clients/, AIGateway/ and EvalServer/ Dockerfiles).
+# Until the images support it, `runAsNonRoot: true` would crash the pods.
+# Compensating controls already in place in kubernetes/base/deployment.yaml:
+# allowPrivilegeEscalation: false, capabilities drop ALL (frontend keeps only
+# NET_BIND_SERVICE to bind port 80), automountServiceAccountToken: false, and
+# a pod-level RuntimeDefault seccomp profile.
+AVD-DS-0002
+
+# AVD-KSV-0014 (HIGH) — container should set readOnlyRootFilesystem: true.
+# Accepted for now: several containers in these manifests genuinely require a
+# writable root filesystem and enabling this would break them at runtime —
+# postgres writes PGDATA (base pod has no data volume mounted), redis writes
+# its dump to /data, and the nginx frontend needs /var/cache/nginx, /var/run
+# and /tmp. The proper fix (per-container emptyDir/tmpfs mounts after
+# verifying each app's write paths) is tracked as hardening backlog.
+# Compensating controls as above (no privilege escalation, dropped
+# capabilities, seccomp RuntimeDefault).
+AVD-KSV-0014

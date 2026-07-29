@@ -18,6 +18,10 @@ spec:
         app: verifywise
         component: ai-gateway
     spec:
+      # Pod-level security context (KSV-0118): runtime-default seccomp profile.
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       containers:
       - name: ai-gateway
         image: ghcr.io/verifywise-ai/verifywise-ai-gateway:latest
