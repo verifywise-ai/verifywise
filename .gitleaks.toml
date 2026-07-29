@@ -1,0 +1,57 @@
+# Gitleaks configuration — extends the default ruleset.
+#
+# The global allowlist below documents known FALSE POSITIVES only; every entry
+# is justified inline. Allowlisting is primarily PATH-based so real secrets in
+# source files are still caught everywhere else. The few value regexes at the
+# bottom match exact placeholder literals that live inside real source files
+# (where a path allowlist would hide genuine leaks).
+#
+# Path separators are written as [/\\] so the same config behaves identically
+# on Windows dev machines and Linux CI runners.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Documented false positives: tests, fixtures, docs, examples"
+paths = [
+  # --- Build/dependency artifacts (never committed; local-run noise only) ---
+  '''node_modules''',
+  '''(^|[/\\])dist[/\\]''',
+  '''(^|[/\\])coverage[/\\]''',
+  '''(^|[/\\])venv[/\\]''',
+  '''(^|[/\\])\.venv[/\\]''',
+  '''\.tmp-sec[/\\]''',
+
+  # --- Test fixtures with intentionally fake tokens ---
+  # Frontend/backend unit & integration tests use dummy tokens/keys only.
+  '''__tests__[/\\]''',
+  '''[/\\]tests?[/\\]''',
+  # Detection FIXTURE: fake API-key patterns used to test the AI-key
+  # detection logic itself — must never be treated as real secrets.
+  '''test-patterns\.ts$''',
+
+  # --- Documentation: example curl/JWT/placeholder values ---
+  # All markdown files are docs/snippets by definition in this repo.
+  '''\.md$''',
+  '''(^|[/\\])docs[/\\]''',
+  '''[/\\]documentation[/\\]''',
+  '''user-guide-content[/\\]''',
+
+  # --- Kubernetes example manifest: values are REPLACE_ME placeholders ---
+  '''secrets-example\.yaml$''',
+]
+
+# Value regexes: exact placeholder literals inside REAL source files.
+# gitleaks matches these against the detected secret value, not the code.
+regexes = [
+  # localStorage tab-state keys in Clients Framework pages — UI constants,
+  # not credentials (e.g. "verifywise_iso27001_tab").
+  '''verifywise_(iso\d+|nist_ai_rmf|eu_ai_act)_tab''',
+  # PEM header literal used as a DETECTION pattern in the AI Gateway
+  # guardrail config (Clients Guardrails page) — it detects keys, it is not
+  # one.
+  '''-----BEGIN (RSA |OPENSSH |EC |DSA |PGP )?PRIVATE KEY-----''',
+  # Truncated example JWT in JSDoc/swagger response examples (header segment
+  # only, ends in "...") — e.g. Servers/controllers/*.ctrl.ts.
+  '''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.\.\.''',
+]

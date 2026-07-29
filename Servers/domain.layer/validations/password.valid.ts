@@ -17,7 +17,7 @@ export function passwordValidation(password: string): {
 } {
   const specialCharRegex = /[!@#$%^&*(),.?":{}|<>]/;
   const minLength = 8;
-  const maxLength = 32;
+  const maxLength = 128;
 
   // Check for required criteria: lowercase, uppercase, digit, and minimum length
   const hasLowercase = /[a-z]/.test(password);

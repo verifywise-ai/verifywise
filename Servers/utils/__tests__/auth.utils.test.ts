@@ -4,6 +4,10 @@ import { describe, it, expect, jest, beforeAll, beforeEach } from "@jest/globals
 jest.mock("../jwt.utils", () => ({
   generateToken: jest.fn(),
   generateRefreshToken: jest.fn(),
+  THIRTY_DAYS_MS: 30 * 24 * 3600 * 1000,
+}));
+jest.mock("../refreshToken.utils", () => ({
+  storeRefreshToken: jest.fn<any>().mockResolvedValue(undefined),
 }));
 
 import { generateUserTokens } from "../auth.utils";
@@ -39,17 +43,43 @@ describe("auth.utils", () => {
       return res;
     }
 
-    it("should generate both access and refresh tokens", () => {
+    it("should generate both access and refresh tokens", async () => {
       const res = createMockRes();
-      const result = generateUserTokens(userData, res);
+      const result = await generateUserTokens(userData, res);
 
       expect(result.accessToken).toBe("access-token-123");
       expect(result.refreshToken).toBe("refresh-token-456");
+      expect(result.familyId).toBeDefined();
     });
 
-    it("should include organizationId in token payload", () => {
+    it("should persist the refresh token hash", async () => {
+      const { storeRefreshToken } = require("../refreshToken.utils");
       const res = createMockRes();
-      generateUserTokens(userData, res);
+      await generateUserTokens(userData, res);
+
+      expect(storeRefreshToken).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: 1,
+          organizationId: 10,
+          token: "refresh-token-456",
+        }),
+      );
+    });
+
+    it("should reuse the provided rotation family", async () => {
+      const { storeRefreshToken } = require("../refreshToken.utils");
+      const res = createMockRes();
+      const result = await generateUserTokens(userData, res, "family-abc");
+
+      expect(result.familyId).toBe("family-abc");
+      expect(storeRefreshToken).toHaveBeenCalledWith(
+        expect.objectContaining({ familyId: "family-abc" }),
+      );
+    });
+
+    it("should include organizationId in token payload", async () => {
+      const res = createMockRes();
+      await generateUserTokens(userData, res);
 
       expect(mockGenerateToken).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -61,9 +91,9 @@ describe("auth.utils", () => {
       );
     });
 
-    it("should set refresh token as httpOnly cookie", () => {
+    it("should set refresh token as httpOnly cookie", async () => {
       const res = createMockRes();
-      generateUserTokens(userData, res);
+      await generateUserTokens(userData, res);
 
       expect(res.cookie).toHaveBeenCalledWith(
         "refresh_token",
@@ -75,10 +105,10 @@ describe("auth.utils", () => {
       );
     });
 
-    it("should set sameSite to lax in development", () => {
+    it("should set sameSite to lax in development", async () => {
       process.env.NODE_ENV = "development";
       const res = createMockRes();
-      generateUserTokens(userData, res);
+      await generateUserTokens(userData, res);
 
       expect(res.cookie).toHaveBeenCalledWith(
         "refresh_token",
@@ -90,10 +120,10 @@ describe("auth.utils", () => {
       );
     });
 
-    it("should set cookie expiration ~30 days in the future", () => {
+    it("should set cookie expiration ~30 days in the future", async () => {
       const res = createMockRes();
       const before = Date.now();
-      generateUserTokens(userData, res);
+      await generateUserTokens(userData, res);
 
       const cookieCall = res.cookie.mock.calls[0];
       const cookieOptions = cookieCall[2];

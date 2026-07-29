@@ -75,7 +75,7 @@ check_and_download_compose_files() {
 
 # Secrets that must be set (non-empty) before any container starts.
 # Keep in sync with the blanked values in .env.dev / .env.prod.
-REQUIRED_SECRETS="DB_PASSWORD SUPERADMIN_PASSWORD JWT_SECRET REFRESH_TOKEN_SECRET ENCRYPTION_ALGORITHM ENCRYPTION_PASSWORD AI_GATEWAY_INTERNAL_KEY"
+REQUIRED_SECRETS="DB_PASSWORD SUPERADMIN_PASSWORD JWT_SECRET REFRESH_TOKEN_SECRET ENCRYPTION_ALGORITHM ENCRYPTION_PASSWORD AI_GATEWAY_INTERNAL_KEY EVAL_SERVER_INTERNAL_KEY"
 
 # Function to verify all required secrets are set before starting Docker
 check_required_secrets() {

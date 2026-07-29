@@ -281,6 +281,7 @@ function deepEvalRoutes() {
   const router = Router();
 
   const targetUrl = process.env.LLM_EVALS_URL || "http://127.0.0.1:8000";
+  const EVAL_SERVER_KEY = process.env.EVAL_SERVER_INTERNAL_KEY || "";
 
   const AI_GATEWAY_URL = process.env.AI_GATEWAY_URL || "http://127.0.0.1:8100";
   const AI_GATEWAY_KEY = process.env.AI_GATEWAY_INTERNAL_KEY || "";
@@ -378,6 +379,16 @@ function deepEvalRoutes() {
       proxyReq: (proxyReq, req) => {
         // Forward custom headers to the proxy target
         const expressReq = req as Request;
+
+        // Service-to-service shared secret (overwrites any client-supplied value)
+        proxyReq.setHeader("x-internal-key", EVAL_SERVER_KEY);
+
+        // Strip client-supplied tenant headers: the eval server trusts these,
+        // so they must only ever come from the authenticated JWT context.
+        proxyReq.removeHeader("x-organization-id");
+        proxyReq.removeHeader("x-user-id");
+        proxyReq.removeHeader("x-role");
+
         if (expressReq.organizationId) {
           proxyReq.setHeader("x-organization-id", expressReq.organizationId.toString());
         }

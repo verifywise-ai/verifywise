@@ -1,5 +1,10 @@
 FROM node:24-alpine3.20
 
+# Security: guarantee production mode in the published image.
+# Without this, cookies lose the Secure flag, Swagger docs are exposed,
+# and dev code paths activate if NODE_ENV is not set elsewhere.
+ENV NODE_ENV=production
+
 WORKDIR /app
 COPY ./package.json ./
 
