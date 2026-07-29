@@ -102,6 +102,8 @@ When `frameworkIds` is non-empty, derive `scopedProjectIds` as the distinct proj
 
 An empty `frameworkIds` skips all of this, so present-day behaviour is untouched.
 
+An **empty `scopedProjectIds` skips the section entirely** and emits a `no_framework_target` notice — it must never build a predicate, because `= ANY(:emptyArray)` runs into Postgres empty-array type inference. This is a live path, not a hypothetical: template #21 selects `native:1` at project scope, so running it against an ISO project resolves zero targets.
+
 This is why `use-case-onboarding-assessment` (#21) selects `native:1`: it gates `assessment` **and** narrows `projectRisks` to EU AI Act projects. On a template whose sections are all entity-scoped, a framework selection would be decorative — none of the 21 is in that position.
 
 ### Empty-section notices
@@ -183,11 +185,21 @@ AI block abbreviations — `RA` and `RISK` are distinct blocks and the shorthand
 
 **Framework ↔ section reachability.** `collectAllData` gates framework sections on numeric ids: `compliance`/`assessment` → 1, `clausesAndAnnexes` → 2 or 3, `nistSubcategories` → 4. A template enabling a gated section whose gate no selected framework opens renders that section empty. Verified on paper for #4, 5, 6, 7, 8, 9, 10 and 21; every other template selects no framework and so reaches all gates. A test re-derives this from the seeded rows rather than trusting the table above — **the seed does not get written until it passes.** A 21-template migration with silently-empty sections is expensive to unwind once installs have run it.
 
-### Seed migration
+### Seed migration, and why the definitions leave it
 
-Second migration. Resolves framework ids **by name** the way `20260302111132-seed-framework-struct-data.js` does, never by hardcoded integer. Tolerates a missing or inactive framework by skipping that template with a log line. Keeps the existing `SELECT id FROM report_templates WHERE slug = :slug AND is_system_template = true` idempotency guard — `slug` carries a unique index from `20260720163044-report-template-slug-unique.js`.
+`20260619191640` keeps its three templates in a `TEMPLATES` const local to the migration file. A Jest test cannot import that, so the two checks above would have to either restate the 21-row table — drifting from the seed silently, which defeats their whole purpose — or run against a live migrated database.
+
+The definitions therefore move to **`Servers/database/seeders/systemReportTemplates.js`**, a plain CommonJS module exporting all 21 including the three currently inlined. The seed migration requires it and inserts the 18 missing slugs; the distinctness and reachability tests require the same file. That single shared source is what turns the reachability check from a paragraph into a gate.
+
+`.js`, not `.ts`, deliberately: migrations run from `dist/` per `Servers/CLAUDE.md`, and a TypeScript source would put the migration and the test on different paths to the same data.
+
+Two migrations, and **migration A must sort before B** — two `date +%Y%m%d%H%M%S` calls in the same second return the same timestamp, and the `ALTER` has to precede the seed.
+
+The seed resolves framework ids **by name** the way `20260302111132-seed-framework-struct-data.js` does, never by hardcoded integer, and tolerates a missing or inactive framework by skipping that template with a log line. It keeps the existing `SELECT id FROM report_templates WHERE slug = :slug AND is_system_template = true` idempotency guard — `slug` carries a unique index from `20260720163044-report-template-slug-unique.js`.
 
 The three existing templates need no backfill: `framework_config` defaults to `'{}'`, which reads as all frameworks, which is what they do today.
+
+**`down()` cannot `DELETE`.** `scheduled_reports.template_id INTEGER NOT NULL REFERENCES verifywise.report_templates(id)` carries no `ON DELETE` clause, so `NO ACTION` applies and dropping a system template any org has scheduled from raises an FK violation. Latent at 3 templates; not at 21. `down()` sets `is_active = false` on the 18 seeded slugs instead.
 
 ## Phase 2 — TemplatesTab grouping and category canonicalization
 
@@ -280,6 +292,8 @@ Both mechanical checks re-run over all 29 templates when this phase lands.
 | 4 | Per-section collector, renderer and facts tests; a `FACTS_SCHEMA_VERSION` bump test |
 
 `npm run build` in both `Servers` and `Clients` before any PR.
+
+If a phase touches a route file, regenerate the API surface in the same commit — `npm run generate:swagger && npm run generate:endpoints && npm run check:api-drift`. The `api-docs-drift` CI job is the most common PR failure. Adding `frameworkIds` to a request body may not change the route files at all; check rather than assume.
 
 ## Documentation
 
