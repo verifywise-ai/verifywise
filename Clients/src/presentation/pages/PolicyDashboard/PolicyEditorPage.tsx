@@ -142,12 +142,7 @@ export default function PolicyEditorPage() {
         const r = checkStringValidation("Next review date", (v as string) || "", 1);
         return r.accepted ? "" : r.message;
       },
-      assignedReviewers: (v: unknown) => {
-        const reviewers = v as PolicyFormData["assignedReviewers"];
-        return reviewers.filter((u) => u.id !== undefined).length === 0
-          ? "At least one reviewer is required."
-          : "";
-      },
+      assignedReviewers: () => "",
     }),
     [],
   );
