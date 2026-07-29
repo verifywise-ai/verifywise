@@ -44,6 +44,7 @@ describe("DOCX Generator", () => {
     charts: {},
     renderedCharts: {},
     sections: {},
+    sectionNotices: [],
   };
 
   describe("generateDOCX", () => {
@@ -610,25 +611,28 @@ describe("DOCX Generator", () => {
     // renderers add a Use case column as soon as mergeSections labels the rows.
     // createTable pairs headers with cells positionally — both sides are driven
     // off one flag, and this is what holds them in step.
-    const merged = (useCase?: string) => ({
-      ...mockReportData,
-      sections: {
-        compliance: {
-          overallProgress: 0,
-          totalControls: 1,
-          completedControls: 0,
-          controls: [{ id: 1, controlId: "C1", title: "Train staff", status: "Waiting", useCase }],
+    const merged = (useCase?: string) =>
+      ({
+        ...mockReportData,
+        sections: {
+          compliance: {
+            overallProgress: 0,
+            totalControls: 1,
+            completedControls: 0,
+            controls: [
+              { id: 1, controlId: "C1", title: "Train staff", status: "Waiting", useCase },
+            ],
+          },
+          clausesAndAnnexes: {
+            clauses: [
+              { id: 1, clauseId: "4", title: "Context", status: "Done", subClauses: [], useCase },
+            ],
+            annexes: [
+              { id: 1, annexId: "A.1", title: "Policy", status: "Done", controls: [], useCase },
+            ],
+          },
         },
-        clausesAndAnnexes: {
-          clauses: [
-            { id: 1, clauseId: "4", title: "Context", status: "Done", subClauses: [], useCase },
-          ],
-          annexes: [
-            { id: 1, annexId: "A.1", title: "Policy", status: "Done", controls: [], useCase },
-          ],
-        },
-      },
-    }) as unknown as ReportData;
+      }) as unknown as ReportData;
 
     it("labels the merged rows and keeps the tables well formed", async () => {
       const result = await generateDOCX(merged("Alpha"));
@@ -647,6 +651,53 @@ describe("DOCX Generator", () => {
 
       expect(text).not.toContain("Use case");
       expect(text).toContain("C1");
+    });
+  });
+
+  describe("section notices", () => {
+    it("names the section and explains why it is empty", async () => {
+      // Nothing but notices: both "has any section" guards return [], so this
+      // also proves a notices-only report still produces a document.
+      const result = await generateDOCX({
+        ...mockReportData,
+        sections: {},
+        sectionNotices: [{ sectionKey: "nistSubcategories", reason: "no_framework_target" }],
+      });
+      const text = await docxText(result.content);
+
+      expect(result.success).toBe(true);
+      expect(text).toContain("Sections with no data");
+      expect(text).toContain("NIST subcategories");
+      expect(text).toContain("No project in scope uses a framework that provides this section.");
+    });
+
+    it("falls back to the raw key and reason it does not recognise", async () => {
+      const result = await generateDOCX({
+        ...mockReportData,
+        sectionNotices: [
+          { sectionKey: "somethingNew", reason: "brand_new_reason" },
+        ] as unknown as ReportData["sectionNotices"],
+      });
+      const text = await docxText(result.content);
+
+      expect(text).toContain("somethingNew");
+      expect(text).toContain("brand_new_reason");
+    });
+
+    it("renders nothing when there are no notices", async () => {
+      const result = await generateDOCX({ ...mockReportData, sectionNotices: [] });
+      const text = await docxText(result.content);
+
+      expect(text).not.toContain("Sections with no data");
+    });
+
+    it("renders nothing when a caller omits sectionNotices entirely", async () => {
+      const { sectionNotices: _omitted, ...legacy } = mockReportData;
+      const result = await generateDOCX(legacy as ReportData);
+      const text = await docxText(result.content);
+
+      expect(result.success).toBe(true);
+      expect(text).not.toContain("Sections with no data");
     });
   });
 });

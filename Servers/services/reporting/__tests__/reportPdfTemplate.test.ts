@@ -8,16 +8,29 @@
 import * as ejs from "ejs";
 import * as fs from "fs";
 import * as path from "path";
-import { AISummaries, ReportData } from "../../../domain.layer/interfaces/i.reportGeneration";
+import {
+  AISummaries,
+  ReportData,
+  SectionNotice,
+} from "../../../domain.layer/interfaces/i.reportGeneration";
 import { ANALYSIS_LABELS } from "../analyzers/mapToSummaries";
 
 const TEMPLATE_PATH = path.join(__dirname, "../../../templates/reports/report-pdf.ejs");
 const template = fs.readFileSync(TEMPLATE_PATH, "utf-8");
 
 const SECTION_KEYS: Array<keyof ReportData["sections"]> = [
-  "projectRisks", "vendorRisks", "modelRisks", "compliance", "assessment",
-  "clausesAndAnnexes", "nistSubcategories", "vendors", "models",
-  "trainingRegistry", "policyManager", "incidentManagement",
+  "projectRisks",
+  "vendorRisks",
+  "modelRisks",
+  "compliance",
+  "assessment",
+  "clausesAndAnnexes",
+  "nistSubcategories",
+  "vendors",
+  "models",
+  "trainingRegistry",
+  "policyManager",
+  "incidentManagement",
 ];
 
 function render(
@@ -25,6 +38,9 @@ function render(
   // Sections default to falsy stand-ins; a test that needs a real section
   // passes just that one and leaves its eleven siblings switched off.
   sectionOverrides: Partial<Record<(typeof SECTION_KEYS)[number], unknown>> = {},
+  // Left undefined by default so every pre-existing test also proves the
+  // template survives a caller that predates sectionNotices.
+  sectionNotices?: SectionNotice[],
 ): string {
   const data = {
     metadata: {
@@ -48,6 +64,10 @@ function render(
       ...sectionOverrides,
     } as unknown as ReportData["sections"],
     aiSummaries,
+    // The cast keeps `satisfies ReportData` honest while still letting a test
+    // pass literally nothing — the template's own `typeof` guard is the thing
+    // under test in that case.
+    sectionNotices: sectionNotices as SectionNotice[],
     // The renderer supplies these; the template must not declare its own copy.
     analysisLabels: ANALYSIS_LABELS,
     include: () => "",
@@ -68,7 +88,9 @@ const FULL: AISummaries = {
   complianceGap: {
     narrative: "Two controls lack evidence.",
     scores_caveat: "Readiness scores were unavailable for this period.",
-    gaps: [{ control: "Art. 9 Risk management", gap: "No documented review cadence", priority: "High" }],
+    gaps: [
+      { control: "Art. 9 Risk management", gap: "No documented review cadence", priority: "High" },
+    ],
   },
   vendorRisk: {
     narrative: "One vendor processes personal data without a DPA.",
@@ -172,8 +194,12 @@ describe("report-pdf.ejs template", () => {
   it("abstained sections render nothing at all", () => {
     const html = render({ sectionSummaries: {} });
     for (const s of [
-      "Recommended actions", "Compliance Gap Analysis", "Compliance gap analysis",
-      "Third-party risk analysis", "Prioritised gaps", "Scope note",
+      "Recommended actions",
+      "Compliance Gap Analysis",
+      "Compliance gap analysis",
+      "Third-party risk analysis",
+      "Prioritised gaps",
+      "Scope note",
     ]) {
       expect(html).not.toContain(s);
     }
@@ -282,7 +308,11 @@ describe("report-pdf.ejs template", () => {
       riskAnalysis: {
         narrative: "Concentration risk dominates.",
         top_risks: [
-          { name: "Single model owner", level: "Very high risk", why: "25 of 25 models share one owner" },
+          {
+            name: "Single model owner",
+            level: "Very high risk",
+            why: "25 of 25 models share one owner",
+          },
         ],
       },
     });
@@ -536,7 +566,9 @@ describe("report-pdf.ejs template", () => {
     });
 
     const iso = (useCase?: string) => ({
-      clauses: [{ id: 1, clauseId: "4", title: "Context", status: "Done", subClauses: [], useCase }],
+      clauses: [
+        { id: 1, clauseId: "4", title: "Context", status: "Done", subClauses: [], useCase },
+      ],
       annexes: [{ id: 1, annexId: "A.1", title: "Policy", status: "Done", controls: [], useCase }],
     });
 
@@ -571,5 +603,38 @@ describe("report-pdf.ejs template", () => {
 
       expect(html).toContain("Gamma");
     });
+  });
+});
+
+describe("section notices", () => {
+  it("names the section and explains why it is empty", () => {
+    const html = render(undefined, {}, [
+      { sectionKey: "nistSubcategories", reason: "no_framework_target" },
+    ]);
+
+    expect(html).toContain("Sections with no data");
+    expect(html).toContain("NIST subcategories");
+    expect(html).toContain("No project in scope uses a framework that provides this section.");
+  });
+
+  it("falls back to the raw key and reason it does not recognise", () => {
+    const html = render(undefined, {}, [
+      { sectionKey: "somethingNew", reason: "brand_new_reason" } as unknown as SectionNotice,
+    ]);
+
+    expect(html).toContain("somethingNew");
+    expect(html).toContain("brand_new_reason");
+  });
+
+  it("renders nothing when there are no notices", () => {
+    const html = render(undefined, {}, []);
+
+    expect(html).not.toContain("section-notice");
+  });
+
+  it("renders nothing when a caller omits sectionNotices entirely", () => {
+    const html = render();
+
+    expect(html).not.toContain("section-notice");
   });
 });

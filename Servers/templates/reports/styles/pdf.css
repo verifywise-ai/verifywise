@@ -508,3 +508,20 @@ body {
     flex-direction: column;
   }
 }
+
+/* Sections with no data (section notices) */
+.section-notice-intro {
+  font-size: 11px;
+  color: #667085;
+  margin-bottom: 8px;
+}
+
+.section-notice {
+  font-size: 12px;
+  color: #344054;
+  padding-left: 18px;
+}
+
+.section-notice li {
+  margin-bottom: 4px;
+}

@@ -50,6 +50,33 @@ const COLORS = {
 };
 
 /**
+ * Copy for the "sections with no data" block. Duplicated in report-pdf.ejs
+ * the same way every other section's copy is — the two renderers do not share
+ * a template layer. Keep the two copies exactly in step.
+ */
+const NOTICE_LABELS: Record<string, string> = {
+  projectRisks: "Use case risks",
+  vendorRisks: "Vendor risks",
+  modelRisks: "Model risks",
+  compliance: "Requirements",
+  assessment: "Assessment tracker",
+  clausesAndAnnexes: "Clauses and annexes",
+  nistSubcategories: "NIST subcategories",
+  models: "AI models",
+  vendors: "Vendors",
+  trainingRegistry: "Training registry",
+  policyManager: "Policy manager",
+  incidentManagement: "Incident management",
+};
+
+const NOTICE_REASONS: Record<string, string> = {
+  no_framework_target: "No project in scope uses a framework that provides this section.",
+  no_data: "No records were found in scope.",
+  unresolved_framework:
+    "The selected framework is a plugin framework, which reports do not yet cover.",
+};
+
+/**
  * Create the cover page section (matching PDF format)
  */
 function createCoverPage(reportData: ReportData): Paragraph[] {
@@ -548,17 +575,15 @@ function createAIAnalysisBox(
         fill: bgColor,
         type: ShadingType.CLEAR,
       },
-      children: content
-        .split("\n")
-        .map(
-          (line, i) =>
-            new TextRun({
-              text: line,
-              size: 20,
-              color: COLORS.textPrimary,
-              ...(i > 0 && { break: 1 }),
-            }),
-        ),
+      children: content.split("\n").map(
+        (line, i) =>
+          new TextRun({
+            text: line,
+            size: 20,
+            color: COLORS.textPrimary,
+            ...(i > 0 && { break: 1 }),
+          }),
+      ),
     }),
   ];
 }
@@ -758,7 +783,12 @@ function createComplianceGapSection(reportData: ReportData): (Paragraph | Table)
           indent: { left: convertInchesToTwip(0.3) },
           bullet: { level: 0 },
           children: [
-            new TextRun({ text: `${g.control}: `, bold: true, size: 20, color: COLORS.textPrimary }),
+            new TextRun({
+              text: `${g.control}: `,
+              bold: true,
+              size: 20,
+              color: COLORS.textPrimary,
+            }),
             new TextRun({
               text: `${g.gap} (${g.priority}${g.basis ? `, Basis: ${g.basis}` : ""})`,
               size: 20,
@@ -1405,6 +1435,63 @@ function createOrganizationSection(reportData: ReportData): (Paragraph | Table)[
 }
 
 /**
+ * Create the "sections with no data" block.
+ *
+ * Deliberately its own top-level section rather than a tail on
+ * createOrganizationSection: that function returns [] when no organization
+ * section is present, so a report whose only content is notices would print
+ * nothing at all. The two "has any section" guards stay untouched.
+ */
+function createSectionNoticesSection(reportData: ReportData): (Paragraph | Table)[] {
+  // `?? []` so a caller constructing ReportData without sectionNotices — every
+  // caller that predates the field — renders nothing rather than throwing.
+  const notices = reportData.sectionNotices ?? [];
+  if (notices.length === 0) return [];
+
+  const elements: (Paragraph | Table)[] = [];
+  elements.push(createSubsectionHeader("Sections with no data"));
+  elements.push(
+    new Paragraph({
+      spacing: { after: 120 },
+      children: [
+        new TextRun({
+          text:
+            "These sections were requested but produced nothing. They are listed so an " +
+            "empty report is never mistaken for a clean one.",
+          size: 20,
+          color: COLORS.textSecondary,
+        }),
+      ],
+    }),
+  );
+
+  for (const notice of notices) {
+    elements.push(
+      new Paragraph({
+        spacing: { before: 60, after: 60 },
+        indent: { left: convertInchesToTwip(0.3) },
+        bullet: { level: 0 },
+        children: [
+          new TextRun({
+            text: NOTICE_LABELS[notice.sectionKey] ?? notice.sectionKey,
+            bold: true,
+            size: 20,
+            color: COLORS.textPrimary,
+          }),
+          new TextRun({
+            text: ` — ${NOTICE_REASONS[notice.reason] ?? notice.reason}`,
+            size: 20,
+            color: COLORS.textPrimary,
+          }),
+        ],
+      }),
+    );
+  }
+
+  return elements;
+}
+
+/**
  * Create footer for all pages
  */
 function createFooter(reportData: ReportData): Footer {
@@ -1471,6 +1558,7 @@ export async function generateDOCX(reportData: ReportData): Promise<ReportGenera
       ...riskSection,
       ...complianceSection,
       ...organizationSection,
+      ...createSectionNoticesSection(reportData),
     ];
 
     // Create document

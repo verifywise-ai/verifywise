@@ -1094,6 +1094,57 @@ const riskChipClass = (level) => {
     <% } %>
     <% } %>
 
+    <!-- ============================================ -->
+    <!-- SECTIONS WITH NO DATA (section notices) -->
+    <!-- Deliberately outside every group guard: a report whose only content -->
+    <!-- is notices must still say so. -->
+    <!-- ============================================ -->
+    <% if (typeof sectionNotices !== 'undefined' && sectionNotices && sectionNotices.length > 0) { %>
+    <%
+      /*
+       * Duplicated verbatim in services/reporting/docxGenerator.ts. The two
+       * renderers share no template layer and already duplicate every other
+       * section's copy — keep the two maps exactly in step.
+       */
+      const NOTICE_LABELS = {
+        projectRisks: 'Use case risks',
+        vendorRisks: 'Vendor risks',
+        modelRisks: 'Model risks',
+        compliance: 'Requirements',
+        assessment: 'Assessment tracker',
+        clausesAndAnnexes: 'Clauses and annexes',
+        nistSubcategories: 'NIST subcategories',
+        models: 'AI models',
+        vendors: 'Vendors',
+        trainingRegistry: 'Training registry',
+        policyManager: 'Policy manager',
+        incidentManagement: 'Incident management'
+      };
+      const NOTICE_REASONS = {
+        no_framework_target: 'No project in scope uses a framework that provides this section.',
+        no_data: 'No records were found in scope.',
+        unresolved_framework: 'The selected framework is a plugin framework, which reports do not yet cover.'
+      };
+    %>
+    <div class="subsection">
+      <div class="subsection-header">
+        <h3 class="subsection-title">Sections with no data</h3>
+      </div>
+      <p class="section-notice-intro">
+        These sections were requested but produced nothing. They are listed so an empty
+        report is never mistaken for a clean one.
+      </p>
+      <ul class="section-notice">
+        <% sectionNotices.forEach(function(n) { %>
+        <li>
+          <strong><%= NOTICE_LABELS[n.sectionKey] || n.sectionKey %></strong>
+          &mdash; <%= NOTICE_REASONS[n.reason] || n.reason %>
+        </li>
+        <% }); %>
+      </ul>
+    </div>
+    <% } %>
+
     <!-- Page Footer (rendered as part of content) -->
     <div class="page-footer">
       <span><%= branding.organizationName %></span>
