@@ -136,6 +136,20 @@ export type LLMAnalysisOutput = z.infer<typeof llmAnalysisSchema>;
 const controlMatchSchema = z
   .object({
     control_id: z.number().int().describe("Exact control id provided in the candidate list."),
+    /**
+     * Required, because control_id alone does not identify a control. The
+     * candidate list mixes two catalogues whose id spaces are independent and
+     * overlapping — controls_struct_eu runs 1-103, annexcategories_struct_iso
+     * 1-46 — so id 5 names one control in each. Without this the matcher
+     * resolved every collision to whichever candidate happened to be stored
+     * last, and applySuggestionsQuery wrote that into file_entity_links as
+     * evidence for a control the document had nothing to do with.
+     */
+    framework_type: z
+      .enum(["eu_ai_act", "iso_42001"])
+      .describe(
+        "The framework shown in square brackets beside this control's id in the candidate list. Must match it exactly.",
+      ),
     match_score: z
       .number()
       .min(0)

@@ -275,6 +275,10 @@ export function buildControlMatcherSystemPrompt(): string {
     "",
     "## Hard rules",
     "- Use ONLY control_ids from the provided candidate list. Do NOT invent ids.",
+    // The two catalogues number their controls independently, so the same id
+    // appears in both naming unrelated controls. A match without the framework
+    // cannot be resolved back to what was scored.
+    "- ALWAYS return framework_type exactly as shown in square brackets beside the id. The same id means a DIFFERENT control in each framework.",
     "- Skip any control with score < 50. Do NOT pad the list.",
     "- Each match MUST cite which compliance area(s) link the evidence to the control.",
     "- Sort matches by descending match_score.",
@@ -318,6 +322,6 @@ export function buildControlMatcherUserPrompt(input: {
     "## Candidate controls",
     candidatesList,
     "",
-    "Score each candidate. Skip <50. Return JSON.",
+    "Score each candidate. Skip <50. Return JSON, and give each match the framework_type shown in brackets beside its id.",
   ].join("\n");
 }
