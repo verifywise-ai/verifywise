@@ -22,10 +22,18 @@ jest.mock("../../../utils/reporting.utils", () => ({
   getComplianceReportQuery: jest.fn().mockResolvedValue([]),
   getClausesReportQuery: jest.fn().mockResolvedValue([]),
   getAnnexesReportQuery: jest.fn().mockResolvedValue([]),
+  getClausesReportQueryISO27001: jest.fn().mockResolvedValue([]),
+  getAnnexesReportQueryISO27001: jest.fn().mockResolvedValue([]),
 }));
 
 import { createScopedDataCollector } from "../dataCollector";
 import type { FrameworkTarget } from "../reportScope";
+import {
+  getClausesReportQuery,
+  getAnnexesReportQuery,
+  getClausesReportQueryISO27001,
+  getAnnexesReportQueryISO27001,
+} from "../../../utils/reporting.utils";
 
 const isoTarget: FrameworkTarget = {
   projectId: 5,
@@ -34,6 +42,21 @@ const isoTarget: FrameworkTarget = {
   frameworkId: 2,
   frameworkName: "ISO 42001",
   projectFrameworkId: 11,
+};
+
+const iso27001Target: FrameworkTarget = {
+  projectId: 6,
+  projectTitle: "Information Security Management System",
+  isOrganizationalProject: true,
+  frameworkId: 3,
+  frameworkName: "ISO 27001",
+  projectFrameworkId: 12,
+};
+
+/** The report-level entry a dropped plugin:/custom: selection always raises. */
+const DROPPED_SELECTION = {
+  sectionKey: "Framework selection",
+  reason: "unresolved_framework",
 };
 
 describe("section notices", () => {
@@ -86,17 +109,123 @@ describe("section notices", () => {
     });
   });
 
-  it('emits no notices for an "all" request that is filtered to nothing', async () => {
+  it('emits no PER-SECTION notices for an "all" request that is filtered to nothing', async () => {
     // "all" is the legacy manual-report request meaning "whatever this estate
     // has". A notice per unserved section would turn every report into a wall
-    // of them, so the rule is that notices fire only for a NAMED section — and
-    // a filtered-to-nothing selection is the case most likely to break it.
+    // of them, so the rule is that SECTION notices fire only for a NAMED
+    // section — and a filtered-to-nothing selection is the case most likely to
+    // break it.
+    //
+    // The one report-level entry is not part of that wall and is deliberately
+    // exempt: it says the SELECTION was dropped, not that some section was
+    // empty, and an "all" report whose selection was dropped is precisely the
+    // report that most needs to say so.
     const collector = createScopedDataCollector(10, 1, "organization", [], null, ["plugin:soc2"]);
 
     const data = await collector.collectAllData(["all"]);
 
-    expect(data.sectionNotices).toEqual([]);
+    expect(data.sectionNotices).toEqual([DROPPED_SELECTION]);
     expect(data.sections.projectRisks).toBeUndefined();
+  });
+
+  it("records unresolved_framework for the non-native half of a mixed selection", async () => {
+    // The bug this pins: ["native:2", "plugin:soc2"] narrowed to native [2],
+    // resolved real ISO 42001 pairings, served clausesAndAnnexes in full — and
+    // dropped soc2 without a word. Nothing was empty, so no per-section notice
+    // could carry it, and the reader saw a complete-looking report covering
+    // one of the two frameworks they picked.
+    const collector = createScopedDataCollector(10, 1, "organization", [isoTarget], null, [
+      "native:2",
+      "plugin:soc2",
+    ]);
+
+    const data = await collector.collectAllData(["clausesAndAnnexes"]);
+
+    // Served — the native half must not be collateral damage.
+    expect(data.sections.clausesAndAnnexes).toBeDefined();
+    expect(data.sectionNotices).toEqual([DROPPED_SELECTION]);
+  });
+
+  it("records unresolved_framework for a dropped custom: entry too", async () => {
+    const collector = createScopedDataCollector(10, 1, "organization", [isoTarget], null, [
+      "native:2",
+      "custom:9",
+    ]);
+
+    const data = await collector.collectAllData(["clausesAndAnnexes"]);
+
+    expect(data.sectionNotices).toEqual([DROPPED_SELECTION]);
+  });
+
+  it("raises no report-level notice for a purely native selection", async () => {
+    const collector = createScopedDataCollector(10, 1, "organization", [isoTarget], null, [
+      "native:2",
+    ]);
+
+    const data = await collector.collectAllData(["clausesAndAnnexes"]);
+
+    expect(data.sectionNotices).toEqual([]);
+  });
+
+  it("does not blame plugin support for an unparseable entry alongside a native one", async () => {
+    // "abc" is a typo, not a framework awaiting support. The renderer prints
+    // "The selected framework is a plugin framework, which reports do not yet
+    // cover" — false for a typo.
+    const collector = createScopedDataCollector(10, 1, "organization", [isoTarget], null, [
+      "native:2",
+      "abc",
+    ]);
+
+    const data = await collector.collectAllData(["clausesAndAnnexes"]);
+
+    expect(data.sectionNotices).toEqual([]);
+  });
+});
+
+/**
+ * ISO 42001 and ISO 27001 share the clausesAndAnnexes SECTION and no tables at
+ * all. Both ids opened the same gate while the gate ran the ISO 42001 queries,
+ * so an ISO 27001 pairing id matched zero rows in subclauses_iso /
+ * annexcategories_iso: the report printed the ISO 42001 clause skeleton with
+ * no statuses under an ISO 27001 heading, and raised NO notice — isoTargets
+ * was non-empty, so the no_framework_target branch never ran.
+ */
+describe("clausesAndAnnexes framework routing", () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  it("reads the ISO 27001 tables for an ISO 27001 pairing", async () => {
+    const collector = createScopedDataCollector(10, 1, "organization", [iso27001Target]);
+
+    await collector.collectAllData(["clausesAndAnnexes"]);
+
+    expect(getClausesReportQueryISO27001).toHaveBeenCalledWith(12, 10);
+    expect(getAnnexesReportQueryISO27001).toHaveBeenCalledWith(12, 10);
+    expect(getClausesReportQuery).not.toHaveBeenCalled();
+    expect(getAnnexesReportQuery).not.toHaveBeenCalled();
+  });
+
+  it("leaves the ISO 42001 pairing on the ISO 42001 queries", async () => {
+    const collector = createScopedDataCollector(10, 1, "organization", [isoTarget]);
+
+    await collector.collectAllData(["clausesAndAnnexes"]);
+
+    expect(getClausesReportQuery).toHaveBeenCalledWith(11, 10);
+    expect(getAnnexesReportQuery).toHaveBeenCalledWith(11, 10);
+    expect(getClausesReportQueryISO27001).not.toHaveBeenCalled();
+    expect(getAnnexesReportQueryISO27001).not.toHaveBeenCalled();
+  });
+
+  it("routes each pairing of a mixed ISO report to its own tables", async () => {
+    // Template "ISO 42001 + 27001 Coverage" is exactly this: one report, both
+    // pairings. It used to print the ISO 42001 skeleton twice.
+    const collector = createScopedDataCollector(10, 1, "organization", [isoTarget, iso27001Target]);
+
+    await collector.collectAllData(["clausesAndAnnexes"]);
+
+    expect(getClausesReportQuery).toHaveBeenCalledWith(11, 10);
+    expect(getClausesReportQueryISO27001).toHaveBeenCalledWith(12, 10);
+    expect(getClausesReportQuery).toHaveBeenCalledTimes(1);
+    expect(getClausesReportQueryISO27001).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -161,7 +290,13 @@ describe("what counts as a filtered report", () => {
       // section was skipped rather than collected organization-wide.
       expect(data.sections.projectRisks).toBeUndefined();
       expect(scopedCall).toBeUndefined();
-      expect(data.sectionNotices).toEqual([{ sectionKey: "projectRisks", reason }]);
+      // A plugin:/custom: selection also raises the report-level entry; an
+      // unparseable one does not (it is a typo, not a pending framework).
+      expect(data.sectionNotices).toEqual(
+        reason === "unresolved_framework"
+          ? [DROPPED_SELECTION, { sectionKey: "projectRisks", reason }]
+          : [{ sectionKey: "projectRisks", reason }],
+      );
     } else {
       expect(data.sections.projectRisks).toBeDefined();
       expect(data.sectionNotices).toEqual([]);

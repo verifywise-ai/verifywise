@@ -38,6 +38,8 @@ import {
   getComplianceReportQuery,
   getClausesReportQuery,
   getAnnexesReportQuery,
+  getClausesReportQueryISO27001,
+  getAnnexesReportQueryISO27001,
 } from "../../utils/reporting.utils";
 import { FrameworkTarget, ReportScope } from "./reportScope";
 import { parseFrameworkSelection, type ParsedFrameworkSelection } from "./frameworkSelection";
@@ -245,11 +247,24 @@ export class ReportDataCollector {
    * list can only come from a supplied selection.
    */
   private filterNoticeReason(): SectionNotice["reason"] {
-    return this.isFiltered() &&
-      this.selection.native.length === 0 &&
-      (this.selection.plugin.length > 0 || this.selection.custom.length > 0)
+    return this.isFiltered() && this.selection.native.length === 0 && this.hasUnservedNonNative()
       ? "unresolved_framework"
       : "no_framework_target";
+  }
+
+  /**
+   * True when the selection named a plugin: or custom: framework. Phase 1 has
+   * no data path for either, so every such entry is silently dropped:
+   * projects_frameworks holds native pairings only, and resolveFrameworkTargets
+   * filters on selection.native alone.
+   *
+   * NOT the invalid list. "abc" is a typo, not a framework pending support, and
+   * the sentence unresolved_framework prints ("The selected framework is a
+   * plugin framework, which reports do not yet cover") would be flatly false
+   * for it — the same discrimination filterNoticeReason makes.
+   */
+  private hasUnservedNonNative(): boolean {
+    return this.selection.plugin.length > 0 || this.selection.custom.length > 0;
   }
 
   /**
@@ -292,6 +307,30 @@ export class ReportDataCollector {
     // single-framework estate's report into a wall of them. Templates always
     // name their sections, so they still get notices.
     const requested = (key: string) => sections.includes(key);
+
+    // A dropped plugin:/custom: entry is reported ONCE for the whole report,
+    // not per section, and REGARDLESS of whether native entries also resolved.
+    //
+    // The mixed selection is why: ["native:2", "plugin:soc2"] narrows to
+    // native [2], resolves real ISO 42001 pairings, serves every section it
+    // was asked for — and drops soc2 in complete silence. Nothing was empty,
+    // so no per-section notice can carry the fact, and the reader is left
+    // believing the report covers a framework it never read. Hence a
+    // report-level entry rather than a reason on some section.
+    //
+    // The sectionKey is prose, not a REPORT_SECTION_CATALOG key, because this
+    // notice belongs to no section. Both renderers print
+    // `NOTICE_LABELS[sectionKey] ?? sectionKey` (docxGenerator.ts,
+    // templates/reports/report-pdf.ejs), so it renders as written without
+    // either of them needing a new label.
+    //
+    // Unconditional — it is not gated on `requested()` the way the section
+    // notices below are. That rule exists to stop an "all" request producing a
+    // notice per unserved section; this is one line, and an "all" report whose
+    // selection was dropped is exactly the report most in need of it.
+    if (this.hasUnservedNonNative()) {
+      sectionNotices.push({ sectionKey: "Framework selection", reason: "unresolved_framework" });
+    }
 
     // ============================================
     // RISK ANALYSIS GROUP
@@ -344,9 +383,10 @@ export class ReportDataCollector {
     // section once per pairing that supports it, then merge.
     //
     // Until 2026-07-29 this read a single this.frameworkId, which arrived as 0
-    // from every wizard-driven run because the wizard has no framework picker.
-    // A 0 matches none of the ids below, so all four sections were silently
-    // dropped from the report.
+    // from every wizard-driven run: the wizard's picker selects frameworks for
+    // the report as a SET (frameworkIds, empty meaning all), and never fed a
+    // single scalar id here. A 0 matches none of the ids below, so all four
+    // sections were silently dropped from the report.
     const euTargets = targets.filter((t) => t.frameworkId === 1 && !t.isOrganizationalProject);
     const isoTargets = targets.filter((t) => t.frameworkId === 2 || t.frameworkId === 3);
     const nistTargets = targets.filter((t) => t.frameworkId === 4);
@@ -1041,15 +1081,33 @@ export class ReportDataCollector {
   }
 
   /**
-   * Collect clauses and annexes section data (for ISO frameworks)
+   * Collect clauses and annexes section data (for ISO frameworks).
+   *
+   * ISO 42001 and ISO 27001 share this SECTION and nothing else: their
+   * clauses, subclauses, annexes and annex controls sit in entirely separate
+   * tables. Until 2026-07-29 both ids ran the ISO 42001 queries, so an
+   * ISO 27001 pairing id matched zero rows in subclauses_iso and
+   * annexcategories_iso — every ISO 27001 report printed the ISO 42001 clause
+   * skeleton with no statuses, and the "ISO 42001 + 27001 Coverage" template
+   * printed that same skeleton twice.
+   *
+   * The branch is on the pairing's framework, not on a flag: the two query
+   * pairs return the same shape (clauses carrying `subClauses`, annexes
+   * carrying `annexCategories`), so only the read differs and the mapping
+   * below stays single.
    */
   private async collectClausesAndAnnexes(
     target?: FrameworkTarget,
   ): Promise<ClausesAndAnnexesSectionData> {
     try {
       const projectFrameworkId = target?.projectFrameworkId ?? this.projectFrameworkId;
-      const clauses = await getClausesReportQuery(projectFrameworkId, this.organizationId);
-      const annexes = await getAnnexesReportQuery(projectFrameworkId, this.organizationId);
+      const isIso27001 = (target?.frameworkId ?? this.frameworkId) === 3;
+      const clauses = isIso27001
+        ? await getClausesReportQueryISO27001(projectFrameworkId, this.organizationId)
+        : await getClausesReportQuery(projectFrameworkId, this.organizationId);
+      const annexes = isIso27001
+        ? await getAnnexesReportQueryISO27001(projectFrameworkId, this.organizationId)
+        : await getAnnexesReportQuery(projectFrameworkId, this.organizationId);
 
       return {
         clauses: (clauses as any[]).map((clause) => ({

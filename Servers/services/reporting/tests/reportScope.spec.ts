@@ -136,4 +136,31 @@ describe("resolveFrameworkTargets", () => {
     expect(await resolveFrameworkTargets("organization", null, 10, ["iso42001"])).toEqual([]);
     expect(mockQuery).not.toHaveBeenCalled();
   });
+
+  it("resolves the native half of a mixed selection and drops the rest", async () => {
+    // The pure-plugin case above short-circuits to []. A MIXED selection does
+    // not, and must not: dropping the whole report because one entry names an
+    // unsupported framework would be worse than serving the half that exists.
+    //
+    // What it must NOT do is widen. The predicate has to carry ONLY the native
+    // ids — a plugin entry that leaked into nativeFrameworkIds, or a selection
+    // that fell through to no predicate at all, would put frameworks the caller
+    // never asked for into the report.
+    //
+    // The dropped half is invisible here by design: this layer returns
+    // pairings, not notices. dataCollector raises the unresolved_framework
+    // notice for it — see dataCollector.notices.spec.ts, "records
+    // unresolved_framework for the non-native half of a mixed selection". The
+    // two must stay paired, or a mixed selection silently under-reports.
+    const targets = await resolveFrameworkTargets("organization", null, 10, [
+      "native:2",
+      "plugin:soc2",
+      "custom:9",
+    ]);
+
+    expect(targets).toHaveLength(1);
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(sql).toContain("pf.framework_id = ANY(ARRAY[:nativeFrameworkIds]::INTEGER[])");
+    expect(options.replacements.nativeFrameworkIds).toEqual([2]);
+  });
 });

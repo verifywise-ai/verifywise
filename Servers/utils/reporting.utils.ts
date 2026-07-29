@@ -2,11 +2,11 @@ import { sequelize } from "../database/db";
 import { ProjectsMembersModel } from "../domain.layer/models/projectsMembers/projectsMembers.model";
 import { FileModel } from "../domain.layer/models/file/file.model";
 import { QueryTypes, Transaction } from "sequelize";
-import {
-  getVisibleEuCategoryIdsForProject,
-} from "./eu.utils";
+import { getVisibleEuCategoryIdsForProject } from "./eu.utils";
 import { AnnexStructISOModel } from "../domain.layer/frameworks/ISO-42001/annexStructISO.model";
 import { ClauseStructISOModel } from "../domain.layer/frameworks/ISO-42001/clauseStructISO.model";
+import { ISO27001AnnexStructModel } from "../domain.layer/frameworks/ISO-27001/ISO27001AnnexStruct.model";
+import { ISO27001ClauseStructModel } from "../domain.layer/frameworks/ISO-27001/ISO27001ClauseStruct.model";
 import { IProjectsMembers } from "../domain.layer/interfaces/i.projectMember";
 
 /**
@@ -251,6 +251,16 @@ export const getAssessmentReportQuery = async (
   return Array.from(topics.values());
 };
 
+/**
+ * Annexes for the clauses-and-annexes section — ISO 42001 (framework_id 2) ONLY.
+ *
+ * `annex_struct_iso` / `annexcategories_struct_iso` / `annexcategories_iso` are
+ * the ISO 42001 tables and carry no framework predicate, because the framework
+ * IS the table. ISO 27001 lives in `*_iso27001` tables entirely of its own —
+ * see getAnnexesReportQueryISO27001. Routing an ISO 27001 pairing here matches
+ * zero rows in annexcategories_iso and renders an ISO 42001 skeleton with no
+ * statuses under an ISO 27001 heading, which is what it did until 2026-07-29.
+ */
 export const getAnnexesReportQuery = async (
   projectFrameworkId: number,
   organizationId: number,
@@ -376,6 +386,11 @@ export const getComplianceReportQuery = async (
   return Array.from(byCategory.values());
 };
 
+/**
+ * Clauses for the clauses-and-annexes section — ISO 42001 (framework_id 2) ONLY.
+ * See getAnnexesReportQuery for why there is no framework predicate, and
+ * getClausesReportQueryISO27001 for the ISO 27001 twin.
+ */
 export const getClausesReportQuery = async (
   projectFrameworkId: number,
   organizationId: number,
@@ -413,6 +428,147 @@ export const subClausesQuery = async (
     {
       replacements: {
         clause_id: clauseId,
+        projects_frameworks_id: projectFrameworkId,
+        organizationId,
+      },
+      type: QueryTypes.SELECT,
+      ...(transaction ? { transaction } : {}),
+    },
+  );
+};
+
+// =====================================================================
+// ISO 27001 (framework_id 3)
+//
+// ISO 27001 shares NOTHING with ISO 42001 at the table level: clauses,
+// subclauses, annexes and annex controls each live in their own `*_iso27001`
+// table. The four functions below are therefore whole twins of the four
+// above rather than a framework parameter on them, and their table names and
+// join shape mirror utils/iso27001.utils.ts (getAllClausesWithSubClauseQuery,
+// getAllAnnexesWithSubAnnexQuery) — the queries the ISO 27001 screens
+// themselves run.
+//
+// They deliberately return the SAME shape as the ISO 42001 pair — clauses
+// carrying `subClauses`, annexes carrying `annexCategories` — so
+// collectClausesAndAnnexes only has to choose a query, not a mapping, and
+// mergeSections and both renderers are untouched.
+// =====================================================================
+
+/**
+ * Clauses with their subclauses for the clauses-and-annexes section —
+ * ISO 27001 (framework_id 3) ONLY.
+ */
+export const getClausesReportQueryISO27001 = async (
+  projectFrameworkId: number,
+  organizationId: number,
+  transaction: Transaction | null = null,
+) => {
+  const clauses = (await sequelize.query(`SELECT * FROM clauses_struct_iso27001 ORDER BY id;`, {
+    mapToModel: true,
+    ...(transaction ? { transaction } : {}),
+  })) as [ISO27001ClauseStructModel[], number];
+
+  for (const clause of clauses[0]) {
+    // ISO27001ClauseStructModel types `id` as optional (unlike the ISO 42001
+    // twin), but this row came back from `SELECT * FROM clauses_struct_iso27001`,
+    // whose `id` is a SERIAL PRIMARY KEY — it cannot be absent on a real row.
+    const subClauses = await subClausesISO27001Query(
+      projectFrameworkId,
+      clause.id!,
+      organizationId,
+      transaction,
+    );
+    (clause as any).subClauses = subClauses;
+  }
+  return clauses[0];
+};
+
+/**
+ * INNER JOIN, matching subClausesQuery: only subclauses this pairing actually
+ * holds a row for belong in the report. The ISO 27001 screen loader uses the
+ * same inner join (iso27001.utils.ts getAllClausesWithSubClauseQuery); the
+ * LEFT JOIN it uses for annex controls exists to render the unstarted ones,
+ * which a status report has nothing to say about.
+ */
+export const subClausesISO27001Query = async (
+  projectFrameworkId: number,
+  clauseId: number,
+  organizationId: number,
+  transaction: Transaction | null = null,
+) => {
+  return await sequelize.query(
+    `SELECT sc.id, scs.title, scs.subclause_id, scs.order_no, scs.requirement_summary,
+            sc.status, sc.implementation_description
+     FROM subclauses_struct_iso27001 scs
+     JOIN subclauses_iso27001 sc ON scs.id = sc.subclause_meta_id AND sc.organization_id = :organizationId
+     WHERE scs.clause_id = :clause_id AND sc.projects_frameworks_id = :projects_frameworks_id
+     ORDER BY scs.order_no, scs.id;`,
+    {
+      replacements: {
+        clause_id: clauseId,
+        projects_frameworks_id: projectFrameworkId,
+        organizationId,
+      },
+      type: QueryTypes.SELECT,
+      ...(transaction ? { transaction } : {}),
+    },
+  );
+};
+
+/**
+ * Annexes with their controls for the clauses-and-annexes section —
+ * ISO 27001 (framework_id 3) ONLY.
+ */
+export const getAnnexesReportQueryISO27001 = async (
+  projectFrameworkId: number,
+  organizationId: number,
+  transaction: Transaction | null = null,
+) => {
+  const annexes = (await sequelize.query(`SELECT * FROM annex_struct_iso27001 ORDER BY id;`, {
+    mapToModel: true,
+    ...(transaction ? { transaction } : {}),
+  })) as [ISO27001AnnexStructModel[], number];
+
+  for (const annex of annexes[0]) {
+    // ISO27001AnnexStructModel types `id` as optional (unlike the ISO 42001
+    // twin), but this row came back from `SELECT * FROM annex_struct_iso27001`,
+    // whose `id` is a SERIAL PRIMARY KEY — it cannot be absent on a real row.
+    const annexControls = await annexControlsISO27001Query(
+      projectFrameworkId,
+      annex.id!,
+      organizationId,
+      transaction,
+    );
+    // `annexCategories`, not `annexcontrols`: the section's shape is shared
+    // with ISO 42001, whose equivalent rows are annex CATEGORIES. Renaming it
+    // here would mean branching the mapping in collectClausesAndAnnexes too.
+    (annex as any).annexCategories = annexControls;
+  }
+  return annexes[0];
+};
+
+/**
+ * `acs.annex_id` is the FK to annex_struct_iso27001.id — an INTEGER, unlike
+ * annexcategories_struct_iso27001.annex_id, which is a display string ("A.5")
+ * on a table this path does not touch. Mirrors the join in
+ * iso27001.utils.ts getAllAnnexesWithSubAnnexQuery.
+ */
+export const annexControlsISO27001Query = async (
+  projectFrameworkId: number,
+  annexId: number,
+  organizationId: number,
+  transaction: Transaction | null = null,
+) => {
+  return await sequelize.query(
+    `SELECT ac.id, acs.control_id, acs.title, acs.description, acs.order_no,
+            ac.status, ac.implementation_description
+       FROM annexcontrols_struct_iso27001 acs
+       JOIN annexcontrols_iso27001 ac ON acs.id = ac.annexcontrol_meta_id AND ac.organization_id = :organizationId
+      WHERE acs.annex_id = :annex_id AND ac.projects_frameworks_id = :projects_frameworks_id
+      ORDER BY acs.order_no, acs.id;`,
+    {
+      replacements: {
+        annex_id: annexId,
         projects_frameworks_id: projectFrameworkId,
         organizationId,
       },

@@ -41,9 +41,30 @@ const s = (key, reportSectionKey, label, core = true) => ({
 });
 
 /**
- * Which frameworks open each framework-gated section in collectAllData.
- * Mirrors the gates at dataCollector.ts:238-240. The reachability test below
- * is the only thing keeping the two in step.
+ * Which frameworks open each framework-gated section in collectAllData, and —
+ * per framework — the query function that actually READS that framework's own
+ * tables.
+ *
+ * The second half is not decoration. This map used to mirror only the NUMERIC
+ * gate in collectAllData (`frameworkId === 2 || frameworkId === 3` for
+ * clausesAndAnnexes), and the numeric gate was passing ISO 27001 pairings to
+ * the ISO 42001 queries: clauses_struct_iso / subclauses_iso, tables ISO 27001
+ * has no rows in. The gate said "reachable", the query layer said "empty", and
+ * the reachability check below certified two ISO 27001 templates that rendered
+ * an ISO 42001 skeleton with no statuses. A framework belongs in a gate list
+ * only if a query path reads ITS tables — check 3 in
+ * __tests__/systemReportTemplates.test.ts asserts exactly that.
+ *
+ *   compliance          EU AI Act    getComplianceReportQuery   (controls_eu)
+ *   assessment          EU AI Act    getAssessmentReportQuery   (answers_eu)
+ *   clausesAndAnnexes   ISO 42001    getClausesReportQuery /
+ *                                    getAnnexesReportQuery      (subclauses_iso,
+ *                                                                annexcategories_iso)
+ *   clausesAndAnnexes   ISO 27001    getClausesReportQueryISO27001 /
+ *                                    getAnnexesReportQueryISO27001
+ *                                                               (subclauses_iso27001,
+ *                                                                annexcontrols_iso27001)
+ *   nistSubcategories   NIST AI RMF  collectNistSubcategories   (nist_ai_rmf_subcategories)
  */
 const FRAMEWORK_SECTION_GATES = {
   compliance: ["EU AI Act"],
