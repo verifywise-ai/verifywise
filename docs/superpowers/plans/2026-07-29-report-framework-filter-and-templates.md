@@ -22,6 +22,7 @@
 - Canonical template categories: `executive`, `compliance`, `risk`, `operational`, `governance`.
 - `recommended_frequency` accepts only `daily`, `weekly`, `monthly`.
 - Sentence case for all user-facing labels (VerifyWise design rule).
+- **Never write a bare `= ANY(:ids)` with a Sequelize named replacement.** Sequelize expands an array replacement to a bare comma list, so `ANY(:ids)` renders `ANY(2, 3)` — a Postgres syntax error. Use `= ANY(ARRAY[:ids]::INTEGER[])` (see `dataCollector.ts:704`) or `IN (:ids)` (see `dataCollector.ts:861`). `ARRAY[:ids]::varchar[]` is likewise safe. A test that only asserts on the SQL string cannot catch this — assert the `ARRAY[...]` form explicitly.
 - No `console.log` in shipped code. Backend logging goes through `utils/logger/logHelper.ts`.
 - `cd Servers && npm run build` and `cd Clients && npm run build` must both pass before the phase is done.
 - If any file under `Servers/routes/` changes, run `npm run generate:swagger && npm run generate:endpoints && npm run check:api-drift` and commit the regenerated files.
@@ -339,7 +340,7 @@ Append to `Servers/services/reporting/tests/reportScope.spec.ts`, inside the exi
     await resolveFrameworkTargets("organization", null, 10, ["native:2", "native:3"]);
 
     const [sql, options] = mockQuery.mock.calls[0];
-    expect(sql).toContain("pf.framework_id = ANY(:nativeFrameworkIds)");
+    expect(sql).toContain("pf.framework_id = ANY(ARRAY[:nativeFrameworkIds]::INTEGER[])");
     expect(options.replacements.nativeFrameworkIds).toEqual([2, 3]);
   });
 
@@ -450,7 +451,11 @@ export async function resolveFrameworkTargets(
 
   let frameworkPredicate = "";
   if (selection.native.length > 0) {
-    frameworkPredicate = " AND pf.framework_id = ANY(:nativeFrameworkIds)";
+    // ARRAY[...]::INTEGER[] rather than a bare `= ANY(:ids)`: sequelize expands
+    // an array replacement to a bare comma list, so `ANY(:ids)` renders as
+    // `ANY(2, 3)` — a Postgres syntax error. Same reasoning, and the same form,
+    // as dataCollector.ts:704.
+    frameworkPredicate = " AND pf.framework_id = ANY(ARRAY[:nativeFrameworkIds]::INTEGER[])";
     replacements.nativeFrameworkIds = selection.native;
   }
 
