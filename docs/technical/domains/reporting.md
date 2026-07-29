@@ -176,9 +176,14 @@ never pull in another tenant's project.
   project does not weigh the same as a forty-control one.
 - **Organization-wide sections** (`trainingRegistry`, `policyManager`) are
   collected once for the report, never per pairing.
-- **Project-filterable sections** (`projectRisks`, `vendors`, `models`,
-  `vendorRisks`, `modelRisks`, `incidentManagement`) drop their project
-  predicate under organization scope.
+- **Project-filterable sections** drop their project predicate under
+  organization scope. `vendors`, `models`, `vendorRisks`, `modelRisks` and
+  `incidentManagement` also drop it for a project whose
+  `projects.is_organizational` is set — long-standing behaviour, and the reason
+  the collector keeps `orgWide` separate from the report's scope.
+  `projectRisks` does **not**: ISO 42001, ISO 27001 and NIST projects are all
+  organizational, and a project report of one of them must still name its own
+  risks rather than every project's.
 
 Merged rows carry a `useCase` label — set only when more than one pairing
 contributed — and both renderers turn it into a "Use case" column or a heading
