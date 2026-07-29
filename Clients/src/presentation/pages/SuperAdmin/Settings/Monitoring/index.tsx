@@ -40,6 +40,9 @@ const Monitoring: React.FC = () => {
   const [alert, setAlert] = useState<AlertState | null>(null);
   const [urlError, setUrlError] = useState<string | null>(null);
   const [nameError, setNameError] = useState<string | null>(null);
+  // Shown after a successful save: config is only picked up on restart, so the
+  // new Observability URL won't take effect until the super admin restarts.
+  const [showRestartNotice, setShowRestartNotice] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -104,10 +107,7 @@ const Monitoring: React.FC = () => {
         setAuthHeaderSet(Boolean(cfg.auth_header_set));
         setSavedDeploymentName(cfg.deployment_name || "");
       }
-      setAlert({
-        variant: "success",
-        body: "Monitoring configuration saved. Restart services to apply changes.",
-      });
+      setShowRestartNotice(true);
     } catch {
       setAlert({ variant: "error", body: "Failed to save monitoring configuration." });
     } finally {
@@ -191,7 +191,10 @@ const Monitoring: React.FC = () => {
         label="Observability URL"
         placeholder="https://obs.example.com:4318"
         value={url}
-        onChange={(e) => setUrl(e.target.value)}
+        onChange={(e) => {
+          setUrl(e.target.value);
+          setShowRestartNotice(false);
+        }}
         error={urlError || undefined}
         disabled={!enabled}
         width="100%"
@@ -221,22 +224,31 @@ const Monitoring: React.FC = () => {
         />
         <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
           The token is signed server-side with this deployment's private key and never shown here.
-          The observability server verifies it with the matching public key; regenerating replaces
-          the stored token.
-          {!canGenerateToken ? " Save the deployment name first, then generate." : ""}
+          The observability server verifies it with the matching public key. A token can only be
+          generated once.
+          {!authHeaderSet && !canGenerateToken ? " Save the deployment name first, then generate." : ""}
         </Typography>
         <Box>
           <CustomizableButton
             variant="outlined"
-            text={
-              generating ? "Generating..." : authHeaderSet ? "Regenerate token" : "Generate token"
-            }
+            text={generating ? "Generating..." : "Generate token"}
             icon={<KeyIcon size={16} />}
             onClick={handleGenerateToken}
-            isDisabled={generating || !canGenerateToken}
+            isDisabled={generating || !canGenerateToken || authHeaderSet}
           />
         </Box>
       </Stack>
+
+      {showRestartNotice && (
+        <Box>
+          <Alert
+            variant="info"
+            body="Monitoring configuration saved. Restart the server for the new Observability URL to take effect."
+            isToast={true}
+            onClick={() => setShowRestartNotice(false)}
+          />
+        </Box>
+      )}
 
       <Box>
         <CustomizableButton

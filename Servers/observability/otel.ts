@@ -10,9 +10,17 @@
  * Everything here is a no-op when monitoring is disabled or unconfigured, so the
  * server always starts cleanly.
  */
-import { metrics, Counter, Histogram, Attributes } from "@opentelemetry/api";
+import {
+  metrics,
+  Counter,
+  Histogram,
+  Attributes,
+  diag,
+  DiagConsoleLogger,
+  DiagLogLevel,
+} from "@opentelemetry/api";
 import { logs, SeverityNumber } from "@opentelemetry/api-logs";
-import { Resource } from "@opentelemetry/resources";
+import { resourceFromAttributes } from "@opentelemetry/resources";
 import { ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from "@opentelemetry/semantic-conventions";
 import { MeterProvider, PeriodicExportingMetricReader } from "@opentelemetry/sdk-metrics";
 import { LoggerProvider, BatchLogRecordProcessor } from "@opentelemetry/sdk-logs";
@@ -90,6 +98,9 @@ export async function initObservability(): Promise<boolean> {
   if (started) return Boolean(meterProvider);
   started = true;
 
+  // Surface OTLP exporter push failures (network/TLS/HTTP errors) to the console.
+  diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.ERROR);
+
   const config = await resolveConfig();
   deploymentName = config.deploymentName;
 
@@ -101,7 +112,7 @@ export async function initObservability(): Promise<boolean> {
   const base = config.endpoint.replace(/\/+$/, "");
   const headers = parseAuthHeader(config.authHeader);
 
-  const resource = new Resource({
+  const resource = resourceFromAttributes({
     [ATTR_SERVICE_NAME]: SERVICE_NAME,
     [ATTR_SERVICE_VERSION]: process.env.npm_package_version || "0.0.0",
     "deployment.name": deploymentName,
@@ -128,11 +139,14 @@ export async function initObservability(): Promise<boolean> {
     unit: "s",
   });
 
-  // Logs
-  loggerProvider = new LoggerProvider({ resource });
-  loggerProvider.addLogRecordProcessor(
-    new BatchLogRecordProcessor(new OTLPLogExporter({ url: `${base}/v1/logs`, headers })),
-  );
+  // Logs — sdk-logs 0.217 removed addLogRecordProcessor(); processors are
+  // supplied via the constructor.
+  loggerProvider = new LoggerProvider({
+    resource,
+    processors: [
+      new BatchLogRecordProcessor(new OTLPLogExporter({ url: `${base}/v1/logs`, headers })),
+    ],
+  });
   logs.setGlobalLoggerProvider(loggerProvider);
 
   console.log(

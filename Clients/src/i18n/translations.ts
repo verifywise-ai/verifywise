@@ -33,6 +33,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Monitoring-Konfiguration konnte nicht gespeichert werden.",
     "Monitoring configuration saved. Restart services to apply changes.":
       "Monitoring-Konfiguration gespeichert. Starten Sie die Dienste neu, um die Änderungen zu übernehmen.",
+    "Monitoring configuration saved. Restart the server for the new Observability URL to take effect.":
+      "Monitoring-Konfiguration gespeichert. Starten Sie den Server neu, damit die neue Observability-URL wirksam wird.",
     "Observability URL": "Observability-URL",
     "Push token": "Push-Token",
     "Push token generated. Restart services to apply changes.":
@@ -8969,6 +8971,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Échec de l'enregistrement de la configuration de surveillance.",
     "Monitoring configuration saved. Restart services to apply changes.":
       "Configuration de surveillance enregistrée. Redémarrez les services pour appliquer les modifications.",
+    "Monitoring configuration saved. Restart the server for the new Observability URL to take effect.":
+      "Configuration de surveillance enregistrée. Redémarrez le serveur pour que la nouvelle URL d'observabilité prenne effet.",
     "Observability URL": "URL d'observabilité",
     "Push token": "Jeton d'envoi",
     "Push token generated. Restart services to apply changes.":
@@ -17857,6 +17861,8 @@ export const translations: Record<string, Record<string, string>> = {
       "No se pudo guardar la configuración de supervisión.",
     "Monitoring configuration saved. Restart services to apply changes.":
       "Configuración de supervisión guardada. Reinicie los servicios para aplicar los cambios.",
+    "Monitoring configuration saved. Restart the server for the new Observability URL to take effect.":
+      "Configuración de supervisión guardada. Reinicie el servidor para que la nueva URL de observabilidad surta efecto.",
     "Observability URL": "URL de observabilidad",
     "Push token": "Token de envío",
     "Push token generated. Restart services to apply changes.":

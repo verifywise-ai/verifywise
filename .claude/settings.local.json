@@ -112,7 +112,23 @@
       "Bash(xargs cat)",
       "Bash(npm test *)",
       "Bash(npm -v)",
-      "Bash(timeout 10 npm ping)"
+      "Bash(timeout 10 npm ping)",
+      "Bash(ps eww *)",
+      "Bash(docker exec *)",
+      "Bash(nslookup observability.verifywise.ai)",
+      "Bash(ps -o pid,lstart,etime,command -p 58722)",
+      "Bash(ps -o pid,ppid,lstart,etime,command -p 58722)",
+      "Bash(docker info *)",
+      "Bash(stat -f '%Sm %N' -t '%H:%M:%S' observability/otel.ts dist/observability/otel.js)",
+      "Bash(grep -c \"otel\\\\]\\\\[debug\\\\]\" dist/observability/otel.js)",
+      "Bash(:)",
+      "Bash(break)",
+      "Bash(npm view *)",
+      "Bash(pkill -f 'node dist/index.js')",
+      "Bash(PORT=3055 nohup node dist/index.js)",
+      "Bash(pkill -9 -f 'node dist/index.js')",
+      "Bash(cat)",
+      "Bash(git check-ignore *)"
     ]
   }
 }
