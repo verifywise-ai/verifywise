@@ -50,7 +50,7 @@
     "@smithy/node-http-handler": "^4.3.0",
     "@types/passport-jwt": "^4.0.1",
     "@types/uuid": "^10.0.0",
-    "ai": "^6.0.177",
+    "ai": "^7.0.41",
     "axios": "^1.18.1",
     "bcrypt": "^6.0.0",
     "bullmq": "^5.76.6",
