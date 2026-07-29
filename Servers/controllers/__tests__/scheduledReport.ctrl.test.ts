@@ -10,7 +10,12 @@ jest.mock("../../utils/scheduledReport.utils", () => ({
 }));
 import { createScheduledReport, updateScheduledReport } from "../scheduledReport.ctrl";
 
-function mockRes() { const r: any = {}; r.status = jest.fn(() => r); r.json = jest.fn(() => r); return r; }
+function mockRes() {
+  const r: any = {};
+  r.status = jest.fn(() => r);
+  r.json = jest.fn(() => r);
+  return r;
+}
 
 describe("createScheduledReport", () => {
   it("400 when validation fails", async () => {
@@ -22,7 +27,10 @@ describe("createScheduledReport", () => {
   });
   it("201 on success", async () => {
     const res = mockRes();
-    await createScheduledReport({ body: { scope: "project", projectId: 5 }, organizationId: 1, userId: 2 } as any, res);
+    await createScheduledReport(
+      { body: { scope: "project", projectId: 5 }, organizationId: 1, userId: 2 } as any,
+      res,
+    );
     expect(res.status).toHaveBeenCalledWith(201);
   });
   it("400s when the template version is not owned by the caller's org", async () => {
@@ -92,6 +100,72 @@ describe("updateScheduledReport", () => {
       res,
     );
     expect(res.status).toHaveBeenCalledWith(400);
+  });
+
+  // PATCH is the third write path into framework_ids. An unrecognised entry is
+  // dropped by parseFrameworkSelection, and an empty selection means EVERY
+  // framework in scope — so an ungated typo silently widens the schedule.
+  it("400s on an unrecognised framework selection and does not update the row", async () => {
+    const utils = require("../../utils/scheduledReport.utils");
+    utils.updateScheduledReportQuery.mockClear();
+    const res = mockRes();
+    await updateScheduledReport(
+      {
+        params: { id: "7" },
+        // `name` is here so the 400 cannot be the "no updatable fields
+        // supplied" branch — that branch would make this test pass even if the
+        // guard were absent.
+        body: { name: "Renamed", frameworkIds: ["native:2", "iso42001"] },
+        organizationId: 42,
+        userId: 9,
+      } as any,
+      res,
+    );
+    expect(res.status).toHaveBeenCalledWith(400);
+    // Assert on the payload, so the 400 is provably this guard's and not
+    // another branch's.
+    expect(JSON.stringify(res.json.mock.calls[0][0])).toContain("iso42001");
+    expect(utils.updateScheduledReportQuery).not.toHaveBeenCalled();
+  });
+
+  it("400s when frameworkIds is not an array and does not update the row", async () => {
+    const utils = require("../../utils/scheduledReport.utils");
+    utils.updateScheduledReportQuery.mockClear();
+    const res = mockRes();
+    await updateScheduledReport(
+      {
+        params: { id: "7" },
+        // A single id sent unwrapped: parseFrameworkSelection returns no
+        // `invalid` entries for a non-array, so this needs its own guard.
+        body: { name: "Renamed", frameworkIds: "native:2" },
+        organizationId: 42,
+        userId: 9,
+      } as any,
+      res,
+    );
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(JSON.stringify(res.json.mock.calls[0][0])).toContain("must be an array");
+    expect(utils.updateScheduledReportQuery).not.toHaveBeenCalled();
+  });
+
+  it("200s on a valid framework selection", async () => {
+    const utils = require("../../utils/scheduledReport.utils");
+    utils.updateScheduledReportQuery.mockClear();
+    utils.updateScheduledReportQuery.mockResolvedValueOnce({ id: 7 });
+    const res = mockRes();
+    await updateScheduledReport(
+      {
+        params: { id: "7" },
+        body: { frameworkIds: ["native:2", "plugin:soc2"] },
+        organizationId: 42,
+        userId: 9,
+      } as any,
+      res,
+    );
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(utils.updateScheduledReportQuery.mock.calls[0][2]).toEqual({
+      frameworkIds: ["native:2", "plugin:soc2"],
+    });
   });
 
   it("400s when the new delivery config has a malformed recipient", async () => {

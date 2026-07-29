@@ -135,6 +135,16 @@ export async function updateScheduledReport(req: Request, res: Response): Promis
       return res.status(400).json(STATUS_CODE[400]({ errors: ["no updatable fields supplied"] }));
     }
 
+    // frameworkIds is allowlisted above, so a PATCH is a third write path into
+    // framework_ids and needs the same gate as create and run-now. This is its
+    // own check rather than part of the block below because that block only
+    // runs when deliveryConfig/sectionsConfig are present — a PATCH carrying
+    // frameworkIds alone would otherwise reach the UPDATE unvalidated.
+    const frameworkErrors = frameworkSelectionErrors(input.frameworkIds);
+    if (frameworkErrors.length) {
+      return res.status(400).json(STATUS_CODE[400]({ errors: frameworkErrors }));
+    }
+
     // Re-validate the delivery block if it is being replaced, so a PATCH
     // cannot smuggle in the malformed recipients that create rejects.
     if (input.deliveryConfig !== undefined || input.sectionsConfig !== undefined) {
