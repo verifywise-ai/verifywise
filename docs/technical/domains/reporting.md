@@ -216,6 +216,12 @@ renders — and a report multiplies that by every pairing in its scope. Measured
 Keep it that way. If a section needs a new field, widen its flat query; do not
 reach for the screen's loader.
 
+One deliberate difference from the old loader: the compliance query returns only
+control families that hold a control, where the loader returned every visible
+family. The section's output is identical because the collector flattens them,
+but an applicable-yet-empty family no longer draws a `0/0` bar in the
+compliance-progress chart.
+
 ### Charts
 
 Charts are **derived from the collected sections**, not fetched again: the risk
