@@ -10,6 +10,7 @@ The Reporting domain in VerifyWise provides comprehensive report generation capa
 
 - Multi-format report generation (PDF, DOCX)
 - Framework-specific section selection
+- Framework targeting per template and schedule (see [Framework selection](#framework-selection))
 - Custom branding (logo, colors)
 - Organization and project-scoped reports
 - Real-time data collection from all domains
@@ -153,19 +154,28 @@ Manual and scheduled reports now share this same `report_runs` execution pipelin
 
 ### Scope, and how a report finds its frameworks
 
-A template or schedule states a **scope** and, for project scope, a project. It
-never states a framework — `projects_frameworks` is many-per-project, so a
-single `frameworkId` field would pin a report to one framework and silently drop
-the project's others. The pairings are derived instead, by
-`resolveFrameworkTargets` (`services/reporting/reportScope.ts`):
+A template or schedule states a **scope** and, for project scope, a project, and
+may state a **framework selection**. Scope and project decide the candidate set
+of `projects_frameworks` pairings; the selection only narrows that set, and an
+empty selection narrows nothing. `resolveFrameworkTargets`
+(`services/reporting/reportScope.ts`) resolves both at once:
 
-| Scope | Pairings collected |
+| Scope | Candidate pairings |
 | --- | --- |
 | `project` | `projects_frameworks` for that one project — every framework it holds |
 | `organization` | `projects_frameworks` for the whole tenant |
 
 Both queries join `projects` on `organization_id` as well, so a pairing row can
 never pull in another tenant's project.
+
+A **single** `frameworkId` field would still be wrong, and until 2026-07-29 this
+file concluded from that the wizard must never grow a framework picker. The
+rationale was against the scalar: `projects_frameworks` is many-per-project, so
+one id pins a report to one framework and silently drops the project's others. A
+multi-valued filter where empty means *every framework in scope* is the case
+that argument does not cover, and it is what makes an "ISO 42001 Internal Audit
+Pack" expressible at all. The wizard now has a picker; the scalars are still
+dead. See [Framework selection](#framework-selection).
 
 `collectAllData` then splits its sections three ways:
 
@@ -183,7 +193,8 @@ never pull in another tenant's project.
   the collector keeps `orgWide` separate from the report's scope.
   `projectRisks` does **not**: ISO 42001, ISO 27001 and NIST projects are all
   organizational, and a project report of one of them must still name its own
-  risks rather than every project's.
+  risks rather than every project's. A framework selection narrows `projectRisks`
+  further still — see [The three narrowing tiers](#the-three-narrowing-tiers).
 
 Merged rows carry a `useCase` label — set only when more than one pairing
 contributed — and both renderers turn it into a "Use case" column or a heading
@@ -192,7 +203,8 @@ clause `4`, so a merged table is unreadable without it. A single-pairing report
 has no labels and renders exactly as it did before scope existed.
 
 > **Historic bug.** Until 2026-07-29 the collector took one `frameworkId`, and
-> the wizard never sent one: `runTemplateNow` and `createScheduledReportQuery`
+> the wizard of the day had no framework control to send one with:
+> `runTemplateNow` and `createScheduledReportQuery`
 > stored NULL and `resolveReportRequest` coerced it to `0`. Every framework
 > section is gated on the numeric id, so a `0` closed all four gates and every
 > wizard-driven report came out with no compliance, assessment, clause or NIST
@@ -203,6 +215,160 @@ has no labels and renders exactly as it did before scope existed.
 `metadata.isOrganizational` still means `projects.is_organizational` — the
 renderers read it to drop the project line. The report's own scope is
 `metadata.scope`; do not conflate them.
+
+### Framework selection
+
+`frameworkIds` is a **string** array, and every entry carries a namespace
+prefix, because native and plugin framework ids collide numerically:
+`frameworks.id = 2` is ISO 42001 while `custom_frameworks.id = 2` is whatever
+plugin framework one organization happens to have installed. A bare `2` cannot
+say which. `parseFrameworkSelection`
+(`services/reporting/frameworkSelection.ts`) accepts three forms:
+
+| Form | Names | Notes |
+| --- | --- | --- |
+| `native:<frameworks.id>` | one of the four built-in frameworks | the only form the collector can serve today |
+| `plugin:<custom_framework_definitions.plugin_key>` | a plugin framework, by key | portable across installs — what a system template would seed |
+| `custom:<custom_frameworks.id>` | one organization's `custom_frameworks` row | concrete, not portable |
+
+A bare positive integer is accepted as `native:<n>` for forgiveness and is never
+emitted. The `plugin:` key pattern is lower-case only, so `plugin:SOC2` is not a
+plugin selection but an invalid one — two spellings of one key would otherwise
+look like two frameworks. Ids must be **greater than 0**: a `0` closes all four
+framework gates in `collectAllData`, which is the shipped bug documented above,
+so every parser branch rejects it rather than passing it through.
+
+**Empty or NULL means every framework in scope.** That is the entire
+backward-compatibility story: every row written before the column existed keeps
+behaving exactly as it did. `resolveReportRequest` passes `undefined` rather
+than `[]` for such a row, so `resolveFrameworkTargets` takes its unfiltered path
+untouched.
+
+| Column | Holds |
+| --- | --- |
+| `report_template_versions.framework_config` | `{"frameworkIds": ["native:2"]}` — a **template's default**, `NOT NULL DEFAULT '{}'` |
+| `scheduled_reports.framework_ids` | the same list on a **concrete schedule** (and on the in-memory schedule run-now builds), nullable JSONB |
+
+The legacy scalars `scheduled_reports.framework_id` and `project_framework_id`
+remain **dead, and are deliberately left untouched**: `resolveReportRequest`
+(`services/reporting/reportTemplateResolver.ts`) still coerces them with `?? 0`
+and a `0` closes every gate. They are carried for the row's shape only; nothing
+reads them to collect. Migration `20260729205954` therefore adds two columns and
+backfills nothing — empty already means all.
+
+**Every write path validates the selection.** `parseFrameworkSelection` collects
+unrecognised entries in `invalid`, and all three writers return **400** on a
+non-empty `invalid` rather than dropping the bad entry: `runTemplateNow`
+(`controllers/reportTemplate.ctrl.ts`), plus `createScheduledReport` and
+`updateScheduledReport` (`controllers/scheduledReport.ctrl.ts`, sharing one
+`frameworkSelectionErrors` helper). Dropping an entry would collapse the
+selection toward `[]` — *every* framework — so a caller who typed `iso42001`
+would get a wider report than they asked for with nothing in the output saying
+so. A non-array body value is rejected for the same reason and never coerced:
+`"native:2"` would otherwise parse to `[]`.
+
+Manual generation (`/reporting/generate-report` and `/v2/generate-report`) sends
+neither `scope` nor `frameworkIds` and stays on the legacy single-target path.
+Framework selection is a template/schedule feature.
+
+### The three narrowing tiers
+
+A selection narrows the twelve sections in three different ways, and the third
+way is *not at all*.
+
+**Framework-gated** — `compliance`, `assessment`, `clausesAndAnnexes`,
+`nistSubcategories`. These were already collected once per pairing that carries
+the right framework and merged, so nothing in the sections themselves changes;
+the narrowed target set is the whole of it. The narrowing happens once, in
+`resolveFrameworkTargets`.
+
+**Project-scoped** — `projectRisks`. A filtered report does not add a predicate
+to the existing query, it takes a different one: `fetchRisksForProjects`, over
+the distinct project ids of the resolved targets, with
+`AND pr.project_id = ANY(ARRAY[:scopedProjectIds]::INTEGER[])`. It selects
+`DISTINCT ON (risk.id)` because `projects_risks` is many-to-many — one risk
+linked to two selected projects would be counted twice, and `risksByLevel` feeds
+the risk donut.
+
+**Entity-scoped** — `vendors`, `models`, `vendorRisks`, `modelRisks`,
+`incidentManagement`, `trainingRegistry`, `policyManager`. These are
+**unaffected by the selection**, on purpose. A vendor is not "an ISO 42001
+vendor": these entities carry no framework of their own, so any narrowing would
+have to run through whichever project they happen to be linked to. Dropping rows
+on that basis is invisible to the reader — the section still renders, with fewer
+rows and no statement that anything was removed — and a vendor register missing
+vendors is simply a wrong vendor register.
+
+An **empty** scoped project set is a real answer meaning "filtered, and matched
+nothing". It is never turned into a predicate: `= ANY('{}')` hits Postgres
+empty-array type inference. The section is skipped instead, and the skip is
+unconditional while the notice below is not — under the legacy
+`sections: ["all"]` request a filter that matched nothing leaves `projectRisks`
+silently absent rather than noticed.
+
+### Section notices
+
+`ReportData.sectionNotices` is **required and always present**, possibly empty.
+It is how a report says a section it was asked for produced nothing, so that an
+empty report is never mistaken for a clean one. Both renderers print it under
+*Sections with no data* — `templates/reports/report-pdf.ejs` and
+`createSectionNoticesSection` in `services/reporting/docxGenerator.ts`, each
+carrying its own verbatim copy of the label and reason maps. **Change the two
+together.** The block sits outside every group guard in both renderers: a report
+whose only content is notices must still say so.
+
+| Reason | Printed as | When |
+| --- | --- | --- |
+| `no_framework_target` | "No project in scope uses a framework that provides this section." | no resolved pairing serves the section — including an invalid-only selection such as `["abc"]` or `["plugin:SOC2"]` |
+| `unresolved_framework` | "The selected framework is a plugin framework, which reports do not yet cover." | the selection named a `plugin:`/`custom:` framework and **no** native one |
+| `no_data` | "No records were found in scope." | **declared but never emitted — see below** |
+
+`unresolved_framework` requires both halves of that test — no native entry *and*
+a plugin or custom entry present. An invalid-only selection has neither, so it
+falls to `no_framework_target`, which is true of it, where the plugin sentence
+would be flatly false.
+
+An invalid-only selection cannot reach the collector through the API — all three
+write paths reject it — so that case covers a stored row written before
+validation existed. It is also why "filtered" is defined as *how many entries the
+caller supplied*, not what parsed: keying off the parse result would make
+`["abc"]` look unfiltered here while `resolveFrameworkTargets` had already
+narrowed it to nothing, and `projectRisks` would fall back to the whole
+organization's risks beside silently empty framework sections.
+
+`no_data` is **declared but never emitted today**. No section distinguishes "a
+pairing exists but the query returned zero rows" from "the section collected
+normally and the estate is empty", so nothing constructs that reason and both
+renderers carry a branch that cannot currently be reached. It is kept as the
+name for the distinction whenever a section starts drawing it.
+
+**A notice fires only for a section named explicitly in the request.** The
+legacy `sections: ["all"]` shape means "whatever this estate has", not "I
+expected these twelve", and one notice per unserved section would turn every
+single-framework estate's report into a wall of them. Templates always name
+their sections, so template and schedule runs still get notices.
+
+### The `!isOrganizationalProject` guard is redundant, and stays
+
+`collectAllData` builds its EU AI Act target set as
+`targets.filter((t) => t.frameworkId === 1 && !t.isOrganizationalProject)`. An
+earlier design draft for this work flagged that second clause as a limitation —
+a guard that could silently empty `compliance` and `assessment` at organization
+scope. **That was wrong, and it is recorded here so nobody re-derives it.**
+
+`frameworks` seeds EU AI Act with `is_organizational = false` and ISO 42001,
+ISO 27001 and NIST AI RMF with `true`
+(`database/migrations/20260226234301-public-schema-tables.js`), and
+`createNewProjectQuery` (`utils/project.utils.ts`) rejects any framework whose
+flag differs from the project's. So `frameworkId === 1` implies
+`!isOrganizationalProject` for every well-formed row, and the guard never
+removes a target. It is kept as cheap defense against a malformed one.
+
+`services/reporting/tests/frameworkInvariant.spec.ts` pins the invariant against
+the seed migration's text. If a future migration flips EU AI Act's flag, that
+guard starts emptying every EU AI Act report — and this test fails first. The
+ISO and NIST branches carry no such guard for the mirror-image reason: requiring
+`!isOrganizational` there made both branches unreachable.
 
 ### Query cost
 
@@ -237,6 +403,20 @@ The project-scoped queries for `models`, `modelRisks`, `vendors` and
 (entity, project): `model_inventories_projects_frameworks` links a model to a
 project once with a framework and once without, so a plain `JOIN` reported one
 model as two and two model risks as four.
+
+### Array predicates: never a bare `ANY(:ids)`
+
+Sequelize expands an array replacement by string substitution into a bare comma
+list, so `= ANY(:ids)` renders `ANY(2, 3)` — a Postgres syntax error, raised at
+runtime by the first report that reaches the query. The framework work hit this
+twice. Write one of the two working forms instead:
+
+- `= ANY(ARRAY[:ids]::INTEGER[])` — used by `fetchRisksForProjects` and by
+  `resolveFrameworkTargets`' `pf.framework_id` predicate;
+- `IN (:ids)` — used by `resolveUserNames`.
+
+All three carry the explanation inline; keep the next one consistent with them
+rather than inventing a third spelling.
 
 ### ReportDataCollector Class
 
@@ -563,6 +743,9 @@ interface ReportData {
   branding: ReportBranding;
   charts: ChartData;
   renderedCharts: RenderedCharts;
+  aiSummaries?: AISummaries;
+  /** Required, possibly empty. See Section Notices. */
+  sectionNotices: SectionNotice[];
   sections: {
     projectRisks?: ProjectRisksSectionData;
     vendorRisks?: VendorRisksSectionData;
@@ -703,21 +886,103 @@ Manual generation (`/generate-report`, `/v2/generate-report`) now runs through t
 | Table | Purpose |
 |-------|---------|
 | `report_templates` | Reusable report definitions (system or org-defined). |
-| `report_template_versions` | Versioned snapshots of a template's section/config payload. |
-| `scheduled_reports` | A template + schedule (cron) + delivery config for an org. |
+| `report_template_versions` | Versioned snapshots of a template's section/config payload, including `framework_config` — its default framework selection. |
+| `scheduled_reports` | A template + schedule (cron) + delivery config for an org, plus the schedule's own `framework_ids`. |
 | `report_runs` | **The single list of produced reports** — execution records of every scheduled or run-now report. The Reporting UI's Generate and Archive tabs are both views over this one table (see [Run Archiving](#run-archiving)); nothing reads the legacy `files`-based list ([below](#the-legacy-files-based-list-is-dead-code-for-the-ui)). |
 
 `report_runs.archived_at` / `archived_by` carry a manual, reversible archive — set by `PATCH /runs/:id/archive`, cleared by `PATCH /runs/:id/restore`. Archiving is **orthogonal to `status`**: a `failed` run can be archived, a `success` run can sit unarchived indefinitely, and archiving never touches `status`, `file_id` or any other column. It is a UI-side filing action, not a statement about whether the run worked.
 
-### Seeded System Templates
+### The System Template Library
 
-Three system templates are seeded. MVP sections are **SNAPSHOT-based** (current-state); delta and time-window sections are future work.
+**21 system templates are seeded**, up from the three the MVP shipped. Sections
+are **SNAPSHOT-based** (current-state); delta and time-window sections are
+future work.
 
-| Template | Focus |
-|----------|-------|
-| Daily Governance Pulse | Daily snapshot of governance posture. |
-| Weekly Executive Brief | Weekly executive-level summary. |
-| Compliance Evidence Gap | Snapshot of missing/incomplete compliance evidence. |
+The definitions live in **`Servers/database/seeders/systemReportTemplates.js`**,
+which is the single source of truth for the library. It is plain CommonJS, and
+`.js` rather than `.ts` on purpose: migrations run from `dist/`, so a TypeScript
+source would put the seed migration and the tests on different paths to the same
+data. Both the seed migration (`20260729221814-seed-system-report-template-library.js`)
+and the mechanical checks in `database/seeders/__tests__/` require that one
+file. That is what makes the checks a gate rather than a paragraph — a test that
+restated the table would drift from the seed in silence.
+
+The module also exports `FRAMEWORK_SECTION_GATES`, the mapping from a
+framework-gated section to the frameworks that open it, mirroring the gates in
+`collectAllData`.
+
+| Template | Slug | Scope | Frequency | Frameworks |
+|----------|------|-------|-----------|------------|
+| Daily Governance Pulse | `daily-governance-pulse` | project | daily | all in scope |
+| Weekly Executive Brief | `weekly-executive-brief` | organization | weekly | all in scope |
+| Compliance Evidence Gap | `compliance-evidence-gap` | project | weekly | all in scope |
+| EU AI Act Readiness Review | `eu-ai-act-readiness` | project | monthly | EU AI Act |
+| EU AI Act Conformity Evidence Pack | `eu-ai-act-conformity-pack` | organization | monthly | EU AI Act |
+| ISO 42001 Internal Audit Pack | `iso-42001-audit-pack` | organization | monthly | ISO 42001 |
+| ISO 27001 Control Status Report | `iso-27001-control-status` | organization | monthly | ISO 27001 |
+| ISO 42001 + 27001 Coverage | `iso-dual-standard-coverage` | organization | monthly | ISO 42001, ISO 27001 |
+| NIST AI RMF Profile Report | `nist-ai-rmf-profile` | organization | monthly | NIST AI RMF |
+| Cross-Framework Compliance Scorecard | `cross-framework-scorecard` | organization | monthly | all four |
+| Third-Party and Vendor Risk Review | `third-party-risk-review` | organization | monthly | all in scope |
+| AI Model Inventory Report | `ai-model-inventory` | organization | monthly | all in scope |
+| Model Risk Register | `model-risk-register` | organization | weekly | all in scope |
+| Consolidated Risk Register | `consolidated-risk-register` | organization | weekly | all in scope |
+| Incident and Post-Market Monitoring | `incident-monitoring-report` | organization | weekly | all in scope |
+| Policy Governance Review | `policy-governance-review` | organization | monthly | all in scope |
+| Training and Awareness Compliance | `training-awareness-compliance` | organization | monthly | all in scope |
+| Board Governance Report | `board-governance-report` | organization | monthly | all in scope |
+| Monthly Operations Review | `monthly-operations-review` | organization | monthly | all in scope |
+| Use Case Risk Deep Dive | `use-case-risk-deep-dive` | project | weekly | all in scope |
+| New Use Case Onboarding Assessment | `use-case-onboarding-assessment` | project | monthly | EU AI Act |
+
+"All in scope" is the empty selection — the seeded `framework_config` is
+`{"frameworkIds": []}`. Every template also carries one of five canonical
+categories (`executive`, `compliance`, `risk`, `operational`, `governance`) and
+supports both scopes; `defaultScope` above is only what the wizard opens on.
+
+The first three rows are reproduced **verbatim** from the original
+`20260619191640` seed — sections, labels, `core` and `defaultEnabled` values —
+because changing them would alter what existing schedules produce.
+
+#### The mechanical checks
+
+`database/seeders/__tests__/systemReportTemplates.test.ts` runs against the
+seeder module directly. These are not style checks: a 21-template migration is
+expensive to unwind once installs have run it. Two checks carry the design, one
+guards the enums.
+
+- **Distinctness.** No two templates share an enabled-section set, *and* no two
+  share the full configuration tuple (enabled sections + sorted framework names
+  + default scope + frequency + enabled AI blocks). Two checks, because two
+  templates could differ only in frequency and still be the same report. Three
+  preamble assertions hold the count at 21 and the slugs and names unique —
+  names because `report_templates` carries a per-organization unique name and
+  every system row shares `organization_id NULL`.
+- **Reachability.** For every framework-gated section a template enables, at
+  least one framework the template selects must open it — so a template cannot
+  ship a section its own selection has already closed.
+- **Field validity**, alongside the two: category is one of the five canonical
+  values, frequency and default scope are in their enums, every
+  `frameworkNames` entry is a framework that exists, and every template enables
+  at least one section.
+
+Reachability is **skipped for a template with an empty selection**, since empty
+opens every gate. That is correct for the template but says nothing about the
+estate: `board-governance-report` enables `clausesAndAnnexes` with no selection
+at all, and on an estate holding only EU AI Act projects that section has
+nothing to collect. What keeps *that* case non-silent is the notice, not the
+check — the two mechanisms cover different halves, and neither covers both.
+
+The seed resolves framework ids **by name**, the way
+`20260302111132-seed-framework-struct-data.js` does; a hardcoded integer breaks
+on any install whose SERIAL ran differently. A template naming a framework the
+install does not have is **skipped with a log line** rather than seeded with a
+dangling id — so an install missing a framework legitimately ends up with fewer
+than 21 system rows. The seed is idempotent per slug (the three pre-existing
+templates are reactivated, not duplicated), and its `down()` deactivates rather
+than deletes: `scheduled_reports.template_id` is a NOT NULL FK with no
+`ON DELETE` clause, so deleting a scheduled-from template raises a foreign key
+violation and fails the whole rollback.
 
 ### API Endpoints
 
@@ -762,6 +1027,8 @@ All endpoints are auth-protected and org-scoped.
 ### Run Now (Ad Hoc Template Runs)
 
 `POST /reporting/templates/:id/run` (`runTemplateNow` in `controllers/reportTemplate.ctrl.ts`) produces **one** report from a template with no `scheduled_reports` row behind it. It builds an in-memory schedule object (`id: null`) from the requested scope/sections/format and the template's latest version, forces `delivery_config: { saveToStorage: true }` — a run-now report exists to be downloaded from the Generate tab, not delivered by email — and calls the same `runScheduledReport()` that scheduled runs use. **Scheduled runs and run-now share one execution path**; the only difference is which caller assembles the schedule object and that run-now's schedule id is always `null`.
+
+The request body takes `frameworkIds` like a schedule does, validated the same way and stored on the in-memory schedule's `framework_ids`; the legacy `frameworkId` / `projectFrameworkId` it also accepts are kept for the row's shape and never read (see [Framework selection](#framework-selection)).
 
 The response reflects the run's outcome rather than always claiming success: `success` / `partial_success` return `200 { started: true, runId, status }`; `failed` returns `500 { runId, status: "failed", error }` so the caller still has the run id to look up what happened. `partial_success` is still a downloadable report — only `failed` means no file was produced.
 
@@ -862,6 +1129,8 @@ Every one of the three is scoped by `organization_id` in its `WHERE` clause, and
 
 **The field allowlist is enforced twice** — in the controller and again in the query builder (`UPDATABLE_FIELDS` in `Servers/utils/scheduledReport.utils.ts`). `organization_id`, `template_id`, `template_version_id` and `created_by` are deliberately absent from it. A PATCH therefore cannot move a schedule between tenants or re-point it at another org's template, and neither layer alone is load-bearing.
 
+**`frameworkIds` is allowlisted, and validated on its own.** It is a third write path into `framework_ids`, so the PATCH runs `frameworkSelectionErrors` before the delivery/sections re-validation block — that block only runs when `deliveryConfig` or `sectionsConfig` is present, and a PATCH carrying `frameworkIds` alone would otherwise reach the `UPDATE` unvalidated. The value is JSONB, so it goes through the same `JSON.stringify` as the config objects; passing the raw array would bind a Postgres array.
+
 **A `schedule_config` change recomputes `next_run_at`.** Without this the stored value would still reflect the old cron expression, and the schedule would keep firing on its previous cadence until the next run rewrote it.
 
 ### Frontend Schedule Management
@@ -871,6 +1140,7 @@ The Reporting UI can now edit and delete schedules. Note that the soft-delete en
 The wizard (`ConfigureReportWizard.tsx`) now:
 
 - **Offers PDF and DOCX.** The format was previously hardcoded with no state behind it, so the DOCX generator was unreachable from the UI.
+- **Has a framework picker.** A multi-select on the Scope step, seeded from `template.latestVersion.framework_config.frameworkIds`, emitting `native:<id>` values built from `useFrameworks`. `frameworkIds` is **always sent, empty included** — `[]` is the explicit "every framework in scope" the backend already treats as the default, and `canNext` is deliberately not gated on it because an empty selection is a real choice. A `plugin:`/`custom:` id seeded on a template is unreachable from the control but rendered verbatim rather than dropped; dropping it would quietly widen the report back to every framework. The review step spells the empty case out as "all frameworks in scope".
 - **Disables AI blocks when the org has no LLM key**, gated on the *settled* value of `useLLMKeyStatus`. `hasKeys` is optimistically `true` while loading, so the gate checks `!loading && !hasKeys`; reading `hasKeys` alone would flash the controls enabled and then disable them.
 
 ### RBAC
@@ -892,13 +1162,15 @@ The existing **Admin-only** manual generate endpoints are preserved.
 
 - Structured `recommendedActions` emission is **scaffolding only** — runs currently render the existing recommendations rather than emitting structured actions.
 - A `PATCH` carrying **both** metadata and config performs two un-transacted writes. If the version insert fails, the metadata update is already committed.
-- `ScheduledReportUpdateBody` (frontend) omits `frameworkId` and `projectFrameworkId`, which the backend `UPDATABLE_FIELDS` allowlist does accept. The frontend type is a strict subset of the API — harmless today, but it means those two fields cannot be edited from the UI.
+- The `no_data` section-notice reason is **declared but never emitted** (see [Section Notices](#section-notices)). Both renderers carry a branch for it that cannot currently be reached.
+- A `plugin:` or `custom:` framework selection parses and stores, but resolves to no target: `projects_frameworks` holds native pairings only. Such a report renders `unresolved_framework` notices for its framework-gated sections rather than plugin content. The custom-framework data path is a later phase.
+- **`framework_config` has no API write path.** Only the seed migration writes a template's default selection; `createTemplateVersionQuery` does not carry it into the new version a config `PATCH` inserts, `createTemplateQuery` does not accept it, and `TemplatesTab`'s **Duplicate** copies `sections_config` and `ai_blocks_config` but not `framework_config`. A duplicated "ISO 42001 Internal Audit Pack" therefore comes back defaulting to every framework. The schedule the wizard creates still carries whatever the user picked, so this loses a default, not a report's filter.
 
 ### Frontend surface (complete)
 
 The UI half of the templates/schedules/runs stack is wired. The Reporting page (`Clients/src/presentation/pages/Reporting/index.tsx`) has four tabs — Generate, Templates, Scheduled, Archive:
 
-- **`TemplatesTab`** — splits templates into two sections, **My templates** and **System templates**, on `is_system_template` (`Clients/src/presentation/pages/Reporting/TemplatesTab.tsx`). Every card offers **Use Template** (opens the wizard in schedule mode, `onUse(id, "schedule")`) and **Run now** (opens it in run-now mode, `onUse(id, "run-now")`, see [Run Now](#run-now-ad-hoc-template-runs)). My-templates cards additionally get **Edit** (name, description, category, over `useUpdateTemplate`) and **Archive** (over `useArchiveTemplate`, behind a confirmation). **System-template cards get neither Edit nor Archive** — writes match on `organization_id = :org AND is_system_template = false`, so the backend 404s for them and the UI omits buttons that cannot succeed. In their place, System-template cards offer **Duplicate**, which `POST`s a new org-owned `report_templates` row seeded from the source template's name (`"<name> (copy)"`), description, category, scope and section/AI-block config (`handleDuplicate`, `useCreateTemplate`) — this is how an org turns a read-only system template into something it can edit. **Duplicate fetches the full template first** (`getTemplate(id)`): `useTemplates` is backed by `SELECT * FROM report_templates`, which carries no version, and only `GET /templates/:id` attaches `latestVersion`. Reading the section config off the list row produced copies with an empty `sections_config`, which the wizard will not accept (its Sections step requires one enabled section) and the Edit modal cannot repair. If that fetch fails, nothing is created. A 409 from any of these surfaces as a duplicate-name message.
+- **`TemplatesTab`** — splits templates into two sections, **My templates** and **System templates**, on `is_system_template` (`Clients/src/presentation/pages/Reporting/TemplatesTab.tsx`). Every card offers **Use Template** (opens the wizard in schedule mode, `onUse(id, "schedule")`) and **Run now** (opens it in run-now mode, `onUse(id, "run-now")`, see [Run Now](#run-now-ad-hoc-template-runs)). My-templates cards additionally get **Edit** (name, description, category, over `useUpdateTemplate`) and **Archive** (over `useArchiveTemplate`, behind a confirmation). **System-template cards get neither Edit nor Archive** — writes match on `organization_id = :org AND is_system_template = false`, so the backend 404s for them and the UI omits buttons that cannot succeed. In their place, System-template cards offer **Duplicate**, which `POST`s a new org-owned `report_templates` row seeded from the source template's name (`"<name> (copy)"`), description, category, scope and section/AI-block config (`handleDuplicate`, `useCreateTemplate`) — but **not** its `framework_config`, so a duplicate of a framework-targeted system template defaults back to every framework (see [Known MVP Limitations](#known-mvp-limitations)). This is how an org turns a read-only system template into something it can edit. **Duplicate fetches the full template first** (`getTemplate(id)`): `useTemplates` is backed by `SELECT * FROM report_templates`, which carries no version, and only `GET /templates/:id` attaches `latestVersion`. Reading the section config off the list row produced copies with an empty `sections_config`, which the wizard will not accept (its Sections step requires one enabled section) and the Edit modal cannot repair. If that fetch fails, nothing is created. A 409 from any of these surfaces as a duplicate-name message.
 - **`ScheduledReportsTab`** — edit (name, format, schedule) and delete, over `useUpdateScheduledReport` / `useDeleteScheduledReport`. Both destructive paths require a confirmation naming the schedule. Edits always send `scheduleConfig`, because `updateScheduledReportQuery` only recomputes `next_run_at` when that key is present.
 - **`ReportRunsTable`** (`Clients/src/presentation/pages/Reporting/ReportRunsTable.tsx`) — the one table backing both the Generate and Archive tabs (see [Run Archiving](#run-archiving)). It takes a `variant: "live" | "archived"` prop and passes `archived: variant === "archived"` to `useReportRunsPage`, so the two tabs differ only in which half of `report_runs` they query — same columns (Report / Template / Status / Scope / Created / Triggered by / Actions), same empty-state component, same drawer. `output_filename` is `NULL` until a run succeeds, so a queued, running or failed row is named `Run #<id>` and identified by the adjacent Template and Scope columns rather than a bare dash. Pagination is server-side via `StandardTablePagination`, gated on the server-reported `total` rather than the current page's row count, so paging past the end reads as "you paged past the end", not "there is nothing here"; `page` is pulled back in range when archiving the last row shrinks the total below it. Status renders through a fixed label/variant map on the shared `Chip` — `partial_success` is styled `warning`, never `error`, because a partial-success run is still downloadable (see the run-status vocabulary note below) — and its tooltip falls back from `error_message`, which is `NULL` on that path, to the failed channels in `delivery_status`. Download re-materializes the returned Blob through a throwaway `<a>` element; Delete is gated behind a `ConfirmationModal` since, unlike Archive, it cannot be undone. Each row also opens `ReportAnalysisPanel` in a drawer, independent of variant.
 - **`ReportAnalysisPanel`** — presentational (`{analyses, isLoading}`), caller owns `useRunAnalyses`. Renders all seven section keys including `sectionSummaries`, handles a `null` payload (a real runtime case — `runAnalyzers` writes `payload: null` when a section produced nothing) and surfaces `abstain_reason`.
