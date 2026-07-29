@@ -40,11 +40,7 @@ import {
   getAnnexesReportQuery,
 } from "../../utils/reporting.utils";
 import { FrameworkTarget, ReportScope } from "./reportScope";
-import {
-  parseFrameworkSelection,
-  isEmptySelection,
-  type ParsedFrameworkSelection,
-} from "./frameworkSelection";
+import { parseFrameworkSelection, type ParsedFrameworkSelection } from "./frameworkSelection";
 import {
   mergeAssessment,
   mergeClausesAndAnnexes,
@@ -145,6 +141,23 @@ export class ReportDataCollector {
     custom: [],
     invalid: [],
   };
+  /**
+   * How many entries the caller actually supplied — NOT how many parsed.
+   *
+   * This, and not the parse result, is what "filtered" means here, so that this
+   * collector and resolveFrameworkTargets agree on every input. reportScope.ts
+   * carries a second guard for a selection that parsed to nothing resolvable
+   * (`isEmptySelection(selection) && (frameworkIds ?? []).length > 0` — see
+   * reportScope.ts:72) and hands back zero targets for it. Keying off the parse
+   * result instead would make an invalid-only selection such as ["abc"],
+   * ["plugin:SOC2"] (the plugin regex is lower-case only) or ["native:0"] look
+   * UNFILTERED here while reportScope had already narrowed it to nothing — so
+   * scopedProjectIds() would return null, projectRisks would fall through to
+   * fetchOrganizationRisks(), and the report would show every project's risks
+   * beside silently empty framework sections. That widening is precisely what
+   * reportScope's guard exists to prevent.
+   */
+  private suppliedFrameworkCount = 0;
 
   constructor(
     organizationId: number,
@@ -164,6 +177,7 @@ export class ReportDataCollector {
     this.scope = scope;
     this.targets = targets;
     this.selection = parseFrameworkSelection(frameworkIds ?? []);
+    this.suppliedFrameworkCount = (frameworkIds ?? []).length;
   }
 
   /**
@@ -185,9 +199,15 @@ export class ReportDataCollector {
     ];
   }
 
-  /** True when the caller named at least one framework. */
+  /**
+   * True when the caller supplied a framework selection at all.
+   *
+   * Deliberately the supplied count rather than !isEmptySelection(selection):
+   * see suppliedFrameworkCount. An entry that parses to nothing resolvable is
+   * still a filter, and treating it as "no filter" would widen the report.
+   */
   private isFiltered(): boolean {
-    return !isEmptySelection(this.selection);
+    return this.suppliedFrameworkCount > 0;
   }
 
   /**
@@ -202,17 +222,32 @@ export class ReportDataCollector {
   }
 
   /**
-   * Why a filtered report cannot serve a section: a selection that named only
-   * plugin/custom frameworks is unresolvable until the custom-framework data
-   * path lands, and is worth distinguishing from a framework simply not being
-   * on any project.
+   * Why a filtered report cannot serve a section.
    *
-   * Gated on isFiltered() as well: an EMPTY selection also has no native ids,
-   * and calling an unfiltered gap "unresolved_framework" would tell the reader
-   * a framework they never picked is pending support.
+   * "unresolved_framework" is reserved for the one case its declared meaning
+   * covers — a plugin:/custom: framework was selected and that data path is not
+   * available yet — because that is the sentence the renderers print: "The
+   * selected framework is a plugin framework, which reports do not yet cover."
+   * Hence the plugin/custom test rather than a bare `native.length === 0`.
+   *
+   * Everything else falls to "no_framework_target", including an invalid-only
+   * selection such as ["abc"] or ["plugin:SOC2"] (the plugin regex is
+   * lower-case only). Nothing about those is pending plugin support, so the
+   * plugin sentence would be flatly false for them, whereas "no project in
+   * scope uses a framework that provides this section" is true.
+   *
+   * The plugin/custom test IS the discriminator, including for the empty
+   * selection an earlier revision gated on separately: no selection means no
+   * plugin and no custom entries, so an unfiltered gap already falls to
+   * "no_framework_target" rather than telling the reader a framework they never
+   * picked is pending support. The leading isFiltered() is kept as a guard and
+   * is currently implied by the clause after it — a non-empty plugin or custom
+   * list can only come from a supplied selection.
    */
   private filterNoticeReason(): SectionNotice["reason"] {
-    return this.isFiltered() && this.selection.native.length === 0
+    return this.isFiltered() &&
+      this.selection.native.length === 0 &&
+      (this.selection.plugin.length > 0 || this.selection.custom.length > 0)
       ? "unresolved_framework"
       : "no_framework_target";
   }

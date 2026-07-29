@@ -12,8 +12,16 @@ jest.mock("../../../database/db", () => ({
   sequelize: { query: jest.fn().mockResolvedValue([]) },
 }));
 
+// Every named import dataCollector takes from this module is stubbed, not just
+// the one the first tests happened to reach: `collectAllData(["all"])` walks
+// sections the narrower specs never request, and a missing export there is an
+// unhelpful "x is not a function" rather than a real failure.
 jest.mock("../../../utils/reporting.utils", () => ({
   getProjectRisksReportQuery: jest.fn().mockResolvedValue([]),
+  getAssessmentReportQuery: jest.fn().mockResolvedValue([]),
+  getComplianceReportQuery: jest.fn().mockResolvedValue([]),
+  getClausesReportQuery: jest.fn().mockResolvedValue([]),
+  getAnnexesReportQuery: jest.fn().mockResolvedValue([]),
 }));
 
 import { createScopedDataCollector } from "../dataCollector";
@@ -76,6 +84,130 @@ describe("section notices", () => {
       sectionKey: "nistSubcategories",
       reason: "no_framework_target",
     });
+  });
+
+  it('emits no notices for an "all" request that is filtered to nothing', async () => {
+    // "all" is the legacy manual-report request meaning "whatever this estate
+    // has". A notice per unserved section would turn every report into a wall
+    // of them, so the rule is that notices fire only for a NAMED section — and
+    // a filtered-to-nothing selection is the case most likely to break it.
+    const collector = createScopedDataCollector(10, 1, "organization", [], null, ["plugin:soc2"]);
+
+    const data = await collector.collectAllData(["all"]);
+
+    expect(data.sectionNotices).toEqual([]);
+    expect(data.sections.projectRisks).toBeUndefined();
+  });
+});
+
+/**
+ * The collector and resolveFrameworkTargets must agree on what "filtered"
+ * means for every class of input, because they read the same selection from
+ * opposite ends: reportScope decides which pairings exist, the collector
+ * decides whether to narrow. When they disagree the report WIDENS — targets
+ * resolve to nothing while project risks fall through to the whole
+ * organization, so every framework section is empty beside every project's
+ * risks.
+ *
+ * Rows 4 and 5 are the ones reportScope.ts:72 turns into zero targets: a
+ * selection that was supplied but parsed to nothing resolvable.
+ */
+describe("what counts as a filtered report", () => {
+  const rows: Array<{
+    label: string;
+    frameworkIds: string[] | null;
+    /** What resolveFrameworkTargets hands back for this selection. */
+    targets: FrameworkTarget[];
+    outcome: "unfiltered" | "narrowed" | "nothing";
+    reason?: "no_framework_target" | "unresolved_framework";
+  }> = [
+    {
+      label: "null (no column value)",
+      frameworkIds: null,
+      targets: [isoTarget],
+      outcome: "unfiltered",
+    },
+    { label: "empty array", frameworkIds: [], targets: [isoTarget], outcome: "unfiltered" },
+    { label: "native:2", frameworkIds: ["native:2"], targets: [isoTarget], outcome: "narrowed" },
+    {
+      label: "plugin:soc2 (unsupported path)",
+      frameworkIds: ["plugin:soc2"],
+      targets: [],
+      outcome: "nothing",
+      reason: "unresolved_framework",
+    },
+    {
+      label: "abc (invalid)",
+      frameworkIds: ["abc"],
+      targets: [],
+      outcome: "nothing",
+      reason: "no_framework_target",
+    },
+  ];
+
+  it.each(rows)("$label -> $outcome", async ({ frameworkIds, targets, outcome, reason }) => {
+    const { sequelize } = require("../../../database/db");
+    (sequelize.query as jest.Mock).mockClear();
+
+    const collector = createScopedDataCollector(10, 1, "organization", targets, null, frameworkIds);
+    const data = await collector.collectAllData(["projectRisks"]);
+
+    const scopedCall = (sequelize.query as jest.Mock).mock.calls.find(([sql]: [string]) =>
+      sql.includes("scopedProjectIds"),
+    );
+
+    if (outcome === "nothing") {
+      // The else branch assigns unconditionally, so an absent key is proof the
+      // section was skipped rather than collected organization-wide.
+      expect(data.sections.projectRisks).toBeUndefined();
+      expect(scopedCall).toBeUndefined();
+      expect(data.sectionNotices).toEqual([{ sectionKey: "projectRisks", reason }]);
+    } else {
+      expect(data.sections.projectRisks).toBeDefined();
+      expect(data.sectionNotices).toEqual([]);
+      if (outcome === "narrowed") {
+        expect(scopedCall).toBeDefined();
+        expect(scopedCall[1].replacements.scopedProjectIds).toEqual([5]);
+      } else {
+        expect(scopedCall).toBeUndefined();
+      }
+    }
+  });
+
+  it("does not blame plugin support for a garbage selection", async () => {
+    // "unresolved_framework" makes the renderer print "The selected framework
+    // is a plugin framework, which reports do not yet cover." That sentence is
+    // false for "abc" — nothing about it is pending the custom-framework data
+    // path — so the reason must stay no_framework_target.
+    const collector = createScopedDataCollector(10, 1, "organization", [], null, ["abc"]);
+
+    const data = await collector.collectAllData(["projectRisks", "clausesAndAnnexes"]);
+
+    expect(data.sectionNotices).not.toContainEqual(
+      expect.objectContaining({ reason: "unresolved_framework" }),
+    );
+    expect(data.sectionNotices).toContainEqual({
+      sectionKey: "clausesAndAnnexes",
+      reason: "no_framework_target",
+    });
+  });
+
+  it("does not read the whole organization's risks for an invalid-only selection", async () => {
+    // The bug this pins: isFiltered() keyed off the PARSED selection called
+    // ["native:0"] unfiltered, scopedProjectIds() returned null, and
+    // collectProjectRisks fell through to fetchOrganizationRisks() — every
+    // project's risks in the tenant, in a report that named one framework.
+    const { sequelize } = require("../../../database/db");
+    (sequelize.query as jest.Mock).mockClear();
+
+    const collector = createScopedDataCollector(10, 1, "organization", [], null, ["native:0"]);
+    const data = await collector.collectAllData(["projectRisks"]);
+
+    expect(data.sections.projectRisks).toBeUndefined();
+    const riskQuery = (sequelize.query as jest.Mock).mock.calls.find(([sql]: [string]) =>
+      sql.includes("projects_risks"),
+    );
+    expect(riskQuery).toBeUndefined();
   });
 });
 
