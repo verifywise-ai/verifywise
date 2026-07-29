@@ -23,6 +23,7 @@ import {
   PolicyManagerSectionData,
   IncidentManagementSectionData,
 } from "../../domain.layer/interfaces/i.reportGeneration";
+import type { SectionNotice } from "../../domain.layer/interfaces/i.reportGeneration";
 import {
   generateRiskDistributionChart,
   generateRiskDonutChart,
@@ -39,6 +40,11 @@ import {
   getAnnexesReportQuery,
 } from "../../utils/reporting.utils";
 import { FrameworkTarget, ReportScope } from "./reportScope";
+import {
+  parseFrameworkSelection,
+  isEmptySelection,
+  type ParsedFrameworkSelection,
+} from "./frameworkSelection";
 import {
   mergeAssessment,
   mergeClausesAndAnnexes,
@@ -128,6 +134,17 @@ export class ReportDataCollector {
    * above.
    */
   private targets?: FrameworkTarget[];
+  /**
+   * The parsed framework selection. Empty means every framework in scope, and
+   * every narrowing below is skipped — that is the backward-compatible path
+   * every pre-existing schedule takes.
+   */
+  private selection: ParsedFrameworkSelection = {
+    native: [],
+    plugin: [],
+    custom: [],
+    invalid: [],
+  };
 
   constructor(
     organizationId: number,
@@ -137,6 +154,7 @@ export class ReportDataCollector {
     userId: number,
     scope: ReportScope = "project",
     targets?: FrameworkTarget[],
+    frameworkIds?: string[] | null,
   ) {
     this.organizationId = organizationId;
     this.projectId = projectId;
@@ -145,6 +163,7 @@ export class ReportDataCollector {
     this.userId = userId;
     this.scope = scope;
     this.targets = targets;
+    this.selection = parseFrameworkSelection(frameworkIds ?? []);
   }
 
   /**
@@ -164,6 +183,38 @@ export class ReportDataCollector {
         projectFrameworkId: this.projectFrameworkId,
       },
     ];
+  }
+
+  /** True when the caller named at least one framework. */
+  private isFiltered(): boolean {
+    return !isEmptySelection(this.selection);
+  }
+
+  /**
+   * The projects a filtered report may read project-scoped sections from, or
+   * null when unfiltered. An EMPTY array is a real answer meaning "no project
+   * in scope carries a selected framework" — callers must skip the section, not
+   * build `= ANY('{}')`, which hits Postgres empty-array type inference.
+   */
+  private scopedProjectIds(): number[] | null {
+    if (!this.isFiltered()) return null;
+    return Array.from(new Set(this.frameworkTargets().map((t) => t.projectId)));
+  }
+
+  /**
+   * Why a filtered report cannot serve a section: a selection that named only
+   * plugin/custom frameworks is unresolvable until the custom-framework data
+   * path lands, and is worth distinguishing from a framework simply not being
+   * on any project.
+   *
+   * Gated on isFiltered() as well: an EMPTY selection also has no native ids,
+   * and calling an unfiltered gap "unresolved_framework" would tell the reader
+   * a framework they never picked is pending support.
+   */
+  private filterNoticeReason(): SectionNotice["reason"] {
+    return this.isFiltered() && this.selection.native.length === 0
+      ? "unresolved_framework"
+      : "no_framework_target";
   }
 
   /**
@@ -192,6 +243,20 @@ export class ReportDataCollector {
     const targets = this.frameworkTargets();
 
     const sectionData: ReportData["sections"] = {};
+    const sectionNotices: SectionNotice[] = [];
+    const scopedProjectIds = this.scopedProjectIds();
+    const noticeReason = this.filterNoticeReason();
+    // An empty scoped set means the filter matched no project at all. Every
+    // section below that depends on a pairing has to report it rather than
+    // quietly return nothing.
+    const filteredToNothing = scopedProjectIds !== null && scopedProjectIds.length === 0;
+
+    // A notice is only ever pushed for a section the caller NAMED. "all" is the
+    // legacy manual-report request meaning "whatever this estate has", not "I
+    // expected these twelve", and a notice per unserved section would turn every
+    // single-framework estate's report into a wall of them. Templates always
+    // name their sections, so they still get notices.
+    const requested = (key: string) => sections.includes(key);
 
     // ============================================
     // RISK ANALYSIS GROUP
@@ -205,7 +270,19 @@ export class ReportDataCollector {
     // is_organizational, and a project report of one of them must still name
     // its own risks rather than every project's.
     if (sections.includes("projectRisks") || sections.includes("all")) {
-      sectionData.projectRisks = await this.collectProjectRisks(this.scope === "organization");
+      // The skip is unconditional on an empty scoped set — it is what keeps the
+      // query out of `= ANY('{}')` — while the notice stays on the explicit
+      // request alone.
+      if (filteredToNothing) {
+        if (requested("projectRisks")) {
+          sectionNotices.push({ sectionKey: "projectRisks", reason: noticeReason });
+        }
+      } else {
+        sectionData.projectRisks = await this.collectProjectRisks(
+          this.scope === "organization",
+          scopedProjectIds,
+        );
+      }
     }
 
     // Vendor Risks - available for all report types
@@ -252,6 +329,12 @@ export class ReportDataCollector {
           await this.perTarget(euTargets, (t) => this.collectAssessment(t)),
         );
       }
+    } else {
+      for (const key of ["compliance", "assessment"]) {
+        if (requested(key)) {
+          sectionNotices.push({ sectionKey: key, reason: noticeReason });
+        }
+      }
     }
 
     // ISO 42001 and ISO 27001 specific sections (frameworkId = 2 or 3)
@@ -270,6 +353,8 @@ export class ReportDataCollector {
           await this.perTarget(isoTargets, (t) => this.collectClausesAndAnnexes(t)),
         );
       }
+    } else if (requested("clausesAndAnnexes")) {
+      sectionNotices.push({ sectionKey: "clausesAndAnnexes", reason: noticeReason });
     }
 
     // NIST AI RMF specific sections (frameworkId = 4) — same reasoning.
@@ -279,6 +364,8 @@ export class ReportDataCollector {
           await this.perTarget(nistTargets, (t) => this.collectNistSubcategories(t)),
         );
       }
+    } else if (requested("nistSubcategories")) {
+      sectionNotices.push({ sectionKey: "nistSubcategories", reason: noticeReason });
     }
 
     // ============================================
@@ -321,6 +408,7 @@ export class ReportDataCollector {
       charts,
       renderedCharts,
       sections: sectionData,
+      sectionNotices,
     };
   }
 
@@ -430,9 +518,9 @@ export class ReportDataCollector {
 
   /** Distinct framework names across the report's pairings, in target order. */
   private frameworkNames(): string {
-    return Array.from(new Set((this.targets ?? []).map((t) => t.frameworkName).filter(Boolean))).join(
-      ", ",
-    );
+    return Array.from(
+      new Set((this.targets ?? []).map((t) => t.frameworkName).filter(Boolean)),
+    ).join(", ");
   }
 
   /**
@@ -528,7 +616,11 @@ export class ReportDataCollector {
       const { answeredQuestions, totalQuestions } = sections.assessment;
       chartData.assessmentStatus = [
         { status: "Answered", count: answeredQuestions, color: "#027A48" },
-        { status: "Pending", count: Math.max(totalQuestions - answeredQuestions, 0), color: "#F2F4F7" },
+        {
+          status: "Pending",
+          count: Math.max(totalQuestions - answeredQuestions, 0),
+          color: "#F2F4F7",
+        },
       ];
     }
 
@@ -538,10 +630,16 @@ export class ReportDataCollector {
   /**
    * Collect project risks section data
    */
-  private async collectProjectRisks(orgWide = false): Promise<ProjectRisksSectionData> {
-    const risks = orgWide
-      ? await this.fetchOrganizationRisks()
-      : ((await getProjectRisksReportQuery(this.projectId, this.organizationId)) as any[]);
+  private async collectProjectRisks(
+    orgWide = false,
+    scopedProjectIds: number[] | null = null,
+  ): Promise<ProjectRisksSectionData> {
+    const risks =
+      scopedProjectIds && scopedProjectIds.length > 0
+        ? await this.fetchRisksForProjects(scopedProjectIds)
+        : orgWide
+          ? await this.fetchOrganizationRisks()
+          : ((await getProjectRisksReportQuery(this.projectId, this.organizationId)) as any[]);
 
     const risksByLevel: Record<string, number> = {};
     risks.forEach((risk) => {
@@ -593,6 +691,37 @@ export class ReportDataCollector {
         WHERE risk.organization_id = :organizationId
         ORDER BY risk.id`,
       { replacements: { organizationId: this.organizationId }, type: QueryTypes.SELECT },
+    )) as any[];
+  }
+
+  /**
+   * Risks of a specific set of projects — the framework filter's project tier.
+   *
+   * DISTINCT ON (risk.id) because projects_risks is many-to-many: one risk
+   * linked to two selected projects would otherwise be counted twice, and
+   * risksByLevel feeds the risk donut.
+   *
+   * `= ANY(ARRAY[:ids]::INTEGER[])` rather than the bare `= ANY(:ids)`:
+   * sequelize expands an array replacement to a comma list by string
+   * substitution, so the bare form renders `ANY(5, 7)` and is a syntax error.
+   * This is the same trap resolveUserNames documents below, and the form used
+   * by every other array predicate in the codebase.
+   */
+  private async fetchRisksForProjects(projectIds: number[]): Promise<any[]> {
+    return (await sequelize.query(
+      `SELECT DISTINCT ON (risk.id)
+              risk.*, pr.project_id AS project_id,
+              u.name AS risk_owner_name, u.surname AS risk_owner_surname
+         FROM risks risk
+         JOIN projects_risks pr ON risk.id = pr.risk_id AND pr.organization_id = :organizationId
+         LEFT JOIN users u ON risk.risk_owner = u.id
+        WHERE risk.organization_id = :organizationId
+          AND pr.project_id = ANY(ARRAY[:scopedProjectIds]::INTEGER[])
+        ORDER BY risk.id`,
+      {
+        replacements: { organizationId: this.organizationId, scopedProjectIds: projectIds },
+        type: QueryTypes.SELECT,
+      },
     )) as any[];
   }
 
@@ -1326,6 +1455,8 @@ export function createScopedDataCollector(
    * with no risks that the framework-id bug produced.
    */
   projectId?: number | null,
+  /** The report's framework selection; empty means every framework in scope. */
+  frameworkIds?: string[] | null,
 ): ReportDataCollector {
   const first = targets[0];
   return new ReportDataCollector(
@@ -1336,5 +1467,6 @@ export function createScopedDataCollector(
     userId,
     scope,
     targets,
+    frameworkIds,
   );
 }

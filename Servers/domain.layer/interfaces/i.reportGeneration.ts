@@ -97,19 +97,22 @@ export interface ReportGenerationResult {
    * to report_run_analyses; the renderers read the flattened copy on
    * ReportData.aiSummaries instead.
    */
-  analyses?: Record<string, {
-    payload: any;
-    abstained: boolean;
-    abstain_reason: string | null;
-    model: string | null;
-    attempts: number;
-    /**
-     * True when the §6 shallowness gate fired and the call was re-issued.
-     * Optional, mirroring AnalyzerRunResult in analyzers/runAnalyzers.ts:
-     * sectionSummaries never runs the gate.
-     */
-    restatementRetried?: boolean;
-  }>;
+  analyses?: Record<
+    string,
+    {
+      payload: any;
+      abstained: boolean;
+      abstain_reason: string | null;
+      model: string | null;
+      attempts: number;
+      /**
+       * True when the §6 shallowness gate fired and the call was re-issued.
+       * Optional, mirroring AnalyzerRunResult in analyzers/runAnalyzers.ts:
+       * sectionSummaries never runs the gate.
+       */
+      restatementRetried?: boolean;
+    }
+  >;
   /**
    * The deterministic facts snapshot this run's analyzers were built from. The
    * runner persists it to report_run_analyses.audit_metadata so the next run of
@@ -186,7 +189,7 @@ export interface AISummaries {
   riskHighlights?: string;
   recommendedActions?: Array<{
     action: string;
-    suggestedOwner?: string;  // MUST be an existing org member/role or omitted
+    suggestedOwner?: string; // MUST be an existing org member/role or omitted
     suggestedDueDate?: string;
     priority?: "low" | "medium" | "high" | "critical";
     sourceSignal?: string;
@@ -222,6 +225,25 @@ export interface AISummaries {
   };
 }
 
+/**
+ * Why a requested section produced nothing.
+ *
+ * Before this existed, collectAllData simply omitted the key and both
+ * renderers skipped what was absent, so "the framework you picked is on no
+ * project in scope" and "this section was never requested" looked identical in
+ * the output.
+ */
+export interface SectionNotice {
+  /** Matches a REPORT_SECTION_CATALOG key. */
+  sectionKey: string;
+  reason: /** Requested, but no pairing in scope carries a framework that serves it. */
+    | "no_framework_target"
+    /** A pairing exists; the query returned zero rows. */
+    | "no_data"
+    /** A plugin:/custom: framework was selected but that path is not available yet. */
+    | "unresolved_framework";
+}
+
 // Unified report data structure
 export interface ReportData {
   metadata: ReportMetadata;
@@ -229,6 +251,8 @@ export interface ReportData {
   charts: ChartData;
   renderedCharts: RenderedCharts;
   aiSummaries?: AISummaries;
+  /** Always present, possibly empty. See SectionNotice. */
+  sectionNotices: SectionNotice[];
   sections: {
     // Risk Analysis group
     projectRisks?: ProjectRisksSectionData;
