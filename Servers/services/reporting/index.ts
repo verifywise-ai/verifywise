@@ -100,7 +100,13 @@ export async function generateReport(
       ? await resolveFrameworkTargets(request.scope, request.projectId || null, organizationId)
       : [];
     const dataCollector = request.scope
-      ? createScopedDataCollector(organizationId, userId, request.scope, targets)
+      ? createScopedDataCollector(
+          organizationId,
+          userId,
+          request.scope,
+          targets,
+          request.projectId || null,
+        )
       : createDataCollector(
           organizationId,
           request.projectId,
@@ -247,13 +253,26 @@ export async function getReportData(
   userId: number,
   organizationId: number,
 ): Promise<ReportData> {
-  const dataCollector = createDataCollector(
-    organizationId,
-    request.projectId,
-    request.frameworkId,
-    request.projectFrameworkId,
-    userId,
-  );
+  // Same two paths as generateReport: a scoped request must preview what the
+  // produced report would contain, or the two disagree.
+  const targets = request.scope
+    ? await resolveFrameworkTargets(request.scope, request.projectId || null, organizationId)
+    : [];
+  const dataCollector = request.scope
+    ? createScopedDataCollector(
+        organizationId,
+        userId,
+        request.scope,
+        targets,
+        request.projectId || null,
+      )
+    : createDataCollector(
+        organizationId,
+        request.projectId,
+        request.frameworkId,
+        request.projectFrameworkId,
+        userId,
+      );
 
   const sections = getRequestedSections(request.reportType);
   const reportData = await dataCollector.collectAllData(sections);

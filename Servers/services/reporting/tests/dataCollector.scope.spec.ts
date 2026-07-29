@@ -169,10 +169,45 @@ describe("createScopedDataCollector — project scope", () => {
   });
 
   it("still filters risks by the project", async () => {
-    const collector = createScopedDataCollector(10, 5, "project", [EU]);
+    const collector = createScopedDataCollector(10, 5, "project", [EU], 1);
     await collector.collectAllData(["projectRisks"]);
 
     expect(mockRisks).toHaveBeenCalledWith(1, 10);
+  });
+
+  it("keeps an organizational project's risks its own", async () => {
+    // ISO 42001, ISO 27001 and NIST projects all carry is_organizational, and
+    // the five organization-group sections have always widened to the whole
+    // tenant for them. Risks never did — a project report naming one project's
+    // risks must not start listing every project's.
+    const { getProjectByIdQuery } = require("../../../utils/project.utils");
+    (getProjectByIdQuery as jest.Mock).mockResolvedValue({
+      project_title: "Gamma",
+      is_organizational: true,
+    });
+
+    const collector = createScopedDataCollector(10, 5, "project", [ISO], 3);
+    await collector.collectAllData(["projectRisks"]);
+
+    expect(mockRisks).toHaveBeenCalledWith(3, 10);
+  });
+
+  it("keeps the project's identity when it holds no framework yet", async () => {
+    // A project created but not yet assigned a framework resolves to no
+    // pairings. Reading the project id out of targets[0] made it 0 — the same
+    // "Unknown Project" with no risks that the framework-id bug produced.
+    const { getProjectByIdQuery } = require("../../../utils/project.utils");
+    (getProjectByIdQuery as jest.Mock).mockResolvedValue({
+      project_title: "Fresh",
+      is_organizational: false,
+    });
+
+    const collector = createScopedDataCollector(10, 5, "project", [], 42);
+    const data = await collector.collectAllData(["projectRisks"]);
+
+    expect(getProjectByIdQuery).toHaveBeenCalledWith(42, 10);
+    expect(data.metadata.projectTitle).toBe("Fresh");
+    expect(mockRisks).toHaveBeenCalledWith(42, 10);
   });
 
   it("covers every framework the project holds, not just one", async () => {
@@ -183,7 +218,7 @@ describe("createScopedDataCollector — project scope", () => {
     mockCompliance.mockResolvedValue(controlCategory("C1"));
     mockClauses.mockResolvedValue([{ id: 1, clause_id: "4", title: "c", status: "Done" }]);
 
-    const collector = createScopedDataCollector(10, 5, "project", bothOnOneProject);
+    const collector = createScopedDataCollector(10, 5, "project", bothOnOneProject, 1);
     const data = await collector.collectAllData(["compliance", "clausesAndAnnexes"]);
 
     expect(data.sections.compliance!.controls).toHaveLength(1);

@@ -181,9 +181,15 @@ export class ReportDataCollector {
     // RISK ANALYSIS GROUP
     // ============================================
 
-    // Project/Use Case Risks - common for all
+    // Project/Use Case Risks - common for all.
+    //
+    // Widened by the report's scope alone, NOT by orgWide. The five sections
+    // below have always shown the whole tenant for an organizational project,
+    // but risks never have: ISO 42001, ISO 27001 and NIST projects all carry
+    // is_organizational, and a project report of one of them must still name
+    // its own risks rather than every project's.
     if (sections.includes("projectRisks") || sections.includes("all")) {
-      sectionData.projectRisks = await this.collectProjectRisks(orgWide);
+      sectionData.projectRisks = await this.collectProjectRisks(this.scope === "organization");
     }
 
     // Vendor Risks - available for all report types
@@ -369,10 +375,10 @@ export class ReportDataCollector {
   private async collectMetadata(): Promise<ReportMetadata> {
     if (this.scope === "organization") return this.collectOrganizationMetadata();
 
-    // Project scope with resolved targets: they all name the same project, so
-    // the first one carries the ids the legacy lookups need.
+    // this.projectId, not targets[0]: a project with no framework yet has no
+    // pairings at all, and it still has a title and risks of its own.
     const first = this.targets?.[0];
-    const projectId = first?.projectId ?? this.projectId;
+    const projectId = this.projectId;
     const project = await getProjectByIdQuery(projectId, this.organizationId);
     const framework = await getAllFrameworkByIdQuery(
       first?.frameworkId ?? this.frameworkId,
@@ -1297,11 +1303,18 @@ export function createScopedDataCollector(
   userId: number,
   scope: ReportScope,
   targets: FrameworkTarget[],
+  /**
+   * The report's project, passed in rather than read off targets[0]: a project
+   * created but not yet assigned a framework resolves to no pairings, and
+   * taking the id from an empty list makes it 0 — the same "Unknown Project"
+   * with no risks that the framework-id bug produced.
+   */
+  projectId?: number | null,
 ): ReportDataCollector {
   const first = targets[0];
   return new ReportDataCollector(
     organizationId,
-    first?.projectId ?? 0,
+    projectId ?? first?.projectId ?? 0,
     first?.frameworkId ?? 0,
     first?.projectFrameworkId ?? 0,
     userId,

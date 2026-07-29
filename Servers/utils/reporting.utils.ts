@@ -3,12 +3,8 @@ import { ProjectsMembersModel } from "../domain.layer/models/projectsMembers/pro
 import { FileModel } from "../domain.layer/models/file/file.model";
 import { QueryTypes, Transaction } from "sequelize";
 import {
-  getAllTopicsQuery,
-  getAllSubTopicsQuery,
-  getAllQuestionsQuery,
-  getComplianceEUByProjectIdQuery,
+  getVisibleEuCategoryIdsForProject,
 } from "./eu.utils";
-import { TopicStructEUModel } from "../domain.layer/frameworks/EU-AI-Act/topicStructEU.model";
 import { AnnexStructISOModel } from "../domain.layer/frameworks/ISO-42001/annexStructISO.model";
 import { ClauseStructISOModel } from "../domain.layer/frameworks/ISO-42001/clauseStructISO.model";
 import { IProjectsMembers } from "../domain.layer/interfaces/i.projectMember";
@@ -186,29 +182,66 @@ export const getAssessmentReportQuery = async (
 
   const assessmentIdValue = assessmentId[0]?.[0]?.id;
 
-  const allTopics: TopicStructEUModel[] = await getAllTopicsQuery(organizationId);
-  await Promise.all(
-    allTopics.map(async (topic) => {
-      if (topic.id) {
-        const subtopicStruct = await getAllSubTopicsQuery(topic.id, organizationId);
-        await Promise.all(
-          subtopicStruct.map(async (subtopic) => {
-            if (subtopic.id && assessmentIdValue) {
-              const questionAnswers = await getAllQuestionsQuery(
-                subtopic.id!,
-                assessmentIdValue,
-                organizationId,
-              );
-              (subtopic.dataValues as any).questions = questionAnswers.map((q) => ({ ...q }));
-            }
-          }),
-        );
-        (topic.dataValues as any).subtopics = subtopicStruct.map((s) => s.get({ plain: true }));
-      }
-    }),
-  );
-  const allAssessments = allTopics.map((topic) => topic.get({ plain: true }));
-  return allAssessments;
+  // One flat read of the topic -> subtopic -> question tree.
+  //
+  // Deliberately NOT getAllTopicsQuery + getAllSubTopicsQuery +
+  // getAllQuestionsQuery, which is the Assessment screen's loader: it issues a
+  // query per subtopic and, inside each, pulls every answer's evidence files
+  // and linked risks. Measured on 2026-07-29 that cost 129 queries for one
+  // project, and the report reads none of the evidence or risk data — the
+  // section renders question, answer and status. A report covers every pairing
+  // in its scope, so the cost multiplies by the organization's project count.
+  //
+  // LEFT JOINs, because the shape must not change: the old loader listed every
+  // topic and subtopic in the framework whether or not the project had answered
+  // anything, and an assessment row that does not exist yet leaves the tree
+  // present but its question lists empty.
+  const rows = (await sequelize.query(
+    `SELECT t.id AS topic_id, t.title AS topic_title, t.order_no AS topic_order,
+            st.id AS subtopic_id, st.title AS subtopic_title, st.order_no AS subtopic_order,
+            q.id AS question_id, q.question AS question, q.order_no AS question_order,
+            a.answer AS answer, a.status AS status
+       FROM topics_struct_eu t
+       LEFT JOIN subtopics_struct_eu st ON st.topic_id = t.id
+       LEFT JOIN questions_struct_eu q ON q.subtopic_id = st.id
+       LEFT JOIN answers_eu a ON a.question_id = q.id
+                             AND a.organization_id = :organizationId
+                             AND a.assessment_id = :assessment_id
+      ORDER BY t.order_no, t.id, st.order_no, st.id, q.order_no, q.id`,
+    {
+      replacements: { organizationId, assessment_id: assessmentIdValue ?? null },
+      type: QueryTypes.SELECT,
+    },
+  )) as any[];
+
+  const topics = new Map<number, any>();
+  const subtopics = new Map<number, any>();
+  for (const row of rows) {
+    let topic = topics.get(row.topic_id);
+    if (!topic) {
+      topic = { id: row.topic_id, title: row.topic_title, subtopics: [] };
+      topics.set(row.topic_id, topic);
+    }
+    if (row.subtopic_id == null) continue;
+
+    let subtopic = subtopics.get(row.subtopic_id);
+    if (!subtopic) {
+      subtopic = { id: row.subtopic_id, title: row.subtopic_title, questions: [] };
+      subtopics.set(row.subtopic_id, subtopic);
+      topic.subtopics.push(subtopic);
+    }
+    // A question with no answer row is not part of this project's assessment;
+    // counting it would inflate the section's denominator.
+    if (row.question_id == null || row.answer === undefined || row.status === null) continue;
+
+    subtopic.questions.push({
+      id: row.question_id,
+      question: row.question,
+      answer: row.answer,
+      status: row.status,
+    });
+  }
+  return Array.from(topics.values());
 };
 
 export const getAnnexesReportQuery = async (
@@ -259,12 +292,81 @@ export const annexCategoriesQuery = async (
   return annexCategories;
 };
 
+/**
+ * Control categories with their controls, for the report's compliance section.
+ *
+ * Deliberately NOT getComplianceEUByProjectIdQuery, which is the Requirements
+ * screen's loader: that one walks control-by-control and pulls each control's
+ * subcontrols, evidence files and linked risks. Measured on 2026-07-29 it cost
+ * 604 queries for one project — none of which the report reads, since the
+ * section renders id, title, status, owner, due date and family. A report
+ * covers every pairing in its scope, so that cost is multiplied by the number
+ * of projects in the organization.
+ *
+ * The visible-category filter is the same rule the Requirements screen applies:
+ * a project's EU AI Act risk tier decides which control families are
+ * applicable, and the report must show the same set the screen does.
+ */
 export const getComplianceReportQuery = async (
   projectFrameworkId: number,
   organizationId: number,
 ) => {
-  const compliances = await getComplianceEUByProjectIdQuery(projectFrameworkId, organizationId);
-  return compliances;
+  const visibleCategoryIds = await getVisibleEuCategoryIdsForProject(
+    projectFrameworkId,
+    organizationId,
+  );
+  if (visibleCategoryIds.length === 0) return [];
+
+  const rows = (await sequelize.query(
+    `SELECT ccs.id AS category_id,
+            ccs.title AS category_title,
+            ccs.order_no AS category_order,
+            c.id AS id,
+            c.status AS status,
+            c.owner AS owner,
+            c.due_date AS due_date,
+            cs.title AS title,
+            cs.description AS description,
+            cs.order_no AS order_no
+       FROM controls_eu c
+       JOIN controls_struct_eu cs ON cs.id = c.control_meta_id
+       JOIN controlcategories_struct_eu ccs ON ccs.id = cs.control_category_id
+      WHERE c.organization_id = :organizationId
+        AND c.projects_frameworks_id = :projects_frameworks_id
+        AND cs.control_category_id IN (:visibleCategoryIds)
+      ORDER BY ccs.order_no, cs.order_no, c.id`,
+    {
+      replacements: {
+        organizationId,
+        projects_frameworks_id: projectFrameworkId,
+        visibleCategoryIds,
+      },
+      type: QueryTypes.SELECT,
+    },
+  )) as any[];
+
+  // Regrouped into the { title, controls[] } shape the collector reads. Only
+  // categories that actually hold a control appear, matching the old loader:
+  // it started from the project's control ids, so an empty family produced an
+  // empty controls array that the collector then contributed nothing from.
+  const byCategory = new Map<number, { id: number; title: string; controls: any[] }>();
+  for (const row of rows) {
+    let category = byCategory.get(row.category_id);
+    if (!category) {
+      category = { id: row.category_id, title: row.category_title, controls: [] };
+      byCategory.set(row.category_id, category);
+    }
+    category.controls.push({
+      id: row.id,
+      title: row.title,
+      description: row.description,
+      status: row.status,
+      owner: row.owner,
+      due_date: row.due_date,
+      order_no: row.order_no,
+    });
+  }
+  return Array.from(byCategory.values());
 };
 
 export const getClausesReportQuery = async (
