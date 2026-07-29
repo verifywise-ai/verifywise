@@ -151,14 +151,78 @@ Manual and scheduled reports now share this same `report_runs` execution pipelin
 
 ## Data Collection
 
+### Scope, and how a report finds its frameworks
+
+A template or schedule states a **scope** and, for project scope, a project. It
+never states a framework — `projects_frameworks` is many-per-project, so a
+single `frameworkId` field would pin a report to one framework and silently drop
+the project's others. The pairings are derived instead, by
+`resolveFrameworkTargets` (`services/reporting/reportScope.ts`):
+
+| Scope | Pairings collected |
+| --- | --- |
+| `project` | `projects_frameworks` for that one project — every framework it holds |
+| `organization` | `projects_frameworks` for the whole tenant |
+
+Both queries join `projects` on `organization_id` as well, so a pairing row can
+never pull in another tenant's project.
+
+`collectAllData` then splits its sections three ways:
+
+- **Framework sections** (`compliance`, `assessment`, `clausesAndAnnexes`,
+  `nistSubcategories`) are collected once per pairing that carries the right
+  framework, and merged by `services/reporting/mergeSections.ts`. Totals are
+  re-derived from the pooled rows rather than averaged, so a four-control
+  project does not weigh the same as a forty-control one.
+- **Organization-wide sections** (`trainingRegistry`, `policyManager`) are
+  collected once for the report, never per pairing.
+- **Project-filterable sections** (`projectRisks`, `vendors`, `models`,
+  `vendorRisks`, `modelRisks`, `incidentManagement`) drop their project
+  predicate under organization scope.
+
+Merged rows carry a `useCase` label — set only when more than one pairing
+contributed — and both renderers turn it into a "Use case" column or a heading
+prefix. Every EU AI Act project has a control `C1` and every ISO project a
+clause `4`, so a merged table is unreadable without it. A single-pairing report
+has no labels and renders exactly as it did before scope existed.
+
+> **Historic bug.** Until 2026-07-29 the collector took one `frameworkId`, and
+> the wizard never sent one: `runTemplateNow` and `createScheduledReportQuery`
+> stored NULL and `resolveReportRequest` coerced it to `0`. Every framework
+> section is gated on the numeric id, so a `0` closed all four gates and every
+> wizard-driven report came out with no compliance, assessment, clause or NIST
+> content whatsoever. With `projectId` `0` on top there was no project row
+> either, so the remaining sections filtered on `project_id = 0` and returned
+> nothing. An organization-scoped run collected zero sections.
+
+`metadata.isOrganizational` still means `projects.is_organizational` — the
+renderers read it to drop the project line. The report's own scope is
+`metadata.scope`; do not conflate them.
+
+### Charts
+
+Charts are **derived from the collected sections**, not fetched again: the risk
+donut is `projectRisks.risksByLevel`, the compliance bars are its controls
+grouped by family, the assessment donut is its answered/total. Re-reading the
+database to draw them cost a duplicate query per pairing and let a chart
+disagree with the table beside it.
+
+### Join fan-out
+
+The project-scoped queries for `models`, `modelRisks`, `vendors` and
+`vendorRisks` use `SELECT DISTINCT`. Their link tables are **not** one row per
+(entity, project): `model_inventories_projects_frameworks` links a model to a
+project once with a framework and once without, so a plain `JOIN` reported one
+model as two and two model risks as four.
+
 ### ReportDataCollector Class
 
 ```typescript
 class ReportDataCollector {
   // Metadata
-  collectMetadata(): ReportMetadata
+  collectMetadata(): ReportMetadata     // organization scope takes its own path
   collectBranding(): ReportBranding
-  collectChartData(): ChartData
+  deriveCharts(sections): ChartData     // from the sections, no second read
 
   // Domain Data
   collectProjectRisks(): ProjectRisksSectionData
@@ -191,7 +255,7 @@ literal `NULL` and counted as "unowned".
 | projectRisks       | risks, projects_risks                  | risk_name, risk_level_autocalculated, **mitigation_status** (not `approval_status` — the two are orthogonal axes), risk_owner |
 | vendorRisks        | vendorrisks, vendors                   | risk_level, action_plan, action_owner                                                                                         |
 | modelRisks         | model_risks, model_inventories         | risk_name, risk_level, **status** (there is no `mitigation_status` column), mitigation_plan, target_date                      |
-| compliance         | controls_eu, controlcategories_eu      | status, title, owner, due_date, categoryName                                                                                  |
+| compliance         | controls_eu, controlcategories_struct_eu | status, title, owner, due_date, **title** for the control family (the category rows have no `name` column; reading `name` labelled every control "Unknown") |
 | assessment         | assessments, topics, questions         | answer, progress                                                                                                              |
 | clausesAndAnnexes  | subclauses_iso, annexcategories_iso    | status (the `*_struct` parent tables carry none)                                                                              |
 | nistSubcategories  | nist_ai_rmf_subcategories + `*_struct` | function, category, status                                                                                                    |
