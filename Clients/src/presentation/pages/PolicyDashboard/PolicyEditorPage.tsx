@@ -26,28 +26,12 @@ import {
   Box,
   Stack,
   Typography,
-  IconButton,
-  Tooltip,
   useTheme,
   Skeleton,
-  Popover,
   Snackbar,
   Alert,
-  TextField,
   GlobalStyles,
 } from "@mui/material";
-import {
-  SaveIcon,
-  History as HistoryIcon,
-  FileText,
-  FileDown,
-  Loader2,
-  X,
-  ArrowLeft,
-  Check,
-  Pencil,
-  Upload,
-} from "lucide-react";
 
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { HistorySidebar } from "../../components/Common/HistorySidebar";
@@ -82,6 +66,7 @@ import { usePolicyFindReplace } from "./PolicyEditor/usePolicyFindReplace";
 import { FindReplacePopover } from "./PolicyEditor/FindReplacePopover";
 import { PolicyTableBubbleMenu } from "./PolicyEditor/PolicyTableBubbleMenu";
 import { PolicyEditorToolbar } from "./PolicyEditor/PolicyEditorToolbar";
+import { PolicyEditorHeader } from "./PolicyEditor/PolicyEditorHeader";
 
 // ── Component ─────────────────────────────────────────────────────────
 export default function PolicyEditorPage() {
@@ -127,9 +112,7 @@ export default function PolicyEditorPage() {
   const [exportError, setExportError] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
-  const [exportAnchorEl, setExportAnchorEl] = useState<HTMLElement | null>(null);
   const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
-  const docxInputRef = useRef<HTMLInputElement>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [serverErrors, setServerErrors] = useState<PolicyFormErrors>({});
@@ -765,329 +748,41 @@ export default function PolicyEditorPage() {
             overflow: "hidden",
           }}
         >
-          <Stack
-            direction="row"
-            justifyContent="space-between"
-            alignItems="center"
-            sx={{ mb: "8px", flexShrink: 0 }}
-          >
-            <Stack direction="row" alignItems="center" gap={1}>
-              <Tooltip title="Back to policies" arrow>
-                <IconButton
-                  onClick={() => navigate("/policies")}
-                  size="small"
-                  sx={{
-                    "padding": "4px",
-                    "borderRadius": "4px",
-                    "color": "text.muted",
-                    "&:hover": { backgroundColor: "#F2F4F7", color: "text.secondary" },
-                  }}
-                >
-                  <ArrowLeft size={18} />
-                </IconButton>
-              </Tooltip>
-              <Box
-                sx={{
-                  "display": "inline-flex",
-                  "alignItems": "center",
-                  "gap": 0.5,
-                  "&:hover .edit-title-icon": {
-                    opacity: 1,
-                  },
-                }}
-              >
-                {isEditingTitle ? (
-                  <>
-                    <TextField
-                      value={editedTitle}
-                      onChange={(e) => setEditedTitle(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleSaveTitle();
-                        if (e.key === "Escape") handleCancelEditTitle();
-                      }}
-                      placeholder="Policy title"
-                      variant="outlined"
-                      size="small"
-                      autoFocus
-                      disabled={isSavingTitle}
-                      error={!!displayErrors.title}
-                      helperText={displayErrors.title}
-                      inputProps={{ maxLength: 128 }}
-                      sx={{
-                        "minWidth": "400px",
-                        "& .MuiOutlinedInput-root": {
-                          fontSize: "16px",
-                          fontWeight: 600,
-                        },
-                      }}
-                    />
-                    <IconButton
-                      size="small"
-                      onClick={handleSaveTitle}
-                      disabled={!editedTitle.trim() || isSavingTitle}
-                      sx={{ color: "brand.primary" }}
-                    >
-                      {isSavingTitle ? (
-                        <Loader2 size={18} style={{ animation: "spin 1s linear infinite" }} />
-                      ) : (
-                        <Check size={18} />
-                      )}
-                    </IconButton>
-                    <IconButton
-                      size="small"
-                      onClick={handleCancelEditTitle}
-                      disabled={isSavingTitle}
-                      sx={{ color: "text.disabled" }}
-                    >
-                      <X size={18} />
-                    </IconButton>
-                  </>
-                ) : (
-                  <>
-                    <Typography sx={{ fontSize: 16, color: "text.secondary", fontWeight: 600 }}>
-                      {pageTitle}
-                    </Typography>
-                    <IconButton
-                      size="small"
-                      onClick={handleStartEditTitle}
-                      className="edit-title-icon"
-                      sx={{
-                        // "opacity": 0,
-                        "transition": "opacity 0.2s",
-                        "color": "text.disabled",
-                        "&:hover": {
-                          color: "brand.primary",
-                          backgroundColor: "rgba(19, 113, 91, 0.1)",
-                        },
-                      }}
-                    >
-                      <Pencil size={14} />
-                    </IconButton>
-                  </>
-                )}
-              </Box>
-            </Stack>
-
-            <Stack direction="row" gap="8px" alignItems="center">
-              {/* Export error */}
-              {exportError && (
-                <Typography
-                  sx={{
-                    fontSize: 12,
-                    color: theme.palette.status?.error?.text || "#f04438",
-                    backgroundColor: theme.palette.status?.error?.bg || "#f9eced",
-                    px: 1.5,
-                    py: 0.75,
-                    borderRadius: "4px",
-                  }}
-                >
-                  {exportError}
-                </Typography>
-              )}
-
-              {/* History toggle */}
-              {!isNew && policy?.id && (
-                <Tooltip title="Activity history" arrow>
-                  <IconButton
-                    onClick={() => setIsHistorySidebarOpen((prev) => !prev)}
-                    size="small"
-                    sx={{
-                      "color": isHistorySidebarOpen ? "brand.primary" : "text.muted",
-                      "padding": "4px",
-                      "borderRadius": "4px",
-                      "backgroundColor": isHistorySidebarOpen ? "#E6F4F1" : "transparent",
-                      "&:hover": {
-                        backgroundColor: isHistorySidebarOpen ? "#D1EDE6" : "#F2F4F7",
-                      },
-                    }}
-                  >
-                    <HistoryIcon size={16} />
-                  </IconButton>
-                </Tooltip>
-              )}
-
-              {/* Export dropdown + Import button */}
-              {!isNew && policy?.id && (
-                <>
-                  <CustomizableButton
-                    variant="outlined"
-                    text={
-                      isExportingPDF
-                        ? "Exporting PDF..."
-                        : isExportingDOCX
-                          ? "Exporting Word..."
-                          : "Export"
-                    }
-                    isDisabled={isExportingPDF || isExportingDOCX}
-                    sx={{
-                      "backgroundColor": "background.main",
-                      "border": "1px solid #d0d5dd",
-                      "color": "text.secondary",
-                      "gap": 1,
-                      "minWidth": "90px",
-                      "&:hover": {
-                        backgroundColor: "background.accent",
-                        borderColor: "text.muted",
-                      },
-                      "&:disabled": {
-                        backgroundColor: "background.accent",
-                        borderColor: "#E4E7EC",
-                        color: "text.muted",
-                      },
-                    }}
-                    onClick={(e: React.MouseEvent<HTMLElement>) =>
-                      setExportAnchorEl(e.currentTarget)
-                    }
-                    icon={
-                      isExportingPDF || isExportingDOCX ? (
-                        <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />
-                      ) : (
-                        <FileDown size={16} />
-                      )
-                    }
-                  />
-                  <Popover
-                    open={Boolean(exportAnchorEl)}
-                    anchorEl={exportAnchorEl}
-                    onClose={() => setExportAnchorEl(null)}
-                    anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
-                    transformOrigin={{ vertical: "top", horizontal: "left" }}
-                    slotProps={{
-                      paper: {
-                        sx: {
-                          mt: 0.5,
-                          borderRadius: "4px",
-                          border: "1px solid #E4E7EC",
-                          boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-                          minWidth: 140,
-                          p: 0.5,
-                          display: "flex",
-                          flexDirection: "column",
-                        },
-                      },
-                    }}
-                  >
-                    {[
-                      {
-                        icon: <FileText size={14} />,
-                        label: "Download as PDF",
-                        format: "pdf" as const,
-                      },
-                      {
-                        icon: <FileDown size={14} />,
-                        label: "Download as Word",
-                        format: "docx" as const,
-                      },
-                    ].map(({ icon, label, format }) => (
-                      <Box
-                        key={format}
-                        component="button"
-                        onClick={() => {
-                          setExportAnchorEl(null);
-                          downloadExport(format);
-                        }}
-                        sx={{
-                          "display": "flex",
-                          "alignItems": "center",
-                          "gap": 1,
-                          "px": 1.5,
-                          "py": 1,
-                          "border": "none",
-                          "background": "none",
-                          "cursor": "pointer",
-                          "borderRadius": "4px",
-                          "fontSize": 13,
-                          "color": "text.secondary",
-                          "width": "100%",
-                          "textAlign": "left",
-                          "&:hover": { backgroundColor: "#F2F4F7" },
-                        }}
-                      >
-                        {icon}
-                        {label}
-                      </Box>
-                    ))}
-                  </Popover>
-                </>
-              )}
-
-              {/* Import DOCX */}
-              <CustomizableButton
-                variant="outlined"
-                text={isImporting ? "Importing..." : "Import"}
-                isDisabled={isImporting}
-                sx={{
-                  "backgroundColor": "background.main",
-                  "border": "1px solid #d0d5dd",
-                  "color": "text.secondary",
-                  "gap": 1,
-                  "minWidth": "90px",
-                  "&:hover": {
-                    backgroundColor: "background.accent",
-                    borderColor: "text.muted",
-                  },
-                  "&:disabled": {
-                    backgroundColor: "background.accent",
-                    borderColor: "#E4E7EC",
-                    color: "text.muted",
-                  },
-                }}
-                onClick={() => docxInputRef.current?.click()}
-                icon={
-                  isImporting ? (
-                    <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />
-                  ) : (
-                    <Upload size={16} />
-                  )
-                }
-              />
-              <input
-                ref={docxInputRef}
-                type="file"
-                accept=".docx"
-                style={{ display: "none" }}
-                onChange={handleDocxFileSelect}
-              />
-
-              {/* Save */}
-              <CustomizableButton
-                variant="contained"
-                text={
-                  isSaving
-                    ? "Saving..."
-                    : saveSuccess
-                      ? "Saved"
-                      : isNew && template
-                        ? "Save in organizational policies"
-                        : "Save"
-                }
-                isDisabled={isSaving || customFieldsGate.blocked}
-                sx={{
-                  "backgroundColor": saveSuccess ? "#079455" : "brand.primary",
-                  "border": `1px solid ${saveSuccess ? "#079455" : "#13715B"}`,
-                  "gap": 2,
-                  "&:hover": {
-                    backgroundColor: saveSuccess ? "#079455" : "#0F5B4D",
-                    borderColor: saveSuccess ? "#079455" : "#0F5B4D",
-                  },
-                  "&:disabled": {
-                    backgroundColor: "brand.primary",
-                    opacity: 0.7,
-                  },
-                }}
-                onClick={save}
-                icon={
-                  isSaving ? (
-                    <Loader2 size={16} style={{ animation: "spin 1s linear infinite" }} />
-                  ) : saveSuccess ? (
-                    <Check size={16} />
-                  ) : (
-                    <SaveIcon size={16} />
-                  )
-                }
-              />
-            </Stack>
-          </Stack>
+          <PolicyEditorHeader
+            pageTitle={pageTitle}
+            isEditingTitle={isEditingTitle}
+            editedTitle={editedTitle}
+            isSavingTitle={isSavingTitle}
+            titleError={displayErrors.title}
+            onBack={() => navigate("/policies")}
+            onStartEditTitle={handleStartEditTitle}
+            onEditedTitleChange={setEditedTitle}
+            onSaveTitle={handleSaveTitle}
+            onCancelEditTitle={handleCancelEditTitle}
+            isNew={isNew}
+            hasPolicyId={Boolean(policy?.id)}
+            isHistorySidebarOpen={isHistorySidebarOpen}
+            onToggleHistorySidebar={() => setIsHistorySidebarOpen((prev) => !prev)}
+            isExportingPDF={isExportingPDF}
+            isExportingDOCX={isExportingDOCX}
+            exportError={exportError}
+            onDownloadExport={downloadExport}
+            isImporting={isImporting}
+            onDocxFileSelect={handleDocxFileSelect}
+            isSaving={isSaving}
+            saveSuccess={saveSuccess}
+            isSaveDisabled={isSaving || customFieldsGate.blocked}
+            saveButtonText={
+              isSaving
+                ? "Saving..."
+                : saveSuccess
+                  ? "Saved"
+                  : isNew && template
+                    ? "Save in organizational policies"
+                    : "Save"
+            }
+            onSave={save}
+          />
 
           {/* ── Metadata form ────────────────────────────────────────── */}
           <Box
