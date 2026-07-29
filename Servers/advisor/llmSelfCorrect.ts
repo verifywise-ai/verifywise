@@ -23,18 +23,22 @@
  *   - Only Zod validation errors trigger self-correction. Other errors
  *     (auth, network, rate-limit) bubble up unchanged so the existing
  *     error mapping in advisor.ctrl.ts continues to work.
- *   - Three provider-repair behaviours sit behind the `extendedRecovery`
+ *   - Two provider-repair behaviours sit behind the `extendedRecovery`
  *     opt-in and are OFF by default, so a caller with its own fallback keeps
  *     getting the raw error:
  *       - a `NoObjectGeneratedError` (empty or truncated completion — no
  *         object to validate, so no Zod issues) retried with
  *         `TRUNCATION_DIRECTIVE`. It CONSUMES an attempt and sets `attempts` /
- *         `selfCorrected`, unlike the two transport downgrades, which repair
- *         what we sent and so give the budget back.
- *       - two transport downgrades, each one-shot and budget-neutral: the
- *         json_schema → json_object switch (`isResponseFormatUnsupported`) and
- *         the maxOutputTokens cap (`isMaxOutputTokensRejected`). Both are
- *         provider 400s, never a NoObjectGeneratedError.
+ *         `selfCorrected`.
+ *       - the maxOutputTokens cap (`isMaxOutputTokensRejected`), a one-shot,
+ *         budget-neutral downgrade on a provider 400.
+ *   - Two repairs run for EVERY caller, because neither changes what we accept
+ *     back — only what we send, or how we read what came back:
+ *       - the json_schema → json_object switch
+ *         (`isResponseFormatUnsupported`), one-shot and budget-neutral. The
+ *         schema still validates the result.
+ *       - salvaging a complete, schema-valid object a provider wrapped in
+ *         prose (`salvageObjectFromText`), which costs no extra call at all.
  */
 
 import {
@@ -79,18 +83,25 @@ export interface SelfCorrectingParams<T> {
    */
   timeoutMs?: number;
   /**
-   * Opt in to the three provider-repair behaviours: the truncation retry, the
-   * json_schema → json_object transport downgrade, and the maxOutputTokens
-   * cap-and-retry. Off by default — each one turns an error into a degraded
-   * answer, which is the right trade only for a caller with no fallback of its
+   * Opt in to the two behaviours that turn an error into a DEGRADED answer:
+   * the truncation retry and the maxOutputTokens cap-and-retry. Off by
+   * default — that trade is only right for a caller with no fallback of its
    * own. The evidence analyzer, control matcher and planner all have one
    * (heuristic grading, empty match list, single-plan) and are better served by
    * the raw error, so they must not get these implicitly.
    *
+   * Deliberately NOT what gates the json_schema → json_object downgrade. That
+   * one repairs the REQUEST and leaves the response contract untouched — the
+   * schema still validates what comes back — so withholding it bought no
+   * safety and cost correctness: api.deepseek.com answers 400 "This
+   * response_format type is unavailable now", which killed evidence grading on
+   * the first call while the reporting analyzers, which do opt in, worked
+   * against the very same key.
+   *
    * An explicit flag rather than keying off `timeoutMs` (today's only opt-in
    * caller sets both): a timeout is about wall-clock budget and says nothing
    * about whether a caller wants degraded output, and conflating them hands the
-   * next caller that just wants a deadline all three behaviours by surprise —
+   * next caller that just wants a deadline both behaviours by surprise —
    * which is precisely the regression this flag exists to close.
    */
   extendedRecovery?: boolean;
@@ -541,7 +552,16 @@ export async function generateObjectWithSelfCorrection<T>(
         // validation error nor fatal: downgrade to JSON-object mode once and
         // retry. The schema still validates the result and self-correction
         // still repairs it, so this only changes transport, not correctness.
-        if (params.extendedRecovery && !fellBackToJsonObject && isResponseFormatUnsupported(err)) {
+        //
+        // Which is exactly why it does NOT sit behind extendedRecovery. That
+        // flag withholds behaviours that turn an error into a DEGRADED answer;
+        // this one repairs the request and leaves what we accept back
+        // unchanged. Gating it meant api.deepseek.com — which answers 400
+        // "This response_format type is unavailable now" — killed evidence
+        // grading on the first call, while the reporting analyzers, which do
+        // opt in, worked against the very same key. That asymmetry was the
+        // bug, reported 2026-07-29.
+        if (!fellBackToJsonObject && isResponseFormatUnsupported(err)) {
           fellBackToJsonObject = true;
           model = wrapLanguageModel({
             model: params.model,

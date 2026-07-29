@@ -596,7 +596,13 @@ describe("llmSelfCorrect / extendedRecovery gate", () => {
     expect(systems[1]).toContain("PREVIOUS RESPONSE UNUSABLE");
   });
 
-  it("does not downgrade json_schema when the opt-in is absent", async () => {
+  it("downgrades json_schema even without the opt-in, and only once", async () => {
+    // Not an extendedRecovery behaviour: this repairs the REQUEST and the
+    // schema still validates whatever comes back, so it changes transport, not
+    // correctness. Withholding it meant a provider that rejects json_schema
+    // (api.deepseek.com answers 400 "This response_format type is unavailable
+    // now") killed evidence grading outright, while the reporting analyzers —
+    // which do opt in — worked against the same key.
     const err = new Error("This response_format type is unavailable now");
     let invocation = 0;
     const mock: GenerateObjectImpl = (async () => {
@@ -610,7 +616,28 @@ describe("llmSelfCorrect / extendedRecovery gate", () => {
         mock,
       ),
     ).rejects.toBe(err);
-    expect(invocation).toBe(1);
+    // Downgraded once, then propagated — a provider that rejects the switched
+    // request too must not be retried forever.
+    expect(invocation).toBe(2);
+  });
+
+  it("recovers without the opt-in when the downgraded request succeeds", async () => {
+    let invocation = 0;
+    const mock: GenerateObjectImpl = (async () => {
+      invocation += 1;
+      if (invocation === 1) throw new Error("This response_format type is unavailable now");
+      return { object: { name: "okay", count: 1 } } as any;
+    }) as unknown as GenerateObjectImpl;
+
+    const res = await generateObjectWithSelfCorrection<Sample>(
+      { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p" },
+      mock,
+    );
+
+    expect(res.object).toEqual({ name: "okay", count: 1 });
+    // Budget-neutral: repairing what we sent is not a self-correction.
+    expect(res.attempts).toBe(1);
+    expect(res.selfCorrected).toBe(false);
   });
 
   it("does not cap maxOutputTokens when the opt-in is absent", async () => {
