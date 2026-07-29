@@ -46,7 +46,10 @@ router.post("/:key/test-connection", authenticateJWT, testPluginConnection);
 // If bundle doesn't exist locally, download it from the marketplace
 const isValidPluginKey = (value: string) => /^[a-z0-9_-]+$/.test(value);
 const isValidBundleFilename = (value: string) =>
-  /^[A-Za-z0-9._-]+$/.test(value) && !value.includes("..") && !value.includes("/") && !value.includes("\\");
+  /^[A-Za-z0-9._-]+$/.test(value) &&
+  !value.includes("..") &&
+  !value.includes("/") &&
+  !value.includes("\\");
 
 router.get("/:key/ui/dist/:filename", async (req, res) => {
   const { key, filename } = req.params;
