@@ -155,4 +155,34 @@ describe("analyzeFile", () => {
       STATUS_CODE[200]({ ...persisted, quality_rationale: analyzerResult.quality_rationale }),
     );
   });
+  it("names the real reason when the LLM fails, instead of claiming there is no key", async () => {
+    // This path is only ever reached WITH a key -- an organization without one
+    // is turned away with a 400 above. Reporting "no LLM key" here sent a user
+    // who had just configured one back to re-enter it, which is exactly the
+    // complaint that surfaced this bug on 2026-07-29.
+    (getLLMKeysWithKeyQuery as jest.Mock).mockResolvedValue([
+      { key: "sk-test", url: "https://integrate.api.nvidia.com/v1", model: "deepseek", name: "Custom" },
+    ]);
+
+    (sequelize.query as jest.Mock)
+      .mockResolvedValueOnce([[{ id: 42, filename: "policy.pdf", type: "application/pdf" }], {}])
+      .mockResolvedValueOnce([
+        [{ content: Buffer.from("some evidence text"), size_bytes: 100, upload_date: "2026-01-01" }],
+        {},
+      ])
+      .mockResolvedValueOnce([[], {}]);
+
+    (parseDocument as jest.Mock).mockResolvedValue({ text: "some evidence text" });
+    (analyzeEvidence as jest.Mock).mockRejectedValue(
+      new Error("No object generated: could not parse the response."),
+    );
+    (upsertAnalysisQuery as jest.Mock).mockResolvedValue({ id: 1, file_id: 42 });
+
+    const res = createRes();
+    await analyzeFile(createReq(), res);
+
+    const payload = res.json.mock.calls[0][0].data;
+    expect(payload.message).toContain("No object generated");
+    expect(payload.message).not.toContain("no LLM key");
+  });
 });

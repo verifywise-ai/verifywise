@@ -831,3 +831,139 @@ describe("llmSelfCorrect / jsonObjectFallbackMiddleware", () => {
     expect(await transform(params)).toBe(params);
   });
 });
+
+/* ------------------------------------------------------------------ */
+/* Salvaging a complete object the provider wrapped in prose          */
+/* ------------------------------------------------------------------ */
+
+describe("llmSelfCorrect / prose-wrapped object salvage", () => {
+  /**
+   * NVIDIA NIM serving deepseek-ai/deepseek-v4-flash returns HTTP 200 with a
+   * reasoning fragment glued to the front of the JSON when the request carries
+   * a json_schema response_format ("We{\"summary\": ...}"). The object itself
+   * is complete and schema-valid; only generateObject's strict parse fails.
+   * Observed 2026-07-29 against the live endpoint.
+   */
+  const wrapped = (text: string) =>
+    new NoObjectGeneratedError({
+      message: "No object generated: could not parse the response.",
+      text,
+      response: { id: "r", timestamp: new Date(0), modelId: "m" },
+      usage: { inputTokens: 1, outputTokens: 9, totalTokens: 10 },
+      finishReason: "stop",
+    });
+
+  const throwing = (err: unknown) => {
+    let invocation = 0;
+    const impl: GenerateObjectImpl = (async () => {
+      invocation += 1;
+      throw err;
+    }) as unknown as GenerateObjectImpl;
+    return { impl, calls: () => invocation };
+  };
+
+  it("returns the object rather than throwing away a paid-for completion", async () => {
+    const { impl, calls } = throwing(wrapped('We{"name": "okay", "count": 1}'));
+
+    const res = await generateObjectWithSelfCorrection<Sample>(
+      { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p" },
+      impl,
+    );
+
+    expect(res.object).toEqual({ name: "okay", count: 1 });
+    // Salvage costs no provider call and is not a correction.
+    expect(calls()).toBe(1);
+    expect(res.attempts).toBe(1);
+    expect(res.selfCorrected).toBe(false);
+  });
+
+  it("salvages without the extendedRecovery opt-in", async () => {
+    // Deliberately outside that gate: the payload is the model's own
+    // schema-valid output, not the degraded answer those behaviours produce.
+    const { impl } = throwing(wrapped('Sure, here you go:\n{"name": "okay", "count": 2}'));
+
+    const res = await generateObjectWithSelfCorrection<Sample>(
+      { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p" },
+      impl,
+    );
+
+    expect(res.object).toEqual({ name: "okay", count: 2 });
+  });
+
+  it("skips a decoy object in the prose and keeps scanning for one that validates", async () => {
+    // Reasoning that mentions an object of its own would satisfy a naive
+    // first-brace grab and return garbage.
+    const { impl } = throwing(
+      wrapped('We need {"note": "not the answer"} first. {"name": "real", "count": 3}'),
+    );
+
+    const res = await generateObjectWithSelfCorrection<Sample>(
+      { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p" },
+      impl,
+    );
+
+    expect(res.object).toEqual({ name: "real", count: 3 });
+  });
+
+  it("is not fooled by braces inside string literals", async () => {
+    const { impl } = throwing(wrapped('We{"name": "a}b{c", "count": 4}'));
+
+    const res = await generateObjectWithSelfCorrection<Sample>(
+      { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p" },
+      impl,
+    );
+
+    expect(res.object).toEqual({ name: "a}b{c", count: 4 });
+  });
+
+  it("is not fooled by an escaped quote before a brace", async () => {
+    const { impl } = throwing(wrapped('We{"name": "say \\"hi\\" }", "count": 5}'));
+
+    const res = await generateObjectWithSelfCorrection<Sample>(
+      { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p" },
+      impl,
+    );
+
+    expect(res.object).toEqual({ name: 'say "hi" }', count: 5 });
+  });
+
+  it("still throws when the completion was truncated", async () => {
+    // Nothing complete to salvage. This must keep reaching the caller so the
+    // evidence analyzer falls back to heuristic grading rather than inventing
+    // a partial analysis.
+    const err = wrapped('{"name": "o');
+    const { impl, calls } = throwing(err);
+
+    await expect(
+      generateObjectWithSelfCorrection<Sample>(
+        { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p" },
+        impl,
+      ),
+    ).rejects.toBe(err);
+    expect(calls()).toBe(1);
+  });
+
+  it("still throws when the only complete object fails the schema", async () => {
+    const err = wrapped('We{"name": "x", "count": -1}');
+    const { impl } = throwing(err);
+
+    await expect(
+      generateObjectWithSelfCorrection<Sample>(
+        { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p" },
+        impl,
+      ),
+    ).rejects.toBe(err);
+  });
+
+  it("still throws when the error carries no text at all", async () => {
+    const err = wrapped("");
+    const { impl } = throwing(err);
+
+    await expect(
+      generateObjectWithSelfCorrection<Sample>(
+        { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p" },
+        impl,
+      ),
+    ).rejects.toBe(err);
+  });
+});

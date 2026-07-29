@@ -23,7 +23,21 @@ import type {
 
 const fileName = "evidenceAi.ctrl.ts";
 
-const NO_GRADE_MESSAGE = "AI grading unavailable — no LLM key";
+/**
+ * Why no grade was produced.
+ *
+ * analyzeFile turns an organization with no key away with a 400 long before
+ * the heuristic path, so "no LLM key" is never the reason there — the key
+ * exists and the call failed. Saying otherwise sent a user who had just
+ * configured a key back to configure it again (reported 2026-07-29, where the
+ * real cause was a provider returning the object wrapped in prose).
+ *
+ * getAnalysis serves stored rows, including ones written before this endpoint
+ * required a key, so the keyless wording still has a caller.
+ */
+const NO_KEY_MESSAGE = "AI grading unavailable — no LLM key";
+const gradingFailedMessage = (reason: string) =>
+  `AI grading unavailable — ${reason || "the LLM call failed"}`;
 
 /**
  * No-LLM-key / LLM-failure fallback. Extracts a deterministic summary and
@@ -88,7 +102,9 @@ function buildHeuristicResult(documentText: string): {
     complianceAreas: foundAreas,
     qualityScore: null,
     overallGrade: null,
-    message: NO_GRADE_MESSAGE,
+    // Overwritten by the caller with the real failure reason; this stands only
+    // if buildHeuristicResult ever runs somewhere a key genuinely is absent.
+    message: NO_KEY_MESSAGE,
     suggestions: [],
   };
 }
@@ -259,7 +275,10 @@ export async function analyzeFile(req: Request, res: Response) {
       // No LLM => no grade is computed. dims + overall are null with a message.
       qualityScore = h.qualityScore;
       overallGrade = h.overallGrade;
-      message = h.message;
+      // The key is present — analyzeFile 400s without one — so report what
+      // actually went wrong rather than sending the user to re-enter a key
+      // they already configured.
+      message = gradingFailedMessage(fallbackReason);
       suggestions = h.suggestions;
       modelLabel = `heuristic-v1${fallbackReason ? ` (fallback: ${fallbackReason})` : ""}`;
       // Heuristic path leaves audit_metadata null — no rationales available.

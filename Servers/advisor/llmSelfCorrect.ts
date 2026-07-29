@@ -210,6 +210,83 @@ function errorMessages(err: unknown): string {
   return messages.join(" ");
 }
 
+/* ------------------------------------------------------------------ */
+/* Salvaging a complete object the provider wrapped in prose          */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Every `{...}` span in `text` that is balanced, in source order.
+ *
+ * Brace counting alone is not enough: a brace inside a string literal, or an
+ * escaped quote inside one, throws the count off and yields a span that either
+ * ends early or never closes. So the scan tracks whether it is inside a string
+ * and whether the previous character was a backslash.
+ */
+function* balancedObjectSpans(text: string): Generator<string> {
+  for (let start = 0; start < text.length; start++) {
+    if (text[start] !== "{") continue;
+
+    let depth = 0;
+    let inString = false;
+    let escaped = false;
+
+    for (let i = start; i < text.length; i++) {
+      const ch = text[i];
+
+      if (inString) {
+        if (escaped) escaped = false;
+        else if (ch === "\\") escaped = true;
+        else if (ch === '"') inString = false;
+        continue;
+      }
+
+      if (ch === '"') inString = true;
+      else if (ch === "{") depth++;
+      else if (ch === "}") {
+        depth--;
+        if (depth === 0) {
+          yield text.slice(start, i + 1);
+          break;
+        }
+      }
+    }
+  }
+}
+
+/**
+ * The caller's object, recovered from a completion the provider wrapped in
+ * prose — or null when there is nothing complete and valid in there.
+ *
+ * NVIDIA NIM serving deepseek-ai/deepseek-v4-flash answers a json_schema
+ * request with HTTP 200 and a reasoning fragment glued to the front of the
+ * JSON: `We{"summary": ...}`. The object is complete and schema-valid; only
+ * `generateObject`'s strict parse fails, and the whole analysis is then thrown
+ * away. Observed 2026-07-29 against the live endpoint.
+ *
+ * Every candidate is parsed AND validated against the caller's schema, and a
+ * failure resumes the scan at the next `{` rather than giving up. That is what
+ * separates this from a lucky first-brace grab: reasoning that mentions an
+ * object of its own ("We need {...} first") cannot hijack the result, and a
+ * truncated completion — nothing balanced to find — still throws, which is what
+ * keeps the evidence analyzer falling back to heuristic grading.
+ */
+export function salvageObjectFromText<T>(text: unknown, schema: z.ZodType<T>): T | null {
+  if (typeof text !== "string" || text.length === 0) return null;
+
+  for (const span of balancedObjectSpans(text)) {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(span);
+    } catch {
+      continue;
+    }
+    const result = schema.safeParse(parsed);
+    if (result.success) return result.data;
+  }
+
+  return null;
+}
+
 /**
  * True when the error is a provider rejecting the `json_schema` response_format
  * that structured outputs rely on — DeepSeek and many custom / self-hosted
@@ -409,6 +486,27 @@ export async function generateObjectWithSelfCorrection<T>(
         // enlarging the input that overran, and spending an extra provider
         // call once the correction budget is gone.
         if (NoObjectGeneratedError.isInstance(err)) {
+          // Before treating this as a failed attempt: the completion may be
+          // complete and schema-valid, with only prose in front of it. That is
+          // the model's own answer, already paid for — recovering it is not the
+          // degraded output the extendedRecovery gate exists to withhold, so it
+          // runs for every caller.
+          const salvaged = salvageObjectFromText(
+            (err as { text?: unknown }).text,
+            params.schema,
+          );
+          if (salvaged !== null) {
+            logger.warn(
+              `[llmSelfCorrect] provider wrapped the object in prose; salvaged it from the raw completion (${(err as Error).message})`,
+            );
+            return {
+              object: salvaged,
+              attempts: attempt,
+              selfCorrected: attempt > 1,
+              lastValidationIssues: lastIssues,
+            };
+          }
+
           if (!params.extendedRecovery || isLastAttempt) throw err;
           logger.warn(
             `[llmSelfCorrect] attempt ${attempt} returned no parseable object (${(err as Error).message}); retrying with a truncation directive`,
