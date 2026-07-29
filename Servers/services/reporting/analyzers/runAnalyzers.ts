@@ -161,10 +161,22 @@ const SUMMARY_CONSUMERS: AnalysisSectionKey[] = [
 /**
  * Per-ATTEMPT budget — llmSelfCorrect builds a fresh AbortSignal.timeout for
  * each attempt from this, rather than one signal shared by the first call and
- * its self-correction. Doubled from aiSummarizer's 30s because an abort here
- * is not a retry, it is a generic abstention in a regulator-facing artifact.
+ * its self-correction. Sized well above the ask because an abort here is not a
+ * retry, it is a generic abstention in a regulator-facing artifact.
+ *
+ * Was 60s, chosen as a doubling of aiSummarizer's 30s rather than from a
+ * measurement, and it turned out to be under what a slow endpoint needs.
+ * Measured 2026-07-29 against NVIDIA NIM serving deepseek-v4-flash, with no
+ * other call in flight: complianceGap on an 18.4k-char prompt took 110.7s.
+ * At 60s it abstained with "the AI service call failed" while the model was
+ * answering correctly, just slowly — and it did so more often once
+ * sectionSummaries began holding the endpoint for its own (also measured)
+ * 57-75s, since Stage 1 runs both concurrently.
+ *
+ * 120s matches SECTION_SUMMARY_TIMEOUT_MS: the two budgets face the same
+ * endpoint and there is no reason for them to disagree.
  */
-const LLM_TIMEOUT_MS = 60_000;
+const LLM_TIMEOUT_MS = 120_000;
 
 /**
  * Stated, not inherited. These payloads carry a 3500-character summary, or up

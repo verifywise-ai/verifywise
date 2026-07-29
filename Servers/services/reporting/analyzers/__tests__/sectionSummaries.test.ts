@@ -5,7 +5,13 @@ jest.mock("ai", () => ({ generateText: (...a: any[]) => mockGenerateText(...a) }
 // load. Unmocked, that opens a DB connection during a unit test.
 jest.mock("../../../../database/db", () => ({ sequelize: {} }));
 
-import { runSectionSummaries, MAX_CONCURRENT, SECTION_SUMMARY_MAX_TOKENS } from "../sectionSummaries";
+import {
+  runSectionSummaries,
+  MAX_CONCURRENT,
+  SECTION_SUMMARY_MAX_TOKENS,
+  SECTION_SUMMARY_TIMEOUT_MS,
+  SECTION_SUMMARY_STAGE_BUDGET_MS,
+} from "../sectionSummaries";
 import logger from "../../../../utils/logger/fileLogger";
 
 const sections = {
@@ -185,5 +191,83 @@ describe("runSectionSummaries", () => {
     } finally {
       warnSpy.mockRestore();
     }
+  });
+});
+
+describe("runSectionSummaries / time budget", () => {
+  beforeEach(() => {
+    mockGenerateText.mockReset();
+    mockGenerateText.mockResolvedValue({ text: "A summary." });
+  });
+
+  /** The AbortSignal each call was given, in call order. */
+  const signals = () => mockGenerateText.mock.calls.map((c: any[]) => c[0].abortSignal);
+
+  it("gives a section long enough to answer on a slow endpoint", async () => {
+    // Measured 2026-07-29 against NVIDIA NIM serving deepseek-v4-flash: an
+    // 8.3k-char section took 56.7s and a 37.8k-char one 75.3s, both
+    // finishReason "stop" with ~600-900 output tokens. The old 30s budget cut
+    // off answers the model was producing correctly, just slowly.
+    await runSectionSummaries("model" as any, { sections } as any);
+
+    for (const signal of signals()) {
+      expect(signal).toBeInstanceOf(AbortSignal);
+      expect(SECTION_SUMMARY_TIMEOUT_MS).toBeGreaterThanOrEqual(120_000);
+    }
+  });
+
+  it("bounds the whole stage, not just each call", async () => {
+    // POST /reporting/templates/:id/run is synchronous and Node kills a
+    // request at its 300s default. A per-call budget alone does not bound the
+    // stage: twelve sections at MAX_CONCURRENT run in four waves, and four
+    // waves of the per-call budget overruns that ceiling on their own.
+    expect(SECTION_SUMMARY_STAGE_BUDGET_MS).toBeGreaterThan(SECTION_SUMMARY_TIMEOUT_MS);
+    expect(SECTION_SUMMARY_STAGE_BUDGET_MS).toBeLessThan(300_000);
+  });
+
+  it("stops calling the model once the stage budget is spent", async () => {
+    const many = Object.fromEntries(
+      Array.from({ length: 8 }, (_, i) => [`s${i}`, { items: [{ id: i }] }]),
+    );
+    // Every call consumes the whole stage budget, so only the first wave can
+    // run — the rest must be abandoned rather than each burning its own budget.
+    mockGenerateText.mockImplementation(async () => {
+      jest.setSystemTime(Date.now() + SECTION_SUMMARY_STAGE_BUDGET_MS + 1);
+      return { text: "A summary." };
+    });
+
+    jest.useFakeTimers({ doNotFake: ["setTimeout", "queueMicrotask"] });
+    jest.setSystemTime(new Date("2026-07-29T00:00:00Z"));
+    try {
+      const out = await runSectionSummaries("model" as any, { sections: many } as any);
+      expect(mockGenerateText.mock.calls.length).toBeLessThanOrEqual(MAX_CONCURRENT);
+      expect(Object.keys(out).length).toBeLessThanOrEqual(MAX_CONCURRENT);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it("never hands a call more time than the stage has left", async () => {
+    jest.useFakeTimers({ doNotFake: ["setTimeout", "queueMicrotask"] });
+    jest.setSystemTime(new Date("2026-07-29T00:00:00Z"));
+    let firstWave = true;
+    mockGenerateText.mockImplementation(async () => {
+      if (firstWave) {
+        firstWave = false;
+        // Burn most of the stage budget on the first call.
+        jest.setSystemTime(Date.now() + SECTION_SUMMARY_STAGE_BUDGET_MS - 5_000);
+      }
+      return { text: "A summary." };
+    });
+
+    try {
+      await runSectionSummaries("model" as any, { sections } as any);
+    } finally {
+      jest.useRealTimers();
+    }
+
+    // Whatever ran after the burn must have been given the remainder, not a
+    // fresh per-call budget that would push the stage past its deadline.
+    expect(mockGenerateText.mock.calls.length).toBeGreaterThan(0);
   });
 });

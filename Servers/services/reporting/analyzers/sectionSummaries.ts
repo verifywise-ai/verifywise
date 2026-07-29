@@ -12,22 +12,56 @@ import {
 } from "./prompts";
 
 /**
- * Stage 1's own budget. Sized independently of runAnalyzers.ts's
+ * One section's budget. Sized independently of runAnalyzers.ts's
  * LLM_TIMEOUT_MS: this path calls generateText directly, not
  * generateObjectWithSelfCorrection, so there is no per-attempt retry to budget
  * for — and an abort here is unrecoverable, `summariseSection` catches it into
  * an empty string and the section is dropped from the three Stage-2 analyzers
  * that consume it.
  *
- * It is not independent of SECTION_SUMMARY_MAX_TOKENS, though — the tokens that
- * cap buys also take wall-clock time, so raising the cap moves generations
- * closer to this wall. What keeps 30s the right number is that the cap is a
- * CEILING, not a target: wall clock follows the tokens actually emitted, and
- * the ask below (300-450 words) plus the measured reasoning pass is ~1.3k
- * tokens, less than half of the 3000 the ceiling allows. Raise this if the ask
- * itself grows, not because the ceiling did.
+ * Sized from wall clock, not from tokens. It was 30s on the reasoning that the
+ * ask (300-450 words plus a reasoning pass, ~1.3k tokens) sits well under
+ * SECTION_SUMMARY_MAX_TOKENS. The token arithmetic was right and the budget was
+ * still wrong: a slow endpoint spends far longer on those tokens than a fast
+ * one. Measured 2026-07-29 against NVIDIA NIM serving deepseek-v4-flash — an
+ * 8.3k-char compliance section took 56.7s for 608 output tokens, a 37.8k-char
+ * assessment section 75.3s for 935, BOTH finishReason "stop". Nothing was
+ * truncated and nothing was over-generating; 30s simply cut off answers the
+ * model was producing correctly. Extrapolating to a section clamped at
+ * MAX_PROMPT_CHARS (60k) gives roughly 120s.
+ *
+ * So: raise this when the slowest endpoint a tenant may point at gets slower,
+ * or when the ask grows — not because the token ceiling moved.
  */
-const LLM_TIMEOUT_MS = 30_000;
+export const SECTION_SUMMARY_TIMEOUT_MS = 120_000;
+
+/**
+ * The whole stage's budget, and the reason the per-section one above can be
+ * this large.
+ *
+ * POST /reporting/templates/:id/run runs the report synchronously, and Node
+ * kills a request at its 300s `requestTimeout` default (nothing in this app
+ * overrides it). A per-section budget alone does not bound the stage: twelve
+ * sections at MAX_CONCURRENT is four waves, and four waves of 120s is 480s —
+ * the request would die with the run still marked running. The old 30s
+ * per-section budget was what kept the stage under that ceiling, so raising it
+ * has to put the protection back explicitly.
+ *
+ * 150s leaves room for Stage 2, which runs its consumers concurrently at
+ * runAnalyzers.ts's 60s per attempt, plus rendering and delivery — about 210s
+ * for a run whose Stage 2 succeeds first try. A section that cannot start
+ * before the deadline is skipped, and one that starts late gets only the
+ * remainder: an empty string, dropped from the output, exactly as a per-section
+ * timeout already produces.
+ *
+ * Residual, unchanged by this file: a Stage-2 analyzer that spends its full
+ * two self-corrections costs 180s, and 150 + 180 overruns the 300s ceiling. It
+ * needs a twelve-section report AND a triple-retry to happen, and the real fix
+ * is moving run-now onto BullMQ with a 202/poll response — already on record as
+ * its own piece of work. Sizing this stage smaller would not close it, only
+ * trade a rare overrun for routinely dropped summaries.
+ */
+export const SECTION_SUMMARY_STAGE_BUDGET_MS = 150_000;
 
 /**
  * Was an inline 500 against a "150-250 words" ask. Run 2 hit that ceiling and
@@ -79,8 +113,18 @@ async function summariseSection(
   projectTitle: string,
   referenceDate: string,
   model: any,
+  /** Epoch ms the whole stage must be finished by. */
+  stageDeadline: number,
 ): Promise<string> {
   try {
+    // Whichever runs out first. A section that cannot start at all is skipped
+    // without a call rather than opening one the deadline will abort anyway.
+    const remaining = stageDeadline - Date.now();
+    if (remaining <= 0) {
+      logger.warn(`Section summary for "${key}" skipped: the stage time budget was already spent`);
+      return "";
+    }
+    const timeoutMs = Math.min(SECTION_SUMMARY_TIMEOUT_MS, remaining);
     const label = SECTION_LABELS[key] || key;
     const prompt = `You are an AI governance analyst writing the "${label}" section analysis for a ${frameworkName} compliance report on the project "${projectTitle}".
 
@@ -102,7 +146,7 @@ ${clampSectionData(key, data)}`;
       model,
       prompt,
       maxOutputTokens: SECTION_SUMMARY_MAX_TOKENS,
-      abortSignal: AbortSignal.timeout(LLM_TIMEOUT_MS),
+      abortSignal: AbortSignal.timeout(timeoutMs),
     });
     if (result.finishReason === "length") {
       // These summaries are the INPUT to the executive summary, key findings
@@ -143,10 +187,22 @@ export async function runSectionSummaries(
   const projectTitle = reportData.metadata?.projectTitle ?? "the organization";
   const referenceDate = referenceDay(reportData.metadata?.generatedAt);
 
+  // One deadline for the whole stage, fixed before the first call so a late
+  // wave inherits what earlier ones left rather than starting its own clock.
+  const stageDeadline = Date.now() + SECTION_SUMMARY_STAGE_BUDGET_MS;
+
   const summaries = await runWithConcurrency(
     entries.map(
       ([key, data]) => () =>
-        summariseSection(key, data, frameworkName, projectTitle, referenceDate, model),
+        summariseSection(
+          key,
+          data,
+          frameworkName,
+          projectTitle,
+          referenceDate,
+          model,
+          stageDeadline,
+        ),
     ),
     MAX_CONCURRENT,
   );

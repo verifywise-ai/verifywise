@@ -120,18 +120,20 @@ describe("runAnalyzers", () => {
     expect(out.riskAnalysis!.attempts).toBe(2);
   });
 
-  it("bounds each ATTEMPT with its own 60s timeout, allows two corrections, and states an output budget", async () => {
+  it("bounds each ATTEMPT with its own timeout, allows two corrections, and states an output budget", async () => {
     await runAnalyzers({ reportData, llmKey, blocks: only("riskAnalysis") });
 
     const params = mockGenerate.mock.calls[0][0];
     // timeoutMs, not extra.abortSignal: one pre-built signal is shared by the
     // first call and its retries, so a deeper (slower) analysis aborts and
     // degrades into a generic abstention.
-    expect(params.timeoutMs).toBe(60_000);
+    // 120s, measured: complianceGap on an 18.4k-char prompt took 110.7s against
+    // the endpoint this tenant configured, with nothing else in flight.
+    expect(params.timeoutMs).toBe(120_000);
     // Two, not one. basis and what_would_close_this are new required keys on
     // four analyzers; one correction turns a second omission into
     // "this analysis could not be produced because the AI service call
-    // failed". Each attempt now has its own 60s budget, so a second is safe.
+    // failed". Each attempt has its own budget, so a second is safe.
     expect(params.maxSelfCorrectionAttempts).toBe(2);
     // Nothing was passed before, so the output ceiling was whatever the
     // provider happened to default to — the same silence that truncated a
