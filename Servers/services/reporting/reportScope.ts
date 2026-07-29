@@ -1,24 +1,31 @@
 /**
- * @fileoverview Report scope resolution — turns a report's scope into the set
- * of (project, framework) pairings its framework sections are collected from.
+ * @fileoverview Report scope resolution — turns a report's scope and framework
+ * selection into the set of (project, framework) pairings its framework
+ * sections are collected from.
  *
- * The report wizard has no framework picker, and it should not grow one:
- * projects_frameworks is many-per-project, so a single frameworkId field would
- * pin a report to one framework and silently drop the project's others.
- * Scope + projectId is all the caller states; the pairings are derived here.
+ * This file used to say the wizard should never grow a framework picker. That
+ * rationale was against a SINGLE frameworkId field: projects_frameworks is
+ * many-per-project, so one id would pin a report to one framework and silently
+ * drop the project's others. A multi-valued filter where empty means "all" is
+ * the case that argument does not cover, and it is what makes an "ISO 42001
+ * Internal Audit Pack" expressible at all.
  *
- * Before this existed, frameworkId and projectFrameworkId arrived as NULL from
+ * Scope + projectId still decide the candidate set; frameworkIds only narrows
+ * it, and an empty selection narrows nothing.
+ *
+ * Before scope existed, frameworkId and projectFrameworkId arrived as NULL from
  * every wizard-driven run and reportTemplateResolver coerced them to 0. Every
  * framework section in collectAllData is gated on the numeric framework id
  * (=== 1 for EU AI Act, 2/3 for ISO, 4 for NIST), so a 0 closed all four gates
  * and the report came out with no compliance, assessment, clauses or NIST
- * content at all.
+ * content at all. parseFrameworkSelection rejects 0 for the same reason.
  *
  * @module services/reporting/reportScope
  */
 
 import { QueryTypes } from "sequelize";
 import { sequelize } from "../../database/db";
+import { parseFrameworkSelection, isEmptySelection } from "./frameworkSelection";
 
 export type ReportScope = "project" | "organization";
 
@@ -46,17 +53,36 @@ export async function resolveFrameworkTargets(
   scope: ReportScope,
   projectId: number | null | undefined,
   organizationId: number,
+  frameworkIds?: string[] | null,
 ): Promise<FrameworkTarget[]> {
   // A project-scoped report with no project covers nothing. Returning empty
   // beats querying the whole organization, which would leak every project's
   // data into a report that asked for one.
   if (scope === "project" && !projectId) return [];
 
-  const replacements: Record<string, number> = { organizationId };
+  const selection = parseFrameworkSelection(frameworkIds ?? []);
+
+  // A non-empty selection naming no native framework — only plugin/custom
+  // entries, or only unparseable ones — resolves to nothing here, because
+  // projects_frameworks holds native pairings only. Falling through to an
+  // unfiltered query would widen the report to every framework the caller
+  // explicitly did not ask for. The collector turns this into a visible
+  // no_framework_target notice rather than a silently missing section.
+  if (!isEmptySelection(selection) && selection.native.length === 0) return [];
+  if (isEmptySelection(selection) && (frameworkIds ?? []).length > 0) return [];
+
+  const replacements: Record<string, unknown> = { organizationId };
+
   let projectPredicate = "";
   if (scope === "project") {
     projectPredicate = " AND pf.project_id = :projectId";
     replacements.projectId = Number(projectId);
+  }
+
+  let frameworkPredicate = "";
+  if (selection.native.length > 0) {
+    frameworkPredicate = " AND pf.framework_id = ANY(:nativeFrameworkIds)";
+    replacements.nativeFrameworkIds = selection.native;
   }
 
   const rows = (await sequelize.query(
@@ -69,7 +95,7 @@ export async function resolveFrameworkTargets(
        FROM projects_frameworks pf
        JOIN projects p ON p.id = pf.project_id AND p.organization_id = :organizationId
        JOIN frameworks f ON f.id = pf.framework_id
-      WHERE pf.organization_id = :organizationId${projectPredicate}
+      WHERE pf.organization_id = :organizationId${projectPredicate}${frameworkPredicate}
       ORDER BY pf.project_id, pf.framework_id`,
     { replacements, type: QueryTypes.SELECT },
   )) as any[];

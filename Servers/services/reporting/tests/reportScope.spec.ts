@@ -85,4 +85,36 @@ describe("resolveFrameworkTargets", () => {
     expect(await resolveFrameworkTargets("project", null, 10)).toEqual([]);
     expect(mockQuery).not.toHaveBeenCalled();
   });
+
+  it("narrows to the selected native frameworks", async () => {
+    await resolveFrameworkTargets("organization", null, 10, ["native:2", "native:3"]);
+
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(sql).toContain("pf.framework_id = ANY(:nativeFrameworkIds)");
+    expect(options.replacements.nativeFrameworkIds).toEqual([2, 3]);
+  });
+
+  it("adds no framework predicate for an empty selection", async () => {
+    for (const empty of [undefined, null, []]) {
+      mockQuery.mockClear();
+      await resolveFrameworkTargets("organization", null, 10, empty as any);
+
+      const [sql, options] = mockQuery.mock.calls[0];
+      expect(sql).not.toContain("nativeFrameworkIds");
+      expect(options.replacements).not.toHaveProperty("nativeFrameworkIds");
+    }
+  });
+
+  it("resolves nothing when the selection names only non-native frameworks", async () => {
+    // projects_frameworks holds native pairings only. Falling through to an
+    // unfiltered query here would silently widen the report to every framework
+    // the caller explicitly did not ask for.
+    expect(await resolveFrameworkTargets("organization", null, 10, ["plugin:soc2"])).toEqual([]);
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
+
+  it("ignores an unparseable entry rather than querying for it", async () => {
+    expect(await resolveFrameworkTargets("organization", null, 10, ["iso42001"])).toEqual([]);
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
 });
