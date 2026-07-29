@@ -17,7 +17,7 @@ huggingface-hub>=1.16.1
 
 # Data handling
 datasets>=4.8.5
-pyarrow>=24.0.0
+pyarrow>=25.0.0
 
 # Utilities
 tqdm>=4.68.2
