@@ -1,23 +1,13 @@
 import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { sanitizeRichText } from "../../../application/utils/richTextSanitizer";
-import {
-  useEditor,
-  EditorContent,
-  NodeViewWrapper,
-  NodeViewProps,
-  ReactNodeViewRenderer,
-  Extension,
-} from "@tiptap/react";
+import { useEditor, EditorContent } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
-import { Plugin, PluginKey } from "@tiptap/pm/state";
-import { Decoration, DecorationSet } from "@tiptap/pm/view";
 import StarterKit from "@tiptap/starter-kit";
 import TipTapUnderline from "@tiptap/extension-underline";
 import Highlight from "@tiptap/extension-highlight";
 import TextAlign from "@tiptap/extension-text-align";
 import TipTapLink from "@tiptap/extension-link";
-import TipTapImage from "@tiptap/extension-image";
 import {
   Table as TipTapTable,
   TableRow as TipTapTableRow,
@@ -46,6 +36,7 @@ import {
   Snackbar,
   Alert,
   TextField,
+  GlobalStyles,
 } from "@mui/material";
 import {
   Underline as UnderlineIcon,
@@ -87,14 +78,11 @@ import {
   Check,
   Pencil,
   Palette,
-  ChevronDown as ChevronDownIcon,
-  ChevronUp as ChevronUpIcon,
   Search,
   Upload,
 } from "lucide-react";
 
 import Select from "../../components/Inputs/Select";
-import Field from "../../components/Inputs/Field";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { HistorySidebar } from "../../components/Common/HistorySidebar";
 import CustomFieldsSection, {
@@ -120,284 +108,13 @@ import { checkStringValidation } from "../../../application/validations/stringVa
 import { useFormValidation } from "../../../application/hooks/useFormValidation";
 import { store } from "../../../application/redux/store";
 import { PageBreadcrumbs } from "../../components/breadcrumbs/PageBreadcrumbs";
-
-// ── Auth image node view with resize ─────────────────────────────────
-const AuthImage: React.FC<NodeViewProps> = ({ node, updateAttributes, selected }) => {
-  const src = node.attrs.src || "";
-  const alt = node.attrs.alt || "";
-  const width = node.attrs.width as number | null;
-  const isApiUrl = src.startsWith("/api/") || src.includes("/api/file-manager/");
-  const [blobUrl, setBlobUrl] = useState<string | null>(null);
-  const [error, setError] = useState(false);
-  const imgRef = useRef<HTMLImageElement>(null);
-  const startXRef = useRef(0);
-  const startWidthRef = useRef(0);
-
-  useEffect(() => {
-    if (!isApiUrl || !src) return;
-    let cancelled = false;
-    const controller = new AbortController();
-    (async () => {
-      try {
-        const token = store.getState().auth.authToken;
-        const res = await fetch(src, {
-          headers: { Authorization: `Bearer ${token}` },
-          signal: controller.signal,
-        });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const blob = await res.blob();
-        if (!cancelled) setBlobUrl(URL.createObjectURL(blob));
-      } catch (e: any) {
-        if (e.name !== "AbortError" && !cancelled) setError(true);
-      }
-    })();
-    return () => {
-      cancelled = true;
-      controller.abort();
-    };
-  }, [src, isApiUrl]);
-
-  const handleResizeStart = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      startXRef.current = e.clientX;
-      startWidthRef.current = imgRef.current?.offsetWidth || 300;
-
-      const onMove = (ev: MouseEvent) => {
-        const diff = ev.clientX - startXRef.current;
-        const newWidth = Math.max(100, startWidthRef.current + diff);
-        updateAttributes({ width: newWidth });
-      };
-      const onUp = () => {
-        document.removeEventListener("mousemove", onMove);
-        document.removeEventListener("mouseup", onUp);
-      };
-      document.addEventListener("mousemove", onMove);
-      document.addEventListener("mouseup", onUp);
-    },
-    [updateAttributes],
-  );
-
-  const displaySrc = isApiUrl ? blobUrl : src;
-
-  return (
-    <NodeViewWrapper>
-      {error ? (
-        <div
-          style={{
-            background: "#fee2e2",
-            color: "#991b1b",
-            padding: "8px 12px",
-            borderRadius: 6,
-            fontSize: "0.9rem",
-            textAlign: "center",
-            margin: "12px 0",
-          }}
-        >
-          Image not found
-        </div>
-      ) : displaySrc ? (
-        <div
-          style={{
-            position: "relative",
-            display: "inline-block",
-            margin: "12px 0",
-            outline: selected ? "2px solid brand.primary" : "none",
-            borderRadius: 8,
-          }}
-        >
-          <img
-            ref={imgRef}
-            src={displaySrc}
-            alt={alt}
-            style={{
-              display: "block",
-              width: width ? `${width}px` : undefined,
-              maxWidth: "100%",
-              borderRadius: 8,
-            }}
-          />
-          {selected && (
-            <div
-              onMouseDown={handleResizeStart}
-              style={{
-                position: "absolute",
-                right: -5,
-                bottom: -5,
-                width: 12,
-                height: 12,
-                backgroundColor: "brand.primary",
-                border: "2px solid background.main",
-                borderRadius: 2,
-                cursor: "nwse-resize",
-                boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
-              }}
-            />
-          )}
-        </div>
-      ) : (
-        <div
-          style={{
-            background: "#f0f0f0",
-            color: "#666",
-            padding: "16px 24px",
-            borderRadius: 6,
-            textAlign: "center",
-            fontSize: "0.9rem",
-            margin: "12px 0",
-          }}
-        >
-          Loading image...
-        </div>
-      )}
-    </NodeViewWrapper>
-  );
-};
-
-const AuthImageExtension = TipTapImage.extend({
-  addAttributes() {
-    return {
-      ...this.parent?.(),
-      width: {
-        default: null,
-        parseHTML: (el) => (el.getAttribute("width") ? Number(el.getAttribute("width")) : null),
-        renderHTML: (attrs) => (attrs.width ? { width: attrs.width } : {}),
-      },
-    };
-  },
-  addNodeView() {
-    return ReactNodeViewRenderer(AuthImage);
-  },
-});
-
-// ── Toolbar key type ──────────────────────────────────────────────────
-type ToolbarKey =
-  | "bold"
-  | "italic"
-  | "underline"
-  | "undo"
-  | "redo"
-  | "strike"
-  | "ol"
-  | "ul"
-  | "align-left"
-  | "align-center"
-  | "align-right"
-  | "link"
-  | "image"
-  | "highlight"
-  | "blockquote"
-  | "table"
-  | "code"
-  | "hr"
-  | "taskList"
-  | "superscript"
-  | "subscript"
-  | "color"
-  | "search";
-
-const defaultToolbarState: Record<ToolbarKey, boolean> = {
-  "bold": false,
-  "italic": false,
-  "underline": false,
-  "undo": false,
-  "redo": false,
-  "strike": false,
-  "ol": false,
-  "ul": false,
-  "align-left": false,
-  "align-center": false,
-  "align-right": false,
-  "link": false,
-  "image": false,
-  "highlight": false,
-  "blockquote": false,
-  "table": false,
-  "code": false,
-  "hr": false,
-  "taskList": false,
-  "superscript": false,
-  "subscript": false,
-  "color": false,
-  "search": false,
-};
-
-// ── Normalize legacy Slate HTML ───────────────────────────────────────
-function normalizeSlateHtml(html: string): string {
-  let n = html.replace(
-    /<div([^>]*?)data-slate-type="(h[1-6]|p|blockquote)"([^>]*)>/gi,
-    (_m, before, tag, after) => `<${tag}${before}${after}>`,
-  );
-  n = n.replace(/<div[^>]*class="slate-editor"[^>]*>/gi, "");
-  n = n.replace(/<span[^>]*data-slate-string="true"[^>]*>([^<]*)<\/span>/gi, "$1");
-  n = n.replace(/<span[^>]*data-slate-leaf="true"[^>]*>/gi, "");
-  n = n.replace(/<span[^>]*data-slate-node="text"[^>]*>/gi, "");
-  n = n.replace(/\s*data-slate-[a-z-]+="[^"]*"/gi, "");
-  n = n.replace(/\s*data-block-id="[^"]*"/gi, "");
-  n = n.replace(/\s*class="slate-[^"]*"/gi, "");
-  n = n.replace(/\s*style="position:\s*relative\s*;?\s*"/gi, "");
-  n = n.replace(/\s*style=""/gi, "");
-  n = n.replace(/\s*class=""/gi, "");
-  n = n.replace(/<div>\s*([^<])/gi, "<p>$1");
-  n = n.replace(/<\/div>/gi, "</p>");
-  n = n.replace(/<\/p>\s*<\/p>/gi, "</p>");
-  return n;
-}
-
-// ── Search highlight extension ─────────────────────────────────────────
-const searchHighlightKey = new PluginKey("searchHighlight");
-
-function createSearchHighlightExtension() {
-  return Extension.create({
-    name: "searchHighlight",
-    addProseMirrorPlugins() {
-      return [
-        new Plugin({
-          key: searchHighlightKey,
-          state: {
-            init() {
-              return { term: "", decorations: DecorationSet.empty };
-            },
-            apply(tr, prev) {
-              const meta = tr.getMeta(searchHighlightKey);
-              if (meta !== undefined) {
-                const term = meta as string;
-                if (!term) return { term: "", decorations: DecorationSet.empty };
-                const decorations: Decoration[] = [];
-                const searchLower = term.toLowerCase();
-                tr.doc.descendants((node, pos) => {
-                  if (!node.isText || !node.text) return;
-                  const text = node.text.toLowerCase();
-                  let idx = text.indexOf(searchLower);
-                  while (idx !== -1) {
-                    decorations.push(
-                      Decoration.inline(pos + idx, pos + idx + term.length, {
-                        class: "search-highlight",
-                      }),
-                    );
-                    idx = text.indexOf(searchLower, idx + term.length);
-                  }
-                });
-                return { term, decorations: DecorationSet.create(tr.doc, decorations) };
-              }
-              // Remap existing decorations on doc change
-              if (tr.docChanged && prev.decorations !== DecorationSet.empty) {
-                return { ...prev, decorations: prev.decorations.map(tr.mapping, tr.doc) };
-              }
-              return prev;
-            },
-          },
-          props: {
-            decorations(state) {
-              return this.getState(state)?.decorations ?? DecorationSet.empty;
-            },
-          },
-        }),
-      ];
-    },
-  });
-}
+import { AuthImageExtension } from "./PolicyEditor/AuthImage";
+import { normalizeSlateHtml } from "./PolicyEditor/normalizeSlateHtml";
+import { createSearchHighlightExtension } from "./PolicyEditor/searchHighlightExtension";
+import { type ToolbarKey, defaultToolbarState } from "./PolicyEditor/toolbarTypes";
+import { policyEditorStyles } from "./PolicyEditor/editorStyles";
+import { usePolicyFindReplace } from "./PolicyEditor/usePolicyFindReplace";
+import { FindReplacePopover } from "./PolicyEditor/FindReplacePopover";
 
 // ── Component ─────────────────────────────────────────────────────────
 export default function PolicyEditorPage() {
@@ -462,12 +179,6 @@ export default function PolicyEditorPage() {
 
   // Color picker state
   const [colorAnchorEl, setColorAnchorEl] = useState<HTMLElement | null>(null);
-
-  // Search & replace state
-  const [searchAnchorEl, setSearchAnchorEl] = useState<HTMLElement | null>(null);
-  const [searchText, setSearchText] = useState("");
-  const [replaceText, setReplaceText] = useState("");
-  const [searchMatchCount, setSearchMatchCount] = useState(0);
 
   const validators = useMemo(
     () => ({
@@ -862,171 +573,20 @@ export default function PolicyEditorPage() {
     "#9333ea",
   ];
 
-  // ── Search & replace ───────────────────────────────────────────
-  const countMatches = useCallback(() => {
-    if (!editor || !searchText) {
-      setSearchMatchCount(0);
-      return;
-    }
-    const searchLower = searchText.toLowerCase();
-    let count = 0;
-    editor.state.doc.descendants((node) => {
-      if (!node.isText || !node.text) return;
-      const text = node.text.toLowerCase();
-      let idx = text.indexOf(searchLower);
-      while (idx !== -1) {
-        count++;
-        idx = text.indexOf(searchLower, idx + searchText.length);
-      }
-    });
-    setSearchMatchCount(count);
-  }, [editor, searchText]);
-
-  // Count matches, update decorations, and auto-find first match when searchText changes
-  useEffect(() => {
-    countMatches();
-    if (!editor) return;
-    // Update search highlight decorations
-    const tr = editor.state.tr.setMeta(searchHighlightKey, searchText || "");
-    editor.view.dispatch(tr);
-    // Auto-jump to first match
-    if (searchText) {
-      const searchLower = searchText.toLowerCase();
-      let found = false;
-      editor.state.doc.descendants((node, pos) => {
-        if (found || !node.isText || !node.text) return;
-        const text = node.text.toLowerCase();
-        const idx = text.indexOf(searchLower);
-        if (idx !== -1) {
-          const from = pos + idx;
-          const to = from + searchText.length;
-          editor.chain().setTextSelection({ from, to }).scrollIntoView().run();
-          found = true;
-        }
-      });
-    }
-  }, [countMatches, editor, searchText]);
-
-  const handleSearchNext = useCallback(() => {
-    if (!editor || !searchText) return;
-    const { doc, selection } = editor.state;
-    const searchLower = searchText.toLowerCase();
-    const startFrom = selection.to;
-    let found = false;
-
-    doc.descendants((node, pos) => {
-      if (found || !node.isText || !node.text) return;
-      const text = node.text.toLowerCase();
-      const idx =
-        pos >= startFrom ? text.indexOf(searchLower) : text.indexOf(searchLower, startFrom - pos);
-      if (idx !== -1 && pos + idx >= startFrom) {
-        const from = pos + idx;
-        const to = from + searchText.length;
-        editor.chain().setTextSelection({ from, to }).scrollIntoView().run();
-        found = true;
-      }
-    });
-
-    // Wrap around if not found after cursor
-    if (!found) {
-      doc.descendants((node, pos) => {
-        if (found || !node.isText || !node.text) return;
-        const text = node.text.toLowerCase();
-        const idx = text.indexOf(searchLower);
-        if (idx !== -1) {
-          const from = pos + idx;
-          const to = from + searchText.length;
-          editor.chain().setTextSelection({ from, to }).scrollIntoView().run();
-          found = true;
-        }
-      });
-    }
-  }, [editor, searchText]);
-
-  const handleSearchPrev = useCallback(() => {
-    if (!editor || !searchText) return;
-    const { doc, selection } = editor.state;
-    const searchLower = searchText.toLowerCase();
-    const startBefore = selection.from;
-    let lastMatch: { from: number; to: number } | null = null;
-
-    // Find the last match before cursor
-    doc.descendants((node, pos) => {
-      if (!node.isText || !node.text) return;
-      const text = node.text.toLowerCase();
-      let idx = text.indexOf(searchLower);
-      while (idx !== -1) {
-        const from = pos + idx;
-        if (from < startBefore) {
-          lastMatch = { from, to: from + searchText.length };
-        }
-        idx = text.indexOf(searchLower, idx + searchText.length);
-      }
-    });
-
-    if (lastMatch) {
-      editor.chain().setTextSelection(lastMatch).scrollIntoView().run();
-    } else {
-      // Wrap around: find last match in the whole doc
-      doc.descendants((node, pos) => {
-        if (!node.isText || !node.text) return;
-        const text = node.text.toLowerCase();
-        let idx = text.indexOf(searchLower);
-        while (idx !== -1) {
-          const from = pos + idx;
-          lastMatch = { from, to: from + searchText.length };
-          idx = text.indexOf(searchLower, idx + searchText.length);
-        }
-      });
-      if (lastMatch) {
-        editor.chain().setTextSelection(lastMatch).scrollIntoView().run();
-      }
-    }
-  }, [editor, searchText]);
-
-  const handleReplaceCurrent = useCallback(() => {
-    if (!editor || !searchText) return;
-    const { from, to } = editor.state.selection;
-    const selectedText = editor.state.doc.textBetween(from, to).toLowerCase();
-    if (selectedText === searchText.toLowerCase()) {
-      editor.chain().deleteSelection().insertContent(replaceText).run();
-      countMatches();
-      // Find next match after replacement
-      handleSearchNext();
-    } else {
-      // No current selection matching — find next first
-      handleSearchNext();
-    }
-  }, [editor, searchText, replaceText, countMatches, handleSearchNext]);
-
-  const handleReplaceAll = useCallback(() => {
-    if (!editor || !searchText) return;
-    const { doc, tr } = editor.state;
-    const searchLower = searchText.toLowerCase();
-    let replaced = 0;
-
-    doc.descendants((node, pos) => {
-      if (!node.isText || !node.text) return;
-      const text = node.text.toLowerCase();
-      let idx = text.indexOf(searchLower);
-      while (idx !== -1) {
-        const from = pos + idx;
-        const to = from + searchText.length;
-        tr.replaceWith(
-          from + replaced * (replaceText.length - searchText.length),
-          to + replaced * (replaceText.length - searchText.length),
-          editor.state.schema.text(replaceText),
-        );
-        replaced++;
-        idx = text.indexOf(searchLower, idx + searchText.length);
-      }
-    });
-
-    if (replaced > 0) {
-      editor.view.dispatch(tr);
-      countMatches();
-    }
-  }, [editor, searchText, replaceText, countMatches]);
+  const {
+    searchAnchorEl,
+    openFindReplace,
+    closeFindReplace,
+    searchText,
+    setSearchText,
+    replaceText,
+    setReplaceText,
+    searchMatchCount,
+    handleSearchNext,
+    handleSearchPrev,
+    handleReplaceCurrent,
+    handleReplaceAll,
+  } = usePolicyFindReplace(editor);
 
   // ── Toolbar config ────────────────────────────────────────────────
   const toolbarConfig: Array<{
@@ -1950,7 +1510,7 @@ export default function PolicyEditorPage() {
                       return;
                     }
                     if (key === "search") {
-                      setSearchAnchorEl(e.currentTarget);
+                      openFindReplace(e.currentTarget);
                       return;
                     }
                     action?.();
@@ -2040,157 +1600,19 @@ export default function PolicyEditorPage() {
             </Box>
           </Popover>
 
-          {/* ── Find & replace popover (Google Docs style) ────────────── */}
-          <Popover
-            open={Boolean(searchAnchorEl)}
+          <FindReplacePopover
             anchorEl={searchAnchorEl}
-            onClose={() => {
-              setSearchAnchorEl(null);
-              setSearchText("");
-              setReplaceText("");
-            }}
-            anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-            transformOrigin={{ vertical: "top", horizontal: "right" }}
-            disableAutoFocus
-            disableEnforceFocus
-            slotProps={{
-              paper: {
-                sx: {
-                  width: 340,
-                  borderRadius: "4px",
-                  border: "1px solid #d0d5dd",
-                  boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
-                  p: "16px",
-                },
-              },
-            }}
-          >
-            {/* Find row */}
-            <Stack gap="12px">
-              <Stack direction="row" gap="8px" alignItems="center">
-                <Box sx={{ flex: 1 }}>
-                  <Field
-                    id="search-find-input"
-                    placeholder="Find in document..."
-                    value={searchText}
-                    onChange={(e) => setSearchText(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleSearchNext();
-                    }}
-                    autoFocus
-                    sx={{
-                      "& .field-input": { height: 34 },
-                      "& input": { padding: "0 10px", fontSize: 13 },
-                    }}
-                  />
-                </Box>
-                <Tooltip title="Previous" arrow>
-                  <IconButton
-                    onClick={handleSearchPrev}
-                    disabled={searchMatchCount === 0}
-                    size="small"
-                    sx={{
-                      "padding": "6px",
-                      "borderRadius": "4px",
-                      "border": "1px solid #d0d5dd",
-                      "color": "text.secondary",
-                      "&:hover": { backgroundColor: "background.accent" },
-                      "&:disabled": { color: "border.dark", borderColor: "border.light" },
-                    }}
-                  >
-                    <ChevronUpIcon size={16} />
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title="Next" arrow>
-                  <IconButton
-                    onClick={handleSearchNext}
-                    disabled={searchMatchCount === 0}
-                    size="small"
-                    sx={{
-                      "padding": "6px",
-                      "borderRadius": "4px",
-                      "border": "1px solid #d0d5dd",
-                      "color": "text.secondary",
-                      "&:hover": { backgroundColor: "background.accent" },
-                      "&:disabled": { color: "border.dark", borderColor: "border.light" },
-                    }}
-                  >
-                    <ChevronDownIcon size={16} />
-                  </IconButton>
-                </Tooltip>
-              </Stack>
-
-              {/* Match count */}
-              {searchText && (
-                <Typography sx={{ fontSize: 11, color: "text.muted", mt: "-4px" }}>
-                  {searchMatchCount === 0
-                    ? "No matches found"
-                    : `${searchMatchCount} match${searchMatchCount !== 1 ? "es" : ""} found`}
-                </Typography>
-              )}
-
-              {/* Replace row */}
-              <Stack direction="row" gap="8px" alignItems="center">
-                <Box sx={{ flex: 1 }}>
-                  <Field
-                    id="search-replace-input"
-                    placeholder="Replace with..."
-                    value={replaceText}
-                    onChange={(e) => setReplaceText(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") handleReplaceCurrent();
-                    }}
-                    sx={{
-                      "& .field-input": { height: 34 },
-                      "& input": { padding: "0 10px", fontSize: 13 },
-                    }}
-                  />
-                </Box>
-                <Tooltip title="Replace" arrow>
-                  <span>
-                    <CustomizableButton
-                      variant="outlined"
-                      text="Replace"
-                      onClick={handleReplaceCurrent}
-                      isDisabled={searchMatchCount === 0}
-                      sx={{
-                        "minWidth": "auto",
-                        "height": 34,
-                        "px": "10px",
-                        "fontSize": 12,
-                        "backgroundColor": "background.main",
-                        "border": "1px solid #d0d5dd",
-                        "color": "text.secondary",
-                        "whiteSpace": "nowrap",
-                        "&:hover": { backgroundColor: "background.accent" },
-                      }}
-                    />
-                  </span>
-                </Tooltip>
-              </Stack>
-
-              {/* Replace all */}
-              <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
-                <CustomizableButton
-                  variant="outlined"
-                  text="Replace all"
-                  onClick={handleReplaceAll}
-                  isDisabled={searchMatchCount === 0}
-                  sx={{
-                    "minWidth": "auto",
-                    "height": 34,
-                    "px": "10px",
-                    "fontSize": 12,
-                    "backgroundColor": "background.main",
-                    "border": "1px solid #d0d5dd",
-                    "color": "text.secondary",
-                    "whiteSpace": "nowrap",
-                    "&:hover": { backgroundColor: "background.accent" },
-                  }}
-                />
-              </Box>
-            </Stack>
-          </Popover>
+            onClose={closeFindReplace}
+            searchText={searchText}
+            onSearchTextChange={setSearchText}
+            replaceText={replaceText}
+            onReplaceTextChange={setReplaceText}
+            searchMatchCount={searchMatchCount}
+            onSearchNext={handleSearchNext}
+            onSearchPrev={handleSearchPrev}
+            onReplaceCurrent={handleReplaceCurrent}
+            onReplaceAll={handleReplaceAll}
+          />
 
           {/* ── Editor + History sidebar ────────────────────────────── */}
           <Stack direction="row" sx={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
@@ -2260,191 +1682,7 @@ export default function PolicyEditorPage() {
                   </Box>
                 </BubbleMenu>
               )}
-              <style>{`
-              .policy-tiptap-editor .ProseMirror {
-                height: 100%;
-                min-height: 300px;
-                overflow-y: auto;
-                padding: 20px 24px;
-                border: none;
-                border-radius: 4px;
-                background-color: #FFFFFF;
-                font-size: ${theme.typography.fontSize}px;
-                color: ${theme.palette.text.primary};
-                outline: none;
-              }
-              .policy-tiptap-editor .ProseMirror:focus {
-                outline: none;
-              }
-              .policy-tiptap-editor .ProseMirror p.is-editor-empty:first-child::before {
-                content: attr(data-placeholder);
-                float: left;
-                color: #adb5bd;
-                pointer-events: none;
-                height: 0;
-              }
-              .policy-tiptap-editor .ProseMirror mark {
-                background-color: #fef08a;
-                padding: 0 2px;
-                border-radius: 2px;
-              }
-              .policy-tiptap-editor .ProseMirror blockquote {
-                border-left: 3px solid #d0d5dd;
-                margin: 8px 0;
-                padding: 8px 16px;
-                color: #475467;
-                background-color: #f9fafb;
-                border-radius: 0 4px 4px 0;
-              }
-              .policy-tiptap-editor .ProseMirror pre {
-                background-color: #1e1e1e;
-                color: #d4d4d4;
-                padding: 12px 16px;
-                border-radius: 6px;
-                font-family: 'JetBrains Mono', 'Fira Code', monospace;
-                font-size: 0.9em;
-                overflow-x: auto;
-                margin: 12px 0;
-              }
-              .policy-tiptap-editor .ProseMirror pre code {
-                background: none;
-                color: inherit;
-                padding: 0;
-              }
-              .policy-tiptap-editor .ProseMirror code {
-                background-color: #f1f3f5;
-                padding: 2px 4px;
-                border-radius: 3px;
-                font-size: 0.9em;
-              }
-              .policy-tiptap-editor .ProseMirror hr {
-                border: none;
-                border-top: 1px solid #d0d5dd;
-                margin: 16px 0;
-              }
-              .policy-tiptap-editor .ProseMirror table {
-                border-collapse: collapse;
-                width: 100%;
-                margin: 12px 0;
-                table-layout: fixed;
-                overflow: hidden;
-              }
-              .policy-tiptap-editor .ProseMirror th,
-              .policy-tiptap-editor .ProseMirror td {
-                border: 1px solid #d0d5dd;
-                padding: 8px 12px;
-                text-align: left;
-                vertical-align: top;
-                min-width: 80px;
-                position: relative;
-                box-sizing: border-box;
-              }
-              .policy-tiptap-editor .ProseMirror th {
-                background-color: #f0f4f2;
-                font-weight: 600;
-              }
-              /* Selected cell highlight */
-              .policy-tiptap-editor .ProseMirror .selectedCell {
-                background-color: #e6f0ec !important;
-                border-color: #13715B !important;
-              }
-              .policy-tiptap-editor .ProseMirror .selectedCell::after {
-                content: '';
-                position: absolute;
-                inset: 0;
-                background: rgba(19, 113, 91, 0.08);
-                pointer-events: none;
-              }
-              /* Column resize handle */
-              .policy-tiptap-editor .ProseMirror .column-resize-handle {
-                position: absolute;
-                right: -2px;
-                top: 0;
-                bottom: -2px;
-                width: 4px;
-                background-color: #13715B;
-                cursor: col-resize;
-                z-index: 10;
-              }
-              .policy-tiptap-editor .ProseMirror.resize-cursor {
-                cursor: col-resize;
-              }
-              /* Subtle hover on rows (only when no cell is selected) */
-              .policy-tiptap-editor .ProseMirror td:hover {
-                background-color: #fafbfc;
-              }
-              .policy-tiptap-editor .ProseMirror img {
-                max-width: 100%;
-                border-radius: 8px;
-                margin: 12px 0;
-              }
-              .policy-tiptap-editor .ProseMirror a {
-                color: #3182ce;
-                text-decoration: underline;
-                cursor: pointer;
-              }
-              .policy-tiptap-editor .ProseMirror ul,
-              .policy-tiptap-editor .ProseMirror ol {
-                padding-left: 24px;
-              }
-              .policy-tiptap-editor .ProseMirror h1 {
-                font-size: 1.75em;
-                font-weight: 700;
-                margin: 16px 0 8px;
-              }
-              .policy-tiptap-editor .ProseMirror h2 {
-                font-size: 1.4em;
-                font-weight: 600;
-                margin: 12px 0 6px;
-              }
-              .policy-tiptap-editor .ProseMirror h3 {
-                font-size: 1.15em;
-                font-weight: 600;
-                margin: 10px 0 4px;
-              }
-              .policy-tiptap-editor .ProseMirror ul[data-type="taskList"] {
-                list-style: none;
-                padding-left: 4px;
-              }
-              .policy-tiptap-editor .ProseMirror ul[data-type="taskList"] li {
-                display: flex;
-                align-items: flex-start;
-                gap: 8px;
-                margin: 4px 0;
-              }
-              .policy-tiptap-editor .ProseMirror ul[data-type="taskList"] li label {
-                display: flex;
-                align-items: center;
-                flex-shrink: 0;
-                margin-top: 2px;
-              }
-              .policy-tiptap-editor .ProseMirror ul[data-type="taskList"] li label input[type="checkbox"] {
-                width: 16px;
-                height: 16px;
-                cursor: pointer;
-                accent-color: #13715B;
-              }
-              .policy-tiptap-editor .ProseMirror ul[data-type="taskList"] li > div {
-                flex: 1;
-              }
-              .policy-tiptap-editor .ProseMirror ul[data-type="taskList"] li[data-checked="true"] > div > p {
-                text-decoration: line-through;
-                color: #98A2B3;
-              }
-              .policy-tiptap-editor .ProseMirror sup {
-                font-size: 0.75em;
-                vertical-align: super;
-              }
-              .policy-tiptap-editor .ProseMirror sub {
-                font-size: 0.75em;
-                vertical-align: sub;
-              }
-              .policy-tiptap-editor .ProseMirror .search-highlight {
-                background-color: #fef08a;
-                border-radius: 2px;
-                box-shadow: 0 0 0 1px #eab308;
-              }
-            `}</style>
+              <GlobalStyles styles={policyEditorStyles} />
             </Box>
 
             {displayErrors.content && (
