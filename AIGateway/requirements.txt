@@ -2,7 +2,7 @@
 fastapi>=0.120.0
 uvicorn>=0.32.0
 python-dotenv>=1.2.2
-pydantic>=2.5.0
+pydantic>=2.13.4
 pydantic-settings>=2.0.0
 redis>=5.0.0
 cryptography>=48.0.1
