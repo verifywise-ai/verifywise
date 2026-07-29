@@ -19,6 +19,26 @@ vi.mock("../../../../application/hooks/useLLMKeyStatus", () => ({
   useLLMKeyStatus: () => ({ hasKeys: false, loading: false, data: null, error: null }),
 }));
 
+// Mandatory, not a convenience: the real hook is a useQuery, so without a
+// QueryClientProvider it throws on mount and every test in this file dies.
+// The names matter — the wizard resolves "native:2" to a label through this
+// list, and falls back to the raw id when it cannot.
+vi.mock("../../../../application/hooks/useFrameworks", () => ({
+  default: () => ({
+    allFrameworks: [
+      { id: 1, name: "EU AI Act" },
+      { id: 2, name: "ISO 42001" },
+      { id: 3, name: "ISO 27001" },
+    ],
+    filteredFrameworks: [],
+    projectFrameworksMap: new Map(),
+    loading: false,
+    error: null,
+    refreshAllFrameworks: vi.fn(),
+    refreshFilteredFrameworks: vi.fn(),
+  }),
+}));
+
 import ConfigureReportWizard from "../ConfigureReportWizard";
 
 // canNext() blocks step 1 unless at least one section has
@@ -62,11 +82,16 @@ describe("ConfigureReportWizard", () => {
         onClose={() => {}}
       />,
     );
-    expect(screen.getByText(/Scope/i)).toBeInTheDocument();
+    // Exact string, not /Scope/i: the framework field's helper text ("...every
+    // framework in scope.") also matches that regex, and getByText throws on
+    // more than one hit. The stepper label is what this test is about.
+    expect(screen.getByText("Scope")).toBeInTheDocument();
   });
 
   it("offers all seven AI blocks, not the legacy three", () => {
-    render(<ConfigureReportWizard template={TEMPLATE_FIXTURE} mode="schedule" onClose={() => {}} />);
+    render(
+      <ConfigureReportWizard template={TEMPLATE_FIXTURE} mode="schedule" onClose={() => {}} />,
+    );
     // Step 0 (Scope, org scope so no project needed) -> 1 (Sections) -> 2 (AI)
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
@@ -85,7 +110,9 @@ describe("ConfigureReportWizard", () => {
   });
 
   it("no longer renders raw camelCase keys as labels", () => {
-    render(<ConfigureReportWizard template={TEMPLATE_FIXTURE} mode="schedule" onClose={() => {}} />);
+    render(
+      <ConfigureReportWizard template={TEMPLATE_FIXTURE} mode="schedule" onClose={() => {}} />,
+    );
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
     expect(screen.queryByText("executiveSummary")).not.toBeInTheDocument();
@@ -102,7 +129,9 @@ describe("ConfigureReportWizard", () => {
   );
 
   it("disables the AI blocks when the org has no LLM key", () => {
-    render(<ConfigureReportWizard template={TEMPLATE_FIXTURE} mode="schedule" onClose={() => {}} />);
+    render(
+      <ConfigureReportWizard template={TEMPLATE_FIXTURE} mode="schedule" onClose={() => {}} />,
+    );
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
     expect(screen.getByLabelText("Executive summary")).toBeDisabled();
@@ -142,6 +171,101 @@ describe("ConfigureReportWizard", () => {
         id: TEMPLATE_FIXTURE.id,
         body: expect.objectContaining({ templateVersionId: TEMPLATE_FIXTURE.latestVersion.id }),
       }),
+      expect.anything(),
+    );
+  });
+});
+
+// TEMPLATE_FIXTURE is organization-scoped, so the Scope step needs no project
+// and the three Next clicks below reach Review on their own.
+const templateWithDefaultFramework = {
+  ...TEMPLATE_FIXTURE,
+  latestVersion: {
+    ...TEMPLATE_FIXTURE.latestVersion,
+    framework_config: { frameworkIds: ["native:2"] },
+  },
+};
+
+const goToReview = () => {
+  // Scope -> Sections -> AI Insights -> Review
+  for (let i = 0; i < 3; i += 1) {
+    fireEvent.click(screen.getByRole("button", { name: /next/i }));
+  }
+};
+
+describe("framework selection", () => {
+  beforeEach(() => {
+    runNowMutate.mockReset();
+  });
+
+  it("pre-selects the template's default frameworks", () => {
+    render(
+      <ConfigureReportWizard
+        template={templateWithDefaultFramework}
+        mode="run-now"
+        onClose={vi.fn()}
+      />,
+    );
+
+    // The chip carries the framework's name, not the raw namespaced id.
+    expect(screen.getByText("ISO 42001")).toBeInTheDocument();
+  });
+
+  it("allows an empty selection to mean every framework", () => {
+    render(<ConfigureReportWizard template={TEMPLATE_FIXTURE} mode="run-now" onClose={vi.fn()} />);
+
+    // No framework picked, and Next is still enabled: empty is a real choice
+    // (every framework in scope), so canNext must not gate on it.
+    expect(screen.getByRole("button", { name: /next/i })).toBeEnabled();
+  });
+
+  it("sends frameworkIds on the run body", () => {
+    render(
+      <ConfigureReportWizard
+        template={templateWithDefaultFramework}
+        mode="run-now"
+        onClose={vi.fn()}
+      />,
+    );
+
+    goToReview();
+    fireEvent.click(screen.getByRole("button", { name: /run now/i }));
+
+    expect(runNowMutate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.objectContaining({ frameworkIds: ["native:2"] }),
+      }),
+      expect.anything(),
+    );
+  });
+
+  it("sends an empty array when no framework is chosen", () => {
+    render(<ConfigureReportWizard template={TEMPLATE_FIXTURE} mode="run-now" onClose={vi.fn()} />);
+
+    goToReview();
+    fireEvent.click(screen.getByRole("button", { name: /run now/i }));
+
+    expect(runNowMutate).toHaveBeenCalledWith(
+      expect.objectContaining({ body: expect.objectContaining({ frameworkIds: [] }) }),
+      expect.anything(),
+    );
+  });
+
+  it("namespaces what the user picks as native:<id>", () => {
+    render(<ConfigureReportWizard template={TEMPLATE_FIXTURE} mode="run-now" onClose={vi.fn()} />);
+
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: /frameworks/i }));
+    fireEvent.click(screen.getByRole("option", { name: "ISO 42001" }));
+    // The menu stays open for a multi-select, and MUI aria-hides the rest of
+    // the app while it is — Next would be unreachable by role until it closes.
+    fireEvent.keyDown(screen.getByRole("listbox"), { key: "Escape", code: "Escape" });
+
+    goToReview();
+    fireEvent.click(screen.getByRole("button", { name: /run now/i }));
+
+    // A bare 2 or a mis-cased prefix is a 400 from the backend.
+    expect(runNowMutate).toHaveBeenCalledWith(
+      expect.objectContaining({ body: expect.objectContaining({ frameworkIds: ["native:2"] }) }),
       expect.anything(),
     );
   });

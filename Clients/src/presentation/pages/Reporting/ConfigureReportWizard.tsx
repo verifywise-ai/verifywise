@@ -14,8 +14,12 @@ import {
   Stack,
   Chip,
 } from "@mui/material";
-import { useCreateScheduledReport, useRunTemplateNow } from "../../../application/hooks/useReporting";
+import {
+  useCreateScheduledReport,
+  useRunTemplateNow,
+} from "../../../application/hooks/useReporting";
 import { useProjects } from "../../../application/hooks/useProjects";
+import useFrameworks from "../../../application/hooks/useFrameworks";
 import { useLLMKeyStatus } from "../../../application/hooks/useLLMKeyStatus";
 import { showAlert } from "../../../infrastructure/api/customAxios";
 import type { AiBlocksConfig } from "../../../domain/interfaces/i.reporting";
@@ -66,6 +70,12 @@ export default function ConfigureReportWizard({
     template.default_scope ?? "project",
   );
   const [projectId, setProjectId] = useState<number | null>(null);
+  // Seeded from the template's default. An empty list means every framework in
+  // scope — a real choice, not a missing one — so canNext is deliberately NOT
+  // gated on it.
+  const [frameworkIds, setFrameworkIds] = useState<string[]>(
+    template.latestVersion?.framework_config?.frameworkIds ?? [],
+  );
   const [sections, setSections] = useState<any[]>(
     template.latestVersion?.sections_config?.sections ?? [],
   );
@@ -90,6 +100,7 @@ export default function ConfigureReportWizard({
   const [recipientsText, setRecipientsText] = useState("");
 
   const { data: projects = [] } = useProjects();
+  const { allFrameworks } = useFrameworks({ listOfFrameworks: [] });
   const create = useCreateScheduledReport();
   const runNow = useRunTemplateNow();
 
@@ -101,6 +112,12 @@ export default function ConfigureReportWizard({
   const aiDisabled = !llmKeyLoading && !hasKeys;
 
   const enabledSections = sections.filter((s: any) => s.defaultEnabled !== false);
+
+  // Only "native:" ids are reachable from this control. A plugin or custom id
+  // seeded on the template is shown verbatim rather than dropped: dropping it
+  // would quietly widen the report back to every framework in scope.
+  const frameworkLabel = (value: string) =>
+    allFrameworks.find((f: any) => `native:${f.id}` === value)?.name ?? value;
 
   // Select the panel by step name, not numeric index — run-now mode drops
   // Schedule and Delivery, so an index-based check would show the wrong panel.
@@ -140,6 +157,9 @@ export default function ConfigureReportWizard({
       name: `${template.name}${scope === "project" ? " - Project" : " - Org"}`,
       scope,
       projectId: scope === "project" ? projectId : null,
+      // Always sent, empty included: [] is the explicit "every framework in
+      // scope" the backend already treats as the default.
+      frameworkIds,
       sectionsConfig: { sections },
       aiBlocksConfig: ai,
       format,
@@ -214,6 +234,38 @@ export default function ConfigureReportWizard({
               ))}
             </TextField>
           )}
+          {/* Namespaced ids ("native:2") are what the backend accepts; a bare
+              number or a mis-cased prefix is a 400. An empty selection is
+              valid and means every framework in scope. */}
+          <TextField
+            select
+            label="Frameworks"
+            value={frameworkIds}
+            onChange={(e) =>
+              setFrameworkIds(
+                typeof e.target.value === "string"
+                  ? e.target.value.split(",")
+                  : (e.target.value as unknown as string[]),
+              )
+            }
+            helperText="Leave empty to include every framework in scope."
+            SelectProps={{
+              multiple: true,
+              renderValue: (selected) => (
+                <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
+                  {(selected as string[]).map((value) => (
+                    <Chip key={value} size="small" label={frameworkLabel(value)} />
+                  ))}
+                </Stack>
+              ),
+            }}
+          >
+            {allFrameworks.map((f: any) => (
+              <MenuItem key={f.id} value={`native:${f.id}`}>
+                {f.name}
+              </MenuItem>
+            ))}
+          </TextField>
           {/* Format lives on a step both modes share. It used to sit on the
               Schedule panel, which run-now drops — so a run-now report was
               always a PDF and the option could not be reached at all. */}
@@ -273,9 +325,7 @@ export default function ConfigureReportWizard({
                 <Checkbox
                   disabled={aiDisabled}
                   checked={!!ai[key]}
-                  onChange={(e) =>
-                    setAi((prev) => ({ ...prev, [key]: e.target.checked }))
-                  }
+                  onChange={(e) => setAi((prev) => ({ ...prev, [key]: e.target.checked }))}
                 />
               }
               label={label}
@@ -321,9 +371,7 @@ export default function ConfigureReportWizard({
             <TextField
               label="Timezone"
               value={schedule.timezone}
-              onChange={(e) =>
-                setSchedule((prev: any) => ({ ...prev, timezone: e.target.value }))
-              }
+              onChange={(e) => setSchedule((prev: any) => ({ ...prev, timezone: e.target.value }))}
             />
           </Stack>
         </Stack>
@@ -394,6 +442,22 @@ export default function ConfigureReportWizard({
           </Typography>
           <Box>
             <Typography variant="body2" component="span" sx={{ mr: 1 }}>
+              <strong>Frameworks:</strong>
+            </Typography>
+            {frameworkIds.length ? (
+              <Stack direction="row" spacing={1} sx={{ display: "inline-flex", flexWrap: "wrap" }}>
+                {frameworkIds.map((value) => (
+                  <Chip key={value} size="small" label={frameworkLabel(value)} />
+                ))}
+              </Stack>
+            ) : (
+              <Typography variant="body2" component="span" color="text.secondary">
+                all frameworks in scope
+              </Typography>
+            )}
+          </Box>
+          <Box>
+            <Typography variant="body2" component="span" sx={{ mr: 1 }}>
               <strong>Sections:</strong>
             </Typography>
             {enabledSections.length ? (
@@ -420,8 +484,8 @@ export default function ConfigureReportWizard({
             <>
               <Typography variant="body2">
                 <strong>Schedule:</strong> {schedule.frequency} at{" "}
-                {String(schedule.hour).padStart(2, "0")}:
-                {String(schedule.minute).padStart(2, "0")} {schedule.timezone}
+                {String(schedule.hour).padStart(2, "0")}:{String(schedule.minute).padStart(2, "0")}{" "}
+                {schedule.timezone}
               </Typography>
               <Typography variant="body2">
                 <strong>Delivery:</strong>{" "}

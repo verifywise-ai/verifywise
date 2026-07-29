@@ -4,12 +4,7 @@
 // The pipeline's own vocabulary (Servers/services/reporting/reportRunOrchestrator).
 // partial_success means generated but a delivery channel failed — it is still
 // downloadable and must not be presented as an error.
-export type ReportRunStatus =
-  | "queued"
-  | "running"
-  | "success"
-  | "failed"
-  | "partial_success";
+export type ReportRunStatus = "queued" | "running" | "success" | "failed" | "partial_success";
 
 export interface ReportRun {
   id: number;
@@ -82,6 +77,18 @@ export interface AiBlocksConfig {
   vendorRisk?: boolean;
 }
 
+/**
+ * A template version's default target frameworks. Mirrors
+ * Servers/domain.layer/interfaces/i.reportTemplate.ts FrameworkConfig.
+ */
+export interface FrameworkConfig {
+  /**
+   * Namespaced framework ids ("native:1"). Empty or omitted means every
+   * framework in scope, which is what every report did before this existed.
+   */
+  frameworkIds?: string[];
+}
+
 export interface TemplateSectionConfig {
   key: string;
   reportSectionKey: string;
@@ -101,6 +108,9 @@ export interface ReportTemplateVersion {
   version: number;
   sections_config: SectionsConfig;
   ai_blocks_config: AiBlocksConfig;
+  // Optional, unlike its siblings, even though the column is NOT NULL DEFAULT
+  // '{}': responses generated before the column existed carry no such key.
+  framework_config?: FrameworkConfig;
   format_config: Record<string, unknown>;
   branding_config: Record<string, unknown>;
   schedule_defaults: Record<string, unknown>;
@@ -278,6 +288,11 @@ export interface ScheduledReportUpdateBody {
   scope?: ReportScope;
   projectId?: number | null;
   frameworkId?: number | null;
+  /**
+   * Namespaced framework ids ("native:1"). Empty or omitted means every
+   * framework in scope, which is what every report did before this existed.
+   */
+  frameworkIds?: string[];
   projectFrameworkId?: number | null;
   sectionsConfig?: SectionsConfig;
   aiBlocksConfig?: AiBlocksConfig;
