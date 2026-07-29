@@ -4291,6 +4291,8 @@ export const translations: Record<string, Record<string, string>> = {
       "API-Aufrufe an OpenAI, Anthropic, Google AI und andere KI-Dienste erscheinen hier",
     "Hardcoded API keys and secrets detected in the codebase. These should be moved to environment variables or a secrets manager.":
       "Im Code hart codierte API-Schlüssel und Geheimnisse erkannt. Diese sollten in Umgebungsvariablen oder einen Secret-Manager verschoben werden.",
+    "Hardcoded secrets in source code can be exposed if the repository is made public or accessed by unauthorized users. Rotate any exposed credentials immediately.":
+      "Hart codierte Geheimnisse im Quellcode können offengelegt werden, wenn das Repository öffentlich gemacht oder von unbefugten Benutzern eingesehen wird. Rotieren Sie alle offengelegten Anmeldedaten umgehend.",
     "No hardcoded secrets detected": "Keine hart codierten Geheimnisse erkannt",
     "No API keys, tokens, or other secrets were found in the scanned code.":
       "Im gescannten Code wurden keine API-Schlüssel, Tokens oder andere Geheimnisse gefunden.",
@@ -13207,6 +13209,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Les appels API vers OpenAI, Anthropic, Google AI et d'autres services IA apparaîtront ici",
     "Hardcoded API keys and secrets detected in the codebase. These should be moved to environment variables or a secrets manager.":
       "Clés API et secrets codés en dur détectés dans le code. Ils devraient être déplacés vers des variables d'environnement ou un gestionnaire de secrets.",
+    "Hardcoded secrets in source code can be exposed if the repository is made public or accessed by unauthorized users. Rotate any exposed credentials immediately.":
+      "Les secrets codés en dur dans le code source peuvent être exposés si le dépôt est rendu public ou consulté par des utilisateurs non autorisés. Renouvelez immédiatement toutes les informations d'identification exposées.",
     "No hardcoded secrets detected": "Aucun secret codé en dur détecté",
     "No API keys, tokens, or other secrets were found in the scanned code.":
       "Aucune clé API, jeton ou autre secret n'a été trouvé dans le code analysé.",
@@ -24064,6 +24068,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Aquí aparecerán las llamadas a la API de OpenAI, Anthropic, Google AI y otros servicios de IA",
     "Hardcoded API keys and secrets detected in the codebase. These should be moved to environment variables or a secrets manager.":
       "Claves de API y secretos codificados de forma fija detectados en el código base. Deberían trasladarse a variables de entorno o a un gestor de secretos.",
+    "Hardcoded secrets in source code can be exposed if the repository is made public or accessed by unauthorized users. Rotate any exposed credentials immediately.":
+      "Los secretos codificados de forma fija en el código fuente pueden quedar expuestos si el repositorio se hace público o si acceden a él usuarios no autorizados. Rote de inmediato todas las credenciales expuestas.",
     "No API keys, tokens, or other secrets were found in the scanned code.":
       "No se encontraron claves de API, tokens ni otros secretos en el código analizado.",
     "LLM-specific vulnerability findings detected through code analysis. These identify insecure patterns in how AI/LLM components are used.":
