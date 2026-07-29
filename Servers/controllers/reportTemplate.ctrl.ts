@@ -312,6 +312,11 @@ export async function runTemplateNow(req: Request, res: Response): Promise<any> 
       template_id: templateId,
       template_version_id: version.id,
       name: req.body.name ?? template.name,
+      // Scope is what selects the report's data. The framework ids stay for
+      // the schedule row's shape, but nothing reads them to collect: a project
+      // holds many frameworks, so generateReport derives the pairings from
+      // scope + project instead. See resolveFrameworkTargets.
+      scope: isProjectScope ? "project" : "organization",
       project_id: projectId,
       framework_id: req.body.frameworkId ?? null,
       project_framework_id: req.body.projectFrameworkId ?? null,

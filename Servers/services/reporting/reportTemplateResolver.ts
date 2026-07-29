@@ -25,6 +25,12 @@ export function resolveReportRequest(sched: any, llmKeyId?: number): ReportGener
     projectId: sched.project_id ?? 0,
     frameworkId: sched.framework_id ?? 0,
     projectFrameworkId: sched.project_framework_id ?? 0,
+    // A schedule states a scope; it never states a framework, because a
+    // project holds many and the wizard has no picker. generateReport turns
+    // scope + project into the set of projects_frameworks pairings to collect
+    // from. Falling back to the project id keeps rows written before the scope
+    // column existed working.
+    scope: sched.scope ?? (sched.project_id ? "project" : "organization"),
     reportType: reportType.length ? reportType : "all",
     reportName: sched.name,
     format: sched.format,

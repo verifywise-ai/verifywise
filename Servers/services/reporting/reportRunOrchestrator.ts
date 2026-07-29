@@ -35,7 +35,11 @@ export async function runScheduledReport(sched: any, opts: { triggeredBy: "sched
     // (scheduled_report_id is NULL). listRunsQuery reads it to decide who may
     // see the run: the legacy Generate list showed a non-Admin only the reports
     // of projects they own or are a member of. NULL means organization scope.
-    config_snapshot: { project_id: sched.project_id ?? null, sections_config: sched.sections_config, ai_blocks_config: sched.ai_blocks_config, delivery_config: sched.delivery_config },
+    // scope is snapshotted alongside project_id because scope is what selects
+    // the run's data — it decides which projects_frameworks pairings the
+    // report covered. Without it a run's own record cannot say what it looked
+    // at. Derived when absent, the same way resolveReportRequest derives it.
+    config_snapshot: { project_id: sched.project_id ?? null, scope: sched.scope ?? (sched.project_id ? "project" : "organization"), sections_config: sched.sections_config, ai_blocks_config: sched.ai_blocks_config, delivery_config: sched.delivery_config },
     scheduled_for: opts.scheduledFor ?? null,
   });
 

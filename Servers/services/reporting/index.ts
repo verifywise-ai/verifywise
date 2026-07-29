@@ -10,7 +10,8 @@ import {
   ReportData,
 } from "../../domain.layer/interfaces/i.reportGeneration";
 import { ReportType } from "../../domain.layer/models/reporting/reporting.model";
-import { createDataCollector } from "./dataCollector";
+import { createDataCollector, createScopedDataCollector } from "./dataCollector";
+import { resolveFrameworkTargets } from "./reportScope";
 import { generatePDF, closeBrowser } from "./pdfGenerator";
 import { generateDOCX } from "./docxGenerator";
 import logger from "../../utils/logger/fileLogger";
@@ -93,14 +94,20 @@ export async function generateReport(
   organizationId: number,
 ): Promise<ReportGenerationResult> {
   try {
-    // Create data collector
-    const dataCollector = createDataCollector(
-      organizationId,
-      request.projectId,
-      request.frameworkId,
-      request.projectFrameworkId,
-      userId,
-    );
+    // A scoped request states what the report covers and lets the pairings be
+    // derived; an unscoped one (the legacy manual path) names them outright.
+    const targets = request.scope
+      ? await resolveFrameworkTargets(request.scope, request.projectId || null, organizationId)
+      : [];
+    const dataCollector = request.scope
+      ? createScopedDataCollector(organizationId, userId, request.scope, targets)
+      : createDataCollector(
+          organizationId,
+          request.projectId,
+          request.frameworkId,
+          request.projectFrameworkId,
+          userId,
+        );
 
     // Determine which sections to include
     const sections = getRequestedSections(request.reportType);
@@ -137,17 +144,36 @@ export async function generateReport(
         const { facts, snapshot } = collectFactsInput(reportData, priorFacts);
         factsSnapshot = snapshot;
 
+        // Both readiness and evidence-gap lookups key off a framework id. A
+        // scoped request has none of its own — the ids on the request are 0
+        // there — so take them from the resolved pairings. Feeding the zero
+        // through made both return empty, and the complianceGap analyzer read
+        // that as "no gaps".
+        //
+        // The first pairing, not all of them: both inputs describe one
+        // framework, and the analyzer's prompt is written for one.
+        const primary = targets[0];
+        const analyzerProjectId = request.scope
+          ? request.scope === "project"
+            ? primary?.projectId
+            : undefined // readiness is stored per project; see collectReadinessInput
+          : request.projectId;
+        const analyzerFrameworkId = request.scope ? primary?.frameworkId : request.frameworkId;
+
         // Two independent inputs, fetched in parallel and kept separate.
         const extras = blocks.complianceGap
           ? await (async () => {
               const [readiness, evidenceGaps] = await Promise.all([
                 collectReadinessInput(
-                  request.projectId,
-                  request.frameworkId,
+                  analyzerProjectId,
+                  analyzerFrameworkId,
                   reportData.metadata.organizationId,
                   userId,
                 ),
-                collectEvidenceGapsInput(request.frameworkId, reportData.metadata.organizationId),
+                collectEvidenceGapsInput(
+                  analyzerFrameworkId,
+                  reportData.metadata.organizationId,
+                ),
               ]);
               return { readiness, evidenceGaps, facts };
             })()

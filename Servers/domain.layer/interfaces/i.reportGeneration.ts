@@ -22,7 +22,18 @@ export interface ReportMetadata {
   generatedAt: Date;
   generatedBy: string;
   organizationId: number;
+  /**
+   * projects.is_organizational of the report's project — NOT the report's
+   * scope. Organization-scoped reports also set it, because it is what the
+   * renderers read to drop the project line, but the two concepts are
+   * distinct: a project-scoped report of an organizational project sets it too.
+   */
   isOrganizational: boolean;
+  /**
+   * What the report covers. Optional so the legacy single-target collector,
+   * which has no scope of its own, stays type-compatible.
+   */
+  scope?: "project" | "organization";
 }
 
 export interface ReportSection {
@@ -36,6 +47,16 @@ export interface ReportGenerationRequest {
   projectId: number;
   frameworkId: number;
   projectFrameworkId: number;
+  /**
+   * What the report covers. When set, generateReport resolves the
+   * projects_frameworks pairings itself (see resolveFrameworkTargets) and the
+   * three ids above are not used to select data — templates and schedules
+   * state a scope, never a framework, because a project holds many.
+   *
+   * Omitted by the legacy manual /generate-report path, which names one
+   * project and one framework outright.
+   */
+  scope?: "project" | "organization";
   reportType: string | string[];
   reportName?: string;
   format: ReportFormat;

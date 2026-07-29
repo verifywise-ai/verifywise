@@ -10,8 +10,6 @@ import {
   ReportBranding,
   ChartData,
   RenderedCharts,
-  RiskDistributionData,
-  AssessmentStatusData,
   ProjectRisksSectionData,
   VendorsListSectionData,
   VendorRisksSectionData,
@@ -40,6 +38,14 @@ import {
   getClausesReportQuery,
   getAnnexesReportQuery,
 } from "../../utils/reporting.utils";
+import { FrameworkTarget, ReportScope } from "./reportScope";
+import {
+  mergeAssessment,
+  mergeClausesAndAnnexes,
+  mergeCompliance,
+  mergeNistSubcategories,
+  SectionContribution,
+} from "./mergeSections";
 import { getOrganizationByIdQuery } from "../../utils/organization.utils";
 import { getUserByIdQuery } from "../../utils/user.utils";
 import { getProjectByIdQuery } from "../../utils/project.utils";
@@ -98,6 +104,14 @@ export class ReportDataCollector {
   private frameworkId: number;
   private projectFrameworkId: number;
   private userId: number;
+  private scope: ReportScope;
+  /**
+   * The projects_frameworks pairings this report covers. Undefined on the
+   * legacy single-target path (createDataCollector), which keeps behaving
+   * exactly as it did — one project, one framework, taken from the fields
+   * above.
+   */
+  private targets?: FrameworkTarget[];
 
   constructor(
     organizationId: number,
@@ -105,12 +119,35 @@ export class ReportDataCollector {
     frameworkId: number,
     projectFrameworkId: number,
     userId: number,
+    scope: ReportScope = "project",
+    targets?: FrameworkTarget[],
   ) {
     this.organizationId = organizationId;
     this.projectId = projectId;
     this.frameworkId = frameworkId;
     this.projectFrameworkId = projectFrameworkId;
     this.userId = userId;
+    this.scope = scope;
+    this.targets = targets;
+  }
+
+  /**
+   * The pairings to collect framework sections from. The legacy path has no
+   * resolved set, so it stands in as a single synthetic target built from the
+   * ids it was constructed with.
+   */
+  private frameworkTargets(): FrameworkTarget[] {
+    if (this.targets) return this.targets;
+    return [
+      {
+        projectId: this.projectId,
+        projectTitle: "",
+        isOrganizationalProject: false,
+        frameworkId: this.frameworkId,
+        frameworkName: "",
+        projectFrameworkId: this.projectFrameworkId,
+      },
+    ];
   }
 
   /**
@@ -130,8 +167,13 @@ export class ReportDataCollector {
   async collectAllData(sections: string[]): Promise<ReportData> {
     const metadata = await this.collectMetadata();
     const branding = await this.collectBranding();
-    const charts = await this.collectChartData(sections);
-    const isOrganizational = metadata.isOrganizational;
+    // Drop the project filter when the report covers the whole organization,
+    // or when its single project is itself organizational. These are two
+    // different reasons for the same query shape, which is why the report's
+    // scope does not reuse metadata.isOrganizational — that one still means
+    // "projects.is_organizational", and docxGenerator renders off it.
+    const orgWide = this.scope === "organization" || metadata.isOrganizational;
+    const targets = this.frameworkTargets();
 
     const sectionData: ReportData["sections"] = {};
 
@@ -141,35 +183,52 @@ export class ReportDataCollector {
 
     // Project/Use Case Risks - common for all
     if (sections.includes("projectRisks") || sections.includes("all")) {
-      sectionData.projectRisks = await this.collectProjectRisks();
+      sectionData.projectRisks = await this.collectProjectRisks(orgWide);
     }
 
     // Vendor Risks - available for all report types
     // For organizational reports, shows ALL vendor risks across organization
     // For use case reports, shows vendor risks filtered by project
     if (sections.includes("vendorRisks") || sections.includes("all")) {
-      sectionData.vendorRisks = await this.collectVendorRisks(isOrganizational);
+      sectionData.vendorRisks = await this.collectVendorRisks(orgWide);
     }
 
     // Model Risks - available for all report types
     // For organizational reports, shows ALL model risks across organization
     // For use case reports, shows model risks filtered by project
     if (sections.includes("modelRisks") || sections.includes("all")) {
-      sectionData.modelRisks = await this.collectModelRisks(isOrganizational);
+      sectionData.modelRisks = await this.collectModelRisks(orgWide);
     }
 
     // ============================================
     // COMPLIANCE & GOVERNANCE GROUP
     // ============================================
 
+    // Framework sections are gated on the framework a pairing carries, and a
+    // report can cover many pairings — every framework of one project under
+    // project scope, every project's under organization scope. Collect each
+    // section once per pairing that supports it, then merge.
+    //
+    // Until 2026-07-29 this read a single this.frameworkId, which arrived as 0
+    // from every wizard-driven run because the wizard has no framework picker.
+    // A 0 matches none of the ids below, so all four sections were silently
+    // dropped from the report.
+    const euTargets = targets.filter((t) => t.frameworkId === 1 && !t.isOrganizationalProject);
+    const isoTargets = targets.filter((t) => t.frameworkId === 2 || t.frameworkId === 3);
+    const nistTargets = targets.filter((t) => t.frameworkId === 4);
+
     // EU AI Act specific sections (frameworkId = 1)
-    if (this.frameworkId === 1 && !isOrganizational) {
+    if (euTargets.length > 0) {
       if (sections.includes("compliance") || sections.includes("all")) {
-        sectionData.compliance = await this.collectCompliance();
+        sectionData.compliance = mergeCompliance(
+          await this.perTarget(euTargets, (t) => this.collectCompliance(t)),
+        );
       }
 
       if (sections.includes("assessment") || sections.includes("all")) {
-        sectionData.assessment = await this.collectAssessment();
+        sectionData.assessment = mergeAssessment(
+          await this.perTarget(euTargets, (t) => this.collectAssessment(t)),
+        );
       }
     }
 
@@ -183,16 +242,20 @@ export class ReportDataCollector {
     // silently dropped the section from every report that asked for it.
     // The frameworkId check is sufficient on its own: the collector is built
     // from a real projects_frameworks row, so the pairing is already valid.
-    if (this.frameworkId === 2 || this.frameworkId === 3) {
+    if (isoTargets.length > 0) {
       if (sections.includes("clausesAndAnnexes") || sections.includes("all")) {
-        sectionData.clausesAndAnnexes = await this.collectClausesAndAnnexes();
+        sectionData.clausesAndAnnexes = mergeClausesAndAnnexes(
+          await this.perTarget(isoTargets, (t) => this.collectClausesAndAnnexes(t)),
+        );
       }
     }
 
     // NIST AI RMF specific sections (frameworkId = 4) — same reasoning.
-    if (this.frameworkId === 4) {
+    if (nistTargets.length > 0) {
       if (sections.includes("nistSubcategories") || sections.includes("all")) {
-        sectionData.nistSubcategories = await this.collectNistSubcategories();
+        sectionData.nistSubcategories = mergeNistSubcategories(
+          await this.perTarget(nistTargets, (t) => this.collectNistSubcategories(t)),
+        );
       }
     }
 
@@ -202,12 +265,12 @@ export class ReportDataCollector {
 
     // Vendors list - for all reports
     if (sections.includes("vendors") || sections.includes("all")) {
-      sectionData.vendors = await this.collectVendorsList(isOrganizational);
+      sectionData.vendors = await this.collectVendorsList(orgWide);
     }
 
     // Models list - for all reports
     if (sections.includes("models") || sections.includes("all")) {
-      sectionData.models = await this.collectModelsList(isOrganizational);
+      sectionData.models = await this.collectModelsList(orgWide);
     }
 
     if (sections.includes("trainingRegistry") || sections.includes("all")) {
@@ -219,10 +282,15 @@ export class ReportDataCollector {
     }
 
     if (sections.includes("incidentManagement") || sections.includes("all")) {
-      sectionData.incidentManagement = await this.collectIncidentManagement(isOrganizational);
+      sectionData.incidentManagement = await this.collectIncidentManagement(orgWide);
     }
 
-    // Render chart SVGs
+    // Charts are derived from the sections that were just collected, not
+    // fetched again. They used to re-run getComplianceReportQuery and
+    // getAssessmentReportQuery — which fans out to two queries per pairing on
+    // an organization report — and a chart built from a second read can
+    // disagree with the table beside it.
+    const charts = this.deriveCharts(sectionData);
     const renderedCharts = this.renderCharts(charts);
 
     return {
@@ -232,6 +300,29 @@ export class ReportDataCollector {
       renderedCharts,
       sections: sectionData,
     };
+  }
+
+  /**
+   * Runs one section collector across a set of pairings, tagging each result
+   * with where it came from so the merge can label rows.
+   *
+   * Sequential rather than Promise.all: a whole-organization report can hold
+   * dozens of pairings, and each collector fires several queries. Fanning them
+   * all out at once would open more connections than the pool holds.
+   */
+  private async perTarget<T>(
+    targets: FrameworkTarget[],
+    collect: (target: FrameworkTarget) => Promise<T>,
+  ): Promise<SectionContribution<T>[]> {
+    const contributions: SectionContribution<T>[] = [];
+    for (const target of targets) {
+      contributions.push({
+        useCase: target.projectTitle,
+        framework: target.frameworkName,
+        data: await collect(target),
+      });
+    }
+    return contributions;
   }
 
   /**
@@ -276,8 +367,17 @@ export class ReportDataCollector {
    * Collect report metadata
    */
   private async collectMetadata(): Promise<ReportMetadata> {
-    const project = await getProjectByIdQuery(this.projectId, this.organizationId);
-    const framework = await getAllFrameworkByIdQuery(this.frameworkId, this.organizationId);
+    if (this.scope === "organization") return this.collectOrganizationMetadata();
+
+    // Project scope with resolved targets: they all name the same project, so
+    // the first one carries the ids the legacy lookups need.
+    const first = this.targets?.[0];
+    const projectId = first?.projectId ?? this.projectId;
+    const project = await getProjectByIdQuery(projectId, this.organizationId);
+    const framework = await getAllFrameworkByIdQuery(
+      first?.frameworkId ?? this.frameworkId,
+      this.organizationId,
+    );
     const user = await getUserByIdQuery(this.userId);
 
     // Get project owner name
@@ -290,16 +390,52 @@ export class ReportDataCollector {
     }
 
     return {
-      projectId: this.projectId,
+      projectId,
       projectTitle: project?.project_title || "Unknown Project",
       projectOwner: projectOwnerName,
-      frameworkId: this.frameworkId,
-      frameworkName: framework?.name || "Unknown Framework",
-      projectFrameworkId: this.projectFrameworkId,
+      frameworkId: first?.frameworkId ?? this.frameworkId,
+      // A project can hold several frameworks and the report covers all of
+      // them, so name them all rather than only the first.
+      frameworkName: this.frameworkNames() || framework?.name || "Unknown Framework",
+      projectFrameworkId: first?.projectFrameworkId ?? this.projectFrameworkId,
       generatedAt: new Date(),
       generatedBy: user ? `${user.name || ""} ${user.surname || ""}`.trim() : "System",
       organizationId: this.organizationId,
       isOrganizational: project?.is_organizational || false,
+      scope: this.scope,
+    };
+  }
+
+  /** Distinct framework names across the report's pairings, in target order. */
+  private frameworkNames(): string {
+    return Array.from(new Set((this.targets ?? []).map((t) => t.frameworkName).filter(Boolean))).join(
+      ", ",
+    );
+  }
+
+  /**
+   * Metadata for a whole-organization report. There is no single project to
+   * name, so the organization stands in as the subject and isOrganizational is
+   * set — that flag is the renderers' signal to drop the project line, and no
+   * section gate reads it any more (the framework gates read each pairing's
+   * own project flag).
+   */
+  private async collectOrganizationMetadata(): Promise<ReportMetadata> {
+    const user = await getUserByIdQuery(this.userId);
+    const organization = await getOrganizationByIdQuery(this.organizationId);
+
+    return {
+      projectId: 0,
+      projectTitle: organization?.name || "Organization",
+      projectOwner: "-",
+      frameworkId: 0,
+      frameworkName: this.frameworkNames() || "All frameworks",
+      projectFrameworkId: 0,
+      generatedAt: new Date(),
+      generatedBy: user ? `${user.name || ""} ${user.surname || ""}`.trim() : "System",
+      organizationId: this.organizationId,
+      isOrganizational: true,
+      scope: "organization",
     };
   }
 
@@ -331,135 +467,59 @@ export class ReportDataCollector {
   }
 
   /**
-   * Collect chart data for visualizations
-   * Framework-specific chart data collection
+   * Chart data, derived from the sections the report already collected.
+   *
+   * Every chart here restates a section beside it — the risk donut is
+   * projectRisks' own risksByLevel, the compliance bars are its controls
+   * grouped by family, the assessment donut is its answered/total. Reading the
+   * database a second time to draw them cost a duplicate query per pairing and
+   * let a chart disagree with the table under it.
    */
-  private async collectChartData(sections: string[]): Promise<ChartData> {
+  private deriveCharts(sections: ReportData["sections"]): ChartData {
     const chartData: ChartData = {};
 
-    // Risk distribution is common for all frameworks
-    if (sections.includes("projectRisks") || sections.includes("all")) {
-      chartData.riskDistribution = await this.collectRiskDistribution();
+    if (sections.projectRisks) {
+      chartData.riskDistribution = sections.projectRisks.risksByLevel;
     }
 
-    // Compliance progress is only for EU AI Act (frameworkId = 1)
-    if (this.frameworkId === 1) {
-      if (sections.includes("compliance") || sections.includes("all")) {
-        chartData.complianceProgress = await this.collectComplianceProgress();
-      }
+    if (sections.compliance) {
+      const progressMap: Record<string, { completed: number; total: number }> = {};
+      sections.compliance.controls.forEach((control) => {
+        // Control families are the framework's own, so the same family from
+        // two use cases pools into one bar.
+        const category = control.category || "Other";
+        if (!progressMap[category]) progressMap[category] = { completed: 0, total: 0 };
+        progressMap[category].total++;
+        // collectCompliance maps the row's "Done" to the section's status.
+        if (control.status === "Done") progressMap[category].completed++;
+      });
 
-      if (sections.includes("assessment") || sections.includes("all")) {
-        chartData.assessmentStatus = await this.collectAssessmentStatus();
-      }
+      chartData.complianceProgress = Object.entries(progressMap).map(([category, data]) => ({
+        category,
+        completed: data.completed,
+        total: data.total,
+        percentage: data.total > 0 ? Math.round((data.completed / data.total) * 100) : 0,
+      }));
+    }
+
+    if (sections.assessment) {
+      const { answeredQuestions, totalQuestions } = sections.assessment;
+      chartData.assessmentStatus = [
+        { status: "Answered", count: answeredQuestions, color: "#027A48" },
+        { status: "Pending", count: Math.max(totalQuestions - answeredQuestions, 0), color: "#F2F4F7" },
+      ];
     }
 
     return chartData;
   }
 
   /**
-   * Collect risk distribution data for charts
-   */
-  private async collectRiskDistribution(): Promise<RiskDistributionData[]> {
-    const risks = await getProjectRisksReportQuery(this.projectId, this.organizationId);
-    const distribution: Record<string, number> = {};
-
-    (risks as any[]).forEach((risk) => {
-      const level = risk.risk_level_autocalculated || "Unknown";
-      distribution[level] = (distribution[level] || 0) + 1;
-    });
-
-    return Object.entries(distribution).map(([level, count]) => ({
-      level,
-      count,
-      color: RISK_LEVEL_COLORS[level] || "#667085",
-    }));
-  }
-
-  /**
-   * Collect compliance progress data for charts
-   * Note: getComplianceReportQuery returns control categories with nested controls
-   */
-  private async collectComplianceProgress(): Promise<
-    { category: string; completed: number; total: number; percentage: number }[]
-  > {
-    try {
-      const controlCategories = await getComplianceReportQuery(
-        this.projectFrameworkId,
-        this.organizationId,
-      );
-
-      // Calculate progress per control category
-      const progressMap: Record<string, { completed: number; total: number }> = {};
-
-      (controlCategories as any[]).forEach((category) => {
-        const categoryName = category.name || category.dataValues?.name || "Other";
-        const controls = category.dataValues?.controls || category.controls || [];
-
-        if (!progressMap[categoryName]) {
-          progressMap[categoryName] = { completed: 0, total: 0 };
-        }
-
-        controls.forEach((control: any) => {
-          progressMap[categoryName].total++;
-          if (control.status === "Done") {
-            progressMap[categoryName].completed++;
-          }
-        });
-      });
-
-      return Object.entries(progressMap).map(([category, data]) => ({
-        category,
-        completed: data.completed,
-        total: data.total,
-        percentage: data.total > 0 ? Math.round((data.completed / data.total) * 100) : 0,
-      }));
-    } catch (error) {
-      console.error("[ReportDataCollector] Error collecting compliance progress:", error);
-      return [];
-    }
-  }
-
-  /**
-   * Collect assessment status data for charts
-   */
-  private async collectAssessmentStatus(): Promise<AssessmentStatusData[]> {
-    try {
-      const assessmentData = await getAssessmentReportQuery(
-        this.projectId,
-        this.frameworkId,
-        this.organizationId,
-      );
-
-      let answered = 0;
-      let pending = 0;
-
-      (assessmentData as any[]).forEach((topic) => {
-        (topic.subtopics || []).forEach((subtopic: any) => {
-          (subtopic.questions || []).forEach((q: any) => {
-            if (q.status === "Done") {
-              answered++;
-            } else {
-              pending++;
-            }
-          });
-        });
-      });
-
-      return [
-        { status: "Answered", count: answered, color: "#027A48" },
-        { status: "Pending", count: pending, color: "#F2F4F7" },
-      ];
-    } catch (error) {
-      console.error("[ReportDataCollector] Error collecting assessment status:", error);
-      return [];
-    }
-  }
-
-  /**
    * Collect project risks section data
    */
-  private async collectProjectRisks(): Promise<ProjectRisksSectionData> {
-    const risks = (await getProjectRisksReportQuery(this.projectId, this.organizationId)) as any[];
+  private async collectProjectRisks(orgWide = false): Promise<ProjectRisksSectionData> {
+    const risks = orgWide
+      ? await this.fetchOrganizationRisks()
+      : ((await getProjectRisksReportQuery(this.projectId, this.organizationId)) as any[]);
 
     const risksByLevel: Record<string, number> = {};
     risks.forEach((risk) => {
@@ -493,6 +553,28 @@ export class ReportDataCollector {
   }
 
   /**
+   * Every risk in the organization, for a report that is not pinned to one
+   * project. getProjectRisksReportQuery cannot serve this: it joins
+   * projects_risks to filter on a project id, which both drops risks linked to
+   * no project and — before scope existed — returned nothing at all when the
+   * report was handed a project id of 0.
+   *
+   * DISTINCT because projects_risks is many-to-many: a risk shared by two use
+   * cases would otherwise be counted twice in the totals and the chart.
+   */
+  private async fetchOrganizationRisks(): Promise<any[]> {
+    return (await sequelize.query(
+      `SELECT DISTINCT ON (risk.id)
+              risk.*, u.name AS risk_owner_name, u.surname AS risk_owner_surname
+         FROM risks risk
+         LEFT JOIN users u ON risk.risk_owner = u.id
+        WHERE risk.organization_id = :organizationId
+        ORDER BY risk.id`,
+      { replacements: { organizationId: this.organizationId }, type: QueryTypes.SELECT },
+    )) as any[];
+  }
+
+  /**
    * Collect vendors list section data (Organization group)
    * For organizational reports: all vendors
    * For use case reports: vendors linked to project
@@ -515,7 +597,7 @@ export class ReportDataCollector {
       } else {
         // Get only project-linked vendors for use case reports
         vendorsQuery = `
-          SELECT v.*, u.name as assignee_name, u.surname as assignee_surname
+          SELECT DISTINCT v.*, u.name as assignee_name, u.surname as assignee_surname
           FROM vendors v
           JOIN vendors_projects vp ON v.id = vp.vendor_id AND vp.organization_id = v.organization_id
           LEFT JOIN users u ON v.assignee = u.id
@@ -575,7 +657,7 @@ export class ReportDataCollector {
       } else {
         // For use case reports, filter by project
         vendorRisksQuery = `
-          SELECT vr.*, v.vendor_name as vendor_name, u.name as owner_name, u.surname as owner_surname
+          SELECT DISTINCT vr.*, v.vendor_name as vendor_name, u.name as owner_name, u.surname as owner_surname
           FROM vendorrisks vr
           JOIN vendors v ON vr.vendor_id = v.id AND v.organization_id = vr.organization_id
           LEFT JOIN users u ON vr.action_owner = u.id
@@ -660,9 +742,9 @@ export class ReportDataCollector {
    * Collect compliance section data
    * Note: getComplianceReportQuery returns control categories with nested controls
    */
-  private async collectCompliance(): Promise<ComplianceSectionData> {
+  private async collectCompliance(target?: FrameworkTarget): Promise<ComplianceSectionData> {
     const controlCategories = (await getComplianceReportQuery(
-      this.projectFrameworkId,
+      target?.projectFrameworkId ?? this.projectFrameworkId,
       this.organizationId,
     )) as any[];
 
@@ -673,7 +755,15 @@ export class ReportDataCollector {
       controls.forEach((control: any) => {
         allControls.push({
           ...control,
-          categoryName: category.name || category.dataValues?.name || "Unknown",
+          // controlcategories_struct_eu labels its rows `title`; there is no
+          // `name` column. Reading only `name` labelled every control
+          // "Unknown" and left the compliance-progress chart a single bar.
+          categoryName:
+            category.title ||
+            category.dataValues?.title ||
+            category.name ||
+            category.dataValues?.name ||
+            "Unknown",
         });
       });
     });
@@ -706,10 +796,10 @@ export class ReportDataCollector {
   /**
    * Collect assessment section data
    */
-  private async collectAssessment(): Promise<AssessmentSectionData> {
+  private async collectAssessment(target?: FrameworkTarget): Promise<AssessmentSectionData> {
     const assessmentData = await getAssessmentReportQuery(
-      this.projectId,
-      this.frameworkId,
+      target?.projectId ?? this.projectId,
+      target?.frameworkId ?? this.frameworkId,
       this.organizationId,
     );
 
@@ -767,10 +857,13 @@ export class ReportDataCollector {
   /**
    * Collect clauses and annexes section data (for ISO frameworks)
    */
-  private async collectClausesAndAnnexes(): Promise<ClausesAndAnnexesSectionData> {
+  private async collectClausesAndAnnexes(
+    target?: FrameworkTarget,
+  ): Promise<ClausesAndAnnexesSectionData> {
     try {
-      const clauses = await getClausesReportQuery(this.projectFrameworkId, this.organizationId);
-      const annexes = await getAnnexesReportQuery(this.projectFrameworkId, this.organizationId);
+      const projectFrameworkId = target?.projectFrameworkId ?? this.projectFrameworkId;
+      const clauses = await getClausesReportQuery(projectFrameworkId, this.organizationId);
+      const annexes = await getAnnexesReportQuery(projectFrameworkId, this.organizationId);
 
       return {
         clauses: (clauses as any[]).map((clause) => ({
@@ -824,9 +917,15 @@ export class ReportDataCollector {
         `;
         replacements = { organizationId: this.organizationId };
       } else {
-        // Get only project-linked models for use case reports
+        // Get only project-linked models for use case reports.
+        //
+        // DISTINCT because model_inventories_projects_frameworks is not one
+        // row per (model, project): the same model is linked once with a
+        // framework and once without, so a plain JOIN listed every model
+        // twice. Measured on 2026-07-29 — one model in the database, two in
+        // the report.
         modelsQuery = `
-          SELECT mi.*, u.name as approver_name, u.surname as approver_surname
+          SELECT DISTINCT mi.*, u.name as approver_name, u.surname as approver_surname
           FROM model_inventories mi
           JOIN model_inventories_projects_frameworks mip ON mi.id = mip.model_inventory_id AND mip.organization_id = mi.organization_id
           LEFT JOIN users u ON mi.approver = u.id
@@ -883,9 +982,11 @@ export class ReportDataCollector {
         `;
         replacements = { organizationId: this.organizationId };
       } else {
-        // For use case reports, filter by project
+        // For use case reports, filter by project. DISTINCT for the same
+        // reason as collectModelsList — the link table fans a risk out once
+        // per link row, and two model risks were reported as four.
         modelRisksQuery = `
-          SELECT mr.*, mi.model as model_name
+          SELECT DISTINCT mr.*, mi.model as model_name
           FROM model_risks mr
           JOIN model_inventories mi ON mr.model_id = mi.id AND mi.organization_id = mr.organization_id
           JOIN model_inventories_projects_frameworks mip ON mi.id = mip.model_inventory_id AND mip.organization_id = mi.organization_id
@@ -995,7 +1096,9 @@ export class ReportDataCollector {
    * Collect NIST AI RMF subcategories section data
    * Groups subcategories by function (Govern, Map, Measure, Manage)
    */
-  private async collectNistSubcategories(): Promise<NistSubcategoriesSectionData> {
+  private async collectNistSubcategories(
+    target?: FrameworkTarget,
+  ): Promise<NistSubcategoriesSectionData> {
     try {
       // Get subcategories with their risks for this project
       const subcategoriesQuery = `
@@ -1023,7 +1126,7 @@ export class ReportDataCollector {
       const results = (await sequelize.query(subcategoriesQuery, {
         replacements: {
           organizationId: this.organizationId,
-          projectFrameworkId: this.projectFrameworkId,
+          projectFrameworkId: target?.projectFrameworkId ?? this.projectFrameworkId,
         },
         type: QueryTypes.SELECT,
       })) as any[];
@@ -1164,6 +1267,10 @@ export class ReportDataCollector {
 
 /**
  * Factory function to create a data collector instance
+ *
+ * Single-target: the caller already knows the one project and framework. The
+ * legacy manual /generate-report path takes all three ids from its request
+ * body, so it still uses this.
  */
 export function createDataCollector(
   organizationId: number,
@@ -1178,5 +1285,27 @@ export function createDataCollector(
     frameworkId,
     projectFrameworkId,
     userId,
+  );
+}
+
+/**
+ * Collector for a report described by scope rather than by a single pairing.
+ * Templates and schedules go through here — see resolveFrameworkTargets.
+ */
+export function createScopedDataCollector(
+  organizationId: number,
+  userId: number,
+  scope: ReportScope,
+  targets: FrameworkTarget[],
+): ReportDataCollector {
+  const first = targets[0];
+  return new ReportDataCollector(
+    organizationId,
+    first?.projectId ?? 0,
+    first?.frameworkId ?? 0,
+    first?.projectFrameworkId ?? 0,
+    userId,
+    scope,
+    targets,
   );
 }

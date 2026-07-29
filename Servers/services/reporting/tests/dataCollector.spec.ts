@@ -328,6 +328,29 @@ describe("dataCollector", () => {
       expect(controls[1].category).toBe("Human oversight");
     });
 
+    it("reads the control family from the category's `title`, the column the query returns", async () => {
+      // getComplianceEUByProjectIdQuery -> getCompliancesEUByIdQuery returns
+      // controlcategories_struct_eu rows, whose label column is `title`. There
+      // is no `name`, so reading only `name` made every control's family
+      // "Unknown" and collapsed the compliance-progress chart to one bar.
+      mockGetCompliance.mockResolvedValue([
+        {
+          id: 1,
+          title: "AI literacy",
+          controls: [{ id: 7, title: "Train staff", status: "Done", owner: null }],
+        },
+      ] as any);
+      mockQuery.mockResolvedValue([] as any);
+
+      const collector = createDataCollector(10, 1, 1, 100, 5);
+      const result = await collector.collectAllData(["compliance"]);
+
+      expect(result.sections.compliance!.controls[0].category).toBe("AI literacy");
+      expect(result.charts.complianceProgress).toEqual([
+        { category: "AI literacy", completed: 1, total: 1, percentage: 100 },
+      ]);
+    });
+
     it("names the model_inventories join column `approver`, since there is no owner column", async () => {
       // verifywise.model_inventories has `approver` (a users FK) and NO `owner`
       // column at all — the UI labels the field "Approver". Projecting the
