@@ -226,7 +226,9 @@ const Monitoring: React.FC = () => {
           The token is signed server-side with this deployment's private key and never shown here.
           The observability server verifies it with the matching public key. A token can only be
           generated once.
-          {!authHeaderSet && !canGenerateToken ? " Save the deployment name first, then generate." : ""}
+          {!authHeaderSet && !canGenerateToken
+            ? " Save the deployment name first, then generate."
+            : ""}
         </Typography>
         <Box>
           <CustomizableButton
