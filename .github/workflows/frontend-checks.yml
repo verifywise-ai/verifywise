@@ -152,7 +152,7 @@ jobs:
 
       - name: Post coverage gate failure comment
         if: github.event_name == 'pull_request' && failure()
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const fs = require("fs");
@@ -204,7 +204,7 @@ jobs:
 
       - name: Post coverage gate success comment
         if: github.event_name == 'pull_request' && success()
-        uses: actions/github-script@v7
+        uses: actions/github-script@v9
         with:
           script: |
             const body = "## ✅ Coverage Gate Passed\n\nAll coverage thresholds are met.\n\n<!-- coverage-gate -->";
