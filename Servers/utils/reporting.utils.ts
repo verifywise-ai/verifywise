@@ -200,7 +200,7 @@ export const getAssessmentReportQuery = async (
     `SELECT t.id AS topic_id, t.title AS topic_title, t.order_no AS topic_order,
             st.id AS subtopic_id, st.title AS subtopic_title, st.order_no AS subtopic_order,
             q.id AS question_id, q.question AS question, q.order_no AS question_order,
-            a.answer AS answer, a.status AS status
+            a.id AS answer_id, a.answer AS answer, a.status AS status
        FROM topics_struct_eu t
        LEFT JOIN subtopics_struct_eu st ON st.topic_id = t.id
        LEFT JOIN questions_struct_eu q ON q.subtopic_id = st.id
@@ -232,7 +232,14 @@ export const getAssessmentReportQuery = async (
     }
     // A question with no answer row is not part of this project's assessment;
     // counting it would inflate the section's denominator.
-    if (row.question_id == null || row.answer === undefined || row.status === null) continue;
+    //
+    // Tested on answer_id, the primary key, and not on status or answer: both
+    // of those are nullable, so an existing answer row with a NULL status
+    // would look like a missing one and the question would vanish from
+    // totalQuestions — the completion figure the section leads with and the
+    // analyzers reason over. answer_id reproduces the INNER JOIN the loader
+    // this replaced used, whatever the row holds.
+    if (row.question_id == null || row.answer_id == null) continue;
 
     subtopic.questions.push({
       id: row.question_id,

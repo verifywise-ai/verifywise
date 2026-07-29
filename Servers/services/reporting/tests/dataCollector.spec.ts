@@ -439,4 +439,38 @@ describe("dataCollector", () => {
       expect(mockGetUser).not.toHaveBeenCalledWith(99);
     });
   });
+  describe("risk level colours", () => {
+    // risks.risk_level_autocalculated holds "High risk", "Medium risk" and so
+    // on (Clients/src/domain/enums/riskLevelAutoCalculated.enum.ts). The
+    // colour map was keyed "High"/"Medium", so every level missed and the
+    // report's donut, bar chart and legend came out uniformly grey.
+    it.each([
+      ["Very high risk", "#B42318"],
+      ["High risk", "#C4320A"],
+      ["Medium risk", "#B54708"],
+      ["Low risk", "#027A48"],
+      ["Very low risk", "#026AA2"],
+    ])("%s is not the grey fallback", async (level, expected) => {
+      mockGetProjectRisks.mockResolvedValue([
+        { id: 1, risk_name: "R", risk_level_autocalculated: level },
+      ] as never);
+
+      const collector = createDataCollector(10, 1, 1, 100, 5);
+      const result = await collector.collectAllData(["projectRisks"]);
+
+      expect(result.sections.projectRisks!.risksByLevel[0].color).toBe(expected);
+    });
+
+    it("still falls back to grey for a level with no palette entry", async () => {
+      mockGetProjectRisks.mockResolvedValue([
+        { id: 1, risk_name: "R", risk_level_autocalculated: null },
+      ] as never);
+
+      const collector = createDataCollector(10, 1, 1, 100, 5);
+      const result = await collector.collectAllData(["projectRisks"]);
+
+      expect(result.sections.projectRisks!.risksByLevel[0].level).toBe("Unknown");
+      expect(result.sections.projectRisks!.risksByLevel[0].color).toBe("#667085");
+    });
+  });
 });

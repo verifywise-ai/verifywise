@@ -604,4 +604,49 @@ describe("DOCX Generator", () => {
       expect(text).toContain("No risk rows were supplied.");
     });
   });
+  describe("use case provenance on merged sections", () => {
+    // Mirrors reportPdfTemplate.test.ts. An organization report merges each
+    // framework section across every use case and the ids repeat, so the
+    // renderers add a Use case column as soon as mergeSections labels the rows.
+    // createTable pairs headers with cells positionally — both sides are driven
+    // off one flag, and this is what holds them in step.
+    const merged = (useCase?: string) => ({
+      ...mockReportData,
+      sections: {
+        compliance: {
+          overallProgress: 0,
+          totalControls: 1,
+          completedControls: 0,
+          controls: [{ id: 1, controlId: "C1", title: "Train staff", status: "Waiting", useCase }],
+        },
+        clausesAndAnnexes: {
+          clauses: [
+            { id: 1, clauseId: "4", title: "Context", status: "Done", subClauses: [], useCase },
+          ],
+          annexes: [
+            { id: 1, annexId: "A.1", title: "Policy", status: "Done", controls: [], useCase },
+          ],
+        },
+      },
+    }) as unknown as ReportData;
+
+    it("labels the merged rows and keeps the tables well formed", async () => {
+      const result = await generateDOCX(merged("Alpha"));
+      const text = await docxText(result.content);
+
+      expect(text).toContain("Use case");
+      expect(text).toContain("Alpha");
+      expect(text).toContain("C1");
+      expect(text).toContain("4");
+      expect(text).toContain("A.1");
+    });
+
+    it("adds no column for a single-use-case report", async () => {
+      const result = await generateDOCX(merged());
+      const text = await docxText(result.content);
+
+      expect(text).not.toContain("Use case");
+      expect(text).toContain("C1");
+    });
+  });
 });

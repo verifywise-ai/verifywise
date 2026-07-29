@@ -53,14 +53,30 @@ import { getAllFrameworkByIdQuery } from "../../utils/framework.utils";
 import { sequelize } from "../../database/db";
 import { QueryTypes } from "sequelize";
 
-// Risk level color mapping
+/**
+ * Risk level colour mapping.
+ *
+ * The `... risk` keys are what `risks.risk_level_autocalculated` actually
+ * holds — see Clients/src/domain/enums/riskLevelAutoCalculated.enum.ts. Until
+ * 2026-07-29 only the unsuffixed forms were here, so every real level missed
+ * and the report's donut, bar chart and legend rendered uniformly grey.
+ *
+ * The unsuffixed keys are kept: vendor and model risk levels are written
+ * without the suffix, and they share this map.
+ */
 const RISK_LEVEL_COLORS: Record<string, string> = {
   Critical: "#B42318",
+  "Very high risk": "#B42318",
   "Very High": "#B42318",
+  "High risk": "#C4320A",
   High: "#C4320A",
+  "Medium risk": "#B54708",
   Medium: "#B54708",
+  "Low risk": "#027A48",
   Low: "#027A48",
+  "Very low risk": "#026AA2",
   "Very Low": "#026AA2",
+  "No risk": "#667085",
 };
 
 /**
