@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent, waitFor, within } from "@testing-library/react";
+import { screen, fireEvent, waitFor, within } from "@testing-library/react";
+// The cards and the edit modal read colours off the app theme.
+import { renderWithProviders as render } from "../../../../test/renderWithProviders";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 
@@ -85,38 +87,38 @@ describe("TemplatesTab", () => {
     expect(screen.getAllByText(/Use Template/i).length).toBe(2);
   });
 
-  it("offers no edit or archive on a system template", () => {
+  it("offers no edit or delete on a system template", () => {
     render(<TemplatesTab onUse={() => {}} />);
     const card = cardFor("EU AI Act pack");
 
     expect(within(card).queryByText("Edit")).not.toBeInTheDocument();
-    expect(within(card).queryByText("Archive")).not.toBeInTheDocument();
+    expect(within(card).queryByText("Delete")).not.toBeInTheDocument();
     expect(within(card).getByText("System")).toBeInTheDocument();
   });
 
-  it("offers edit and archive on a custom template", () => {
+  it("offers edit and delete on a custom template", () => {
     render(<TemplatesTab onUse={() => {}} />);
     const card = cardFor("My quarterly review");
 
     expect(within(card).getByText("Edit")).toBeInTheDocument();
-    expect(within(card).getByText("Archive")).toBeInTheDocument();
+    expect(within(card).getByText("Delete")).toBeInTheDocument();
     expect(within(card).queryByText("System")).not.toBeInTheDocument();
   });
 
-  it("confirms before archiving, and only then calls the mutation", () => {
+  it("confirms before deleting, and only then calls the mutation", () => {
     render(<TemplatesTab onUse={() => {}} />);
 
-    fireEvent.click(within(cardFor("My quarterly review")).getByText("Archive"));
+    fireEvent.click(within(cardFor("My quarterly review")).getByText("Delete"));
 
     // Confirmation dialog is up and names the template; nothing sent yet.
     const dialog = screen
-      .getByText("Archive template")
+      .getByText("Delete template")
       .closest('[role="presentation"]') as HTMLElement;
     expect(within(dialog).getByText(/My quarterly review/)).toBeInTheDocument();
     expect(archiveMutate).not.toHaveBeenCalled();
 
-    // The dialog's own Archive button (the card's is still in the DOM).
-    fireEvent.click(within(dialog).getByText("Archive"));
+    // The dialog's own Delete button (the card's is still in the DOM).
+    fireEvent.click(within(dialog).getByText("Delete"));
 
     expect(archiveMutate).toHaveBeenCalledTimes(1);
     expect(archiveMutate.mock.calls[0][0]).toBe(CUSTOM_TEMPLATE.id);
@@ -156,12 +158,12 @@ describe("TemplatesTab", () => {
     expect(within(system).getByText("EU AI Act pack")).toBeInTheDocument();
   });
 
-  it("offers no edit or archive on a system template", () => {
+  it("offers no edit or delete on a system template", () => {
     renderWithProviders(<TemplatesTab onUse={vi.fn()} />);
 
     const system = screen.getByRole("region", { name: /system templates/i });
     expect(within(system).queryByRole("button", { name: /^edit$/i })).not.toBeInTheDocument();
-    expect(within(system).queryByRole("button", { name: /^archive$/i })).not.toBeInTheDocument();
+    expect(within(system).queryByRole("button", { name: /^delete$/i })).not.toBeInTheDocument();
     expect(within(system).getByRole("button", { name: /duplicate/i })).toBeInTheDocument();
   });
 

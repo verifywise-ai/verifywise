@@ -86,10 +86,52 @@ describe("ReadinessDashboard", () => {
     expect(screen.getByText("45")).toBeInTheDocument();
   });
 
-  it("shows loading spinner for scores when loading", () => {
+  // framework_readiness_scores keys its upsert on created_by, so the same
+  // framework comes back once per user that has calculated it.
+  const twoUsersSameFramework = [
+    {
+      id: 1,
+      framework_type: "eu_ai_act",
+      project_id: 1,
+      created_by: 2,
+      avg_score: 29,
+      calculated_at: "2026-07-28T18:07:14.235Z",
+    },
+    {
+      id: 6,
+      framework_type: "eu_ai_act",
+      project_id: 1,
+      created_by: 1,
+      avg_score: 36,
+      calculated_at: "2026-07-30T14:05:35.633Z",
+    },
+  ];
+
+  it("renders one card per framework when two users have scored the same framework", () => {
+    mockScores.mockReturnValue({ data: twoUsersSameFramework, isLoading: false });
+    // Scoped mode hides the framework tabs, so "EU AI Act" here is the card title.
+    renderWithProviders(<ReadinessDashboard projectId={1} frameworkType="eu_ai_act" />);
+    expect(screen.getAllByText("EU AI Act")).toHaveLength(1);
+    expect(screen.getByText("36")).toBeInTheDocument();
+    expect(screen.queryByText("29")).not.toBeInTheDocument();
+  });
+
+  it("dedupes on the org-wide path too, keeping the newest regardless of API order", () => {
+    // getFrameworkScoresQuery sorts by avg_score ASC, not by recency, so the
+    // newest row is not reliably last.
+    mockScores.mockReturnValue({
+      data: [...twoUsersSameFramework].reverse(),
+      isLoading: false,
+    });
+    renderWithProviders(<ReadinessDashboard />);
+    expect(screen.getByText("36")).toBeInTheDocument();
+    expect(screen.queryByText("29")).not.toBeInTheDocument();
+  });
+
+  it("shows loading skeleton for scores when loading", () => {
     mockScores.mockReturnValue({ data: undefined, isLoading: true });
     renderWithProviders(<ReadinessDashboard />);
-    expect(document.querySelector(".MuiCircularProgress-root")).toBeInTheDocument();
+    expect(document.querySelector(".MuiSkeleton-root")).toBeInTheDocument();
   });
 
   it("shows empty state when no scores", () => {

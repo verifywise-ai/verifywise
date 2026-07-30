@@ -1,21 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from "react";
-import {
-  Box,
-  Stack,
-  Typography,
-  CircularProgress,
-  TextField,
-  MenuItem,
-  useTheme,
-} from "@mui/material";
-import { FileText } from "lucide-react";
+import { Box, Stack, Typography, CircularProgress, useTheme } from "@mui/material";
+import { LayoutTemplate } from "lucide-react";
 import { text as textColors } from "../../themes/palette";
-import { cardStyles } from "../../themes/components";
 import Chip from "../../components/Chip";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { EmptyState } from "../../components/EmptyState";
 import StandardModal from "../../components/Modals/StandardModal";
+import Field from "../../components/Inputs/Field";
+import Select from "../../components/Inputs/Select";
 import {
   useTemplates,
   useUpdateTemplate,
@@ -40,6 +33,11 @@ type TemplateCreateBody = ReportTemplateWriteBody & {
 // Same three the builder offers. Kept in sync by hand — the backend takes any
 // string, so a mismatch is a UX bug, not a type error.
 const CATEGORIES = ["governance", "compliance", "risk"];
+
+const CATEGORY_ITEMS = CATEGORIES.map((c) => ({
+  _id: c,
+  name: c.charAt(0).toUpperCase() + c.slice(1),
+}));
 
 // A 409 from PATCH/POST /templates is always a unique-name violation. Saying
 // "failed" there sends the user hunting for a server problem that isn't one.
@@ -66,7 +64,7 @@ export default function TemplatesTab({
 
   const [editing, setEditing] = useState<any>(null);
   const [form, setForm] = useState({ name: "", description: "", category: "" });
-  const [archiving, setArchiving] = useState<any>(null);
+  const [deleting, setDeleting] = useState<any>(null);
 
   const openEdit = (t: any) => {
     setForm({
@@ -95,11 +93,11 @@ export default function TemplatesTab({
     );
   };
 
-  const confirmArchive = () => {
-    if (!archiving) return;
-    archive.mutate(archiving.id, {
-      onSuccess: () => setArchiving(null),
-      onError: mutationError("Failed to archive template"),
+  const confirmDelete = () => {
+    if (!deleting) return;
+    archive.mutate(deleting.id, {
+      onSuccess: () => setDeleting(null),
+      onError: mutationError("Failed to delete template"),
     });
   };
 
@@ -165,29 +163,60 @@ export default function TemplatesTab({
   }
 
   if (!templates.length) {
-    return <EmptyState icon={FileText} message="No report templates available yet." showBorder />;
+    return (
+      <EmptyState icon={LayoutTemplate} message="No report templates available yet." showBorder />
+    );
   }
 
+  // Style guide § Buttons: 34px tall, 13px text, #d0d5dd border, accent hover.
   const secondaryButtonSx = {
     "height": 34,
     "fontSize": 13,
-    "border": `1px solid ${theme.palette.border?.dark || "#d0d5dd"}`,
+    "border": `1px solid ${theme.palette.border.dark}`,
     "color": theme.palette.text.secondary,
     "&:hover": {
       backgroundColor: theme.palette.background.accent,
-      border: `1px solid ${theme.palette.border?.dark || "#d0d5dd"}`,
+      border: `1px solid ${theme.palette.border.dark}`,
     },
   };
 
+  // Style guide § Cards: white surface, 1px border.light frame, 4px radius,
+  // 16px padding. cardStyles.base() is deliberately not reused — its padding is
+  // theme.spacing(2), which is 4px on this theme, and its border is the darker
+  // input border, so neither matches the card spec.
+  const cardSx = {
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+    backgroundColor: theme.palette.background.main,
+    border: `1px solid ${theme.palette.border.light}`,
+    borderRadius: "4px",
+    padding: "16px",
+  };
+
+  // Section title, 16px/600 on text.primary, 8px above the grid it labels.
+  const sectionTitleSx = {
+    fontSize: 16,
+    fontWeight: 600,
+    color: textColors.primary,
+    mb: "8px",
+  };
+
+  const cardGridSx = {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+    gap: "16px",
+  };
+
   // is_system_template marks the shared, cross-organization templates. Editing
-  // or archiving one would change it for every organization, so those actions
+  // or deleting one would change it for every organization, so those actions
   // stay withheld and Duplicate is offered instead.
   const myTemplates = templates.filter((t: any) => !t.is_system_template);
   const systemTemplates = templates.filter((t: any) => t.is_system_template);
 
   const renderCard = (t: any, { editable }: { editable: boolean }) => (
-    <Stack key={t.id} sx={{ ...cardStyles.base(theme), gap: "8px" }}>
-      <Stack direction="row" spacing="8px" flexWrap="wrap">
+    <Stack key={t.id} sx={cardSx}>
+      <Stack direction="row" spacing="8px" flexWrap="wrap" useFlexGap>
         <Chip label={t.category} size="small" />
         {t.recommended_frequency && <Chip label={t.recommended_frequency} size="small" />}
         {/* Reads as "this card is deliberately read-only" rather than
@@ -196,23 +225,22 @@ export default function TemplatesTab({
           <Chip label="System" variant="info" size="small" uppercase={false} />
         )}
       </Stack>
-      <Typography sx={{ fontSize: 16, fontWeight: 600, color: textColors.primary }}>
+      {/* Card title 16/600, body 13 on text.tertiary — style guide § Typography. */}
+      <Typography
+        sx={{ fontSize: 16, fontWeight: 600, lineHeight: 1.4, color: textColors.primary }}
+      >
         {t.name}
       </Typography>
-      <Typography sx={{ fontSize: 13, color: textColors.tertiary, flex: 1 }}>
+      <Typography sx={{ fontSize: 13, lineHeight: 1.5, color: textColors.tertiary, flex: 1 }}>
         {t.description}
       </Typography>
       <Stack direction="row" spacing="8px" flexWrap="wrap" useFlexGap>
+        {/* No sx override: CustomizableButton's contained/primary default is
+            already the 34px, 13px, #13715B spec. */}
         <CustomizableButton
           variant="contained"
           text="Use Template"
           onClick={() => onUse(t.id, "schedule")}
-          sx={{
-            "backgroundColor": theme.palette.primary.main,
-            "&:hover": { backgroundColor: theme.palette.primary.dark },
-            "height": 34,
-            "fontSize": 13,
-          }}
         />
         <CustomizableButton
           variant="outlined"
@@ -234,8 +262,8 @@ export default function TemplatesTab({
             />
             <CustomizableButton
               variant="outlined"
-              text="Archive"
-              onClick={() => setArchiving(t)}
+              text="Delete"
+              onClick={() => setDeleting(t)}
               sx={secondaryButtonSx}
             />
           </>
@@ -253,34 +281,20 @@ export default function TemplatesTab({
 
   return (
     <>
-      <Box component="section" aria-label="My templates" sx={{ mb: 4 }}>
-        <Typography sx={{ fontWeight: 600, fontSize: 15, mb: 1 }}>My templates</Typography>
+      <Box component="section" aria-label="My templates" sx={{ mb: "24px" }}>
+        <Typography sx={sectionTitleSx}>My templates</Typography>
         {myTemplates.length === 0 ? (
-          <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
+          <Typography sx={{ fontSize: 13, lineHeight: 1.5, color: textColors.tertiary }}>
             You haven&apos;t created any templates yet.
           </Typography>
         ) : (
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
-              gap: "16px",
-            }}
-          >
-            {myTemplates.map((t: any) => renderCard(t, { editable: true }))}
-          </Box>
+          <Box sx={cardGridSx}>{myTemplates.map((t: any) => renderCard(t, { editable: true }))}</Box>
         )}
       </Box>
 
       <Box component="section" aria-label="System templates">
-        <Typography sx={{ fontWeight: 600, fontSize: 15, mb: 1 }}>System templates</Typography>
-        <Box
-          sx={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
-            gap: "16px",
-          }}
-        >
+        <Typography sx={sectionTitleSx}>System templates</Typography>
+        <Box sx={cardGridSx}>
           {systemTemplates.map((t: any) => renderCard(t, { editable: false }))}
         </Box>
       </Box>
@@ -296,46 +310,47 @@ export default function TemplatesTab({
         fitContent
       >
         <Stack spacing={6}>
-          <TextField
+          <Field
+            id="template-name"
             label="Template name"
+            isRequired
             value={form.name}
             onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-            fullWidth
           />
-          <TextField
+          <Field
+            id="template-description"
             label="Description"
-            value={form.description}
-            onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
+            isOptional
             multiline
             minRows={2}
-            fullWidth
+            value={form.description}
+            onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))}
           />
-          <TextField
-            select
+          <Select
+            id="template-category"
             label="Category"
             value={form.category}
-            onChange={(e) => setForm((p) => ({ ...p, category: e.target.value }))}
-            fullWidth
-          >
-            {CATEGORIES.map((c) => (
-              <MenuItem key={c} value={c}>
-                {c.charAt(0).toUpperCase() + c.slice(1)}
-              </MenuItem>
-            ))}
-          </TextField>
+            items={CATEGORY_ITEMS}
+            onChange={(e) => setForm((p) => ({ ...p, category: String(e.target.value) }))}
+            getOptionValue={(item) => item._id}
+          />
         </Stack>
       </StandardModal>
 
-      {/* Archiving is a soft delete (is_active = false): the row survives and
-          schedules already pointing at it keep running. Say "archive", not
-          "delete", so the wording matches what actually happens. */}
+      {/* The server soft-deletes (is_active = false) because
+          scheduled_reports.template_id is a NOT NULL FK with no ON DELETE
+          clause, so a hard DELETE of a referenced template fails. That is an
+          implementation detail: getTemplatesQuery filters is_active = true and
+          nothing in the UI can bring the template back, so to the user this is
+          a delete. The one consequence worth surfacing is that schedules
+          already pointing at it keep running. */}
       <StandardModal
-        isOpen={!!archiving}
-        onClose={() => setArchiving(null)}
-        title="Archive template"
-        description={`Archive "${archiving?.name ?? ""}"? It will no longer appear here. Scheduled reports already using it keep running.`}
-        onSubmit={confirmArchive}
-        submitButtonText="Archive"
+        isOpen={!!deleting}
+        onClose={() => setDeleting(null)}
+        title="Delete template"
+        description={`Delete "${deleting?.name ?? ""}"? This cannot be undone. Scheduled reports already using it keep running.`}
+        onSubmit={confirmDelete}
+        submitButtonText="Delete"
         submitButtonColor={theme.palette.error?.main}
         isSubmitting={archive.isPending}
       />

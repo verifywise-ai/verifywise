@@ -1,9 +1,11 @@
 import { Box, Typography, Stack, LinearProgress } from "@mui/material";
 import Chip from "../Chip";
-import { AlertTriangle, ArrowDown, CheckCircle2, Lightbulb } from "lucide-react";
+import CustomizableSkeleton from "../Skeletons";
+import { EmptyState } from "../EmptyState";
+import { AlertTriangle, ArrowDown, CheckCircle, Lightbulb } from "lucide-react";
 import {
   status,
-  accent,
+  risk,
   text as textColors,
   border as borderPalette,
   background,
@@ -24,10 +26,14 @@ interface WeakControlsListProps {
   maxItems?: number;
 }
 
+/**
+ * Priority colors mirror the risk palette that Chip auto-derives from the same
+ * labels, so the badge and its icon always agree.
+ */
 function getPriorityConfig(score: number) {
-  if (score < 30) return { label: "Critical", colors: status.error, Icon: AlertTriangle };
-  if (score < 60) return { label: "High", colors: status.warning, Icon: ArrowDown };
-  return { label: "Medium", colors: accent.primary, Icon: CheckCircle2 };
+  if (score < 30) return { label: "Critical", colors: risk.critical, Icon: AlertTriangle };
+  if (score < 60) return { label: "High", colors: risk.high, Icon: ArrowDown };
+  return { label: "Medium", colors: risk.medium, Icon: CheckCircle };
 }
 
 function formatFrameworkName(type: string): string {
@@ -42,7 +48,7 @@ function formatFrameworkName(type: string): string {
 
 function getScoreColor(score: number) {
   if (score >= 80) return status.success.text;
-  if (score >= 60) return accent.primary.text;
+  if (score >= 60) return status.info.text;
   if (score >= 40) return status.warning.text;
   return status.error.text;
 }
@@ -56,42 +62,21 @@ export default function WeakControlsList({
 }: WeakControlsListProps) {
   if (isLoading) {
     return (
-      <Box
-        sx={{
-          height: FIXED_HEIGHT,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <Typography sx={{ fontSize: 13, color: textColors.muted }}>Loading...</Typography>
+      <Box sx={{ height: FIXED_HEIGHT }}>
+        <CustomizableSkeleton variant="rounded" width="100%" height={FIXED_HEIGHT - 16} />
       </Box>
     );
   }
 
   if (!controls || controls.length === 0) {
     return (
-      <Box
-        sx={{
-          height: FIXED_HEIGHT,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          p: 3,
-          textAlign: "center",
-          backgroundColor: background.accent,
-          borderRadius: 2,
-        }}
-      >
-        <CheckCircle2
-          size={28}
-          strokeWidth={1.5}
-          style={{ color: status.success.text, marginBottom: 8 }}
+      <Box sx={{ height: FIXED_HEIGHT }}>
+        <EmptyState
+          icon={CheckCircle}
+          message="No weak controls found. Your compliance posture looks strong!"
+          fillContainer
+          showBorder={false}
         />
-        <Typography sx={{ fontSize: 13, color: textColors.tertiary }}>
-          No weak controls found. Your compliance posture looks strong!
-        </Typography>
       </Box>
     );
   }
@@ -101,11 +86,12 @@ export default function WeakControlsList({
       {/* Header */}
       <Typography
         sx={{
-          fontSize: 15,
+          fontSize: 16,
           fontWeight: 600,
           color: textColors.primary,
           fontFamily: "'Red Hat Display', 'Geist', sans-serif",
-          mb: 1,
+          lineHeight: 1.4,
+          mb: "12px",
           flexShrink: 0,
         }}
       >
@@ -118,17 +104,17 @@ export default function WeakControlsList({
           "flex": 1,
           "overflowY": "auto",
           "overflowX": "hidden",
-          "pr": 0.5,
+          "pr": "4px",
           "&::-webkit-scrollbar": { width: 4 },
           "&::-webkit-scrollbar-track": { backgroundColor: "transparent" },
           "&::-webkit-scrollbar-thumb": {
             "backgroundColor": background.hover,
-            "borderRadius": 2,
+            "borderRadius": "4px",
             "&:hover": { backgroundColor: textColors.muted },
           },
         }}
       >
-        <Stack spacing={1.5}>
+        <Stack sx={{ gap: "8px" }}>
           {controls.slice(0, maxItems).map((ctrl, i) => {
             const priority = getPriorityConfig(ctrl.overall_score);
 
@@ -142,11 +128,11 @@ export default function WeakControlsList({
               <Box
                 key={`${ctrl.control_id}-${i}`}
                 sx={{
-                  "p": 2,
-                  "borderRadius": "8px",
+                  "padding": "12px 16px",
+                  "borderRadius": "4px",
                   "border": `1px solid ${borderPalette.light}`,
                   "backgroundColor": background.main,
-                  "transition": "all 0.2s ease",
+                  "transition": "background-color 0.2s ease, border-color 0.2s ease",
                   "&:hover": {
                     borderColor: priority.colors.border,
                     backgroundColor: priority.colors.bg,
@@ -158,15 +144,15 @@ export default function WeakControlsList({
                   direction="row"
                   justifyContent="space-between"
                   alignItems="center"
-                  sx={{ mb: 1 }}
+                  sx={{ mb: "8px", gap: "8px" }}
                 >
-                  <Stack direction="row" alignItems="center" spacing={1.5}>
+                  <Stack direction="row" alignItems="center" sx={{ gap: "8px" }}>
                     {/* Priority icon */}
                     <Box
                       sx={{
                         width: 28,
                         height: 28,
-                        borderRadius: "6px",
+                        borderRadius: "4px",
                         backgroundColor: priority.colors.bg,
                         border: `1px solid ${priority.colors.border}`,
                         display: "flex",
@@ -181,31 +167,25 @@ export default function WeakControlsList({
                       <Typography
                         sx={{
                           fontSize: 13,
-                          fontWeight: 600,
+                          fontWeight: 500,
                           color: textColors.primary,
-                          lineHeight: 1.2,
+                          lineHeight: 1.4,
                         }}
                       >
                         Control #{ctrl.control_id}
                       </Typography>
-                      <Typography sx={{ fontSize: 11, color: textColors.muted }}>
+                      <Typography sx={{ fontSize: 11, color: textColors.accent }}>
                         {formatFrameworkName(ctrl.framework_type)}
                       </Typography>
                     </Box>
                   </Stack>
 
-                  <Stack direction="row" alignItems="center" spacing={1.25}>
-                    <Chip
-                      label={priority.label}
-                      size="small"
-                      backgroundColor={priority.colors.bg}
-                      textColor={priority.colors.text}
-                      uppercase={false}
-                    />
+                  <Stack direction="row" alignItems="center" sx={{ gap: "8px" }}>
+                    <Chip label={priority.label} size="small" uppercase={false} />
                     <Typography
                       sx={{
-                        fontSize: 18,
-                        fontWeight: 700,
+                        fontSize: 16,
+                        fontWeight: 600,
                         color: getScoreColor(ctrl.overall_score),
                       }}
                     >
@@ -220,11 +200,11 @@ export default function WeakControlsList({
                   value={ctrl.overall_score}
                   sx={{
                     "height": 4,
-                    "borderRadius": 2,
-                    "mb": recs.length > 0 ? 1.25 : 0,
+                    "borderRadius": "4px",
+                    "mb": recs.length > 0 ? "8px" : 0,
                     "backgroundColor": background.hover,
                     "& .MuiLinearProgress-bar": {
-                      borderRadius: 2,
+                      borderRadius: "4px",
                       backgroundColor: getScoreColor(ctrl.overall_score),
                     },
                   }}
@@ -232,13 +212,13 @@ export default function WeakControlsList({
 
                 {/* Recommendations */}
                 {recs.length > 0 && (
-                  <Stack spacing={0.5}>
+                  <Stack sx={{ gap: "4px" }}>
                     {recs.slice(0, 3).map((rec, j) => (
-                      <Stack key={j} direction="row" alignItems="flex-start" spacing={1}>
+                      <Stack key={j} direction="row" alignItems="flex-start" sx={{ gap: "4px" }}>
                         <Lightbulb
-                          size={12}
+                          size={14}
                           style={{
-                            color: accent.amber.text,
+                            color: textColors.icon,
                             marginTop: 2,
                             flexShrink: 0,
                           }}

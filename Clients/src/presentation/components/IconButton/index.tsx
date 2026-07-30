@@ -29,6 +29,19 @@ const ROW_ACTIONS_LABEL_BY_TYPE: Record<string, string> = {
   risk: "Risk actions",
   training: "Training actions",
   project: "Project actions",
+  reportrun: "Report actions",
+  scheduledreport: "Scheduled report actions",
+};
+
+// Types whose menu separates a reversible "archive" from a permanent "delete",
+// so both items are wired to their own callback and confirmation.
+const ARCHIVE_DELETE_PAIR_TYPES = ["task", "reportrun"];
+
+// The remove confirmation says "Delete {type}" by default, which reads badly
+// for camelCase type names — and is plain wrong where the item archives.
+const REMOVE_PROCEED_TEXT_BY_TYPE: Record<string, string> = {
+  scheduledreport: "Delete report",
+  reportrun: "Archive report",
 };
 
 function getRowActionsAriaLabel(type?: string): string {
@@ -72,8 +85,17 @@ function IconButton({
   onPreview,
   onEditMetadata,
   onViewHistory,
+  // Scheduled-report props
+  onRunNow,
+  isPaused,
 }: IconButtonProps) {
   const theme = useTheme();
+  const normalizedType = type?.toLowerCase();
+  const usesArchiveDeletePair = ARCHIVE_DELETE_PAIR_TYPES.includes(normalizedType ?? "");
+  // The remove-family item archives (reversibly) for these types, so its
+  // confirmation is a warning rather than a destructive delete.
+  const isArchiveRemoval =
+    type === "Incident" || type === "Task" || normalizedType === "reportrun";
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [isOpenRemoveModal, setIsOpenRemoveModal] = useState(false);
   const [isOpenHardDeleteModal, setIsOpenHardDeleteModal] = useState(false);
@@ -221,6 +243,15 @@ function IconButton({
     }
   };
 
+  const handleRunNow = async (e?: React.SyntheticEvent) => {
+    if (onRunNow) {
+      await onRunNow();
+    }
+    if (e) {
+      closeActionMenu(e);
+    }
+  };
+
   const handleRestore = (e?: React.SyntheticEvent) => {
     if (onRestore) {
       onRestore();
@@ -308,10 +339,29 @@ function IconButton({
   };
 
   const getListOfButtons = () => {
-    const normalizedType = type?.toLowerCase();
-
     if (normalizedType === "task") {
       return isArchived ? ["restore", "delete"] : ["edit", "archive", "delete"];
+    }
+
+    // A report run: download the file, open its analyses, archive (reversible)
+    // or restore, and delete the file and record for good.
+    if (normalizedType === "reportrun") {
+      const items: string[] = [];
+      // A run only has a file once it succeeds, so the caller withholds
+      // onDownload rather than offering an item that cannot work.
+      if (onDownload) items.push("download");
+      if (onView) items.push("view");
+      items.push(isArchived ? "restore" : "archive");
+      items.push("delete");
+      return items;
+    }
+
+    if (normalizedType === "scheduledreport") {
+      const items: string[] = [];
+      if (onRunNow) items.push("run_now");
+      if (onToggleEnable) items.push("pause_resume");
+      items.push("edit", "remove");
+      return items;
     }
 
     if (normalizedType === "vendor") {
@@ -350,11 +400,13 @@ function IconButton({
    */
 
   const getMenuItemText = (item: string) => {
-    const normalizedType = type?.toLowerCase();
-
-    // Dynamic case stays explicit
+    // Dynamic cases stay explicit
     if (item === "make visible") {
       return isVisible ? "Make hidden" : "Make visible";
+    }
+
+    if (item === "pause_resume") {
+      return isPaused ? "Resume" : "Pause";
     }
 
     const LABELS_BY_TYPE: Record<string, Record<string, string>> = {
@@ -365,6 +417,13 @@ function IconButton({
         archive: "Archive task",
         delete: "Delete permanently",
         restore: "Restore task",
+      },
+      reportrun: {
+        view: "View analyses",
+        delete: "Delete permanently",
+      },
+      scheduledreport: {
+        remove: "Delete",
       },
     };
 
@@ -377,6 +436,7 @@ function IconButton({
       preview: "Preview",
       edit_metadata: "Edit metadata",
       version_history: "Version history",
+      run_now: "Run now",
     };
 
     // Type-specific
@@ -409,8 +469,12 @@ function IconButton({
           (type === "Resource" || type === "resource") && item !== "make visible";
         const isResourceDisabled = isResourceAction && !isVisible;
 
-        // Disable download actions for non-admin users
-        const isDownloadAction = ["download", "download_pdf", "download_docx"].includes(item);
+        // Disable download actions for non-admin users. Report runs are not
+        // file-manager files — gating them here would newly lock non-admins
+        // out of a download the Reporting tables always allowed.
+        const isDownloadAction =
+          ["download", "download_pdf", "download_docx"].includes(item) &&
+          normalizedType !== "reportrun";
         const isDownloadDisabled = isDownloadAction && !isAdmin;
 
         const isDisabled = isResourceDisabled || isDownloadDisabled;
@@ -441,6 +505,10 @@ function IconButton({
                 } else if (item === "Send Test") {
                   await handleSendTestNotification(e);
                 } else if (item === "Activate/Deactivate") {
+                  await handleToggleStatus(e);
+                } else if (item === "run_now") {
+                  await handleRunNow(e);
+                } else if (item === "pause_resume") {
                   await handleToggleStatus(e);
                 } else if (item === "restore") {
                   // Task restore action
@@ -481,16 +549,16 @@ function IconButton({
                     onViewHistory();
                   }
                   if (e) closeActionMenu(e);
-                } else if (item === "delete" && (type === "Task" || type === "task")) {
-                  // Task hard delete action
+                } else if (item === "delete" && usesArchiveDeletePair) {
+                  // Permanent delete, confirmed separately from archive
                   if (hardDeleteWarningTitle && hardDeleteWarningMessage) {
                     setIsOpenHardDeleteModal(true);
                     if (e) closeActionMenu(e);
                   } else {
                     handleHardDelete(e);
                   }
-                } else if (item === "archive" && (type === "Task" || type === "task")) {
-                  // Task archive action (soft delete)
+                } else if (item === "archive" && usesArchiveDeletePair) {
+                  // Archive action (soft delete)
                   if (warningTitle && warningMessage) {
                     setIsOpenRemoveModal(true);
                     if (e) closeActionMenu(e);
@@ -514,11 +582,11 @@ function IconButton({
               sx={{
                 ...(() => {
                   // Archive (soft delete) uses warning color
-                  if (item === "archive" && (type === "Task" || type === "task")) {
+                  if (item === "archive" && usesArchiveDeletePair) {
                     return { color: theme.palette.warning.main };
                   }
                   // Hard delete uses error color
-                  if (item === "delete" && (type === "Task" || type === "task")) {
+                  if (item === "delete" && usesArchiveDeletePair) {
                     return { color: theme.palette.error.main };
                   }
                   // Other remove/archive uses error color
@@ -581,13 +649,13 @@ function IconButton({
           proceedText={
             type === "Incident" || type === "Task"
               ? `Archive ${type.toLowerCase()}`
-              : `Delete ${type}`
+              : (REMOVE_PROCEED_TEXT_BY_TYPE[normalizedType ?? ""] ?? `Delete ${type}`)
           }
           onCancel={() => handleCancel()}
           onProceed={() =>
             checkForRisks && onDeleteWithRisks ? handleDeleteWithRiskCheck() : handleDelete()
           }
-          proceedButtonColor={type === "Incident" || type === "Task" ? "warning" : "error"}
+          proceedButtonColor={isArchiveRemoval ? "warning" : "error"}
           proceedButtonVariant="contained"
           TitleFontSize={0}
         />

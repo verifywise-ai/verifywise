@@ -1,6 +1,11 @@
-import { useState, useCallback } from "react";
-import { Box, Tabs, Tab, Drawer, Button } from "@mui/material";
+import { useState, useCallback, useMemo } from "react";
+import { Box } from "@mui/material";
+import TabContext from "@mui/lab/TabContext";
+import { Plus } from "lucide-react";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
+import TabBar from "../../components/TabBar";
+import type { TabItem } from "../../components/TabBar";
+import { CustomizableButton } from "../../components/button/customizable-button";
 import GenerateReport from "./GenerateReport";
 import ReportRunsTable from "./ReportRunsTable";
 import PageTour from "../../components/PageTour";
@@ -11,11 +16,48 @@ import ArchiveTab from "./ArchiveTab";
 import ConfigureReportWizard from "./ConfigureReportWizard";
 import TemplateBuilder from "./TemplateBuilder";
 import { getTemplate } from "../../../application/repository/reporting.repository";
+import { useScheduledReports } from "../../../application/hooks/useReporting";
 import { showAlert } from "../../../infrastructure/api/customAxios";
+
+/**
+ * Each tab carries the same icon its own empty state uses, so the tab and the
+ * table behind it read as one thing.
+ */
+const REPORTING_TABS: TabItem[] = [
+  { label: "Generate", value: "generate", icon: "FileText" },
+  { label: "Templates", value: "templates", icon: "LayoutTemplate" },
+  { label: "Scheduled", value: "scheduled", icon: "CalendarClock" },
+  { label: "Archive", value: "archive", icon: "Archive" },
+];
 
 const Reporting = () => {
   const [refreshKey, setRefreshKey] = useState(0);
-  const [activeTab, setActiveTab] = useState(0);
+  const [activeTab, setActiveTab] = useState("generate");
+
+  /**
+   * Only Scheduled carries a count. "Is anything scheduled?" is the one question
+   * you cannot answer without opening the tab, and useScheduledReports takes no
+   * params, so the badge reads the same cache entry ScheduledReportsTab does.
+   * Cost is one GET on page load; opening the tab still refetches, as it did
+   * before (that query sets no staleTime).
+   *
+   * The other three are bare on purpose: Generate already prints its own
+   * "Showing X - Y of Z" row, Templates would be dominated by the ~21 system
+   * templates and never meaningfully move, and counting either of those or
+   * Archive means holding a runs query up here — which drags
+   * useReportRunsPage's 5s poll onto every tab, not just its own.
+   */
+  const { data: scheduledReports = [], isLoading: scheduledLoading } = useScheduledReports();
+
+  const tabs = useMemo<TabItem[]>(
+    () =>
+      REPORTING_TABS.map((tab) =>
+        tab.value === "scheduled"
+          ? { ...tab, count: scheduledReports.length, isLoading: scheduledLoading }
+          : tab,
+      ),
+    [scheduledReports.length, scheduledLoading],
+  );
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [wizardTemplate, setWizardTemplate] = useState<any | null>(null);
   const [wizardMode, setWizardMode] = useState<"schedule" | "run-now">("schedule");
@@ -26,7 +68,7 @@ const Reporting = () => {
     setRefreshKey((prev) => prev + 1);
   }, []);
 
-  const handleTabChange = (_: React.SyntheticEvent, value: number) => {
+  const handleTabChange = (_: React.SyntheticEvent, value: string) => {
     setActiveTab(value);
   };
 
@@ -51,7 +93,7 @@ const Reporting = () => {
     setWizardTemplate(null);
     // A schedule belongs on the Scheduled tab; a run-now report belongs in the
     // Generate list, so send the user where their result actually landed.
-    setActiveTab(wizardMode === "run-now" ? 0 : 2);
+    setActiveTab(wizardMode === "run-now" ? "generate" : "scheduled");
   }, [wizardMode]);
 
   return (
@@ -61,20 +103,12 @@ const Reporting = () => {
       helpArticlePath="reporting/generating-reports"
       tipBoxEntity="reporting"
     >
-      <Tabs
-        value={activeTab}
-        onChange={handleTabChange}
-        indicatorColor="primary"
-        textColor="primary"
-        sx={{ borderBottom: 1, borderColor: "divider" }}
-      >
-        <Tab label="Generate" disableRipple sx={{ textTransform: "none" }} />
-        <Tab label="Templates" disableRipple sx={{ textTransform: "none" }} />
-        <Tab label="Scheduled" disableRipple sx={{ textTransform: "none" }} />
-        <Tab label="Archive" disableRipple sx={{ textTransform: "none" }} />
-      </Tabs>
+      {/* TabList needs a TabContext ancestor — see style guide § Tabs. */}
+      <TabContext value={activeTab}>
+        <TabBar tabs={tabs} activeTab={activeTab} onChange={handleTabChange} />
+      </TabContext>
 
-      {activeTab === 0 && (
+      {activeTab === "generate" && (
         <div data-joyride-id="reports-list">
           <Box sx={{ display: "flex", justifyContent: "flex-end", my: 2 }}>
             <div data-joyride-id="generate-report-button">
@@ -85,42 +119,44 @@ const Reporting = () => {
         </div>
       )}
 
-      {activeTab === 1 && (
+      {activeTab === "templates" && (
         <Box>
           <Box sx={{ display: "flex", justifyContent: "flex-end", mb: 2 }}>
-            <Button variant="contained" onClick={() => setBuilderOpen(true)}>
-              New template
-            </Button>
+            {/* Style guide § Buttons: primary actions carry an icon. */}
+            <CustomizableButton
+              variant="contained"
+              text="New template"
+              icon={<Plus size={16} />}
+              onClick={() => setBuilderOpen(true)}
+            />
           </Box>
           <TemplatesTab onUse={handleUseTemplate} />
         </Box>
       )}
 
-      {activeTab === 2 && (
+      {activeTab === "scheduled" && (
         <Box>
           <ScheduledReportsTab />
         </Box>
       )}
 
-      {activeTab === 3 && (
+      {activeTab === "archive" && (
         <Box>
           <ArchiveTab />
         </Box>
       )}
 
-      <Drawer anchor="right" open={!!wizardTemplate} onClose={handleWizardClose}>
-        {wizardTemplate && (
-          <ConfigureReportWizard
-            template={wizardTemplate}
-            mode={wizardMode}
-            onClose={handleWizardClose}
-          />
-        )}
-      </Drawer>
+      {/* Both wizards are StepperModals now — they carry their own overlay,
+          header and footer, so there is no Drawer to wrap them in. */}
+      {wizardTemplate && (
+        <ConfigureReportWizard
+          template={wizardTemplate}
+          mode={wizardMode}
+          onClose={handleWizardClose}
+        />
+      )}
 
-      <Drawer anchor="right" open={builderOpen} onClose={() => setBuilderOpen(false)}>
-        {builderOpen && <TemplateBuilder onClose={() => setBuilderOpen(false)} />}
-      </Drawer>
+      {builderOpen && <TemplateBuilder onClose={() => setBuilderOpen(false)} />}
 
       <PageTour steps={ReportingSteps} run={true} tourKey="reporting-tour" />
     </PageHeaderExtended>

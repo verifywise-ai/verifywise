@@ -36,8 +36,10 @@ const mockControls: ControlReadinessScore[] = [
 
 describe("ReadinessHeatmap", () => {
   it("shows loading state", () => {
-    renderWithProviders(<ReadinessHeatmap controls={[]} frameworkType="eu_ai_act" isLoading />);
-    expect(screen.getByText("Loading heatmap...")).toBeInTheDocument();
+    const { container } = renderWithProviders(
+      <ReadinessHeatmap controls={[]} frameworkType="eu_ai_act" isLoading />,
+    );
+    expect(container.querySelector(".MuiSkeleton-root")).toBeInTheDocument();
   });
 
   it("shows empty state when no controls", () => {
@@ -70,16 +72,19 @@ describe("ReadinessHeatmap", () => {
 
   it("shows legend with all levels", () => {
     renderWithProviders(<ReadinessHeatmap controls={mockControls} frameworkType="eu_ai_act" />);
-    expect(screen.getByText("Ready")).toBeInTheDocument();
-    expect(screen.getByText("Needs Work")).toBeInTheDocument();
-    expect(screen.getByText("At Risk")).toBeInTheDocument();
-    expect(screen.getByText("Not Started")).toBeInTheDocument();
+    expect(screen.getByText(/^Ready/)).toBeInTheDocument();
+    expect(screen.getByText(/^Needs work/)).toBeInTheDocument();
+    expect(screen.getByText(/^At risk/)).toBeInTheDocument();
+    expect(screen.getByText(/^Not started/)).toBeInTheDocument();
   });
 
   it("shows correct legend counts", () => {
     renderWithProviders(<ReadinessHeatmap controls={mockControls} frameworkType="eu_ai_act" />);
-    expect(screen.getAllByText("1")).toHaveLength(3);
-    expect(screen.getByText("2")).toBeInTheDocument();
+    // Legend chips render the level label and its count together.
+    expect(screen.getByText("Ready 2")).toBeInTheDocument();
+    expect(screen.getByText("Needs work 1")).toBeInTheDocument();
+    expect(screen.getByText("At risk 1")).toBeInTheDocument();
+    expect(screen.getByText("Not started 1")).toBeInTheDocument();
   });
 
   it("renders with single control", () => {

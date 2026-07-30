@@ -1,19 +1,21 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from "react";
 import {
-  Stepper,
-  Step,
-  StepLabel,
   Box,
-  Button,
   MenuItem,
-  TextField,
-  FormControlLabel,
-  Checkbox,
-  Typography,
+  Select as MuiSelect,
   Stack,
-  Chip,
+  Typography,
+  useTheme,
 } from "@mui/material";
+import { ChevronDown } from "lucide-react";
+import StepperModal from "../../components/Modals/StepperModal";
+import Field from "../../components/Inputs/Field";
+import Select from "../../components/Inputs/Select";
+import Checkbox from "../../components/Inputs/Checkbox";
+import Chip from "../../components/Chip";
+import { text as textColors } from "../../themes/palette";
+import { getSelectStyles } from "../../utils/inputStyles";
 import {
   useCreateScheduledReport,
   useRunTemplateNow,
@@ -30,6 +32,21 @@ import type { AiBlocksConfig } from "../../../domain/interfaces/i.reporting";
 const SCHEDULE_STEPS = ["Scope", "Sections", "AI Insights", "Schedule", "Delivery", "Review"];
 const RUN_NOW_STEPS = ["Scope", "Sections", "AI Insights", "Review"];
 const FREQUENCIES = ["daily", "weekly", "monthly"];
+
+const FREQUENCY_ITEMS = FREQUENCIES.map((f) => ({
+  _id: f,
+  name: f.charAt(0).toUpperCase() + f.slice(1),
+}));
+
+const SCOPE_ITEMS = [
+  { _id: "project", name: "Project" },
+  { _id: "organization", name: "Organization" },
+];
+
+const FORMAT_ITEMS = [
+  { _id: "pdf", name: "PDF" },
+  { _id: "docx", name: "Word (DOCX)" },
+];
 
 // The seven blocks Phase 2 shipped on the backend. Previously three of these
 // were hardcoded here and the other four were unreachable from the UI.
@@ -55,6 +72,23 @@ const DEFAULT_AI_BLOCKS: AiBlocksConfig = {
   vendorRisk: false,
 };
 
+const FRAMEWORKS_LABEL_ID = "configure-report-frameworks-label";
+const FRAMEWORKS_INPUT_ID = "configure-report-frameworks";
+
+// Style guide § Typography: body 13px, hint on text.tertiary. The panels carry
+// no heading of their own — the stepper already names each step.
+const panelHintSx = {
+  fontSize: 13,
+  lineHeight: 1.5,
+  color: textColors.tertiary,
+};
+
+const reviewRowSx = {
+  fontSize: 13,
+  lineHeight: 1.5,
+  color: textColors.secondary,
+};
+
 export default function ConfigureReportWizard({
   template,
   mode,
@@ -64,6 +98,7 @@ export default function ConfigureReportWizard({
   mode: "schedule" | "run-now";
   onClose: () => void;
 }) {
+  const theme = useTheme();
   const STEPS = mode === "run-now" ? RUN_NOW_STEPS : SCHEDULE_STEPS;
   const [active, setActive] = useState(0);
   const [scope, setScope] = useState<"project" | "organization">(
@@ -122,6 +157,7 @@ export default function ConfigureReportWizard({
   // Select the panel by step name, not numeric index — run-now mode drops
   // Schedule and Delivery, so an index-based check would show the wrong panel.
   const step = STEPS[active];
+  const isLastStep = active === STEPS.length - 1;
 
   const canNext = () => {
     if (step === "Scope" && scope === "project" && !projectId) return false;
@@ -133,6 +169,8 @@ export default function ConfigureReportWizard({
       !delivery.attachFile
     )
       return false;
+    // Nothing can be submitted without a template version to run.
+    if (isLastStep && !template.latestVersion?.id) return false;
     return true;
   };
 
@@ -197,281 +235,382 @@ export default function ConfigureReportWizard({
   };
 
   return (
-    <Box sx={{ p: 3, minWidth: 600 }}>
-      <Stepper activeStep={active} sx={{ mb: 3 }}>
-        {STEPS.map((s) => (
-          <Step key={s}>
-            <StepLabel>{s}</StepLabel>
-          </Step>
-        ))}
-      </Stepper>
-
+    <StepperModal
+      isOpen
+      onClose={onClose}
+      title={mode === "run-now" ? "Run report" : "Schedule report"}
+      steps={STEPS}
+      activeStep={active}
+      onNext={() => setActive(active + 1)}
+      onBack={() => setActive(active - 1)}
+      onSubmit={submit}
+      canProceed={canNext()}
+      isSubmitting={mode === "run-now" ? runNow.isPending : create.isPending}
+      submitButtonText={mode === "run-now" ? "Run now" : "Create Scheduled Report"}
+      maxWidth="700px"
+    >
+      {/* No panel heading here: the stepper already labels this step, and a
+          second "Scope" on screen would only repeat it. */}
       {step === "Scope" && (
-        <Stack spacing={2}>
-          <Typography variant="body2" color="text.secondary">
+        <Stack spacing={6}>
+          <Typography sx={panelHintSx}>
             Choose whether this report covers a single project or the whole organization.
           </Typography>
-          <TextField
-            select
+          <Select
+            id="configure-report-level"
             label="Report level"
             value={scope}
+            items={SCOPE_ITEMS}
             onChange={(e) => setScope(e.target.value as "project" | "organization")}
-          >
-            <MenuItem value="project">Project</MenuItem>
-            <MenuItem value="organization">Organization</MenuItem>
-          </TextField>
+            getOptionValue={(item) => item._id}
+          />
           {scope === "project" && (
-            <TextField
-              select
+            <Select
+              id="configure-report-project"
               label="Project"
+              placeholder="Select a project"
               value={projectId ?? ""}
+              items={projects.map((p: any) => ({ _id: p.id, name: p.project_title }))}
               onChange={(e) => setProjectId(Number(e.target.value))}
-            >
-              {projects.map((p: any) => (
-                <MenuItem key={p.id} value={p.id}>
-                  {p.project_title}
-                </MenuItem>
-              ))}
-            </TextField>
+              getOptionValue={(item) => item._id}
+            />
           )}
-          {/* Namespaced ids ("native:2") are what the backend accepts; a bare
+          {/* Multi-select, so the shared Select (single value) cannot be used.
+              Same label/menu/border treatment, driven by getSelectStyles.
+              Namespaced ids ("native:2") are what the backend accepts; a bare
               number or a mis-cased prefix is a 400. An empty selection is
               valid and means every framework in scope. */}
-          <TextField
-            select
-            label="Frameworks"
-            value={frameworkIds}
-            onChange={(e) =>
-              setFrameworkIds(
-                typeof e.target.value === "string"
-                  ? e.target.value.split(",")
-                  : (e.target.value as unknown as string[]),
-              )
-            }
-            helperText="Leave empty to include every framework in scope."
-            SelectProps={{
-              multiple: true,
-              renderValue: (selected) => (
-                <Stack direction="row" spacing={1} sx={{ flexWrap: "wrap" }}>
-                  {(selected as string[]).map((value) => (
-                    <Chip key={value} size="small" label={frameworkLabel(value)} />
-                  ))}
-                </Stack>
-              ),
-            }}
-          >
-            {allFrameworks.map((f: any) => (
-              <MenuItem key={f.id} value={`native:${f.id}`}>
-                {f.name}
-              </MenuItem>
-            ))}
-          </TextField>
+          <Stack gap={theme.spacing(2)}>
+            <Typography
+              id={FRAMEWORKS_LABEL_ID}
+              component="label"
+              htmlFor={FRAMEWORKS_INPUT_ID}
+              sx={{
+                margin: 0,
+                height: "22px",
+                display: "flex",
+                alignItems: "center",
+                fontSize: 13,
+                fontWeight: 500,
+                color: theme.palette.text.secondary,
+              }}
+            >
+              Frameworks
+            </Typography>
+            <MuiSelect
+              multiple
+              labelId={FRAMEWORKS_LABEL_ID}
+              value={frameworkIds}
+              inputProps={{ id: FRAMEWORKS_INPUT_ID }}
+              onChange={(e) =>
+                setFrameworkIds(
+                  typeof e.target.value === "string"
+                    ? e.target.value.split(",")
+                    : (e.target.value as unknown as string[]),
+                )
+              }
+              displayEmpty
+              renderValue={(selected) =>
+                (selected as string[]).length ? (
+                  <Stack direction="row" spacing="8px" flexWrap="wrap" useFlexGap>
+                    {(selected as string[]).map((value) => (
+                      <Chip
+                        key={value}
+                        label={frameworkLabel(value)}
+                        size="small"
+                        uppercase={false}
+                      />
+                    ))}
+                  </Stack>
+                ) : (
+                  <Typography
+                    component="span"
+                    sx={{ fontSize: 13, color: theme.palette.text.tertiary }}
+                  >
+                    All frameworks in scope
+                  </Typography>
+                )
+              }
+              IconComponent={() => (
+                <ChevronDown
+                  size={16}
+                  style={{
+                    position: "absolute",
+                    right: "12px",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    pointerEvents: "none",
+                    color: theme.palette.text.tertiary,
+                  }}
+                />
+              )}
+              MenuProps={{
+                disableScrollLock: true,
+                style: { zIndex: 10001 },
+                PaperProps: {
+                  sx: {
+                    "borderRadius": theme.shape.borderRadius,
+                    "boxShadow": theme.boxShadow,
+                    "mt": 1,
+                    "& .MuiMenuItem-root": {
+                      "fontSize": 13,
+                      "color": theme.palette.text.primary,
+                      "&:hover": {
+                        backgroundColor: theme.palette.background.accent,
+                        color: theme.palette.primary.main,
+                      },
+                    },
+                  },
+                },
+              }}
+              sx={{
+                "fontSize": 13,
+                "minWidth": "125px",
+                "width": "100%",
+                "backgroundColor": theme.palette.background.main,
+                "position": "relative",
+                ...getSelectStyles(theme, { hasError: false }),
+                // Same 34px control height and 10px inset as the shared Select;
+                // minHeight rather than height so a long chip list wraps instead
+                // of being clipped.
+                "& .MuiSelect-select": {
+                  minHeight: "34px",
+                  boxSizing: "border-box",
+                  padding: "4px 32px 4px 10px",
+                  display: "flex",
+                  alignItems: "center",
+                  flexWrap: "wrap",
+                  gap: "4px",
+                },
+              }}
+            >
+              {allFrameworks.map((f: any) => (
+                <MenuItem key={f.id} value={`native:${f.id}`}>
+                  {f.name}
+                </MenuItem>
+              ))}
+            </MuiSelect>
+            <Typography sx={{ fontSize: 11, opacity: 0.8, color: theme.palette.text.tertiary }}>
+              Leave empty to include every framework in scope.
+            </Typography>
+          </Stack>
           {/* Format lives on a step both modes share. It used to sit on the
               Schedule panel, which run-now drops — so a run-now report was
               always a PDF and the option could not be reached at all. */}
-          <TextField
-            select
+          <Select
+            id="configure-report-format"
             label="Format"
             value={format}
+            items={FORMAT_ITEMS}
             onChange={(e) => setFormat(e.target.value as "pdf" | "docx")}
-          >
-            <MenuItem value="pdf">PDF</MenuItem>
-            <MenuItem value="docx">Word (DOCX)</MenuItem>
-          </TextField>
+            getOptionValue={(item) => item._id}
+          />
         </Stack>
       )}
 
       {step === "Sections" && (
-        <Stack spacing={1}>
-          <Typography variant="h6">Sections</Typography>
+        <Stack spacing="8px">
           {sections.length === 0 && (
-            <Typography variant="body2" color="text.secondary">
-              This template has no configurable sections.
-            </Typography>
+            <Typography sx={panelHintSx}>This template has no configurable sections.</Typography>
           )}
-          {sections.map((s: any) => {
-            const key = s.reportSectionKey ?? s.key;
-            return (
-              <FormControlLabel
-                key={key}
-                control={
-                  <Checkbox
-                    checked={s.defaultEnabled !== false}
-                    onChange={(e) => toggleSection(key, e.target.checked)}
-                  />
-                }
-                label={s.label ?? key}
-              />
-            );
-          })}
+          <Stack>
+            {sections.map((s: any) => {
+              const key = s.reportSectionKey ?? s.key;
+              return (
+                <Checkbox
+                  key={key}
+                  id={`configure-report-section-${key}`}
+                  label={s.label ?? key}
+                  value={key}
+                  size="small"
+                  isChecked={s.defaultEnabled !== false}
+                  onChange={(e) => toggleSection(key, e.target.checked)}
+                />
+              );
+            })}
+          </Stack>
         </Stack>
       )}
 
       {step === "AI Insights" && (
-        <Stack spacing={1}>
-          <Typography variant="h6">AI insights</Typography>
-          <Typography variant="body2" color="text.secondary">
+        <Stack spacing="8px">
+          <Typography sx={panelHintSx}>
             Each enabled block is one language-model call per report run.
           </Typography>
           {aiDisabled && (
-            <Typography variant="body2" color="text.secondary">
+            <Typography sx={panelHintSx}>
               Add a language-model key in Settings to enable AI insights.
             </Typography>
           )}
-          {AI_BLOCKS.map(({ key, label }) => (
-            <FormControlLabel
-              key={key}
-              control={
-                <Checkbox
-                  disabled={aiDisabled}
-                  checked={!!ai[key]}
-                  onChange={(e) => setAi((prev) => ({ ...prev, [key]: e.target.checked }))}
-                />
-              }
-              label={label}
-            />
-          ))}
+          <Stack>
+            {AI_BLOCKS.map(({ key, label }) => (
+              <Checkbox
+                key={key}
+                id={`configure-report-ai-${key}`}
+                label={label}
+                value={key}
+                size="small"
+                isDisabled={aiDisabled}
+                isChecked={!!ai[key]}
+                onChange={(e) => setAi((prev) => ({ ...prev, [key]: e.target.checked }))}
+              />
+            ))}
+          </Stack>
         </Stack>
       )}
 
       {step === "Schedule" && (
-        <Stack spacing={2}>
-          <Typography variant="h6">Schedule</Typography>
-          <TextField
-            select
+        <Stack spacing={6}>
+          <Select
+            id="configure-report-frequency"
             label="Frequency"
             value={schedule.frequency}
-            onChange={(e) => setSchedule((prev: any) => ({ ...prev, frequency: e.target.value }))}
-          >
-            {FREQUENCIES.map((f) => (
-              <MenuItem key={f} value={f}>
-                {f}
-              </MenuItem>
-            ))}
-          </TextField>
-          <Stack direction="row" spacing={2}>
-            <TextField
+            items={FREQUENCY_ITEMS}
+            onChange={(e) =>
+              setSchedule((prev: any) => ({ ...prev, frequency: String(e.target.value) }))
+            }
+            getOptionValue={(item) => item._id}
+          />
+          <Stack direction="row" spacing={6}>
+            <Field
+              id="configure-report-hour"
               type="number"
               label="Hour"
               value={schedule.hour}
+              min={0}
+              max={23}
               onChange={(e) =>
                 setSchedule((prev: any) => ({ ...prev, hour: Number(e.target.value) }))
               }
-              inputProps={{ min: 0, max: 23 }}
             />
-            <TextField
+            <Field
+              id="configure-report-minute"
               type="number"
               label="Minute"
               value={schedule.minute}
+              min={0}
+              max={59}
               onChange={(e) =>
                 setSchedule((prev: any) => ({ ...prev, minute: Number(e.target.value) }))
               }
-              inputProps={{ min: 0, max: 59 }}
             />
-            <TextField
+            <Field
+              id="configure-report-timezone"
               label="Timezone"
               value={schedule.timezone}
-              onChange={(e) => setSchedule((prev: any) => ({ ...prev, timezone: e.target.value }))}
+              onChange={(e) =>
+                setSchedule((prev: any) => ({ ...prev, timezone: e.target.value }))
+              }
             />
           </Stack>
         </Stack>
       )}
 
       {step === "Delivery" && (
-        <Stack spacing={1}>
-          <Typography variant="h6">Delivery</Typography>
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={delivery.saveToStorage}
-                onChange={(e) =>
-                  setDelivery((prev: any) => ({ ...prev, saveToStorage: e.target.checked }))
-                }
-              />
-            }
-            label="Save to storage"
-          />
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={delivery.sendEmailLink}
-                onChange={(e) =>
-                  setDelivery((prev: any) => ({ ...prev, sendEmailLink: e.target.checked }))
-                }
-              />
-            }
-            label="Send email link"
-          />
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={delivery.attachFile}
-                onChange={(e) =>
-                  setDelivery((prev: any) => ({ ...prev, attachFile: e.target.checked }))
-                }
-              />
-            }
-            label="Attach file"
-          />
+        <Stack spacing="8px">
+          <Stack>
+            <Checkbox
+              id="configure-report-save-to-storage"
+              label="Save to storage"
+              value="saveToStorage"
+              size="small"
+              isChecked={delivery.saveToStorage}
+              onChange={(e) =>
+                setDelivery((prev: any) => ({ ...prev, saveToStorage: e.target.checked }))
+              }
+            />
+            <Checkbox
+              id="configure-report-send-email-link"
+              label="Send email link"
+              value="sendEmailLink"
+              size="small"
+              isChecked={delivery.sendEmailLink}
+              onChange={(e) =>
+                setDelivery((prev: any) => ({ ...prev, sendEmailLink: e.target.checked }))
+              }
+            />
+            <Checkbox
+              id="configure-report-attach-file"
+              label="Attach file"
+              value="attachFile"
+              size="small"
+              isChecked={delivery.attachFile}
+              onChange={(e) =>
+                setDelivery((prev: any) => ({ ...prev, attachFile: e.target.checked }))
+              }
+            />
+          </Stack>
           {(delivery.sendEmailLink || delivery.attachFile) && (
-            <TextField
-              label="Recipients (comma separated)"
+            <Field
+              id="configure-report-recipients"
+              label="Recipients"
+              placeholder="name@company.com, name2@company.com"
+              helperText="Comma separated."
               value={recipientsText}
               onChange={(e) => setRecipientsText(e.target.value)}
-              fullWidth
             />
           )}
         </Stack>
       )}
 
       {step === "Review" && (
-        <Stack spacing={1}>
-          <Typography variant="h6">Review</Typography>
-          <Typography variant="body2">
+        <Stack spacing="8px">
+          <Typography sx={reviewRowSx}>
             <strong>Template:</strong> {template.name}
           </Typography>
-          <Typography variant="body2">
-            <strong>Scope:</strong> {scope}
+          <Typography sx={reviewRowSx}>
+            <strong>Scope:</strong> {scope === "project" ? "Project" : "Organization"}
             {scope === "project" &&
               projectId &&
               ` (${projects.find((p: any) => p.id === projectId)?.project_title ?? projectId})`}
           </Typography>
           {/* Set on the Scope step in both modes, so both have to review it. */}
-          <Typography variant="body2">
+          <Typography sx={reviewRowSx}>
             <strong>Format:</strong> {format.toUpperCase()}
           </Typography>
           <Box>
-            <Typography variant="body2" component="span" sx={{ mr: 1 }}>
+            <Typography component="span" sx={{ ...reviewRowSx, mr: "8px" }}>
               <strong>Frameworks:</strong>
             </Typography>
             {frameworkIds.length ? (
-              <Stack direction="row" spacing={1} sx={{ display: "inline-flex", flexWrap: "wrap" }}>
+              <Stack
+                direction="row"
+                spacing="8px"
+                useFlexGap
+                sx={{ display: "inline-flex", flexWrap: "wrap" }}
+              >
                 {frameworkIds.map((value) => (
-                  <Chip key={value} size="small" label={frameworkLabel(value)} />
+                  <Chip key={value} label={frameworkLabel(value)} size="small" uppercase={false} />
                 ))}
               </Stack>
             ) : (
-              <Typography variant="body2" component="span" color="text.secondary">
+              <Typography component="span" sx={{ ...reviewRowSx, color: textColors.tertiary }}>
                 all frameworks in scope
               </Typography>
             )}
           </Box>
           <Box>
-            <Typography variant="body2" component="span" sx={{ mr: 1 }}>
+            <Typography component="span" sx={{ ...reviewRowSx, mr: "8px" }}>
               <strong>Sections:</strong>
             </Typography>
             {enabledSections.length ? (
-              <Stack direction="row" spacing={1} sx={{ display: "inline-flex", flexWrap: "wrap" }}>
+              <Stack
+                direction="row"
+                spacing="8px"
+                useFlexGap
+                sx={{ display: "inline-flex", flexWrap: "wrap" }}
+              >
                 {enabledSections.map((s: any) => (
                   <Chip
                     key={s.reportSectionKey ?? s.key}
-                    size="small"
                     label={s.label ?? s.reportSectionKey ?? s.key}
+                    size="small"
+                    uppercase={false}
                   />
                 ))}
               </Stack>
             ) : (
-              <Typography variant="body2" component="span" color="text.secondary">
+              <Typography component="span" sx={{ ...reviewRowSx, color: textColors.tertiary }}>
                 none
               </Typography>
             )}
@@ -482,12 +621,12 @@ export default function ConfigureReportWizard({
               user delivery choices they never made and that won't happen. */}
           {mode === "schedule" && (
             <>
-              <Typography variant="body2">
+              <Typography sx={reviewRowSx}>
                 <strong>Schedule:</strong> {schedule.frequency} at{" "}
                 {String(schedule.hour).padStart(2, "0")}:{String(schedule.minute).padStart(2, "0")}{" "}
                 {schedule.timezone}
               </Typography>
-              <Typography variant="body2">
+              <Typography sx={reviewRowSx}>
                 <strong>Delivery:</strong>{" "}
                 {[
                   delivery.saveToStorage && "storage",
@@ -501,28 +640,6 @@ export default function ConfigureReportWizard({
           )}
         </Stack>
       )}
-
-      <Box sx={{ mt: 3, display: "flex", justifyContent: "space-between" }}>
-        <Button disabled={active === 0} onClick={() => setActive(active - 1)}>
-          Back
-        </Button>
-        {active < STEPS.length - 1 ? (
-          <Button variant="contained" disabled={!canNext()} onClick={() => setActive(active + 1)}>
-            Next
-          </Button>
-        ) : (
-          <Button
-            variant="contained"
-            disabled={
-              (mode === "run-now" ? runNow.isPending : create.isPending) ||
-              !template.latestVersion?.id
-            }
-            onClick={submit}
-          >
-            {mode === "run-now" ? "Run now" : "Create Scheduled Report"}
-          </Button>
-        )}
-      </Box>
-    </Box>
+    </StepperModal>
   );
 }

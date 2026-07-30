@@ -1,4 +1,6 @@
-import { render, screen, fireEvent } from "@testing-library/react";
+import { screen, fireEvent } from "@testing-library/react";
+// StepperModal and the design-system inputs read colours off the app theme.
+import { renderWithProviders as render } from "../../../../test/renderWithProviders";
 import { vi } from "vitest";
 
 const mutate = vi.fn();

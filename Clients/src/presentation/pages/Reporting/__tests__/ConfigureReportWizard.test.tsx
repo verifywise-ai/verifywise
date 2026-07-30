@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
+// StepperModal and the design-system inputs read colours off the app theme.
+import { renderWithProviders as render } from "../../../../test/renderWithProviders";
 
 const runNowMutate = vi.fn();
 
@@ -148,7 +150,9 @@ describe("ConfigureReportWizard", () => {
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
 
-    expect(screen.getByRole("heading", { name: /review/i })).toBeInTheDocument();
+    // The Review panel has no heading of its own — the stepper labels the step
+    // — so assert on the summary it renders instead.
+    expect(screen.getByText(/Template:/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /run now/i })).toBeInTheDocument();
 
     // runTemplateNow hardcodes delivery_config to { saveToStorage: true }

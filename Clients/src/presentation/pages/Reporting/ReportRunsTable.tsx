@@ -22,14 +22,15 @@ import {
   Typography,
   useTheme,
 } from "@mui/material";
-import { Archive, ArchiveRestore, Download, Trash2, FileText, Sparkles } from "lucide-react";
+import { Archive, FileText, X } from "lucide-react";
 import singleTheme from "../../themes/v1SingleTheme";
 import { text as textColors } from "../../themes/palette";
 import Chip from "../../components/Chip";
 import { EmptyState } from "../../components/EmptyState";
+import TableEmptyStateLayout from "../../components/Table/TableEmptyStateLayout";
 import StandardTablePagination from "../../components/Table/StandardTablePagination";
 import ReportAnalysisPanel from "../../components/ReportAnalysisPanel";
-import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
+import RowActionsButton from "../../components/IconButton";
 import {
   useReportRunsPage,
   useArchiveRun,
@@ -113,8 +114,7 @@ export default function ReportRunsTable({ variant }: { variant: "live" | "archiv
   // disables the analyses query.
   const [selectedRunId, setSelectedRunId] = useState<number | null>(null);
   // Delete is permanent (unlike archive, which can be undone with restore), so
-  // it is gated behind an explicit confirmation instead of firing on click.
-  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null);
+  // it is gated behind the row menu's own hard-delete confirmation.
 
   const { data, isLoading } = useReportRunsPage({
     archived: variant === "archived",
@@ -171,17 +171,35 @@ export default function ReportRunsTable({ variant }: { variant: "live" | "archiv
     );
   }
 
+  // Shared by the populated table and the empty layout, so the column row does
+  // not drift between the two states.
+  const tableHead = (
+    <TableHead
+      sx={{ backgroundColor: singleTheme.tableStyles.primary.header.backgroundColors }}
+    >
+      <TableRow sx={singleTheme.tableStyles.primary.header.row}>
+        {COLUMNS.map((h) => (
+          <TableCell key={h} sx={singleTheme.tableStyles.primary.header.cell} align="left">
+            {h}
+          </TableCell>
+        ))}
+      </TableRow>
+    </TableHead>
+  );
+
   if (!total) {
     return (
-      <EmptyState
-        icon={variant === "archived" ? Archive : FileText}
-        message={
-          variant === "archived"
-            ? "No archived reports yet."
-            : "No reports yet. Generate one, or run a template."
-        }
-        showBorder
-      />
+      <TableEmptyStateLayout header={tableHead}>
+        <EmptyState
+          icon={variant === "archived" ? Archive : FileText}
+          message={
+            variant === "archived"
+              ? "No archived reports yet."
+              : "No reports yet. Generate one, or run a template."
+          }
+          showBorder
+        />
+      </TableEmptyStateLayout>
     );
   }
 
@@ -193,19 +211,7 @@ export default function ReportRunsTable({ variant }: { variant: "live" | "archiv
     <>
       <TableContainer sx={singleTheme.tableStyles.primary.frame}>
         <Table>
-          <TableHead>
-            <TableRow sx={singleTheme.tableStyles.primary.header.row}>
-              {COLUMNS.map((h) => (
-                <TableCell
-                  key={h}
-                  sx={singleTheme.tableStyles.primary.header.cell}
-                  align={h === "Actions" ? "right" : "left"}
-                >
-                  {h}
-                </TableCell>
-              ))}
-            </TableRow>
-          </TableHead>
+          {tableHead}
           <TableBody>
             {rows.map((r) => (
               <TableRow key={r.id} sx={singleTheme.tableStyles.primary.body.row}>
@@ -241,60 +247,32 @@ export default function ReportRunsTable({ variant }: { variant: "live" | "archiv
                 <TableCell sx={{ ...bodyCell, color: textColors.secondary }}>
                   {r.triggered_by}
                 </TableCell>
-                <TableCell sx={bodyCell} align="right">
-                  <Tooltip title="Download">
-                    <span>
-                      <IconButton
-                        aria-label="Download"
-                        size="small"
-                        disabled={!r.file_id}
-                        onClick={() => handleDownload(r.id, r.output_filename ?? null)}
-                      >
-                        <Download size={16} />
-                      </IconButton>
-                    </span>
-                  </Tooltip>
-                  {/* Always offered: whether a run produced analyses is only known
-                      after fetching them, and the panel has its own empty state. */}
-                  <Tooltip title="View analyses">
-                    <IconButton
-                      aria-label="View analyses"
-                      size="small"
-                      onClick={() => setSelectedRunId(r.id)}
-                    >
-                      <Sparkles size={16} />
-                    </IconButton>
-                  </Tooltip>
-                  {variant === "live" ? (
-                    <Tooltip title="Archive">
-                      <IconButton
-                        aria-label="Archive"
-                        size="small"
-                        onClick={() => archive.mutate(r.id)}
-                      >
-                        <Archive size={16} />
-                      </IconButton>
-                    </Tooltip>
-                  ) : (
-                    <Tooltip title="Restore">
-                      <IconButton
-                        aria-label="Restore"
-                        size="small"
-                        onClick={() => restore.mutate(r.id)}
-                      >
-                        <ArchiveRestore size={16} />
-                      </IconButton>
-                    </Tooltip>
-                  )}
-                  <Tooltip title="Delete">
-                    <IconButton
-                      aria-label="Delete"
-                      size="small"
-                      onClick={() => setPendingDeleteId(r.id)}
-                    >
-                      <Trash2 size={16} />
-                    </IconButton>
-                  </Tooltip>
+                {/* The shared row-actions menu every other table uses. View
+                    analyses is always offered: whether a run produced any is
+                    only known after fetching them, and the panel has its own
+                    empty state. */}
+                <TableCell sx={bodyCell}>
+                  <RowActionsButton
+                    id={r.id}
+                    type="reportRun"
+                    isArchived={variant === "archived"}
+                    onDownload={
+                      r.file_id
+                        ? () => handleDownload(r.id, r.output_filename ?? null)
+                        : undefined
+                    }
+                    onView={() => setSelectedRunId(r.id)}
+                    onEdit={() => {}}
+                    onDelete={() => archive.mutate(r.id)}
+                    // Archive sits one item above a permanent delete in the
+                    // same menu, so it asks too rather than firing on a misclick.
+                    warningTitle="Archive this report run?"
+                    warningMessage={`"${reportName(r)}" moves to the Archive tab. You can restore it from there.`}
+                    onRestore={() => restore.mutate(r.id)}
+                    onHardDelete={() => remove.mutate(r.id)}
+                    hardDeleteWarningTitle="Delete report run permanently?"
+                    hardDeleteWarningMessage="This permanently deletes the report file and run record. This cannot be undone."
+                  />
                 </TableCell>
               </TableRow>
             ))}
@@ -315,48 +293,78 @@ export default function ReportRunsTable({ variant }: { variant: "live" | "archiv
         </Table>
       </TableContainer>
 
+      {/* Drawer per the style guide: right anchor, background.modal, and a
+          header / content split rather than one padded column. The header keeps
+          its height while only the content scrolls.
+
+          600px is the guide's standard dialog width (Modal sizes: md), not the
+          400px drawer default: these analyses are long-form prose, and at 400px
+          the lines were short enough to be tiring to read. */}
       <Drawer
         anchor="right"
         open={selectedRunId != null}
         onClose={() => setSelectedRunId(null)}
-        slotProps={{ paper: { sx: { width: 520, maxWidth: "100%", p: "24px" } } }}
+        slotProps={{
+          paper: {
+            sx: {
+              width: 600,
+              maxWidth: "100%",
+              backgroundColor: theme.palette.background.modal,
+            },
+          },
+        }}
       >
-        <Stack spacing="16px">
-          <Typography
+        <Stack
+          direction="row"
+          alignItems="flex-start"
+          justifyContent="space-between"
+          spacing="16px"
+          sx={{
+            p: "16px 20px",
+            flexShrink: 0,
+            borderBottom: `1px solid ${theme.palette.border.light}`,
+          }}
+        >
+          {/* Title with the guide's title-to-subtitle step, so the caveat about
+              what these analyses are travels with the panel itself. */}
+          <Stack spacing="8px">
+            <Typography
+              sx={{
+                fontSize: 16,
+                fontWeight: 600,
+                lineHeight: 1.4,
+                color: theme.palette.text.primary,
+              }}
+            >
+              AI analyses
+            </Typography>
+            <Typography
+              sx={{ fontSize: 13, lineHeight: 1.5, color: theme.palette.text.tertiary }}
+            >
+              AI-generated readings of this report's data, meant to speed up your review — check
+              each point against the report before acting on it.
+            </Typography>
+          </Stack>
+          <IconButton
+            aria-label="Close AI analyses"
+            onClick={() => setSelectedRunId(null)}
             sx={{
-              fontSize: 16,
-              fontWeight: 600,
-              lineHeight: 1.4,
-              color: theme.palette.text.primary,
+              "p": "4px",
+              "color": theme.palette.text.tertiary,
+              "&:hover": {
+                backgroundColor: "transparent",
+                color: theme.palette.text.primary,
+              },
             }}
           >
-            AI analyses
-          </Typography>
-          <ReportAnalysisPanel analyses={analyses} isLoading={analysesLoading} />
+            <X size={20} />
+          </IconButton>
         </Stack>
-      </Drawer>
 
-      {pendingDeleteId != null && (
-        <ConfirmationModal
-          isOpen
-          title="Delete report run permanently?"
-          body={
-            <Typography fontSize={13} color={theme.palette.text.primary}>
-              This permanently deletes the report file and run record. This
-              cannot be undone.
-            </Typography>
-          }
-          cancelText="Cancel"
-          proceedText="Delete permanently"
-          proceedButtonColor="error"
-          proceedButtonVariant="contained"
-          onCancel={() => setPendingDeleteId(null)}
-          onProceed={() => {
-            remove.mutate(pendingDeleteId);
-            setPendingDeleteId(null);
-          }}
-        />
-      )}
+        <Box sx={{ p: "20px", flex: 1, overflowY: "auto" }}>
+          <ReportAnalysisPanel analyses={analyses} isLoading={analysesLoading} />
+        </Box>
+      </Drawer>
     </>
   );
 }

@@ -1,9 +1,10 @@
 import type { ReactNode } from "react";
-import { Box, Card, Skeleton, Stack, Typography, useTheme } from "@mui/material";
-import { AlertTriangle, Sparkles } from "lucide-react";
+import { Box, Skeleton, Stack, Typography, useTheme } from "@mui/material";
+import type { Theme } from "@mui/material";
+import { AlertTriangle, Info, Sparkles } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import Chip from "../Chip";
 import { EmptyState } from "../EmptyState";
-import { cardStyles } from "../../themes/components";
 import type {
   AnalysisPayload,
   ComplianceGapPayload,
@@ -46,14 +47,79 @@ function abstainReasonOf(payload: AnalysisPayload): string | null {
   return payload.abstain_reason;
 }
 
+/**
+ * Card container per the style guide's Cards & containers section: white
+ * surface, 1px border.light frame, 4px radius, 16px padding, no shadow. Written
+ * locally rather than through cardStyles.base because that shared helper pads
+ * with theme.spacing(2) — 4px on this 2px-based scale — which is what made the
+ * drawer read as unpadded text.
+ *
+ * border.light rather than border.dark: five stacked frames in one scroll, and
+ * the card spec's own colour is the quieter of the two.
+ */
+const analysisCardSx = (theme: Theme) => ({
+  backgroundColor: theme.palette.background.main,
+  border: `1px solid ${theme.palette.border.light}`,
+  borderRadius: "4px",
+  boxShadow: "none",
+  p: "16px",
+});
+
+/**
+ * Status-colored notice box (Cards & containers §Alert boxes): warning bg,
+ * warning border, 4px radius, 12px 16px padding, 16px icon at a 12px gap.
+ *
+ * Aligned to the top, not centred: an abstain reason wraps to several lines in
+ * a 400px drawer, and a centred icon would then float beside the middle line.
+ * The 2px nudge is theme.spacing(1), the scale's icon-gap step.
+ */
+function WarningNotice({ icon: Icon, text }: { icon: LucideIcon; text: string }) {
+  const theme = useTheme();
+  return (
+    <Stack
+      direction="row"
+      spacing="12px"
+      alignItems="flex-start"
+      sx={{
+        backgroundColor: theme.palette.status.warning.bg,
+        border: `1px solid ${theme.palette.status.warning.main}`,
+        borderRadius: "4px",
+        p: "12px 16px",
+      }}
+    >
+      <Box
+        sx={{
+          color: theme.palette.status.warning.text,
+          display: "flex",
+          flexShrink: 0,
+          mt: "2px",
+        }}
+      >
+        <Icon size={16} />
+      </Box>
+      <Typography
+        sx={{ fontSize: 13, color: theme.palette.status.warning.text, lineHeight: 1.5 }}
+      >
+        {text}
+      </Typography>
+    </Stack>
+  );
+}
+
+/**
+ * Narratives and summaries are the long-form text in this panel, so they take
+ * the guide's long-form settings rather than the 13px/1.5 body default: Body
+ * large (14px) and the Loose line height (1.75), which is listed for exactly
+ * this kind of content. Short list rows below stay at the 13px body size.
+ */
 function Prose({ text }: { text: string }) {
   const theme = useTheme();
   return (
     <Typography
       sx={{
-        fontSize: 13,
+        fontSize: 14,
         color: theme.palette.text.secondary,
-        lineHeight: 1.5,
+        lineHeight: 1.75,
         whiteSpace: "pre-line",
       }}
     >
@@ -87,25 +153,22 @@ function ListItem({
         >
           {primary}
         </Typography>
-        {chipLabel && <Chip label={chipLabel} size="small" uppercase={false} />}
+        {/* The chip must keep its width when the sentence beside it wraps. */}
+        {chipLabel && (
+          <Box sx={{ flexShrink: 0 }}>
+            <Chip label={chipLabel} size="small" uppercase={false} />
+          </Box>
+        )}
       </Stack>
+      {/* Body small (12 / 1.5 / text.tertiary), not the 11px caption: a
+          recommended action's rationale runs to several sentences here, and
+          caption sizing is for hints and timestamps. */}
       {secondary && (
-        <Typography sx={{ fontSize: 11, color: theme.palette.text.accent, lineHeight: 1.4 }}>
+        <Typography sx={{ fontSize: 12, color: theme.palette.text.tertiary, lineHeight: 1.5 }}>
           {secondary}
         </Typography>
       )}
     </Stack>
-  );
-}
-
-function Caveat({ text }: { text: string }) {
-  const theme = useTheme();
-  return (
-    <Typography
-      sx={{ fontSize: 12, color: theme.palette.status.warning.text, lineHeight: 1.5 }}
-    >
-      {text}
-    </Typography>
   );
 }
 
@@ -175,7 +238,7 @@ function sectionBody(sectionKey: string, payload: AnalysisPayload): ReactNode {
       return (
         <Stack spacing="12px">
           {p.narrative && <Prose text={p.narrative} />}
-          {p.scores_caveat && <Caveat text={p.scores_caveat} />}
+          {p.scores_caveat && <WarningNotice icon={Info} text={p.scores_caveat} />}
           {gaps.map((g, i) => (
             <ListItem key={i} primary={g.control} chipLabel={g.priority} secondary={g.gap} />
           ))}
@@ -209,13 +272,26 @@ function sectionBody(sectionKey: string, payload: AnalysisPayload): ReactNode {
   }
 }
 
+/**
+ * One long card holds every per-section summary, so each key is set as a
+ * subsection title (14 / 600 / text.primary) and entries are separated by the
+ * 24px section-to-section step. At 12px / tertiary the keys read as captions
+ * and got lost in the prose.
+ */
 function SummaryList({ entries }: { entries: Array<[string, string]> }) {
   const theme = useTheme();
   return (
-    <Stack spacing="12px">
+    <Stack spacing="24px">
       {entries.map(([key, summary]) => (
         <Stack key={key} spacing="4px">
-          <Typography sx={{ fontSize: 12, fontWeight: 500, color: theme.palette.text.tertiary }}>
+          <Typography
+            sx={{
+              fontSize: 14,
+              fontWeight: 600,
+              lineHeight: 1.5,
+              color: theme.palette.text.primary,
+            }}
+          >
             {key}
           </Typography>
           <Prose text={summary} />
@@ -232,56 +308,48 @@ function AnalysisCard({ analysis }: { analysis: ReportRunAnalysis }) {
   const body = sectionBody(analysis.section_key, analysis.payload);
 
   return (
-    <Card elevation={0} sx={cardStyles.base(theme)}>
-      {/* Card title: 16px / 600 / 1.4 / text.primary */}
-      <Typography
-        sx={{
-          fontSize: 16,
-          fontWeight: 600,
-          lineHeight: 1.4,
-          color: theme.palette.text.primary,
-          mb: "12px",
-        }}
-      >
-        {label}
-      </Typography>
+    <Box sx={analysisCardSx(theme)}>
+      {/* Gaps rather than margins between the card's children (Do's & don'ts
+          §Spacing), so every section card spaces the same way. */}
+      <Stack spacing="12px">
+        {/* Card title: 16px / 600 / 1.4 / text.primary */}
+        <Typography
+          sx={{
+            fontSize: 16,
+            fontWeight: 600,
+            lineHeight: 1.4,
+            color: theme.palette.text.primary,
+          }}
+        >
+          {label}
+        </Typography>
 
-      {abstainReason && (
-        <Stack direction="row" spacing="8px" alignItems="flex-start" sx={{ mb: "12px" }}>
-          <Box sx={{ color: theme.palette.status.warning.text, mt: "2px", flexShrink: 0 }}>
-            <AlertTriangle size={16} />
-          </Box>
-          <Typography
-            sx={{ fontSize: 13, color: theme.palette.status.warning.text, lineHeight: 1.5 }}
-          >
-            The analyzer abstained: {abstainReason}
+        {/* One Typography, so the reason stays searchable as a single string. */}
+        {abstainReason && (
+          <WarningNotice
+            icon={AlertTriangle}
+            text={`The analyzer abstained: ${abstainReason}`}
+          />
+        )}
+
+        {body}
+
+        {/* Quiet fallback — a null payload (abstained or failed analyzer) or an
+            empty result. Suppressed when an abstain reason already explains it. */}
+        {!body && !abstainReason && (
+          <Typography sx={{ fontSize: 12, color: theme.palette.text.tertiary, lineHeight: 1.5 }}>
+            This section was not generated.
           </Typography>
-        </Stack>
-      )}
+        )}
 
-      {body}
-
-      {/* Quiet fallback — a null payload (abstained or failed analyzer) or an
-          empty result. Suppressed when an abstain reason already explains it. */}
-      {!body && !abstainReason && (
-        <Typography sx={{ fontSize: 12, color: theme.palette.text.tertiary, lineHeight: 1.5 }}>
-          This section was not generated.
-        </Typography>
-      )}
-
-      <Box
-        sx={{
-          mt: "12px",
-          pt: "12px",
-          borderTop: `1px solid ${theme.palette.border.light}`,
-        }}
-      >
-        <Typography sx={{ fontSize: 11, color: theme.palette.text.accent }}>
-          {analysis.analysis_model ?? "Model not recorded"} ·{" "}
-          {new Date(analysis.analyzed_at).toLocaleString()}
-        </Typography>
-      </Box>
-    </Card>
+        <Box sx={{ pt: "12px", borderTop: `1px solid ${theme.palette.border.light}` }}>
+          <Typography sx={{ fontSize: 11, color: theme.palette.text.accent, lineHeight: 1.4 }}>
+            {analysis.analysis_model ?? "Model not recorded"} ·{" "}
+            {new Date(analysis.analyzed_at).toLocaleString()}
+          </Typography>
+        </Box>
+      </Stack>
+    </Box>
   );
 }
 
@@ -298,11 +366,13 @@ export default function ReportAnalysisPanel({ analyses, isLoading }: ReportAnaly
   }
 
   if (!analyses?.length) {
+    // showBorder={false} — the guide reserves the dashed frame for tables and
+    // full-width lists, not for a narrow panel that already has its own edge.
     return (
       <EmptyState
         icon={Sparkles}
         message="No AI analyses were generated for this report run."
-        showBorder
+        showBorder={false}
       />
     );
   }

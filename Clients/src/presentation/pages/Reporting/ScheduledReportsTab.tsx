@@ -1,23 +1,24 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from "react";
 import {
+  Stack,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Stack,
-  TextField,
-  MenuItem,
 } from "@mui/material";
 import { CalendarClock } from "lucide-react";
 import singleTheme from "../../themes/v1SingleTheme";
-import { text as textColors, status } from "../../themes/palette";
+import { text as textColors } from "../../themes/palette";
 import Chip from "../../components/Chip";
-import { CustomizableButton } from "../../components/button/customizable-button";
+import RowActionsButton from "../../components/IconButton";
 import { EmptyState } from "../../components/EmptyState";
+import TableEmptyStateLayout from "../../components/Table/TableEmptyStateLayout";
 import StandardModal from "../../components/Modals/StandardModal";
+import Field from "../../components/Inputs/Field";
+import Select from "../../components/Inputs/Select";
 import {
   useScheduledReports,
   useRunNow,
@@ -28,6 +29,22 @@ import {
 import { showAlert } from "../../../infrastructure/api/customAxios";
 
 const FREQUENCIES = ["daily", "weekly", "monthly"];
+
+const COLUMNS = ["Name", "Scope", "Next run", "Status", "Actions"];
+
+// The runs table renders this column as "Organization"; the raw enum value
+// would have the two tables disagree on the same word.
+const scopeLabel = (scope: string) => (scope === "project" ? "Project" : "Organization");
+
+const FREQUENCY_ITEMS = FREQUENCIES.map((f) => ({
+  _id: f,
+  name: f.charAt(0).toUpperCase() + f.slice(1),
+}));
+
+const FORMAT_ITEMS = [
+  { _id: "pdf", name: "PDF" },
+  { _id: "docx", name: "Word (DOCX)" },
+];
 
 // The three fields worth editing in place. Scope, sections and AI blocks stay
 // in the create wizard — changing those is a different report, not an edit.
@@ -45,7 +62,6 @@ export default function ScheduledReportsTab() {
   const updateReport = useUpdateScheduledReport();
   const deleteReport = useDeleteScheduledReport();
   const [draft, setDraft] = useState<Draft | null>(null);
-  const [pendingDelete, setPendingDelete] = useState<any>(null);
 
   const onActionError = () =>
     showAlert({ variant: "error", body: "Action failed", isToast: true });
@@ -77,56 +93,52 @@ export default function ScheduledReportsTab() {
     );
   };
 
-  const confirmDelete = () => {
-    if (!pendingDelete) return;
-    deleteReport.mutate(pendingDelete.id, {
-      onSuccess: () => setPendingDelete(null),
-      onError: onActionError,
-    });
-  };
+  // Shared by the populated table and the empty layout, so the column row does
+  // not drift between the two states.
+  const tableHead = (
+    <TableHead
+      sx={{ backgroundColor: singleTheme.tableStyles.primary.header.backgroundColors }}
+    >
+      <TableRow sx={singleTheme.tableStyles.primary.header.row}>
+        {COLUMNS.map((h) => (
+          <TableCell key={h} sx={singleTheme.tableStyles.primary.header.cell} align="left">
+            {h}
+          </TableCell>
+        ))}
+      </TableRow>
+    </TableHead>
+  );
 
   if (!rows.length) {
     return (
-      <EmptyState
-        icon={CalendarClock}
-        message="No scheduled reports yet. Create one from the Templates tab."
-        showBorder
-      />
+      <TableEmptyStateLayout header={tableHead}>
+        <EmptyState
+          icon={CalendarClock}
+          message="No scheduled reports yet. Create one from the Templates tab."
+          showBorder
+        />
+      </TableEmptyStateLayout>
     );
   }
+
+  const bodyCell = singleTheme.tableStyles.primary.body.cell;
 
   return (
     <>
       <TableContainer sx={singleTheme.tableStyles.primary.frame}>
         <Table>
-          <TableHead>
-            <TableRow sx={singleTheme.tableStyles.primary.header.row}>
-              {["Name", "Scope", "Next run", "Status", "Actions"].map((h) => (
-                <TableCell key={h} sx={singleTheme.tableStyles.primary.header.cell}>
-                  {h}
-                </TableCell>
-              ))}
-            </TableRow>
-          </TableHead>
+          {tableHead}
           <TableBody>
             {rows.map((r: any) => (
               <TableRow key={r.id} sx={singleTheme.tableStyles.primary.body.row}>
-                <TableCell
-                  sx={{ ...singleTheme.tableStyles.primary.body.cell, color: textColors.primary }}
-                >
-                  {r.name}
+                <TableCell sx={{ ...bodyCell, color: textColors.primary }}>{r.name}</TableCell>
+                <TableCell sx={{ ...bodyCell, color: textColors.secondary }}>
+                  {scopeLabel(r.scope)}
                 </TableCell>
-                <TableCell
-                  sx={{ ...singleTheme.tableStyles.primary.body.cell, color: textColors.secondary }}
-                >
-                  {r.scope}
-                </TableCell>
-                <TableCell
-                  sx={{ ...singleTheme.tableStyles.primary.body.cell, color: textColors.secondary }}
-                >
+                <TableCell sx={{ ...bodyCell, color: textColors.secondary }}>
                   {r.next_run_at ? new Date(r.next_run_at).toLocaleString() : "—"}
                 </TableCell>
-                <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
+                <TableCell sx={bodyCell}>
                   <Chip
                     label={r.is_active ? "Active" : "Paused"}
                     variant={r.is_active ? "success" : "default"}
@@ -134,35 +146,26 @@ export default function ScheduledReportsTab() {
                     uppercase={false}
                   />
                 </TableCell>
-                <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                  <Stack direction="row" spacing="8px">
-                    <CustomizableButton
-                      variant="text"
-                      text="Run now"
-                      onClick={() => runNow.mutate(r.id, { onError: onActionError })}
-                      sx={{ height: 28, fontSize: 13, minWidth: 0 }}
-                    />
-                    <CustomizableButton
-                      variant="text"
-                      text={r.is_active ? "Pause" : "Resume"}
-                      onClick={() =>
-                        setActive.mutate({ id: r.id, active: !r.is_active }, { onError: onActionError })
-                      }
-                      sx={{ height: 28, fontSize: 13, minWidth: 0 }}
-                    />
-                    <CustomizableButton
-                      variant="text"
-                      text="Edit"
-                      onClick={() => openEdit(r)}
-                      sx={{ height: 28, fontSize: 13, minWidth: 0 }}
-                    />
-                    <CustomizableButton
-                      variant="text"
-                      text="Delete"
-                      onClick={() => setPendingDelete(r)}
-                      sx={{ height: 28, fontSize: 13, minWidth: 0, color: status.error.text }}
-                    />
-                  </Stack>
+                {/* The shared row-actions menu every other table uses. */}
+                <TableCell sx={bodyCell}>
+                  <RowActionsButton
+                    id={r.id}
+                    type="scheduledReport"
+                    isPaused={!r.is_active}
+                    onRunNow={() => runNow.mutate(r.id, { onError: onActionError })}
+                    onToggleEnable={async () =>
+                      setActive.mutate(
+                        { id: r.id, active: !r.is_active },
+                        { onError: onActionError },
+                      )
+                    }
+                    onEdit={() => openEdit(r)}
+                    onDelete={() =>
+                      deleteReport.mutate(r.id, { onError: onActionError })
+                    }
+                    warningTitle="Delete scheduled report"
+                    warningMessage={`"${r.name}" will stop running and be removed from this list. This cannot be undone.`}
+                  />
                 </TableCell>
               </TableRow>
             ))}
@@ -181,65 +184,64 @@ export default function ScheduledReportsTab() {
           isSubmitting={updateReport.isPending}
         >
           <Stack spacing={6}>
-            <TextField
+            <Field
+              id="scheduled-report-name"
               label="Name"
               value={draft.name}
               onChange={(e) => setDraft({ ...draft, name: e.target.value })}
             />
-            <TextField
-              select
+            <Select
+              id="scheduled-report-format"
               label="Format"
               value={draft.format}
-              onChange={(e) =>
-                setDraft({ ...draft, format: e.target.value as "pdf" | "docx" })
-              }
-            >
-              <MenuItem value="pdf">PDF</MenuItem>
-              <MenuItem value="docx">Word (DOCX)</MenuItem>
-            </TextField>
-            <TextField
-              select
+              items={FORMAT_ITEMS}
+              onChange={(e) => setDraft({ ...draft, format: e.target.value as "pdf" | "docx" })}
+              getOptionValue={(item) => item._id}
+            />
+            <Select
+              id="scheduled-report-frequency"
               label="Frequency"
               value={draft.schedule.frequency}
+              items={FREQUENCY_ITEMS}
               onChange={(e) =>
                 setDraft({
                   ...draft,
-                  schedule: { ...draft.schedule, frequency: e.target.value },
+                  schedule: { ...draft.schedule, frequency: String(e.target.value) },
                 })
               }
-            >
-              {FREQUENCIES.map((f) => (
-                <MenuItem key={f} value={f}>
-                  {f}
-                </MenuItem>
-              ))}
-            </TextField>
-            <Stack direction="row" spacing={2}>
-              <TextField
+              getOptionValue={(item) => item._id}
+            />
+            <Stack direction="row" spacing={6}>
+              <Field
+                id="scheduled-report-hour"
                 type="number"
                 label="Hour"
                 value={draft.schedule.hour}
+                min={0}
+                max={23}
                 onChange={(e) =>
                   setDraft({
                     ...draft,
                     schedule: { ...draft.schedule, hour: Number(e.target.value) },
                   })
                 }
-                inputProps={{ min: 0, max: 23 }}
               />
-              <TextField
+              <Field
+                id="scheduled-report-minute"
                 type="number"
                 label="Minute"
                 value={draft.schedule.minute}
+                min={0}
+                max={59}
                 onChange={(e) =>
                   setDraft({
                     ...draft,
                     schedule: { ...draft.schedule, minute: Number(e.target.value) },
                   })
                 }
-                inputProps={{ min: 0, max: 59 }}
               />
-              <TextField
+              <Field
+                id="scheduled-report-timezone"
                 label="Timezone"
                 value={draft.schedule.timezone}
                 onChange={(e) =>
@@ -252,19 +254,6 @@ export default function ScheduledReportsTab() {
             </Stack>
           </Stack>
         </StandardModal>
-      )}
-
-      {pendingDelete && (
-        <StandardModal
-          isOpen
-          onClose={() => setPendingDelete(null)}
-          title="Delete scheduled report"
-          description={`"${pendingDelete.name}" will stop running and be removed from this list. This cannot be undone.`}
-          onSubmit={confirmDelete}
-          submitButtonText="Delete report"
-          submitButtonColor={status.error.text}
-          isSubmitting={deleteReport.isPending}
-        />
       )}
     </>
   );

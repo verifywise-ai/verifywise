@@ -39,7 +39,7 @@ const mockData: FrameworkReadinessScore[] = [
 describe("ReadinessTrend", () => {
   it("shows loading state", () => {
     const { container } = renderWithProviders(<ReadinessTrend data={[]} isLoading />);
-    expect(container.querySelector(".MuiLinearProgress-root")).toBeInTheDocument();
+    expect(container.querySelector(".MuiSkeleton-root")).toBeInTheDocument();
   });
 
   it("shows empty state when no data", () => {

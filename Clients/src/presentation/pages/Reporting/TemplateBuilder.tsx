@@ -1,17 +1,10 @@
 import { useState } from "react";
-import {
-  Stepper,
-  Step,
-  StepLabel,
-  Box,
-  Button,
-  MenuItem,
-  TextField,
-  FormControlLabel,
-  Checkbox,
-  Typography,
-  Stack,
-} from "@mui/material";
+import { Box, Stack, Typography } from "@mui/material";
+import StepperModal from "../../components/Modals/StepperModal";
+import Field from "../../components/Inputs/Field";
+import Select from "../../components/Inputs/Select";
+import Checkbox from "../../components/Inputs/Checkbox";
+import { text as textColors } from "../../themes/palette";
 import { useSectionCatalog, useCreateTemplate } from "../../../application/hooks/useReporting";
 import { showAlert } from "../../../infrastructure/api/customAxios";
 import type {
@@ -44,6 +37,25 @@ const DEFAULT_AI_BLOCKS: AiBlocksConfig = {
   riskAnalysis: true,
   complianceGap: false,
   vendorRisk: false,
+};
+
+const CATEGORY_ITEMS = [
+  { _id: "governance", name: "Governance" },
+  { _id: "compliance", name: "Compliance" },
+  { _id: "risk", name: "Risk" },
+];
+
+const SCOPE_ITEMS = [
+  { _id: "project", name: "Project" },
+  { _id: "organization", name: "Organization" },
+];
+
+// Style guide § Typography: body 13px, hint on text.tertiary. The panels carry
+// no heading of their own — the stepper already names each step.
+const panelHintSx = {
+  fontSize: 13,
+  lineHeight: 1.5,
+  color: textColors.tertiary,
 };
 
 export default function TemplateBuilder({ onClose }: { onClose: () => void }) {
@@ -110,118 +122,104 @@ export default function TemplateBuilder({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <Box sx={{ p: 3, minWidth: 600 }}>
-      <Stepper activeStep={active} sx={{ mb: 3 }}>
-        {STEPS.map((s) => (
-          <Step key={s}>
-            <StepLabel>{s}</StepLabel>
-          </Step>
-        ))}
-      </Stepper>
-
+    <StepperModal
+      isOpen
+      onClose={onClose}
+      title="New report template"
+      steps={STEPS}
+      activeStep={active}
+      onNext={() => setActive(active + 1)}
+      onBack={() => setActive(active - 1)}
+      onSubmit={submit}
+      canProceed={canNext()}
+      isSubmitting={create.isPending}
+      submitButtonText="Create template"
+      maxWidth="700px"
+    >
       {active === 0 && (
-        <Stack spacing={2}>
-          <TextField
+        <Stack spacing={6}>
+          <Field
+            id="template-builder-name"
             label="Template name"
+            isRequired
+            placeholder="e.g. Quarterly board pack"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            fullWidth
           />
-          <TextField
+          <Field
+            id="template-builder-description"
             label="Description"
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            isOptional
             multiline
             minRows={2}
-            fullWidth
+            placeholder="What this report covers and who it is for"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
           />
-          <TextField
-            select
+          <Select
+            id="template-builder-category"
             label="Category"
             value={category}
-            onChange={(e) => setCategory(e.target.value)}
-          >
-            <MenuItem value="governance">Governance</MenuItem>
-            <MenuItem value="compliance">Compliance</MenuItem>
-            <MenuItem value="risk">Risk</MenuItem>
-          </TextField>
-          <TextField
-            select
+            items={CATEGORY_ITEMS}
+            onChange={(e) => setCategory(String(e.target.value))}
+            getOptionValue={(item) => item._id}
+          />
+          <Select
+            id="template-builder-scope"
             label="Default report level"
             value={scope}
+            items={SCOPE_ITEMS}
             onChange={(e) => setScope(e.target.value as ReportScope)}
-          >
-            <MenuItem value="project">Project</MenuItem>
-            <MenuItem value="organization">Organization</MenuItem>
-          </TextField>
+            getOptionValue={(item) => item._id}
+          />
         </Stack>
       )}
 
       {active === 1 && (
-        <Stack spacing={1}>
-          <Typography variant="h6">Sections</Typography>
-          {isLoading && (
-            <Typography variant="body2" color="text.secondary">
-              Loading sections…
-            </Typography>
-          )}
+        <Stack spacing="16px">
+          {isLoading && <Typography sx={panelHintSx}>Loading sections…</Typography>}
           {Object.entries(groups).map(([group, entries]) => (
-            <Box key={group} sx={{ mb: 1 }}>
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                {group}
-              </Typography>
-              {entries.map((entry) => (
-                <FormControlLabel
-                  key={entry.key}
-                  control={
-                    <Checkbox
-                      checked={selected.includes(entry.key)}
-                      onChange={() => toggleSection(entry.key)}
-                    />
-                  }
-                  label={entry.label}
-                />
-              ))}
+            <Box key={group}>
+              {/* Group label, not a heading: it names a checkbox cluster. */}
+              <Typography sx={{ ...panelHintSx, mb: "4px" }}>{group}</Typography>
+              <Stack>
+                {entries.map((entry) => (
+                  <Checkbox
+                    key={entry.key}
+                    id={`template-builder-section-${entry.key}`}
+                    label={entry.label}
+                    value={entry.key}
+                    size="small"
+                    isChecked={selected.includes(entry.key)}
+                    onChange={() => toggleSection(entry.key)}
+                  />
+                ))}
+              </Stack>
             </Box>
           ))}
         </Stack>
       )}
 
       {active === 2 && (
-        <Stack spacing={1}>
-          <Typography variant="h6">AI insights</Typography>
-          <Typography variant="body2" color="text.secondary">
+        <Stack spacing="8px">
+          <Typography sx={panelHintSx}>
             Each enabled block is one language-model call per report run.
           </Typography>
-          {AI_BLOCKS.map(({ key, label }) => (
-            <FormControlLabel
-              key={key}
-              control={
-                <Checkbox
-                  checked={!!ai[key]}
-                  onChange={(e) => setAi((prev) => ({ ...prev, [key]: e.target.checked }))}
-                />
-              }
-              label={label}
-            />
-          ))}
+          <Stack>
+            {AI_BLOCKS.map(({ key, label }) => (
+              <Checkbox
+                key={key}
+                id={`template-builder-ai-${key}`}
+                label={label}
+                value={key}
+                size="small"
+                isChecked={!!ai[key]}
+                onChange={(e) => setAi((prev) => ({ ...prev, [key]: e.target.checked }))}
+              />
+            ))}
+          </Stack>
         </Stack>
       )}
-
-      <Box sx={{ mt: 3, display: "flex", justifyContent: "space-between" }}>
-        <Button disabled={active === 0} onClick={() => setActive(active - 1)}>
-          Back
-        </Button>
-        {active < STEPS.length - 1 ? (
-          <Button variant="contained" disabled={!canNext()} onClick={() => setActive(active + 1)}>
-            Next
-          </Button>
-        ) : (
-          <Button variant="contained" disabled={create.isPending} onClick={submit}>
-            Create template
-          </Button>
-        )}
-      </Box>
-    </Box>
+    </StepperModal>
   );
 }

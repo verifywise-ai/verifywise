@@ -345,7 +345,9 @@ const ProjectFrameworks = ({
             </TabPanel>
           )}
           {readinessFrameworkType && (
-            <TabPanel value="readiness" sx={tabPanelStyle}>
+            // Tighter top padding than the sibling panels: readiness opens with a
+            // right-aligned control strip, so the default 20px reads as dead space.
+            <TabPanel value="readiness" sx={{ ...tabPanelStyle, pt: 6 }}>
               <ReadinessDashboard
                 projectId={Number(project.id)}
                 frameworkType={readinessFrameworkType}

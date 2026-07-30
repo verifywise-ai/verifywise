@@ -46,6 +46,20 @@ const run = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
+// Row actions live behind the shared row-actions menu (components/IconButton):
+// open the row's gear menu, then pick the item.
+const openRowMenu = (user: ReturnType<typeof userEvent.setup>, index = 0) =>
+  user.click(screen.getAllByRole("button", { name: "Report actions" })[index]);
+
+const clickRowAction = async (
+  user: ReturnType<typeof userEvent.setup>,
+  name: string,
+  index = 0,
+) => {
+  await openRowMenu(user, index);
+  await user.click(screen.getByRole("menuitem", { name }));
+};
+
 describe("ReportRunsTable", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -117,16 +131,18 @@ describe("ReportRunsTable", () => {
     expect(screen.getByText("Failed")).toBeInTheDocument();
   });
 
-  it("treats partial_success as downloadable, not an error", () => {
+  it("treats partial_success as downloadable, not an error", async () => {
     mockRunsPage.mockReturnValue({
       data: { rows: [run({ status: "partial_success" })], total: 1 },
       isLoading: false,
     });
-
+    const user = userEvent.setup();
     renderWithProviders(<ReportRunsTable variant="live" />);
 
     expect(screen.getByText("Partial success")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /download/i })).toBeEnabled();
+    // The menu only offers Download for a run that has a file.
+    await openRowMenu(user);
+    expect(screen.getByRole("menuitem", { name: "Download" })).toBeInTheDocument();
   });
 
   // error_message is NULL on the partial_success path; which channel failed is
@@ -159,7 +175,10 @@ describe("ReportRunsTable", () => {
     const user = userEvent.setup();
     renderWithProviders(<ReportRunsTable variant="live" />);
 
-    await user.click(screen.getByRole("button", { name: /archive/i }));
+    await clickRowAction(user, "Archive");
+    // Archive neighbours a permanent delete in the menu, so it confirms first.
+    expect(mockArchive).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Archive report" }));
 
     expect(mockArchive).toHaveBeenCalledWith(1);
   });
@@ -172,7 +191,7 @@ describe("ReportRunsTable", () => {
     });
     renderWithProviders(<ReportRunsTable variant="archived" />);
 
-    await user.click(screen.getByRole("button", { name: /restore/i }));
+    await clickRowAction(user, "Restore");
 
     expect(mockRestore).toHaveBeenCalledWith(1);
   });
@@ -234,7 +253,7 @@ describe("ReportRunsTable", () => {
     const user = userEvent.setup();
     renderWithProviders(<ReportRunsTable variant="live" />);
 
-    await user.click(screen.getByRole("button", { name: /view analyses/i }));
+    await clickRowAction(user, "View analyses");
 
     // Exact match: a substring/regex match also hits the panel's own empty
     // state ("No AI analyses were generated for this report run.").
@@ -255,7 +274,7 @@ describe("ReportRunsTable", () => {
     const user = userEvent.setup();
     renderWithProviders(<ReportRunsTable variant="live" />);
 
-    await user.click(screen.getAllByRole("button", { name: /view analyses/i })[1]);
+    await clickRowAction(user, "View analyses", 1);
 
     expect(mockAnalyses).toHaveBeenLastCalledWith(2);
   });
@@ -282,7 +301,7 @@ describe("ReportRunsTable", () => {
       const user = userEvent.setup();
       renderWithProviders(<ReportRunsTable variant="live" />);
 
-      await user.click(screen.getByRole("button", { name: "Download" }));
+      await clickRowAction(user, "Download");
 
       // The handler is async (await downloadReportRun before touching the DOM).
       await waitFor(() => expect(clickSpy).toHaveBeenCalledOnce());
@@ -302,7 +321,7 @@ describe("ReportRunsTable", () => {
     const user = userEvent.setup();
     renderWithProviders(<ReportRunsTable variant="live" />);
 
-    await user.click(screen.getByRole("button", { name: "Delete" }));
+    await clickRowAction(user, "Delete permanently");
 
     expect(screen.getByText("Delete report run permanently?")).toBeInTheDocument();
     expect(mockDelete).not.toHaveBeenCalled();
@@ -312,15 +331,15 @@ describe("ReportRunsTable", () => {
     const user = userEvent.setup();
     renderWithProviders(<ReportRunsTable variant="live" />);
 
-    await user.click(screen.getByRole("button", { name: "Delete" }));
+    await clickRowAction(user, "Delete permanently");
     await user.click(screen.getByRole("button", { name: /delete permanently/i }));
 
     expect(mockDelete).toHaveBeenCalledWith(1);
   });
 
   it("deletes only the run whose Delete action was clicked", async () => {
-    // pendingDeleteId is a single value shared across rows; this proves the
-    // confirmation fires for the clicked row, not always the first one.
+    // Each row owns its own menu and confirmation; this proves the delete
+    // fires for the clicked row, not always the first one.
     mockRunsPage.mockReturnValue({
       data: {
         rows: [run(), run({ id: 2, output_filename: "Q4 risk review.pdf" })],
@@ -331,7 +350,7 @@ describe("ReportRunsTable", () => {
     const user = userEvent.setup();
     renderWithProviders(<ReportRunsTable variant="live" />);
 
-    await user.click(screen.getAllByRole("button", { name: "Delete" })[1]);
+    await clickRowAction(user, "Delete permanently", 1);
     await user.click(screen.getByRole("button", { name: /delete permanently/i }));
 
     expect(mockDelete).toHaveBeenCalledWith(2);
@@ -346,7 +365,7 @@ describe("ReportRunsTable", () => {
     const user = userEvent.setup();
     renderWithProviders(<ReportRunsTable variant="archived" />);
 
-    await user.click(screen.getByRole("button", { name: "Delete" }));
+    await clickRowAction(user, "Delete permanently");
     expect(mockDelete).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: /delete permanently/i }));
@@ -357,7 +376,7 @@ describe("ReportRunsTable", () => {
     const user = userEvent.setup();
     renderWithProviders(<ReportRunsTable variant="live" />);
 
-    await user.click(screen.getByRole("button", { name: "Delete" }));
+    await clickRowAction(user, "Delete permanently");
     await user.click(screen.getByRole("button", { name: "Cancel" }));
 
     expect(mockDelete).not.toHaveBeenCalled();

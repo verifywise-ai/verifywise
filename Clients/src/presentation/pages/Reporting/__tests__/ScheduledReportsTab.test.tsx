@@ -1,5 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
+// The tab now uses the design-system Field/Select, which read border and text
+// colours off the app theme — a bare render() blows up on the MUI default one.
+import { renderWithProviders as render } from "../../../../test/renderWithProviders";
 
 const updateMutate = vi.fn();
 const deleteMutate = vi.fn();
@@ -24,10 +27,15 @@ vi.mock("../../../../application/hooks/useReporting", () => ({
 
 import ScheduledReportsTab from "../ScheduledReportsTab";
 
-// The row action and the dialog's confirm button both say "delete"; the row one
-// is the plain "Delete", the confirm is "Delete report".
-const clickRowDelete = () =>
-  fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+// Row actions live behind the shared row-actions menu (components/IconButton):
+// open the row's gear menu, then pick the item. The menu item is a menuitem and
+// the dialog's confirm is a button, so "Delete" and "Delete report" stay apart.
+const clickRowAction = (name: string) => {
+  fireEvent.click(screen.getByRole("button", { name: "Scheduled report actions" }));
+  fireEvent.click(screen.getByRole("menuitem", { name }));
+};
+
+const clickRowDelete = () => clickRowAction("Delete");
 
 describe("ScheduledReportsTab", () => {
   beforeEach(() => {
@@ -67,7 +75,7 @@ describe("ScheduledReportsTab", () => {
 
   it("submits edited fields through useUpdateScheduledReport with the row id", () => {
     render(<ScheduledReportsTab />);
-    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    clickRowAction("Edit");
 
     fireEvent.change(screen.getByLabelText("Name"), {
       target: { value: "Monthly compliance digest" },
@@ -90,7 +98,7 @@ describe("ScheduledReportsTab", () => {
 
   it("seeds the edit form from the row instead of blank defaults", () => {
     render(<ScheduledReportsTab />);
-    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    clickRowAction("Edit");
 
     expect(screen.getByLabelText("Name")).toHaveValue("Weekly compliance digest");
     expect(screen.getByLabelText("Timezone")).toHaveValue("UTC");
