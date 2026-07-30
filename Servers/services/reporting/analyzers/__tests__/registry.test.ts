@@ -11,7 +11,14 @@ import {
 describe("analyzer registry", () => {
   it("exposes exactly the six analyzers", () => {
     expect(Object.keys(ANALYZERS).sort()).toEqual(
-      ["complianceGap", "executiveSummary", "keyFindings", "recommendedActions", "riskAnalysis", "vendorRisk"].sort(),
+      [
+        "complianceGap",
+        "executiveSummary",
+        "keyFindings",
+        "recommendedActions",
+        "riskAnalysis",
+        "vendorRisk",
+      ].sort(),
     );
     expect(ANALYSIS_SECTION_KEYS).toHaveLength(6);
   });
@@ -33,14 +40,28 @@ describe("analyzer registry", () => {
     const reportData: any = {
       metadata: { frameworkName: "EU AI Act", projectTitle: "Acme", organizationId: 5 },
       sections: {
-        projectRisks: { totalRisks: 1, risksByLevel: [{ level: "High", count: 1 }], risks: [{ name: "R1" }] },
+        projectRisks: {
+          totalRisks: 1,
+          risksByLevel: [{ level: "High", count: 1 }],
+          risks: [{ name: "R1" }],
+        },
         vendorRisks: { totalRisks: 1, risks: [{ riskName: "VR1" }] },
         vendors: { totalVendors: 1, vendors: [{ name: "Acme Corp" }] },
-        compliance: { totalControls: 1, completedControls: 0, overallProgress: 0, controls: [{ id: 1 }] },
+        compliance: {
+          totalControls: 1,
+          completedControls: 0,
+          overallProgress: 0,
+          controls: [{ id: 1 }],
+        },
       },
     };
     const extras = {
-      readiness: { controlScores: [{ control_id: 1, overall_score: 25 }], weakestControls: [], frameworkScore: null, stale: true },
+      readiness: {
+        controlScores: [{ control_id: 1, overall_score: 25 }],
+        weakestControls: [],
+        frameworkScore: null,
+        stale: true,
+      },
       sectionSummaries: {
         projectRisks: "Use case risks are concentrated in one high-severity item.",
         compliance: "Compliance controls are mostly complete.",
@@ -53,7 +74,10 @@ describe("analyzer registry", () => {
   });
 
   it("returns an empty prompt — not a wasted LLM call — when an analyzer has no input", () => {
-    const empty: any = { metadata: { frameworkName: "EU AI Act", projectTitle: "Acme", organizationId: 5 }, sections: {} };
+    const empty: any = {
+      metadata: { frameworkName: "EU AI Act", projectTitle: "Acme", organizationId: 5 },
+      sections: {},
+    };
     for (const def of Object.values(ANALYZERS)) {
       expect(def.buildUserPrompt(empty, {})).toBe("");
     }
@@ -298,8 +322,12 @@ describe("analyzer registry", () => {
     // The live corpus contains not one percentage, not one date comparison and
     // not one ratio: taken literally, "Never introduce a fact, name, number...
     // that does not appear in it" forbids dividing two numbers that do.
-    expect(GROUNDING_RULES).toContain("Compute ratios, percentages, shares, counts and differences");
-    expect(GROUNDING_RULES).toContain("compare dates in the data against the reference date when one is supplied");
+    expect(GROUNDING_RULES).toContain(
+      "Compute ratios, percentages, shares, counts and differences",
+    );
+    expect(GROUNDING_RULES).toContain(
+      "compare dates in the data against the reference date when one is supplied",
+    );
     expect(GROUNDING_RULES).toContain("neither supplied nor derivable");
     // The anti-fabrication rule itself must survive the carve-out verbatim.
     expect(GROUNDING_RULES).toContain(
@@ -322,7 +350,13 @@ describe("analyzer registry", () => {
       metadata: { frameworkName: "EU AI Act", projectTitle: "Acme" },
       // A big raw section is present, but must never leak into these three
       // analyzers' prompts — only sectionSummaries prose may.
-      sections: { projectRisks: { totalRisks: 1, risksByLevel: [], risks: [{ name: "RawSectionLeakMarker" }] } },
+      sections: {
+        projectRisks: {
+          totalRisks: 1,
+          risksByLevel: [],
+          risks: [{ name: "RawSectionLeakMarker" }],
+        },
+      },
     };
 
     for (const key of ["executiveSummary", "keyFindings", "recommendedActions"] as const) {
@@ -345,9 +379,16 @@ describe("analyzer registry", () => {
     const reportData: any = {
       metadata: { frameworkName: "EU AI Act", projectTitle: "Acme" },
       sections: {
-        vendorRisks: { totalRisks: 1, risks: [{ vendorName: "Northwind Traders", riskName: "Unvetted subprocessor" }] },
+        vendorRisks: {
+          totalRisks: 1,
+          risks: [{ vendorName: "Northwind Traders", riskName: "Unvetted subprocessor" }],
+        },
         vendors: { totalVendors: 1, vendors: [{ name: "Northwind Traders" }] },
-        projectRisks: { totalRisks: 1, risksByLevel: [], risks: [{ name: "Unbounded model access" }] },
+        projectRisks: {
+          totalRisks: 1,
+          risksByLevel: [],
+          risks: [{ name: "Unbounded model access" }],
+        },
       },
     };
 
@@ -383,10 +424,16 @@ describe("analyzer registry", () => {
       subtopics: Array.from({ length: 10 }, (_, j) => ({
         id: j,
         title: `Subtopic ${j}`,
-        questions: Array.from({ length: 10 }, (_, k) => ({ id: k, question: `Q${k}`, status: "answered" })),
+        questions: Array.from({ length: 10 }, (_, k) => ({
+          id: k,
+          question: `Q${k}`,
+          status: "answered",
+        })),
       })),
     }));
-    const out = JSON.parse(prepareSectionData("assessment", { totalQuestions: 2000, answeredQuestions: 0, topics }));
+    const out = JSON.parse(
+      prepareSectionData("assessment", { totalQuestions: 2000, answeredQuestions: 0, topics }),
+    );
 
     expect(out.topics).toHaveLength(10);
     expect(out._topicsTruncated).toBe("showing 10 of 20");
@@ -402,14 +449,23 @@ describe("analyzer registry", () => {
       clauseId: `C${i}`,
       title: `Clause ${i}`,
       status: "met",
-      subClauses: Array.from({ length: 30 }, (_, j) => ({ id: j, title: `Sub ${j}`, status: "met" })),
+      subClauses: Array.from({ length: 30 }, (_, j) => ({
+        id: j,
+        title: `Sub ${j}`,
+        status: "met",
+      })),
     }));
     const annexes = Array.from({ length: 40 }, (_, i) => ({
       id: i,
       annexId: `A${i}`,
       title: `Annex ${i}`,
       status: "met",
-      controls: Array.from({ length: 30 }, (_, j) => ({ id: j, controlId: `AC${j}`, title: `Control ${j}`, status: "met" })),
+      controls: Array.from({ length: 30 }, (_, j) => ({
+        id: j,
+        controlId: `AC${j}`,
+        title: `Control ${j}`,
+        status: "met",
+      })),
     }));
     const out = JSON.parse(prepareSectionData("clausesAndAnnexes", { clauses, annexes }));
 
@@ -450,9 +506,16 @@ describe("analyzer registry", () => {
   });
 
   it("Fix 4 — complianceGap does not claim scores are missing when frameworkScore/weakestControls exist without controlScores", () => {
-    const reportData: any = { metadata: { frameworkName: "EU AI Act", projectTitle: "Acme" }, sections: {} };
+    const reportData: any = {
+      metadata: { frameworkName: "EU AI Act", projectTitle: "Acme" },
+      sections: {},
+    };
     const prompt = ANALYZERS.complianceGap.buildUserPrompt(reportData, {
-      readiness: { controlScores: [], weakestControls: [{ control_id: 1, overall_score: 10 }], frameworkScore: 42 },
+      readiness: {
+        controlScores: [],
+        weakestControls: [{ control_id: 1, overall_score: 10 }],
+        frameworkScore: 42,
+      },
     });
     expect(prompt).not.toContain("No stored readiness scores were found for this project.");
     expect(prompt).toContain("42");
@@ -467,7 +530,12 @@ describe("analyzer registry", () => {
       description: "x".repeat(3000),
     }));
     const sections = {
-      compliance: { totalControls: 50, completedControls: 0, overallProgress: 0, controls: bigControls },
+      compliance: {
+        totalControls: 50,
+        completedControls: 0,
+        overallProgress: 0,
+        controls: bigControls,
+      },
     };
     const out = renderSections(sections, ["compliance"]);
     expect(out).toContain("[TRUNCATED: section data exceeded the prompt budget]");
@@ -478,16 +546,32 @@ describe("analyzer registry", () => {
     const reportData: any = {
       metadata: { frameworkName: "EU AI Act", projectTitle: "Acme", organizationId: 5 },
       sections: {
-        projectRisks: { totalRisks: 1, risksByLevel: [{ level: "High", count: 1 }], risks: [{ name: "R1" }] },
+        projectRisks: {
+          totalRisks: 1,
+          risksByLevel: [{ level: "High", count: 1 }],
+          risks: [{ name: "R1" }],
+        },
         vendorRisks: { totalRisks: 1, risks: [{ riskName: "VR1" }] },
         vendors: { totalVendors: 1, vendors: [{ name: "Acme Corp" }] },
-        compliance: { totalControls: 1, completedControls: 0, overallProgress: 0, controls: [{ id: 1 }] },
+        compliance: {
+          totalControls: 1,
+          completedControls: 0,
+          overallProgress: 0,
+          controls: [{ id: 1 }],
+        },
       },
     };
     const extras = {
       facts: "FACTS-MARKER totalRisks=41; ownerless=7",
-      readiness: { controlScores: [{ control_id: 1, overall_score: 25 }], weakestControls: [], frameworkScore: null, stale: true },
-      sectionSummaries: { projectRisks: "Use case risks are concentrated in one high-severity item." },
+      readiness: {
+        controlScores: [{ control_id: 1, overall_score: 25 }],
+        weakestControls: [],
+        frameworkScore: null,
+        stale: true,
+      },
+      sectionSummaries: {
+        projectRisks: "Use case risks are concentrated in one high-severity item.",
+      },
     };
 
     it("all six carry the facts block, so a single prompt holds the whole estate", () => {
@@ -512,7 +596,9 @@ describe("analyzer registry", () => {
       const withoutFacts = ANALYZERS.riskAnalysis.buildUserPrompt(reportData, {});
       expect(withoutFacts).toContain("Risk data:");
       expect(withoutFacts).not.toContain("FACTS-MARKER");
-      expect(withoutFacts.startsWith("Framework: EU AI Act\nSubject: Acme\n\nRisk data:")).toBe(true);
+      expect(withoutFacts.startsWith("Framework: EU AI Act\nSubject: Acme\n\nRisk data:")).toBe(
+        true,
+      );
     });
   });
 
@@ -521,7 +607,9 @@ describe("analyzer registry", () => {
       metadata: { frameworkName: "EU AI Act", projectTitle: "Acme", organizationId: 5 },
       sections: {},
     };
-    const extras = { sectionSummaries: { projectRisks: "One high-severity item dominates the register." } };
+    const extras = {
+      sectionSummaries: { projectRisks: "One high-severity item dominates the register." },
+    };
 
     it("asks for a lead finding with its evidence instead of the fixed four-part outline", () => {
       const system = ANALYZERS.executiveSummary.buildSystemPrompt();
@@ -534,7 +622,8 @@ describe("analyzer registry", () => {
       // The .describe() text is serialised into the JSON schema handed to the
       // provider, so an outline left there reaches the model in the same call
       // and contradicts the system prompt.
-      const summaryDescription = (ANALYZERS.executiveSummary.schema as any).shape.summary.description;
+      const summaryDescription = (ANALYZERS.executiveSummary.schema as any).shape.summary
+        .description;
       expect(summaryDescription).not.toContain("overall compliance and governance posture");
     });
 
@@ -543,7 +632,9 @@ describe("analyzer registry", () => {
       // requirements" — the name never reached the instruction body.
       const prompt = ANALYZERS.executiveSummary.buildUserPrompt(reportData, extras);
       expect(prompt).toContain("Write the executive summary for Acme against EU AI Act.");
-      expect(ANALYZERS.executiveSummary.buildSystemPrompt()).toContain('never write "the framework"');
+      expect(ANALYZERS.executiveSummary.buildSystemPrompt()).toContain(
+        'never write "the framework"',
+      );
     });
 
     it("still spends nothing when there are no summaries to work from", () => {
@@ -582,7 +673,12 @@ describe("analyzer registry", () => {
     // basis labels the CLAIM. It must never read as permission to name a
     // control or vendor that is not in the input — sanitizeProvenance would
     // drop the row anyway, so an unwarned model just loses content.
-    for (const key of ["keyFindings", "complianceGap", "vendorRisk", "recommendedActions"] as const) {
+    for (const key of [
+      "keyFindings",
+      "complianceGap",
+      "vendorRisk",
+      "recommendedActions",
+    ] as const) {
       expect(ANALYZERS[key].buildSystemPrompt()).toContain("verbatim");
     }
   });

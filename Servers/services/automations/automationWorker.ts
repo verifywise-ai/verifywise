@@ -537,7 +537,9 @@ export async function handleComplianceScoreJob() {
       const drops = await detectComplianceDrop(organizationId);
       if (drops.length > 0) {
         const summary = drops
-          .map((d) => `${d.framework_type}: -${d.drop} pts (${d.previous_score} → ${d.latest_score})`)
+          .map(
+            (d) => `${d.framework_type}: -${d.drop} pts (${d.previous_score} → ${d.latest_score})`,
+          )
           .join("; ");
         await notifyProactive(organizationId, {
           title: "Compliance score drop detected",

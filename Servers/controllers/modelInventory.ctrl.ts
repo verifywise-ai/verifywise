@@ -511,7 +511,10 @@ export async function updateModelInventoryById(req: Request, res: Response) {
     // into the deployed (Approved) state, trigger an automatic risk-assessment
     // notification (in-app + email). Failure must never break the response.
     const previousStatus = (currentModelInventory as any).status;
-    if (status === ModelInventoryStatus.APPROVED && previousStatus !== ModelInventoryStatus.APPROVED) {
+    if (
+      status === ModelInventoryStatus.APPROVED &&
+      previousStatus !== ModelInventoryStatus.APPROVED
+    ) {
       const modelName = savedModelInventory.model || `Model #${modelInventoryId}`;
       notifyProactive(req.organizationId!, {
         title: "Model deployed — risk assessment required",

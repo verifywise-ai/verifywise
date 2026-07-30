@@ -10,7 +10,8 @@ import {
 describe("analyzer schemas", () => {
   it("executiveSummary accepts a valid payload", () => {
     const parsed = executiveSummarySchema.parse({
-      summary: "The programme demonstrates partial coverage of the required controls across all assessed domains.",
+      summary:
+        "The programme demonstrates partial coverage of the required controls across all assessed domains.",
       abstain_reason: null,
     });
     expect(parsed.abstain_reason).toBeNull();
@@ -103,13 +104,36 @@ describe("analyzer schemas", () => {
     // Prose fields keep their .min(40) floor even when abstaining — an abstention
     // still has to say something a reader can act on, and these strings are what
     // actually renders in the report.
-    expect(riskAnalysisSchema.parse({ narrative: "No risks are recorded for this project, so no risk posture can be assessed.", top_risks: [], abstain_reason: "Empty risk register." }).top_risks).toEqual([]);
-    expect(complianceGapSchema.parse({ narrative: "No readiness scores are stored for this project, so no gap analysis is possible.", gaps: [], scores_caveat: "Readiness has never been calculated for this project.", abstain_reason: "No stored readiness rows." }).gaps).toEqual([]);
-    expect(vendorRiskSchema.parse({ narrative: "No vendors are registered against this project, so there is no exposure to assess.", concerns: [], abstain_reason: "Empty vendor list." }).concerns).toEqual([]);
+    expect(
+      riskAnalysisSchema.parse({
+        narrative: "No risks are recorded for this project, so no risk posture can be assessed.",
+        top_risks: [],
+        abstain_reason: "Empty risk register.",
+      }).top_risks,
+    ).toEqual([]);
+    expect(
+      complianceGapSchema.parse({
+        narrative:
+          "No readiness scores are stored for this project, so no gap analysis is possible.",
+        gaps: [],
+        scores_caveat: "Readiness has never been calculated for this project.",
+        abstain_reason: "No stored readiness rows.",
+      }).gaps,
+    ).toEqual([]);
+    expect(
+      vendorRiskSchema.parse({
+        narrative:
+          "No vendors are registered against this project, so there is no exposure to assess.",
+        concerns: [],
+        abstain_reason: "Empty vendor list.",
+      }).concerns,
+    ).toEqual([]);
   });
 
   it("rejects a prose field too short to be a usable sentence", () => {
-    expect(() => executiveSummarySchema.parse({ summary: "ok", abstain_reason: "no data" })).toThrow();
+    expect(() =>
+      executiveSummarySchema.parse({ summary: "ok", abstain_reason: "no data" }),
+    ).toThrow();
   });
 
   it("requires the basis KEY on every finding, action, gap and concern", () => {
@@ -133,7 +157,9 @@ describe("analyzer schemas", () => {
     expect(() =>
       vendorRiskSchema.parse({
         narrative: "Third-party exposure is concentrated in a single unreviewed supplier.",
-        concerns: [{ vendor: "Acme Corp", concern: "No DPA on file for this vendor.", severity: "high" }],
+        concerns: [
+          { vendor: "Acme Corp", concern: "No DPA on file for this vendor.", severity: "high" },
+        ],
         abstain_reason: null,
       }),
     ).toThrow();
@@ -190,7 +216,8 @@ describe("analyzer schemas", () => {
       related_sections: ["compliance"],
     };
     expect(
-      keyFindingsSchema.parse({ findings: [row], abstain_reason: null }).findings[0].related_sections,
+      keyFindingsSchema.parse({ findings: [row], abstain_reason: null }).findings[0]
+        .related_sections,
     ).toEqual(["compliance"]);
     expect(() =>
       keyFindingsSchema.parse({
@@ -230,9 +257,14 @@ describe("analyzer schemas", () => {
       what_would_close_this: "Evidence is attached to each of the twelve controls.",
       related_sections: [],
     };
-    expect(keyFindingsSchema.parse({ findings: [finding], abstain_reason: null }).findings[0].text).toHaveLength(450);
+    expect(
+      keyFindingsSchema.parse({ findings: [finding], abstain_reason: null }).findings[0].text,
+    ).toHaveLength(450);
     expect(() =>
-      keyFindingsSchema.parse({ findings: [{ ...finding, text: "x".repeat(601) }], abstain_reason: null }),
+      keyFindingsSchema.parse({
+        findings: [{ ...finding, text: "x".repeat(601) }],
+        abstain_reason: null,
+      }),
     ).toThrow();
 
     const action = {
@@ -242,12 +274,21 @@ describe("analyzer schemas", () => {
       rationale: long,
       basis: "observed",
     };
-    expect(recommendedActionsSchema.parse({ actions: [action], abstain_reason: null }).actions[0].rationale).toHaveLength(450);
+    expect(
+      recommendedActionsSchema.parse({ actions: [action], abstain_reason: null }).actions[0]
+        .rationale,
+    ).toHaveLength(450);
     expect(() =>
-      recommendedActionsSchema.parse({ actions: [{ ...action, action: "x".repeat(601) }], abstain_reason: null }),
+      recommendedActionsSchema.parse({
+        actions: [{ ...action, action: "x".repeat(601) }],
+        abstain_reason: null,
+      }),
     ).toThrow();
     expect(() =>
-      recommendedActionsSchema.parse({ actions: [{ ...action, rationale: "x".repeat(601) }], abstain_reason: null }),
+      recommendedActionsSchema.parse({
+        actions: [{ ...action, rationale: "x".repeat(601) }],
+        abstain_reason: null,
+      }),
     ).toThrow();
 
     const gapPayload = {
@@ -266,7 +307,10 @@ describe("analyzer schemas", () => {
     };
     expect(complianceGapSchema.parse(gapPayload).gaps[0].gap).toHaveLength(450);
     expect(() =>
-      complianceGapSchema.parse({ ...gapPayload, gaps: [{ ...gapPayload.gaps[0], gap: "x".repeat(601) }] }),
+      complianceGapSchema.parse({
+        ...gapPayload,
+        gaps: [{ ...gapPayload.gaps[0], gap: "x".repeat(601) }],
+      }),
     ).toThrow();
 
     const concernPayload = {
@@ -276,18 +320,30 @@ describe("analyzer schemas", () => {
     };
     expect(vendorRiskSchema.parse(concernPayload).concerns[0].concern).toHaveLength(450);
     expect(() =>
-      vendorRiskSchema.parse({ ...concernPayload, concerns: [{ ...concernPayload.concerns[0], concern: "x".repeat(601) }] }),
+      vendorRiskSchema.parse({
+        ...concernPayload,
+        concerns: [{ ...concernPayload.concerns[0], concern: "x".repeat(601) }],
+      }),
     ).toThrow();
   });
 
   it("leaves the prose caps alone — the row caps were what was binding", () => {
-    expect(executiveSummarySchema.parse({ summary: "x".repeat(3500), abstain_reason: null }).summary).toHaveLength(3500);
-    expect(() => executiveSummarySchema.parse({ summary: "x".repeat(3501), abstain_reason: null })).toThrow();
     expect(
-      riskAnalysisSchema.parse({ narrative: "x".repeat(2500), top_risks: [], abstain_reason: null }).narrative,
+      executiveSummarySchema.parse({ summary: "x".repeat(3500), abstain_reason: null }).summary,
+    ).toHaveLength(3500);
+    expect(() =>
+      executiveSummarySchema.parse({ summary: "x".repeat(3501), abstain_reason: null }),
+    ).toThrow();
+    expect(
+      riskAnalysisSchema.parse({ narrative: "x".repeat(2500), top_risks: [], abstain_reason: null })
+        .narrative,
     ).toHaveLength(2500);
     expect(() =>
-      riskAnalysisSchema.parse({ narrative: "x".repeat(2501), top_risks: [], abstain_reason: null }),
+      riskAnalysisSchema.parse({
+        narrative: "x".repeat(2501),
+        top_risks: [],
+        abstain_reason: null,
+      }),
     ).toThrow();
   });
 

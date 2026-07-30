@@ -174,10 +174,14 @@ export const ANALYZERS: Record<AnalysisSectionKey, AnalyzerDefinition> = {
               weakestControls: readiness?.weakestControls?.length
                 ? readiness.weakestControls.slice(0, 20)
                 : undefined,
-              controlScores: readiness?.controlScores?.length ? readiness.controlScores.slice(0, 50) : undefined,
+              controlScores: readiness?.controlScores?.length
+                ? readiness.controlScores.slice(0, 50)
+                : undefined,
               caveats: [
                 "evidence_quality_score, evidence_recency_score and risk_mitigation_score are stored as 0 for every control by the current calculator and carry no signal.",
-                readiness?.stale ? "These scores may be stale — nothing recalculates them at report time." : null,
+                readiness?.stale
+                  ? "These scores may be stale — nothing recalculates them at report time."
+                  : null,
               ].filter(Boolean),
             },
             null,

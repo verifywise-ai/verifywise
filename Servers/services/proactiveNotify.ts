@@ -56,12 +56,7 @@ export const notifyProactive = async (
   // In-app + email (email is delivered by the in-app service).
   if (wantsInApp || wantsEmail) {
     try {
-      await sendInAppNotification(
-        organizationId,
-        payload.notification,
-        wantsEmail,
-        channels.email,
-      );
+      await sendInAppNotification(organizationId, payload.notification, wantsEmail, channels.email);
     } catch (error) {
       logger.error("proactiveNotify: in-app/email channel failed:", error);
     }

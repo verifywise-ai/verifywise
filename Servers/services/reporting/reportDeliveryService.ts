@@ -4,8 +4,16 @@ import { uploadFile } from "../../utils/fileUpload.utils";
 import { sendAutomationEmail } from "../emailService";
 import { compileMjmlToHtml } from "../../tools/mjmlCompiler";
 
-export interface DeliveryArtifact { content: Buffer; filename: string; mimeType: string; }
-export interface DeliveryCtx { organizationId: number; userId: number; runId?: number; }
+export interface DeliveryArtifact {
+  content: Buffer;
+  filename: string;
+  mimeType: string;
+}
+export interface DeliveryCtx {
+  organizationId: number;
+  userId: number;
+  runId?: number;
+}
 
 // Delivers a generated report across the enabled channels. Each channel is
 // try/caught independently so one failure neither throws nor blocks the others.

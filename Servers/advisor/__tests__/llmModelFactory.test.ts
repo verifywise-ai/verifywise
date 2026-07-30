@@ -6,10 +6,14 @@ const mockOpenAIFactory = jest.fn((..._a: any[]) => {
   f.chat = mockChat;
   return f;
 });
-const mockAnthropicFactory = jest.fn((..._a: any[]) => jest.fn((..._m: any[]) => "anthropic-model"));
+const mockAnthropicFactory = jest.fn((..._a: any[]) =>
+  jest.fn((..._m: any[]) => "anthropic-model"),
+);
 
 jest.mock("@ai-sdk/openai", () => ({ createOpenAI: (...a: any[]) => mockOpenAIFactory(...a) }));
-jest.mock("@ai-sdk/anthropic", () => ({ createAnthropic: (...a: any[]) => mockAnthropicFactory(...a) }));
+jest.mock("@ai-sdk/anthropic", () => ({
+  createAnthropic: (...a: any[]) => mockAnthropicFactory(...a),
+}));
 
 import { createModelFromKey, detectProvider } from "../llmModelFactory";
 

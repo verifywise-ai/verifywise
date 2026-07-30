@@ -25,7 +25,10 @@ export function detectProvider(name: string | null | undefined): LLMProvider {
  * silently losing the default-substitution case.
  */
 export function resolveModelId(row: LLMKeyRow): string {
-  return row.model || (detectProvider(row.name) === "Anthropic" ? "claude-sonnet-4-20250514" : "gpt-4o-mini");
+  return (
+    row.model ||
+    (detectProvider(row.name) === "Anthropic" ? "claude-sonnet-4-20250514" : "gpt-4o-mini")
+  );
 }
 
 /**

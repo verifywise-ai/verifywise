@@ -63,8 +63,7 @@ export default function ScheduledReportsTab() {
   const deleteReport = useDeleteScheduledReport();
   const [draft, setDraft] = useState<Draft | null>(null);
 
-  const onActionError = () =>
-    showAlert({ variant: "error", body: "Action failed", isToast: true });
+  const onActionError = () => showAlert({ variant: "error", body: "Action failed", isToast: true });
 
   const openEdit = (r: any) =>
     setDraft({
@@ -96,9 +95,7 @@ export default function ScheduledReportsTab() {
   // Shared by the populated table and the empty layout, so the column row does
   // not drift between the two states.
   const tableHead = (
-    <TableHead
-      sx={{ backgroundColor: singleTheme.tableStyles.primary.header.backgroundColors }}
-    >
+    <TableHead sx={{ backgroundColor: singleTheme.tableStyles.primary.header.backgroundColors }}>
       <TableRow sx={singleTheme.tableStyles.primary.header.row}>
         {COLUMNS.map((h) => (
           <TableCell key={h} sx={singleTheme.tableStyles.primary.header.cell} align="left">
@@ -160,9 +157,7 @@ export default function ScheduledReportsTab() {
                       )
                     }
                     onEdit={() => openEdit(r)}
-                    onDelete={() =>
-                      deleteReport.mutate(r.id, { onError: onActionError })
-                    }
+                    onDelete={() => deleteReport.mutate(r.id, { onError: onActionError })}
                     warningTitle="Delete scheduled report"
                     warningMessage={`"${r.name}" will stop running and be removed from this list. This cannot be undone.`}
                   />

@@ -210,11 +210,7 @@ export const getEvidenceGapsQuery = async (
   return allGaps.map((g) => ({
     ...g,
     gap_type:
-      g.evidence_count === 0
-        ? "no_evidence"
-        : g.adequate_count === 0
-          ? "low_quality"
-          : "adequate",
+      g.evidence_count === 0 ? "no_evidence" : g.adequate_count === 0 ? "low_quality" : "adequate",
   }));
 };
 

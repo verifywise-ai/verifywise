@@ -62,9 +62,7 @@ beforeEach(() => {
 describe("frameworkGapWorkflow / definition shape", () => {
   it("exposes the expected workflow metadata", () => {
     expect(frameworkGapWorkflow.id).toBe("framework_gap_remediation");
-    expect(frameworkGapWorkflow.triggerName).toBe(
-      "compliance.score.below_threshold",
-    );
+    expect(frameworkGapWorkflow.triggerName).toBe("compliance.score.below_threshold");
     expect(frameworkGapWorkflow.agents).toEqual(["compliance", "policy"]);
   });
 
@@ -78,9 +76,7 @@ describe("frameworkGapWorkflow / definition shape", () => {
   });
 
   it("marks every step as read-only (no destructive writes)", () => {
-    expect(frameworkGapWorkflow.steps.every((s) => s.isWrite === false)).toBe(
-      true,
-    );
+    expect(frameworkGapWorkflow.steps.every((s) => s.isWrite === false)).toBe(true);
   });
 });
 

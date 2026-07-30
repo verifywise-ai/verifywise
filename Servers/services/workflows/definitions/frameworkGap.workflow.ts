@@ -27,9 +27,7 @@ interface FrameworkScore {
 /**
  * Get all admin users (role_id = 1) for an organization.
  */
-async function getOrgAdmins(
-  organizationId: number,
-): Promise<Array<{ id: number }>> {
+async function getOrgAdmins(organizationId: number): Promise<Array<{ id: number }>> {
   const rows = (await sequelize.query(
     `SELECT id FROM users WHERE organization_id = :orgId AND role_id = 1`,
     {
@@ -76,9 +74,7 @@ export const frameworkGapWorkflow: WorkflowDefinition = {
       agent: "compliance",
       isWrite: false,
       handler: async (ctx) => {
-        const frameworks = ctx.results.scan_frameworks as
-          | FrameworkScore[]
-          | undefined;
+        const frameworks = ctx.results.scan_frameworks as FrameworkScore[] | undefined;
         if (!frameworks || frameworks.length === 0) {
           return { type: "skip", reason: "All frameworks above threshold" };
         }
@@ -123,9 +119,7 @@ export const frameworkGapWorkflow: WorkflowDefinition = {
           return { type: "skip", reason: "No admins in organization" };
         }
         const frameworks = ctx.results.scan_frameworks as FrameworkScore[];
-        const summary = frameworks
-          .map((f) => `${f.framework_type}: ${f.avg_score}%`)
-          .join(", ");
+        const summary = frameworks.map((f) => `${f.framework_type}: ${f.avg_score}%`).join(", ");
         await sendBulkInAppNotifications(ctx.organizationId, {
           user_ids: admins.map((a) => a.id),
           type: NotificationType.SYSTEM,

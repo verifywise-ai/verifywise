@@ -83,7 +83,9 @@ describe("workflows / incidentResponse definition shape", () => {
 
 describe("workflows / incidentResponse classify_incident (key decision)", () => {
   it("classifies and proceeds (ok) when the incident is critical (Very serious)", async () => {
-    fetchIncidents.mockResolvedValue([{ id: 99, severity: "Very serious", type: "Security breach" }]);
+    fetchIncidents.mockResolvedValue([
+      { id: 99, severity: "Very serious", type: "Security breach" },
+    ]);
 
     const result = await stepById("classify_incident").handler(ctx());
 

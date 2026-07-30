@@ -50,9 +50,7 @@ describe("ScheduledReportsTab", () => {
     expect(deleteMutate).not.toHaveBeenCalled();
     expect(screen.getByText("Delete scheduled report")).toBeInTheDocument();
     // The name also appears in the table row, so match the dialog's sentence.
-    expect(
-      screen.getByText(/"Weekly compliance digest" will stop running/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/"Weekly compliance digest" will stop running/)).toBeInTheDocument();
   });
 
   it("deletes only after the confirmation is accepted", () => {

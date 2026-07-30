@@ -92,10 +92,7 @@ async function persistRun(
 /**
  * Create a new workflow run row in the DB and return the row id.
  */
-async function createRun(
-  workflow: WorkflowDefinition,
-  params: WorkflowRunParams,
-): Promise<number> {
+async function createRun(workflow: WorkflowDefinition, params: WorkflowRunParams): Promise<number> {
   const rows = (await sequelize.query(
     `INSERT INTO ai_workflow_runs
        (organization_id, workflow_type, trigger_name, trigger_payload, state, current_step, results, started_by)
@@ -114,17 +111,11 @@ async function createRun(
     },
   )) as Array<{ id: number }>;
   const id = rows[0].id;
-  await logWorkflowAudit(
-    params.organizationId,
-    id,
-    "pending",
-    `workflow.${workflow.id}.created`,
-    {
-      workflow: workflow.id,
-      triggerName: workflow.triggerName,
-      triggerPayload: params.triggerPayload || {},
-    },
-  );
+  await logWorkflowAudit(params.organizationId, id, "pending", `workflow.${workflow.id}.created`, {
+    workflow: workflow.id,
+    triggerName: workflow.triggerName,
+    triggerPayload: params.triggerPayload || {},
+  });
   return id;
 }
 
@@ -398,13 +389,10 @@ async function resumeWorkflow(
   };
 
   await persistRun(runId, organizationId, "running", run.currentStep, records);
-  await logWorkflowAudit(
-    organizationId,
-    runId,
-    "running",
-    `workflow.${workflow.id}.resumed`,
-    { approvalId, fromStep: run.currentStep },
-  );
+  await logWorkflowAudit(organizationId, runId, "running", `workflow.${workflow.id}.resumed`, {
+    approvalId,
+    fromStep: run.currentStep,
+  });
 
   // The gating step at run.currentStep already did its job by pausing;
   // continue from the next step.

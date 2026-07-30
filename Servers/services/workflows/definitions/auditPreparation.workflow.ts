@@ -13,10 +13,7 @@
  */
 
 import { WorkflowDefinition, WorkflowStep } from "../types";
-import {
-  getFrameworkScoresQuery,
-  getWeakestControlsQuery,
-} from "../../../utils/readiness.utils";
+import { getFrameworkScoresQuery, getWeakestControlsQuery } from "../../../utils/readiness.utils";
 import { getEvidenceGapsQuery } from "../../../utils/evidenceAi.utils";
 import { getAllUsersQuery } from "../../../utils/user.utils";
 import { createBulkNotificationsQuery } from "../../../utils/notification.utils";
@@ -64,7 +61,10 @@ const steps: WorkflowStep[] = [
     handler: async (ctx) => {
       // Gate the write: pause for approval until the trigger payload approves it.
       if (ctx.triggerPayload.approved !== true) {
-        return { type: "pause", reason: "Audit-preparation report requires approval before publishing." };
+        return {
+          type: "pause",
+          reason: "Audit-preparation report requires approval before publishing.",
+        };
       }
 
       const frameworks =
@@ -89,9 +89,7 @@ const steps: WorkflowStep[] = [
     isWrite: true,
     handler: async (ctx) => {
       const users = await getAllUsersQuery(ctx.organizationId);
-      const adminIds = users
-        .filter((u) => u.role_id === ADMIN_ROLE_ID)
-        .map((u) => u.id as number);
+      const adminIds = users.filter((u) => u.role_id === ADMIN_ROLE_ID).map((u) => u.id as number);
 
       if (adminIds.length === 0) {
         return { type: "skip", reason: "No admins to notify." };
@@ -106,7 +104,8 @@ const steps: WorkflowStep[] = [
           user_ids: adminIds,
           type: NotificationType.SYSTEM,
           title: "Audit-preparation report ready",
-          message: "The quarterly audit-preparation report has been generated and is ready for review.",
+          message:
+            "The quarterly audit-preparation report has been generated and is ready for review.",
           metadata: { workflow: "audit_preparation", report },
         },
         ctx.organizationId,

@@ -1,7 +1,4 @@
-import {
-  REPORT_SECTION_CATALOG,
-  SECTION_KEYS,
-} from "../sectionCatalog";
+import { REPORT_SECTION_CATALOG, SECTION_KEYS } from "../sectionCatalog";
 
 // The 13 literals VALID_SECTION_KEYS held before the catalog refactor.
 // This is a behaviour pin: the refactor must not add or drop a key.
@@ -28,9 +25,7 @@ describe("sectionCatalog", () => {
   });
 
   it("plus the wildcard reproduces the legacy VALID_SECTION_KEYS set exactly", () => {
-    expect(new Set([...SECTION_KEYS, "all"])).toEqual(
-      new Set(LEGACY_VALID_SECTION_KEYS),
-    );
+    expect(new Set([...SECTION_KEYS, "all"])).toEqual(new Set(LEGACY_VALID_SECTION_KEYS));
   });
 
   it("gives every section a non-empty label and group", () => {

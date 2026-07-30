@@ -49,7 +49,10 @@ async function classifyIncident(ctx: WorkflowContext): Promise<StepResult> {
 
   const severity = incident.severity ?? (ctx.triggerPayload.severity as string | undefined);
   if (!isCriticalSeverity(severity)) {
-    return { type: "skip", reason: `Incident ${incident.id} is not critical (${severity ?? "unknown"})` };
+    return {
+      type: "skip",
+      reason: `Incident ${incident.id} is not critical (${severity ?? "unknown"})`,
+    };
   }
 
   return {
@@ -67,10 +70,10 @@ async function classifyIncident(ctx: WorkflowContext): Promise<StepResult> {
  * Step 2 — find risks related to the incident so remediation has context.
  */
 async function linkRelatedRisks(ctx: WorkflowContext): Promise<StepResult> {
-  const risks = (await availableRiskTools.fetch_risks(
-    { limit: 50 },
-    ctx.organizationId,
-  )) as Array<{ id: number; risk_name?: string }>;
+  const risks = (await availableRiskTools.fetch_risks({ limit: 50 }, ctx.organizationId)) as Array<{
+    id: number;
+    risk_name?: string;
+  }>;
 
   return {
     type: "ok",

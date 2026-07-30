@@ -58,7 +58,12 @@ export function slugify(name: string): string {
       .toLowerCase()
       .trim()
       .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-+|-+$/g, "")
+      // Single-character anchors, not `^-+|-+$`: the collapse above already
+      // reduced every run of non-alphanumerics to one dash, so at most one
+      // dash can sit at either end. The quantified form backtracks on a name
+      // that is all separators ("----…"), which is caller-supplied.
+      .replace(/^-/, "")
+      .replace(/-$/, "")
       .slice(0, 200) || "template"
   );
 }

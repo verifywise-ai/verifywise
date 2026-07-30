@@ -47,7 +47,7 @@ const basis = z
   .enum(["observed", "inferred", "absent"])
   .nullable()
   .describe(
-    "Declare how this claim relates to the supplied data. Use \"observed\" when the data states the claim directly. Use \"inferred\" when the claim follows from the supplied data by reasoning the data does not itself state — a ratio, a comparison against the reference date, a pattern running across two sections. Use \"absent\" when the claim is that something required is missing from the data. This label describes the claim only: every control, vendor, risk or person you name must still appear verbatim in the supplied data, whichever label you choose. Use null only when none of the three fits, which should be rare.",
+    'Declare how this claim relates to the supplied data. Use "observed" when the data states the claim directly. Use "inferred" when the claim follows from the supplied data by reasoning the data does not itself state — a ratio, a comparison against the reference date, a pattern running across two sections. Use "absent" when the claim is that something required is missing from the data. This label describes the claim only: every control, vendor, risk or person you name must still appear verbatim in the supplied data, whichever label you choose. Use null only when none of the three fits, which should be rare.',
   );
 
 const whatWouldCloseThis = z
@@ -56,21 +56,17 @@ const whatWouldCloseThis = z
   .max(300)
   .nullable()
   .describe(
-    "The counterfactual: state what would specifically have to become true for this to stop being an issue — a status reaching a named value, an owner recorded, a document attached, a date met. Write it so the next report could check it against the same fields. Do not restate the problem and do not write a generic instruction such as \"review and update\". Use null only when the supplied data gives you no concrete condition to name.",
+    'The counterfactual: state what would specifically have to become true for this to stop being an issue — a status reaching a named value, an owner recorded, a document attached, a date met. Write it so the next report could check it against the same fields. Do not restate the problem and do not write a generic instruction such as "review and update". Use null only when the supplied data gives you no concrete condition to name.',
   );
 
 export const executiveSummarySchema = z
   .object({
-    summary: z
-      .string()
-      .min(40)
-      .max(3500)
-      .describe(
-        // Shape only. The four-part outline that used to live here reached the
-        // model as part of the JSON schema and contradicted the system prompt's
-        // "do not work through a fixed outline" — structure is the prompt's job.
-        "Three to five paragraphs, professional third-person, flowing prose. No markdown, no bullet points, no headers.",
-      ),
+    summary: z.string().min(40).max(3500).describe(
+      // Shape only. The four-part outline that used to live here reached the
+      // model as part of the JSON schema and contradicted the system prompt's
+      // "do not work through a fixed outline" — structure is the prompt's job.
+      "Three to five paragraphs, professional third-person, flowing prose. No markdown, no bullet points, no headers.",
+    ),
     abstain_reason: abstainReason,
   })
   .strict();
@@ -174,14 +170,24 @@ export const riskAnalysisSchema = z
       .string()
       .min(40)
       .max(2500)
-      .describe("Two to four paragraphs on the risk posture across use-case, vendor and model risks. Flowing prose, no markdown."),
+      .describe(
+        "Two to four paragraphs on the risk posture across use-case, vendor and model risks. Flowing prose, no markdown.",
+      ),
     top_risks: z
       .array(
         z
           .object({
             name: z.string().min(2).max(200).describe("Risk name, copied verbatim from the input."),
-            level: z.string().min(2).max(40).describe("Risk level, copied verbatim from the input."),
-            why: z.string().min(10).max(300).describe("Why this risk ranks among the most material."),
+            level: z
+              .string()
+              .min(2)
+              .max(40)
+              .describe("Risk level, copied verbatim from the input."),
+            why: z
+              .string()
+              .min(10)
+              .max(300)
+              .describe("Why this risk ranks among the most material."),
           })
           .strict(),
       )
@@ -205,7 +211,11 @@ export const complianceGapSchema = z
       .array(
         z
           .object({
-            control: z.string().min(1).max(200).describe("Control identifier or title, copied verbatim from the input."),
+            control: z
+              .string()
+              .min(1)
+              .max(200)
+              .describe("Control identifier or title, copied verbatim from the input."),
             gap: z
               .string()
               .min(10)
@@ -244,7 +254,11 @@ export const vendorRiskSchema = z
       .array(
         z
           .object({
-            vendor: z.string().min(1).max(200).describe("Vendor name, copied verbatim from the input."),
+            vendor: z
+              .string()
+              .min(1)
+              .max(200)
+              .describe("Vendor name, copied verbatim from the input."),
             concern: z
               .string()
               .min(10)

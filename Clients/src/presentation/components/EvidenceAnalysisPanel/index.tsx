@@ -238,7 +238,11 @@ export default function EvidenceAnalysisPanel({
   if (!analysis) {
     const locked = hasLLMKey === false;
     return (
-      <EmptyState icon={Sparkles} message="No AI analysis available for this evidence yet." showBorder>
+      <EmptyState
+        icon={Sparkles}
+        message="No AI analysis available for this evidence yet."
+        showBorder
+      >
         {onTriggerAnalysis && (
           <Tooltip title={locked ? "Configure an LLM key to enable AI analysis" : ""} arrow>
             <span>
@@ -370,7 +374,13 @@ export default function EvidenceAnalysisPanel({
             </Stack>
             {/* Card title: 16px / 600 / 1.4 / text.primary */}
             <Typography
-              sx={{ fontSize: 16, fontWeight: 600, lineHeight: 1.4, color: textColors.primary, mb: "8px" }}
+              sx={{
+                fontSize: 16,
+                fontWeight: 600,
+                lineHeight: 1.4,
+                color: textColors.primary,
+                mb: "8px",
+              }}
             >
               {overallGrade ? `${overallLabel} quality evidence` : "AI grading unavailable"}
             </Typography>
@@ -411,7 +421,12 @@ export default function EvidenceAnalysisPanel({
       {/* Suggested control links — real Table, singleTheme.tableStyles.primary */}
       {suggestedLinks.length > 0 && (
         <Card elevation={0} sx={cardStyles.base(theme)}>
-          <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: "12px" }}>
+          <Stack
+            direction="row"
+            alignItems="center"
+            justifyContent="space-between"
+            sx={{ mb: "12px" }}
+          >
             <Typography sx={subsectionTitleSx}>
               Suggested control links ({suggestedLinks.length})
             </Typography>
@@ -451,12 +466,18 @@ export default function EvidenceAnalysisPanel({
                 {suggestedLinks.slice(0, 6).map((link, i) => (
                   <TableRow key={i} sx={singleTheme.tableStyles.primary.body.row}>
                     <TableCell
-                      sx={{ ...singleTheme.tableStyles.primary.body.cell, color: textColors.secondary }}
+                      sx={{
+                        ...singleTheme.tableStyles.primary.body.cell,
+                        color: textColors.secondary,
+                      }}
                     >
                       {link.control_title}
                     </TableCell>
                     <TableCell
-                      sx={{ ...singleTheme.tableStyles.primary.body.cell, color: textColors.secondary }}
+                      sx={{
+                        ...singleTheme.tableStyles.primary.body.cell,
+                        color: textColors.secondary,
+                      }}
                     >
                       {link.framework_type.replace(/_/g, " ")}
                     </TableCell>
@@ -554,7 +575,10 @@ export default function EvidenceAnalysisPanel({
               );
             })()}
             {(() => {
-              const c = signalStatusColors({ positive: !docSignals.is_draft, invertSemantic: true });
+              const c = signalStatusColors({
+                positive: !docSignals.is_draft,
+                invertSemantic: true,
+              });
               return (
                 <Chip
                   label={`Draft ${docSignals.is_draft ? "Yes" : "No"}`}
@@ -632,7 +656,9 @@ export default function EvidenceAnalysisPanel({
                     </Box>
                     <Box sx={{ flex: 1, minWidth: 0 }}>
                       {/* Body small: 12px / 400 / 1.5 / text.tertiary */}
-                      <Typography sx={{ fontSize: 12, color: textColors.tertiary, lineHeight: 1.5 }}>
+                      <Typography
+                        sx={{ fontSize: 12, color: textColors.tertiary, lineHeight: 1.5 }}
+                      >
                         {finding.length > 160 ? finding.substring(0, 160) + "..." : finding}
                       </Typography>
                       {fwq?.evidence_quote && (

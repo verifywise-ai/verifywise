@@ -81,8 +81,7 @@ export const RUBRIC = {
     },
     {
       grade: "C",
-      anchor:
-        "Roughly 18–36 months old, or approaching an expiry date. Aging but usable.",
+      anchor: "Roughly 18–36 months old, or approaching an expiry date. Aging but usable.",
     },
     {
       grade: "D",
@@ -133,7 +132,8 @@ export const RUBRIC = {
     },
     {
       grade: "C",
-      anchor: "Procedures use action verbs and clear sequencing, but lack named systems or numbers.",
+      anchor:
+        "Procedures use action verbs and clear sequencing, but lack named systems or numbers.",
     },
     {
       grade: "D",

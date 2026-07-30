@@ -94,8 +94,7 @@ function IconButton({
   const usesArchiveDeletePair = ARCHIVE_DELETE_PAIR_TYPES.includes(normalizedType ?? "");
   // The remove-family item archives (reversibly) for these types, so its
   // confirmation is a warning rather than a destructive delete.
-  const isArchiveRemoval =
-    type === "Incident" || type === "Task" || normalizedType === "reportrun";
+  const isArchiveRemoval = type === "Incident" || type === "Task" || normalizedType === "reportrun";
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const [isOpenRemoveModal, setIsOpenRemoveModal] = useState(false);
   const [isOpenHardDeleteModal, setIsOpenHardDeleteModal] = useState(false);

@@ -97,9 +97,7 @@ function WarningNotice({ icon: Icon, text }: { icon: LucideIcon; text: string })
       >
         <Icon size={16} />
       </Box>
-      <Typography
-        sx={{ fontSize: 13, color: theme.palette.status.warning.text, lineHeight: 1.5 }}
-      >
+      <Typography sx={{ fontSize: 13, color: theme.palette.status.warning.text, lineHeight: 1.5 }}>
         {text}
       </Typography>
     </Stack>
@@ -326,10 +324,7 @@ function AnalysisCard({ analysis }: { analysis: ReportRunAnalysis }) {
 
         {/* One Typography, so the reason stays searchable as a single string. */}
         {abstainReason && (
-          <WarningNotice
-            icon={AlertTriangle}
-            text={`The analyzer abstained: ${abstainReason}`}
-          />
+          <WarningNotice icon={AlertTriangle} text={`The analyzer abstained: ${abstainReason}`} />
         )}
 
         {body}

@@ -28,7 +28,11 @@ const reportData = {
 /** Per-call distinct output so tests can catch a reversed key<->summary mapping. */
 function mockPerKeySummaries() {
   mockGenerateText.mockImplementation(async ({ prompt }: { prompt: string }) => ({
-    text: prompt.includes("Vendors") ? "V-SUMMARY" : prompt.includes("Compliance") ? "C-SUMMARY" : "R-SUMMARY",
+    text: prompt.includes("Vendors")
+      ? "V-SUMMARY"
+      : prompt.includes("Compliance")
+        ? "C-SUMMARY"
+        : "R-SUMMARY",
   }));
 }
 
@@ -60,7 +64,9 @@ describe("runSectionSummaries", () => {
     expect(firstPrompt).not.toContain("projectRisks");
     expect(firstPrompt).toContain("EU AI Act");
     expect(firstPrompt).toContain("Acme Project");
-    expect(firstPrompt).toContain("Use only the data provided — never introduce a fact that does not appear in it.");
+    expect(firstPrompt).toContain(
+      "Use only the data provided — never introduce a fact that does not appear in it.",
+    );
     expect(firstPrompt).toContain("300-450 words");
     // §1: Stage 1 needs the same "today" the facts block declares, or a date
     // in the data has nothing to be compared against.
@@ -77,33 +83,40 @@ describe("runSectionSummaries", () => {
   });
 
   it("§3 — an unmapped section key degrades to the generic instruction instead of losing its summary", async () => {
-    const out = await runSectionSummaries("model" as any, {
-      sections: { somethingNew: { rows: [1] } },
-      metadata: { frameworkName: "EU AI Act", projectTitle: "Acme Project" },
-    } as any);
+    const out = await runSectionSummaries(
+      "model" as any,
+      {
+        sections: { somethingNew: { rows: [1] } },
+        metadata: { frameworkName: "EU AI Act", projectTitle: "Acme Project" },
+      } as any,
+    );
     const prompt = mockGenerateText.mock.calls[0][0].prompt as string;
     expect(prompt).toContain("Highlights key observations and patterns");
     expect(out.somethingNew).toBe("A summary.");
   });
 
   it("skips sections with no data instead of calling the model", async () => {
-    const out = await runSectionSummaries("model" as any, { sections: { projectRisks: null, compliance: undefined } } as any);
+    const out = await runSectionSummaries(
+      "model" as any,
+      { sections: { projectRisks: null, compliance: undefined } } as any,
+    );
     expect(out).toEqual({});
     expect(mockGenerateText).not.toHaveBeenCalled();
   });
 
   it("skips a dataCollector-shaped empty section (zero counts, empty arrays)", async () => {
-    const out = await runSectionSummaries("model" as any, {
-      sections: { vendorRisks: { totalRisks: 0, risksByLevel: [], risks: [] } },
-    } as any);
+    const out = await runSectionSummaries(
+      "model" as any,
+      {
+        sections: { vendorRisks: { totalRisks: 0, risksByLevel: [], risks: [] } },
+      } as any,
+    );
     expect(out).toEqual({});
     expect(mockGenerateText).not.toHaveBeenCalled();
   });
 
   it("one section failing does not lose the others", async () => {
-    mockGenerateText
-      .mockRejectedValueOnce(new Error("boom"))
-      .mockResolvedValue({ text: "ok" });
+    mockGenerateText.mockRejectedValueOnce(new Error("boom")).mockResolvedValue({ text: "ok" });
     const out = await runSectionSummaries("model" as any, { sections } as any);
     // First call (deterministic entries order) is projectRisks — that's the one that fails.
     expect(out.projectRisks).toBeUndefined();
@@ -120,7 +133,10 @@ describe("runSectionSummaries", () => {
     const huge = {
       risks: Array.from({ length: 5 }, (_, i) => ({ name: `R${i}`, note: "x".repeat(20000) })),
     };
-    const out = await runSectionSummaries("model" as any, { sections: { projectRisks: huge } } as any);
+    const out = await runSectionSummaries(
+      "model" as any,
+      { sections: { projectRisks: huge } } as any,
+    );
     const prompt = mockGenerateText.mock.calls[0][0].prompt as string;
     expect(prompt).toContain("[TRUNCATED: section data exceeded the prompt budget]");
     expect(prompt.length).toBeLessThan(70000);
@@ -166,9 +182,12 @@ describe("runSectionSummaries", () => {
         finishReason: "length",
       });
 
-      const out = await runSectionSummaries("model" as any, {
-        sections: { projectRisks: { totalRisks: 2, risks: [{ name: "R1" }] } },
-      } as any);
+      const out = await runSectionSummaries(
+        "model" as any,
+        {
+          sections: { projectRisks: { totalRisks: 2, risks: [{ name: "R1" }] } },
+        } as any,
+      );
 
       // The truncated text is still kept — a cut-off summary beats no summary.
       expect(out.projectRisks).toContain("nine remain in draft");
@@ -184,9 +203,12 @@ describe("runSectionSummaries", () => {
     const warnSpy = jest.spyOn(logger as any, "warn").mockImplementation(() => undefined);
     try {
       mockGenerateText.mockResolvedValue({ text: "A complete summary.", finishReason: "stop" });
-      await runSectionSummaries("model" as any, {
-        sections: { projectRisks: { totalRisks: 2, risks: [{ name: "R1" }] } },
-      } as any);
+      await runSectionSummaries(
+        "model" as any,
+        {
+          sections: { projectRisks: { totalRisks: 2, risks: [{ name: "R1" }] } },
+        } as any,
+      );
       expect(warnSpy).not.toHaveBeenCalled();
     } finally {
       warnSpy.mockRestore();

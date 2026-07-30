@@ -11,9 +11,10 @@ import { AISummaries, ReportData } from "../../../domain.layer/interfaces/i.repo
 async function docxText(content: Buffer): Promise<string> {
   const zip = await JSZip.loadAsync(content);
   const xml = await zip.file("word/document.xml")!.async("string");
-  return (xml.match(/<w:t[^>]*>[^<]*<\/w:t>/g) ?? [])
-    .map((run) => run.replace(/<[^>]+>/g, ""))
-    .join("\n");
+  // Capture the run text directly rather than matching the element and then
+  // stripping tags off it — one pass, and no tag-stripping regex that reads
+  // like (and gets flagged as) HTML sanitization it is not.
+  return [...xml.matchAll(/<w:t[^>]*>([^<]*)<\/w:t>/g)].map((m) => m[1]).join("\n");
 }
 
 /** Raw document.xml, for asserting on OOXML elements docxText discards (e.g. <w:br/>). */

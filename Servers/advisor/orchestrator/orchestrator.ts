@@ -37,7 +37,11 @@ export async function runParallel(
       if (i >= subtasks.length) return;
       const subtask = subtasks[i];
       try {
-        const result = await runWorker({ ...agentParams, userPrompt: subtask, messages: undefined });
+        const result = await runWorker({
+          ...agentParams,
+          userPrompt: subtask,
+          messages: undefined,
+        });
         results[i] = { subtask, result, status: "ok" };
       } catch (error) {
         results[i] = {

@@ -1,13 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState } from "react";
-import {
-  Box,
-  MenuItem,
-  Select as MuiSelect,
-  Stack,
-  Typography,
-  useTheme,
-} from "@mui/material";
+import { Box, MenuItem, Select as MuiSelect, Stack, Typography, useTheme } from "@mui/material";
 import { ChevronDown } from "lucide-react";
 import StepperModal from "../../components/Modals/StepperModal";
 import Field from "../../components/Inputs/Field";
@@ -498,9 +491,7 @@ export default function ConfigureReportWizard({
               id="configure-report-timezone"
               label="Timezone"
               value={schedule.timezone}
-              onChange={(e) =>
-                setSchedule((prev: any) => ({ ...prev, timezone: e.target.value }))
-              }
+              onChange={(e) => setSchedule((prev: any) => ({ ...prev, timezone: e.target.value }))}
             />
           </Stack>
         </Stack>

@@ -1,7 +1,15 @@
 import express from "express";
 import authenticateJWT from "../middleware/auth.middleware";
 import authorize from "../middleware/accessControl.middleware";
-import { listRuns, getRun, downloadRun, getRunAnalyses, archiveRun, restoreRun, deleteRun } from "../controllers/reportRun.ctrl";
+import {
+  listRuns,
+  getRun,
+  downloadRun,
+  getRunAnalyses,
+  archiveRun,
+  restoreRun,
+  deleteRun,
+} from "../controllers/reportRun.ctrl";
 
 const router = express.Router();
 

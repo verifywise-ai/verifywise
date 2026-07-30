@@ -63,7 +63,11 @@ describe("useLLMKeyStatus", () => {
   });
 
   it("derives hasKeys as true once resolved with keys configured", async () => {
-    mockGetStatus.mockResolvedValue({ hasKeys: true, keyCount: 1, providers: ["Anthropic"] } as any);
+    mockGetStatus.mockResolvedValue({
+      hasKeys: true,
+      keyCount: 1,
+      providers: ["Anthropic"],
+    } as any);
     const { result } = renderHook(() => useLLMKeyStatus());
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.hasKeys).toBe(true);

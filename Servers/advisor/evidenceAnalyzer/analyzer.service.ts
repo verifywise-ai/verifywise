@@ -104,7 +104,11 @@ function normalizeDocument(raw: string): {
   let cleaned = raw
     // eslint-disable-next-line no-control-regex
     .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "")
-    .replace(/ /g, " ")
+    // PDF and DOCX extraction emits non-breaking and typographic spaces. They
+    // have to become plain spaces before the run below can collapse them —
+    // written as escapes because the literal characters are indistinguishable
+    // from a space in source and the replace silently became a no-op.
+    .replace(/[\u00A0\u1680\u2000-\u200A\u202F\u205F\u3000\uFEFF]/g, " ")
     .replace(/[ \t]+/g, " ")
     .replace(/\r\n?/g, "\n")
     .replace(/\n{3,}/g, "\n\n")
@@ -141,11 +145,7 @@ function createModel(key: AnalyzerInput["llmKey"]) {
 /* Abstain path                                                       */
 /* ------------------------------------------------------------------ */
 
-function buildAbstainResult(
-  reason: string,
-  charCount: number,
-  modelLabel: string,
-): AnalyzerResult {
+function buildAbstainResult(reason: string, charCount: number, modelLabel: string): AnalyzerResult {
   const grade: QualityGrade = "F";
   return {
     summary: `Insufficient content to grade (${reason}).`,

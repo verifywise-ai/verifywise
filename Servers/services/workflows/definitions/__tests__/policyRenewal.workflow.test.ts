@@ -102,7 +102,13 @@ describe("workflows / definitions / policyRenewal", () => {
     });
 
     it("auto-picks the earliest-review policy when no policyId is supplied", async () => {
-      const policyRow = { id: 5, title: "Data Retention", status: "draft", next_review_date: reviewDateIn(3), author_id: 2 };
+      const policyRow = {
+        id: 5,
+        title: "Data Retention",
+        status: "draft",
+        next_review_date: reviewDateIn(3),
+        author_id: 2,
+      };
       // 1st query: candidate lookup -> id 5; 2nd query: detail fetch
       mockQuery.mockResolvedValueOnce([{ id: 5 }] as any);
       mockQuery.mockResolvedValueOnce([policyRow] as any);
@@ -125,9 +131,7 @@ describe("workflows / definitions / policyRenewal", () => {
     it("fails when the named policy does not exist", async () => {
       mockQuery.mockResolvedValueOnce([] as any); // detail fetch empty
 
-      const result = await handlerFor("fetch_policy")(
-        ctx({ triggerPayload: { policyId: 999 } }),
-      );
+      const result = await handlerFor("fetch_policy")(ctx({ triggerPayload: { policyId: 999 } }));
 
       expect((result as any).type).toBe("fail");
       expect((result as any).error).toContain("999");
@@ -208,11 +212,14 @@ describe("workflows / definitions / policyRenewal", () => {
     });
 
     it("skips when the policy has no author_id", async () => {
-      const policy = { id: 42, title: "Acceptable Use", next_review_date: reviewDateIn(10), author_id: null };
+      const policy = {
+        id: 42,
+        title: "Acceptable Use",
+        next_review_date: reviewDateIn(10),
+        author_id: null,
+      };
 
-      const result = await handlerFor("notify_owner")(
-        ctx({ results: { fetch_policy: policy } }),
-      );
+      const result = await handlerFor("notify_owner")(ctx({ results: { fetch_policy: policy } }));
 
       expect((result as any).type).toBe("skip");
       expect(mockNotify).not.toHaveBeenCalled();

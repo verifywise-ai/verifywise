@@ -12,10 +12,7 @@ const fileName = "observability.ctrl.ts";
  */
 function percentile(sortedAsc: number[], p: number): number {
   if (sortedAsc.length === 0) return 0;
-  const idx = Math.min(
-    sortedAsc.length - 1,
-    Math.floor((p / 100) * sortedAsc.length),
-  );
+  const idx = Math.min(sortedAsc.length - 1, Math.floor((p / 100) * sortedAsc.length));
   return sortedAsc[idx];
 }
 
@@ -103,10 +100,7 @@ export async function getCosts(req: Request, res: Response) {
     );
 
     const breakdown = ((summary as any)?.breakdown ?? []) as any[];
-    const totalCost = breakdown.reduce(
-      (sum, row) => sum + Number(row.total_cost ?? 0),
-      0,
-    );
+    const totalCost = breakdown.reduce((sum, row) => sum + Number(row.total_cost ?? 0), 0);
 
     return res.status(200).json(STATUS_CODE[200]({ breakdown, totalCost }));
   } catch (error) {
@@ -130,15 +124,13 @@ export async function getPerformance(req: Request, res: Response) {
 
     const langfuse = getLangfuse();
     if (!langfuse) {
-      return res
-        .status(200)
-        .json(
-          STATUS_CODE[200]({
-            latency: { p50: 0, p95: 0, p99: 0 },
-            errorRate: 0,
-            totalRequests: 0,
-          }),
-        );
+      return res.status(200).json(
+        STATUS_CODE[200]({
+          latency: { p50: 0, p95: 0, p99: 0 },
+          errorRate: 0,
+          totalRequests: 0,
+        }),
+      );
     }
 
     const result = await langfuse.fetchObservations({ limit: limitNum } as any);

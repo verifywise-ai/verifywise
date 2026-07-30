@@ -15,7 +15,9 @@ jest.mock("../../llmSelfCorrect", () => ({
 }));
 
 const mockQuery = jest.fn();
-jest.mock("../../../database/db", () => ({ sequelize: { query: (...a: any[]) => mockQuery(...a) } }));
+jest.mock("../../../database/db", () => ({
+  sequelize: { query: (...a: any[]) => mockQuery(...a) },
+}));
 
 jest.mock("../embeddingMatcher", () => ({
   rankControlsByEmbedding: jest.fn().mockResolvedValue(null),
@@ -31,8 +33,16 @@ import { matchControlsSemantic } from "../controlMatcher";
 
 /** id 5 exists in BOTH catalogues and names unrelated controls. */
 const EU_ROWS = [
-  { id: 5, control_title: "No emotion recognition at work", control_description: "risk management" },
-  { id: 48, control_title: "Bias and Fairness Evaluation", control_description: "bias and fairness" },
+  {
+    id: 5,
+    control_title: "No emotion recognition at work",
+    control_description: "risk management",
+  },
+  {
+    id: 48,
+    control_title: "Bias and Fairness Evaluation",
+    control_description: "bias and fairness",
+  },
 ];
 const ISO_ROWS = [
   { id: 5, control_title: "Accountability for AI systems", control_description: "risk management" },

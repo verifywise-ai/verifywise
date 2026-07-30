@@ -97,9 +97,7 @@ describe("workflows / modelDeploymentWorkflow handlers", () => {
   });
 
   it("risk_assessment short-circuits to an empty snapshot when no modelId", async () => {
-    const res = await stepById("risk_assessment").handler(
-      ctx({ triggerPayload: {} }),
-    );
+    const res = await stepById("risk_assessment").handler(ctx({ triggerPayload: {} }));
 
     expect(res).toEqual({ type: "ok", output: { count: 0, criticalCount: 0 } });
     expect(mockQuery).not.toHaveBeenCalled();

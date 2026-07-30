@@ -29,7 +29,12 @@ export async function executeManualRun(
     }
 
     const uploaded = await uploadFile(
-      { originalname: result.filename, buffer: result.content, fieldname: "file", mimetype: result.mimeType },
+      {
+        originalname: result.filename,
+        buffer: result.content,
+        fieldname: "file",
+        mimetype: result.mimeType,
+      },
       userId,
       request.projectId,
       mapReportTypeToFileSource(request.reportType),

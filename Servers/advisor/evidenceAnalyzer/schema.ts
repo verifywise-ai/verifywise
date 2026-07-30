@@ -104,7 +104,9 @@ export const llmAnalysisSchema = z
       .object({
         mismatch: z
           .boolean()
-          .describe("True only if the filename is clearly misleading or generic relative to the content."),
+          .describe(
+            "True only if the filename is clearly misleading or generic relative to the content.",
+          ),
         suggested_filename: z
           .string()
           .min(1)
@@ -118,7 +120,9 @@ export const llmAnalysisSchema = z
           .min(10)
           .max(200)
           .nullable()
-          .describe("One plain-language sentence explaining the mismatch. Null when mismatch is false."),
+          .describe(
+            "One plain-language sentence explaining the mismatch. Null when mismatch is false.",
+          ),
       })
       .strict()
       .nullable()

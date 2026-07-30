@@ -1,4 +1,7 @@
-import { findDueScheduledReportsQuery, markRunEnqueuedQuery } from "../../utils/scheduledReport.utils";
+import {
+  findDueScheduledReportsQuery,
+  markRunEnqueuedQuery,
+} from "../../utils/scheduledReport.utils";
 import { runScheduledReport } from "./reportRunOrchestrator";
 import { computeNextRun } from "./scheduleCalculator";
 

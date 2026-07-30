@@ -193,16 +193,17 @@ export async function runSectionSummaries(
 
   const summaries = await runWithConcurrency(
     entries.map(
-      ([key, data]) => () =>
-        summariseSection(
-          key,
-          data,
-          frameworkName,
-          projectTitle,
-          referenceDate,
-          model,
-          stageDeadline,
-        ),
+      ([key, data]) =>
+        () =>
+          summariseSection(
+            key,
+            data,
+            frameworkName,
+            projectTitle,
+            referenceDate,
+            model,
+            stageDeadline,
+          ),
     ),
     MAX_CONCURRENT,
   );

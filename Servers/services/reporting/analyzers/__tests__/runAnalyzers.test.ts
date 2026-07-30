@@ -44,7 +44,11 @@ const only = (...on: (keyof AiBlocks)[]): AiBlocks =>
 describe("runAnalyzers", () => {
   beforeEach(() => {
     mockGenerate.mockReset();
-    mockGenerate.mockResolvedValue({ object: { summary: "ok", abstain_reason: null }, attempts: 1, selfCorrected: false });
+    mockGenerate.mockResolvedValue({
+      object: { summary: "ok", abstain_reason: null },
+      attempts: 1,
+      selfCorrected: false,
+    });
     mockSectionSummaries.mockReset();
     mockSectionSummaries.mockResolvedValue({ projectRisks: "Risks look thin." });
   });
@@ -57,11 +61,17 @@ describe("runAnalyzers", () => {
   });
 
   it("one analyzer failing does not lose the others", async () => {
-    mockGenerate
-      .mockRejectedValueOnce(new Error("llm exploded"))
-      .mockResolvedValue({ object: { narrative: "ok", abstain_reason: null }, attempts: 1, selfCorrected: false });
+    mockGenerate.mockRejectedValueOnce(new Error("llm exploded")).mockResolvedValue({
+      object: { narrative: "ok", abstain_reason: null },
+      attempts: 1,
+      selfCorrected: false,
+    });
 
-    const out = await runAnalyzers({ reportData, llmKey, blocks: only("riskAnalysis", "vendorRisk") });
+    const out = await runAnalyzers({
+      reportData,
+      llmKey,
+      blocks: only("riskAnalysis", "vendorRisk"),
+    });
 
     expect(out.riskAnalysis!.abstained).toBe(true);
     expect(out.riskAnalysis!.abstain_reason).toBe(
@@ -78,10 +88,18 @@ describe("runAnalyzers", () => {
     // still satisfy by coincidence — this test rejects the second one so the
     // mutant clobbers the first (already-successful) result instead.
     mockGenerate
-      .mockResolvedValueOnce({ object: { narrative: "ok", abstain_reason: null }, attempts: 1, selfCorrected: false })
+      .mockResolvedValueOnce({
+        object: { narrative: "ok", abstain_reason: null },
+        attempts: 1,
+        selfCorrected: false,
+      })
       .mockRejectedValueOnce(new Error("llm exploded"));
 
-    const out = await runAnalyzers({ reportData, llmKey, blocks: only("riskAnalysis", "vendorRisk") });
+    const out = await runAnalyzers({
+      reportData,
+      llmKey,
+      blocks: only("riskAnalysis", "vendorRisk"),
+    });
 
     expect(out.riskAnalysis!.abstained).toBe(false);
     expect(out.riskAnalysis!.payload.narrative).toBe("ok");
@@ -171,9 +189,16 @@ describe("runAnalyzers", () => {
   // consumers read Stage 1's output, never raw sections.
 
   it("feeds Stage 1 summaries to the Stage 2 consumers", async () => {
-    mockSectionSummaries.mockResolvedValue({ projectRisks: "Risk coverage is thin.", compliance: "Half the controls lack evidence." });
+    mockSectionSummaries.mockResolvedValue({
+      projectRisks: "Risk coverage is thin.",
+      compliance: "Half the controls lack evidence.",
+    });
 
-    const out = await runAnalyzers({ reportData, llmKey, blocks: only("sectionSummaries", "executiveSummary") });
+    const out = await runAnalyzers({
+      reportData,
+      llmKey,
+      blocks: only("sectionSummaries", "executiveSummary"),
+    });
 
     expect(mockSectionSummaries).toHaveBeenCalledTimes(1);
     expect(mockGenerate).toHaveBeenCalledTimes(1);
@@ -202,12 +227,20 @@ describe("runAnalyzers", () => {
     // returns "". This mirrors aiSummarizer.ts:227, which returned "" for the
     // same reason.
     mockSectionSummaries.mockResolvedValue({});
-    const out = await runAnalyzers({ reportData, llmKey, blocks: only("executiveSummary", "keyFindings") });
+    const out = await runAnalyzers({
+      reportData,
+      llmKey,
+      blocks: only("executiveSummary", "keyFindings"),
+    });
     expect(mockGenerate).not.toHaveBeenCalled();
     expect(out.executiveSummary!.abstained).toBe(true);
-    expect(out.executiveSummary!.abstain_reason).toBe("no section summaries were available to summarise");
+    expect(out.executiveSummary!.abstain_reason).toBe(
+      "no section summaries were available to summarise",
+    );
     expect(out.keyFindings!.abstained).toBe(true);
-    expect(out.keyFindings!.abstain_reason).toBe("no section summaries were available to summarise");
+    expect(out.keyFindings!.abstain_reason).toBe(
+      "no section summaries were available to summarise",
+    );
     expect(out.sectionSummaries).toBeUndefined();
   });
 
@@ -222,8 +255,18 @@ describe("runAnalyzers", () => {
     mockGenerate.mockResolvedValue({
       object: {
         actions: [
-          { action: "Assign the unevidenced controls.", suggestedOwner: "ghost@nowhere.com", priority: "high", rationale: "Unevidenced." },
-          { action: "Review the risk register.", suggestedOwner: "alice@acme.com", priority: "medium", rationale: "Stale entries." },
+          {
+            action: "Assign the unevidenced controls.",
+            suggestedOwner: "ghost@nowhere.com",
+            priority: "high",
+            rationale: "Unevidenced.",
+          },
+          {
+            action: "Review the risk register.",
+            suggestedOwner: "alice@acme.com",
+            priority: "medium",
+            rationale: "Stale entries.",
+          },
         ],
         abstain_reason: null,
       },
@@ -252,7 +295,12 @@ describe("runAnalyzers", () => {
     mockGenerate.mockResolvedValue({
       object: {
         actions: [
-          { action: "Notify the owner.", suggestedOwner: "Alice@Acme.com", priority: "high", rationale: "Casing differs from the DB record." },
+          {
+            action: "Notify the owner.",
+            suggestedOwner: "Alice@Acme.com",
+            priority: "high",
+            rationale: "Casing differs from the DB record.",
+          },
         ],
         abstain_reason: null,
       },
@@ -307,7 +355,9 @@ describe("runAnalyzers", () => {
     expect(out.complianceGap!.payload.gaps).toHaveLength(1);
     expect(out.complianceGap!.payload.gaps[0].control).toBe("AC-12 Access Review");
     // The rest of the payload must survive the strip untouched.
-    expect(out.complianceGap!.payload.narrative).toBe("Readiness is uneven across the control set.");
+    expect(out.complianceGap!.payload.narrative).toBe(
+      "Readiness is uneven across the control set.",
+    );
     expect(out.complianceGap!.abstained).toBe(false);
   });
 
@@ -480,7 +530,8 @@ describe("runAnalyzers", () => {
   const SUMMARY_BLOCK =
     "The Policy Manager section comprises 14 policies, of which 9 remain in draft status and 5 have been approved. Ownership is recorded for 11 of the 14 policies; the remaining 3 carry no assigned owner at all. The most recent approval was recorded on 12 March 2026, and 6 of the approved policies list a review date that has already passed. Tagging is inconsistent: 4 policies carry no tag, while the Data Protection tag is applied to 5 separate documents that differ in scope. Two policies share the same title under different identifiers, which suggests a duplicate that was never retired.";
   // Measured against the rendered prompt block: RESTATED 0.84, ANALYSED 0.34.
-  const RESTATED = SUMMARY_BLOCK.replace("comprises", "consists of") +
+  const RESTATED =
+    SUMMARY_BLOCK.replace("comprises", "consists of") +
     " Overall the organization maintains a policy set that requires continued attention from governance stakeholders.";
   const ANALYSED =
     "Sixty-four percent of the policy set has never cleared approval, and the five that did are already ageing: six carry a review date behind the 12 March 2026 reference point, so the approved population is smaller than the raw count suggests. Every record names its own drafter as approver, which is the most economical explanation for a duplicated title surviving unretired, and the three ownerless drafts have nobody to trigger the review that would catch it.";
@@ -497,8 +548,16 @@ describe("runAnalyzers", () => {
 
   it("re-issues once with a corrective directive when the prose restates its input", async () => {
     mockGenerate
-      .mockResolvedValueOnce({ object: { summary: RESTATED, abstain_reason: null }, attempts: 1, selfCorrected: false })
-      .mockResolvedValueOnce({ object: { summary: ANALYSED, abstain_reason: null }, attempts: 1, selfCorrected: false });
+      .mockResolvedValueOnce({
+        object: { summary: RESTATED, abstain_reason: null },
+        attempts: 1,
+        selfCorrected: false,
+      })
+      .mockResolvedValueOnce({
+        object: { summary: ANALYSED, abstain_reason: null },
+        attempts: 1,
+        selfCorrected: false,
+      });
 
     const out = await restatingRun();
 
@@ -522,8 +581,16 @@ describe("runAnalyzers", () => {
   it("keeps the first payload when the re-issue restates its input as well", async () => {
     // Invariant: the gate must never turn a produced analysis into a lost one.
     mockGenerate
-      .mockResolvedValueOnce({ object: { summary: RESTATED, abstain_reason: null }, attempts: 1, selfCorrected: false })
-      .mockResolvedValueOnce({ object: { summary: SUMMARY_BLOCK, abstain_reason: null }, attempts: 1, selfCorrected: false });
+      .mockResolvedValueOnce({
+        object: { summary: RESTATED, abstain_reason: null },
+        attempts: 1,
+        selfCorrected: false,
+      })
+      .mockResolvedValueOnce({
+        object: { summary: SUMMARY_BLOCK, abstain_reason: null },
+        attempts: 1,
+        selfCorrected: false,
+      });
 
     const out = await restatingRun();
 
@@ -542,9 +609,16 @@ describe("runAnalyzers", () => {
     // A re-issue that abstains produced no new analysis; that is the same
     // second failure as a re-issue that restates.
     mockGenerate
-      .mockResolvedValueOnce({ object: { summary: RESTATED, abstain_reason: null }, attempts: 1, selfCorrected: false })
       .mockResolvedValueOnce({
-        object: { summary: "The supplied data cannot support a deeper reading.", abstain_reason: "insufficient detail in the policy section" },
+        object: { summary: RESTATED, abstain_reason: null },
+        attempts: 1,
+        selfCorrected: false,
+      })
+      .mockResolvedValueOnce({
+        object: {
+          summary: "The supplied data cannot support a deeper reading.",
+          abstain_reason: "insufficient detail in the policy section",
+        },
         attempts: 1,
         selfCorrected: false,
       });
@@ -562,7 +636,11 @@ describe("runAnalyzers", () => {
 
   it("keeps the first payload when the re-issue throws", async () => {
     mockGenerate
-      .mockResolvedValueOnce({ object: { summary: RESTATED, abstain_reason: null }, attempts: 1, selfCorrected: false })
+      .mockResolvedValueOnce({
+        object: { summary: RESTATED, abstain_reason: null },
+        attempts: 1,
+        selfCorrected: false,
+      })
       .mockRejectedValueOnce(new Error("llm exploded"));
 
     const out = await restatingRun();
@@ -581,7 +659,11 @@ describe("runAnalyzers", () => {
   });
 
   it("does not re-issue for prose that analyses its input", async () => {
-    mockGenerate.mockResolvedValue({ object: { summary: ANALYSED, abstain_reason: null }, attempts: 1, selfCorrected: false });
+    mockGenerate.mockResolvedValue({
+      object: { summary: ANALYSED, abstain_reason: null },
+      attempts: 1,
+      selfCorrected: false,
+    });
 
     const out = await restatingRun();
 

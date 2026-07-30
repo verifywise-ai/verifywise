@@ -23,8 +23,22 @@ jest.mock("../../utils/statusCode.utils", () => ({
   },
 }));
 
-import { archiveRun, restoreRun, deleteRun, listRuns, getRun, downloadRun, getRunAnalyses } from "../reportRun.ctrl";
-import { getRunQuery, canViewRunQuery, listRunsQuery, setRunArchivedQuery, deleteRunQuery } from "../../utils/reportRun.utils";
+import {
+  archiveRun,
+  restoreRun,
+  deleteRun,
+  listRuns,
+  getRun,
+  downloadRun,
+  getRunAnalyses,
+} from "../reportRun.ctrl";
+import {
+  getRunQuery,
+  canViewRunQuery,
+  listRunsQuery,
+  setRunArchivedQuery,
+  deleteRunQuery,
+} from "../../utils/reportRun.utils";
 import { getFileById } from "../../utils/fileUpload.utils";
 import { getRunAnalysesQuery } from "../../utils/reportRunAnalysis.utils";
 
@@ -36,13 +50,22 @@ const mockGetAnalyses = getRunAnalysesQuery as jest.MockedFunction<typeof getRun
 // req.organizationId is the authed tenant (5). params.id/body carry an
 // attacker-supplied value; the handler must scope by the authed org, never trust input.
 function createMockReq(params: any = {}, role?: string): Partial<Request> {
-  return { params, query: {}, organizationId: 5, userId: 3, ...(role ? { role } : {}) } as Partial<Request>;
+  return {
+    params,
+    query: {},
+    organizationId: 5,
+    userId: 3,
+    ...(role ? { role } : {}),
+  } as Partial<Request>;
 }
 function createMockRes(): Partial<Response> {
   const res: any = {};
   res.status = jest.fn().mockReturnValue(res);
   res.json = jest.fn().mockReturnValue(res);
   res.send = jest.fn().mockReturnValue(res);
+  // downloadRun writes the file buffer with res.end, like the file-manager
+  // download path, so the body never goes through res.send.
+  res.end = jest.fn().mockReturnValue(res);
   res.setHeader = jest.fn().mockReturnValue(res);
   return res;
 }
@@ -91,7 +114,13 @@ describe("reportRun.ctrl tenant isolation", () => {
   });
 
   it("downloadRun scopes both the run and the file fetch by the authed organizationId", async () => {
-    mockGetRun.mockResolvedValue({ id: 77, organization_id: 5, file_id: 9, output_filename: "r.pdf", output_mime_type: "application/pdf" } as any);
+    mockGetRun.mockResolvedValue({
+      id: 77,
+      organization_id: 5,
+      file_id: 9,
+      output_filename: "r.pdf",
+      output_mime_type: "application/pdf",
+    } as any);
     mockGetFile.mockResolvedValue({ content: Buffer.from("x") } as any);
 
     const req = createMockReq({ id: "77" });
@@ -101,6 +130,55 @@ describe("reportRun.ctrl tenant isolation", () => {
 
     expect(mockGetRun).toHaveBeenCalledWith(77, 5);
     expect(mockGetFile).toHaveBeenCalledWith(9, 5);
+  });
+
+  it("downloadRun keeps a hostile output_filename out of the Content-Disposition header", async () => {
+    // output_filename is written by the generator, but it is derived from
+    // template and project names, so a quote would close the header's quoted
+    // string early and a CRLF would start a header of the attacker's choosing.
+    mockGetRun.mockResolvedValue({
+      id: 77,
+      organization_id: 5,
+      file_id: 9,
+      output_filename: 'evil".pdf\r\nX-Injected: yes\r\n\r\n<script>ünïcode',
+      output_mime_type: "application/pdf",
+    } as any);
+    mockGetFile.mockResolvedValue({ content: Buffer.from("x") } as any);
+
+    const res = createMockRes();
+    await downloadRun(createMockReq({ id: "77" }) as Request, res as Response);
+
+    const disposition = (res.setHeader as jest.Mock).mock.calls.find(
+      (c) => c[0] === "Content-Disposition",
+    )![1] as string;
+
+    expect(disposition).not.toMatch(/[\r\n]/);
+    // One opening and one closing quote, both ours.
+    expect(disposition.match(/"/g)).toHaveLength(2);
+    // Quotes and CRLF are dropped, non-ASCII collapses to underscores, so the
+    // hostile parts survive only as inert text inside our own quoted string.
+    expect(disposition).toBe('attachment; filename="evil.pdfX-Injected: yes<script>_n_code"');
+    expect(res.setHeader).toHaveBeenCalledWith("X-Content-Type-Options", "nosniff");
+  });
+
+  it("downloadRun falls back to a run-derived filename when output_filename is null", async () => {
+    mockGetRun.mockResolvedValue({
+      id: 77,
+      organization_id: 5,
+      file_id: 9,
+      output_filename: null,
+      output_mime_type: null,
+    } as any);
+    mockGetFile.mockResolvedValue({ content: Buffer.from("x") } as any);
+
+    const res = createMockRes();
+    await downloadRun(createMockReq({ id: "77" }) as Request, res as Response);
+
+    expect(res.setHeader).toHaveBeenCalledWith(
+      "Content-Disposition",
+      'attachment; filename="report-77"',
+    );
+    expect(res.setHeader).toHaveBeenCalledWith("Content-Type", "application/octet-stream");
   });
 
   it("getRunAnalyses returns 404 and never queries analyses when the run is not in the caller's org", async () => {
@@ -291,6 +369,9 @@ describe("per-run visibility gate", () => {
       expect(res.status).toHaveBeenCalledWith(404);
       expect(mockGetRun).not.toHaveBeenCalled();
       expect(mockGetFile).not.toHaveBeenCalled();
+      // Both write paths: res.end is the one downloadRun uses for the body, and
+      // asserting only on res.send would pass whether or not a body was served.
+      expect(res.end).not.toHaveBeenCalled();
       expect(res.send).not.toHaveBeenCalled();
     });
 
@@ -334,8 +415,11 @@ describe("per-run visibility gate", () => {
     ["a project member", "Editor"],
   ])("still serves %s the run, the download and the analyses", async (_label, role) => {
     mockGetRun.mockResolvedValue({
-      id: 77, organization_id: 5, file_id: 9,
-      output_filename: "r.pdf", output_mime_type: "application/pdf",
+      id: 77,
+      organization_id: 5,
+      file_id: 9,
+      output_filename: "r.pdf",
+      output_mime_type: "application/pdf",
     } as any);
     mockGetFile.mockResolvedValue({ content: Buffer.from("x") } as any);
     mockGetAnalyses.mockResolvedValue([] as any);
@@ -346,7 +430,7 @@ describe("per-run visibility gate", () => {
 
     const downloadRes = createMockRes();
     await downloadRun(createMockReq({ id: "77" }, role) as Request, downloadRes as Response);
-    expect(downloadRes.send).toHaveBeenCalled();
+    expect(downloadRes.end).toHaveBeenCalledWith(Buffer.from("x"));
     expect(mockGetFile).toHaveBeenCalledWith(9, 5);
 
     const analysesRes = createMockRes();
@@ -366,7 +450,12 @@ describe("archiveRun / restoreRun / deleteRun", () => {
 
   it("archives with the authed organization and user, never the request body", async () => {
     mockSetArchived.mockResolvedValue({ id: 1, archived_at: "2026-07-28" });
-    const req = { params: { id: "1" }, body: { organizationId: 999 }, organizationId: 5, userId: 3 } as any;
+    const req = {
+      params: { id: "1" },
+      body: { organizationId: 999 },
+      organizationId: 5,
+      userId: 3,
+    } as any;
     const res = createMockRes() as Response;
 
     await archiveRun(req, res);

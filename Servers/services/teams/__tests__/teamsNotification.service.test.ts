@@ -50,9 +50,7 @@ describe("teamsNotification.service", () => {
     });
 
     it("should no-op (no throw, no POST) when webhook URL is empty", async () => {
-      await expect(
-        sendTeamsNotification("", { title: "T", text: "B" }),
-      ).resolves.toBeUndefined();
+      await expect(sendTeamsNotification("", { title: "T", text: "B" })).resolves.toBeUndefined();
       expect(mockAxiosPost).not.toHaveBeenCalled();
     });
 

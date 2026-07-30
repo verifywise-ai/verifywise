@@ -5,7 +5,8 @@ module.exports = {
   async up(queryInterface) {
     const t = await queryInterface.sequelize.transaction();
     try {
-      await queryInterface.sequelize.query(`
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE IF NOT EXISTS verifywise.report_templates (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -21,9 +22,12 @@ module.exports = {
           created_by INTEGER REFERENCES verifywise.users(id),
           created_at TIMESTAMPTZ DEFAULT NOW(),
           updated_at TIMESTAMPTZ DEFAULT NOW()
-        );`, { transaction: t });
+        );`,
+        { transaction: t },
+      );
 
-      await queryInterface.sequelize.query(`
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE IF NOT EXISTS verifywise.report_template_versions (
           id SERIAL PRIMARY KEY,
           template_id INTEGER NOT NULL REFERENCES verifywise.report_templates(id) ON DELETE CASCADE,
@@ -37,9 +41,12 @@ module.exports = {
           config_schema_version INTEGER NOT NULL DEFAULT 1,
           created_by INTEGER REFERENCES verifywise.users(id),
           created_at TIMESTAMPTZ DEFAULT NOW()
-        );`, { transaction: t });
+        );`,
+        { transaction: t },
+      );
 
-      await queryInterface.sequelize.query(`
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE IF NOT EXISTS verifywise.scheduled_reports (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER NOT NULL REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -63,9 +70,12 @@ module.exports = {
           created_at TIMESTAMPTZ DEFAULT NOW(),
           updated_at TIMESTAMPTZ DEFAULT NOW(),
           deleted_at TIMESTAMPTZ
-        );`, { transaction: t });
+        );`,
+        { transaction: t },
+      );
 
-      await queryInterface.sequelize.query(`
+      await queryInterface.sequelize.query(
+        `
         CREATE TABLE IF NOT EXISTS verifywise.report_runs (
           id SERIAL PRIMARY KEY,
           organization_id INTEGER NOT NULL REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
@@ -91,9 +101,12 @@ module.exports = {
           retry_count INTEGER NOT NULL DEFAULT 0,
           created_at TIMESTAMPTZ DEFAULT NOW(),
           updated_at TIMESTAMPTZ DEFAULT NOW()
-        );`, { transaction: t });
+        );`,
+        { transaction: t },
+      );
 
-      await queryInterface.sequelize.query(`
+      await queryInterface.sequelize.query(
+        `
         CREATE INDEX IF NOT EXISTS idx_report_templates_org ON verifywise.report_templates(organization_id);
         CREATE UNIQUE INDEX IF NOT EXISTS idx_tpl_versions_unique ON verifywise.report_template_versions(template_id, version);
         CREATE INDEX IF NOT EXISTS idx_sched_reports_org ON verifywise.scheduled_reports(organization_id);
@@ -101,10 +114,15 @@ module.exports = {
         CREATE INDEX IF NOT EXISTS idx_report_runs_org ON verifywise.report_runs(organization_id);
         CREATE INDEX IF NOT EXISTS idx_report_runs_sched ON verifywise.report_runs(scheduled_report_id);
         CREATE UNIQUE INDEX IF NOT EXISTS idx_report_runs_dedupe ON verifywise.report_runs(scheduled_report_id, scheduled_for) WHERE scheduled_report_id IS NOT NULL AND scheduled_for IS NOT NULL;
-      `, { transaction: t });
+      `,
+        { transaction: t },
+      );
 
       await t.commit();
-    } catch (e) { await t.rollback(); throw e; }
+    } catch (e) {
+      await t.rollback();
+      throw e;
+    }
   },
 
   async down(queryInterface) {

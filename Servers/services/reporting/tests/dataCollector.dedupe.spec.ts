@@ -31,7 +31,9 @@ jest.mock("../../../utils/user.utils", () => ({
 }));
 
 jest.mock("../../../utils/project.utils", () => ({
-  getProjectByIdQuery: jest.fn().mockResolvedValue({ project_title: "P", is_organizational: false }),
+  getProjectByIdQuery: jest
+    .fn()
+    .mockResolvedValue({ project_title: "P", is_organizational: false }),
 }));
 
 jest.mock("../../../utils/framework.utils", () => ({

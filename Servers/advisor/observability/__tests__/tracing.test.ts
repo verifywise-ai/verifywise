@@ -118,9 +118,7 @@ describe("aiSdkAgent / langfuse tracing wiring", () => {
     await runAdvisorAiSdk(makeParams());
     expect(traceManager.startSpan).toHaveBeenCalled();
     // The span name should reference the tool that ran.
-    const names = (traceManager.startSpan as jest.Mock).mock.calls.map((c: any[]) =>
-      String(c[1]),
-    );
+    const names = (traceManager.startSpan as jest.Mock).mock.calls.map((c: any[]) => String(c[1]));
     expect(names.some((n) => n.includes("fetch_risks"))).toBe(true);
   });
 

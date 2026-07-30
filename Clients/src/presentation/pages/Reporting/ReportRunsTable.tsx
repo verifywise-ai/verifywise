@@ -121,9 +121,7 @@ export default function ReportRunsTable({ variant }: { variant: "live" | "archiv
     limit: rowsPerPage,
     offset: page * rowsPerPage,
   });
-  const { data: analyses, isLoading: analysesLoading } = useRunAnalyses(
-    selectedRunId ?? undefined,
-  );
+  const { data: analyses, isLoading: analysesLoading } = useRunAnalyses(selectedRunId ?? undefined);
 
   const archive = useArchiveRun();
   const restore = useRestoreRun();
@@ -174,9 +172,7 @@ export default function ReportRunsTable({ variant }: { variant: "live" | "archiv
   // Shared by the populated table and the empty layout, so the column row does
   // not drift between the two states.
   const tableHead = (
-    <TableHead
-      sx={{ backgroundColor: singleTheme.tableStyles.primary.header.backgroundColors }}
-    >
+    <TableHead sx={{ backgroundColor: singleTheme.tableStyles.primary.header.backgroundColors }}>
       <TableRow sx={singleTheme.tableStyles.primary.header.row}>
         {COLUMNS.map((h) => (
           <TableCell key={h} sx={singleTheme.tableStyles.primary.header.cell} align="left">
@@ -257,9 +253,7 @@ export default function ReportRunsTable({ variant }: { variant: "live" | "archiv
                     type="reportRun"
                     isArchived={variant === "archived"}
                     onDownload={
-                      r.file_id
-                        ? () => handleDownload(r.id, r.output_filename ?? null)
-                        : undefined
+                      r.file_id ? () => handleDownload(r.id, r.output_filename ?? null) : undefined
                     }
                     onView={() => setSelectedRunId(r.id)}
                     onEdit={() => {}}
@@ -338,9 +332,7 @@ export default function ReportRunsTable({ variant }: { variant: "live" | "archiv
             >
               AI analyses
             </Typography>
-            <Typography
-              sx={{ fontSize: 13, lineHeight: 1.5, color: theme.palette.text.tertiary }}
-            >
+            <Typography sx={{ fontSize: 13, lineHeight: 1.5, color: theme.palette.text.tertiary }}>
               AI-generated readings of this report's data, meant to speed up your review — check
               each point against the report before acting on it.
             </Typography>

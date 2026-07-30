@@ -97,9 +97,7 @@ describe("useReporting template hooks", () => {
   it("useUpdateTemplate splits id and body", async () => {
     const { result } = renderHook(() => useUpdateTemplate(), { wrapper: wrap });
     result.current.mutate({ id: 7, body: { name: "Renamed" } });
-    await waitFor(() =>
-      expect(repo.updateTemplate).toHaveBeenCalledWith(7, { name: "Renamed" }),
-    );
+    await waitFor(() => expect(repo.updateTemplate).toHaveBeenCalledWith(7, { name: "Renamed" }));
   });
 
   it("useRunAnalyses stays disabled without a run id", () => {

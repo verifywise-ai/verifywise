@@ -37,10 +37,7 @@ import {
   status,
 } from "../../themes/palette";
 import Chip from "../../components/Chip";
-import {
-  useTraces,
-  useObservabilityMetrics,
-} from "../../../application/hooks/useObservability";
+import { useTraces, useObservabilityMetrics } from "../../../application/hooks/useObservability";
 import { getTraceDetail } from "../../../application/repository/observability.repository";
 
 // Consistent card style matching AIAuditDashboard / DashboardCard

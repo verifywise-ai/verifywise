@@ -1,6 +1,11 @@
 jest.mock("../../database/db", () => ({ sequelize: { query: jest.fn() } }));
 import { sequelize } from "../../database/db";
-import { createRunQuery, updateRunStatusQuery, listRunsQuery, canViewRunQuery } from "../reportRun.utils";
+import {
+  createRunQuery,
+  updateRunStatusQuery,
+  listRunsQuery,
+  canViewRunQuery,
+} from "../reportRun.utils";
 const q = sequelize.query as jest.Mock;
 const ADMIN = { userId: 1, role: "Admin" };
 
@@ -30,7 +35,12 @@ describe("reportRun.utils", () => {
   });
   it("createRunQuery inserts with org + status running", async () => {
     q.mockResolvedValueOnce([{ id: 1, status: "running" }]);
-    const r = await createRunQuery({ organization_id: 7, scheduled_report_id: 3, triggered_by: "scheduler", scheduled_for: new Date() } as any);
+    const r = await createRunQuery({
+      organization_id: 7,
+      scheduled_report_id: 3,
+      triggered_by: "scheduler",
+      scheduled_for: new Date(),
+    } as any);
     expect(r.status).toBe("running");
     expect(q.mock.calls[0][1].replacements.organization_id).toBe(7);
   });

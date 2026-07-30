@@ -429,9 +429,7 @@ export async function getGaps(req: Request, res: Response) {
     // ?low_grades=C,D,F to widen the bar. Invalid letters are dropped.
     const validGrades: QualityGrade[] = ["A", "B", "C", "D", "F"];
     const rawLowGrades = req.query.low_grades
-      ? String(
-          Array.isArray(req.query.low_grades) ? req.query.low_grades[0] : req.query.low_grades,
-        )
+      ? String(Array.isArray(req.query.low_grades) ? req.query.low_grades[0] : req.query.low_grades)
           .split(",")
           .map((g) => g.trim().toUpperCase())
           .filter((g): g is QualityGrade => (validGrades as string[]).includes(g))

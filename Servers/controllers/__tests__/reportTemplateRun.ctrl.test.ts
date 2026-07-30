@@ -137,7 +137,12 @@ describe("runTemplateNow", () => {
     const res = createMockRes() as Response;
 
     await runTemplateNow(
-      { params: { id: "2" }, body: { ...body, projectId: "4" }, organizationId: 5, userId: 3 } as any,
+      {
+        params: { id: "2" },
+        body: { ...body, projectId: "4" },
+        organizationId: 5,
+        userId: 3,
+      } as any,
       res,
     );
 

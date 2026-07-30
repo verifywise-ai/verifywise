@@ -6,17 +6,27 @@ jest.mock("../../database/db", () => ({
 }));
 // Prevent loading the real reporting engine (Playwright/docx) at import time.
 jest.mock("../../services/reporting", () => ({ generateReport: jest.fn() }));
-jest.mock("../../utils/reportRun.utils", () => ({ createRunQuery: jest.fn(), updateRunStatusQuery: jest.fn().mockResolvedValue(undefined) }));
-jest.mock("../../services/automations/automationProducer", () => ({ enqueueAutomationAction: jest.fn() }));
+jest.mock("../../utils/reportRun.utils", () => ({
+  createRunQuery: jest.fn(),
+  updateRunStatusQuery: jest.fn().mockResolvedValue(undefined),
+}));
+jest.mock("../../services/automations/automationProducer", () => ({
+  enqueueAutomationAction: jest.fn(),
+}));
 jest.mock("../../utils/user.utils", () => ({ getUserByIdQuery: jest.fn() }));
 jest.mock("../../utils/organization.utils", () => ({ getOrganizationByIdQuery: jest.fn() }));
 jest.mock("../../utils/logger/logHelper", () => ({
-  logProcessing: jest.fn(), logSuccess: jest.fn(), logFailure: jest.fn(),
+  logProcessing: jest.fn(),
+  logSuccess: jest.fn(),
+  logFailure: jest.fn(),
 }));
 jest.mock("../../utils/logger/fileLogger", () => ({
-  __esModule: true, default: { debug: jest.fn(), error: jest.fn(), info: jest.fn() },
+  __esModule: true,
+  default: { debug: jest.fn(), error: jest.fn(), info: jest.fn() },
 }));
-jest.mock("../../utils/i18n.utils", () => ({ translateError: jest.fn((_r, e) => (e as Error).message) }));
+jest.mock("../../utils/i18n.utils", () => ({
+  translateError: jest.fn((_r, e) => (e as Error).message),
+}));
 jest.mock("../../utils/statusCode.utils", () => ({
   STATUS_CODE: {
     202: (d: any) => ({ message: "Accepted", data: d }),
@@ -58,14 +68,24 @@ describe("generateReportsV2 (async)", () => {
     mockOrg.mockResolvedValue({ name: "Acme" } as any);
     mockCreateRun.mockResolvedValue({ id: 77 } as any);
 
-    const req = createMockReq({ projectId: "7", frameworkId: "1", projectFrameworkId: "2", reportType: "project", format: "pdf" });
+    const req = createMockReq({
+      projectId: "7",
+      frameworkId: "1",
+      projectFrameworkId: "2",
+      reportType: "project",
+      format: "pdf",
+    });
     const res = createMockRes();
 
     await generateReportsV2(req as Request, res as Response);
 
-    expect(mockCreateRun).toHaveBeenCalledWith(expect.objectContaining({
-      organization_id: 5, triggered_by: "manual", triggered_by_user_id: 3,
-    }));
+    expect(mockCreateRun).toHaveBeenCalledWith(
+      expect.objectContaining({
+        organization_id: 5,
+        triggered_by: "manual",
+        triggered_by_user_id: 3,
+      }),
+    );
     expect(mockEnqueue).toHaveBeenCalledWith(
       "generate_report_manual",
       expect.objectContaining({ runId: 77, userId: 3, organizationId: 5 }),
@@ -76,7 +96,12 @@ describe("generateReportsV2 (async)", () => {
 
   it("returns 404 when the user does not exist", async () => {
     mockUser.mockResolvedValue(null as any);
-    const req = createMockReq({ projectId: "7", frameworkId: "1", projectFrameworkId: "2", reportType: "project" });
+    const req = createMockReq({
+      projectId: "7",
+      frameworkId: "1",
+      projectFrameworkId: "2",
+      reportType: "project",
+    });
     const res = createMockRes();
 
     await generateReportsV2(req as Request, res as Response);
@@ -91,7 +116,13 @@ describe("generateReportsV2 (async)", () => {
     mockCreateRun.mockResolvedValue({ id: 77 } as any);
     mockEnqueue.mockRejectedValue(new Error("redis down"));
 
-    const req = createMockReq({ projectId: "7", frameworkId: "1", projectFrameworkId: "2", reportType: "project", format: "pdf" });
+    const req = createMockReq({
+      projectId: "7",
+      frameworkId: "1",
+      projectFrameworkId: "2",
+      reportType: "project",
+      format: "pdf",
+    });
     const res = createMockRes();
 
     await generateReportsV2(req as Request, res as Response);
@@ -109,7 +140,13 @@ describe("generateReportsV2 (async)", () => {
     mockEnqueue.mockResolvedValue(undefined as any);
     mockLogSuccess.mockRejectedValue(new Error("log sink down") as never);
 
-    const req = createMockReq({ projectId: "7", frameworkId: "1", projectFrameworkId: "2", reportType: "project", format: "pdf" });
+    const req = createMockReq({
+      projectId: "7",
+      frameworkId: "1",
+      projectFrameworkId: "2",
+      reportType: "project",
+      format: "pdf",
+    });
     const res = createMockRes();
 
     await generateReportsV2(req as Request, res as Response);

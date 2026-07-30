@@ -24,7 +24,7 @@ import type {
 
 // Backend responses are wrapped as { data: <payload> }; apiServices already
 // returns { data: response.data, ... }, so the payload is at r.data.data.
-const extract = <T,>(r: any): T => (r?.data?.data ?? r?.data) as T;
+const extract = <T>(r: any): T => (r?.data?.data ?? r?.data) as T;
 
 export async function getTemplates(): Promise<any[]> {
   return extract(await apiServices.get("/reporting/templates"));
@@ -109,9 +109,7 @@ export async function getSectionCatalog(): Promise<ReportSectionCatalogEntry[]> 
   return extract(await apiServices.get("/reporting/sections"));
 }
 
-export async function createTemplate(
-  body: ReportTemplateWriteBody,
-): Promise<ReportTemplate> {
+export async function createTemplate(body: ReportTemplateWriteBody): Promise<ReportTemplate> {
   return extract(await apiServices.post("/reporting/templates", body));
 }
 

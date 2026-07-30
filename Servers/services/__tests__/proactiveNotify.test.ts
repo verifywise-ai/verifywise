@@ -29,7 +29,10 @@ import { notifyProactive } from "../proactiveNotify";
 import { sendInAppNotification } from "../inAppNotification.service";
 import { sendSlackNotification } from "../slack/slackNotificationService";
 import { sendTeamsNotification } from "../teams/teamsNotification.service";
-import { NotificationType, NotificationEntityType } from "../../domain.layer/interfaces/i.notification";
+import {
+  NotificationType,
+  NotificationEntityType,
+} from "../../domain.layer/interfaces/i.notification";
 
 const mockSendInApp = sendInAppNotification as jest.MockedFunction<typeof sendInAppNotification>;
 const mockSendSlack = sendSlackNotification as jest.MockedFunction<typeof sendSlackNotification>;

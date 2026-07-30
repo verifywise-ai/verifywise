@@ -4,10 +4,7 @@ jest.mock("../../../utils/reportTemplate.utils", () => ({
 }));
 
 import { validateTemplateVersionOwnership } from "../scheduledReportService";
-import {
-  getTemplateByIdQuery,
-  getVersionByIdQuery,
-} from "../../../utils/reportTemplate.utils";
+import { getTemplateByIdQuery, getVersionByIdQuery } from "../../../utils/reportTemplate.utils";
 
 beforeEach(() => jest.clearAllMocks());
 
@@ -44,11 +41,7 @@ describe("validateTemplateVersionOwnership", () => {
   });
 
   it("rejects missing ids rather than querying with NaN", async () => {
-    const errs = await validateTemplateVersionOwnership(
-      undefined as any,
-      undefined as any,
-      42,
-    );
+    const errs = await validateTemplateVersionOwnership(undefined as any, undefined as any, 42);
     expect(errs).toHaveLength(1);
     expect(getTemplateByIdQuery).not.toHaveBeenCalled();
   });

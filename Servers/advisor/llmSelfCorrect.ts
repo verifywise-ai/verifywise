@@ -502,10 +502,7 @@ export async function generateObjectWithSelfCorrection<T>(
           // the model's own answer, already paid for — recovering it is not the
           // degraded output the extendedRecovery gate exists to withhold, so it
           // runs for every caller.
-          const salvaged = salvageObjectFromText(
-            (err as { text?: unknown }).text,
-            params.schema,
-          );
+          const salvaged = salvageObjectFromText((err as { text?: unknown }).text, params.schema);
           if (salvaged !== null) {
             logger.warn(
               `[llmSelfCorrect] provider wrapped the object in prose; salvaged it from the raw completion (${(err as Error).message})`,

@@ -82,9 +82,7 @@ export default function TemplateBuilder({ onClose }: { onClose: () => void }) {
   };
 
   const toggleSection = (key: string) =>
-    setSelected((prev) =>
-      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
-    );
+    setSelected((prev) => (prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key]));
 
   const submit = () => {
     create.mutate(

@@ -220,11 +220,9 @@ export async function createNewIncident(req: Request, res: Response) {
       typeof savedIncident.severity === "string" &&
       CRITICAL_INCIDENT_SEVERITIES.has(savedIncident.severity.toLowerCase())
     ) {
-      triggerIncidentResponse(
-        req.organizationId!,
-        savedIncident.id,
-        savedIncident.severity,
-      ).catch((err) => console.error("Failed to trigger incident_response workflow:", err));
+      triggerIncidentResponse(req.organizationId!, savedIncident.id, savedIncident.severity).catch(
+        (err) => console.error("Failed to trigger incident_response workflow:", err),
+      );
     }
 
     logStructured(

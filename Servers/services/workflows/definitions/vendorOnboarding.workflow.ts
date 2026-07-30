@@ -126,7 +126,12 @@ export const vendorOnboardingWorkflow: WorkflowDefinition = {
       isWrite: false,
       handler: async (ctx: WorkflowContext): Promise<StepResult> => {
         const vendor = ctx.results.fetch_vendor as
-          | { id?: number; vendor_name?: string; assignee?: number | null; reviewer?: number | null }
+          | {
+              id?: number;
+              vendor_name?: string;
+              assignee?: number | null;
+              reviewer?: number | null;
+            }
           | undefined;
         const ownerId = vendor?.assignee ?? vendor?.reviewer ?? null;
         if (!ownerId) {

@@ -291,11 +291,11 @@ describe("ReportRunsTable", () => {
     (URL as any).revokeObjectURL = revokeObjectURL;
 
     let downloadedFilename: string | undefined;
-    const clickSpy = vi
-      .spyOn(HTMLAnchorElement.prototype, "click")
-      .mockImplementation(function (this: HTMLAnchorElement) {
-        downloadedFilename = this.download;
-      });
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      downloadedFilename = this.download;
+    });
 
     try {
       const user = userEvent.setup();

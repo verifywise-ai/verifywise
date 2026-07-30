@@ -5,14 +5,19 @@ import type { GenerateObjectImpl } from "../../llmSelfCorrect";
 // A GenerateObjectImpl stub that always resolves to the given object.
 const impl =
   (object: unknown): GenerateObjectImpl =>
-  (async () => ({ object }) as any);
+  async () =>
+    ({ object }) as any;
 
 describe("planSubtasks", () => {
   it("returns parallel with the subtasks when the model finds independent tasks", async () => {
     const plan = await planSubtasks(
       "count risks and count vendors",
       {},
-      impl({ mode: "parallel", subtasks: ["count risks", "count vendors"], reasoning: "independent" }),
+      impl({
+        mode: "parallel",
+        subtasks: ["count risks", "count vendors"],
+        reasoning: "independent",
+      }),
     );
     expect(plan.mode).toBe("parallel");
     expect(plan.subtasks).toEqual(["count risks", "count vendors"]);
@@ -40,7 +45,11 @@ describe("planSubtasks", () => {
 
   it("clamps subtasks to MAX_SUBTASKS", async () => {
     const many = Array.from({ length: MAX_SUBTASKS + 3 }, (_, i) => `task ${i}`);
-    const plan = await planSubtasks("many", {}, impl({ mode: "parallel", subtasks: many, reasoning: "x" }));
+    const plan = await planSubtasks(
+      "many",
+      {},
+      impl({ mode: "parallel", subtasks: many, reasoning: "x" }),
+    );
     expect(plan.subtasks).toHaveLength(MAX_SUBTASKS);
   });
 

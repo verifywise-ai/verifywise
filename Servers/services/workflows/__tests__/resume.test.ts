@@ -33,10 +33,7 @@ const mockQuery = sequelize.query as unknown as jest.Mock;
 /** UPDATE ai_workflow_runs ... SET state = :state — collect persisted states. */
 function persistStates(): string[] {
   return mockQuery.mock.calls
-    .filter(
-      (c) =>
-        String(c[0]).includes("UPDATE") && String(c[0]).includes("ai_workflow_runs"),
-    )
+    .filter((c) => String(c[0]).includes("UPDATE") && String(c[0]).includes("ai_workflow_runs"))
     .map((c) => (c[1] as any)?.replacements?.state as string);
 }
 

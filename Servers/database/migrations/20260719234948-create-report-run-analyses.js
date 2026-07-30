@@ -36,8 +36,6 @@ module.exports = {
   },
 
   async down(queryInterface) {
-    await queryInterface.sequelize.query(
-      "DROP TABLE IF EXISTS verifywise.report_run_analyses;",
-    );
+    await queryInterface.sequelize.query("DROP TABLE IF EXISTS verifywise.report_run_analyses;");
   },
 };

@@ -113,7 +113,9 @@ describe("ReportAnalysisPanel", () => {
         analyses={[
           row("riskAnalysis", {
             narrative: "Risk exposure is concentrated in third-party models.",
-            top_risks: [{ name: "Model drift", level: "Very high", why: "No monitoring in place." }],
+            top_risks: [
+              { name: "Model drift", level: "Very high", why: "No monitoring in place." },
+            ],
             abstain_reason: null,
           }),
         ]}
@@ -155,9 +157,7 @@ describe("ReportAnalysisPanel", () => {
         analyses={[
           row("vendorRisk", {
             narrative: "Two vendors process personal data.",
-            concerns: [
-              { vendor: "Acme AI", concern: "No DPA on file.", severity: "critical" },
-            ],
+            concerns: [{ vendor: "Acme AI", concern: "No DPA on file.", severity: "critical" }],
             abstain_reason: null,
           }),
         ]}
@@ -274,20 +274,24 @@ describe("ReportAnalysisPanel", () => {
             ],
             abstain_reason: null,
           }),
-          row("complianceGap", {
-            narrative: "Readiness is uneven across the control set.",
-            gaps: [
-              {
-                control: "A.5.1",
-                gap: "No documented policy.",
-                priority: "high",
-                basis: "absent",
-                what_would_close_this: "An approved policy document is attached to A.5.1.",
-              },
-            ],
-            scores_caveat: null,
-            abstain_reason: null,
-          }, { id: 2 }),
+          row(
+            "complianceGap",
+            {
+              narrative: "Readiness is uneven across the control set.",
+              gaps: [
+                {
+                  control: "A.5.1",
+                  gap: "No documented policy.",
+                  priority: "high",
+                  basis: "absent",
+                  what_would_close_this: "An approved policy document is attached to A.5.1.",
+                },
+              ],
+              scores_caveat: null,
+              abstain_reason: null,
+            },
+            { id: 2 },
+          ),
         ]}
       />,
     );

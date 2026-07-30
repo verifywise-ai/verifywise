@@ -20,12 +20,7 @@ jest.mock("../../utils/statusCode.utils", () => ({
   },
 }));
 
-import {
-  getTraces,
-  getTraceDetail,
-  getCosts,
-  getPerformance,
-} from "../observability.ctrl";
+import { getTraces, getTraceDetail, getCosts, getPerformance } from "../observability.ctrl";
 import { getLangfuse } from "../../advisor/observability/langfuseConfig";
 import { getCostSummary } from "../../advisor/observability/costTracker";
 
@@ -64,9 +59,7 @@ describe("observability.ctrl", () => {
     it("returns 200 with traces from Langfuse when configured", async () => {
       const fakeLangfuse = {
         fetchTraces: jest.fn<any>().mockResolvedValue({
-          data: [
-            { id: "t1", name: "agent-interaction", timestamp: "2026-01-01T00:00:00Z" },
-          ],
+          data: [{ id: "t1", name: "agent-interaction", timestamp: "2026-01-01T00:00:00Z" }],
           meta: { totalItems: 1 },
         }),
       };

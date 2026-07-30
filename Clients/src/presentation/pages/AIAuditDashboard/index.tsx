@@ -385,7 +385,12 @@ export default function AIAuditDashboard() {
                       border: `1px solid ${borderPalette.dark}`,
                     }}
                   />
-                  <Bar dataKey="count" fill={brand.primary} radius={[4, 4, 0, 0]} isAnimationActive={false} />
+                  <Bar
+                    dataKey="count"
+                    fill={brand.primary}
+                    radius={[4, 4, 0, 0]}
+                    isAnimationActive={false}
+                  />
                 </BarChart>
               </ResponsiveContainer>
             )}

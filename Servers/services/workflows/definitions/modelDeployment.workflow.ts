@@ -38,10 +38,7 @@ interface ControlCoverage {
 }
 
 /** Count of model-scoped risks (and the critical subset) for the snapshot. */
-async function fetchRiskSnapshot(
-  orgId: number,
-  modelId: unknown,
-): Promise<RiskSnapshot> {
+async function fetchRiskSnapshot(orgId: number, modelId: unknown): Promise<RiskSnapshot> {
   if (!modelId) return { count: 0, criticalCount: 0 };
   const rows = (await sequelize.query(
     `SELECT COUNT(*)::int AS total,
@@ -80,9 +77,7 @@ async function fetchControlCoverage(orgId: number): Promise<ControlCoverage[]> {
 }
 
 /** All Admin-role users for an organization (id only is consumed downstream). */
-async function getOrgAdmins(
-  organizationId: number,
-): Promise<Array<{ id: number }>> {
+async function getOrgAdmins(organizationId: number): Promise<Array<{ id: number }>> {
   const rows = (await sequelize.query(
     `SELECT u.id
        FROM users u
@@ -94,11 +89,7 @@ async function getOrgAdmins(
 }
 
 /** Fan-out an in-app notification to every org admin (no-op when none). */
-async function notifyAdmins(
-  ctx: WorkflowContext,
-  title: string,
-  message: string,
-): Promise<void> {
+async function notifyAdmins(ctx: WorkflowContext, title: string, message: string): Promise<void> {
   const admins = await getOrgAdmins(ctx.organizationId);
   if (admins.length === 0) return;
   await sendBulkInAppNotifications(ctx.organizationId, {

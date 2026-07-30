@@ -45,11 +45,7 @@ function auditTransitions(): string[] {
 function persistStates(): string[] {
   // persistRun issues an UPDATE ai_workflow_runs ... SET state = :state
   return mockQuery.mock.calls
-    .filter(
-      (c) =>
-        String(c[0]).includes("UPDATE") &&
-        String(c[0]).includes("ai_workflow_runs"),
-    )
+    .filter((c) => String(c[0]).includes("UPDATE") && String(c[0]).includes("ai_workflow_runs"))
     .map((c) => (c[1] as any)?.replacements?.state as string);
 }
 
@@ -84,9 +80,27 @@ describe("workflows / runWorkflow", () => {
   it("runs steps in declared order", async () => {
     const calls: string[] = [];
     const wf = workflow([
-      step({ id: "a", handler: async () => { calls.push("a"); return { type: "ok", output: 1 }; } }),
-      step({ id: "b", handler: async () => { calls.push("b"); return { type: "ok", output: 2 }; } }),
-      step({ id: "c", handler: async () => { calls.push("c"); return { type: "ok", output: 3 }; } }),
+      step({
+        id: "a",
+        handler: async () => {
+          calls.push("a");
+          return { type: "ok", output: 1 };
+        },
+      }),
+      step({
+        id: "b",
+        handler: async () => {
+          calls.push("b");
+          return { type: "ok", output: 2 };
+        },
+      }),
+      step({
+        id: "c",
+        handler: async () => {
+          calls.push("c");
+          return { type: "ok", output: 3 };
+        },
+      }),
     ]);
 
     await runWorkflow(wf, 100, params);
@@ -100,7 +114,10 @@ describe("workflows / runWorkflow", () => {
       step({ id: "first", handler: async () => ({ type: "ok", output: { value: 42 } }) }),
       step({
         id: "second",
-        handler: async (ctx) => { seen = ctx.results.first; return { type: "ok", output: {} }; },
+        handler: async (ctx) => {
+          seen = ctx.results.first;
+          return { type: "ok", output: {} };
+        },
       }),
     ]);
 
@@ -142,10 +159,7 @@ describe("workflows / runWorkflow", () => {
   });
 
   it("records an audit entry for each state transition", async () => {
-    const wf = workflow([
-      step({ id: "s1" }),
-      step({ id: "s2" }),
-    ]);
+    const wf = workflow([step({ id: "s1" }), step({ id: "s2" })]);
 
     await runWorkflow(wf, 104, params);
 
@@ -162,7 +176,12 @@ describe("workflows / runWorkflow", () => {
 
   it("fails the run when a step handler throws (state 'failed')", async () => {
     const wf = workflow([
-      step({ id: "boom", handler: async () => { throw new Error("kaboom"); } }),
+      step({
+        id: "boom",
+        handler: async () => {
+          throw new Error("kaboom");
+        },
+      }),
       step({ id: "never", handler: jest.fn(async () => ({ type: "ok" as const, output: {} })) }),
     ]);
 

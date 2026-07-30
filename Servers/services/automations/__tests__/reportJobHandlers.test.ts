@@ -13,7 +13,13 @@ describe("handleManualReportGeneration", () => {
   it("forwards the job payload to executeManualRun", async () => {
     const data = {
       runId: 12,
-      request: { projectId: 7, frameworkId: 1, projectFrameworkId: 2, reportType: "project", format: "pdf" as const },
+      request: {
+        projectId: 7,
+        frameworkId: 1,
+        projectFrameworkId: 2,
+        reportType: "project",
+        format: "pdf" as const,
+      },
       userId: 3,
       organizationId: 5,
     };

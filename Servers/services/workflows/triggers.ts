@@ -40,10 +40,7 @@ async function triggerModelDeployment(
  * Trigger: vendor.created
  * Called from the vendor controller after a vendor is created.
  */
-async function triggerVendorOnboarding(
-  organizationId: number,
-  vendorId: number,
-): Promise<void> {
+async function triggerVendorOnboarding(organizationId: number, vendorId: number): Promise<void> {
   const wf = getWorkflow("vendor_onboarding");
   if (!wf) return;
   try {

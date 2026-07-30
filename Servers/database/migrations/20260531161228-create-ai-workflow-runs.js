@@ -64,10 +64,9 @@ module.exports = {
   async down(queryInterface) {
     const transaction = await queryInterface.sequelize.transaction();
     try {
-      await queryInterface.sequelize.query(
-        `DROP TABLE IF EXISTS verifywise.ai_workflow_runs;`,
-        { transaction },
-      );
+      await queryInterface.sequelize.query(`DROP TABLE IF EXISTS verifywise.ai_workflow_runs;`, {
+        transaction,
+      });
       await transaction.commit();
     } catch (error) {
       await transaction.rollback();

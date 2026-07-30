@@ -131,7 +131,9 @@ describe("GenerateReport", () => {
     // Parent re-renders with a FRESH onClose while the download is pending.
     // Same run id/status → effect must NOT re-run and must NOT cancel the fetch.
     const onClose2 = vi.fn();
-    rerender(<GenerateReport onClose={onClose2} onReportGenerated={vi.fn()} reportType="project" />);
+    rerender(
+      <GenerateReport onClose={onClose2} onReportGenerated={vi.fn()} reportType="project" />,
+    );
 
     // Complete the download; it must run to completion using the latest onClose.
     resolveDownload(new Blob(["pdf"]));

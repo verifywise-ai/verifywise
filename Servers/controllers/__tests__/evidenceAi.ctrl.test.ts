@@ -45,7 +45,10 @@ import { sequelize } from "../../database/db";
 import { getLLMKeysWithKeyQuery } from "../../utils/llmKey.utils";
 import { upsertAnalysisQuery } from "../../utils/evidenceAi.utils";
 import { parseDocument } from "../../advisor/parsers";
-import { analyzeEvidence, type AnalyzerResult } from "../../advisor/evidenceAnalyzer/analyzer.service";
+import {
+  analyzeEvidence,
+  type AnalyzerResult,
+} from "../../advisor/evidenceAnalyzer/analyzer.service";
 
 function createReq(overrides?: Partial<Request>): any {
   return {
@@ -87,13 +90,24 @@ describe("analyzeFile", () => {
 
   it("returns 200 and persists the analyzer result when a key is configured", async () => {
     (getLLMKeysWithKeyQuery as jest.Mock).mockResolvedValue([
-      { key: "sk-test", url: "https://api.anthropic.com", model: "claude-3-opus", name: "Anthropic" },
+      {
+        key: "sk-test",
+        url: "https://api.anthropic.com",
+        model: "claude-3-opus",
+        name: "Anthropic",
+      },
     ]);
 
     (sequelize.query as jest.Mock)
       .mockResolvedValueOnce([[{ id: 42, filename: "policy.pdf", type: "application/pdf" }], {}]) // file metadata
       .mockResolvedValueOnce([
-        [{ content: Buffer.from("some evidence text"), size_bytes: 100, upload_date: "2026-01-01" }],
+        [
+          {
+            content: Buffer.from("some evidence text"),
+            size_bytes: 100,
+            upload_date: "2026-01-01",
+          },
+        ],
         {},
       ]) // file content
       .mockResolvedValueOnce([[], {}]); // evidence expiry (none linked)
@@ -161,13 +175,24 @@ describe("analyzeFile", () => {
     // who had just configured one back to re-enter it, which is exactly the
     // complaint that surfaced this bug on 2026-07-29.
     (getLLMKeysWithKeyQuery as jest.Mock).mockResolvedValue([
-      { key: "sk-test", url: "https://integrate.api.nvidia.com/v1", model: "deepseek", name: "Custom" },
+      {
+        key: "sk-test",
+        url: "https://integrate.api.nvidia.com/v1",
+        model: "deepseek",
+        name: "Custom",
+      },
     ]);
 
     (sequelize.query as jest.Mock)
       .mockResolvedValueOnce([[{ id: 42, filename: "policy.pdf", type: "application/pdf" }], {}])
       .mockResolvedValueOnce([
-        [{ content: Buffer.from("some evidence text"), size_bytes: 100, upload_date: "2026-01-01" }],
+        [
+          {
+            content: Buffer.from("some evidence text"),
+            size_bytes: 100,
+            upload_date: "2026-01-01",
+          },
+        ],
         {},
       ])
       .mockResolvedValueOnce([[], {}]);

@@ -272,9 +272,7 @@ describe("EvidenceAnalysisPanel", () => {
       };
       renderWithProviders(<EvidenceAnalysisPanel analysis={analysis} />);
       expect(screen.getByText(/vendor-risk-assessment\.pdf/)).toBeInTheDocument();
-      expect(
-        screen.getByText(/vendor risk assessment, not a contract/),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/vendor risk assessment, not a contract/)).toBeInTheDocument();
     });
 
     it("does not render when mismatch is false", () => {

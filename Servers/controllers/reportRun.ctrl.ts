@@ -65,7 +65,8 @@ export async function listRuns(req: Request, res: Response): Promise<any> {
     // to ask the database for everything.
     const rawLimit = Number(req.query.limit);
     const rawOffset = Number(req.query.offset);
-    const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, MAX_PAGE) : MAX_PAGE;
+    const limit =
+      Number.isFinite(rawLimit) && rawLimit > 0 ? Math.min(rawLimit, MAX_PAGE) : MAX_PAGE;
     const offset = Number.isFinite(rawOffset) && rawOffset > 0 ? rawOffset : 0;
 
     // Query strings are strings: only the two literals map to booleans, and
@@ -118,9 +119,20 @@ export async function downloadRun(req: Request, res: Response): Promise<any> {
     // a FileModel whose `content` is the stored file buffer.
     const file: any = await getFileById(run.file_id, req.organizationId!);
     if (!file) return res.status(404).json(STATUS_CODE[404]("file missing"));
+    // Same shape as the file-manager download path (fileManager.ctrl.ts):
+    // sanitize before the name reaches a header — a quote or CRLF in
+    // output_filename would otherwise rewrite it — declare nosniff, and write
+    // the buffer with res.end so the body is never handled as a rendered
+    // response body.
+    const safeFilename = String(run.output_filename || `report-${run.id}`)
+      .replace(/["\r\n]/g, "")
+      .replace(/[^\x20-\x7E]/g, "_");
     res.setHeader("Content-Type", run.output_mime_type || "application/octet-stream");
-    res.setHeader("Content-Disposition", `attachment; filename="${run.output_filename}"`);
-    return res.send(file.content);
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("Content-Disposition", `attachment; filename="${safeFilename}"`);
+    res.setHeader("Content-Length", file.content ? file.content.length : 0);
+    res.end(file.content);
+    return;
   } catch (e) {
     return res.status(500).json(STATUS_CODE[500]((e as Error).message));
   }

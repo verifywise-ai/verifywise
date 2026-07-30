@@ -288,7 +288,9 @@ export default function TemplatesTab({
             You haven&apos;t created any templates yet.
           </Typography>
         ) : (
-          <Box sx={cardGridSx}>{myTemplates.map((t: any) => renderCard(t, { editable: true }))}</Box>
+          <Box sx={cardGridSx}>
+            {myTemplates.map((t: any) => renderCard(t, { editable: true }))}
+          </Box>
         )}
       </Box>
 
