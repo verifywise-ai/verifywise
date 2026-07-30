@@ -6795,17 +6795,6 @@ export const organizationEndpoints: Endpoint[] = [
     tag: "Organizations",
   },
   {
-    method: 'POST',
-    path: '/organizations/setup',
-    summary: "Create First Organization",
-    requiresAuth: false,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Organizations",
-  },
-  {
     method: 'GET',
     path: '/organizations/{id}',
     summary: "Get Organization By Id",
@@ -9648,6 +9637,19 @@ export const userEndpoints: Endpoint[] = [
     responses: [
       { status: 200, description: "Users found" },
       { status: 204, description: "No users found (empty organization)" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Users",
+  },
+  {
+    method: 'GET',
+    path: '/users/preferences',
+    summary: "Get current user preferences",
+    description: "Returns the authenticated user's persisted preferences (date_format, language) from user_preferences. If no row exists, returns safe defaults including a transient theme default.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Preferences found or defaults returned" },
+      { status: 401, description: "Unauthorized" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Users",
