@@ -219,8 +219,8 @@ export async function analyzeFile(req: Request, res: Response) {
     let fallbackReason = "";
 
     try {
-      const apiKey = clients[0];
-      const baseURL = apiKey.url || getLLMProviderUrl(apiKey.name as LLMProvider);
+      const llmKey = clients[0];
+      const baseURL = llmKey.url || getLLMProviderUrl(llmKey.name as LLMProvider);
       analyzerResult = await analyzeEvidence({
         documentText,
         filename: file.filename,
@@ -230,11 +230,11 @@ export async function analyzeFile(req: Request, res: Response) {
         expiryDate,
         parseFidelity: inferParseFidelity(file.type),
         llmKey: {
-          apiKey: apiKey.key || "",
+          apiKey: llmKey.key || "",
           baseURL,
-          model: apiKey.model,
-          provider: apiKey.name as "Anthropic" | "OpenAI" | "OpenRouter" | "Custom",
-          headers: apiKey.custom_headers || undefined,
+          model: llmKey.model,
+          provider: llmKey.name as "Anthropic" | "OpenAI" | "OpenRouter" | "Custom",
+          headers: llmKey.custom_headers || undefined,
         },
       });
     } catch (llmErr) {

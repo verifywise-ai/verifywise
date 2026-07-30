@@ -1257,11 +1257,19 @@ export const notifyUserAssigned = async (
       },
     );
 
+    // Constant format strings with the values passed as arguments: assigneeId
+    // reaches here from a request body (modelInventory's approver list, among
+    // others), and interpolating it makes the caller's data the format string,
+    // where a stray %s or %d would be interpreted rather than printed.
     console.log(
-      `📧 Assignment notification sent to user ${assigneeId} as ${assignment.roleType} for ${assignment.entityType} ${assignment.entityId}`,
+      "📧 Assignment notification sent to user %s as %s for %s %s",
+      assigneeId,
+      assignment.roleType,
+      assignment.entityType,
+      assignment.entityId,
     );
   } catch (error) {
-    console.error(`Failed to send assignment notification to user ${assigneeId}:`, error);
+    console.error("Failed to send assignment notification to user %s:", assigneeId, error);
     // Don't rethrow - notifications should not break the main flow
   }
 };

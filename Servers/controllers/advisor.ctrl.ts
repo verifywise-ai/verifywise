@@ -259,8 +259,8 @@ export async function runAdvisor(req: Request, res: Response) {
         .json(STATUS_CODE[400]("No LLM keys configured for this organization."));
     }
 
-    const apiKey = selectLLMKey(clients, llmKeyId);
-    const url = apiKey.url || getLLMProviderUrl(apiKey.name as LLMProvider);
+    const llmKey = selectLLMKey(clients, llmKeyId);
+    const url = llmKey.url || getLLMProviderUrl(llmKey.name as LLMProvider);
 
     // sessionId for agent memory: same plumbing as the streaming endpoints.
     const memorySessionId =
@@ -271,16 +271,16 @@ export async function runAdvisor(req: Request, res: Response) {
           : undefined;
 
     const agentParams = {
-      apiKey: apiKey.key || "",
+      apiKey: llmKey.key || "",
       baseURL: url,
-      model: apiKey.model,
+      model: llmKey.model,
       userPrompt: prompt,
       tenant: organizationId,
       userId,
       availableTools,
       toolsDefinition,
-      provider: apiKey.name as "Anthropic" | "OpenAI" | "OpenRouter" | "Custom",
-      headers: apiKey.custom_headers || undefined,
+      provider: llmKey.name as "Anthropic" | "OpenAI" | "OpenRouter" | "Custom",
+      headers: llmKey.custom_headers || undefined,
       sessionId: memorySessionId,
       agentName: "advisor" as const,
     };
@@ -663,8 +663,8 @@ export async function streamAdvisor(req: Request, res: Response) {
       return;
     }
 
-    const apiKey = selectLLMKey(clients, llmKeyId);
-    const url = apiKey.url || getLLMProviderUrl(apiKey.name as LLMProvider);
+    const llmKey = selectLLMKey(clients, llmKeyId);
+    const url = llmKey.url || getLLMProviderUrl(llmKey.name as LLMProvider);
 
     // Set SSE headers — disable ALL buffering for real-time streaming
     res.setHeader("Content-Type", "text/event-stream");
@@ -695,16 +695,16 @@ export async function streamAdvisor(req: Request, res: Response) {
           : undefined;
 
     const agentParams = {
-      apiKey: apiKey.key || "",
+      apiKey: llmKey.key || "",
       baseURL: url,
-      model: apiKey.model,
+      model: llmKey.model,
       userPrompt: prompt,
       tenant: organizationId,
       userId,
       availableTools,
       toolsDefinition,
-      provider: apiKey.name as "Anthropic" | "OpenAI" | "OpenRouter" | "Custom",
-      headers: apiKey.custom_headers || undefined,
+      provider: llmKey.name as "Anthropic" | "OpenAI" | "OpenRouter" | "Custom",
+      headers: llmKey.custom_headers || undefined,
       sessionId: memorySessionId,
       agentName: "advisor" as const,
     };
@@ -812,8 +812,8 @@ export async function streamAdvisorV2(req: Request, res: Response) {
       return;
     }
 
-    const apiKey = selectLLMKey(clients, llmKeyId);
-    const url = apiKey.url || getLLMProviderUrl(apiKey.name as LLMProvider);
+    const llmKey = selectLLMKey(clients, llmKeyId);
+    const url = llmKey.url || getLLMProviderUrl(llmKey.name as LLMProvider);
 
     // sessionId for agent memory: chat endpoint may carry an explicit
     // `conversationId` from the client (which the frontend uses to group
@@ -831,9 +831,9 @@ export async function streamAdvisorV2(req: Request, res: Response) {
             : undefined;
 
     const agentParams = {
-      apiKey: apiKey.key || "",
+      apiKey: llmKey.key || "",
       baseURL: url,
-      model: apiKey.model,
+      model: llmKey.model,
       // `messages` carries the full multi-turn history; `userPrompt` is kept
       // as an empty string because it's ignored when `messages` is set but
       // the type still requires it.
@@ -843,8 +843,8 @@ export async function streamAdvisorV2(req: Request, res: Response) {
       userId,
       availableTools,
       toolsDefinition,
-      provider: apiKey.name as "Anthropic" | "OpenAI" | "OpenRouter" | "Custom",
-      headers: apiKey.custom_headers || undefined,
+      provider: llmKey.name as "Anthropic" | "OpenAI" | "OpenRouter" | "Custom",
+      headers: llmKey.custom_headers || undefined,
       sessionId: memorySessionId,
       agentName: "advisor" as const,
     };
