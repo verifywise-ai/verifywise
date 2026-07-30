@@ -75,7 +75,7 @@ function walk(dir, files = []) {
       // Skip test files
       if (/\.test\.(tsx?|jsx?)$/.test(name)) continue;
       // Skip the StyleGuide page — it's full of dev-only demo strings
-      if (full.includes("/pages/StyleGuide/")) continue;
+      if (/[\\/]pages[\\/]StyleGuide[\\/]/.test(full)) continue;
       files.push(full);
     }
   }

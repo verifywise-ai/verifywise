@@ -20,6 +20,7 @@ import Chip from "../../components/Chip";
 import { DASHBOARD_COLORS, DEADLINE_COLORS } from "../../styles/colors";
 import { DeadlineViewProps, DeadlineGroup } from "./types";
 import { getEndOfWeek, getEndOfMonth } from "./utils";
+import { storageService, dynamicKeys } from "../../../infrastructure/storage";
 
 const DeadlineView: React.FC<DeadlineViewProps> = ({
   tasks,
@@ -36,7 +37,7 @@ const DeadlineView: React.FC<DeadlineViewProps> = ({
   onHardDelete,
   flashRowId,
 }) => {
-  const STORAGE_KEY = "verifywise_deadline_collapsed_sections";
+  const STORAGE_KEY = dynamicKeys.deadlineCollapsedSections();
   const ALL_SECTIONS = [
     "overdue",
     "today",
@@ -47,17 +48,12 @@ const DeadlineView: React.FC<DeadlineViewProps> = ({
     "no-due-date",
   ];
 
-  // Track collapsed sections - load from localStorage or default all collapsed
+  // Track collapsed sections - load from storage or default all collapsed
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        return new Set(JSON.parse(saved));
-      } catch {
-        return new Set(ALL_SECTIONS);
-      }
-    }
-    return new Set(ALL_SECTIONS);
+    const saved = storageService.getRaw<string[]>(STORAGE_KEY, [], {
+      legacyKey: "verifywise_deadline_collapsed_sections",
+    });
+    return saved.length > 0 ? new Set(saved) : new Set(ALL_SECTIONS);
   });
 
   const toggleSection = (key: string) => {
@@ -68,8 +64,8 @@ const DeadlineView: React.FC<DeadlineViewProps> = ({
       } else {
         next.add(key);
       }
-      // Save to localStorage
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(Array.from(next)));
+      // Save to storage
+      storageService.setRaw(STORAGE_KEY, Array.from(next));
       return next;
     });
   };

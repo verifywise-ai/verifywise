@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { Box, Fade } from "@mui/material";
 import TabContext from "@mui/lab/TabContext";
 import TabBar from "../../../components/TabBar";
@@ -16,7 +17,21 @@ interface ModelRiskManagementTabProps {
   users: MrmUser[];
 }
 
-type MrmSubTab = "overview" | "tiering" | "validation" | "findings" | "monitoring" | "settings";
+const MRM_BASE_PATH = "/model-inventory/model-risk-management";
+
+const MRM_SUB_TABS = [
+  "overview",
+  "tiering",
+  "validation",
+  "findings",
+  "monitoring",
+  "settings",
+] as const;
+
+type MrmSubTab = (typeof MRM_SUB_TABS)[number];
+
+const isMrmSubTab = (value: string | undefined): value is MrmSubTab =>
+  !!value && (MRM_SUB_TABS as readonly string[]).includes(value);
 
 interface MrmToast {
   variant: "success" | "error" | "info";
@@ -24,7 +39,16 @@ interface MrmToast {
 }
 
 const ModelRiskManagementTab = ({ users }: ModelRiskManagementTabProps) => {
-  const [subTab, setSubTab] = useState<MrmSubTab>("overview");
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // The active sub-tab is derived from the path segment that follows the MRM
+  // base, so that deeper paths like ".../settings/thresholds" still resolve the
+  // "settings" tab. An absent or unrecognised segment falls back to "overview".
+  const afterBase = location.pathname.split(`${MRM_BASE_PATH}/`)[1];
+  const firstSegment = afterBase ? afterBase.split("/")[0] : undefined;
+  const subTab: MrmSubTab = isMrmSubTab(firstSegment) ? firstSegment : "overview";
+
   const [toast, setToast] = useState<MrmToast | null>(null);
   const [showToast, setShowToast] = useState(false);
 
@@ -70,7 +94,10 @@ const ModelRiskManagementTab = ({ users }: ModelRiskManagementTabProps) => {
               { label: "Settings", value: "settings", icon: "Settings" },
             ]}
             activeTab={subTab}
-            onChange={(_e, value) => setSubTab(value as MrmSubTab)}
+            onChange={(_e, value) => {
+              const next = value as MrmSubTab;
+              navigate(next === "overview" ? MRM_BASE_PATH : `${MRM_BASE_PATH}/${next}`);
+            }}
             dataJoyrideId="mrm-sub-tabs"
           />
         </Box>

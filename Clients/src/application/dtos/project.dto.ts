@@ -26,8 +26,8 @@ export interface ProjectResponseDTO {
   owner: number;
   members: string[] | number[]; // Can be IDs or names depending on API
   start_date: string; // ISO date string from API
-  ai_risk_classification: number | string; // Can be number or enum string
-  type_of_high_risk_role: number | string; // Can be number or enum string
+  ai_risk_classification: number | string | null; // Can be number, enum string, or null
+  type_of_high_risk_role: number | string | null; // Can be number, enum string, or null
   goal: string;
   last_updated: string; // ISO date string from API
   last_updated_by: number;
@@ -40,6 +40,12 @@ export interface ProjectResponseDTO {
   status?: string;
   is_demo?: boolean;
   created_at?: string; // ISO date string from API
+
+  // Regulation-agnostic use-case classification
+  use_case_category?: string | null;
+  use_case_purpose?: string | null;
+  use_case_audience?: string | null;
+  deployment_context?: string | null;
 
   // Statistical fields (may be included in response)
   doneSubcontrols?: number;
@@ -67,8 +73,8 @@ export interface CreateProjectDTO {
   owner: number;
   members: ProjectMemberDTO[];
   start_date: string; // ISO date string
-  ai_risk_classification: number;
-  type_of_high_risk_role: number;
+  ai_risk_classification?: number | null;
+  type_of_high_risk_role?: number | null;
   goal: string;
   framework_type?: string;
   geography?: number;
@@ -76,6 +82,12 @@ export interface CreateProjectDTO {
   description?: string;
   enable_ai_data_insertion?: boolean;
   monitored_regulations_and_standards?: Array<{ _id: number; name: string }>;
+
+  // Regulation-agnostic use-case classification
+  use_case_category?: string | null;
+  use_case_purpose?: string | null;
+  use_case_audience?: string | null;
+  deployment_context?: string | null;
 }
 
 /**
@@ -87,8 +99,8 @@ export interface UpdateProjectDTO {
   owner?: number;
   members?: ProjectMemberDTO[];
   start_date?: string;
-  ai_risk_classification?: number;
-  type_of_high_risk_role?: number;
+  ai_risk_classification?: number | null;
+  type_of_high_risk_role?: number | null;
   goal?: string;
   framework_type?: string;
   geography?: number;
@@ -96,6 +108,12 @@ export interface UpdateProjectDTO {
   description?: string;
   status?: number;
   monitored_regulations_and_standards?: Array<{ _id: number; name: string }>;
+
+  // Regulation-agnostic use-case classification
+  use_case_category?: string | null;
+  use_case_purpose?: string | null;
+  use_case_audience?: string | null;
+  deployment_context?: string | null;
 }
 
 /**

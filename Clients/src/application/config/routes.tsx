@@ -643,6 +643,24 @@ export const createRoutes = (
         </Suspense>
       }
     />
+    {/* MRM sub-tab (overview, tiering, validation, findings, monitoring, settings) */}
+    <Route
+      path="/model-inventory/model-risk-management/:mrmTab"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <ModelInventory />
+        </Suspense>
+      }
+    />
+    {/* MRM settings section (metrics-feed, tiering-rules, thresholds, alerts, roles) */}
+    <Route
+      path="/model-inventory/model-risk-management/settings/:settingsSection"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <ModelInventory />
+        </Suspense>
+      }
+    />
     {/* Model lifecycle detail page - rendered by plugin */}
     <Route
       path="/model-inventory/models/:id"

@@ -330,6 +330,7 @@ export class ModelInventoryModel extends Model<ModelInventoryModel> implements I
       security_assessment_data:
         this.security_assessment_data != undefined ? this.security_assessment_data : [],
       is_demo: this.is_demo,
+      external_key: this.external_key ?? null,
       created_at: (this.createdAt ?? this.created_at)?.toISOString(),
       updated_at: (this.updatedAt ?? this.updated_at)?.toISOString(),
       projects: dataValues.projects || [],
@@ -369,6 +370,7 @@ export class ModelInventoryModel extends Model<ModelInventoryModel> implements I
       security_assessment_data:
         this.security_assessment_data != undefined ? this.security_assessment_data : [],
       is_demo: this.is_demo,
+      external_key: this.external_key ?? null,
       created_at: (this.createdAt ?? this.created_at)?.toISOString(),
       updated_at: (this.updatedAt ?? this.updated_at)?.toISOString(),
       projects: dataValues.projects || [],
@@ -443,6 +445,7 @@ export class ModelInventoryModel extends Model<ModelInventoryModel> implements I
       hosting_provider: data.hosting_provider || "",
       security_assessment_data: data.security_assessment_data || [],
       is_demo: data.is_demo || false,
+      external_key: data.external_key ?? undefined,
       created_at: new Date(),
       updated_at: new Date(),
     });
@@ -504,6 +507,9 @@ export class ModelInventoryModel extends Model<ModelInventoryModel> implements I
     }
     if (data.is_demo !== undefined) {
       existingModel.is_demo = data.is_demo;
+    }
+    if (data.external_key !== undefined) {
+      existingModel.external_key = data.external_key;
     }
 
     // Always update the updated_at timestamp

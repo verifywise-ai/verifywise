@@ -1,7 +1,8 @@
 import express from "express";
 const router = express.Router();
-const multer = require("multer");
-const upload = multer({ storage: multer.memoryStorage() });
+import { createMemoryUpload } from "../utils/upload.utils";
+// Security: bounded upload config (30MB/file, 10 files, MIME allowlist).
+const upload = createMemoryUpload();
 import { validateVisibility } from "../middleware/validateAITrustCentreVisibility.middleware";
 
 import {

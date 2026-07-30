@@ -43,6 +43,7 @@ export interface File {
   size?: number;
   file_path?: string;
   org_id?: number;
+  organization_id?: number;
   model_id?: number;
   source: FileSource;
   // New metadata fields
@@ -150,6 +151,17 @@ export class FileModel extends Model<File> {
     allowNull: true,
   })
   org_id?: number;
+
+  // Canonical tenant column. The legacy org_id above is NULL for files created
+  // by newer flows (AI Trust Center, evidence), so organization_id is the field
+  // to trust for tenant scoping. Both exist on the table during the migration
+  // window; queries and access checks use organization_id.
+  @ForeignKey(() => OrganizationModel)
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: true,
+  })
+  organization_id?: number;
 
   @Column({
     type: DataType.INTEGER,

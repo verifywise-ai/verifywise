@@ -18,6 +18,7 @@ export interface IModelInventory {
   biases?: string;
   limitations?: string;
   hosting_provider?: string;
+  external_key?: string;
   projects: number[];
   frameworks: number[];
   is_demo?: boolean;

@@ -3,6 +3,7 @@ name: Frontend Checks
 permissions:
   contents: read
   security-events: write
+  pull-requests: write
 
 on:
   pull_request:
@@ -28,7 +29,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Set up Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: 'npm'
@@ -62,7 +63,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Set up Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: 'npm'
@@ -80,6 +81,11 @@ jobs:
       - name: i18n audit (catch dictionary drift)
         run: npm run i18n:audit:strict
 
+      - name: Dependency vulnerability audit
+        run: |
+          npm audit --audit-level=high --omit=dev || true
+          node $GITHUB_WORKSPACE/scripts/security/npm-audit-gate.js .
+
   unit-and-component-tests:
     name: Unit & Component Tests (shard ${{ matrix.shard }}/4)
     runs-on: ubuntu-latest
@@ -95,7 +101,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Set up Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: 'npm'
@@ -120,7 +126,7 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Set up Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: 'npm'
@@ -132,12 +138,98 @@ jobs:
       - name: Run tests with coverage
         run: npm run test:ci
 
+      - name: Dependency vulnerability audit
+        run: |
+          npm audit --audit-level=high --omit=dev || true
+          node $GITHUB_WORKSPACE/scripts/security/npm-audit-gate.js .
+
       - name: Upload coverage report
         uses: actions/upload-artifact@v7
         with:
           name: frontend-coverage-report
           path: Clients/coverage/
           retention-days: 14
+
+      - name: Post coverage gate failure comment
+        if: github.event_name == 'pull_request' && failure()
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require("fs");
+            const summaryPath = "Clients/coverage/coverage-summary.json";
+            if (!fs.existsSync(summaryPath)) {
+              console.log("coverage-summary.json not found, skipping comment");
+              return;
+            }
+            const json = JSON.parse(fs.readFileSync(summaryPath, "utf8"));
+            const total = json.total;
+            const threshold = { statements: 30, branches: 20, functions: 25, lines: 30 };
+            const rows = ["| Metric | Threshold | Actual | Status |", "|--------|----------:|------:|:------:|"];
+            let passed = true;
+            for (const key of ["statements", "branches", "functions", "lines"]) {
+              const actual = total[key].pct;
+              const ok = actual >= threshold[key];
+              if (!ok) passed = false;
+              rows.push(`| ${key.charAt(0).toUpperCase() + key.slice(1)} | ${threshold[key]}% | ${actual}% | ${ok ? "✅" : "❌"} |`);
+            }
+
+            if (passed) {
+              console.log("All coverage thresholds pass");
+              return;
+            }
+
+            const body = `## Coverage Gate Failed\n\n${rows.join("\n")}\n\n<!-- coverage-gate -->`;
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const marker = "<!-- coverage-gate -->";
+            const existing = comments.find(c => c.body && c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+      - name: Post coverage gate success comment
+        if: github.event_name == 'pull_request' && success()
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const body = "## ✅ Coverage Gate Passed\n\nAll coverage thresholds are met.\n\n<!-- coverage-gate -->";
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const marker = "<!-- coverage-gate -->";
+            const existing = comments.find(c => c.body && c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
 
   dependency-review:
     name: Dependency Review
@@ -148,7 +240,7 @@ jobs:
 
       - name: Dependency Review
         uses: actions/dependency-review-action@v5
-        continue-on-error: true
         with:
           fail-on-severity: high
           deny-licenses: GPL-3.0, AGPL-3.0
+          allow-ghsas: GHSA-mh99-v99m-4gvg

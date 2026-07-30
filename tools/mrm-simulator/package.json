@@ -1,0 +1,22 @@
+{
+  "name": "mrm-simulator",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Scenario-driven MRM metric simulator and gap-finder for VerifyWise",
+  "scripts": {
+    "test": "vitest run",
+    "sim": "tsx src/cli.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.1",
+    "@types/ws": "^8.5.13",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3",
+    "vitest": "^3.2.6"
+  },
+  "dependencies": {
+    "ws": "^8.21.0",
+    "yaml": "^2.8.3"
+  }
+}

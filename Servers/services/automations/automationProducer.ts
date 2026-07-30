@@ -339,6 +339,22 @@ export async function scheduleWorkflowAutopilotJobs() {
   );
 }
 
+export async function scheduleMrmRetentionPrune() {
+  logger.info("Adding MRM metric retention prune job to the queue...");
+  // Daily at 3 AM (the revalidation sweep runs at 4 AM — kept distinct). Prunes
+  // benign aged-out mrm_metrics points per org; warn/breach history is never
+  // deleted. No obliterate here — the repeatable add is idempotent by repeat key.
+  await automationQueue.add(
+    "mrm_retention_prune",
+    { type: "mrm_retention" },
+    {
+      repeat: { pattern: "0 3 * * *" },
+      removeOnComplete: true,
+      removeOnFail: false,
+    },
+  );
+}
+
 export async function scheduleAiTrustIndexSync() {
   logger.info("Adding AI Trust Index weekly sync job to the queue...");
   // Monday 06:00 UTC. jobId keyed weekly is set at runtime is not needed here;

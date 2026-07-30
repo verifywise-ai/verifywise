@@ -20,6 +20,7 @@ import {
   getDomainByPath,
 } from "../AdvisorChat/advisorConfig";
 import AdvisorHeader from "./AdvisorHeader";
+import { useOverlayAccessibility } from "../../../application/hooks/useOverlayAccessibility";
 import "./SidebarWrapper.css";
 
 type Tab = "user-guide" | "advisor" | "help" | "whats-new";
@@ -69,6 +70,13 @@ const SidebarWrapper: React.FC<SidebarWrapperProps> = ({
   const [isLoadingLLMKeys, setIsLoadingLLMKeys] = useState(true);
   const resizeRef = useRef<{ startX: number; startWidth: number } | null>(null);
   const handleRef = useRef<HTMLDivElement>(null);
+  const sidebarContainerRef = useRef<HTMLDivElement>(null);
+
+  useOverlayAccessibility({
+    isOpen,
+    onClose,
+    containerRef: sidebarContainerRef,
+  });
 
   // Sync content width with context whenever it changes
   const setContentWidth = useCallback(
@@ -478,7 +486,11 @@ const SidebarWrapper: React.FC<SidebarWrapperProps> = ({
 
   return (
     <div
+      ref={sidebarContainerRef}
       className="sidebar-container"
+      role={isOpen ? "dialog" : undefined}
+      aria-modal={isOpen ? true : undefined}
+      aria-label={isOpen ? "Help and advisor sidebar" : undefined}
       style={{
         position: "fixed",
         top: 0,

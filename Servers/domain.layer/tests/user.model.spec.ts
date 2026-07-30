@@ -55,9 +55,13 @@ class TestUserModel {
     password: string,
     role_id: number,
   ): Promise<TestUserModel> {
+    // Mirror production: normalize before validating so a whitespace-padded
+    // email is accepted and stored clean rather than rejected.
+    const normalizedEmail = typeof email === "string" ? email.trim() : email;
+
     // Validate email
-    if (!emailValidation(email)) {
-      throw new ValidationException("Invalid email format", "email", email);
+    if (!emailValidation(normalizedEmail)) {
+      throw new ValidationException("Invalid email format", "email", normalizedEmail);
     }
 
     // Validate password
@@ -84,7 +88,7 @@ class TestUserModel {
     const user = new TestUserModel();
     user.name = name;
     user.surname = surname;
-    user.email = email;
+    user.email = normalizedEmail;
     user.password_hash = password_hash;
     user.role_id = role_id;
     user.created_at = new Date();
@@ -231,6 +235,18 @@ describe("UserModel", () => {
       expect(user.is_demo).toBe(false);
       expect(user.created_at).toBeInstanceOf(Date);
       expect(user.last_login).toBeInstanceOf(Date);
+    });
+
+    it("should trim surrounding whitespace from the email", async () => {
+      const user = await TestUserModel.createNewUser(
+        validUserData.name,
+        validUserData.surname,
+        `  ${validUserData.email}  `,
+        validUserData.password,
+        validUserData.role_id,
+      );
+
+      expect(user.email).toBe(validUserData.email);
     });
 
     it("should throw ValidationException for invalid email", async () => {

@@ -44,8 +44,21 @@ router.post("/:key/test-connection", authenticateJWT, testPluginConnection);
 
 // Serve plugin UI bundles from temp/plugins/{key}/ui/dist/
 // If bundle doesn't exist locally, download it from the marketplace
+const isValidPluginKey = (value: string) => /^[a-z0-9_-]+$/.test(value);
+const isValidBundleFilename = (value: string) =>
+  /^[A-Za-z0-9._-]+$/.test(value) &&
+  !value.includes("..") &&
+  !value.includes("/") &&
+  !value.includes("\\");
+
 router.get("/:key/ui/dist/:filename", async (req, res) => {
   const { key, filename } = req.params;
+
+  if (!isValidPluginKey(key) || !isValidBundleFilename(filename)) {
+    res.status(400).json({ error: "Invalid plugin key or bundle filename" });
+    return;
+  }
+
   const bundlePath = path.join(__dirname, "../../temp/plugins", key, "ui", "dist", filename);
   console.log(
     "[Plugin UI] Requested:",
@@ -61,7 +74,10 @@ router.get("/:key/ui/dist/:filename", async (req, res) => {
   if (!fs.existsSync(bundlePath)) {
     try {
       console.log(`[Plugin UI] Bundle not found locally, downloading from marketplace...`);
-      const bundleUrl = `${PLUGIN_MARKETPLACE_BASE_URL}/plugins/${key}/ui/dist/${filename}`;
+      const bundleUrl = new URL(
+        `/plugins/${encodeURIComponent(key)}/ui/dist/${encodeURIComponent(filename)}`,
+        PLUGIN_MARKETPLACE_BASE_URL,
+      ).toString();
 
       const response = await axios.get(bundleUrl, {
         timeout: 30000,

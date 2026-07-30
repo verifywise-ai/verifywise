@@ -28,6 +28,7 @@ for path in (EVALSERVER_SRC, EVALMODULE_SRC):
     if str_path not in sys.path:
         sys.path.insert(0, str_path)
 
+os.environ.setdefault("EVAL_SERVER_INTERNAL_KEY", "test-internal-key")
 os.environ.setdefault("DB_USER", "test")
 os.environ.setdefault("DB_PASSWORD", "test")
 os.environ.setdefault("DB_HOST", "localhost")

@@ -77,6 +77,58 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      # Nightly informational Trivy scans of the pushed :test images.
+      # Non-blocking (exit-code 0); results go to the job summary.
+      - name: Scan Frontend test image with Trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: 'ghcr.io/${{ github.repository_owner }}/verifywise-frontend:test'
+          format: 'table'
+          output: 'frontend-trivy-results.txt'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'
+          ignore-unfixed: true
+
+      - name: Scan Backend test image with Trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: 'ghcr.io/${{ github.repository_owner }}/verifywise-backend:test'
+          format: 'table'
+          output: 'backend-trivy-results.txt'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'
+          ignore-unfixed: true
+
+      - name: Scan EvalServer test image with Trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: 'ghcr.io/${{ github.repository_owner }}/verifywise-eval-server:test'
+          format: 'table'
+          output: 'evalserver-trivy-results.txt'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'
+          ignore-unfixed: true
+
+      - name: Scan AIGateway test image with Trivy
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: 'ghcr.io/${{ github.repository_owner }}/verifywise-ai-gateway:test'
+          format: 'table'
+          output: 'aigateway-trivy-results.txt'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'
+          ignore-unfixed: true
+
+      - name: Add Trivy results to job summary
+        if: always()
+        run: |
+          for f in frontend backend evalserver aigateway; do
+            echo "## Trivy scan — $f:test" >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+            cat "$f-trivy-results.txt" >> "$GITHUB_STEP_SUMMARY" || true
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          done
+
       - name: Deploy to Testing
         uses: appleboy/ssh-action@v1.2.5
         with:

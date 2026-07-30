@@ -4,6 +4,7 @@
   "main": "index.js",
   "scripts": {
     "test:unit": "jest --testPathIgnorePatterns=/tests/integration/ --testPathIgnorePatterns=/helpers/ --detectOpenHandles --forceExit",
+    "test:coverage": "jest --coverage --testPathIgnorePatterns=/tests/integration/ --testPathIgnorePatterns=/helpers/ --detectOpenHandles --forceExit",
     "test:smoke": "jest --config jest.config.js --globalSetup=\"<rootDir>/tests/integration/globalSetup.js\" --testPathPatterns=deadline-summary --runInBand",
     "test": "npm run test:unit",
     "test:watch": "jest --watch",
@@ -40,17 +41,17 @@
     "@ai-sdk/openai": "^3.0.63",
     "@aws-sdk/client-ses": "^3.1045.0",
     "@azure/communication-email": "^1.1.0",
-    "@azure/msal-node": "^3.8.10",
+    "@azure/msal-node": "^5.4.2",
     "@daytonaio/sdk": "^0.182.0",
     "@e2b/code-interpreter": "^2.4.0",
     "@mastra/core": "^1.24.1",
     "@mastra/memory": "^1.15.0",
-    "@slack/web-api": "^7.15.2",
+    "@slack/web-api": "^8.0.0",
     "@smithy/node-http-handler": "^4.3.0",
     "@types/passport-jwt": "^4.0.1",
     "@types/uuid": "^10.0.0",
     "ai": "^6.0.177",
-    "axios": "^1.16.0",
+    "axios": "^1.18.1",
     "bcrypt": "^6.0.0",
     "bullmq": "^5.76.6",
     "cookie-parser": "^1.4.7",
@@ -77,7 +78,7 @@
     "mlflow": "^2.0.7",
     "multer": "^2.2.0",
     "node-cron": "^4.2.1",
-    "nodemailer": "^8.0.7",
+    "nodemailer": "^9.0.3",
     "passport-jwt": "^4.0.1",
     "pdf-parse": "^2.4.5",
     "pg": "^8.20.0",
@@ -116,7 +117,7 @@
     "@types/lusca": "^1.7.5",
     "@types/mjml": "^5.0.0",
     "@types/multer": "^2.1.0",
-    "@types/node": "^25.6.2",
+    "@types/node": "^26.1.1",
     "@types/nodemailer": "^8.0.0",
     "@types/pdf-parse": "^1.1.5",
     "@types/pg": "^8.20.0",
@@ -148,8 +149,18 @@
   },
   "overrides": {
     "html-minifier": "npm:html-minifier-terser@^7.2.0",
-    "minimatch": ">=9.0.7",
     "protobufjs": ">=8.2.0",
-    "uuid": "^11.1.1"
+    "uuid": "^11.1.1",
+    "@opentelemetry/core": "^2.9.0",
+    "@opentelemetry/propagator-jaeger": "^2.9.0",
+    "test-exclude": {
+      "minimatch": "^3.1.2"
+    },
+    "postcss": "^8.5.23",
+    "shell-quote": "^1.10.0",
+    "body-parser": "^2.3.0",
+    "tar": "^7.5.22",
+    "@hono/node-server": "^2.0.5",
+    "minimatch@9": "9.0.8"
   }
 }

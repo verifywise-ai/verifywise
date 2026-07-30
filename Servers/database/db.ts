@@ -30,6 +30,7 @@ import { MrmIngestionTokenModel } from "../domain.layer/models/mrm/mrmIngestionT
 import { MrmRevalidationEventModel } from "../domain.layer/models/mrm/mrmRevalidationEvent.model";
 import dbConfig from "./config/config";
 import { Dialect } from "sequelize";
+import { enableRlsQueryScoping } from "../middleware/rls.middleware";
 import { FrameworkModel } from "../domain.layer/models/frameworks/frameworks.model";
 import { ProjectFrameworksModel } from "../domain.layer/models/projectFrameworks/projectFrameworks.model";
 import { TopicStructEUModel } from "../domain.layer/frameworks/EU-AI-Act/topicStructEU.model";
@@ -244,5 +245,11 @@ const sequelize = new Sequelize(conf.database!, conf.username!, conf.password, {
     GovernanceScenarioActivationModel,
   ],
 }) as Sequelize;
+
+// RLS Phase 2 (flag-gated, OFF by default): when
+// RLS_ENFORCEMENT_ENABLED=true, every sequelize.query issued inside a
+// request's AsyncLocalStorage context is routed through that request's
+// RLS-scoped transaction (SET LOCAL app.current_org). No-op otherwise.
+enableRlsQueryScoping(sequelize);
 
 export { sequelize };

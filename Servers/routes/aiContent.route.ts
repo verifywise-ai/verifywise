@@ -1,5 +1,6 @@
 import express from "express";
 import authenticateJWT from "../middleware/auth.middleware";
+import authorize from "../middleware/accessControl.middleware";
 import { getBadges, reviewContent, getUnreviewed, getStats } from "../controllers/aiContent.ctrl";
 
 const router = express.Router();
@@ -14,6 +15,6 @@ router.get("/unreviewed", authenticateJWT, getUnreviewed);
 router.get("/:entityType/:entityId", authenticateJWT, getBadges);
 
 // PATCH mark as reviewed
-router.patch("/:id/review", authenticateJWT, reviewContent);
+router.patch("/:id/review", authenticateJWT, authorize(["Admin", "Editor"]), reviewContent);
 
 export default router;

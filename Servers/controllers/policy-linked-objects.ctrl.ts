@@ -174,7 +174,7 @@ export async function createLinkedObject(req: Request, res: Response) {
   } catch (error: any) {
     if (transaction) await transaction.rollback();
     logger.error("❌ Error in createLinkedObject:", error);
-    return res.status(500).json(STATUS_CODE[500](error.message));
+    return res.status(500).json(STATUS_CODE[500](req.t!("Internal server error")));
   }
 }
 

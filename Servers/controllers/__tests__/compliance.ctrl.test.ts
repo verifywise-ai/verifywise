@@ -161,6 +161,19 @@ describe("compliance.ctrl", () => {
       });
     });
 
+    it("should return 403 when organization context is missing (fail-closed)", async () => {
+      const req = createReq({
+        organizationId: undefined,
+        params: { organizationId: "1" },
+      });
+      const res = createRes();
+
+      await getComplianceScoreByOrganization(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(mockCalc).not.toHaveBeenCalled();
+    });
+
     it("should return 403 for unauthorized organization", async () => {
       const req = createReq({
         organizationId: 1,
@@ -242,6 +255,19 @@ describe("compliance.ctrl", () => {
         message: "Bad Request",
         data: "Invalid organization ID",
       });
+    });
+
+    it("should return 403 when organization context is missing (fail-closed)", async () => {
+      const req = createReq({
+        organizationId: undefined,
+        params: { organizationId: "1" },
+      });
+      const res = createRes();
+
+      await getComplianceDetails(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(403);
+      expect(mockCalc).not.toHaveBeenCalled();
     });
 
     it("should return 403 for unauthorized organization", async () => {

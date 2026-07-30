@@ -26,6 +26,7 @@ import AppSwitcher from "../../components/AppSwitcher";
 import { ContextSidebar } from "../../components/ContextSidebar";
 import { useAuth } from "../../../application/hooks/useAuth";
 import ReadOnlyBanner from "../../components/ReadOnlyBanner";
+import { storageService } from "../../../infrastructure/storage";
 import { setActiveOrganizationId } from "../../../application/redux/auth/authSlice";
 import { getOrganizations } from "../../../application/repository/superAdmin.repository";
 import { status } from "../../themes/palette";
@@ -52,8 +53,8 @@ const Dashboard: FC<DashboardProps> = ({ reloadTrigger }) => {
   const [openDeleteDemoDataModal, setOpenDeleteDemoDataModal] = useState<boolean>(false);
   const [hasDemoData, setHasDemoData] = useState<boolean>(false);
   const [showDemoDataButton, setShowDemoDataButton] = useState<boolean>(() => {
-    // Check localStorage on initial load
-    return localStorage.getItem("hideDemoDataButton") !== "true";
+    // Check storage on initial load
+    return !storageService.get("dashboardDemoHidden", false);
   });
   const [alertState, setAlertState] = useState<AlertState>();
   const [refreshProjectsFlag, setRefreshProjectsFlag] = useState<boolean>(false);
@@ -317,7 +318,7 @@ const Dashboard: FC<DashboardProps> = ({ reloadTrigger }) => {
                   onOpenCreateDemoData={() => setOpenDemoDataModal(true)}
                   onOpenDeleteDemoData={() => setOpenDeleteDemoDataModal(true)}
                   onDismissDemoDataButton={() => {
-                    localStorage.setItem("hideDemoDataButton", "true");
+                    storageService.set("dashboardDemoHidden", true);
                     setShowDemoDataButton(false);
                   }}
                   showDemoDataButton={showDemoDataButton}

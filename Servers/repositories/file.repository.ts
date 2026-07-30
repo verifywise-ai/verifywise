@@ -88,6 +88,7 @@ export interface OrganizationFileMetadata {
   upload_date?: string;
   uploaded_by?: number;
   org_id?: number;
+  organization_id?: number;
   project_id?: number | null;
   model_id?: number;
   source?: string;
@@ -830,6 +831,7 @@ export async function getFileWithMetadata(
       f.uploaded_time AS upload_date,
       f.uploaded_by,
       f.org_id,
+      f.organization_id,
       f.project_id,
       f.model_id,${FILE_LINK_GROUPS_SOURCE_EXPR_SQL},
       f.tags,

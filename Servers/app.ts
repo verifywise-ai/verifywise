@@ -2,6 +2,7 @@ import express, { RequestHandler } from "express";
 import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
+import { csrfProtection } from "./middleware/csrf.middleware";
 
 import assessmentRoutes from "./routes/assessment.route";
 import projectRoutes from "./routes/project.route";
@@ -111,6 +112,7 @@ import virtualKeyProxyRoutes from "./routes/virtualKeyProxy.route";
 import internalRoutes from "./routes/internal.route";
 import superAdminRoutes from "./routes/superAdmin.route";
 import { i18nMiddleware } from "./middleware/i18n.middleware";
+import { generalApiLimiter } from "./middleware/rateLimit.middleware";
 import { sequelize } from "./database/db";
 import redisClient from "./database/redis";
 import ssoConfigRoutes from "./routes/ssoConfig.route";
@@ -123,6 +125,10 @@ const DEFAULT_HOST = "localhost";
 export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Application {
   const app = express();
   const host = process.env.HOST || DEFAULT_HOST;
+
+  // Trust the first reverse proxy (nginx) so req.ip, req.secure and
+  // X-Forwarded-Proto are honored for rate limiting and cookie logic.
+  app.set("trust proxy", 1);
 
   app.use(
     cors({
@@ -147,7 +153,13 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
         }
       },
       credentials: true,
-      allowedHeaders: ["Authorization", "Content-Type", "X-Requested-With", "X-Organization-Id"],
+      allowedHeaders: [
+        "Authorization",
+        "Content-Type",
+        "X-Requested-With",
+        "X-Organization-Id",
+        "X-CSRF-Token",
+      ],
     }),
   );
   app.use(helmet());
@@ -168,6 +180,9 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
     express.json({ limit: "10mb" })(req, res, next);
   });
   app.use(cookieParser());
+  // Double-submit-cookie CSRF protection for cookie-authenticated flows
+  // (refresh-token / logout). Bearer-only API clients pass through.
+  app.use(csrfProtection);
 
   app.use(i18nMiddleware);
 
@@ -214,6 +229,18 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
   if (preRoutesMiddleware) {
     preRoutesMiddleware.forEach((mw) => app.use(mw));
   }
+
+  // Global API rate limiter (audit 4.5): a loose per-IP ceiling mounted
+  // ahead of every route mount. Stricter per-route limiters (auth, file
+  // ops, ingestion, ...) still apply on top. Webhook/raw-body endpoints
+  // are exempt — they are signature-verified and have their own controls —
+  // and /health stays unlimited for load-balancer probes.
+  app.use((req, res, next) => {
+    if (req.url.startsWith("/api/webhooks/")) {
+      return next();
+    }
+    return generalApiLimiter(req, res, next);
+  });
 
   app.use("/api/users", userRoutes);
   app.use("/api/vendorRisks", vendorRiskRoutes);

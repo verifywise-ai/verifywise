@@ -24,6 +24,7 @@ import axios, { AxiosError } from "axios";
 import { store } from "../../application/redux/store";
 import { ENV_VARs } from "../../../env.vars";
 import { clearAuthState, setAuthToken } from "../../application/redux/auth/authSlice";
+import { storageService } from "../storage";
 import { AlertProps } from "../../presentation/types/alert.types";
 import { translations, type Lang } from "../../i18n/translations";
 import { getLanguage } from "../../i18n/domTranslator";
@@ -76,6 +77,18 @@ const showGlobalErrorAlert = (error: AxiosError) => {
   const isServerError = status != null && status >= 500;
   const isNetworkError = error.response == null;
 
+  // DEBUG: log every global alert trigger so we can identify the failing request
+  // eslint-disable-next-line no-console
+  console.error("[customAxios global alert]", {
+    url: error.config?.url,
+    method: error.config?.method,
+    status,
+    statusText: error.response?.statusText,
+    message: error.message,
+    responseData: (error.response as any)?.data,
+    code: (error as any).code,
+  });
+
   if (isServerError || isNetworkError) {
     showAlert({
       variant: "error",
@@ -113,6 +126,12 @@ const processQueue = (error: unknown, token: string | null = null) => {
   failedQueue = [];
 };
 
+// Read a cookie value by name (used for the non-httpOnly CSRF cookie).
+const getCookieValue = (name: string): string | null => {
+  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : null;
+};
+
 // Request interceptor to handle both authorization token and credentials
 CustomAxios.interceptors.request.use(
   (config) => {
@@ -132,18 +151,26 @@ CustomAxios.interceptors.request.use(
       config.headers["X-Organization-Id"] = String(activeOrgId);
     }
 
-    try {
-      const lang = localStorage.getItem("vw_lang_prototype");
-      if (lang) {
-        config.headers["Accept-Language"] = lang;
-      }
-    } catch {
-      // localStorage unavailable in sandboxed contexts.
+    const lang = storageService.get("language", "en");
+    if (lang) {
+      config.headers["Accept-Language"] = lang;
     }
 
     // Enable credentials for auth-related endpoints
     if (config.url?.includes("/users/login") || config.url?.includes("/users/refresh-token")) {
       config.withCredentials = true;
+    }
+
+    // Double-submit-cookie CSRF: echo the csrfToken cookie in the header so
+    // cookie-authenticated state-changing requests (refresh-token, logout)
+    // pass the server-side CSRF middleware. Harmless on all other requests.
+    try {
+      const csrfToken = getCookieValue("csrfToken");
+      if (csrfToken) {
+        config.headers["x-csrf-token"] = csrfToken;
+      }
+    } catch {
+      // document.cookie unavailable in sandboxed contexts.
     }
 
     return config;

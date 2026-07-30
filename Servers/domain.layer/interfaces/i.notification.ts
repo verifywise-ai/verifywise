@@ -42,6 +42,7 @@ export enum NotificationType {
 
   // MRM (Model Risk Management) monitoring notifications
   MRM_METRIC_BREACH = "mrm_metric_breach",
+  MRM_REVALIDATION_DUE = "mrm_revalidation_due",
 
   // AI Gateway notifications
   AI_GATEWAY_BUDGET_WARNING = "ai_gateway_budget_warning",

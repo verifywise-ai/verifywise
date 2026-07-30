@@ -7,6 +7,8 @@
 .env.*
 !.env.example
 !.env.*.example
+!ansible/templates/.env.j2
+ansible/secrets.yml
 *.key
 *.pem
 *.cert
@@ -154,6 +156,9 @@ nul
 *.zip
 .dfmt/
 ansible/inventory.ini
+
+# Kubernetes secrets env files
+secrets.env
 
 # -------------------- Scratch scripts --------------------
 Servers/scripts/_*.ts

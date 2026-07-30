@@ -143,6 +143,16 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     baseRoute: "/api/mrm/revalidation-events",
   },
   {
+    name: "mrm_org_settings",
+    tables: ["mrm_org_settings"],
+    baseRoute: "/api/mrm/settings",
+  },
+  {
+    name: "mrm_alert_recipients",
+    tables: ["mrm_alert_recipients"],
+    baseRoute: "/api/mrm/settings",
+  },
+  {
     name: "report_templates",
     tables: ["report_templates"],
     baseRoute: "/api/reporting/templates",

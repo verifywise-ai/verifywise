@@ -82,6 +82,7 @@ interface NewModelInventoryFormValues {
   biases: string;
   limitations: string;
   hosting_provider: string;
+  external_key?: string;
   projects: number[];
   frameworks: number[];
   security_assessment_data: FileResponse[];
@@ -101,6 +102,7 @@ const initialState: NewModelInventoryFormValues = {
   biases: "",
   limitations: "",
   hosting_provider: "",
+  external_key: "",
   projects: [],
   frameworks: [],
   security_assessment_data: [],
@@ -784,6 +786,18 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
           onChange={handleOnTextFieldChange("limitations")}
           sx={fieldStyle}
           placeholder="Limitation"
+        />
+      </Stack>
+
+      <Stack direction={"row"} spacing={6}>
+        <Field
+          id="external_key"
+          label="External key"
+          width={"50%"}
+          value={values.external_key ?? ""}
+          onChange={handleOnTextFieldChange("external_key")}
+          sx={fieldStyle}
+          placeholder="eg. credit-scoring-v3"
         />
       </Stack>
 

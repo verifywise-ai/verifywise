@@ -1,6 +1,6 @@
 import { translations, type Lang } from "./translations";
+import { storageService } from "../infrastructure/storage";
 
-const STORAGE_KEY = "vw_lang_prototype";
 const TRANSLATABLE_ATTRS = ["placeholder", "title", "aria-label", "alt"];
 const SKIP_TAGS = new Set(["SCRIPT", "STYLE", "NOSCRIPT", "TEXTAREA", "CODE", "PRE"]);
 
@@ -18,7 +18,8 @@ const AUDIT_KEY = "vw_audit";
 const auditMisses = new Map<string, Set<string>>(); // lang → set of source strings
 let auditFlushTimer: ReturnType<typeof setTimeout> | null = null;
 
-const isAuditOn = () => typeof window !== "undefined" && localStorage.getItem(AUDIT_KEY) === "1";
+const isAuditOn = () =>
+  typeof window !== "undefined" && storageService.getRaw(AUDIT_KEY, null, { raw: true }) === "1";
 
 const looksLikeDynamicData = (s: string): boolean => {
   // Skip strings we'd never want to translate so the log isn't drowned in noise.
@@ -75,12 +76,12 @@ if (typeof window !== "undefined") {
 const SUPPORTED: Lang[] = ["en", "de", "fr", "es"];
 
 const getCurrentLang = (): Lang => {
-  const stored = localStorage.getItem(STORAGE_KEY) as Lang | null;
-  return stored && SUPPORTED.includes(stored) ? stored : "en";
+  const stored = storageService.get("language", "en") as Lang;
+  return SUPPORTED.includes(stored) ? stored : "en";
 };
 
 const setCurrentLang = (lang: Lang) => {
-  localStorage.setItem(STORAGE_KEY, lang);
+  storageService.set("language", lang);
   currentLang = lang;
   dict = lang === "en" ? {} : translations[lang] || {};
   if (typeof window !== "undefined") {

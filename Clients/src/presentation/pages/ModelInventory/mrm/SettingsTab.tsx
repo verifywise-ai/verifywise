@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { ReactNode, useEffect, useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
 import {
   Box,
   Stack,
@@ -9,8 +10,9 @@ import {
   TableHead,
   TableRow,
   Typography,
-  useTheme,
 } from "@mui/material";
+import { Rss, Layers, SlidersHorizontal, Bell, Users, Archive } from "lucide-react";
+import SectionNav, { SectionNavItem } from "../../../components/SectionNav";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import Select from "../../../components/Inputs/Select";
 import { EmptyState } from "../../../components/EmptyState";
@@ -26,6 +28,7 @@ import { fleetModelName, mrmErrorMessage, ROLE_DEFINITIONS } from "./constants";
 import MetricsFeedSection from "./MetricsFeedSection";
 import DefaultThresholdsSection from "./DefaultThresholdsSection";
 import AlertsSection from "./AlertsSection";
+import RetentionSection from "./RetentionSection";
 import {
   mrmSectionIntroStyle,
   mrmTableCellStyle,
@@ -39,15 +42,61 @@ interface SettingsTabProps {
   onSuccess: (message: string) => void;
 }
 
-type SettingsSection = "metrics-feed" | "tiering-rules" | "default-thresholds" | "alerts" | "roles";
+type SettingsSection =
+  | "metrics-feed"
+  | "tiering-rules"
+  | "default-thresholds"
+  | "alerts"
+  | "roles"
+  | "retention";
 
-const SECTION_ITEMS: { key: SettingsSection; label: string }[] = [
-  { key: "metrics-feed", label: "Metrics feed & tokens" },
-  { key: "tiering-rules", label: "Tiering rules" },
-  { key: "default-thresholds", label: "Default thresholds" },
-  { key: "alerts", label: "Alerts & notifications" },
-  { key: "roles", label: "Roles & independence" },
+const MRM_SETTINGS_BASE_PATH = "/model-inventory/model-risk-management/settings";
+
+// The URL slug and the internal section key differ only for thresholds, where
+// the URL uses the shorter "thresholds".
+const SECTION_ITEMS: { key: SettingsSection; slug: string; label: string; icon: ReactNode }[] = [
+  {
+    key: "metrics-feed",
+    slug: "metrics-feed",
+    label: "Metrics feed & tokens",
+    icon: <Rss size={16} strokeWidth={1.5} />,
+  },
+  {
+    key: "tiering-rules",
+    slug: "tiering-rules",
+    label: "Tiering rules",
+    icon: <Layers size={16} strokeWidth={1.5} />,
+  },
+  {
+    key: "default-thresholds",
+    slug: "thresholds",
+    label: "Default thresholds",
+    icon: <SlidersHorizontal size={16} strokeWidth={1.5} />,
+  },
+  {
+    key: "alerts",
+    slug: "alerts",
+    label: "Alerts & notifications",
+    icon: <Bell size={16} strokeWidth={1.5} />,
+  },
+  {
+    key: "roles",
+    slug: "roles",
+    label: "Roles & independence",
+    icon: <Users size={16} strokeWidth={1.5} />,
+  },
+  {
+    key: "retention",
+    slug: "retention",
+    label: "Data retention",
+    icon: <Archive size={16} strokeWidth={1.5} />,
+  },
 ];
+
+const DEFAULT_SECTION = SECTION_ITEMS[0];
+
+const sectionFromSlug = (slug: string | undefined): (typeof SECTION_ITEMS)[number] =>
+  SECTION_ITEMS.find((item) => item.slug === slug) ?? DEFAULT_SECTION;
 
 const TIERING_RULES = [
   {
@@ -61,7 +110,12 @@ const TIERING_RULES = [
 const RolesSection = ({ users, onError, onSuccess }: SettingsTabProps) => {
   const { data: fleet = [] } = useFleetTiering();
   const [modelId, setModelId] = useState<number | "">("");
-  const { data: roles = [] } = useModelRoles(modelId === "" ? null : Number(modelId));
+  // Do NOT default to `= []` here: when the query is disabled (no model
+  // selected) `data` is undefined, and an inline `= []` would produce a fresh
+  // array reference on every render. That new reference would retrigger the
+  // effect below, which calls setAssignments, causing an infinite render loop.
+  // Keeping `roles` as React Query's stable `data` avoids that.
+  const { data: roles } = useModelRoles(modelId === "" ? null : Number(modelId));
   const setRoles = useSetModelRoles();
 
   const [assignments, setAssignments] = useState<Record<MrmModelRole, number | "">>({
@@ -78,7 +132,7 @@ const RolesSection = ({ users, onError, onSuccess }: SettingsTabProps) => {
       [MrmModelRole.VALIDATOR]: "",
       [MrmModelRole.APPROVER]: "",
     };
-    roles.forEach((r) => {
+    (roles ?? []).forEach((r) => {
       if (r.user_id != null) next[r.role] = Number(r.user_id);
     });
     setAssignments(next);
@@ -227,45 +281,30 @@ const TieringRulesSection = () => (
 );
 
 const SettingsTab = ({ users, onError, onSuccess }: SettingsTabProps) => {
-  const theme = useTheme();
-  const [section, setSection] = useState<SettingsSection>("metrics-feed");
+  const { settingsSection } = useParams<{ settingsSection?: string }>();
+
+  // The active section is driven by the URL slug; an absent or unrecognised
+  // slug falls back to the first section.
+  const active = sectionFromSlug(settingsSection);
+  const section: SettingsSection = active.key;
+
+  const navItems: SectionNavItem[] = SECTION_ITEMS.map((item) => ({
+    id: item.key,
+    label: item.label,
+    icon: item.icon,
+  }));
+
+  const slugForKey = (key: string) =>
+    SECTION_ITEMS.find((item) => item.key === key)?.slug ?? DEFAULT_SECTION.slug;
 
   return (
     <Stack direction="row" sx={{ gap: "48px", alignItems: "flex-start" }}>
-      <Box
-        role="tablist"
-        sx={{
-          minWidth: "200px",
-          border: `1px solid ${theme.palette.border.dark}`,
-          borderRadius: "4px",
-          overflow: "hidden",
-          flexShrink: 0,
-        }}
-      >
-        {SECTION_ITEMS.map((item) => (
-          <Box
-            key={item.key}
-            role="tab"
-            aria-selected={section === item.key}
-            tabIndex={0}
-            onClick={() => setSection(item.key)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") setSection(item.key);
-            }}
-            sx={{
-              padding: "12px 16px",
-              fontSize: "13px",
-              cursor: "pointer",
-              borderBottom: `1px solid ${theme.palette.border.light}`,
-              backgroundColor: section === item.key ? "background.accent" : "transparent",
-              color: section === item.key ? "primary.main" : "text.secondary",
-              fontWeight: section === item.key ? 600 : 400,
-            }}
-          >
-            {item.label}
-          </Box>
-        ))}
-      </Box>
+      <SectionNav
+        items={navItems}
+        activeId={section}
+        ariaLabel="Settings sections"
+        getHref={(key) => `${MRM_SETTINGS_BASE_PATH}/${slugForKey(key)}`}
+      />
 
       <Box sx={{ flex: 1, minWidth: 0 }}>
         {section === "metrics-feed" && (
@@ -275,10 +314,13 @@ const SettingsTab = ({ users, onError, onSuccess }: SettingsTabProps) => {
         {section === "default-thresholds" && (
           <DefaultThresholdsSection onError={onError} onSuccess={onSuccess} />
         )}
-        {section === "alerts" && <AlertsSection users={users} />}
+        {section === "alerts" && (
+          <AlertsSection users={users} onError={onError} onSuccess={onSuccess} />
+        )}
         {section === "roles" && (
           <RolesSection users={users} onError={onError} onSuccess={onSuccess} />
         )}
+        {section === "retention" && <RetentionSection onError={onError} onSuccess={onSuccess} />}
       </Box>
     </Stack>
   );

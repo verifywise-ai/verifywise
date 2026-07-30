@@ -40,11 +40,11 @@ interface MetricsFeedSectionProps {
   onSuccess: (message: string) => void;
 }
 
-const ENDPOINT_URL = "POST https://app.verifywise.ai/api/mrm/models/{externalModelKey}/metrics";
+const ENDPOINT_URL = "POST https://your-server/api/mrm/models/{externalModelKey}/metrics";
 
 const EXAMPLE_REQUEST = `# push one metric reading for a model (key in the path)
-curl -X POST https://app.verifywise.ai/api/mrm/models/retail-pd-scorecard/metrics \\
-  -H "Authorization: Bearer vw_mrm_..." \\
+curl -X POST https://your-server/api/mrm/models/retail-pd-scorecard/metrics \\
+  -H "Authorization: Bearer mrm_..." \\
   -H "Content-Type: application/json" \\
   -d '{
     "metric": "psi",
