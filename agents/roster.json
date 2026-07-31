@@ -1,0 +1,515 @@
+{
+  "version": "2.0.0",
+  "description": "Expanded software-company agent roster for VerifyWise.",
+  "agent_count": 62,
+  "categories": [
+    "Leadership & Strategy",
+    "Product & Research",
+    "Design",
+    "Engineering",
+    "Platform & Operations",
+    "Security & Compliance",
+    "Data & Analytics",
+    "Quality & Testing",
+    "Operations & Support",
+    "Delivery & Cross-Functional"
+  ],
+  "agents": [
+    {
+      "key": "chief-technology-officer",
+      "name": "Chief Technology Officer (CTO)",
+      "category": "Leadership & Strategy",
+      "description": "Sets the technology vision, architecture direction, and engineering culture for the company.",
+      "file": "agents/chief-technology-officer.md",
+      "emoji": "\ud83c\udfaf"
+    },
+    {
+      "key": "engineering-manager",
+      "name": "Engineering Manager",
+      "category": "Leadership & Strategy",
+      "description": "Leads people, process, and delivery for one or more engineering teams.",
+      "file": "agents/engineering-manager.md",
+      "emoji": "\ud83d\udc65"
+    },
+    {
+      "key": "director-of-engineering",
+      "name": "Director of Engineering",
+      "category": "Leadership & Strategy",
+      "description": "Scales engineering execution, delivery excellence, and cross-team alignment.",
+      "file": "agents/director-of-engineering.md",
+      "emoji": "\ud83c\udfd7\ufe0f"
+    },
+    {
+      "key": "product-manager",
+      "name": "Product Manager",
+      "category": "Product & Research",
+      "description": "Owns the product roadmap, requirements, and measurable outcomes for a product area.",
+      "file": "agents/product-manager.md",
+      "emoji": "\ud83d\udce6"
+    },
+    {
+      "key": "product-analyst",
+      "name": "Product Analyst",
+      "category": "Product & Research",
+      "description": "Turns product data into prioritization signals and success-metric dashboards.",
+      "file": "agents/product-analyst.md",
+      "emoji": "\ud83d\udcca"
+    },
+    {
+      "key": "user-researcher",
+      "name": "User Researcher",
+      "category": "Product & Research",
+      "description": "Discovers user needs, behaviors, and pain points through rigorous research.",
+      "file": "agents/user-researcher.md",
+      "emoji": "\ud83d\udde3\ufe0f"
+    },
+    {
+      "key": "business-analyst",
+      "name": "Business Analyst",
+      "category": "Product & Research",
+      "description": "Maps business processes, rules, and requirements into clear implementation guidance.",
+      "file": "agents/business-analyst.md",
+      "emoji": "\ud83d\udcdd"
+    },
+    {
+      "key": "ux-writer-content-strategist",
+      "name": "UX Writer / Content Strategist",
+      "category": "Product & Research",
+      "description": "Crafts clear, consistent, and localization-ready product content.",
+      "file": "agents/ux-writer-content-strategist.md",
+      "emoji": "\u270d\ufe0f"
+    },
+    {
+      "key": "product-marketing-manager",
+      "name": "Product Marketing Manager",
+      "category": "Product & Research",
+      "description": "Plans go-to-market positioning, messaging, and launch campaigns for product releases.",
+      "file": "agents/product-marketing-manager.md",
+      "emoji": "\ud83d\udce2"
+    },
+    {
+      "key": "ux-ui-designer",
+      "name": "UX/UI Designer",
+      "category": "Design",
+      "description": "Designs intuitive, accessible, and visually cohesive end-to-end experiences.",
+      "file": "agents/ux-ui-designer.md",
+      "emoji": "\ud83c\udfa8"
+    },
+    {
+      "key": "interaction-designer",
+      "name": "Interaction Designer",
+      "category": "Design",
+      "description": "Designs micro-interactions, motion, and dynamic behaviors that make products feel alive.",
+      "file": "agents/interaction-designer.md",
+      "emoji": "\ud83c\udfac"
+    },
+    {
+      "key": "visual-designer",
+      "name": "Visual Designer",
+      "category": "Design",
+      "description": "Owns the visual language, illustration, and pixel-level polish of the product.",
+      "file": "agents/visual-designer.md",
+      "emoji": "\ud83d\uddbc\ufe0f"
+    },
+    {
+      "key": "design-systems-lead",
+      "name": "Design Systems Lead",
+      "category": "Design",
+      "description": "Builds and governs the shared design system that powers product development.",
+      "file": "agents/design-systems-lead.md",
+      "emoji": "\ud83e\udde9"
+    },
+    {
+      "key": "brand-designer",
+      "name": "Brand Designer",
+      "category": "Design",
+      "description": "Owns brand identity and ensures brand coherence across product and marketing.",
+      "file": "agents/brand-designer.md",
+      "emoji": "\ud83c\udff7\ufe0f"
+    },
+    {
+      "key": "technical-lead",
+      "name": "Technical Lead",
+      "category": "Engineering",
+      "description": "Owns technical direction, architecture decisions, code quality, and developer mentorship.",
+      "file": "agents/technical-lead.md",
+      "emoji": "\ud83e\udded"
+    },
+    {
+      "key": "solutions-architect",
+      "name": "Solutions Architect",
+      "category": "Engineering",
+      "description": "Designs cross-system and enterprise integration solutions aligned with business goals.",
+      "file": "agents/solutions-architect.md",
+      "emoji": "\ud83c\udf09"
+    },
+    {
+      "key": "software-architect",
+      "name": "Software Architect",
+      "category": "Engineering",
+      "description": "Defines code-level architecture, patterns, and technology strategy.",
+      "file": "agents/software-architect.md",
+      "emoji": "\ud83c\udfdb\ufe0f"
+    },
+    {
+      "key": "ai-ml-engineer",
+      "name": "AI/ML Engineer",
+      "category": "Engineering",
+      "description": "Builds, integrates, and evaluates AI/ML capabilities including LLMs and classical models.",
+      "file": "agents/ai-ml-engineer.md",
+      "emoji": "\ud83e\udd16"
+    },
+    {
+      "key": "data-engineer",
+      "name": "Data Engineer",
+      "category": "Engineering",
+      "description": "Builds reliable data pipelines, storage, and transformation systems.",
+      "file": "agents/data-engineer.md",
+      "emoji": "\ud83d\udee2\ufe0f"
+    },
+    {
+      "key": "senior-backend-developer",
+      "name": "Senior Backend Developer",
+      "category": "Engineering",
+      "description": "Builds robust, scalable, secure server-side systems and mentors backend developers.",
+      "file": "agents/senior-backend-developer.md",
+      "emoji": "\u2699\ufe0f"
+    },
+    {
+      "key": "mid-backend-developer",
+      "name": "Mid-Level Backend Developer",
+      "category": "Engineering",
+      "description": "Delivers solid, tested backend features within established architecture.",
+      "file": "agents/mid-backend-developer.md",
+      "emoji": "\ud83d\udd27"
+    },
+    {
+      "key": "junior-backend-developer",
+      "name": "Junior Backend Developer",
+      "category": "Engineering",
+      "description": "Executes clearly scoped backend tasks and learns established patterns.",
+      "file": "agents/junior-backend-developer.md",
+      "emoji": "\ud83c\udf31"
+    },
+    {
+      "key": "database-administrator",
+      "name": "Database Administrator (DBA)",
+      "category": "Engineering",
+      "description": "Ensures database performance, availability, backups, and capacity.",
+      "file": "agents/database-administrator.md",
+      "emoji": "\ud83d\uddc4\ufe0f"
+    },
+    {
+      "key": "api-platform-engineer",
+      "name": "API Platform Engineer",
+      "category": "Engineering",
+      "description": "Owns the API gateway, standards, developer portal, and API lifecycle.",
+      "file": "agents/api-platform-engineer.md",
+      "emoji": "\ud83d\udd0c"
+    },
+    {
+      "key": "backend-platform-engineer",
+      "name": "Backend Platform Engineer",
+      "category": "Engineering",
+      "description": "Builds shared backend services, libraries, and golden paths for product teams.",
+      "file": "agents/backend-platform-engineer.md",
+      "emoji": "\ud83e\uddf1"
+    },
+    {
+      "key": "senior-frontend-developer",
+      "name": "Senior Frontend Developer",
+      "category": "Engineering",
+      "description": "Builds performant, accessible, and maintainable user interfaces.",
+      "file": "agents/senior-frontend-developer.md",
+      "emoji": "\ud83d\udcbb"
+    },
+    {
+      "key": "mid-frontend-developer",
+      "name": "Mid-Level Frontend Developer",
+      "category": "Engineering",
+      "description": "Delivers clean, tested frontend features within established component architecture.",
+      "file": "agents/mid-frontend-developer.md",
+      "emoji": "\ud83d\udda5\ufe0f"
+    },
+    {
+      "key": "junior-frontend-developer",
+      "name": "Junior Frontend Developer",
+      "category": "Engineering",
+      "description": "Executes clearly scoped UI tasks and learns frontend patterns.",
+      "file": "agents/junior-frontend-developer.md",
+      "emoji": "\ud83c\udf3f"
+    },
+    {
+      "key": "mobile-developer",
+      "name": "Mobile Developer",
+      "category": "Engineering",
+      "description": "Builds native or cross-platform mobile applications for iOS and Android.",
+      "file": "agents/mobile-developer.md",
+      "emoji": "\ud83d\udcf1"
+    },
+    {
+      "key": "full-stack-developer",
+      "name": "Full-Stack Developer",
+      "category": "Engineering",
+      "description": "Delivers end-to-end features across frontend, backend, and data layers.",
+      "file": "agents/full-stack-developer.md",
+      "emoji": "\ud83e\udd5e"
+    },
+    {
+      "key": "accessibility-engineer",
+      "name": "Accessibility Engineer",
+      "category": "Engineering",
+      "description": "Ensures products meet and exceed accessibility standards for all users.",
+      "file": "agents/accessibility-engineer.md",
+      "emoji": "\u267f"
+    },
+    {
+      "key": "frontend-performance-engineer",
+      "name": "Frontend Performance Engineer",
+      "category": "Engineering",
+      "description": "Optimizes loading, rendering, and runtime performance of web applications.",
+      "file": "agents/frontend-performance-engineer.md",
+      "emoji": "\u26a1"
+    },
+    {
+      "key": "devops-engineer",
+      "name": "DevOps Engineer",
+      "category": "Platform & Operations",
+      "description": "Builds CI/CD, infrastructure, and operational tooling that makes deployments boring and safe.",
+      "file": "agents/devops-engineer.md",
+      "emoji": "\ud83d\ude80"
+    },
+    {
+      "key": "site-reliability-engineer",
+      "name": "Site Reliability Engineer (SRE)",
+      "category": "Platform & Operations",
+      "description": "Owns reliability, SLOs, incident response, and production health.",
+      "file": "agents/site-reliability-engineer.md",
+      "emoji": "\ud83d\udee1\ufe0f"
+    },
+    {
+      "key": "platform-engineer",
+      "name": "Platform Engineer",
+      "category": "Platform & Operations",
+      "description": "Creates the internal developer platform that accelerates product teams.",
+      "file": "agents/platform-engineer.md",
+      "emoji": "\ud83d\udee0\ufe0f"
+    },
+    {
+      "key": "cloud-architect",
+      "name": "Cloud Architect",
+      "category": "Platform & Operations",
+      "description": "Designs cloud strategy, networking, security, and cost-optimized infrastructure.",
+      "file": "agents/cloud-architect.md",
+      "emoji": "\u2601\ufe0f"
+    },
+    {
+      "key": "developer-experience-engineer",
+      "name": "Developer Experience Engineer",
+      "category": "Platform & Operations",
+      "description": "Improves the tools, workflows, and documentation that make engineers productive.",
+      "file": "agents/developer-experience-engineer.md",
+      "emoji": "\ud83e\uddf0"
+    },
+    {
+      "key": "release-manager",
+      "name": "Release Manager",
+      "category": "Platform & Operations",
+      "description": "Coordinates versioning, release trains, and deployment readiness.",
+      "file": "agents/release-manager.md",
+      "emoji": "\ud83d\udea6"
+    },
+    {
+      "key": "devsecops-engineer",
+      "name": "DevSecOps Engineer",
+      "category": "Platform & Operations",
+      "description": "Embeds security into CI/CD, infrastructure, and the software supply chain.",
+      "file": "agents/devsecops-engineer.md",
+      "emoji": "\ud83d\udd10"
+    },
+    {
+      "key": "security-engineer",
+      "name": "Security Engineer",
+      "category": "Security & Compliance",
+      "description": "Designs and operates security architecture, threat modeling, and incident response.",
+      "file": "agents/security-engineer.md",
+      "emoji": "\ud83d\udd12"
+    },
+    {
+      "key": "application-security-engineer",
+      "name": "Application Security (AppSec) Engineer",
+      "category": "Security & Compliance",
+      "description": "Reviews code, designs, and dependencies to keep applications secure.",
+      "file": "agents/application-security-engineer.md",
+      "emoji": "\ud83d\udee1\ufe0f"
+    },
+    {
+      "key": "compliance-officer",
+      "name": "Compliance Officer",
+      "category": "Security & Compliance",
+      "description": "Maps, tracks, and evidences compliance with regulations and standards.",
+      "file": "agents/compliance-officer.md",
+      "emoji": "\ud83d\udcdc"
+    },
+    {
+      "key": "privacy-engineer",
+      "name": "Privacy Engineer",
+      "category": "Security & Compliance",
+      "description": "Implements privacy-by-design, consent, and data-minimization controls.",
+      "file": "agents/privacy-engineer.md",
+      "emoji": "\ud83d\udd75\ufe0f"
+    },
+    {
+      "key": "penetration-tester",
+      "name": "Penetration Tester",
+      "category": "Security & Compliance",
+      "description": "Simulates attacks to find exploitable weaknesses before real attackers do.",
+      "file": "agents/penetration-tester.md",
+      "emoji": "\ud83e\udde8"
+    },
+    {
+      "key": "data-scientist",
+      "name": "Data Scientist",
+      "category": "Data & Analytics",
+      "description": "Builds predictive models, experiments, and statistical insights.",
+      "file": "agents/data-scientist.md",
+      "emoji": "\ud83d\udd2c"
+    },
+    {
+      "key": "business-intelligence-analyst",
+      "name": "Business Intelligence Analyst",
+      "category": "Data & Analytics",
+      "description": "Creates dashboards, reports, and KPIs that guide business decisions.",
+      "file": "agents/business-intelligence-analyst.md",
+      "emoji": "\ud83d\udcc8"
+    },
+    {
+      "key": "analytics-engineer",
+      "name": "Analytics Engineer",
+      "category": "Data & Analytics",
+      "description": "Transforms raw data into clean, modeled, and documented datasets for analysis.",
+      "file": "agents/analytics-engineer.md",
+      "emoji": "\ud83e\uddee"
+    },
+    {
+      "key": "data-governance-officer",
+      "name": "Data Governance Officer",
+      "category": "Data & Analytics",
+      "description": "Owns data quality, lineage, catalogs, policies, and access governance.",
+      "file": "agents/data-governance-officer.md",
+      "emoji": "\ud83d\udccb"
+    },
+    {
+      "key": "qa-engineer",
+      "name": "QA Engineer",
+      "category": "Quality & Testing",
+      "description": "Owns test strategy, automation, and quality gates across the product.",
+      "file": "agents/qa-engineer.md",
+      "emoji": "\ud83e\uddea"
+    },
+    {
+      "key": "test-automation-engineer",
+      "name": "Test Automation Engineer",
+      "category": "Quality & Testing",
+      "description": "Specializes in frameworks, tooling, and reliable automated test pipelines.",
+      "file": "agents/test-automation-engineer.md",
+      "emoji": "\ud83e\udd16"
+    },
+    {
+      "key": "manual-qa-analyst",
+      "name": "Manual QA Analyst",
+      "category": "Quality & Testing",
+      "description": "Performs hands-on exploratory, acceptance, and usability testing.",
+      "file": "agents/manual-qa-analyst.md",
+      "emoji": "\ud83d\udd75\ufe0f"
+    },
+    {
+      "key": "performance-test-engineer",
+      "name": "Performance Test Engineer",
+      "category": "Quality & Testing",
+      "description": "Validates system performance under load, stress, and endurance conditions.",
+      "file": "agents/performance-test-engineer.md",
+      "emoji": "\u23f1\ufe0f"
+    },
+    {
+      "key": "security-tester",
+      "name": "Security Tester",
+      "category": "Quality & Testing",
+      "description": "Runs security-focused tests to validate controls and catch vulnerabilities.",
+      "file": "agents/security-tester.md",
+      "emoji": "\ud83d\udea8"
+    },
+    {
+      "key": "incident-commander",
+      "name": "Incident Commander",
+      "category": "Operations & Support",
+      "description": "Leads incident response, coordination, communication, and postmortems.",
+      "file": "agents/incident-commander.md",
+      "emoji": "\ud83c\udf96\ufe0f"
+    },
+    {
+      "key": "customer-success-manager",
+      "name": "Customer Success Manager",
+      "category": "Operations & Support",
+      "description": "Drives customer adoption, health, and expansion post-launch.",
+      "file": "agents/customer-success-manager.md",
+      "emoji": "\ud83e\udd1d"
+    },
+    {
+      "key": "support-engineer",
+      "name": "Support Engineer",
+      "category": "Operations & Support",
+      "description": "Diagnoses and resolves customer issues while feeding insights back to product.",
+      "file": "agents/support-engineer.md",
+      "emoji": "\ud83c\udfa7"
+    },
+    {
+      "key": "it-operations-engineer",
+      "name": "IT Operations Engineer",
+      "category": "Operations & Support",
+      "description": "Manages internal identity, endpoints, SaaS, and corporate IT services.",
+      "file": "agents/it-operations-engineer.md",
+      "emoji": "\ud83d\udda7"
+    },
+    {
+      "key": "engineering-project-manager",
+      "name": "Engineering Project Manager",
+      "category": "Delivery & Cross-Functional",
+      "description": "Plans, tracks, and coordinates complex engineering initiatives end to end.",
+      "file": "agents/engineering-project-manager.md",
+      "emoji": "\ud83d\udcc5"
+    },
+    {
+      "key": "scrum-master",
+      "name": "Scrum Master",
+      "category": "Delivery & Cross-Functional",
+      "description": "Facilitates agile ceremonies, removes impediments, and improves team flow.",
+      "file": "agents/scrum-master.md",
+      "emoji": "\ud83c\udfc9"
+    },
+    {
+      "key": "release-train-engineer",
+      "name": "Release Train Engineer",
+      "category": "Delivery & Cross-Functional",
+      "description": "Coordinates large-scale program increments and cross-team release trains.",
+      "file": "agents/release-train-engineer.md",
+      "emoji": "\ud83d\ude82"
+    },
+    {
+      "key": "change-management-lead",
+      "name": "Change Management Lead",
+      "category": "Delivery & Cross-Functional",
+      "description": "Ensures organizational readiness and adoption for significant changes.",
+      "file": "agents/change-management-lead.md",
+      "emoji": "\ud83d\udd04"
+    },
+    {
+      "key": "technical-writer",
+      "name": "Technical Writer",
+      "category": "Delivery & Cross-Functional",
+      "description": "Creates clear, accurate, and findable documentation for users and developers.",
+      "file": "agents/technical-writer.md",
+      "emoji": "\ud83d\udcda"
+    }
+  ]
+}
