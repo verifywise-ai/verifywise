@@ -16,6 +16,7 @@ jest.mock("../../utils/logger/fileLogger", () => ({
 jest.mock("../../utils/statusCode.utils", () => ({
   STATUS_CODE: {
     200: (data: any) => ({ message: "OK", data }),
+    404: (error: any) => ({ message: "Not Found", error }),
     500: (error: any) => ({ message: "Internal Server Error", error }),
   },
 }));
@@ -116,6 +117,9 @@ describe("observability.ctrl", () => {
           data: {
             id: "t1",
             name: "agent-interaction",
+            // Trace is tagged for org 1 (the caller's org) so the ownership
+            // check in getTraceDetail passes.
+            tags: ["org:1"],
             observations: [
               { id: "s1", type: "SPAN", name: "fetch_risks" },
               { id: "s2", type: "GENERATION", name: "llm" },
@@ -136,6 +140,44 @@ describe("observability.ctrl", () => {
       expect(payload.trace).toBeTruthy();
       expect(Array.isArray(payload.spans)).toBe(true);
       expect(payload.spans).toHaveLength(2);
+    });
+
+    it("returns 404 when the trace belongs to another org (tenant isolation)", async () => {
+      const fakeLangfuse = {
+        fetchTrace: jest.fn<any>().mockResolvedValue({
+          data: {
+            id: "t1",
+            name: "agent-interaction",
+            // Trace is tagged for a DIFFERENT org — must not be disclosed to org 1.
+            tags: ["org:2"],
+            observations: [{ id: "s1", type: "SPAN", name: "secret" }],
+          },
+        }),
+      };
+      mockGetLangfuse.mockReturnValue(fakeLangfuse as any);
+
+      const req = createReq({ params: { id: "t1" }, organizationId: 1 } as any);
+      const res = createRes();
+
+      await getTraceDetail(req as Request, res as Response);
+
+      expect(res.status).toHaveBeenCalledWith(404);
+    });
+
+    it("returns 404 when the trace carries no org tag", async () => {
+      const fakeLangfuse = {
+        fetchTrace: jest.fn<any>().mockResolvedValue({
+          data: { id: "t1", name: "agent-interaction", observations: [] },
+        }),
+      };
+      mockGetLangfuse.mockReturnValue(fakeLangfuse as any);
+
+      const req = createReq({ params: { id: "t1" } } as any);
+      const res = createRes();
+
+      await getTraceDetail(req as Request, res as Response);
+
+      expect(res.status).toHaveBeenCalledWith(404);
     });
 
     it("returns 200 with null trace + empty spans when Langfuse is not configured (does not throw)", async () => {
@@ -222,8 +264,13 @@ describe("observability.ctrl", () => {
 
   // ── GET /api/observability/performance ────────────────────────────
   describe("getPerformance", () => {
-    it("returns 200 with latency percentiles + error rate from Langfuse observations", async () => {
+    it("returns 200 with latency percentiles + error rate from this org's trace observations", async () => {
+      // getPerformance resolves the org's traces via the org tag first, then
+      // aggregates observations belonging to those traces.
       const fakeLangfuse = {
+        fetchTraces: jest.fn<any>().mockResolvedValue({
+          data: [{ id: "t1" }],
+        }),
         fetchObservations: jest.fn<any>().mockResolvedValue({
           data: [
             { latency: 100, level: "DEFAULT" },
@@ -231,8 +278,38 @@ describe("observability.ctrl", () => {
             { latency: 300, level: "ERROR" },
             { latency: 400, level: "DEFAULT" },
           ],
-          meta: { totalItems: 4 },
         }),
+      };
+      mockGetLangfuse.mockReturnValue(fakeLangfuse as any);
+
+      const req = createReq();
+      const res = createRes();
+
+      await getPerformance(req as Request, res as Response);
+
+      // Traces are queried scoped to the caller's org tag.
+      expect(fakeLangfuse.fetchTraces).toHaveBeenCalledWith(
+        expect.objectContaining({ tags: ["org:1"] }),
+      );
+      // Observations are fetched per resolved trace id, never project-wide.
+      expect(fakeLangfuse.fetchObservations).toHaveBeenCalledWith(
+        expect.objectContaining({ traceId: "t1" }),
+      );
+      expect(res.status).toHaveBeenCalledWith(200);
+      const payload = res.json.mock.calls[0][0].data;
+      expect(payload.latency).toHaveProperty("p50");
+      expect(payload.latency).toHaveProperty("p95");
+      expect(payload.latency).toHaveProperty("p99");
+      expect(payload).toHaveProperty("errorRate");
+      expect(payload).toHaveProperty("totalRequests");
+      expect(payload.totalRequests).toBe(4);
+      expect(payload.errorRate).toBeCloseTo(0.25);
+    });
+
+    it("returns zeroed metrics when the org has no traces (no cross-org aggregation)", async () => {
+      const fakeLangfuse = {
+        fetchTraces: jest.fn<any>().mockResolvedValue({ data: [] }),
+        fetchObservations: jest.fn<any>(),
       };
       mockGetLangfuse.mockReturnValue(fakeLangfuse as any);
 
@@ -243,13 +320,9 @@ describe("observability.ctrl", () => {
 
       expect(res.status).toHaveBeenCalledWith(200);
       const payload = res.json.mock.calls[0][0].data;
-      expect(payload.latency).toHaveProperty("p50");
-      expect(payload.latency).toHaveProperty("p95");
-      expect(payload.latency).toHaveProperty("p99");
-      expect(payload).toHaveProperty("errorRate");
-      expect(payload).toHaveProperty("totalRequests");
-      expect(payload.totalRequests).toBe(4);
-      expect(payload.errorRate).toBeCloseTo(0.25);
+      expect(payload.totalRequests).toBe(0);
+      // Never falls back to a project-wide observation fetch.
+      expect(fakeLangfuse.fetchObservations).not.toHaveBeenCalled();
     });
 
     it("returns 200 with zeroed metrics when Langfuse is not configured (does not throw)", async () => {
@@ -269,7 +342,8 @@ describe("observability.ctrl", () => {
 
     it("returns 500 when Langfuse fetch throws", async () => {
       const fakeLangfuse = {
-        fetchObservations: jest.fn<any>().mockRejectedValue(new Error("nope")),
+        fetchTraces: jest.fn<any>().mockRejectedValue(new Error("nope")),
+        fetchObservations: jest.fn<any>(),
       };
       mockGetLangfuse.mockReturnValue(fakeLangfuse as any);
 
