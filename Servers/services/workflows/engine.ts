@@ -66,6 +66,7 @@ async function persistRun(
   currentStep: number,
   results: StepRecord[],
   error?: string,
+  awaitingApprovalId?: string | null,
 ): Promise<void> {
   await sequelize.query(
     `UPDATE ai_workflow_runs
@@ -73,6 +74,9 @@ async function persistRun(
             current_step = :currentStep,
             results = :results::jsonb,
             error = :error,
+            -- Set the approval link only when pausing; clear it on any resume/
+            -- terminal transition so a stale id can't re-trigger a later resume.
+            awaiting_approval_id = CASE WHEN :state = 'awaiting_approval' THEN :awaitingApprovalId ELSE NULL END,
             completed_at = CASE WHEN :state IN ('completed', 'failed', 'cancelled') THEN NOW() ELSE completed_at END
       WHERE id = :id AND organization_id = :organizationId`,
     {
@@ -83,6 +87,7 @@ async function persistRun(
         currentStep,
         results: JSON.stringify(results),
         error: error ?? null,
+        awaitingApprovalId: awaitingApprovalId ?? null,
       },
       type: QueryTypes.UPDATE,
     },
@@ -251,7 +256,16 @@ async function executeStepLoop(
       i = target;
     } else if (outcome.type === "pause") {
       record.status = "completed"; // the step did its job by pausing
-      record.output = { paused: true, reason: outcome.reason };
+      record.output = { paused: true, reason: outcome.reason, approvalId: outcome.approvalId };
+      // Without an approvalId there is nothing for approval resolution to match
+      // on, so the run would be unresumable. Surface that instead of silently
+      // parking it forever.
+      if (!outcome.approvalId) {
+        logger.warn(
+          `[workflow] run ${workflowRunId} step "${step.id}" paused without an approvalId; ` +
+            `it cannot be resumed until the step links an ai_action_approvals row.`,
+        );
+      }
       await logWorkflowAudit(
         organizationId,
         workflowRunId,
@@ -259,9 +273,18 @@ async function executeStepLoop(
         `workflow.${workflow.id}.step.${step.id}`,
         {
           reason: outcome.reason,
+          approvalId: outcome.approvalId ?? null,
         },
       );
-      await persistRun(workflowRunId, organizationId, "awaiting_approval", i, records);
+      await persistRun(
+        workflowRunId,
+        organizationId,
+        "awaiting_approval",
+        i,
+        records,
+        undefined,
+        outcome.approvalId ?? null,
+      );
       return buildRun(workflow, workflowRunId, params, "awaiting_approval", i, records);
     } else {
       record.status = "failed";

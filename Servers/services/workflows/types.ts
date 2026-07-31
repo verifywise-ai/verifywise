@@ -23,14 +23,16 @@ export interface WorkflowContext {
  *  - ok: step succeeded; `output` is stored in ctx.results[stepId]
  *  - skip: step was intentionally not executed
  *  - branch: jump to another step by id
- *  - pause: halt the run and put it in 'awaiting_approval'
+ *  - pause: halt the run and put it in 'awaiting_approval'. `approvalId` links
+ *    the run to the ai_action_approvals row whose resolution resumes it; without
+ *    it the run cannot be resumed (see engine.persistRun / resumeWorkflow).
  *  - fail: short-circuit the run into 'failed'
  */
 export type StepResult =
   | { type: "ok"; output: unknown }
   | { type: "skip"; reason?: string }
   | { type: "branch"; gotoStepId: string }
-  | { type: "pause"; reason?: string }
+  | { type: "pause"; reason?: string; approvalId?: string }
   | { type: "fail"; error: string };
 
 /**

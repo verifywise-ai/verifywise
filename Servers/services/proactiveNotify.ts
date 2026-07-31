@@ -5,7 +5,39 @@ import {
   ICreateNotification,
   IEmailNotificationConfig,
 } from "../domain.layer/interfaces/i.notification";
+import { getAllUsersQuery } from "../utils/user.utils";
 import logger from "../utils/logger/fileLogger";
+
+// Admin role id (see JWT roles table). Org-wide proactive alerts are delivered
+// to the org's admins.
+const ADMIN_ROLE_ID = 1;
+
+/**
+ * Resolve the concrete in-app recipients for a proactive notification. These
+ * alerts are org-wide with no single owner, so the caller passes a falsy
+ * user_id as a "broadcast" marker; we expand it to one notification per org
+ * admin. notifications.user_id is NOT NULL REFERENCES users(id), so a real id
+ * is required — a literal 0 would raise a foreign-key violation.
+ *
+ * When the notification already targets a real user (user_id > 0) it is passed
+ * through unchanged.
+ */
+async function resolveInAppRecipients(
+  organizationId: number,
+  notification: ICreateNotification,
+): Promise<ICreateNotification[]> {
+  if (notification.user_id && notification.user_id > 0) {
+    return [notification];
+  }
+  const users = await getAllUsersQuery(organizationId);
+  const admins = users.filter((u) => u.role_id === ADMIN_ROLE_ID);
+  // Fall back to all org users if the org has no admin (shouldn't happen, but
+  // never silently drop the alert).
+  const recipients = admins.length > 0 ? admins : users;
+  return recipients
+    .filter((u) => typeof u.id === "number" && u.id > 0)
+    .map((u) => ({ ...notification, user_id: u.id as number }));
+}
 
 /**
  * Channel selection for a proactive notification.
@@ -53,10 +85,28 @@ export const notifyProactive = async (
   const wantsInApp = channels.inApp !== false;
   const wantsEmail = !!channels.email;
 
-  // In-app + email (email is delivered by the in-app service).
+  // In-app + email (email is delivered by the in-app service). Resolve the
+  // broadcast marker (user_id 0) to real org-admin recipients and deliver one
+  // notification per recipient; a failure for one recipient never blocks the
+  // rest or the other channels.
   if (wantsInApp || wantsEmail) {
     try {
-      await sendInAppNotification(organizationId, payload.notification, wantsEmail, channels.email);
+      const recipients = await resolveInAppRecipients(organizationId, payload.notification);
+      if (recipients.length === 0) {
+        logger.warn(
+          `proactiveNotify: no in-app recipients resolved for org ${organizationId}; skipping in-app/email`,
+        );
+      }
+      for (const recipient of recipients) {
+        try {
+          await sendInAppNotification(organizationId, recipient, wantsEmail, channels.email);
+        } catch (error) {
+          logger.error(
+            `proactiveNotify: in-app/email delivery failed for user ${recipient.user_id}:`,
+            error,
+          );
+        }
+      }
     } catch (error) {
       logger.error("proactiveNotify: in-app/email channel failed:", error);
     }

@@ -25,10 +25,15 @@ jest.mock("../../utils/logger/fileLogger", () => ({
   __esModule: true,
 }));
 
+jest.mock("../../utils/user.utils", () => ({
+  getAllUsersQuery: jest.fn(),
+}));
+
 import { notifyProactive } from "../proactiveNotify";
 import { sendInAppNotification } from "../inAppNotification.service";
 import { sendSlackNotification } from "../slack/slackNotificationService";
 import { sendTeamsNotification } from "../teams/teamsNotification.service";
+import { getAllUsersQuery } from "../../utils/user.utils";
 import {
   NotificationType,
   NotificationEntityType,
@@ -37,6 +42,7 @@ import {
 const mockSendInApp = sendInAppNotification as jest.MockedFunction<typeof sendInAppNotification>;
 const mockSendSlack = sendSlackNotification as jest.MockedFunction<typeof sendSlackNotification>;
 const mockSendTeams = sendTeamsNotification as jest.MockedFunction<typeof sendTeamsNotification>;
+const mockGetAllUsers = getAllUsersQuery as jest.MockedFunction<typeof getAllUsersQuery>;
 
 const baseNotification = {
   user_id: 7,
@@ -155,5 +161,51 @@ describe("proactiveNotify", () => {
     expect(mockSendInApp).toHaveBeenCalledTimes(1);
     expect(mockSendSlack).toHaveBeenCalledTimes(1);
     expect(mockSendTeams).toHaveBeenCalledTimes(1);
+  });
+
+  // Regression: org-wide proactive alerts pass user_id 0 as a broadcast marker.
+  // notifications.user_id is NOT NULL REFERENCES users(id), so 0 would be a FK
+  // violation — it must be expanded to real org-admin recipients.
+  describe("broadcast recipient resolution (user_id 0)", () => {
+    const broadcast = { ...baseNotification, user_id: 0 };
+
+    it("fans out one in-app notification per org admin, never user_id 0", async () => {
+      mockGetAllUsers.mockResolvedValue([
+        { id: 11, role_id: 1 },
+        { id: 12, role_id: 1 },
+        { id: 13, role_id: 3 }, // Editor — not an admin, excluded
+      ] as any);
+
+      await notifyProactive(42, { title: "Hello", body: "World", notification: broadcast });
+
+      expect(mockGetAllUsers).toHaveBeenCalledWith(42);
+      expect(mockSendInApp).toHaveBeenCalledTimes(2);
+      const recipientIds = mockSendInApp.mock.calls.map((c) => (c[1] as any).user_id);
+      expect(recipientIds.sort()).toEqual([11, 12]);
+      expect(recipientIds).not.toContain(0);
+    });
+
+    it("falls back to all org users when the org has no admin", async () => {
+      mockGetAllUsers.mockResolvedValue([
+        { id: 21, role_id: 3 },
+        { id: 22, role_id: 4 },
+      ] as any);
+
+      await notifyProactive(42, { title: "Hello", body: "World", notification: broadcast });
+
+      expect(mockSendInApp).toHaveBeenCalledTimes(2);
+    });
+
+    it("passes a real user_id straight through without resolving recipients", async () => {
+      await notifyProactive(42, {
+        title: "Hello",
+        body: "World",
+        notification: baseNotification, // user_id 7
+      });
+
+      expect(mockGetAllUsers).not.toHaveBeenCalled();
+      expect(mockSendInApp).toHaveBeenCalledTimes(1);
+      expect((mockSendInApp.mock.calls[0][1] as any).user_id).toBe(7);
+    });
   });
 });

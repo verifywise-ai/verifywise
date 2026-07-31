@@ -48,6 +48,13 @@ function persistStates(): string[] {
     .filter((c) => String(c[0]).includes("UPDATE") && String(c[0]).includes("ai_workflow_runs"))
     .map((c) => (c[1] as any)?.replacements?.state as string);
 }
+/** The persistRun call that wrote 'awaiting_approval', if any. */
+function awaitingApprovalPersist(): any {
+  return mockQuery.mock.calls
+    .filter((c) => String(c[0]).includes("UPDATE") && String(c[0]).includes("ai_workflow_runs"))
+    .map((c) => (c[1] as any)?.replacements)
+    .find((r) => r?.state === "awaiting_approval");
+}
 
 function step(partial: Partial<WorkflowStep> & { id: string }): WorkflowStep {
   return {
@@ -156,6 +163,37 @@ describe("workflows / runWorkflow", () => {
     expect(persistStates()).toContain("awaiting_approval");
     // and the pause produced an 'awaiting_approval' audit transition
     expect(auditTransitions()).toContain("awaiting_approval");
+  });
+
+  it("persists the approvalId on the awaiting_approval row so the run can be resumed", async () => {
+    const wf = workflow([
+      step({
+        id: "gate",
+        isWrite: true,
+        handler: async () => ({ type: "pause", reason: "needs approval", approvalId: "appr-1" }),
+      }),
+    ]);
+
+    await runWorkflow(wf, 106, params);
+
+    // Regression: without awaiting_approval_id the resume lookup
+    // (WHERE awaiting_approval_id = :approvalId) can never match and the run
+    // is stuck forever. The pause must persist the linking id.
+    const persisted = awaitingApprovalPersist();
+    expect(persisted).toBeDefined();
+    expect(persisted.awaitingApprovalId).toBe("appr-1");
+  });
+
+  it("warns and persists a null link when a step pauses without an approvalId", async () => {
+    const wf = workflow([
+      step({ id: "gate", handler: async () => ({ type: "pause", reason: "no id" }) }),
+    ]);
+
+    await runWorkflow(wf, 107, params);
+
+    const persisted = awaitingApprovalPersist();
+    expect(persisted).toBeDefined();
+    expect(persisted.awaitingApprovalId).toBeNull();
   });
 
   it("records an audit entry for each state transition", async () => {
