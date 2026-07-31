@@ -26,6 +26,8 @@ export type Lang = "en" | "de" | "fr" | "es";
 export const translations: Record<string, Record<string, string>> = {
   de: {
     "Deployment name": "Bereitstellungsname",
+    "Save the deployment name first, then generate the token.":
+      "Speichern Sie zuerst den Bereitstellungsnamen, dann generieren Sie das Token.",
     "Enable centralized monitoring": "Zentrales Monitoring aktivieren",
     "Failed to load monitoring configuration.":
       "Monitoring-Konfiguration konnte nicht geladen werden.",
@@ -8966,6 +8968,8 @@ export const translations: Record<string, Record<string, string>> = {
 
   fr: {
     "Deployment name": "Nom du déploiement",
+    "Save the deployment name first, then generate the token.":
+      "Enregistrez d'abord le nom du déploiement, puis générez le jeton.",
     "Enable centralized monitoring": "Activer la surveillance centralisée",
     "Failed to load monitoring configuration.":
       "Échec du chargement de la configuration de surveillance.",
@@ -17858,6 +17862,8 @@ export const translations: Record<string, Record<string, string>> = {
   },
   es: {
     "Deployment name": "Nombre del despliegue",
+    "Save the deployment name first, then generate the token.":
+      "Primero guarde el nombre del despliegue y luego genere el token.",
     "Enable centralized monitoring": "Habilitar la supervisión centralizada",
     "Failed to load monitoring configuration.":
       "No se pudo cargar la configuración de supervisión.",

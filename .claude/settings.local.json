@@ -128,7 +128,8 @@
       "Bash(PORT=3055 nohup node dist/index.js)",
       "Bash(pkill -9 -f 'node dist/index.js')",
       "Bash(cat)",
-      "Bash(git check-ignore *)"
+      "Bash(git check-ignore *)",
+      "Bash(docker manifest *)"
     ]
   }
 }

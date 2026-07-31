@@ -223,11 +223,14 @@ const Monitoring: React.FC = () => {
           width="100%"
         />
         <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
-          The token is signed server-side with this deployment's private key and never shown here.
-          The observability server verifies it with the matching public key. A token can only be
+          <Box component="span" sx={{ fontWeight: 600 }}>
+            Save the deployment name first, then generate the token.
+          </Box>{" "}
+          The token is signed server-side for the saved deployment name (never shown here); the
+          observability server verifies it with the matching public key. A token can only be
           generated once.
           {!authHeaderSet && !canGenerateToken
-            ? " Save the deployment name first, then generate."
+            ? " The Generate button stays disabled until the deployment name is saved and matches the field above."
             : ""}
         </Typography>
         <Box>
