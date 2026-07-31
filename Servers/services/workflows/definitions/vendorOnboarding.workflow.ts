@@ -111,11 +111,19 @@ export const vendorOnboardingWorkflow: WorkflowDefinition = {
       handler: async (ctx: WorkflowContext): Promise<StepResult> => {
         const vendor = ctx.results.fetch_vendor as { vendor_name?: string } | undefined;
         const checks = ctx.results.run_risk_checks as { highSeverityCount?: number } | undefined;
+        // Pause on first visit; proceed on the post-approval resume so the run
+        // does not re-pause forever.
+        if (!ctx.resumedApprovalId) {
+          return {
+            type: "pause",
+            reason: `Follow-up tasks for ${vendor?.vendor_name || "vendor"} (${
+              checks?.highSeverityCount || 0
+            } high-severity risk(s)) require approval before creation`,
+          };
+        }
         return {
-          type: "pause",
-          reason: `Follow-up tasks for ${vendor?.vendor_name || "vendor"} (${
-            checks?.highSeverityCount || 0
-          } high-severity risk(s)) require approval before creation`,
+          type: "ok",
+          output: { followup_tasks_approved: true, vendor: vendor?.vendor_name ?? null },
         };
       },
     },

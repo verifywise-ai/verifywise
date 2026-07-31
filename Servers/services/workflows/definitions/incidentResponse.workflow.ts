@@ -86,23 +86,41 @@ async function linkRelatedRisks(ctx: WorkflowContext): Promise<StepResult> {
 
 /**
  * Step 3 — create remediation tasks. WRITE: gated for approval.
+ *
+ * Pauses on first visit; on the post-approval resume (resumedApprovalId set)
+ * the engine re-runs this step, which then records the approved outcome rather
+ * than pausing again.
  */
 async function createRemediationTasks(ctx: WorkflowContext): Promise<StepResult> {
   const classification = ctx.results.classify_incident as { incidentId?: number } | undefined;
+  if (!ctx.resumedApprovalId) {
+    return {
+      type: "pause",
+      reason: `Approve creation of remediation tasks for incident ${classification?.incidentId ?? "?"}`,
+    };
+  }
   return {
-    type: "pause",
-    reason: `Approve creation of remediation tasks for incident ${classification?.incidentId ?? "?"}`,
+    type: "ok",
+    output: { remediation_tasks_approved: true, incidentId: classification?.incidentId ?? null },
   };
 }
 
 /**
  * Step 4 — escalate and notify admins. WRITE: gated for approval.
+ *
+ * Pauses on first visit; proceeds on the post-approval resume.
  */
 async function escalateNotifyAdmins(ctx: WorkflowContext): Promise<StepResult> {
   const classification = ctx.results.classify_incident as { incidentId?: number } | undefined;
+  if (!ctx.resumedApprovalId) {
+    return {
+      type: "pause",
+      reason: `Approve admin escalation for critical incident ${classification?.incidentId ?? "?"}`,
+    };
+  }
   return {
-    type: "pause",
-    reason: `Approve admin escalation for critical incident ${classification?.incidentId ?? "?"}`,
+    type: "ok",
+    output: { escalation_approved: true, incidentId: classification?.incidentId ?? null },
   };
 }
 

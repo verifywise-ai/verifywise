@@ -16,6 +16,13 @@ export interface WorkflowContext {
   triggerPayload: Record<string, unknown>;
   /** Output of each completed step, keyed by step id. */
   results: Record<string, unknown>;
+  /**
+   * Set only when the run is being resumed after an approval was resolved. A
+   * gated write step re-runs on resume (the engine restarts AT the gating step,
+   * not after it), so the step uses this to tell "first visit → pause" apart
+   * from "approved → perform the write". Undefined on the initial run.
+   */
+  resumedApprovalId?: string | null;
 }
 
 /**

@@ -64,13 +64,17 @@ describe("workflows / modelDeploymentWorkflow definition", () => {
   });
 
   it("declares the steps in the expected order", () => {
+    // ready_report precedes notify_completion so both the evidence-gap path
+    // (create_evidence_task -> branch notify_completion) and the no-gap path
+    // (branch ready_report -> notify_completion) converge on notify_completion
+    // without the gap path falling through into ready_report.
     expect(modelDeploymentWorkflow.steps.map((s) => s.id)).toEqual([
       "risk_assessment",
       "control_coverage",
       "decide_evidence_gap",
       "create_evidence_task",
-      "notify_completion",
       "ready_report",
+      "notify_completion",
     ]);
   });
 
@@ -149,12 +153,14 @@ describe("workflows / modelDeploymentWorkflow handlers", () => {
     expect(res).toEqual({ type: "branch", gotoStepId: "ready_report" });
   });
 
-  it("create_evidence_task notifies admins and reports the evidence task was flagged", async () => {
+  it("create_evidence_task notifies admins and branches to the shared completion step", async () => {
     mockQuery.mockResolvedValueOnce([{ id: 11 }, { id: 12 }] as any); // getOrgAdmins
 
     const res = await stepById("create_evidence_task").handler(ctx());
 
-    expect(res).toEqual({ type: "ok", output: { evidence_task_flagged: true } });
+    // Branches to notify_completion so it does not fall through into
+    // ready_report and send a contradictory "passed all control checks" notice.
+    expect(res).toEqual({ type: "branch", gotoStepId: "notify_completion" });
     expect(mockNotify).toHaveBeenCalledTimes(1);
     const [orgArg, bulkArg] = mockNotify.mock.calls[0] as [number, any];
     expect(orgArg).toBe(1);
@@ -162,13 +168,36 @@ describe("workflows / modelDeploymentWorkflow handlers", () => {
     expect(bulkArg.metadata).toMatchObject({ workflow_run_id: 99 });
   });
 
-  it("create_evidence_task does not notify when there are no admins", async () => {
+  it("create_evidence_task does not notify when there are no admins but still branches to completion", async () => {
     mockQuery.mockResolvedValueOnce([] as any); // getOrgAdmins -> none
 
     const res = await stepById("create_evidence_task").handler(ctx());
 
-    expect(res).toEqual({ type: "ok", output: { evidence_task_flagged: true } });
+    expect(res).toEqual({ type: "branch", gotoStepId: "notify_completion" });
     expect(mockNotify).not.toHaveBeenCalled();
+  });
+
+  it("create_evidence_task pauses for approval on first visit when requireApproval is set", async () => {
+    const res = await stepById("create_evidence_task").handler(
+      ctx({ triggerPayload: { modelName: "Fraud Model", requireApproval: true } }),
+    );
+
+    expect(res).toMatchObject({ type: "pause" });
+    expect(mockNotify).not.toHaveBeenCalled();
+  });
+
+  it("create_evidence_task performs the write on resume instead of pausing again", async () => {
+    mockQuery.mockResolvedValueOnce([{ id: 11 }] as any); // getOrgAdmins
+
+    const res = await stepById("create_evidence_task").handler(
+      ctx({
+        triggerPayload: { modelName: "Fraud Model", requireApproval: true },
+        resumedApprovalId: "appr-1",
+      }),
+    );
+
+    expect(res).toEqual({ type: "branch", gotoStepId: "notify_completion" });
+    expect(mockNotify).toHaveBeenCalledTimes(1);
   });
 
   it("ready_report notifies admins and reports the report is ready", async () => {

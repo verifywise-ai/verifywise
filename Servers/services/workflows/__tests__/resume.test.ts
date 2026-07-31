@@ -4,8 +4,9 @@
  * resumeWorkflow(runId, approvalId, organizationId) continues a run that is
  * parked in 'awaiting_approval'. It loads the persisted run, looks up the
  * workflow definition from the registry by the run's workflow_type, and
- * re-enters the step loop AFTER the gating step (current_step + 1), driving
- * the run to 'completed'.
+ * re-enters the step loop AT the gating step (current_step) with
+ * ctx.resumedApprovalId set, so the gate's write runs (instead of being skipped)
+ * and the run drives to 'completed'.
  *
  * Persistence (sequelize.query) is mocked: the first SELECT returns the paused
  * run row; subsequent UPDATE/INSERT calls are no-ops we can assert on. No DB /
@@ -41,8 +42,15 @@ const ORG_ID = 1;
 const RUN_ID = 555;
 const APPROVAL_ID = "approval-abc";
 
-/** A 2-step workflow: a gating pause step, then a finishing step. */
-function pausedThenFinishWorkflow(afterHandler: () => void): WorkflowDefinition {
+/**
+ * A 2-step workflow: a gating step that pauses on first visit and performs its
+ * write on the post-approval resume, then a finishing step. `gateWrite` records
+ * that the gate's write body actually ran on resume.
+ */
+function pausedThenFinishWorkflow(
+  afterHandler: () => void,
+  gateWrite = () => {},
+): WorkflowDefinition {
   return {
     id: "resume_test_wf",
     name: "Resume Test Workflow",
@@ -51,10 +59,16 @@ function pausedThenFinishWorkflow(afterHandler: () => void): WorkflowDefinition 
     steps: [
       {
         id: "gate",
-        description: "gate (already paused/approved)",
+        description: "gate: pauses first, writes on resume",
         agent: "compliance",
         isWrite: true,
-        handler: async () => ({ type: "pause", reason: "needs approval" }),
+        handler: async (ctx) => {
+          if (!ctx.resumedApprovalId) {
+            return { type: "pause" as const, reason: "needs approval" };
+          }
+          gateWrite();
+          return { type: "ok" as const, output: { approved: true } };
+        },
       },
       {
         id: "finish",
@@ -100,13 +114,17 @@ describe("workflows / resumeWorkflow", () => {
     mockQuery.mockReset();
   });
 
-  it("continues a paused 'awaiting_approval' run to 'completed'", async () => {
+  it("re-runs the gating step's write on resume, then continues to 'completed'", async () => {
     const afterHandler = jest.fn();
-    register(pausedThenFinishWorkflow(afterHandler));
+    const gateWrite = jest.fn();
+    register(pausedThenFinishWorkflow(afterHandler, gateWrite));
     mockPausedRun();
 
     const run = await resumeWorkflow(RUN_ID, APPROVAL_ID, ORG_ID);
 
+    // Regression: the gating step must RE-RUN on resume so its write executes
+    // (previously the engine restarted at current_step + 1 and skipped it).
+    expect(gateWrite).toHaveBeenCalledTimes(1);
     // the finishing step ran on resume
     expect(afterHandler).toHaveBeenCalledTimes(1);
     // the run reached completion

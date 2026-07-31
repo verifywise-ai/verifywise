@@ -83,12 +83,24 @@ async function runPolicyRenewalScan(): Promise<void> {
   for (const org of orgs as Array<{ id: number }>) {
     const orgId = org.id;
     try {
+      // Dedup: the scan runs daily and a policy stays in the 30-day window for
+      // many consecutive days, so without this guard the same policy would spawn
+      // a fresh run (and re-notify its owner) every day. Skip a policy that
+      // already has a run for it within the current lead window.
       const policies = (await sequelize.query(
-        `SELECT id
-           FROM policy_manager
-          WHERE organization_id = :orgId
-            AND next_review_date IS NOT NULL
-            AND next_review_date BETWEEN CURRENT_DATE AND CURRENT_DATE + (:lead || ' days')::interval`,
+        `SELECT p.id
+           FROM policy_manager p
+          WHERE p.organization_id = :orgId
+            AND p.next_review_date IS NOT NULL
+            AND p.next_review_date BETWEEN CURRENT_DATE AND CURRENT_DATE + (:lead || ' days')::interval
+            AND NOT EXISTS (
+              SELECT 1
+                FROM ai_workflow_runs r
+               WHERE r.organization_id = :orgId
+                 AND r.workflow_type = 'policy_renewal'
+                 AND r.trigger_payload->>'policyId' = p.id::text
+                 AND r.created_at >= CURRENT_DATE - (:lead || ' days')::interval
+            )`,
         {
           replacements: { orgId, lead: POLICY_LEAD_DAYS },
           type: QueryTypes.SELECT,

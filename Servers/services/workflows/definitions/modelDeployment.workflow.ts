@@ -154,8 +154,11 @@ export const modelDeploymentWorkflow: WorkflowDefinition = {
           requireApproval?: boolean;
         };
         // Write step: gate behind approval when the trigger requests it so
-        // the engine can pause the run in 'awaiting_approval'.
-        if (trigger.requireApproval) {
+        // the engine can pause the run in 'awaiting_approval'. On the
+        // post-approval resume the engine re-runs this step with
+        // resumedApprovalId set, so it proceeds to the write instead of
+        // pausing again.
+        if (trigger.requireApproval && !ctx.resumedApprovalId) {
           return { type: "pause", reason: "Evidence collection task requires approval" };
         }
         await notifyAdmins(
@@ -163,22 +166,10 @@ export const modelDeploymentWorkflow: WorkflowDefinition = {
           "Model deployment requires evidence",
           `${trigger.modelName || "A model"} has been deployed but has open control gaps. Please assign evidence collection.`,
         );
-        return { type: "ok", output: { evidence_task_flagged: true } };
-      },
-    },
-    {
-      id: "notify_completion",
-      description: "Notify admins workflow completed",
-      agent: "model",
-      isWrite: false,
-      handler: async (ctx): Promise<StepResult> => {
-        const trigger = ctx.triggerPayload as { modelName?: string };
-        await notifyAdmins(
-          ctx,
-          "Model deployment workflow completed",
-          `Compliance review for ${trigger.modelName || "a model"} finished. See workflow run ${ctx.workflowRunId}.`,
-        );
-        return { type: "ok", output: { notified: true } };
+        // Converge on the shared completion step. Without this branch the run
+        // would fall through into ready_report and also send a contradictory
+        // "passed all control checks" notification for a model that has gaps.
+        return { type: "branch", gotoStepId: "notify_completion" };
       },
     },
     {
@@ -194,6 +185,21 @@ export const modelDeploymentWorkflow: WorkflowDefinition = {
           `Deployment for ${trigger.modelName || "a model"} passed all control checks.`,
         );
         return { type: "ok", output: { report_ready: true } };
+      },
+    },
+    {
+      id: "notify_completion",
+      description: "Notify admins workflow completed",
+      agent: "model",
+      isWrite: false,
+      handler: async (ctx): Promise<StepResult> => {
+        const trigger = ctx.triggerPayload as { modelName?: string };
+        await notifyAdmins(
+          ctx,
+          "Model deployment workflow completed",
+          `Compliance review for ${trigger.modelName || "a model"} finished. See workflow run ${ctx.workflowRunId}.`,
+        );
+        return { type: "ok", output: { notified: true } };
       },
     },
   ],

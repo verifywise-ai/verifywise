@@ -59,8 +59,10 @@ const steps: WorkflowStep[] = [
     agent: "compliance-agent",
     isWrite: true,
     handler: async (ctx) => {
-      // Gate the write: pause for approval until the trigger payload approves it.
-      if (ctx.triggerPayload.approved !== true) {
+      // Gate the write: pause for approval unless the trigger already approved
+      // it, or this is the post-approval resume (the engine re-runs this step
+      // after the approval resolves).
+      if (ctx.triggerPayload.approved !== true && !ctx.resumedApprovalId) {
         return {
           type: "pause",
           reason: "Audit-preparation report requires approval before publishing.",

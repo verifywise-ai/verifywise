@@ -389,8 +389,13 @@ async function resumeWorkflow(
   }
 
   // Rebuild the per-step results map from the persisted step records so
-  // downstream steps see the outputs produced before the pause.
-  const records: StepRecord[] = Array.isArray(run.results) ? run.results : [];
+  // downstream steps see the outputs produced before the pause. Drop the
+  // gating step's own record: it is re-executed on resume (see below), so its
+  // pause-marker output must not linger in ctx.results or the records list.
+  const gatingStep = workflow.steps[run.currentStep];
+  const records: StepRecord[] = (Array.isArray(run.results) ? run.results : []).filter(
+    (r) => r.stepId !== gatingStep?.id,
+  );
   const results: Record<string, unknown> = {};
   for (const r of records) {
     if (r.status === "completed" || r.status === "skipped") {
@@ -409,6 +414,9 @@ async function resumeWorkflow(
     userId: run.startedBy,
     triggerPayload: run.triggerPayload || {},
     results,
+    // Marks this as a post-approval resume so the gating step performs its
+    // write instead of pausing again.
+    resumedApprovalId: approvalId,
   };
 
   await persistRun(runId, organizationId, "running", run.currentStep, records);
@@ -417,9 +425,10 @@ async function resumeWorkflow(
     fromStep: run.currentStep,
   });
 
-  // The gating step at run.currentStep already did its job by pausing;
-  // continue from the next step.
-  return executeStepLoop(workflow, runId, params, ctx, records, run.currentStep + 1);
+  // Re-enter AT the gating step (not after it): the pause was the gate, and the
+  // step's actual write lives past that gate. Skipping it would drop the write
+  // and leave downstream steps reading an empty/paused output.
+  return executeStepLoop(workflow, runId, params, ctx, records, run.currentStep);
 }
 
 async function loadRun(id: number, organizationId: number): Promise<WorkflowRun | null> {
