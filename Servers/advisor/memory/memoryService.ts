@@ -33,7 +33,7 @@ export async function saveMessage(
   content: string,
   metadata?: Record<string, unknown>,
 ): Promise<void> {
-  const trace = startTrace(userId, sessionId, { fn: "saveMessage", agentName });
+  const trace = startTrace(userId, sessionId, { fn: "saveMessage", agentName }, organizationId);
   const span = startSpan(trace, "memory:write", { agentName, role });
   try {
     await saveMessageImpl(organizationId, agentName, userId, sessionId, role, content, metadata);
@@ -111,7 +111,7 @@ export async function getMessages(
 ): Promise<
   Array<{ role: string; content: string; created_at: string; metadata: Record<string, unknown> }>
 > {
-  const trace = startTrace(0, sessionId, { fn: "getMessages", agentName });
+  const trace = startTrace(0, sessionId, { fn: "getMessages", agentName }, organizationId);
   const span = startSpan(trace, "memory:read", { agentName });
   try {
     const rows = await getMessagesImpl(organizationId, agentName, sessionId, limit);

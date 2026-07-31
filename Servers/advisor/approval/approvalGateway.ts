@@ -154,11 +154,16 @@ async function updateApprovalRecord(
 export async function submitForApproval(
   config: SubmitForApprovalConfig,
 ): Promise<ApprovalSubmitResult> {
-  const trace = startTrace(config.userId ?? 0, "", {
-    fn: "submitForApproval",
-    toolName: config.toolName,
-    riskLevel: config.riskLevel,
-  });
+  const trace = startTrace(
+    config.userId ?? 0,
+    "",
+    {
+      fn: "submitForApproval",
+      toolName: config.toolName,
+      riskLevel: config.riskLevel,
+    },
+    config.organizationId,
+  );
   const span = startSpan(trace, "approval:submit", { toolName: config.toolName });
   try {
     const result = await submitForApprovalImpl(config);
@@ -418,7 +423,7 @@ export async function approveAction(
   id: string,
   userId: number,
 ): Promise<{ success: boolean; result?: unknown; error?: string }> {
-  const trace = startTrace(userId, "", { fn: "approveAction", approvalId: id });
+  const trace = startTrace(userId, "", { fn: "approveAction", approvalId: id }, organizationId);
   const span = startSpan(trace, "approval:approve", { approvalId: id });
   try {
     const result = await approveActionImpl(organizationId, id, userId);
@@ -627,7 +632,7 @@ export async function rejectAction(
   userId: number,
   reason?: string,
 ): Promise<{ success: boolean; error?: string }> {
-  const trace = startTrace(userId, "", { fn: "rejectAction", approvalId: id });
+  const trace = startTrace(userId, "", { fn: "rejectAction", approvalId: id }, organizationId);
   const span = startSpan(trace, "approval:reject", { approvalId: id });
   try {
     const result = await rejectActionImpl(organizationId, id, userId, reason);

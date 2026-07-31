@@ -83,15 +83,51 @@ export async function findDueScheduledReportsQuery(now: Date): Promise<any[]> {
   );
 }
 
+/**
+ * Atomically claim a due scheduled report by advancing its next_run_at.
+ *
+ * The UPDATE is guarded by `next_run_at = :expectedNextRun` (the value the tick
+ * read when selecting the row) so it acts as a compare-and-swap: only the first
+ * tick to run the UPDATE matches and advances the row; a concurrent overlapping
+ * tick sees the already-advanced value, matches zero rows, and must skip the
+ * report. Returns true only for the tick that won the claim, which prevents the
+ * same scheduled slot from being delivered twice.
+ *
+ * When expectedNextRun is null the guard falls back to id-only (unconditional),
+ * preserving the previous behaviour for rows without a prior next_run_at.
+ */
 export async function markRunEnqueuedQuery(
   id: number,
   lastRun: Date,
   nextRun: Date,
-): Promise<void> {
-  await sequelize.query(
-    `UPDATE scheduled_reports SET last_run_at = :lastRun, next_run_at = :nextRun, updated_at = NOW() WHERE id = :id`,
-    { replacements: { id, lastRun, nextRun }, type: QueryTypes.UPDATE },
+  expectedNextRun?: Date | null,
+): Promise<boolean> {
+  // The expected value is a JS Date (millisecond precision) while next_run_at is
+  // a TIMESTAMPTZ (microsecond precision). Compare both at millisecond precision
+  // via date_trunc so a microsecond-precise stored value still matches the bound
+  // value and the claim doesn't silently fail forever.
+  const [, meta] = await sequelize.query(
+    `UPDATE scheduled_reports
+       SET last_run_at = :lastRun, next_run_at = :nextRun, updated_at = NOW()
+     WHERE id = :id
+       AND is_active = true
+       AND deleted_at IS NULL
+       ${
+         expectedNextRun != null
+           ? "AND date_trunc('milliseconds', next_run_at) = date_trunc('milliseconds', :expectedNextRun::timestamptz)"
+           : ""
+       }`,
+    {
+      replacements: { id, lastRun, nextRun, expectedNextRun: expectedNextRun ?? null },
+      type: QueryTypes.UPDATE,
+    },
   );
+  // Sequelize's raw UPDATE returns [results, metadata]; with the pg driver the
+  // affected-row count is metadata.rowCount, not a bare number. Only the tick
+  // whose CAS matched a row (rowCount > 0) has won the claim.
+  const rowCount =
+    typeof meta === "number" ? meta : ((meta as unknown as { rowCount?: number })?.rowCount ?? 0);
+  return rowCount > 0;
 }
 
 // Editable fields only. organization_id, template_id, template_version_id and

@@ -15,6 +15,8 @@ describe("handleReportSchedulerTick", () => {
     findDue.mockReset();
     markEnqueued.mockReset();
     runScheduledReport.mockReset();
+    // Default: the claim succeeds unless a test overrides it.
+    markEnqueued.mockResolvedValue(true);
   });
   it("runs each due report and advances next_run", async () => {
     findDue.mockResolvedValue([
@@ -27,6 +29,34 @@ describe("handleReportSchedulerTick", () => {
   it("no due reports -> no runs", async () => {
     findDue.mockResolvedValue([]);
     await handleReportSchedulerTick();
+    expect(runScheduledReport).not.toHaveBeenCalled();
+  });
+  it("passes the current next_run_at as the expected value for the atomic claim", async () => {
+    const nextRunAt = "2026-07-31T09:00:00.000Z";
+    findDue.mockResolvedValue([
+      {
+        id: 3,
+        next_run_at: nextRunAt,
+        schedule_config: { frequency: "daily", hour: 9, minute: 0, timezone: "UTC" },
+      },
+    ]);
+    await handleReportSchedulerTick();
+    const [id, , , expectedNextRun] = markEnqueued.mock.calls[0];
+    expect(id).toBe(3);
+    expect(expectedNextRun).toEqual(new Date(nextRunAt));
+  });
+  it("skips the report when the atomic claim is lost to a concurrent tick", async () => {
+    findDue.mockResolvedValue([
+      {
+        id: 3,
+        next_run_at: "2026-07-31T09:00:00.000Z",
+        schedule_config: { frequency: "daily", hour: 9, minute: 0, timezone: "UTC" },
+      },
+    ]);
+    // A concurrent tick already advanced next_run_at -> compare-and-swap matches 0 rows.
+    markEnqueued.mockResolvedValue(false);
+    await handleReportSchedulerTick();
+    expect(markEnqueued).toHaveBeenCalledTimes(1);
     expect(runScheduledReport).not.toHaveBeenCalled();
   });
 });

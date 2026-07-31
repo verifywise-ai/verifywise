@@ -354,12 +354,17 @@ export async function* streamAdvisorAiSdk(
   logger.debug(`[AI-SDK] streamAdvisor started for ${params.provider} with model ${params.model}`);
 
   // Open a Langfuse trace (no-op when unconfigured).
-  const traceHandle = startTrace(params.userId ?? 0, params.sessionId ?? "", {
-    provider: params.provider,
-    model: params.model,
-    agent: params.agentName || "advisor",
-    fn: "streamAdvisorAiSdk",
-  });
+  const traceHandle = startTrace(
+    params.userId ?? 0,
+    params.sessionId ?? "",
+    {
+      provider: params.provider,
+      model: params.model,
+      agent: params.agentName || "advisor",
+      fn: "streamAdvisorAiSdk",
+    },
+    params.tenant,
+  );
 
   const model = createModel(params);
   const tools = await buildRoutedTools(params);
@@ -468,12 +473,17 @@ export async function runAdvisorAiSdk(params: AiSdkAdvisorParams): Promise<strin
 
   // Open a Langfuse trace for this run. No-ops when Langfuse is unconfigured
   // (traceHandle stays null and every traceManager call below is a no-op).
-  const traceHandle = startTrace(params.userId ?? 0, params.sessionId ?? "", {
-    provider: params.provider,
-    model: params.model,
-    agent: params.agentName || "advisor",
-    fn: "runAdvisorAiSdk",
-  });
+  const traceHandle = startTrace(
+    params.userId ?? 0,
+    params.sessionId ?? "",
+    {
+      provider: params.provider,
+      model: params.model,
+      agent: params.agentName || "advisor",
+      fn: "runAdvisorAiSdk",
+    },
+    params.tenant,
+  );
 
   const model = createModel(params);
   const tools = await buildRoutedTools(params);
@@ -557,12 +567,17 @@ export async function getStreamTextResult(params: AiSdkAdvisorParams) {
 
   // Open a Langfuse trace (no-op when unconfigured). Closed in onFinish /
   // onError below since the streamText result is handed back to the caller.
-  const traceHandle = startTrace(params.userId ?? 0, params.sessionId ?? "", {
-    provider: params.provider,
-    model: params.model,
-    agent: params.agentName || "advisor",
-    fn: "getStreamTextResult",
-  });
+  const traceHandle = startTrace(
+    params.userId ?? 0,
+    params.sessionId ?? "",
+    {
+      provider: params.provider,
+      model: params.model,
+      agent: params.agentName || "advisor",
+      fn: "getStreamTextResult",
+    },
+    params.tenant,
+  );
 
   // Persist the inbound user turn before the stream begins. Memory writes
   // are best-effort and never block the stream.

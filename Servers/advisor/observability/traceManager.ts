@@ -23,22 +23,46 @@ interface SpanHandle {
 }
 
 /**
+ * Tag prefix used to bind a Langfuse trace to the organization that produced it.
+ * Langfuse traces live in a single shared project, so this tag is the only tenant
+ * boundary the observability read APIs can filter/verify against. See
+ * observability.ctrl.ts for the read-side enforcement.
+ */
+export const ORG_TAG_PREFIX = "org:";
+
+/** Build the org-scoping tag for a given organization id. */
+export function orgTag(organizationId: number): string {
+  return `${ORG_TAG_PREFIX}${organizationId}`;
+}
+
+/**
  * Start a new trace for a user interaction.
+ *
+ * Every trace is tagged with `org:<organizationId>` so the observability read
+ * endpoints can scope by tenant — Langfuse has no native org concept and all
+ * orgs share one project. When organizationId is omitted the trace carries no
+ * org tag and is therefore invisible to every org's scoped reads.
  */
 export function startTrace(
   userId: number,
   sessionId: string,
   metadata?: Record<string, unknown>,
+  organizationId?: number,
 ): TraceHandle | null {
   const langfuse = getLangfuse();
   if (!langfuse) return null;
 
   try {
+    const tags = organizationId != null ? [orgTag(organizationId)] : undefined;
     const trace = langfuse.trace({
       name: "agent-interaction",
       userId: String(userId),
       sessionId,
-      metadata: metadata || {},
+      tags,
+      metadata: {
+        ...(metadata || {}),
+        ...(organizationId != null ? { organization_id: organizationId } : {}),
+      },
     });
 
     return { traceId: trace.id, trace };
