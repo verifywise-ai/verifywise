@@ -1,6 +1,6 @@
 # Reporting Domain
 
-> **Last Updated:** 2026-07-29
+> **Last Updated:** 2026-08-02
 
 ## Overview
 
@@ -1133,6 +1133,29 @@ Every one of the three is scoped by `organization_id` in its `WHERE` clause, and
 
 **A `schedule_config` change recomputes `next_run_at`.** Without this the stored value would still reflect the old cron expression, and the schedule would keep firing on its previous cadence until the next run rewrote it.
 
+#### One Rule, Applied to Every Produce-Side Endpoint
+
+The read side has `canViewRunQuery` ([above](#one-rule-applied-to-every-per-run-endpoint)); the side that *produces* a report has `assertReportScopeAllowed` (`Servers/services/reporting/reportAuthorization.ts`). The two apply the same membership predicate in opposite directions — one gates who may *see* a run, the other gates who may *create, edit or trigger* one.
+
+The rule, in order: Admin and SuperAdmin bypass it entirely. `"organization"` scope requires Admin — it is the union of every project in the tenant, and no membership predicate can narrow that. `"project"` scope requires a `projectId` and requires the caller to be the project's owner or a member (`projects_members`), the identical predicate `canViewRunQuery` and `project.utils.ts`'s `getAllProjectsQuery` use.
+
+`assertReportScopeAllowed` runs from five controller call sites, each supplying the scope it is about to act on:
+
+| Controller function | Scope evaluated |
+|---|---|
+| `createScheduledReport` | `body.scope`, `body.projectId` |
+| `updateScheduledReport` | the **effective post-patch** scope/projectId — the row's stored values with the patch applied, computed even when the patch itself carries neither field, since `deliveryConfig` alone can redirect who receives the report |
+| `runScheduledReportNow` and `resumeScheduledReport` | the stored schedule's `scope` and `project_id` |
+| `runTemplateNow` | the resolved scope — an omitted body defaults to `"organization"`, the widest case, so an absent scope is refused for a non-Admin rather than silently permitted |
+
+**Refusal is 403, not 404.** This diverges from the read side deliberately: the read side hides a denied run behind a 404 to avoid confirming another organization's id exists over a sequential id space, but every produce-side call already knows its own organization's row — there is nothing to hide, and the client needs to distinguish "malformed request" (400) from "not allowed" (403). Validation is ordered before authorization on every one of these endpoints, so a malformed body still gets its 400 even for a caller who would otherwise be refused.
+
+**Every field a PATCH can touch is covered, not only `scope` and `projectId`.** `updateScheduledReport` fetches the row unconditionally and authorizes against its post-patch scope on every PATCH — including one that touches only `deliveryConfig`. A PATCH carrying `{ deliveryConfig: { attachFile: true, recipients: [...] } }` and nothing else can redirect a project schedule's email recipients without ever mentioning `scope` or `projectId`; fetching the row (and therefore authorizing) only when those two fields were present in the body left exactly that path ungated. `resumeScheduledReport` is gated the same way, since resuming re-enables delivery on whatever scope the schedule already has.
+
+`generateReportsV2` (`POST /api/reporting/v2/generate-report`) needs no equivalent call: that route is already `authorize(["Admin"])` at the route level, and Admins bypass the rule regardless.
+
+**The scheduler is the deliberate exception.** `reportSchedulerJobs` has no authenticated user, so it cannot enforce the rule the way a request handler can — schedules that predate the rule keep running rather than breaking delivery silently on deploy. It still calls `assertReportScopeAllowed` for every due schedule, using the owner's real role (`findDueScheduledReportsQuery` joins `users`/`roles` to get it, rather than passing a hard-coded `role: null` that would fail even an Admin's own schedule), and logs a warning naming the schedule on a non-empty result before running it anyway — turning "we tightened the rule" into an actionable cleanup list instead of either breaking things or staying silent.
+
 ### Frontend Schedule Management
 
 The Reporting UI can now edit and delete schedules. Note that the soft-delete endpoint had existed since the reporting MVP **with no caller at all** — it was reachable only by hand-crafting a request.
@@ -1147,7 +1170,7 @@ The wizard (`ConfigureReportWizard.tsx`) now:
 
 | Operation | Access |
 |-----------|--------|
-| Writes (create/update/run-now/pause/resume/delete scheduled reports) | Admin / Editor (via `authorize` middleware) |
+| Writes (create/update/run-now/pause/resume/delete scheduled reports) | Admin / Editor via `authorize` middleware, additionally scope-gated by `assertReportScopeAllowed` — organization scope requires Admin, project scope requires ownership or membership (Admin/SuperAdmin unrestricted); refusal is **403** — see [One Rule, Applied to Every Produce-Side Endpoint](#one-rule-applied-to-every-produce-side-endpoint) |
 | Template writes (create / update / archive) | Admin / Editor (via `authorize` middleware) |
 | Reads (section catalog, templates, scheduled reports, runs) | Any authenticated user (JWT) |
 | Any single run — fetch, download, analyses, archive, restore, delete | Authenticated + org-scoped + project-membership-scoped via `canViewRunQuery` (Admin/SuperAdmin unrestricted); denial is 404 — see [One Rule, Applied to Every Per-Run Endpoint](#one-rule-applied-to-every-per-run-endpoint) |
