@@ -20,6 +20,7 @@ import { requestGateApproval } from "../../services/workflows/approvalGate";
 import { approveAction, rejectAction } from "../../advisor/approval/approvalGateway";
 import { WorkflowDefinition } from "../../services/workflows/types";
 import { createTestOrganization, createTestUser, cleanupDatabase } from "./helpers";
+import * as aiAuditTrail from "../../services/aiAuditTrail.service";
 
 const twoGateWorkflow: WorkflowDefinition = {
   id: "gate_probe",
@@ -66,36 +67,77 @@ async function approvalRow(id: string) {
   return rows[0];
 }
 
+async function auditLogCount(workflowRunId: number): Promise<number> {
+  const rows = (await sequelize.query(
+    `SELECT COUNT(*)::int AS c FROM ai_action_audit_log WHERE workflow_run_id = :workflowRunId`,
+    { replacements: { workflowRunId }, type: QueryTypes.SELECT },
+  )) as Array<{ c: number }>;
+  return rows[0].c;
+}
+
+// approveAction/rejectAction/submitWorkflowGate fire a state-history audit
+// write (logStateHistory(...).catch(() => {})) without awaiting it. Left
+// alone, that write can outlive the call that triggered it and:
+//   - race the NEXT test's cleanupDatabase() TRUNCATE (a still-in-flight
+//     INSERT referencing an org that is about to be deleted), surfacing as a
+//     non-fatal but noisy "deadlock detected" / FK-violation log line from
+//     aiAuditTrail.service; or
+//   - race afterAll's sequelize.close(): a query that is still in flight when
+//     the pool closes under it can throw somewhere logTransition's own
+//     try/catch doesn't reach, which Jest reports as a bare "Test suite
+//     failed to run" with no message — destroying every test's signal in the
+//     file, not just one assertion. Reproduced directly: with no drain at all
+//     before sequelize.close(), this crash fires reliably; a fixed 500ms
+//     sleep in its place made it go away in this environment, but "long
+//     enough on this machine" is not a bound anyone can rely on in CI.
+//
+// Rather than bet on a fixed sleep being long enough under CI load (this
+// suite runs eighth in a shared --runInBand pass), spy on logStateHistory —
+// the single choke point every one of those fire-and-forget calls goes
+// through — and explicitly await every promise it hands back before the next
+// destructive operation. This works because aiAuditTrail.service.ts and this
+// test file both go through TypeScript's commonjs + esModuleInterop output:
+// `import * as aiAuditTrail from "./aiAuditTrail.service"` resolves to the
+// SAME exports object approvalGateway.ts's compiled `logStateHistory(...)`
+// calls do a property lookup on, so replacing the property here is visible
+// there too (verified: pendingAuditWrites is non-empty after every
+// approveAction/rejectAction call in this file, and the drain removes the
+// crash without weakening or skipping any assertion).
+let pendingAuditWrites: Promise<unknown>[] = [];
+
+async function drainAuditWrites(): Promise<void> {
+  const toDrain = pendingAuditWrites;
+  pendingAuditWrites = [];
+  await Promise.allSettled(toDrain);
+}
+
 describe("workflow approval gate end to end", () => {
   let orgId: number;
   let adminId: number;
 
-  beforeAll(() => register(twoGateWorkflow));
+  beforeAll(() => {
+    register(twoGateWorkflow);
+    const original = aiAuditTrail.logStateHistory;
+    jest.spyOn(aiAuditTrail, "logStateHistory").mockImplementation((...args) => {
+      const p = original(...args);
+      pendingAuditWrites.push(p);
+      return p;
+    });
+  });
 
-  // approveAction/rejectAction fire a state-history audit write
-  // (logStateHistory(...).catch(() => {})) without awaiting it. The write
-  // outlives the call that triggered it, so the next test's cleanupDatabase()
-  // TRUNCATE can race a still-in-flight INSERT that references the org this
-  // test is about to delete — surfacing as a non-fatal but noisy "deadlock
-  // detected" / FK-violation log line from aiAuditTrail.service. Draining here
-  // is a test-side mitigation for a real gap in the production code (the
-  // promise should be awaited or otherwise tracked); it is not masking this
-  // suite's own assertions, only giving stray background writes from the
-  // PREVIOUS test time to land before the next TRUNCATE.
   beforeEach(async () => {
-    await new Promise((r) => setTimeout(r, 100));
+    // Drain the PREVIOUS test's stray writes before truncating out from
+    // under them.
+    await drainAuditWrites();
     await cleanupDatabase();
     orgId = await createTestOrganization("Gate org");
     adminId = await createTestUser(orgId, 1, `gate-admin-${Date.now()}@test.com`, "Password123!");
   });
 
   afterAll(async () => {
-    // Same race as above, but against sequelize.close(): a still-in-flight
-    // fire-and-forget audit write can throw once the pool is closed under it,
-    // which Jest reports as a bare "Test suite failed to run" with no message
-    // (confirmed by reproducing it with this drain removed). Draining first
-    // lets those writes finish before the pool goes away.
-    await new Promise((r) => setTimeout(r, 500));
+    // Drain this file's last test before closing the pool out from under it.
+    await drainAuditWrites();
+    jest.restoreAllMocks();
     await cleanupDatabase();
     await sequelize.close();
   });
@@ -180,6 +222,9 @@ describe("workflow approval gate end to end", () => {
 
     const result = await approveAction(orgId, first, adminId);
     expect(result.success).toBe(false);
+    // The test's own name is a claim about persisted state, not just the
+    // return value: the gate must actually be written back as failed.
+    expect((await approvalRow(first)).state).toBe("failed");
   });
 
   it("resume is a no-op for a run that is not awaiting approval", async () => {
@@ -189,7 +234,14 @@ describe("workflow approval gate end to end", () => {
     const second = (await runRow(run.id)).awaiting_approval_id!;
     await approveAction(orgId, second, adminId);
 
+    // The run is already 'completed' before this call, so it would read
+    // back as 'completed' whether resumeWorkflow genuinely declined to act
+    // OR silently re-ran the step loop and coincidentally landed on the same
+    // terminal state. Counting audit rows before/after is what tells those
+    // apart: a real no-op writes nothing further to the trail.
+    const auditCountBefore = await auditLogCount(run.id);
     const again = await resumeWorkflow(run.id, second, orgId);
     expect(again?.state).toBe("completed");
+    expect(await auditLogCount(run.id)).toBe(auditCountBefore);
   });
 });
