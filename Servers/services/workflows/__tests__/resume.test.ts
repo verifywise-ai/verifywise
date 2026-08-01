@@ -173,3 +173,94 @@ describe("workflows / resumeWorkflow", () => {
     expect(persistStates()).not.toContain("running");
   });
 });
+
+describe("resumedApprovalId scoping", () => {
+  beforeEach(() => {
+    mockQuery.mockReset();
+  });
+
+  it("is cleared once the gating step completes, so a later gate pauses again", async () => {
+    // incident_response has two gated write steps. With resumedApprovalId left
+    // set for the rest of the loop, approving the first would silently
+    // authorize the second — one human decision permitting two gated writes.
+    const seen: Array<string | null | undefined> = [];
+    const twoGateWorkflow: WorkflowDefinition = {
+      id: "two_gate_probe",
+      name: "Two gate probe",
+      triggerName: "two.gate.probe",
+      agents: ["probe"],
+      steps: [
+        {
+          id: "first_gate",
+          description: "gated",
+          agent: "probe",
+          isWrite: true,
+          handler: async (ctx) => {
+            seen.push(ctx.resumedApprovalId);
+            if (!ctx.resumedApprovalId) {
+              return { type: "pause" as const, reason: "first", approvalId: "appr-1" };
+            }
+            return { type: "ok" as const, output: { first: true } };
+          },
+        },
+        {
+          id: "second_gate",
+          description: "gated",
+          agent: "probe",
+          isWrite: true,
+          handler: async (ctx) => {
+            seen.push(ctx.resumedApprovalId);
+            if (!ctx.resumedApprovalId) {
+              return { type: "pause" as const, reason: "second", approvalId: "appr-2" };
+            }
+            return { type: "ok" as const, output: { second: true } };
+          },
+        },
+      ],
+    };
+    register(twoGateWorkflow);
+
+    // Simulate the state the engine persists when it pauses at step 0. This
+    // file doesn't have a shared "load a run row" helper (mockPausedRun above
+    // is hardwired to the resume_test_wf fixture), so this mocks
+    // sequelize.query directly, following the same SELECT/no-op shape.
+    mockQuery.mockImplementation((sql: string) => {
+      if (String(sql).includes("SELECT") && String(sql).includes("ai_workflow_runs")) {
+        return Promise.resolve([
+          {
+            id: 1,
+            organization_id: 1,
+            workflow_type: "two_gate_probe",
+            trigger_name: "two.gate.probe",
+            trigger_payload: {},
+            state: "awaiting_approval",
+            current_step: 0,
+            results: [],
+            error: null,
+            started_by: null,
+            created_at: new Date().toISOString(),
+            completed_at: null,
+          },
+        ] as any);
+      }
+      return Promise.resolve([] as any);
+    });
+
+    const run = await resumeWorkflow(1, "appr-1", 1);
+
+    // The first step saw the approval and proceeded; the second saw nothing
+    // and paused for its own.
+    expect(seen).toHaveLength(2);
+    expect(seen[0]).toBe("appr-1");
+    expect(seen[1]).toBeUndefined();
+    expect(run?.state).toBe("awaiting_approval");
+
+    // Not just "some" pause: confirm it parked under the SECOND gate's own
+    // approvalId, not a reuse of the first. That's the actual security
+    // property — a fresh human decision is required for the second write.
+    const pauseCall = mockQuery.mock.calls.find(
+      (c) => (c[1] as any)?.replacements?.state === "awaiting_approval",
+    );
+    expect((pauseCall?.[1] as any)?.replacements?.awaitingApprovalId).toBe("appr-2");
+  });
+});

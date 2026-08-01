@@ -177,6 +177,11 @@ async function executeStepLoop(
   workflow.steps.forEach((s, i) => stepIndex.set(s.id, i));
 
   let i = startIndex;
+  // resumeWorkflow re-enters AT the gating step with ctx.resumedApprovalId set
+  // so that step performs its write instead of pausing again. It must not stay
+  // set beyond that step: incident_response has two gated writes, and a single
+  // approval would otherwise authorize both.
+  const resumeIndex = ctx.resumedApprovalId ? startIndex : -1;
   while (i < workflow.steps.length) {
     const step = workflow.steps[i];
     const startedAt = new Date().toISOString();
@@ -305,6 +310,15 @@ async function executeStepLoop(
       return buildRun(workflow, workflowRunId, params, "failed", i, records, outcome.error);
     }
     await persistRun(workflowRunId, organizationId, "running", i, records);
+
+    // resumedApprovalId is scoped to the gating step alone: clear it once that
+    // step has run its course (ok/skip/branch), regardless of which of those
+    // outcomes fired. `i` may have jumped via branch, so compare step identity
+    // rather than the loop index. fail/pause return earlier and never reach
+    // here — the run is no longer looping, so there is nothing to scope.
+    if (resumeIndex >= 0 && step === workflow.steps[resumeIndex]) {
+      ctx.resumedApprovalId = undefined;
+    }
   }
 
   await persistRun(workflowRunId, organizationId, "completed", workflow.steps.length, records);
