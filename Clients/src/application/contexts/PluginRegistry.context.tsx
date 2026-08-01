@@ -114,6 +114,15 @@ export function PluginRegistryProvider({ children }: PluginRegistryProviderProps
   // Use ref for loadedBundles to avoid stale closure issues in loadPluginUI callback
   const loadedBundlesRef = React.useRef<Set<string>>(new Set());
 
+  // Avoid fetching plugins on public auth pages (e.g. /login) where there is no
+  // authenticated user. This keeps the hook independent of react-redux so it
+  // can be tested without a Redux <Provider>.
+  const isPublicAuthPage =
+    typeof window !== "undefined" &&
+    ["/login", "/login-microsoft", "/register", "/reset-password"].includes(
+      window.location.pathname,
+    );
+
   // Fetch installed plugins with React Query caching
   const { data: installedPlugins = [], isLoading } = useQuery({
     queryKey: PLUGINS_QUERY_KEY,
@@ -123,6 +132,7 @@ export function PluginRegistryProvider({ children }: PluginRegistryProviderProps
     },
     staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
     gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+    enabled: !isPublicAuthPage,
   });
 
   const refreshPlugins = useCallback(async () => {

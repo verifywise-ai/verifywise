@@ -115,6 +115,7 @@ def client(patched_controllers, no_background_task, fake_get_db):
 
 def _headers(org_id: int = 7) -> Dict[str, str]:
     return {
+        "x-internal-key": "test-internal-key",
         "x-organization-id": str(org_id),
         "x-user-id": "42",
         "x-role": "Editor",
@@ -132,7 +133,10 @@ def test_legacy_tenant_id_header_is_accepted_by_middleware(client) -> None:
     `_get_organization_id` raises 400 from inside the route. Confirms middleware
     accepts the legacy tenant header without raising.
     """
-    res = client.get("/deepeval/experiments", headers={"x-tenant-id": "legacy-tenant-hash"})
+    res = client.get(
+        "/deepeval/experiments",
+        headers={"x-internal-key": "test-internal-key", "x-tenant-id": "legacy-tenant-hash"},
+    )
     assert res.status_code == 400
 
 
@@ -291,3 +295,23 @@ def test_validate_model_returns_error_when_no_key(
     body = res.json()
     assert body["valid"] is False
     assert "ANTHROPIC_API_KEY" in (body["error_message"] or "")
+
+
+
+# --------------------------------------------------------------------------- #
+# Middleware: internal-key authentication                                      #
+# --------------------------------------------------------------------------- #
+
+
+def test_missing_internal_key_is_rejected(client) -> None:
+    """Requests without the shared secret must not be able to set tenant context."""
+    res = client.get("/deepeval/experiments", headers={"x-organization-id": "7"})
+    assert res.status_code == 401
+
+
+def test_invalid_internal_key_is_rejected(client) -> None:
+    res = client.get(
+        "/deepeval/experiments",
+        headers={"x-internal-key": "wrong-key", "x-organization-id": "7"},
+    )
+    assert res.status_code == 401

@@ -61,6 +61,54 @@ updates:
     commit-message:
       prefix: "deps(eval):"
 
+  # AIGateway - Python dependencies
+  - package-ecosystem: "pip"
+    directory: "/AIGateway"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "bluewave-labs/verifywise-maintainers"
+    labels:
+      - "dependencies"
+      - "security"
+      - "python"
+    commit-message:
+      prefix: "deps(aigateway):"
+
+  # EvalServer - Python dependencies
+  - package-ecosystem: "pip"
+    directory: "/EvalServer"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "bluewave-labs/verifywise-maintainers"
+    labels:
+      - "dependencies"
+      - "security"
+      - "python"
+    commit-message:
+      prefix: "deps(evalserver):"
+
+  # GRSModule - Python dependencies (pyproject.toml / uv.lock)
+  - package-ecosystem: "pip"
+    directory: "/GRSModule"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "bluewave-labs/verifywise-maintainers"
+    labels:
+      - "dependencies"
+      - "security"
+      - "python"
+    commit-message:
+      prefix: "deps(grsmodule):"
+
   # GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
@@ -96,3 +144,23 @@ updates:
       - "docker"
     commit-message:
       prefix: "docker(backend):"
+
+  - package-ecosystem: "docker"
+    directory: "/AIGateway"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "docker"
+    commit-message:
+      prefix: "docker(aigateway):"
+
+  - package-ecosystem: "docker"
+    directory: "/EvalServer"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "docker"
+    commit-message:
+      prefix: "docker(evalserver):"

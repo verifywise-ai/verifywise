@@ -32,6 +32,12 @@ function aiGatewayRoutes() {
         // Forward internal API key
         proxyReq.setHeader("x-internal-key", AI_GATEWAY_KEY);
 
+        // Strip client-supplied tenant headers: the gateway trusts these,
+        // so they must only ever come from the authenticated JWT context.
+        proxyReq.removeHeader("x-organization-id");
+        proxyReq.removeHeader("x-user-id");
+        proxyReq.removeHeader("x-role");
+
         // Forward tenant context from JWT
         if (expressReq.organizationId) {
           proxyReq.setHeader("x-organization-id", expressReq.organizationId.toString());

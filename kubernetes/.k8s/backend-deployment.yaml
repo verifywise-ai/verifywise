@@ -18,6 +18,10 @@ spec:
         app: verifywise
         component: backend
     spec:
+      # Pod-level security context (KSV-0118): runtime-default seccomp profile.
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       containers:
       - name: backend
         image: ghcr.io/verifywise-ai/verifywise-backend:latest
