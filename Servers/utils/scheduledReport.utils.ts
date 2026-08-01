@@ -76,9 +76,22 @@ export async function softDeleteQuery(id: number, organization_id: number): Prom
   );
 }
 
+/**
+ * owner_role is joined in so the scheduler can pass the owner's REAL role to
+ * assertReportScopeAllowed — without it every org-scope schedule looks
+ * owner-less to the Admin/SuperAdmin bypass, including ones an Admin created
+ * and that are fully permitted, drowning the "schedules that predate the
+ * rule" warning list in false entries. LEFT JOINs so a schedule whose owner
+ * was since deleted still comes back (owner_role NULL) rather than vanishing
+ * from the due list.
+ */
 export async function findDueScheduledReportsQuery(now: Date): Promise<any[]> {
   return sequelize.query(
-    `SELECT * FROM scheduled_reports WHERE is_active = true AND deleted_at IS NULL AND next_run_at IS NOT NULL AND next_run_at <= :now`,
+    `SELECT sr.*, r.name AS owner_role
+       FROM scheduled_reports sr
+       LEFT JOIN users u ON u.id = sr.owner_id
+       LEFT JOIN roles r ON r.id = u.role_id
+      WHERE sr.is_active = true AND sr.deleted_at IS NULL AND sr.next_run_at IS NOT NULL AND sr.next_run_at <= :now`,
     { replacements: { now }, type: QueryTypes.SELECT },
   );
 }

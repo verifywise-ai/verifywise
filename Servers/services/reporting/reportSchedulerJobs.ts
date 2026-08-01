@@ -38,7 +38,13 @@ export async function handleReportSchedulerTick(): Promise<void> {
     if (sched.owner_id) {
       try {
         const scopeErrors = await assertReportScopeAllowed({
-          role: null,
+          // findDueScheduledReportsQuery joins the owner's role in as
+          // owner_role. Without it, every org-scope schedule looked
+          // owner-less to the Admin/SuperAdmin bypass — including ones an
+          // Admin created and that are fully permitted — so this warning
+          // fired on every legitimate org-scope schedule, not just the ones
+          // that predate the rule.
+          role: sched.owner_role ?? null,
           userId: sched.owner_id,
           organizationId: sched.organization_id,
           scope: sched.scope,
