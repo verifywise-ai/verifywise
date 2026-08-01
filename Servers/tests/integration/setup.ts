@@ -53,6 +53,38 @@ jest.mock("bullmq", () => {
   return { Queue: MockQueue, Worker: MockWorker, Job: MockJob };
 });
 
+// Mock the Redis client so integration tests do not require a running Redis server.
+// app.ts imports database/redis at module load, which would otherwise open a real
+// ioredis connection and emit an unhandled 'error' event if Redis is down.
+jest.mock("../../database/redis", () => ({
+  __esModule: true,
+  default: {
+    ping: jest.fn().mockResolvedValue("PONG"),
+    get: jest.fn().mockResolvedValue(null),
+    set: jest.fn().mockResolvedValue("OK"),
+    del: jest.fn().mockResolvedValue(1),
+    publish: jest.fn().mockResolvedValue(1),
+    lpush: jest.fn().mockResolvedValue(1),
+    lrange: jest.fn().mockResolvedValue([]),
+    expire: jest.fn().mockResolvedValue(1),
+    hget: jest.fn().mockResolvedValue(null),
+    hset: jest.fn().mockResolvedValue(1),
+    exists: jest.fn().mockResolvedValue(0),
+    incr: jest.fn().mockResolvedValue(1),
+    sadd: jest.fn().mockResolvedValue(1),
+    smembers: jest.fn().mockResolvedValue([]),
+    srem: jest.fn().mockResolvedValue(1),
+    keys: jest.fn().mockResolvedValue([]),
+    on: jest.fn().mockReturnThis(),
+    once: jest.fn().mockReturnThis(),
+    quit: jest.fn().mockResolvedValue("OK"),
+    close: jest.fn().mockResolvedValue(undefined),
+    disconnect: jest.fn(),
+    duplicate: jest.fn().mockReturnThis(),
+  },
+  REDIS_URL: "redis://localhost:6379/0",
+}));
+
 import { Application, Request, Response, NextFunction } from "express";
 import supertest, { Agent } from "supertest";
 import { createApp } from "../../app";
