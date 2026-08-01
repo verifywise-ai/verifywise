@@ -29,6 +29,7 @@ import { REPORT_SECTION_CATALOG } from "../services/reporting/sectionCatalog";
 import { parseFrameworkSelection } from "../services/reporting/frameworkSelection";
 import { NotFoundException } from "../domain.layer/exceptions/custom.exception";
 import { runScheduledReport } from "../services/reporting/reportRunOrchestrator";
+import { assertReportScopeAllowed } from "../services/reporting/reportAuthorization";
 
 export async function listTemplates(req: Request, res: Response): Promise<any> {
   try {
@@ -337,6 +338,19 @@ export async function runTemplateNow(req: Request, res: Response): Promise<any> 
         .json(
           STATUS_CODE[400](`unrecognised framework selection: ${selection.invalid.join(", ")}`),
         );
+    }
+
+    // An omitted scope resolves to "organization" here, so this endpoint is the
+    // widest report in the product reachable with the least input.
+    const scopeErrors = await assertReportScopeAllowed({
+      role: req.role ?? null,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+      scope: isProjectScope ? "project" : "organization",
+      projectId,
+    });
+    if (scopeErrors.length) {
+      return res.status(403).json(STATUS_CODE[403]({ errors: scopeErrors }));
     }
 
     const sched = {

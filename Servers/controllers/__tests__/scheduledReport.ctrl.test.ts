@@ -9,6 +9,9 @@ jest.mock("../../utils/scheduledReport.utils", () => ({
   updateScheduledReportQuery: jest.fn(),
   UPDATABLE_FIELDS: jest.requireActual("../../utils/scheduledReport.utils").UPDATABLE_FIELDS,
 }));
+jest.mock("../../services/reporting/reportAuthorization", () => ({
+  assertReportScopeAllowed: jest.fn(async () => []),
+}));
 import { createScheduledReport, updateScheduledReport } from "../scheduledReport.ctrl";
 
 function mockRes() {
@@ -262,5 +265,34 @@ describe("updateScheduledReport", () => {
       res,
     );
     expect(res.status).toHaveBeenCalledWith(400);
+  });
+
+  it("403s when the scope authorization rule refuses, without updating the row", async () => {
+    const utils = require("../../utils/scheduledReport.utils");
+    const authz = require("../../services/reporting/reportAuthorization");
+    utils.updateScheduledReportQuery.mockClear();
+    utils.getScheduledReportQuery.mockResolvedValueOnce({
+      id: 7,
+      scope: "project",
+      project_id: 5,
+    });
+    authz.assertReportScopeAllowed.mockResolvedValueOnce([
+      "organization-scope reports require the Admin role",
+    ]);
+
+    const res = mockRes();
+    await updateScheduledReport(
+      {
+        params: { id: "7" },
+        body: { scope: "organization", projectId: null },
+        organizationId: 42,
+        userId: 9,
+        role: "Editor",
+      } as any,
+      res,
+    );
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(utils.updateScheduledReportQuery).not.toHaveBeenCalled();
   });
 });

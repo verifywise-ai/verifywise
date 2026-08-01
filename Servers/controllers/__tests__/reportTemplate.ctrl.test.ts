@@ -25,6 +25,13 @@ jest.mock("../../database/db", () => ({
     query: jest.fn(),
   },
 }));
+// runTemplateNow now gates on scope authorization; without this mock every
+// test in this file that reaches that check hits the real assertion (and,
+// through it, sequelize.query) instead of the framework-selection logic these
+// tests exist to cover.
+jest.mock("../../services/reporting/reportAuthorization", () => ({
+  assertReportScopeAllowed: jest.fn(async () => []),
+}));
 
 import {
   createTemplate,

@@ -28,6 +28,7 @@ import {
 } from "../utils/scheduledReport.utils";
 import { runScheduledReport } from "../services/reporting/reportRunOrchestrator";
 import { parseFrameworkSelection } from "../services/reporting/frameworkSelection";
+import { assertReportScopeAllowed } from "../services/reporting/reportAuthorization";
 
 /**
  * An unparseable framework entry must not reach the column. An empty selection
@@ -62,6 +63,22 @@ export async function createScheduledReport(req: Request, res: Response): Promis
       )),
     ];
     if (errors.length) return res.status(400).json(STATUS_CODE[400]({ errors }));
+
+    // Authorization, not validation: organization scope is the union of every
+    // project in the tenant, and a project-scoped report must not be
+    // producible by someone who could not open it (canViewRunQuery denies
+    // exactly that on the read side).
+    const scopeErrors = await assertReportScopeAllowed({
+      role: req.role ?? null,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+      scope: req.body.scope,
+      projectId: req.body.projectId,
+    });
+    if (scopeErrors.length) {
+      return res.status(403).json(STATUS_CODE[403]({ errors: scopeErrors }));
+    }
+
     const row = await createScheduledReportQuery(req.body, req.organizationId!, req.userId!);
     return res.status(201).json(STATUS_CODE[201](row));
   } catch (error) {
@@ -173,6 +190,17 @@ export async function updateScheduledReport(req: Request, res: Response): Promis
       if (scopeErrors.length) {
         return res.status(400).json(STATUS_CODE[400]({ errors: scopeErrors }));
       }
+
+      const authzErrors = await assertReportScopeAllowed({
+        role: req.role ?? null,
+        userId: req.userId!,
+        organizationId: req.organizationId!,
+        scope: effectiveScope,
+        projectId: effectiveProjectId,
+      });
+      if (authzErrors.length) {
+        return res.status(403).json(STATUS_CODE[403]({ errors: authzErrors }));
+      }
     }
 
     // Re-validate the delivery block if it is being replaced, so a PATCH
@@ -208,6 +236,18 @@ export async function runScheduledReportNow(req: Request, res: Response): Promis
   try {
     const sched = await getScheduledReportQuery(Number(req.params.id), req.organizationId!);
     if (!sched) return res.status(404).json(STATUS_CODE[404]("not found"));
+
+    const scopeErrors = await assertReportScopeAllowed({
+      role: req.role ?? null,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+      scope: sched.scope,
+      projectId: sched.project_id,
+    });
+    if (scopeErrors.length) {
+      return res.status(403).json(STATUS_CODE[403]({ errors: scopeErrors }));
+    }
+
     await runScheduledReport(sched, { triggeredBy: "manual", userId: req.userId! });
     return res.status(202).json(STATUS_CODE[202]({ queued: true }));
   } catch (error) {
