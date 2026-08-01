@@ -26,13 +26,29 @@ jest.mock("../../../services/workflows/engine", () => {
   const actual = jest.requireActual("../../../services/workflows/engine");
   return { ...actual, resumeWorkflow: jest.fn() };
 });
+// resolveConfirmation never resolves. This is the sharpest possible proof
+// that rejecting a gate cannot hang on Redis: rejectActionImpl skips this
+// call entirely for WORKFLOW_GATE_TOOL records (submitWorkflowGate never
+// calls storeConfirmation, so a gate has no key to resolve). If that guard
+// were ever removed, this mock would make the "rejecting a gate" tests below
+// hang until Jest's own timeout — reproducing, deterministically and without
+// touching real infrastructure, the exact CI failure this file exists to
+// prevent (three jobs timed out on this path because no job in
+// backend-checks.yml provisions a Redis service, so the real client's
+// offline queue never drained).
+jest.mock("../../confirmation/confirmationStore", () => ({
+  storeConfirmation: jest.fn(() => Promise.resolve()),
+  resolveConfirmation: jest.fn(() => new Promise(() => {})),
+}));
 
 import { approveAction, rejectAction, WORKFLOW_GATE_TOOL } from "../approvalGateway";
 import { sequelize } from "../../../database/db";
 import { resumeWorkflow } from "../../../services/workflows/engine";
+import { resolveConfirmation } from "../../confirmation/confirmationStore";
 import { writeToolExecutors } from "../../confirmation/createWriteTool";
 
 const mockQuery = sequelize.query as jest.Mock;
+const mockResolveConfirmation = resolveConfirmation as jest.Mock;
 
 function gateRecord(overrides: Record<string, unknown> = {}) {
   return {
@@ -202,5 +218,11 @@ describe("workflow gate resolution", () => {
         String(JSON.stringify(c[1]?.replacements ?? {})).includes("cancelled"),
     );
     expect(cancel).toBeDefined();
+    // The regression this guards against: resolveConfirmation is mocked above
+    // to never resolve, so if rejectActionImpl ever called it for a
+    // WORKFLOW_GATE_TOOL record again, `await rejectAction(...)` would hang
+    // until Jest's timeout instead of returning. Reaching this line at all is
+    // part of the proof; this assertion makes the "why" explicit.
+    expect(mockResolveConfirmation).not.toHaveBeenCalled();
   });
 });
