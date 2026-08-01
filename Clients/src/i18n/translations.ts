@@ -8899,6 +8899,7 @@ export const translations: Record<string, Record<string, string>> = {
     // AI Gateway empty/error states
     "Click Save draft to create your first version.":
       "Klicken Sie auf Entwurf speichern, um Ihre erste Version zu erstellen.",
+    "Could not load metrics.": "Die Metriken konnten nicht geladen werden.",
     "Could not load this run.": "Dieser Lauf konnte nicht geladen werden.",
     "Create your first version": "Erstellen Sie Ihre erste Version",
     "Error loading AI Trust Center settings. Please try again.":
@@ -17860,6 +17861,7 @@ export const translations: Record<string, Record<string, string>> = {
     // AI Gateway empty/error states
     "Click Save draft to create your first version.":
       "Cliquez sur Enregistrer le brouillon pour créer votre première version.",
+    "Could not load metrics.": "Impossible de charger les métriques.",
     "Could not load this run.": "Impossible de charger cette exécution.",
     "Create your first version": "Créer votre première version",
     "Error loading AI Trust Center settings. Please try again.":
@@ -26735,6 +26737,7 @@ export const translations: Record<string, Record<string, string>> = {
     // AI Gateway empty/error states
     "Click Save draft to create your first version.":
       "Haga clic en Guardar borrador para crear su primera versión.",
+    "Could not load metrics.": "No se pudieron cargar las métricas.",
     "Could not load this run.": "No se pudo cargar esta ejecución.",
     "Create your first version": "Crear su primera versión",
     "Error loading AI Trust Center settings. Please try again.":
