@@ -82,11 +82,78 @@ describe("deliverReport", () => {
   });
 
   it("does not claim success when there are no recipients", async () => {
-    const res = await deliverReport({ sendEmailLink: true, recipients: [] }, artifact, ctx);
+    (uploadFile as jest.Mock).mockResolvedValue({ id: 100 });
+
+    const res = await deliverReport(
+      { saveToStorage: true, sendEmailLink: true, recipients: [] },
+      artifact,
+      ctx,
+    );
 
     expect(sendAutomationEmail).not.toHaveBeenCalled();
     expect(res.emailLink.status).toBe("failed");
     expect(res.emailLink.error).toMatch(/recipient/i);
+  });
+
+  it("does not email a download link for a report that was never stored", async () => {
+    // The download endpoint resolves the run's file_id. With storage off there
+    // is no file, so the link 404s for the recipient while the run itself is
+    // recorded as a success — the same "looks healthy, delivers nothing" shape
+    // as the empty-recipients case above.
+    const res = await deliverReport(
+      { sendEmailLink: true, recipients: ["a@example.com"] },
+      artifact,
+      ctx,
+    );
+
+    expect(sendAutomationEmail).not.toHaveBeenCalled();
+    expect(res.emailLink.status).toBe("failed");
+    expect(res.emailLink.error).toMatch(/storage/i);
+  });
+
+  it("does not email a download link when storage was requested but failed", async () => {
+    (uploadFile as jest.Mock).mockRejectedValue(new Error("disk full"));
+
+    const res = await deliverReport(
+      { saveToStorage: true, sendEmailLink: true, recipients: ["a@example.com"] },
+      artifact,
+      ctx,
+    );
+
+    expect(sendAutomationEmail).not.toHaveBeenCalled();
+    expect(res.storage.status).toBe("failed");
+    expect(res.emailLink.status).toBe("failed");
+  });
+
+  it("still sends the attachment when the link channel cannot be honoured", async () => {
+    // attachFile carries the bytes itself, so it does not depend on storage.
+    (sendAutomationEmail as jest.Mock).mockResolvedValue(undefined);
+
+    const res = await deliverReport(
+      { sendEmailLink: true, attachFile: true, recipients: ["a@example.com"] },
+      artifact,
+      ctx,
+    );
+
+    expect(sendAutomationEmail).toHaveBeenCalledTimes(1);
+    expect(res.attachment.status).toBe("success");
+    expect(res.emailLink.status).toBe("failed");
+  });
+
+  it("escapes the report name before it reaches the email markup", async () => {
+    (uploadFile as jest.Mock).mockResolvedValue({ id: 100 });
+    (sendAutomationEmail as jest.Mock).mockResolvedValue(undefined);
+
+    await deliverReport(
+      { saveToStorage: true, sendEmailLink: true, recipients: ["a@example.com"] },
+      { ...artifact, filename: `<img src=x onerror=alert(1)>.pdf` },
+      ctx,
+    );
+
+    const { compileMjmlToHtml } = jest.requireMock("../../../tools/mjmlCompiler");
+    const [, slots] = (compileMjmlToHtml as jest.Mock).mock.calls[0];
+    expect(slots.reportName).not.toContain("<img");
+    expect(slots.reportName).toContain("&lt;img");
   });
 
   it("skips every channel that is not enabled", async () => {

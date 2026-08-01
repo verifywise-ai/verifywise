@@ -5,6 +5,7 @@ jest.mock("../../services/reporting/scheduledReportService", () => ({
 jest.mock("../../utils/scheduledReport.utils", () => ({
   createScheduledReportQuery: jest.fn(async () => ({ id: 1 })),
   listScheduledReportsQuery: jest.fn(async () => []),
+  getScheduledReportQuery: jest.fn(async () => null),
   updateScheduledReportQuery: jest.fn(),
   UPDATABLE_FIELDS: jest.requireActual("../../utils/scheduledReport.utils").UPDATABLE_FIELDS,
 }));
@@ -100,6 +101,85 @@ describe("updateScheduledReport", () => {
       res,
     );
     expect(res.status).toHaveBeenCalledWith(400);
+  });
+
+  // scope/projectId has to be judged on the post-patch row. A PATCH carrying
+  // scope alone used to skip validation entirely, leaving a project-scoped
+  // schedule's project_id in place under an organization scope — the next run
+  // then collected the whole tenant and emailed it to the project's recipients.
+  it("400s when switching to organization scope without clearing the stored projectId", async () => {
+    const utils = require("../../utils/scheduledReport.utils");
+    utils.updateScheduledReportQuery.mockClear();
+    utils.getScheduledReportQuery.mockResolvedValueOnce({
+      id: 7,
+      scope: "project",
+      project_id: 5,
+    });
+    const res = mockRes();
+    await updateScheduledReport(
+      {
+        params: { id: "7" },
+        body: { scope: "organization" },
+        organizationId: 42,
+        userId: 9,
+      } as any,
+      res,
+    );
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(utils.updateScheduledReportQuery).not.toHaveBeenCalled();
+  });
+
+  it("allows switching to organization scope when projectId is cleared in the same request", async () => {
+    const utils = require("../../utils/scheduledReport.utils");
+    utils.updateScheduledReportQuery.mockClear();
+    utils.getScheduledReportQuery.mockResolvedValueOnce({
+      id: 7,
+      scope: "project",
+      project_id: 5,
+    });
+    utils.updateScheduledReportQuery.mockResolvedValueOnce({ id: 7 });
+    const res = mockRes();
+    await updateScheduledReport(
+      {
+        params: { id: "7" },
+        body: { scope: "organization", projectId: null },
+        organizationId: 42,
+        userId: 9,
+      } as any,
+      res,
+    );
+    expect(res.status).toHaveBeenCalledWith(200);
+  });
+
+  it("400s when clearing the projectId of a schedule that stays project-scoped", async () => {
+    const utils = require("../../utils/scheduledReport.utils");
+    utils.updateScheduledReportQuery.mockClear();
+    utils.getScheduledReportQuery.mockResolvedValueOnce({
+      id: 7,
+      scope: "project",
+      project_id: 5,
+    });
+    const res = mockRes();
+    await updateScheduledReport(
+      { params: { id: "7" }, body: { projectId: null }, organizationId: 42, userId: 9 } as any,
+      res,
+    );
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(utils.updateScheduledReportQuery).not.toHaveBeenCalled();
+  });
+
+  it("does not re-read the row for a patch that touches neither scope nor projectId", async () => {
+    const utils = require("../../utils/scheduledReport.utils");
+    utils.updateScheduledReportQuery.mockClear();
+    utils.getScheduledReportQuery.mockClear();
+    utils.updateScheduledReportQuery.mockResolvedValueOnce({ id: 7 });
+    const res = mockRes();
+    await updateScheduledReport(
+      { params: { id: "7" }, body: { name: "Renamed" }, organizationId: 42, userId: 9 } as any,
+      res,
+    );
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(utils.getScheduledReportQuery).not.toHaveBeenCalled();
   });
 
   // PATCH is the third write path into framework_ids. An unrecognised entry is

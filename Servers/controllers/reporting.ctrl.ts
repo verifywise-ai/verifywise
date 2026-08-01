@@ -293,7 +293,14 @@ export async function generateReportsV2(req: Request, res: Response): Promise<an
       triggered_by_user_id: userId!,
       // Manual runs have no template to decompose; store the assembled request
       // itself. (Scheduled runs store { sections_config, ai_blocks_config, ... }.)
-      config_snapshot: { request },
+      //
+      // project_id is lifted to the top level because that is the only place
+      // the visibility rule looks: reportRun.utils' RUN_PROJECT_ID_SQL reads
+      // config_snapshot->>'project_id', and a NULL there means "organization
+      // scope — visible to the whole org". Leaving the id nested under
+      // `request` made every project report generated here readable and
+      // downloadable by any member of the organization, project member or not.
+      config_snapshot: { project_id: Number.isFinite(projectId) ? projectId : null, request },
       scheduled_for: null,
     });
 

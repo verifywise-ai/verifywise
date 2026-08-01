@@ -145,6 +145,36 @@ export async function updateScheduledReport(req: Request, res: Response): Promis
       return res.status(400).json(STATUS_CODE[400]({ errors: frameworkErrors }));
     }
 
+    // scope and projectId have to be validated against the row as it will be
+    // AFTER the patch, not against the patch alone. A PATCH of {scope:
+    // "organization"} on its own used to skip validation entirely — and even
+    // inside the block below, input.projectId is undefined for a field the
+    // caller did not send, so the "organization scope must not set projectId"
+    // rule passed while the stored project_id stayed put. The next run then
+    // collected the whole tenant under an organization scope and emailed it to
+    // the schedule's project-level recipients.
+    const existing =
+      input.scope !== undefined || input.projectId !== undefined
+        ? await getScheduledReportQuery(Number(req.params.id), req.organizationId!)
+        : null;
+    if (existing) {
+      const effectiveScope = input.scope ?? existing.scope;
+      const effectiveProjectId =
+        input.projectId !== undefined ? input.projectId : existing.project_id;
+      const scopeErrors: string[] = [];
+      if (effectiveScope === "project" && !effectiveProjectId) {
+        scopeErrors.push("project scope requires projectId");
+      }
+      if (effectiveScope === "organization" && effectiveProjectId) {
+        scopeErrors.push(
+          "organization scope must not set projectId — clear projectId in the same request",
+        );
+      }
+      if (scopeErrors.length) {
+        return res.status(400).json(STATUS_CODE[400]({ errors: scopeErrors }));
+      }
+    }
+
     // Re-validate the delivery block if it is being replaced, so a PATCH
     // cannot smuggle in the malformed recipients that create rejects.
     if (input.deliveryConfig !== undefined || input.sectionsConfig !== undefined) {
