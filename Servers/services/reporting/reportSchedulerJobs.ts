@@ -32,18 +32,26 @@ export async function handleReportSchedulerTick(): Promise<void> {
     // Report-only. The scope rule gates creation and editing; a schedule that
     // predates it keeps delivering so nothing silently stops working on
     // deploy. Naming it here is what turns "we tightened the rule" into an
-    // actionable cleanup list.
+    // actionable cleanup list. The claim above is already consumed, so a
+    // failure to *check* (e.g. a DB blip in the membership lookup) must never
+    // cost the schedule its run — catch and move on to runScheduledReport.
     if (sched.owner_id) {
-      const scopeErrors = await assertReportScopeAllowed({
-        role: null,
-        userId: sched.owner_id,
-        organizationId: sched.organization_id,
-        scope: sched.scope,
-        projectId: sched.project_id,
-      });
-      if (scopeErrors.length) {
+      try {
+        const scopeErrors = await assertReportScopeAllowed({
+          role: null,
+          userId: sched.owner_id,
+          organizationId: sched.organization_id,
+          scope: sched.scope,
+          projectId: sched.project_id,
+        });
+        if (scopeErrors.length) {
+          logger.warn(
+            `[report-scheduler] schedule ${sched.id} (org ${sched.organization_id}, owner ${sched.owner_id}) would no longer be permitted: ${scopeErrors.join("; ")}. Running it anyway.`,
+          );
+        }
+      } catch (err) {
         logger.warn(
-          `[report-scheduler] schedule ${sched.id} (org ${sched.organization_id}, owner ${sched.owner_id}) would no longer be permitted: ${scopeErrors.join("; ")}. Running it anyway.`,
+          `[report-scheduler] schedule ${sched.id} (org ${sched.organization_id}, owner ${sched.owner_id}) scope check failed, skipping the check and running anyway: ${err instanceof Error ? err.message : String(err)}`,
         );
       }
     }

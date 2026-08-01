@@ -55,4 +55,17 @@ describe("handleReportSchedulerTick scope warnings", () => {
     expect(runScheduledReport).toHaveBeenCalledTimes(1);
     expect(logger.warn).not.toHaveBeenCalled();
   });
+
+  it("still runs the report when the scope check itself throws", async () => {
+    // The claim is already consumed by markRunEnqueuedQuery before this check
+    // runs, so a failure here (e.g. a DB blip in the membership lookup) must
+    // not lose the slot: it must not throw out of the tick, and the report
+    // must still be delivered.
+    (findDueScheduledReportsQuery as jest.Mock).mockResolvedValue([DUE]);
+    (assertReportScopeAllowed as jest.Mock).mockRejectedValue(new Error("connection blip"));
+
+    await expect(handleReportSchedulerTick()).resolves.toBeUndefined();
+
+    expect(runScheduledReport).toHaveBeenCalledTimes(1);
+  });
 });
