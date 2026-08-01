@@ -164,6 +164,17 @@ jobs:
         working-directory: Clients
         env:
           E2E_BASE_URL: http://localhost:5173
+          # Must match the super-admin seeded by the migration step, otherwise
+          # global.setup logs in as a non-super-admin and the flow cannot create
+          # organizations. seedE2EAdmin (spawned by global.setup) also needs the
+          # DB_* vars to connect, since there is no Servers/.env in CI.
+          E2E_EMAIL: admin@verifywise-test.com
+          E2E_PASSWORD: TestAdmin!Str0ng
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: verifywise_test
+          DB_USER: postgres
+          DB_PASSWORD: postgres
         run: npx playwright test
 
       - name: Upload Playwright report

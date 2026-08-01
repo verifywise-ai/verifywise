@@ -112,7 +112,9 @@ test.describe("Critical end-to-end journey", () => {
     const dayOfMonth = dueSoonDate.getDate();
 
     // Click the calendar icon button inside the DatePicker to open the popup
-    const calendarIcon = page.locator(".mui-date-picker").getByRole("button", { name: /choose date/i });
+    const calendarIcon = page
+      .locator(".mui-date-picker")
+      .getByRole("button", { name: /choose date/i });
     await calendarIcon.click();
 
     // Wait for the calendar popover to appear
