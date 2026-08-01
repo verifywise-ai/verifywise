@@ -9,6 +9,9 @@ jest.mock("../../utils/reportTemplate.utils", () => ({
 jest.mock("../../services/reporting/reportRunOrchestrator", () => ({
   runScheduledReport: jest.fn(),
 }));
+jest.mock("../../services/reporting/reportAuthorization", () => ({
+  assertReportScopeAllowed: jest.fn(async () => []),
+}));
 jest.mock("../../utils/statusCode.utils", () => ({
   STATUS_CODE: {
     200: (d: any) => ({ message: "OK", data: d }),
@@ -22,10 +25,12 @@ jest.mock("../../utils/statusCode.utils", () => ({
 import { runTemplateNow } from "../reportTemplate.ctrl";
 import { getTemplateByIdQuery, getVersionByIdQuery } from "../../utils/reportTemplate.utils";
 import { runScheduledReport } from "../../services/reporting/reportRunOrchestrator";
+import { assertReportScopeAllowed } from "../../services/reporting/reportAuthorization";
 
 const mockTemplate = getTemplateByIdQuery as jest.MockedFunction<any>;
 const mockVersion = getVersionByIdQuery as jest.MockedFunction<any>;
 const mockRun = runScheduledReport as jest.MockedFunction<any>;
+const mockAuthz = assertReportScopeAllowed as jest.MockedFunction<any>;
 
 function createMockRes(): Partial<Response> {
   const res: any = {};
@@ -50,6 +55,7 @@ describe("runTemplateNow", () => {
     mockTemplate.mockResolvedValue({ id: 2, name: "Risk template", organization_id: null });
     mockVersion.mockResolvedValue({ id: 9, template_id: 2 });
     mockRun.mockResolvedValue({ runId: 77, status: "success" });
+    mockAuthz.mockResolvedValue([]);
   });
 
   it("runs the orchestrator with no schedule id and storage forced on, and reports the run id", async () => {
@@ -167,6 +173,17 @@ describe("runTemplateNow", () => {
     await runTemplateNow({ params: { id: "2" }, body, organizationId: 5, userId: 3 } as any, res);
 
     expect(res.status).toHaveBeenCalledWith(404);
+    expect(mockRun).not.toHaveBeenCalled();
+  });
+
+  it("403s when the scope authorization rule refuses, without starting the run", async () => {
+    mockAuthz.mockResolvedValueOnce(["organization-scope reports require the Admin role"]);
+    const req = { params: { id: "2" }, body, organizationId: 5, userId: 3 } as any;
+    const res = createMockRes() as Response;
+
+    await runTemplateNow(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(403);
     expect(mockRun).not.toHaveBeenCalled();
   });
 });
