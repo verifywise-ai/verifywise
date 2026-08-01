@@ -60,6 +60,15 @@ export interface ApprovalSubmitResult {
   errorMessage?: string;
 }
 
+/**
+ * tool_name marking an approval as a workflow gate rather than an AI tool call.
+ *
+ * A gate has no executor: the write is performed by the workflow step itself
+ * when the run resumes. approveActionImpl branches on this value so it resumes
+ * instead of looking for an executor that will never exist.
+ */
+export const WORKFLOW_GATE_TOOL = "workflow_gate";
+
 // ── Helpers ─────────────────────────────────────────────────────
 
 function deriveActionType(toolName: string): string {
@@ -103,7 +112,7 @@ async function insertApprovalRecord(
         riskLevel: config.riskLevel,
         state,
         ruleMatched: extra?.ruleMatched || null,
-        requestedBy: config.userId,
+        requestedBy: config.userId ?? null,
         approvedBy: extra?.approvedBy || null,
         approvedAt: extra?.approvedAt || null,
         executedAt: extra?.executedAt || null,
@@ -409,6 +418,83 @@ async function submitForApprovalImpl(
     logStateHistory(config.organizationId, id, stateHistory, config.toolName).catch(() => {});
     return { outcome: "pending", approvalId: id, confirmationResult };
   }
+}
+
+/**
+ * Create a pending approval for a gated workflow step.
+ *
+ * Deliberately does NOT go through submitForApproval: that path runs the rule
+ * engine and an executor pre-check, and auto-rejects anything whose tool has no
+ * registered executor (approvalGateway isAutoRejectable). Both exist to decide
+ * whether a *tool* should run; a workflow gate has no tool. The consequence is
+ * that org-level auto-approve rules do not apply to gates — see the design doc.
+ *
+ * @returns the approval id, which the step returns as StepResult.approvalId so
+ *          the engine can persist it to ai_workflow_runs.awaiting_approval_id.
+ */
+export async function submitWorkflowGate(config: {
+  organizationId: number;
+  userId?: number;
+  workflowId: string;
+  workflowRunId: number;
+  stepId: string;
+  description: string;
+}): Promise<string> {
+  const id = uuidv4();
+  const now = new Date().toISOString();
+  const stateHistory: StateHistoryEntry[] = [
+    { state: "idle", timestamp: now, actor: "system" },
+    {
+      state: "pending_approval",
+      timestamp: now,
+      actor: "system",
+      reason: `workflow gate: ${config.workflowId}.${config.stepId}`,
+    },
+  ];
+
+  const gateConfig: SubmitForApprovalConfig = {
+    organizationId: config.organizationId,
+    // requested_by is nullable: most gated runs are started by a trigger, not
+    // a person, and inventing a synthetic user id would corrupt the audit trail.
+    userId: config.userId as number,
+    toolName: WORKFLOW_GATE_TOOL,
+    actionType: "workflow_gate",
+    riskLevel: "warning",
+    description: config.description,
+    inputParams: {
+      workflowId: config.workflowId,
+      workflowRunId: config.workflowRunId,
+      stepId: config.stepId,
+    },
+  };
+
+  await insertApprovalRecord(id, gateConfig, "pending_approval", stateHistory);
+  logStateHistory(config.organizationId, id, stateHistory, WORKFLOW_GATE_TOOL).catch(() => {});
+
+  // Non-fatal, matching submitForApprovalImpl's pending-approval path: a
+  // notification failure must never surface as a rejection here. This is the
+  // approval id the workflow step returns as StepResult.approvalId — if this
+  // throws, the caller never gets the id, the engine persists
+  // awaiting_approval_id = NULL, and the run strands with no resume path
+  // (the exact failure class this task exists to fix).
+  try {
+    await notifyPendingApproval(gateConfig);
+  } catch (notifyError) {
+    logStructured(
+      "error",
+      `notification failed (non-fatal): ${notifyError}`,
+      "submitWorkflowGate",
+      fileName,
+    );
+  }
+
+  logStructured(
+    "successful",
+    `workflow gate ${config.workflowId}.${config.stepId} awaiting approval (run ${config.workflowRunId})`,
+    "submitWorkflowGate",
+    fileName,
+  );
+  return id;
 }
 
 // ── Approve / Reject Actions ────────────────────────────────────
