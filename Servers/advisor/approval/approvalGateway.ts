@@ -15,7 +15,7 @@ import type { SubmitForApprovalConfig, ApprovalContext, StateHistoryEntry } from
 import { sequelize } from "../../database/db";
 import { QueryTypes } from "sequelize";
 import { v4 as uuidv4 } from "uuid";
-import { logStructured } from "../../utils/logger/fileLogger";
+import logger, { logStructured } from "../../utils/logger/fileLogger";
 import { createNotificationQuery } from "../../utils/notification.utils";
 import {
   NotificationType,
@@ -23,7 +23,7 @@ import {
 } from "../../domain.layer/interfaces/i.notification";
 import { logStateHistory } from "../../services/aiAuditTrail.service";
 import { startTrace, startSpan, endSpan, logError } from "../observability/traceManager";
-import { resumeWorkflow } from "../../services/workflows/engine";
+import { resumeWorkflow, cancelRunForRejectedApproval } from "../../services/workflows/engine";
 
 const fileName = "approvalGateway.ts";
 
@@ -550,6 +550,59 @@ async function approveActionImpl(
       ? JSON.parse(record.state_history)
       : record.state_history || [];
 
+  // A workflow gate has no executor by design: the write is performed by the
+  // workflow step itself when the run resumes. The resume IS the execution.
+  if (record.tool_name === WORKFLOW_GATE_TOOL) {
+    stateHistory.push({
+      state: "approved",
+      timestamp: new Date().toISOString(),
+      actor: `user:${userId}`,
+    });
+    stateHistory.push({ state: "executing", timestamp: new Date().toISOString(), actor: "system" });
+    await updateApprovalRecord(id, organizationId, {
+      state: "executing",
+      stateHistory,
+      approvedBy: userId,
+      approvedAt: new Date().toISOString(),
+    });
+
+    const runs = (await sequelize.query(
+      `SELECT id FROM ai_workflow_runs
+        WHERE organization_id = :organizationId
+          AND awaiting_approval_id = :approvalId
+          AND state = 'awaiting_approval'
+        LIMIT 1`,
+      { replacements: { organizationId, approvalId: id }, type: QueryTypes.SELECT },
+    )) as Array<{ id: number }>;
+
+    if (!runs[0]) {
+      // Never report success for a gate that resumed nothing.
+      stateHistory.push({
+        state: "failed",
+        timestamp: new Date().toISOString(),
+        actor: "system",
+        reason: "no workflow run linked",
+      });
+      await updateApprovalRecord(id, organizationId, {
+        state: "failed",
+        stateHistory,
+        errorMessage: "no workflow run linked to this gate",
+      });
+      return { success: false, error: "no workflow run linked to this gate" };
+    }
+
+    const resumed = await resumeWorkflow(runs[0].id, id, organizationId);
+    stateHistory.push({ state: "completed", timestamp: new Date().toISOString(), actor: "system" });
+    await updateApprovalRecord(id, organizationId, {
+      state: "completed",
+      stateHistory,
+      executedAt: new Date().toISOString(),
+      result: { workflowRunId: runs[0].id, state: resumed?.state ?? null },
+    });
+    logStateHistory(organizationId, id, stateHistory, record.tool_name).catch(() => {});
+    return { success: true, result: { workflowRunId: runs[0].id, state: resumed?.state ?? null } };
+  }
+
   // Look up executor
   const executor = writeToolExecutors.get(record.tool_name);
   if (!executor) {
@@ -769,6 +822,22 @@ async function rejectActionImpl(
     state: "rejected",
     stateHistory,
   });
+
+  // A rejected gate must not leave its run parked forever: the approval can
+  // never return to pending_approval, so no future approve could recover it.
+  if (record.tool_name === WORKFLOW_GATE_TOOL) {
+    try {
+      await cancelRunForRejectedApproval(id, organizationId, userId, reason);
+    } catch (error) {
+      logStructured(
+        "error",
+        `failed to cancel workflow run for rejected gate ${id}`,
+        functionName,
+        fileName,
+      );
+      logger.error("cancelRunForRejectedApproval failed:", error);
+    }
+  }
 
   // Also resolve in Redis
   try {

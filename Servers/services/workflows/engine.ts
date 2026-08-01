@@ -527,6 +527,49 @@ async function listRuns(
   };
 }
 
+/**
+ * Terminate a run whose gating approval was rejected.
+ *
+ * `cancelled` rather than `failed`: a human declined, which is a different
+ * fact from a step erroring, and the compliance audit trail has to keep them
+ * apart. persistRun clears awaiting_approval_id for any non-pausing state, so
+ * the stale link cannot re-trigger a later resume.
+ */
+async function cancelRunForRejectedApproval(
+  approvalId: string,
+  organizationId: number,
+  userId: number,
+  reason?: string,
+): Promise<void> {
+  const runs = (await sequelize.query(
+    `SELECT id, workflow_type, current_step, results FROM ai_workflow_runs
+      WHERE organization_id = :organizationId
+        AND awaiting_approval_id = :approvalId
+        AND state = 'awaiting_approval'
+      LIMIT 1`,
+    { replacements: { organizationId, approvalId }, type: QueryTypes.SELECT },
+  )) as Array<{ id: number; workflow_type: string; current_step: number; results: unknown }>;
+  const run = runs[0];
+  if (!run) return;
+
+  const records = (Array.isArray(run.results) ? run.results : []) as StepRecord[];
+  await persistRun(
+    run.id,
+    organizationId,
+    "cancelled",
+    run.current_step,
+    records,
+    `approval rejected by user ${userId}${reason ? `: ${reason}` : ""}`,
+  );
+  await logWorkflowAudit(
+    organizationId,
+    run.id,
+    "cancelled",
+    `workflow.${run.workflow_type}.rejected`,
+    { approvalId, rejectedBy: userId, reason: reason ?? null },
+  );
+}
+
 async function cancelRun(id: number, organizationId: number): Promise<void> {
   await sequelize.query(
     `UPDATE ai_workflow_runs
@@ -551,4 +594,5 @@ export {
   loadRun,
   listRuns,
   cancelRun,
+  cancelRunForRejectedApproval,
 };
