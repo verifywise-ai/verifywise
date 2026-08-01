@@ -50,7 +50,7 @@ test.describe("Critical end-to-end journey", () => {
             risk_owner: userId,
             risk_description: "E2E critical journey risk for deadline testing",
             ai_lifecycle_phase: "Problem definition & planning",
-            risk_category: ["Bias"],
+            risk_category: ["Strategic risk"],
             impact: "High potential impact on fairness and transparency",
             projects: [pid],
           }),
@@ -111,25 +111,22 @@ test.describe("Critical end-to-end journey", () => {
     dueSoonDate.setDate(today.getDate() + 3);
     const dayOfMonth = dueSoonDate.getDate();
 
-    // Click the MUI DatePicker to open the calendar popup
-    const datePicker = page.locator(".mui-date-picker");
-    await datePicker.click();
+    // Click the calendar icon button inside the DatePicker to open the popup
+    const calendarIcon = page.locator(".mui-date-picker").getByRole("button", { name: /choose date/i });
+    await calendarIcon.click();
 
-    // Wait for the calendar popover to appear, then click the day cell.
-    // The calendar uses a grid with <button> elements for each day.
-    const calendarPopup = page.locator('[role="dialog"], [role="presentation"]');
+    // Wait for the calendar popover to appear
+    const calendarPopup = page.locator(".MuiPickerPopper-root, .MuiPickersPopper-root");
     await calendarPopup.first().waitFor({ state: "visible", timeout: 5_000 });
 
-    // Click the day button — MUI renders day numbers as button text.
-    // Use a regex to match the exact day number to avoid matching "17" when looking for "7".
-    const dayButton = page
-      .locator('[role="grid"] button')
-      .filter({ hasText: new RegExp(`^${dayOfMonth}$`) });
-    await dayButton.click();
-    await page.waitForTimeout(300);
-
-    // Close calendar if still open
-    await page.keyboard.press("Escape");
+    // MUI x-date-pickers renders day cells as td[role="gridcell"] > button.
+    // Click the gridcell for the target day.
+    const dayCell = page
+      .locator('[role="gridcell"]')
+      .filter({ hasText: new RegExp(`^${dayOfMonth}$`) })
+      .first();
+    await dayCell.click();
+    await page.waitForTimeout(500);
 
     // Submit the task
     const submitTaskBtn = page.getByRole("button", { name: /create task/i });
