@@ -115,6 +115,30 @@ export async function pauseScheduledReport(req: Request, res: Response): Promise
 
 export async function resumeScheduledReport(req: Request, res: Response): Promise<any> {
   try {
+    // Resuming re-enables delivery, so it needs the same scope gate as
+    // create/patch/run-now — but only for a row that actually exists in the
+    // caller's organization. pause/resume/delete are deliberately a 200
+    // no-op for a cross-tenant id (the org-scoped WHERE in setActiveQuery
+    // matches nothing and the caller is still told "ok" — see
+    // tests/integration/tenant-isolation/scheduled-reports.isolation.test.ts,
+    // "makes a cross-tenant resume a no-op on a paused schedule"), so a
+    // 404/403 here must not fire for a row this organization_id can't see in
+    // the first place; it only guards a same-tenant caller who is not
+    // authorized for the row's scope.
+    const sched = await getScheduledReportQuery(Number(req.params.id), req.organizationId!);
+    if (sched) {
+      const scopeErrors = await assertReportScopeAllowed({
+        role: req.role ?? null,
+        userId: req.userId!,
+        organizationId: req.organizationId!,
+        scope: sched.scope,
+        projectId: sched.project_id,
+      });
+      if (scopeErrors.length) {
+        return res.status(403).json(STATUS_CODE[403]({ errors: scopeErrors }));
+      }
+    }
+
     await setActiveQuery(Number(req.params.id), req.organizationId!, true);
     return res.status(200).json(STATUS_CODE[200]({ ok: true }));
   } catch (error) {
@@ -170,27 +194,42 @@ export async function updateScheduledReport(req: Request, res: Response): Promis
     // rule passed while the stored project_id stayed put. The next run then
     // collected the whole tenant under an organization scope and emailed it to
     // the schedule's project-level recipients.
-    const existing =
-      input.scope !== undefined || input.projectId !== undefined
-        ? await getScheduledReportQuery(Number(req.params.id), req.organizationId!)
-        : null;
+    //
+    // The fetch itself must be unconditional, not gated on scope/projectId
+    // being present: authorization below needs the row's CURRENT scope for
+    // every PATCH, including one that touches only deliveryConfig. A PATCH
+    // carrying just `{ deliveryConfig: { recipients: [...] } }` sends neither
+    // scope nor projectId, but it can still redirect a project report's
+    // recipients — and canViewRunQuery already refuses that same non-member
+    // on the read side. Skipping the fetch (and therefore the authz check)
+    // whenever scope/projectId are absent left exactly that path ungated.
+    const existing = await getScheduledReportQuery(Number(req.params.id), req.organizationId!);
     if (existing) {
       const effectiveScope = input.scope ?? existing.scope;
       const effectiveProjectId =
         input.projectId !== undefined ? input.projectId : existing.project_id;
-      const scopeErrors: string[] = [];
-      if (effectiveScope === "project" && !effectiveProjectId) {
-        scopeErrors.push("project scope requires projectId");
-      }
-      if (effectiveScope === "organization" && effectiveProjectId) {
-        scopeErrors.push(
-          "organization scope must not set projectId — clear projectId in the same request",
-        );
-      }
-      if (scopeErrors.length) {
-        return res.status(400).json(STATUS_CODE[400]({ errors: scopeErrors }));
+
+      // These invariant checks only make sense when the patch actually
+      // touches scope or projectId — a patch that touches neither cannot
+      // have introduced a new invariant violation (the stored row already
+      // satisfied it), so it must not trip on values it never sent.
+      if (input.scope !== undefined || input.projectId !== undefined) {
+        const scopeErrors: string[] = [];
+        if (effectiveScope === "project" && !effectiveProjectId) {
+          scopeErrors.push("project scope requires projectId");
+        }
+        if (effectiveScope === "organization" && effectiveProjectId) {
+          scopeErrors.push(
+            "organization scope must not set projectId — clear projectId in the same request",
+          );
+        }
+        if (scopeErrors.length) {
+          return res.status(400).json(STATUS_CODE[400]({ errors: scopeErrors }));
+        }
       }
 
+      // Authorization runs against the effective post-patch scope on EVERY
+      // PATCH to an existing row, not only ones that touch scope/projectId.
       const authzErrors = await assertReportScopeAllowed({
         role: req.role ?? null,
         userId: req.userId!,

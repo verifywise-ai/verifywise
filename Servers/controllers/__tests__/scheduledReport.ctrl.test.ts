@@ -171,10 +171,26 @@ describe("updateScheduledReport", () => {
     expect(utils.updateScheduledReportQuery).not.toHaveBeenCalled();
   });
 
-  it("does not re-read the row for a patch that touches neither scope nor projectId", async () => {
+  // Was: "does not re-read the row for a patch that touches neither scope nor
+  // projectId", asserting getScheduledReportQuery was NOT called. That
+  // assertion encoded the bug this replaces: a PATCH carrying only
+  // deliveryConfig sends neither scope nor projectId, but can still redirect
+  // a project report's recipients, and skipping the row read meant skipping
+  // authorization too — see report-scope-authorization.test.ts's "refuses an
+  // Editor redirecting a foreign project schedule's recipients". The row must
+  // now be read (for its current scope) on every PATCH, so this asserts the
+  // opposite of the original.
+  it("reads the row and authorizes even a patch that touches neither scope nor projectId", async () => {
     const utils = require("../../utils/scheduledReport.utils");
+    const authz = require("../../services/reporting/reportAuthorization");
     utils.updateScheduledReportQuery.mockClear();
     utils.getScheduledReportQuery.mockClear();
+    utils.getScheduledReportQuery.mockResolvedValueOnce({
+      id: 7,
+      scope: "project",
+      project_id: 5,
+    });
+    authz.assertReportScopeAllowed.mockResolvedValueOnce([]);
     utils.updateScheduledReportQuery.mockResolvedValueOnce({ id: 7 });
     const res = mockRes();
     await updateScheduledReport(
@@ -182,7 +198,70 @@ describe("updateScheduledReport", () => {
       res,
     );
     expect(res.status).toHaveBeenCalledWith(200);
-    expect(utils.getScheduledReportQuery).not.toHaveBeenCalled();
+    expect(utils.getScheduledReportQuery).toHaveBeenCalled();
+    // The effective scope for a patch that doesn't touch scope/projectId is
+    // the row's own current values — not something derived from the (absent)
+    // input.
+    expect(authz.assertReportScopeAllowed).toHaveBeenCalledWith(
+      expect.objectContaining({ scope: "project", projectId: 5 }),
+    );
+  });
+
+  it("403s a deliveryConfig-only patch that would redirect a foreign project schedule's recipients", async () => {
+    // The exploit this closes: an Editor who is not a member of project 5
+    // sends { deliveryConfig: { recipients: [...] } } with no scope/projectId
+    // — previously that skipped authorization entirely (existing was only
+    // fetched when scope/projectId were present) and reached the UPDATE.
+    const utils = require("../../utils/scheduledReport.utils");
+    const authz = require("../../services/reporting/reportAuthorization");
+    utils.updateScheduledReportQuery.mockClear();
+    utils.getScheduledReportQuery.mockResolvedValueOnce({
+      id: 7,
+      scope: "project",
+      project_id: 5,
+    });
+    authz.assertReportScopeAllowed.mockResolvedValueOnce(["you are not a member of this project"]);
+    const res = mockRes();
+    await updateScheduledReport(
+      {
+        params: { id: "7" },
+        body: { deliveryConfig: { saveToStorage: true, recipients: ["e@external.example"] } },
+        organizationId: 42,
+        userId: 9,
+        role: "Editor",
+      } as any,
+      res,
+    );
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(utils.updateScheduledReportQuery).not.toHaveBeenCalled();
+  });
+
+  it("200s a deliveryConfig-only patch on a schedule the caller is authorized for", async () => {
+    // Positive twin of the 403 above: the fix must not block a legitimate
+    // deliveryConfig-only patch by a caller the scope rule actually permits.
+    const utils = require("../../utils/scheduledReport.utils");
+    const authz = require("../../services/reporting/reportAuthorization");
+    utils.updateScheduledReportQuery.mockClear();
+    utils.getScheduledReportQuery.mockResolvedValueOnce({
+      id: 7,
+      scope: "project",
+      project_id: 5,
+    });
+    authz.assertReportScopeAllowed.mockResolvedValueOnce([]);
+    utils.updateScheduledReportQuery.mockResolvedValueOnce({ id: 7 });
+    const res = mockRes();
+    await updateScheduledReport(
+      {
+        params: { id: "7" },
+        body: { deliveryConfig: { saveToStorage: true } },
+        organizationId: 42,
+        userId: 9,
+        role: "Editor",
+      } as any,
+      res,
+    );
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(utils.updateScheduledReportQuery).toHaveBeenCalled();
   });
 
   // PATCH is the third write path into framework_ids. An unrecognised entry is

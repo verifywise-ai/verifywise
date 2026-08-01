@@ -160,4 +160,75 @@ describe("report scope authorization", () => {
     );
     expect(res.status).toBe(403);
   });
+
+  // The PATCH path was ungated whenever the body carried neither `scope` nor
+  // `projectId` — createScheduledReportQuery, the scope-changing PATCH, and
+  // run-now all correctly refuse this Editor, but a deliveryConfig-only PATCH
+  // skipped authorization entirely (the row was only fetched when scope or
+  // projectId were present) and would redirect the schedule's recipients on
+  // its next run, for a project canViewRunQuery already denies this Editor on
+  // the read side.
+  it("refuses an Editor redirecting a foreign project schedule's recipients", async () => {
+    const created = await testRequest(appFor(adminId, "Admin", orgId))
+      .post(SCHEDULES)
+      .send(schedulePayload({ scope: "project", projectId: foreignProjectId }));
+    expect(created.status).toBe(201);
+    const id = (created.body?.data ?? created.body).id;
+
+    const before = (await sequelize.query(
+      `SELECT delivery_config FROM scheduled_reports WHERE id = :id`,
+      { replacements: { id }, type: QueryTypes.SELECT },
+    )) as Array<{ delivery_config: unknown }>;
+
+    const res = await testRequest(appFor(editorId, "Editor", orgId))
+      .patch(`${SCHEDULES}/${id}`)
+      .send({
+        deliveryConfig: {
+          saveToStorage: true,
+          attachFile: true,
+          recipients: ["editor@external.example"],
+        },
+      });
+    expect(res.status).toBe(403);
+    // Pin the refusal to the scope rule itself, not merely to some other
+    // 403-shaped branch that happens to also leave the row untouched.
+    expect(JSON.stringify(res.body)).toContain("not a member");
+
+    const after = (await sequelize.query(
+      `SELECT delivery_config FROM scheduled_reports WHERE id = :id`,
+      { replacements: { id }, type: QueryTypes.SELECT },
+    )) as Array<{ delivery_config: unknown }>;
+    expect(after[0].delivery_config).toEqual(before[0].delivery_config);
+  });
+
+  it("refuses an Editor resuming a foreign project schedule", async () => {
+    const created = await testRequest(appFor(adminId, "Admin", orgId))
+      .post(SCHEDULES)
+      .send(schedulePayload({ scope: "project", projectId: foreignProjectId }));
+    expect(created.status).toBe(201);
+    const id = (created.body?.data ?? created.body).id;
+
+    const res = await testRequest(appFor(editorId, "Editor", orgId)).post(
+      `${SCHEDULES}/${id}/resume`,
+    );
+    expect(res.status).toBe(403);
+    expect(JSON.stringify(res.body)).toContain("not a member");
+  });
+
+  // Positive control for the two refusals above: the fix must not block a
+  // member acting on their own project's schedule.
+  it("allows a project member to patch their own schedule's deliveryConfig", async () => {
+    const created = await testRequest(appFor(editorId, "Editor", orgId))
+      .post(SCHEDULES)
+      .send(schedulePayload({ scope: "project", projectId: ownedProjectId }));
+    expect(created.status).toBe(201);
+    const id = (created.body?.data ?? created.body).id;
+
+    const res = await testRequest(appFor(editorId, "Editor", orgId))
+      .patch(`${SCHEDULES}/${id}`)
+      .send({
+        deliveryConfig: { saveToStorage: true, attachFile: true, recipients: ["editor@test.com"] },
+      });
+    expect(res.status).toBe(200);
+  });
 });
