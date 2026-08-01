@@ -34,10 +34,10 @@ async function logWorkflowAudit(
   try {
     await sequelize.query(
       `INSERT INTO ai_action_audit_log
-         (organization_id, action_approval_id, command_id, workflow_run_id,
+         (organization_id, action_approval_id, workflow_run_id,
           from_state, to_state, actor_type, rule_name, metadata, created_at)
        VALUES
-         (:organizationId, NULL, NULL, :workflowRunId,
+         (:organizationId, NULL, :workflowRunId,
           NULL, :toState, 'system', :ruleName, :metadata::jsonb, NOW())`,
       {
         replacements: {
@@ -76,7 +76,10 @@ async function persistRun(
             error = :error,
             -- Set the approval link only when pausing; clear it on any resume/
             -- terminal transition so a stale id can't re-trigger a later resume.
-            awaiting_approval_id = CASE WHEN :state = 'awaiting_approval' THEN :awaitingApprovalId ELSE NULL END,
+            -- The ::uuid cast is required: the bind is text, the column is uuid,
+            -- and without it Postgres rejects the CASE on EVERY transition —
+            -- including the NULL branch — so no run could leave 'pending'.
+            awaiting_approval_id = CASE WHEN :state = 'awaiting_approval' THEN :awaitingApprovalId::uuid ELSE NULL END,
             completed_at = CASE WHEN :state IN ('completed', 'failed', 'cancelled') THEN NOW() ELSE completed_at END
       WHERE id = :id AND organization_id = :organizationId`,
     {
