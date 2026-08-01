@@ -1,3 +1,8 @@
+// Integration suites share one Postgres instance and truncate between
+// tests; the default 5s hook timeout is not enough once several suites
+// run in the same --runInBand pass. Same value as the isolation matrix.
+jest.setTimeout(60000);
+
 /**
  * The framework-gap workflow must stay silent when there is no gap.
  *
@@ -41,6 +46,9 @@ describe("framework gap remediation workflow", () => {
 
   afterAll(async () => {
     await cleanupDatabase();
+    // Release the pool. Each test file gets its own module registry and so its
+    // own sequelize instance; leaving connections open makes the NEXT file's
+    // cleanupDatabase() TRUNCATE wait on them and time out.
     await sequelize.close();
   });
 

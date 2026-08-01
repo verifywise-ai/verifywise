@@ -1,3 +1,8 @@
+// Integration suites share one Postgres instance and truncate between
+// tests; the default 5s hook timeout is not enough once several suites
+// run in the same --runInBand pass. Same value as the isolation matrix.
+jest.setTimeout(60000);
+
 /**
  * A project-scoped run must be classified as belonging to that project.
  *
@@ -55,6 +60,9 @@ describe("manual report run visibility", () => {
 
   afterAll(async () => {
     await cleanupDatabase();
+    // Release the pool. Each test file gets its own module registry and so its
+    // own sequelize instance; leaving connections open makes the NEXT file's
+    // cleanupDatabase() TRUNCATE wait on them and time out.
     await sequelize.close();
   });
 
