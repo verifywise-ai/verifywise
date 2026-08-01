@@ -85,6 +85,56 @@ describe("workflow gate resolution", () => {
     expect(resumeWorkflow).not.toHaveBeenCalled();
   });
 
+  it("marks the approval failed when resumeWorkflow leaves the run still awaiting approval", async () => {
+    // resumeWorkflow doesn't always throw or advance the run: if its workflow
+    // definition can't be resolved (unregistered after a deploy/rename), it
+    // logs an error and returns the run UNCHANGED, still in 'awaiting_approval'.
+    // That is a resume that resumed nothing and must not be reported as success.
+    mockQuery.mockImplementation(async (sql: string) => {
+      if (String(sql).includes("SELECT * FROM ai_action_approvals")) return [gateRecord()];
+      if (String(sql).includes("FROM ai_workflow_runs")) return [{ id: 77 }];
+      return [];
+    });
+    (resumeWorkflow as jest.Mock).mockResolvedValue({ id: 77, state: "awaiting_approval" });
+
+    const result = await approveAction(42, "appr-1", 9);
+
+    expect(result.success).toBe(false);
+    expect(resumeWorkflow).toHaveBeenCalledWith(77, "appr-1", 42);
+    const failed = mockQuery.mock.calls.find(
+      (c) =>
+        String(c[0]).includes("UPDATE ai_action_approvals") &&
+        String(JSON.stringify(c[1]?.replacements ?? {})).includes("failed"),
+    );
+    expect(failed).toBeDefined();
+  });
+
+  it("marks the approval failed, and does not throw, when resumeWorkflow rejects", async () => {
+    // By the time resumeWorkflow is called the approval is already persisted
+    // as 'executing'. If the resume throws uncaught, the approval is stuck
+    // there forever: the entry guard (state !== 'pending_approval') blocks
+    // every retry. approveAction must catch this and land on 'failed'.
+    mockQuery.mockImplementation(async (sql: string) => {
+      if (String(sql).includes("SELECT * FROM ai_action_approvals")) return [gateRecord()];
+      if (String(sql).includes("FROM ai_workflow_runs")) return [{ id: 77 }];
+      return [];
+    });
+    (resumeWorkflow as jest.Mock).mockRejectedValue(
+      new Error("workflow definition not registered"),
+    );
+
+    const result = await approveAction(42, "appr-1", 9);
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBe("workflow definition not registered");
+    const failed = mockQuery.mock.calls.find(
+      (c) =>
+        String(c[0]).includes("UPDATE ai_action_approvals") &&
+        String(JSON.stringify(c[1]?.replacements ?? {})).includes("failed"),
+    );
+    expect(failed).toBeDefined();
+  });
+
   it("rejecting a gate cancels the run", async () => {
     mockQuery.mockImplementation(async (sql: string) => {
       if (String(sql).includes("SELECT * FROM ai_action_approvals")) return [gateRecord()];

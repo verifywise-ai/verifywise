@@ -591,16 +591,66 @@ async function approveActionImpl(
       return { success: false, error: "no workflow run linked to this gate" };
     }
 
-    const resumed = await resumeWorkflow(runs[0].id, id, organizationId);
+    let resumed: Awaited<ReturnType<typeof resumeWorkflow>>;
+    try {
+      resumed = await resumeWorkflow(runs[0].id, id, organizationId);
+    } catch (resumeError) {
+      // Mirror the tool-executor path's handling of a throwing execution:
+      // without this, the approval is stuck at "executing" (already
+      // persisted above) and the entry guard `record.state !==
+      // "pending_approval"` blocks every retry forever.
+      const errorMsg = resumeError instanceof Error ? resumeError.message : "Unknown error";
+      stateHistory.push({
+        state: "failed",
+        timestamp: new Date().toISOString(),
+        actor: "system",
+        reason: errorMsg,
+      });
+      await updateApprovalRecord(id, organizationId, {
+        state: "failed",
+        stateHistory,
+        errorMessage: errorMsg,
+        executedAt: new Date().toISOString(),
+      });
+      logStateHistory(organizationId, id, stateHistory, record.tool_name).catch(() => {});
+      logStructured(
+        "error",
+        `workflow resume threw after gate approval: ${errorMsg}`,
+        functionName,
+        fileName,
+      );
+      return { success: false, error: errorMsg };
+    }
+
+    if (!resumed || resumed.state === "awaiting_approval") {
+      // resumeWorkflow returns the run UNCHANGED (still awaiting_approval)
+      // rather than throwing when its workflow definition can't be resolved
+      // (e.g. unregistered after a deploy/rename). Never report success for
+      // a gate that resumed nothing.
+      stateHistory.push({
+        state: "failed",
+        timestamp: new Date().toISOString(),
+        actor: "system",
+        reason: "resume did not advance the run",
+      });
+      await updateApprovalRecord(id, organizationId, {
+        state: "failed",
+        stateHistory,
+        errorMessage: "workflow resume did not advance the run",
+      });
+      logStateHistory(organizationId, id, stateHistory, record.tool_name).catch(() => {});
+      return { success: false, error: "workflow resume did not advance the run" };
+    }
+
     stateHistory.push({ state: "completed", timestamp: new Date().toISOString(), actor: "system" });
     await updateApprovalRecord(id, organizationId, {
       state: "completed",
       stateHistory,
       executedAt: new Date().toISOString(),
-      result: { workflowRunId: runs[0].id, state: resumed?.state ?? null },
+      result: { workflowRunId: runs[0].id, state: resumed.state },
     });
     logStateHistory(organizationId, id, stateHistory, record.tool_name).catch(() => {});
-    return { success: true, result: { workflowRunId: runs[0].id, state: resumed?.state ?? null } };
+    return { success: true, result: { workflowRunId: runs[0].id, state: resumed.state } };
   }
 
   // Look up executor
