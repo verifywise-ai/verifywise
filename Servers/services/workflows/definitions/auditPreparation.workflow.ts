@@ -18,6 +18,7 @@ import { getEvidenceGapsQuery } from "../../../utils/evidenceAi.utils";
 import { getAllUsersQuery } from "../../../utils/user.utils";
 import { createBulkNotificationsQuery } from "../../../utils/notification.utils";
 import { NotificationType } from "../../../domain.layer/interfaces/i.notification";
+import { requestGateApproval } from "../approvalGate";
 
 const GAP_LIMIT = 10;
 const ADMIN_ROLE_ID = 1;
@@ -63,10 +64,12 @@ const steps: WorkflowStep[] = [
       // it, or this is the post-approval resume (the engine re-runs this step
       // after the approval resolves).
       if (ctx.triggerPayload.approved !== true && !ctx.resumedApprovalId) {
-        return {
-          type: "pause",
-          reason: "Audit-preparation report requires approval before publishing.",
-        };
+        return requestGateApproval(
+          ctx,
+          "audit_preparation",
+          "generate_audit_prep_report",
+          "Audit-preparation report requires approval before publishing.",
+        );
       }
 
       const frameworks =

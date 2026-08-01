@@ -16,6 +16,7 @@ import { WorkflowContext, WorkflowDefinition, StepResult } from "../types";
 import { getVendorByIdQuery } from "../../../utils/vendor.utils";
 import { getVendorRisksByVendorIdQuery } from "../../../utils/vendorRisk.utils";
 import { sendInAppNotification } from "../../inAppNotification.service";
+import { requestGateApproval } from "../approvalGate";
 import {
   NotificationType,
   NotificationEntityType,
@@ -114,12 +115,14 @@ export const vendorOnboardingWorkflow: WorkflowDefinition = {
         // Pause on first visit; proceed on the post-approval resume so the run
         // does not re-pause forever.
         if (!ctx.resumedApprovalId) {
-          return {
-            type: "pause",
-            reason: `Follow-up tasks for ${vendor?.vendor_name || "vendor"} (${
+          return requestGateApproval(
+            ctx,
+            "vendor_onboarding",
+            "create_followup_tasks",
+            `Follow-up tasks for ${vendor?.vendor_name || "vendor"} (${
               checks?.highSeverityCount || 0
             } high-severity risk(s)) require approval before creation`,
-          };
+          );
         }
         return {
           type: "ok",

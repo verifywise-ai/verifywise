@@ -22,6 +22,7 @@
 import { WorkflowContext, WorkflowDefinition, StepResult } from "../types";
 import { availableIncidentTools } from "../../../advisor/functions/incidentFunctions";
 import { availableRiskTools } from "../../../advisor/functions/riskFunctions";
+import { requestGateApproval } from "../approvalGate";
 
 /** Severity values that count as a critical-tier incident. */
 const CRITICAL_SEVERITIES = new Set(["very serious", "critical"]);
@@ -94,10 +95,12 @@ async function linkRelatedRisks(ctx: WorkflowContext): Promise<StepResult> {
 async function createRemediationTasks(ctx: WorkflowContext): Promise<StepResult> {
   const classification = ctx.results.classify_incident as { incidentId?: number } | undefined;
   if (!ctx.resumedApprovalId) {
-    return {
-      type: "pause",
-      reason: `Approve creation of remediation tasks for incident ${classification?.incidentId ?? "?"}`,
-    };
+    return requestGateApproval(
+      ctx,
+      "incident_response",
+      "create_remediation_tasks",
+      `Approve creation of remediation tasks for incident ${classification?.incidentId ?? "?"}`,
+    );
   }
   return {
     type: "ok",
@@ -113,10 +116,12 @@ async function createRemediationTasks(ctx: WorkflowContext): Promise<StepResult>
 async function escalateNotifyAdmins(ctx: WorkflowContext): Promise<StepResult> {
   const classification = ctx.results.classify_incident as { incidentId?: number } | undefined;
   if (!ctx.resumedApprovalId) {
-    return {
-      type: "pause",
-      reason: `Approve admin escalation for critical incident ${classification?.incidentId ?? "?"}`,
-    };
+    return requestGateApproval(
+      ctx,
+      "incident_response",
+      "escalate_notify_admins",
+      `Approve admin escalation for critical incident ${classification?.incidentId ?? "?"}`,
+    );
   }
   return {
     type: "ok",

@@ -23,14 +23,23 @@ jest.mock("../../../../database/db", () => ({
 jest.mock("../../../inAppNotification.service", () => ({
   sendBulkInAppNotifications: jest.fn(),
 }));
+jest.mock("../../approvalGate", () => ({
+  requestGateApproval: jest.fn(async (_ctx, _workflowId, _stepId, description) => ({
+    type: "pause",
+    reason: description,
+    approvalId: "appr-test",
+  })),
+}));
 
 import { modelDeploymentWorkflow } from "../modelDeployment.workflow";
 import type { WorkflowContext, WorkflowStep } from "../../types";
 import { sequelize } from "../../../../database/db";
 import { sendBulkInAppNotifications } from "../../../inAppNotification.service";
+import { requestGateApproval } from "../../approvalGate";
 
 const mockQuery = sequelize.query as unknown as jest.Mock;
 const mockNotify = sendBulkInAppNotifications as unknown as jest.Mock;
+const mockRequestGateApproval = requestGateApproval as unknown as jest.Mock;
 
 function stepById(id: string): WorkflowStep {
   const s = modelDeploymentWorkflow.steps.find((x) => x.id === id);
@@ -184,6 +193,14 @@ describe("workflows / modelDeploymentWorkflow handlers", () => {
 
     expect(res).toMatchObject({ type: "pause" });
     expect(mockNotify).not.toHaveBeenCalled();
+    // The gate must be created with this exact workflow/step id: it lands in
+    // the approval's input_params and is what makes the Admin queue readable.
+    expect(mockRequestGateApproval).toHaveBeenCalledWith(
+      expect.anything(),
+      "model_deployment",
+      "create_evidence_task",
+      expect.any(String),
+    );
   });
 
   it("create_evidence_task performs the write on resume instead of pausing again", async () => {

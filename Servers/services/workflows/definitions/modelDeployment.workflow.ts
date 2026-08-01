@@ -21,6 +21,7 @@ import {
   NotificationEntityType,
 } from "../../../domain.layer/interfaces/i.notification";
 import { StepResult, WorkflowContext, WorkflowDefinition } from "../types";
+import { requestGateApproval } from "../approvalGate";
 
 /** Controls gap count at/above this threshold → evidence gap branch. */
 const MISSING_EVIDENCE_THRESHOLD = 5;
@@ -159,7 +160,12 @@ export const modelDeploymentWorkflow: WorkflowDefinition = {
         // resumedApprovalId set, so it proceeds to the write instead of
         // pausing again.
         if (trigger.requireApproval && !ctx.resumedApprovalId) {
-          return { type: "pause", reason: "Evidence collection task requires approval" };
+          return requestGateApproval(
+            ctx,
+            "model_deployment",
+            "create_evidence_task",
+            "Evidence collection task requires approval",
+          );
         }
         await notifyAdmins(
           ctx,

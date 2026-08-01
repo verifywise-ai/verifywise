@@ -25,16 +25,25 @@ jest.mock("../../../../utils/vendorRisk.utils", () => ({
 jest.mock("../../../inAppNotification.service", () => ({
   sendInAppNotification: jest.fn(),
 }));
+jest.mock("../../approvalGate", () => ({
+  requestGateApproval: jest.fn(async (_ctx, _workflowId, _stepId, description) => ({
+    type: "pause",
+    reason: description,
+    approvalId: "appr-test",
+  })),
+}));
 
 import { vendorOnboardingWorkflow } from "../vendorOnboarding.workflow";
 import type { WorkflowContext, WorkflowStep } from "../../types";
 import { getVendorByIdQuery } from "../../../../utils/vendor.utils";
 import { getVendorRisksByVendorIdQuery } from "../../../../utils/vendorRisk.utils";
 import { sendInAppNotification } from "../../../inAppNotification.service";
+import { requestGateApproval } from "../../approvalGate";
 
 const mockGetVendor = getVendorByIdQuery as unknown as jest.Mock;
 const mockGetVendorRisks = getVendorRisksByVendorIdQuery as unknown as jest.Mock;
 const mockNotify = sendInAppNotification as unknown as jest.Mock;
+const mockRequestGateApproval = requestGateApproval as unknown as jest.Mock;
 
 function stepById(id: string): WorkflowStep {
   const s = vendorOnboardingWorkflow.steps.find((st) => st.id === id);
@@ -210,6 +219,14 @@ describe("workflows / vendorOnboarding — create_followup_tasks (gated write)",
     );
 
     expect(result.type).toBe("pause");
+    // The gate must be created with this exact workflow/step id: it lands in
+    // the approval's input_params and is what makes the Admin queue readable.
+    expect(mockRequestGateApproval).toHaveBeenCalledWith(
+      expect.anything(),
+      "vendor_onboarding",
+      "create_followup_tasks",
+      expect.any(String),
+    );
   });
 });
 

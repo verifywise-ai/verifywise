@@ -20,14 +20,23 @@ jest.mock("../../../../advisor/functions/incidentFunctions", () => ({
 jest.mock("../../../../advisor/functions/riskFunctions", () => ({
   availableRiskTools: { fetch_risks: jest.fn() },
 }));
+jest.mock("../../approvalGate", () => ({
+  requestGateApproval: jest.fn(async (_ctx, _workflowId, _stepId, description) => ({
+    type: "pause",
+    reason: description,
+    approvalId: "appr-test",
+  })),
+}));
 
 import { incidentResponseWorkflow } from "../incidentResponse.workflow";
 import type { WorkflowContext } from "../../types";
 import { availableIncidentTools } from "../../../../advisor/functions/incidentFunctions";
 import { availableRiskTools } from "../../../../advisor/functions/riskFunctions";
+import { requestGateApproval } from "../../approvalGate";
 
 const fetchIncidents = availableIncidentTools.fetch_incidents as unknown as jest.Mock;
 const fetchRisks = availableRiskTools.fetch_risks as unknown as jest.Mock;
+const mockRequestGateApproval = requestGateApproval as unknown as jest.Mock;
 
 function ctx(overrides: Partial<WorkflowContext> = {}): WorkflowContext {
   return {
@@ -139,11 +148,25 @@ describe("workflows / incidentResponse write steps gate for approval", () => {
     );
 
     expect(result.type).toBe("pause");
+    // The gate must be created with this exact workflow/step id: it lands in
+    // the approval's input_params and is what makes the Admin queue readable.
+    expect(mockRequestGateApproval).toHaveBeenCalledWith(
+      expect.anything(),
+      "incident_response",
+      "create_remediation_tasks",
+      expect.any(String),
+    );
   });
 
   it("escalate_notify_admins pauses for approval", async () => {
     const result = await stepById("escalate_notify_admins").handler(ctx());
 
     expect(result.type).toBe("pause");
+    expect(mockRequestGateApproval).toHaveBeenCalledWith(
+      expect.anything(),
+      "incident_response",
+      "escalate_notify_admins",
+      expect.any(String),
+    );
   });
 });

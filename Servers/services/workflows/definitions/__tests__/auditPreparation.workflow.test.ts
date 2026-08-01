@@ -27,6 +27,13 @@ jest.mock("../../../../utils/user.utils", () => ({
 jest.mock("../../../../utils/notification.utils", () => ({
   createBulkNotificationsQuery: jest.fn(),
 }));
+jest.mock("../../approvalGate", () => ({
+  requestGateApproval: jest.fn(async (_ctx, _workflowId, _stepId, description) => ({
+    type: "pause",
+    reason: description,
+    approvalId: "appr-test",
+  })),
+}));
 
 import { auditPreparationWorkflow } from "../auditPreparation.workflow";
 import type { WorkflowContext } from "../../types";
@@ -37,12 +44,14 @@ import {
 import { getEvidenceGapsQuery } from "../../../../utils/evidenceAi.utils";
 import { getAllUsersQuery } from "../../../../utils/user.utils";
 import { createBulkNotificationsQuery } from "../../../../utils/notification.utils";
+import { requestGateApproval } from "../../approvalGate";
 
 const mockGetFrameworkScores = getFrameworkScoresQuery as unknown as jest.Mock;
 const mockGetWeakestControls = getWeakestControlsQuery as unknown as jest.Mock;
 const mockGetEvidenceGaps = getEvidenceGapsQuery as unknown as jest.Mock;
 const mockGetAllUsers = getAllUsersQuery as unknown as jest.Mock;
 const mockCreateBulkNotifications = createBulkNotificationsQuery as unknown as jest.Mock;
+const mockRequestGateApproval = requestGateApproval as unknown as jest.Mock;
 
 const STEP_IDS = [
   "gather_framework_readiness",
@@ -150,6 +159,14 @@ describe("auditPreparation workflow / report step gates for approval", () => {
     );
 
     expect(result.type).toBe("pause");
+    // The gate must be created with this exact workflow/step id: it lands in
+    // the approval's input_params and is what makes the Admin queue readable.
+    expect(mockRequestGateApproval).toHaveBeenCalledWith(
+      expect.anything(),
+      "audit_preparation",
+      "generate_audit_prep_report",
+      expect.any(String),
+    );
   });
 
   it("produces the report once approved, summarizing the prior steps", async () => {
