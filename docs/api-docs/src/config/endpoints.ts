@@ -695,6 +695,7 @@ export const aiConfirmationEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/ai-confirmation/approve/{id}',
     summary: "Approve Confirmation",
+    description: "Requires role: Admin",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -706,6 +707,7 @@ export const aiConfirmationEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/ai-confirmation/reject/{id}',
     summary: "Reject Confirmation",
+    description: "Requires role: Admin",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },

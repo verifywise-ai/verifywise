@@ -16732,6 +16732,7 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires role: Admin'
   '/ai-confirmation/reject/{id}':
     post:
       summary: 'Reject Confirmation'
@@ -16746,6 +16747,7 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires role: Admin'
   /ai-confirmation/pending:
     get:
       summary: 'Get Pending Confirmations'
