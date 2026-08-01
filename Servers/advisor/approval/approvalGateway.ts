@@ -591,9 +591,10 @@ async function approveActionImpl(
       return { success: false, error: "no workflow run linked to this gate" };
     }
 
-    let resumed: Awaited<ReturnType<typeof resumeWorkflow>>;
     try {
-      resumed = await resumeWorkflow(runs[0].id, id, organizationId);
+      // The return value isn't the discriminator (see below) — we only need
+      // resumeWorkflow to run to completion or throw.
+      await resumeWorkflow(runs[0].id, id, organizationId);
     } catch (resumeError) {
       // Mirror the tool-executor path's handling of a throwing execution:
       // without this, the approval is stuck at "executing" (already
@@ -622,11 +623,27 @@ async function approveActionImpl(
       return { success: false, error: errorMsg };
     }
 
-    if (!resumed || resumed.state === "awaiting_approval") {
-      // resumeWorkflow returns the run UNCHANGED (still awaiting_approval)
-      // rather than throwing when its workflow definition can't be resolved
-      // (e.g. unregistered after a deploy/rename). Never report success for
-      // a gate that resumed nothing.
+    // A workflow's `state` alone cannot tell "nothing advanced" apart from
+    // "advanced into a NEW gate": incident_response has two sequential gates
+    // (create_remediation_tasks, then escalate_notify_admins), so a
+    // successful resume legitimately re-pauses on a different approval, and
+    // that pause looks identical — state === 'awaiting_approval' — to a
+    // resume that didn't move at all (e.g. an unregistered workflow
+    // definition, where resumeWorkflow returns the run UNCHANGED rather than
+    // throwing). The only reliable discriminator is whether the run is still
+    // waiting on THIS SAME approval id.
+    const afterResume = (await sequelize.query(
+      `SELECT state, awaiting_approval_id FROM ai_workflow_runs
+        WHERE id = :runId AND organization_id = :organizationId`,
+      { replacements: { runId: runs[0].id, organizationId }, type: QueryTypes.SELECT },
+    )) as Array<{ state: string; awaiting_approval_id: string | null }>;
+    const runAfter = afterResume[0];
+
+    const nothingAdvanced =
+      !runAfter || (runAfter.state === "awaiting_approval" && runAfter.awaiting_approval_id === id);
+
+    if (nothingAdvanced) {
+      // Never report success for a gate that resumed nothing.
       stateHistory.push({
         state: "failed",
         timestamp: new Date().toISOString(),
@@ -647,10 +664,10 @@ async function approveActionImpl(
       state: "completed",
       stateHistory,
       executedAt: new Date().toISOString(),
-      result: { workflowRunId: runs[0].id, state: resumed.state },
+      result: { workflowRunId: runs[0].id, state: runAfter.state },
     });
     logStateHistory(organizationId, id, stateHistory, record.tool_name).catch(() => {});
-    return { success: true, result: { workflowRunId: runs[0].id, state: resumed.state } };
+    return { success: true, result: { workflowRunId: runs[0].id, state: runAfter.state } };
   }
 
   // Look up executor

@@ -52,11 +52,31 @@ describe("workflow gate resolution", () => {
     writeToolExecutors.clear?.();
   });
 
-  it("approving a gate resumes the run instead of looking for an executor", async () => {
+  // The gate branch issues two different SELECTs against ai_workflow_runs:
+  // one to find the run before resuming it, one to read it back afterward
+  // to discover whether it advanced. Both queries include "FROM
+  // ai_workflow_runs", so tests must distinguish them by their SELECT list
+  // rather than matching on the table name alone.
+  function mockRunLookups(opts: {
+    beforeResume: Array<{ id: number }>;
+    afterResume?: Array<{ state: string; awaiting_approval_id: string | null }>;
+  }) {
     mockQuery.mockImplementation(async (sql: string) => {
-      if (String(sql).includes("SELECT * FROM ai_action_approvals")) return [gateRecord()];
-      if (String(sql).includes("FROM ai_workflow_runs")) return [{ id: 77 }];
+      const s = String(sql);
+      if (s.includes("SELECT * FROM ai_action_approvals")) return [gateRecord()];
+      if (s.includes("SELECT id FROM ai_workflow_runs")) return opts.beforeResume;
+      if (s.includes("SELECT state, awaiting_approval_id FROM ai_workflow_runs")) {
+        return opts.afterResume ?? [];
+      }
       return [];
+    });
+  }
+
+  it("approving a gate resumes the run instead of looking for an executor", async () => {
+    mockRunLookups({
+      beforeResume: [{ id: 77 }],
+      // Single-gate resume: the run finished and cleared its approval link.
+      afterResume: [{ state: "completed", awaiting_approval_id: null }],
     });
     (resumeWorkflow as jest.Mock).mockResolvedValue({ id: 77, state: "completed" });
 
@@ -73,11 +93,7 @@ describe("workflow gate resolution", () => {
   });
 
   it("marks the approval failed when no run is linked, rather than reporting success", async () => {
-    mockQuery.mockImplementation(async (sql: string) => {
-      if (String(sql).includes("SELECT * FROM ai_action_approvals")) return [gateRecord()];
-      if (String(sql).includes("FROM ai_workflow_runs")) return [];
-      return [];
-    });
+    mockRunLookups({ beforeResume: [] });
 
     const result = await approveAction(42, "appr-1", 9);
 
@@ -85,15 +101,16 @@ describe("workflow gate resolution", () => {
     expect(resumeWorkflow).not.toHaveBeenCalled();
   });
 
-  it("marks the approval failed when resumeWorkflow leaves the run still awaiting approval", async () => {
+  it("marks the approval failed when resumeWorkflow leaves the run parked on the SAME approval", async () => {
     // resumeWorkflow doesn't always throw or advance the run: if its workflow
     // definition can't be resolved (unregistered after a deploy/rename), it
-    // logs an error and returns the run UNCHANGED, still in 'awaiting_approval'.
-    // That is a resume that resumed nothing and must not be reported as success.
-    mockQuery.mockImplementation(async (sql: string) => {
-      if (String(sql).includes("SELECT * FROM ai_action_approvals")) return [gateRecord()];
-      if (String(sql).includes("FROM ai_workflow_runs")) return [{ id: 77 }];
-      return [];
+    // logs an error and returns the run UNCHANGED, still in 'awaiting_approval'
+    // pointing at THIS SAME approval id. That is a resume that resumed
+    // nothing and must not be reported as success. (state alone can't tell
+    // this apart from advancing into a new gate -- see the next test.)
+    mockRunLookups({
+      beforeResume: [{ id: 77 }],
+      afterResume: [{ state: "awaiting_approval", awaiting_approval_id: "appr-1" }],
     });
     (resumeWorkflow as jest.Mock).mockResolvedValue({ id: 77, state: "awaiting_approval" });
 
@@ -107,6 +124,40 @@ describe("workflow gate resolution", () => {
         String(JSON.stringify(c[1]?.replacements ?? {})).includes("failed"),
     );
     expect(failed).toBeDefined();
+  });
+
+  it("completes the approval when the resume advances into a NEW gate on a different approval", async () => {
+    // incident_response has two sequential gates: create_remediation_tasks,
+    // then escalate_notify_admins. Approving the first gate resumes the run,
+    // which legitimately re-pauses in 'awaiting_approval' -- but on a NEW,
+    // DIFFERENT approval id. By state alone this is indistinguishable from
+    // the previous test (nothing advanced); the approval id is what tells
+    // them apart, and this run DID advance, so it must be reported as
+    // success. This is the case that regressed in the first fix pass: it
+    // used `resumed.state === "awaiting_approval"` alone as the failure
+    // signal and could not tell these two cases apart.
+    mockRunLookups({
+      beforeResume: [{ id: 77 }],
+      afterResume: [{ state: "awaiting_approval", awaiting_approval_id: "appr-2" }],
+    });
+    (resumeWorkflow as jest.Mock).mockResolvedValue({ id: 77, state: "awaiting_approval" });
+
+    const result = await approveAction(42, "appr-1", 9);
+
+    expect(result.success).toBe(true);
+    expect(resumeWorkflow).toHaveBeenCalledWith(77, "appr-1", 42);
+    const completed = mockQuery.mock.calls.find(
+      (c) =>
+        String(c[0]).includes("UPDATE ai_action_approvals") &&
+        String(JSON.stringify(c[1]?.replacements ?? {})).includes("completed"),
+    );
+    expect(completed).toBeDefined();
+    const failed = mockQuery.mock.calls.find(
+      (c) =>
+        String(c[0]).includes("UPDATE ai_action_approvals") &&
+        String(JSON.stringify(c[1]?.replacements ?? {})).includes("failed"),
+    );
+    expect(failed).toBeUndefined();
   });
 
   it("marks the approval failed, and does not throw, when resumeWorkflow rejects", async () => {
