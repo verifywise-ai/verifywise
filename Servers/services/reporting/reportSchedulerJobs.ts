@@ -4,6 +4,8 @@ import {
 } from "../../utils/scheduledReport.utils";
 import { runScheduledReport } from "./reportRunOrchestrator";
 import { computeNextRun } from "./scheduleCalculator";
+import logger from "../../utils/logger/fileLogger";
+import { assertReportScopeAllowed } from "./reportAuthorization";
 
 // Single repeatable BullMQ tick: find scheduled reports whose next_run_at is due
 // and run each. next_run is advanced via an atomic compare-and-swap claim BEFORE
@@ -27,6 +29,24 @@ export async function handleReportSchedulerTick(): Promise<void> {
       sched.next_run_at ? new Date(sched.next_run_at) : null,
     );
     if (!claimed) continue;
+    // Report-only. The scope rule gates creation and editing; a schedule that
+    // predates it keeps delivering so nothing silently stops working on
+    // deploy. Naming it here is what turns "we tightened the rule" into an
+    // actionable cleanup list.
+    if (sched.owner_id) {
+      const scopeErrors = await assertReportScopeAllowed({
+        role: null,
+        userId: sched.owner_id,
+        organizationId: sched.organization_id,
+        scope: sched.scope,
+        projectId: sched.project_id,
+      });
+      if (scopeErrors.length) {
+        logger.warn(
+          `[report-scheduler] schedule ${sched.id} (org ${sched.organization_id}, owner ${sched.owner_id}) would no longer be permitted: ${scopeErrors.join("; ")}. Running it anyway.`,
+        );
+      }
+    }
     try {
       await runScheduledReport(sched, { triggeredBy: "scheduler", scheduledFor });
     } catch {
