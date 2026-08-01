@@ -906,11 +906,17 @@ async function rejectActionImpl(
     }
   }
 
-  // Also resolve in Redis
-  try {
-    await resolveConfirmation(organizationId, id, "rejected", userId);
-  } catch {
-    /* non-fatal */
+  // Also resolve in Redis — but only for tool approvals. submitWorkflowGate
+  // never calls storeConfirmation (a gate has no confirmation-polling UI), so
+  // there is no key for a gate rejection to resolve; skipping it avoids
+  // paying for a Redis round trip (bounded by commandTimeout, see
+  // database/redis.ts, but still pure overhead) that can never do anything.
+  if (record.tool_name !== WORKFLOW_GATE_TOOL) {
+    try {
+      await resolveConfirmation(organizationId, id, "rejected", userId);
+    } catch {
+      /* non-fatal */
+    }
   }
 
   logStateHistory(organizationId, id, stateHistory, record.tool_name).catch(() => {});
