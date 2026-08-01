@@ -183,7 +183,7 @@ jobs:
           # globalSetup; it fails closed without it. CI-only value.
           DB_APP_PASSWORD: test-app-role-password-for-ci
         run: |
-          npm run test:integration -- --testPathPatterns='tests/integration/(workflow-audit-log|user-deletion-fks|reporting-rls-policies|report-run-visibility|framework-gap-workflow)\.test\.ts'
+          npm run test:integration -- --testPathPatterns='tests/integration/(workflow-audit-log|user-deletion-fks|reporting-rls-policies|report-run-visibility|framework-gap-workflow|report-scope-membership)\.test\.ts'
 
       - name: Run deadline-summary smoke test
         env:
