@@ -70,13 +70,20 @@ export const frameworkGapWorkflow: WorkflowDefinition = {
     },
     {
       id: "check_any_low",
-      description: "Skip if no framework is below threshold",
+      description: "End the run if no framework is below threshold",
       agent: "compliance",
       isWrite: false,
       handler: async (ctx) => {
         const frameworks = ctx.results.scan_frameworks as FrameworkScore[] | undefined;
         if (!frameworks || frameworks.length === 0) {
-          return { type: "skip", reason: "All frameworks above threshold" };
+          // Branch, not skip: `skip` marks the step and advances to the next
+          // one, so this short-circuit never short-circuited. The run walked on
+          // to notify_admins, which read an empty scan result and sent every
+          // admin "Frameworks below 70%: ." — daily, per org, from the 07:00
+          // scheduler, most visibly to a brand-new org with no readiness rows
+          // at all. Branching to the terminal no-op is the only way a
+          // definition can end a run early.
+          return { type: "branch", gotoStepId: "no_gaps" };
         }
         return { type: "ok", output: { lowFrameworks: frameworks.length } };
       },
@@ -114,11 +121,16 @@ export const frameworkGapWorkflow: WorkflowDefinition = {
       agent: "compliance",
       isWrite: false,
       handler: async (ctx) => {
+        const frameworks = ctx.results.scan_frameworks as FrameworkScore[] | undefined;
+        // Belt and braces with the branch above: this step must never be the
+        // thing that decides an empty gap list is worth an org-wide broadcast.
+        if (!frameworks || frameworks.length === 0) {
+          return { type: "skip", reason: "No framework below threshold" };
+        }
         const admins = await getOrgAdmins(ctx.organizationId);
         if (admins.length === 0) {
           return { type: "skip", reason: "No admins in organization" };
         }
-        const frameworks = ctx.results.scan_frameworks as FrameworkScore[];
         const summary = frameworks.map((f) => `${f.framework_type}: ${f.avg_score}%`).join(", ");
         await sendBulkInAppNotifications(ctx.organizationId, {
           user_ids: admins.map((a) => a.id),
@@ -130,6 +142,16 @@ export const frameworkGapWorkflow: WorkflowDefinition = {
         });
         return { type: "ok", output: { notified_admins: admins.length } };
       },
+    },
+    {
+      // Terminal no-op. The engine has no "end the run here" result, so a
+      // definition that wants to finish early branches to a last step that
+      // does nothing. Must stay last.
+      id: "no_gaps",
+      description: "No framework is below threshold — nothing to remediate",
+      agent: "compliance",
+      isWrite: false,
+      handler: async () => ({ type: "ok", output: { gaps: 0 } }),
     },
   ],
 };

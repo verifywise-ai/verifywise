@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useRef } from "react";
 import {
   Box,
   Stack,
@@ -86,6 +86,7 @@ export default function AIObservability() {
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailSpans, setDetailSpans] = useState<any[]>([]);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState(false);
 
   const selectedPeriod = PERIOD_OPTIONS.find((p) => p.value === period)!;
   const dateFrom = useMemo(() => {
@@ -95,8 +96,16 @@ export default function AIObservability() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [period]);
 
-  const { data: metrics, isLoading: metricsLoading } = useObservabilityMetrics(dateFrom);
-  const { data: traceData, isLoading: tracesLoading } = useTraces({
+  const {
+    data: metrics,
+    isLoading: metricsLoading,
+    isError: metricsError,
+  } = useObservabilityMetrics(dateFrom);
+  const {
+    data: traceData,
+    isLoading: tracesLoading,
+    isError: tracesError,
+  } = useTraces({
     dateFrom,
     limit: rowsPerPage,
     offset: page * rowsPerPage,
@@ -104,17 +113,34 @@ export default function AIObservability() {
 
   const summary = metrics?.summary || {};
   const latencyTrend = metrics?.latencyTrend || [];
+  // The API returns { traces, total }. Reading `rows` here left the table
+  // permanently empty while the pager below — which reads `total`, a key that
+  // does exist — reported the real count, so the page contradicted itself.
+  const traceRows: any[] = Array.isArray(traceData?.traces) ? traceData.traces : [];
+
+  // Which trace the open dialog is for. Without this, opening a slow trace,
+  // closing it and opening a fast one lets the first response land last and
+  // overwrite the spans — and the dialog title carries no trace id, so nothing
+  // would tell the user they are looking at the wrong waterfall.
+  const activeTraceRef = useRef<string | null>(null);
 
   const handleViewDetail = async (traceId: string) => {
+    activeTraceRef.current = traceId;
+    setDetailSpans([]);
+    setDetailError(false);
     setDetailLoading(true);
     setDetailOpen(true);
     try {
       const detail = await getTraceDetail(traceId);
+      if (activeTraceRef.current !== traceId) return;
       setDetailSpans(Array.isArray(detail?.spans) ? detail.spans : []);
     } catch {
-      setDetailSpans([]);
+      if (activeTraceRef.current !== traceId) return;
+      // Kept apart from the empty result: a failed fetch and a trace with no
+      // spans both used to render "No spans found for this trace".
+      setDetailError(true);
     } finally {
-      setDetailLoading(false);
+      if (activeTraceRef.current === traceId) setDetailLoading(false);
     }
   };
 
@@ -126,17 +152,21 @@ export default function AIObservability() {
     },
     {
       label: "Total cost",
-      value: `$${(summary.total_cost ?? 0).toFixed(2)}`,
+      // Coerced, not asserted: the cost is summed from a pg numeric column,
+      // which the driver hands back as a string — `"1.50".toFixed` is not a
+      // function and would white-screen the page. Line 375 below already does
+      // this for the per-row cost.
+      value: `$${Number(summary.total_cost ?? 0).toFixed(2)}`,
       icon: <DollarSign size={13} />,
     },
     {
       label: "Avg latency",
-      value: `${Math.round(summary.avg_latency_ms ?? 0)}ms`,
+      value: `${Math.round(Number(summary.avg_latency_ms ?? 0))}ms`,
       icon: <Clock size={13} />,
     },
     {
       label: "Error rate",
-      value: `${summary.error_rate_pct ?? 0}%`,
+      value: `${Number(summary.error_rate_pct ?? 0)}%`,
       icon: <XCircle size={13} />,
     },
   ];
@@ -170,8 +200,29 @@ export default function AIObservability() {
         <Stack direction="row" spacing={1}>
           {PERIOD_OPTIONS.map((opt) => {
             const isSelected = period === opt.value;
+            // Selecting a period must reset the pager: the offset is derived
+            // from `page`, so keeping page 5 while switching to a shorter window
+            // asks for rows that no longer exist and renders an empty table
+            // with an out-of-range MUI page.
+            const selectPeriod = () => {
+              setPeriod(opt.value);
+              setPage(0);
+            };
             return (
-              <Box key={opt.value} onClick={() => setPeriod(opt.value)} sx={{ cursor: "pointer" }}>
+              <Box
+                key={opt.value}
+                role="button"
+                tabIndex={0}
+                aria-pressed={isSelected}
+                onClick={selectPeriod}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    selectPeriod();
+                  }
+                }}
+                sx={{ cursor: "pointer" }}
+              >
                 <Chip
                   label={opt.label}
                   size="small"
@@ -231,7 +282,13 @@ export default function AIObservability() {
           <Typography sx={{ fontSize: 13, fontWeight: 600, color: textColors.primary, mb: 1 }}>
             Latency over time
           </Typography>
-          {latencyTrend.length === 0 ? (
+          {metricsError ? (
+            <Box sx={{ py: 4, textAlign: "center" }}>
+              <Typography sx={{ fontSize: 12, color: textColors.accent }}>
+                Could not load metrics.
+              </Typography>
+            </Box>
+          ) : latencyTrend.length === 0 ? (
             <Box sx={{ py: 4, textAlign: "center" }}>
               <Typography sx={{ fontSize: 12, color: textColors.accent }}>No data</Typography>
             </Box>
@@ -298,7 +355,19 @@ export default function AIObservability() {
                     <CircularProgress size={20} />
                   </TableCell>
                 </TableRow>
-              ) : (traceData?.rows || []).length === 0 ? (
+              ) : tracesError ? (
+                // Distinct from the empty state on purpose: "the request failed"
+                // and "you have no traces" are different situations and only one
+                // of them is worth retrying.
+                <TableRow>
+                  <TableCell colSpan={6} align="center" sx={{ py: 4, border: "none" }}>
+                    <Typography sx={{ fontSize: 12, color: textColors.accent }}>
+                      Could not load traces. Check that the observability service is reachable and
+                      try again.
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              ) : traceRows.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} align="center" sx={{ py: 4, border: "none" }}>
                     <Typography sx={{ fontSize: 12, color: textColors.accent }}>
@@ -307,7 +376,7 @@ export default function AIObservability() {
                   </TableCell>
                 </TableRow>
               ) : (
-                (traceData?.rows || []).map((row: any, i: number) => (
+                traceRows.map((row: any, i: number) => (
                   <TableRow
                     key={row.id || row.trace_id || i}
                     hover
@@ -421,6 +490,11 @@ export default function AIObservability() {
             <Box display="flex" justifyContent="center" py={4}>
               <CircularProgress size={24} />
             </Box>
+          ) : detailError ? (
+            <Alert severity="warning" sx={{ fontSize: 13 }}>
+              Could not load this trace. It may have been removed, or the observability service is
+              unreachable.
+            </Alert>
           ) : detailSpans.length === 0 ? (
             <Alert severity="info" sx={{ fontSize: 13 }}>
               No spans found for this trace

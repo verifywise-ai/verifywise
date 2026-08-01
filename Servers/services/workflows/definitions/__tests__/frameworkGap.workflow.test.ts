@@ -72,6 +72,9 @@ describe("frameworkGapWorkflow / definition shape", () => {
       "check_any_low",
       "fetch_weakest_controls",
       "notify_admins",
+      // Terminal no-op. The engine has no "end the run" result, so ending
+      // early means branching to a last step that does nothing. Must stay last.
+      "no_gaps",
     ]);
   });
 
@@ -97,14 +100,20 @@ describe("frameworkGapWorkflow / scan_frameworks", () => {
 });
 
 describe("frameworkGapWorkflow / check_any_low (decision branch)", () => {
-  it("skips when no framework is below threshold", async () => {
+  it("branches to the terminal step when no framework is below threshold", async () => {
+    // Not `skip`: the engine treats skip as "mark this step and carry on", so
+    // the original short-circuit fell through to notify_admins and broadcast an
+    // empty gap list to every admin, daily. Branching is the only way a
+    // definition can actually end a run early.
     const result = await stepById("check_any_low").handler(
       ctx({ results: { scan_frameworks: [] } }),
     );
-    expect(result).toEqual({
-      type: "skip",
-      reason: "All frameworks above threshold",
-    });
+    expect(result).toEqual({ type: "branch", gotoStepId: "no_gaps" });
+  });
+
+  it("branches rather than throwing when the scan step produced no result at all", async () => {
+    const result = await stepById("check_any_low").handler(ctx({ results: {} }));
+    expect(result).toEqual({ type: "branch", gotoStepId: "no_gaps" });
   });
 
   it("continues (ok) when at least one framework is below threshold", async () => {

@@ -21,7 +21,13 @@ jest.mock("../../utils/statusCode.utils", () => ({
   },
 }));
 
-import { getTraces, getTraceDetail, getCosts, getPerformance } from "../observability.ctrl";
+import {
+  getTraces,
+  getTraceDetail,
+  getCosts,
+  getPerformance,
+  getMetrics,
+} from "../observability.ctrl";
 import { getLangfuse } from "../../advisor/observability/langfuseConfig";
 import { getCostSummary } from "../../advisor/observability/costTracker";
 
@@ -353,6 +359,137 @@ describe("observability.ctrl", () => {
       await getPerformance(req as Request, res as Response);
 
       expect(res.status).toHaveBeenCalledWith(500);
+    });
+  });
+  // ── GET /api/observability/metrics ────────────────────────────────
+  describe("getMetrics", () => {
+    // The AI Observability page has always called this path. Until it existed
+    // every request 404'd and the page settled into four permanently-zero stat
+    // cards that were indistinguishable from an org with no AI activity.
+    it("rolls traces up into the summary shape the dashboard consumes", async () => {
+      mockGetCostSummary.mockResolvedValue({
+        breakdown: [{ total_cost: "1.25" }, { total_cost: "0.75" }],
+      } as any);
+      const fakeLangfuse = {
+        fetchTraces: jest.fn<any>().mockResolvedValue({
+          data: [
+            { id: "t1", tags: ["org:1"], latency: 100, timestamp: "2026-07-01T10:00:00Z" },
+            { id: "t2", tags: ["org:1"], latency: 300, timestamp: "2026-07-01T12:00:00Z" },
+            {
+              id: "t3",
+              tags: ["org:1"],
+              latency: 200,
+              level: "ERROR",
+              timestamp: "2026-07-02T09:00:00Z",
+            },
+          ],
+          meta: { totalItems: 3 },
+        }),
+      };
+      mockGetLangfuse.mockReturnValue(fakeLangfuse as any);
+
+      const req = createReq();
+      const res = createRes();
+
+      await getMetrics(req as Request, res as Response);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      const payload = res.json.mock.calls[0][0].data;
+      expect(payload.summary.total_traces).toBe(3);
+      expect(payload.summary.total_cost).toBeCloseTo(2);
+      expect(payload.summary.avg_latency_ms).toBe(200);
+      expect(payload.summary.error_rate_pct).toBe(33);
+      // One point per day, ascending, averaged within the day.
+      expect(payload.latencyTrend).toEqual([
+        { date: "2026-07-01", avg_latency_ms: 200 },
+        { date: "2026-07-02", avg_latency_ms: 200 },
+      ]);
+    });
+
+    it("scopes the roll-up to the caller's organization", async () => {
+      mockGetCostSummary.mockResolvedValue({ breakdown: [] } as any);
+      const fakeLangfuse = {
+        fetchTraces: jest.fn<any>().mockResolvedValue({
+          data: [
+            { id: "mine", tags: ["org:1"], latency: 100, timestamp: "2026-07-01T10:00:00Z" },
+            // Neither of these may influence the numbers: a foreign tag, and a
+            // trace with no org tag at all (fail closed, as elsewhere).
+            { id: "theirs", tags: ["org:2"], latency: 9000, timestamp: "2026-07-01T10:00:00Z" },
+            { id: "untagged", latency: 9000, timestamp: "2026-07-01T10:00:00Z" },
+          ],
+          meta: { totalItems: 3 },
+        }),
+      };
+      mockGetLangfuse.mockReturnValue(fakeLangfuse as any);
+
+      const res = createRes();
+      await getMetrics(createReq() as Request, res as Response);
+
+      const payload = res.json.mock.calls[0][0].data;
+      expect(payload.summary.avg_latency_ms).toBe(100);
+      expect(fakeLangfuse.fetchTraces).toHaveBeenCalledWith(
+        expect.objectContaining({ tags: ["org:1"] }),
+      );
+    });
+
+    it("returns zeroes rather than 500 when Langfuse is unconfigured, keeping cost data", async () => {
+      mockGetCostSummary.mockResolvedValue({ breakdown: [{ total_cost: "3.00" }] } as any);
+      mockGetLangfuse.mockReturnValue(null as any);
+
+      const res = createRes();
+      await getMetrics(createReq() as Request, res as Response);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      const payload = res.json.mock.calls[0][0].data;
+      // costTracker is Langfuse-independent, so the cost is still real.
+      expect(payload.summary.total_cost).toBeCloseTo(3);
+      expect(payload.summary.total_traces).toBe(0);
+      expect(payload.latencyTrend).toEqual([]);
+    });
+
+    it("500s when the cost source throws", async () => {
+      mockGetCostSummary.mockRejectedValue(new Error("db down") as any);
+
+      const res = createRes();
+      await getMetrics(createReq() as Request, res as Response);
+
+      expect(res.status).toHaveBeenCalledWith(500);
+    });
+  });
+
+  describe("limit clamping", () => {
+    // Unclamped, `limit` let a caller ask for an arbitrary page size, which
+    // getPerformance then fans out across up to 100 traces, and limit=0 turned
+    // the offset/limit page computation into Infinity.
+    it("caps an oversized limit on getTraces", async () => {
+      const fakeLangfuse = {
+        fetchTraces: jest.fn<any>().mockResolvedValue({ data: [], meta: { totalItems: 0 } }),
+      };
+      mockGetLangfuse.mockReturnValue(fakeLangfuse as any);
+
+      const res = createRes();
+      await getTraces(createReq({ query: { limit: "100000" } } as any) as Request, res as Response);
+
+      expect(fakeLangfuse.fetchTraces).toHaveBeenCalledWith(
+        expect.objectContaining({ limit: 500 }),
+      );
+    });
+
+    it("falls back to the default rather than producing a non-finite page", async () => {
+      const fakeLangfuse = {
+        fetchTraces: jest.fn<any>().mockResolvedValue({ data: [], meta: { totalItems: 0 } }),
+      };
+      mockGetLangfuse.mockReturnValue(fakeLangfuse as any);
+
+      const res = createRes();
+      await getTraces(
+        createReq({ query: { limit: "0", offset: "10" } } as any) as Request,
+        res as Response,
+      );
+
+      const arg = fakeLangfuse.fetchTraces.mock.calls[0][0];
+      expect(arg.limit).toBe(50);
+      expect(Number.isFinite(arg.page)).toBe(true);
     });
   });
 });

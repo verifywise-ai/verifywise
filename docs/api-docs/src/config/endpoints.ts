@@ -6737,6 +6737,17 @@ export const notificationEndpoints: Endpoint[] = [
 export const observabilityEndpoints: Endpoint[] = [
   {
     method: 'GET',
+    path: '/observability/metrics',
+    summary: "Get Metrics",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Observability",
+  },
+  {
+    method: 'GET',
     path: '/observability/traces',
     summary: "Get Traces",
     requiresAuth: true,

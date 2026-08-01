@@ -47,6 +47,10 @@ async function mapWithConcurrency<T, R>(
 const PERFORMANCE_TRACE_SAMPLE = 100;
 // Max concurrent per-trace observation fetches for one performance request.
 const PERFORMANCE_FETCH_CONCURRENCY = 8;
+// How many of an org's most-recent traces the dashboard roll-up summarises.
+// Bounded for the same reason as PERFORMANCE_TRACE_SAMPLE: one page load must
+// not fan out an unbounded fetch to Langfuse.
+const METRICS_TRACE_SAMPLE = 500;
 
 /**
  * Compute a percentile from a numeric sample.
@@ -59,6 +63,23 @@ function percentile(sortedAsc: number[], p: number): number {
 }
 
 /**
+ * Read a caller-supplied `limit` into a sane bounded integer.
+ *
+ * Unclamped, `Number(limit)` let a caller ask for an arbitrary page size (which
+ * getPerformance then fans out across up to 100 traces) and let `limit=0` turn
+ * the `offset/limit` page computation into Infinity/NaN. Mirrors the clamping
+ * reportRun.ctrl.ts already applies to its list endpoint.
+ */
+function boundedLimit(raw: unknown, fallback: number, max: number): number {
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed) || parsed < 1) return fallback;
+  return Math.min(Math.floor(parsed), max);
+}
+
+/** Upper bound on any caller-supplied page size on these endpoints. */
+const MAX_LIMIT = 500;
+
+/**
  * GET /api/observability/traces
  * Recent traces with optional filters. Empty when Langfuse is unconfigured.
  */
@@ -68,8 +89,10 @@ export async function getTraces(req: Request, res: Response) {
 
   try {
     const { limit, offset, userId, name } = req.query;
-    const limitNum = limit ? Number(limit) : 50;
-    const offsetNum = offset ? Number(offset) : 0;
+    const limitNum = boundedLimit(limit, 50, MAX_LIMIT);
+    const parsedOffset = Number(offset);
+    const offsetNum =
+      Number.isFinite(parsedOffset) && parsedOffset > 0 ? Math.floor(parsedOffset) : 0;
 
     const langfuse = getLangfuse();
     if (!langfuse) {
@@ -176,7 +199,7 @@ export async function getPerformance(req: Request, res: Response) {
 
   try {
     const { limit } = req.query;
-    const limitNum = limit ? Number(limit) : 500;
+    const limitNum = boundedLimit(limit, 500, MAX_LIMIT);
 
     const langfuse = getLangfuse();
     if (!langfuse) {
@@ -257,6 +280,120 @@ export async function getPerformance(req: Request, res: Response) {
   } catch (error) {
     logStructured("error", "failed to get performance", functionName, fileName);
     logger.error("Error in getPerformance:", error);
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+  }
+}
+
+/**
+ * GET /api/observability/metrics
+ * Dashboard roll-up: headline counters plus a per-day average-latency series.
+ *
+ * The AI Observability page has always called this path; the route was never
+ * implemented, so every request 404'd, React Query retried three times, and the
+ * page settled into four permanently-zero stat cards and an empty chart that
+ * were indistinguishable from an org with no AI activity.
+ *
+ * Composed from the same org-scoped primitives the sibling endpoints use --
+ * costs from costTracker, latency and error rate from the traces carrying this
+ * org's tag -- so it inherits their tenant boundary rather than introducing a
+ * second one. Zeroed, not 500, when Langfuse is unconfigured: an unconfigured
+ * install is a legitimate state, and the cost figures are still meaningful
+ * because costTracker is Langfuse-independent.
+ */
+export async function getMetrics(req: Request, res: Response) {
+  const functionName = "getMetrics";
+  const organizationId = req.organizationId!;
+
+  try {
+    const { dateFrom, dateTo } = req.query;
+
+    const costSummary = await getCostSummary(
+      organizationId,
+      dateFrom as string | undefined,
+      dateTo as string | undefined,
+    );
+    const breakdown = ((costSummary as any)?.breakdown ?? []) as any[];
+    // pg returns numeric as a string, so coerce before summing.
+    const totalCost = breakdown.reduce((sum, row) => sum + Number(row.total_cost ?? 0), 0);
+
+    const emptySummary = {
+      summary: {
+        total_traces: 0,
+        total_cost: totalCost,
+        avg_latency_ms: 0,
+        error_rate_pct: 0,
+      },
+      latencyTrend: [] as Array<{ date: string; avg_latency_ms: number }>,
+    };
+
+    const langfuse = getLangfuse();
+    if (!langfuse) {
+      return res.status(200).json(STATUS_CODE[200](emptySummary));
+    }
+
+    const tracesResult = await langfuse.fetchTraces({
+      limit: METRICS_TRACE_SAMPLE,
+      page: 1,
+      tags: [orgTag(organizationId)],
+    } as any);
+    const traces = (((tracesResult as any)?.data ?? []) as any[]).filter((t) =>
+      traceBelongsToOrg(t, organizationId),
+    );
+    const totalTraces = (tracesResult as any)?.meta?.totalItems ?? traces.length;
+
+    if (traces.length === 0) {
+      return res.status(200).json(
+        STATUS_CODE[200]({
+          ...emptySummary,
+          summary: { ...emptySummary.summary, total_traces: totalTraces },
+        }),
+      );
+    }
+
+    const latencies: number[] = [];
+    let errorCount = 0;
+    // date (YYYY-MM-DD) -> running sum and count, so the series is one pass.
+    const perDay = new Map<string, { sum: number; count: number }>();
+
+    for (const trace of traces) {
+      const latency = Number(trace?.latency ?? 0);
+      if (Number.isFinite(latency)) latencies.push(latency);
+      if (trace?.level === "ERROR") errorCount += 1;
+
+      const stamp = trace?.timestamp ?? trace?.createdAt;
+      const date = typeof stamp === "string" ? stamp.slice(0, 10) : null;
+      if (date && Number.isFinite(latency)) {
+        const bucket = perDay.get(date) ?? { sum: 0, count: 0 };
+        bucket.sum += latency;
+        bucket.count += 1;
+        perDay.set(date, bucket);
+      }
+    }
+
+    const avgLatency =
+      latencies.length > 0 ? latencies.reduce((a, b) => a + b, 0) / latencies.length : 0;
+
+    const latencyTrend = Array.from(perDay.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, { sum, count }]) => ({
+        date,
+        avg_latency_ms: Math.round(sum / count),
+      }));
+
+    return res.status(200).json(
+      STATUS_CODE[200]({
+        summary: {
+          total_traces: totalTraces,
+          total_cost: totalCost,
+          avg_latency_ms: Math.round(avgLatency),
+          error_rate_pct: Math.round((errorCount / traces.length) * 100),
+        },
+        latencyTrend,
+      }),
+    );
+  } catch (error) {
+    logStructured("error", "failed to get metrics", functionName, fileName);
+    logger.error("Error in getMetrics:", error);
     return res.status(500).json(STATUS_CODE[500]((error as Error).message));
   }
 }

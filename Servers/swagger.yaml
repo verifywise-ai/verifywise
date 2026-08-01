@@ -17116,6 +17116,20 @@ paths:
       security:
         -
           bearerAuth: []
+  /observability/metrics:
+    get:
+      summary: 'Get Metrics'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Observability
+      operationId: getMetrics
+      security:
+        -
+          bearerAuth: []
   /observability/traces:
     get:
       summary: 'Get Traces'
