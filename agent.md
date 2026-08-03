@@ -67,7 +67,9 @@ Regenerated root `package-lock.json`. `sharp` now resolves to `0.35.3`.
 
 `Servers` directly depended on `sanitize-html@^2.17.4`, which has incomplete URI scheme validation for attributes like `action`, `formaction`, `data`, `poster`, and `background` (Dependabot alert #512).
 
-**Action:** bumped `sanitize-html` to `^2.17.5` in `Servers/package.json` and regenerated `Servers/package-lock.json`. Resolved version is `2.17.6`.
+**Action:** pinned `sanitize-html` to `2.17.5` in `Servers/package.json` and regenerated `Servers/package-lock.json`.
+
+> Note: `2.17.6` pulls in `htmlparser2@12` (ESM-only), which Jest cannot transform because `node_modules` is ignored by default. `2.17.5` still satisfies the security fix and uses `htmlparser2@10` (CommonJS), so tests pass without a Jest config change.
 
 **Commit:**
 - `security(servers): bump sanitize-html to ^2.17.5`
@@ -111,7 +113,7 @@ The GitHub Dependency Review action (`actions/dependency-review-action@v5`) alre
 | `GRSModule/ui/frontend` | `npm run lint` | ✅ |
 | `Servers` | `npm run build` | ✅ |
 | Root | `npm ls sharp` | `0.35.3` ✅ |
-| `Servers` | `npm ls sanitize-html` | `2.17.6` ✅ |
+| `Servers` | `npm ls sanitize-html` | `2.17.5` ✅ |
 | `GRSModule/ui/frontend` | `npm ls dompurify` | `3.4.12` ✅ |
 | `docs/api-docs` | `npm audit` (React Router) | Only non-exploitable RSC CSRF remains |
 | `GRSModule/ui/frontend` | `npm audit` (React Router) | Only non-exploitable RSC CSRF remains |
