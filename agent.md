@@ -1,8 +1,8 @@
 # VerifyWise — Dependency Security Patch Report
 
 **Date:** 2026-08-03  
-**Branch:** `mo-379-aug-3-security-and-quality` (pushed to origin)  
-**Scope:** Security updates for React Router and `brace-expansion` transitive dependencies.
+**Branch:** `mo-380-aug-3-dependency-security-patch` (pushed to origin)  
+**Scope:** Security updates for React Router, `brace-expansion`, `sharp`, `sanitize-html`, and `dompurify` transitive dependencies.
 
 ---
 
@@ -46,15 +46,61 @@ Regenerated `Servers/package-lock.json`. All `brace-expansion` instances now res
 **Commit:**
 - `security(servers): patch brace-expansion DoS via overrides`
 
-### 1.3 `Clients` — RSC-mode CSRF (#478)
+### 1.3 `sharp` — root `package-lock.json`
 
-`Clients` pins `react-router-dom@7.18.0`. Alert #478 affects React Router's unstable RSC/server-action code paths and is patched only in v8.3.0.
+Root devDependency `webreel@^0.1.4` transitively depended on `sharp@0.34.5`, which bundles vulnerable `libvips` versions (Dependabot alert #474).
 
-**Decision:** `Clients/src/main.tsx` uses `<BrowserRouter>` with declarative `<Routes>` — it does **not** use RSC, `RouterProvider`, or server actions. The vector is not reachable, so no upgrade was performed. React Router v8 migration is tracked as a separate future initiative.
+**Action:** added an npm override in root `package.json`:
 
-### 1.4 Dependency Review Allowlist
+```json
+"overrides": {
+  "sharp": ">=0.35.0"
+}
+```
 
-The GitHub Dependency Review action (`actions/dependency-review-action@v5`) flags the residual RSC-mode CSRF advisory (`GHSA-qwww-vcr4-c8h2`) in `docs/api-docs` and `GRSModule/ui/frontend` because both install `react-router@7.18.2`. Since these modules use BrowserRouter/Data mode and the vulnerable code path is unreachable, the advisory was added to the `allow-ghsas` list in both `.github/workflows/backend-checks.yml` and `.github/workflows/frontend-checks.yml` alongside the existing `brace-expansion` exception (`GHSA-mh99-v99m-4gvg`).
+Regenerated root `package-lock.json`. `sharp` now resolves to `0.35.3`.
+
+**Commit:**
+- `security(root): override transitive sharp to >=0.35.0`
+
+### 1.4 `sanitize-html` — `Servers`
+
+`Servers` directly depended on `sanitize-html@^2.17.4`, which has incomplete URI scheme validation for attributes like `action`, `formaction`, `data`, `poster`, and `background` (Dependabot alert #512).
+
+**Action:** pinned `sanitize-html` to `2.17.5` in `Servers/package.json` and regenerated `Servers/package-lock.json`.
+
+> Note: `2.17.6` pulls in `htmlparser2@12` (ESM-only), which Jest cannot transform because `node_modules` is ignored by default. `2.17.5` still satisfies the security fix and uses `htmlparser2@10` (CommonJS), so tests pass without a Jest config change.
+
+**Commit:**
+- `security(servers): bump sanitize-html to ^2.17.5`
+
+### 1.5 `dompurify` — `GRSModule/ui/frontend`
+
+`GRSModule/ui/frontend` did not directly depend on `dompurify`; it was pulled in by `monaco-editor` (via `@monaco-editor/react`) at `dompurify@3.2.7`. The affected range is `<=3.4.11` (Dependabot alert #466).
+
+**Action:** added an npm override in `GRSModule/ui/frontend/package.json`:
+
+```json
+"overrides": {
+  "dompurify": ">=3.4.12"
+}
+```
+
+Regenerated the lockfile. `dompurify` now resolves to `3.4.12`.
+
+**Commit:**
+- `security(grs-frontend): override dompurify to >=3.4.12`
+
+### 1.6 React Router RSC-mode CSRF — `docs/api-docs`, `GRSModule/ui/frontend`, `Clients`
+
+New Dependabot alerts #515, #514, and #478 are additional instances of the same RSC-mode CSRF advisory (`GHSA-qwww-vcr4-c8h2`). The patched version is 8.3.0.
+
+**Decision:** all three modules use React Router in **Declarative/Data mode** (`BrowserRouter` / `<Routes>`). They do **not** use unstable RSC/server-action APIs, so the vector is not reachable. No upgrade to React Router v8 was performed; migration is tracked separately.
+
+The GitHub Dependency Review action (`actions/dependency-review-action@v5`) already allowlists `GHSA-qwww-vcr4-c8h2` in both `.github/workflows/backend-checks.yml` and `.github/workflows/frontend-checks.yml` alongside the `brace-expansion` exception (`GHSA-mh99-v99m-4gvg`).
+
+**Commit:**
+- `ci: allow GHSA-qwww-vcr4-c8h2 in dependency-review`
 
 ---
 
@@ -66,22 +112,25 @@ The GitHub Dependency Review action (`actions/dependency-review-action@v5`) flag
 | `GRSModule/ui/frontend` | `npm run build` | ✅ |
 | `GRSModule/ui/frontend` | `npm run lint` | ✅ |
 | `Servers` | `npm run build` | ✅ |
-| `docs/api-docs` | `npm audit` (React Router) | Only unrelated RSC CSRF remains |
-| `GRSModule/ui/frontend` | `npm audit` (React Router) | Only unrelated RSC CSRF remains |
-| `Servers` | `npm audit` (`brace-expansion`) | No `brace-expansion` findings |
+| Root | `npm ls sharp` | `0.35.3` ✅ |
+| `Servers` | `npm ls sanitize-html` | `2.17.5` ✅ |
+| `GRSModule/ui/frontend` | `npm ls dompurify` | `3.4.12` ✅ |
+| `docs/api-docs` | `npm audit` (React Router) | Only non-exploitable RSC CSRF remains |
+| `GRSModule/ui/frontend` | `npm audit` (React Router) | Only non-exploitable RSC CSRF remains |
+| `Servers` | `npm audit` (`brace-expansion`, `sanitize-html`) | No findings for either |
 
 ---
 
 ## 3. Pull Request
 
-Compare URL for `develop ← mo-379-aug-3-security-and-quality`:
+Compare URL for `develop ← mo-380-aug-3-dependency-security-patch`:
 
-https://github.com/verifywise-ai/verifywise/compare/develop...mo-379-aug-3-security-and-quality
+https://github.com/verifywise-ai/verifywise/compare/develop...mo-380-aug-3-dependency-security-patch
 
 ---
 
 ## 4. Outcome
 
 - All listed React Router Dependabot alerts for `docs/api-docs` and `GRSModule/ui/frontend` are resolved.
-- The `brace-expansion` DoS alert for `Servers` is resolved via targeted overrides.
-- `Clients` RSC-mode risk is accepted/documented as non-exploitable in the current BrowserRouter deployment.
+- The `brace-expansion`, `sanitize-html`, `sharp`, and `dompurify` alerts are resolved via targeted version bumps and overrides.
+- Residual React Router RSC-mode CSRF alerts (#515, #514, #478) are accepted/documented as non-exploitable in the current BrowserRouter/Data-mode deployments and allowlisted in CI.
