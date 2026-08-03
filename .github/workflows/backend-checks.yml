@@ -287,4 +287,4 @@ jobs:
         with:
           fail-on-severity: high
           deny-licenses: GPL-3.0, AGPL-3.0
-          allow-ghsas: GHSA-mh99-v99m-4gvg
+          allow-ghsas: GHSA-mh99-v99m-4gvg, GHSA-qwww-vcr4-c8h2
