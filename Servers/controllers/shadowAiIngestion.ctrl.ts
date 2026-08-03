@@ -25,6 +25,7 @@ import { ShadowAiIngestionRequest } from "../domain.layer/interfaces/i.shadowAi"
 import { getSettingsQuery } from "../utils/shadowAiConfig.utils";
 
 import { translateError } from "../utils/i18n.utils";
+import { isEmail } from "../utils/validations/email.utils";
 const MAX_EVENTS_PER_REQUEST = 10000;
 
 // ─── In-memory sliding window rate limiter ─────────────────────────────
@@ -136,7 +137,6 @@ export async function ingestEvents(req: Request, res: Response) {
   }
 
   // Validate required fields and basic formats
-  const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   for (let i = 0; i < body.events.length; i++) {
     const evt = body.events[i];
     if (!evt.user_email || !evt.destination || !evt.timestamp) {
@@ -151,7 +151,7 @@ export async function ingestEvents(req: Request, res: Response) {
           ),
         );
     }
-    if (!EMAIL_REGEX.test(evt.user_email)) {
+    if (!isEmail(evt.user_email)) {
       return res
         .status(400)
         .json(STATUS_CODE[400](req.t!("Event at index {i} has invalid user_email format", { i })));

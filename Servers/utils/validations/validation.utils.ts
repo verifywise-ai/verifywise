@@ -502,7 +502,9 @@ export const sanitizeString = (
  * Common validation patterns
  */
 export const VALIDATION_PATTERNS = {
-  EMAIL: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+  // Safe regex: labels are separated by fixed "." characters so the engine
+  // cannot partition the domain in multiple ways (avoids polynomial ReDoS).
+  EMAIL: /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/,
   PHONE: /^\+?[\d\s\-\(\)]{10,}$/,
   URL: /^https?:\/\/.+/,
   ALPHANUMERIC: /^[a-zA-Z0-9]+$/,
