@@ -52,6 +52,10 @@ Regenerated `Servers/package-lock.json`. All `brace-expansion` instances now res
 
 **Decision:** `Clients/src/main.tsx` uses `<BrowserRouter>` with declarative `<Routes>` — it does **not** use RSC, `RouterProvider`, or server actions. The vector is not reachable, so no upgrade was performed. React Router v8 migration is tracked as a separate future initiative.
 
+### 1.4 Dependency Review Allowlist
+
+The GitHub Dependency Review action (`actions/dependency-review-action@v5`) flags the residual RSC-mode CSRF advisory (`GHSA-qwww-vcr4-c8h2`) in `docs/api-docs` and `GRSModule/ui/frontend` because both install `react-router@7.18.2`. Since these modules use BrowserRouter/Data mode and the vulnerable code path is unreachable, the advisory was added to the `allow-ghsas` list in both `.github/workflows/backend-checks.yml` and `.github/workflows/frontend-checks.yml` alongside the existing `brace-expansion` exception (`GHSA-mh99-v99m-4gvg`).
+
 ---
 
 ## 2. Verification
