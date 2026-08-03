@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Box, Stack, Typography, useTheme, Divider, Snackbar } from "@mui/material";
-import { Copy, Database } from "lucide-react";
+import { Database } from "lucide-react";
 import CodeBlock from "../CodeBlock";
 
 interface MockEmptyStateProps {
