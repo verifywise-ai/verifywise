@@ -793,12 +793,18 @@ export const checkRateLimitQuery = async (
  * Generate slug from name
  */
 export function generateSlug(name: string): string {
-  return name
+  let slug = name
     .toLowerCase()
     .trim()
     .replace(/[^\w\s-]/g, "")
-    .replace(/[\s_-]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+    .replace(/[\s_-]+/g, "-");
+
+  // Trim leading/trailing hyphens without using the ambiguous /-+$/ regex.
+  let start = 0;
+  let end = slug.length;
+  while (start < end && slug[start] === "-") start++;
+  while (end > start && slug[end - 1] === "-") end--;
+  return slug.slice(start, end);
 }
 
 /**

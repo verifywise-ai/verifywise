@@ -24,7 +24,9 @@ export const MAIL_VALIDATION_LIMITS = {
 /**
  * Email validation pattern
  */
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Safe regex: labels are separated by fixed "." characters so the engine
+// cannot partition the domain in multiple ways (avoids polynomial ReDoS).
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/;
 
 /**
  * Validates email address field
