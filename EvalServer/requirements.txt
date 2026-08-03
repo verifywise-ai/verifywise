@@ -83,7 +83,7 @@ pytz==2025.2
 PyYAML==6.0.3
 questionary==2.1.1
 redis==7.0.1
-regex==2025.11.3
+regex==2026.7.19
 reportlab==4.4.10
 requests==2.33.0
 rich==14.2.0
