@@ -22,11 +22,10 @@ if (!API_TOKEN_HASH_SECRET) {
  * Only the HMAC-SHA256 hash is persisted; the raw token is shown to the creator
  * once and never stored. Using HMAC with a server-side secret (pepper) prevents
  * attackers from reconstructing tokens from a leaked database alone.
- *
- * codeql[js/insufficient-password-hash] HMAC-SHA256 with a server-side secret
- * is the correct primitive for a high-entropy API-token fingerprint/lookup key;
- * this is not password storage and does not require bcrypt/scrypt/PBKDF2.
  */
+// codeql[js/insufficient-password-hash] HMAC-SHA256 with a server-side secret is
+// the correct primitive for a high-entropy API-token fingerprint/lookup key; this
+// is not password storage and does not require bcrypt/scrypt/PBKDF2.
 export const hashApiToken = (token: string): string =>
   crypto.createHmac("sha256", API_TOKEN_HASH_SECRET).update(token).digest("hex");
 
