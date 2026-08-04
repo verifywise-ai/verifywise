@@ -19,15 +19,14 @@ if (!API_TOKEN_HASH_SECRET) {
 
 /**
  * Hash an API token (the signed JWT string) for storage and lookup.
- * Only the HMAC-SHA256 hash is persisted; the raw token is shown to the creator
- * once and never stored. Using HMAC with a server-side secret (pepper) prevents
- * attackers from reconstructing tokens from a leaked database alone.
+ * Only the PBKDF2-derived hash is persisted; the raw token is shown to the creator
+ * once and never stored. The server-side secret is used as the salt so the hash is
+ * deterministic (the same token always produces the same hash, which is required
+ * for database lookup) while still preventing an attacker who only has the database
+ * from reconstructing or brute-forcing tokens.
  */
-// codeql[js/insufficient-password-hash] HMAC-SHA256 with a server-side secret is
-// the correct primitive for a high-entropy API-token fingerprint/lookup key; this
-// is not password storage and does not require bcrypt/scrypt/PBKDF2.
 export const hashApiToken = (token: string): string =>
-  crypto.createHmac("sha256", API_TOKEN_HASH_SECRET).update(token).digest("hex");
+  crypto.pbkdf2Sync(token, API_TOKEN_HASH_SECRET, 100000, 32, "sha512").toString("hex");
 
 export const getNumberOfApiTokensQuery = async (organizationId: number) => {
   // Only active (non-revoked) tokens count toward the per-organization limit.

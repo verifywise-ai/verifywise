@@ -41,37 +41,26 @@ export const startDashboardServer = async (
 
   const publicReal = await realpath(PUBLIC);
 
-  // Validate and sanitize a decoded URL path into a safe relative path.
-  // Returns null for any value that could escape the public directory.
-  const sanitizePath = (value: string): string | null => {
-    if (
-      value.includes("\0") ||
-      value.split("/").includes("..") ||
-      value.split("\\").includes("..")
-    ) {
-      return null;
-    }
-    return value;
-  };
-
   const httpServer = createServer(async (req, res) => {
     const urlPath = req.url === "/" ? "/index.html" : (req.url ?? "/index.html");
     const rawPath = decodeURIComponent(urlPath.split("?")[0]);
 
-    const safePath = sanitizePath(rawPath);
-    if (!safePath) {
+    // Reject null bytes and traversal attempts before touching the filesystem.
+    if (
+      rawPath.includes("\0") ||
+      rawPath.split("/").includes("..") ||
+      rawPath.split("\\").includes("..")
+    ) {
       res.writeHead(403).end("forbidden");
       return;
     }
 
     // Resolve the real path (following symlinks) and require it to stay strictly
-    // inside PUBLIC. A plain string prefix check on the un-resolved join is
-    // bypassable (sibling dirs sharing the prefix, symlinks, "..").
-    // The leading "." forces path.resolve to treat safePath as relative to
-    // publicReal even when it starts with "/".
+    // inside PUBLIC. path.resolve normalizes ".." segments; realpath resolves
+    // symlinks; the startsWith check blocks absolute paths and any escape.
     let filePath: string;
     try {
-      filePath = await realpath(resolve(publicReal, "." + safePath));
+      filePath = await realpath(resolve(publicReal, rawPath));
     } catch {
       res.writeHead(404).end("not found");
       return;
