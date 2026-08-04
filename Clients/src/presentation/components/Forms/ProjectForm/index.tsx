@@ -33,7 +33,7 @@ import { FrameworkTypeEnum } from "./constants";
 import { FormValues } from "./constants";
 import { initialState } from "./constants";
 import { ProjectFormProps } from "./constants";
-import { useFormValidation } from "../../../../application/hooks/useFormValidation";
+import { useFormValidation, type FieldValidators } from "../../../../application/hooks/useFormValidation";
 import {
   PROJECT_FORM_FIELD_IDS,
   PROJECT_FORM_FIELD_ORDER,
@@ -120,7 +120,7 @@ export const ProjectForm = ({
   const [approvalWorkflows, setApprovalWorkflows] = useState<Array<{ _id: number; name: string }>>(
     [],
   );
-  const validators = useMemo(
+  const validators = useMemo<FieldValidators<FormValues>>(
     () => ({
       project_title: (v: unknown, vals: FormValues) => {
         const label =

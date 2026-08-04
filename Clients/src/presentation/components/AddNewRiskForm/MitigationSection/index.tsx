@@ -11,7 +11,7 @@ import React, {
 import { Divider, SelectChangeEvent, Stack, Typography, useTheme } from "@mui/material";
 import dayjs, { Dayjs } from "dayjs";
 import { MitigationFormValues } from "../interface";
-import { useFormValidation } from "../../../../application/hooks/useFormValidation";
+import { useFormValidation, type FieldValidators } from "../../../../application/hooks/useFormValidation";
 import { MITIGATION_FORM_FIELD_ORDER } from "../../../constants/formValidationFieldMaps";
 import { createFieldBlurHandler } from "../../../../application/utils/formValidationFocus";
 import { checkStringValidation } from "../../../../application/validations/stringValidation";
@@ -53,6 +53,10 @@ interface MitigationSectionProps {
   userRoleName: string;
   disableInternalScroll?: boolean;
   compactMode?: boolean;
+  /** Backend validation errors to display inline (keyed by MitigationFormValues field). */
+  serverErrors?: Partial<Record<keyof MitigationFormValues, string>>;
+  /** Reports live client-side validity (drives the submit button's disabled state). */
+  onValidityChange?: (isValid: boolean) => void;
 }
 /**
  * MitigationSection component manages mitigation details for risk assessment.
@@ -76,6 +80,8 @@ const MitigationSection: FC<MitigationSectionProps> = ({
   userRoleName,
   disableInternalScroll = false,
   compactMode = false,
+  serverErrors,
+  onValidityChange,
 }) => {
   const theme = useTheme();
   const isEditingDisabled = !allowedRoles.projectRisks.edit.includes(userRoleName);
@@ -99,7 +105,7 @@ const MitigationSection: FC<MitigationSectionProps> = ({
     maxWidth: contentWidth,
   };
 
-  const validators = useMemo(
+  const validators = useMemo<FieldValidators<MitigationFormValues>>(
     () => ({
       mitigationStatus: (v: unknown) => {
         const r = selectValidation("Mitigation status", v as number);
@@ -143,10 +149,28 @@ const MitigationSection: FC<MitigationSectionProps> = ({
     [],
   );
 
-  const { errors, validateAll, validateField, clearFieldError, getFirstInvalidField } =
+  const { errors, validateAll, validateField, clearFieldError, setServerErrors, getFirstInvalidField } =
     useFormValidation<MitigationFormValues>(validators);
   const mitigationValuesRef = useRef(mitigationValues);
   mitigationValuesRef.current = mitigationValues;
+
+  // Merge backend validation errors into the inline error state.
+  useEffect(() => {
+    if (serverErrors) setServerErrors(serverErrors);
+  }, [serverErrors, setServerErrors]);
+
+  // Live client-side validity, computed without surfacing errors in the UI.
+  const isSectionValid = useMemo(
+    () =>
+      (Object.keys(validators) as (keyof MitigationFormValues)[]).every(
+        (field) => !validators[field]?.(mitigationValues[field], mitigationValues),
+      ),
+    [validators, mitigationValues],
+  );
+
+  useEffect(() => {
+    onValidityChange?.(isSectionValid);
+  }, [isSectionValid, onValidityChange]);
 
   const handleFieldBlur = useCallback(
     (prop: keyof MitigationFormValues) =>

@@ -22,7 +22,7 @@ import { useProjects } from "../../../../application/hooks/useProjects";
 import useFrameworks from "../../../../application/hooks/useFrameworks";
 import allowedRoles from "../../../../application/constants/permissions";
 import AutoCompleteField from "../../Inputs/Autocomplete";
-import { useFormValidation } from "../../../../application/hooks/useFormValidation";
+import { useFormValidation, type FieldValidators } from "../../../../application/hooks/useFormValidation";
 import { RISK_FORM_FIELD_ORDER } from "../../../constants/formValidationFieldMaps";
 import { createFieldBlurHandler } from "../../../../application/utils/formValidationFocus";
 import { checkStringValidation } from "../../../../application/validations/stringValidation";
@@ -65,6 +65,10 @@ interface RiskSectionProps {
   userRoleName: string;
   disableInternalScroll?: boolean;
   compactMode?: boolean;
+  /** Backend validation errors to display inline (keyed by RiskFormValues field). */
+  serverErrors?: Partial<Record<keyof RiskFormValues, string>>;
+  /** Reports live client-side validity (drives the submit button's disabled state). */
+  onValidityChange?: (isValid: boolean) => void;
 }
 
 /**
@@ -88,6 +92,8 @@ const RiskSection: FC<RiskSectionProps> = ({
   userRoleName,
   disableInternalScroll = false,
   compactMode = false,
+  serverErrors,
+  onValidityChange,
 }) => {
   const theme = useTheme();
   const isEditingDisabled = !allowedRoles.projectRisks.edit.includes(userRoleName);
@@ -115,7 +121,7 @@ const RiskSection: FC<RiskSectionProps> = ({
     listOfFrameworks: [],
   });
 
-  const validators = useMemo(
+  const validators = useMemo<FieldValidators<RiskFormValues>>(
     () => ({
       riskName: (v: unknown) => {
         const r = checkStringValidation("Risk name", v as string, 3, 255);
@@ -152,10 +158,28 @@ const RiskSection: FC<RiskSectionProps> = ({
     [],
   );
 
-  const { errors, validateAll, validateField, clearFieldError, getFirstInvalidField } =
+  const { errors, validateAll, validateField, clearFieldError, setServerErrors, getFirstInvalidField } =
     useFormValidation<RiskFormValues>(validators);
   const riskValuesRef = useRef(riskValues);
   riskValuesRef.current = riskValues;
+
+  // Merge backend validation errors into the inline error state.
+  useEffect(() => {
+    if (serverErrors) setServerErrors(serverErrors);
+  }, [serverErrors, setServerErrors]);
+
+  // Live client-side validity, computed without surfacing errors in the UI.
+  const isSectionValid = useMemo(
+    () =>
+      (Object.keys(validators) as (keyof RiskFormValues)[]).every(
+        (field) => !validators[field]?.(riskValues[field], riskValues),
+      ),
+    [validators, riskValues],
+  );
+
+  useEffect(() => {
+    onValidityChange?.(isSectionValid);
+  }, [isSectionValid, onValidityChange]);
 
   const handleFieldBlur = useCallback(
     (prop: keyof RiskFormValues) =>
