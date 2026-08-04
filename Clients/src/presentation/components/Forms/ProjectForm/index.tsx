@@ -49,6 +49,7 @@ import {
 import { getAllApprovalWorkflows } from "../../../../application/repository/approvalWorkflow.repository";
 import { AiRiskClassification } from "../../../../domain/enums/aiRiskClassification.enum";
 import { HighRiskRole } from "../../../../domain/enums/highRiskRole.enum";
+import CustomException from "../../../../infrastructure/exceptions/customeException";
 
 const PROJECT_STATUS_ITEMS = [
   { _id: 1, name: "Not started" },
@@ -170,8 +171,14 @@ export const ProjectForm = ({
     }),
     [projectToEdit],
   );
-  const { errors, validateAll, validateField, clearFieldError, getFirstInvalidField } =
-    useFormValidation<FormValues>(validators);
+  const {
+    errors,
+    validateAll,
+    validateField,
+    clearFieldError,
+    setServerErrors,
+    getFirstInvalidField,
+  } = useFormValidation<FormValues>(validators);
   const valuesRef = useRef(values);
   valuesRef.current = values;
 
@@ -179,6 +186,17 @@ export const ProjectForm = ({
     (prop: keyof FormValues) =>
       createFieldBlurHandler(prop, () => valuesRef.current, validateField),
     [validateField],
+  );
+
+  // Live form validity, computed by running the same validators against the
+  // current values without surfacing errors in the UI. Drives the submit
+  // button's disabled state so submission is blocked until the form is valid.
+  const isFormValid = useMemo(
+    () =>
+      (Object.keys(validators) as (keyof FormValues)[]).every(
+        (field) => !validators[field]?.(values[field], values),
+      ),
+    [validators, values],
   );
 
   // Check if the project has a pending approval request
@@ -525,7 +543,34 @@ export const ProjectForm = ({
             setIsSubmitting(false);
           }, 1000);
         }
-      } catch (_err) {
+      } catch (err) {
+        // Surface backend validation errors (400) inline, mapped per field.
+        if (err instanceof CustomException && err.status === 400) {
+          const serverErrors = err.response?.data?.errors;
+          if (Array.isArray(serverErrors) && serverErrors.length > 0) {
+            const fieldErrors: Partial<Record<keyof FormValues, string>> = {};
+            for (const serverError of serverErrors) {
+              if (
+                serverError &&
+                typeof serverError.field === "string" &&
+                typeof serverError.message === "string"
+              ) {
+                fieldErrors[serverError.field as keyof FormValues] = serverError.message;
+              }
+            }
+            setServerErrors(fieldErrors);
+            setActiveTab("details");
+            const firstServerInvalid = PROJECT_FORM_FIELD_ORDER.find(
+              (field) => fieldErrors[field],
+            );
+            const fieldId = firstServerInvalid
+              ? PROJECT_FORM_FIELD_IDS[firstServerInvalid]
+              : undefined;
+            if (fieldId) {
+              focusFormFieldById(fieldId);
+            }
+          }
+        }
         setTimeout(() => {
           setIsSubmitting(false);
         }, 1000);
@@ -536,6 +581,7 @@ export const ProjectForm = ({
     projectToEdit,
     authState.authToken,
     validateAll,
+    setServerErrors,
     getFirstInvalidField,
     projectStatusItems,
     riskClassificationItems,
@@ -1099,6 +1145,7 @@ export const ProjectForm = ({
             sx={createProjectButtonStyle}
             icon={<AddCircleOutlineIcon size={20} />}
             onClick={() => handleSubmit()}
+            isDisabled={!isFormValid || isSubmitting}
           />
         </Stack>
       )}
