@@ -145,7 +145,7 @@ export async function getAllProjects(req: Request, res: Response): Promise<any> 
 }
 
 export async function getProjectById(req: Request, res: Response): Promise<any> {
-  const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+  const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
 
   logProcessing({
     description: `starting getProjectById for ID ${projectId}`,
@@ -477,7 +477,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
 
 export async function updateProjectById(req: Request, res: Response): Promise<any> {
   const transaction = await sequelize.transaction();
-  const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+  const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
   const updateData = req.body;
 
   logProcessing({
@@ -736,7 +736,7 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
 
 export async function deleteProjectById(req: Request, res: Response): Promise<any> {
   const transaction = await sequelize.transaction();
-  const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+  const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
 
   logProcessing({
     description: `starting deleteProjectById for ID ${projectId}`,
@@ -834,7 +834,7 @@ export async function deleteProjectById(req: Request, res: Response): Promise<an
 }
 
 export async function getProjectStatsById(req: Request, res: Response): Promise<any> {
-  const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+  const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
 
   logProcessing({
     description: `starting getProjectStatsById for project ID ${projectId}`,
@@ -888,7 +888,7 @@ export async function getProjectStatsById(req: Request, res: Response): Promise<
 }
 
 export async function getProjectRisksCalculations(req: Request, res: Response): Promise<any> {
-  const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+  const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
 
   logProcessing({
     description: `starting getProjectRisksCalculations for project ID ${projectId}`,
@@ -929,7 +929,7 @@ export async function getProjectRisksCalculations(req: Request, res: Response): 
 }
 
 export async function getVendorRisksCalculations(req: Request, res: Response): Promise<any> {
-  const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+  const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
 
   logProcessing({
     description: `starting getVendorRisksCalculations for project ID ${projectId}`,
@@ -972,6 +972,7 @@ export async function getVendorRisksCalculations(req: Request, res: Response): P
 export async function getCompliances(req: Request, res: Response) {
   const projectId = parseInt(
     Array.isArray(req.params.projid) ? req.params.projid[0] : req.params.projid,
+    10,
   );
 
   logProcessing({
@@ -1050,7 +1051,7 @@ export async function getCompliances(req: Request, res: Response) {
 }
 
 export async function projectComplianceProgress(req: Request, res: Response) {
-  const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+  const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
 
   logProcessing({
     description: `starting projectComplianceProgress for ID ${projectId}`,
@@ -1111,7 +1112,7 @@ export async function projectComplianceProgress(req: Request, res: Response) {
 }
 
 export async function projectAssessmentProgress(req: Request, res: Response) {
-  const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+  const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
 
   logProcessing({
     description: `starting projectAssessmentProgress for ID ${projectId}`,
@@ -1196,8 +1197,8 @@ export async function allProjectsComplianceProgress(req: Request, res: Response)
             project.id!,
             req.organizationId!,
           );
-          totalNumberOfSubcontrols += parseInt(totalSubcontrols);
-          totalNumberOfDoneSubcontrols += parseInt(doneSubcontrols);
+          totalNumberOfSubcontrols += parseInt(totalSubcontrols, 10);
+          totalNumberOfDoneSubcontrols += parseInt(doneSubcontrols, 10);
         }),
       );
 
@@ -1268,8 +1269,8 @@ export async function allProjectsAssessmentProgress(req: Request, res: Response)
             project.id!,
             req.organizationId!,
           );
-          totalNumberOfQuestions += parseInt(totalAssessments);
-          totalNumberOfAnsweredQuestions += parseInt(answeredAssessments);
+          totalNumberOfQuestions += parseInt(totalAssessments, 10);
+          totalNumberOfAnsweredQuestions += parseInt(answeredAssessments, 10);
         }),
       );
 
@@ -1317,7 +1318,7 @@ export async function allProjectsAssessmentProgress(req: Request, res: Response)
 
 export async function updateProjectStatus(req: Request, res: Response): Promise<any> {
   const transaction = await sequelize.transaction();
-  const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+  const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
   const { status } = req.body;
 
   logProcessing({

@@ -92,7 +92,7 @@ export async function getAllRisks(req: Request, res: Response): Promise<any> {
 }
 
 export async function getRisksByProject(req: Request, res: Response): Promise<any> {
-  const projectId = parseInt(req.params.id as string);
+  const projectId = parseInt(req.params.id as string, 10);
   const filter = (req.query.filter as "active" | "deleted" | "all") || "active";
 
   // Return empty array for non-numeric project IDs (e.g., plugin-sourced IDs like "plugin-prefix-2")
@@ -146,7 +146,7 @@ export async function getRisksByProject(req: Request, res: Response): Promise<an
 }
 
 export async function getRisksByFramework(req: Request, res: Response): Promise<any> {
-  const frameworkId = parseInt(req.params.id as string);
+  const frameworkId = parseInt(req.params.id as string, 10);
   const filter = (req.query.filter as "active" | "deleted" | "all") || "active";
 
   logStructured(
@@ -195,7 +195,7 @@ export async function getRisksByFramework(req: Request, res: Response): Promise<
 }
 
 export async function getRiskById(req: Request, res: Response): Promise<any> {
-  const projectRiskId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+  const projectRiskId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
 
   logStructured(
     "processing",
@@ -386,7 +386,7 @@ export async function createRisk(req: Request, res: Response): Promise<any> {
 
 export async function updateRiskById(req: Request, res: Response): Promise<any> {
   const transaction = await sequelize.transaction();
-  const projectRiskId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+  const projectRiskId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
   const updateData = req.body;
 
   logStructured(
@@ -649,7 +649,7 @@ export async function updateRiskById(req: Request, res: Response): Promise<any> 
 
 export async function deleteRiskById(req: Request, res: Response): Promise<any> {
   const transaction = await sequelize.transaction();
-  const projectRiskId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+  const projectRiskId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
 
   logStructured(
     "processing",
