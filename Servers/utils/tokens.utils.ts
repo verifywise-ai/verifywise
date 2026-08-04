@@ -6,12 +6,25 @@ import { TokenModel } from "../domain.layer/models/tokens/tokens.model";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 
 /**
+ * Server-side secret used as the HMAC key for API-token hashing.
+ * Falls back to ENCRYPTION_KEY for backward compatibility in existing installs,
+ * but a dedicated secret is recommended so token hashes can be rotated
+ * independently of encryption keys.
+ */
+const API_TOKEN_HASH_SECRET = process.env.API_TOKEN_HASH_SECRET || process.env.ENCRYPTION_KEY || "";
+
+if (!API_TOKEN_HASH_SECRET) {
+  throw new Error("API_TOKEN_HASH_SECRET or ENCRYPTION_KEY must be set for API token hashing");
+}
+
+/**
  * Hash an API token (the signed JWT string) for storage and lookup.
- * Only the SHA-256 hash is persisted; the raw token is shown to the creator
- * once and never stored. Mirrors the Shadow AI API key pattern.
+ * Only the HMAC-SHA256 hash is persisted; the raw token is shown to the creator
+ * once and never stored. Using HMAC with a server-side secret (pepper) prevents
+ * attackers from reconstructing tokens from a leaked database alone.
  */
 export const hashApiToken = (token: string): string =>
-  crypto.createHash("sha256").update(token).digest("hex");
+  crypto.createHmac("sha256", API_TOKEN_HASH_SECRET).update(token).digest("hex");
 
 export const getNumberOfApiTokensQuery = async (organizationId: number) => {
   // Only active (non-revoked) tokens count toward the per-organization limit.
