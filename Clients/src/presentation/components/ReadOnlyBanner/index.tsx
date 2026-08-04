@@ -9,7 +9,7 @@ import {
   useTheme,
 } from "@mui/material";
 import { ChevronDown, Eye } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { useAuth } from "../../../application/hooks/useAuth";
 import { useSelector, useDispatch } from "react-redux";
 import { RootState } from "../../../application/redux/store";

@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useContext, useEffect } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 import { Likelihood, Severity } from "../../RiskLevel/constants";
 import { RiskLikelihood, RiskSeverity } from "../../RiskLevel/riskValues";
 import { RiskFormValues, MitigationFormValues } from "../interface";

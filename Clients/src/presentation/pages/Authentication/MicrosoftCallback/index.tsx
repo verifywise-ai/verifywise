@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Box, CircularProgress, Typography } from "@mui/material";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router";
 import { useDispatch } from "react-redux";
 import { setAuthToken, setExpiration } from "../../../../application/redux/auth/authSlice";
 import { loginUserWithMicrosoft } from "../../../../application/repository/user.repository";

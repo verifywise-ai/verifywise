@@ -1,7 +1,7 @@
 import { useState, type SyntheticEvent } from "react";
 import TabPanel from "@mui/lab/TabPanel";
 import TabContext from "@mui/lab/TabContext";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router";
 import { Settings } from "lucide-react";
 import TabBar, { TabItem } from "../../../components/TabBar";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";

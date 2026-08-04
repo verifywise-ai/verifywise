@@ -98,7 +98,7 @@
     "validator": "^13.15.35",
     "winston": "^3.17.0",
     "winston-daily-rotate-file": "^5.0.0",
-    "xlsx": "https://cdn.sheetjs.com/xlsx-0.19.3/xlsx-0.19.3.tgz",
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "xstate": "^5.30.0",
     "yamljs": "^0.3.0",
     "zod": "^4.4.3"

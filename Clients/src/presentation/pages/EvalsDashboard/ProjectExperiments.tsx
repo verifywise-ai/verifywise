@@ -22,7 +22,7 @@ import Alert from "../../components/Alert";
 import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
 import NewExperimentModal from "./NewExperimentModal";
 import { CustomizableButton } from "../../components/button/customizable-button";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import ExperimentTable from "../../components/Table/ExperimentTable";
 import PerformanceChart, {
   TIME_RANGE_OPTIONS,

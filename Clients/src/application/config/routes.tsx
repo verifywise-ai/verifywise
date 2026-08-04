@@ -1,5 +1,5 @@
 import { Suspense } from "react";
-import { Route, Navigate } from "react-router-dom";
+import { Route, Navigate } from "react-router";
 import { lazyRoute, LazyFallback } from "../utils/lazyRoute";
 import { SHOW_AI_GATEWAY_PROMPTS } from "./featureFlags";
 

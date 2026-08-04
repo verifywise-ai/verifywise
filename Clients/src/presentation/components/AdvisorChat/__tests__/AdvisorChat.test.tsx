@@ -30,9 +30,13 @@ vi.mock("../../../../application/hooks/useAuth", () => ({
   useAuth: () => ({ userId: 1 }),
 }));
 
-vi.mock("react-router", () => ({
-  useNavigate: () => vi.fn(),
-}));
+vi.mock("react-router", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("react-router")>();
+  return {
+    ...actual,
+    useNavigate: () => vi.fn(),
+  };
+});
 
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import AdvisorChat from "../index";

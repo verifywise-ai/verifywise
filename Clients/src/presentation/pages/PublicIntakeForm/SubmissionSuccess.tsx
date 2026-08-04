@@ -1,4 +1,4 @@
-import { useLocation, useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router";
 import { Box, Typography } from "@mui/material";
 import { Edit, Hash, Clock } from "lucide-react";
 import { useEffect } from "react";

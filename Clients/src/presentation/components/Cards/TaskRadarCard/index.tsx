@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Stack, Typography } from "@mui/material";
 import { ChevronRight } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import {
   BarChart,
   Bar,
