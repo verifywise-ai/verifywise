@@ -67,10 +67,26 @@ describe("GET /api/projects/:id", () => {
 describe("POST /api/projects", () => {
   it("should return 201 when body is valid", async () => {
     const app = createProjectTestApp();
-    const res = await request(app).post("/api/projects").send({ name: "New Project" });
+    const res = await request(app)
+      .post("/api/projects")
+      .send({ project_title: "New Project", owner: 1, start_date: "2024-06-01" });
 
     expect(res.status).toBe(201);
     expect(res.body).toHaveProperty("id");
+  });
+
+  it("should return 400 with field-level errors when body is invalid", async () => {
+    const app = createProjectTestApp();
+    const res = await request(app).post("/api/projects").send({ name: "New Project" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.data.errors).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ field: "project_title", message: expect.any(String) }),
+        expect.objectContaining({ field: "owner", message: expect.any(String) }),
+        expect.objectContaining({ field: "start_date", message: expect.any(String) }),
+      ]),
+    );
   });
 });
 
