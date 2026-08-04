@@ -193,43 +193,40 @@ export function useRiskForm(props: AddNewRiskFormProps): UseRiskFormReturn {
    * Splits backend field-level errors between the two sections, pushes them
    * into the inline error states, and focuses the first offending field.
    */
-  const applyServerErrors = useCallback(
-    (errors: Array<{ field?: string; message?: string }>) => {
-      const riskErrors: Partial<Record<keyof RiskFormValues, string>> = {};
-      const mitigationErrors: Partial<Record<keyof MitigationFormValues, string>> = {};
-      for (const err of errors) {
-        if (!err?.field || !err.message) continue;
-        const riskField = RISK_SERVER_FIELD_MAP[err.field];
-        if (riskField) {
-          riskErrors[riskField] = err.message;
-          continue;
-        }
-        const mitigationField = MITIGATION_SERVER_FIELD_MAP[err.field];
-        if (mitigationField) {
-          mitigationErrors[mitigationField] = err.message;
-        }
+  const applyServerErrors = useCallback((errors: Array<{ field?: string; message?: string }>) => {
+    const riskErrors: Partial<Record<keyof RiskFormValues, string>> = {};
+    const mitigationErrors: Partial<Record<keyof MitigationFormValues, string>> = {};
+    for (const err of errors) {
+      if (!err?.field || !err.message) continue;
+      const riskField = RISK_SERVER_FIELD_MAP[err.field];
+      if (riskField) {
+        riskErrors[riskField] = err.message;
+        continue;
       }
-
-      const hasRiskErrors = Object.keys(riskErrors).length > 0;
-      const hasMitigationErrors = Object.keys(mitigationErrors).length > 0;
-
-      setRiskServerErrors(hasRiskErrors ? { ...riskErrors } : undefined);
-      setMitigationServerErrors(hasMitigationErrors ? { ...mitigationErrors } : undefined);
-
-      if (hasRiskErrors) {
-        setValue("risks");
-        const firstField = RISK_FORM_FIELD_ORDER.find((field) => riskErrors[field]);
-        const fieldId = firstField ? RISK_FORM_FIELD_IDS[firstField] : undefined;
-        if (fieldId) focusFormFieldById(fieldId);
-      } else if (hasMitigationErrors) {
-        setValue("mitigation");
-        const firstField = MITIGATION_FORM_FIELD_ORDER.find((field) => mitigationErrors[field]);
-        const fieldId = firstField ? MITIGATION_FORM_FIELD_IDS[firstField] : undefined;
-        if (fieldId) focusFormFieldById(fieldId);
+      const mitigationField = MITIGATION_SERVER_FIELD_MAP[err.field];
+      if (mitigationField) {
+        mitigationErrors[mitigationField] = err.message;
       }
-    },
-    [],
-  );
+    }
+
+    const hasRiskErrors = Object.keys(riskErrors).length > 0;
+    const hasMitigationErrors = Object.keys(mitigationErrors).length > 0;
+
+    setRiskServerErrors(hasRiskErrors ? { ...riskErrors } : undefined);
+    setMitigationServerErrors(hasMitigationErrors ? { ...mitigationErrors } : undefined);
+
+    if (hasRiskErrors) {
+      setValue("risks");
+      const firstField = RISK_FORM_FIELD_ORDER.find((field) => riskErrors[field]);
+      const fieldId = firstField ? RISK_FORM_FIELD_IDS[firstField] : undefined;
+      if (fieldId) focusFormFieldById(fieldId);
+    } else if (hasMitigationErrors) {
+      setValue("mitigation");
+      const firstField = MITIGATION_FORM_FIELD_ORDER.find((field) => mitigationErrors[field]);
+      const fieldId = firstField ? MITIGATION_FORM_FIELD_IDS[firstField] : undefined;
+      if (fieldId) focusFormFieldById(fieldId);
+    }
+  }, []);
 
   const handleTabChange = useCallback((_: React.SyntheticEvent, newValue: string) => {
     setValue(newValue);

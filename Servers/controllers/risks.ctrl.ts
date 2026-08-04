@@ -195,7 +195,10 @@ export async function getRisksByFramework(req: Request, res: Response): Promise<
 }
 
 export async function getRiskById(req: Request, res: Response): Promise<any> {
-  const projectRiskId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+  const projectRiskId = parseInt(
+    Array.isArray(req.params.id) ? req.params.id[0] : req.params.id,
+    10,
+  );
 
   logStructured(
     "processing",
@@ -386,7 +389,10 @@ export async function createRisk(req: Request, res: Response): Promise<any> {
 
 export async function updateRiskById(req: Request, res: Response): Promise<any> {
   const transaction = await sequelize.transaction();
-  const projectRiskId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+  const projectRiskId = parseInt(
+    Array.isArray(req.params.id) ? req.params.id[0] : req.params.id,
+    10,
+  );
   const updateData = req.body;
 
   logStructured(
@@ -649,7 +655,10 @@ export async function updateRiskById(req: Request, res: Response): Promise<any> 
 
 export async function deleteRiskById(req: Request, res: Response): Promise<any> {
   const transaction = await sequelize.transaction();
-  const projectRiskId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+  const projectRiskId = parseInt(
+    Array.isArray(req.params.id) ? req.params.id[0] : req.params.id,
+    10,
+  );
 
   logStructured(
     "processing",

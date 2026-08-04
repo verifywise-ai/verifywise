@@ -11,7 +11,10 @@ import React, {
 import { Divider, SelectChangeEvent, Stack, Typography, useTheme } from "@mui/material";
 import dayjs, { Dayjs } from "dayjs";
 import { MitigationFormValues } from "../interface";
-import { useFormValidation, type FieldValidators } from "../../../../application/hooks/useFormValidation";
+import {
+  useFormValidation,
+  type FieldValidators,
+} from "../../../../application/hooks/useFormValidation";
 import { MITIGATION_FORM_FIELD_ORDER } from "../../../constants/formValidationFieldMaps";
 import { createFieldBlurHandler } from "../../../../application/utils/formValidationFocus";
 import { checkStringValidation } from "../../../../application/validations/stringValidation";
@@ -149,8 +152,14 @@ const MitigationSection: FC<MitigationSectionProps> = ({
     [],
   );
 
-  const { errors, validateAll, validateField, clearFieldError, setServerErrors, getFirstInvalidField } =
-    useFormValidation<MitigationFormValues>(validators);
+  const {
+    errors,
+    validateAll,
+    validateField,
+    clearFieldError,
+    setServerErrors,
+    getFirstInvalidField,
+  } = useFormValidation<MitigationFormValues>(validators);
   const mitigationValuesRef = useRef(mitigationValues);
   mitigationValuesRef.current = mitigationValues;
 

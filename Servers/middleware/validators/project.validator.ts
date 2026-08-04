@@ -4,9 +4,7 @@ import { AiRiskClassification } from "../../domain.layer/enums/ai-risk-classific
 import { HighRiskRole } from "../../domain.layer/enums/high-risk-role.enum";
 import { ProjectStatus } from "../../domain.layer/enums/project-status.enum";
 
-const projectIdParam = param("id")
-  .isInt({ min: 1 })
-  .withMessage("id must be a positive integer");
+const projectIdParam = param("id").isInt({ min: 1 }).withMessage("id must be a positive integer");
 
 // Fields that are typed-checked whenever they are present (create + update).
 const optionalProjectBodyFields = [
@@ -20,10 +18,7 @@ const optionalProjectBodyFields = [
     .optional({ nullable: true })
     .isInt({ min: 1 })
     .withMessage("owner must be a positive integer"),
-  body("start_date")
-    .optional()
-    .isISO8601()
-    .withMessage("start_date must be a valid ISO 8601 date"),
+  body("start_date").optional().isISO8601().withMessage("start_date must be a valid ISO 8601 date"),
   body("geography")
     .optional({ nullable: true })
     .isInt({ min: 1 })

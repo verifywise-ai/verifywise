@@ -22,7 +22,13 @@ const RISK_LEVELS = [
   "High risk",
   "Very high risk",
 ];
-const CURRENT_RISK_LEVELS = ["Very Low risk", "Low risk", "Medium risk", "High risk", "Very high risk"];
+const CURRENT_RISK_LEVELS = [
+  "Very Low risk",
+  "Low risk",
+  "Medium risk",
+  "High risk",
+  "Very high risk",
+];
 const MITIGATION_STATUSES = [
   "Not Started",
   "In Progress",
@@ -57,9 +63,7 @@ const FAIR_NUMERIC_FIELDS = [
   "roi_percentage",
 ];
 
-const riskIdParam = param("id")
-  .isInt({ min: 1 })
-  .withMessage("id must be a positive integer");
+const riskIdParam = param("id").isInt({ min: 1 }).withMessage("id must be a positive integer");
 
 // Fields that are typed-checked whenever they are present (create + update).
 const optionalRiskBodyFields = [
@@ -192,10 +196,7 @@ const optionalRiskBodyFields = [
     .isLength({ min: 3, max: 3 })
     .withMessage("currency must be a 3-letter code"),
   ...FAIR_NUMERIC_FIELDS.map((field) =>
-    body(field)
-      .optional({ nullable: true })
-      .isFloat()
-      .withMessage(`${field} must be a number`),
+    body(field).optional({ nullable: true }).isFloat().withMessage(`${field} must be a number`),
   ),
 ];
 
@@ -214,11 +215,7 @@ export const validateCreateRisk = [
   handleValidationErrors,
 ];
 
-export const validateUpdateRisk = [
-  riskIdParam,
-  ...optionalRiskBodyFields,
-  handleValidationErrors,
-];
+export const validateUpdateRisk = [riskIdParam, ...optionalRiskBodyFields, handleValidationErrors];
 
 export const validateBulkUpdateProjectRisks = [
   body("ids").isArray({ min: 1 }).withMessage("ids must be a non-empty array of risk ids"),

@@ -22,7 +22,10 @@ import { useProjects } from "../../../../application/hooks/useProjects";
 import useFrameworks from "../../../../application/hooks/useFrameworks";
 import allowedRoles from "../../../../application/constants/permissions";
 import AutoCompleteField from "../../Inputs/Autocomplete";
-import { useFormValidation, type FieldValidators } from "../../../../application/hooks/useFormValidation";
+import {
+  useFormValidation,
+  type FieldValidators,
+} from "../../../../application/hooks/useFormValidation";
 import { RISK_FORM_FIELD_ORDER } from "../../../constants/formValidationFieldMaps";
 import { createFieldBlurHandler } from "../../../../application/utils/formValidationFocus";
 import { checkStringValidation } from "../../../../application/validations/stringValidation";
@@ -158,8 +161,14 @@ const RiskSection: FC<RiskSectionProps> = ({
     [],
   );
 
-  const { errors, validateAll, validateField, clearFieldError, setServerErrors, getFirstInvalidField } =
-    useFormValidation<RiskFormValues>(validators);
+  const {
+    errors,
+    validateAll,
+    validateField,
+    clearFieldError,
+    setServerErrors,
+    getFirstInvalidField,
+  } = useFormValidation<RiskFormValues>(validators);
   const riskValuesRef = useRef(riskValues);
   riskValuesRef.current = riskValues;
 

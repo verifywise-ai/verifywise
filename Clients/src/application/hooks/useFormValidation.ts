@@ -92,12 +92,9 @@ export function useFormValidation<TValues extends object>(
     setErrors((prev) => ({ ...prev, [field]: "" }));
   }, []);
 
-  const setServerErrors = useCallback(
-    (serverErrors: Partial<Record<keyof TValues, string>>) => {
-      setErrors((prev) => ({ ...prev, ...serverErrors }));
-    },
-    [],
-  );
+  const setServerErrors = useCallback((serverErrors: Partial<Record<keyof TValues, string>>) => {
+    setErrors((prev) => ({ ...prev, ...serverErrors }));
+  }, []);
 
   const validateAll = useCallback((values: TValues, fieldOrder?: (keyof TValues)[]): boolean => {
     const newErrors: Partial<Record<keyof TValues, string>> = {};
