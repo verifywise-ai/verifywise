@@ -23,6 +23,13 @@ const args = process.argv.slice(2);
 const wantJson = args.includes("--json");
 const strict = args.includes("--strict");
 const langArg = args.find((a) => a.startsWith("--lang="))?.split("=")[1];
+
+if (langArg && !SUPPORTED_LANGS.includes(langArg)) {
+  throw new Error(
+    `Unsupported language: ${langArg}. Supported: ${SUPPORTED_LANGS.join(", ")}`,
+  );
+}
+
 const targetLangs = langArg ? [langArg] : SUPPORTED_LANGS;
 
 // ─── Load dictionaries ──────────────────────────────────────────────────────
