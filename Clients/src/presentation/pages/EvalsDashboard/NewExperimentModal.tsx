@@ -11,7 +11,6 @@ import {
   Select,
   MenuItem,
   FormControl,
-  CircularProgress,
   Accordion,
   AccordionSummary,
   AccordionDetails,
@@ -38,16 +37,6 @@ import Checkbox from "../../components/Inputs/Checkbox";
 import Alert from "../../components/Alert";
 import Chip from "../../components/Chip";
 import { palette } from "../../themes/palette";
-
-// Import provider logos
-import { ReactComponent as OpenAILogo } from "../../assets/icons/openai_logo.svg";
-import { ReactComponent as AnthropicLogo } from "../../assets/icons/anthropic_logo.svg";
-import { ReactComponent as OllamaLogo } from "../../assets/icons/ollama_logo.svg";
-import { ReactComponent as GeminiLogo } from "../../assets/icons/gemini_logo.svg";
-import { ReactComponent as MistralLogo } from "../../assets/icons/mistral_logo.svg";
-import { ReactComponent as XAILogo } from "../../assets/icons/xai_logo.svg";
-import { ReactComponent as OpenRouterLogo } from "../../assets/icons/openrouter_logo.svg";
-import { ReactComponent as FolderFilledIcon } from "../../assets/icons/folder_filled.svg";
 import {
   createExperiment,
   listDatasets,
@@ -65,7 +54,6 @@ import { getAllEntities } from "../../../application/repository/entity.repositor
 import { PROVIDERS, type ModelInfo } from "../../utils/providers";
 import { evalModelsService, type SavedModel } from "../../../infrastructure/api/evalModelsService";
 import { useModelPreferences } from "../../../application/hooks/useModelPreferences";
-import { BuildIcon, HuggingFaceLogo } from "./NewExperiment/experimentIcons";
 import {
   datasetNameFromPresetPath,
   generateDefaultExperimentName,
@@ -77,8 +65,14 @@ import {
   type UserDataset,
   WIZARD_STEPS,
 } from "./NewExperiment/newExperimentConfig";
+import {
+  availableJudgeProviders,
+  availableModelProviders,
+  CLOUD_PROVIDER_IDS,
+} from "./NewExperiment/providerConfig";
 import { canProceedToNextStep, getMissingKeyProviders } from "./NewExperiment/stepValidation";
 import DatasetStep from "./NewExperiment/DatasetStep";
+import ModelStep from "./NewExperiment/ModelStep";
 
 interface NewExperimentModalProps {
   isOpen: boolean;
@@ -1013,41 +1007,6 @@ export default function NewExperimentModal({
     return configuredApiKeys.some((k) => k.provider === providerId);
   };
 
-  // All cloud providers that need API keys (using the saved models)
-  const cloudProviders = [
-    {
-      id: "openrouter" as ProviderType,
-      name: "OpenRouter",
-      Logo: OpenRouterLogo,
-      needsApiKey: true,
-    },
-    { id: "openai" as ProviderType, name: "OpenAI", Logo: OpenAILogo, needsApiKey: true },
-    { id: "anthropic" as ProviderType, name: "Anthropic", Logo: AnthropicLogo, needsApiKey: true },
-    { id: "google" as ProviderType, name: "Gemini", Logo: GeminiLogo, needsApiKey: true },
-    { id: "xai" as ProviderType, name: "xAI", Logo: XAILogo, needsApiKey: true },
-    { id: "mistral" as ProviderType, name: "Mistral", Logo: MistralLogo, needsApiKey: true },
-  ];
-
-  // Local providers that don't need API keys
-  const localProviders = [
-    {
-      id: "huggingface" as ProviderType,
-      name: "HuggingFace",
-      Logo: HuggingFaceLogo,
-      needsApiKey: false,
-    },
-    { id: "ollama" as ProviderType, name: "Ollama", Logo: OllamaLogo, needsApiKey: false },
-    {
-      id: "custom_api" as ProviderType,
-      name: "Custom / Self-hosted",
-      Logo: BuildIcon,
-      needsApiKey: false,
-    },
-  ];
-
-  // All available providers for judge selection (all cloud + local)
-  const availableJudgeProviders = [...cloudProviders, ...localProviders];
-
   const selectedProvider = availableJudgeProviders.find((p) => p.id === config.judgeLlm.provider);
 
   // Get saved models that match a given provider ID
@@ -1109,15 +1068,7 @@ export default function NewExperimentModal({
     const loadForProvider = async (provider: string) => {
       if (!provider || gatewayModelsLoaded.current.has(provider)) return;
       // Only cloud providers — local/custom providers don't have a LiteLLM catalog entry
-      const cloudProviders = new Set([
-        "openai",
-        "anthropic",
-        "google",
-        "mistral",
-        "xai",
-        "openrouter",
-      ]);
-      if (!cloudProviders.has(provider)) return;
+      if (!(CLOUD_PROVIDER_IDS as readonly string[]).includes(provider)) return;
       gatewayModelsLoaded.current.add(provider); // mark before fetch to prevent concurrent calls
       try {
         const models = await evalModelsService.getGatewayModelsForProvider(provider);
@@ -1134,15 +1085,7 @@ export default function NewExperimentModal({
   useEffect(() => {
     const loadForProvider = async (provider: string) => {
       if (!provider || gatewayModelsLoaded.current.has(provider)) return;
-      const cloudProviders = new Set([
-        "openai",
-        "anthropic",
-        "google",
-        "mistral",
-        "xai",
-        "openrouter",
-      ]);
-      if (!cloudProviders.has(provider)) return;
+      if (!(CLOUD_PROVIDER_IDS as readonly string[]).includes(provider)) return;
       gatewayModelsLoaded.current.add(provider);
       try {
         const models = await evalModelsService.getGatewayModelsForProvider(provider);
@@ -1162,22 +1105,6 @@ export default function NewExperimentModal({
       handleLoadBuiltinDataset();
     }
   }, [activeStep, config.dataset.useBuiltin, datasetLoaded, handleLoadBuiltinDataset]);
-
-  // Model providers - show ALL providers (cloud + local)
-  const allModelProviders = [
-    ...cloudProviders.map((p) => ({ ...p, needsUrl: false })),
-    ...localProviders.map((p) => ({ ...p, needsUrl: false })),
-    {
-      id: "local" as ProviderType,
-      name: "Local",
-      Logo: FolderFilledIcon,
-      needsApiKey: false,
-      needsUrl: true,
-    },
-  ];
-
-  // Show all providers - we'll handle missing API keys with a message
-  const availableModelProviders = allModelProviders;
 
   const selectedModelProvider = availableModelProviders.find(
     (p) => p.id === config.model.accessMethod,
@@ -1201,645 +1128,56 @@ export default function NewExperimentModal({
       case 0:
         // Step 1: Model - Model to be evaluated
         return (
-          <Stack spacing={4}>
-            <Box>
-              <Typography variant="body2" color="text.secondary">
-                Select the model you want to evaluate.
-              </Typography>
-            </Box>
-
-            {loadingApiKeys ? (
-              <Box sx={{ py: 4, textAlign: "center" }}>
-                <CircularProgress size={24} />
-                <Typography sx={{ mt: 1, fontSize: "13px", color: palette.text.tertiary }}>
-                  Loading providers...
-                </Typography>
-              </Box>
-            ) : (
-              <Box>
-                <Typography
-                  sx={{ mb: 2.5, fontSize: "14px", fontWeight: 500, color: palette.text.secondary }}
-                >
-                  Model provider
-                </Typography>
-                <Grid container spacing={1.5}>
-                  {/* Show all providers */}
-                  {availableModelProviders.map((provider) => {
-                    const { Logo } = provider;
-                    const isSelected = config.model.accessMethod === provider.id;
-
-                    return (
-                      <Grid size={{ xs: 4, sm: 3 }} key={provider.id}>
-                        <Card
-                          onClick={() => {
-                            setSelectedSavedModelId(null); // deselect saved model when picking a provider
-                            setConfig((prev) => ({
-                              ...prev,
-                              model: {
-                                ...prev.model,
-                                accessMethod: provider.id as typeof config.model.accessMethod,
-                                name: "", // Reset model name when changing provider
-                              },
-                            }));
-                            setUseCustomModelName(false);
-                          }}
-                          sx={{
-                            "cursor": "pointer",
-                            "border": "1px solid",
-                            "borderColor": isSelected ? palette.brand.primary : palette.border.dark,
-                            "backgroundColor": palette.background.main,
-                            "boxShadow": "none",
-                            "transition": "all 0.2s ease",
-                            "position": "relative",
-                            "height": "100%",
-                            "&:hover": {
-                              borderColor: palette.brand.primary,
-                              boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
-                            },
-                          }}
-                        >
-                          <CardContent
-                            sx={{
-                              "textAlign": "center",
-                              "py": 3,
-                              "px": 2,
-                              "height": "100%",
-                              "display": "flex",
-                              "flexDirection": "column",
-                              "alignItems": "center",
-                              "justifyContent": "center",
-                              "&:last-child": { pb: 3 },
-                            }}
-                          >
-                            {isSelected && (
-                              <Box
-                                sx={{
-                                  position: "absolute",
-                                  top: 8,
-                                  right: 8,
-                                  backgroundColor: palette.brand.primary,
-                                  borderRadius: "50%",
-                                  width: 20,
-                                  height: 20,
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                }}
-                              >
-                                <Check size={12} color={palette.background.main} strokeWidth={3} />
-                              </Box>
-                            )}
-
-                            {/* Provider Logo */}
-                            <Box
-                              sx={{
-                                "display": "flex",
-                                "alignItems": "center",
-                                "justifyContent": "center",
-                                "width": 40,
-                                "height": 40,
-                                "mb": 1.5,
-                                "& svg": {
-                                  width: 32,
-                                  height: 32,
-                                },
-                              }}
-                            >
-                              <Logo />
-                            </Box>
-
-                            {/* Provider Name */}
-                            <Typography
-                              sx={{
-                                fontSize: "12px",
-                                fontWeight: isSelected ? 600 : 500,
-                                color: isSelected ? palette.brand.primary : palette.text.secondary,
-                                textAlign: "center",
-                              }}
-                            >
-                              {provider.name}
-                            </Typography>
-                          </CardContent>
-                        </Card>
-                      </Grid>
-                    );
-                  })}
-                </Grid>
-              </Box>
-            )}
-
-            {/* Saved Models — toggle selection; bypasses provider/model UI when active */}
-            {savedModels.length > 0 && (
-              <Box>
-                <Typography
-                  sx={{
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    color: palette.text.disabled,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.06em",
-                    mb: 1.5,
-                  }}
-                >
-                  Saved Models
-                </Typography>
-                <Stack spacing={1}>
-                  {savedModels.map((m) => {
-                    const providerKey = m.provider.toLowerCase();
-                    const providerEntry = availableModelProviders.find((p) => p.id === providerKey);
-                    const ProviderLogo = providerEntry?.Logo ?? null;
-                    const isSelected = selectedSavedModelId === m.id;
-                    return (
-                      <Box
-                        key={m.id}
-                        onClick={() => {
-                          // Just toggle the saved model ID — don't touch config at all
-                          setSelectedSavedModelId(isSelected ? null : m.id);
-                        }}
-                        sx={{
-                          "display": "flex",
-                          "alignItems": "center",
-                          "justifyContent": "space-between",
-                          "px": 2,
-                          "py": 1.25,
-                          "borderRadius": "8px",
-                          "border": `1.5px solid ${isSelected ? palette.brand.primary : palette.border.light}`,
-                          "backgroundColor": isSelected
-                            ? palette.brand.primaryLight
-                            : "transparent",
-                          "cursor": "pointer",
-                          "transition": "all 0.15s ease",
-                          "&:hover": {
-                            borderColor: palette.brand.primary,
-                            backgroundColor: palette.brand.primaryLight,
-                          },
-                        }}
-                      >
-                        <Stack direction="row" alignItems="center" spacing={1.5}>
-                          {ProviderLogo && (
-                            <Box
-                              sx={{
-                                width: 20,
-                                height: 20,
-                                flexShrink: 0,
-                                display: "flex",
-                                alignItems: "center",
-                              }}
-                            >
-                              <ProviderLogo style={{ width: 20, height: 20 }} />
-                            </Box>
-                          )}
-                          <Typography
-                            sx={{
-                              fontSize: "13px",
-                              fontWeight: 500,
-                              color: isSelected ? palette.brand.primary : palette.text.primary,
-                            }}
-                          >
-                            {m.name}
-                          </Typography>
-                        </Stack>
-                        <Box
-                          sx={{
-                            width: 18,
-                            height: 18,
-                            borderRadius: "50%",
-                            border: `1.5px solid ${isSelected ? palette.brand.primary : palette.border.dark}`,
-                            backgroundColor: isSelected ? palette.brand.primary : "transparent",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            flexShrink: 0,
-                            transition: "all 0.15s ease",
-                          }}
-                        >
-                          {isSelected && (
-                            <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                              <path
-                                d="M1 4L3.5 6.5L9 1"
-                                stroke="white"
-                                strokeWidth="1.5"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              />
-                            </svg>
-                          )}
-                        </Box>
-                      </Box>
-                    );
-                  })}
-                </Stack>
-              </Box>
-            )}
-
-            {/* Conditional Fields Based on Provider */}
-            {config.model.accessMethod && (
-              <Box ref={formFieldsRef}>
-                <Stack spacing={3}>
-                  {/* Model Selection - Dropdown for cloud providers, text input for local/OpenRouter */}
-                  {config.model.accessMethod === "openrouter" ? (
-                    /* OpenRouter - Custom model input with suggestions */
-                    <Box>
-                      <Typography
-                        sx={{
-                          fontSize: "13px",
-                          fontWeight: 500,
-                          color: palette.text.secondary,
-                          mb: 1,
-                        }}
-                      >
-                        Model
-                      </Typography>
-                      <Typography sx={{ fontSize: "11px", color: palette.text.tertiary, mb: 1.5 }}>
-                        OpenRouter supports any model. Enter the model ID or select from saved or
-                        popular options.
-                      </Typography>
-                      <Field
-                        label=""
-                        value={config.model.name}
-                        onChange={(e) =>
-                          setConfig((prev) => ({
-                            ...prev,
-                            model: { ...prev.model, name: e.target.value },
-                          }))
-                        }
-                        placeholder="e.g., openai/gpt-4o, anthropic/claude-3-opus"
-                      />
-                      <Typography
-                        sx={{
-                          fontSize: "11px",
-                          fontWeight: 600,
-                          color: palette.text.disabled,
-                          mt: 2,
-                          mb: 1,
-                          textTransform: "uppercase",
-                        }}
-                      >
-                        Popular Models
-                      </Typography>
-                      <Stack direction="row" flexWrap="wrap" gap={1}>
-                        {[
-                          { id: "openai/gpt-4o", name: "GPT-4o" },
-                          { id: "anthropic/claude-3.5-sonnet", name: "Claude 3.5 Sonnet" },
-                          { id: "google/gemini-pro-1.5", name: "Gemini Pro 1.5" },
-                          { id: "meta-llama/llama-3.1-70b-instruct", name: "Llama 3.1 70B" },
-                          { id: "mistralai/mistral-large", name: "Mistral Large" },
-                        ].map((m) => (
-                          <MuiChip
-                            key={m.id}
-                            label={m.name}
-                            variant={config.model.name === m.id ? "filled" : "outlined"}
-                            onClick={() =>
-                              setConfig((prev) => ({
-                                ...prev,
-                                model: { ...prev.model, name: m.id },
-                              }))
-                            }
-                            sx={{
-                              "cursor": "pointer",
-                              "backgroundColor":
-                                config.model.name === m.id
-                                  ? palette.brand.primaryLight
-                                  : "transparent",
-                              "borderColor":
-                                config.model.name === m.id
-                                  ? palette.brand.primary
-                                  : palette.border.dark,
-                              "color":
-                                config.model.name === m.id
-                                  ? palette.brand.primary
-                                  : palette.text.secondary,
-                              "&:hover": {
-                                backgroundColor:
-                                  config.model.name === m.id
-                                    ? palette.brand.primaryLight
-                                    : palette.background.accent,
-                                borderColor: palette.brand.primary,
-                              },
-                            }}
-                          />
-                        ))}
-                      </Stack>
-                    </Box>
-                  ) : PROVIDERS[config.model.accessMethod] ? (
-                    <Box>
-                      <Typography
-                        sx={{
-                          fontSize: "13px",
-                          fontWeight: 500,
-                          color: palette.text.secondary,
-                          mb: 1,
-                        }}
-                      >
-                        Model
-                      </Typography>
-                      <FormControl fullWidth size="small">
-                        <Select
-                          value={config.model.name}
-                          onChange={(e) =>
-                            setConfig((prev) => ({
-                              ...prev,
-                              model: { ...prev.model, name: e.target.value as string },
-                            }))
-                          }
-                          displayEmpty
-                          sx={{
-                            "fontSize": "13px",
-                            "& .MuiOutlinedInput-notchedOutline": {
-                              borderColor: palette.border.dark,
-                            },
-                            "&:hover .MuiOutlinedInput-notchedOutline": {
-                              borderColor: palette.border.dark,
-                            },
-                            "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                              borderColor: palette.brand.primary,
-                            },
-                          }}
-                        >
-                          <MenuItem value="" disabled>
-                            <Typography sx={{ color: palette.text.disabled, fontSize: "13px" }}>
-                              Select a model
-                            </Typography>
-                          </MenuItem>
-                          {getProviderModels(config.model.accessMethod).map((model) => (
-                            <MenuItem key={model.id} value={model.id}>
-                              <Stack
-                                direction="row"
-                                alignItems="center"
-                                justifyContent="space-between"
-                                sx={{ width: "100%" }}
-                              >
-                                <Typography sx={{ fontSize: "13px" }}>{model.name}</Typography>
-                                {model.inputCost !== undefined && (
-                                  <Typography
-                                    sx={{ fontSize: "11px", color: palette.text.disabled }}
-                                  >
-                                    ${model.inputCost}/1M in • ${model.outputCost}/1M out
-                                  </Typography>
-                                )}
-                              </Stack>
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    </Box>
-                  ) : (
-                    /* Local/self-hosted/custom providers: show dropdown if saved models exist, else text input */
-                    (() => {
-                      const providerSavedModels = getProviderModels(config.model.accessMethod);
-                      const showDropdown = providerSavedModels.length > 0 && !useCustomModelName;
-                      const placeholder =
-                        config.model.accessMethod === "ollama"
-                          ? "e.g., llama2, mistral, codellama"
-                          : config.model.accessMethod === "huggingface"
-                            ? "e.g., TinyLlama/TinyLlama-1.1B-Chat-v1.0"
-                            : "e.g., gpt-4, claude-3-opus";
-
-                      if (showDropdown) {
-                        return (
-                          <Box>
-                            <Typography
-                              sx={{
-                                fontSize: "13px",
-                                fontWeight: 500,
-                                color: palette.text.secondary,
-                                mb: 1,
-                              }}
-                            >
-                              Model
-                            </Typography>
-                            <FormControl fullWidth size="small">
-                              <Select
-                                value={config.model.name}
-                                onChange={(e) => {
-                                  const val = e.target.value as string;
-                                  if (val === "__other__") {
-                                    setUseCustomModelName(true);
-                                    setConfig((prev) => ({
-                                      ...prev,
-                                      model: { ...prev.model, name: "" },
-                                    }));
-                                  } else {
-                                    setConfig((prev) => ({
-                                      ...prev,
-                                      model: { ...prev.model, name: val },
-                                    }));
-                                  }
-                                }}
-                                displayEmpty
-                                sx={{
-                                  "fontSize": "13px",
-                                  "& .MuiOutlinedInput-notchedOutline": {
-                                    borderColor: palette.border.dark,
-                                  },
-                                  "&:hover .MuiOutlinedInput-notchedOutline": {
-                                    borderColor: palette.border.dark,
-                                  },
-                                  "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                                    borderColor: palette.brand.primary,
-                                  },
-                                }}
-                              >
-                                <MenuItem value="" disabled>
-                                  <Typography
-                                    sx={{ color: palette.text.disabled, fontSize: "13px" }}
-                                  >
-                                    Select a model
-                                  </Typography>
-                                </MenuItem>
-                                {providerSavedModels.map((model) => (
-                                  <MenuItem key={model.id} value={model.id}>
-                                    <Stack
-                                      direction="row"
-                                      alignItems="center"
-                                      justifyContent="space-between"
-                                      sx={{ width: "100%" }}
-                                    >
-                                      <Typography sx={{ fontSize: "13px" }}>
-                                        {model.name}
-                                      </Typography>
-                                      {model.description && (
-                                        <Typography
-                                          sx={{ fontSize: "11px", color: palette.text.disabled }}
-                                        >
-                                          {model.description}
-                                        </Typography>
-                                      )}
-                                    </Stack>
-                                  </MenuItem>
-                                ))}
-                                <Divider />
-                                <MenuItem value="__other__">
-                                  <Typography
-                                    sx={{
-                                      fontSize: "13px",
-                                      color: palette.text.tertiary,
-                                      fontStyle: "italic",
-                                    }}
-                                  >
-                                    Other (type custom)
-                                  </Typography>
-                                </MenuItem>
-                              </Select>
-                            </FormControl>
-                          </Box>
-                        );
-                      }
-
-                      return (
-                        <Box>
-                          {providerSavedModels.length > 0 && (
-                            <Button
-                              size="small"
-                              variant="text"
-                              onClick={() => {
-                                setUseCustomModelName(false);
-                                setConfig((prev) => ({
-                                  ...prev,
-                                  model: { ...prev.model, name: "" },
-                                }));
-                              }}
-                              sx={{
-                                "textTransform": "none",
-                                "fontSize": "11px",
-                                "color": palette.text.tertiary,
-                                "p": 0,
-                                "mb": 0.5,
-                                "minWidth": "auto",
-                                "&:hover": { color: palette.brand.primary },
-                              }}
-                            >
-                              &larr; Back to saved models
-                            </Button>
-                          )}
-                          <Field
-                            label="Model name"
-                            value={config.model.name}
-                            onChange={(e) =>
-                              setConfig((prev) => ({
-                                ...prev,
-                                model: { ...prev.model, name: e.target.value },
-                              }))
-                            }
-                            placeholder={placeholder}
-                          />
-                        </Box>
-                      );
-                    })()
-                  )}
-
-                  {/* URL field for Local, Custom / Self-hosted */}
-                  {selectedModelProvider &&
-                    (("needsUrl" in selectedModelProvider && selectedModelProvider.needsUrl) ||
-                      config.model.accessMethod === "custom_api") && (
-                      <Field
-                        label="Endpoint URL"
-                        value={config.model.endpointUrl}
-                        onChange={(e) =>
-                          setConfig((prev) => ({
-                            ...prev,
-                            model: { ...prev.model, endpointUrl: e.target.value },
-                          }))
-                        }
-                        placeholder={
-                          config.model.accessMethod === "local"
-                            ? "http://localhost:11434/api/generate"
-                            : "https://api.example.com/v1/chat/completions"
-                        }
-                      />
-                    )}
-
-                  {/* API Key - show configured status OR input field */}
-                  {/* Cloud providers: required. Custom / Self-hosted: optional */}
-                  {(selectedModelProvider?.needsApiKey ||
-                    config.model.accessMethod === "custom_api") &&
-                    (hasApiKey(config.model.accessMethod) ? (
-                      <Box
-                        sx={{
-                          p: 1.5,
-                          backgroundColor: palette.status.success.bg,
-                          borderRadius: "8px",
-                          border: `1px solid ${palette.status.success.border}`,
-                        }}
-                      >
-                        <Stack direction="row" alignItems="center" spacing={1}>
-                          <Check size={16} color={palette.status.success.text} />
-                          <Typography sx={{ fontSize: "12px", color: palette.status.success.text }}>
-                            API key configured — will be saved for future experiments
-                          </Typography>
-                        </Stack>
-                      </Box>
-                    ) : (
-                      <Field
-                        label={
-                          config.model.accessMethod === "custom_api"
-                            ? "API key (optional)"
-                            : "API key"
-                        }
-                        type="password"
-                        value={config.model.apiKey}
-                        onChange={(e) =>
-                          setConfig((prev) => ({
-                            ...prev,
-                            model: { ...prev.model, apiKey: e.target.value },
-                          }))
-                        }
-                        placeholder={
-                          config.model.accessMethod === "custom_api"
-                            ? "Leave blank if not required"
-                            : `Enter your ${selectedModelProvider?.name || ""} API key`
-                        }
-                        autoComplete="off"
-                        helperText={
-                          config.model.accessMethod === "custom_api"
-                            ? undefined
-                            : "Your key will be saved securely for future experiments"
-                        }
-                      />
-                    ))}
-                </Stack>
-              </Box>
-            )}
-
-            {/* Link to model inventory (optional) */}
-            <Box sx={{ mt: "16px" }}>
-              <Typography
-                variant="body2"
-                sx={{ mb: "4px", fontWeight: 500, fontSize: "13px", color: palette.text.secondary }}
-              >
-                Link to model inventory (optional)
-              </Typography>
-              <FormControl fullWidth size="small">
-                <Select
-                  value={selectedModelInventoryId !== null ? selectedModelInventoryId : ""}
-                  onChange={(e) => {
-                    const val = String(e.target.value);
-                    setSelectedModelInventoryId(val === "" ? null : Number(val));
-                  }}
-                  displayEmpty
-                  sx={{ height: "34px", fontSize: "13px", borderRadius: "4px" }}
-                >
-                  <MenuItem value="">
-                    <Typography sx={{ fontSize: "13px", color: palette.text.secondary }}>
-                      None — don't link to inventory
-                    </Typography>
-                  </MenuItem>
-                  {modelInventories.map((m) => (
-                    <MenuItem key={m.id} value={m.id}>
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <Typography sx={{ fontSize: "13px" }}>
-                          {m.provider} — {m.model}
-                        </Typography>
-                        <Typography sx={{ fontSize: "11px", color: palette.text.secondary }}>
-                          v{m.version}
-                        </Typography>
-                      </Stack>
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Box>
-          </Stack>
+          <ModelStep
+            loadingApiKeys={loadingApiKeys}
+            savedModels={savedModels}
+            selectedSavedModelId={selectedSavedModelId}
+            modelConfig={{
+              name: config.model.name,
+              accessMethod: config.model.accessMethod,
+              endpointUrl: config.model.endpointUrl,
+              apiKey: config.model.apiKey,
+            }}
+            useCustomModelName={useCustomModelName}
+            modelInventories={modelInventories}
+            selectedModelInventoryId={selectedModelInventoryId}
+            fieldsRef={formFieldsRef}
+            getProviderModels={getProviderModels}
+            hasApiKey={hasApiKey}
+            onProviderSelect={(providerId) => {
+              setSelectedSavedModelId(null);
+              setConfig((prev) => ({
+                ...prev,
+                model: {
+                  ...prev.model,
+                  accessMethod: providerId,
+                  name: "",
+                },
+              }));
+              setUseCustomModelName(false);
+            }}
+            onModelNameChange={(name) =>
+              setConfig((prev) => ({
+                ...prev,
+                model: { ...prev.model, name },
+              }))
+            }
+            onEndpointUrlChange={(url) =>
+              setConfig((prev) => ({
+                ...prev,
+                model: { ...prev.model, endpointUrl: url },
+              }))
+            }
+            onApiKeyChange={(key) =>
+              setConfig((prev) => ({
+                ...prev,
+                model: { ...prev.model, apiKey: key },
+              }))
+            }
+            onSavedModelSelect={setSelectedSavedModelId}
+            onUseCustomModelNameChange={setUseCustomModelName}
+            onModelInventoryChange={setSelectedModelInventoryId}
+          />
         );
 
       case 1:
