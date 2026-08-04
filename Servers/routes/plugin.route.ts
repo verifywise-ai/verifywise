@@ -45,23 +45,37 @@ router.post("/:key/test-connection", authenticateJWT, testPluginConnection);
 
 // Serve plugin UI bundles from temp/plugins/{key}/ui/dist/
 // If bundle doesn't exist locally, download it from the marketplace
-const isValidPluginKey = (value: string) => /^[a-z0-9_-]+$/.test(value);
-const isValidBundleFilename = (value: string) =>
-  /^[A-Za-z0-9._-]+$/.test(value) &&
-  !value.includes("..") &&
-  !value.includes("/") &&
-  !value.includes("\\");
+// Sanitize and validate user-supplied path components. Returning null signals
+// an unsafe value; the caller must reject the request before any filesystem
+// path is built.
+const sanitizePluginKey = (value: string): string | null =>
+  /^[a-z0-9_-]+$/.test(value) ? value : null;
+
+const sanitizeBundleFilename = (value: string): string | null => {
+  if (
+    !/^[A-Za-z0-9._-]+$/.test(value) ||
+    value.includes("..") ||
+    value.includes("/") ||
+    value.includes("\\")
+  ) {
+    return null;
+  }
+  const sanitized = sanitize(value);
+  return sanitized === value ? value : null;
+};
 
 router.get("/:key/ui/dist/:filename", async (req, res) => {
   const { key, filename } = req.params;
 
-  if (!isValidPluginKey(key) || !isValidBundleFilename(filename)) {
+  const safeKey = sanitizePluginKey(key);
+  const safeFilename = sanitizeBundleFilename(filename);
+  if (!safeKey || !safeFilename) {
     res.status(400).json({ error: "Invalid plugin key or bundle filename" });
     return;
   }
 
   const baseDir = path.resolve(__dirname, "../../temp/plugins");
-  const bundlePath = path.resolve(baseDir, key, "ui", "dist", sanitize(filename));
+  const bundlePath = path.resolve(baseDir, safeKey, "ui", "dist", safeFilename);
   if (!bundlePath.startsWith(baseDir + path.sep)) {
     res.status(403).json({ error: "Forbidden" });
     return;

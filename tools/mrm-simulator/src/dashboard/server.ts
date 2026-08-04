@@ -41,16 +41,25 @@ export const startDashboardServer = async (
 
   const publicReal = await realpath(PUBLIC);
 
+  // Validate and sanitize a decoded URL path into a safe relative path.
+  // Returns null for any value that could escape the public directory.
+  const sanitizePath = (value: string): string | null => {
+    if (
+      value.includes("\0") ||
+      value.split("/").includes("..") ||
+      value.split("\\").includes("..")
+    ) {
+      return null;
+    }
+    return value;
+  };
+
   const httpServer = createServer(async (req, res) => {
     const urlPath = req.url === "/" ? "/index.html" : (req.url ?? "/index.html");
     const rawPath = decodeURIComponent(urlPath.split("?")[0]);
 
-    // Reject traversal attempts and null bytes before touching the filesystem.
-    if (
-      rawPath.includes("\0") ||
-      rawPath.split("/").includes("..") ||
-      rawPath.split("\\").includes("..")
-    ) {
+    const safePath = sanitizePath(rawPath);
+    if (!safePath) {
       res.writeHead(403).end("forbidden");
       return;
     }
@@ -60,7 +69,7 @@ export const startDashboardServer = async (
     // bypassable (sibling dirs sharing the prefix, symlinks, "..").
     let filePath: string;
     try {
-      filePath = await realpath(join(publicReal, rawPath));
+      filePath = await realpath(join(publicReal, safePath));
     } catch {
       res.writeHead(404).end("not found");
       return;
