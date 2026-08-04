@@ -1,7 +1,7 @@
 import { createServer } from "node:http";
 import { readFile, realpath } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
-import { dirname, join, extname, sep } from "node:path";
+import { dirname, extname, join, resolve, sep } from "node:path";
 import { WebSocketServer, WebSocket } from "ws";
 import { SimConfig } from "../types.js";
 import { DashboardEvent } from "./events.js";
@@ -67,9 +67,11 @@ export const startDashboardServer = async (
     // Resolve the real path (following symlinks) and require it to stay strictly
     // inside PUBLIC. A plain string prefix check on the un-resolved join is
     // bypassable (sibling dirs sharing the prefix, symlinks, "..").
+    // The leading "." forces path.resolve to treat safePath as relative to
+    // publicReal even when it starts with "/".
     let filePath: string;
     try {
-      filePath = await realpath(join(publicReal, safePath));
+      filePath = await realpath(resolve(publicReal, "." + safePath));
     } catch {
       res.writeHead(404).end("not found");
       return;

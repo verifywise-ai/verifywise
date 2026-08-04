@@ -1,5 +1,5 @@
 import { test as setup, expect } from "@playwright/test";
-import { execSync } from "child_process";
+import { execFileSync } from "child_process";
 import path from "path";
 import { fileURLToPath } from "url";
 import { mkdtempSync, readFileSync, unlinkSync } from "fs";
@@ -91,8 +91,9 @@ function seedAdminInOrg(orgId: number): SeedOutput {
   const tmpDir = mkdtempSync(path.join(tmpdir(), "vw-e2e-"));
   const credentialsFile = path.join(tmpDir, "e2e-credentials.json");
 
-  const stdout = execSync(
-    `npx ts-node scripts/seedE2EAdmin.ts ${orgId} --output-file=${credentialsFile}`,
+  const stdout = execFileSync(
+    process.platform === "win32" ? "npx.cmd" : "npx",
+    ["ts-node", "scripts/seedE2EAdmin.ts", String(orgId), `--output-file=${credentialsFile}`],
     {
       cwd: SERVERS_DIR,
       encoding: "utf-8",

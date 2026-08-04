@@ -350,8 +350,7 @@ export async function* streamAdvisorAiSdk(
   params: AiSdkAdvisorParams,
 ): AsyncGenerator<StreamChunk, void> {
   const agentStartTime = Date.now();
-  const { provider: streamProvider, model: streamModel } = params;
-  logger.debug(`[AI-SDK] streamAdvisor started for ${streamProvider} with model ${streamModel}`);
+  logger.debug("[AI-SDK] streamAdvisor started");
 
   const model = createModel(params);
   const tools = await buildRoutedTools(params);
@@ -443,8 +442,7 @@ export async function* streamAdvisorAiSdk(
  */
 export async function runAdvisorAiSdk(params: AiSdkAdvisorParams): Promise<string> {
   const agentStartTime = Date.now();
-  const { provider: runProvider, model: runModel } = params;
-  logger.debug(`[AI-SDK] runAdvisor started for ${runProvider} with model ${runModel}`);
+  logger.debug("[AI-SDK] runAdvisor started");
 
   const model = createModel(params);
   const tools = await buildRoutedTools(params);
@@ -503,8 +501,7 @@ export async function runAdvisorAiSdk(params: AiSdkAdvisorParams): Promise<strin
  * Used by the controller when serving the native AI SDK streaming protocol.
  */
 export async function getStreamTextResult(params: AiSdkAdvisorParams) {
-  const { provider: textProvider, model: textModel } = params;
-  logger.debug(`[AI-SDK] getStreamTextResult started for ${textProvider} with model ${textModel}`);
+  logger.debug("[AI-SDK] getStreamTextResult started");
 
   const model = createModel(params);
   const tools = await buildRoutedTools(params);
