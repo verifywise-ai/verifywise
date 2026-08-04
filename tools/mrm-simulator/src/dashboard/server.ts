@@ -43,12 +43,24 @@ export const startDashboardServer = async (
 
   const httpServer = createServer(async (req, res) => {
     const urlPath = req.url === "/" ? "/index.html" : (req.url ?? "/index.html");
+    const rawPath = decodeURIComponent(urlPath.split("?")[0]);
+
+    // Reject traversal attempts and null bytes before touching the filesystem.
+    if (
+      rawPath.includes("\0") ||
+      rawPath.split("/").includes("..") ||
+      rawPath.split("\\").includes("..")
+    ) {
+      res.writeHead(403).end("forbidden");
+      return;
+    }
+
     // Resolve the real path (following symlinks) and require it to stay strictly
     // inside PUBLIC. A plain string prefix check on the un-resolved join is
     // bypassable (sibling dirs sharing the prefix, symlinks, "..").
     let filePath: string;
     try {
-      filePath = await realpath(join(publicReal, urlPath.split("?")[0]));
+      filePath = await realpath(join(publicReal, rawPath));
     } catch {
       res.writeHead(404).end("not found");
       return;

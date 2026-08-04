@@ -3,6 +3,7 @@ import rateLimit from "express-rate-limit";
 import path from "path";
 import fs from "fs";
 import axios from "axios";
+import sanitize from "sanitize-filename";
 import { PLUGIN_MARKETPLACE_BASE_URL } from "../services/plugin/pluginService";
 const router = express.Router();
 
@@ -59,7 +60,12 @@ router.get("/:key/ui/dist/:filename", async (req, res) => {
     return;
   }
 
-  const bundlePath = path.join(__dirname, "../../temp/plugins", key, "ui", "dist", filename);
+  const baseDir = path.resolve(__dirname, "../../temp/plugins");
+  const bundlePath = path.resolve(baseDir, key, "ui", "dist", sanitize(filename));
+  if (!bundlePath.startsWith(baseDir + path.sep)) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
   console.log(
     "[Plugin UI] Requested:",
     key,
