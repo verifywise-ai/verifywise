@@ -113,6 +113,8 @@ import { sequelize } from "./database/db";
 import redisClient from "./database/redis";
 import ssoConfigRoutes from "./routes/ssoConfig.route";
 import aiTrustIndexRoutes from "./routes/aiTrustIndex.route";
+import telemetryRoutes from "./routes/telemetry.route";
+import { requestMetricsMiddleware } from "./middleware/requestMetrics.middleware";
 
 const swaggerDoc = YAML.load("./swagger.yaml");
 
@@ -231,6 +233,11 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
     const allOk = Object.values(checks).every((c) => c.status === "ok");
     res.status(allOk ? 200 : 503).json({ status: allOk ? "ok" : "degraded", checks });
   });
+
+  // Track every request: metrics + access log (shipped to the central
+  // observability stack when monitoring is enabled). Mounted after /health so
+  // health checks aren't counted, and before all /api routes.
+  app.use(requestMetricsMiddleware);
 
   if (preRoutesMiddleware) {
     preRoutesMiddleware.forEach((mw) => app.use(mw));
@@ -356,6 +363,7 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
 
   app.use("/api/super-admin", superAdminRoutes);
   app.use("/api/internal", internalRoutes);
+  app.use("/api/telemetry", telemetryRoutes);
   app.use("/v1", virtualKeyProxyRoutes());
   app.use("/api/ssoConfig", ssoConfigRoutes);
   app.use("/api/ai-trust-index", aiTrustIndexRoutes);

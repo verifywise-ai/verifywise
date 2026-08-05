@@ -2,6 +2,7 @@ import { createLogger, format, transports } from "winston";
 import DailyRotateFile from "winston-daily-rotate-file";
 import path from "path";
 import { getTenantIdForLogging, ensureTenantLogDirectory } from "../tenant/tenantContext";
+import { emitOtlpLog } from "../../observability/otel";
 
 const { combine, timestamp, printf, colorize } = format;
 const isDev = process.env.NODE_ENV !== "production";
@@ -115,6 +116,16 @@ export function logStructured(
   const tenantLogger = getTenantLogger(tenant);
 
   tenantLogger.info(line);
+
+  // Ship the same line to the central stack (deployment name is added by
+  // emitOtlpLog). No-op when observability is disabled. File format unchanged.
+  emitOtlpLog(state === "error" ? "error" : "info", line, {
+    "tenant.hash": tenant,
+    "log.state": state,
+    "log.function": functionName,
+    "log.file": fileName,
+    "service.name": "verifywise-backend",
+  });
 }
 
 /**
