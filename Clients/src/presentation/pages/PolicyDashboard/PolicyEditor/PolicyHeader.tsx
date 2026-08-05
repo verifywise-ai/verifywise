@@ -2,10 +2,10 @@ import { Stack } from "@mui/material";
 import { PolicyEditorTitleArea, type PolicyEditorTitleAreaProps } from "./PolicyEditorTitleArea";
 import { PolicyEditorActionsBar, type PolicyEditorActionsBarProps } from "./PolicyEditorActionsBar";
 
-export type PolicyEditorHeaderProps = PolicyEditorTitleAreaProps & PolicyEditorActionsBarProps;
+export type PolicyHeaderProps = PolicyEditorTitleAreaProps & PolicyEditorActionsBarProps;
 
 /** Title editing chrome and save/export/import actions for the policy editor. */
-export function PolicyEditorHeader(props: PolicyEditorHeaderProps) {
+export function PolicyHeader(props: PolicyHeaderProps) {
   const {
     pageTitle,
     isEditingTitle,

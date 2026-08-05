@@ -10,7 +10,7 @@ import { ColorPickerPopover } from "./ColorPickerPopover";
 const { background, brand, risk } = palette;
 const TOOLBAR_ACTIVE_BG = risk.veryLow.bg;
 
-export interface PolicyEditorToolbarProps {
+export interface PolicyToolbarProps {
   editor: Editor | null;
   isUploadingImage: boolean;
   onInsertImage: () => void;
@@ -19,13 +19,13 @@ export interface PolicyEditorToolbarProps {
 }
 
 /** Main TipTap toolbar: block type, formatting actions, color picker, word count. */
-export function PolicyEditorToolbar({
+export function PolicyToolbar({
   editor,
   isUploadingImage,
   onInsertImage,
   onOpenLink,
   onOpenFindReplace,
-}: PolicyEditorToolbarProps) {
+}: PolicyToolbarProps) {
   const [toolbarState, setToolbarState] = useState(defaultToolbarState);
   const [currentBlockType, setCurrentBlockType] = useState<string>("p");
   const [colorAnchorEl, setColorAnchorEl] = useState<HTMLElement | null>(null);

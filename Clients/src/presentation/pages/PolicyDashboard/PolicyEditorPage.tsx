@@ -65,8 +65,8 @@ import { policyEditorStyles } from "./PolicyEditor/editorStyles";
 import { usePolicyFindReplace } from "./PolicyEditor/usePolicyFindReplace";
 import { FindReplacePopover } from "./PolicyEditor/FindReplacePopover";
 import { PolicyTableBubbleMenu } from "./PolicyEditor/PolicyTableBubbleMenu";
-import { PolicyEditorToolbar } from "./PolicyEditor/PolicyEditorToolbar";
-import { PolicyEditorHeader } from "./PolicyEditor/PolicyEditorHeader";
+import { PolicyToolbar } from "./PolicyEditor/PolicyToolbar";
+import { PolicyHeader } from "./PolicyEditor/PolicyHeader";
 
 // ── Component ─────────────────────────────────────────────────────────
 export default function PolicyEditorPage() {
@@ -744,7 +744,7 @@ export default function PolicyEditorPage() {
             overflow: "hidden",
           }}
         >
-          <PolicyEditorHeader
+          <PolicyHeader
             pageTitle={pageTitle}
             isEditingTitle={isEditingTitle}
             editedTitle={editedTitle}
@@ -810,7 +810,7 @@ export default function PolicyEditorPage() {
             />
           </Stack>
 
-          <PolicyEditorToolbar
+          <PolicyToolbar
             editor={editor}
             isUploadingImage={isUploadingImage}
             onInsertImage={() => imageInputRef.current?.click()}
