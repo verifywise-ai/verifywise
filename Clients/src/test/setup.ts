@@ -8,7 +8,12 @@ expect.extend(matchers as unknown as MatchersObject);
 
 // ---- MSW lifecycle ----
 beforeAll(() => server.listen({ onUnhandledRequest: "error" }));
-afterEach(() => server.resetHandlers());
+afterEach(() => {
+  server.resetHandlers();
+  vi.restoreAllMocks();
+  vi.useRealTimers();
+  localStorage.clear();
+});
 afterAll(() => server.close());
 
 // ---- Environment stubs ----
