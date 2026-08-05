@@ -351,7 +351,7 @@ export async function* streamAdvisorAiSdk(
   params: AiSdkAdvisorParams,
 ): AsyncGenerator<StreamChunk, void> {
   const agentStartTime = Date.now();
-  logger.debug(`[AI-SDK] streamAdvisor started for ${params.provider} with model ${params.model}`);
+  logger.debug("[AI-SDK] streamAdvisor started");
 
   // Open a Langfuse trace (no-op when unconfigured).
   const traceHandle = startTrace(
@@ -469,7 +469,7 @@ export async function* streamAdvisorAiSdk(
  */
 export async function runAdvisorAiSdk(params: AiSdkAdvisorParams): Promise<string> {
   const agentStartTime = Date.now();
-  logger.debug(`[AI-SDK] runAdvisor started for ${params.provider} with model ${params.model}`);
+  logger.debug("[AI-SDK] runAdvisor started");
 
   // Open a Langfuse trace for this run. No-ops when Langfuse is unconfigured
   // (traceHandle stays null and every traceManager call below is a no-op).
@@ -556,9 +556,7 @@ export async function runAdvisorAiSdk(params: AiSdkAdvisorParams): Promise<strin
  * Used by the controller when serving the native AI SDK streaming protocol.
  */
 export async function getStreamTextResult(params: AiSdkAdvisorParams) {
-  logger.debug(
-    `[AI-SDK] getStreamTextResult started for ${params.provider} with model ${params.model}`,
-  );
+  logger.debug("[AI-SDK] getStreamTextResult started");
 
   const model = createModel(params);
   const tools = await buildRoutedTools(params);

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useState } from "react";
 import type { ReactNode } from "react";
 
 interface ConfigContextValue {
@@ -7,7 +7,8 @@ interface ConfigContextValue {
   markClean: (name: string) => void;
 }
 
-const ConfigContext = createContext<ConfigContextValue>({
+// eslint-disable-next-line react-refresh/only-export-components
+export const ConfigContext = createContext<ConfigContextValue>({
   dirtyConfigs: new Set(),
   markDirty: () => {},
   markClean: () => {},
@@ -32,5 +33,3 @@ export function ConfigProvider({ children }: { children: ReactNode }) {
     </ConfigContext.Provider>
   );
 }
-
-export const useConfigContext = () => useContext(ConfigContext);

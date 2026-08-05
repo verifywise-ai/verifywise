@@ -4906,6 +4906,17 @@ export const internalEndpoints: Endpoint[] = [
     ],
     tag: "Internal",
   },
+  {
+    method: 'GET',
+    path: '/internal/observability-config',
+    summary: "Anonymous",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Internal",
+  },
 ];
 
 // Invitations endpoints
@@ -9353,6 +9364,42 @@ export const superAdminEndpoints: Endpoint[] = [
     ],
     tag: "Super Admin",
   },
+  {
+    method: 'GET',
+    path: '/super-admin/monitoring',
+    summary: "Get Monitoring",
+    description: "Requires role: Super Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Super Admin",
+  },
+  {
+    method: 'PUT',
+    path: '/super-admin/monitoring',
+    summary: "Update Monitoring",
+    description: "Requires role: Super Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Super Admin",
+  },
+  {
+    method: 'POST',
+    path: '/super-admin/monitoring/token',
+    summary: "Generate Monitoring Token",
+    description: "Requires role: Super Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Super Admin",
+  },
 ];
 
 // System endpoints
@@ -9563,6 +9610,21 @@ export const taskEndpoints: Endpoint[] = [
       { status: 500, description: "Internal server error" },
     ],
     tag: "Tasks",
+  },
+];
+
+// Telemetry endpoints
+export const telemetryEndpoints: Endpoint[] = [
+  {
+    method: 'POST',
+    path: '/telemetry',
+    summary: "Type",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Telemetry",
   },
 ];
 
@@ -10294,9 +10356,17 @@ export const allEndpoints = {
   superAdmin: superAdminEndpoints,
   system: systemEndpoints,
   task: taskEndpoints,
+  telemetry: telemetryEndpoints,
   training: trainingEndpoints,
   user: userEndpoints,
   vendor: vendorEndpoints,
   vendorRisk: vendorRiskEndpoints,
   webhook: webhookEndpoints,
 };
+
+// Temporary placeholders for endpoint groups referenced by App.tsx but not yet
+// present in the generated Swagger snapshot. These keep the TypeScript build green
+// until the OpenAPI generator is re-run against an updated swagger.yaml.
+export const tokenEndpoints: Endpoint[] = [];
+export const userPreferenceEndpoints: Endpoint[] = [];
+export const slackWebhookEndpoints: Endpoint[] = [];

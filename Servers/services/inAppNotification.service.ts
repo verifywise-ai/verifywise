@@ -1,6 +1,7 @@
 import redisClient from "../database/redis";
 import { sequelize } from "../database/db";
 import { QueryTypes } from "sequelize";
+import logger from "../utils/logger/fileLogger";
 import { createNotificationQuery, createBulkNotificationsQuery } from "../utils/notification.utils";
 import {
   ICreateNotification,
@@ -75,7 +76,7 @@ export const sendInAppNotification = async (
       }),
     );
 
-    console.log(
+    logger.info(
       `📤 In-app notification sent to user ${notification.user_id}: ${notification.title}`,
     );
 
@@ -91,17 +92,21 @@ export const sendInAppNotification = async (
             emailConfig.template,
             emailConfig.variables,
           );
-          console.log(`📧 Email notification sent to ${user.email}`);
+          logger.info(`📧 Email notification sent to ${user.email}`);
         }
       } catch (emailError) {
-        console.error("Failed to send email notification:", emailError);
+        logger.error(
+          `Failed to send email notification: ${emailError instanceof Error ? emailError.message : String(emailError)}`,
+        );
         // Don't fail the whole notification if email fails
       }
     }
 
     return storedNotification;
   } catch (error) {
-    console.error("❌ Error sending in-app notification:", error);
+    logger.error(
+      `❌ Error sending in-app notification: ${error instanceof Error ? error.message : String(error)}`,
+    );
     throw error;
   }
 };
@@ -132,7 +137,7 @@ export const sendBulkInAppNotifications = async (
       );
     }
 
-    console.log(`📤 Bulk notifications sent to ${bulk.user_ids.length} users: ${bulk.title}`);
+    logger.info(`📤 Bulk notifications sent to ${bulk.user_ids.length} users: ${bulk.title}`);
 
     // 3. Optionally send email notifications using existing NotificationService (with rate limiting)
     if (sendEmailNotification && emailConfig) {
@@ -149,14 +154,18 @@ export const sendBulkInAppNotifications = async (
             },
           );
         } catch (emailError) {
-          console.error(`Failed to send email to ${user.email}:`, emailError);
+          logger.error(
+            `Failed to send email to ${user.email}: ${emailError instanceof Error ? emailError.message : String(emailError)}`,
+          );
         }
       }
     }
 
     return storedNotifications;
   } catch (error) {
-    console.error("❌ Error sending bulk notifications:", error);
+    logger.error(
+      `❌ Error sending bulk notifications: ${error instanceof Error ? error.message : String(error)}`,
+    );
     throw error;
   }
 };
@@ -432,7 +441,9 @@ async function buildEntityLinksHtml(
     try {
       url = await buildEntityUrlAsync(baseUrl, link.entity_type, link.entity_id, organizationId);
     } catch (error) {
-      console.error(`Failed to build URL for ${link.entity_type}:${link.entity_id}:`, error);
+      logger.error(
+        `Failed to build URL for ${link.entity_type}:${link.entity_id}: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
 
     const nameHtml = url
@@ -1210,7 +1221,7 @@ export const notifyUserAssigned = async (
   try {
     const assignee = await getUserById(assigneeId);
     if (!assignee) {
-      console.warn(`Cannot send assignment notification: user ${assigneeId} not found`);
+      logger.warn(`Cannot send assignment notification: user ${assigneeId} not found`);
       return;
     }
 
@@ -1257,19 +1268,18 @@ export const notifyUserAssigned = async (
       },
     );
 
-    // Constant format strings with the values passed as arguments: assigneeId
-    // reaches here from a request body (modelInventory's approver list, among
-    // others), and interpolating it makes the caller's data the format string,
-    // where a stray %s or %d would be interpreted rather than printed.
-    console.log(
-      "📧 Assignment notification sent to user %s as %s for %s %s",
-      assigneeId,
-      assignment.roleType,
-      assignment.entityType,
-      assignment.entityId,
+    // The values are interpolated into the message here rather than passed as
+    // printf arguments: winston is configured without format.splat(), so a
+    // stray %s or %d in caller-supplied data (assigneeId reaches here from a
+    // request body) is printed literally instead of being treated as a
+    // format specifier.
+    logger.info(
+      `📧 Assignment notification sent to user ${assigneeId} as ${assignment.roleType} for ${assignment.entityType} ${assignment.entityId}`,
     );
   } catch (error) {
-    console.error("Failed to send assignment notification to user %s:", assigneeId, error);
+    logger.error(
+      `Failed to send assignment notification to user ${assigneeId}: ${error instanceof Error ? error.message : String(error)}`,
+    );
     // Don't rethrow - notifications should not break the main flow
   }
 };

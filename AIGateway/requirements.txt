@@ -29,3 +29,8 @@ spacy>=3.8.14
 
 # MCP Gateway — Model Context Protocol SDK
 mcp>=1.0.0
+
+# Observability — OpenTelemetry metrics + logs (pushed to central OTLP collector)
+opentelemetry-api>=1.27.0
+opentelemetry-sdk>=1.27.0
+opentelemetry-exporter-otlp-proto-http>=1.27.0

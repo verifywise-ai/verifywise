@@ -1,3 +1,5 @@
+import "dotenv/config";
+import "./utils/localStoragePolyfill";
 import { createApp } from "./app";
 import { addAllJobs } from "./jobs/producer";
 import {
@@ -9,6 +11,7 @@ import redisClient from "./database/redis";
 import { startTimeoutHandler } from "./advisor/approval/timeoutHandler";
 import { bootstrapAgentNetwork } from "./advisor/network/agentNetwork";
 import { registerAllWorkflows } from "./services/workflows";
+import { initObservability, shutdownObservability } from "./observability/otel";
 
 const DEFAULT_PORT = "3000";
 const DEFAULT_HOST = "localhost";
@@ -19,6 +22,15 @@ const port = parseInt(portString, 10);
 
 try {
   const app = createApp();
+
+  // Initialize OpenTelemetry exporters (reads monitoring_config at startup).
+  (async () => {
+    try {
+      await initObservability();
+    } catch (error) {
+      console.error("Failed to initialize observability:", error);
+    }
+  })();
 
   // Adding background jobs in the Queue
   (async () => {
@@ -114,6 +126,13 @@ try {
         console.log("Database connection closed");
       } catch (err: unknown) {
         console.error("Error closing database connection:", err);
+      }
+
+      try {
+        await shutdownObservability();
+        console.log("Observability exporters flushed");
+      } catch (err: unknown) {
+        console.error("Error shutting down observability:", err);
       }
 
       process.exit(0);

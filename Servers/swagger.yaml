@@ -7772,6 +7772,8 @@ tags:
   -
     name: Tasks
   -
+    name: Telemetry
+  -
     name: Training
   -
     name: Users
@@ -23441,6 +23443,50 @@ paths:
           description: 'Forbidden - insufficient role'
         '500':
           description: 'Internal server error'
+  /super-admin/monitoring:
+    get:
+      summary: 'Get Monitoring'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Super Admin'
+      operationId: getMonitoring
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Super Admin'
+    put:
+      summary: 'Update Monitoring'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Super Admin'
+      operationId: updateMonitoring
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Super Admin'
+  /super-admin/monitoring/token:
+    post:
+      summary: 'Generate Monitoring Token'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Super Admin'
+      operationId: generateMonitoringToken
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Super Admin'
   /internal/ai-gateway/notify:
     post:
       tags:
@@ -23457,6 +23503,28 @@ paths:
           description: 'Created successfully'
         '500':
           description: 'Internal server error'
+  /internal/observability-config:
+    get:
+      summary: Anonymous
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Internal
+      operationId: internal_anonymous
+  /telemetry:
+    post:
+      summary: Type
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Telemetry
+      operationId: type
   /ssoConfig/feature:
     get:
       summary: 'Get S S O Feature Status'

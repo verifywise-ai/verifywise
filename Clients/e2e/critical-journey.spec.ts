@@ -12,64 +12,59 @@ test.describe("Critical end-to-end journey", () => {
     const riskTitle = `E2E Critical Risk ${Date.now()}`;
     const taskTitle = `E2E Critical Task ${Date.now()}`;
 
-    // --- Add a risk ---
-    await page.goto("/risk-management");
-    await expect(page).toHaveURL(/\/risk-management/);
+    // --- Look up project ID and create risk via API ---
+    // Extract auth token + user ID from localStorage, query the project list
+    // to find the project created by the fixture, then create the risk
+    // directly through the API. This avoids fragile combobox interactions.
+    const setupData = await page.evaluate(async (name) => {
+      const raw = localStorage.getItem("persist:root");
+      if (!raw) throw new Error("No persist:root in localStorage");
+      const auth = JSON.parse(JSON.parse(raw).auth);
+      const token: string = auth.authToken;
 
-    await page.evaluate(() => {
-      localStorage.setItem("risk-management-tour", "true");
-    });
+      // Decode JWT to get user ID (no verification needed — we trust our own token)
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      const userId: number = payload.id;
 
-    const addRiskBtn = page.getByRole("button", { name: /add new risk/i });
-    await expect(addRiskBtn).toBeVisible({ timeout: 15_000 });
-    await addRiskBtn.click();
-    await page.waitForTimeout(300);
+      // Fetch projects and find the one created by the fixture
+      const res = await fetch("/api/projects", {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const body = await res.json();
+      const projects = body?.data?.projects ?? body?.data ?? [];
+      const project = projects.find((p: { project_title: string }) => p.project_title === name);
+      if (!project) throw new Error(`Project "${name}" not found via API`);
+      return { token, userId, projectId: project.id as number };
+    }, projectName);
 
-    const manualOption = page
-      .getByText(/add manually/i)
-      .or(page.getByText(/custom risk/i))
-      .or(page.getByText(/add a new risk/i));
-    if (
-      await manualOption
-        .first()
-        .isVisible({ timeout: 3_000 })
-        .catch(() => false)
-    ) {
-      await manualOption.first().click();
-    }
-
-    const riskTitleInput = page
-      .getByRole("textbox", { name: /title/i })
-      .or(page.getByPlaceholder(/title/i))
-      .or(page.getByPlaceholder(/risk name/i))
-      .or(page.getByRole("textbox").first());
-    await expect(riskTitleInput.first()).toBeVisible({ timeout: 10_000 });
-    await riskTitleInput.first().fill(riskTitle);
-
-    const projectSelect = page
-      .getByRole("combobox", { name: /project/i })
-      .or(page.getByText(/select.*project/i));
-    if (
-      await projectSelect
-        .first()
-        .isVisible()
-        .catch(() => false)
-    ) {
-      await projectSelect.first().click();
-      const projectOption = page.getByRole("option", { name: new RegExp(projectName, "i") });
-      if (
-        await projectOption
-          .first()
-          .isVisible({ timeout: 3_000 })
-          .catch(() => false)
-      ) {
-        await projectOption.first().click();
-      }
-    }
-
-    const submitRiskBtn = page.getByRole("button", { name: /create|save|submit|add/i }).last();
-    await submitRiskBtn.click();
-    await page.waitForTimeout(1000);
+    await page.evaluate(
+      ({ riskName, token, userId, projectId: pid }) =>
+        fetch("/api/projectRisks", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            risk_name: riskName,
+            risk_owner: userId,
+            risk_description: "E2E critical journey risk for deadline testing",
+            ai_lifecycle_phase: "Problem definition & planning",
+            risk_category: ["Strategic risk"],
+            impact: "High potential impact on fairness and transparency",
+            projects: [pid],
+          }),
+        }).then((r) => {
+          if (!r.ok) throw new Error(`Risk creation failed: ${r.status}`);
+          return r.json();
+        }),
+      {
+        riskName: riskTitle,
+        token: setupData.token,
+        userId: setupData.userId,
+        projectId: setupData.projectId,
+      },
+    );
 
     // --- Open Tasks and create a task due soon ---
     await page.goto("/tasks");
@@ -114,34 +109,46 @@ test.describe("Critical end-to-end journey", () => {
     const today = new Date();
     const dueSoonDate = new Date(today);
     dueSoonDate.setDate(today.getDate() + 3);
-    const formattedDate = dueSoonDate.toLocaleDateString("en-US", {
-      month: "2-digit",
-      day: "2-digit",
-      year: "numeric",
-    });
+    const dayOfMonth = dueSoonDate.getDate();
 
-    const dateInput = page
-      .locator(".MuiPickersSectionList-root")
-      .or(page.locator(".mui-date-picker"));
-    await dateInput.first().click();
-    await page.keyboard.press("Control+a");
-    await page.keyboard.type(formattedDate);
-    await page.keyboard.press("Tab");
+    // Click the calendar icon button inside the DatePicker to open the popup
+    const calendarIcon = page
+      .locator(".mui-date-picker")
+      .getByRole("button", { name: /choose date/i });
+    await calendarIcon.click();
+
+    // Wait for the calendar popover to appear
+    const calendarPopup = page.locator(".MuiPickerPopper-root, .MuiPickersPopper-root");
+    await calendarPopup.first().waitFor({ state: "visible", timeout: 5_000 });
+
+    // MUI x-date-pickers renders day cells as td[role="gridcell"] > button.
+    // Click the gridcell for the target day.
+    const dayCell = page
+      .locator('[role="gridcell"]')
+      .filter({ hasText: new RegExp(`^${dayOfMonth}$`) })
+      .first();
+    await dayCell.click();
+    await page.waitForTimeout(500);
 
     // Submit the task
     const submitTaskBtn = page.getByRole("button", { name: /create task/i });
     await submitTaskBtn.click();
 
     // The deadline-warning query may be cached from before the task was
-    // created, so reload the page to force a fresh fetch.
-    await page.reload();
-
-    // Clear any persisted snooze so the banner can appear.
+    // created. Clear snooze before reloading so the banner can appear,
+    // then reload to force a fresh fetch of the deadline summary API.
     await page.evaluate(() => {
       Object.keys(localStorage)
         .filter((key) => key.includes("deadline_snooze"))
         .forEach((key) => localStorage.removeItem(key));
     });
+
+    const deadlineResponse = page.waitForResponse(
+      (resp) => resp.url().includes("/api/deadlines/summary") && resp.status() === 200,
+      { timeout: 15_000 },
+    );
+    await page.reload();
+    await deadlineResponse;
 
     await expect(page.locator('[data-testid="deadline-warning-banner"]')).toBeVisible({
       timeout: 15_000,

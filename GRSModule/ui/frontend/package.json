@@ -15,7 +15,7 @@
     "js-yaml": "^4.3.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
-    "react-router-dom": "^7.0.0"
+    "react-router-dom": "^7.18.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -36,5 +36,8 @@
     "typescript-eslint": "^8.58.2",
     "vite": "^8.1.5",
     "vitest": "^4.1.10"
+  },
+  "overrides": {
+    "dompurify": ">=3.4.12"
   }
 }

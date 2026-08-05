@@ -6,12 +6,15 @@ FROM node:24-alpine3.20
 ENV NODE_ENV=production
 
 WORKDIR /app
-COPY ./package.json ./
+COPY ./package.json ./package-lock.json ./
 
-# Increase timeout and use cache for cross-platform builds
+# Increase timeout and use cache for cross-platform builds.
+# --include=dev is required even though NODE_ENV=production: devDependencies
+# (patch-package for the postinstall patches, typescript for `npm run build`)
+# are needed to build the image. NODE_ENV=production still governs runtime.
 RUN npm config set fetch-timeout 600000 && \
     npm config set fetch-retries 5 && \
-    npm ci --prefer-offline --no-audit || npm install
+    npm ci --include=dev --prefer-offline --no-audit || npm install --include=dev
 
 # Install Playwright dependencies and git for Alpine
 # Note: Playwright requires chromium and its dependencies

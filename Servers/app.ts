@@ -112,11 +112,13 @@ import virtualKeyProxyRoutes from "./routes/virtualKeyProxy.route";
 import internalRoutes from "./routes/internal.route";
 import superAdminRoutes from "./routes/superAdmin.route";
 import { i18nMiddleware } from "./middleware/i18n.middleware";
-import { generalApiLimiter } from "./middleware/rateLimit.middleware";
+import { createRateLimiter, generalApiLimiter } from "./middleware/rateLimit.middleware";
 import { sequelize } from "./database/db";
 import redisClient from "./database/redis";
 import ssoConfigRoutes from "./routes/ssoConfig.route";
 import aiTrustIndexRoutes from "./routes/aiTrustIndex.route";
+import telemetryRoutes from "./routes/telemetry.route";
+import { requestMetricsMiddleware } from "./middleware/requestMetrics.middleware";
 
 const swaggerDoc = YAML.load("./swagger.yaml");
 
@@ -186,7 +188,17 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
 
   app.use(i18nMiddleware);
 
-  app.get("/health", async (_req, res) => {
+  // Generous rate limiter for the health endpoint. Load-balancer probes are
+  // still allowed, but the endpoint is capped to prevent abuse.
+  const nodeEnv = (process.env.NODE_ENV ?? "").trim().toLowerCase();
+  const isNonProduction = nodeEnv === "development" || nodeEnv === "test" || nodeEnv === "local";
+  const healthLimiter = createRateLimiter({
+    windowMinutes: 1,
+    maxRequests: isNonProduction ? 100000 : 1000,
+    message: "Too many health-check requests from this IP, please slow down",
+  });
+
+  app.get("/health", healthLimiter, async (_req, res) => {
     const AI_GATEWAY_URL = process.env.AI_GATEWAY_URL || "http://localhost:8100";
     const checks: Record<string, { status: "ok" | "error"; error?: string }> = {};
 
@@ -226,6 +238,11 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
     res.status(allOk ? 200 : 503).json({ status: allOk ? "ok" : "degraded", checks });
   });
 
+  // Track every request: metrics + access log (shipped to the central
+  // observability stack when monitoring is enabled). Mounted after /health so
+  // health checks aren't counted, and before all /api routes.
+  app.use(requestMetricsMiddleware);
+
   if (preRoutesMiddleware) {
     preRoutesMiddleware.forEach((mw) => app.use(mw));
   }
@@ -234,7 +251,7 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
   // ahead of every route mount. Stricter per-route limiters (auth, file
   // ops, ingestion, ...) still apply on top. Webhook/raw-body endpoints
   // are exempt — they are signature-verified and have their own controls —
-  // and /health stays unlimited for load-balancer probes.
+  // and /health has its own generous per-IP limiter above.
   app.use((req, res, next) => {
     if (req.url.startsWith("/api/webhooks/")) {
       return next();
@@ -354,6 +371,7 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
 
   app.use("/api/super-admin", superAdminRoutes);
   app.use("/api/internal", internalRoutes);
+  app.use("/api/telemetry", telemetryRoutes);
   app.use("/v1", virtualKeyProxyRoutes());
   app.use("/api/ssoConfig", ssoConfigRoutes);
   app.use("/api/ai-trust-index", aiTrustIndexRoutes);
