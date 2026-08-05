@@ -21,6 +21,9 @@
 import { describe, it, expect, beforeEach, jest } from "@jest/globals";
 import type { NextFunction, Request, Response } from "express";
 
+// The token hashing module requires a server-side HMAC secret at load time.
+process.env.API_TOKEN_HASH_SECRET = "test-api-token-hash-secret";
+
 // `http-proxy-middleware` ships ESM and Jest can't transform it without extra
 // config; we don't exercise the proxy here so a no-op mock is fine.
 jest.mock("http-proxy-middleware", () => ({

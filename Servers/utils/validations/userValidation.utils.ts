@@ -10,6 +10,7 @@ import {
   ValidationResult,
   ValidationError,
 } from "./validation.utils";
+import { isEmail } from "./email.utils";
 
 /**
  * Email validation using regex pattern
@@ -23,7 +24,6 @@ const validateEmail = (
     trimWhitespace?: boolean;
   } = {},
 ): ValidationResult => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const { required = false, maxLength = 128, trimWhitespace = true } = options;
 
   // First validate as string
@@ -41,7 +41,7 @@ const validateEmail = (
   // If value is provided, validate email format
   if (value !== undefined && value !== null && String(value).trim() !== "") {
     const emailValue = trimWhitespace ? String(value).trim() : String(value);
-    if (!emailRegex.test(emailValue)) {
+    if (!isEmail(emailValue)) {
       return {
         isValid: false,
         message: `${fieldName} must be a valid email address`,

@@ -141,7 +141,7 @@ async def generate_report_controller(
                     provider, api_key = key_info
                     model = DEFAULT_MODELS.get(provider, "gpt-4o-mini")
                     try:
-                        logger.info(f"Generating AI summaries with {provider}/{model}")
+                        logger.info("Generating AI summaries")
                         executive_summary, metric_summaries, recommendations_summary = generate_all_summaries(
                             experiments,
                             provider=provider,

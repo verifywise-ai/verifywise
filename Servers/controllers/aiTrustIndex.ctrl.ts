@@ -11,8 +11,8 @@ import {
   getSettingsQuery,
   upsertSettingsQuery,
 } from "../utils/aiTrustIndex.utils";
+import { isEmail } from "../utils/validations/email.utils";
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const isAdmin = (role?: string) => role === "Admin" || role === "SuperAdmin";
 
 export async function getApps(req: Request, res: Response): Promise<any> {
@@ -222,9 +222,7 @@ export async function updateSettings(req: Request, res: Response): Promise<any> 
     const badUserId = recipientUserIds.find((id: unknown) => !Number.isInteger(id));
     if (badUserId !== undefined)
       return res.status(400).json(STATUS_CODE[400](`Invalid user id: ${String(badUserId)}`));
-    const badEmail = recipientEmails.find(
-      (e: unknown) => typeof e !== "string" || !EMAIL_RE.test(e),
-    );
+    const badEmail = recipientEmails.find((e: unknown) => !isEmail(e));
     if (badEmail !== undefined)
       return res.status(400).json(STATUS_CODE[400](`Invalid email: ${String(badEmail)}`));
     await upsertSettingsQuery(req.organizationId!, req.userId!, recipientUserIds, recipientEmails);

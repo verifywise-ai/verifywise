@@ -7,6 +7,7 @@ const tsJestTransformCfg = createDefaultPreset({
 /** @type {import("jest").Config} **/
 module.exports = {
   testEnvironment: "node",
+  setupFiles: ["<rootDir>/utils/localStoragePolyfill.ts"],
   transform: {
     ...tsJestTransformCfg,
   },

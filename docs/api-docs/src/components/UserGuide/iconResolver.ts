@@ -5,6 +5,7 @@ import {
   EyeOff,
   FileText,
   FlaskConical,
+  Gauge,
   GraduationCap,
   Info,
   Plug,
@@ -31,6 +32,7 @@ const collectionIconMap: Record<IconName, LucideIcon> = {
   ScanSearch,
   EyeOff,
   Router,
+  Gauge,
 };
 
 export const resolveIcon = (name: IconName): LucideIcon =>
