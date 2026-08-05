@@ -48,12 +48,13 @@ Tools represented: **Trivy** (197), **Semgrep OSS** (77), **CodeQL** (19).
 - React Router alert triaged: either migrate to v8, or document non-exploitability (no RSC APIs used) and dismiss the alert.
 - EvaluationModule `huggingface-hub` alert triaged: `>=1.26.0` conflicts with `deepeval<4.2.0` (`click<8.4.0` vs `click>=8.4.2`). Decision tracked; do not merge a broken dependency bump.
 
-> **Wave 1 status (as of latest commit)**
+> **Wave 1 status (completed)**
 > - `undici` and `hono` resolved.
 > - `xlsx` bumped to CDN `0.20.3`; `npm audit` no longer flags `xlsx` in `Clients`/`Servers`.
 > - `GRSModule/ui/frontend` transitive `babel/core` and `brace-expansion` findings fixed via `npm audit fix`.
-> - `react-router` remains open in `Clients` and `GRSModule/ui/frontend` (no 7.x patch; not exploitable in current usage).
-> - EvaluationModule `huggingface-hub` Dependabot PR is blocked by the `deepeval`/`click` conflict.
+> - `react-router` migrated to v8.3.0 in `Clients`, `GRSModule/ui/frontend`, and `docs/api-docs`; all builds and the full `Clients` test suite (5,170 tests) pass.
+> - EvaluationModule `huggingface-hub` capped to `<1.16.3` to avoid the `deepeval<4.2.0` / `click>=8.4.2` conflict; the Dependabot PR should be closed/dismissed and revisited when `deepeval` loosens its `click` constraint.
+> - Remaining open dependency risk: `Servers` has 2 low-severity `@ai-sdk/provider-utils` alerts via `@mastra/core`.
 
 ---
 
