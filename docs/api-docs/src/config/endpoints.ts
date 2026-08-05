@@ -10363,10 +10363,3 @@ export const allEndpoints = {
   vendorRisk: vendorRiskEndpoints,
   webhook: webhookEndpoints,
 };
-
-// Temporary placeholders for endpoint groups referenced by App.tsx but not yet
-// present in the generated Swagger snapshot. These keep the TypeScript build green
-// until the OpenAPI generator is re-run against an updated swagger.yaml.
-export const tokenEndpoints: Endpoint[] = [];
-export const userPreferenceEndpoints: Endpoint[] = [];
-export const slackWebhookEndpoints: Endpoint[] = [];
