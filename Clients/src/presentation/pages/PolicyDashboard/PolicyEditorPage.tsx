@@ -35,12 +35,9 @@ import {
 
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { HistorySidebar } from "../../components/Common/HistorySidebar";
-import CustomFieldsSection, {
-  type CustomFieldsSectionHandle,
-} from "../../components/CustomFieldsSection";
+import { type CustomFieldsSectionHandle } from "../../components/CustomFieldsSection";
 import { useRequiredCustomFieldsGate } from "../../components/CustomFieldsSection/RequiredCustomFieldsGate";
 import { usePolicyChangeHistory } from "../../../application/hooks/usePolicyChangeHistory";
-import PolicyForm from "../../components/Policies/PolicyForm";
 import InsertLinkModal from "../../components/Modals/InsertLinkModal/InsertLinkModal";
 import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
 import { uploadFileToManager } from "../../../application/repository/file.repository";
@@ -67,6 +64,7 @@ import { FindReplacePopover } from "./PolicyEditor/FindReplacePopover";
 import { PolicyTableBubbleMenu } from "./PolicyEditor/PolicyTableBubbleMenu";
 import { PolicyToolbar } from "./PolicyEditor/PolicyToolbar";
 import { PolicyHeader } from "./PolicyEditor/PolicyHeader";
+import { PolicyMetadataSidebar } from "./PolicyEditor/PolicyMetadataSidebar";
 
 // ── Component ─────────────────────────────────────────────────────────
 export default function PolicyEditorPage() {
@@ -781,34 +779,17 @@ export default function PolicyEditorPage() {
           />
 
           {/* ── Metadata form ────────────────────────────────────────── */}
-          <Box
-            ref={formRef}
-            sx={{
-              flexShrink: 0,
-              mb: "8px",
-              overflow: "visible",
-              position: "relative",
-              zIndex: 1,
-            }}
-          >
-            <PolicyForm
-              formData={formData}
-              setFormData={setFormData}
-              tags={tags}
-              errors={displayErrors}
-              clearFieldError={clearFieldError}
-            />
-          </Box>
-
-          <Stack>
-            {/* Custom fields — staging in create mode, write-through in edit */}
-            <CustomFieldsSection
-              ref={customFieldsRef}
-              entityType="policy"
-              entityId={isNew ? null : (policy?.id ?? null)}
-              onPendingChange={customFieldsGate.onPendingChange}
-            />
-          </Stack>
+          <PolicyMetadataSidebar
+            formRef={formRef}
+            formData={formData}
+            setFormData={setFormData}
+            tags={tags}
+            errors={displayErrors}
+            clearFieldError={clearFieldError}
+            customFieldsRef={customFieldsRef}
+            entityId={isNew ? null : (policy?.id ?? null)}
+            onPendingChange={customFieldsGate.onPendingChange}
+          />
 
           <PolicyToolbar
             editor={editor}
