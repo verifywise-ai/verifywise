@@ -18,7 +18,7 @@ import {
   removeUser,
   OrgUser,
 } from "../../../../application/repository/superAdmin.repository";
-import { useParams } from "react-router-dom";
+import { useParams } from "react-router";
 import StandardModal from "../../../components/Modals/StandardModal";
 import Field from "../../../components/Inputs/Field";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";

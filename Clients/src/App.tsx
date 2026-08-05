@@ -1,4 +1,4 @@
-import { Routes } from "react-router-dom";
+import { Routes } from "react-router";
 import "./App.css";
 import { ThemeProvider } from "@emotion/react";
 import light from "./presentation/themes/light";
@@ -28,7 +28,7 @@ import {
 import Alert from "./presentation/components/Alert";
 import useUsers from "./application/hooks/useUsers";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router";
 import { clearChunkReloadFlag } from "./application/utils/deploymentHelpers";
 import ChunkErrorBoundary from "./presentation/components/ChunkErrorBoundary";
 import { CommandPalette } from "./presentation/components/CommandPalette";

@@ -1,6 +1,6 @@
 import { Box } from "@mui/material";
 import { Link2 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import GovernanceTooltip from "./GovernanceTooltip";
 import { accent } from "../../themes/palette";
 

@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { Project } from "../../../../../domain/types/Project";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 import { getAllProjectRisksByProjectId } from "../../../../../application/repository/projectRisk.repository";
 import RisksView from "../../../../components/RisksView";
 import { RiskModel } from "../../../../../domain/models/Common/risks/risk.model";

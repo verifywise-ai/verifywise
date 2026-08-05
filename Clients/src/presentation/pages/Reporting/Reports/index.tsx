@@ -11,7 +11,7 @@ import Alert from "../../../components/Alert";
 import { useProjects } from "../../../../application/hooks/useProjects";
 import CustomizableSkeleton from "../../../components/Skeletons";
 import { Project } from "../../../../domain/types/Project";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 import { useAuth } from "../../../../application/hooks/useAuth";
 import { GetMyOrganization } from "../../../../application/repository/organization.repository";
 import { GroupBy } from "../../../components/Table/GroupBy";

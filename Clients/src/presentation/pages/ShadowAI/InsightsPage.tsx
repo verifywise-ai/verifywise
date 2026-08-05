@@ -29,7 +29,7 @@ import { DashboardCard } from "../../components/Cards/DashboardCard";
 import { VWLink } from "../../components/Link/VWLink";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import ShadowAIOnboarding from "../../components/Modals/ShadowAIOnboarding";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { PERIOD_OPTIONS } from "./constants";
 import { palette } from "../../themes/palette";
 

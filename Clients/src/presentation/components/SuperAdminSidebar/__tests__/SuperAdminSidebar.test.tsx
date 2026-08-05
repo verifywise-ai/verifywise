@@ -7,6 +7,7 @@ vi.mock("../../../../application/repository/superAdmin.repository", () => ({
 }));
 
 vi.mock("react-router", () => ({
+    MemoryRouter: ({ children }: any) => <>{children}</>,
   useNavigate: () => vi.fn(),
   useLocation: () => ({ pathname: "/super-admin" }),
 }));

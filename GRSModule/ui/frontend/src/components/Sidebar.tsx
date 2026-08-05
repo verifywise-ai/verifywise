@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+import { NavLink } from "react-router";
 import type { CSSProperties, ReactNode } from "react";
 import { useConfigContext } from "../hooks/useConfigContext";
 
