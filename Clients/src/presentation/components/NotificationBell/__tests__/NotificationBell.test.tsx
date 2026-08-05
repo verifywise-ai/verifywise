@@ -75,6 +75,11 @@ describe("NotificationBell", () => {
     vi.clearAllMocks();
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
   const openPopover = async () => {
     renderWithProviders(<NotificationBell />);
     await userEvent.click(screen.getByRole("button"));
