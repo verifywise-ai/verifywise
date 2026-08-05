@@ -1,45 +1,20 @@
 import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { sanitizeRichText } from "../../../application/utils/richTextSanitizer";
-import { useEditor, EditorContent } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import TipTapUnderline from "@tiptap/extension-underline";
-import Highlight from "@tiptap/extension-highlight";
-import TextAlign from "@tiptap/extension-text-align";
-import TipTapLink from "@tiptap/extension-link";
-import {
-  Table as TipTapTable,
-  TableRow as TipTapTableRow,
-  TableCell as TipTapTableCell,
-  TableHeader as TipTapTableHeader,
-} from "@tiptap/extension-table";
-import Placeholder from "@tiptap/extension-placeholder";
-import TaskList from "@tiptap/extension-task-list";
-import TaskItem from "@tiptap/extension-task-item";
-import CharacterCount from "@tiptap/extension-character-count";
-import Superscript from "@tiptap/extension-superscript";
-import Subscript from "@tiptap/extension-subscript";
-import TypographyExtension from "@tiptap/extension-typography";
-import Color from "@tiptap/extension-color";
-import { TextStyle } from "@tiptap/extension-text-style";
 import {
   Box,
   Stack,
   Typography,
-  useTheme,
   Skeleton,
   Snackbar,
   Alert,
-  GlobalStyles,
 } from "@mui/material";
 
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { type CustomFieldsSectionHandle } from "../../components/CustomFieldsSection";
 import { useRequiredCustomFieldsGate } from "../../components/CustomFieldsSection/RequiredCustomFieldsGate";
 import { usePolicyChangeHistory } from "../../../application/hooks/usePolicyChangeHistory";
-import InsertLinkModal from "../../components/Modals/InsertLinkModal/InsertLinkModal";
 import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
-import { uploadFileToManager } from "../../../application/repository/file.repository";
 import {
   getPolicyById,
   getAllTags,
@@ -54,14 +29,9 @@ import { checkStringValidation } from "../../../application/validations/stringVa
 import { useFormValidation } from "../../../application/hooks/useFormValidation";
 import { store } from "../../../application/redux/store";
 import { PageBreadcrumbs } from "../../components/breadcrumbs/PageBreadcrumbs";
-import { AuthImageExtension } from "./PolicyEditor/AuthImage";
-import { normalizeSlateHtml } from "./PolicyEditor/normalizeSlateHtml";
-import { createSearchHighlightExtension } from "./PolicyEditor/searchHighlightExtension";
-import { policyEditorStyles } from "./PolicyEditor/editorStyles";
 import { usePolicyFindReplace } from "./PolicyEditor/usePolicyFindReplace";
-import { FindReplacePopover } from "./PolicyEditor/FindReplacePopover";
-import { PolicyTableBubbleMenu } from "./PolicyEditor/PolicyTableBubbleMenu";
-import { PolicyToolbar } from "./PolicyEditor/PolicyToolbar";
+import { usePolicyEditorContent } from "./PolicyEditor/usePolicyEditorContent";
+import { PolicyContentEditor } from "./PolicyEditor/PolicyContentEditor";
 import { PolicyHeader } from "./PolicyEditor/PolicyHeader";
 import { PolicyMetadataSidebar } from "./PolicyEditor/PolicyMetadataSidebar";
 import { PolicyReviewPanel } from "./PolicyEditor/PolicyReviewPanel";
@@ -71,7 +41,6 @@ export default function PolicyEditorPage() {
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const theme = useTheme();
   const { users } = useUsers();
   const createPolicyMutation = useCreatePolicy();
   const updatePolicyMutation = useUpdatePolicy();
@@ -101,10 +70,7 @@ export default function PolicyEditorPage() {
   const [loadError, setLoadError] = useState<string | null>(null);
 
   // Editor state
-  const [openLink, setOpenLink] = useState(false);
-  const [selectedTextForLink, setSelectedTextForLink] = useState("");
   const [isHistorySidebarOpen, setIsHistorySidebarOpen] = useState(false);
-  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [isExportingPDF, setIsExportingPDF] = useState(false);
   const [isExportingDOCX, setIsExportingDOCX] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -118,8 +84,6 @@ export default function PolicyEditorPage() {
   const [editedTitle, setEditedTitle] = useState("");
   const [isSavingTitle, setIsSavingTitle] = useState(false);
   const [titleSaveError, setTitleSaveError] = useState<string | null>(null);
-  const imageInputRef = useRef<HTMLInputElement>(null);
-  const isLoadingContentRef = useRef(false);
   const formRef = useRef<HTMLDivElement>(null);
   const [validationSnackbar, setValidationSnackbar] = useState(false);
 
@@ -298,157 +262,20 @@ export default function PolicyEditorPage() {
     }
   }, [policy, template, users]);
 
-  // ── Compute initial editor content ──────────────────────────────
-  const initialContent = (() => {
-    const raw = policy?.content_html || template?.content || "";
-    if (!raw) return "";
-    return sanitizeRichText(normalizeSlateHtml(raw));
-  })();
-
-  // ── TipTap editor ─────────────────────────────────────────────────
-  // Pass `deps` array so the editor re-creates when content changes
-  const editor = useEditor(
-    {
-      extensions: [
-        StarterKit.configure({ heading: { levels: [1, 2, 3] } }),
-        TipTapUnderline,
-        Highlight,
-        TextAlign.configure({ types: ["heading", "paragraph", "blockquote"] }),
-        TipTapLink.configure({
-          openOnClick: false,
-          HTMLAttributes: { target: "_blank", rel: "noopener noreferrer" },
-        }),
-        AuthImageExtension.configure({ inline: false, allowBase64: true }),
-        TipTapTable.configure({ resizable: true }),
-        TipTapTableRow,
-        TipTapTableCell,
-        TipTapTableHeader,
-        Placeholder.configure({ placeholder: "Start typing your policy content..." }),
-        TaskList,
-        TaskItem.configure({ nested: true }),
-        CharacterCount,
-        Superscript,
-        Subscript,
-        TypographyExtension,
-        TextStyle,
-        Color,
-        createSearchHighlightExtension(),
-      ],
-      content: initialContent,
-      autofocus: false,
-      onUpdate: ({ editor: e }) => {
-        if (isLoadingContentRef.current) return;
-        setFormData((prev) => ({ ...prev, content: e.getHTML() }));
-      },
-      editorProps: {
-        handleDrop: (view, event, _slice, moved) => {
-          if (moved || !event.dataTransfer?.files?.length) return false;
-          const file = event.dataTransfer.files[0];
-          if (!file.type.startsWith("image/") || file.size > 10 * 1024 * 1024) return false;
-          event.preventDefault();
-          // Capture position before async upload
-          const coords = view.posAtCoords({ left: event.clientX, top: event.clientY });
-          const dropPos = coords?.pos ?? view.state.selection.anchor;
-          (async () => {
-            try {
-              const response = await uploadFileToManager({
-                file,
-                model_id: null,
-                source: "policy_editor",
-                signal: undefined,
-              });
-              const fileId = response.data.id;
-              const node = view.state.schema.nodes.image.create({
-                src: `/api/file-manager/${fileId}`,
-                alt: file.name,
-              });
-              const tr = view.state.tr.insert(Math.min(dropPos, view.state.doc.content.size), node);
-              view.dispatch(tr);
-            } catch {
-              // ignore
-            }
-          })();
-          return true;
-        },
-        handlePaste: (view, event) => {
-          const items = event.clipboardData?.items;
-          if (!items) return false;
-          for (const item of Array.from(items)) {
-            if (!item.type.startsWith("image/")) continue;
-            const file = item.getAsFile();
-            if (!file || file.size > 10 * 1024 * 1024) continue;
-            event.preventDefault();
-            (async () => {
-              try {
-                const response = await uploadFileToManager({
-                  file,
-                  model_id: null,
-                  source: "policy_editor",
-                  signal: undefined,
-                });
-                const fileId = response.data.id;
-                const node = view.state.schema.nodes.image.create({
-                  src: `/api/file-manager/${fileId}`,
-                  alt: file.name,
-                });
-                const tr = view.state.tr.replaceSelectionWith(node);
-                view.dispatch(tr);
-              } catch {
-                // ignore
-              }
-            })();
-            return true;
-          }
-          return false;
-        },
-      },
-    },
-    [initialContent],
-  );
-
-  // ── Image upload handler ──────────────────────────────────────────
-  const handleImageFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    event.target.value = "";
-    if (!file.type.startsWith("image/")) return;
-    if (file.size > 10 * 1024 * 1024) return;
-
-    setIsUploadingImage(true);
-    try {
-      const response = await uploadFileToManager({
-        file,
-        model_id: null,
-        source: "policy_editor",
-        signal: undefined,
-      });
-      const fileId = response.data.id;
-      editor
-        ?.chain()
-        .focus()
-        .setImage({ src: `/api/file-manager/${fileId}`, alt: file.name })
-        .run();
-    } catch {
-      // ignore
-    } finally {
-      setIsUploadingImage(false);
-    }
-  };
-
+  // ── TipTap editor (extensions, image upload, link modal) ─────────
   const {
-    searchAnchorEl,
-    openFindReplace,
-    closeFindReplace,
-    searchText,
-    setSearchText,
-    replaceText,
-    setReplaceText,
-    searchMatchCount,
-    handleSearchNext,
-    handleSearchPrev,
-    handleReplaceCurrent,
-    handleReplaceAll,
-  } = usePolicyFindReplace(editor);
+    editor,
+    imageInputRef,
+    isUploadingImage,
+    handleImageFileChange,
+    openLink,
+    selectedTextForLink,
+    handleOpenLink,
+    handleCloseLink,
+    handleInsertLink,
+  } = usePolicyEditorContent({ policy, template, setFormData });
+
+  const findReplace = usePolicyFindReplace(editor);
 
   // ── Save ──────────────────────────────────────────────────────────
   const save = async () => {
@@ -686,50 +513,6 @@ export default function PolicyEditorPage() {
 
   return (
     <>
-      <InsertLinkModal
-        open={openLink}
-        onClose={() => {
-          setOpenLink(false);
-          setSelectedTextForLink("");
-        }}
-        onInsert={(url, text) => {
-          if (!editor) return;
-          const { from, to } = editor.state.selection;
-          if (from !== to && !text) {
-            editor.chain().focus().setLink({ href: url, target: "_blank" }).run();
-          } else {
-            const linkText = text || url;
-            editor
-              .chain()
-              .focus()
-              .insertContent({
-                type: "text",
-                text: linkText,
-                marks: [
-                  {
-                    type: "link",
-                    attrs: {
-                      href: url,
-                      target: "_blank",
-                      rel: "noopener noreferrer",
-                    },
-                  },
-                ],
-              })
-              .run();
-          }
-        }}
-        selectedText={selectedTextForLink}
-      />
-
-      <input
-        ref={imageInputRef}
-        type="file"
-        accept="image/*"
-        style={{ display: "none" }}
-        onChange={handleImageFileChange}
-      />
-
       <Stack className="vwhome" gap="16px">
         {/* ── Breadcrumbs ──────────────────────────────────────────── */}
         <PageBreadcrumbs />
@@ -791,66 +574,25 @@ export default function PolicyEditorPage() {
             onPendingChange={customFieldsGate.onPendingChange}
           />
 
-          <PolicyToolbar
+          <PolicyContentEditor
             editor={editor}
+            contentError={displayErrors.content}
+            imageInputRef={imageInputRef}
             isUploadingImage={isUploadingImage}
-            onInsertImage={() => imageInputRef.current?.click()}
-            onOpenLink={(selectedText) => {
-              setSelectedTextForLink(selectedText);
-              setOpenLink(true);
-            }}
-            onOpenFindReplace={openFindReplace}
-          />
-
-          <FindReplacePopover
-            anchorEl={searchAnchorEl}
-            onClose={closeFindReplace}
-            searchText={searchText}
-            onSearchTextChange={setSearchText}
-            replaceText={replaceText}
-            onReplaceTextChange={setReplaceText}
-            searchMatchCount={searchMatchCount}
-            onSearchNext={handleSearchNext}
-            onSearchPrev={handleSearchPrev}
-            onReplaceCurrent={handleReplaceCurrent}
-            onReplaceAll={handleReplaceAll}
-          />
-
-          {/* ── Editor + History sidebar ────────────────────────────── */}
-          <Stack direction="row" sx={{ flex: 1, minHeight: 0, overflow: "hidden" }}>
-            {/* Editor */}
-            <Box
-              sx={{
-                flex: 1,
-                minWidth: 0,
-                minHeight: 0,
-                overflow: "auto",
-                border: "1px solid",
-                borderColor: "border.dark",
-                borderRadius: "4px",
-              }}
-            >
-              <EditorContent editor={editor} className="policy-tiptap-editor" />
-              {editor && <PolicyTableBubbleMenu editor={editor} />}
-              <GlobalStyles styles={policyEditorStyles} />
-            </Box>
-
-            {displayErrors.content && (
-              <Typography
-                component="span"
-                color={theme.palette.status?.error?.text || theme.palette.error.main}
-                sx={{ opacity: 0.8, fontSize: 11, mt: 1 }}
-              >
-                {displayErrors.content}
-              </Typography>
-            )}
-
+            onImageFileChange={handleImageFileChange}
+            linkModalOpen={openLink}
+            selectedTextForLink={selectedTextForLink}
+            onOpenLink={handleOpenLink}
+            onCloseLink={handleCloseLink}
+            onInsertLink={handleInsertLink}
+            findReplace={findReplace}
+          >
             <PolicyReviewPanel
               isOpen={isHistorySidebarOpen}
               isNew={isNew}
               policyId={policy?.id}
             />
-          </Stack>
+          </PolicyContentEditor>
         </Stack>
       </Stack>
 
