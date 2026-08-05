@@ -168,6 +168,7 @@
     "body-parser": "^2.3.0",
     "tar": "^7.5.22",
     "@hono/node-server": "^2.0.5",
+    "hono": "^4.12.34",
     "minimatch@9": "9.0.8",
     "brace-expansion@1": "1.1.18",
     "brace-expansion@2": "^2.1.4",
