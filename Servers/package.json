@@ -101,7 +101,8 @@
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.19.3/xlsx-0.19.3.tgz",
     "xstate": "^5.30.0",
     "yamljs": "^0.3.0",
-    "zod": "^4.4.3"
+    "zod": "^4.4.3",
+    "re2js": "^2.8.6"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
@@ -161,6 +162,13 @@
     "@hono/node-server": "^2.0.5",
     "minimatch@9": "9.0.8",
     "brace-expansion@1": "1.1.18",
-    "brace-expansion@5": "^5.0.8"
+    "brace-expansion@2": "^2.1.4",
+    "brace-expansion@3": "^3.0.6",
+    "brace-expansion@4": "^5.0.9",
+    "brace-expansion@5": "^5.0.9",
+    "fast-uri": "^3.1.5",
+    "ip-address": ">10.3.0",
+    "undici@6": "^6.28.0",
+    "undici@7": "^7.29.0"
   }
 }

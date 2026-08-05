@@ -2,6 +2,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import List
 
+from .path_utils import resolve_dataset_path
 from ..models import ProgressCounts
 
 
@@ -24,7 +25,10 @@ def get_progress(stage: str, dataset_version: str, grs_root: Path) -> List[Progr
     Returns:
         List of ProgressCounts per model_id, sorted by model_id.
     """
-    final_dir = grs_root / "datasets" / dataset_version / "final"
+    if stage not in {"infer", "judge"}:
+        raise ValueError(f"Invalid stage: {stage!r}; must be 'infer' or 'judge'")
+
+    final_dir = resolve_dataset_path(grs_root, dataset_version, "final")
     total_per_model = count_lines(final_dir / "scenarios.jsonl")
 
     # Determine output subdirectory based on stage
