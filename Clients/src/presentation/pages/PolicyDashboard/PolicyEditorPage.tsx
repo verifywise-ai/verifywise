@@ -34,7 +34,6 @@ import {
 } from "@mui/material";
 
 import { CustomizableButton } from "../../components/button/customizable-button";
-import { HistorySidebar } from "../../components/Common/HistorySidebar";
 import { type CustomFieldsSectionHandle } from "../../components/CustomFieldsSection";
 import { useRequiredCustomFieldsGate } from "../../components/CustomFieldsSection/RequiredCustomFieldsGate";
 import { usePolicyChangeHistory } from "../../../application/hooks/usePolicyChangeHistory";
@@ -65,6 +64,7 @@ import { PolicyTableBubbleMenu } from "./PolicyEditor/PolicyTableBubbleMenu";
 import { PolicyToolbar } from "./PolicyEditor/PolicyToolbar";
 import { PolicyHeader } from "./PolicyEditor/PolicyHeader";
 import { PolicyMetadataSidebar } from "./PolicyEditor/PolicyMetadataSidebar";
+import { PolicyReviewPanel } from "./PolicyEditor/PolicyReviewPanel";
 
 // ── Component ─────────────────────────────────────────────────────────
 export default function PolicyEditorPage() {
@@ -845,15 +845,11 @@ export default function PolicyEditorPage() {
               </Typography>
             )}
 
-            {/* History sidebar */}
-            {!isNew && policy?.id && (
-              <HistorySidebar
-                isOpen={isHistorySidebarOpen}
-                entityType="policy"
-                entityId={policy.id}
-                height="100%"
-              />
-            )}
+            <PolicyReviewPanel
+              isOpen={isHistorySidebarOpen}
+              isNew={isNew}
+              policyId={policy?.id}
+            />
           </Stack>
         </Stack>
       </Stack>
