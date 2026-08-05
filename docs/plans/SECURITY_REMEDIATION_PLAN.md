@@ -38,12 +38,22 @@ Tools represented: **Trivy** (197), **Semgrep OSS** (77), **CodeQL** (19).
 |---------|------------|----------|-------------|----------|--------|
 | `undici` | `>=7.0.0,<7.29.0` | `7.29.0` | `Clients/package-lock.json`, `GRSModule/ui/frontend/package-lock.json` | 7 medium + 1 high | `npm update undici` or override; run tests |
 | `hono` | `<4.12.34` | `4.12.34` | `Servers/package-lock.json` | medium | bump `hono` in `Servers/package.json` |
-| `react-router` | `>=7.12.0,<8.3.0` | `8.3.0` | `Clients/package-lock.json`, `GRSModule/ui/frontend/package-lock.json`, `docs/api-docs/package-lock.json` | high | assess major-version impact first; may need override or version pin |
+| `xlsx` (SheetJS) | `<0.20.2` (ReDoS) | `0.20.3` | `Clients/package.json`, `Servers/package.json` | high | Bump CDN tarball to `https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz`; run spreadsheet tests. |
+| `react-router` | `>=7.12.0,<8.3.0` | `8.3.0` | `Clients/package-lock.json`, `GRSModule/ui/frontend/package-lock.json`, `docs/api-docs/package-lock.json` | high | **No 7.x patch exists.** App uses standard BrowserRouter/Data-mode APIs (no unstable RSC APIs), so exploit path is not reachable. Major v8 migration tracked separately; otherwise dismiss as non-exploitable with justification. |
 
 **Acceptance criteria:**
-- `npm audit` passes for the affected workspaces with no open `undici`/`hono`/`react-router` alerts.
-- Full test suites for `Clients` and `Servers` remain green.
-- React Router upgrade path documented if not bumped immediately.
+- `npm audit` passes for the affected workspaces with no open `undici`/`hono`/`xlsx` alerts.
+- `Clients` and `Servers` spreadsheet import/export tests pass after `xlsx` bump.
+- `hono` and `undici` bumps verified by build/tests.
+- React Router alert triaged: either migrate to v8, or document non-exploitability (no RSC APIs used) and dismiss the alert.
+- EvaluationModule `huggingface-hub` alert triaged: `>=1.26.0` conflicts with `deepeval<4.2.0` (`click<8.4.0` vs `click>=8.4.2`). Decision tracked; do not merge a broken dependency bump.
+
+> **Wave 1 status (as of latest commit)**
+> - `undici` and `hono` resolved.
+> - `xlsx` bumped to CDN `0.20.3`; `npm audit` no longer flags `xlsx` in `Clients`/`Servers`.
+> - `GRSModule/ui/frontend` transitive `babel/core` and `brace-expansion` findings fixed via `npm audit fix`.
+> - `react-router` remains open in `Clients` and `GRSModule/ui/frontend` (no 7.x patch; not exploitable in current usage).
+> - EvaluationModule `huggingface-hub` Dependabot PR is blocked by the `deepeval`/`click` conflict.
 
 ---
 
