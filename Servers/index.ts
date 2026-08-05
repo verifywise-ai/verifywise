@@ -1,3 +1,4 @@
+import "dotenv/config";
 import "./utils/localStoragePolyfill";
 import { createApp } from "./app";
 import { addAllJobs } from "./jobs/producer";
