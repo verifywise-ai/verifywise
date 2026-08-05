@@ -7,6 +7,10 @@
 
 import { sequelize } from "../../database/db";
 
+function daysAgo(days: number): string {
+  return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
+}
+
 export interface CreateTestProjectOptions {
   project_title?: string;
   uc_id?: string;
@@ -619,7 +623,7 @@ export async function createTestMrmMetric(
         modelInventoryId,
         metric: options.metric ?? "psi",
         value: options.value ?? 0.28,
-        at: options.at ?? "2026-07-02T00:00:00Z",
+        at: options.at ?? daysAgo(10),
         // window/segment are NOT NULL with sentinels ('' / 'overall') — an explicit
         // null would violate the constraint, so mirror the ingestion normalization.
         window: options.window ?? "",
