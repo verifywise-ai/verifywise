@@ -1,7 +1,8 @@
 import { createServer } from "node:http";
-import { readFile, realpath } from "node:fs/promises";
+import { realpathSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
-import { dirname, join, extname, sep } from "node:path";
+import { dirname, extname, join, resolve, sep } from "node:path";
 import { WebSocketServer, WebSocket } from "ws";
 import { SimConfig } from "../types.js";
 import { DashboardEvent } from "./events.js";
@@ -39,21 +40,35 @@ export const startDashboardServer = async (
     for (const ws of clients) if (ws.readyState === ws.OPEN) ws.send(data);
   };
 
-  const publicReal = await realpath(PUBLIC);
+  const publicRoot = realpathSync(PUBLIC);
 
   const httpServer = createServer(async (req, res) => {
     const urlPath = req.url === "/" ? "/index.html" : (req.url ?? "/index.html");
+    // URL paths always begin with "/"; strip it so the request resolves
+    // relative to PUBLIC instead of being treated as an absolute path.
+    const rawPath = decodeURIComponent(urlPath.split("?")[0]).replace(/^[\/\\]+/, "");
+
+    // Reject null bytes and traversal attempts before touching the filesystem.
+    if (
+      rawPath.includes("\0") ||
+      rawPath.split("/").includes("..") ||
+      rawPath.split("\\").includes("..")
+    ) {
+      res.writeHead(403).end("forbidden");
+      return;
+    }
+
     // Resolve the real path (following symlinks) and require it to stay strictly
-    // inside PUBLIC. A plain string prefix check on the un-resolved join is
-    // bypassable (sibling dirs sharing the prefix, symlinks, "..").
+    // inside PUBLIC. path.resolve normalizes ".." segments; realpathSync resolves
+    // symlinks; the startsWith check blocks absolute paths and any escape.
     let filePath: string;
     try {
-      filePath = await realpath(join(publicReal, urlPath.split("?")[0]));
+      filePath = realpathSync(resolve(publicRoot, rawPath));
     } catch {
       res.writeHead(404).end("not found");
       return;
     }
-    if (filePath !== publicReal && !filePath.startsWith(publicReal + sep)) {
+    if (!filePath.startsWith(publicRoot + sep)) {
       res.writeHead(403).end("forbidden");
       return;
     }

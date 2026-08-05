@@ -1,0 +1,27 @@
+# Prometheus config for the central observability stack.
+#
+# Metrics are PUSHED in via the OTLP receiver (enabled with
+# --web.enable-otlp-receiver in docker-compose.observability.yml), so there are
+# no scrape targets for the VerifyWise deployments themselves. We keep a single
+# self-scrape for the Prometheus instance's own health.
+
+global:
+  scrape_interval: 30s
+  evaluation_interval: 30s
+
+# Honor resource attributes pushed via OTLP (e.g. deployment, service.name) as
+# labels instead of dropping them.
+otlp:
+  promote_resource_attributes:
+    - service.name
+    - service.namespace
+    - deployment
+
+storage:
+  tsdb:
+    out_of_order_time_window: 30m
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]

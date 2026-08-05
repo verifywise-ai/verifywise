@@ -11,6 +11,9 @@
 
 import { describe, it, expect, beforeEach, jest } from "@jest/globals";
 
+// The token hashing module requires a server-side HMAC secret at load time.
+process.env.API_TOKEN_HASH_SECRET = "test-api-token-hash-secret";
+
 jest.mock("../../database/db", () => ({
   __esModule: true,
   sequelize: {
@@ -38,7 +41,7 @@ beforeEach(() => {
 });
 
 describe("hashApiToken", () => {
-  it("produces a stable 64-char sha256 hex digest and is not the raw token", () => {
+  it("produces a stable 64-char HMAC-SHA256 hex digest and is not the raw token", () => {
     const token = "eyJhbGciOi.JIUzI1Ni.signature";
     const hash = hashApiToken(token);
     expect(hash).toMatch(/^[0-9a-f]{64}$/);

@@ -1,12 +1,45 @@
 import { Request, Response } from "express";
+import fs from "fs";
+import jwt from "jsonwebtoken";
 import { sequelize } from "../database/db";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { createOrganizationQuery } from "../utils/organization.utils";
 import { deleteUserByIdQuery } from "../utils/user.utils";
 import { invite } from "./vwmailer.ctrl";
 import { OrganizationModel } from "../domain.layer/models/organization/organization.model";
+import { getMonitoringConfig, upsertMonitoringConfig } from "../utils/monitoringConfig.utils";
 
 import { translateError } from "../utils/i18n.utils";
+
+/**
+ * Strip the auth_header secret before returning config to the browser.
+ * The UI only needs to know whether an auth header is set, not its value.
+ */
+function redactMonitoringConfig(config: Awaited<ReturnType<typeof getMonitoringConfig>>) {
+  const { auth_header, ...rest } = config;
+  return { ...rest, auth_header_set: Boolean(auth_header) };
+}
+
+/**
+ * Load the RSA private key used to sign observability push tokens.
+ *
+ * Accepts either `OBSERVABILITY_PRIVATE_KEY_PATH` (path to a PEM file) or an
+ * inline `OBSERVABILITY_PRIVATE_KEY` (PEM, with literal "\n" allowed so it fits
+ * on one env line). Returns null when neither is configured.
+ */
+function loadObservabilityPrivateKey(): string | null {
+  const keyPath = process.env.OBSERVABILITY_PRIVATE_KEY_PATH;
+  if (keyPath) {
+    try {
+      return fs.readFileSync(keyPath, "utf8");
+    } catch {
+      return null;
+    }
+  }
+  const inline = process.env.OBSERVABILITY_PRIVATE_KEY;
+  return inline ? inline.replace(/\\n/g, "\n") : null;
+}
+
 /**
  * List all organizations
  */
@@ -325,6 +358,125 @@ export async function removeUser(req: Request, res: Response) {
     return res.status(200).json(STATUS_CODE[200]({ deleted: true, userId }));
   } catch (error) {
     await transaction.rollback();
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+/**
+ * Get the instance-level observability/monitoring configuration.
+ * The auth header secret is redacted; only its presence is reported.
+ */
+export async function getMonitoring(req: Request, res: Response) {
+  try {
+    const config = await getMonitoringConfig();
+    return res.status(200).json(STATUS_CODE[200](redactMonitoringConfig(config)));
+  } catch (error) {
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+/**
+ * Update the instance-level observability/monitoring configuration.
+ *
+ * Changes take effect after services restart (exporters are configured at
+ * startup). The push token in `auth_header` is not set here — it is minted by
+ * `generateMonitoringToken` (Generate token button) and preserved across updates.
+ */
+export async function updateMonitoring(req: Request, res: Response) {
+  try {
+    const { enabled, otlp_endpoint, deployment_name } = req.body ?? {};
+
+    if (enabled && (!otlp_endpoint || !deployment_name)) {
+      return res.status(400).json(
+        STATUS_CODE[400]({
+          message: req.t!("Observability URL and deployment name are required when enabled"),
+        }),
+      );
+    }
+
+    if (otlp_endpoint) {
+      try {
+        const url = new URL(String(otlp_endpoint));
+        if (!["http:", "https:"].includes(url.protocol)) {
+          throw new Error("invalid protocol");
+        }
+      } catch {
+        return res
+          .status(400)
+          .json(STATUS_CODE[400]({ message: req.t!("Observability URL is not a valid URL") }));
+      }
+    }
+
+    const existing = await getMonitoringConfig();
+
+    const updated = await upsertMonitoringConfig({
+      enabled: Boolean(enabled),
+      otlp_endpoint: otlp_endpoint ?? null,
+      deployment_name: deployment_name ?? null,
+      // Token is minted separately via generateMonitoringToken; preserve it here.
+      auth_header: existing.auth_header,
+      updated_by: req.userId ?? null,
+    });
+
+    return res.status(200).json(STATUS_CODE[200](redactMonitoringConfig(updated)));
+  } catch (error) {
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+/**
+ * Generate a signed observability push token and store it on the config row.
+ *
+ * The token is an RS256 JWT signed with the backend's RSA private key
+ * (OBSERVABILITY_PRIVATE_KEY[_PATH]), carrying `sub = deployment_name`. The
+ * observability VM's nginx verifies it with the matching PUBLIC key — the VM
+ * never holds a signing key. The raw token is never returned to the frontend;
+ * the UI only sees `auth_header_set: true` on the next GET.
+ */
+export async function generateMonitoringToken(req: Request, res: Response) {
+  try {
+    const privateKey = loadObservabilityPrivateKey();
+    if (!privateKey) {
+      return res.status(500).json(
+        STATUS_CODE[500]({
+          message: req.t!("OBSERVABILITY_PRIVATE_KEY is not configured on the server"),
+        }),
+      );
+    }
+
+    const existing = await getMonitoringConfig();
+    const deploymentName = existing.deployment_name?.trim();
+    if (!deploymentName) {
+      return res.status(400).json(
+        STATUS_CODE[400]({
+          message: req.t!("Set and save a deployment name before generating a token"),
+        }),
+      );
+    }
+
+    let token: string;
+    try {
+      token = jwt.sign({ sub: deploymentName }, privateKey, { algorithm: "RS256" });
+    } catch {
+      return res.status(500).json(
+        STATUS_CODE[500]({
+          message: req.t!(
+            "Failed to sign token — check OBSERVABILITY_PRIVATE_KEY is a valid RSA private key",
+          ),
+        }),
+      );
+    }
+
+    const updated = await upsertMonitoringConfig({
+      enabled: existing.enabled,
+      otlp_endpoint: existing.otlp_endpoint,
+      deployment_name: existing.deployment_name,
+      auth_header: `Authorization: Bearer ${token}`,
+      updated_by: req.userId ?? null,
+    });
+
+    return res.status(200).json(STATUS_CODE[200](redactMonitoringConfig(updated)));
+  } catch (error) {
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }

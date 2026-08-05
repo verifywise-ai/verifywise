@@ -5,13 +5,14 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from .. import app as _app
 from ..services.watcher import count_lines
+from ..services.path_utils import resolve_dataset_path
 
 router = APIRouter()
 
 
 @router.get("/results/leaderboard")
 def get_leaderboard(dataset_version: str = Query(...)):
-    path = _app.GRS_ROOT / "datasets" / dataset_version / "final" / "leaderboard.json"
+    path = resolve_dataset_path(_app.GRS_ROOT, dataset_version, "final", "leaderboard.json")
     if not path.exists():
         raise HTTPException(status_code=404, detail="Leaderboard not found for this dataset version")
     return json.loads(path.read_text(encoding="utf-8"))
@@ -27,7 +28,7 @@ class SummaryResponse(BaseModel):
 
 @router.get("/results/summary", response_model=SummaryResponse)
 def get_summary(dataset_version: str = Query(...)):
-    final = _app.GRS_ROOT / "datasets" / dataset_version / "final"
+    final = resolve_dataset_path(_app.GRS_ROOT, dataset_version, "final")
 
     def _count(path):
         return count_lines(path) if path.exists() else None
