@@ -1,7 +1,8 @@
-import { Box, IconButton, Popover, Stack, Tooltip, Typography } from "@mui/material";
+import { Box, IconButton, Popover, Stack, Tooltip, Typography, alpha } from "@mui/material";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import Field from "../../../components/Inputs/Field";
 import { CustomizableButton } from "../../../components/button/customizable-button";
+import { palette } from "../../../themes/palette";
 
 export interface FindReplacePopoverProps {
   anchorEl: HTMLElement | null;
@@ -47,7 +48,7 @@ export function FindReplacePopover({
             borderRadius: "4px",
             border: "1px solid",
             borderColor: "border.dark",
-            boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
+            boxShadow: `0 4px 16px ${alpha(palette.text.black, 0.12)}`,
             p: "16px",
           },
         },

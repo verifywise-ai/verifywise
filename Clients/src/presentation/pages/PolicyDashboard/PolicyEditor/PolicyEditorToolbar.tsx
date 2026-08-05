@@ -7,8 +7,8 @@ import { defaultToolbarState } from "./toolbarTypes";
 import { getToolbarConfig } from "./toolbarConfig";
 import { ColorPickerPopover } from "./ColorPickerPopover";
 
-const { background, brand } = palette;
-const TOOLBAR_ACTIVE_BG = "#E0F7FA";
+const { background, brand, risk } = palette;
+const TOOLBAR_ACTIVE_BG = risk.veryLow.bg;
 
 export interface PolicyEditorToolbarProps {
   editor: Editor | null;

@@ -1,7 +1,7 @@
 import React from "react";
 import type { Editor } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
-import { Box, Divider, IconButton, Tooltip } from "@mui/material";
+import { Box, Divider, IconButton, Tooltip, alpha } from "@mui/material";
 import {
   Plus,
   X,
@@ -126,7 +126,7 @@ export function PolicyTableBubbleMenu({ editor }: PolicyTableBubbleMenuProps) {
           border: "1px solid",
           borderColor: border.dark,
           borderRadius: "6px",
-          boxShadow: "0 4px 12px rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.08)",
+          boxShadow: `0 4px 12px ${alpha(text.black, 0.12)}, 0 1px 3px ${alpha(text.black, 0.08)}`,
         }}
       >
         {tableToolbarConfig.map(({ key, title, icon, action, separator, danger }) => (

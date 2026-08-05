@@ -1,7 +1,11 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { NodeViewWrapper, NodeViewProps, ReactNodeViewRenderer } from "@tiptap/react";
 import TipTapImage from "@tiptap/extension-image";
+import { alpha } from "@mui/material";
 import { store } from "../../../../application/redux/store";
+import { palette } from "../../../themes/palette";
+
+const { editor: editorColors, text } = palette;
 
 /** Auth-aware TipTap image node view with drag-to-resize. */
 const AuthImage: React.FC<NodeViewProps> = ({ node, updateAttributes, selected }) => {
@@ -68,8 +72,8 @@ const AuthImage: React.FC<NodeViewProps> = ({ node, updateAttributes, selected }
       {error ? (
         <div
           style={{
-            background: "#fee2e2",
-            color: "#991b1b",
+            background: editorColors.imageErrorBg,
+            color: editorColors.imageErrorText,
             padding: "8px 12px",
             borderRadius: 6,
             fontSize: "0.9rem",
@@ -113,7 +117,7 @@ const AuthImage: React.FC<NodeViewProps> = ({ node, updateAttributes, selected }
                 border: "2px solid background.main",
                 borderRadius: 2,
                 cursor: "nwse-resize",
-                boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
+                boxShadow: `0 1px 3px ${alpha(text.black, 0.3)}`,
               }}
             />
           )}
@@ -121,8 +125,8 @@ const AuthImage: React.FC<NodeViewProps> = ({ node, updateAttributes, selected }
       ) : (
         <div
           style={{
-            background: "#f0f0f0",
-            color: "#666",
+            background: editorColors.imagePlaceholderBg,
+            color: editorColors.imagePlaceholderText,
             padding: "16px 24px",
             borderRadius: 6,
             textAlign: "center",

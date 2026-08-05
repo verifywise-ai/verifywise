@@ -663,7 +663,8 @@ export default function PolicyEditorPage() {
           sx={{
             p: 4,
             textAlign: "center",
-            border: "1px solid #d0d5dd",
+            border: "1px solid",
+            borderColor: "border.dark",
             borderRadius: "4px",
           }}
         >
@@ -843,7 +844,8 @@ export default function PolicyEditorPage() {
                 minWidth: 0,
                 minHeight: 0,
                 overflow: "auto",
-                border: "1px solid #d0d5dd",
+                border: "1px solid",
+                borderColor: "border.dark",
                 borderRadius: "4px",
               }}
             >
