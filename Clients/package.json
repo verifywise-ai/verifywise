@@ -108,7 +108,7 @@
     "typescript-eslint": "^8.61.1",
     "validator": "^13.15.35",
     "vite": "^8.0.16",
-    "xlsx": "https://cdn.sheetjs.com/xlsx-0.19.3/xlsx-0.19.3.tgz"
+    "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.11.3",
