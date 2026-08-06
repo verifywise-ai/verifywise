@@ -34,8 +34,16 @@ const targetLangs = langArg ? [langArg] : SUPPORTED_LANGS;
 
 function loadDict(lang) {
   const content = readFileSync(TRANSLATIONS_PATH, "utf8");
-  const blockRe = new RegExp(`^\\s*${lang}:\\s*\\{([\\s\\S]*?)\\n\\s*\\},`, "m");
-  const block = content.match(blockRe);
+  // Static regex that matches any "xx: { ... }," block. We then select the
+  // block for the requested language instead of building a regex from `lang`.
+  const blockRe = /^\s*(\w{2}):\s*\{([\s\S]*?)\n\s*\},/gm;
+  let block = null;
+  for (const m of content.matchAll(blockRe)) {
+    if (m[1] === lang) {
+      block = m;
+      break;
+    }
+  }
   if (!block) {
     throw new Error(`Could not find ${lang}: { ... } block in translations.ts`);
   }
