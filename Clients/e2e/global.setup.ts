@@ -1,5 +1,7 @@
 import { test as setup, expect } from "@playwright/test";
 import { execSync } from "child_process";
+import dotenv from "dotenv";
+import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -84,11 +86,24 @@ async function createOrganization(page: any): Promise<number> {
   return orgId;
 }
 
+const E2E_NODE_ENV = process.env.E2E_NODE_ENV || "test";
+
 function seedAdminInOrg(orgId: number): SeedOutput {
+  const env: NodeJS.ProcessEnv = { ...process.env, NODE_ENV: E2E_NODE_ENV };
+  if (E2E_NODE_ENV === "test") {
+    // seedE2EAdmin.ts connects via Servers/database/db.ts. Its config module
+    // reads process.env at import time, before db.ts's own .env.test override
+    // runs, so the test DB values must already be in the child env. This
+    // mirrors the integration-suite convention (tests/integration/globalSetup.js).
+    const envTestPath = path.resolve(SERVERS_DIR, ".env.test");
+    if (fs.existsSync(envTestPath)) {
+      Object.assign(env, dotenv.parse(fs.readFileSync(envTestPath, "utf8")));
+    }
+  }
   const stdout = execSync(`npx ts-node scripts/seedE2EAdmin.ts ${orgId}`, {
     cwd: SERVERS_DIR,
     encoding: "utf-8",
-    env: process.env,
+    env,
   });
   const lastLine = stdout.trim().split("\n").pop() || "";
   return JSON.parse(lastLine) as SeedOutput;

@@ -48,7 +48,11 @@ const upload = multer({
 });
 
 import rateLimit from "express-rate-limit";
-import { authLimiter, tokenRefreshLimiter } from "../middleware/rateLimit.middleware";
+import {
+  authLimiter,
+  isNonProduction,
+  tokenRefreshLimiter,
+} from "../middleware/rateLimit.middleware";
 
 import {
   checkUserExists,
@@ -148,7 +152,9 @@ router.post("/register", authLimiter, registerJWT, createNewUser);
 // Apply rate limiting specifically to login route
 const loginLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
-  max: 5, // limit each IP to 5 login requests per windowMs
+  // Relaxed in explicit dev/test so the E2E suite's repeated UI logins are not
+  // blocked; strict 5/min production limit unchanged (see rateLimit.middleware).
+  max: isNonProduction ? 1000 : 5, // limit each IP to N login requests per windowMs
   message: "Too many login attempts from this IP, please try again after a minute",
 });
 router.post("/login", loginLimiter, loginUser);
