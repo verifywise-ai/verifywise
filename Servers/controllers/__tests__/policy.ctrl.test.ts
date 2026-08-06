@@ -216,6 +216,50 @@ describe("policy.ctrl", () => {
     });
   });
 
+  describe("save response shape", () => {
+    it("should return the persisted entity including status and last_updated_at for create and update", async () => {
+      const persisted = {
+        id: 1,
+        title: "P1",
+        content_html: "<p>test</p>",
+        status: "Under Review",
+        last_updated_by: 1,
+        last_updated_at: "2026-08-05T00:00:00.000Z",
+      };
+
+      // POST /policies — 201 body carries the full persisted row
+      mockCreate.mockResolvedValue(persisted as any);
+      const createReqObj = createReq({ body: { title: "P1", content_html: "<p>test</p>" } });
+      const createResObj = createRes();
+      await PolicyController.createPolicy(createReqObj, createResObj);
+      expect(createResObj.status).toHaveBeenCalledWith(201);
+      expect(createResObj.json).toHaveBeenCalledWith({
+        message: "Created",
+        data: expect.objectContaining({
+          id: 1,
+          status: "Under Review",
+          last_updated_at: "2026-08-05T00:00:00.000Z",
+        }),
+      });
+
+      // PUT /policies/:id — 202 body carries the full persisted row
+      mockGetById.mockResolvedValue([{ id: 1, title: "P1" }] as any);
+      mockUpdate.mockResolvedValue({ ...persisted, title: "P2" } as any);
+      const updateReqObj = createReq({ params: { id: "1" }, body: { title: "P2" } });
+      const updateResObj = createRes();
+      await PolicyController.updatePolicy(updateReqObj, updateResObj);
+      expect(updateResObj.status).toHaveBeenCalledWith(202);
+      expect(updateResObj.json).toHaveBeenCalledWith({
+        message: "Accepted",
+        data: expect.objectContaining({
+          id: 1,
+          status: "Under Review",
+          last_updated_at: "2026-08-05T00:00:00.000Z",
+        }),
+      });
+    });
+  });
+
   describe("deletePolicyById", () => {
     it("should return 202 when policy is deleted", async () => {
       mockDelete.mockResolvedValue({ id: 1 } as any);

@@ -20,10 +20,10 @@ import {
   getAllTags,
   importDocxToHtml,
 } from "../../../application/repository/policy.repository";
-import { useCreatePolicy, useUpdatePolicy } from "../../../application/hooks/usePolicyMutations";
+import { useUpdatePolicy } from "../../../application/hooks/usePolicyMutations";
 import useUsers from "../../../application/hooks/useUsers";
 import { User } from "../../../domain/types/User";
-import { PolicyFormData, PolicyFormErrors, PolicyInput } from "../../types/interfaces/i.policy";
+import { PolicyFormData, PolicyInput } from "../../types/interfaces/i.policy";
 import { PolicyManagerModel } from "../../../domain/models/Common/policy/policyManager.model";
 import { checkStringValidation } from "../../../application/validations/stringValidation";
 import { useFormValidation } from "../../../application/hooks/useFormValidation";
@@ -31,6 +31,7 @@ import { store } from "../../../application/redux/store";
 import { PageBreadcrumbs } from "../../components/breadcrumbs/PageBreadcrumbs";
 import { usePolicyFindReplace } from "./PolicyEditor/usePolicyFindReplace";
 import { usePolicyEditorContent } from "./PolicyEditor/usePolicyEditorContent";
+import { usePolicySave } from "./PolicyEditor/usePolicySave";
 import { PolicyContentEditor } from "./PolicyEditor/PolicyContentEditor";
 import { PolicyHeader } from "./PolicyEditor/PolicyHeader";
 import { PolicyMetadataSidebar } from "./PolicyEditor/PolicyMetadataSidebar";
@@ -42,7 +43,6 @@ export default function PolicyEditorPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { users } = useUsers();
-  const createPolicyMutation = useCreatePolicy();
   const updatePolicyMutation = useUpdatePolicy();
 
   const isNew = !id;
@@ -77,15 +77,11 @@ export default function PolicyEditorPage() {
   const [isImporting, setIsImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
   const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState(false);
-  const [serverErrors, setServerErrors] = useState<PolicyFormErrors>({});
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState("");
   const [isSavingTitle, setIsSavingTitle] = useState(false);
   const [titleSaveError, setTitleSaveError] = useState<string | null>(null);
   const formRef = useRef<HTMLDivElement>(null);
-  const [validationSnackbar, setValidationSnackbar] = useState(false);
 
   const validators = useMemo(
     () => ({
@@ -115,11 +111,6 @@ export default function PolicyEditorPage() {
     resetErrors,
     clearFieldError,
   } = useFormValidation<PolicyFormData>(validators);
-
-  const displayErrors = useMemo(
-    () => ({ ...validationErrors, ...serverErrors }),
-    [validationErrors, serverErrors],
-  );
 
   const [formData, setFormData] = useState<PolicyFormData>({
     title: "",
@@ -277,90 +268,35 @@ export default function PolicyEditorPage() {
 
   const findReplace = usePolicyFindReplace(editor);
 
-  // ── Save ──────────────────────────────────────────────────────────
-  const save = async () => {
-    if (customFieldsGate.blocked) return;
-    setServerErrors({});
-    resetErrors();
-    if (!validateAll(formData)) {
-      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      setValidationSnackbar(true);
-      if (!formData.title.trim()) {
-        setEditedTitle(formData.title);
-        setIsEditingTitle(true);
-      }
-      return;
-    }
-    setIsSaving(true);
+  // ── Save (validation, create/update, custom-fields flush, navigation) ──
+  const {
+    save,
+    isSaving,
+    saveSuccess,
+    setSaveSuccess,
+    serverErrors,
+    setServerErrors,
+    validationSnackbar,
+    setValidationSnackbar,
+  } = usePolicySave({
+    isNew,
+    policy,
+    setPolicy,
+    formData,
+    editor,
+    formRef,
+    customFieldsRef,
+    customFieldsBlocked: customFieldsGate.blocked,
+    validateAll,
+    resetErrors,
+    setEditedTitle,
+    setIsEditingTitle,
+  });
 
-    const html = editor?.getHTML() || "";
-    const payload = {
-      title: formData.title,
-      status: formData.status,
-      tags: formData.tags,
-      content_html: html,
-      next_review_date: formData.nextReviewDate ? new Date(formData.nextReviewDate) : undefined,
-      policy_owner_id: formData.policyOwner?.id ?? null,
-      assigned_reviewer_ids: formData.assignedReviewers
-        .map((u) => u.id)
-        .filter((id) => id !== formData.policyOwner?.id),
-    };
-
-    try {
-      let savedPolicy: PolicyManagerModel;
-
-      if (isNew) {
-        savedPolicy = await createPolicyMutation.mutateAsync(payload);
-      } else {
-        savedPolicy = await updatePolicyMutation.mutateAsync({
-          id: policy!.id,
-          input: payload,
-        });
-      }
-
-      // Flush any locally-staged custom field changes (create OR update).
-      let cfFlushFailed = false;
-      if (savedPolicy?.id && customFieldsRef.current?.hasPendingValues()) {
-        try {
-          await customFieldsRef.current.flush(savedPolicy.id);
-        } catch (cfError) {
-          cfFlushFailed = true;
-          console.error("Policy saved, but custom field values failed to save:", cfError);
-        }
-      }
-
-      setIsSaving(false);
-
-      // For new policies, navigate to the edit URL so subsequent saves work as updates.
-      // Skip the success banner when flush failed so the inline warning is the
-      // dominant signal.
-      if (isNew && savedPolicy?.id) {
-        navigate(`/policies/${savedPolicy.id}/edit`, { replace: true });
-      }
-      if (cfFlushFailed) return;
-      setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
-    } catch (err: any) {
-      setIsSaving(false);
-
-      const errorData = err?.originalError?.response || err?.response?.data || err?.response;
-
-      if (errorData?.errors) {
-        const apiErrors: PolicyFormErrors = {};
-        errorData.errors.forEach((error: any) => {
-          if (error.field === "title") apiErrors.title = error.message;
-          else if (error.field === "status") apiErrors.status = error.message;
-          else if (error.field === "tags") apiErrors.tags = error.message;
-          else if (error.field === "content_html") apiErrors.content = error.message;
-          else if (error.field === "next_review_date") apiErrors.nextReviewDate = error.message;
-          else if (error.field === "assigned_reviewer_ids")
-            apiErrors.assignedReviewers = error.message;
-          else if (error.field === "policy_owner_id") apiErrors.policyOwner = error.message;
-        });
-        setServerErrors(apiErrors);
-      }
-    }
-  };
+  const displayErrors = useMemo(
+    () => ({ ...validationErrors, ...serverErrors }),
+    [validationErrors, serverErrors],
+  );
 
   // ── Export ─────────────────────────────────────────────────────────
   const downloadExport = async (format: "pdf" | "docx") => {
