@@ -30,8 +30,6 @@ import {
   User,
   Bot,
   Check,
-  MessageSquare,
-  GitBranch,
   Eye,
 } from "lucide-react";
 import { CustomizableButton } from "../../components/button/customizable-button";
@@ -55,7 +53,6 @@ import {
 } from "../../../application/repository/deepEval.repository";
 import Alert from "../../components/Alert";
 import Chip from "../../components/Chip";
-import ModalStandard from "../../components/Modals/StandardModal";
 import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
 import Field from "../../components/Inputs/Field";
 import SearchBox from "../../components/Search/SearchBox";
@@ -71,9 +68,9 @@ import TemplatesTable from "../../components/Table/TemplatesTable";
 import { PageHeader } from "../../components/Layout/PageHeader";
 import HelperIcon from "../../components/HelperIcon";
 import TipBox from "../../components/TipBox";
-import SelectableCard from "../../components/SelectableCard";
 import { useAuth } from "../../../application/hooks/useAuth";
 import UploadDatasetModal from "./ProjectDatasets/UploadDatasetModal";
+import CreateDatasetModals from "./ProjectDatasets/CreateDatasetModals";
 import type { ExampleTurnType, ExampleUseCase } from "./ProjectDatasets/exampleDatasetPayloads";
 import allowedRoles from "../../../application/constants/permissions";
 
@@ -174,13 +171,7 @@ export function ProjectDatasets({ projectId, orgId }: ProjectDatasetsProps) {
 
   // Create dataset modal state
   const [createDatasetModalOpen, setCreateDatasetModalOpen] = useState(false);
-
-  // Create from scratch type selection modal
   const [createTypeSelectionOpen, setCreateTypeSelectionOpen] = useState(false);
-  const [newDatasetUseCase, setNewDatasetUseCase] = useState<"chatbot" | "rag">("chatbot");
-  const [newDatasetTurnType, setNewDatasetTurnType] = useState<"single-turn" | "multi-turn">(
-    "single-turn",
-  );
 
   // Note: promptCount is now returned by the API - no need to load metadata individually
 
@@ -2619,222 +2610,37 @@ export function ProjectDatasets({ projectId, orgId }: ProjectDatasetsProps) {
         </Stack>
       </Drawer>
 
-      {/* Create Dataset Modal - Choice between Editor and Upload */}
-      <ModalStandard
-        isOpen={createDatasetModalOpen}
-        onClose={() => setCreateDatasetModalOpen(false)}
-        title="Add dataset"
-        description="Choose how you want to add a new dataset"
-        maxWidth="480px"
-      >
-        <Stack spacing="8px">
-          {/* Create from scratch option */}
-          <SelectableCard
-            isSelected={false}
-            onClick={() => {
-              setCreateDatasetModalOpen(false);
-              setCreateTypeSelectionOpen(true);
-            }}
-            icon={<Edit3 size={14} color={palette.text.disabled} />}
-            title="Create from scratch"
-            description="Choose format and manually add prompts"
-          />
-
-          {/* Upload JSON option */}
-          <SelectableCard
-            isSelected={false}
-            onClick={() => {
-              setCreateDatasetModalOpen(false);
-              setUploadModalOpen(true);
-            }}
-            icon={<Upload size={14} color={palette.text.disabled} />}
-            title="Upload JSON file"
-            description="Import existing dataset in JSON format"
-          />
-
-          {/* Use template option */}
-          <SelectableCard
-            isSelected={false}
-            onClick={() => {
-              setCreateDatasetModalOpen(false);
-              setActiveTab("templates");
-            }}
-            icon={<Database size={14} color={palette.text.disabled} />}
-            title="Start from template"
-            description="Browse pre-built evaluation templates"
-          />
-        </Stack>
-      </ModalStandard>
-
-      {/* Create from scratch - Type Selection Modal */}
-      <ModalStandard
-        isOpen={createTypeSelectionOpen}
-        onClose={() => setCreateTypeSelectionOpen(false)}
-        title="Choose dataset format"
-        description="Select the type and format for your new dataset"
-        maxWidth="520px"
-        submitButtonText="Create Dataset"
-        onSubmit={() => {
-          setCreateTypeSelectionOpen(false);
-
-          // Initialize with appropriate format based on selection
-          if (newDatasetTurnType === "single-turn") {
-            const singleTurnPrompt: SingleTurnPrompt = {
-              id: "prompt_1",
-              category: "general",
-              prompt: "",
-              expected_output: "",
-              difficulty: "medium",
-              ...(newDatasetUseCase === "rag" ? { retrieval_context: [] } : {}),
-            };
-            setEditablePrompts([singleTurnPrompt]);
-          } else {
-            const multiTurnConversation: MultiTurnConversation = {
-              id: "conversation_1",
-              scenario: "",
-              expected_outcome: "",
-              turns: [{ role: "user", content: "" }],
-              ...(newDatasetUseCase === "rag" ? { context: [] } : {}),
-            };
-            setEditablePrompts([multiTurnConversation]);
-          }
-
+      <CreateDatasetModals
+        choiceOpen={createDatasetModalOpen}
+        onChoiceClose={() => setCreateDatasetModalOpen(false)}
+        onOpenTypeSelection={() => {
+          setCreateDatasetModalOpen(false);
+          setCreateTypeSelectionOpen(true);
+        }}
+        onChooseUpload={() => {
+          setCreateDatasetModalOpen(false);
+          setUploadModalOpen(true);
+        }}
+        onChooseTemplate={() => {
+          setCreateDatasetModalOpen(false);
+          setActiveTab("templates");
+        }}
+        typeSelectionOpen={createTypeSelectionOpen}
+        onTypeSelectionClose={() => setCreateTypeSelectionOpen(false)}
+        onCreate={(draft) => {
+          setEditablePrompts(draft.prompts);
           setEditDatasetName("");
           setEditingDataset({
             key: "new",
             name: "New Dataset",
             path: "",
-            use_case: newDatasetUseCase,
-            datasetType: newDatasetUseCase,
-            turnType: newDatasetTurnType,
+            use_case: draft.useCase,
+            datasetType: draft.useCase,
+            turnType: draft.turnType,
           });
           setEditorOpen(true);
         }}
-      >
-        <Stack spacing="20px">
-          {/* Use Case Selection */}
-          <Box>
-            <Typography
-              variant="body2"
-              sx={{ fontWeight: 600, color: palette.text.secondary, mb: 1.5 }}
-            >
-              Use Case
-            </Typography>
-            <Stack direction="row" spacing={1}>
-              <Box
-                onClick={() => setNewDatasetUseCase("chatbot")}
-                sx={{ cursor: "pointer", flex: 1 }}
-              >
-                <SelectableCard
-                  isSelected={newDatasetUseCase === "chatbot"}
-                  onClick={() => setNewDatasetUseCase("chatbot")}
-                  icon={
-                    <MessageSquare
-                      size={14}
-                      color={
-                        newDatasetUseCase === "chatbot"
-                          ? palette.brand.primary
-                          : palette.text.disabled
-                      }
-                    />
-                  }
-                  title="Chatbot"
-                  description="Standard Q&A evaluation"
-                />
-              </Box>
-              <Box onClick={() => setNewDatasetUseCase("rag")} sx={{ cursor: "pointer", flex: 1 }}>
-                <SelectableCard
-                  isSelected={newDatasetUseCase === "rag"}
-                  onClick={() => setNewDatasetUseCase("rag")}
-                  icon={
-                    <Database
-                      size={14}
-                      color={
-                        newDatasetUseCase === "rag" ? palette.brand.primary : palette.text.disabled
-                      }
-                    />
-                  }
-                  title="RAG"
-                  description="With retrieval context"
-                />
-              </Box>
-            </Stack>
-          </Box>
-
-          {/* Turn Type Selection */}
-          <Box>
-            <Typography
-              variant="body2"
-              sx={{ fontWeight: 600, color: palette.text.secondary, mb: 1.5 }}
-            >
-              Conversation Format
-            </Typography>
-            <Stack direction="row" spacing={1}>
-              <Box
-                onClick={() => setNewDatasetTurnType("single-turn")}
-                sx={{ cursor: "pointer", flex: 1 }}
-              >
-                <SelectableCard
-                  isSelected={newDatasetTurnType === "single-turn"}
-                  onClick={() => setNewDatasetTurnType("single-turn")}
-                  icon={
-                    <MessageSquare
-                      size={14}
-                      color={
-                        newDatasetTurnType === "single-turn"
-                          ? palette.brand.primary
-                          : palette.text.disabled
-                      }
-                    />
-                  }
-                  title="Single-turn"
-                  description="One prompt, one response"
-                />
-              </Box>
-              <Box
-                onClick={() => setNewDatasetTurnType("multi-turn")}
-                sx={{ cursor: "pointer", flex: 1 }}
-              >
-                <SelectableCard
-                  isSelected={newDatasetTurnType === "multi-turn"}
-                  onClick={() => setNewDatasetTurnType("multi-turn")}
-                  icon={
-                    <GitBranch
-                      size={14}
-                      color={
-                        newDatasetTurnType === "multi-turn"
-                          ? palette.brand.primary
-                          : palette.text.disabled
-                      }
-                    />
-                  }
-                  title="Multi-turn"
-                  description="Conversation with multiple exchanges"
-                />
-              </Box>
-            </Stack>
-          </Box>
-
-          {/* Format Preview */}
-          <Box sx={{ backgroundColor: palette.background.accent, borderRadius: "8px", p: 2 }}>
-            <Typography
-              variant="body2"
-              sx={{ fontWeight: 600, color: palette.text.secondary, mb: 1 }}
-            >
-              Format Preview
-            </Typography>
-            <Typography variant="body2" sx={{ color: palette.text.tertiary, fontSize: "12px" }}>
-              {newDatasetTurnType === "single-turn"
-                ? newDatasetUseCase === "rag"
-                  ? "Prompts with expected output, category, difficulty, and retrieval_context fields"
-                  : "Prompts with expected output, category, and difficulty fields"
-                : newDatasetUseCase === "rag"
-                  ? "Conversations with scenario, multiple turns (user/assistant), expected outcome, and context"
-                  : "Conversations with scenario, multiple turns (user/assistant), and expected outcome"}
-            </Typography>
-          </Box>
-        </Stack>
-      </ModalStandard>
+      />
     </Stack>
   );
 }
