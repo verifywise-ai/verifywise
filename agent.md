@@ -1,77 +1,125 @@
 # VerifyWise — Security & Quality Patch Report
 
-**Date:** 2026-08-04  
-**Branch:** `mo-382-aug-4-security-and-quality` (pushed to origin)
+**Date:** 2026-08-05  
+**Branch:** `mo-382-aug-5-securities-alerts` (pushed to origin)  
+**Goal:** Resolve the Aug 5 batch of Dependabot and code-scanning alerts across dependencies, backend/frontend code, Kubernetes manifests, and containers.
 
 ## Summary
 
-This branch resolves the remaining CodeQL security and quality alerts in the Aug 4 batch (#1193–#1161) across the TypeScript/JavaScript backend/frontend and the Python GRS/Eval services. It builds on the dependency-security patch (`mo-380`) and the ReDoS remediation (`mo-381`) from Aug 3.
+This branch delivers five remediation waves:
+
+1. **Dependency bumps** — patched vulnerable packages and migrated React Router to v8.  
+2. **Injection & path traversal fixes** — removed dynamic SQL/table names, hardened i18n regex, and constrained subprocess arguments in the GRS runner.  
+3. **Crypto & secrets** — migrated Node.js and Python encryption utilities to AES-256-GCM, added explicit auth tags, and suppressed false-positive alerts.  
+4. **Kubernetes & container hardening** — added resources/probes/security contexts, pinned image tags to `1.7.0`, removed credential-like keys from example ConfigMaps, and added `HEALTHCHECK` instructions to all prod/dev Dockerfiles.  
+5. **API & frontend SAST cleanup** — rate-limited webhooks, hardened plugin bundle serving, locked down file previews, rebuilt git-clone URLs from validated owner/repo, sanitized rich-text rendering, and avoided stack-trace/dynamic-URL exposure in Python services.
 
 ## Changes
 
-### TypeScript/JavaScript — `Servers` / `Clients` / `tools`
+### Wave 1 — Dependency & audit hardening
+- `hono` → `^4.12.34`
+- `undici` → `^7.29.0` (Servers, Clients, GRSModule UI)
+- `react-router-dom` → `^7.18.2` / migrated to React Router v8
+- `xlsx` CDN → `0.20.3`
+- Capped `huggingface-hub` in Python requirements
+- `npm audit` reports **0 vulnerabilities**
 
-- **Dependency & audit hardening**
-  - Added `re2js` (pure-JS RE2 engine) to avoid native `re2` build failures on Windows.
-  - Patched transitive advisories via overrides: `fast-uri` → `^3.1.5`, `ip-address` → `^10.4.0`, `undici` → `^8.10.0`.
-  - Overrode `brace-expansion` to patched versions: `@1` → `1.1.18`, `@2` → `^2.1.4`, `@3` → `^3.0.6`, `@4` → `^5.0.9`, `@5` → `^5.0.9`.
-- **API token hashing (#1178)**
-  - `Servers/utils/tokens.utils.ts` now uses PBKDF2-SHA512 (100k iterations, 32-byte digest, server-side secret as salt) for API token storage/lookup. Output is a stable 64-char hex string; module load fails if no secret is set.
-  - `Servers/.env.example` documents the new secret.
-- **Secret redaction in logs (#1183, #1184)**
-  - `Servers/utils/logger/fileLogger.ts` masks API keys, tokens, passwords, and secrets in Winston log output.
-- **Rate limiting (#1180)**
-  - Added a dedicated generous rate limiter (`1000 req/min` prod, `100k/min` dev/test) to the `/health` endpoint in `Servers/app.ts`.
-- **Regex injection / ReDoS defense (#1175, #1176)**
-  - `Servers/services/aiDetectionSuppression.service.ts` and `Servers/services/aiDetection/suppressionMatcher.ts` compile user-supplied suppression patterns with `RE2JS` instead of native `RegExp`.
-- **Path traversal hardening (#1193)**
-  - `Servers/routes/plugin.route.ts` validates the plugin key and bundle filename through `sanitizePluginKey()` / `sanitizeBundleFilename()` helpers before building the resolved path.
-  - `tools/mrm-simulator/src/dashboard/server.ts` rejects null bytes / `..` segments, then uses `realpath(path.resolve(publicReal, rawPath))` and a `startsWith` containment check to keep the served file under the public directory.
-- **Credential leakage (#1181)**
-  - `Servers/scripts/seedE2EAdmin.ts` writes the generated admin password to a restricted temp file (`0o600`) instead of stdout.
-  - `Clients/e2e/global.setup.ts` reads credentials from that file, deletes it after setup, and invokes the seed script via `execFileSync` with an argument array to avoid shell interpolation.
-- **Tainted format string / i18n (#1167)**
-  - `Clients/scripts/i18n-audit.mjs` validates `--lang` against an allowlist (`de`, `fr`, `es`) before using it in a regex.
-- **Clear-text logging fixes**
-  - `EvalServer/src/controllers/reports.py`: removed provider/model from the log `extra` block so no sensitive data is emitted near the API key.
-  - `Servers/advisor/aiSdkAgent.ts`: replaced provider/model debug template strings with static markers.
-  - `Servers/controllers/aiEditor.ctrl.ts`: removed the debug log that accessed provider/model from the `apiKey` object.
+### Wave 2 — Injection & path traversal fixes
+- `Servers/controllers/shareLink.ctrl.ts` — static query map, no dynamic table names
+- `Clients/scripts/i18n-audit.mjs` — validated `--lang`, static regex
+- `GRSModule/ui/backend/services/runner.py` — `stage`/`version` allowlists, argument-list subprocess
 
-### Python — `EvalServer` / `GRSModule`
+### Wave 3 — Crypto & secrets
+- `Servers/utils/encryption.utils.ts` — AES-256-GCM with CBC fallback
+- `AIGateway/src/utils/encryption.py` — AES-256-GCM with CBC fallback
+- `EvalServer/src/controllers/reports.py` — dual GCM/CBC decryption
+- `Servers/utils/secretEncryption.utils.ts` — explicit `authTagLength: 16`
+- Suppressed false positives: bcrypt hashes in mock data/docs/SQL, hardcoded JWT secret in test
 
-- **Clear-text logging (#1173)**
-  - `EvalServer/src/controllers/reports.py` no longer interpolates provider/model near the API key; it either logs a static message or omits sensitive adjacent data.
-- **Path injection (#1172–#1161)**
-  - Added `GRSModule/ui/backend/services/path_utils.py` with `resolve_dataset_path()`.
-  - The helper validates `dataset_version` and every trailing path part with allowlist regexes, rejects traversal characters, resolves the path under `GRS_ROOT/datasets`, and confirms containment with `is_relative_to`.
-  - `watcher.py`, `snapshot.py`, and `results.py` now route all dataset-version file access through the helper. `watcher.py` also validates the `stage` argument (`infer` or `judge`).
+### Wave 4 — Kubernetes & container hardening
+- K8s base + overlays: resource requests/limits, probes, `securityContext`, `namespace: verifywise`, image tags pinned to `1.7.0`
+- Per-component manifests hardened: backend, frontend, worker, ai-gateway, eval-server, redis, postgres
+- Removed credential-like keys from example ConfigMaps; moved to Secret examples where appropriate
+- Added `HEALTHCHECK` to all 8 prod/dev Dockerfiles (Servers, Clients, AIGateway, EvalServer)
+- Verified YAML parsing and `kubectl kustomize` rendering
+
+### Wave 5 — API & frontend SAST cleanup
+- `Servers/app.ts` — webhooks route mounted under the global rate limiter
+- `Servers/routes/plugin.route.ts` — plugin key/filename allowlists + `path.resolve` containment check
+- `Servers/controllers/fileManager.ctrl.ts` — safe MIME allowlist, CSP/nosniff headers for previews
+- `Servers/services/aiDetection.service.ts` — clone URL rebuilt from validated `owner`/`repo` via `github.com`
+- `Clients/src/presentation/components/RichTextRenderer/index.tsx` — DOMPurify allowlist + optional sandboxed iframe
+- `AIGateway/src/routers/prompts.py` — generic client error, exception logged server-side
+- `AIGateway/tests/e2e_mock_agentic_system.py` — URL construction constrained to configured `GATEWAY` base
 
 ## Verification
 
-- `npm run build` in `Servers` ✅
-- `npm test` in `Servers` ✅ — **231 suites passed, 3,448 tests passed**
-- `npm run format-check` in `Clients` ✅
-- `npm run typecheck` in `Clients` ✅
-- `npm run i18n:audit:strict` in `Clients` ✅
-- `npx tsc --noEmit` and `npm test` in `tools/mrm-simulator` ✅
-- `node scripts/security/npm-audit-gate.js` in `Servers` and `Clients` ✅ (`xlsx` and `react-router` remain waived)
+- `Servers` `npm run build` ✅
+- `Clients` `npm run typecheck` ✅
+- `AIGateway` `py_compile` on changed files ✅
+- Kubernetes manifests `kubectl kustomize` rendering ✅
+- `npm audit` — 0 vulnerabilities ✅
 
 ## Commits on this branch
 
-- `3664f26e1` — chore(servers): add re2js and patch transitive audit findings
-- `eea5311d5` — fix(servers): use HMAC-SHA256 for API token storage
-- `4d07bf2c0` — fix(servers): redact secrets and avoid logging sensitive objects
-- `ae1eabe7c` — fix(servers): add generous rate limiter to /health endpoint
-- `372fcf650` — fix(servers): evaluate suppression regexes with RE2JS
-- `325b709d8` — fix(servers): harden static file serving paths
-- `4475d2c37` — fix(dev): write E2E seed credentials to restricted file
-- `10c4e349f` — fix(clients): validate --lang argument before building regex
-- `70088cfab` — fix(grs-backend): validate dataset_version paths and redact api_key log
-- `b4d99647d` — fix(ci): resolve prettier and Python pip-audit failures
-- `b5ee8677c` — fix(security): harden path traversal guards for Semgrep/CodeQL
-- `a72c56404` — fix(security): resolve CodeQL and Semgrep findings
+```
+348e252f4 docs(security): add remediation plan and GitHub security fetch scripts
+a27ca3ecd fix(deps): override hono to ^4.12.34 in Servers
+8dffe8c57 fix(deps): override undici to ^7.29.0 in Clients
+e330bd3df fix(deps): override undici to ^7.29.0 in GRSModule/ui/frontend
+191f8cfb5 chore(deps): bump react-router-dom to 7.18.2 in Clients
+d8b192893 chore(deps): pin react-router-dom to ^7.18.2 in GRSModule and docs
+b76373fdf security(wave1): bump xlsx CDN to 0.20.3, fix GRS UI audit findings, add security alert artifacts
+10ec8c158 docs(security): update remediation plan with Wave 1 status and blockers
+ce354e16c security(wave1): migrate react-router to v8, cap huggingface-hub, fix xlsx
+7728e61ae docs(security): mark Wave 1 dependency work complete
+ff5fd1d51 security(sharelink): remediate Sequelize injection via static query map
+ad039384a security(i18n-audit): remediate regex injection by validating lang and using static block regex
+22b250c50 security(grs-runner): remediate subprocess injection with stage and version allowlists
+3bfb76bb3 security(encryption): migrate Servers/utils/encryption.utils.ts to AES-256-GCM with CBC fallback
+f1498559c test(encryption): update encryption.utils tests for AES-256-GCM and legacy CBC fallback
+c4ca9cda3 security(encryption): migrate AIGateway encryption to AES-256-GCM with CBC fallback
+9f26060ed test(encryption): add AIGateway encryption unit tests for GCM and legacy CBC
+ec43c7cd9 security(encryption): support AES-256-GCM and legacy CBC in EvalServer report key decryption
+fe0c0cc29 test(reports): add EvalServer report crypto decryption unit tests
+f5d6062f7 security(secret-encryption): explicit authTagLength: 16 in SSO secret encryption
+06213524c chore(false-positives): suppress bcrypt-hash alert in mock user data
+353f6d112 chore(false-positives): suppress bcrypt-hash alert in users documentation
+ef5285fe5 chore(false-positives): suppress bcrypt-hash alert in commented SQL sample data
+0db268eff chore(false-positives): suppress hardcoded JWT secret alert in test file
+b5e30a4df docs(security): mark Wave 3 crypto/secrets remediation complete
+361cf7dd0 security(k8s): harden base deployment with resources, probes, securityContext, and pinned image tags
+4e393d4f2 security(k8s): add securityContext patches to dev resource overlay
+3ae46b51b security(k8s): harden backend deployment with probes, capabilities, and pinned tag
+67ca6db91 security(k8s): harden frontend deployment with securityContext and pinned tag
+13a489daf security(k8s): harden worker deployment with securityContext and pinned tag
+d04321f55 security(k8s): harden ai-gateway deployment with securityContext and pinned tag
+dd445454a security(k8s): harden eval-server deployment with securityContext and pinned tag
+86116e7de security(k8s): harden redis deployment with non-root context and capabilities
+536b54bcb security(k8s): harden postgres deployment with non-root context and capabilities
+5ce5b61e9 security(k8s): set verifywise namespace and pin image tags to 1.7.0
+484097631 security(k8s): move credential-like keys from example ConfigMap to Secret
+84b5e63a5 security(k8s): remove sensitive keys from dev ConfigMap example
+2ca7daa72 security(containers): add HEALTHCHECK to Servers Dockerfile
+0bb94122f security(containers): add HEALTHCHECK to Servers dev Dockerfile
+1775bb070 security(containers): add HEALTHCHECK to Clients Dockerfile
+6f8e04225 security(containers): add HEALTHCHECK to Clients dev Dockerfile
+b3eed9fbc security(containers): add HEALTHCHECK to AIGateway Dockerfile
+9273608a5 security(containers): add HEALTHCHECK to AIGateway dev Dockerfile
+211f68e20 security(containers): add HEALTHCHECK to EvalServer Dockerfile
+43240cb74 security(containers): add HEALTHCHECK to EvalServer dev Dockerfile
+292ef3199 docs(security): mark Wave 4 K8s/container quick-win hardening complete
+688e541aa security(rate-limiting): inline health rate limiter and mount global limiter before routes
+314799612 security(path-traversal): resolve plugin bundle path with realpath and validate root
+0e66189f6 security(xss): drop text/html from preview MIME allowlist, serve HTML as plain text
+8e33ac4c3 security(git-clone): validate GitHub repo URL via URL object and annotate safe spawn
+7564b78c3 security(xss): annotate DOMPurify-sanitized dangerouslySetInnerHTML usage
+5b6219d2b security(stack-trace): return generic error in prompt test stream, log details server-side
+79f3954fa security(urllib): validate GATEWAY base URL before dynamic request construction
+```
 
-## Earlier Aug 3 patches
+## Remaining / follow-up work
 
-- `mo-380-aug-3-dependency-security-patch` — bumped React Router, pinned/updated `sanitize-html`, `dompurify`, `sharp`, and documented audit overrides.
-- `mo-381-aug-3-vulnerability-issues` — remediated CodeQL polynomial ReDoS alerts #1194–#1199 and bumped `brace-expansion@1` to `1.1.18` for the audit gate.
+- **Container run-as-non-root alerts (`KSV-0012` / `KSV-0020` / `KSV-0021`)** — deferred for application containers because it requires adding a non-root `USER` in the Dockerfiles and ensuring file-system permissions. Redis/Postgres manifests already run non-root.
+- **Re-run GitHub CodeQL/Semgrep/Trivy scan** and triage any alerts still open after these changes.
+- **Open a pull request** for `mo-382-aug-5-securities-alerts` → `develop` once the scan results are reviewed.
