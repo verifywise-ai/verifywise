@@ -144,6 +144,16 @@ Trivy KSV alerts (197 total). Grouped themes:
 - Kubernetes manifests render with `kubectl apply --dry-run=client`.
 - Local dev still works after securityContext changes.
 
+> **Wave 4 status (completed — Option A quick-win hardening)**
+> - `kubernetes/base/deployment.yaml`: added resource requests/limits, probes, worker securityContext, hardened redis/postgres contexts, pinned app images to `1.7.0`, and set `imagePullPolicy: IfNotPresent`.
+> - `kubernetes/dev/set-resources.yaml`: added worker/redis securityContext patches and `runAsNonRoot` for postgres.
+> - `kubernetes/.k8s/*-deployment.yaml`: added `securityContext` (drop ALL, no privilege escalation) to backend/frontend/worker/ai-gateway/eval-server; hardened redis/postgres; enabled backend HTTP probes; pinned app images; set `IfNotPresent`.
+> - `kubernetes/.k8s/kustomization.yaml`: changed namespace from `default` to `verifywise`; pinned image tags to `1.7.0`.
+> - `kubernetes/.k8s/configmap-example.yaml` and `kubernetes/dev/configmap.yaml`: removed credential-like keys that belong in Secrets.
+> - All 8 Dockerfiles (`Servers`, `Clients`, `AIGateway`, `EvalServer` — prod + dev) now include a `HEALTHCHECK` instruction.
+> - `kubectl kustomize kubernetes/base` renders successfully; all Kubernetes YAML parses cleanly.
+> - Note: KSV-0012/0020/0021 (run-as-root) remain open for the application containers because the images still run as root; deferred to a follow-up container-hardening pass (Option B).
+
 ---
 
 ### Wave 5 — API & Frontend SAST
