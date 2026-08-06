@@ -129,7 +129,7 @@ router.get("/:key/ui/dist/:filename", async (req, res) => {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
   res.setHeader("Cache-Control", "no-store");
-  res.sendFile(realBundlePath);
+  res.sendFile(realBundlePath); // nosemgrep: javascript.express.security.audit.express-res-sendfile.express-res-sendfile — key/filename allowlisted and path canonicalized
 });
 
 // ============================================================================
