@@ -5,11 +5,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
+from .path_utils import resolve_dataset_path
+
 
 def write_snapshot(grs_root: Path, dataset_version: str, run_request: dict) -> Path:
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    snapshot_dir = (
-        grs_root / "datasets" / dataset_version / "configs_snapshot" / f"run_{timestamp}"
+    snapshot_dir = resolve_dataset_path(
+        grs_root, dataset_version, "configs_snapshot", f"run_{timestamp}"
     )
     snapshot_dir.mkdir(parents=True, exist_ok=True)
 

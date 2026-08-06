@@ -180,6 +180,24 @@ async function getAllUsers(req: Request, res: Response): Promise<any> {
   logger.debug("🔍 Fetching all users");
 
   try {
+    // /api/users is the org-scoped member endpoint. A SuperAdmin isn't an org
+    // member and lists users through the dedicated /super-admin/* routes, so a
+    // SuperAdmin hitting this endpoint (e.g. an incidental call from the app
+    // shell before an org is selected) has no org context: req.organizationId
+    // is unset, and feeding it into the tenant-scoped query makes Sequelize
+    // throw "Named replacement ':organization_id' has no entry in the
+    // replacement map", surfacing as a 500. Short-circuit on the role instead.
+    if (req.isSuperAdmin) {
+      logStructured(
+        "successful",
+        "SuperAdmin request; returning empty org user list",
+        "getAllUsers",
+        "user.ctrl.ts",
+      );
+      return res.status(200).json(STATUS_CODE[200]([]));
+    }
+
+    // Non-SuperAdmins always carry an organizationId (set by auth middleware).
     const users = (await getAllUsersQuery(req.organizationId!)) as UserModel[];
 
     if (users && users.length > 0) {

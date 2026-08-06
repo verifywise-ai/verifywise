@@ -25,6 +25,24 @@ export type Lang = "en" | "de" | "fr" | "es";
 
 export const translations: Record<string, Record<string, string>> = {
   de: {
+    "Deployment name": "Bereitstellungsname",
+    "Save the deployment name first, then generate the token.":
+      "Speichern Sie zuerst den Bereitstellungsnamen, dann generieren Sie das Token.",
+    "Enable centralized monitoring": "Zentrales Monitoring aktivieren",
+    "Failed to load monitoring configuration.":
+      "Monitoring-Konfiguration konnte nicht geladen werden.",
+    "Failed to save monitoring configuration.":
+      "Monitoring-Konfiguration konnte nicht gespeichert werden.",
+    "Monitoring configuration saved. Restart services to apply changes.":
+      "Monitoring-Konfiguration gespeichert. Starten Sie die Dienste neu, um die Änderungen zu übernehmen.",
+    "Monitoring configuration saved. Restart the server for the new Observability URL to take effect.":
+      "Monitoring-Konfiguration gespeichert. Starten Sie den Server neu, damit die neue Observability-URL wirksam wird.",
+    "Observability URL": "Observability-URL",
+    "Push token": "Push-Token",
+    "Push token generated. Restart services to apply changes.":
+      "Push-Token generiert. Starten Sie die Dienste neu, um die Änderungen zu übernehmen.",
+    "Send logs and metrics to a central observability stack":
+      "Logs und Metriken an einen zentralen Observability-Stack senden",
     // Rich text renderer
     "Rich text content": "Rich-Text-Inhalt",
     // Settings — help text
@@ -8949,6 +8967,24 @@ export const translations: Record<string, Record<string, string>> = {
   },
 
   fr: {
+    "Deployment name": "Nom du déploiement",
+    "Save the deployment name first, then generate the token.":
+      "Enregistrez d'abord le nom du déploiement, puis générez le jeton.",
+    "Enable centralized monitoring": "Activer la surveillance centralisée",
+    "Failed to load monitoring configuration.":
+      "Échec du chargement de la configuration de surveillance.",
+    "Failed to save monitoring configuration.":
+      "Échec de l'enregistrement de la configuration de surveillance.",
+    "Monitoring configuration saved. Restart services to apply changes.":
+      "Configuration de surveillance enregistrée. Redémarrez les services pour appliquer les modifications.",
+    "Monitoring configuration saved. Restart the server for the new Observability URL to take effect.":
+      "Configuration de surveillance enregistrée. Redémarrez le serveur pour que la nouvelle URL d'observabilité prenne effet.",
+    "Observability URL": "URL d'observabilité",
+    "Push token": "Jeton d'envoi",
+    "Push token generated. Restart services to apply changes.":
+      "Jeton d'envoi généré. Redémarrez les services pour appliquer les modifications.",
+    "Send logs and metrics to a central observability stack":
+      "Envoyer les journaux et les métriques vers une pile d'observabilité centralisée",
     // Rich text renderer
     "Rich text content": "Contenu de texte enrichi",
     // Settings — help text
@@ -17825,6 +17861,24 @@ export const translations: Record<string, Record<string, string>> = {
     "Who is the intended audience for the use case?": "Quel est le public cible du cas d'usage ?",
   },
   es: {
+    "Deployment name": "Nombre del despliegue",
+    "Save the deployment name first, then generate the token.":
+      "Primero guarde el nombre del despliegue y luego genere el token.",
+    "Enable centralized monitoring": "Habilitar la supervisión centralizada",
+    "Failed to load monitoring configuration.":
+      "No se pudo cargar la configuración de supervisión.",
+    "Failed to save monitoring configuration.":
+      "No se pudo guardar la configuración de supervisión.",
+    "Monitoring configuration saved. Restart services to apply changes.":
+      "Configuración de supervisión guardada. Reinicie los servicios para aplicar los cambios.",
+    "Monitoring configuration saved. Restart the server for the new Observability URL to take effect.":
+      "Configuración de supervisión guardada. Reinicie el servidor para que la nueva URL de observabilidad surta efecto.",
+    "Observability URL": "URL de observabilidad",
+    "Push token": "Token de envío",
+    "Push token generated. Restart services to apply changes.":
+      "Token de envío generado. Reinicie los servicios para aplicar los cambios.",
+    "Send logs and metrics to a central observability stack":
+      "Enviar registros y métricas a una pila de observabilidad centralizada",
     // Rich text renderer
     "Rich text content": "Contenido de texto enriquecido",
     // Settings — help text
