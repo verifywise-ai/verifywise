@@ -71,6 +71,7 @@ export const RichTextRenderer: React.FC<RichTextRendererProps> = ({
     );
   }
 
+  // nosemgrep: typescript.react.security.audit.react-dangerouslysetinnerhtml — sanitizedHtml is produced by useRichTextSanitizer (DOMPurify allowlist + post-processing).
   return <div className={className} dangerouslySetInnerHTML={{ __html: sanitizedHtml }} />;
 };
 
