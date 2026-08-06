@@ -294,10 +294,10 @@ async function cloneRepository(
 
   try {
     // Clone with depth 1 (shallow clone - only latest commit)
-    // Use spawn to get the child process so we can kill it on abort
-    // nosemgrep: javascript.lang.security.spawn-git-clone — args are a fixed list; URL is built from validated owner/repo.
+    // Use spawn to get the child process so we can kill it on abort.
+    // URL is built from validated owner/repo and forced to github.com.
     const clonePromise = new Promise<void>((resolve, reject) => {
-      const gitProcess = spawn("git", ["clone", "--depth", "1", cloneUrl, tempDir]);
+      const gitProcess = spawn("git", ["clone", "--depth", "1", cloneUrl, tempDir]); // nosemgrep: javascript.lang.security.spawn-git-clone.spawn-git-clone
 
       let stderr = "";
       gitProcess.stderr.on("data", (data: Buffer) => {
