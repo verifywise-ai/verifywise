@@ -5,6 +5,7 @@ import json
 import os
 import re
 import sys
+import urllib.parse
 import urllib.request
 
 REPO = "verifywise-ai/verifywise"
@@ -31,6 +32,13 @@ def parse_link_header(link_header: str | None):
     return links
 
 
+def _validate_github_url(url: str) -> str:
+    parsed = urllib.parse.urlparse(url)
+    if parsed.scheme != "https" or parsed.netloc != "api.github.com":
+        sys.exit(f"Refusing to fetch unexpected URL: {url}")
+    return url
+
+
 def fetch_all(endpoint: str, use_page: bool = True):
     results = []
     per_page = 100
@@ -41,8 +49,10 @@ def fetch_all(endpoint: str, use_page: bool = True):
         url = f"https://api.github.com/repos/{REPO}/{endpoint}?per_page={per_page}"
 
     while url:
+        url = _validate_github_url(url)
         req = urllib.request.Request(url, headers=HEADERS)
         try:
+            # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected
             with urllib.request.urlopen(req) as resp:
                 data = json.loads(resp.read().decode())
                 link_header = resp.headers.get("Link")
