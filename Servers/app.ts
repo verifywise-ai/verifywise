@@ -1,6 +1,7 @@
 import express, { RequestHandler } from "express";
 import cors from "cors";
 import helmet from "helmet";
+import rateLimit from "express-rate-limit";
 import cookieParser from "cookie-parser";
 import { csrfProtection } from "./middleware/csrf.middleware";
 
@@ -108,7 +109,7 @@ import virtualKeyProxyRoutes from "./routes/virtualKeyProxy.route";
 import internalRoutes from "./routes/internal.route";
 import superAdminRoutes from "./routes/superAdmin.route";
 import { i18nMiddleware } from "./middleware/i18n.middleware";
-import { createRateLimiter, generalApiLimiter } from "./middleware/rateLimit.middleware";
+import { generalApiLimiter } from "./middleware/rateLimit.middleware";
 import { sequelize } from "./database/db";
 import redisClient from "./database/redis";
 import ssoConfigRoutes from "./routes/ssoConfig.route";
@@ -188,51 +189,55 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
   // still allowed, but the endpoint is capped to prevent abuse.
   const nodeEnv = (process.env.NODE_ENV ?? "").trim().toLowerCase();
   const isNonProduction = nodeEnv === "development" || nodeEnv === "test" || nodeEnv === "local";
-  const healthLimiter = createRateLimiter({
-    windowMinutes: 1,
-    maxRequests: isNonProduction ? 100000 : 1000,
-    message: "Too many health-check requests from this IP, please slow down",
-  });
+  app.get(
+    "/health",
+    rateLimit({
+      windowMs: 60 * 1000,
+      max: isNonProduction ? 100000 : 1000,
+      standardHeaders: true,
+      legacyHeaders: false,
+      message: "Too many health-check requests from this IP, please slow down",
+    }),
+    async (_req, res) => {
+      const AI_GATEWAY_URL = process.env.AI_GATEWAY_URL || "http://localhost:8100";
+      const checks: Record<string, { status: "ok" | "error"; error?: string }> = {};
 
-  app.get("/health", healthLimiter, async (_req, res) => {
-    const AI_GATEWAY_URL = process.env.AI_GATEWAY_URL || "http://localhost:8100";
-    const checks: Record<string, { status: "ok" | "error"; error?: string }> = {};
-
-    try {
-      await sequelize.query("SELECT 1");
-      checks.database = { status: "ok" };
-    } catch (err: unknown) {
-      checks.database = { status: "error", error: (err as Error).message };
-    }
-
-    try {
-      const pong = await redisClient.ping();
-      checks.redis =
-        pong === "PONG"
-          ? { status: "ok" }
-          : { status: "error", error: `Unexpected PING response: ${pong}` };
-    } catch (err: unknown) {
-      checks.redis = { status: "error", error: (err as Error).message };
-    }
-
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 5000);
       try {
-        const gwRes = await fetch(`${AI_GATEWAY_URL}/health`, { signal: controller.signal });
-        checks.ai_gateway = gwRes.ok
-          ? { status: "ok" }
-          : { status: "error", error: `HTTP ${gwRes.status}` };
-      } finally {
-        clearTimeout(timeout);
+        await sequelize.query("SELECT 1");
+        checks.database = { status: "ok" };
+      } catch (err: unknown) {
+        checks.database = { status: "error", error: (err as Error).message };
       }
-    } catch (err: unknown) {
-      checks.ai_gateway = { status: "error", error: (err as Error).message };
-    }
 
-    const allOk = Object.values(checks).every((c) => c.status === "ok");
-    res.status(allOk ? 200 : 503).json({ status: allOk ? "ok" : "degraded", checks });
-  });
+      try {
+        const pong = await redisClient.ping();
+        checks.redis =
+          pong === "PONG"
+            ? { status: "ok" }
+            : { status: "error", error: `Unexpected PING response: ${pong}` };
+      } catch (err: unknown) {
+        checks.redis = { status: "error", error: (err as Error).message };
+      }
+
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000);
+        try {
+          const gwRes = await fetch(`${AI_GATEWAY_URL}/health`, { signal: controller.signal });
+          checks.ai_gateway = gwRes.ok
+            ? { status: "ok" }
+            : { status: "error", error: `HTTP ${gwRes.status}` };
+        } finally {
+          clearTimeout(timeout);
+        }
+      } catch (err: unknown) {
+        checks.ai_gateway = { status: "error", error: (err as Error).message };
+      }
+
+      const allOk = Object.values(checks).every((c) => c.status === "ok");
+      res.status(allOk ? 200 : 503).json({ status: allOk ? "ok" : "degraded", checks });
+    },
+  );
 
   // Track every request: metrics + access log (shipped to the central
   // observability stack when monitoring is enabled). Mounted after /health so
@@ -243,17 +248,15 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
     preRoutesMiddleware.forEach((mw) => app.use(mw));
   }
 
+  // Webhook routes are mounted before the global rate limiter because they are
+  // signature-verified and have their own per-route controls.
+  app.use("/api/webhooks", webhookRoutes);
+
   // Global API rate limiter (audit 4.5): a loose per-IP ceiling mounted
   // ahead of every route mount. Stricter per-route limiters (auth, file
-  // ops, ingestion, ...) still apply on top. Webhook/raw-body endpoints
-  // are exempt — they are signature-verified and have their own controls —
-  // and /health has its own generous per-IP limiter above.
-  app.use((req, res, next) => {
-    if (req.url.startsWith("/api/webhooks/")) {
-      return next();
-    }
-    return generalApiLimiter(req, res, next);
-  });
+  // ops, ingestion, ...) still apply on top. /health has its own generous
+  // per-IP limiter above.
+  app.use(generalApiLimiter);
 
   app.use("/api/users", userRoutes);
   app.use("/api/vendorRisks", vendorRiskRoutes);
@@ -338,7 +341,6 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
   app.use("/api/dataset-change-history", datasetChangeHistoryRoutes);
   app.use("/api/approval-workflows", approvalWorkflowRoutes);
   app.use("/api/approval-requests", approvalRequestRoutes);
-  app.use("/api/webhooks", webhookRoutes);
   app.use("/api/ai-detection", aiDetectionRoutes);
   app.use("/api/ai-detection/repositories", aiDetectionRepositoryRoutes);
   app.use("/api/integrations/github", githubIntegrationRoutes);
