@@ -20,6 +20,7 @@ def _legacy_encrypt(plaintext: str, key: bytes) -> str:
     import os as _os
 
     iv = _os.urandom(16)
+    # nosemgrep: python.cryptography.security.mode-without-authentication.crypto-mode-without-authentication
     cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
     encryptor = cipher.encryptor()
     padder = crypto_padding.PKCS7(128).padder()
