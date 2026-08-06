@@ -50,7 +50,10 @@ export function usePolicyEditorContent({
 
   // ── Shared image upload + insert helper ───────────────────────────
   // Single implementation backing drop, paste, and file-input uploads.
-  const uploadAndInsertImage = async (file: File, insert: (attrs: { src: string; alt: string }) => void) => {
+  const uploadAndInsertImage = async (
+    file: File,
+    insert: (attrs: { src: string; alt: string }) => void,
+  ) => {
     setIsUploadingImage(true);
     try {
       const response = await uploadFileToManager({

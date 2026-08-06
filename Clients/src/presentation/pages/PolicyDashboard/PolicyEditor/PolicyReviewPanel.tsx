@@ -11,12 +11,5 @@ export function PolicyReviewPanel({ isOpen, isNew, policyId }: PolicyReviewPanel
   if (isNew || !policyId) return null;
 
   // History sidebar
-  return (
-    <HistorySidebar
-      isOpen={isOpen}
-      entityType="policy"
-      entityId={policyId}
-      height="100%"
-    />
-  );
+  return <HistorySidebar isOpen={isOpen} entityType="policy" entityId={policyId} height="100%" />;
 }

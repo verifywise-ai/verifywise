@@ -1,10 +1,7 @@
 import { Dispatch, RefObject, SetStateAction, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import type { Editor } from "@tiptap/react";
-import {
-  useCreatePolicy,
-  useUpdatePolicy,
-} from "../../../../application/hooks/usePolicyMutations";
+import { useCreatePolicy, useUpdatePolicy } from "../../../../application/hooks/usePolicyMutations";
 import { PolicyManagerModel } from "../../../../domain/models/Common/policy/policyManager.model";
 import { PolicyFormData, PolicyFormErrors } from "../../../types/interfaces/i.policy";
 import { type CustomFieldsSectionHandle } from "../../../components/CustomFieldsSection";

@@ -1,14 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useParams, useSearchParams, useNavigate } from "react-router-dom";
 import { sanitizeRichText } from "../../../application/utils/richTextSanitizer";
-import {
-  Box,
-  Stack,
-  Typography,
-  Skeleton,
-  Snackbar,
-  Alert,
-} from "@mui/material";
+import { Box, Stack, Typography, Skeleton, Snackbar, Alert } from "@mui/material";
 
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { type CustomFieldsSectionHandle } from "../../components/CustomFieldsSection";
@@ -523,11 +516,7 @@ export default function PolicyEditorPage() {
             onInsertLink={handleInsertLink}
             findReplace={findReplace}
           >
-            <PolicyReviewPanel
-              isOpen={isHistorySidebarOpen}
-              isNew={isNew}
-              policyId={policy?.id}
-            />
+            <PolicyReviewPanel isOpen={isHistorySidebarOpen} isNew={isNew} policyId={policy?.id} />
           </PolicyContentEditor>
         </Stack>
       </Stack>
