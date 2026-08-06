@@ -76,7 +76,8 @@ router.get("/:key/ui/dist/:filename", async (req, res) => {
 
   const baseDir = path.resolve(__dirname, "../../temp/plugins");
   const bundlePath = path.resolve(baseDir, safeKey, "ui", "dist", safeFilename);
-  if (!bundlePath.startsWith(baseDir + path.sep)) {
+  const realBaseDir = fs.realpathSync(baseDir);
+  if (!bundlePath.startsWith(realBaseDir + path.sep)) {
     res.status(403).json({ error: "Forbidden" });
     return;
   }
@@ -116,11 +117,19 @@ router.get("/:key/ui/dist/:filename", async (req, res) => {
     }
   }
 
+  // Resolve the final path after optional download and confirm it is still
+  // inside the allowed plugin bundle root.
+  const realBundlePath = fs.realpathSync(bundlePath);
+  if (!realBundlePath.startsWith(realBaseDir + path.sep)) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+
   res.setHeader("Content-Type", "application/javascript; charset=utf-8");
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
   res.setHeader("Cache-Control", "no-store");
-  res.sendFile(bundlePath);
+  res.sendFile(realBundlePath);
 });
 
 // ============================================================================
