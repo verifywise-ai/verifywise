@@ -114,6 +114,14 @@ Tools represented: **Trivy** (197), **Semgrep OSS** (77), **CodeQL** (19).
 - Crypto alerts resolved or documented as false positives with dismissal justifications.
 - No production code uses unauthenticated encryption modes.
 
+> **Wave 3 status (completed)**
+> - `Servers/utils/encryption.utils.ts` migrated to AES-256-GCM output (`iv:tag:ciphertext`) with legacy AES-256-CBC decryption fallback; tests updated and passing.
+> - `AIGateway/src/utils/encryption.py` migrated to AES-256-GCM with legacy CBC fallback; new unit tests added.
+> - `EvalServer/src/controllers/reports.py` `_decrypt_api_key()` now supports both GCM and legacy CBC formats; new unit tests added.
+> - `Servers/utils/secretEncryption.utils.ts` now passes explicit `authTagLength: 16` to `createCipheriv`/`createDecipheriv`.
+> - Bcrypt-hash false positives suppressed with `nosemgrep` annotations in `users.mock.data.ts`, `users.md`, and `SQL_Commands.sql`.
+> - Hardcoded JWT-secret false positive suppressed with `nosemgrep` annotation in `jwt.utils.test.ts`.
+
 ---
 
 ### Wave 4 — Kubernetes & Container Hardening
