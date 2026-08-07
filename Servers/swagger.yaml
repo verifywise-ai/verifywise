@@ -7784,6 +7784,22 @@ tags:
   -
     name: Webhooks
 paths:
+  /webhooks/github:
+    post:
+      tags:
+        - Webhooks
+      summary: 'Github Webhook Controller'
+      operationId: githubWebhookController
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: 'Created successfully'
+        '500':
+          description: 'Internal server error'
   /users:
     get:
       summary: 'List all users in organization'
@@ -18837,22 +18853,6 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
-  /webhooks/github:
-    post:
-      tags:
-        - Webhooks
-      summary: 'Github Webhook Controller'
-      operationId: githubWebhookController
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        '201':
-          description: 'Created successfully'
-        '500':
-          description: 'Internal server error'
   /ai-detection/scans:
     post:
       tags:
@@ -23727,14 +23727,3 @@ paths:
       security:
         -
           bearerAuth: []
-  /health:
-    get:
-      tags:
-        - System
-      summary: 'Health Check'
-      operationId: healthCheck
-      responses:
-        '200':
-          description: Success
-        '500':
-          description: 'Internal server error'

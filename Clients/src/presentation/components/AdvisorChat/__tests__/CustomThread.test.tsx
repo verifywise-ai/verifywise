@@ -18,7 +18,10 @@ vi.mock("../advisorConfig", () => ({ getSuggestions: () => [] }));
 vi.mock("../../../../application/hooks/useAuth", () => ({
   useAuth: () => ({ userRoleName: "Admin" }),
 }));
-vi.mock("react-router", () => ({ useNavigate: () => vi.fn() }));
+vi.mock("react-router", async () => {
+  const actual = await vi.importActual<typeof import("react-router")>("react-router");
+  return { ...actual, useNavigate: () => vi.fn() };
+});
 
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import { CustomThread } from "../CustomThread";
