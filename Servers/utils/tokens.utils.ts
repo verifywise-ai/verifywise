@@ -10,6 +10,10 @@ import { ValidationException } from "../domain.layer/exceptions/custom.exception
  * Falls back to ENCRYPTION_KEY for backward compatibility in existing installs,
  * but a dedicated secret is recommended so token hashes can be rotated
  * independently of encryption keys.
+ *
+ * Changing this secret (or the hashing scheme) changes every token's hash, which
+ * invalidates all previously-issued API tokens — the raw tokens are not stored,
+ * so existing tokens cannot be re-hashed and must be re-issued after such a change.
  */
 const API_TOKEN_HASH_SECRET = process.env.API_TOKEN_HASH_SECRET || process.env.ENCRYPTION_KEY || "";
 
@@ -19,14 +23,29 @@ if (!API_TOKEN_HASH_SECRET) {
 
 /**
  * Hash an API token (the signed JWT string) for storage and lookup.
- * Only the PBKDF2-derived hash is persisted; the raw token is shown to the creator
- * once and never stored. The server-side secret is used as the salt so the hash is
- * deterministic (the same token always produces the same hash, which is required
- * for database lookup) while still preventing an attacker who only has the database
- * from reconstructing or brute-forcing tokens.
+ *
+ * Uses a keyed HMAC-SHA256 with the server-side secret as the key. The token
+ * being hashed is a high-entropy, HMAC-signed JWT — not a low-entropy password —
+ * so a keyed MAC (not a slow password KDF) is the correct primitive: it is
+ * deterministic (required for the DB lookup), fast (runs inline in the auth
+ * middleware on every API-token request), and an attacker who only has the
+ * database cannot reproduce hashes without the secret key.
+ *
+ * NOTE: a slow synchronous KDF (e.g. pbkdf2Sync) MUST NOT be used here — it runs
+ * on the auth hot path and would block the Node event loop ~milliseconds per
+ * request, serializing all concurrent traffic. The full token entropy already
+ * makes offline brute-force infeasible, so key-stretching adds cost without
+ * meaningful benefit.
+ *
+ * Only the hash is persisted; the raw token is shown to the creator once and
+ * never stored.
  */
+// codeql[js/insufficient-password-hash] HMAC-SHA256 with a server-side secret is
+// the correct primitive for a high-entropy API-token fingerprint/lookup key; this
+// is not password storage and must not use a slow KDF (bcrypt/scrypt/PBKDF2) — a
+// synchronous KDF on this auth hot path would block the event loop per request.
 export const hashApiToken = (token: string): string =>
-  crypto.pbkdf2Sync(token, API_TOKEN_HASH_SECRET, 100000, 32, "sha512").toString("hex");
+  crypto.createHmac("sha256", API_TOKEN_HASH_SECRET).update(token).digest("hex");
 
 export const getNumberOfApiTokensQuery = async (organizationId: number) => {
   // Only active (non-revoked) tokens count toward the per-organization limit.
@@ -61,7 +80,7 @@ export const createApiTokenQuery = async (
     );
   }
 
-  // `tokenPayload.token` is the SHA-256 hash of the JWT, not the JWT itself.
+  // `tokenPayload.token` is the HMAC-SHA256 hash of the JWT, not the JWT itself.
   // The raw token is returned to the caller by the controller and never stored.
   // The hash column is intentionally excluded from RETURNING so it never leaves
   // the database.
