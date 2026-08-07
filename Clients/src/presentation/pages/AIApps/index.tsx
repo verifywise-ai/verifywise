@@ -1,5 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router";
 import { Stack, Box, Typography } from "@mui/material";
 import CustomizableSkeleton from "../../components/Skeletons";
 import { Plus } from "lucide-react";

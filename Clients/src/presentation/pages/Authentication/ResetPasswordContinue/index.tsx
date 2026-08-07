@@ -6,7 +6,7 @@ import { Button, Stack, Typography, useTheme } from "@mui/material";
 import { ReactComponent as Background } from "../../../assets/imgs/background-grid.svg";
 import { CheckCircle as Success } from "lucide-react";
 import singleTheme from "../../../themes/v1SingleTheme";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { text, border as borderPalette } from "../../../themes/palette";
 
 const ResetPasswordContinue = () => {

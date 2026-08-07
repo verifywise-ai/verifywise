@@ -15,9 +15,25 @@ from .snapshot import write_snapshot, write_result
 # Path to the grs-scenarios entry point inside the project venv
 _GRS_BIN = Path(__file__).parent.parent.parent.parent / ".venv" / "bin" / "grs-scenarios"
 
+_ALLOWED_STAGES = {"seeds", "render", "perturb", "validate", "backfill-base", "infer", "judge", "judge-patch", "leaderboard"}
+
+
+def _validate_stage(stage: str) -> None:
+    if stage not in _ALLOWED_STAGES:
+        raise ValueError(f"Invalid stage: {stage}")
+
+
+def _validate_dataset_version(version: str) -> None:
+    # Allow simple version strings like "v1.0", "2024-08-01", "draft_2"
+    import re
+    if not re.fullmatch(r"[A-Za-z0-9_.-]+", version):
+        raise ValueError(f"Invalid dataset version: {version}")
+
 
 def build_command(stage: str, dataset_version: str, params: dict) -> List[str]:
     """Build a grs-scenarios CLI command for the given stage and parameters."""
+    _validate_stage(stage)
+    _validate_dataset_version(dataset_version)
     base = [str(_GRS_BIN), "generate", "--stage", stage,
             "--dataset-version", dataset_version, "--out-dir", "datasets"]
 
@@ -114,6 +130,16 @@ def start_run(request: RunRequest, grs_root: Path) -> Optional[str]:
     """
     if run_state.state == "running":
         return "A run is already in progress"
+
+    for stage in request.stages:
+        try:
+            _validate_stage(stage)
+        except ValueError as exc:
+            return str(exc)
+    try:
+        _validate_dataset_version(request.dataset_version)
+    except ValueError as exc:
+        return str(exc)
 
     if _needs_api_key(request.stages, request.params):
         if not os.environ.get("OPENROUTER_API_KEY"):

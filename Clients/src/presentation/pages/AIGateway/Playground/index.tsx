@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Box, Typography, Stack, IconButton, Slider } from "@mui/material";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import { Settings, Router, MessageSquare, Zap, Coins, TriangleAlert, KeyRound } from "lucide-react";
 import { AssistantRuntimeProvider } from "@assistant-ui/react";
 import { ThreadPrimitive } from "@assistant-ui/react";

@@ -24,8 +24,8 @@ spec:
           type: RuntimeDefault
       containers:
       - name: backend
-        image: ghcr.io/verifywise-ai/verifywise-backend:latest
-        imagePullPolicy: Always
+        image: ghcr.io/verifywise-ai/verifywise-backend:1.7.0
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3000
           name: http
@@ -237,22 +237,22 @@ spec:
             secretKeyRef:
               name: verifywise-secrets
               key: ENCRYPTION_PASSWORD
-        # livenessProbe:
-        #   httpGet:
-        #     path: /
-        #     port: 3000
-        #   initialDelaySeconds: 60
-        #   periodSeconds: 30
-        #   timeoutSeconds: 10
-        #   failureThreshold: 5
-        # readinessProbe:
-        #   httpGet:
-        #     path: /
-        #     port: 3000
-        #   initialDelaySeconds: 30
-        #   periodSeconds: 10
-        #   timeoutSeconds: 5
-        #   failureThreshold: 3
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 3000
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
         resources:
           requests:
             memory: "256Mi"
@@ -260,6 +260,11 @@ spec:
           limits:
             memory: "512Mi"
             cpu: "500m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
 ---
 apiVersion: v1
 kind: Service

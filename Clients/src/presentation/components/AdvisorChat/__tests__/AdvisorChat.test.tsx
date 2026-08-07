@@ -32,6 +32,7 @@ vi.mock("../../../../application/hooks/useAuth", () => ({
 }));
 
 vi.mock("react-router", () => ({
+  MemoryRouter: ({ children }: any) => <>{children}</>,
   useNavigate: () => vi.fn(),
 }));
 

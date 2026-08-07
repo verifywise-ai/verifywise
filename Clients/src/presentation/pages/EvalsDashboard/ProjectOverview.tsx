@@ -24,7 +24,7 @@ import {
 } from "../../../application/repository/deepEval.repository";
 import NewExperimentModal from "./NewExperimentModal";
 import type { DeepEvalProject } from "./types";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { PageHeader } from "../../components/Layout/PageHeader";
 import HelperIcon from "../../components/HelperIcon";
 import TipBox from "../../components/TipBox";

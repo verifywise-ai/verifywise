@@ -1,6 +1,6 @@
 import { Box, Stack, Typography } from "@mui/material";
 import { Calendar, AlertTriangle, Clock } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { EmptyStateMessage } from "../../EmptyStateMessage";
 import Chip from "../../Chip";
 import VWTooltip from "../../VWTooltip";
