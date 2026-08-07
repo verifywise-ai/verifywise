@@ -1,44 +1,67 @@
 import { Box, Tooltip, Typography } from "@mui/material";
-import { status, accent } from "../../themes/palette";
+import { status } from "../../themes/palette";
+
+export type QualityGrade = "A" | "B" | "C" | "D" | "F";
 
 interface EvidenceQualityBadgeProps {
-  score: number;
+  grade: QualityGrade | null;
   size?: "small" | "medium";
   showLabel?: boolean;
   onClick?: (e: React.MouseEvent) => void;
 }
 
-function getScoreColor(score: number) {
-  if (score >= 80) return status.success;
-  if (score >= 60) return accent.primary;
-  if (score >= 40) return status.warning;
-  return status.error;
+export function getGradeColor(grade: QualityGrade | null) {
+  switch (grade) {
+    case "A":
+      return status.success;
+    case "B":
+      return status.info;
+    case "C":
+      return status.warning;
+    case "D":
+      return status.default;
+    case "F":
+      return status.error;
+    default:
+      return status.default;
+  }
 }
 
-function getScoreLabel(score: number) {
-  if (score >= 80) return "High";
-  if (score >= 60) return "Good";
-  if (score >= 40) return "Fair";
-  return "Low";
+export function getGradeLabel(grade: QualityGrade | null) {
+  switch (grade) {
+    case "A":
+      return "Excellent";
+    case "B":
+      return "Good";
+    case "C":
+      return "Adequate";
+    case "D":
+      return "Weak";
+    case "F":
+      return "Insufficient";
+    default:
+      return "Unrated";
+  }
 }
 
 export default function EvidenceQualityBadge({
-  score,
+  grade,
   size = "small",
   showLabel = true,
   onClick,
 }: EvidenceQualityBadgeProps) {
-  const colors = getScoreColor(score);
-  const label = getScoreLabel(score);
+  const colors = getGradeColor(grade);
+  const label = getGradeLabel(grade);
   const isSmall = size === "small";
   const isClickable = typeof onClick === "function";
+  const display = grade ?? "—";
 
   return (
     <Tooltip
       title={
         isClickable
-          ? `Click for details — ${score}/100 (${label})`
-          : `Evidence Quality: ${score}/100 (${label})`
+          ? `Click for details — ${display} (${label})`
+          : `Evidence Quality: ${display} (${label})`
       }
       arrow
     >
@@ -70,12 +93,12 @@ export default function EvidenceQualityBadge({
       >
         <Typography
           sx={{
-            fontSize: isSmall ? 11 : 13,
-            fontWeight: 600,
+            fontSize: isSmall ? 12 : 14,
+            fontWeight: 700,
             lineHeight: 1.2,
           }}
         >
-          {score}
+          {display}
         </Typography>
         {showLabel && (
           <Typography

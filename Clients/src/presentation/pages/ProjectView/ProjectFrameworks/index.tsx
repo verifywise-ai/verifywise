@@ -9,6 +9,7 @@ import ComplianceTracker from "../../../pages/ComplianceTracker/1.0ComplianceTra
 import { Project } from "../../../../domain/types/Project";
 import { Framework } from "../../../../domain/types/Framework";
 import AssessmentTracker from "../../Assessment/1.0AssessmentTracker";
+import ReadinessDashboard from "../../ReadinessDashboard";
 import useFrameworks from "../../../../application/hooks/useFrameworks";
 import AddFrameworkModal from "../AddNewFramework";
 import useMultipleOnScreen from "../../../../application/hooks/useMultipleOnScreen";
@@ -34,9 +35,20 @@ const FRAMEWORK_IDS = {
 const TRACKER_TABS = [
   { label: "Requirements", value: "compliance" },
   { label: "Assessments", value: "assessment" },
+  { label: "AI readiness", value: "readiness" },
 ] as const;
 
 type TrackerTab = (typeof TRACKER_TABS)[number]["value"];
+
+/**
+ * Frameworks the readiness engine can score, keyed by framework name.
+ * The backend silently falls back to EU AI Act controls for unknown types, so the
+ * readiness tab is only offered for names listed here.
+ */
+const READINESS_FRAMEWORK_TYPES: Record<string, string> = {
+  "EU AI Act": "eu_ai_act",
+  "ISO 42001": "iso_42001",
+};
 
 const ProjectFrameworks = ({
   project,
@@ -100,7 +112,11 @@ const ProjectFrameworks = ({
         );
         setSelectedFramework(index >= 0 ? index : 0);
         // Check for subtab parameter first, then controlId, default to assessment
-        if (subtabParam === "compliance" || subtabParam === "assessment") {
+        if (
+          subtabParam === "compliance" ||
+          subtabParam === "assessment" ||
+          subtabParam === "readiness"
+        ) {
           setTracker(subtabParam as TrackerTab);
         } else {
           setTracker(searchParams.get("controlId") ? "compliance" : "assessment");
@@ -136,7 +152,37 @@ const ProjectFrameworks = ({
   };
 
   const isEUAIAct = Number(selectedFrameworkId) === FRAMEWORK_IDS.EU_AI_ACT;
-  const tabs = TRACKER_TABS;
+
+  const readinessFrameworkType = useMemo(() => {
+    const selected = projectFrameworks.find(
+      (fw: Framework) => Number(fw.id) === Number(selectedFrameworkId),
+    );
+    return selected ? READINESS_FRAMEWORK_TYPES[selected.name] : undefined;
+  }, [projectFrameworks, selectedFrameworkId]);
+
+  // Only EU AI Act has an assessment tracker, and only some frameworks are scored
+  // by the readiness engine — offering those tabs elsewhere renders a blank panel.
+  const isTabAvailable = useCallback(
+    (tab: TrackerTab) => {
+      if (tab === "assessment") return isEUAIAct;
+      if (tab === "readiness") return Boolean(readinessFrameworkType);
+      return true;
+    },
+    [isEUAIAct, readinessFrameworkType],
+  );
+
+  const tabs = useMemo(
+    () => TRACKER_TABS.filter((tab) => isTabAvailable(tab.value)),
+    [isTabAvailable],
+  );
+
+  // Selecting a framework that doesn't offer the active tab (or landing on it via
+  // ?subtab=) removes it — fall back to Requirements so the panel is never blank.
+  useEffect(() => {
+    if (!isTabAvailable(tracker)) {
+      setTracker("compliance");
+    }
+  }, [tracker, isTabAvailable]);
 
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [applicabilityFilter, setApplicabilityFilter] = useState<string>("all");
@@ -298,6 +344,16 @@ const ProjectFrameworks = ({
               />
             </TabPanel>
           )}
+          {readinessFrameworkType && (
+            // Tighter top padding than the sibling panels: readiness opens with a
+            // right-aligned control strip, so the default 20px reads as dead space.
+            <TabPanel value="readiness" sx={{ ...tabPanelStyle, pt: 6 }}>
+              <ReadinessDashboard
+                projectId={Number(project.id)}
+                frameworkType={readinessFrameworkType}
+              />
+            </TabPanel>
+          )}
         </TabContext>
       </>
     );
@@ -308,6 +364,7 @@ const ProjectFrameworks = ({
     approverFilter,
     dueDateFilter,
     isEUAIAct,
+    readinessFrameworkType,
     tracker,
     statusOptions,
     userOptions,

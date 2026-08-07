@@ -695,6 +695,7 @@ export const aiConfirmationEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/ai-confirmation/approve/{id}',
     summary: "Approve Confirmation",
+    description: "Requires role: Admin",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -706,6 +707,7 @@ export const aiConfirmationEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/ai-confirmation/reject/{id}',
     summary: "Reject Confirmation",
+    description: "Requires role: Admin",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -6744,6 +6746,65 @@ export const notificationEndpoints: Endpoint[] = [
   },
 ];
 
+// Observability endpoints
+export const observabilityEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/observability/metrics',
+    summary: "Get Metrics",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Observability",
+  },
+  {
+    method: 'GET',
+    path: '/observability/traces',
+    summary: "Get Traces",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Observability",
+  },
+  {
+    method: 'GET',
+    path: '/observability/traces/{id}',
+    summary: "Get Trace Detail",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Observability",
+  },
+  {
+    method: 'GET',
+    path: '/observability/costs',
+    summary: "Get Costs",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Observability",
+  },
+  {
+    method: 'GET',
+    path: '/observability/performance',
+    summary: "Get Performance",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Observability",
+  },
+];
+
 // Organizations endpoints
 export const organizationEndpoints: Endpoint[] = [
   {
@@ -8116,6 +8177,17 @@ export const reportingEndpoints: Endpoint[] = [
     tag: "Reporting",
   },
   {
+    method: 'GET',
+    path: '/reporting/sections',
+    summary: "List Sections",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting",
+  },
+  {
     method: 'DELETE',
     path: '/reporting/{id}',
     summary: "Delete Generated Report By Id",
@@ -8129,6 +8201,251 @@ export const reportingEndpoints: Endpoint[] = [
       { status: 500, description: "Internal server error" },
     ],
     tag: "Reporting",
+  },
+];
+
+// Reporting/Runs endpoints
+export const reportingrunsEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/reporting/runs',
+    summary: "List Runs",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Runs",
+  },
+  {
+    method: 'GET',
+    path: '/reporting/runs/{id}',
+    summary: "Get Run",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Runs",
+  },
+  {
+    method: 'DELETE',
+    path: '/reporting/runs/{id}',
+    summary: "Delete Run",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Runs",
+  },
+  {
+    method: 'GET',
+    path: '/reporting/runs/{id}/download',
+    summary: "Download Run",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Runs",
+  },
+  {
+    method: 'GET',
+    path: '/reporting/runs/{id}/analyses',
+    summary: "Get Run Analyses",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Runs",
+  },
+  {
+    method: 'PATCH',
+    path: '/reporting/runs/{id}/archive',
+    summary: "Archive Run",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Runs",
+  },
+  {
+    method: 'PATCH',
+    path: '/reporting/runs/{id}/restore',
+    summary: "Restore Run",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Runs",
+  },
+];
+
+// Reporting/Scheduled Reports endpoints
+export const reportingscheduledReportsEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/reporting/scheduled-reports',
+    summary: "List Scheduled Reports",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Scheduled Reports",
+  },
+  {
+    method: 'POST',
+    path: '/reporting/scheduled-reports',
+    summary: "Create Scheduled Report",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Scheduled Reports",
+  },
+  {
+    method: 'PATCH',
+    path: '/reporting/scheduled-reports/{id}',
+    summary: "Update Scheduled Report",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Scheduled Reports",
+  },
+  {
+    method: 'DELETE',
+    path: '/reporting/scheduled-reports/{id}',
+    summary: "Delete Scheduled Report",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Scheduled Reports",
+  },
+  {
+    method: 'POST',
+    path: '/reporting/scheduled-reports/{id}/pause',
+    summary: "Pause Scheduled Report",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Scheduled Reports",
+  },
+  {
+    method: 'POST',
+    path: '/reporting/scheduled-reports/{id}/resume',
+    summary: "Resume Scheduled Report",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Scheduled Reports",
+  },
+  {
+    method: 'POST',
+    path: '/reporting/scheduled-reports/{id}/run-now',
+    summary: "Run Scheduled Report Now",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Scheduled Reports",
+  },
+];
+
+// Reporting/Templates endpoints
+export const reportingtemplatesEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/reporting/templates',
+    summary: "List Templates",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Templates",
+  },
+  {
+    method: 'POST',
+    path: '/reporting/templates',
+    summary: "Create Template",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Templates",
+  },
+  {
+    method: 'GET',
+    path: '/reporting/templates/{id}',
+    summary: "Get Template",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Templates",
+  },
+  {
+    method: 'PATCH',
+    path: '/reporting/templates/{id}',
+    summary: "Update Template",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Templates",
+  },
+  {
+    method: 'DELETE',
+    path: '/reporting/templates/{id}',
+    summary: "Archive Template",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Templates",
+  },
+  {
+    method: 'POST',
+    path: '/reporting/templates/{id}/run',
+    summary: "Run Template Now",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Templates",
   },
 ];
 
@@ -9122,17 +9439,6 @@ export const systemEndpoints: Endpoint[] = [
     ],
     tag: "System",
   },
-  {
-    method: 'GET',
-    path: '/health',
-    summary: "Health Check",
-    requiresAuth: false,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "System",
-  },
 ];
 
 // Tasks endpoints
@@ -10014,6 +10320,7 @@ export const allEndpoints = {
   nistAiRmf: nistAiRmfEndpoints,
   note: noteEndpoints,
   notification: notificationEndpoints,
+  observability: observabilityEndpoints,
   organization: organizationEndpoints,
   plugin: pluginEndpoints,
   policy: policyEndpoints,
@@ -10023,6 +10330,9 @@ export const allEndpoints = {
   quantitativeRisk: quantitativeRiskEndpoints,
   readiness: readinessEndpoints,
   reporting: reportingEndpoints,
+  reportingruns: reportingrunsEndpoints,
+  reportingscheduledReports: reportingscheduledReportsEndpoints,
+  reportingtemplates: reportingtemplatesEndpoints,
   riskBenchmark: riskBenchmarkEndpoints,
   riskHistory: riskHistoryEndpoints,
   role: roleEndpoints,
@@ -10042,10 +10352,3 @@ export const allEndpoints = {
   vendorRisk: vendorRiskEndpoints,
   webhook: webhookEndpoints,
 };
-
-// Temporary placeholders for endpoint groups referenced by App.tsx but not yet
-// present in the generated Swagger snapshot. These keep the TypeScript build green
-// until the OpenAPI generator is re-run against an updated swagger.yaml.
-export const tokenEndpoints: Endpoint[] = [];
-export const userPreferenceEndpoints: Endpoint[] = [];
-export const slackWebhookEndpoints: Endpoint[] = [];

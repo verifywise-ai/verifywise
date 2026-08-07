@@ -41,13 +41,13 @@ beforeEach(() => {
 });
 
 describe("hashApiToken", () => {
-  it("produces a stable 64-char HMAC-SHA256 hex digest and is not the raw token", () => {
+  it("produces a stable 64-char PBKDF2 hex digest and is not the raw token", async () => {
     const token = "eyJhbGciOi.JIUzI1Ni.signature";
-    const hash = hashApiToken(token);
+    const hash = await hashApiToken(token);
     expect(hash).toMatch(/^[0-9a-f]{64}$/);
     expect(hash).not.toBe(token);
     // Deterministic: same input → same hash (so write-side and read-side match).
-    expect(hashApiToken(token)).toBe(hash);
+    expect(await hashApiToken(token)).toBe(hash);
   });
 });
 
