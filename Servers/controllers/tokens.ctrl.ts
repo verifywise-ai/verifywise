@@ -71,12 +71,13 @@ export const createApiToken = async (req: Request, res: Response) => {
     );
     logger.debug(`🔐 Generated API token for user: ${user.id}`);
 
-    // Only the SHA-256 hash of the token is persisted. The raw token is
+    // Only the PBKDF2 hash of the token is persisted. The raw token is
     // returned to the caller once, below, and never stored.
+    const tokenHash = await hashApiToken(apiToken);
     const tokenResponse = await createApiTokenQuery(
       {
         name: name,
-        token: hashApiToken(apiToken),
+        token: tokenHash,
         expires_at: new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000),
         created_by: req.userId!,
       },
