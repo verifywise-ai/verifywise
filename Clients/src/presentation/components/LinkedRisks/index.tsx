@@ -4,7 +4,7 @@ import Field from "../Inputs/Field";
 import useProjectRisks from "../../../application/hooks/useProjectRisks";
 import { getAllProjectRisks } from "../../../application/repository/projectRisk.repository";
 import LinkedRisksTable from "../Table/LinkedRisksTable";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 import StandardModal from "../Modals/StandardModal";
 
 import { textfieldStyle } from "./styles";

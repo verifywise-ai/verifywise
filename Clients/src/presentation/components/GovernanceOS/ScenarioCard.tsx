@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Box, Typography, Stack, IconButton } from "@mui/material";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import {
   Check,
   Info,

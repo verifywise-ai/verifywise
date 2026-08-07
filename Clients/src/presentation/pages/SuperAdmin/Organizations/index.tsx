@@ -18,7 +18,7 @@ import {
   deleteOrganization,
   Organization,
 } from "../../../../application/repository/superAdmin.repository";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import StandardModal from "../../../components/Modals/StandardModal";
 import Field from "../../../components/Inputs/Field";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";

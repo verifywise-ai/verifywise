@@ -1,6 +1,6 @@
 import { useState, useMemo, memo, useCallback, useEffect, type ReactNode } from "react";
 import { Stack, IconButton, Box } from "@mui/material";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router";
 import { Search, Zap, WorkflowIcon, Package, ClipboardList } from "lucide-react";
 import { useAuth } from "../../../application/hooks/useAuth";
 import VWTooltip from "../VWTooltip";

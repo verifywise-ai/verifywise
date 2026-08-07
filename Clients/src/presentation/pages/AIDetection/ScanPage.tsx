@@ -30,7 +30,7 @@ import {
   Webhook,
   ShieldAlert,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import Field from "../../components/Inputs/Field";
 import Toggle from "../../components/Inputs/Toggle";
 import InfoBox from "../../components/InfoBox";

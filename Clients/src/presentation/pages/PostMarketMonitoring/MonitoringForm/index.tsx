@@ -17,7 +17,7 @@ import {
   CircularProgress,
   useTheme,
 } from "@mui/material";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router";
 import { AlertTriangle, CheckCircle, Clock, Flag } from "lucide-react";
 import { PageBreadcrumbs } from "../../../components/breadcrumbs/PageBreadcrumbs";
 import { CustomizableButton } from "../../../components/button/customizable-button";

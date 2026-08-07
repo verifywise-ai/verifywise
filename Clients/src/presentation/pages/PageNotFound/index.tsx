@@ -1,7 +1,7 @@
 import { ReactComponent as Background } from "../../assets/imgs/background-grid.svg";
 import { ArrowLeft as LeftArrowLong } from "lucide-react";
 import { Typography, Stack, useTheme } from "@mui/material";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 
 function PageNotFound() {
   const theme = useTheme();

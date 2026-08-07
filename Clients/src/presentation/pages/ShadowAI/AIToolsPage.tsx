@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router";
 import { usePromoteFromShadowAi } from "../../../application/hooks/useAiApps";
 import {
   Stack,
