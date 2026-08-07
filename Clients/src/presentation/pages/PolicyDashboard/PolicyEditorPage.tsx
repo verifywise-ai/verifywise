@@ -216,9 +216,14 @@ export default function PolicyEditorPage() {
   }, [id]);
 
   // ── Populate form from policy/template ────────────────────────────
+  // Tracks which policy id's content has been seeded into formData, so a
+  // post-save setPolicy() (same id, new object) refreshes metadata but does NOT
+  // clobber formData.content — the editor owns content and holds the live value.
+  const seededContentPolicyId = useRef<number | null>(null);
   useEffect(() => {
     if (policy) {
-      setFormData({
+      const isNewPolicyIdentity = seededContentPolicyId.current !== policy.id;
+      setFormData((prev) => ({
         title: policy.title || "",
         status: policy.status || "Draft",
         tags: policy.tags || [],
@@ -234,8 +239,11 @@ export default function PolicyEditorPage() {
               .map((i) => users.find((u) => u.id === i))
               .filter((u): u is User => u !== undefined)
           : [],
-        content: policy.content_html || "",
-      });
+        // Seed content only when a different policy loads; on same-policy churn
+        // (e.g. post-save) keep the live editor value already in formData.
+        content: isNewPolicyIdentity ? policy.content_html || "" : prev.content,
+      }));
+      seededContentPolicyId.current = policy.id ?? null;
     } else if (template) {
       setFormData((prev) => ({
         ...prev,

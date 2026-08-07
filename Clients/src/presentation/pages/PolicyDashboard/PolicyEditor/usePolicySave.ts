@@ -26,10 +26,11 @@ export interface UsePolicySaveParams {
  * custom-fields flush, post-create navigation, and the save-related UI state
  * (isSaving, saveSuccess, serverErrors, validationSnackbar).
  *
- * On success the server-persisted entity (including `status`,
- * `last_updated_at`, and the server-sanitized `content_html`) is written back
- * into local `policy` state so the UI reflects what was actually persisted,
- * without a refetch.
+ * On success the server-persisted metadata (`status`, `last_updated_at`, etc.)
+ * is written back into local `policy` state so the UI reflects what was
+ * actually persisted, without a refetch. The existing `content_html` is
+ * deliberately preserved rather than adopting the server's copy — see the
+ * comment at the setPolicy call for why (it would rebuild the editor).
  */
 export function usePolicySave({
   isNew,
@@ -94,9 +95,20 @@ export function usePolicySave({
         });
       }
 
-      // Reflect the server-persisted entity (status, last_updated_at, and the
-      // server-sanitized content_html) in local state without a refetch.
-      setPolicy(savedPolicy);
+      // Reflect the server-persisted metadata (status, last_updated_at, etc.)
+      // in local state without a refetch. Deliberately KEEP the existing
+      // content_html rather than adopting savedPolicy.content_html: that field
+      // seeds `initialContent`, the sole dep of the TipTap `useEditor([...])`,
+      // so overwriting it with the server's (re-serialized/sanitized) HTML
+      // changes the dep and tears down + rebuilds the editor on every save —
+      // resetting cursor, selection, scroll and undo history, and dropping any
+      // edits made while the save was in flight. The live editor already holds
+      // the authoritative content, so we preserve it here.
+      setPolicy((prev) =>
+        prev
+          ? ({ ...savedPolicy, content_html: prev.content_html } as PolicyManagerModel)
+          : savedPolicy,
+      );
 
       // Flush any locally-staged custom field changes (create OR update).
       let cfFlushFailed = false;
