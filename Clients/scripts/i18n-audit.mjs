@@ -55,8 +55,8 @@ function loadDict(lang) {
   // Without handling all three, hundreds of dictionary entries silently
   // disappear from the audit's view whenever a formatter changes the file.
   const pairRe =
-    /(?:"((?:[^"\\]|\\.)+)"|'((?:[^'\\]|\\.)+)'|([A-Za-z_$][\w$]*))\s*:\s*(?:"((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)')/g;
-  for (const m of block[1].matchAll(pairRe)) {
+    /(?:"((?:[^"\\]|\\.)+)"|'((?:[^'\\]|\\.)+)'|([A-Za-z_$][\w$]*))\s*:\s*(?:\n\s*)?(?:"((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)')/g;
+  for (const m of block[2].matchAll(pairRe)) {
     // Unescape: \" → ", \' → ', \\ → \
     const raw = m[1] ?? m[2] ?? m[3];
     const key = raw.replace(/\\(["'\\])/g, "$1");
