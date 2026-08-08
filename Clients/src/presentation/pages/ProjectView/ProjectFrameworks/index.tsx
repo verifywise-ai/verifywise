@@ -60,9 +60,12 @@ const ProjectFrameworks = ({
   triggerRefresh?: (isTrigger: boolean, toastMessage?: string) => void;
   initialFrameworkId: number;
 }) => {
+  // Stable reference — avoids re-triggering useFrameworks memo + downstream
+  // re-renders on every parent render.
+  const projectFrameworkList = useMemo(() => project.framework ?? [], [project.framework]);
   const { filteredFrameworks, loading, error, refreshFilteredFrameworks, allFrameworks } =
     useFrameworks({
-      listOfFrameworks: project.framework,
+      listOfFrameworks: projectFrameworkList,
     });
   const [selectedFrameworkId, setSelectedFrameworkId] = useState<number>(initialFrameworkId);
   const [selectedFramework, setSelectedFramework] = useState<number>(0);

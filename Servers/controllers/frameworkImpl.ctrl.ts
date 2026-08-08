@@ -243,15 +243,6 @@ export async function updateImpl(req: RequestWithFile, res: Response): Promise<a
     );
     logger.debug(`[fw] updateImpl → updated status=${(updated as any)?.status} risks=${((updated as any)?.risks || []).length}`);
 
-    await sequelize.query(
-      `UPDATE projects SET updated_at = NOW()
-        WHERE organization_id = :organizationId AND id = :id;`,
-      {
-        replacements: { organizationId: req.organizationId!, id: context.project_id },
-        transaction,
-      },
-    );
-
     await transaction.commit();
 
     await logSuccess({

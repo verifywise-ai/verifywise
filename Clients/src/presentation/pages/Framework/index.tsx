@@ -196,9 +196,15 @@ const Framework = () => {
     }
   };
 
-  // Fetch all frameworks
+  // Stable reference for the frameworks list — otherwise every render
+  // hands useFrameworks a fresh `[]` (or a new derived array) and the
+  // downstream memo recomputes, cascading re-renders + duplicate fetches.
+  const orgFrameworkList = useMemo(
+    () => organizationalProject?.framework ?? [],
+    [organizationalProject?.framework],
+  );
   const { allFrameworks, loading, error, refreshFilteredFrameworks } = useFrameworks({
-    listOfFrameworks: organizationalProject?.framework || [], // Use organizational project's frameworks
+    listOfFrameworks: orgFrameworkList,
   });
 
   // Only show frameworks that are actually assigned to the organizational project

@@ -197,6 +197,68 @@ const FrameworkDashboard = ({ organizationalProject, filteredFrameworks }: Dashb
 
       setLoading(true);
       try {
+        // NIST AI RMF endpoints are org-scoped (no framework/project id in the URL).
+        // Fetch once up front so we don't fan out 5 calls per framework in the
+        // .map() below (and again on every effect re-run).
+        const hasNISTAIRMF = filteredFrameworks.some((fw) =>
+          fw.name.toLowerCase().includes("nist ai rmf"),
+        );
+        let sharedNistProgress: { totalSubcategories: number; doneSubcategories: number } | undefined;
+        let sharedNistProgressByFunction: FrameworkData["nistProgressByFunction"];
+        let sharedNistAssignments: { totalSubcategories: number; assignedSubcategories: number } | undefined;
+        let sharedNistAssignmentsByFunction: FrameworkData["nistAssignmentsByFunction"];
+        let sharedNistStatusBreakdown: FrameworkData["nistStatusBreakdown"];
+        if (hasNISTAIRMF) {
+          const [progressRes, progressByFunctionRes, assignmentsRes, assignmentsByFunctionRes, statusRes] =
+            await Promise.all([
+              getEntityById({ routeUrl: `/nist-ai-rmf/progress` }).catch((e) => {
+                if (!abortController.signal.aborted) console.error("NIST progress:", e);
+                return undefined;
+              }),
+              getEntityById({ routeUrl: `/nist-ai-rmf/progress-by-function` }).catch((e) => {
+                if (!abortController.signal.aborted) console.error("NIST progress-by-function:", e);
+                return undefined;
+              }),
+              getEntityById({ routeUrl: `/nist-ai-rmf/assignments` }).catch((e) => {
+                if (!abortController.signal.aborted) console.error("NIST assignments:", e);
+                return undefined;
+              }),
+              getEntityById({ routeUrl: `/nist-ai-rmf/assignments-by-function` }).catch((e) => {
+                if (!abortController.signal.aborted) console.error("NIST assignments-by-function:", e);
+                return undefined;
+              }),
+              getEntityById({ routeUrl: `/nist-ai-rmf/status-breakdown` }).catch((e) => {
+                if (!abortController.signal.aborted) console.error("NIST status-breakdown:", e);
+                return undefined;
+              }),
+            ]);
+          sharedNistProgress = progressRes?.data
+            ? {
+                totalSubcategories: progressRes.data.totalSubcategories || 0,
+                doneSubcategories: progressRes.data.doneSubcategories || 0,
+              }
+            : { totalSubcategories: 0, doneSubcategories: 0 };
+          sharedNistProgressByFunction = progressByFunctionRes?.data;
+          sharedNistAssignments = assignmentsRes?.data
+            ? {
+                totalSubcategories: assignmentsRes.data.totalSubcategories || 0,
+                assignedSubcategories: assignmentsRes.data.assignedSubcategories || 0,
+              }
+            : { totalSubcategories: 0, assignedSubcategories: 0 };
+          sharedNistAssignmentsByFunction = assignmentsByFunctionRes?.data;
+          sharedNistStatusBreakdown = statusRes?.data
+            ? {
+                notStarted: statusRes.data.notStarted || 0,
+                draft: statusRes.data.draft || 0,
+                inProgress: statusRes.data.inProgress || 0,
+                awaitingReview: statusRes.data.awaitingReview || 0,
+                awaitingApproval: statusRes.data.awaitingApproval || 0,
+                implemented: statusRes.data.implemented || 0,
+                needsRework: statusRes.data.needsRework || 0,
+              }
+            : undefined;
+        }
+
         const dataPromises = filteredFrameworks.map(async (framework) => {
           // Get project framework ID
           const projectFramework = organizationalProject.framework?.find(
@@ -217,87 +279,12 @@ const FrameworkDashboard = ({ organizationalProject, filteredFrameworks }: Dashb
           let genericProgress, genericAssignments, genericStatusBreakdown;
 
           if (isNISTAIRMF) {
-            // Fetch NIST AI RMF data
-            try {
-              const progressRes = await getEntityById({
-                routeUrl: `/nist-ai-rmf/progress`,
-              });
-              if (progressRes?.data) {
-                nistProgress = {
-                  totalSubcategories: progressRes.data.totalSubcategories || 0,
-                  doneSubcategories: progressRes.data.doneSubcategories || 0,
-                };
-              }
-            } catch (error) {
-              if (!abortController.signal.aborted) {
-                console.error(`Error fetching NIST AI RMF progress:`, error);
-              }
-              nistProgress = { totalSubcategories: 0, doneSubcategories: 0 };
-            }
-
-            try {
-              const progressByFunctionRes = await getEntityById({
-                routeUrl: `/nist-ai-rmf/progress-by-function`,
-              });
-              if (progressByFunctionRes?.data) {
-                nistProgressByFunction = progressByFunctionRes.data;
-              }
-            } catch (error) {
-              if (!abortController.signal.aborted) {
-                console.error(`Error fetching NIST AI RMF progress by function:`, error);
-              }
-            }
-
-            try {
-              const assignmentsRes = await getEntityById({
-                routeUrl: `/nist-ai-rmf/assignments`,
-              });
-              if (assignmentsRes?.data) {
-                nistAssignments = {
-                  totalSubcategories: assignmentsRes.data.totalSubcategories || 0,
-                  assignedSubcategories: assignmentsRes.data.assignedSubcategories || 0,
-                };
-              }
-            } catch (error) {
-              if (!abortController.signal.aborted) {
-                console.error(`Error fetching NIST AI RMF assignments:`, error);
-              }
-              nistAssignments = { totalSubcategories: 0, assignedSubcategories: 0 };
-            }
-
-            try {
-              const assignmentsByFunctionRes = await getEntityById({
-                routeUrl: `/nist-ai-rmf/assignments-by-function`,
-              });
-              if (assignmentsByFunctionRes?.data) {
-                nistAssignmentsByFunction = assignmentsByFunctionRes.data;
-              }
-            } catch (error) {
-              if (!abortController.signal.aborted) {
-                console.error(`Error fetching NIST AI RMF assignments by function:`, error);
-              }
-            }
-
-            try {
-              const statusRes = await getEntityById({
-                routeUrl: `/nist-ai-rmf/status-breakdown`,
-              });
-              if (statusRes?.data) {
-                nistStatusBreakdown = {
-                  notStarted: statusRes.data.notStarted || 0,
-                  draft: statusRes.data.draft || 0,
-                  inProgress: statusRes.data.inProgress || 0,
-                  awaitingReview: statusRes.data.awaitingReview || 0,
-                  awaitingApproval: statusRes.data.awaitingApproval || 0,
-                  implemented: statusRes.data.implemented || 0,
-                  needsRework: statusRes.data.needsRework || 0,
-                };
-              }
-            } catch (error) {
-              if (!abortController.signal.aborted) {
-                console.error(`Error fetching NIST AI RMF status breakdown:`, error);
-              }
-            }
+            // Reuse the org-scoped NIST responses fetched once above.
+            nistProgress = sharedNistProgress;
+            nistProgressByFunction = sharedNistProgressByFunction;
+            nistAssignments = sharedNistAssignments;
+            nistAssignmentsByFunction = sharedNistAssignmentsByFunction;
+            nistStatusBreakdown = sharedNistStatusBreakdown;
           } else if (isISO27001) {
             // Fetch ISO 27001 data
             try {

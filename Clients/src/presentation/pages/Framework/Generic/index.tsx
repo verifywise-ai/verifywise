@@ -92,6 +92,7 @@ const STATUS_OPTIONS = [
   { label: "Awaiting review", value: "Awaiting review" },
   { label: "Awaiting approval", value: "Awaiting approval" },
   { label: "Implemented", value: "Implemented" },
+  { label: "Audited", value: "Audited" },
   { label: "Needs rework", value: "Needs rework" },
 ];
 
@@ -247,14 +248,39 @@ const GenericFramework = ({
       userId: userId || 1,
     });
     if (success) {
+      // Patch only the changed row in local state. Avoids the whole-tree
+      // refetch (and cascading re-render) that setRefreshTrigger would cause.
+      const targetImplId = node.impl_id;
+      setData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          tree: prev.tree.map((l1) => ({
+            ...l1,
+            children: (l1.children ?? []).map((l2) => {
+              if (level === "l2" && l2.impl_id === targetImplId) {
+                return { ...l2, status: newStatus };
+              }
+              if (level === "l3" && l2.children?.length) {
+                return {
+                  ...l2,
+                  children: l2.children.map((l3) =>
+                    l3.impl_id === targetImplId ? { ...l3, status: newStatus } : l3,
+                  ),
+                };
+              }
+              return l2;
+            }),
+          })),
+        };
+      });
       handleAlert({
         variant: "success",
         body: "Status updated successfully",
         setAlert,
       });
-      setFlashingRowId(node.impl_id);
+      setFlashingRowId(targetImplId);
       setTimeout(() => setFlashingRowId(null), 2000);
-      setRefreshTrigger((prev) => prev + 1);
     } else {
       handleAlert({
         variant: "error",
