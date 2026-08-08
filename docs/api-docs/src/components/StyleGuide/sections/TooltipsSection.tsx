@@ -27,7 +27,7 @@ const MockTooltip: React.FC<MockTooltipProps> = ({ children, title, content }) =
   return (
     <ClickAwayListener onClickAway={handleClose}>
       <Box sx={{ display: "inline-block" }}>
-        {React.cloneElement(children, {
+        {React.cloneElement(children as React.ReactElement<any>, {
           onMouseEnter: handleMouseEnter,
           onMouseLeave: () => {}, // Keep open on child hover out
         })}

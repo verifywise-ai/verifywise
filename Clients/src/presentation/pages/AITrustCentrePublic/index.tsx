@@ -14,7 +14,7 @@ import {
 } from "./style";
 import AITrustCentreHeader from "./Components/Header/AITrustCentreHeader";
 import axios from "axios";
-import { useParams } from "react-router-dom";
+import { useParams } from "react-router";
 import { ENV_VARs } from "../../../../env.vars";
 
 const AITrustCentrePublic: React.FC = () => {

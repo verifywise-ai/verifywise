@@ -30,6 +30,7 @@ vi.mock("../../../i18n/translations", () => ({
   },
 }));
 
+import { CanceledError, type AxiosError } from "axios";
 import CustomAxios, { showAlert, setShowAlertCallback } from "../customAxios";
 import { store } from "../../../application/redux/store";
 import { getLanguage } from "../../../i18n/domTranslator";
@@ -172,6 +173,35 @@ describe("customAxios", () => {
         config: { url: "/test" },
         response: { status: 400, data: { message: "Bad request" } },
         message: "Bad Request",
+      };
+
+      await expect(rejected(error)).rejects.toEqual(error);
+      expect(callback).not.toHaveBeenCalled();
+    });
+
+    // Hooks that abort in-flight requests on cleanup (the assessment hooks do)
+    // reject with a CanceledError that carries no response. That is the caller
+    // walking away, not a failure — it must not reach the user as an error toast.
+    it("does not show a toast when the request was canceled", async () => {
+      const callback = vi.fn();
+      setShowAlertCallback(callback);
+
+      const error = new CanceledError("canceled");
+      (error as AxiosError).config = { url: "/test" } as AxiosError["config"];
+
+      await expect(rejected(error)).rejects.toEqual(error);
+      expect(callback).not.toHaveBeenCalled();
+    });
+
+    it("does not show a toast when the request was aborted via AbortSignal", async () => {
+      const callback = vi.fn();
+      setShowAlertCallback(callback);
+
+      const error = {
+        config: { url: "/test" },
+        response: undefined,
+        code: "ERR_CANCELED",
+        message: "canceled",
       };
 
       await expect(rejected(error)).rejects.toEqual(error);

@@ -3,7 +3,7 @@ import { renderHook, act } from "@testing-library/react";
 
 const mockNavigate = vi.fn();
 
-vi.mock("react-router-dom", () => ({
+vi.mock("react-router", () => ({
   useNavigate: () => mockNavigate,
   createSearchParams: (params: Record<string, string>) => new URLSearchParams(params),
 }));

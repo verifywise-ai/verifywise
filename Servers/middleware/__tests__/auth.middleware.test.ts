@@ -1,6 +1,9 @@
 import { describe, it, expect, jest, beforeEach, afterEach } from "@jest/globals";
 import { Request, Response } from "express";
 
+// The token hashing module requires a server-side HMAC secret at load time.
+process.env.API_TOKEN_HASH_SECRET = "test-api-token-hash-secret";
+
 // Mock dependencies before importing the module under test
 jest.mock("../../utils/jwt.utils", () => ({
   getTokenPayload: jest.fn(),

@@ -39,7 +39,9 @@ const evaluateEvidence = async (
     const [rows] = await sequelize.query(
       `SELECT
          COUNT(DISTINCT fel.file_id) AS evidence_count,
-         COALESCE(AVG(eaa.overall_quality_score), 0) AS avg_quality,
+         COALESCE(AVG(CASE eaa.overall_quality_grade
+           WHEN 'A' THEN 95 WHEN 'B' THEN 80 WHEN 'C' THEN 65
+           WHEN 'D' THEN 45 WHEN 'F' THEN 20 END), 0) AS avg_quality,
          EXTRACT(DAY FROM NOW() - MAX(eaa.analyzed_at))::INT AS days_since_latest
        FROM file_entity_links fel
        LEFT JOIN evidence_ai_analysis eaa
@@ -196,9 +198,8 @@ const generateRecommendations = async (
     const [weakest] = await sequelize.query(
       `SELECT
          control_id, overall_score, readiness_level,
-         evidence_quality_score, evidence_count_score,
-         evidence_recency_score, task_completion_score,
-         risk_mitigation_score, recommendations
+         requirements_score, evidence_quality_score,
+         evidence_count_score, evidence_recency_score, recommendations
        FROM control_readiness_scores
        WHERE framework_type = :frameworkType
          AND organization_id = :organizationId
@@ -219,6 +220,13 @@ const generateRecommendations = async (
     const recommendations = controls.map((ctrl) => {
       const actions: string[] = [];
 
+      // requirements_score carries half the control score, so an incomplete
+      // control has to say so before any evidence advice — otherwise a control
+      // sitting at 50/100 purely on unfinished requirements is told to
+      // "continue maintaining current compliance posture".
+      if ((ctrl.requirements_score ?? 100) < 100) {
+        actions.push("Complete the remaining requirements for this control");
+      }
       if ((ctrl.evidence_count_score || 0) < 30) {
         actions.push("Upload evidence documents for this control");
       }
@@ -227,12 +235,6 @@ const generateRecommendations = async (
       }
       if ((ctrl.evidence_recency_score || 0) < 40) {
         actions.push("Update or replace outdated evidence with recent documents");
-      }
-      if ((ctrl.task_completion_score || 0) < 50) {
-        actions.push("Complete pending tasks linked to this control");
-      }
-      if ((ctrl.risk_mitigation_score || 0) < 50) {
-        actions.push("Address unmitigated risks linked to this control");
       }
       if (actions.length === 0) {
         actions.push("Continue maintaining current compliance posture");
@@ -263,12 +265,15 @@ const generateRecommendations = async (
 };
 
 function getWeakestDimension(ctrl: any): string {
+  // Ordered by scoring weight, so an exact tie resolves to the dimension that
+  // moves the overall score most. A NULL requirements_score (a row written
+  // before the column existed) defaults to 100 rather than 0 — an unknown
+  // dimension must not win "weakest" unconditionally.
   const dims: Record<string, number> = {
+    requirements: ctrl.requirements_score ?? 100,
     evidence_quality: ctrl.evidence_quality_score || 0,
     evidence_count: ctrl.evidence_count_score || 0,
     evidence_recency: ctrl.evidence_recency_score || 0,
-    task_completion: ctrl.task_completion_score || 0,
-    risk_mitigation: ctrl.risk_mitigation_score || 0,
   };
 
   let min = Infinity;

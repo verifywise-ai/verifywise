@@ -3,7 +3,7 @@ import React, { useState, useEffect, useContext, useMemo, useCallback, useRef } 
 import { useQueryClient } from "@tanstack/react-query";
 import { Box, Stack, Typography, Fade } from "@mui/material";
 import TabContext from "@mui/lab/TabContext";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 import { CirclePlus as AddCircleIcon, Flag } from "lucide-react";
 import { SearchBox } from "../../components/Search";
 import TasksTable from "../../components/Table/TasksTable";

@@ -1,7 +1,10 @@
 import { useMemo } from "react";
 import { Box, Typography, Tooltip, Stack } from "@mui/material";
 import { ShieldCheck, ShieldAlert, ShieldX, ShieldOff } from "lucide-react";
-import { status, accent, text as textColors, background } from "../../themes/palette";
+import { status, text as textColors, background } from "../../themes/palette";
+import Chip from "../Chip";
+import CustomizableSkeleton from "../Skeletons";
+import { EmptyState } from "../EmptyState";
 import type { ReadinessLevel, ControlReadinessScore } from "../../../domain/interfaces/i.readiness";
 
 interface ReadinessHeatmapProps {
@@ -19,9 +22,9 @@ const LEVEL_CONFIG: Record<
   }
 > = {
   ready: { label: "Ready", colors: status.success, Icon: ShieldCheck },
-  needs_work: { label: "Needs Work", colors: accent.primary, Icon: ShieldAlert },
-  at_risk: { label: "At Risk", colors: status.warning, Icon: ShieldX },
-  not_started: { label: "Not Started", colors: status.error, Icon: ShieldOff },
+  needs_work: { label: "Needs work", colors: status.info, Icon: ShieldAlert },
+  at_risk: { label: "At risk", colors: status.warning, Icon: ShieldX },
+  not_started: { label: "Not started", colors: status.error, Icon: ShieldOff },
 };
 
 const LEVELS: ReadinessLevel[] = ["ready", "needs_work", "at_risk", "not_started"];
@@ -58,36 +61,21 @@ export default function ReadinessHeatmap({
 
   if (isLoading) {
     return (
-      <Box
-        sx={{
-          height: FIXED_HEIGHT,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <Typography sx={{ fontSize: 13, color: textColors.muted }}>Loading heatmap...</Typography>
+      <Box sx={{ height: FIXED_HEIGHT }}>
+        <CustomizableSkeleton variant="rounded" width="100%" height={FIXED_HEIGHT - 16} />
       </Box>
     );
   }
 
   if (!controls || controls.length === 0) {
     return (
-      <Box
-        sx={{
-          height: FIXED_HEIGHT,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          p: 3,
-          textAlign: "center",
-          backgroundColor: background.accent,
-          borderRadius: 2,
-        }}
-      >
-        <Typography sx={{ fontSize: 13, color: textColors.tertiary }}>
-          No readiness data. Run a calculation first.
-        </Typography>
+      <Box sx={{ height: FIXED_HEIGHT }}>
+        <EmptyState
+          icon={ShieldCheck}
+          message="No readiness data. Run a calculation first."
+          fillContainer
+          showBorder={false}
+        />
       </Box>
     );
   }
@@ -97,11 +85,12 @@ export default function ReadinessHeatmap({
       {/* Header */}
       <Typography
         sx={{
-          fontSize: 15,
+          fontSize: 16,
           fontWeight: 600,
           color: textColors.primary,
           fontFamily: "'Red Hat Display', 'Geist', sans-serif",
-          mb: 1,
+          lineHeight: 1.4,
+          mb: "12px",
           flexShrink: 0,
         }}
       >
@@ -109,37 +98,19 @@ export default function ReadinessHeatmap({
       </Typography>
 
       {/* Legend with counts */}
-      <Stack direction="row" spacing={2.5} sx={{ mb: 1, flexShrink: 0 }}>
+      <Stack direction="row" sx={{ gap: "8px", mb: "12px", flexWrap: "wrap", flexShrink: 0 }}>
         {LEVELS.map((level) => {
           const { label, colors, Icon } = LEVEL_CONFIG[level];
-          const count = counts[level];
           return (
-            <Stack key={level} direction="row" alignItems="center" spacing={0.75}>
-              <Box
-                sx={{
-                  width: 20,
-                  height: 20,
-                  borderRadius: "4px",
-                  backgroundColor: colors.bg,
-                  border: `1px solid ${colors.border}`,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <Icon size={11} style={{ color: colors.text }} />
-              </Box>
-              <Typography sx={{ fontSize: 11, color: textColors.secondary }}>{label}</Typography>
-              <Typography
-                sx={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  color: count > 0 ? colors.text : textColors.muted,
-                }}
-              >
-                {count}
-              </Typography>
-            </Stack>
+            <Chip
+              key={level}
+              label={`${label} ${counts[level]}`}
+              icon={<Icon size={14} />}
+              size="small"
+              uppercase={false}
+              backgroundColor={colors.bg}
+              textColor={colors.text}
+            />
           );
         })}
       </Stack>
@@ -150,17 +121,17 @@ export default function ReadinessHeatmap({
           "flex": 1,
           "overflowY": "auto",
           "overflowX": "hidden",
-          "pr": 0.5,
+          "pr": "4px",
           "&::-webkit-scrollbar": { width: 4 },
           "&::-webkit-scrollbar-track": { backgroundColor: "transparent" },
           "&::-webkit-scrollbar-thumb": {
             "backgroundColor": background.hover,
-            "borderRadius": 2,
+            "borderRadius": "4px",
             "&:hover": { backgroundColor: textColors.muted },
           },
         }}
       >
-        <Box sx={{ display: "flex", flexWrap: "wrap", gap: "6px" }}>
+        <Box sx={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
           {controls.map((ctrl) => {
             const { colors, label } = LEVEL_CONFIG[ctrl.readiness_level];
             return (
@@ -168,10 +139,10 @@ export default function ReadinessHeatmap({
                 key={ctrl.control_id}
                 title={
                   <Box>
-                    <Typography sx={{ fontSize: 12, fontWeight: 600 }}>
+                    <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
                       Control {ctrl.control_id}
                     </Typography>
-                    <Typography sx={{ fontSize: 11, mt: 0.25 }}>
+                    <Typography sx={{ fontSize: 11, mt: "4px" }}>
                       Score: {ctrl.overall_score}/100 ({label})
                     </Typography>
                   </Box>
@@ -183,26 +154,23 @@ export default function ReadinessHeatmap({
                   sx={{
                     "width": 36,
                     "height": 36,
-                    "borderRadius": "6px",
+                    "borderRadius": "4px",
                     "backgroundColor": colors.bg,
-                    "border": `1.5px solid ${colors.border}`,
+                    "border": `1px solid ${colors.border}`,
                     "display": "flex",
                     "alignItems": "center",
                     "justifyContent": "center",
                     "cursor": "default",
-                    "transition": "all 0.2s ease",
+                    "transition": "border-color 0.2s ease",
                     "&:hover": {
-                      transform: "scale(1.12)",
-                      boxShadow: `0 2px 8px ${colors.border}`,
                       borderColor: colors.text,
-                      zIndex: 1,
                     },
                   }}
                 >
                   <Typography
                     sx={{
                       fontSize: 11,
-                      fontWeight: 700,
+                      fontWeight: 500,
                       color: colors.text,
                       lineHeight: 1,
                     }}
@@ -217,7 +185,7 @@ export default function ReadinessHeatmap({
       </Box>
 
       {/* Footer */}
-      <Typography sx={{ mt: 1.5, fontSize: 11, color: textColors.muted, flexShrink: 0 }}>
+      <Typography sx={{ mt: "12px", fontSize: 11, color: textColors.accent, flexShrink: 0 }}>
         {controls.length} controls evaluated
       </Typography>
     </Box>

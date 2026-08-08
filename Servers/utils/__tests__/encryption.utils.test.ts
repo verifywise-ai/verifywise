@@ -1,15 +1,33 @@
 import { describe, it, expect } from "@jest/globals";
+import crypto from "crypto";
 import { encrypt, decrypt, maskApiKey } from "../encryption.utils";
+
+const ENCRYPTION_KEY =
+  process.env.ENCRYPTION_KEY || "default-key-change-this-in-production-32chars!!";
+
+function deriveKey(): Buffer {
+  return Buffer.from(ENCRYPTION_KEY.padEnd(32, "0").slice(0, 32));
+}
+
+function legacyEncrypt(text: string): string {
+  const key = deriveKey();
+  const iv = crypto.randomBytes(16);
+  const cipher = crypto.createCipheriv("aes-256-cbc", key, iv);
+  let encrypted = cipher.update(text, "utf8", "hex");
+  encrypted += cipher.final("hex");
+  return `${iv.toString("hex")}:${encrypted}`;
+}
 
 describe("encryption.utils", () => {
   describe("encrypt", () => {
-    it("should encrypt text and return iv:encryptedData format", () => {
+    it("should encrypt text and return iv:authTag:encryptedData format", () => {
       const encrypted = encrypt("hello world");
       expect(encrypted).toContain(":");
       const parts = encrypted.split(":");
-      expect(parts).toHaveLength(2);
-      expect(parts[0]).toHaveLength(32); // IV hex length = 16 bytes * 2
-      expect(parts[1]).toBeTruthy();
+      expect(parts).toHaveLength(3);
+      expect(parts[0]).toHaveLength(24); // GCM IV hex length = 12 bytes * 2
+      expect(parts[1]).toHaveLength(32); // auth tag hex length = 16 bytes * 2
+      expect(parts[2]).toBeTruthy();
     });
 
     it("should throw when text is empty", () => {
@@ -24,9 +42,16 @@ describe("encryption.utils", () => {
   });
 
   describe("decrypt", () => {
-    it("should decrypt encrypted text back to original", () => {
+    it("should decrypt GCM-encrypted text back to original", () => {
       const original = "my secret message";
       const encrypted = encrypt(original);
+      const decrypted = decrypt(encrypted);
+      expect(decrypted).toBe(original);
+    });
+
+    it("should decrypt legacy CBC-encrypted text back to original", () => {
+      const original = "legacy secret message";
+      const encrypted = legacyEncrypt(original);
       const decrypted = decrypt(encrypted);
       expect(decrypted).toBe(original);
     });
@@ -45,8 +70,16 @@ describe("encryption.utils", () => {
       expect(() => decrypt("invalid-no-colon")).toThrow("Invalid encrypted text format");
     });
 
-    it("should throw for invalid format with too many colons", () => {
-      expect(() => decrypt("iv:data:extra")).toThrow("Invalid encrypted text format");
+    it("should throw for invalid format with unsupported part count", () => {
+      expect(() => decrypt("iv:data:extra:more")).toThrow("Invalid encrypted text format");
+    });
+
+    it("should throw for tampered GCM auth tag", () => {
+      const original = "tamper test";
+      const encrypted = encrypt(original);
+      const [iv, tag, ct] = encrypted.split(":");
+      const tamperedTag = (parseInt(tag[0], 16) ^ 1).toString(16) + tag.slice(1);
+      expect(() => decrypt(`${iv}:${tamperedTag}:${ct}`)).toThrow();
     });
   });
 

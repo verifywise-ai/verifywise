@@ -6,7 +6,7 @@
  * It renders the plugin's UI via PluginSlot.
  */
 
-import { useParams } from "react-router-dom";
+import { useParams } from "react-router";
 import { PluginSlot } from "../../../components/PluginSlot";
 import { PLUGIN_SLOTS } from "../../../../domain/constants/pluginSlots";
 

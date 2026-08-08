@@ -17,8 +17,46 @@ const mockBulkState = vi.hoisted(() => ({
   count: 0,
 }));
 
+const mockTrigger = vi.hoisted(() => ({
+  mutate: vi.fn(),
+  mutateAsync: vi.fn().mockResolvedValue({}),
+  isPending: false,
+}));
+const mockQuality = vi.hoisted(() => ({ data: [] as any[] }));
+
+const mockLLMKeyStatus = vi.hoisted(() => ({
+  data: { hasKeys: true, keyCount: 1, providers: ["Anthropic"] } as any,
+  loading: false,
+  error: null as string | null,
+}));
+
 vi.mock("../../../../../application/hooks/useBulkSelection", () => ({
   useBulkSelection: () => mockBulkState,
+}));
+
+vi.mock("../../../../../application/hooks/useEvidenceAi", () => ({
+  useTriggerAnalysis: () => mockTrigger,
+  useQualityScores: () => mockQuality,
+}));
+
+vi.mock("../../../../../application/hooks/useLLMKeyStatus", () => ({
+  useLLMKeyStatus: () => ({
+    ...mockLLMKeyStatus,
+    hasKeys: mockLLMKeyStatus.loading || (mockLLMKeyStatus.data?.hasKeys ?? false),
+  }),
+}));
+
+vi.mock("../../../EvidenceAnalysisPanel", () => ({
+  default: () => <div data-testid="analysis-panel" />,
+}));
+
+vi.mock("../../../EvidenceQualityBadge", () => ({
+  default: ({ grade }: any) => <span data-testid="quality-badge">{grade}</span>,
+}));
+
+vi.mock("../../../Modals/StandardModal", () => ({
+  default: ({ isOpen, children }: any) =>
+    isOpen ? <div data-testid="analysis-modal">{children}</div> : null,
 }));
 
 vi.mock("../../../../../application/hooks/useBulkUpdateFiles", () => ({
@@ -233,7 +271,8 @@ const mockColumns: IColumn[] = [
   { id: 4, name: "Source" },
   { id: 5, name: "Version" },
   { id: 6, name: "Status" },
-  { id: 7, name: "Action" },
+  { id: 7, name: "Quality" },
+  { id: 8, name: "Action" },
 ];
 
 const mockFiles = [
@@ -286,6 +325,10 @@ describe("FileBasicTable", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     vi.spyOn(console, "warn").mockImplementation(() => {});
     setBulkSelected([]);
+    mockQuality.data = [];
+    mockTrigger.isPending = false;
+    mockLLMKeyStatus.data = { hasKeys: true, keyCount: 1, providers: ["Anthropic"] };
+    mockLLMKeyStatus.loading = false;
   });
 
   afterEach(() => {
@@ -728,5 +771,62 @@ describe("FileBasicTable", () => {
       />,
     );
     expect(screen.getByText("legacy-user")).toBeInTheDocument();
+  });
+
+  it("renders an Analyze with AI button per row", () => {
+    renderWithProviders(<FileBasicTable {...defaultProps} />);
+    const analyzeButtons = screen.getAllByRole("button", { name: /analyze with ai/i });
+    expect(analyzeButtons).toHaveLength(3);
+  });
+
+  it("triggers analysis with the numeric row id when analyze is clicked", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<FileBasicTable {...defaultProps} />);
+    const analyzeButtons = screen.getAllByRole("button", { name: /analyze with ai/i });
+    await user.click(analyzeButtons[0]);
+    expect(mockTrigger.mutate).toHaveBeenCalledWith(1);
+  });
+
+  it("renders a quality badge and opens the analysis modal when a grade exists", async () => {
+    mockQuality.data = [{ file_id: 1, overall_quality_grade: "B" }];
+    const user = userEvent.setup();
+    renderWithProviders(<FileBasicTable {...defaultProps} />);
+    const badge = screen.getByTestId("quality-badge");
+    expect(badge).toHaveTextContent("B");
+    await user.click(badge);
+    expect(screen.getByTestId("analysis-modal")).toBeInTheDocument();
+    expect(screen.getByTestId("analysis-panel")).toBeInTheDocument();
+  });
+
+  it("bulk analyze calls mutateAsync once per selected id", async () => {
+    setBulkSelected([1, 2]);
+    const user = userEvent.setup();
+    renderWithProviders(<FileBasicTable {...defaultProps} canRunBulkActions />);
+    await user.click(screen.getByTestId("bulk-action-analyze_ai"));
+    expect(mockTrigger.mutateAsync).toHaveBeenCalledWith(1);
+    expect(mockTrigger.mutateAsync).toHaveBeenCalledWith(2);
+  });
+
+  it("disables the per-row analyze button when no LLM key is configured", () => {
+    mockLLMKeyStatus.data = { hasKeys: false, keyCount: 0, providers: [] };
+    renderWithProviders(<FileBasicTable {...defaultProps} />);
+    const analyzeButtons = screen.getAllByRole("button", { name: /analyze with ai/i });
+    analyzeButtons.forEach((btn) => expect(btn).toBeDisabled());
+  });
+
+  it("disables the bulk analyze action when no LLM key is configured", () => {
+    mockLLMKeyStatus.data = { hasKeys: false, keyCount: 0, providers: [] };
+    renderWithProviders(<FileBasicTable {...defaultProps} canRunBulkActions />);
+    const bulkAction = screen.getByTestId("bulk-action-analyze_ai");
+    expect(bulkAction).toBeDisabled();
+  });
+
+  it("does not disable analyze buttons while LLM key status is still loading", () => {
+    mockLLMKeyStatus.data = null;
+    mockLLMKeyStatus.loading = true;
+    renderWithProviders(<FileBasicTable {...defaultProps} canRunBulkActions />);
+    const analyzeButtons = screen.getAllByRole("button", { name: /analyze with ai/i });
+    analyzeButtons.forEach((btn) => expect(btn).not.toBeDisabled());
+    expect(screen.getByTestId("bulk-action-analyze_ai")).not.toBeDisabled();
   });
 });

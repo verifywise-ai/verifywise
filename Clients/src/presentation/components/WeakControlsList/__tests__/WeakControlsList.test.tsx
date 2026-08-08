@@ -35,8 +35,8 @@ const mockControls = [
 
 describe("WeakControlsList", () => {
   it("renders loading state", () => {
-    renderWithProviders(<WeakControlsList controls={[]} isLoading />);
-    expect(screen.getByText("Loading...")).toBeInTheDocument();
+    const { container } = renderWithProviders(<WeakControlsList controls={[]} isLoading />);
+    expect(container.querySelector(".MuiSkeleton-root")).toBeInTheDocument();
   });
 
   it("renders empty state when controls is empty", () => {

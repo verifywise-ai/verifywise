@@ -1463,7 +1463,6 @@ export const previewFile = async (req: Request, res: Response): Promise<any> => 
       "image/svg+xml", // Note: SVG can contain scripts but browser should respect nosniff
       "text/plain",
       "text/csv",
-      "text/html", // Will be treated as plain text due to CSP
       "application/json",
       "application/xml",
       "text/xml",

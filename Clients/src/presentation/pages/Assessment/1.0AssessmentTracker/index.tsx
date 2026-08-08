@@ -24,7 +24,7 @@ import AssessmentSteps from "./AssessmentSteps";
 import { Project } from "../../../../domain/types/Project";
 import { Question } from "../../../../domain/types/Question";
 import { Subtopic } from "../../../../domain/types/Subtopic";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 import { brand, background } from "../../../themes/palette";
 
 const AssessmentTracker = ({

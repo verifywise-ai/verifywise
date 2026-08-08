@@ -1,0 +1,197 @@
+name: E2E Tests
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    paths:
+      - "Clients/**"
+      - "Servers/**"
+  workflow_dispatch:
+
+jobs:
+  e2e-tests:
+    name: Playwright E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: verifywise_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set up Node
+        uses: actions/setup-node@v6
+        with:
+          node-version: '20'
+
+      # ---- Backend setup ----
+      - name: Install backend dependencies
+        working-directory: Servers
+        run: npm ci --legacy-peer-deps
+
+      - name: Build backend
+        working-directory: Servers
+        run: npm run build
+
+      - name: Run migrations
+        working-directory: Servers
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: verifywise_test
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          # Required by the RLS runtime-role migration (rls-app-role.js), which
+          # fails closed without it. CI-only value; not a real credential.
+          DB_APP_PASSWORD: test-app-role-password-for-ci
+          SUPERADMIN_EMAIL: admin@verifywise-test.com
+          SUPERADMIN_PASSWORD: TestAdmin!Str0ng
+        run: npx sequelize db:migrate
+
+      - name: Seed test data
+        working-directory: Servers
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: verifywise_test
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+        run: node dist/scripts/seedTestData.js
+
+      # ---- AIGateway setup ----
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+
+      - name: Install AIGateway dependencies
+        working-directory: AIGateway
+        run: pip install -r requirements.txt
+
+      - name: Start AIGateway
+        working-directory: AIGateway/src
+        env:
+          AI_GATEWAY_PORT: 8100
+          AI_GATEWAY_INTERNAL_KEY: test-ai-gateway-key-for-e2e
+          REDIS_URL: redis://localhost:6379/0
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: verifywise_test
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          ENCRYPTION_KEY: test-encryption-key-32chars!!
+          EXPRESS_BACKEND_URL: http://localhost:3000
+        run: |
+          alembic upgrade head
+          uvicorn app:app --host 0.0.0.0 --port 8100 &
+          # Wait for AIGateway to be ready
+          for i in $(seq 1 30); do
+            curl -s http://localhost:8100/health && break
+            sleep 1
+          done
+
+      - name: Start backend
+        working-directory: Servers
+        env:
+          PORT: 3000
+          NODE_ENV: test
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: verifywise_test
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+          JWT_SECRET: test-jwt-secret-for-e2e
+          REFRESH_TOKEN_SECRET: test-refresh-secret-for-e2e
+          ENCRYPTION_KEY: test-encryption-key-32chars!!
+          MULTI_TENANCY_ENABLED: false
+          AI_GATEWAY_URL: http://localhost:8100
+          AI_GATEWAY_INTERNAL_KEY: test-ai-gateway-key-for-e2e
+        run: |
+          node dist/index.js &
+          # Wait for backend to be ready
+          for i in $(seq 1 30); do
+            curl -s http://localhost:3000/api/users/check/exists && break
+            sleep 1
+          done
+
+      # ---- Frontend setup ----
+      - name: Install frontend dependencies
+        working-directory: Clients
+        run: npm ci --legacy-peer-deps
+
+      - name: Install Playwright browsers
+        working-directory: Clients
+        run: npx playwright install --with-deps chromium
+
+      - name: Start frontend
+        working-directory: Clients
+        env:
+          VITE_APP_API_BASE_URL: http://localhost:3000
+        run: |
+          npm run dev:vite &
+          # Wait for frontend to be ready
+          for i in $(seq 1 30); do
+            curl -s http://localhost:5173 && break
+            sleep 1
+          done
+
+      # ---- Run E2E tests ----
+      - name: Run Playwright tests
+        working-directory: Clients
+        env:
+          E2E_BASE_URL: http://localhost:5173
+          # Must match the super-admin seeded by the migration step, otherwise
+          # global.setup logs in as a non-super-admin and the flow cannot create
+          # organizations. seedE2EAdmin (spawned by global.setup) also needs the
+          # DB_* vars to connect, since there is no Servers/.env in CI.
+          E2E_EMAIL: admin@verifywise-test.com
+          E2E_PASSWORD: TestAdmin!Str0ng
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: verifywise_test
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+        run: npx playwright test
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: Clients/playwright-report/
+          retention-days: 14
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-results
+          path: Clients/test-results/
+          retention-days: 7

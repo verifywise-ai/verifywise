@@ -16,6 +16,7 @@ import {
   notifyVirtualKeyBudgetExhausted,
   notifyApprovalPending,
 } from "../services/aiGateway/aiGatewayNotifications";
+import { getMonitoringConfig } from "../utils/monitoringConfig.utils";
 
 const router = Router();
 
@@ -92,6 +93,29 @@ router.post("/ai-gateway/notify", async (req: Request, res: Response) => {
     return res.status(200).json({ ok: true });
   } catch (error) {
     logger.error("Internal notification dispatch error:", error);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+/**
+ * GET /api/internal/observability-config
+ *
+ * Returns the instance-level observability config (including the auth_header
+ * secret, which is safe here because the route is guarded by the internal key).
+ * Python services (EvalServer, AIGateway) call this at startup to self-configure
+ * their OpenTelemetry exporters.
+ */
+router.get("/observability-config", async (_req: Request, res: Response) => {
+  try {
+    const config = await getMonitoringConfig();
+    return res.status(200).json({
+      enabled: config.enabled,
+      otlp_endpoint: config.otlp_endpoint,
+      deployment_name: config.deployment_name,
+      auth_header: config.auth_header,
+    });
+  } catch (error) {
+    logger.error("Internal observability-config error:", error);
     return res.status(500).json({ error: "Internal server error" });
   }
 });

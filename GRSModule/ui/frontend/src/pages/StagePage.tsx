@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link } from "react-router";
 import { useRunStatus, useStartRun, useStopRun, type RunRequest } from "../api/useRun";
 import { useProgress } from "../api/useProgress";
 import { STAGE_PARAMS } from "../constants/stageParams";

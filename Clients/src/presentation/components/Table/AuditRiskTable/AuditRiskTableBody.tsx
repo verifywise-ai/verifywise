@@ -19,7 +19,7 @@ const SelectorVertical = (props: SelectorVerticalProps) => <ChevronsUpDown size=
 import { paginationStyle, paginationDropdown, paginationSelect } from "../styles";
 import TablePaginationActions from "../../TablePagination";
 import Chip from "../../Chip";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 import { CustomizableButton } from "../../button/customizable-button";
 import { IAuditRiskTableBodyProps, ITypeRisk } from "../../../types/interfaces/i.table";
 

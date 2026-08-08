@@ -40,7 +40,7 @@ import StandardModal from "../../components/Modals/StandardModal";
 import { deleteProject } from "../../../application/repository/project.repository";
 import { FrameworkTypeEnum } from "../../components/Forms/ProjectForm/constants";
 import NoProject from "../../components/NoProject/NoProject";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import { ButtonToggle } from "../../components/button-toggle";
 import FrameworkDashboard from "./Dashboard";

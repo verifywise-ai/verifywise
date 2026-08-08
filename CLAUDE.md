@@ -1,6 +1,6 @@
 # VerifyWise - Development Guide
 
-> **Last Updated:** 2026-07-03
+> **Last Updated:** 2026-07-28
 
 This document contains cross-cutting rules for the VerifyWise codebase. Directory-scoped guides load automatically when working in each area:
 
@@ -175,6 +175,7 @@ Read the relevant file BEFORE implementing changes in that area:
 | Agent Control (AI Gateway native tool-call hook, file-write gating, approval, result capture, run correlation, multi-agent wiring) | `docs/technical/domains/agent-control.md` |
 | Agent Control integrator/developer docs (connect an agent, Claude Code + Cursor, generic contract, API ref) | `shared/user-guide-content/content/developers/` |
 | AI Trust Index | `docs/technical/domains/ai-trust-index.md` |
+| Readiness scoring (requirements + assessments + evidence) | `docs/technical/domains/readiness.md` |
 | Model Risk Management (MRM: bank model-risk governance — tiering, validation, findings, monitoring/ingestion, threshold eval, revalidation triggers, attestation; SR 26-2 / SS1/23 / OSFI E-23) | `docs/technical/domains/mrm.md` |
 | AI Detection | `docs/technical/domains/ai-detection.md` |
 | Risk management | `docs/technical/domains/risk-management.md` |
@@ -194,6 +195,7 @@ Read the relevant file BEFORE implementing changes in that area:
 | Post-market monitoring | `docs/technical/domains/post-market-monitoring.md` |
 | FRIA (Fundamental Rights Impact Assessment) | `docs/technical/domains/fria.md` |
 | Compliance frameworks | `docs/technical/domains/compliance-frameworks.md` |
+| Observability (OTel metrics + logs → Grafana/Prometheus/Loki) | `docs/technical/infrastructure/observability.md` |
 | Docker & deployment | `docs/deployment/PRODUCTION_DEPLOYMENT_GUIDE.md` |
 | Database schema | `docs/technical/architecture/database-schema.md` |
 | Authentication architecture | `docs/technical/architecture/authentication.md` |

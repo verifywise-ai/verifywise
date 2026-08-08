@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
-import { useParams, useNavigate, Navigate, useLocation } from "react-router-dom";
+import { useParams, useNavigate, Navigate, useLocation } from "react-router";
 import {
   Box,
   Stack,

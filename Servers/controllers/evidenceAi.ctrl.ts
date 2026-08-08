@@ -15,26 +15,43 @@ import { trackAIContent } from "../middleware/aiContentTracker.middleware";
 import { analyzeEvidence, type AnalyzerResult } from "../advisor/evidenceAnalyzer/analyzer.service";
 import { getLLMKeysWithKeyQuery, getLLMProviderUrl } from "../utils/llmKey.utils";
 import type { LLMProvider } from "../domain.layer/interfaces/i.llmKey";
+import type {
+  QualityGrade,
+  IQualityScore,
+  IQualityRationale,
+} from "../domain.layer/interfaces/i.evidenceAi";
 
 const fileName = "evidenceAi.ctrl.ts";
 
 /**
- * Heuristic fallback — used only when no LLM key is configured for the org
- * or the LLM call fails. Same scoring algorithm as v1 but tagged so the
- * UI can show "fallback" provenance.
+ * Why no grade was produced.
+ *
+ * analyzeFile turns an organization with no key away with a 400 long before
+ * the heuristic path, so "no LLM key" is never the reason there — the key
+ * exists and the call failed. Saying otherwise sent a user who had just
+ * configured a key back to configure it again (reported 2026-07-29, where the
+ * real cause was a provider returning the object wrapped in prose).
+ *
+ * getAnalysis serves stored rows, including ones written before this endpoint
+ * required a key, so the keyless wording still has a caller.
+ */
+const NO_KEY_MESSAGE = "AI grading unavailable — no LLM key";
+const gradingFailedMessage = (reason: string) =>
+  `AI grading unavailable — ${reason || "the LLM call failed"}`;
+
+/**
+ * No-LLM-key / LLM-failure fallback. Extracts a deterministic summary and
+ * candidate findings (no LLM required) but does NOT fabricate a quality grade —
+ * all quality judgement comes from the LLM only. quality_score dims and the
+ * overall grade are null, with an explanatory message.
  */
 function buildHeuristicResult(documentText: string): {
   summary: string;
   keyFindings: string[];
   complianceAreas: string[];
-  qualityScore: {
-    relevance: number;
-    completeness: number;
-    recency: number;
-    reliability: number;
-    specificity: number;
-  };
-  overall: number;
+  qualityScore: null;
+  overallGrade: null;
+  message: string;
   suggestions: Array<{
     control_id: number;
     control_title: string;
@@ -79,33 +96,15 @@ function buildHeuristicResult(documentText: string): {
   const summary =
     documentText.length > 500 ? documentText.substring(0, 500).trim() + "..." : documentText.trim();
 
-  const relevance = Math.min(100, foundAreas.length * 15 + 10);
-  const completeness = Math.min(100, keyFindings.length * 10 + (summary.length > 200 ? 20 : 0));
-  const recency = 70;
-  const reliability = Math.min(
-    100,
-    (keyFindings.length > 3 ? 40 : 20) + (foundAreas.length > 2 ? 30 : 10) + 20,
-  );
-  const specificity = Math.min(100, keyFindings.filter((f) => f.length > 50).length * 15 + 10);
-  const overall = Math.round(
-    relevance * 0.25 +
-      completeness * 0.25 +
-      recency * 0.2 +
-      reliability * 0.15 +
-      specificity * 0.15,
-  );
   return {
     summary,
     keyFindings,
     complianceAreas: foundAreas,
-    qualityScore: {
-      relevance,
-      completeness,
-      recency,
-      reliability,
-      specificity,
-    },
-    overall,
+    qualityScore: null,
+    overallGrade: null,
+    // Overwritten by the caller with the real failure reason; this stands only
+    // if buildHeuristicResult ever runs somewhere a key genuinely is absent.
+    message: NO_KEY_MESSAGE,
     suggestions: [],
   };
 }
@@ -130,9 +129,10 @@ function inferParseFidelity(fileType: string): "high" | "medium" | "low" | undef
 
 /**
  * POST /api/evidence-ai/analyze/:fileId
- * Trigger AI analysis for a file. Uses the v2 evidence-analyzer
- * (LLM-rubric + deterministic recency/reliability) when an LLM key is
- * configured. Falls back to heuristic-v1 if no key or the LLM call fails.
+ * Trigger AI analysis for a file. Requires an LLM key — returns 400 if
+ * none is configured for the organization. Uses the v2 evidence-analyzer
+ * (LLM-rubric + deterministic recency/reliability); falls back to
+ * heuristic-v1 only if the LLM call itself fails after a key was found.
  */
 export async function analyzeFile(req: Request, res: Response) {
   const functionName = "analyzeFile";
@@ -149,6 +149,16 @@ export async function analyzeFile(req: Request, res: Response) {
   try {
     const organizationId = req.organizationId!;
     const userId = req.userId ? Number(req.userId) : null;
+
+    // ---- LLM key required ------------------------------------------
+    // NOTE: a DB error here now surfaces as a 500 (previously it was
+    // swallowed into a heuristic-v1 200 fallback) — documented tradeoff.
+    const clients = await getLLMKeysWithKeyQuery(organizationId);
+    if (clients.length === 0) {
+      return res
+        .status(400)
+        .json(STATUS_CODE[400]("No LLM keys configured for this organization."));
+    }
 
     // ---- File metadata + content ---------------------------------
     const [fileRows] = await sequelize.query(
@@ -203,48 +213,44 @@ export async function analyzeFile(req: Request, res: Response) {
       return res.status(422).json(STATUS_CODE[422]("File has no extractable text content"));
     }
 
-    // ---- Pick LLM key for the org --------------------------------
+    // ---- Run the analyzer ------------------------------------------
     let analyzerResult: AnalyzerResult | null = null;
     let usedFallback = false;
     let fallbackReason = "";
 
     try {
-      const clients = await getLLMKeysWithKeyQuery(organizationId);
-      if (clients.length === 0) {
-        usedFallback = true;
-        fallbackReason = "no LLM key configured";
-      } else {
-        const apiKey = clients[0];
-        const baseURL = apiKey.url || getLLMProviderUrl(apiKey.name as LLMProvider);
-        analyzerResult = await analyzeEvidence({
-          documentText,
-          filename: file.filename,
-          fileType: file.type,
-          fileSizeBytes: contentRow?.size_bytes ?? null,
-          uploadDate: contentRow?.upload_date ?? null,
-          expiryDate,
-          parseFidelity: inferParseFidelity(file.type),
-          llmKey: {
-            apiKey: apiKey.key || "",
-            baseURL,
-            model: apiKey.model,
-            provider: apiKey.name as "Anthropic" | "OpenAI" | "OpenRouter" | "Custom",
-            headers: apiKey.custom_headers || undefined,
-          },
-        });
-      }
+      const llmKey = clients[0];
+      const baseURL = llmKey.url || getLLMProviderUrl(llmKey.name as LLMProvider);
+      analyzerResult = await analyzeEvidence({
+        documentText,
+        filename: file.filename,
+        fileType: file.type,
+        fileSizeBytes: contentRow?.size_bytes ?? null,
+        uploadDate: contentRow?.upload_date ?? null,
+        expiryDate,
+        parseFidelity: inferParseFidelity(file.type),
+        llmKey: {
+          apiKey: llmKey.key || "",
+          baseURL,
+          model: llmKey.model,
+          provider: llmKey.name as "Anthropic" | "OpenAI" | "OpenRouter" | "Custom",
+          headers: llmKey.custom_headers || undefined,
+        },
+      });
     } catch (llmErr) {
       logger.warn("[evidenceAnalyzer] LLM analysis failed, falling back to heuristic-v1", llmErr);
       usedFallback = true;
       fallbackReason = (llmErr as Error).message || "LLM error";
     }
 
-    // ---- Heuristic fallback path ---------------------------------
+    // ---- Fallback path -------------------------------------------
     let summary: string;
     let keyFindings: any;
     let complianceAreas: any;
-    let qualityScore: any;
-    let overall: number;
+    let qualityScore: IQualityScore | null;
+    let overallGrade: QualityGrade | null;
+    let qualityRationale: IQualityRationale | null = null;
+    let message: string | null = null;
     let suggestions: any[];
     let modelLabel: string;
     let auditMetadata: any | null = null;
@@ -256,7 +262,8 @@ export async function analyzeFile(req: Request, res: Response) {
       keyFindings = analyzerResult.key_findings;
       complianceAreas = analyzerResult.compliance_areas;
       qualityScore = analyzerResult.quality_score;
-      overall = analyzerResult.overall_quality_score;
+      overallGrade = analyzerResult.overall_quality_grade;
+      qualityRationale = analyzerResult.quality_rationale;
       suggestions = analyzerResult.suggested_control_links;
       modelLabel = analyzerResult.analysis_model;
       auditMetadata = analyzerResult.audit;
@@ -265,21 +272,26 @@ export async function analyzeFile(req: Request, res: Response) {
       summary = h.summary;
       keyFindings = h.keyFindings;
       complianceAreas = h.complianceAreas;
+      // No LLM => no grade is computed. dims + overall are null with a message.
       qualityScore = h.qualityScore;
-      overall = h.overall;
+      overallGrade = h.overallGrade;
+      // The key is present — analyzeFile 400s without one — so report what
+      // actually went wrong rather than sending the user to re-enter a key
+      // they already configured.
+      message = gradingFailedMessage(fallbackReason);
       suggestions = h.suggestions;
       modelLabel = `heuristic-v1${fallbackReason ? ` (fallback: ${fallbackReason})` : ""}`;
       // Heuristic path leaves audit_metadata null — no rationales available.
     }
 
     // ---- Persist -------------------------------------------------
-    const visibility = req.body.visibility || "public";
+    const visibility = req.body?.visibility || "public";
     const analysis = await upsertAnalysisQuery(fileId, organizationId, {
       summary,
       key_findings: keyFindings,
       compliance_areas: complianceAreas,
       quality_score: qualityScore,
-      overall_quality_score: overall,
+      overall_quality_grade: overallGrade,
       suggested_control_links: suggestions,
       analysis_model: modelLabel,
       analyzed_by: userId,
@@ -314,7 +326,6 @@ export async function analyzeFile(req: Request, res: Response) {
         modelUsed: modelLabel,
         modelProvider: usedFallback ? "verifywise" : "llm",
         toolName: "evidence-analysis",
-        confidenceScore: overall,
         promptSummary: `Analyzed file ${file.filename}: ${complianceAreas.length} compliance areas, ${
           Array.isArray(keyFindings) ? keyFindings.length : 0
         } findings`,
@@ -323,7 +334,15 @@ export async function analyzeFile(req: Request, res: Response) {
     ).catch(() => {});
 
     logStructured("successful", `file ${fileId} analyzed (${modelLabel})`, functionName, fileName);
-    return res.status(200).json(STATUS_CODE[200](analysis));
+    // quality_rationale isn't persisted; return it transiently on the analyze
+    // response. message is set only on the no-grade fallback path.
+    return res.status(200).json(
+      STATUS_CODE[200]({
+        ...analysis,
+        ...(qualityRationale ? { quality_rationale: qualityRationale } : {}),
+        ...(message ? { message } : {}),
+      }),
+    );
   } catch (error) {
     logStructured("error", "failed to analyze file", functionName, fileName);
     logger.error("Error in analyzeFile:", error);
@@ -406,15 +425,18 @@ export async function getGaps(req: Request, res: Response) {
             : req.query.framework_type,
         )
       : undefined;
-    const qualityThreshold = req.query.quality_threshold
-      ? Number(
-          Array.isArray(req.query.quality_threshold)
-            ? req.query.quality_threshold[0]
-            : req.query.quality_threshold,
-        )
-      : 50;
+    // Grades treated as low-quality (a gap). Defaults to D/F; caller may pass
+    // ?low_grades=C,D,F to widen the bar. Invalid letters are dropped.
+    const validGrades: QualityGrade[] = ["A", "B", "C", "D", "F"];
+    const rawLowGrades = req.query.low_grades
+      ? String(Array.isArray(req.query.low_grades) ? req.query.low_grades[0] : req.query.low_grades)
+          .split(",")
+          .map((g) => g.trim().toUpperCase())
+          .filter((g): g is QualityGrade => (validGrades as string[]).includes(g))
+      : undefined;
+    const lowGrades = rawLowGrades && rawLowGrades.length > 0 ? rawLowGrades : undefined;
 
-    const gaps = await getEvidenceGapsQuery(req.organizationId!, frameworkType, qualityThreshold);
+    const gaps = await getEvidenceGapsQuery(req.organizationId!, frameworkType, lowGrades);
 
     const noEvidence = gaps.filter((g: any) => g.gap_type === "no_evidence");
     const lowQuality = gaps.filter((g: any) => g.gap_type === "low_quality");
@@ -426,7 +448,7 @@ export async function getGaps(req: Request, res: Response) {
         controls_without_evidence: noEvidence.length,
         controls_with_low_quality: lowQuality.length,
         controls_adequate: gaps.length - noEvidence.length - lowQuality.length,
-        quality_threshold: qualityThreshold,
+        low_grades: lowGrades ?? ["D", "F"],
         gaps: gaps.filter((g: any) => g.gap_type !== "adequate"),
       }),
     );

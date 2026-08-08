@@ -119,7 +119,26 @@
       "Bash(cp plugin-marketplace/plugins/altai/icon.svg verifywise/Clients/public/assets/badges/altai.svg)",
       "Bash(cp plugin-marketplace/plugins/bahrain-pdpl/icon.svg verifywise/Clients/public/assets/badges/bahrain_pdpl.svg)",
       "Bash(cp plugin-marketplace/plugins/cis-controls/icon.svg verifywise/Clients/public/assets/badges/cis_controls.svg)",
-      "Bash(cp plugin-marketplace/plugins/colorado-ai-act/icon.svg verifywise/Clients/public/assets/badges/colorado_ai_act.svg)"
+      "Bash(cp plugin-marketplace/plugins/colorado-ai-act/icon.svg verifywise/Clients/public/assets/badges/colorado_ai_act.svg)",
+      "Bash(npm -v)",
+      "Bash(timeout 10 npm ping)",
+      "Bash(ps eww *)",
+      "Bash(docker exec *)",
+      "Bash(nslookup observability.verifywise.ai)",
+      "Bash(ps -o pid,lstart,etime,command -p 58722)",
+      "Bash(ps -o pid,ppid,lstart,etime,command -p 58722)",
+      "Bash(docker info *)",
+      "Bash(stat -f '%Sm %N' -t '%H:%M:%S' observability/otel.ts dist/observability/otel.js)",
+      "Bash(grep -c \"otel\\\\]\\\\[debug\\\\]\" dist/observability/otel.js)",
+      "Bash(:)",
+      "Bash(break)",
+      "Bash(npm view *)",
+      "Bash(pkill -f 'node dist/index.js')",
+      "Bash(PORT=3055 nohup node dist/index.js)",
+      "Bash(pkill -9 -f 'node dist/index.js')",
+      "Bash(cat)",
+      "Bash(git check-ignore *)",
+      "Bash(docker manifest *)"
     ]
   }
 }

@@ -23,7 +23,7 @@ import { updateISO27001AnnexStatus } from "../../../../components/StatusDropdown
 import { useAuth } from "../../../../../application/hooks/useAuth";
 import allowedRoles from "../../../../../application/constants/permissions";
 import { Project } from "../../../../../domain/types/Project";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 import { TabFilterBar } from "../../../../components/FrameworkFilter/TabFilterBar";
 import { StatsCard } from "../../../../components/Cards/StatsCard";
 import { brand } from "../../../../themes/palette";
