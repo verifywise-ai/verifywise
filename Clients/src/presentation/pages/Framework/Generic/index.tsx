@@ -288,6 +288,11 @@ const GenericFramework = ({
         body: "Failed to update status",
         setAlert,
       });
+      // The status update did not persist. Refetch so the tree re-syncs to the
+      // server's actual value rather than leaving the row (and the dropdown)
+      // showing a state the backend rejected. This runs only on the rare
+      // failure path, so the happy-path optimistic patch above stays refetch-free.
+      setRefreshTrigger((prev) => prev + 1);
     }
     return success;
   };

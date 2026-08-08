@@ -203,41 +203,55 @@ const FrameworkDashboard = ({ organizationalProject, filteredFrameworks }: Dashb
         const hasNISTAIRMF = filteredFrameworks.some((fw) =>
           fw.name.toLowerCase().includes("nist ai rmf"),
         );
-        let sharedNistProgress: { totalSubcategories: number; doneSubcategories: number } | undefined;
+        let sharedNistProgress:
+          | { totalSubcategories: number; doneSubcategories: number }
+          | undefined;
         let sharedNistProgressByFunction: FrameworkData["nistProgressByFunction"];
-        let sharedNistAssignments: { totalSubcategories: number; assignedSubcategories: number } | undefined;
+        let sharedNistAssignments:
+          | { totalSubcategories: number; assignedSubcategories: number }
+          | undefined;
         let sharedNistAssignmentsByFunction: FrameworkData["nistAssignmentsByFunction"];
         let sharedNistStatusBreakdown: FrameworkData["nistStatusBreakdown"];
         if (hasNISTAIRMF) {
-          const [progressRes, progressByFunctionRes, assignmentsRes, assignmentsByFunctionRes, statusRes] =
-            await Promise.all([
-              getEntityById({ routeUrl: `/nist-ai-rmf/progress` }).catch((e) => {
-                if (!abortController.signal.aborted) console.error("NIST progress:", e);
-                return undefined;
-              }),
-              getEntityById({ routeUrl: `/nist-ai-rmf/progress-by-function` }).catch((e) => {
-                if (!abortController.signal.aborted) console.error("NIST progress-by-function:", e);
-                return undefined;
-              }),
-              getEntityById({ routeUrl: `/nist-ai-rmf/assignments` }).catch((e) => {
-                if (!abortController.signal.aborted) console.error("NIST assignments:", e);
-                return undefined;
-              }),
-              getEntityById({ routeUrl: `/nist-ai-rmf/assignments-by-function` }).catch((e) => {
-                if (!abortController.signal.aborted) console.error("NIST assignments-by-function:", e);
-                return undefined;
-              }),
-              getEntityById({ routeUrl: `/nist-ai-rmf/status-breakdown` }).catch((e) => {
-                if (!abortController.signal.aborted) console.error("NIST status-breakdown:", e);
-                return undefined;
-              }),
-            ]);
+          const [
+            progressRes,
+            progressByFunctionRes,
+            assignmentsRes,
+            assignmentsByFunctionRes,
+            statusRes,
+          ] = await Promise.all([
+            getEntityById({ routeUrl: `/nist-ai-rmf/progress` }).catch((e) => {
+              if (!abortController.signal.aborted) console.error("NIST progress:", e);
+              return undefined;
+            }),
+            getEntityById({ routeUrl: `/nist-ai-rmf/progress-by-function` }).catch((e) => {
+              if (!abortController.signal.aborted) console.error("NIST progress-by-function:", e);
+              return undefined;
+            }),
+            getEntityById({ routeUrl: `/nist-ai-rmf/assignments` }).catch((e) => {
+              if (!abortController.signal.aborted) console.error("NIST assignments:", e);
+              return undefined;
+            }),
+            getEntityById({ routeUrl: `/nist-ai-rmf/assignments-by-function` }).catch((e) => {
+              if (!abortController.signal.aborted)
+                console.error("NIST assignments-by-function:", e);
+              return undefined;
+            }),
+            getEntityById({ routeUrl: `/nist-ai-rmf/status-breakdown` }).catch((e) => {
+              if (!abortController.signal.aborted) console.error("NIST status-breakdown:", e);
+              return undefined;
+            }),
+          ]);
+          // On a fetch failure leave progress undefined (unknown) rather than
+          // fabricating 0/0, which would render a populated NIST framework as
+          // "0% complete" after a transient error. nistProgress is optional, so
+          // downstream treats undefined as "no data", not "nothing done".
           sharedNistProgress = progressRes?.data
             ? {
                 totalSubcategories: progressRes.data.totalSubcategories || 0,
                 doneSubcategories: progressRes.data.doneSubcategories || 0,
               }
-            : { totalSubcategories: 0, doneSubcategories: 0 };
+            : undefined;
           sharedNistProgressByFunction = progressByFunctionRes?.data;
           sharedNistAssignments = assignmentsRes?.data
             ? {
