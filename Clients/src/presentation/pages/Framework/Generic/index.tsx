@@ -37,6 +37,7 @@ import allowedRoles from "../../../../application/constants/permissions";
 import { StatsCard } from "../../../components/Cards/StatsCard";
 import { brand } from "../../../themes/palette";
 import { pluralizeEntityType } from "../../../tools/pluralizeEntityType";
+import { isCompletedStatus } from "../../../../domain/types/Status";
 import { styles } from "./style";
 
 interface FrameworkMeta {
@@ -159,13 +160,13 @@ const GenericFramework = ({
       for (const l2 of l1.children) {
         if (l2.impl_id != null) {
           total += 1;
-          if (l2.status === "Implemented") completed += 1;
+          if (isCompletedStatus(l2.status)) completed += 1;
         }
         if (isThreeLevel) {
           for (const l3 of l2.children || []) {
             if (l3.impl_id != null) {
               total += 1;
-              if (l3.status === "Implemented") completed += 1;
+              if (isCompletedStatus(l3.status)) completed += 1;
             }
           }
         }

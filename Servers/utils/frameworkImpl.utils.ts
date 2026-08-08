@@ -587,6 +587,9 @@ export async function getFrameworkDashboardQuery(
       counts.assignments.total += row.total;
       counts.assignments.assigned += row.assigned;
       switch (row.status) {
+        // "Audited" is a completed state one step past "Implemented" — count it
+        // as done so auditing an item does not regress its completion.
+        case "Audited":
         case "Implemented":
           counts.progress.done += row.total;
           counts.statusBreakdown.implemented += row.total;

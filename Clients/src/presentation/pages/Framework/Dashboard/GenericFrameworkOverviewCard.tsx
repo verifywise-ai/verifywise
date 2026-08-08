@@ -4,6 +4,7 @@ import { ChevronRight, LayoutList } from "lucide-react";
 import { getEntityById } from "../../../../application/repository/entity.repository";
 import { getStatusColor } from "../../ISO/style";
 import { pluralizeEntityType } from "../../../tools/pluralizeEntityType";
+import { isCompletedStatus } from "../../../../domain/types/Status";
 
 interface GenericFrameworkOverviewCardProps {
   frameworkId: number;
@@ -77,7 +78,7 @@ const GenericFrameworkOverviewCard = ({
             status: l2.status,
             owner: l2.owner,
           }));
-          const implemented = l2Rows.filter((r) => r.status === "Implemented").length;
+          const implemented = l2Rows.filter((r) => isCompletedStatus(r.status)).length;
           const assigned = l2Rows.filter((r) => r.owner != null).length;
           return {
             id: l1.id,
