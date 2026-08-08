@@ -103,8 +103,7 @@ const GenericFramework = ({
   const { userId, userRoleName } = useAuth();
 
   const fwIdNum = propFrameworkId ?? (params.frameworkId ? parseInt(params.frameworkId, 10) : NaN);
-  const projectIdNum =
-    propProjectId ?? (params.projectId ? parseInt(params.projectId, 10) : NaN);
+  const projectIdNum = propProjectId ?? (params.projectId ? parseInt(params.projectId, 10) : NaN);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -222,9 +221,14 @@ const GenericFramework = ({
       body: message || (success ? "Changes saved successfully" : "Failed to save changes"),
       setAlert,
     });
-    if (success && savedRowId) {
-      setFlashingRowId(savedRowId);
-      setTimeout(() => setFlashingRowId(null), 2000);
+    if (success) {
+      // Refresh on any successful save. Flash only when we have a concrete row
+      // id — guard with != null (not truthiness) so a legitimate id of 0 still
+      // flashes and never blocks the refresh.
+      if (savedRowId != null) {
+        setFlashingRowId(savedRowId);
+        setTimeout(() => setFlashingRowId(null), 2000);
+      }
       setRefreshTrigger((prev) => prev + 1);
     }
   };
@@ -424,7 +428,9 @@ const GenericFramework = ({
           open={selected !== null}
           onClose={handleDrawerClose}
           drawerClassName={`generic-framework-drawer-${data.framework.key}`}
-          onSaveSuccess={(ok, message) => handleSaveSuccess(ok, message, selected?.node.impl_id ?? undefined)}
+          onSaveSuccess={(ok, message) =>
+            handleSaveSuccess(ok, message, selected?.node.impl_id ?? undefined)
+          }
           {...drawerProps}
         />
       )}
