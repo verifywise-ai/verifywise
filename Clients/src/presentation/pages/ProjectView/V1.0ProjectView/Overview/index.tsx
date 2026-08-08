@@ -10,6 +10,7 @@ import { Project } from "../../../../../domain/types/Project";
 import useProjectData from "../../../../../application/hooks/useProjectData";
 import CustomizableSkeleton from "../../../../components/Skeletons";
 import { displayFormattedDate } from "../../../../tools/isoDateToString";
+import { pluralizeEntityType } from "../../../../tools/pluralizeEntityType";
 import { useEffect, useState } from "react";
 import { User } from "../../../../../domain/types/User";
 import { getEntityById } from "../../../../../application/repository/entity.repository";
@@ -23,8 +24,6 @@ import {
   Users as UsersIcon,
   Clock as ClockIcon,
 } from "lucide-react";
-import { PluginSlot } from "../../../../components/PluginSlot";
-import { PLUGIN_SLOTS } from "../../../../../domain/constants/pluginSlots";
 import { brand } from "../../../../themes/palette";
 
 const VWProjectOverview = ({ project }: { project?: Project }) => {
@@ -83,6 +82,22 @@ const VWProjectOverview = ({ project }: { project?: Project }) => {
     totalSubclauses: number;
     doneSubclauses: number;
   }>();
+
+  // Progress cards for the 9 project-attachable generic frameworks (HIPAA,
+  // Texas AI Act, OECD AI Principles, Colorado AI Act, AI Ethics, PCI-DSS,
+  // FTC AI Guidelines, NYC Local Law 144, ALTAI). Framework IDs 1-4 are
+  // handled above (EU AI Act, ISO 42001) or are organizational-only and
+  // never appear on a use case (ISO 27001, NIST AI RMF).
+  type GenericFrameworkProgress = {
+    framework_id: number;
+    name: string;
+    entity_label: string;
+    done: number;
+    total: number;
+  };
+  const [genericFrameworkProgress, setGenericFrameworkProgress] = useState<
+    GenericFrameworkProgress[]
+  >([]);
 
   useEffect(() => {
     const fetchProgressData = async () => {
@@ -143,6 +158,39 @@ const VWProjectOverview = ({ project }: { project?: Project }) => {
           // Reset ISO 42001 progress data if the project doesn't have framework ID 2
           setAnnexesProgress(undefined);
           setClausesProgress(undefined);
+        }
+
+        // Fetch progress for generic frameworks (framework_id >= 5). IDs
+        // 3 (ISO 27001) and 4 (NIST AI RMF) are organizational-only and
+        // are never attached to a use case, so skipping <5 is safe.
+        const genericFrameworks = project.framework.filter((f) => f.framework_id >= 5);
+        if (genericFrameworks.length === 0) {
+          setGenericFrameworkProgress([]);
+        } else {
+          const results = await Promise.all(
+            genericFrameworks.map(async (f) => {
+              try {
+                const response = await getEntityById({
+                  routeUrl: `/frameworks/${f.framework_id}/dashboard/${f.project_framework_id}`,
+                });
+                const data = response?.data;
+                if (!data) return null;
+                return {
+                  framework_id: f.framework_id,
+                  name: f.name,
+                  entity_label: pluralizeEntityType(data.entity_type),
+                  done: data.progress?.done ?? 0,
+                  total: data.progress?.total ?? 0,
+                } satisfies GenericFrameworkProgress;
+              } catch (error) {
+                console.error(`Error fetching progress for framework ${f.framework_id}:`, error);
+                return null;
+              }
+            }),
+          );
+          setGenericFrameworkProgress(
+            results.filter((r): r is GenericFrameworkProgress => r !== null),
+          );
         }
       } catch (error) {
         console.error("Error in fetchProgressData:", error);
@@ -243,7 +291,7 @@ const VWProjectOverview = ({ project }: { project?: Project }) => {
             </>
           )}
         </Stack>
-        <Stack className="vw-project-overview-frameworks" sx={{ width: "100%", gap: 10, mb: 10 }}>
+        <Stack className="vw-project-overview-frameworks" sx={{ width: "100%", gap: 2, mb: 10 }}>
           {project ? (
             <>
               {projectFrameworkId && (
@@ -268,15 +316,17 @@ const VWProjectOverview = ({ project }: { project?: Project }) => {
                   />
                 </Stack>
               )}
-              {/* Custom Framework Progress - Plugin Slot */}
-              <PluginSlot
-                id={PLUGIN_SLOTS.PROJECT_OVERVIEW_CUSTOM_FRAMEWORK}
-                slotProps={{
-                  project,
-                  columnStyle,
-                  projectRiskSection,
-                }}
-              />
+              {genericFrameworkProgress.map((fw) => (
+                <Stack key={fw.framework_id} sx={columnStyle}>
+                  <Typography sx={projectRiskSection}>{`${fw.name} Completion Status`}</Typography>
+                  <GroupStatsCard
+                    completed={[fw.done]}
+                    total={[fw.total]}
+                    title={[fw.entity_label]}
+                    progressbarColor={brand.primary}
+                  />
+                </Stack>
+              ))}
             </>
           ) : (
             <>

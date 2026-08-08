@@ -21,8 +21,6 @@ import {
 } from "../../../../application/repository/entity.repository";
 import Alert from "../../../components/Alert";
 import CustomizableToast from "../../../components/Toast";
-import { PluginSlot } from "../../../components/PluginSlot";
-import { PLUGIN_SLOTS } from "../../../../domain/constants/pluginSlots";
 import { background } from "../../../themes/palette";
 
 interface FrameworkSettingsProps {
@@ -413,24 +411,6 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
           })}
         </Box>
 
-        {/* Custom Frameworks from Plugins */}
-        <PluginSlot
-          id={PLUGIN_SLOTS.ORG_FRAMEWORK_MANAGEMENT}
-          slotProps={{
-            project: organizationalProject,
-            isLoading,
-            onFrameworkAdded: async () => {
-              await onProjectDataChanged();
-              onFrameworksChanged();
-            },
-            onFrameworkRemoved: async () => {
-              await onProjectDataChanged();
-              onFrameworksChanged();
-            },
-            setAlert,
-            setIsLoading,
-          }}
-        />
       </Box>
 
       {/* Modals */}

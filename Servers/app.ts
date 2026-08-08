@@ -18,6 +18,7 @@ import mailRoutes from "./routes/vwmailer.route";
 import euRouter from "./routes/eu.route";
 import reportRoutes from "./routes/reporting.route";
 import frameworks from "./routes/frameworks.route";
+import frameworkImpl from "./routes/frameworkImpl.route";
 import organizationRoutes from "./routes/organization.route";
 import isoRoutes from "./routes/iso42001.route";
 import trainingRoutes from "./routes/trainingRegistar.route";
@@ -252,6 +253,7 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
   app.use("/api/mail", mailRoutes);
   app.use("/api/invitations", invitationRoutes);
   app.use("/api/frameworks", frameworks);
+  app.use("/api/frameworks", frameworkImpl);
   app.use("/api/eu-ai-act", euRouter); // **
   app.use("/api/organizations", organizationRoutes);
   app.use("/api/iso-42001", isoRoutes); // **

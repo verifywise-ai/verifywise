@@ -1,8 +1,8 @@
 import React, { useState, useCallback, useMemo, Suspense } from "react";
 import { Navigate, useLocation, useNavigate } from "react-router-dom";
-import { Box, Stack, Typography, Collapse, useTheme } from "@mui/material";
+import { Box, Stack, Typography } from "@mui/material";
 import { TabContext, TabPanel } from "@mui/lab";
-import { ChevronDown, Puzzle, Download, Settings2, Shield } from "lucide-react";
+import { Puzzle, Download, Settings2, Shield } from "lucide-react";
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import TabBar from "../../components/TabBar";
@@ -30,19 +30,12 @@ import {
   emptyStateContainer,
   emptyStateText,
   tabPanelStyle,
-  regionHeader,
-  regionChevron,
-  regionFlagStyle,
-  regionNameStyle,
-  regionCountStyle,
-  regionContent,
 } from "./style";
 import { brand } from "../../themes/palette";
 
 const Plugins: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const theme = useTheme();
   const { userRoleName } = useAuth();
 
   // Determine initial tab from URL
@@ -60,8 +53,6 @@ const Plugins: React.FC = () => {
     body: string;
     visible: boolean;
   } | null>(null);
-  // Track collapsed regions instead (empty = all expanded)
-  const [collapsedRegions, setCollapsedRegions] = useState<Set<string>>(new Set());
 
   const isAdmin = userRoleName === "Admin";
 
@@ -82,89 +73,23 @@ const Plugins: React.FC = () => {
     [selectedCategory],
   );
 
-  // Helper to check if a plugin is a framework plugin (based on category or tags)
-  const isFrameworkPlugin = useCallback((plugin: Plugin) => {
-    return (
-      (plugin.category as string) === "compliance" ||
-      (plugin.tags || []).some(
-        (tag) =>
-          tag.toLowerCase().includes("compliance") || tag.toLowerCase().includes("framework"),
-      )
-    );
-  }, []);
-
-  // Filter plugins by search query (excluding framework plugins from marketplace)
+  // Filter plugins by search query
   const filteredPlugins = useMemo(() => {
-    const nonFrameworkPlugins = plugins.filter((p) => !isFrameworkPlugin(p));
-    if (!searchQuery) return nonFrameworkPlugins;
+    if (!searchQuery) return plugins;
     const lowerQuery = searchQuery.toLowerCase();
-    return nonFrameworkPlugins.filter(
+    return plugins.filter(
       (p) =>
         p.name.toLowerCase().includes(lowerQuery) ||
         p.description.toLowerCase().includes(lowerQuery) ||
         (p.tags || []).some((tag) => tag.toLowerCase().includes(lowerQuery)),
     );
-  }, [plugins, searchQuery, isFrameworkPlugin]);
+  }, [plugins, searchQuery]);
 
   // Filter to show only installed plugins
   const installedPlugins = useMemo(
     () => plugins.filter((p) => p.installationStatus === PluginInstallationStatus.INSTALLED),
     [plugins],
   );
-
-  const frameworkPlugins = useMemo(
-    () => plugins.filter((p) => isFrameworkPlugin(p)),
-    [plugins, isFrameworkPlugin],
-  );
-
-  // Region flags mapping
-  const regionFlags: Record<string, string> = {
-    "International": "🌐",
-    "United States": "🇺🇸",
-    "European Union": "🇪🇺",
-    "Canada": "🇨🇦",
-    "United Kingdom": "🇬🇧",
-    "Australia": "🇦🇺",
-    "Singapore": "🇸🇬",
-    "India": "🇮🇳",
-    "Japan": "🇯🇵",
-    "Brazil": "🇧🇷",
-    "United Arab Emirates": "🇦🇪",
-    "Saudi Arabia": "🇸🇦",
-    "Qatar": "🇶🇦",
-    "Bahrain": "🇧🇭",
-    "Other": "📋",
-  };
-
-  // Group frameworks by region (from plugin metadata)
-  const frameworksByRegion = useMemo(() => {
-    const regionMap = new Map<string, Plugin[]>();
-
-    frameworkPlugins.forEach((plugin) => {
-      const region = plugin.region || "Other";
-      if (!regionMap.has(region)) {
-        regionMap.set(region, []);
-      }
-      regionMap.get(region)!.push(plugin);
-    });
-
-    // Convert to array and sort by region name
-    return Array.from(regionMap.entries())
-      .map(([regionName, plugins]) => ({
-        region: regionName.toLowerCase().replace(/\s+/g, "-"),
-        regionName,
-        regionFlag: regionFlags[regionName] || "📋",
-        plugins,
-      }))
-      .sort((a, b) => {
-        // Put "Other" at the end, International first
-        if (a.regionName === "Other") return 1;
-        if (b.regionName === "Other") return -1;
-        if (a.regionName === "International") return -1;
-        if (b.regionName === "International") return 1;
-        return a.regionName.localeCompare(b.regionName);
-      });
-  }, [frameworkPlugins]);
 
   // Handle plugin uninstallation
   const handleUninstall = useCallback(
@@ -204,19 +129,6 @@ const Plugins: React.FC = () => {
     },
     [navigate],
   );
-
-  // Toggle region expansion (tracks collapsed regions - empty means all expanded)
-  const toggleRegion = useCallback((regionKey: string) => {
-    setCollapsedRegions((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(regionKey)) {
-        newSet.delete(regionKey);
-      } else {
-        newSet.add(regionKey);
-      }
-      return newSet;
-    });
-  }, []);
 
   // Close toast
   const handleCloseToast = () => {
@@ -271,13 +183,6 @@ const Plugins: React.FC = () => {
                 icon: "Package",
                 count: installedPlugins.length,
                 tooltip: "Plugins currently installed in your organization",
-              },
-              {
-                label: "Frameworks",
-                value: "frameworks",
-                icon: "FileCode",
-                count: frameworkPlugins.length,
-                tooltip: "Compliance framework plugins and extensions",
               },
             ]}
             activeTab={activeTab}
@@ -445,62 +350,6 @@ const Plugins: React.FC = () => {
           </Stack>
         </TabPanel>
 
-        {/* Frameworks Tab */}
-        <TabPanel value="frameworks" sx={tabPanelStyle}>
-          <Stack gap={3}>
-            {/* Framework Plugins by Region */}
-            {loading ? (
-              <Box sx={emptyStateContainer}>
-                <Typography sx={emptyStateText}>Loading framework plugins...</Typography>
-              </Box>
-            ) : frameworksByRegion.length === 0 ? (
-              <Box sx={emptyStateContainer}>
-                <Typography sx={emptyStateText}>No framework plugins available.</Typography>
-              </Box>
-            ) : (
-              frameworksByRegion.map(
-                ({ region, regionName, regionFlag, plugins: regionPlugins }) => {
-                  const isExpanded = !collapsedRegions.has(region);
-                  return (
-                    <Stack key={region} gap={0}>
-                      {/* Region Header - Clickable */}
-                      <Box onClick={() => toggleRegion(region)} sx={regionHeader(theme)}>
-                        <Box sx={regionChevron(theme, isExpanded)}>
-                          <ChevronDown size={18} strokeWidth={2} />
-                        </Box>
-                        <Typography sx={regionFlagStyle}>{regionFlag}</Typography>
-                        <Typography sx={regionNameStyle(theme)}>{regionName}</Typography>
-                        <Typography sx={regionCountStyle(theme)}>
-                          ({regionPlugins.length})
-                        </Typography>
-                      </Box>
-
-                      {/* Region Plugins Grid - Collapsible */}
-                      <Collapse in={isExpanded} timeout={250} unmountOnExit>
-                        <Box sx={regionContent(theme)}>
-                          {regionPlugins.map((plugin) => (
-                            <Box key={plugin.key} sx={pluginCardWrapperThreeColumn}>
-                              <PluginCard
-                                plugin={plugin}
-                                onUninstall={handleUninstall}
-                                onManage={handleManage}
-                                loading={
-                                  !!(
-                                    plugin.installationId && uninstalling === plugin.installationId
-                                  )
-                                }
-                              />
-                            </Box>
-                          ))}
-                        </Box>
-                      </Collapse>
-                    </Stack>
-                  );
-                },
-              )
-            )}
-          </Stack>
-        </TabPanel>
       </TabContext>
     </PageHeaderExtended>
   );

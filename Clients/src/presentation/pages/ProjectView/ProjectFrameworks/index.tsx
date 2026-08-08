@@ -6,6 +6,7 @@ import TabContext from "@mui/lab/TabContext";
 import { tabStyle, tabPanelStyle } from "../V1.0ProjectView/style";
 import CustomizableSkeleton from "../../../components/Skeletons";
 import ComplianceTracker from "../../../pages/ComplianceTracker/1.0ComplianceTracker";
+import GenericFramework from "../../../pages/Framework/Generic";
 import { Project } from "../../../../domain/types/Project";
 import { Framework } from "../../../../domain/types/Framework";
 import AssessmentTracker from "../../Assessment/1.0AssessmentTracker";
@@ -14,9 +15,6 @@ import AddFrameworkModal from "../AddNewFramework";
 import useMultipleOnScreen from "../../../../application/hooks/useMultipleOnScreen";
 import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
 import { ButtonToggle } from "../../../components/button-toggle";
-import { PluginSlot } from "../../../components/PluginSlot";
-import { PLUGIN_SLOTS } from "../../../../domain/constants/pluginSlots";
-import { usePluginRegistry } from "../../../../application/contexts/PluginRegistry.context";
 
 import { containerStyle, headerContainerStyle, tabListStyle } from "./styles";
 import { CustomizableButton } from "../../../components/button/customizable-button";
@@ -61,7 +59,6 @@ const ProjectFrameworks = ({
 
   const { changeComponentVisibility } = useContext(VerifyWiseContext);
   const { userRoleName } = useAuth();
-  const { getComponentsForSlot } = usePluginRegistry();
 
   const { refs, allVisible } = useMultipleOnScreen<HTMLElement>({
     countToTrigger: 1,
@@ -230,6 +227,22 @@ const ProjectFrameworks = ({
       );
     }
 
+    if (!isEUAIAct) {
+      console.debug("[fw] ProjectFrameworks dispatch → GenericFramework", {
+        projectId: project.id,
+        frameworkId: selectedFrameworkId,
+      });
+      return (
+        <GenericFramework
+          projectId={Number(project.id)}
+          frameworkId={selectedFrameworkId}
+        />
+      );
+    }
+    console.debug("[fw] ProjectFrameworks dispatch → ComplianceTracker (EU AI Act)", {
+      projectId: project.id,
+    });
+
     return (
       <>
         <TabFilterBar
@@ -237,7 +250,7 @@ const ProjectFrameworks = ({
           onStatusChange={setStatusFilter}
           applicabilityFilter={applicabilityFilter}
           onApplicabilityChange={setApplicabilityFilter}
-          showStatusFilter={isEUAIAct && (tracker === "compliance" || tracker === "assessment")}
+          showStatusFilter={tracker === "compliance" || tracker === "assessment"}
           showApplicabilityFilter={false}
           statusOptions={statusOptions}
           ownerFilter={ownerFilter}
@@ -246,9 +259,9 @@ const ProjectFrameworks = ({
           onApproverChange={setApproverFilter}
           dueDateFilter={dueDateFilter}
           onDueDateChange={setDueDateFilter}
-          showOwnerFilter={isEUAIAct && tracker === "compliance"}
-          showApproverFilter={isEUAIAct && tracker === "compliance"}
-          showDueDateFilter={isEUAIAct && tracker === "compliance"}
+          showOwnerFilter={tracker === "compliance"}
+          showApproverFilter={tracker === "compliance"}
+          showDueDateFilter={tracker === "compliance"}
           ownerOptions={userOptions}
           approverOptions={userOptions}
         />
@@ -272,32 +285,18 @@ const ProjectFrameworks = ({
               ))}
             </TabList>
           </Box>
-          {isEUAIAct ? (
-            <>
-              <TabPanel value="compliance" sx={tabPanelStyle}>
-                <ComplianceTracker
-                  project={project}
-                  statusFilter={statusFilter}
-                  ownerFilter={ownerFilter}
-                  approverFilter={approverFilter}
-                  dueDateFilter={dueDateFilter}
-                />
-              </TabPanel>
-              <TabPanel value="assessment" sx={tabPanelStyle}>
-                <AssessmentTracker project={project} statusFilter={statusFilter} />
-              </TabPanel>
-            </>
-          ) : (
-            <TabPanel value="compliance" sx={tabPanelStyle}>
-              <ComplianceTracker
-                project={project}
-                statusFilter={statusFilter}
-                ownerFilter={ownerFilter}
-                approverFilter={approverFilter}
-                dueDateFilter={dueDateFilter}
-              />
-            </TabPanel>
-          )}
+          <TabPanel value="compliance" sx={tabPanelStyle}>
+            <ComplianceTracker
+              project={project}
+              statusFilter={statusFilter}
+              ownerFilter={ownerFilter}
+              approverFilter={approverFilter}
+              dueDateFilter={dueDateFilter}
+            />
+          </TabPanel>
+          <TabPanel value="assessment" sx={tabPanelStyle}>
+            <AssessmentTracker project={project} statusFilter={statusFilter} />
+          </TabPanel>
         </TabContext>
       </>
     );
@@ -314,6 +313,7 @@ const ProjectFrameworks = ({
     tabs,
     refs,
     project,
+    selectedFrameworkId,
     tabListStyle,
     projectFrameworks.length,
     loading,
@@ -332,10 +332,6 @@ const ProjectFrameworks = ({
     );
   }
 
-  // Check if plugin is providing custom framework controls
-  const hasCustomFrameworkPlugin =
-    getComponentsForSlot(PLUGIN_SLOTS.PROJECT_CONTROLS_CUSTOM_FRAMEWORK).length > 0;
-
   // Render the "Manage frameworks" button
   const renderManageButton = () => (
     <CustomizableButton
@@ -348,12 +344,19 @@ const ProjectFrameworks = ({
 
   return (
     <Box sx={containerStyle}>
-      {/* Header with toggle and button - only shown when NO plugin */}
-      {!hasCustomFrameworkPlugin && (
-        <Box sx={headerContainerStyle}>
-          {loading ? (
-            <CustomizableSkeleton variant="rectangular" width={200} height={40} />
-          ) : projectFrameworks.length > 0 ? (
+      <Box sx={headerContainerStyle}>
+        {loading ? (
+          <CustomizableSkeleton variant="rectangular" width={200} height={40} />
+        ) : projectFrameworks.length > 0 ? (
+          <Box
+            sx={{
+              flex: 1,
+              minWidth: 0,
+              overflowX: "auto",
+              overflowY: "hidden",
+              pb: 0.5,
+            }}
+          >
             <ButtonToggle
               options={projectFrameworks.map((fw: Framework, index: number) => ({
                 value: index.toString(),
@@ -363,27 +366,10 @@ const ProjectFrameworks = ({
               onChange={(value) => handleFrameworkSelect(parseInt(value))}
               height={34}
             />
-          ) : null}
-          {renderManageButton()}
-        </Box>
-      )}
-
-      {/* Plugin slot - renders header (toggle + button) + content when plugin is loaded */}
-      <PluginSlot
-        id={PLUGIN_SLOTS.PROJECT_CONTROLS_CUSTOM_FRAMEWORK}
-        slotProps={{
-          project: project,
-          builtInFrameworks: projectFrameworks,
-          selectedBuiltInFramework: selectedFramework,
-          onBuiltInFrameworkSelect: handleFrameworkSelect,
-          renderBuiltInContent: renderBuiltInContent,
-          renderHeaderActions: renderManageButton,
-          onRefresh: () => {
-            if (triggerRefresh) triggerRefresh(true);
-            refreshFilteredFrameworks();
-          },
-        }}
-      />
+          </Box>
+        ) : null}
+        {renderManageButton()}
+      </Box>
 
       <AddFrameworkModal
         open={isModalOpen}
@@ -411,11 +397,10 @@ const ProjectFrameworks = ({
         }}
       />
 
-      {/* Default content when no plugin is loaded */}
-      {!hasCustomFrameworkPlugin && projectFrameworks.length > 0 && renderBuiltInContent()}
+      {projectFrameworks.length > 0 && renderBuiltInContent()}
 
       {/* Empty state when no frameworks installed */}
-      {!hasCustomFrameworkPlugin && projectFrameworks.length === 0 && !loading && (
+      {projectFrameworks.length === 0 && !loading && (
         <Box
           sx={{
             display: "flex",

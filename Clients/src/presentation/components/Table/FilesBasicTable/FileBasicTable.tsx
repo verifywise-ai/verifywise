@@ -56,6 +56,21 @@ type SortConfig = {
 };
 
 /**
+ * Rewrite built-in framework source labels to their user-facing display form.
+ * The DB writes "Compliance tracker group" / "Assessment tracker group" for
+ * EU AI Act uploads; per-framework generics already write display-ready
+ * labels ("SOC 2 controls", "GDPR articles", ...) so they pass through.
+ * Used by the Source column, the tooltip, and the popover header so all
+ * three places show the same string.
+ */
+const displaySourceLabel = (raw: string | undefined | null): string => {
+  if (!raw) return "";
+  if (raw === "Compliance tracker group") return "Requirements tracker group";
+  if (raw === "Assessment tracker group") return "Controls tracker group";
+  return raw;
+};
+
+/**
  * Truncate a filename in the middle so the extension stays visible.
  * e.g. "very-long-document-name-here.pdf" → "very-long-documen(...)e-here.pdf"
  */
@@ -709,31 +724,32 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
                   {/* Source column */}
                   {visibleColumnKeys.includes("source") &&
                     (() => {
-                      const KNOWN_GROUP_SOURCES = [
+                      // Static list covers built-in framework labels and the
+                      // evidence-hub labels (Model inventory / Training /
+                      // Evidence) written by the report/upload paths that
+                      // don't populate file_entity_links themselves.
+                      // Per-framework generic labels (e.g. "SOC 2 controls")
+                      // are always accompanied by file_entity_links rows,
+                      // so `hasLinks` covers them without an explicit list.
+                      const STATIC_KNOWN_SOURCES = [
                         "Assessment tracker group",
                         "Compliance tracker group",
                         "Management system clauses group",
                         "Main clauses group",
                         "Reference controls group",
                         "Annex controls group",
-                        // Evidence-hub records resolve to one of these three
-                        // labels (derived from mapped_*_ids in evidence_hub).
                         "Model inventory",
                         "Training",
                         "Evidence",
                       ];
+                      const hasLinks = (row.entityLinks?.length ?? 0) > 0;
                       // Backend aggregates multi-entity attachments as "N groups"
                       // (see getOrganizationFilesWithMetadata).
                       const isKnownSource =
-                        KNOWN_GROUP_SOURCES.includes(row.source || "") ||
+                        hasLinks ||
+                        STATIC_KNOWN_SOURCES.includes(row.source || "") ||
                         /^\d+ groups$/.test(row.source || "");
-                      const displayLabel =
-                        row.source === "Compliance tracker group"
-                          ? "Requirements tracker group"
-                          : row.source === "Assessment tracker group"
-                            ? "Controls tracker group"
-                            : row.source;
-                      const hasLinks = (row.entityLinks?.length ?? 0) > 0;
+                      const displayLabel = displaySourceLabel(row.source);
                       return (
                         <TableCell
                           sx={{
@@ -750,7 +766,9 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
                             <Tooltip
                               title={
                                 (row.linkGroups?.length ?? 0) > 1
-                                  ? `Linked to: ${row.linkGroups!.join(", ")}`
+                                  ? `Linked to: ${row
+                                      .linkGroups!.map(displaySourceLabel)
+                                      .join(", ")}`
                                   : ""
                               }
                               arrow
@@ -1077,7 +1095,7 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
                   bgcolor: "background.paper",
                 }}
               >
-                {groupLabel}
+                {displaySourceLabel(groupLabel)}
               </ListSubheader>,
             );
             groupLinks.forEach((link, li) => {

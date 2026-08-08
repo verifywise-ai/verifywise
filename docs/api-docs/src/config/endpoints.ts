@@ -3878,6 +3878,50 @@ export const frameworkEndpoints: Endpoint[] = [
     ],
     tag: "Frameworks",
   },
+  {
+    method: 'GET',
+    path: '/frameworks/{frameworkId}/tree/{projectId}',
+    summary: "Get Framework Tree",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Frameworks",
+  },
+  {
+    method: 'GET',
+    path: '/frameworks/{frameworkId}/impl/{level}/{id}',
+    summary: "Get Impl By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Frameworks",
+  },
+  {
+    method: 'PATCH',
+    path: '/frameworks/{frameworkId}/impl/{level}/{id}',
+    summary: "Update Impl",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Frameworks",
+  },
+  {
+    method: 'GET',
+    path: '/frameworks/{frameworkId}/impl/{level}/{id}/risks',
+    summary: "Get Impl Risks",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Frameworks",
+  },
 ];
 
 // FRIA endpoints
@@ -6747,17 +6791,6 @@ export const organizationEndpoints: Endpoint[] = [
     tag: "Organizations",
   },
   {
-    method: 'POST',
-    path: '/organizations/setup',
-    summary: "Create First Organization",
-    requiresAuth: false,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Organizations",
-  },
-  {
     method: 'GET',
     path: '/organizations/{id}',
     summary: "Get Organization By Id",
@@ -9350,6 +9383,19 @@ export const userEndpoints: Endpoint[] = [
   },
   {
     method: 'GET',
+    path: '/users/preferences',
+    summary: "Get current user preferences",
+    description: "Returns the authenticated user's persisted preferences (date_format, language) from user_preferences. If no row exists, returns safe defaults including a transient theme default.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Preferences found or defaults returned" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Users",
+  },
+  {
+    method: 'GET',
     path: '/users/{id}',
     summary: "Get user by ID",
     description: "Retrieves a single user by their numeric ID. Super-admins can access any user; regular users can only access users within their organization (or their own record).",
@@ -9977,10 +10023,3 @@ export const allEndpoints = {
   vendorRisk: vendorRiskEndpoints,
   webhook: webhookEndpoints,
 };
-
-// Temporary placeholders for endpoint groups referenced by App.tsx but not yet
-// present in the generated Swagger snapshot. These keep the TypeScript build green
-// until the OpenAPI generator is re-run against an updated swagger.yaml.
-export const tokenEndpoints: Endpoint[] = [];
-export const userPreferenceEndpoints: Endpoint[] = [];
-export const slackWebhookEndpoints: Endpoint[] = [];

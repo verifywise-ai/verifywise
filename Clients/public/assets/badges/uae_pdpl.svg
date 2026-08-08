@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Background circle -->
+  <circle cx="32" cy="32" r="30" fill="#FFFFFF"/>
+
+  <!-- UAE Flag colors - Green, White, Black, Red -->
+  <rect x="2" y="14" width="60" height="9" fill="#00732F"/>
+  <rect x="2" y="23" width="60" height="9" fill="#FFFFFF"/>
+  <rect x="2" y="32" width="60" height="9" fill="#000000"/>
+  <rect x="2" y="41" width="60" height="9" fill="#FF0000"/>
+
+  <!-- Vertical red bar (UAE flag) -->
+  <rect x="2" y="14" width="12" height="36" fill="#FF0000"/>
+
+  <!-- Circular mask -->
+  <circle cx="32" cy="32" r="30" fill="none" stroke="#FFFFFF" stroke-width="4"/>
+
+  <!-- Privacy shield overlay -->
+  <path d="M32 20 L44 26 L44 36 C44 44 38 48 32 52 C26 48 20 44 20 36 L20 26 Z" fill="rgba(0,0,0,0.7)" stroke="#FFFFFF" stroke-width="1.5"/>
+
+  <!-- Lock icon -->
+  <rect x="28" y="36" width="8" height="6" rx="1" fill="#FFFFFF"/>
+  <path d="M29.5 36 L29.5 33 C29.5 31 30.5 30 32 30 C33.5 30 34.5 31 34.5 33 L34.5 36" stroke="#FFFFFF" stroke-width="1.5" fill="none"/>
+  <circle cx="32" cy="39" r="1" fill="#000000"/>
+
+  <!-- UAE PDPL text -->
+  <text x="32" y="58" font-family="Arial, sans-serif" font-size="5" font-weight="bold" fill="#FFFFFF" text-anchor="middle">UAE PDPL</text>
+</svg>

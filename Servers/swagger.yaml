@@ -5179,13 +5179,13 @@ components:
           type: integer
         date_format:
           type: string
-          example: 'DD-MM-YYYY'
+          example: DD-MM-YYYY
         language:
           type: string
-          example: 'en'
+          example: en
         theme:
           type: string
-          example: 'light'
+          example: light
         created_at:
           type: string
           format: date-time
@@ -7798,6 +7798,30 @@ paths:
         '500':
           description: 'Internal server error'
       operationId: getAllUsers
+  /users/preferences:
+    get:
+      summary: 'Get current user preferences'
+      description: "Returns the authenticated user's persisted preferences (date_format,\nlanguage) from user_preferences. If no row exists, returns safe\ndefaults including a transient theme default.\n"
+      tags:
+        - Users
+      security:
+        -
+          bearerAuth: []
+      responses:
+        '200':
+          description: 'Preferences found or defaults returned'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string, example: OK}
+                  data: {$ref: '#/components/schemas/UserPreference'}
+        '401':
+          description: Unauthorized
+        '500':
+          description: 'Internal server error'
+      operationId: getPreferencesForCurrentUser
   '/users/{id}':
     get:
       summary: 'Get user by ID'
@@ -8248,35 +8272,6 @@ paths:
         '500':
           description: 'Internal server error'
       operationId: ChangePassword
-  /users/preferences:
-    get:
-      summary: 'Get current user preferences'
-      description: |
-        Returns the authenticated user's persisted preferences (date_format,
-        language) from user_preferences. If no row exists, returns safe
-        defaults including a transient theme default.
-      tags:
-        - Users
-      security:
-        -
-          bearerAuth: []
-      responses:
-        '200':
-          description: 'Preferences found or defaults returned'
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: 'OK'
-                  data:
-                    $ref: '#/components/schemas/UserPreference'
-        '401':
-          description: Unauthorized
-        '500':
-          description: 'Internal server error'
   /users/check/exists:
     get:
       summary: 'Check if any user exists'
@@ -10555,6 +10550,61 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
+  '/frameworks/{frameworkId}/tree/{projectId}':
+    get:
+      summary: 'Get Framework Tree'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Frameworks
+      operationId: getFrameworkTree
+      security:
+        -
+          bearerAuth: []
+  '/frameworks/{frameworkId}/impl/{level}/{id}':
+    get:
+      summary: 'Get Impl By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Frameworks
+      operationId: getImplById
+      security:
+        -
+          bearerAuth: []
+    patch:
+      summary: 'Update Impl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Frameworks
+      operationId: updateImpl
+      security:
+        -
+          bearerAuth: []
+  '/frameworks/{frameworkId}/impl/{level}/{id}/risks':
+    get:
+      summary: 'Get Impl Risks'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Frameworks
+      operationId: getImplRisks
+      security:
+        -
+          bearerAuth: []
   /eu-ai-act/controlCategories:
     get:
       tags:

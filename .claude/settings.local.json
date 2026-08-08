@@ -110,7 +110,16 @@
       "Bash(xargs -I{} grep -n \"organization_id\" {})",
       "Bash(npx jest *)",
       "Bash(xargs cat)",
-      "Bash(npm test *)"
+      "Bash(npm test *)",
+      "Read(//Users/harsh/Data/vw/plugin-marketplace/**)",
+      "Read(//Users/harsh/Data/**)",
+      "WebFetch(domain:x.com)",
+      "Bash(sort -t: -k2 -n)",
+      "Bash(cp plugin-marketplace/plugins/ai-ethics/icon.svg verifywise/Clients/public/assets/badges/ai_ethics.svg)",
+      "Bash(cp plugin-marketplace/plugins/altai/icon.svg verifywise/Clients/public/assets/badges/altai.svg)",
+      "Bash(cp plugin-marketplace/plugins/bahrain-pdpl/icon.svg verifywise/Clients/public/assets/badges/bahrain_pdpl.svg)",
+      "Bash(cp plugin-marketplace/plugins/cis-controls/icon.svg verifywise/Clients/public/assets/badges/cis_controls.svg)",
+      "Bash(cp plugin-marketplace/plugins/colorado-ai-act/icon.svg verifywise/Clients/public/assets/badges/colorado_ai_act.svg)"
     ]
   }
 }
