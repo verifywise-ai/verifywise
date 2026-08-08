@@ -658,11 +658,7 @@ const FrameworkDashboard = ({ organizationalProject, filteredFrameworks }: Dashb
           </TabPanel>
 
           {genericOrgFrameworks.map((fw) => (
-            <TabPanel
-              key={fw.frameworkId}
-              value={`generic-${fw.frameworkId}`}
-              sx={tabPanelStyle}
-            >
+            <TabPanel key={fw.frameworkId} value={`generic-${fw.frameworkId}`} sx={tabPanelStyle}>
               <GenericFrameworkOverviewCard
                 frameworkId={fw.frameworkId}
                 projectId={organizationalProject.id!}

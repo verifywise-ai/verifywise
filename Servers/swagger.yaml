@@ -10590,6 +10590,20 @@ paths:
       security:
         -
           bearerAuth: []
+  '/frameworks/{frameworkId}/dashboard/{projectFrameworkId}':
+    get:
+      summary: 'Get Framework Dashboard'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Frameworks
+      operationId: getFrameworkDashboard
+      security:
+        -
+          bearerAuth: []
   '/frameworks/{frameworkId}/impl/{level}/{id}':
     get:
       summary: 'Get Impl By Id'

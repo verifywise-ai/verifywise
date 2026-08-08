@@ -410,7 +410,6 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
             );
           })}
         </Box>
-
       </Box>
 
       {/* Modals */}

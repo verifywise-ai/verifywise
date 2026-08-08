@@ -115,7 +115,10 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
     status: "notStarted",
   });
 
-  const handleAlert = (payload: { variant: "success" | "error" | "warning" | "info"; body: string }) => {
+  const handleAlert = (payload: {
+    variant: "success" | "error" | "warning" | "info";
+    body: string;
+  }) => {
     setAlert(payload);
     setTimeout(() => setAlert(null), 3000);
   };
@@ -188,9 +191,10 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
             let found = null as Question | null;
             for (const st of response.data.subTopics || []) {
               if (st.id === subtopic.id) {
-                found = (st.questions || []).find(
-                  (q: { answer_id: number }) => q.answer_id === questionProp.answer_id,
-                ) || null;
+                found =
+                  (st.questions || []).find(
+                    (q: { answer_id: number }) => q.answer_id === questionProp.answer_id,
+                  ) || null;
                 if (found) break;
               }
             }
@@ -241,9 +245,10 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
         let found = null as Question | null;
         for (const st of response.data.subTopics || []) {
           if (st.id === subtopic.id) {
-            found = (st.questions || []).find(
-              (q: { answer_id: number }) => q.answer_id === questionProp.answer_id,
-            ) || null;
+            found =
+              (st.questions || []).find(
+                (q: { answer_id: number }) => q.answer_id === questionProp.answer_id,
+              ) || null;
             if (found) break;
           }
         }

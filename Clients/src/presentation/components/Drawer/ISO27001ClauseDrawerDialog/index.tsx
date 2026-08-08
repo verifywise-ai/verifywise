@@ -9,13 +9,7 @@
  */
 
 import React, { useEffect, useMemo, useState } from "react";
-import {
-  CircularProgress,
-  Dialog,
-  Drawer,
-  Stack,
-  Typography,
-} from "@mui/material";
+import { CircularProgress, Dialog, Drawer, Stack, Typography } from "@mui/material";
 import { TabPanel } from "@mui/lab";
 import { Dayjs } from "dayjs";
 
@@ -147,7 +141,10 @@ const VWISO27001ClauseDrawerDialog = ({
   const [date, setDate] = useState<Dayjs | null>(null);
   const [auditedStatusModalOpen, setAuditedStatusModalOpen] = useState(false);
 
-  const handleAlert = (payload: { variant: "success" | "error" | "warning" | "info"; body: string }) => {
+  const handleAlert = (payload: {
+    variant: "success" | "error" | "warning" | "info";
+    body: string;
+  }) => {
     setAlert(payload);
     setTimeout(() => setAlert(null), 3000);
   };

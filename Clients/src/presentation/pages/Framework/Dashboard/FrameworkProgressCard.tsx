@@ -323,9 +323,7 @@ const FrameworkProgressCard = ({ frameworksData }: FrameworkProgressCardProps) =
                       "borderRadius": 3,
                       "backgroundColor": `${background.hover}`,
                       "& .MuiLinearProgress-bar": {
-                        backgroundColor: getProgressColor(
-                          isISO ? clausePercent : genericPercent,
-                        ),
+                        backgroundColor: getProgressColor(isISO ? clausePercent : genericPercent),
                         borderRadius: 3,
                       },
                     }}
@@ -334,68 +332,68 @@ const FrameworkProgressCard = ({ frameworksData }: FrameworkProgressCardProps) =
 
                 {/* Annexes Progress (ISO only) */}
                 {isISO && (
-                <Box>
-                  <Box
-                    sx={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr auto 1fr",
-                      alignItems: "center",
-                      mb: 1,
-                    }}
-                  >
-                    <Typography sx={{ fontSize: 12, color: "#666666" }}>Annexes</Typography>
+                  <Box>
                     <Box
                       sx={{
-                        display: "flex",
+                        display: "grid",
+                        gridTemplateColumns: "1fr auto 1fr",
                         alignItems: "center",
-                        gap: 0.5,
-                        justifyContent: "flex-end",
+                        mb: 1,
                       }}
                     >
-                      <Typography sx={{ fontSize: 12, color: `${text.black}`, fontWeight: 500 }}>
-                        {annexDone}
-                      </Typography>
-                      <Typography sx={{ fontSize: 12, color: `${text.black}`, fontWeight: 500 }}>
-                        /
-                      </Typography>
-                      <Typography sx={{ fontSize: 12, color: "#999999", fontWeight: 500 }}>
-                        {annexTotal}
-                      </Typography>
-                    </Box>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 1,
-                        justifyContent: "flex-end",
-                      }}
-                    >
-                      {getProgressIcon(annexPercent)}
-                      <Typography
+                      <Typography sx={{ fontSize: 12, color: "#666666" }}>Annexes</Typography>
+                      <Box
                         sx={{
-                          fontSize: 12,
-                          color: annexPercent === 100 ? `${brand.primary}` : "#666666",
-                          fontWeight: 500,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 0.5,
+                          justifyContent: "flex-end",
                         }}
                       >
-                        {annexPercent}%
-                      </Typography>
+                        <Typography sx={{ fontSize: 12, color: `${text.black}`, fontWeight: 500 }}>
+                          {annexDone}
+                        </Typography>
+                        <Typography sx={{ fontSize: 12, color: `${text.black}`, fontWeight: 500 }}>
+                          /
+                        </Typography>
+                        <Typography sx={{ fontSize: 12, color: "#999999", fontWeight: 500 }}>
+                          {annexTotal}
+                        </Typography>
+                      </Box>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1,
+                          justifyContent: "flex-end",
+                        }}
+                      >
+                        {getProgressIcon(annexPercent)}
+                        <Typography
+                          sx={{
+                            fontSize: 12,
+                            color: annexPercent === 100 ? `${brand.primary}` : "#666666",
+                            fontWeight: 500,
+                          }}
+                        >
+                          {annexPercent}%
+                        </Typography>
+                      </Box>
                     </Box>
+                    <LinearProgress
+                      variant="determinate"
+                      value={annexPercent}
+                      sx={{
+                        "height": 6,
+                        "borderRadius": 3,
+                        "backgroundColor": `${background.hover}`,
+                        "& .MuiLinearProgress-bar": {
+                          backgroundColor: getProgressColor(annexPercent),
+                          borderRadius: 3,
+                        },
+                      }}
+                    />
                   </Box>
-                  <LinearProgress
-                    variant="determinate"
-                    value={annexPercent}
-                    sx={{
-                      "height": 6,
-                      "borderRadius": 3,
-                      "backgroundColor": `${background.hover}`,
-                      "& .MuiLinearProgress-bar": {
-                        backgroundColor: getProgressColor(annexPercent),
-                        borderRadius: 3,
-                      },
-                    }}
-                  />
-                </Box>
                 )}
 
                 {/* Add bottom margin for spacing before next section */}

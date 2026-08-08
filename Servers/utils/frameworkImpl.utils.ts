@@ -208,7 +208,9 @@ export async function getFrameworkTreeQuery(
   if (!cfg) return null;
   const { tables, cols } = cfg;
 
-  logger.debug(`[fw] getFrameworkTreeQuery framework=${frameworkId} pfId=${projectFrameworkId} tables=${tables.l1_struct}/${tables.l2_struct}${tables.l3_struct ? "/" + tables.l3_struct : ""}`);
+  logger.debug(
+    `[fw] getFrameworkTreeQuery framework=${frameworkId} pfId=${projectFrameworkId} tables=${tables.l1_struct}/${tables.l2_struct}${tables.l3_struct ? "/" + tables.l3_struct : ""}`,
+  );
 
   const l1Rows = (await sequelize.query(
     `SELECT id, title, description, order_no
@@ -453,7 +455,9 @@ export async function updateImplQuery(
   let nextRiskIds = existing.map((r) => r.projects_risks_id);
   nextRiskIds = nextRiskIds.filter((r) => !risksDeleted.includes(r));
   nextRiskIds = Array.from(new Set(nextRiskIds.concat(risksMitigated)));
-  logger.debug(`[fw] updateImplQuery risks: existing=${existing.length} deleted=${risksDeleted.length} mitigated=${risksMitigated.length} next=${nextRiskIds.length}`);
+  logger.debug(
+    `[fw] updateImplQuery risks: existing=${existing.length} deleted=${risksDeleted.length} mitigated=${risksMitigated.length} next=${nextRiskIds.length}`,
+  );
 
   await sequelize.query(
     `DELETE FROM ${tables.risksTable}

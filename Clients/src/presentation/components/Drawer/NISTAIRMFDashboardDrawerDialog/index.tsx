@@ -8,11 +8,7 @@
  */
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import {
-  Stack,
-  Typography,
-  useTheme,
-} from "@mui/material";
+import { Stack, Typography, useTheme } from "@mui/material";
 import { TabPanel } from "@mui/lab";
 import dayjs, { Dayjs } from "dayjs";
 
@@ -103,7 +99,10 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
     tags: [],
   });
 
-  const handleAlert = (payload: { variant: "success" | "error" | "warning" | "info"; body: string }) => {
+  const handleAlert = (payload: {
+    variant: "success" | "error" | "warning" | "info";
+    body: string;
+  }) => {
     setAlert(payload);
     setTimeout(() => setAlert(null), 3000);
   };
@@ -364,9 +363,7 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
               <ChipInput
                 id="tags"
                 value={formData.tags}
-                onChange={(newValue) =>
-                  setFormData((prev) => ({ ...prev, tags: newValue }))
-                }
+                onChange={(newValue) => setFormData((prev) => ({ ...prev, tags: newValue }))}
                 placeholder="Add tags..."
                 disabled={isEditingDisabled}
                 sx={{

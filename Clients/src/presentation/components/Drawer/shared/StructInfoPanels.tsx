@@ -53,12 +53,7 @@ const StructInfoPanels: React.FC<StructInfoPanelsProps> = ({
           </Typography>
           <Stack spacing={1}>
             {questions.map((q, idx) => (
-              <Typography
-                key={idx}
-                fontSize={12}
-                color="#666"
-                sx={{ pl: 1, position: "relative" }}
-              >
+              <Typography key={idx} fontSize={12} color="#666" sx={{ pl: 1, position: "relative" }}>
                 • {q}
               </Typography>
             ))}
@@ -80,12 +75,7 @@ const StructInfoPanels: React.FC<StructInfoPanelsProps> = ({
           </Typography>
           <Stack spacing={1}>
             {evidenceExamples.map((ex, idx) => (
-              <Typography
-                key={idx}
-                fontSize={12}
-                color="#666"
-                sx={{ pl: 1, position: "relative" }}
-              >
+              <Typography key={idx} fontSize={12} color="#666" sx={{ pl: 1, position: "relative" }}>
                 • {ex}
               </Typography>
             ))}

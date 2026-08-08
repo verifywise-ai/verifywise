@@ -1,12 +1,5 @@
 import React from "react";
-import {
-  Box,
-  IconButton,
-  Stack,
-  Tooltip,
-  Typography,
-  useTheme,
-} from "@mui/material";
+import { Box, IconButton, Stack, Tooltip, Typography, useTheme } from "@mui/material";
 import { Eye as ViewIcon, Trash2 as DeleteIcon } from "lucide-react";
 import { CustomizableButton } from "../../button/customizable-button";
 import { LinkedRisksPopup } from "../../LinkedRisks";

@@ -1,8 +1,5 @@
 import { useCallback, useState } from "react";
-import {
-  getFileById,
-  getEntityFiles,
-} from "../../../../application/repository/file.repository";
+import { getFileById, getEntityFiles } from "../../../../application/repository/file.repository";
 import { FileData, OnAlert } from "./types";
 
 interface UseEvidenceFilesParams {
@@ -18,11 +15,7 @@ interface UseEvidenceFilesParams {
  * request. `loadFiles(entityId, legacyEvidenceLinks)` merges rows from the
  * legacy JSONB column with rows from file_entity_links and dedupes by id.
  */
-export function useEvidenceFiles({
-  frameworkType,
-  entityType,
-  onAlert,
-}: UseEvidenceFilesParams) {
+export function useEvidenceFiles({ frameworkType, entityType, onAlert }: UseEvidenceFilesParams) {
   const [evidenceFiles, setEvidenceFiles] = useState<FileData[]>([]);
   const [uploadFiles, setUploadFiles] = useState<FileData[]>([]);
   const [pendingAttachFiles, setPendingAttachFiles] = useState<FileData[]>([]);

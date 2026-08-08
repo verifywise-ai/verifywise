@@ -89,18 +89,18 @@ export async function getAllPlugins(category?: string): Promise<IPlugin[]> {
 
 export async function getPluginByKey(key: string): Promise<IPlugin | null> {
   if (!key) return null;
-  const rows = (await sequelize.query(
-    `SELECT * FROM plugins WHERE key = :key LIMIT 1;`,
-    { replacements: { key }, type: QueryTypes.SELECT },
-  )) as IPlugin[];
+  const rows = (await sequelize.query(`SELECT * FROM plugins WHERE key = :key LIMIT 1;`, {
+    replacements: { key },
+    type: QueryTypes.SELECT,
+  })) as IPlugin[];
   return rows[0] || null;
 }
 
 export async function getPluginByFrameworkId(frameworkId: number): Promise<IPlugin | null> {
-  const rows = (await sequelize.query(
-    `SELECT * FROM plugins WHERE framework_id = :fid LIMIT 1;`,
-    { replacements: { fid: frameworkId }, type: QueryTypes.SELECT },
-  )) as IPlugin[];
+  const rows = (await sequelize.query(`SELECT * FROM plugins WHERE framework_id = :fid LIMIT 1;`, {
+    replacements: { fid: frameworkId },
+    type: QueryTypes.SELECT,
+  })) as IPlugin[];
   return rows[0] || null;
 }
 
@@ -125,7 +125,9 @@ export async function searchPlugins(query: string): Promise<IPlugin[]> {
   return rows;
 }
 
-export async function getCategories(): Promise<Array<{ id: string; name: string; description: string }>> {
+export async function getCategories(): Promise<
+  Array<{ id: string; name: string; description: string }>
+> {
   const rows = (await sequelize.query(
     `SELECT category, COUNT(*)::int AS count
        FROM plugins WHERE is_published = TRUE
@@ -168,7 +170,11 @@ export async function createInstall(
   const existing = (await sequelize.query(
     `SELECT 1 FROM plugin_installs
       WHERE plugin_key = :key AND organization_id = :orgId LIMIT 1;`,
-    { replacements: { key: pluginKey, orgId: organizationId }, type: QueryTypes.SELECT, transaction },
+    {
+      replacements: { key: pluginKey, orgId: organizationId },
+      type: QueryTypes.SELECT,
+      transaction,
+    },
   )) as unknown[];
   if (existing.length > 0) {
     throw new ValidationException("Plugin is already installed", "plugin_key", pluginKey);
@@ -223,7 +229,11 @@ export async function findInstallByKey(
   const rows = (await sequelize.query(
     `SELECT * FROM plugin_installs
       WHERE plugin_key = :key AND organization_id = :orgId LIMIT 1;`,
-    { replacements: { key: pluginKey, orgId: organizationId }, type: QueryTypes.SELECT, transaction },
+    {
+      replacements: { key: pluginKey, orgId: organizationId },
+      type: QueryTypes.SELECT,
+      transaction,
+    },
   )) as IPluginInstall[];
   return rows[0] || null;
 }

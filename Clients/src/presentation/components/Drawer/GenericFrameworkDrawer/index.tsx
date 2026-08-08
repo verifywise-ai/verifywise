@@ -66,12 +66,12 @@ export interface GenericFrameworkDrawerProps {
 
   // Framework identity — passed by the parent page from the tree response.
   frameworkId: number;
-  frameworkType: string;            // used for file_entity_links keys
-  entityType: string;               // used for file_entity_links keys
-  level: "l2" | "l3";               // impl table level
+  frameworkType: string; // used for file_entity_links keys
+  entityType: string; // used for file_entity_links keys
+  level: "l2" | "l3"; // impl table level
 
   // Impl row + context.
-  entityId: number;                 // impl row id
+  entityId: number; // impl row id
   projectFrameworkId: number;
   project_id: number;
 
@@ -86,7 +86,7 @@ export interface GenericFrameworkDrawerProps {
 
   // Optional overrides.
   statusOptions?: StatusOption[];
-  notesAttachedTo?: string;         // enables Notes tab when provided
+  notesAttachedTo?: string; // enables Notes tab when provided
   drawerClassName?: string;
 
   onSaveSuccess?: (success: boolean, message?: string, id?: number) => void;
@@ -129,7 +129,10 @@ const GenericFrameworkDrawer: React.FC<GenericFrameworkDrawerProps> = ({
     auditor_feedback: "",
   });
 
-  const handleAlert = (payload: { variant: "success" | "error" | "warning" | "info"; body: string }) => {
+  const handleAlert = (payload: {
+    variant: "success" | "error" | "warning" | "info";
+    body: string;
+  }) => {
     setAlert(payload);
     setTimeout(() => setAlert(null), 3000);
   };

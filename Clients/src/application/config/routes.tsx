@@ -46,9 +46,7 @@ const PageNotFound = lazyRoute(() => import("../../presentation/pages/PageNotFou
 
 // ── Compliance & framework routes ─────────────────────────────────────
 const Framework = lazyRoute(() => import("../../presentation/pages/Framework"));
-const GenericFramework = lazyRoute(
-  () => import("../../presentation/pages/Framework/Generic"),
-);
+const GenericFramework = lazyRoute(() => import("../../presentation/pages/Framework/Generic"));
 const Training = lazyRoute(() => import("../../presentation/pages/TrainingRegistar"));
 const PolicyDashboard = lazyRoute(
   () => import("../../presentation/pages/PolicyDashboard/PoliciesDashboard"),

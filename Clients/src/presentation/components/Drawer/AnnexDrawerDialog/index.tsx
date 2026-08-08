@@ -10,13 +10,7 @@
  */
 
 import React, { useEffect, useMemo, useState } from "react";
-import {
-  CircularProgress,
-  Dialog,
-  Drawer,
-  Stack,
-  Typography,
-} from "@mui/material";
+import { CircularProgress, Dialog, Drawer, Stack, Typography } from "@mui/material";
 import { TabPanel } from "@mui/lab";
 import dayjs, { Dayjs } from "dayjs";
 
@@ -131,7 +125,10 @@ const VWISO42001AnnexDrawerDialog = ({
     auditor_feedback: "",
   });
 
-  const handleAlert = (payload: { variant: "success" | "error" | "warning" | "info"; body: string }) => {
+  const handleAlert = (payload: {
+    variant: "success" | "error" | "warning" | "info";
+    body: string;
+  }) => {
     setAlert(payload);
     setTimeout(() => setAlert(null), 3000);
   };
@@ -410,9 +407,7 @@ const VWISO42001AnnexDrawerDialog = ({
                   label="Not applicable"
                   isChecked={!formData.is_applicable}
                   value={"Not Applicable"}
-                  onChange={() =>
-                    setFormData((prev) => ({ ...prev, is_applicable: false }))
-                  }
+                  onChange={() => setFormData((prev) => ({ ...prev, is_applicable: false }))}
                   size="small"
                   isDisabled={isEditingDisabled}
                 />

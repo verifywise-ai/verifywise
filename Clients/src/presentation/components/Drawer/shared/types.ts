@@ -12,13 +12,7 @@ export type OnAlert = (alert: DrawerAlertPayload) => void;
 export interface DrawerTab {
   label: string;
   value: string;
-  icon:
-    | "FileText"
-    | "FolderOpen"
-    | "Link"
-    | "MessageSquare"
-    | "AlertTriangle"
-    | "CheckSquare";
+  icon: "FileText" | "FolderOpen" | "Link" | "MessageSquare" | "AlertTriangle" | "CheckSquare";
 }
 
 export interface StatusOption {

@@ -9,13 +9,7 @@
  */
 
 import React, { useEffect, useMemo, useState } from "react";
-import {
-  CircularProgress,
-  Dialog,
-  Drawer,
-  Stack,
-  Typography,
-} from "@mui/material";
+import { CircularProgress, Dialog, Drawer, Stack, Typography } from "@mui/material";
 import { TabPanel } from "@mui/lab";
 import dayjs, { Dayjs } from "dayjs";
 
@@ -155,7 +149,10 @@ const VWISO27001AnnexDrawerDialog = ({
     risks: [],
   });
 
-  const handleAlert = (payload: { variant: "success" | "error" | "warning" | "info"; body: string }) => {
+  const handleAlert = (payload: {
+    variant: "success" | "error" | "warning" | "info";
+    body: string;
+  }) => {
     setAlert(payload);
     setTimeout(() => setAlert(null), 3000);
   };

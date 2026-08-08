@@ -349,7 +349,6 @@ const Plugins: React.FC = () => {
             )}
           </Stack>
         </TabPanel>
-
       </TabContext>
     </PageHeaderExtended>
   );

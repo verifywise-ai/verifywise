@@ -428,9 +428,7 @@ const AssignmentStatusCard = ({ frameworksData }: AssignmentStatusCardProps) => 
                         <Typography sx={{ fontSize: 12, color: "#999999", fontWeight: 500 }}>
                           {generic.total}
                         </Typography>
-                        <Typography
-                          sx={{ fontSize: 12, color: "#666666", fontWeight: 400, ml: 1 }}
-                        >
+                        <Typography sx={{ fontSize: 12, color: "#666666", fontWeight: 400, ml: 1 }}>
                           assigned
                         </Typography>
                       </Box>

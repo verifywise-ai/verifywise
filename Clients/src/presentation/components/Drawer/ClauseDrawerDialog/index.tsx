@@ -8,12 +8,7 @@
  */
 
 import React, { useEffect, useMemo, useState } from "react";
-import {
-  CircularProgress,
-  Drawer,
-  Stack,
-  Typography,
-} from "@mui/material";
+import { CircularProgress, Drawer, Stack, Typography } from "@mui/material";
 import { TabPanel } from "@mui/lab";
 import dayjs, { Dayjs } from "dayjs";
 
@@ -95,7 +90,10 @@ const ISO42001ClauseDrawerDialog: React.FC<ISO42001ClauseDrawerProps> = ({
   });
   const [date, setDate] = useState<Dayjs | null>(null);
 
-  const handleAlert = (payload: { variant: "success" | "error" | "warning" | "info"; body: string }) => {
+  const handleAlert = (payload: {
+    variant: "success" | "error" | "warning" | "info";
+    body: string;
+  }) => {
     setAlert(payload);
     setTimeout(() => setAlert(null), 3000);
   };

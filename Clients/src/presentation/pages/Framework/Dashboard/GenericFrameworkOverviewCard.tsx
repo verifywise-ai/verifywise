@@ -268,9 +268,7 @@ const GenericFrameworkOverviewCard = ({
                 {renderMiniSquares(section.l2Rows)}
               </Box>
 
-              <Box
-                sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
-              >
+              <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                   <Typography
                     sx={{

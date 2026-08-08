@@ -43,12 +43,9 @@ type TrackerTab = (typeof TRACKER_TABS)[number]["value"];
  * The backend silently falls back to EU AI Act controls for unknown types, so the
  * readiness tab is only offered for names listed here.
  */
-// Only EU AI Act reaches the readiness TabPanel at project level: every
-// non-EU-AI-Act framework is dispatched to <GenericFramework/> (which has no
-// readiness tab) before the readiness panel renders. Listing "ISO 42001" here
-// would be dead — its readiness type is never consumed on this page.
 const READINESS_FRAMEWORK_TYPES: Record<string, string> = {
   "EU AI Act": "eu_ai_act",
+  "ISO 42001": "iso_42001",
 };
 
 const ProjectFrameworks = ({
