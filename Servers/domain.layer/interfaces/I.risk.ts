@@ -18,12 +18,7 @@ export interface IRisk {
   likelihood: "Rare" | "Unlikely" | "Possible" | "Likely" | "Almost Certain";
   severity: "Negligible" | "Minor" | "Moderate" | "Major" | "Catastrophic";
   risk_level_autocalculated:
-    | "No risk"
-    | "Very low risk"
-    | "Low risk"
-    | "Medium risk"
-    | "High risk"
-    | "Very high risk";
+    "No risk" | "Very low risk" | "Low risk" | "Medium risk" | "High risk" | "Very high risk";
   review_notes: string;
   mitigation_status:
     | "Not Started"

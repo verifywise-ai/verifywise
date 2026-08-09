@@ -78,12 +78,7 @@ export interface WorkflowDefinition {
  * Lifecycle state of a persisted workflow run.
  */
 export type WorkflowRunState =
-  | "pending"
-  | "running"
-  | "awaiting_approval"
-  | "completed"
-  | "failed"
-  | "cancelled";
+  "pending" | "running" | "awaiting_approval" | "completed" | "failed" | "cancelled";
 
 /**
  * Per-step execution record persisted in the run's `results` column.

@@ -77,8 +77,7 @@ export const vendorOnboardingWorkflow: WorkflowDefinition = {
       isWrite: false,
       handler: async (ctx: WorkflowContext): Promise<StepResult> => {
         const assessment = ctx.results.verify_risk_assessment as
-          | { risks?: Array<{ risk_severity?: string }> }
-          | undefined;
+          { risks?: Array<{ risk_severity?: string }> } | undefined;
         const risks = assessment?.risks || [];
         const highSeverityCount = risks.filter(
           (r) => r.risk_severity != null && HIGH_SEVERITIES.includes(r.risk_severity),
@@ -93,8 +92,7 @@ export const vendorOnboardingWorkflow: WorkflowDefinition = {
       isWrite: false,
       handler: async (ctx: WorkflowContext): Promise<StepResult> => {
         const assessment = ctx.results.verify_risk_assessment as
-          | { hasAssessment?: boolean }
-          | undefined;
+          { hasAssessment?: boolean } | undefined;
         const checks = ctx.results.run_risk_checks as { highSeverityCount?: number } | undefined;
         const missingAssessment = !assessment?.hasAssessment;
         const hasHighSeverity = (checks?.highSeverityCount || 0) > 0;

@@ -25,13 +25,7 @@ import { Column, DataType, Model, Table } from "sequelize-typescript";
 import { IEvaluationLlmApiKey } from "../../interfaces/i.evalutationLlmApiKey";
 
 export type LLMProvider =
-  | "openai"
-  | "anthropic"
-  | "google"
-  | "xai"
-  | "mistral"
-  | "huggingface"
-  | "openrouter";
+  "openai" | "anthropic" | "google" | "xai" | "mistral" | "huggingface" | "openrouter";
 
 export const VALID_PROVIDERS: LLMProvider[] = [
   "openai",

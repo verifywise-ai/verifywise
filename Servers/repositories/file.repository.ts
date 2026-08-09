@@ -73,12 +73,7 @@ export interface UploadedFile {
 }
 
 export type ReviewStatus =
-  | "draft"
-  | "pending_review"
-  | "approved"
-  | "rejected"
-  | "expired"
-  | "superseded";
+  "draft" | "pending_review" | "approved" | "rejected" | "expired" | "superseded";
 
 export interface OrganizationFileMetadata {
   id: number;
@@ -1161,12 +1156,7 @@ export async function updateFileReviewStatus(
 
 export type FrameworkType = "eu_ai_act" | "nist_ai_rmf" | "iso_27001" | "iso_42001" | string;
 export type EntityType =
-  | "assessment"
-  | "subcontrol"
-  | "subclause"
-  | "annex_control"
-  | "annex_category"
-  | string;
+  "assessment" | "subcontrol" | "subclause" | "annex_control" | "annex_category" | string;
 export type LinkType = "evidence" | "feedback" | "attachment" | "reference" | "source_data";
 
 export interface FileEntityLink {

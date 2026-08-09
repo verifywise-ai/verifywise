@@ -138,7 +138,8 @@
       "Bash(pkill -9 -f 'node dist/index.js')",
       "Bash(cat)",
       "Bash(git check-ignore *)",
-      "Bash(docker manifest *)"
+      "Bash(docker manifest *)",
+      "Bash(npm audit *)"
     ]
   }
 }
