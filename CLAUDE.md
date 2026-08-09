@@ -100,6 +100,9 @@ cd EvalServer/src && alembic upgrade head && uvicorn app:app --port 8000 --worke
 
 ### Git Workflow
 
+**Always work on a branch — never commit directly to `main`, `master`, or
+`develop`.** One branch per feature or fix.
+
 ```bash
 # Branch naming
 feature/description    fix/description    docs/description
@@ -113,6 +116,8 @@ fix(dashboard): resolve chart rendering issue
 ### PR Checklist
 
 - [ ] Build passes locally (`cd Servers && npm run build` and `cd Clients && npm run build`)
+- [ ] `npm run format-check` clean in **both** `Servers` and `Clients` — if either
+      reports issues, run `npm run format`, then recommit before opening the PR
 - [ ] Self-review completed
 - [ ] Issue number included
 - [ ] No hardcoded values
@@ -120,6 +125,10 @@ fix(dashboard): resolve chart rendering issue
 - [ ] Tests written/updated
 - [ ] No console.log statements
 - [ ] No sensitive data exposed
+
+**Never open a PR without explicit permission.** "Ship it", "go ahead", "looks
+good" refer to the work in progress, not to opening a PR. Pushing a branch is
+fine unasked; `gh pr create` is not.
 
 ---
 
@@ -157,6 +166,30 @@ fix(dashboard): resolve chart rendering issue
 | Files (Utilities) | camelCase | `formatDate.ts` |
 | Database Tables | snake_case | `user_profiles` |
 | API Endpoints | kebab-case | `/api/user-profiles` |
+
+---
+
+## UI Component Patterns
+
+**Prefer VerifyWise components over MUI where one exists.** MUI is a dependency
+(`@mui/material`, `@mui/lab`, `@mui/x-charts`, `@mui/x-date-pickers`) and is
+fine underneath, but a screen should reach for the house component first so
+behaviour stays consistent.
+
+| Need | Use | In use |
+|------|-----|--------|
+| Modal | `StandardModal` with `useStandardModal` + `onSubmitRef` | ~137 files |
+| Dropdown | `CustomizableButton` + `Popover` | ~220 files |
+| Search input | `SearchBox` | ~57 files |
+
+Check for an existing pattern before implementing a new one — these are already
+used across most of `Clients/src`, so a bespoke version is nearly always a
+duplicate.
+
+House UI rules: sentence case for all screen text; border `#d0d5dd`; border
+radius 4px; green primary `#13715B`; 30px control height on desktop (buttons,
+inputs, selects, dropdown triggers) — mobile/touch primitives keep their larger
+sizes.
 
 ---
 
