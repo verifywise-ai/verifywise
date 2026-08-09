@@ -36,7 +36,9 @@ export interface ProjectCreatedData {
 }
 
 export type ProjectNotificationData =
-  UserAddedToProjectData | RoleChangedToAdminData | ProjectCreatedData;
+  | UserAddedToProjectData
+  | RoleChangedToAdminData
+  | ProjectCreatedData;
 
 // ============================================================================
 // CONFIGURATION
