@@ -18,8 +18,7 @@ const baseJudge: JudgeLlmConfigForValidation = {
   endpointUrl: "",
 };
 
-const hasApiKey = (configured: string[]) => (providerId: string) =>
-  configured.includes(providerId);
+const hasApiKey = (configured: string[]) => (providerId: string) => configured.includes(providerId);
 
 describe("stepValidation", () => {
   describe("getMissingKeyProviders", () => {
@@ -115,6 +114,7 @@ describe("stepValidation", () => {
       judgeMode: "standard" as const,
       userScorersCount: 0,
       missingKeyProviders: [],
+      judgeLlm: baseJudge,
     };
 
     describe("step 0 (model)", () => {
@@ -151,7 +151,12 @@ describe("stepValidation", () => {
           canProceedToNextStep({
             ...baseParams,
             activeStep: 0,
-            model: { ...baseModel, name: "local-model", accessMethod: "local", endpointUrl: "http://x" },
+            model: {
+              ...baseModel,
+              name: "local-model",
+              accessMethod: "local",
+              endpointUrl: "http://x",
+            },
             selectedModelProvider: { needsUrl: true },
           }),
         ).toBe(true);
@@ -242,7 +247,9 @@ describe("stepValidation", () => {
           judgeMode: "scorer" as const,
         };
         expect(canProceedToNextStep({ ...params, userScorersCount: 0 })).toBe(false);
-        expect(canProceedToNextStep({ ...params, userScorersCount: 1, missingKeyProviders: ["openai"] })).toBe(false);
+        expect(
+          canProceedToNextStep({ ...params, userScorersCount: 1, missingKeyProviders: ["openai"] }),
+        ).toBe(false);
         expect(canProceedToNextStep({ ...params, userScorersCount: 1 })).toBe(true);
       });
 
@@ -294,9 +301,7 @@ describe("stepValidation", () => {
         };
         expect(canProceedToNextStep(params)).toBe(true);
         expect(canProceedToNextStep({ ...params, userScorersCount: 0 })).toBe(false);
-        expect(
-          canProceedToNextStep({ ...params, missingKeyProviders: ["openai"] }),
-        ).toBe(false);
+        expect(canProceedToNextStep({ ...params, missingKeyProviders: ["openai"] })).toBe(false);
         expect(canProceedToNextStep({ ...params, judgeLlm: baseJudge })).toBe(false);
       });
     });

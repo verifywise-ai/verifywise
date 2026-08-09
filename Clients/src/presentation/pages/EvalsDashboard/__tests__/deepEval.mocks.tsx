@@ -38,6 +38,18 @@ const deepEvalMocks = vi.hoisted(() => ({
   getGatewayModelsForProvider: vi.fn(),
   createModel: vi.fn(),
   savePreferences: vi.fn(),
+  getExperiment: vi.fn(),
+  getLogs: vi.fn(),
+  updateExperiment: vi.fn(),
+  listBiasAuditPresets: vi.fn(),
+  getBiasAuditPreset: vi.fn(),
+  runBiasAudit: vi.fn(),
+  getAllExperiments: vi.fn(),
+  deleteExperiment: vi.fn(),
+  createArenaComparison: vi.fn(),
+  listArenaComparisons: vi.fn(),
+  deleteArenaComparison: vi.fn(),
+  getArenaComparisonResults: vi.fn(),
 }));
 
 export { deepEvalMocks };
@@ -56,6 +68,18 @@ vi.mock("../../../../application/repository/deepEval.repository", () => ({
   getAllLlmApiKeys: deepEvalMocks.getAllLlmApiKeys,
   addLlmApiKey: deepEvalMocks.addLlmApiKey,
   validateModel: deepEvalMocks.validateModel,
+  getExperiment: deepEvalMocks.getExperiment,
+  getLogs: deepEvalMocks.getLogs,
+  updateExperiment: deepEvalMocks.updateExperiment,
+  listBiasAuditPresets: deepEvalMocks.listBiasAuditPresets,
+  getBiasAuditPreset: deepEvalMocks.getBiasAuditPreset,
+  runBiasAudit: deepEvalMocks.runBiasAudit,
+  getAllExperiments: deepEvalMocks.getAllExperiments,
+  deleteExperiment: deepEvalMocks.deleteExperiment,
+  createArenaComparison: deepEvalMocks.createArenaComparison,
+  listArenaComparisons: deepEvalMocks.listArenaComparisons,
+  deleteArenaComparison: deepEvalMocks.deleteArenaComparison,
+  getArenaComparisonResults: deepEvalMocks.getArenaComparisonResults,
   isSingleTurnPrompt: (record: unknown) =>
     typeof record === "object" &&
     record !== null &&
@@ -137,14 +161,150 @@ export const samplePrompts = [
 ];
 
 /** Make `listDatasets` resolve a preset list for a given task type. */
-export function mockListDatasetsWith(
-  taskType: string,
-  paths: string[],
-): void {
+export function mockListDatasetsWith(taskType: string, paths: string[]): void {
   deepEvalMocks.listDatasets.mockResolvedValue({
     [taskType]: paths.map((path) => ({ path })),
   });
 }
+
+/**
+ * Default experiment resolved by `getExperiment` after `resetDeepEvalMocks`.
+ * Tests can override with their own `getExperiment.mockResolvedValue(...)`.
+ * `created_at` is date-only so `displayFormattedDate` renders the same value
+ * in every timezone.
+ */
+export const mockExperiment = {
+  id: "exp-1",
+  project_id: "proj-1",
+  name: "Test Experiment",
+  description: "A test run",
+  config: {
+    model: { name: "gpt-4o", accessMethod: "openai" },
+    judgeLlm: { model: "gpt-4o" },
+  },
+  status: "completed",
+  created_at: "2025-06-01",
+  updated_at: "2025-06-01",
+  tenant: "t1",
+};
+
+/**
+ * Preset summaries returned by `listBiasAuditPresets` after
+ * `resetDeepEvalMocks`. `custom` is included so the modal can move it to the
+ * front of the list (mirrors the component's sort).
+ */
+export const mockPresetSummaries: Array<{
+  id: string;
+  name: string;
+  jurisdiction: string;
+  effective_date: string;
+  mode: string;
+  description: string;
+}> = [
+  {
+    id: "custom",
+    name: "Custom audit",
+    jurisdiction: "Custom",
+    effective_date: "2025-01-01",
+    mode: "custom",
+    description: "Build your own bias audit from scratch",
+  },
+  {
+    id: "nyc_ll144",
+    name: "NYC Local Law 144",
+    jurisdiction: "New York City",
+    effective_date: "2025-01-01",
+    mode: "quantitative_audit",
+    description: "Automated employment decision tool audit",
+  },
+  {
+    id: "eeoc_guidelines",
+    name: "EEOC Guidelines",
+    jurisdiction: "United States",
+    effective_date: "2025-01-01",
+    mode: "framework_assessment",
+    description: "EEOC employment discrimination guidance",
+  },
+];
+
+/**
+ * Full preset resolved by `getBiasAuditPreset` for `nyc_ll144` after
+ * `resetDeepEvalMocks`. Has one required category (`gender`), one optional
+ * category (`age`), an intersectional config and a non-null threshold so step
+ * 3 gating and the step 4 settings render. `intersectional.required` is false
+ * so the step 4 checkbox starts unchecked and tests can enable it.
+ */
+export const mockFullPreset = {
+  id: "nyc_ll144",
+  name: "NYC Local Law 144",
+  jurisdiction: "New York City",
+  effective_date: "2025-01-01",
+  mode: "quantitative_audit",
+  description: "Automated employment decision tool audit",
+  categories: {
+    gender: { label: "Gender", groups: ["female", "male"] },
+    age: { label: "Age", groups: [] },
+  },
+  intersectional: { required: false, cross: ["gender"] },
+  metrics: ["selection_rate", "scoring_rate", "fairness_metrics"],
+  threshold: 0.8,
+  small_sample_exclusion: 2,
+  required_metadata: ["systemName"],
+};
+
+/** A valid applicant CSV the modal parses in step 3. */
+export const mockCsvContent = [
+  "gender,race,outcome",
+  "female,white,1",
+  "male,asian,0",
+  "female,asian,1",
+  "male,white,0",
+].join("\n");
+
+/** Build a File whose content the jsdom FileReader can read as text. */
+export function makeCsvFile(
+  content = mockCsvContent,
+  name = "applicants.csv",
+): File {
+  return new File([content], name, { type: "text/csv" });
+}
+
+/** Arena comparisons resolved by `listArenaComparisons` after reset. */
+export const mockArenaComparisons: Array<{
+  id: string;
+  name: string;
+  status: "pending" | "running" | "completed" | "failed";
+  contestants: string[];
+  winner?: string;
+  dataset?: string;
+  createdAt: string;
+}> = [
+  {
+    id: "battle-1",
+    name: "GPT-4 vs Claude",
+    status: "completed",
+    contestants: ["gpt-4o", "claude-sonnet-4"],
+    winner: "gpt-4o",
+    dataset: "chatbot.json",
+    createdAt: "2025-06-01T10:00:00Z",
+  },
+  {
+    id: "battle-2",
+    name: "Running battle",
+    status: "running",
+    contestants: ["gemini-pro", "llama-3"],
+    createdAt: "2025-06-01T11:00:00Z",
+  },
+];
+
+/** Results resolved by `getArenaComparisonResults` after reset. */
+export const mockArenaResults = {
+  id: "battle-1",
+  name: "GPT-4 vs Claude",
+  status: "completed",
+  winCounts: { "gpt-4o": 8, "claude-sonnet-4": 2 },
+  detailedResults: [],
+};
 
 // ── Lifecycle helpers ───────────────────────────────────────────────────────
 
@@ -174,15 +334,11 @@ export function installBrowserStubs(): void {
 
 /** Reset every mock handle to a safe default (call in `beforeEach`). */
 export function resetDeepEvalMocks(): void {
-  deepEvalMocks.createExperiment
-    .mockReset()
-    .mockResolvedValue({ experiment: { id: "exp-123" } });
+  deepEvalMocks.createExperiment.mockReset().mockResolvedValue({ experiment: { id: "exp-123" } });
   deepEvalMocks.listDatasets.mockReset().mockResolvedValue({});
   deepEvalMocks.readDataset.mockReset().mockResolvedValue({ prompts: [] });
   deepEvalMocks.listMyDatasets.mockReset().mockResolvedValue({ datasets: [] });
-  deepEvalMocks.uploadDataset
-    .mockReset()
-    .mockResolvedValue({ path: "uploads/uploaded.json" });
+  deepEvalMocks.uploadDataset.mockReset().mockResolvedValue({ path: "uploads/uploaded.json" });
   deepEvalMocks.deleteDatasets.mockReset().mockResolvedValue({ success: true });
   deepEvalMocks.listScorers.mockReset().mockResolvedValue({ scorers: [] });
   deepEvalMocks.getAllLlmApiKeys.mockReset().mockResolvedValue([]);
@@ -197,4 +353,18 @@ export function resetDeepEvalMocks(): void {
     .mockReset()
     .mockResolvedValue({ id: 1, name: "test-model", provider: "openai" });
   deepEvalMocks.savePreferences.mockReset().mockResolvedValue(true);
+  deepEvalMocks.getExperiment.mockReset().mockResolvedValue({ experiment: mockExperiment });
+  deepEvalMocks.getLogs.mockReset().mockResolvedValue({ logs: [] });
+  deepEvalMocks.updateExperiment.mockReset().mockResolvedValue({ experiment: mockExperiment });
+  deepEvalMocks.listBiasAuditPresets.mockReset().mockResolvedValue(mockPresetSummaries);
+  deepEvalMocks.getBiasAuditPreset.mockReset().mockResolvedValue(mockFullPreset);
+  deepEvalMocks.runBiasAudit.mockReset().mockResolvedValue({ auditId: "audit-1", status: "running" });
+  deepEvalMocks.getAllExperiments.mockReset().mockResolvedValue({ experiments: [] });
+  deepEvalMocks.deleteExperiment.mockReset().mockResolvedValue({ success: true });
+  deepEvalMocks.createArenaComparison
+    .mockReset()
+    .mockResolvedValue({ id: "new-1", status: "running", message: "ok", contestants: [] });
+  deepEvalMocks.listArenaComparisons.mockReset().mockResolvedValue({ comparisons: [] });
+  deepEvalMocks.deleteArenaComparison.mockReset().mockResolvedValue({ success: true });
+  deepEvalMocks.getArenaComparisonResults.mockReset().mockResolvedValue(mockArenaResults);
 }
