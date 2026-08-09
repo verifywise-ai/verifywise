@@ -28,6 +28,7 @@ const deepEvalMocks = vi.hoisted(() => ({
   readDataset: vi.fn(),
   listMyDatasets: vi.fn(),
   uploadDataset: vi.fn(),
+  deleteDatasets: vi.fn(),
   listScorers: vi.fn(),
   getAllLlmApiKeys: vi.fn(),
   addLlmApiKey: vi.fn(),
@@ -41,16 +42,30 @@ const deepEvalMocks = vi.hoisted(() => ({
 
 export { deepEvalMocks };
 
+// The `isSingleTurnPrompt` / `isMultiTurnConversation` type guards are kept
+// real (they mirror the implementations in deepEvalDatasetsService) so
+// components that branch on them keep correct behavior.
 vi.mock("../../../../application/repository/deepEval.repository", () => ({
   createExperiment: deepEvalMocks.createExperiment,
   listDatasets: deepEvalMocks.listDatasets,
   readDataset: deepEvalMocks.readDataset,
   listMyDatasets: deepEvalMocks.listMyDatasets,
   uploadDataset: deepEvalMocks.uploadDataset,
+  deleteDatasets: deepEvalMocks.deleteDatasets,
   listScorers: deepEvalMocks.listScorers,
   getAllLlmApiKeys: deepEvalMocks.getAllLlmApiKeys,
   addLlmApiKey: deepEvalMocks.addLlmApiKey,
   validateModel: deepEvalMocks.validateModel,
+  isSingleTurnPrompt: (record: unknown) =>
+    typeof record === "object" &&
+    record !== null &&
+    "prompt" in record &&
+    typeof (record as { prompt?: unknown }).prompt === "string",
+  isMultiTurnConversation: (record: unknown) =>
+    typeof record === "object" &&
+    record !== null &&
+    "turns" in record &&
+    Array.isArray((record as { turns?: unknown }).turns),
 }));
 
 vi.mock("../../../../application/repository/entity.repository", () => ({
@@ -143,9 +158,17 @@ export function installBrowserStubs(): void {
   if (typeof Element !== "undefined" && !Element.prototype.scrollIntoView) {
     Element.prototype.scrollIntoView = vi.fn();
   }
-  if (typeof URL !== "undefined" && !URL.createObjectURL) {
-    URL.createObjectURL = vi.fn(() => "blob:mock");
-    URL.revokeObjectURL = vi.fn();
+  if (typeof URL !== "undefined") {
+    Object.defineProperty(URL, "createObjectURL", {
+      configurable: true,
+      writable: true,
+      value: vi.fn(() => "blob:mock"),
+    });
+    Object.defineProperty(URL, "revokeObjectURL", {
+      configurable: true,
+      writable: true,
+      value: vi.fn(),
+    });
   }
 }
 
@@ -160,6 +183,7 @@ export function resetDeepEvalMocks(): void {
   deepEvalMocks.uploadDataset
     .mockReset()
     .mockResolvedValue({ path: "uploads/uploaded.json" });
+  deepEvalMocks.deleteDatasets.mockReset().mockResolvedValue({ success: true });
   deepEvalMocks.listScorers.mockReset().mockResolvedValue({ scorers: [] });
   deepEvalMocks.getAllLlmApiKeys.mockReset().mockResolvedValue([]);
   deepEvalMocks.addLlmApiKey
