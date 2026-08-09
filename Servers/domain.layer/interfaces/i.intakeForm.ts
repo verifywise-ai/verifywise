@@ -5,7 +5,15 @@ import { IntakeEntityType } from "../enums/intake-entity-type.enum";
  * Field type options for intake form fields
  */
 export type IntakeFieldType =
-  "text" | "textarea" | "select" | "multiselect" | "checkbox" | "date" | "email" | "url" | "number";
+  | "text"
+  | "textarea"
+  | "select"
+  | "multiselect"
+  | "checkbox"
+  | "date"
+  | "email"
+  | "url"
+  | "number";
 
 /**
  * Individual field definition in the form schema

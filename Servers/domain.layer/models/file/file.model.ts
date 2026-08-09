@@ -58,7 +58,12 @@ export type FileSource =
   | "UAE PDPL articles";
 
 export type ReviewStatus =
-  "draft" | "pending_review" | "approved" | "rejected" | "expired" | "superseded";
+  | "draft"
+  | "pending_review"
+  | "approved"
+  | "rejected"
+  | "expired"
+  | "superseded";
 
 export interface File {
   filename: string;

@@ -51,7 +51,12 @@ class TestProjectRiskModel {
   likelihood!: "Rare" | "Unlikely" | "Possible" | "Likely" | "Almost Certain";
   severity!: "Negligible" | "Minor" | "Moderate" | "Major" | "Catastrophic";
   risk_level_autocalculated!:
-    "No risk" | "Very low risk" | "Low risk" | "Medium risk" | "High risk" | "Very high risk";
+    | "No risk"
+    | "Very low risk"
+    | "Low risk"
+    | "Medium risk"
+    | "High risk"
+    | "Very high risk";
   review_notes!: string;
   mitigation_status!:
     | "Not Started"
@@ -62,7 +67,11 @@ class TestProjectRiskModel {
     | "Canceled"
     | "Requires review";
   current_risk_level!:
-    "Very Low risk" | "Low risk" | "Medium risk" | "High risk" | "Very high risk";
+    | "Very Low risk"
+    | "Low risk"
+    | "Medium risk"
+    | "High risk"
+    | "Very high risk";
   deadline!: Date;
   mitigation_plan!: string;
   implementation_strategy!: string;

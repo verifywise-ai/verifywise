@@ -241,8 +241,7 @@ export interface AISummaries {
 export interface SectionNotice {
   /** Matches a REPORT_SECTION_CATALOG key. */
   sectionKey: string;
-  reason:
-    /** Requested, but no pairing in scope carries a framework that serves it. */
+  reason: /** Requested, but no pairing in scope carries a framework that serves it. */
     | "no_framework_target"
     /** A pairing exists; the query returned zero rows. */
     | "no_data"

@@ -93,7 +93,12 @@ export class RiskModel extends Model<RiskModel> implements IRisk {
     ),
   })
   risk_level_autocalculated!:
-    "No risk" | "Very low risk" | "Low risk" | "Medium risk" | "High risk" | "Very high risk";
+    | "No risk"
+    | "Very low risk"
+    | "Low risk"
+    | "Medium risk"
+    | "High risk"
+    | "Very high risk";
 
   @Column({
     type: DataType.STRING,
@@ -124,7 +129,11 @@ export class RiskModel extends Model<RiskModel> implements IRisk {
     type: DataType.ENUM("Very Low risk", "Low risk", "Medium risk", "High risk", "Very high risk"),
   })
   current_risk_level!:
-    "Very Low risk" | "Low risk" | "Medium risk" | "High risk" | "Very high risk";
+    | "Very Low risk"
+    | "Low risk"
+    | "Medium risk"
+    | "High risk"
+    | "Very high risk";
 
   @Column({
     type: DataType.DATE,
