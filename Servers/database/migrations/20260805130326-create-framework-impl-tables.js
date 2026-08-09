@@ -21,11 +21,15 @@ module.exports = {
     const transaction = await sequelize.transaction();
 
     try {
-      console.log(`[fw:migrate-impl] creating impl tables for ${FRAMEWORK_STRUCTURES.length} frameworks`);
+      console.log(
+        `[fw:migrate-impl] creating impl tables for ${FRAMEWORK_STRUCTURES.length} frameworks`,
+      );
       for (const fw of FRAMEWORK_STRUCTURES) {
         const { tables, cols } = fw;
         const isThreeLevel = !!tables.l3_struct;
-        console.log(`[fw:migrate-impl] ${fw.key}: ${tables.l2_impl}${isThreeLevel ? " + " + tables.l3_impl : ""}`);
+        console.log(
+          `[fw:migrate-impl] ${fw.key}: ${tables.l2_impl}${isThreeLevel ? " + " + tables.l3_impl : ""}`,
+        );
 
         // ---- L2 impl status enum + table ----
         const l2Enum = `enum_${tables.l2_impl}_status`;
@@ -37,7 +41,7 @@ module.exports = {
              );
            EXCEPTION WHEN duplicate_object THEN NULL;
            END $$;`,
-          { transaction }
+          { transaction },
         );
         await sequelize.query(
           `CREATE TABLE verifywise.${tables.l2_impl} (
@@ -55,17 +59,17 @@ module.exports = {
              created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
              is_demo BOOLEAN DEFAULT FALSE
            );`,
-          { transaction }
+          { transaction },
         );
         await sequelize.query(
           `CREATE INDEX idx_${tables.l2_impl}_org
              ON verifywise.${tables.l2_impl}(organization_id);`,
-          { transaction }
+          { transaction },
         );
         await sequelize.query(
           `CREATE INDEX idx_${tables.l2_impl}_pf
              ON verifywise.${tables.l2_impl}(projects_frameworks_id);`,
-          { transaction }
+          { transaction },
         );
 
         // ---- L2 risks junction ----
@@ -76,7 +80,7 @@ module.exports = {
              projects_risks_id INTEGER REFERENCES verifywise.risks(id) ON DELETE CASCADE,
              PRIMARY KEY (${cols.l2_risks_impl}, projects_risks_id)
            );`,
-          { transaction }
+          { transaction },
         );
 
         // ---- L3 impl status enum + table + risks (three-level only) ----
@@ -90,7 +94,7 @@ module.exports = {
                );
              EXCEPTION WHEN duplicate_object THEN NULL;
              END $$;`,
-            { transaction }
+            { transaction },
           );
           await sequelize.query(
             `CREATE TABLE verifywise.${tables.l3_impl} (
@@ -109,17 +113,17 @@ module.exports = {
                created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP,
                is_demo BOOLEAN DEFAULT FALSE
              );`,
-            { transaction }
+            { transaction },
           );
           await sequelize.query(
             `CREATE INDEX idx_${tables.l3_impl}_org
                ON verifywise.${tables.l3_impl}(organization_id);`,
-            { transaction }
+            { transaction },
           );
           await sequelize.query(
             `CREATE INDEX idx_${tables.l3_impl}_pf
                ON verifywise.${tables.l3_impl}(projects_frameworks_id);`,
-            { transaction }
+            { transaction },
           );
 
           await sequelize.query(
@@ -129,7 +133,7 @@ module.exports = {
                projects_risks_id INTEGER REFERENCES verifywise.risks(id) ON DELETE CASCADE,
                PRIMARY KEY (${cols.l3_risks_impl}, projects_risks_id)
              );`,
-            { transaction }
+            { transaction },
           );
         }
       }
@@ -151,33 +155,27 @@ module.exports = {
       for (const fw of FRAMEWORK_STRUCTURES) {
         const { tables } = fw;
         if (tables.l3_risks) {
-          await sequelize.query(
-            `DROP TABLE IF EXISTS verifywise.${tables.l3_risks} CASCADE;`,
-            { transaction }
-          );
+          await sequelize.query(`DROP TABLE IF EXISTS verifywise.${tables.l3_risks} CASCADE;`, {
+            transaction,
+          });
         }
-        await sequelize.query(
-          `DROP TABLE IF EXISTS verifywise.${tables.l2_risks} CASCADE;`,
-          { transaction }
-        );
+        await sequelize.query(`DROP TABLE IF EXISTS verifywise.${tables.l2_risks} CASCADE;`, {
+          transaction,
+        });
         if (tables.l3_impl) {
-          await sequelize.query(
-            `DROP TABLE IF EXISTS verifywise.${tables.l3_impl} CASCADE;`,
-            { transaction }
-          );
-          await sequelize.query(
-            `DROP TYPE IF EXISTS verifywise.enum_${tables.l3_impl}_status;`,
-            { transaction }
-          );
+          await sequelize.query(`DROP TABLE IF EXISTS verifywise.${tables.l3_impl} CASCADE;`, {
+            transaction,
+          });
+          await sequelize.query(`DROP TYPE IF EXISTS verifywise.enum_${tables.l3_impl}_status;`, {
+            transaction,
+          });
         }
-        await sequelize.query(
-          `DROP TABLE IF EXISTS verifywise.${tables.l2_impl} CASCADE;`,
-          { transaction }
-        );
-        await sequelize.query(
-          `DROP TYPE IF EXISTS verifywise.enum_${tables.l2_impl}_status;`,
-          { transaction }
-        );
+        await sequelize.query(`DROP TABLE IF EXISTS verifywise.${tables.l2_impl} CASCADE;`, {
+          transaction,
+        });
+        await sequelize.query(`DROP TYPE IF EXISTS verifywise.enum_${tables.l2_impl}_status;`, {
+          transaction,
+        });
       }
 
       await transaction.commit();

@@ -31,7 +31,9 @@ module.exports = {
 
     try {
       console.log(`[fw:migrate-struct] starting for ${FRAMEWORK_STRUCTURES.length} frameworks`);
-      let l1Total = 0, l2Total = 0, l3Total = 0;
+      let l1Total = 0,
+        l2Total = 0,
+        l3Total = 0;
       for (const fw of FRAMEWORK_STRUCTURES) {
         const { id: frameworkId, tables, cols, seed } = fw;
         const isThreeLevel = !!tables.l3_struct;
@@ -39,10 +41,12 @@ module.exports = {
         if (isThreeLevel !== seedIsThreeLevel) {
           throw new Error(
             `Hierarchy mismatch for '${fw.key}': seed says ` +
-            `'${seed.hierarchy?.type}' but tables ${isThreeLevel ? "have" : "lack"} l3_struct`
+              `'${seed.hierarchy?.type}' but tables ${isThreeLevel ? "have" : "lack"} l3_struct`,
           );
         }
-        console.log(`[fw:migrate-struct] ${fw.key} (id=${frameworkId}) — ${isThreeLevel ? "3-level" : "2-level"}`);
+        console.log(
+          `[fw:migrate-struct] ${fw.key} (id=${frameworkId}) — ${isThreeLevel ? "3-level" : "2-level"}`,
+        );
 
         // ---- frameworks row ----
         await sequelize.query(
@@ -58,7 +62,7 @@ module.exports = {
               is_organizational: !!seed.is_organizational,
             },
             transaction,
-          }
+          },
         );
 
         // ---- L1 struct ----
@@ -71,7 +75,7 @@ module.exports = {
              order_no INTEGER,
              is_demo BOOLEAN DEFAULT FALSE
            );`,
-          { transaction }
+          { transaction },
         );
 
         // ---- L2 struct ----
@@ -87,7 +91,7 @@ module.exports = {
              order_no INTEGER,
              is_demo BOOLEAN DEFAULT FALSE
            );`,
-          { transaction }
+          { transaction },
         );
 
         // ---- L3 struct (three-level only) ----
@@ -104,12 +108,14 @@ module.exports = {
                order_no INTEGER,
                is_demo BOOLEAN DEFAULT FALSE
              );`,
-            { transaction }
+            { transaction },
           );
         }
 
         // ---- Seed struct rows from structure ----
-        let l1Count = 0, l2Count = 0, l3Count = 0;
+        let l1Count = 0,
+          l2Count = 0,
+          l3Count = 0;
         let l1Idx = 0;
         for (const l1 of seed.structure || []) {
           l1Count++;
@@ -126,7 +132,7 @@ module.exports = {
                 order_no: l1.order_no || l1Idx + 1,
               },
               transaction,
-            }
+            },
           );
           const l1Id = l1Res[0].id;
 
@@ -151,7 +157,7 @@ module.exports = {
                   order_no: l2.order_no || l2Idx + 1,
                 },
                 transaction,
-              }
+              },
             );
             const l2Id = l2Res[0].id;
 
@@ -176,7 +182,7 @@ module.exports = {
                       order_no: l3.order_no || l3Idx + 1,
                     },
                     transaction,
-                  }
+                  },
                 );
                 l3Idx++;
               }
@@ -185,8 +191,12 @@ module.exports = {
           }
           l1Idx++;
         }
-        console.log(`[fw:migrate-struct] ${fw.key} seeded: L1=${l1Count} L2=${l2Count} L3=${l3Count}`);
-        l1Total += l1Count; l2Total += l2Count; l3Total += l3Count;
+        console.log(
+          `[fw:migrate-struct] ${fw.key} seeded: L1=${l1Count} L2=${l2Count} L3=${l3Count}`,
+        );
+        l1Total += l1Count;
+        l2Total += l2Count;
+        l3Total += l3Count;
       }
       console.log(`[fw:migrate-struct] done. Totals: L1=${l1Total} L2=${l2Total} L3=${l3Total}`);
 
@@ -194,7 +204,7 @@ module.exports = {
       await sequelize.query(
         `SELECT setval('verifywise.frameworks_id_seq',
                        (SELECT MAX(id) FROM verifywise.frameworks));`,
-        { transaction }
+        { transaction },
       );
 
       await transaction.commit();
@@ -212,27 +222,24 @@ module.exports = {
       for (const fw of FRAMEWORK_STRUCTURES) {
         const { tables } = fw;
         if (tables.l3_struct) {
-          await sequelize.query(
-            `DROP TABLE IF EXISTS verifywise.${tables.l3_struct} CASCADE;`,
-            { transaction }
-          );
+          await sequelize.query(`DROP TABLE IF EXISTS verifywise.${tables.l3_struct} CASCADE;`, {
+            transaction,
+          });
         }
-        await sequelize.query(
-          `DROP TABLE IF EXISTS verifywise.${tables.l2_struct} CASCADE;`,
-          { transaction }
-        );
-        await sequelize.query(
-          `DROP TABLE IF EXISTS verifywise.${tables.l1_struct} CASCADE;`,
-          { transaction }
-        );
+        await sequelize.query(`DROP TABLE IF EXISTS verifywise.${tables.l2_struct} CASCADE;`, {
+          transaction,
+        });
+        await sequelize.query(`DROP TABLE IF EXISTS verifywise.${tables.l1_struct} CASCADE;`, {
+          transaction,
+        });
       }
 
       const ids = FRAMEWORK_STRUCTURES.map((fw) => fw.id);
       if (ids.length > 0) {
-        await sequelize.query(
-          `DELETE FROM verifywise.frameworks WHERE id IN (:ids);`,
-          { replacements: { ids }, transaction }
-        );
+        await sequelize.query(`DELETE FROM verifywise.frameworks WHERE id IN (:ids);`, {
+          replacements: { ids },
+          transaction,
+        });
       }
 
       await transaction.commit();

@@ -47,7 +47,7 @@ async function tableExists(sequelize, name, transaction) {
   const [rows] = await sequelize.query(
     `SELECT 1 FROM information_schema.tables
       WHERE table_schema = 'verifywise' AND table_name = :name LIMIT 1`,
-    { replacements: { name }, transaction }
+    { replacements: { name }, transaction },
   );
   return rows.length > 0;
 }
@@ -76,7 +76,7 @@ module.exports = {
                 entity_id, link_type, created_by, created_at
            FROM verifywise.file_entity_links
           WHERE entity_type IN ('level2_impl', 'level3_impl');`,
-        { transaction }
+        { transaction },
       );
       console.log(`[fw:fix-fel] found ${orphanFels.length} legacy-style file link(s)`);
 
@@ -90,9 +90,10 @@ module.exports = {
         // Look up the ACTUAL owning plugin + struct location from the legacy
         // impl id. The plugin here may differ from fel.framework_type (bug
         // case #2).
-        const legacyImplTable = fel.entity_type === "level2_impl"
-          ? "custom_framework_level2_impl"
-          : "custom_framework_level3_impl";
+        const legacyImplTable =
+          fel.entity_type === "level2_impl"
+            ? "custom_framework_level2_impl"
+            : "custom_framework_level3_impl";
 
         let ownerInfo;
         if (fel.entity_type === "level2_impl") {
@@ -112,7 +113,7 @@ module.exports = {
                  ON l1.id = l2.level1_id
               WHERE li.id = :eid
               LIMIT 1;`,
-            { replacements: { eid: fel.entity_id }, transaction }
+            { replacements: { eid: fel.entity_id }, transaction },
           );
           ownerInfo = rows[0];
         } else {
@@ -137,14 +138,14 @@ module.exports = {
                  ON cf.id = cfp.framework_id
               WHERE li.id = :eid
               LIMIT 1;`,
-            { replacements: { eid: fel.entity_id }, transaction }
+            { replacements: { eid: fel.entity_id }, transaction },
           );
           ownerInfo = rows[0];
         }
 
         if (!ownerInfo) {
           console.warn(
-            `[fw:fix-fel] file_link id=${fel.id} entity_id=${fel.entity_id} (${fel.entity_type}) not found in legacy impl tables — skipping`
+            `[fw:fix-fel] file_link id=${fel.id} entity_id=${fel.entity_id} (${fel.entity_type}) not found in legacy impl tables — skipping`,
           );
           skippedNoImpl++;
           continue;
@@ -153,7 +154,7 @@ module.exports = {
         const fixedFramework = findStructureForPluginKey(ownerInfo.plugin_key);
         if (!fixedFramework) {
           console.warn(
-            `[fw:fix-fel] file_link id=${fel.id} owner plugin '${ownerInfo.plugin_key}' has no matching structure — skipping`
+            `[fw:fix-fel] file_link id=${fel.id} owner plugin '${ownerInfo.plugin_key}' has no matching structure — skipping`,
           );
           skippedNoStructure++;
           continue;
@@ -188,11 +189,13 @@ module.exports = {
               replacements: {
                 org: fel.organization_id,
                 legacy_pf_id: ownerInfo.legacy_pf_id,
-                l1_t: ownerInfo.l1_title, l1_o: ownerInfo.l1_order,
-                l2_t: ownerInfo.l2_title, l2_o: ownerInfo.l2_order,
+                l1_t: ownerInfo.l1_title,
+                l1_o: ownerInfo.l1_order,
+                l2_t: ownerInfo.l2_title,
+                l2_o: ownerInfo.l2_order,
               },
               transaction,
-            }
+            },
           );
         } else {
           [newImplRes] = await sequelize.query(
@@ -219,27 +222,29 @@ module.exports = {
               replacements: {
                 org: fel.organization_id,
                 legacy_pf_id: ownerInfo.legacy_pf_id,
-                l1_t: ownerInfo.l1_title, l1_o: ownerInfo.l1_order,
-                l2_t: ownerInfo.l2_title, l2_o: ownerInfo.l2_order,
-                l3_t: ownerInfo.l3_title, l3_o: ownerInfo.l3_order,
+                l1_t: ownerInfo.l1_title,
+                l1_o: ownerInfo.l1_order,
+                l2_t: ownerInfo.l2_title,
+                l2_o: ownerInfo.l2_order,
+                l3_t: ownerInfo.l3_title,
+                l3_o: ownerInfo.l3_order,
               },
               transaction,
-            }
+            },
           );
         }
 
         if (newImplRes.length === 0) {
           console.warn(
-            `[fw:fix-fel] file_link id=${fel.id} — new impl not found for ${ownerInfo.plugin_key} L2="${ownerInfo.l2_title}" (order=${ownerInfo.l2_order}). Was 20260805131033 run? Skipping.`
+            `[fw:fix-fel] file_link id=${fel.id} — new impl not found for ${ownerInfo.plugin_key} L2="${ownerInfo.l2_title}" (order=${ownerInfo.l2_order}). Was 20260805131033 run? Skipping.`,
           );
           skippedNoNewImpl++;
           continue;
         }
 
         const newImplId = newImplRes[0].id;
-        const newEntityType = fel.entity_type === "level2_impl"
-          ? entity_types.l2_impl
-          : entity_types.l3_impl;
+        const newEntityType =
+          fel.entity_type === "level2_impl" ? entity_types.l2_impl : entity_types.l3_impl;
 
         await sequelize.query(
           `INSERT INTO verifywise.file_entity_links
@@ -259,13 +264,15 @@ module.exports = {
               ca: fel.created_at,
             },
             transaction,
-          }
+          },
         );
 
         console.log(
           `[fw:fix-fel] rewrote file=${fel.file_id}: ${fel.framework_type}/${fel.entity_type}/${fel.entity_id}` +
-          ` → ${newFrameworkType}/${newEntityType}/${newImplId}` +
-          (originallyWrong ? ` (framework_type corrected from '${fel.framework_type}' to owner plugin '${ownerInfo.plugin_key}')` : "")
+            ` → ${newFrameworkType}/${newEntityType}/${newImplId}` +
+            (originallyWrong
+              ? ` (framework_type corrected from '${fel.framework_type}' to owner plugin '${ownerInfo.plugin_key}')`
+              : ""),
         );
         rewrote++;
         rewrittenIds.push(fel.id);
@@ -274,15 +281,15 @@ module.exports = {
       // Delete only the successfully-rewritten legacy rows. Skipped rows
       // stay so an operator can inspect why they didn't map.
       if (rewrittenIds.length > 0) {
-        await sequelize.query(
-          `DELETE FROM verifywise.file_entity_links WHERE id IN (:ids);`,
-          { replacements: { ids: rewrittenIds }, transaction }
-        );
+        await sequelize.query(`DELETE FROM verifywise.file_entity_links WHERE id IN (:ids);`, {
+          replacements: { ids: rewrittenIds },
+          transaction,
+        });
         console.log(`[fw:fix-fel] deleted ${rewrittenIds.length} legacy row(s) after rewriting`);
       }
 
       console.log(
-        `[fw:fix-fel] done. rewrote=${rewrote} skipped: no-impl=${skippedNoImpl}, no-structure=${skippedNoStructure}, no-new-impl=${skippedNoNewImpl}`
+        `[fw:fix-fel] done. rewrote=${rewrote} skipped: no-impl=${skippedNoImpl}, no-structure=${skippedNoStructure}, no-new-impl=${skippedNoNewImpl}`,
       );
       await transaction.commit();
     } catch (err) {

@@ -41,8 +41,14 @@ const LEGACY_KEY_ALIAS = {
 };
 
 const VALID_STATUSES = new Set([
-  "Not started", "Draft", "In progress", "Awaiting review",
-  "Awaiting approval", "Implemented", "Audited", "Needs rework",
+  "Not started",
+  "Draft",
+  "In progress",
+  "Awaiting review",
+  "Awaiting approval",
+  "Implemented",
+  "Audited",
+  "Needs rework",
 ]);
 
 function normalizeStatus(s) {
@@ -66,7 +72,7 @@ async function tableExists(sequelize, name, transaction) {
   const [rows] = await sequelize.query(
     `SELECT 1 FROM information_schema.tables
       WHERE table_schema = 'verifywise' AND table_name = :name LIMIT 1`,
-    { replacements: { name }, transaction }
+    { replacements: { name }, transaction },
   );
   return rows.length > 0;
 }
@@ -80,7 +86,9 @@ module.exports = {
       console.log(`[fw:migrate-data] starting`);
       // Fresh install — nothing legacy to migrate.
       if (!(await tableExists(sequelize, "custom_framework_definitions", transaction))) {
-        console.log(`[fw:migrate-data] no legacy custom_framework_definitions table — fresh install, nothing to migrate.`);
+        console.log(
+          `[fw:migrate-data] no legacy custom_framework_definitions table — fresh install, nothing to migrate.`,
+        );
         await transaction.commit();
         return;
       }
@@ -102,19 +110,16 @@ module.exports = {
       // keys up front so an operator can add the missing structure and rerun.
       const [allLegacyDefs] = await sequelize.query(
         `SELECT plugin_key FROM verifywise.custom_framework_definitions;`,
-        { transaction }
+        { transaction },
       );
       const structureKeys = new Set(FRAMEWORK_STRUCTURES.map((fw) => fw.key));
-      const knownLegacyKeys = new Set([
-        ...structureKeys,
-        ...Object.values(LEGACY_KEY_ALIAS),
-      ]);
+      const knownLegacyKeys = new Set([...structureKeys, ...Object.values(LEGACY_KEY_ALIAS)]);
       const unmappable = allLegacyDefs
         .map((r) => r.plugin_key)
         .filter((k) => !knownLegacyKeys.has(k));
       if (unmappable.length > 0) {
         console.warn(
-          `[migrate-framework-data] ${unmappable.length} legacy plugin(s) have no matching structure — data will NOT migrate: ${unmappable.join(", ")}`
+          `[migrate-framework-data] ${unmappable.length} legacy plugin(s) have no matching structure — data will NOT migrate: ${unmappable.join(", ")}`,
         );
       }
 
@@ -124,7 +129,7 @@ module.exports = {
         const pluginKey = LEGACY_KEY_ALIAS[fw.key] || fw.key;
         if (pluginKey !== fw.key) {
           console.log(
-            `[fw:migrate-data:${fw.key}] resolving legacy plugin_key '${pluginKey}' via alias`
+            `[fw:migrate-data:${fw.key}] resolving legacy plugin_key '${pluginKey}' via alias`,
           );
         }
         const { id: frameworkId, framework_type, tables, cols, entity_types } = fw;
@@ -134,11 +139,13 @@ module.exports = {
         const [defRows] = await sequelize.query(
           `SELECT id FROM verifywise.custom_framework_definitions
             WHERE plugin_key = :key LIMIT 1;`,
-          { replacements: { key: pluginKey }, transaction }
+          { replacements: { key: pluginKey }, transaction },
         );
         if (defRows.length === 0) continue;
         const legacyDefinitionId = defRows[0].id;
-        console.log(`[fw:migrate-data:${pluginKey}] legacy definition found (id=${legacyDefinitionId})`);
+        console.log(
+          `[fw:migrate-data:${pluginKey}] legacy definition found (id=${legacyDefinitionId})`,
+        );
 
         // ---- Struct id maps: legacy_id -> new_id ----
         // Struct rows are matched by (title, order_no). Any legacy row that
@@ -151,13 +158,13 @@ module.exports = {
             `SELECT id, title, order_no
                FROM verifywise.custom_framework_level1_struct
               WHERE definition_id = :d;`,
-            { replacements: { d: legacyDefinitionId }, transaction }
+            { replacements: { d: legacyDefinitionId }, transaction },
           );
           const [newL1] = await sequelize.query(
             `SELECT id, title, order_no
                FROM verifywise.${tables.l1_struct}
               WHERE framework_id = :fid;`,
-            { replacements: { fid: frameworkId }, transaction }
+            { replacements: { fid: frameworkId }, transaction },
           );
           const lookup = new Map(newL1.map((r) => [`${r.title}|${r.order_no}`, r.id]));
           const missed = [];
@@ -177,7 +184,7 @@ module.exports = {
                JOIN verifywise.custom_framework_level1_struct l1
                  ON l2.level1_id = l1.id
               WHERE l1.definition_id = :d;`,
-            { replacements: { d: legacyDefinitionId }, transaction }
+            { replacements: { d: legacyDefinitionId }, transaction },
           );
           const [newL2] = await sequelize.query(
             `SELECT l2.id, l2.${cols.l2_struct_parent} AS parent, l2.title, l2.order_no
@@ -185,7 +192,7 @@ module.exports = {
                JOIN verifywise.${tables.l1_struct} l1
                  ON l2.${cols.l2_struct_parent} = l1.id
               WHERE l1.framework_id = :fid;`,
-            { replacements: { fid: frameworkId }, transaction }
+            { replacements: { fid: frameworkId }, transaction },
           );
           const lookup = new Map(newL2.map((r) => [`${r.parent}|${r.title}|${r.order_no}`, r.id]));
           const missedNoParent = [];
@@ -214,7 +221,7 @@ module.exports = {
                JOIN verifywise.custom_framework_level1_struct l1
                  ON l2.level1_id = l1.id
               WHERE l1.definition_id = :d;`,
-            { replacements: { d: legacyDefinitionId }, transaction }
+            { replacements: { d: legacyDefinitionId }, transaction },
           );
           const [newL3] = await sequelize.query(
             `SELECT l3.id, l3.${cols.l3_struct_parent} AS parent, l3.title, l3.order_no
@@ -224,7 +231,7 @@ module.exports = {
                JOIN verifywise.${tables.l1_struct} l1
                  ON l2.${cols.l2_struct_parent} = l1.id
               WHERE l1.framework_id = :fid;`,
-            { replacements: { fid: frameworkId }, transaction }
+            { replacements: { fid: frameworkId }, transaction },
           );
           const lookup = new Map(newL3.map((r) => [`${r.parent}|${r.title}|${r.order_no}`, r.id]));
           const missedNoParent = [];
@@ -248,7 +255,7 @@ module.exports = {
           `SELECT id, organization_id
              FROM verifywise.custom_frameworks
             WHERE plugin_key = :key;`,
-          { replacements: { key: pluginKey }, transaction }
+          { replacements: { key: pluginKey }, transaction },
         );
 
         for (const cf of legacyCFs) {
@@ -256,15 +263,17 @@ module.exports = {
             `SELECT id, project_id
                FROM verifywise.custom_framework_projects
               WHERE framework_id = :fid;`,
-            { replacements: { fid: cf.id }, transaction }
+            { replacements: { fid: cf.id }, transaction },
           );
 
-          console.log(`[fw:migrate-data:${pluginKey}] org=${cf.organization_id} legacy projects=${legacyProjects.length}`);
+          console.log(
+            `[fw:migrate-data:${pluginKey}] org=${cf.organization_id} legacy projects=${legacyProjects.length}`,
+          );
           for (const lp of legacyProjects) {
             // Skip if the project was deleted after the plugin install.
             const [projExists] = await sequelize.query(
               `SELECT 1 FROM verifywise.projects WHERE id = :pid LIMIT 1;`,
-              { replacements: { pid: lp.project_id }, transaction }
+              { replacements: { pid: lp.project_id }, transaction },
             );
             if (projExists.length === 0) continue;
 
@@ -272,7 +281,7 @@ module.exports = {
             const [existingPf] = await sequelize.query(
               `SELECT id FROM verifywise.projects_frameworks
                 WHERE project_id = :pid AND framework_id = :fid LIMIT 1;`,
-              { replacements: { pid: lp.project_id, fid: frameworkId }, transaction }
+              { replacements: { pid: lp.project_id, fid: frameworkId }, transaction },
             );
             let pfId;
             if (existingPf.length > 0) {
@@ -289,7 +298,7 @@ module.exports = {
                     fid: frameworkId,
                   },
                   transaction,
-                }
+                },
               );
               pfId = inserted[0].id;
             }
@@ -299,9 +308,11 @@ module.exports = {
             const [legacyL2Impls] = await sequelize.query(
               `SELECT * FROM verifywise.custom_framework_level2_impl
                 WHERE project_framework_id = :pf;`,
-              { replacements: { pf: lp.id }, transaction }
+              { replacements: { pf: lp.id }, transaction },
             );
-            console.log(`[fw:migrate-data:${pluginKey}] project=${lp.project_id} pfId=${pfId} legacy L2 impls=${legacyL2Impls.length}`);
+            console.log(
+              `[fw:migrate-data:${pluginKey}] project=${lp.project_id} pfId=${pfId} legacy L2 impls=${legacyL2Impls.length}`,
+            );
 
             for (const row of legacyL2Impls) {
               const newL2StructId = l2IdMap.get(row.level2_id);
@@ -333,25 +344,35 @@ module.exports = {
                     is_demo: !!row.is_demo,
                   },
                   transaction,
-                }
+                },
               );
               const newImplId = ins[0].id;
               l2ImplIdMap.set(row.id, newImplId);
 
               // Inline JSONB file link migration for this impl row.
               await migrateJsonbLinks(
-                sequelize, transaction,
-                row.evidence_links, "evidence",
-                row.organization_id, newImplId,
-                framework_type, entity_types.l2_impl,
-                row.created_at, validFiles
+                sequelize,
+                transaction,
+                row.evidence_links,
+                "evidence",
+                row.organization_id,
+                newImplId,
+                framework_type,
+                entity_types.l2_impl,
+                row.created_at,
+                validFiles,
               );
               await migrateJsonbLinks(
-                sequelize, transaction,
-                row.feedback_links, "feedback",
-                row.organization_id, newImplId,
-                framework_type, entity_types.l2_impl,
-                row.created_at, validFiles
+                sequelize,
+                transaction,
+                row.feedback_links,
+                "feedback",
+                row.organization_id,
+                newImplId,
+                framework_type,
+                entity_types.l2_impl,
+                row.created_at,
+                validFiles,
               );
             }
 
@@ -364,9 +385,11 @@ module.exports = {
                    JOIN verifywise.custom_framework_level2_impl l2i
                      ON l3i.level2_impl_id = l2i.id
                   WHERE l2i.project_framework_id = :pf;`,
-                { replacements: { pf: lp.id }, transaction }
+                { replacements: { pf: lp.id }, transaction },
               );
-              console.log(`[fw:migrate-data:${pluginKey}] project=${lp.project_id} legacy L3 impls=${legacyL3Impls.length}`);
+              console.log(
+                `[fw:migrate-data:${pluginKey}] project=${lp.project_id} legacy L3 impls=${legacyL3Impls.length}`,
+              );
 
               for (const row of legacyL3Impls) {
                 const newL3StructId = l3IdMap.get(row.level3_id);
@@ -400,24 +423,34 @@ module.exports = {
                       is_demo: !!row.is_demo,
                     },
                     transaction,
-                  }
+                  },
                 );
                 const newImplId = ins[0].id;
                 l3ImplIdMap.set(row.id, newImplId);
 
                 await migrateJsonbLinks(
-                  sequelize, transaction,
-                  row.evidence_links, "evidence",
-                  row.organization_id, newImplId,
-                  framework_type, entity_types.l3_impl,
-                  row.created_at, validFiles
+                  sequelize,
+                  transaction,
+                  row.evidence_links,
+                  "evidence",
+                  row.organization_id,
+                  newImplId,
+                  framework_type,
+                  entity_types.l3_impl,
+                  row.created_at,
+                  validFiles,
                 );
                 await migrateJsonbLinks(
-                  sequelize, transaction,
-                  row.feedback_links, "feedback",
-                  row.organization_id, newImplId,
-                  framework_type, entity_types.l3_impl,
-                  row.created_at, validFiles
+                  sequelize,
+                  transaction,
+                  row.feedback_links,
+                  "feedback",
+                  row.organization_id,
+                  newImplId,
+                  framework_type,
+                  entity_types.l3_impl,
+                  row.created_at,
+                  validFiles,
                 );
               }
             }
@@ -428,7 +461,7 @@ module.exports = {
                 `SELECT organization_id, level2_impl_id, risk_id
                    FROM verifywise.custom_framework_level2_risks
                   WHERE level2_impl_id IN (:ids);`,
-                { replacements: { ids: [...l2ImplIdMap.keys()] }, transaction }
+                { replacements: { ids: [...l2ImplIdMap.keys()] }, transaction },
               );
               for (const r of legacyL2Risks) {
                 const newImplId = l2ImplIdMap.get(r.level2_impl_id);
@@ -441,7 +474,7 @@ module.exports = {
                   {
                     replacements: { org: r.organization_id, impl: newImplId, risk: r.risk_id },
                     transaction,
-                  }
+                  },
                 );
               }
             }
@@ -452,7 +485,7 @@ module.exports = {
                 `SELECT organization_id, level3_impl_id, risk_id
                    FROM verifywise.custom_framework_level3_risks
                   WHERE level3_impl_id IN (:ids);`,
-                { replacements: { ids: [...l3ImplIdMap.keys()] }, transaction }
+                { replacements: { ids: [...l3ImplIdMap.keys()] }, transaction },
               );
               for (const r of legacyL3Risks) {
                 const newImplId = l3ImplIdMap.get(r.level3_impl_id);
@@ -465,7 +498,7 @@ module.exports = {
                   {
                     replacements: { org: r.organization_id, impl: newImplId, risk: r.risk_id },
                     transaction,
-                  }
+                  },
                 );
               }
             }
@@ -473,7 +506,9 @@ module.exports = {
             // Legacy `file_entity_links` rows are translated by the
             // follow-up migration 20260807142621-fix-legacy-file-entity-
             // links.js — see this file's header for the rationale.
-            console.log(`[fw:migrate-data:${pluginKey}] project=${lp.project_id} migrated: L2 impls=${l2ImplIdMap.size}${isThreeLevel ? ", L3 impls=" + l3ImplIdMap.size : ""}`);
+            console.log(
+              `[fw:migrate-data:${pluginKey}] project=${lp.project_id} migrated: L2 impls=${l2ImplIdMap.size}${isThreeLevel ? ", L3 impls=" + l3ImplIdMap.size : ""}`,
+            );
           }
         }
       }
@@ -499,14 +534,21 @@ function logMissed(pluginKey, level, cause, missed) {
   const sample = missed.slice(0, 3).join(", ");
   const more = missed.length > 3 ? ` (+${missed.length - 3} more)` : "";
   console.warn(
-    `[migrate-framework-data:${pluginKey}] ${level} mismatch (${cause}): ${missed.length} legacy row(s) — impls on these will NOT migrate: ${sample}${more}`
+    `[migrate-framework-data:${pluginKey}] ${level} mismatch (${cause}): ${missed.length} legacy row(s) — impls on these will NOT migrate: ${sample}${more}`,
   );
 }
 
 async function migrateJsonbLinks(
-  sequelize, transaction, links, linkType,
-  orgId, newImplId, frameworkType, entityType,
-  createdAt, validFiles
+  sequelize,
+  transaction,
+  links,
+  linkType,
+  orgId,
+  newImplId,
+  frameworkType,
+  entityType,
+  createdAt,
+  validFiles,
 ) {
   if (!Array.isArray(links) || links.length === 0) return;
 
@@ -531,8 +573,7 @@ async function migrateJsonbLinks(
           ca: createdAt || new Date(),
         },
         transaction,
-      }
+      },
     );
   }
 }
-

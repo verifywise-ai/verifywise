@@ -10,7 +10,6 @@ import {
 import { CustomizableButton } from "../../button/customizable-button";
 import { FilePickerModal } from "../../FilePickerModal";
 import { text } from "../../../themes/palette";
-import { FileData } from "./types";
 import { UseEvidenceFilesReturn } from "./useEvidenceFiles";
 
 interface EvidenceTabProps {

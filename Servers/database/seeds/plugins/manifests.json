@@ -39,12 +39,7 @@
         "displayOrder": 4
       }
     ],
-    "tags": [
-      "notifications",
-      "messaging",
-      "collaboration",
-      "alerts"
-    ],
+    "tags": ["notifications", "messaging", "collaboration", "alerts"],
     "dependencies": {
       "@slack/web-api": "^6.9.0"
     },
@@ -108,12 +103,7 @@
         "displayOrder": 5
       }
     ],
-    "tags": [
-      "ml-ops",
-      "model-tracking",
-      "experiments",
-      "model-registry"
-    ],
+    "tags": ["ml-ops", "model-tracking", "experiments", "model-registry"],
     "dependencies": {
       "axios": "^1.6.0"
     },
@@ -186,13 +176,7 @@
         "displayOrder": 5
       }
     ],
-    "tags": [
-      "azure",
-      "ai-foundry",
-      "openai",
-      "model-registry",
-      "cloud"
-    ],
+    "tags": ["azure", "ai-foundry", "openai", "model-registry", "cloud"],
     "dependencies": {},
     "ui": {
       "bundleUrl": "/api/plugins/azure-ai-foundry/ui/dist/index.esm.js",
@@ -263,13 +247,7 @@
         "displayOrder": 5
       }
     ],
-    "tags": [
-      "risk",
-      "import",
-      "excel",
-      "bulk-operations",
-      "data-management"
-    ],
+    "tags": ["risk", "import", "excel", "bulk-operations", "data-management"],
     "dependencies": {
       "exceljs": "^4.4.0"
     },
@@ -343,14 +321,7 @@
         "displayOrder": 5
       }
     ],
-    "tags": [
-      "jira",
-      "assets",
-      "import",
-      "use-cases",
-      "sync",
-      "integration"
-    ],
+    "tags": ["jira", "assets", "import", "use-cases", "sync", "integration"],
     "dependencies": {
       "axios": "^1.6.0"
     },
@@ -424,13 +395,7 @@
         "displayOrder": 4
       }
     ],
-    "tags": [
-      "soc2",
-      "audit",
-      "trust-services",
-      "compliance",
-      "security"
-    ],
+    "tags": ["soc2", "audit", "trust-services", "compliance", "security"],
     "dependencies": {},
     "ui": {
       "bundleUrl": "/api/plugins/soc2/ui/dist/index.esm.js",
@@ -541,13 +506,7 @@
         "displayOrder": 4
       }
     ],
-    "tags": [
-      "gdpr",
-      "privacy",
-      "data-protection",
-      "eu",
-      "compliance"
-    ],
+    "tags": ["gdpr", "privacy", "data-protection", "eu", "compliance"],
     "dependencies": {},
     "ui": {
       "bundleUrl": "/api/plugins/gdpr/ui/dist/index.esm.js",
@@ -658,13 +617,7 @@
         "displayOrder": 4
       }
     ],
-    "tags": [
-      "hipaa",
-      "healthcare",
-      "phi",
-      "security",
-      "compliance"
-    ],
+    "tags": ["hipaa", "healthcare", "phi", "security", "compliance"],
     "dependencies": {},
     "ui": {
       "bundleUrl": "/api/plugins/hipaa/ui/dist/index.esm.js",
@@ -775,13 +728,7 @@
         "displayOrder": 4
       }
     ],
-    "tags": [
-      "pci-dss",
-      "payment",
-      "cardholder",
-      "security",
-      "compliance"
-    ],
+    "tags": ["pci-dss", "payment", "cardholder", "security", "compliance"],
     "dependencies": {},
     "ui": {
       "bundleUrl": "/api/plugins/pci-dss/ui/dist/index.esm.js",
@@ -892,13 +839,7 @@
         "displayOrder": 4
       }
     ],
-    "tags": [
-      "ccpa",
-      "privacy",
-      "california",
-      "consumer-rights",
-      "compliance"
-    ],
+    "tags": ["ccpa", "privacy", "california", "consumer-rights", "compliance"],
     "dependencies": {},
     "ui": {
       "bundleUrl": "/api/plugins/ccpa/ui/dist/index.esm.js",
@@ -1009,13 +950,7 @@
         "displayOrder": 4
       }
     ],
-    "tags": [
-      "dora",
-      "financial",
-      "resilience",
-      "eu",
-      "compliance"
-    ],
+    "tags": ["dora", "financial", "resilience", "eu", "compliance"],
     "dependencies": {},
     "ui": {
       "bundleUrl": "/api/plugins/dora/ui/dist/index.esm.js",
@@ -1245,13 +1180,7 @@
         "displayOrder": 4
       }
     ],
-    "tags": [
-      "nist",
-      "cybersecurity",
-      "framework",
-      "critical-infrastructure",
-      "compliance"
-    ],
+    "tags": ["nist", "cybersecurity", "framework", "critical-infrastructure", "compliance"],
     "dependencies": {},
     "ui": {
       "bundleUrl": "/api/plugins/nist-csf/ui/dist/index.esm.js",
@@ -1601,13 +1530,7 @@
         "displayOrder": 4
       }
     ],
-    "tags": [
-      "cis",
-      "controls",
-      "security",
-      "cyber-defense",
-      "compliance"
-    ],
+    "tags": ["cis", "controls", "security", "cyber-defense", "compliance"],
     "dependencies": {},
     "ui": {
       "bundleUrl": "/api/plugins/cis-controls/ui/dist/index.esm.js",
@@ -1718,13 +1641,7 @@
         "displayOrder": 4
       }
     ],
-    "tags": [
-      "ai",
-      "ethics",
-      "governance",
-      "responsible-ai",
-      "fairness"
-    ],
+    "tags": ["ai", "ethics", "governance", "responsible-ai", "fairness"],
     "dependencies": {},
     "ui": {
       "bundleUrl": "/api/plugins/ai-ethics/ui/dist/index.esm.js",
@@ -1954,13 +1871,7 @@
         "displayOrder": 4
       }
     ],
-    "tags": [
-      "data",
-      "governance",
-      "quality",
-      "management",
-      "compliance"
-    ],
+    "tags": ["data", "governance", "quality", "management", "compliance"],
     "dependencies": {},
     "ui": {
       "bundleUrl": "/api/plugins/data-governance/ui/dist/index.esm.js",
@@ -2071,15 +1982,7 @@
         "displayOrder": 4
       }
     ],
-    "tags": [
-      "uae",
-      "pdpl",
-      "difc",
-      "ai-ethics",
-      "data-protection",
-      "compliance",
-      "gulf"
-    ],
+    "tags": ["uae", "pdpl", "difc", "ai-ethics", "data-protection", "compliance", "gulf"],
     "dependencies": {},
     "ui": {
       "bundleUrl": "/api/plugins/uae-pdpl/ui/dist/index.esm.js",
@@ -2309,15 +2212,7 @@
         "displayOrder": 4
       }
     ],
-    "tags": [
-      "qatar",
-      "pdpl",
-      "data-privacy",
-      "fintech",
-      "ai-policy",
-      "compliance",
-      "gulf"
-    ],
+    "tags": ["qatar", "pdpl", "data-privacy", "fintech", "ai-policy", "compliance", "gulf"],
     "dependencies": {},
     "ui": {
       "bundleUrl": "/api/plugins/qatar-pdpl/ui/dist/index.esm.js",
@@ -2428,15 +2323,7 @@
         "displayOrder": 4
       }
     ],
-    "tags": [
-      "bahrain",
-      "pdpl",
-      "cbb",
-      "open-banking",
-      "ai-ethics",
-      "compliance",
-      "gulf"
-    ],
+    "tags": ["bahrain", "pdpl", "cbb", "open-banking", "ai-ethics", "compliance", "gulf"],
     "dependencies": {},
     "ui": {
       "bundleUrl": "/api/plugins/bahrain-pdpl/ui/dist/index.esm.js",
@@ -2547,15 +2434,7 @@
         "displayOrder": 4
       }
     ],
-    "tags": [
-      "quebec",
-      "law-25",
-      "bill-64",
-      "privacy",
-      "canada",
-      "data-protection",
-      "compliance"
-    ],
+    "tags": ["quebec", "law-25", "bill-64", "privacy", "canada", "data-protection", "compliance"],
     "dependencies": {},
     "ui": {
       "bundleUrl": "/api/plugins/quebec-law25/ui/dist/index.esm.js",
