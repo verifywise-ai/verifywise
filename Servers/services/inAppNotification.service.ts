@@ -1040,7 +1040,13 @@ async function getUserEmails(
  * Role type for assignment notifications
  */
 export type AssignmentRoleType =
-  "Owner" | "Reviewer" | "Approver" | "Member" | "Assignee" | "Action Owner" | "Risk Owner";
+  | "Owner"
+  | "Reviewer"
+  | "Approver"
+  | "Member"
+  | "Assignee"
+  | "Action Owner"
+  | "Risk Owner";
 
 /**
  * Entity type labels for display in notifications
