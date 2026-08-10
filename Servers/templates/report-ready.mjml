@@ -1,0 +1,50 @@
+<mjml>
+<mj-head>
+  <mj-font name="Inter" href="https://fonts.googleapis.com/css?family=Inter:400,500,600"></mj-font>
+  <mj-attributes>
+    <mj-all font-family="Geist, Inter, system-ui, -apple-system, BlinkMacSystemFont, Helvetica, Arial, sans-serif" color="#344054"></mj-all>
+    <mj-text font-size="15px" line-height="24px" color="#344054" padding="0"></mj-text>
+    <mj-section padding="0px"></mj-section>
+    <mj-column padding="0px"></mj-column>
+  </mj-attributes>
+  <mj-style inline="inline">
+    .email-card { background-color: #ffffff; border: 1px solid #eaecf0; border-radius: 10px; overflow: hidden; }
+    .email-heading { color: #1c2130; font-size: 22px; font-weight: 600; line-height: 1.35; margin: 0 0 24px 0; letter-spacing: -0.2px; }
+    .email-body { color: #344054; font-size: 15px; line-height: 24px; margin: 0 0 20px 0; }
+    .email-footer { color: #838c99; font-size: 13px; line-height: 20px; text-align: center; }
+    .box { padding: 20px; border-radius: 6px; margin: 24px 0; }
+    .box-info { background-color: #f9fafb; }
+    .box-title { color: #1c2130; font-weight: 600; font-size: 15px; margin: 0 0 10px 0; }
+    .box-subtitle { color: #475467; font-size: 14px; line-height: 22px; margin: 0; }
+    a { color: #13715B; text-decoration: none; }
+    .btn { display: inline-block; padding: 12px 24px; border-radius: 4px; text-decoration: none; font-size: 14px; font-weight: 500; color: #ffffff; }
+    .btn-primary { background-color: #13715B; }
+  </mj-style>
+</mj-head>
+  <mj-body background-color="#f4f6f8">
+    <mj-section padding="32px 20px 20px">
+      <mj-column width="100%">
+        <mj-text align="center" padding="0 0 24px 0">
+          <span style="color: #13715B; font-size: 22px; font-weight: 600; letter-spacing: -0.5px;">VerifyWise</span>
+        </mj-text>
+      </mj-column>
+    </mj-section>
+    <mj-wrapper css-class="email-card" padding="40px">
+      <mj-section>
+        <mj-column width="100%">
+          <mj-text>
+                <h2 class="email-heading">Your report is ready</h2><div class="box box-info"><p class="box-title">{{reportName}}</p>
+                <p class="box-subtitle">Generated on {{generatedAt}}</p></div><p class="email-body">{{downloadNote}}</p>{{downloadButtonHtml}}
+          </mj-text>
+        </mj-column>
+      </mj-section>
+    </mj-wrapper>
+    <mj-section padding="32px 20px">
+      <mj-column width="100%">
+        <mj-text css-class="email-footer" align="center">
+          You are receiving this because you are a recipient of a scheduled report in VerifyWise.
+        </mj-text>
+      </mj-column>
+    </mj-section>
+  </mj-body>
+</mjml>

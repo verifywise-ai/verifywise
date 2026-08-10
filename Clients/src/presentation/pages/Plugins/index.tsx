@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo, Suspense } from "react";
-import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Navigate, useLocation, useNavigate } from "react-router";
 import { Box, Stack, Typography, Collapse, useTheme } from "@mui/material";
 import { TabContext, TabPanel } from "@mui/lab";
 import { ChevronDown, Puzzle, Download, Settings2, Shield } from "lucide-react";

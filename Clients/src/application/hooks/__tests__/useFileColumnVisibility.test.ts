@@ -1,6 +1,10 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { renderHook, act } from "@testing-library/react";
-import { useFileColumnVisibility, DEFAULT_COLUMNS } from "../useFileColumnVisibility";
+import {
+  useFileColumnVisibility,
+  DEFAULT_COLUMNS,
+  SCHEMA_VERSION,
+} from "../useFileColumnVisibility";
 
 describe("useFileColumnVisibility", () => {
   beforeEach(() => {
@@ -90,7 +94,10 @@ describe("useFileColumnVisibility", () => {
 
   it("migrates from the legacy un-namespaced key once", () => {
     localStorage.setItem("verifywise:file-column-visibility", JSON.stringify(["file", "action"]));
-    localStorage.setItem("verifywise:file-column-visibility-version", "3");
+    // Seed the CURRENT version so this exercises migration only, with no schema
+    // upgrade. Hardcoding a number here is what silently broke this test when
+    // SCHEMA_VERSION was bumped from 3 to 4 for the "quality" column.
+    localStorage.setItem("verifywise:file-column-visibility-version", String(SCHEMA_VERSION));
 
     const { result } = renderHook(() => useFileColumnVisibility());
 
@@ -100,6 +107,23 @@ describe("useFileColumnVisibility", () => {
     // Value migrated to the namespaced key; legacy key removed.
     expect(localStorage.getItem("verifywise_file_column_visibility")).not.toBeNull();
     expect(localStorage.getItem("verifywise:file-column-visibility")).toBeNull();
+  });
+
+  // The schema-upgrade path had no coverage, which is why bumping
+  // SCHEMA_VERSION broke the test above instead of failing a test of its own.
+  it("adds newly-defaulted columns when the stored version is behind", () => {
+    localStorage.setItem("verifywise_file_column_visibility", JSON.stringify(["file", "action"]));
+    localStorage.setItem("verifywise_file_column_visibility_version", String(SCHEMA_VERSION - 1));
+
+    const { result } = renderHook(() => useFileColumnVisibility());
+
+    // An outdated stored set gains every defaultVisible column it was missing.
+    expect(result.current.isColumnVisible("uploader")).toBe(true);
+    expect(result.current.isColumnVisible("quality")).toBe(true);
+    // And the stored version is advanced so this only happens once.
+    expect(localStorage.getItem("verifywise_file_column_visibility_version")).toBe(
+      String(SCHEMA_VERSION),
+    );
   });
 
   it("getTableColumns returns visible columns with proper format", () => {

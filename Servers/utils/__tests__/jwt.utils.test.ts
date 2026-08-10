@@ -10,8 +10,8 @@ import {
 
 // Set up required env vars for testing
 beforeAll(() => {
-  process.env.JWT_SECRET = "test-jwt-secret-key-for-testing";
-  process.env.REFRESH_TOKEN_SECRET = "test-refresh-secret-key-for-testing";
+  process.env.JWT_SECRET = "test-jwt-secret-key-for-testing"; // nosemgrep: test-only JWT secret
+  process.env.REFRESH_TOKEN_SECRET = "test-refresh-secret-key-for-testing"; // nosemgrep: test-only JWT secret
 });
 
 const testPayload = {

@@ -63,7 +63,7 @@ export function validateEmailOptions(options: EmailOptions): void {
  * Validates email address format with enhanced security checks
  * Prevents bypass attempts and dangerous characters
  */
-function isValidEmail(email: string): boolean {
+export function isValidEmail(email: string): boolean {
   // Basic length and format checks
   if (!email || typeof email !== "string" || email.length > 320) {
     return false; // RFC 5321 limit

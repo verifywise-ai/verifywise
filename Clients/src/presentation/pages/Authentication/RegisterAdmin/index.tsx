@@ -4,7 +4,7 @@ import { ReactComponent as Background } from "../../../assets/imgs/background-gr
 import { Check } from "../../../components/Checks";
 import Field from "../../../components/Inputs/Field";
 import singleTheme from "../../../themes/v1SingleTheme";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { logEngine } from "../../../../application/tools/log.engine";
 import {
   validatePassword,

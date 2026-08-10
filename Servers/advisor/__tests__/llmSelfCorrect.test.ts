@@ -12,13 +12,32 @@
  */
 
 import { describe, expect, it, jest } from "@jest/globals";
+import { NoObjectGeneratedError } from "ai";
 import { z, ZodError } from "zod";
 import {
   generateObjectWithSelfCorrection,
   buildCorrectionDirective,
   extractValidationIssues,
+  isMaxOutputTokensRejected,
+  isResponseFormatUnsupported,
+  jsonObjectFallbackMiddleware,
+  PROVIDER_SAFE_MAX_OUTPUT_TOKENS,
   type GenerateObjectImpl,
 } from "../llmSelfCorrect";
+
+/**
+ * Minimal LanguageModelV3-shaped fake, valid enough for `wrapLanguageModel`
+ * to wrap it. The injected `generateImpl` ignores the model, so its methods
+ * are never actually called.
+ */
+const fakeModel = {
+  specificationVersion: "v3",
+  provider: "test",
+  modelId: "test-model",
+  supportedUrls: {},
+  doGenerate: async () => ({}),
+  doStream: async () => ({}),
+} as unknown as Record<string, unknown>;
 
 const sampleSchema = z.object({
   name: z.string().min(3),
@@ -81,6 +100,17 @@ describe("llmSelfCorrect / extractValidationIssues", () => {
     const b: { cause?: unknown } = { cause: a };
     a.cause = b;
     expect(extractValidationIssues(a)).toBeNull();
+  });
+
+  it("does not descend into a provider's raw HTTP body", () => {
+    // `data` / `responseBody` carry provider text, never a ZodError. Descending
+    // there would route a provider 400 into self-correction instead of the
+    // json_schema downgrade — errorMessages may read them, this walker may not.
+    const outer = Object.assign(new Error("AI SDK call failed"), {
+      data: makeZodError("name", "too short"),
+      responseBody: makeZodError("count", "bad"),
+    });
+    expect(extractValidationIssues(outer)).toBeNull();
   });
 });
 
@@ -217,6 +247,173 @@ describe("llmSelfCorrect / generateObjectWithSelfCorrection", () => {
     expect(invocation).toBe(1); // no retry
   });
 
+  it("retries a NoObjectGeneratedError, spending the budget rather than rethrowing at once", async () => {
+    // Run 4 of the report pipeline lost five analyses to this. A truncated or
+    // empty completion is neither a ZodError nor a response_format rejection,
+    // so it fell through to the rethrow on the FIRST attempt and every large
+    // analyzer got exactly one shot.
+    const systems: string[] = [];
+    let invocation = 0;
+    const mock: GenerateObjectImpl = (async (p: any) => {
+      systems.push(p.system);
+      invocation += 1;
+      if (invocation === 1) {
+        throw new NoObjectGeneratedError({
+          message: "No object generated: the model did not return a response.",
+          text: "",
+          response: { id: "r", timestamp: new Date(0), modelId: "m" },
+          usage: { inputTokens: 1, outputTokens: 0, totalTokens: 1 },
+          finishReason: "length",
+        });
+      }
+      return { object: { name: "ok", count: 1 } } as any;
+    }) as unknown as GenerateObjectImpl;
+
+    const res = await generateObjectWithSelfCorrection<Sample>(
+      { model: {}, schema: sampleSchema, system: "s", prompt: "p", extendedRecovery: true },
+      mock,
+    );
+
+    expect(res.object).toEqual({ name: "ok", count: 1 });
+    expect(invocation).toBe(2);
+    expect(res.attempts).toBe(2);
+    expect(systems[0]).toBe("s");
+    expect(systems[1]).toContain("PREVIOUS RESPONSE UNUSABLE");
+  });
+
+  it("stops re-issuing a NoObjectGeneratedError once the budget is spent", async () => {
+    // A model that cannot finish will not finish on the tenth try either — the
+    // retry must consume an attempt, unlike the json-object transport switch.
+    let invocation = 0;
+    const err = new NoObjectGeneratedError({
+      message: "No object generated: could not parse the response.",
+      text: "{ partial",
+      response: { id: "r", timestamp: new Date(0), modelId: "m" },
+      usage: { inputTokens: 1, outputTokens: 9, totalTokens: 10 },
+      finishReason: "length",
+    });
+    const mock: GenerateObjectImpl = (async () => {
+      invocation += 1;
+      throw err;
+    }) as unknown as GenerateObjectImpl;
+
+    await expect(
+      generateObjectWithSelfCorrection<Sample>(
+        {
+          model: {},
+          schema: sampleSchema,
+          system: "s",
+          prompt: "p",
+          maxSelfCorrectionAttempts: 2, // → 3 total attempts
+          extendedRecovery: true,
+        },
+        mock,
+      ),
+    ).rejects.toBe(err);
+    expect(invocation).toBe(3);
+  });
+
+  it("answers a truncated completion with the retry, not the json_schema downgrade", async () => {
+    // The truncation arrives as a JSONParseError whose message embeds the raw
+    // model output (`JSON parsing failed: Text: …`). Prose that merely mentions
+    // a JSON schema — likely, since the fallback middleware itself injects
+    // "JSON Schema:" into the system prompt — satisfies
+    // isResponseFormatUnsupported, so checking that first would answer an
+    // overrun by prepending the whole schema to the input that overran.
+    const systems: string[] = [];
+    let invocation = 0;
+    const mock: GenerateObjectImpl = (async (p: any) => {
+      systems.push(p.system);
+      invocation += 1;
+      if (invocation === 1) {
+        throw new NoObjectGeneratedError({
+          message: "No object generated: could not parse the response.",
+          cause: new Error(
+            'JSON parsing failed: Text: Here is the object per the json schema you gave me: {"name": "o',
+          ),
+          text: 'Here is the object per the json schema you gave me: {"name": "o',
+          response: { id: "r", timestamp: new Date(0), modelId: "m" },
+          usage: { inputTokens: 1, outputTokens: 9, totalTokens: 10 },
+          finishReason: "length",
+        });
+      }
+      return { object: { name: "ok", count: 1 } } as any;
+    }) as unknown as GenerateObjectImpl;
+
+    const res = await generateObjectWithSelfCorrection<Sample>(
+      { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p", extendedRecovery: true },
+      mock,
+    );
+
+    expect(invocation).toBe(2);
+    expect(res.attempts).toBe(2);
+    expect(systems[1]).toContain("PREVIOUS RESPONSE UNUSABLE");
+    expect(systems[1]).not.toContain("JSON Schema:");
+  });
+
+  it("re-issues at the safe ceiling when the model caps maxOutputTokens lower", async () => {
+    // llm_keys.model is free-form tenant text: claude-3-opus and gpt-4-turbo
+    // answer max_tokens > 4096 with a 400, which is neither a ZodError nor a
+    // NoObjectGeneratedError, so rethrowing it loses the whole analysis for
+    // those tenants on every run.
+    const asked: unknown[] = [];
+    let invocation = 0;
+    const mock: GenerateObjectImpl = (async (p: any) => {
+      asked.push(p.maxOutputTokens);
+      invocation += 1;
+      if (invocation === 1) {
+        throw new Error(
+          "max_tokens: 6000 > 4096, which is the maximum allowed number of output tokens for claude-3-opus-20240229",
+        );
+      }
+      return { object: { name: "ok", count: 1 } } as any;
+    }) as unknown as GenerateObjectImpl;
+
+    const res = await generateObjectWithSelfCorrection<Sample>(
+      {
+        model: {},
+        schema: sampleSchema,
+        system: "s",
+        prompt: "p",
+        extendedRecovery: true,
+        extra: { maxOutputTokens: 6000 },
+      },
+      mock,
+    );
+
+    expect(res.object).toEqual({ name: "ok", count: 1 });
+    expect(asked).toEqual([6000, PROVIDER_SAFE_MAX_OUTPUT_TOKENS]);
+    // Repairing what we sent must not cost a self-correction attempt.
+    expect(res.attempts).toBe(1);
+    expect(res.selfCorrected).toBe(false);
+  });
+
+  it("does not re-issue for a max_tokens rejection it did not cause", async () => {
+    let invocation = 0;
+    const err = new Error("max_tokens is too large: 9000.");
+    const mock: GenerateObjectImpl = (async () => {
+      invocation += 1;
+      throw err;
+    }) as unknown as GenerateObjectImpl;
+
+    await expect(
+      generateObjectWithSelfCorrection<Sample>(
+        // Below the safe ceiling already — a second identical call would only
+        // burn a provider round-trip.
+        {
+          model: {},
+          schema: sampleSchema,
+          system: "s",
+          prompt: "p",
+          extendedRecovery: true,
+          extra: { maxOutputTokens: 900 },
+        },
+        mock,
+      ),
+    ).rejects.toBe(err);
+    expect(invocation).toBe(1);
+  });
+
   it("disables self-correction when maxSelfCorrectionAttempts=0", async () => {
     let invocation = 0;
     const mock: GenerateObjectImpl = (async () => {
@@ -273,5 +470,527 @@ describe("llmSelfCorrect / generateObjectWithSelfCorrection", () => {
       mock,
     );
     expect(captured!.temperature).toBe(0);
+  });
+
+  it("omits abortSignal entirely when timeoutMs is absent (existing callers unchanged)", async () => {
+    let captured: Record<string, unknown> | null = null;
+    const mock: GenerateObjectImpl = (async (p: Record<string, unknown>) => {
+      captured = p;
+      return { object: { name: "Erin", count: 1 } };
+    }) as unknown as GenerateObjectImpl;
+
+    await generateObjectWithSelfCorrection<Sample>(
+      { model: {}, schema: sampleSchema, system: "s", prompt: "p" },
+      mock,
+    );
+    expect(captured).not.toBeNull();
+    expect(Object.keys(captured!)).not.toContain("abortSignal");
+  });
+
+  it("gives every attempt its OWN timeout signal when timeoutMs is set", async () => {
+    const calls: Array<Record<string, unknown>> = [];
+    let invocation = 0;
+    const mock: GenerateObjectImpl = (async (p: Record<string, unknown>) => {
+      calls.push(p);
+      invocation += 1;
+      if (invocation === 1) throw makeZodError("name", "too short");
+      return { object: { name: "Frank", count: 1 } };
+    }) as unknown as GenerateObjectImpl;
+
+    const result = await generateObjectWithSelfCorrection<Sample>(
+      { model: {}, schema: sampleSchema, system: "s", prompt: "p", timeoutMs: 1000 },
+      mock,
+    );
+
+    expect(result.attempts).toBe(2);
+    expect(calls[0].abortSignal).toBeInstanceOf(AbortSignal);
+    expect(calls[1].abortSignal).toBeInstanceOf(AbortSignal);
+    // One shared signal IS the bug: the retry inherits whatever is left of
+    // the first attempt's budget, so a slow first call aborts the correction.
+    expect(calls[0].abortSignal).not.toBe(calls[1].abortSignal);
+  });
+
+  it("timeoutMs wins over an abortSignal smuggled in through extra", async () => {
+    const stale = AbortSignal.timeout(5000);
+    let captured: Record<string, unknown> | null = null;
+    const mock: GenerateObjectImpl = (async (p: Record<string, unknown>) => {
+      captured = p;
+      return { object: { name: "Gina", count: 1 } };
+    }) as unknown as GenerateObjectImpl;
+
+    await generateObjectWithSelfCorrection<Sample>(
+      {
+        model: {},
+        schema: sampleSchema,
+        system: "s",
+        prompt: "p",
+        timeoutMs: 1000,
+        extra: { abortSignal: stale },
+      },
+      mock,
+    );
+    expect(captured!.abortSignal).toBeInstanceOf(AbortSignal);
+    expect(captured!.abortSignal).not.toBe(stale);
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* extendedRecovery gate                                              */
+/* ------------------------------------------------------------------ */
+
+describe("llmSelfCorrect / extendedRecovery gate", () => {
+  /** The one caller that opts in (reporting) is the only one these three help. */
+  const noObject = () =>
+    new NoObjectGeneratedError({
+      message: "No object generated: could not parse the response.",
+      text: '{"name": "o',
+      response: { id: "r", timestamp: new Date(0), modelId: "m" },
+      usage: { inputTokens: 1, outputTokens: 9, totalTokens: 10 },
+      finishReason: "length",
+    });
+
+  it("propagates a NoObjectGeneratedError on the first attempt when the opt-in is absent", async () => {
+    // The evidence analyzer, control matcher and planner never opt in. Grading a
+    // truncated completion must throw straight out so advisor.ctrl.ts falls back
+    // to deterministic heuristic grading — not return minimum-length LLM prose
+    // produced under TRUNCATION_DIRECTIVE.
+    const err = noObject();
+    let invocation = 0;
+    const mock: GenerateObjectImpl = (async () => {
+      invocation += 1;
+      throw err;
+    }) as unknown as GenerateObjectImpl;
+
+    await expect(
+      generateObjectWithSelfCorrection<Sample>(
+        { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p" },
+        mock,
+      ),
+    ).rejects.toBe(err);
+    expect(invocation).toBe(1);
+  });
+
+  it("still retries the NoObjectGeneratedError when extendedRecovery is set", async () => {
+    const systems: string[] = [];
+    let invocation = 0;
+    const mock: GenerateObjectImpl = (async (p: any) => {
+      systems.push(p.system);
+      invocation += 1;
+      if (invocation === 1) throw noObject();
+      return { object: { name: "ok", count: 1 } } as any;
+    }) as unknown as GenerateObjectImpl;
+
+    const res = await generateObjectWithSelfCorrection<Sample>(
+      {
+        model: fakeModel,
+        schema: sampleSchema,
+        system: "s",
+        prompt: "p",
+        extendedRecovery: true,
+      },
+      mock,
+    );
+
+    expect(invocation).toBe(2);
+    expect(res.attempts).toBe(2);
+    expect(systems[1]).toContain("PREVIOUS RESPONSE UNUSABLE");
+  });
+
+  it("downgrades json_schema even without the opt-in, and only once", async () => {
+    // Not an extendedRecovery behaviour: this repairs the REQUEST and the
+    // schema still validates whatever comes back, so it changes transport, not
+    // correctness. Withholding it meant a provider that rejects json_schema
+    // (api.deepseek.com answers 400 "This response_format type is unavailable
+    // now") killed evidence grading outright, while the reporting analyzers —
+    // which do opt in — worked against the same key.
+    const err = new Error("This response_format type is unavailable now");
+    let invocation = 0;
+    const mock: GenerateObjectImpl = (async () => {
+      invocation += 1;
+      throw err;
+    }) as unknown as GenerateObjectImpl;
+
+    await expect(
+      generateObjectWithSelfCorrection<Sample>(
+        { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p" },
+        mock,
+      ),
+    ).rejects.toBe(err);
+    // Downgraded once, then propagated — a provider that rejects the switched
+    // request too must not be retried forever.
+    expect(invocation).toBe(2);
+  });
+
+  it("recovers without the opt-in when the downgraded request succeeds", async () => {
+    let invocation = 0;
+    const mock: GenerateObjectImpl = (async () => {
+      invocation += 1;
+      if (invocation === 1) throw new Error("This response_format type is unavailable now");
+      return { object: { name: "okay", count: 1 } } as any;
+    }) as unknown as GenerateObjectImpl;
+
+    const res = await generateObjectWithSelfCorrection<Sample>(
+      { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p" },
+      mock,
+    );
+
+    expect(res.object).toEqual({ name: "okay", count: 1 });
+    // Budget-neutral: repairing what we sent is not a self-correction.
+    expect(res.attempts).toBe(1);
+    expect(res.selfCorrected).toBe(false);
+  });
+
+  it("does not cap maxOutputTokens when the opt-in is absent", async () => {
+    const err = new Error(
+      "max_tokens: 6000 > 4096, which is the maximum allowed number of output tokens for claude-3-opus-20240229",
+    );
+    let invocation = 0;
+    const mock: GenerateObjectImpl = (async () => {
+      invocation += 1;
+      throw err;
+    }) as unknown as GenerateObjectImpl;
+
+    await expect(
+      generateObjectWithSelfCorrection<Sample>(
+        {
+          model: fakeModel,
+          schema: sampleSchema,
+          system: "s",
+          prompt: "p",
+          extra: { maxOutputTokens: 6000 },
+        },
+        mock,
+      ),
+    ).rejects.toBe(err);
+    expect(invocation).toBe(1);
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* isResponseFormatUnsupported                                        */
+/* ------------------------------------------------------------------ */
+
+describe("llmSelfCorrect / isResponseFormatUnsupported", () => {
+  it("detects DeepSeek's response_format rejection", () => {
+    expect(
+      isResponseFormatUnsupported(new Error("This response_format type is unavailable now")),
+    ).toBe(true);
+  });
+
+  it("detects a json_schema rejection nested in `.cause`", () => {
+    const inner = new Error("Invalid schema for response_format 'json_schema'");
+    const outer = Object.assign(new Error("AI SDK call failed"), { cause: inner });
+    expect(isResponseFormatUnsupported(outer)).toBe(true);
+  });
+
+  it("returns false for auth / network errors", () => {
+    expect(isResponseFormatUnsupported(new Error("401 unauthorized"))).toBe(false);
+    expect(isResponseFormatUnsupported(new Error("ECONNRESET"))).toBe(false);
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* isMaxOutputTokensRejected                                          */
+/* ------------------------------------------------------------------ */
+
+describe("llmSelfCorrect / isMaxOutputTokensRejected", () => {
+  it("detects Anthropic's ceiling rejection", () => {
+    expect(
+      isMaxOutputTokensRejected(
+        new Error(
+          "max_tokens: 6000 > 4096, which is the maximum allowed number of output tokens for claude-3-opus-20240229",
+        ),
+      ),
+    ).toBe(true);
+  });
+
+  it("detects OpenAI's ceiling rejection nested in `.responseBody`", () => {
+    const outer = Object.assign(new Error("AI SDK call failed"), {
+      responseBody:
+        "max_tokens is too large: 6000. This model supports at most 4096 completion tokens.",
+    });
+    expect(isMaxOutputTokensRejected(outer)).toBe(true);
+  });
+
+  it("returns false for a response_format rejection or a network error", () => {
+    expect(
+      isMaxOutputTokensRejected(new Error("This response_format type is unavailable now")),
+    ).toBe(false);
+    expect(isMaxOutputTokensRejected(new Error("ECONNRESET"))).toBe(false);
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* generateObjectWithSelfCorrection — json-object fallback            */
+/* ------------------------------------------------------------------ */
+
+describe("llmSelfCorrect / json-object fallback", () => {
+  it("downgrades to JSON-object mode when the provider rejects json_schema", async () => {
+    const valid: Sample = { name: "Zoe", count: 5 };
+    let invocation = 0;
+    const mock: GenerateObjectImpl = (async () => {
+      invocation += 1;
+      if (invocation === 1) {
+        throw new Error("This response_format type is unavailable now");
+      }
+      return { object: valid };
+    }) as unknown as GenerateObjectImpl;
+
+    const result = await generateObjectWithSelfCorrection<Sample>(
+      { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p", extendedRecovery: true },
+      mock,
+    );
+
+    // First call rejected json_schema → wrapper retried once in json-object mode.
+    expect(result.object).toEqual(valid);
+    expect(invocation).toBe(2);
+  });
+
+  it("does not fall back more than once (rethrows if json-object mode also fails)", async () => {
+    let invocation = 0;
+    const mock: GenerateObjectImpl = (async () => {
+      invocation += 1;
+      throw new Error("This response_format type is unavailable now");
+    }) as unknown as GenerateObjectImpl;
+
+    await expect(
+      generateObjectWithSelfCorrection<Sample>(
+        {
+          model: fakeModel,
+          schema: sampleSchema,
+          system: "s",
+          prompt: "p",
+          extendedRecovery: true,
+        },
+        mock,
+      ),
+    ).rejects.toThrow(/response_format/i);
+    // One initial attempt + exactly one fallback retry, then rethrow.
+    expect(invocation).toBe(2);
+  });
+
+  it("never downgrades a truncated completion, even once the budget is spent", async () => {
+    // The two tests above only count invocations of the injected impl, which
+    // ignores the model — so the downgrade firing on the LAST attempt would be
+    // invisible there. It is not invisible here: a truncated completion whose
+    // embedded raw text mentions a json schema must be rethrown after the
+    // budget, not answered with a fourth call carrying the whole schema.
+    let invocation = 0;
+    const err = new NoObjectGeneratedError({
+      message: "No object generated: could not parse the response.",
+      cause: new Error('JSON parsing failed: Text: per the json schema you gave me: {"name": "o'),
+      text: 'per the json schema you gave me: {"name": "o',
+      response: { id: "r", timestamp: new Date(0), modelId: "m" },
+      usage: { inputTokens: 1, outputTokens: 9, totalTokens: 10 },
+      finishReason: "length",
+    });
+    const mock: GenerateObjectImpl = (async () => {
+      invocation += 1;
+      throw err;
+    }) as unknown as GenerateObjectImpl;
+
+    await expect(
+      generateObjectWithSelfCorrection<Sample>(
+        {
+          model: fakeModel,
+          schema: sampleSchema,
+          system: "s",
+          prompt: "p",
+          extendedRecovery: true,
+        },
+        mock,
+      ),
+    ).rejects.toBe(err);
+    expect(invocation).toBe(3);
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* jsonObjectFallbackMiddleware — the repair the downgrade performs    */
+/* ------------------------------------------------------------------ */
+
+describe("llmSelfCorrect / jsonObjectFallbackMiddleware", () => {
+  /** transformParams only reads `params`; the rest of the option bag is inert. */
+  const transform = (params: Record<string, unknown>) =>
+    (jsonObjectFallbackMiddleware.transformParams as any)({
+      type: "generate",
+      model: fakeModel,
+      params,
+    });
+
+  it("drops the schema from responseFormat and restates it as a leading system message", async () => {
+    const schema = { type: "object", properties: { name: { type: "string" } } };
+    const out = await transform({
+      responseFormat: { type: "json", schema, name: "sample" },
+      prompt: [{ role: "user", content: [{ type: "text", text: "go" }] }],
+      temperature: 0,
+    });
+
+    // The provider now receives response_format: { type: "json_object" }.
+    expect(out.responseFormat).toEqual({ type: "json" });
+    // …and the shape it lost is back in the prompt, ahead of everything else.
+    expect(out.prompt[0].role).toBe("system");
+    expect(out.prompt[0].content).toContain(JSON.stringify(schema));
+    expect(out.prompt).toHaveLength(2);
+    expect(out.prompt[1].role).toBe("user");
+    // Everything else is passed through untouched.
+    expect(out.temperature).toBe(0);
+  });
+
+  it("leaves a text-mode call alone", async () => {
+    const params = {
+      responseFormat: { type: "text" },
+      prompt: [{ role: "user", content: [{ type: "text", text: "go" }] }],
+    };
+    expect(await transform(params)).toBe(params);
+  });
+
+  it("leaves a schema-less json call alone (nothing to restate)", async () => {
+    const params = {
+      responseFormat: { type: "json" },
+      prompt: [{ role: "user", content: [{ type: "text", text: "go" }] }],
+    };
+    expect(await transform(params)).toBe(params);
+  });
+
+  it("leaves a call with no responseFormat alone", async () => {
+    const params = { prompt: [] };
+    expect(await transform(params)).toBe(params);
+  });
+});
+
+/* ------------------------------------------------------------------ */
+/* Salvaging a complete object the provider wrapped in prose          */
+/* ------------------------------------------------------------------ */
+
+describe("llmSelfCorrect / prose-wrapped object salvage", () => {
+  /**
+   * NVIDIA NIM serving deepseek-ai/deepseek-v4-flash returns HTTP 200 with a
+   * reasoning fragment glued to the front of the JSON when the request carries
+   * a json_schema response_format ("We{\"summary\": ...}"). The object itself
+   * is complete and schema-valid; only generateObject's strict parse fails.
+   * Observed 2026-07-29 against the live endpoint.
+   */
+  const wrapped = (text: string) =>
+    new NoObjectGeneratedError({
+      message: "No object generated: could not parse the response.",
+      text,
+      response: { id: "r", timestamp: new Date(0), modelId: "m" },
+      usage: { inputTokens: 1, outputTokens: 9, totalTokens: 10 },
+      finishReason: "stop",
+    });
+
+  const throwing = (err: unknown) => {
+    let invocation = 0;
+    const impl: GenerateObjectImpl = (async () => {
+      invocation += 1;
+      throw err;
+    }) as unknown as GenerateObjectImpl;
+    return { impl, calls: () => invocation };
+  };
+
+  it("returns the object rather than throwing away a paid-for completion", async () => {
+    const { impl, calls } = throwing(wrapped('We{"name": "okay", "count": 1}'));
+
+    const res = await generateObjectWithSelfCorrection<Sample>(
+      { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p" },
+      impl,
+    );
+
+    expect(res.object).toEqual({ name: "okay", count: 1 });
+    // Salvage costs no provider call and is not a correction.
+    expect(calls()).toBe(1);
+    expect(res.attempts).toBe(1);
+    expect(res.selfCorrected).toBe(false);
+  });
+
+  it("salvages without the extendedRecovery opt-in", async () => {
+    // Deliberately outside that gate: the payload is the model's own
+    // schema-valid output, not the degraded answer those behaviours produce.
+    const { impl } = throwing(wrapped('Sure, here you go:\n{"name": "okay", "count": 2}'));
+
+    const res = await generateObjectWithSelfCorrection<Sample>(
+      { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p" },
+      impl,
+    );
+
+    expect(res.object).toEqual({ name: "okay", count: 2 });
+  });
+
+  it("skips a decoy object in the prose and keeps scanning for one that validates", async () => {
+    // Reasoning that mentions an object of its own would satisfy a naive
+    // first-brace grab and return garbage.
+    const { impl } = throwing(
+      wrapped('We need {"note": "not the answer"} first. {"name": "real", "count": 3}'),
+    );
+
+    const res = await generateObjectWithSelfCorrection<Sample>(
+      { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p" },
+      impl,
+    );
+
+    expect(res.object).toEqual({ name: "real", count: 3 });
+  });
+
+  it("is not fooled by braces inside string literals", async () => {
+    const { impl } = throwing(wrapped('We{"name": "a}b{c", "count": 4}'));
+
+    const res = await generateObjectWithSelfCorrection<Sample>(
+      { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p" },
+      impl,
+    );
+
+    expect(res.object).toEqual({ name: "a}b{c", count: 4 });
+  });
+
+  it("is not fooled by an escaped quote before a brace", async () => {
+    const { impl } = throwing(wrapped('We{"name": "say \\"hi\\" }", "count": 5}'));
+
+    const res = await generateObjectWithSelfCorrection<Sample>(
+      { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p" },
+      impl,
+    );
+
+    expect(res.object).toEqual({ name: 'say "hi" }', count: 5 });
+  });
+
+  it("still throws when the completion was truncated", async () => {
+    // Nothing complete to salvage. This must keep reaching the caller so the
+    // evidence analyzer falls back to heuristic grading rather than inventing
+    // a partial analysis.
+    const err = wrapped('{"name": "o');
+    const { impl, calls } = throwing(err);
+
+    await expect(
+      generateObjectWithSelfCorrection<Sample>(
+        { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p" },
+        impl,
+      ),
+    ).rejects.toBe(err);
+    expect(calls()).toBe(1);
+  });
+
+  it("still throws when the only complete object fails the schema", async () => {
+    const err = wrapped('We{"name": "x", "count": -1}');
+    const { impl } = throwing(err);
+
+    await expect(
+      generateObjectWithSelfCorrection<Sample>(
+        { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p" },
+        impl,
+      ),
+    ).rejects.toBe(err);
+  });
+
+  it("still throws when the error carries no text at all", async () => {
+    const err = wrapped("");
+    const { impl } = throwing(err);
+
+    await expect(
+      generateObjectWithSelfCorrection<Sample>(
+        { model: fakeModel, schema: sampleSchema, system: "s", prompt: "p" },
+        impl,
+      ),
+    ).rejects.toBe(err);
   });
 });

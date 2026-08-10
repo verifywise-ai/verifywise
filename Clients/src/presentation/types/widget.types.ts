@@ -73,6 +73,10 @@ export interface IconButtonProps {
   onPreview?: () => void | Promise<void>;
   onEditMetadata?: () => void | Promise<void>;
   onViewHistory?: () => void;
+  // Scheduled-report props
+  onRunNow?: () => void | Promise<void>;
+  /** Drives the Pause/Resume label the same way isVisible drives Make visible. */
+  isPaused?: boolean;
 }
 
 /**

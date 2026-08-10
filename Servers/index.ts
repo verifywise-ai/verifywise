@@ -9,6 +9,8 @@ import {
 import { sequelize } from "./database/db";
 import redisClient from "./database/redis";
 import { startTimeoutHandler } from "./advisor/approval/timeoutHandler";
+import { bootstrapAgentNetwork } from "./advisor/network/agentNetwork";
+import { registerAllWorkflows } from "./services/workflows";
 import { initObservability, shutdownObservability } from "./observability/otel";
 
 const DEFAULT_PORT = "3000";
@@ -89,6 +91,11 @@ try {
 
   // Start approval timeout handler (expires pending approvals past TTL)
   startTimeoutHandler();
+
+  // Bootstrap the multi-agent network (registers all domain agents) and
+  // register the autopilot workflow definitions at startup.
+  bootstrapAgentNetwork();
+  registerAllWorkflows();
 
   const server = app.listen(port, () => {
     console.log(`Server running on port http://${host}:${port}/`);

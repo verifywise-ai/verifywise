@@ -21,7 +21,7 @@ import CustomizableSkeleton from "../../../components/Skeletons";
 import NewControlPane from "../../../components/Modals/Controlpane/NewControlPane";
 import Alert from "../../../components/Alert";
 import { StyledTableRow, AlertBox, styles } from "./styles";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 import useUsers from "../../../../application/hooks/useUsers";
 import {
   getControlByIdAndProject,

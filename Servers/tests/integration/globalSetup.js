@@ -1,12 +1,31 @@
+const fs = require("node:fs");
 const path = require("node:path");
 const dotenv = require("dotenv");
 const { Client } = require("pg");
 const { execSync } = require("node:child_process");
+const { assertSafeTestDatabase } = require("../testDatabaseGuard");
 
 module.exports = async function globalSetup() {
-  dotenv.config({ path: path.resolve(__dirname, "../../.env.test") });
+  const envTestPath = path.resolve(__dirname, "../../.env.test");
+  const loaded = dotenv.config({ path: envTestPath });
 
-  const dbName = process.env.DB_NAME || "verifywise_test";
+  // Refuse to run against the development database.
+  //
+  // This suite truncates every table it touches, and .env.test is gitignored,
+  // so a fresh clone can easily end up pointing at the development database —
+  // on 2026-07-28 that destroyed a developer's local data.
+  //
+  // The check is on the database name, not on whether .env.test exists: CI has
+  // neither that file nor Servers/.env and injects DB_* into the environment,
+  // where a file-existence check fails while proving nothing about what is
+  // about to be truncated. See tests/testDatabaseGuard.js.
+  const devEnvPath = path.resolve(__dirname, "../../.env");
+  const devDbName = fs.existsSync(devEnvPath)
+    ? dotenv.parse(fs.readFileSync(devEnvPath, "utf8")).DB_NAME
+    : undefined;
+
+  const dbName = process.env.DB_NAME;
+  assertSafeTestDatabase({ dbName, devDbName, envTestPath, hasEnvTest: !loaded.error });
 
   const client = new Client({
     user: process.env.DB_USER,

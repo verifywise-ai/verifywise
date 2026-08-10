@@ -369,15 +369,38 @@ Automations can use these template variables:
 
 1. **Overview** - Summary, statistics, progress
 2. **Risks** - Risk identification and analysis
-3. **Project Settings** - Metadata, members, frameworks
-4. **Activity** - Change history audit trail
-5. **Post-Market Monitoring** - Ongoing monitoring config
+3. **Frameworks/regulations** - Per-framework compliance tracking (see below)
+4. **Project Settings** - Metadata, members, frameworks
+5. **Activity** - Change history audit trail
+6. **Post-Market Monitoring** - Ongoing monitoring config
+
+#### Frameworks/regulations sub-tabs
+
+`ProjectFrameworks` renders one framework at a time (selected with the framework toggle) and splits it into sub-tabs:
+
+| Sub-tab | Value | Shown for |
+|---------|-------|-----------|
+| Requirements | `compliance` | All frameworks |
+| Assessments | `assessment` | EU AI Act — the only framework with an assessment tracker |
+| AI readiness | `readiness` | Frameworks in `READINESS_FRAMEWORK_TYPES` (EU AI Act, ISO 42001) |
+
+A sub-tab is only rendered when the selected framework has a panel for it, and selecting a framework
+that doesn't (or deep-linking to it with `?subtab=`) falls back to Requirements, so the panel area is
+never blank. The active sub-tab can be deep-linked with the `?subtab=` query parameter.
+
+**AI readiness** renders `pages/ReadinessDashboard` scoped to the use case and the selected framework
+(`projectId` + `frameworkType` props). In this scoped mode the dashboard hides its own framework tabs,
+shows a single framework score card, and "Calculate readiness" recalculates only that framework for that
+use case. Rendered without props (the org-wide dashboard tab), behaviour is unchanged.
+Readiness types are mapped from the framework **name** — the backend falls back to EU AI Act controls for
+unknown types, so unmapped frameworks must not expose the tab.
 
 ### Key Components
 
 | Component | Purpose |
 |-----------|---------|
 | `ProjectView/index.tsx` | Main tab container |
+| `ProjectView/ProjectFrameworks` | Frameworks/regulations tab |
 | `ProjectView/RisksView` | Risk management tab |
 | `ProjectView/ProjectSettings` | Settings form |
 | `ProjectView/Activity` | Change history |

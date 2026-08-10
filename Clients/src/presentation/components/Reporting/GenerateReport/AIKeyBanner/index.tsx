@@ -1,6 +1,6 @@
 import React from "react";
 import { Box, Typography, Button, useTheme } from "@mui/material";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 
 interface AIKeyBannerProps {
   onClose: () => void;

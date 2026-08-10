@@ -13,6 +13,12 @@ import {
   scheduleAiGatewayRiskDetection,
   scheduleAiGatewayCacheCleanup,
   scheduleMcpGatewayCleanup,
+  scheduleProactiveRiskAnomalyDetection,
+  scheduleProactiveComplianceScoreCheck,
+  scheduleProactiveTaskOverdueCheck,
+  scheduleProactiveWeeklyDigest,
+  scheduleWorkflowAutopilotJobs,
+  scheduleReportSchedulerTick,
   scheduleMrmRevalidationSweep,
   scheduleMrmRetentionPrune,
   scheduleAiTrustIndexSync,
@@ -30,6 +36,12 @@ export async function addAllJobs(): Promise<void> {
   await scheduleAiGatewayRiskDetection();
   await scheduleAiGatewayCacheCleanup();
   await scheduleMcpGatewayCleanup();
+  await scheduleProactiveRiskAnomalyDetection();
+  await scheduleProactiveComplianceScoreCheck();
+  await scheduleProactiveTaskOverdueCheck();
+  await scheduleProactiveWeeklyDigest();
+  await scheduleWorkflowAutopilotJobs();
+  await scheduleReportSchedulerTick();
   await scheduleMrmRevalidationSweep(); // non-obliterating — safe to run after the obliterating schedulers
   await scheduleMrmRetentionPrune(); // non-obliterating — safe to run after the obliterating schedulers
   await scheduleAiTrustIndexSync();

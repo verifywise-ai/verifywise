@@ -3,7 +3,7 @@
 // from data the record already holds (+ the full app list passed in); no fetching.
 import { useState } from "react";
 import { Box, Stack, Typography, useTheme } from "@mui/material";
-import { Link as RouterLink } from "react-router-dom";
+import { Link as RouterLink } from "react-router";
 import type { TrustIndexAppData } from "../shared";
 import { faviconUrl } from "../shared";
 import { INDICATOR_GAP_LABELS, type IndicatorMap } from "../rubric";
