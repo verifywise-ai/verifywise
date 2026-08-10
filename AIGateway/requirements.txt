@@ -4,7 +4,7 @@ uvicorn>=0.32.0
 python-dotenv>=1.2.2
 pydantic>=2.13.4
 pydantic-settings>=2.0.0
-redis>=5.0.0
+redis>=8.1.0
 cryptography>=50.0.0
 httpx>=0.28.1
 
