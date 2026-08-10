@@ -10,7 +10,7 @@ httpx>=0.28.1
 
 # Database (async PostgreSQL)
 sqlalchemy[asyncio]>=2.0.0
-asyncpg>=0.30.0
+asyncpg>=0.31.0
 
 # LiteLLM SDK (MIT licensed)
 # Pinned to a specific version — updated per VerifyWise release
