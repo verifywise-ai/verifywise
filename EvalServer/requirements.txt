@@ -41,7 +41,7 @@ httptools==0.7.1
 httpx==0.28.1
 huggingface-hub==1.16.1
 idna==3.15
-importlib_metadata==8.7.0
+importlib_metadata==9.0.0
 invoke==2.2.1
 Jinja2==3.1.6
 jiter==0.11.1
