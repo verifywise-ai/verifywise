@@ -24,7 +24,7 @@ pyarrow>=25.0.0
 
 # Utilities
 tqdm>=4.68.2
-textblob>=0.20.0
+textblob>=0.20.1
 python-dotenv>=1.2.2
 
 # LLM API Clients
