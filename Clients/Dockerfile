@@ -54,5 +54,7 @@ COPY Clients/nginx.conf /etc/nginx/conf.d/default.conf
 # Step 13: Expose port 80
 EXPOSE 80
 
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 CMD wget -qO- http://localhost:80/ >/dev/null || exit 1
+
 # Step 14: Start NGINX server
 CMD ["nginx", "-g", "daemon off;"]

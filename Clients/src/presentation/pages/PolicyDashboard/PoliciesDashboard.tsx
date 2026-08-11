@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router";
 import { Box } from "@mui/material";
 import TabContext from "@mui/lab/TabContext";
 import TabBar from "../../components/TabBar";

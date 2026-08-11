@@ -1,6 +1,6 @@
 import React, { useMemo, useCallback } from "react";
 import { Breadcrumbs as MUIBreadcrumbs, Link, Typography, Stack, useTheme } from "@mui/material";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router";
 import { getRouteMapping, getRouteIcon } from "./routeMapping";
 
 import { ChevronRight as ChevronRightGreyIcon } from "lucide-react";

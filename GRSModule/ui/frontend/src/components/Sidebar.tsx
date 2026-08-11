@@ -1,6 +1,6 @@
-import { NavLink } from "react-router-dom";
+import { NavLink } from "react-router";
 import type { CSSProperties, ReactNode } from "react";
-import { useConfigContext } from "../context/ConfigContext";
+import { useConfigContext } from "../hooks/useConfigContext";
 
 const STAGES = ["seeds", "render", "perturb", "validate", "infer", "judge"];
 const CONFIGS = ["obligations", "mutations", "judge_rubric", "models", "templates", "run_config"];

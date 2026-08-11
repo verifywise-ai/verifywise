@@ -2,7 +2,13 @@ import { Request, Response } from "express";
 import { QueryTypes, Transaction } from "sequelize";
 import { sequelize } from "../database/db";
 import { notifyUserAssigned } from "../services/inAppNotification.service";
+import { notifyProactive } from "../services/proactiveNotify";
 import { ModelInventoryModel } from "../domain.layer/models/modelInventory/modelInventory.model";
+import { ModelInventoryStatus } from "../domain.layer/enums/model-inventory-status.enum";
+import {
+  NotificationType,
+  NotificationEntityType,
+} from "../domain.layer/interfaces/i.notification";
 import {
   getAllModelInventoriesQuery,
   getModelInventoryByIdQuery,
@@ -21,6 +27,7 @@ import {
 import { modelHasMrmHistoryQuery } from "../utils/mrm.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import logger, { logStructured } from "../utils/logger/fileLogger";
+import { triggerModelDeployment } from "../services/workflows/triggers";
 import { logRollbackFailure } from "../utils/logger/logHelper";
 
 import { translateError } from "../utils/i18n.utils";
@@ -499,6 +506,53 @@ export async function updateModelInventoryById(req: Request, res: Response) {
     }
 
     await transaction.commit();
+
+    // Model-deployed hook (Phase 4 / issue 3811): when a model transitions
+    // into the deployed (Approved) state, trigger an automatic risk-assessment
+    // notification (in-app + email). Failure must never break the response.
+    const previousStatus = (currentModelInventory as any).status;
+    if (
+      status === ModelInventoryStatus.APPROVED &&
+      previousStatus !== ModelInventoryStatus.APPROVED
+    ) {
+      const modelName = savedModelInventory.model || `Model #${modelInventoryId}`;
+      notifyProactive(req.organizationId!, {
+        title: "Model deployed — risk assessment required",
+        body: `"${modelName}" was just deployed. A risk assessment is recommended for the newly deployed model.`,
+        notification: {
+          user_id: req.userId!,
+          type: NotificationType.SYSTEM,
+          title: "Model deployed — risk assessment required",
+          message: `"${modelName}" was just deployed. A risk assessment is recommended.`,
+          entity_type: NotificationEntityType.MODEL,
+          entity_id: modelInventoryId,
+        },
+        channels: {
+          inApp: true,
+          email: {
+            template: "model-deployed-risk-assessment",
+            subject: "Model deployed — risk assessment required",
+            variables: {
+              modelName,
+              modelId: String(modelInventoryId),
+            },
+          },
+        },
+        meta: { modelInventoryId },
+      }).catch((err) =>
+        console.error("Failed to send model deployed risk-assessment notification:", err),
+      );
+
+      // Phase 6 / issue 3813 — kick off the model_deployment autopilot
+      // workflow alongside the notification. Fire-and-forget; never blocks
+      // or fails the response.
+      triggerModelDeployment(
+        req.organizationId!,
+        modelInventoryId,
+        modelName,
+        savedModelInventory.version || undefined,
+      ).catch((err) => console.error("Failed to trigger model_deployment workflow:", err));
+    }
 
     // Notify approver if changed to a new user
     const oldApprover = (currentModelInventory as any).approver;

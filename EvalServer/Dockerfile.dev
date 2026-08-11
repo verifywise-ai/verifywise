@@ -14,4 +14,6 @@ COPY ./src .
 # Create uploads directory for user datasets (will be mounted as volume)
 RUN mkdir -p /app/data/uploads
 
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health').read()"
+
 CMD ["sh", "-c", "alembic upgrade head && uvicorn app:app --host 0.0.0.0 --port 8000 --reload --workers 4"]

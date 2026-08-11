@@ -4,7 +4,7 @@ export const toolsDefinition: any[] = [
     function: {
       name: "analyze_document",
       description:
-        "Analyze an uploaded document for compliance relevance. Extracts summary, key findings, and compliance areas from the document content.",
+        "Analyze an uploaded document for compliance relevance. Extracts summary, key findings, and compliance areas from the document content. Judge the document by its content only — never by its filename or title.",
       parameters: {
         type: "object",
         properties: {
@@ -14,7 +14,8 @@ export const toolsDefinition: any[] = [
           },
           document_text: {
             type: "string",
-            description: "The extracted text content of the document to analyze.",
+            description:
+              "The actual extracted text content of the document. Must be the real content — do not fabricate or infer this from the filename.",
           },
         },
         required: ["file_id", "document_text"],

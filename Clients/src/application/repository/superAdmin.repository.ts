@@ -76,3 +76,35 @@ export async function updateUser(
 export async function removeUser(userId: number) {
   return apiServices.delete(`/super-admin/users/${userId}`);
 }
+
+export interface MonitoringConfig {
+  enabled: boolean;
+  otlp_endpoint: string | null;
+  deployment_name: string | null;
+  auth_header_set: boolean;
+  updated_by: number | null;
+  updated_at: string | null;
+}
+
+export interface MonitoringConfigInput {
+  enabled: boolean;
+  otlp_endpoint: string;
+  deployment_name: string;
+}
+
+export async function getMonitoringConfig() {
+  return apiServices.get<ServerResponse<MonitoringConfig>>("/super-admin/monitoring");
+}
+
+export async function updateMonitoringConfig(data: MonitoringConfigInput) {
+  return apiServices.put<ServerResponse<MonitoringConfig>>("/super-admin/monitoring", data);
+}
+
+/**
+ * Ask the backend to mint a signed (RS256) push token for this deployment. The
+ * backend signs it with its private key; the response only reports
+ * `auth_header_set` — the raw token is never returned to the browser.
+ */
+export async function generateMonitoringToken() {
+  return apiServices.post<ServerResponse<MonitoringConfig>>("/super-admin/monitoring/token", {});
+}

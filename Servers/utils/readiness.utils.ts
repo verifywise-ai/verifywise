@@ -1,6 +1,7 @@
 import { sequelize } from "../database/db";
 import logger from "./logger/fileLogger";
 import { buildVisibilityFilter } from "./visibility.utils";
+import { getVisibleEuCategoryIdsForProject } from "./eu.utils";
 
 /**
  * Upsert a control readiness score.
@@ -17,8 +18,7 @@ export async function upsertControlScoreQuery(
     evidence_quality_score: number;
     evidence_count_score: number;
     evidence_recency_score: number;
-    task_completion_score: number;
-    risk_mitigation_score: number;
+    requirements_score: number;
     overall_score: number;
     readiness_level: string;
     recommendations?: string[] | null;
@@ -29,13 +29,13 @@ export async function upsertControlScoreQuery(
       `INSERT INTO control_readiness_scores
         (control_id, framework_type, project_id, created_by, visibility,
          evidence_quality_score, evidence_count_score, evidence_recency_score,
-         task_completion_score, risk_mitigation_score,
+         requirements_score,
          overall_score, readiness_level, recommendations,
          calculated_at, organization_id)
        VALUES
         (:controlId, :frameworkType, :projectId, :createdBy, :visibility,
          :evidenceQuality, :evidenceCount, :evidenceRecency,
-         :taskCompletion, :riskMitigation,
+         :requirements,
          :overallScore, :readinessLevel, :recommendations,
          NOW(), :organizationId)
        ON CONFLICT (control_id, framework_type, COALESCE(project_id, 0), COALESCE(created_by, 0), organization_id)
@@ -43,8 +43,7 @@ export async function upsertControlScoreQuery(
          evidence_quality_score = EXCLUDED.evidence_quality_score,
          evidence_count_score = EXCLUDED.evidence_count_score,
          evidence_recency_score = EXCLUDED.evidence_recency_score,
-         task_completion_score = EXCLUDED.task_completion_score,
-         risk_mitigation_score = EXCLUDED.risk_mitigation_score,
+         requirements_score = EXCLUDED.requirements_score,
          overall_score = EXCLUDED.overall_score,
          readiness_level = EXCLUDED.readiness_level,
          recommendations = EXCLUDED.recommendations,
@@ -60,8 +59,7 @@ export async function upsertControlScoreQuery(
           evidenceQuality: data.evidence_quality_score,
           evidenceCount: data.evidence_count_score,
           evidenceRecency: data.evidence_recency_score,
-          taskCompletion: data.task_completion_score,
-          riskMitigation: data.risk_mitigation_score,
+          requirements: data.requirements_score,
           overallScore: data.overall_score,
           readinessLevel: data.readiness_level,
           recommendations: data.recommendations ? JSON.stringify(data.recommendations) : null,
@@ -72,6 +70,66 @@ export async function upsertControlScoreQuery(
     return (rows as any[])[0];
   } catch (error) {
     logger.error("Error upserting control readiness score:", error);
+    throw error;
+  }
+}
+
+/**
+ * Delete the control readiness rows of a scope that are no longer part of its
+ * applicable control set.
+ *
+ * The applicable set is a moving target — changing a project's risk tier or
+ * high-risk role changes the visible EU categories, and marking an ISO annex
+ * category not applicable drops it — so without this a recalculation upserts
+ * the current set and leaves every previously scored control behind. Those
+ * orphans keep their stale score and outrank the live rows in every
+ * `ORDER BY overall_score ASC` consumer (weakest controls, recommendations,
+ * the heat map).
+ *
+ * Scoped by exactly the columns of `upsertControlScoreQuery`'s ON CONFLICT key
+ * (`uq_ctrl_readiness_full`) minus `control_id`, so a recalculation can only
+ * ever remove rows the same recalculation would have overwritten: one user's
+ * run cannot destroy another user's scores, and a project-scoped run cannot
+ * destroy the organization-wide (`project_id IS NULL`) rows. The `::int` casts
+ * are required — a NULL bind inside COALESCE has no inferrable type on the
+ * organization-wide path.
+ *
+ * Returns the number of rows removed.
+ */
+export async function pruneControlScoresQuery(
+  frameworkType: string,
+  organizationId: number,
+  projectId: number | null,
+  createdBy: number | null,
+  applicableControlIds: number[],
+): Promise<number> {
+  // An empty applicable set means the scope was not recalculated at all; the
+  // callers skip it. Deleting everything here would be a data loss, and an
+  // empty IN list is not valid SQL either.
+  if (applicableControlIds.length === 0) return 0;
+
+  try {
+    const [rows] = await sequelize.query(
+      `DELETE FROM control_readiness_scores
+       WHERE organization_id = :organizationId
+         AND framework_type = :frameworkType
+         AND COALESCE(project_id, 0) = COALESCE(:projectId::int, 0)
+         AND COALESCE(created_by, 0) = COALESCE(:createdBy::int, 0)
+         AND control_id NOT IN (:applicableControlIds)
+       RETURNING control_id`,
+      {
+        replacements: {
+          organizationId,
+          frameworkType,
+          projectId,
+          createdBy,
+          applicableControlIds,
+        },
+      },
+    );
+    return (rows as unknown[]).length;
+  } catch (error) {
+    logger.error("Error pruning control readiness scores:", error);
     throw error;
   }
 }
@@ -88,6 +146,8 @@ export async function upsertFrameworkScoreQuery(
     visibility?: string;
     total_controls: number;
     avg_score: number;
+    controls_avg_score: number;
+    assessment_score: number | null;
     ready_count: number;
     needs_work_count: number;
     at_risk_count: number;
@@ -99,18 +159,20 @@ export async function upsertFrameworkScoreQuery(
     const [rows] = await sequelize.query(
       `INSERT INTO framework_readiness_scores
         (framework_type, project_id, created_by, visibility,
-         total_controls, avg_score,
+         total_controls, avg_score, controls_avg_score, assessment_score,
          ready_count, needs_work_count, at_risk_count, not_started_count,
          weakest_controls, calculated_at, organization_id)
        VALUES
         (:frameworkType, :projectId, :createdBy, :visibility,
-         :totalControls, :avgScore,
+         :totalControls, :avgScore, :controlsAvgScore, :assessmentScore,
          :readyCount, :needsWorkCount, :atRiskCount, :notStartedCount,
          :weakestControls, NOW(), :organizationId)
        ON CONFLICT (framework_type, COALESCE(project_id, 0), COALESCE(created_by, 0), organization_id)
        DO UPDATE SET
          total_controls = EXCLUDED.total_controls,
          avg_score = EXCLUDED.avg_score,
+         controls_avg_score = EXCLUDED.controls_avg_score,
+         assessment_score = EXCLUDED.assessment_score,
          ready_count = EXCLUDED.ready_count,
          needs_work_count = EXCLUDED.needs_work_count,
          at_risk_count = EXCLUDED.at_risk_count,
@@ -126,6 +188,8 @@ export async function upsertFrameworkScoreQuery(
           visibility: data.visibility || "public",
           totalControls: data.total_controls,
           avgScore: data.avg_score,
+          controlsAvgScore: data.controls_avg_score,
+          assessmentScore: data.assessment_score,
           readyCount: data.ready_count,
           needsWorkCount: data.needs_work_count,
           atRiskCount: data.at_risk_count,
@@ -267,7 +331,7 @@ export async function getWeakestControlsQuery(
     const [rows] = await sequelize.query(
       `SELECT control_id, framework_type, overall_score, readiness_level,
               evidence_quality_score, evidence_count_score,
-              evidence_recency_score, task_completion_score, risk_mitigation_score,
+              evidence_recency_score,
               recommendations
        FROM control_readiness_scores
        WHERE organization_id = :organizationId
@@ -383,31 +447,158 @@ export async function getReadinessHistoryQuery(
   }
 }
 
+/** readiness framework_type → frameworks.name */
+export const FRAMEWORK_NAMES: Record<string, string> = {
+  eu_ai_act: "EU AI Act",
+  iso_42001: "ISO 42001",
+};
+
 /**
- * Get all controls from a framework struct table for calculation.
+ * Resolve the projects_frameworks rows in scope: one row when a project is
+ * given, every row of that framework in the organization otherwise.
  */
-export async function getFrameworkControlsQuery(frameworkType: string): Promise<any[]> {
+async function getProjectFrameworkIds(
+  frameworkType: string,
+  organizationId: number,
+  projectId: number | null,
+): Promise<number[]> {
+  const frameworkName = FRAMEWORK_NAMES[frameworkType];
+  if (!frameworkName) return [];
+
+  const [rows] = await sequelize.query(
+    `SELECT pf.id
+     FROM projects_frameworks pf
+     JOIN frameworks f ON f.id = pf.framework_id
+     WHERE pf.organization_id = :organizationId
+       AND f.name = :frameworkName
+       AND (:projectId::int IS NULL OR pf.project_id = :projectId)`,
+    { replacements: { organizationId, frameworkName, projectId } },
+  );
+
+  return (rows as any[]).map((r) => Number(r.id));
+}
+
+/**
+ * Per-control requirement completion for the controls a project is actually
+ * required to implement.
+ *
+ * EU AI Act counts subcontrols marked 'Done' within the categories visible for
+ * the project's risk tier and role — the same filter the Requirements progress
+ * bar uses, so the two can never disagree. ISO 42001 counts annex categories
+ * marked 'Implemented', excluding only categories explicitly marked not
+ * applicable (is_applicable = false). Categories the user has not yet
+ * triaged (is_applicable IS NULL — the state every category starts in on a
+ * real, non-demo project) are treated as applicable by default so a fresh
+ * project scores as zero-done rather than returning no controls at all.
+ *
+ * Organization-wide (projectId null) sums done/total per control across every
+ * project framework, so each project's own applicability still applies.
+ */
+export async function getApplicableControlsWithRequirementsQuery(
+  frameworkType: string,
+  organizationId: number,
+  projectId: number | null,
+): Promise<Array<{ control_id: number; requirements_score: number }>> {
   try {
-    let query: string;
-    if (frameworkType === "eu_ai_act") {
-      query = `SELECT id AS control_id, title
-               FROM controls_struct_eu
-               WHERE title IS NOT NULL`;
-    } else if (frameworkType === "iso_42001") {
-      query = `SELECT id AS control_id, title
-               FROM annexcategories_struct_iso
-               WHERE title IS NOT NULL`;
-    } else {
-      // Generic — try the eu_ai_act table as fallback
-      query = `SELECT id AS control_id, title
-               FROM controls_struct_eu
-               WHERE title IS NOT NULL`;
+    const projectFrameworkIds = await getProjectFrameworkIds(
+      frameworkType,
+      organizationId,
+      projectId,
+    );
+    if (projectFrameworkIds.length === 0) return [];
+
+    const totals = new Map<number, { done: number; total: number }>();
+
+    for (const projectFrameworkId of projectFrameworkIds) {
+      let rows: any[] = [];
+
+      if (frameworkType === "iso_42001") {
+        const [isoRows] = await sequelize.query(
+          `SELECT ac.annexcategory_meta_id AS control_id,
+                  COUNT(*) AS total,
+                  COUNT(*) FILTER (WHERE ac.status = 'Implemented') AS done
+           FROM annexcategories_iso ac
+           WHERE ac.organization_id = :organizationId
+             AND ac.projects_frameworks_id = :projectFrameworkId
+             AND (ac.is_applicable = TRUE OR ac.is_applicable IS NULL)
+           GROUP BY ac.annexcategory_meta_id`,
+          { replacements: { organizationId, projectFrameworkId } },
+        );
+        rows = isoRows as any[];
+      } else {
+        const visibleCategoryIds = await getVisibleEuCategoryIdsForProject(
+          projectFrameworkId,
+          organizationId,
+        );
+        if (visibleCategoryIds.length === 0) continue;
+
+        const [euRows] = await sequelize.query(
+          `SELECT c.control_meta_id AS control_id,
+                  COUNT(sc.id) AS total,
+                  COUNT(*) FILTER (WHERE sc.status = 'Done') AS done
+           FROM controls_eu c
+           LEFT JOIN subcontrols_eu sc
+             ON c.organization_id = sc.organization_id AND c.id = sc.control_id
+           JOIN controls_struct_eu cs ON c.control_meta_id = cs.id
+           WHERE c.organization_id = :organizationId
+             AND c.projects_frameworks_id = :projectFrameworkId
+             AND cs.control_category_id IN (:visibleCategoryIds)
+           GROUP BY c.control_meta_id`,
+          { replacements: { organizationId, projectFrameworkId, visibleCategoryIds } },
+        );
+        rows = euRows as any[];
+      }
+
+      for (const row of rows) {
+        const controlId = Number(row.control_id);
+        const current = totals.get(controlId) || { done: 0, total: 0 };
+        current.done += parseInt(row.done, 10) || 0;
+        current.total += parseInt(row.total, 10) || 0;
+        totals.set(controlId, current);
+      }
     }
 
-    const [rows] = await sequelize.query(query);
-    return rows as any[];
+    return [...totals.entries()].map(([control_id, { done, total }]) => ({
+      control_id,
+      requirements_score: total > 0 ? Math.round((done / total) * 100) : 0,
+    }));
   } catch (error) {
-    logger.error("Error getting framework controls:", error);
+    logger.error("Error getting applicable controls with requirements:", error);
+    throw error;
+  }
+}
+
+/**
+ * Assessment completion for the scope, as a percentage of questions answered
+ * 'Done'. Returns null when there are no questions at all — the caller
+ * renormalizes rather than scoring a missing input as zero.
+ */
+export async function getAssessmentCompletionQuery(
+  organizationId: number,
+  projectId: number | null,
+): Promise<number | null> {
+  try {
+    const [rows] = await sequelize.query(
+      `SELECT COUNT(*) AS total,
+              COUNT(*) FILTER (WHERE ans.status = 'Done') AS done
+       FROM assessments a
+       JOIN answers_eu ans
+         ON a.organization_id = ans.organization_id AND a.id = ans.assessment_id
+       JOIN projects_frameworks pf
+         ON pf.id = a.projects_frameworks_id AND pf.organization_id = a.organization_id
+       WHERE a.organization_id = :organizationId
+         AND (:projectId::int IS NULL OR pf.project_id = :projectId)`,
+      { replacements: { organizationId, projectId } },
+    );
+
+    const row = (rows as any[])[0] || {};
+    const total = parseInt(row.total, 10) || 0;
+    if (total === 0) return null;
+
+    const done = parseInt(row.done, 10) || 0;
+    return Math.round((done / total) * 100);
+  } catch (error) {
+    logger.error("Error getting assessment completion:", error);
     throw error;
   }
 }

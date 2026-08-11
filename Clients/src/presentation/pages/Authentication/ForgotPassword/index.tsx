@@ -9,7 +9,7 @@ import { ArrowLeft as LeftArrowLong } from "lucide-react";
 import { ReactComponent as Background } from "../../../assets/imgs/background-grid.svg";
 import Field from "../../../components/Inputs/Field";
 import singleTheme from "../../../themes/v1SingleTheme";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router";
 import { sendPasswordResetEmail } from "../../../../application/repository/auth.repository";
 import { AlertProps } from "../../../types/alert.types";
 import Alert from "../../../components/Alert";

@@ -1,10 +1,20 @@
+export type QualityGrade = "A" | "B" | "C" | "D" | "F";
+
 export interface IQualityScore {
-  relevance: number;
-  completeness: number;
-  recency: number;
-  reliability: number;
-  specificity: number;
-  overall: number;
+  relevance: QualityGrade;
+  completeness: QualityGrade;
+  recency: QualityGrade;
+  reliability: QualityGrade;
+  specificity: QualityGrade;
+}
+
+export interface IQualityRationale {
+  relevance: string;
+  completeness: string;
+  recency: string;
+  reliability: string;
+  specificity: string;
+  overall: string;
 }
 
 export interface ISuggestedControlLink {
@@ -25,7 +35,8 @@ export interface IEvidenceAiAnalysis {
   key_findings: IKeyFinding[] | null;
   compliance_areas: string[] | null;
   quality_score: IQualityScore | null;
-  overall_quality_score: number | null;
+  overall_quality_grade: QualityGrade | null;
+  quality_rationale?: IQualityRationale | null;
   suggested_control_links: ISuggestedControlLink[] | null;
   analysis_model: string | null;
   analysis_version: number;

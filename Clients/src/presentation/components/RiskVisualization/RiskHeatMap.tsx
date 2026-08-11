@@ -2,17 +2,49 @@ import React, { useMemo } from "react";
 import { Box, Typography, Tooltip, Stack, useTheme } from "@mui/material";
 import { IRiskHeatMapProps } from "../../types/interfaces/i.risk";
 import { IHeatMapCell } from "../../../domain/interfaces/i.widget";
+import { RiskCalculator } from "../../tools/riskCalculator";
+import { RiskLikelihood, RiskSeverity } from "../RiskLevel/riskValues";
+
+// Index 0 is unused so the arrays line up with the 1-5 scale used by the grid.
+const LIKELIHOOD_BY_VALUE = [
+  null,
+  RiskLikelihood.Rare,
+  RiskLikelihood.Unlikely,
+  RiskLikelihood.Possible,
+  RiskLikelihood.Likely,
+  RiskLikelihood.AlmostCertain,
+] as const;
+
+const SEVERITY_BY_VALUE = [
+  null,
+  RiskSeverity.Negligible,
+  RiskSeverity.Minor,
+  RiskSeverity.Moderate,
+  RiskSeverity.Major,
+  RiskSeverity.Catastrophic,
+] as const;
+
+// Score ranges of RiskCalculator's bands, lowest first. The scale runs 4
+// (Rare × Negligible) to 20 (Almost Certain × Catastrophic).
+const LEGEND_BANDS = [
+  { likelihood: RiskLikelihood.Rare, severity: RiskSeverity.Negligible, range: "4" },
+  { likelihood: RiskLikelihood.Rare, severity: RiskSeverity.Minor, range: "5-8" },
+  { likelihood: RiskLikelihood.Rare, severity: RiskSeverity.Moderate, range: "9-12" },
+  { likelihood: RiskLikelihood.Rare, severity: RiskSeverity.Major, range: "13-16" },
+  { likelihood: RiskLikelihood.AlmostCertain, severity: RiskSeverity.Catastrophic, range: "17-20" },
+] as const;
+
+/** Apply the cell's fill opacity to a RISK_LABELS hex colour. */
+const withAlpha = (hex: string, alpha: number): string => {
+  const value = hex.replace("#", "");
+  const r = parseInt(value.slice(0, 2), 16);
+  const g = parseInt(value.slice(2, 4), 16);
+  const b = parseInt(value.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
 
 const RiskHeatMap: React.FC<IRiskHeatMapProps> = ({ risks, onRiskSelect, selectedRisk }) => {
   const theme = useTheme();
-
-  const getRiskLevelColor = (riskLevel: number, alpha: number = 0.8): string => {
-    if (riskLevel >= 16) return `rgba(198, 54, 34, ${alpha})`; // Very High - Dark Red
-    if (riskLevel >= 12) return `rgba(214, 139, 97, ${alpha})`; // High - Orange Red
-    if (riskLevel >= 8) return `rgba(214, 185, 113, ${alpha})`; // Medium - Orange
-    if (riskLevel >= 4) return `rgba(82, 171, 67, ${alpha})`; // Low - Light Green
-    return `rgba(184, 211, 156, ${alpha})`; // Very Low - Very Light Green
-  };
 
   // Helper functions to convert string values to numeric
   const getLikelihoodNumeric = (likelihood: string): number => {
@@ -57,19 +89,28 @@ const RiskHeatMap: React.FC<IRiskHeatMapProps> = ({ risks, onRiskSelect, selecte
       const row: IHeatMapCell[] = [];
       for (let likelihood = 1; likelihood <= 5; likelihood++) {
         const cellRisks = risks.filter((risk) => {
+          // Pair `likelihood` with `severity` — both describe the current risk.
+          // `risk_severity` is the post-mitigation severity and belongs to the
+          // residual risk, so mixing it in here contradicts the summary cards
+          // and the risks table, which read `risk_level_autocalculated`.
           const riskLikelihood = getLikelihoodNumeric(risk.likelihood);
-          const riskSeverity = getSeverityNumeric(risk.risk_severity);
+          const riskSeverity = getSeverityNumeric(risk.severity);
           return riskLikelihood === likelihood && riskSeverity === severity;
         });
 
-        const riskLevel = likelihood * severity;
+        // Score and colour come from RiskCalculator so a cell reports the same
+        // level as the summary cards and the risks table for the same risk.
+        const likelihoodName = LIKELIHOOD_BY_VALUE[likelihood]!;
+        const severityName = SEVERITY_BY_VALUE[severity]!;
+        const riskLevel = RiskCalculator.getRiskScore(likelihoodName, severityName);
+        const { color } = RiskCalculator.getRiskLevel(likelihoodName, severityName);
 
         row.push({
           likelihood,
           severity,
           risks: cellRisks,
           riskLevel,
-          color: getRiskLevelColor(riskLevel, cellRisks.length > 0 ? 0.8 : 0.1),
+          color: withAlpha(color, cellRisks.length > 0 ? 0.8 : 0.1),
         });
       }
       grid.push(row);
@@ -77,6 +118,15 @@ const RiskHeatMap: React.FC<IRiskHeatMapProps> = ({ risks, onRiskSelect, selecte
 
     return grid;
   }, [risks]);
+
+  const legendItems = useMemo(
+    () =>
+      LEGEND_BANDS.map((band) => {
+        const { level, color } = RiskCalculator.getRiskLevel(band.likelihood, band.severity);
+        return { label: level, color: withAlpha(color, 0.8), level: band.range };
+      }),
+    [],
+  );
 
   const getSeverityLabel = (severity: number): string => {
     const labels = ["", "Very Low", "Low", "Medium", "High", "Very High"];
@@ -101,7 +151,13 @@ const RiskHeatMap: React.FC<IRiskHeatMapProps> = ({ risks, onRiskSelect, selecte
               Severity
             </Typography>
             <Typography variant="body2" sx={{ mt: 0.5 }}>
-              Risk Level: {cell.riskLevel}
+              {
+                RiskCalculator.getRiskLevel(
+                  LIKELIHOOD_BY_VALUE[cell.likelihood]!,
+                  SEVERITY_BY_VALUE[cell.severity]!,
+                ).level
+              }{" "}
+              (score {cell.riskLevel})
             </Typography>
             <Typography variant="body2">
               {cell.risks.length} risk{cell.risks.length !== 1 ? "s" : ""}
@@ -306,17 +362,7 @@ const RiskHeatMap: React.FC<IRiskHeatMapProps> = ({ risks, onRiskSelect, selecte
             Risk Levels
           </Typography>
           <Stack spacing={2}>
-            {[
-              { level: "1-3", color: getRiskLevelColor(2), label: "Very low" },
-              { level: "4-7", color: getRiskLevelColor(6), label: "Low" },
-              { level: "8-11", color: getRiskLevelColor(10), label: "Medium" },
-              { level: "12-15", color: getRiskLevelColor(14), label: "High" },
-              {
-                level: "16-25",
-                color: getRiskLevelColor(20),
-                label: "Very high",
-              },
-            ].map((item, idx) => (
+            {legendItems.map((item, idx) => (
               <Box key={idx} sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                 <Box
                   sx={{
@@ -362,17 +408,7 @@ const RiskHeatMap: React.FC<IRiskHeatMapProps> = ({ risks, onRiskSelect, selecte
             <Typography variant="caption" sx={{ color: "status.default.text", fontWeight: 500 }}>
               Risk Level:
             </Typography>
-            {[
-              { level: "1-3", color: getRiskLevelColor(2), label: "Very low" },
-              { level: "4-7", color: getRiskLevelColor(6), label: "Low" },
-              { level: "8-11", color: getRiskLevelColor(10), label: "Medium" },
-              { level: "12-15", color: getRiskLevelColor(14), label: "High" },
-              {
-                level: "16-25",
-                color: getRiskLevelColor(20),
-                label: "Very high",
-              },
-            ].map((item, idx) => (
+            {legendItems.map((item, idx) => (
               <Box key={idx} sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
                 <Box
                   sx={{

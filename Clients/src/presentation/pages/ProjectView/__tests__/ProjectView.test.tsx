@@ -98,8 +98,8 @@ vi.mock("../../../components/TabBar", () => ({
 }));
 
 // Mock react-router-dom
-vi.mock("react-router-dom", async () => {
-  const actual = await vi.importActual("react-router-dom");
+vi.mock("react-router", async () => {
+  const actual = await vi.importActual("react-router");
   return {
     ...actual,
     useSearchParams: () => [new URLSearchParams("projectId=1"), vi.fn()],

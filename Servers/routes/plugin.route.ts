@@ -3,6 +3,7 @@ import rateLimit from "express-rate-limit";
 import path from "path";
 import fs from "fs";
 import axios from "axios";
+import sanitize from "sanitize-filename";
 import { PLUGIN_MARKETPLACE_BASE_URL } from "../services/plugin/pluginService";
 const router = express.Router();
 
@@ -44,22 +45,42 @@ router.post("/:key/test-connection", authenticateJWT, testPluginConnection);
 
 // Serve plugin UI bundles from temp/plugins/{key}/ui/dist/
 // If bundle doesn't exist locally, download it from the marketplace
-const isValidPluginKey = (value: string) => /^[a-z0-9_-]+$/.test(value);
-const isValidBundleFilename = (value: string) =>
-  /^[A-Za-z0-9._-]+$/.test(value) &&
-  !value.includes("..") &&
-  !value.includes("/") &&
-  !value.includes("\\");
+// Sanitize and validate user-supplied path components. Returning null signals
+// an unsafe value; the caller must reject the request before any filesystem
+// path is built.
+const sanitizePluginKey = (value: string): string | null =>
+  /^[a-z0-9_-]+$/.test(value) ? value : null;
+
+const sanitizeBundleFilename = (value: string): string | null => {
+  if (
+    !/^[A-Za-z0-9._-]+$/.test(value) ||
+    value.includes("..") ||
+    value.includes("/") ||
+    value.includes("\\")
+  ) {
+    return null;
+  }
+  const sanitized = sanitize(value);
+  return sanitized === value ? value : null;
+};
 
 router.get("/:key/ui/dist/:filename", async (req, res) => {
   const { key, filename } = req.params;
 
-  if (!isValidPluginKey(key) || !isValidBundleFilename(filename)) {
+  const safeKey = sanitizePluginKey(key);
+  const safeFilename = sanitizeBundleFilename(filename);
+  if (!safeKey || !safeFilename) {
     res.status(400).json({ error: "Invalid plugin key or bundle filename" });
     return;
   }
 
-  const bundlePath = path.join(__dirname, "../../temp/plugins", key, "ui", "dist", filename);
+  const baseDir = path.resolve(__dirname, "../../temp/plugins");
+  const bundlePath = path.resolve(baseDir, safeKey, "ui", "dist", safeFilename);
+  const realBaseDir = fs.realpathSync(baseDir);
+  if (!bundlePath.startsWith(realBaseDir + path.sep)) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
   console.log(
     "[Plugin UI] Requested:",
     key,
@@ -96,11 +117,19 @@ router.get("/:key/ui/dist/:filename", async (req, res) => {
     }
   }
 
+  // Resolve the final path after optional download and confirm it is still
+  // inside the allowed plugin bundle root.
+  const realBundlePath = fs.realpathSync(bundlePath);
+  if (!realBundlePath.startsWith(realBaseDir + path.sep)) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
+
   res.setHeader("Content-Type", "application/javascript; charset=utf-8");
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
   res.setHeader("Cache-Control", "no-store");
-  res.sendFile(bundlePath);
+  res.sendFile(realBundlePath); // nosemgrep: javascript.express.security.audit.express-res-sendfile.express-res-sendfile — key/filename allowlisted and path canonicalized
 });
 
 // ============================================================================

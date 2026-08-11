@@ -9,16 +9,13 @@ import {
   CardContent,
   CircularProgress,
   LinearProgress,
+  useTheme,
 } from "@mui/material";
 import { Sparkles, CheckCircle, Clock, BarChart3 } from "lucide-react";
 import { VisibilityChips } from "../../components/VisibilityToggle";
 import type { VisibilityFilterValue } from "../../components/VisibilityToggle";
-import {
-  text as textColors,
-  background,
-  border as borderPalette,
-  brand,
-} from "../../themes/palette";
+import { text as textColors, brand } from "../../themes/palette";
+import { cardStyles } from "../../themes/components";
 import Chip from "../../components/Chip";
 import AIContentReviewPanel from "../../components/AIContentReviewPanel";
 import {
@@ -28,12 +25,6 @@ import {
 } from "../../../application/hooks/useAIContent";
 import type { ReviewAction } from "../../../domain/interfaces/i.aiContent";
 
-const cardSx = {
-  border: `1px solid ${borderPalette.dark}`,
-  borderRadius: "4px",
-  background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
-};
-
 const BADGE_COLORS: Record<string, { label: string; color: string }> = {
   generated: { label: "AI-generated", color: brand.primary },
   assisted: { label: "AI-assisted", color: brand.primary },
@@ -42,6 +33,8 @@ const BADGE_COLORS: Record<string, { label: string; color: string }> = {
 };
 
 export default function AIContentReview() {
+  const theme = useTheme();
+  const cardSx = cardStyles.base(theme) as Record<string, unknown>;
   const [tab, setTab] = useState(0);
   const [visFilter, setVisFilter] = useState<VisibilityFilterValue>("all");
   const { data: statsData, isLoading: statsLoading } = useAIContentStats();
@@ -97,7 +90,7 @@ export default function AIContentReview() {
           </Box>
         ) : (
           <>
-            <Stack sx={{ ...cardSx, borderRadius: 2, padding: "8px 14px 14px 14px" }}>
+            <Stack sx={cardSx}>
               <Stack direction="row" alignItems="center" spacing={0.75}>
                 <BarChart3 size={13} style={{ color: textColors.icon }} />
                 <Typography sx={{ fontSize: 12, color: textColors.secondary, fontWeight: 500 }}>
@@ -111,7 +104,7 @@ export default function AIContentReview() {
               </Typography>
             </Stack>
 
-            <Stack sx={{ ...cardSx, borderRadius: 2, padding: "8px 14px 14px 14px" }}>
+            <Stack sx={cardSx}>
               <Stack direction="row" alignItems="center" spacing={0.75}>
                 <CheckCircle size={13} style={{ color: textColors.icon }} />
                 <Typography sx={{ fontSize: 12, color: textColors.secondary, fontWeight: 500 }}>
@@ -125,7 +118,7 @@ export default function AIContentReview() {
               </Typography>
             </Stack>
 
-            <Stack sx={{ ...cardSx, borderRadius: 2, padding: "8px 14px 14px 14px" }}>
+            <Stack sx={cardSx}>
               <Stack direction="row" alignItems="center" spacing={0.75}>
                 <Clock size={13} style={{ color: textColors.icon }} />
                 <Typography sx={{ fontSize: 12, color: textColors.secondary, fontWeight: 500 }}>
@@ -139,7 +132,7 @@ export default function AIContentReview() {
               </Typography>
             </Stack>
 
-            <Stack sx={{ ...cardSx, borderRadius: 2, padding: "8px 14px 14px 14px" }}>
+            <Stack sx={cardSx}>
               <Stack direction="row" alignItems="center" spacing={0.75}>
                 <Sparkles size={13} style={{ color: textColors.icon }} />
                 <Typography sx={{ fontSize: 12, color: textColors.secondary, fontWeight: 500 }}>
@@ -165,7 +158,7 @@ export default function AIContentReview() {
       {stats && stats.total > 0 && (
         <Box sx={{ display: "flex", gap: "8px", mb: "8px", flexWrap: "wrap" }}>
           {/* Progress card */}
-          <Card elevation={0} sx={{ ...cardSx, flex: "2 1 300px" }}>
+          <Card elevation={0} sx={{ ...cardSx, padding: 0, flex: "2 1 300px" }}>
             <CardContent sx={{ "p": "16px", "&:last-child": { pb: "16px" } }}>
               <Stack direction="row" justifyContent="space-between" mb={0.75}>
                 <Typography sx={{ fontSize: 12, color: textColors.secondary, fontWeight: 500 }}>
@@ -181,7 +174,7 @@ export default function AIContentReview() {
                 sx={{
                   "height": 6,
                   "borderRadius": 3,
-                  "backgroundColor": background.hover,
+                  "backgroundColor": theme.palette.background.hover,
                   "& .MuiLinearProgress-bar": {
                     borderRadius: 3,
                     backgroundColor: brand.primary,
@@ -192,7 +185,7 @@ export default function AIContentReview() {
           </Card>
 
           {/* By type card */}
-          <Card elevation={0} sx={{ ...cardSx, flex: "1 1 200px" }}>
+          <Card elevation={0} sx={{ ...cardSx, padding: 0, flex: "1 1 200px" }}>
             <CardContent sx={{ "p": "16px", "&:last-child": { pb: "16px" } }}>
               <Typography
                 sx={{ fontSize: 12, color: textColors.secondary, fontWeight: 500, mb: 1 }}
@@ -281,7 +274,7 @@ export default function AIContentReview() {
               ))}
             </Stack>
           ) : (
-            <Card elevation={0} sx={cardSx}>
+            <Card elevation={0} sx={{ ...cardSx, padding: 0 }}>
               <CardContent sx={{ "textAlign": "center", "py": 4, "&:last-child": { pb: 4 } }}>
                 <CheckCircle
                   size={32}

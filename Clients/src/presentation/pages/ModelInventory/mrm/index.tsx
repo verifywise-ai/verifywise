@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router";
 import { Box, Fade } from "@mui/material";
 import TabContext from "@mui/lab/TabContext";
 import TabBar from "../../../components/TabBar";

@@ -69,6 +69,11 @@ app.add_middleware(
 # Skips /v1/* (virtual key auth) and /health
 app.add_middleware(TenantMiddleware)
 
+# Observability — push OTLP metrics/logs to the central stack (no-op if disabled)
+from observability import setup_observability  # noqa: E402
+
+setup_observability(app, "verifywise-ai-gateway")
+
 # Internal routes (Express backend → Gateway, authenticated via x-internal-key)
 # Mounted under /internal prefix to avoid conflict with public /v1 routes
 app.include_router(completions_router, prefix="/internal", tags=["Internal"])

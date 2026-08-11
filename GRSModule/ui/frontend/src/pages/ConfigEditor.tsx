@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams } from "react-router";
 import { useConfig, useSaveConfig } from "../api/useConfig";
-import { useConfigContext } from "../context/ConfigContext";
+import { useConfigContext } from "../hooks/useConfigContext";
 import YamlEditor from "../components/YamlEditor";
 
 const CONFIG_FILE_PATHS: Record<string, string> = {
@@ -33,6 +33,8 @@ export default function ConfigEditor() {
   const [saveSuccess, setSaveSuccess] = useState(false);
 
   useEffect(() => {
+    // Reset draft when the saved config changes (e.g. switching files).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (savedContent !== undefined) setDraft(savedContent);
   }, [savedContent]);
 

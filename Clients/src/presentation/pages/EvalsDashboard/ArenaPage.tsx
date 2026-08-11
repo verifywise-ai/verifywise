@@ -45,7 +45,7 @@ import {
   type ArenaContestant,
   type LLMApiKey,
 } from "../../../application/repository/deepEval.repository";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { palette } from "../../themes/palette";
 
 // Timing constants (in milliseconds)
