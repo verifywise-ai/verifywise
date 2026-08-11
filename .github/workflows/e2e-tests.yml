@@ -180,6 +180,15 @@ jobs:
             sleep 1
           done
 
+      # ---- Smoke test backend login before Playwright ----
+      - name: Smoke test backend login
+        run: |
+          echo "Smoke testing backend login endpoint..."
+          curl -s -X POST http://localhost:3000/api/users/login \
+            -H "Content-Type: application/json" \
+            -d '{"email":"admin@verifywise-test.com","password":"TestAdmin!Str0ng"}' \
+            -w "\nHTTP_STATUS:%{http_code}\n" || true
+
       # ---- Run E2E tests ----
       - name: Run Playwright tests
         working-directory: Clients
