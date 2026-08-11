@@ -119,16 +119,22 @@ jobs:
           alembic upgrade head
           uvicorn app:app --host 0.0.0.0 --port 8100 > /tmp/aigateway.log 2>&1 &
           # Wait for AIGateway to be ready
+          AIGATEWAY_READY=false
           for i in $(seq 1 30); do
             HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8100/health || true)
             echo "AIGateway health check attempt $i: HTTP $HTTP_STATUS"
             if [ "$HTTP_STATUS" = "200" ]; then
               echo "AIGateway is ready"
+              AIGATEWAY_READY=true
               break
             fi
             sleep 1
           done
-          tail -n 50 /tmp/aigateway.log || true
+          if [ "$AIGATEWAY_READY" != "true" ]; then
+            echo "AIGateway did not become ready; tailing logs..."
+            tail -n 100 /tmp/aigateway.log || true
+            exit 1
+          fi
 
       - name: Start backend
         working-directory: Servers
@@ -151,16 +157,22 @@ jobs:
         run: |
           node dist/index.js > /tmp/backend.log 2>&1 &
           # Wait for backend to be ready
+          BACKEND_READY=false
           for i in $(seq 1 30); do
             HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/api/users/check/exists || true)
             echo "Backend health check attempt $i: HTTP $HTTP_STATUS"
             if [ "$HTTP_STATUS" = "200" ] || [ "$HTTP_STATUS" = "401" ]; then
               echo "Backend is responding (HTTP $HTTP_STATUS)"
+              BACKEND_READY=true
               break
             fi
             sleep 1
           done
-          tail -n 50 /tmp/backend.log || true
+          if [ "$BACKEND_READY" != "true" ]; then
+            echo "Backend did not become ready; tailing logs..."
+            tail -n 100 /tmp/backend.log || true
+            exit 1
+          fi
 
       # ---- Frontend setup ----
       - name: Install frontend dependencies
@@ -178,19 +190,36 @@ jobs:
         run: |
           npm run dev:vite &
           # Wait for frontend to be ready
+          FRONTEND_READY=false
           for i in $(seq 1 30); do
-            curl -s http://localhost:5173 && break
+            if curl -s http://localhost:5173 >/dev/null; then
+              echo "Frontend is ready"
+              FRONTEND_READY=true
+              break
+            fi
+            echo "Frontend health check attempt $i"
             sleep 1
           done
+          if [ "$FRONTEND_READY" != "true" ]; then
+            echo "Frontend did not become ready"
+            exit 1
+          fi
 
       # ---- Smoke test backend login before Playwright ----
       - name: Smoke test backend login
         run: |
           echo "Smoke testing backend login endpoint..."
-          curl -s -X POST http://localhost:3000/api/users/login \
+          LOGIN_RESPONSE=$(curl -s -X POST http://localhost:3000/api/users/login \
             -H "Content-Type: application/json" \
             -d '{"email":"admin@verifywise-test.com","password":"TestAdmin!Str0ng"}' \
-            -w "\nHTTP_STATUS:%{http_code}\n" || true
+            -w "\nHTTP_STATUS:%{http_code}\n")
+          echo "$LOGIN_RESPONSE"
+          LOGIN_STATUS=$(echo "$LOGIN_RESPONSE" | tail -n 1 | sed 's/HTTP_STATUS://')
+          if [ "$LOGIN_STATUS" != "202" ]; then
+            echo "Login smoke test failed with HTTP $LOGIN_STATUS; tailing backend logs..."
+            tail -n 100 /tmp/backend.log || true
+            exit 1
+          fi
 
       # ---- Run E2E tests ----
       - name: Run Playwright tests
