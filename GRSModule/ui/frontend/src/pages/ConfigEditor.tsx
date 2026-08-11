@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams } from "react-router";
 import { useConfig, useSaveConfig } from "../api/useConfig";
 import { useConfigContext } from "../hooks/useConfigContext";
 import YamlEditor from "../components/YamlEditor";

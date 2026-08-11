@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router';
 import { Box, Typography, TextField, InputAdornment, Collapse } from '@mui/material';
 import {
   Search,
@@ -35,14 +35,12 @@ import {
   LayoutDashboard,
   ListTodo,
   KeyRound,
-  SlidersHorizontal,
   Database,
   Siren,
   Stamp,
   Zap,
   Link,
   BarChart3,
-  MessageSquare,
   CreditCard,
   Sparkles,
   ScrollText,
@@ -120,15 +118,12 @@ import {
   settingEndpoints,
   shadowAiEndpoints,
   shareLinkEndpoints,
-  slackWebhookEndpoints,
   subscriptionEndpoints,
   superAdminEndpoints,
   systemEndpoints,
   taskEndpoints,
-  tokenEndpoints,
   trainingEndpoints,
   userEndpoints,
-  userPreferenceEndpoints,
   vendorEndpoints,
   vendorRiskEndpoints,
   webhookEndpoints,
@@ -194,10 +189,10 @@ const App: React.FC = () => {
   const apiNavItems: NavItem[] = [
     // Getting Started
     { id: 'overview', label: 'Overview', icon: <Home size={14} />, category: 'getting-started', keywords: ['overview', 'introduction', 'start'] },
-    { id: 'authentication', label: 'Authentication', icon: <Key size={14} />, category: 'getting-started', keywords: ['auth', 'login', 'token', 'jwt'] },
+    { id: 'authentication', label: 'Authentication', icon: <Key size={14} />, category: 'getting-started', keywords: ['auth', 'login', 'token', 'jwt', 'api key', 'access'] },
 
     // Core Resources
-    { id: 'users', label: 'Users', icon: <Users size={14} />, category: 'core-resources', keywords: ['user', 'account', 'profile'] },
+    { id: 'users', label: 'Users', icon: <Users size={14} />, category: 'core-resources', keywords: ['user', 'account', 'profile', 'preference'] },
     { id: 'organizations', label: 'Organizations', icon: <Building2 size={14} />, category: 'core-resources', keywords: ['org', 'organization', 'tenant'] },
     { id: 'projects', label: 'Projects', icon: <FolderKanban size={14} />, category: 'core-resources', keywords: ['project', 'compliance'] },
     { id: 'roles', label: 'Roles', icon: <UserCog size={14} />, category: 'core-resources', keywords: ['role', 'permission', 'access'] },
@@ -242,13 +237,10 @@ const App: React.FC = () => {
     { id: 'search', label: 'Search', icon: <Search size={14} />, category: 'utilities', keywords: ['search', 'find', 'query'] },
     { id: 'system', label: 'System & logs', icon: <ScrollText size={14} />, category: 'utilities', keywords: ['log', 'audit', 'history', 'system', 'version', 'health'] },
     { id: 'tasks', label: 'Tasks', icon: <ListTodo size={14} />, category: 'utilities', keywords: ['task', 'todo', 'item'] },
-    { id: 'tokens', label: 'Tokens', icon: <KeyRound size={14} />, category: 'utilities', keywords: ['token', 'api key', 'access'] },
-    { id: 'user-preferences', label: 'User preferences', icon: <SlidersHorizontal size={14} />, category: 'utilities', keywords: ['preference', 'settings', 'config'] },
     { id: 'notes', label: 'Notes', icon: <FileText size={14} />, category: 'utilities', keywords: ['note', 'comment', 'annotation'] },
     { id: 'notifications', label: 'Notifications', icon: <Bell size={14} />, category: 'utilities', keywords: ['notification', 'alert', 'bell'] },
     { id: 'share-links', label: 'Share links', icon: <Link size={14} />, category: 'utilities', keywords: ['share', 'link', 'public'] },
     { id: 'reporting', label: 'Reporting', icon: <BarChart3 size={14} />, category: 'utilities', keywords: ['report', 'analytics', 'export'] },
-    { id: 'slack-webhooks', label: 'Slack webhooks', icon: <MessageSquare size={14} />, category: 'utilities', keywords: ['slack', 'webhook', 'notification'] },
     { id: 'settings', label: 'Settings', icon: <Settings size={14} />, category: 'utilities', keywords: ['settings', 'configuration', 'config'] },
     { id: 'subscription', label: 'Subscription', icon: <CreditCard size={14} />, category: 'utilities', keywords: ['subscription', 'billing', 'plan'] },
 
@@ -257,7 +249,7 @@ const App: React.FC = () => {
     { id: 'ai-incidents', label: 'AI incidents', icon: <Siren size={14} />, category: 'advanced', keywords: ['incident', 'ai', 'issue'] },
     { id: 'ce-marking', label: 'CE marking', icon: <Stamp size={14} />, category: 'advanced', keywords: ['ce', 'marking', 'certification'] },
     { id: 'automation', label: 'Automation', icon: <Zap size={14} />, category: 'advanced', keywords: ['automation', 'rule', 'workflow'] },
-    { id: 'integrations', label: 'Integrations', icon: <Globe size={14} />, category: 'advanced', keywords: ['integration', 'connect', 'api'] },
+    { id: 'integrations', label: 'Integrations', icon: <Globe size={14} />, category: 'advanced', keywords: ['integration', 'connect', 'api', 'slack', 'webhook'] },
     { id: 'intake-forms', label: 'Intake forms', icon: <ClipboardCheck size={14} />, category: 'advanced', keywords: ['intake', 'form', 'submission'] },
     { id: 'entity-graph', label: 'Entity graph', icon: <Layers size={14} />, category: 'advanced', keywords: ['entity', 'graph', 'relationship'] },
     { id: 'post-market-monitoring', label: 'Post-market monitoring', icon: <Gauge size={14} />, category: 'advanced', keywords: ['post-market', 'monitoring', 'pmm'] },
@@ -662,14 +654,11 @@ const App: React.FC = () => {
               {activeSection === 'search' && <EndpointSection title="Search" description="Endpoints for global search functionality across the platform." endpoints={searchEndpoints} />}
               {activeSection === 'system' && <EndpointSection title="System & logs" description="Endpoints for system health, version info, and activity logs." endpoints={systemEndpoints} />}
               {activeSection === 'tasks' && <EndpointSection title="Tasks" description="Endpoints for managing tasks and to-do items." endpoints={taskEndpoints} />}
-              {activeSection === 'tokens' && <EndpointSection title="Tokens" description="Endpoints for API token management." endpoints={tokenEndpoints} />}
-              {activeSection === 'user-preferences' && <EndpointSection title="User preferences" description="Endpoints for managing user preferences and settings." endpoints={userPreferenceEndpoints} />}
               {activeSection === 'notes' && <EndpointSection title="Notes" description="Endpoints for creating and managing notes." endpoints={noteEndpoints} />}
               {activeSection === 'notifications' && <EndpointSection title="Notifications" description="Endpoints for notification management and real-time streaming." endpoints={notificationEndpoints} />}
               {activeSection === 'share-links' && <EndpointSection title="Share links" description="Endpoints for creating and managing shareable links." endpoints={shareLinkEndpoints} />}
               {activeSection === 'reporting' && <EndpointSection title="Reporting" description="Endpoints for generating reports and analytics." endpoints={reportingEndpoints} />}
               {activeSection === 'settings' && <EndpointSection title="Settings" description="Endpoints for managing application settings and configuration." endpoints={settingEndpoints} />}
-              {activeSection === 'slack-webhooks' && <EndpointSection title="Slack webhooks" description="Endpoints for managing Slack webhook integrations." endpoints={slackWebhookEndpoints} />}
               {activeSection === 'subscription' && <EndpointSection title="Subscription" description="Endpoints for managing subscriptions and billing." endpoints={subscriptionEndpoints} />}
               {activeSection === 'evidence-hub' && <EndpointSection title="Evidence hub" description="Endpoints for the evidence management hub and document repository." endpoints={evidenceHubEndpoints} />}
               {activeSection === 'ai-incidents' && <EndpointSection title="AI incidents" description="Endpoints for managing AI-related incidents and issues." endpoints={aiIncidentEndpoints} />}

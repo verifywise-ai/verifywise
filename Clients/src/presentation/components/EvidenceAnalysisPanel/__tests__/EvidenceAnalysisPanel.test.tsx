@@ -2,6 +2,7 @@ import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import EvidenceAnalysisPanel from "../index";
+import type { QualityGrade } from "../../EvidenceQualityBadge";
 
 vi.mock("../../Chip", () => ({
   default: ({ label }: { label: string }) => <span data-testid="chip">{label}</span>,
@@ -9,6 +10,23 @@ vi.mock("../../Chip", () => ({
 
 vi.mock("../../EvidenceQualityBadge", () => ({
   default: () => <span data-testid="quality-badge">Badge</span>,
+  getGradeColor: () => ({ bg: "#fff", text: "#000", border: "#ccc" }),
+  getGradeLabel: (grade: QualityGrade | null) => {
+    switch (grade) {
+      case "A":
+        return "Excellent";
+      case "B":
+        return "Good";
+      case "C":
+        return "Adequate";
+      case "D":
+        return "Weak";
+      case "F":
+        return "Insufficient";
+      default:
+        return "Unrated";
+    }
+  },
 }));
 
 describe("EvidenceAnalysisPanel", () => {
@@ -18,13 +36,13 @@ describe("EvidenceAnalysisPanel", () => {
     key_findings: ["Finding one", "Finding two"],
     compliance_areas: ["GDPR", "EU AI Act"],
     quality_score: {
-      relevance: 85,
-      completeness: 70,
-      recency: 90,
-      reliability: 65,
-      specificity: 80,
+      relevance: "A" as QualityGrade,
+      completeness: "B" as QualityGrade,
+      recency: "C" as QualityGrade,
+      reliability: "D" as QualityGrade,
+      specificity: "F" as QualityGrade,
     },
-    overall_quality_score: 78,
+    overall_quality_grade: "B" as QualityGrade,
     suggested_control_links: [
       {
         control_id: 1,
@@ -71,8 +89,8 @@ describe("EvidenceAnalysisPanel", () => {
   };
 
   it("renders loading state", () => {
-    renderWithProviders(<EvidenceAnalysisPanel analysis={null} isLoading />);
-    expect(screen.getByText("Loading analysis...")).toBeInTheDocument();
+    const { container } = renderWithProviders(<EvidenceAnalysisPanel analysis={null} isLoading />);
+    expect(container.querySelectorAll(".MuiSkeleton-root").length).toBeGreaterThan(0);
   });
 
   it("renders empty state when no analysis", () => {
@@ -102,12 +120,23 @@ describe("EvidenceAnalysisPanel", () => {
     expect(onTriggerAnalysis).toHaveBeenCalledTimes(1);
   });
 
-  it("renders overall quality score", () => {
+  it("disables the empty-state button and shows a tooltip when hasLLMKey is false", () => {
+    const onTriggerAnalysis = vi.fn();
+    renderWithProviders(
+      <EvidenceAnalysisPanel
+        analysis={null}
+        onTriggerAnalysis={onTriggerAnalysis}
+        hasLLMKey={false}
+      />,
+    );
+    const button = screen.getByText("Run AI analysis").closest("button");
+    expect(button).toBeDisabled();
+  });
+
+  it("renders overall quality grade", () => {
     renderWithProviders(<EvidenceAnalysisPanel analysis={mockAnalysis} />);
-    expect(screen.getByText("78")).toBeInTheDocument();
-    expect(screen.getAllByText("/ 100").length).toBeGreaterThan(0);
+    expect(screen.getByText("Overall quality grade")).toBeInTheDocument();
     expect(screen.getByText("Good quality evidence")).toBeInTheDocument();
-    expect(screen.getByText("Overall Quality Score")).toBeInTheDocument();
   });
 
   it("renders summary text", () => {
@@ -125,13 +154,15 @@ describe("EvidenceAnalysisPanel", () => {
     expect(screen.getByText("Specificity")).toBeInTheDocument();
   });
 
-  it("renders dimension scores", () => {
+  it("renders dimension grades", () => {
     renderWithProviders(<EvidenceAnalysisPanel analysis={mockAnalysis} />);
-    expect(screen.getByText("85")).toBeInTheDocument();
-    expect(screen.getByText("70")).toBeInTheDocument();
-    expect(screen.getByText("90")).toBeInTheDocument();
-    expect(screen.getByText("65")).toBeInTheDocument();
-    expect(screen.getByText("80")).toBeInTheDocument();
+    // relevance A, completeness B, recency C, reliability D, specificity F
+    expect(screen.getByText("A")).toBeInTheDocument();
+    expect(screen.getByText("C")).toBeInTheDocument();
+    expect(screen.getByText("D")).toBeInTheDocument();
+    expect(screen.getByText("F")).toBeInTheDocument();
+    // "B" appears for completeness and the overall grade circle
+    expect(screen.getAllByText("B").length).toBeGreaterThan(0);
   });
 
   it("renders compliance areas", () => {
@@ -204,9 +235,10 @@ describe("EvidenceAnalysisPanel", () => {
     expect(screen.getByText(/gpt-4/)).toBeInTheDocument();
   });
 
-  it("renders quality badge", () => {
+  it("renders the overall grade as a status chip", () => {
     renderWithProviders(<EvidenceAnalysisPanel analysis={mockAnalysis} />);
-    expect(screen.getAllByTestId("quality-badge").length).toBeGreaterThan(0);
+    const chips = screen.getAllByTestId("chip");
+    expect(chips.some((c) => c.textContent === "B")).toBe(true);
   });
 
   describe("abstain banner", () => {
@@ -226,18 +258,51 @@ describe("EvidenceAnalysisPanel", () => {
     });
   });
 
+  describe("filename mismatch warning", () => {
+    it("renders a suggestion sentence when the filename mismatches the content", () => {
+      const analysis = {
+        ...mockAnalysis,
+        audit_metadata: {
+          filename_check: {
+            mismatch: true,
+            suggested_filename: "vendor-risk-assessment.pdf",
+            reason: "The document is a vendor risk assessment, not a contract.",
+          },
+        } as any,
+      };
+      renderWithProviders(<EvidenceAnalysisPanel analysis={analysis} />);
+      expect(screen.getByText(/vendor-risk-assessment\.pdf/)).toBeInTheDocument();
+      expect(screen.getByText(/vendor risk assessment, not a contract/)).toBeInTheDocument();
+    });
+
+    it("does not render when mismatch is false", () => {
+      const analysis = {
+        ...mockAnalysis,
+        audit_metadata: {
+          filename_check: { mismatch: false, suggested_filename: null, reason: null },
+        } as any,
+      };
+      renderWithProviders(<EvidenceAnalysisPanel analysis={analysis} />);
+      expect(screen.queryByText(/consider renaming/i)).not.toBeInTheDocument();
+    });
+
+    it("does not render when filename_check is absent", () => {
+      renderWithProviders(<EvidenceAnalysisPanel analysis={mockAnalysis} />);
+      expect(screen.queryByText(/consider renaming/i)).not.toBeInTheDocument();
+    });
+  });
+
   describe("document signals", () => {
     it("renders when document_signals present", () => {
       renderWithProviders(<EvidenceAnalysisPanel analysis={mockAnalysisWithAudit} />);
       expect(screen.getByText("Document signals")).toBeInTheDocument();
-      expect(screen.getByText("Authority")).toBeInTheDocument();
-      expect(screen.getByText("Type")).toBeInTheDocument();
-      expect(screen.getByText("Policy Document")).toBeInTheDocument();
-      expect(screen.getByText("Named owner")).toBeInTheDocument();
-      expect(screen.getByText("Version")).toBeInTheDocument();
-      expect(screen.getByText("Explicit dates")).toBeInTheDocument();
-      expect(screen.getByText("Metrics")).toBeInTheDocument();
-      expect(screen.getByText("Draft")).toBeInTheDocument();
+      expect(screen.getByText(/^Authority/)).toBeInTheDocument();
+      expect(screen.getByText(/^Type Policy Document/)).toBeInTheDocument();
+      expect(screen.getByText(/^Named owner/)).toBeInTheDocument();
+      expect(screen.getByText(/^Version/)).toBeInTheDocument();
+      expect(screen.getByText(/^Explicit dates/)).toBeInTheDocument();
+      expect(screen.getByText(/^Metrics/)).toBeInTheDocument();
+      expect(screen.getByText(/^Draft/)).toBeInTheDocument();
     });
 
     it("does not render when document_signals is null", () => {
@@ -247,8 +312,7 @@ describe("EvidenceAnalysisPanel", () => {
 
     it("renders truncated signal when truncated is true", () => {
       renderWithProviders(<EvidenceAnalysisPanel analysis={mockAnalysisWithAudit} />);
-      expect(screen.getByText("Truncated")).toBeInTheDocument();
-      expect(screen.getByText(/15000 ch/)).toBeInTheDocument();
+      expect(screen.getByText(/^Truncated.*15000 ch/)).toBeInTheDocument();
     });
   });
 
@@ -300,33 +364,41 @@ describe("EvidenceAnalysisPanel", () => {
     });
   });
 
-  describe("getScoreColor / getScoreLabel", () => {
-    it('shows "High" for score >= 80', () => {
+  describe("grade label", () => {
+    it('shows "Excellent" for grade A', () => {
       renderWithProviders(
-        <EvidenceAnalysisPanel analysis={{ ...mockAnalysis, overall_quality_score: 85 }} />,
+        <EvidenceAnalysisPanel
+          analysis={{ ...mockAnalysis, overall_quality_grade: "A" as QualityGrade }}
+        />,
       );
-      expect(screen.getByText("High quality evidence")).toBeInTheDocument();
+      expect(screen.getByText("Excellent quality evidence")).toBeInTheDocument();
     });
 
-    it('shows "Good" for score 60-79', () => {
+    it('shows "Good" for grade B', () => {
       renderWithProviders(
-        <EvidenceAnalysisPanel analysis={{ ...mockAnalysis, overall_quality_score: 65 }} />,
+        <EvidenceAnalysisPanel
+          analysis={{ ...mockAnalysis, overall_quality_grade: "B" as QualityGrade }}
+        />,
       );
       expect(screen.getByText("Good quality evidence")).toBeInTheDocument();
     });
 
-    it('shows "Fair" for score 40-59', () => {
+    it('shows "Adequate" for grade C', () => {
       renderWithProviders(
-        <EvidenceAnalysisPanel analysis={{ ...mockAnalysis, overall_quality_score: 50 }} />,
+        <EvidenceAnalysisPanel
+          analysis={{ ...mockAnalysis, overall_quality_grade: "C" as QualityGrade }}
+        />,
       );
-      expect(screen.getByText("Fair quality evidence")).toBeInTheDocument();
+      expect(screen.getByText("Adequate quality evidence")).toBeInTheDocument();
     });
 
-    it('shows "Low" for score < 40', () => {
+    it('shows "Insufficient" for grade F', () => {
       renderWithProviders(
-        <EvidenceAnalysisPanel analysis={{ ...mockAnalysis, overall_quality_score: 25 }} />,
+        <EvidenceAnalysisPanel
+          analysis={{ ...mockAnalysis, overall_quality_grade: "F" as QualityGrade }}
+        />,
       );
-      expect(screen.getByText("Low quality evidence")).toBeInTheDocument();
+      expect(screen.getByText("Insufficient quality evidence")).toBeInTheDocument();
     });
   });
 

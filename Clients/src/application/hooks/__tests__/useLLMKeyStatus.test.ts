@@ -47,4 +47,29 @@ describe("useLLMKeyStatus", () => {
     const { result } = renderHook(() => useLLMKeyStatus());
     expect(result.current.loading).toBe(true);
   });
+
+  it("derives hasKeys as true while still loading, regardless of eventual result", () => {
+    mockGetStatus.mockReturnValue(new Promise(() => {})); // never resolves
+    const { result } = renderHook(() => useLLMKeyStatus());
+    expect(result.current.loading).toBe(true);
+    expect(result.current.hasKeys).toBe(true);
+  });
+
+  it("derives hasKeys as false once resolved with no keys configured", async () => {
+    mockGetStatus.mockResolvedValue({ hasKeys: false, keyCount: 0, providers: [] } as any);
+    const { result } = renderHook(() => useLLMKeyStatus());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.hasKeys).toBe(false);
+  });
+
+  it("derives hasKeys as true once resolved with keys configured", async () => {
+    mockGetStatus.mockResolvedValue({
+      hasKeys: true,
+      keyCount: 1,
+      providers: ["Anthropic"],
+    } as any);
+    const { result } = renderHook(() => useLLMKeyStatus());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.hasKeys).toBe(true);
+  });
 });

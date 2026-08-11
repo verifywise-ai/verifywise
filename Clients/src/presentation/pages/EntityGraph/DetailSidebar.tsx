@@ -23,7 +23,7 @@ import {
   Layers,
   Tag,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 
 import { EntityType } from "./EntityNode";
 import { VWLink } from "../../components/Link";

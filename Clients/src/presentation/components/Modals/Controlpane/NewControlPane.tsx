@@ -46,7 +46,7 @@ import { updateControl } from "../../../../application/repository/control_eu_act
 import { useAuth } from "../../../../application/hooks/useAuth";
 import useUsers from "../../../../application/hooks/useUsers";
 import { User } from "../../../../domain/types/User";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 import { getFileById } from "../../../../application/repository/file.repository";
 import { getEntityById } from "../../../../application/repository/entity.repository";
 

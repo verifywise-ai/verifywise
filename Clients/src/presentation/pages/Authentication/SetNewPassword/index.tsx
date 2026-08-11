@@ -10,7 +10,7 @@ import Field from "../../../components/Inputs/Field";
 import { ArrowLeft as LeftArrowLong } from "lucide-react";
 import { Lock } from "lucide-react";
 import singleTheme from "../../../themes/v1SingleTheme";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router";
 import { validatePassword } from "../../../../application/validations/formValidation";
 import type { FormErrors } from "../../../../application/validations/formValidation";
 import { extractUserToken } from "../../../../application/tools/extractToken";

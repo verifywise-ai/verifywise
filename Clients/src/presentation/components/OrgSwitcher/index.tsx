@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Stack, Typography, Select, MenuItem, SelectChangeEvent, useTheme } from "@mui/material";
 import { useDispatch } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { useAuth } from "../../../application/hooks/useAuth";
 import { setActiveOrganizationId } from "../../../application/redux/auth/authSlice";
 import {

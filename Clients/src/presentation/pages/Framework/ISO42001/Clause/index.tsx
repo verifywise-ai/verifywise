@@ -18,7 +18,7 @@ import Alert from "../../../../components/Alert";
 import { AlertProps } from "../../../../types/alert.types";
 import VWISO42001ClauseDrawerDialog from "../../../../components/Drawer/ClauseDrawerDialog";
 import { getEntityById } from "../../../../../application/repository/entity.repository";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 import StatusDropdown from "../../../../components/StatusDropdown";
 import { updateISO42001ClauseStatus } from "../../../../components/StatusDropdown/statusUpdateApi";
 import { useAuth } from "../../../../../application/hooks/useAuth";

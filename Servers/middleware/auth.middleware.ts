@@ -150,7 +150,7 @@ const authenticateJWT = async (
     // this database round-trip entirely.
     let apiTokenRowId: number | null = null;
     if (decoded.type === "api_token") {
-      const tokenHash = hashApiToken(token);
+      const tokenHash = await hashApiToken(token);
       const tokenRow = await getActiveApiTokenByHashQuery(decoded.organizationId, tokenHash);
       if (!tokenRow) {
         return res.status(401).json(

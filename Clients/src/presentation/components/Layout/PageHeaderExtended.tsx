@@ -6,7 +6,7 @@ import TipBox from "../TipBox";
 import { pageHeaderSummaryCardsStyle } from "./style";
 import { PageHeaderExtendedProps } from "src/presentation/types/interfaces/i.header";
 import { useAuth } from "../../../application/hooks/useAuth";
-import { useLocation } from "react-router-dom";
+import { useLocation } from "react-router";
 
 export function PageHeaderExtended({
   title,

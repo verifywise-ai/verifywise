@@ -217,6 +217,11 @@ const deferredScopedTables: SharedTableEntry[] = [
       "Deferred to a future isolation wave; not covered by the first-pass matrix. See runbook section 2.4.",
   },
   {
+    name: "ai_workflow_runs",
+    justification:
+      "Written only by the workflow engine (services/workflows/engine.ts); no controller and no route, so the route-driven matrix has no surface to exercise. Every read and write already filters on organization_id. Deferred until the engine gets an HTTP surface, at which point it needs a registry entry rather than this waiver. See runbook section 2.4.",
+  },
+  {
     name: "annexcategories_iso",
     justification:
       "Deferred to a future isolation wave; not covered by the first-pass matrix. See runbook section 2.4.",

@@ -5,7 +5,7 @@
  * Maps user messages to one or more specialized agents.
  */
 
-import { findAgentsByKeywords, findAgentsByDomain, getAgent } from "./agentRegistry";
+import { findAgentsByKeywords, findAgentsByDomain } from "./agentRegistry";
 import type { RegisteredAgent } from "./agentRegistry";
 import { logStructured } from "../../utils/logger/fileLogger";
 

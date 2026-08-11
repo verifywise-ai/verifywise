@@ -27,7 +27,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import Toggle from "../../../components/Inputs/Toggle";
 import Chip from "../../../components/Chip";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 import Field from "../../../components/Inputs/Field";
 import Select from "../../../components/Inputs/Select";
 import DatePicker from "../../../components/Inputs/Datepicker";

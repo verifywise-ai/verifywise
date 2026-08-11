@@ -308,10 +308,13 @@ const NewDataset: FC<NewDatasetProps> = ({
 
       {/* Second Row: Type, Classification, Status */}
       <Stack direction={"row"} justifyContent={"space-between"} spacing={6}>
+        {/* Editing a dataset saved without a type or classification: fall back
+            to the placeholder and let the required-field rule ask for an
+            explicit choice, rather than pre-selecting one the user never made. */}
         <SelectComponent
           id="type"
           label="Type"
-          value={values.type}
+          value={values.type ?? ""}
           error={errors.type}
           isRequired
           sx={{ width: "33%" }}
@@ -322,7 +325,7 @@ const NewDataset: FC<NewDatasetProps> = ({
         <SelectComponent
           id="classification"
           label="Classification"
-          value={values.classification}
+          value={values.classification ?? ""}
           error={errors.classification}
           isRequired
           sx={{ width: "33%" }}
