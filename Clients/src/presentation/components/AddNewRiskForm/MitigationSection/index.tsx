@@ -58,7 +58,7 @@ interface MitigationSectionProps {
  * MitigationSection component manages mitigation details for risk assessment.
  *
  * Handles form fields for mitigation plan, implementation strategy, risk levels,
- * approvals, and recommendations with proper validation and state management.
+ * and approvals with proper validation and state management.
  *
  * @component
  * @param {MitigationSectionProps} props - Component props
@@ -131,12 +131,6 @@ const MitigationSection: FC<MitigationSectionProps> = ({
       },
       dateOfAssessment: (v: unknown) => {
         const r = checkStringValidation("Date of assessment", v as string, 1);
-        return r.accepted ? "" : r.message;
-      },
-      recommendations: (v: unknown) => {
-        const s = v as string;
-        if (!s || s.length === 0) return "";
-        const r = checkStringValidation("Recommendation", s, 1, 1024);
         return r.accepted ? "" : r.message;
       },
     }),
@@ -396,19 +390,6 @@ const MitigationSection: FC<MitigationSectionProps> = ({
             sx={{ flex: 1 }}
             isRequired
             error={errors.dateOfAssessment}
-            disabled={isEditingDisabled}
-          />
-        </Stack>
-        <Stack sx={{ mt: `${LAYOUT.VERTICAL_GAP}px`, width: "100%", maxWidth: contentWidth }}>
-          <Field
-            id="recommendations-input"
-            label="Recommendations"
-            type="description"
-            rows={3}
-            value={mitigationValues.recommendations}
-            onChange={handleOnTextFieldChange("recommendations")}
-            onBlur={handleFieldBlur("recommendations")}
-            sx={{ width: "100%" }}
             disabled={isEditingDisabled}
           />
         </Stack>

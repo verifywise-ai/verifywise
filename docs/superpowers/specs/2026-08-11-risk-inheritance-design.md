@@ -118,7 +118,7 @@ One badge per matched signal, naming the value that matched so the user can judg
 
 ## 7. Recommendation text
 
-**Note on `recommendations`:** the field exists in `Servers/domain.layer/interfaces/I.risk.ts` and in the `MitigationSection` form, but there is **no such column** on `verifywise.risks`, no `@Column` on the server `RiskModel`, and it is absent from the `INSERT INTO risks` column list (`risk.utils.ts:660`). It is never persisted, so it would be empty on every fetched risk. It is not used by this feature. (The dead form field is a separate bug, tracked outside this spec.)
+**Note on `recommendations`:** the field exists in `Servers/domain.layer/interfaces/I.risk.ts` and in the `MitigationSection` form, but there is **no such column** on `verifywise.risks`, no `@Column` on the server `RiskModel`, and it is absent from the `INSERT INTO risks` column list (`risk.utils.ts:660`). It was never persisted — `buildBackendData` in `useMitigationSection.ts` did not even include it in the request body, so the value never left the browser. The dead field was removed in a separate commit on this branch; `mitigation_plan` is the persisted field this feature uses.
 
 Resolution order for each row:
 

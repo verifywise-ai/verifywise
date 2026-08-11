@@ -46,7 +46,6 @@ export interface IRisk {
   date_of_assessment: Date;
   is_demo?: boolean;
   created_at?: Date;
-  recommendations?: string;
   deletedLinkedProject?: boolean;
   deletedLinkedFrameworks?: boolean;
 

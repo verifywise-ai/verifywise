@@ -30,7 +30,6 @@ export type ProjectRisk = {
   approver: number;
   approvalStatus: number;
   dateOfAssessment: string;
-  recommendations?: string;
 };
 
 export interface RiskFormErrors {
@@ -57,5 +56,4 @@ export interface MitigationFormErrors {
   approver?: string;
   approvalStatus?: string;
   dateOfAssessment?: string;
-  recommendations?: string;
 }

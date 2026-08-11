@@ -65,7 +65,6 @@ describe("useMitigationSection", () => {
       risk_approval: 42,
       approval_status: "Completed",
       date_of_assessment: "2024-02-01T00:00:00.000Z",
-      recommendations: "Do this",
     };
 
     const mapped = result.current.mapFromInputValues(inputValues);
@@ -81,7 +80,6 @@ describe("useMitigationSection", () => {
     expect(mapped.approver).toBe(42);
     expect(mapped.approvalStatus).toBe(3);
     expect(mapped.dateOfAssessment).toBe("2024-02-01T00:00:00.000Z");
-    expect(mapped.recommendations).toBe("Do this");
   });
 
   it("maps Catastrophic severity to Critical in backend data", () => {
