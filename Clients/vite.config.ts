@@ -1,5 +1,24 @@
+// Node 25+ ships an experimental `localStorage` global that warns when read
+// without `--localstorage-file`. `docx` reads `localStorage` at module load,
+// so install a tiny in-memory stub before any imports run.
+const localStorageStore = new Map<string, string>();
+Object.defineProperty(globalThis, "localStorage", {
+  value: {
+    getItem: (key: string) => localStorageStore.get(key) ?? null,
+    setItem: (key: string, value: string) => localStorageStore.set(key, String(value)),
+    removeItem: (key: string) => localStorageStore.delete(key),
+    clear: () => localStorageStore.clear(),
+    get length() {
+      return localStorageStore.size;
+    },
+    key: (index: number) => Array.from(localStorageStore.keys())[index] ?? null,
+  },
+  configurable: true,
+  writable: true,
+});
+
 import svgr from "@svgr/rollup";
-import react from "@vitejs/plugin-react-swc";
+import react from "@vitejs/plugin-react";
 import path from "path";
 import { defineConfig } from "vitest/config";
 import { version } from "../version.json";
@@ -51,7 +70,7 @@ export default defineConfig({
           if (id.includes("node_modules")) {
             if (
               id.includes("react-dom") ||
-              id.includes("react-router-dom") ||
+              id.includes("react-router") ||
               (id.includes("/react/") && !id.includes("react-"))
             ) {
               return "vendor-react";
@@ -92,6 +111,7 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: "./src/test/setup.ts",
     globals: true,
+    testTimeout: 20000,
     exclude: ["e2e/**", "**/node_modules/**"],
     env: {
       VITE_APP_API_BASE_URL: "http://localhost:3000",

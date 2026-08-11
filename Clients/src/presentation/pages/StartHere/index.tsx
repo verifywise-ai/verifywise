@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useEffect, useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { keyframes } from "@emotion/react";
 import { Stack, Box, Typography, useTheme, IconButton, Tooltip } from "@mui/material";
 import {

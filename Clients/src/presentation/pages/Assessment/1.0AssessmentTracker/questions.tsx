@@ -2,7 +2,7 @@ import { Stack, Typography } from "@mui/material";
 import { Subtopic } from "../../../../domain/types/Subtopic";
 import QuestionFrame from "../../../components/VWQuestion";
 import { Question } from "../../../../domain/types/Question";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 import { useEffect, useState, useRef } from "react";
 import { text } from "../../../themes/palette";
 

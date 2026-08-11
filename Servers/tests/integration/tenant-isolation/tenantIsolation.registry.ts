@@ -152,6 +152,21 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     tables: ["mrm_alert_recipients"],
     baseRoute: "/api/mrm/settings",
   },
+  {
+    name: "report_templates",
+    tables: ["report_templates"],
+    baseRoute: "/api/reporting/templates",
+  },
+  {
+    name: "report_runs",
+    tables: ["report_runs", "report_run_analyses"],
+    baseRoute: "/api/reporting/runs",
+  },
+  {
+    name: "scheduled_reports",
+    tables: ["scheduled_reports"],
+    baseRoute: "/api/reporting/scheduled-reports",
+  },
 ];
 
 /** Flat set of all tenant-scoped tables declared in the registry. */

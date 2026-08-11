@@ -120,7 +120,7 @@ const createRateLimitHandler = (message: string) => {
  * Creates a rate limiter with the specified configuration
  * Uses express-rate-limit's built-in IP extraction and IPv6 normalization
  */
-const createRateLimiter = (config: RateLimitConfig) => {
+export const createRateLimiter = (config: RateLimitConfig) => {
   const options: Partial<Options> = {
     windowMs: config.windowMinutes * 60 * 1000,
     max: config.maxRequests,

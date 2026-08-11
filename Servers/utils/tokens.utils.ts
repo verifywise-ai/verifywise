@@ -1,17 +1,51 @@
 import { QueryTypes, Transaction } from "sequelize";
 import crypto from "crypto";
+import { promisify } from "util";
 import { sequelize } from "../database/db";
 import { IToken } from "../domain.layer/interfaces/i.tokens";
 import { TokenModel } from "../domain.layer/models/tokens/tokens.model";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 
 /**
- * Hash an API token (the signed JWT string) for storage and lookup.
- * Only the SHA-256 hash is persisted; the raw token is shown to the creator
- * once and never stored. Mirrors the Shadow AI API key pattern.
+ * Server-side secret used as the salt for API-token hashing.
+ * Falls back to ENCRYPTION_KEY for backward compatibility in existing installs,
+ * but a dedicated secret is recommended so token hashes can be rotated
+ * independently of encryption keys.
+ *
+ * Changing this secret (or the hashing scheme) changes every token's hash, which
+ * invalidates all previously-issued API tokens — the raw tokens are not stored,
+ * so existing tokens cannot be re-hashed and must be re-issued after such a change.
  */
-export const hashApiToken = (token: string): string =>
-  crypto.createHash("sha256").update(token).digest("hex");
+const API_TOKEN_HASH_SECRET = process.env.API_TOKEN_HASH_SECRET || process.env.ENCRYPTION_KEY || "";
+
+if (!API_TOKEN_HASH_SECRET) {
+  throw new Error("API_TOKEN_HASH_SECRET or ENCRYPTION_KEY must be set for API token hashing");
+}
+
+const pbkdf2 = promisify(crypto.pbkdf2);
+
+/**
+ * Hash an API token (the signed JWT string) for storage and lookup.
+ *
+ * Uses PBKDF2 (100k iterations, SHA-512) with the server-side secret as salt.
+ * The hash is deterministic (the same token always produces the same digest,
+ * required for the DB lookup) and an attacker with only the database cannot
+ * reconstruct tokens without the secret.
+ *
+ * IMPORTANT: this uses the ASYNC crypto.pbkdf2 (libuv threadpool), NOT
+ * pbkdf2Sync. This function runs in the auth middleware on every API-token
+ * request; the synchronous variant would block the single Node event loop for
+ * ~milliseconds per call, serializing all concurrent traffic. The async variant
+ * offloads the work so the event loop stays responsive. Keep it async — every
+ * caller must await it.
+ *
+ * Only the hash is persisted; the raw token is shown to the creator once and
+ * never stored.
+ */
+export const hashApiToken = async (token: string): Promise<string> => {
+  const derived = await pbkdf2(token, API_TOKEN_HASH_SECRET, 100000, 32, "sha512");
+  return derived.toString("hex");
+};
 
 export const getNumberOfApiTokensQuery = async (organizationId: number) => {
   // Only active (non-revoked) tokens count toward the per-organization limit.
@@ -46,7 +80,7 @@ export const createApiTokenQuery = async (
     );
   }
 
-  // `tokenPayload.token` is the SHA-256 hash of the JWT, not the JWT itself.
+  // `tokenPayload.token` is the PBKDF2 hash of the JWT, not the JWT itself.
   // The raw token is returned to the caller by the controller and never stored.
   // The hash column is intentionally excluded from RETURNING so it never leaves
   // the database.

@@ -35,7 +35,7 @@ function emailValidation(email: string): boolean;
 The function uses the following regular expression pattern:
 
 ```typescript
-/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+/^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/;
 ```
 
 Pattern explanation:
@@ -43,10 +43,13 @@ Pattern explanation:
 - `^`: Start of string
 - `[^\s@]+`: One or more characters that are not whitespace or @
 - `@`: Literal @ symbol
-- `[^\s@]+`: One or more characters that are not whitespace or @
-- `\.`: Literal dot
-- `[^\s@]+`: One or more characters that are not whitespace or @
+- `[^\s@.]+`: One or more characters that are not whitespace, @, or dot
+- `(?:\.[^\s@.]+)+`: One or more dot-separated domain labels
 - `$`: End of string
+
+The domain labels are separated by fixed `.` characters, so the regex engine
+cannot partition the domain in multiple ways. This avoids polynomial-time
+backtracking (ReDoS) on pathological inputs.
 
 ## Usage Example
 

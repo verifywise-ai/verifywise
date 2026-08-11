@@ -2,7 +2,7 @@ import { ReactNode, useState } from "react";
 
 import { Card, CardContent, Stack, Typography } from "@mui/material";
 import { ChevronRight } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { text, background, border as borderPalette } from "../../../themes/palette";
 
 interface DashboardCardProps {

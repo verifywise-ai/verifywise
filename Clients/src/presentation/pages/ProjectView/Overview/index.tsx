@@ -8,7 +8,7 @@ import { FC, memo, useCallback, useMemo } from "react";
 import { displayFormattedDate } from "../../../tools/isoDateToString";
 import Risks from "../../../components/Risks";
 import IntakeSubmissionCard from "../IntakeSubmissionCard";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 import useProjectData from "../../../../application/hooks/useProjectData";
 import useProjectStatus from "../../../../application/hooks/useProjectStatus";
 import { useAuth } from "../../../../application/hooks/useAuth";

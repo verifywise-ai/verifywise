@@ -18,7 +18,7 @@ import IconButton from "../../IconButton";
 import ViewRelationshipsButton from "../../ViewRelationshipsButton";
 import { displayFormattedDate } from "../../../tools/isoDateToString";
 import allowedRoles from "../../../../application/constants/permissions";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 import { ProjectRiskMitigation } from "../../ProjectRiskMitigation/ProjectRiskMitigation";
 import useUsers from "../../../../application/hooks/useUsers";
 import { useAuth } from "../../../../application/hooks/useAuth";

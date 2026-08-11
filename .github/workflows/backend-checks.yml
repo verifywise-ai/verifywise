@@ -158,6 +158,33 @@ jobs:
           DB_APP_PASSWORD: test-app-role-password-for-ci
         run: npm run test:integration -- --testPathPatterns=tenant-isolation
 
+      # These suites live outside tests/integration/tenant-isolation/, so the
+      # pattern above never reaches them. They exist because the defects they
+      # cover -- an audit-log INSERT naming columns that do not exist, a uuid
+      # column bound as text, user FKs that block deletion, RLS policies that
+      # were never installed, a run whose project scope the visibility rule
+      # cannot see, and a workflow that broadcasts on an empty result -- all
+      # shipped through a green unit suite that mocked the database away.
+      # Running them only locally would recreate exactly that blindness.
+      - name: Run reporting and workflow regression suites
+        env:
+          DB_HOST: localhost
+          DB_PORT: "5432"
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          DB_NAME: verifywise_test
+          NODE_ENV: test
+          SUPERADMIN_EMAIL: super@local.dev
+          SUPERADMIN_PASSWORD: Super123!
+          JWT_SECRET: test-jwt-secret-key-for-testing-only
+          REFRESH_TOKEN_SECRET: test-refresh-secret-key-for-testing-only
+          ENCRYPTION_KEY: default-key-change-this-in-production-32chars!!
+          # Required by the RLS runtime-role migration (rls-app-role.js), run via
+          # globalSetup; it fails closed without it. CI-only value.
+          DB_APP_PASSWORD: test-app-role-password-for-ci
+        run: |
+          npm run test:integration -- --testPathPatterns='tests/integration/(workflow-audit-log|user-deletion-fks|reporting-rls-policies|report-run-visibility|framework-gap-workflow|report-scope-membership|report-scope-authorization|workflow-approval-gate)\.test\.ts'
+
       - name: Run deadline-summary smoke test
         env:
           DB_HOST: localhost
@@ -193,6 +220,37 @@ jobs:
           # globalSetup; it fails closed without it. CI-only value.
           DB_APP_PASSWORD: test-app-role-password-for-ci
         run: npx ts-node scripts/auditTenantIsolationCoverage.ts
+
+  api-docs-drift:
+    name: API Docs Drift
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Servers
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Regenerate OpenAPI spec and endpoint registry
+        run: |
+          npm run generate:swagger
+          npm run generate:endpoints
+
+      - name: Fail if the committed generated files are stale
+        run: |
+          git diff --exit-code -- swagger.yaml ../docs/api-docs/src/config/endpoints.ts \
+            || { echo "::error::swagger.yaml / endpoints.ts are out of sync with the route layer. Run 'npm run generate:swagger && npm run generate:endpoints' in Servers/ and commit the result."; exit 1; }
+
+      - name: Check route/spec drift
+        run: npm run check:api-drift
 
   coverage:
     name: Coverage Gate
@@ -287,4 +345,4 @@ jobs:
         with:
           fail-on-severity: high
           deny-licenses: GPL-3.0, AGPL-3.0
-          allow-ghsas: GHSA-mh99-v99m-4gvg
+          allow-ghsas: GHSA-mh99-v99m-4gvg, GHSA-qwww-vcr4-c8h2

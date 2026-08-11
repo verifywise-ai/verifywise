@@ -1,22 +1,4 @@
-import { generateReport } from "../repository/entity.repository";
 import { downloadFileFromManager } from "../repository/file.repository";
-import {
-  triggerBrowserDownload,
-  extractFilenameFromHeaders,
-} from "../../presentation/utils/browserDownload.utils";
-
-interface GenerateReportProps {
-  projectId: number | null;
-  projectTitle: string;
-  projectOwner: string;
-  reportType: string | string[];
-  reportName: string;
-  frameworkId: number;
-  projectFrameworkId: number;
-  format: "pdf" | "docx";
-  aiEnhanced?: boolean;
-  llmKeyId?: number;
-}
 
 /**
  * Downloads a file by ID and triggers browser download
@@ -47,41 +29,5 @@ export const handleDownload = async (fileId: string, fileName: string): Promise<
   } catch (error) {
     console.error(`Error downloading file (ID: ${fileId}, Name: ${fileName}):`, error);
     throw error;
-  }
-};
-
-/**
- * Generates a report and triggers automatic download
- *
- * @param requestBody - Report generation parameters
- * @returns HTTP status code (200 for success, 500 for error)
- */
-export const handleAutoDownload = async (requestBody: GenerateReportProps): Promise<number> => {
-  try {
-    const response = await generateReport({
-      routeUrl: `/reporting/generate-report`,
-      body: requestBody,
-    });
-
-    if (response.status === 200) {
-      // Extract filename from Content-Disposition header (DRY: using shared utility)
-      const fileName = extractFilenameFromHeaders(response.headers, "report");
-
-      // Get blob content and content type
-      const blobFileContent = response.data;
-      const responseType = response.headers.get("Content-Type");
-
-      // Create blob and trigger download
-      const blob = new Blob([blobFileContent], { type: responseType || undefined });
-      triggerBrowserDownload(blob, fileName);
-
-      return response.status;
-    } else {
-      console.error("--- Error downloading report");
-      return response.status;
-    }
-  } catch (error) {
-    console.error("*** Error generating report", error);
-    return 500;
   }
 };

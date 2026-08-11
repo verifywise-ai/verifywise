@@ -1,0 +1,53 @@
+# OpenTelemetry Collector — receives OTLP from every VerifyWise deployment and
+# fans out metrics to Prometheus and logs to Loki.
+#
+# The `deployment.name` resource attribute set by each service is promoted to a
+# `deployment` label so dashboards can group/filter by managed deployment.
+
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  batch:
+    timeout: 5s
+    send_batch_size: 1024
+  # Promote resource attributes to labels Prometheus/Loki can filter on.
+  resource:
+    attributes:
+      - key: deployment
+        from_attribute: deployment.name
+        action: upsert
+  # Cap label cardinality for the Loki exporter.
+  attributes/loki:
+    actions:
+      - key: loki.resource.labels
+        value: service.name, deployment
+        action: insert
+
+exporters:
+  # Push metrics into Prometheus via its OTLP receiver (--web.enable-otlp-receiver).
+  otlphttp/prometheus:
+    endpoint: http://prometheus:9090/api/v1/otlp
+    tls:
+      insecure: true
+  # Push logs into Loki.
+  loki:
+    endpoint: http://loki:3100/loki/api/v1/push
+  debug:
+    verbosity: basic
+
+service:
+  pipelines:
+    metrics:
+      receivers: [otlp]
+      processors: [resource, batch]
+      exporters: [otlphttp/prometheus]
+    logs:
+      receivers: [otlp]
+      processors: [resource, attributes/loki, batch]
+      exporters: [loki]

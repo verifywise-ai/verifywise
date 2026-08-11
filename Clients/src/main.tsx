@@ -6,7 +6,7 @@ import * as jsxRuntime from "react/jsx-runtime";
 import * as MUI from "@mui/material";
 import * as emotionReact from "@emotion/react";
 import * as emotionStyled from "@emotion/styled";
-import * as ReactRouterDOM from "react-router-dom";
+import * as ReactRouterDOM from "react-router";
 import App from "./App.tsx";
 import "./presentation/styles/fonts.css";
 import "./index.css";
@@ -14,10 +14,11 @@ import { Provider } from "react-redux";
 import { persistor, store } from "./application/redux/store.ts";
 import { PersistGate } from "redux-persist/integration/react";
 // import { StyledEngineProvider } from "@mui/material";
-import { BrowserRouter as Router } from "react-router-dom";
+import { BrowserRouter as Router } from "react-router";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./application/config/queryClient";
 import { initDomTranslator } from "./i18n/domTranslator";
+import { initBrowserTelemetry } from "./infrastructure/observability/browserTelemetry";
 
 // Expose React and related libraries as globals for plugin UI bundles
 (window as any).React = React;
@@ -29,6 +30,7 @@ import { initDomTranslator } from "./i18n/domTranslator";
 (window as any).ReactRouterDOM = ReactRouterDOM;
 
 initDomTranslator();
+initBrowserTelemetry();
 
 createRoot(document.getElementById("root")!).render(
   <Provider store={store}>

@@ -9,7 +9,7 @@
  * executed in production.
  *
  * Usage:
- *   npx ts-node scripts/seedE2EAdmin.ts [orgId]
+ *   npx ts-node scripts/seedE2EAdmin.ts [orgId] [--output-file=<path>]
  *
  * Environment variables:
  *   - E2E_ADMIN_EMAIL   (default: e2e-admin@verifywise.local)
@@ -17,11 +17,15 @@
  *   - E2E_ORG_NAME      (default: E2E Org <timestamp>)
  *
  * Output:
- *   Prints a single line of JSON: { orgId, userId, email, password }
+ *   Prints a single line of JSON metadata: { orgId, userId, email, credentialsFile }
+ *   If --output-file is provided, the full credential JSON (including password) is
+ *   written to that file with mode 0o600; otherwise the password is omitted from
+ *   stdout entirely.
  */
 
 import { sequelize } from "../database/db";
 import bcrypt from "bcrypt";
+import { writeFileSync, chmodSync } from "fs";
 
 const ADMIN_EMAIL = process.env.E2E_ADMIN_EMAIL || "e2e-admin@verifywise.local";
 const ADMIN_PASSWORD = process.env.E2E_ADMIN_PASSWORD || "E2EAdmin#1";
@@ -72,8 +76,24 @@ async function createAdminUser(orgId: number): Promise<number> {
   return (result as any[])[0].id;
 }
 
+function parseArgs(args: string[]) {
+  const inputOrgId = args.find((a) => /^\d+$/.test(a));
+  const outputFileArg = args.find((a) => a.startsWith("--output-file="));
+  const outputFile = outputFileArg ? outputFileArg.split("=")[1] : undefined;
+  return { inputOrgId, outputFile };
+}
+
+function writeCredentialsFile(
+  path: string,
+  credentials: { orgId: number | null; userId: number; email: string; password: string },
+): void {
+  writeFileSync(path, JSON.stringify(credentials), { mode: 0o600 });
+  chmodSync(path, 0o600);
+}
+
 async function main(): Promise<void> {
-  const inputOrgId = process.argv[2];
+  const args = process.argv.slice(2);
+  const { inputOrgId, outputFile } = parseArgs(args);
 
   const existingUserId = await findExistingUser(ADMIN_EMAIL);
   if (existingUserId !== null) {
@@ -81,13 +101,22 @@ async function main(): Promise<void> {
     const [rows] = await sequelize.query(`SELECT organization_id FROM users WHERE id = :id`, {
       replacements: { id: existingUserId },
     });
-    const existingOrgId = (rows as any[])[0]?.organization_id;
+    const existingOrgId = (rows as any[])[0]?.organization_id ?? null;
+    const credentials = {
+      orgId: existingOrgId,
+      userId: existingUserId,
+      email: ADMIN_EMAIL,
+      password: ADMIN_PASSWORD,
+    };
+    if (outputFile) {
+      writeCredentialsFile(outputFile, credentials);
+    }
     console.log(
       JSON.stringify({
         orgId: existingOrgId,
         userId: existingUserId,
         email: ADMIN_EMAIL,
-        password: ADMIN_PASSWORD,
+        credentialsFile: outputFile || null,
       }),
     );
     return;
@@ -102,13 +131,22 @@ async function main(): Promise<void> {
   }
 
   const userId = await createAdminUser(orgId);
+  const credentials = {
+    orgId,
+    userId,
+    email: ADMIN_EMAIL,
+    password: ADMIN_PASSWORD,
+  };
+  if (outputFile) {
+    writeCredentialsFile(outputFile, credentials);
+  }
 
   console.log(
     JSON.stringify({
       orgId,
       userId,
       email: ADMIN_EMAIL,
-      password: ADMIN_PASSWORD,
+      credentialsFile: outputFile || null,
     }),
   );
 }
