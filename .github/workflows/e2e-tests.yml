@@ -114,12 +114,18 @@ jobs:
           EXPRESS_BACKEND_URL: http://localhost:3000
         run: |
           alembic upgrade head
-          uvicorn app:app --host 0.0.0.0 --port 8100 &
+          uvicorn app:app --host 0.0.0.0 --port 8100 > /tmp/aigateway.log 2>&1 &
           # Wait for AIGateway to be ready
           for i in $(seq 1 30); do
-            curl -s http://localhost:8100/health && break
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8100/health || true)
+            echo "AIGateway health check attempt $i: HTTP $HTTP_STATUS"
+            if [ "$HTTP_STATUS" = "200" ]; then
+              echo "AIGateway is ready"
+              break
+            fi
             sleep 1
           done
+          tail -n 50 /tmp/aigateway.log || true
 
       - name: Start backend
         working-directory: Servers
@@ -140,12 +146,18 @@ jobs:
           AI_GATEWAY_URL: http://localhost:8100
           AI_GATEWAY_INTERNAL_KEY: test-ai-gateway-key-for-e2e
         run: |
-          node dist/index.js &
+          node dist/index.js > /tmp/backend.log 2>&1 &
           # Wait for backend to be ready
           for i in $(seq 1 30); do
-            curl -s http://localhost:3000/api/users/check/exists && break
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/api/users/check/exists || true)
+            echo "Backend health check attempt $i: HTTP $HTTP_STATUS"
+            if [ "$HTTP_STATUS" = "200" ] || [ "$HTTP_STATUS" = "401" ]; then
+              echo "Backend is responding (HTTP $HTTP_STATUS)"
+              break
+            fi
             sleep 1
           done
+          tail -n 50 /tmp/backend.log || true
 
       # ---- Frontend setup ----
       - name: Install frontend dependencies
@@ -200,4 +212,20 @@ jobs:
         with:
           name: playwright-results
           path: Clients/test-results/
+          retention-days: 7
+
+      - name: Upload backend logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-logs
+          path: /tmp/backend.log
+          retention-days: 7
+
+      - name: Upload AIGateway logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: aigateway-logs
+          path: /tmp/aigateway.log
           retention-days: 7
