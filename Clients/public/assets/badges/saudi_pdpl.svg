@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Background circle - Saudi green -->
+  <circle cx="32" cy="32" r="30" fill="#006C35"/>
+
+  <!-- Simplified Shahada representation (decorative Arabic-style pattern) -->
+  <g fill="#FFFFFF">
+    <rect x="20" y="16" width="24" height="3" rx="1"/>
+    <rect x="22" y="21" width="20" height="2" rx="1"/>
+    <rect x="24" y="25" width="16" height="2" rx="1"/>
+  </g>
+
+  <!-- Sword (simplified) -->
+  <path d="M18 34 L46 34 L48 32 L46 30 L18 30 L16 32 Z" fill="#FFFFFF"/>
+  <rect x="14" y="30" width="4" height="4" rx="1" fill="#FFFFFF"/>
+
+  <!-- Privacy shield -->
+  <path d="M32 38 L44 42 L44 50 C44 54 38 58 32 60 C26 58 20 54 20 50 L20 42 Z" fill="#004D26"/>
+  <path d="M32 40 L42 44 L42 50 C42 52 38 56 32 58 C26 56 22 52 22 50 L22 44 Z" fill="#006C35" stroke="#FFFFFF" stroke-width="1"/>
+
+  <!-- Lock -->
+  <rect x="28" y="48" width="8" height="6" rx="1" fill="#FFFFFF"/>
+  <path d="M29.5 48 L29.5 45 C29.5 43.5 30.5 42 32 42 C33.5 42 34.5 43.5 34.5 45 L34.5 48" stroke="#FFFFFF" stroke-width="1.5" fill="none"/>
+
+  <!-- SAUDI text -->
+  <text x="32" y="58" font-family="Arial, sans-serif" font-size="4.5" font-weight="bold" fill="#FFFFFF" text-anchor="middle">SAUDI PDPL</text>
+</svg>

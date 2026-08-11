@@ -172,8 +172,31 @@ function cleanupStaleProgressEntries(): void {
   }
 }
 
-// Run cleanup every minute
-setInterval(cleanupStaleProgressEntries, 60000);
+const PROGRESS_CLEANUP_INTERVAL_MS = 60_000;
+
+let progressCleanupTimer: NodeJS.Timeout | null = null;
+
+/**
+ * Start the periodic cleanup of stale scan-progress entries.
+ * Idempotent — safe to call more than once.
+ */
+export function startAiDetectionProgressCleanup(): void {
+  if (progressCleanupTimer) return;
+  progressCleanupTimer = setInterval(cleanupStaleProgressEntries, PROGRESS_CLEANUP_INTERVAL_MS);
+  // Don't keep the event loop alive solely for this timer — matters for tests
+  // and short-lived scripts that import this module.
+  progressCleanupTimer.unref?.();
+}
+
+/**
+ * Stop the periodic cleanup. Called from graceful shutdown.
+ */
+export function stopAiDetectionProgressCleanup(): void {
+  if (progressCleanupTimer) {
+    clearInterval(progressCleanupTimer);
+    progressCleanupTimer = null;
+  }
+}
 
 /**
  * File item from local file system scan

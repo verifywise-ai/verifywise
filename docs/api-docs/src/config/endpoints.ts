@@ -3880,6 +3880,61 @@ export const frameworkEndpoints: Endpoint[] = [
     ],
     tag: "Frameworks",
   },
+  {
+    method: 'GET',
+    path: '/frameworks/{frameworkId}/tree/{projectId}',
+    summary: "Get Framework Tree",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Frameworks",
+  },
+  {
+    method: 'GET',
+    path: '/frameworks/{frameworkId}/dashboard/{projectFrameworkId}',
+    summary: "Get Framework Dashboard",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Frameworks",
+  },
+  {
+    method: 'GET',
+    path: '/frameworks/{frameworkId}/impl/{level}/{id}',
+    summary: "Get Impl By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Frameworks",
+  },
+  {
+    method: 'PATCH',
+    path: '/frameworks/{frameworkId}/impl/{level}/{id}',
+    summary: "Update Impl",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Frameworks",
+  },
+  {
+    method: 'GET',
+    path: '/frameworks/{frameworkId}/impl/{level}/{id}/risks',
+    summary: "Get Impl Risks",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Frameworks",
+  },
 ];
 
 // FRIA endpoints

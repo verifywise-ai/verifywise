@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Background circle - NIST blue -->
+  <circle cx="32" cy="32" r="30" fill="#0369A1"/>
+
+  <!-- Shield divided into 5 sections (5 core functions) -->
+  <path d="M32 8 L52 18 L52 36 C52 48 42 54 32 58 C22 54 12 48 12 36 L12 18 Z" fill="#FFFFFF"/>
+
+  <!-- 5 colored sections for core functions -->
+  <!-- Identify - Blue -->
+  <path d="M32 8 L52 18 L52 24 L32 16 Z" fill="#1D4ED8"/>
+  <!-- Protect - Green -->
+  <path d="M52 24 L52 32 L32 32 L32 16 Z" fill="#059669"/>
+  <!-- Detect - Yellow -->
+  <path d="M52 32 L52 40 C52 44 48 48 42 52 L32 32 Z" fill="#D97706"/>
+  <!-- Respond - Orange -->
+  <path d="M42 52 C38 54 34 56 32 58 L32 32 Z" fill="#EA580C"/>
+  <!-- Recover - Purple -->
+  <path d="M32 58 C22 54 12 48 12 36 L12 18 L32 16 L32 32 L32 58 Z" fill="#7C3AED" opacity="0.8"/>
+
+  <!-- Center circle -->
+  <circle cx="32" cy="32" r="6" fill="#FFFFFF" stroke="#0369A1" stroke-width="1"/>
+  <text x="32" y="35" font-family="Arial, sans-serif" font-size="6" font-weight="bold" fill="#0369A1" text-anchor="middle">5</text>
+
+  <!-- NIST text -->
+  <text x="32" y="58" font-family="Arial, sans-serif" font-size="6" font-weight="bold" fill="#FFFFFF" text-anchor="middle">NIST CSF</text>
+</svg>

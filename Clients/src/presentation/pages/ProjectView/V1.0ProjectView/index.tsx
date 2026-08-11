@@ -279,6 +279,7 @@ const VWProjectView = () => {
             activeTab={value}
             onChange={handleChange}
             disabledTabTooltip={getDisabledTooltip()}
+            scrollable
           />
 
           <TabPanel value="overview" sx={tabPanelStyle}>
