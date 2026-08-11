@@ -2,15 +2,11 @@ import { sequelize } from "../database/db";
 import { ProjectsMembersModel } from "../domain.layer/models/projectsMembers/projectsMembers.model";
 import { FileModel } from "../domain.layer/models/file/file.model";
 import { QueryTypes, Transaction } from "sequelize";
-import {
-  getAllTopicsQuery,
-  getAllSubTopicsQuery,
-  getAllQuestionsQuery,
-  getComplianceEUByProjectIdQuery,
-} from "./eu.utils";
-import { TopicStructEUModel } from "../domain.layer/frameworks/EU-AI-Act/topicStructEU.model";
+import { getVisibleEuCategoryIdsForProject } from "./eu.utils";
 import { AnnexStructISOModel } from "../domain.layer/frameworks/ISO-42001/annexStructISO.model";
 import { ClauseStructISOModel } from "../domain.layer/frameworks/ISO-42001/clauseStructISO.model";
+import { ISO27001AnnexStructModel } from "../domain.layer/frameworks/ISO-27001/ISO27001AnnexStruct.model";
+import { ISO27001ClauseStructModel } from "../domain.layer/frameworks/ISO-27001/ISO27001ClauseStruct.model";
 import { IProjectsMembers } from "../domain.layer/interfaces/i.projectMember";
 
 /**
@@ -186,31 +182,85 @@ export const getAssessmentReportQuery = async (
 
   const assessmentIdValue = assessmentId[0]?.[0]?.id;
 
-  const allTopics: TopicStructEUModel[] = await getAllTopicsQuery(organizationId);
-  await Promise.all(
-    allTopics.map(async (topic) => {
-      if (topic.id) {
-        const subtopicStruct = await getAllSubTopicsQuery(topic.id, organizationId);
-        await Promise.all(
-          subtopicStruct.map(async (subtopic) => {
-            if (subtopic.id && assessmentIdValue) {
-              const questionAnswers = await getAllQuestionsQuery(
-                subtopic.id!,
-                assessmentIdValue,
-                organizationId,
-              );
-              (subtopic.dataValues as any).questions = questionAnswers.map((q) => ({ ...q }));
-            }
-          }),
-        );
-        (topic.dataValues as any).subtopics = subtopicStruct.map((s) => s.get({ plain: true }));
-      }
-    }),
-  );
-  const allAssessments = allTopics.map((topic) => topic.get({ plain: true }));
-  return allAssessments;
+  // One flat read of the topic -> subtopic -> question tree.
+  //
+  // Deliberately NOT getAllTopicsQuery + getAllSubTopicsQuery +
+  // getAllQuestionsQuery, which is the Assessment screen's loader: it issues a
+  // query per subtopic and, inside each, pulls every answer's evidence files
+  // and linked risks. Measured on 2026-07-29 that cost 129 queries for one
+  // project, and the report reads none of the evidence or risk data — the
+  // section renders question, answer and status. A report covers every pairing
+  // in its scope, so the cost multiplies by the organization's project count.
+  //
+  // LEFT JOINs, because the shape must not change: the old loader listed every
+  // topic and subtopic in the framework whether or not the project had answered
+  // anything, and an assessment row that does not exist yet leaves the tree
+  // present but its question lists empty.
+  const rows = (await sequelize.query(
+    `SELECT t.id AS topic_id, t.title AS topic_title, t.order_no AS topic_order,
+            st.id AS subtopic_id, st.title AS subtopic_title, st.order_no AS subtopic_order,
+            q.id AS question_id, q.question AS question, q.order_no AS question_order,
+            a.id AS answer_id, a.answer AS answer, a.status AS status
+       FROM topics_struct_eu t
+       LEFT JOIN subtopics_struct_eu st ON st.topic_id = t.id
+       LEFT JOIN questions_struct_eu q ON q.subtopic_id = st.id
+       LEFT JOIN answers_eu a ON a.question_id = q.id
+                             AND a.organization_id = :organizationId
+                             AND a.assessment_id = :assessment_id
+      ORDER BY t.order_no, t.id, st.order_no, st.id, q.order_no, q.id`,
+    {
+      replacements: { organizationId, assessment_id: assessmentIdValue ?? null },
+      type: QueryTypes.SELECT,
+    },
+  )) as any[];
+
+  const topics = new Map<number, any>();
+  const subtopics = new Map<number, any>();
+  for (const row of rows) {
+    let topic = topics.get(row.topic_id);
+    if (!topic) {
+      topic = { id: row.topic_id, title: row.topic_title, subtopics: [] };
+      topics.set(row.topic_id, topic);
+    }
+    if (row.subtopic_id == null) continue;
+
+    let subtopic = subtopics.get(row.subtopic_id);
+    if (!subtopic) {
+      subtopic = { id: row.subtopic_id, title: row.subtopic_title, questions: [] };
+      subtopics.set(row.subtopic_id, subtopic);
+      topic.subtopics.push(subtopic);
+    }
+    // A question with no answer row is not part of this project's assessment;
+    // counting it would inflate the section's denominator.
+    //
+    // Tested on answer_id, the primary key, and not on status or answer: both
+    // of those are nullable, so an existing answer row with a NULL status
+    // would look like a missing one and the question would vanish from
+    // totalQuestions — the completion figure the section leads with and the
+    // analyzers reason over. answer_id reproduces the INNER JOIN the loader
+    // this replaced used, whatever the row holds.
+    if (row.question_id == null || row.answer_id == null) continue;
+
+    subtopic.questions.push({
+      id: row.question_id,
+      question: row.question,
+      answer: row.answer,
+      status: row.status,
+    });
+  }
+  return Array.from(topics.values());
 };
 
+/**
+ * Annexes for the clauses-and-annexes section — ISO 42001 (framework_id 2) ONLY.
+ *
+ * `annex_struct_iso` / `annexcategories_struct_iso` / `annexcategories_iso` are
+ * the ISO 42001 tables and carry no framework predicate, because the framework
+ * IS the table. ISO 27001 lives in `*_iso27001` tables entirely of its own —
+ * see getAnnexesReportQueryISO27001. Routing an ISO 27001 pairing here matches
+ * zero rows in annexcategories_iso and renders an ISO 42001 skeleton with no
+ * statuses under an ISO 27001 heading, which is what it did until 2026-07-29.
+ */
 export const getAnnexesReportQuery = async (
   projectFrameworkId: number,
   organizationId: number,
@@ -259,14 +309,88 @@ export const annexCategoriesQuery = async (
   return annexCategories;
 };
 
+/**
+ * Control categories with their controls, for the report's compliance section.
+ *
+ * Deliberately NOT getComplianceEUByProjectIdQuery, which is the Requirements
+ * screen's loader: that one walks control-by-control and pulls each control's
+ * subcontrols, evidence files and linked risks. Measured on 2026-07-29 it cost
+ * 604 queries for one project — none of which the report reads, since the
+ * section renders id, title, status, owner, due date and family. A report
+ * covers every pairing in its scope, so that cost is multiplied by the number
+ * of projects in the organization.
+ *
+ * The visible-category filter is the same rule the Requirements screen applies:
+ * a project's EU AI Act risk tier decides which control families are
+ * applicable, and the report must show the same set the screen does.
+ */
 export const getComplianceReportQuery = async (
   projectFrameworkId: number,
   organizationId: number,
 ) => {
-  const compliances = await getComplianceEUByProjectIdQuery(projectFrameworkId, organizationId);
-  return compliances;
+  const visibleCategoryIds = await getVisibleEuCategoryIdsForProject(
+    projectFrameworkId,
+    organizationId,
+  );
+  if (visibleCategoryIds.length === 0) return [];
+
+  const rows = (await sequelize.query(
+    `SELECT ccs.id AS category_id,
+            ccs.title AS category_title,
+            ccs.order_no AS category_order,
+            c.id AS id,
+            c.status AS status,
+            c.owner AS owner,
+            c.due_date AS due_date,
+            cs.title AS title,
+            cs.description AS description,
+            cs.order_no AS order_no
+       FROM controls_eu c
+       JOIN controls_struct_eu cs ON cs.id = c.control_meta_id
+       JOIN controlcategories_struct_eu ccs ON ccs.id = cs.control_category_id
+      WHERE c.organization_id = :organizationId
+        AND c.projects_frameworks_id = :projects_frameworks_id
+        AND cs.control_category_id IN (:visibleCategoryIds)
+      ORDER BY ccs.order_no, cs.order_no, c.id`,
+    {
+      replacements: {
+        organizationId,
+        projects_frameworks_id: projectFrameworkId,
+        visibleCategoryIds,
+      },
+      type: QueryTypes.SELECT,
+    },
+  )) as any[];
+
+  // Regrouped into the { title, controls[] } shape the collector reads. Only
+  // categories that actually hold a control appear, matching the old loader:
+  // it started from the project's control ids, so an empty family produced an
+  // empty controls array that the collector then contributed nothing from.
+  const byCategory = new Map<number, { id: number; title: string; controls: any[] }>();
+  for (const row of rows) {
+    let category = byCategory.get(row.category_id);
+    if (!category) {
+      category = { id: row.category_id, title: row.category_title, controls: [] };
+      byCategory.set(row.category_id, category);
+    }
+    category.controls.push({
+      id: row.id,
+      title: row.title,
+      description: row.description,
+      status: row.status,
+      owner: row.owner,
+      due_date: row.due_date,
+      order_no: row.order_no,
+    });
+  }
+  return Array.from(byCategory.values());
 };
 
+/**
+ * Clauses for the clauses-and-annexes section — ISO 42001 (framework_id 2) ONLY.
+ * See getAnnexesReportQuery for why there is no framework predicate, and
+ * getClausesReportQueryISO27001 for the ISO 27001 twin.
+ */
 export const getClausesReportQuery = async (
   projectFrameworkId: number,
   organizationId: number,
@@ -304,6 +428,147 @@ export const subClausesQuery = async (
     {
       replacements: {
         clause_id: clauseId,
+        projects_frameworks_id: projectFrameworkId,
+        organizationId,
+      },
+      type: QueryTypes.SELECT,
+      ...(transaction ? { transaction } : {}),
+    },
+  );
+};
+
+// =====================================================================
+// ISO 27001 (framework_id 3)
+//
+// ISO 27001 shares NOTHING with ISO 42001 at the table level: clauses,
+// subclauses, annexes and annex controls each live in their own `*_iso27001`
+// table. The four functions below are therefore whole twins of the four
+// above rather than a framework parameter on them, and their table names and
+// join shape mirror utils/iso27001.utils.ts (getAllClausesWithSubClauseQuery,
+// getAllAnnexesWithSubAnnexQuery) — the queries the ISO 27001 screens
+// themselves run.
+//
+// They deliberately return the SAME shape as the ISO 42001 pair — clauses
+// carrying `subClauses`, annexes carrying `annexCategories` — so
+// collectClausesAndAnnexes only has to choose a query, not a mapping, and
+// mergeSections and both renderers are untouched.
+// =====================================================================
+
+/**
+ * Clauses with their subclauses for the clauses-and-annexes section —
+ * ISO 27001 (framework_id 3) ONLY.
+ */
+export const getClausesReportQueryISO27001 = async (
+  projectFrameworkId: number,
+  organizationId: number,
+  transaction: Transaction | null = null,
+) => {
+  const clauses = (await sequelize.query(`SELECT * FROM clauses_struct_iso27001 ORDER BY id;`, {
+    mapToModel: true,
+    ...(transaction ? { transaction } : {}),
+  })) as [ISO27001ClauseStructModel[], number];
+
+  for (const clause of clauses[0]) {
+    // ISO27001ClauseStructModel types `id` as optional (unlike the ISO 42001
+    // twin), but this row came back from `SELECT * FROM clauses_struct_iso27001`,
+    // whose `id` is a SERIAL PRIMARY KEY — it cannot be absent on a real row.
+    const subClauses = await subClausesISO27001Query(
+      projectFrameworkId,
+      clause.id!,
+      organizationId,
+      transaction,
+    );
+    (clause as any).subClauses = subClauses;
+  }
+  return clauses[0];
+};
+
+/**
+ * INNER JOIN, matching subClausesQuery: only subclauses this pairing actually
+ * holds a row for belong in the report. The ISO 27001 screen loader uses the
+ * same inner join (iso27001.utils.ts getAllClausesWithSubClauseQuery); the
+ * LEFT JOIN it uses for annex controls exists to render the unstarted ones,
+ * which a status report has nothing to say about.
+ */
+export const subClausesISO27001Query = async (
+  projectFrameworkId: number,
+  clauseId: number,
+  organizationId: number,
+  transaction: Transaction | null = null,
+) => {
+  return await sequelize.query(
+    `SELECT sc.id, scs.title, scs.subclause_id, scs.order_no, scs.requirement_summary,
+            sc.status, sc.implementation_description
+     FROM subclauses_struct_iso27001 scs
+     JOIN subclauses_iso27001 sc ON scs.id = sc.subclause_meta_id AND sc.organization_id = :organizationId
+     WHERE scs.clause_id = :clause_id AND sc.projects_frameworks_id = :projects_frameworks_id
+     ORDER BY scs.order_no, scs.id;`,
+    {
+      replacements: {
+        clause_id: clauseId,
+        projects_frameworks_id: projectFrameworkId,
+        organizationId,
+      },
+      type: QueryTypes.SELECT,
+      ...(transaction ? { transaction } : {}),
+    },
+  );
+};
+
+/**
+ * Annexes with their controls for the clauses-and-annexes section —
+ * ISO 27001 (framework_id 3) ONLY.
+ */
+export const getAnnexesReportQueryISO27001 = async (
+  projectFrameworkId: number,
+  organizationId: number,
+  transaction: Transaction | null = null,
+) => {
+  const annexes = (await sequelize.query(`SELECT * FROM annex_struct_iso27001 ORDER BY id;`, {
+    mapToModel: true,
+    ...(transaction ? { transaction } : {}),
+  })) as [ISO27001AnnexStructModel[], number];
+
+  for (const annex of annexes[0]) {
+    // ISO27001AnnexStructModel types `id` as optional (unlike the ISO 42001
+    // twin), but this row came back from `SELECT * FROM annex_struct_iso27001`,
+    // whose `id` is a SERIAL PRIMARY KEY — it cannot be absent on a real row.
+    const annexControls = await annexControlsISO27001Query(
+      projectFrameworkId,
+      annex.id!,
+      organizationId,
+      transaction,
+    );
+    // `annexCategories`, not `annexcontrols`: the section's shape is shared
+    // with ISO 42001, whose equivalent rows are annex CATEGORIES. Renaming it
+    // here would mean branching the mapping in collectClausesAndAnnexes too.
+    (annex as any).annexCategories = annexControls;
+  }
+  return annexes[0];
+};
+
+/**
+ * `acs.annex_id` is the FK to annex_struct_iso27001.id — an INTEGER, unlike
+ * annexcategories_struct_iso27001.annex_id, which is a display string ("A.5")
+ * on a table this path does not touch. Mirrors the join in
+ * iso27001.utils.ts getAllAnnexesWithSubAnnexQuery.
+ */
+export const annexControlsISO27001Query = async (
+  projectFrameworkId: number,
+  annexId: number,
+  organizationId: number,
+  transaction: Transaction | null = null,
+) => {
+  return await sequelize.query(
+    `SELECT ac.id, acs.control_id, acs.title, acs.description, acs.order_no,
+            ac.status, ac.implementation_description
+       FROM annexcontrols_struct_iso27001 acs
+       JOIN annexcontrols_iso27001 ac ON acs.id = ac.annexcontrol_meta_id AND ac.organization_id = :organizationId
+      WHERE acs.annex_id = :annex_id AND ac.projects_frameworks_id = :projects_frameworks_id
+      ORDER BY acs.order_no, acs.id;`,
+    {
+      replacements: {
+        annex_id: annexId,
         projects_frameworks_id: projectFrameworkId,
         organizationId,
       },

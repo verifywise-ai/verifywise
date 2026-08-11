@@ -1,6 +1,7 @@
 import { sequelize } from "../database/db";
 import { createOrganizationQuery } from "./organization.utils";
 import { createNewUserWrapper } from "../controllers/user.ctrl";
+import { isEmail } from "./validations/email.utils";
 
 const REQUIRED_VARS = [
   "DEV_ORG_NAME",
@@ -9,8 +10,6 @@ const REQUIRED_VARS = [
   "DEV_ADMIN_NAME",
   "DEV_ADMIN_SURNAME",
 ] as const;
-
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /**
  * Dev-only bootstrap: on first startup, create initial organization and admin user
@@ -63,7 +62,7 @@ export async function devAutoBootstrap(): Promise<void> {
   const name = process.env.DEV_ADMIN_NAME!;
   const surname = process.env.DEV_ADMIN_SURNAME!;
 
-  if (!EMAIL_RE.test(email)) {
+  if (!isEmail(email)) {
     throw new Error(`[dev-bootstrap] DEV_ADMIN_EMAIL is not a valid email: ${email}`);
   }
 

@@ -2,16 +2,22 @@ import type { ReadinessLevel } from "../../domain.layer/interfaces/i.readiness";
 
 /**
  * Readiness scoring weights — deterministic formula.
- * overall = evidence_quality * 0.30 + evidence_count * 0.20 +
- *           evidence_recency * 0.15 + task_completion * 0.20 +
- *           risk_mitigation * 0.15
+ * control = requirements * 0.50 + evidence_quality * 0.20 +
+ *           evidence_count * 0.15 + evidence_recency * 0.15
  */
 export const READINESS_WEIGHTS = {
-  evidence_quality: 0.3,
-  evidence_count: 0.2,
+  requirements: 0.5,
+  evidence_quality: 0.2,
+  evidence_count: 0.15,
   evidence_recency: 0.15,
-  task_completion: 0.2,
-  risk_mitigation: 0.15,
+} as const;
+
+/**
+ * Framework-level weights: the control average against assessment completion.
+ */
+export const FRAMEWORK_WEIGHTS = {
+  controls: 0.7,
+  assessments: 0.3,
 } as const;
 
 /**
@@ -24,19 +30,17 @@ export const READINESS_THRESHOLDS = {
 } as const;
 
 export interface ReadinessInput {
+  requirements: number; // % of the control's requirement rows completed (0-100)
   evidence_quality: number; // avg quality score of linked evidence (0-100)
   evidence_count: number; // normalized count score (0-100)
   evidence_recency: number; // freshness of evidence (0-100)
-  task_completion: number; // % of linked tasks completed (0-100)
-  risk_mitigation: number; // % of linked risks mitigated (0-100)
 }
 
 export interface ReadinessResult {
+  requirements_score: number;
   evidence_quality_score: number;
   evidence_count_score: number;
   evidence_recency_score: number;
-  task_completion_score: number;
-  risk_mitigation_score: number;
   overall_score: number;
   readiness_level: ReadinessLevel;
 }
@@ -51,35 +55,53 @@ export function classifyReadinessLevel(score: number): ReadinessLevel {
   return "not_started";
 }
 
+const clampScore = (v: number) => Math.max(0, Math.min(100, Math.round(v)));
+
 /**
- * Calculate the overall readiness score using weighted formula.
+ * Calculate the overall control readiness score using the weighted formula.
  */
 export function calculateReadinessScore(input: ReadinessInput): ReadinessResult {
-  const clamp = (v: number) => Math.max(0, Math.min(100, Math.round(v)));
-
-  const eq = clamp(input.evidence_quality);
-  const ec = clamp(input.evidence_count);
-  const er = clamp(input.evidence_recency);
-  const tc = clamp(input.task_completion);
-  const rm = clamp(input.risk_mitigation);
+  const rq = clampScore(input.requirements);
+  const eq = clampScore(input.evidence_quality);
+  const ec = clampScore(input.evidence_count);
+  const er = clampScore(input.evidence_recency);
 
   const overall = Math.round(
-    eq * READINESS_WEIGHTS.evidence_quality +
+    rq * READINESS_WEIGHTS.requirements +
+      eq * READINESS_WEIGHTS.evidence_quality +
       ec * READINESS_WEIGHTS.evidence_count +
-      er * READINESS_WEIGHTS.evidence_recency +
-      tc * READINESS_WEIGHTS.task_completion +
-      rm * READINESS_WEIGHTS.risk_mitigation,
+      er * READINESS_WEIGHTS.evidence_recency,
   );
 
   return {
+    requirements_score: rq,
     evidence_quality_score: eq,
     evidence_count_score: ec,
     evidence_recency_score: er,
-    task_completion_score: tc,
-    risk_mitigation_score: rm,
     overall_score: overall,
     readiness_level: classifyReadinessLevel(overall),
   };
+}
+
+/**
+ * Blend the control average with assessment completion.
+ *
+ * `assessmentCompletion` is null when the framework has no assessment questions
+ * in scope (ISO 42001 always; EU AI Act when the assessment was never created).
+ * The weight is then renormalized to the control average — scoring the missing
+ * term as 0 would cap such a framework at 70.
+ */
+export function blendFrameworkScore(
+  controlsAvg: number,
+  assessmentCompletion: number | null,
+): number {
+  const controls = clampScore(controlsAvg);
+  if (assessmentCompletion === null) return controls;
+
+  const assessments = clampScore(assessmentCompletion);
+  return clampScore(
+    controls * FRAMEWORK_WEIGHTS.controls + assessments * FRAMEWORK_WEIGHTS.assessments,
+  );
 }
 
 /**

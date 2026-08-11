@@ -1,0 +1,110 @@
+# Centralized observability stack for VerifyWise managed deployments.
+#
+# This file is INTENTIONALLY separate from the application compose files
+# (docker-compose.yml / .override / .prod). Deploy it on a dedicated
+# monitoring VM. Every managed VerifyWise deployment then pushes OpenTelemetry
+# metrics + logs to this VM (configured per deployment via SuperAdmin →
+# Settings → Monitoring), authenticating with an RS256 token.
+#
+# Flow:
+#   VerifyWise services --(OTLP + Bearer token)--> otel-ingress (nginx, verifies
+#     token) --> otel-collector --> Prometheus (metrics)
+#                               \--> Loki        (logs)
+#   Grafana visualizes both, grouped by the `deployment` label.
+#
+# Usage on the VM:
+#   docker compose -f docker-compose.observability.yml up -d
+#
+# The ingress binds 4318 to localhost; front it with a TLS reverse proxy (your
+# own nginx / Certbot) so deployments reach it over HTTPS. Do the same for
+# Grafana (3001), and set GRAFANA_ADMIN_PASSWORD.
+
+version: "3.9"
+
+services:
+  # Auth-gated ingress. Terminates HTTP :4318 for deployments, verifies each
+  # deployment's RS256 push token, and forwards valid pushes to the internal
+  # collector. It mounts only the PUBLIC key — the private signing key stays on
+  # the VerifyWise side where tokens are minted, never here. See
+  # observability/nginx/{nginx.conf,auth.js} and observability/README.md.
+  otel-ingress:
+    image: nginx:1.27-alpine
+    depends_on:
+      - otel-collector
+    volumes:
+      - ./observability/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./observability/nginx/auth.js:/etc/nginx/njs/auth.js:ro
+      # Public key used to verify push tokens. Place the public half of your
+      # RSA keypair here (see observability/README.md for the openssl commands).
+      - ./observability/keys/observability-public.pem:/etc/nginx/keys/observability-public.pem:ro
+    ports:
+      # Bound to localhost — the host nginx (TLS) is the only public entry point
+      # and reverse-proxies to this. Deployments never hit :4318 directly.
+      - "127.0.0.1:4318:4318"
+    restart: unless-stopped
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.115.1
+    command: ["--config=/etc/otel-collector-config.yaml"]
+    volumes:
+      - ./observability/otel-collector-config.yaml:/etc/otel-collector-config.yaml:ro
+    # Not exposed to the host — the collector is only reachable via otel-ingress
+    # on the internal compose network.
+    expose:
+      - "4317"
+      - "4318"
+    depends_on:
+      - prometheus
+      - loki
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v3.1.0
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=${PROMETHEUS_RETENTION:-30d}"
+      # Accept pushed metrics over OTLP (matches "direct export" — no app-side collector).
+      - "--web.enable-otlp-receiver"
+    volumes:
+      - ./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    expose:
+      - "9090"
+    ports:
+      - "9090:9090"
+    restart: unless-stopped
+
+  loki:
+    image: grafana/loki:3.3.2
+    command: ["-config.file=/etc/loki/loki-config.yaml"]
+    volumes:
+      - ./observability/loki-config.yaml:/etc/loki/loki-config.yaml:ro
+      - loki_data:/loki
+    expose:
+      - "3100"
+    ports:
+      - "3100:3100"
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana_data:/var/lib/grafana
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+      - loki
+    restart: unless-stopped
+
+volumes:
+  prometheus_data:
+  loki_data:
+  grafana_data:

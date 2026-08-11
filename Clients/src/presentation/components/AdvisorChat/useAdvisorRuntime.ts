@@ -167,7 +167,11 @@ const extractChartData = (message: UIMessage, text: string): unknown => {
   return chartData;
 };
 
-export const useAdvisorRuntime = (selectedLLMKeyId?: number, pageContext?: AdvisorDomain) => {
+export const useAdvisorRuntime = (
+  selectedLLMKeyId?: number,
+  pageContext?: AdvisorDomain,
+  parallelAgents?: boolean,
+) => {
   const conversationContext = useAdvisorConversationSafe();
 
   // Refs to avoid stale closures in callbacks
@@ -204,9 +208,9 @@ export const useAdvisorRuntime = (selectedLLMKeyId?: number, pageContext?: Advis
           const token = store.getState().auth?.authToken;
           return token ? { Authorization: `Bearer ${token}` } : {};
         },
-        body: { llmKeyId: selectedLLMKeyId },
+        body: { llmKeyId: selectedLLMKeyId, parallel: parallelAgents ?? false },
       }),
-    [selectedLLMKeyId],
+    [selectedLLMKeyId, parallelAgents],
   );
 
   // Persist new messages when the turn settles. We persist user turns even

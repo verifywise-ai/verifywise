@@ -1,12 +1,17 @@
 import { useEffect, useRef, memo, useCallback } from "react";
-import { Stack, Box, useTheme, Chip } from "@mui/material";
+import { Stack, Box, useTheme, Chip, Typography } from "@mui/material";
 import { ThreadPrimitive } from "@assistant-ui/react";
+import { Settings } from "lucide-react";
+import { useNavigate } from "react-router";
 import { CustomMessage } from "./CustomMessage";
 import { CustomComposer } from "./CustomComposer";
 import { AdvisorDomain, AdvisorSuggestion, getSuggestions } from "./advisorConfig";
+import { useAuth } from "../../../application/hooks/useAuth";
 
 interface CustomThreadProps {
   pageContext?: AdvisorDomain;
+  hasLLMKeys?: boolean | null;
+  isLoadingLLMKeys?: boolean;
 }
 
 interface SuggestionChipsProps {
@@ -76,7 +81,68 @@ const SuggestionChipsComponent = ({ suggestions }: SuggestionChipsProps) => {
 
 const SuggestionChips = memo(SuggestionChipsComponent);
 
-const CustomThreadComponent = ({ pageContext }: CustomThreadProps) => {
+const ComposerLocked = () => {
+  const theme = useTheme();
+  const navigate = useNavigate();
+  const { userRoleName } = useAuth();
+  const isAdmin = userRoleName?.toLowerCase() === "admin";
+
+  return (
+    <Box
+      sx={{
+        borderTop: `1px solid ${theme.palette.border?.light ?? theme.palette.divider}`,
+        backgroundColor: theme.palette.background.main ?? theme.palette.background.default,
+        padding: "12px",
+        display: "flex",
+        alignItems: "center",
+        gap: "12px",
+      }}
+    >
+      <Box
+        sx={{
+          width: 32,
+          height: 32,
+          borderRadius: "50%",
+          bgcolor: theme.palette.background.fill ?? theme.palette.grey[100],
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexShrink: 0,
+        }}
+      >
+        <Settings size={16} color={theme.palette.text.secondary} />
+      </Box>
+      <Typography sx={{ fontSize: theme.typography.body2.fontSize, color: "text.secondary" }}>
+        {isAdmin ? (
+          <>
+            Configure an LLM API key to send messages.{" "}
+            <Box
+              component="span"
+              onClick={() => navigate("/settings/apikeys")}
+              sx={{
+                "color": "primary.main",
+                "cursor": "pointer",
+                "textDecoration": "underline",
+                "&:hover": { textDecoration: "none" },
+              }}
+            >
+              Go to settings
+            </Box>
+            .
+          </>
+        ) : (
+          "Sending messages requires an LLM API key. Contact your administrator."
+        )}
+      </Typography>
+    </Box>
+  );
+};
+
+const CustomThreadComponent = ({
+  pageContext,
+  hasLLMKeys,
+  isLoadingLLMKeys,
+}: CustomThreadProps) => {
   const theme = useTheme();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -143,7 +209,11 @@ const CustomThreadComponent = ({ pageContext }: CustomThreadProps) => {
       </Box>
 
       {/* Input Area */}
-      <CustomComposer pageContext={pageContext} />
+      {!isLoadingLLMKeys && hasLLMKeys === false ? (
+        <ComposerLocked />
+      ) : (
+        <CustomComposer pageContext={pageContext} />
+      )}
     </ThreadPrimitive.Root>
   );
 };

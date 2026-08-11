@@ -17,13 +17,21 @@ import {
   MenuItem,
   ListSubheader,
   Divider,
+  IconButton as MUIIconButton,
 } from "@mui/material";
 import VWSelect from "../../Inputs/Select";
 import CustomizableMultiSelect from "../../Inputs/Select/Multi";
 import TablePaginationActions from "../../TablePagination";
 import singleTheme from "../../../themes/v1SingleTheme";
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { ChevronsUpDown, ChevronUp, ChevronDown, FolderInput, Tag as TagIcon } from "lucide-react";
+import {
+  ChevronsUpDown,
+  ChevronUp,
+  ChevronDown,
+  FolderInput,
+  Tag as TagIcon,
+  Sparkles,
+} from "lucide-react";
 import IconButton from "../../IconButton";
 import { FileIcon } from "../../FileIcon";
 import Chip from "../../Chip";
@@ -43,6 +51,11 @@ import { deleteEntityById } from "../../../../application/repository/entity.repo
 import ProjectRiskLinkedPolicies from "../../ProjectRiskMitigation/ProjectRiskLinkedPolicies";
 import { useBulkSelection } from "../../../../application/hooks/useBulkSelection";
 import { useBulkUpdateFiles } from "../../../../application/hooks/useBulkUpdateFiles";
+import { useTriggerAnalysis, useQualityScores } from "../../../../application/hooks/useEvidenceAi";
+import { useLLMKeyStatus } from "../../../../application/hooks/useLLMKeyStatus";
+import EvidenceAnalysisPanel from "../../EvidenceAnalysisPanel";
+import EvidenceQualityBadge, { type QualityGrade } from "../../EvidenceQualityBadge";
+import StandardModal from "../../Modals/StandardModal";
 import { getAllFolders } from "../../../../application/repository/virtualFolder.repository";
 import type { IFolderWithCount } from "../../../../domain/interfaces/i.virtualFolder";
 
@@ -220,6 +233,7 @@ const ALL_COLUMN_KEYS = [
   "source",
   "version",
   "status",
+  "quality",
   "action",
 ] as const;
 
@@ -381,6 +395,22 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
     [sortedBodyData],
   );
 
+  // Evidence AI analysis (relocated here from the Model Inventory evidence hub).
+  // Keyed by files.id, which is exactly what FileManager rows carry.
+  const triggerAnalysis = useTriggerAnalysis();
+  const { data: qualityScores } = useQualityScores();
+  const { hasKeys: hasLLMKey } = useLLMKeyStatus();
+  const analysisByFileId = useMemo(() => {
+    const m = new Map<number, { grade: QualityGrade | null; analysis: unknown }>();
+    (qualityScores ?? []).forEach((q: any) => {
+      if (q?.file_id != null) {
+        m.set(Number(q.file_id), { grade: q.overall_quality_grade ?? null, analysis: q });
+      }
+    });
+    return m;
+  }, [qualityScores]);
+  const [selectedAnalysis, setSelectedAnalysis] = useState<any | null>(null);
+
   const [folderDialogOpen, setFolderDialogOpen] = useState(false);
   const [tagsDialogOpen, setTagsDialogOpen] = useState(false);
   const [selectedFolderId, setSelectedFolderId] = useState<string>("");
@@ -504,8 +534,24 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
         onClick: handleOpenTagsDialog,
         disabled: bulkMutation.isPending,
       },
+      {
+        id: "analyze_ai",
+        label: "Analyze with AI",
+        icon: <Sparkles size={16} />,
+        disabled: triggerAnalysis.isPending || !hasLLMKey,
+        onClick: async () => {
+          await Promise.all(selectedIds.map((id) => triggerAnalysis.mutateAsync(id)));
+        },
+      },
     ],
-    [handleOpenFolderDialog, handleOpenTagsDialog, bulkMutation.isPending],
+    [
+      handleOpenFolderDialog,
+      handleOpenTagsDialog,
+      bulkMutation.isPending,
+      triggerAnalysis,
+      selectedIds,
+      hasLLMKey,
+    ],
   );
 
   // Anchor for the source-details dropdown. Tracks which row opened it so
@@ -826,6 +872,61 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
                       />
                     </TableCell>
                   )}
+                  {/* Quality column — AI analyze trigger + grade badge */}
+                  {visibleColumnKeys.includes("quality") && (
+                    <TableCell
+                      sx={{ ...singleTheme.tableStyles.primary.body.cell, minWidth: "80px" }}
+                    >
+                      <Stack direction="row" alignItems="center" spacing="4px">
+                        {(() => {
+                          const fid = Number(row.id);
+                          const entry = analysisByFileId.get(fid);
+                          return (
+                            <>
+                              {entry?.grade && (
+                                <Box
+                                  component="span"
+                                  sx={{ cursor: "pointer", display: "inline-flex" }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedAnalysis(entry.analysis);
+                                  }}
+                                >
+                                  <EvidenceQualityBadge grade={entry.grade} />
+                                </Box>
+                              )}
+                              <Tooltip
+                                title={
+                                  !hasLLMKey
+                                    ? "Configure an LLM key to enable AI analysis"
+                                    : entry?.grade
+                                      ? "Re-analyze with AI"
+                                      : "Analyze with AI"
+                                }
+                                arrow
+                              >
+                                <span>
+                                  <MUIIconButton
+                                    aria-label={
+                                      entry?.grade ? "Re-analyze with AI" : "Analyze with AI"
+                                    }
+                                    size="small"
+                                    disabled={triggerAnalysis.isPending || !hasLLMKey}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (fid) triggerAnalysis.mutate(fid);
+                                    }}
+                                  >
+                                    <Sparkles size={14} />
+                                  </MUIIconButton>
+                                </span>
+                              </Tooltip>
+                            </>
+                          );
+                        })()}
+                      </Stack>
+                    </TableCell>
+                  )}
                   {/* Action column */}
                   {visibleColumnKeys.includes("action") && (
                     <TableCell
@@ -1101,6 +1202,17 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
           return nodes;
         })()}
       </Menu>
+
+      <StandardModal
+        isOpen={selectedAnalysis !== null}
+        onClose={() => setSelectedAnalysis(null)}
+        title="Evidence analysis"
+        description=""
+        hideFooter
+        maxWidth="800px"
+      >
+        {selectedAnalysis && <EvidenceAnalysisPanel analysis={selectedAnalysis} />}
+      </StandardModal>
     </>
   );
 };

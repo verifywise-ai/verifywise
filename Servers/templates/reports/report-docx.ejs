@@ -342,7 +342,7 @@ let sectionNum = 1;
       <th>Model Name</th>
       <th>Version</th>
       <th>Status</th>
-      <th>Owner</th>
+      <th>Approver</th>
     </tr>
   </thead>
   <tbody>
@@ -351,7 +351,7 @@ let sectionNum = 1;
       <td><strong><%= model.name %></strong></td>
       <td><%= model.version || '-' %></td>
       <td><%= model.status %></td>
-      <td><%= model.owner || '-' %></td>
+      <td><%= model.approver || '-' %></td>
     </tr>
     <% }); %>
   </tbody>
@@ -402,18 +402,14 @@ let sectionNum = 1;
   <thead>
     <tr>
       <th>Training Name</th>
-      <th>Completion Date</th>
       <th>Status</th>
-      <th>Assignee</th>
     </tr>
   </thead>
   <tbody>
     <% sections.trainingRegistry.records.forEach(function(record) { %>
     <tr>
       <td><strong><%= record.trainingName %></strong></td>
-      <td><%= record.completionDate || '-' %></td>
       <td class="status-<%= record.status.toLowerCase().replace(/\s+/g, '-') %>"><%= record.status %></td>
-      <td><%= record.assignee || '-' %></td>
     </tr>
     <% }); %>
   </tbody>
@@ -432,7 +428,6 @@ let sectionNum = 1;
   <thead>
     <tr>
       <th>Policy Name</th>
-      <th>Version</th>
       <th>Status</th>
       <th>Review Date</th>
       <th>Owner</th>
@@ -442,7 +437,6 @@ let sectionNum = 1;
     <% sections.policyManager.policies.forEach(function(policy) { %>
     <tr>
       <td><strong><%= policy.policyName %></strong></td>
-      <td><%= policy.version || '-' %></td>
       <td class="status-<%= policy.status.toLowerCase().replace(/\s+/g, '-') %>"><%= policy.status %></td>
       <td><%= policy.reviewDate || '-' %></td>
       <td><%= policy.owner || '-' %></td>
@@ -464,24 +458,22 @@ let sectionNum = 1;
   <thead>
     <tr>
       <th>Incident ID</th>
-      <th>Title</th>
       <th>Type</th>
       <th>Severity</th>
       <th>Status</th>
       <th>Reported</th>
-      <th>Assignee</th>
+      <th>Reporter</th>
     </tr>
   </thead>
   <tbody>
     <% sections.incidentManagement.incidents.forEach(function(incident) { %>
     <tr>
       <td><strong><%= incident.incidentId %></strong></td>
-      <td><%= incident.title %></td>
       <td><%= incident.type %></td>
       <td><%= incident.severity %></td>
       <td><%= incident.status %></td>
       <td><%= incident.reportedDate || '-' %></td>
-      <td><%= incident.assignee || '-' %></td>
+      <td><%= incident.reporter || '-' %></td>
     </tr>
     <% }); %>
   </tbody>

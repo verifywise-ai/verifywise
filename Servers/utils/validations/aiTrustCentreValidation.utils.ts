@@ -317,8 +317,8 @@ export const validateOverviewTermsAndContact = (value: any): ValidationResult =>
       return emailValidation;
     }
 
-    // Basic email format validation
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    // Basic email format validation (safe regex, no ambiguous repetitions)
+    const emailPattern = /^[^\s@]+@[^\s@.]+(?:\.[^\s@.]+)+$/;
     if (!emailPattern.test(value.email_text.trim())) {
       return {
         isValid: false,

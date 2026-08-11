@@ -50,6 +50,7 @@ import { generateSuggestedQuestions, generateFieldGuidance } from "../services/i
 import { getCompanyLogoQuery } from "../utils/aiTrustCentre.utils";
 
 import { translateError } from "../utils/i18n.utils";
+import { isEmail } from "../utils/validations/email.utils";
 /** Safely extract a single string from req.params (which may be string | string[]). */
 const paramStr = (val: string | string[]): string => (Array.isArray(val) ? val[0] : val);
 
@@ -132,8 +133,7 @@ function validateFormData(formData: Record<string, unknown>, schema: IIntakeForm
     // Type-specific validation
     switch (field.type) {
       case "email": {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (typeof value !== "string" || !emailRegex.test(value)) {
+        if (!isEmail(value)) {
           errors.push(`"${field.label}" must be a valid email address`);
         }
         break;
@@ -1494,8 +1494,7 @@ export async function submitPublicFormByPublicId(req: Request, res: Response) {
     if (!submitterEmail) {
       return res.status(400).json(STATUS_CODE[400](req.t!("Submitter email is required")));
     }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(submitterEmail)) {
+    if (!isEmail(submitterEmail)) {
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid email format")));
     }
 
@@ -1817,8 +1816,7 @@ export async function submitPublicForm(req: Request, res: Response) {
     if (!submitterEmail) {
       return res.status(400).json(STATUS_CODE[400](req.t!("Submitter email is required")));
     }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(submitterEmail)) {
+    if (!isEmail(submitterEmail)) {
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid email format")));
     }
 

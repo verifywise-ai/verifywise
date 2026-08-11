@@ -1,161 +1,183 @@
 /**
- * Evidence Analyzer — system prompts with explicit rubric anchors.
+ * Evidence Analyzer — system prompts with explicit A–F rubric anchors.
  *
- * Determinism contract:
- *  - Every dimension has a 5-tier ladder (0/30/50/70/90/100) with anchor
- *    descriptions. The LLM is required to cite the tier in its rationale.
- *  - The same document + same rubric → same score class (±10 between runs
- *    with temperature 0).
- *  - Rationale must reference textual evidence; vague justifications are
- *    flagged in the prompt.
+ * The LLM grades all five dimensions (relevance, completeness, recency,
+ * reliability, specificity) as letters A–F and returns a holistic overall
+ * grade. Recency and reliability are judged from the file metadata passed in
+ * the user prompt — there is no deterministic scoring in code.
  */
 
-export const ANALYZER_VERSION = "evidence-analyzer-v2";
+export const ANALYZER_VERSION = "evidence-analyzer-v3";
 
 /**
- * Rubric anchors — used in both the prompt and the QA tests.
+ * Rubric anchors — one A–F ladder per dimension. Used in the prompt.
  *
- * IMPORTANT — anti-inflation policy:
- *  - Tier 100 in any semantic dimension is RARE. It requires very specific
- *    evidence that most policy documents do NOT contain on their own.
- *  - Default to the LOWER tier when on the boundary.
- *  - A well-written, board-approved policy that lacks execution artifacts
- *    (audit logs, signed reviews, completed assessments) typically scores
- *    90-95, not 100.
+ * Anti-inflation policy:
+ *  - Grade A is RARE. It requires evidence of execution (audit logs, signed
+ *    completed reviews, populated KPI trackers, quantified thresholds), not
+ *    just forward-looking policy intent.
+ *  - Default to the LOWER grade when on the boundary.
  */
 export const RUBRIC = {
   relevance: [
     {
-      tier: 100,
-      label: "Direct evidence with execution proof",
+      grade: "A",
       anchor:
-        "The document cites named controls/articles (e.g., 'EU AI Act Article 10', 'ISO 42001 §6.1.3') AND demonstrates how the control HAS BEEN satisfied with concrete artifacts (audit log entries, completed conformity assessments, signed reviews referencing dates). Pure 'we shall' / 'we will' policy statements do NOT reach tier 100 — they are tier 90.",
+        "Cites named controls/articles (e.g., 'EU AI Act Article 10', 'ISO 42001 §6.1.3') AND demonstrates the control HAS BEEN satisfied with concrete artifacts (audit log entries, completed conformity assessments, signed dated reviews). Pure 'we shall'/'we will' policy statements do NOT reach A.",
     },
     {
-      tier: 90,
-      label: "Strong relevance — control-anchored policy",
+      grade: "B",
       anchor:
-        "Cites named controls/articles AND describes how they will be satisfied via specific procedures. This is the typical ceiling for a well-written policy that has not yet been operationalized.",
+        "Cites named controls/articles AND describes how they will be satisfied via specific procedures. Typical ceiling for a well-written policy not yet operationalized.",
     },
     {
-      tier: 70,
-      label: "Topical coverage",
+      grade: "C",
       anchor:
         "Discusses the compliance domain (risk, data governance, security) with concrete procedures, but lacks specific control references.",
     },
     {
-      tier: 50,
-      label: "Partial relevance",
+      grade: "D",
       anchor:
-        "Mentions compliance topics tangentially, mostly as context for an unrelated subject.",
+        "Mentions compliance topics tangentially or only surface-level terminology without procedures or detail.",
     },
     {
-      tier: 30,
-      label: "Tangential",
-      anchor:
-        "Brief, surface-level mention of compliance terminology without procedures or detail.",
-    },
-    {
-      tier: 0,
-      label: "Off-topic / unreadable",
-      anchor: "No compliance content, garbled OCR, or document is empty/too short to evaluate.",
+      grade: "F",
+      anchor: "No compliance content, garbled OCR, or too short/empty to evaluate.",
     },
   ],
   completeness: [
     {
-      tier: 100,
-      label: "Comprehensive with execution evidence",
+      grade: "A",
       anchor:
-        "Policy + procedures + roles + measurement criteria + EVIDENCE OF EXECUTION embedded in the document itself (e.g., completed audit log table, signed-off review history, exception reports with dates and resolutions, populated KPI tracker). Plans-only documents do NOT qualify.",
+        "Policy + procedures + roles + measurement criteria + EMBEDDED EVIDENCE OF EXECUTION (completed audit log table, signed-off review history, exception reports with dates, populated KPI tracker). Plans-only documents do NOT qualify.",
     },
     {
-      tier: 90,
-      label: "Substantial — fully operationalized policy",
+      grade: "B",
       anchor:
-        "Policy + procedures + named roles + measurement criteria, but execution evidence is missing or schedule-only (e.g., 'monthly review' stated but no logs of past reviews). This is the typical ceiling for a board-approved policy framework.",
+        "Policy + procedures + named roles + measurement criteria, but execution evidence is missing or schedule-only ('monthly review' stated, no logs of past reviews). Typical ceiling for a board-approved policy framework.",
     },
     {
-      tier: 70,
-      label: "Operational",
-      anchor: "Policy + procedures with named roles, missing explicit measurement criteria.",
+      grade: "C",
+      anchor: "Policy + procedures with named roles, but missing explicit measurement criteria.",
     },
     {
-      tier: 50,
-      label: "Stated only",
-      anchor: "Policy stated; procedures partial; no roles or metrics.",
+      grade: "D",
+      anchor: "Policy stated; procedures partial or absent; no roles or metrics.",
     },
     {
-      tier: 30,
-      label: "Stub",
-      anchor: "Mentions the topic but no procedures, no roles, no implementation details.",
-    },
-    {
-      tier: 0,
-      label: "Empty",
+      grade: "F",
       anchor: "No content beyond a title or placeholder.",
+    },
+  ],
+  recency: [
+    {
+      grade: "A",
+      anchor:
+        "Uploaded/effective within the last ~6 months and not expired. Content references current dates/periods. Clearly up to date.",
+    },
+    {
+      grade: "B",
+      anchor: "Roughly 6–18 months old, not expired. Still reasonably current.",
+    },
+    {
+      grade: "C",
+      anchor: "Roughly 18–36 months old, or approaching an expiry date. Aging but usable.",
+    },
+    {
+      grade: "D",
+      anchor: "Over ~3 years old, or past/near expiry. Likely stale.",
+    },
+    {
+      grade: "F",
+      anchor:
+        "Expired, or so old it is no longer credible as current evidence. If no dates are available at all, grade D (cannot confirm currency) rather than F unless the content itself is clearly obsolete.",
+    },
+  ],
+  reliability: [
+    {
+      grade: "A",
+      anchor:
+        "Authoritative and trustworthy source: board-/executive-approved, signed and dated, versioned, clean high-fidelity parse. No signs of tampering or draft status.",
+    },
+    {
+      grade: "B",
+      anchor:
+        "Management-approved or a published internal policy with a named owner/version. Good parse fidelity.",
+    },
+    {
+      grade: "C",
+      anchor:
+        "Internal working document or memo without formal approval, OR content is sound but parse fidelity is medium.",
+    },
+    {
+      grade: "D",
+      anchor:
+        "Draft/unsigned/unattributed, OR low parse fidelity (garbled OCR, structure lost) making the content hard to trust.",
+    },
+    {
+      grade: "F",
+      anchor: "Unattributed and unusable, or parse quality so poor the content cannot be trusted.",
     },
   ],
   specificity: [
     {
-      tier: 100,
-      label: "Precise — quantified",
+      grade: "A",
       anchor:
-        "ALL FIVE: named owners + named systems + exact dates + at least TWO quantified numerical thresholds (e.g., '<5% bias rate', '≥99.5% uptime', '≤24 hours response time', '95% accuracy floor') + explicit data flows. Qualitative scales like 'High/Medium/Low' do NOT count as quantified thresholds.",
+        "Named owners + named systems + exact dates + at least TWO quantified numerical thresholds ('<5% bias rate', '≥99.5% uptime', '≤24h response', '≥0.95 F1') + explicit data flows. Qualitative scales (High/Medium/Low) do NOT count as quantified thresholds.",
     },
     {
-      tier: 90,
-      label: "Specific",
+      grade: "B",
       anchor:
-        "Named owners + named systems + exact dates, but thresholds are qualitative (High/Medium/Low) or absent. This is the typical ceiling for policies without engineering-grade SLAs.",
+        "Named owners + named systems + exact dates, but thresholds are qualitative or absent. Typical ceiling for policies without engineering-grade SLAs.",
     },
     {
-      tier: 70,
-      label: "Operational",
+      grade: "C",
       anchor:
         "Procedures use action verbs and clear sequencing, but lack named systems or numbers.",
     },
     {
-      tier: 50,
-      label: "Generic",
+      grade: "D",
       anchor:
-        "General procedures using boilerplate language ('appropriate measures', 'reasonable steps').",
+        "Generic boilerplate ('appropriate measures', 'reasonable steps') or aspirational statements of intent without procedures.",
     },
     {
-      tier: 30,
-      label: "Aspirational",
-      anchor:
-        "High-level statements of intent without procedures ('we are committed to', 'we strive to').",
+      grade: "F",
+      anchor: "Empty platitudes or pure marketing.",
     },
-    { tier: 0, label: "Vague", anchor: "Empty platitudes or pure marketing." },
   ],
 } as const;
 
 /**
  * Build the system prompt for the evidence analyzer.
- * Keep this stable — changing it changes scores across the org.
+ * Keep this stable — changing it changes grades across the org.
  */
 export function buildAnalyzerSystemPrompt(): string {
   return [
     "You are VerifyWise's Evidence Quality Analyzer — a strict, calibrated reviewer.",
     "",
-    "Your role is to score compliance evidence documents on three semantic dimensions: RELEVANCE, COMPLETENESS, SPECIFICITY.",
-    "Recency and reliability are computed elsewhere; do NOT score them.",
+    "Grade compliance evidence documents on FIVE dimensions, each as a letter A–F:",
+    "RELEVANCE, COMPLETENESS, RECENCY, RELIABILITY, SPECIFICITY.",
+    "Then assign a single HOLISTIC OVERALL grade A–F for the document as a whole.",
     "",
-    "## Scoring discipline (anti-inflation)",
-    "These rules override any tendency to be encouraging or generous:",
-    "1. Tier 100 is RARE. A well-written, board-approved policy that lacks executed audit logs, signed completed reviews, populated KPI trackers, or quantified numerical thresholds typically peaks at 90, not 100.",
-    "2. If you find yourself about to score 100 on a semantic dimension, you MUST first identify and quote the specific evidence-of-execution artifact (e.g., a populated audit table, a completed conformity assessment with a date, a signed review history). If you cannot quote one, drop to 90.",
-    "3. Scoring 100 on ALL THREE semantic dimensions simultaneously is statistically very rare. If your initial scores are all ≥ 95, re-evaluate at least one downward.",
-    "4. Default to the LOWER tier when uncertain. The rubric ladder is 0/30/50/70/90/95/100 — when between two tiers, pick the lower.",
-    "5. Pure 'we shall' / 'we will' / 'must' / 'should' language is policy intent — it caps at tier 90 on relevance and completeness, regardless of how comprehensively the topic is covered.",
-    "6. Qualitative risk scales (High/Medium/Low, Critical/Severe/Moderate) do NOT count as quantified thresholds for specificity tier 100. Only numerical values like '<5%', '≥99.5%', '≤24h', '≥0.95 F1' qualify.",
+    "Grade meanings: A = Excellent, B = Good, C = Adequate, D = Weak, F = Insufficient.",
+    "",
+    "## Grading discipline (anti-inflation)",
+    "1. Grade A is RARE. A well-written, board-approved policy that lacks executed audit logs, signed completed reviews, populated KPI trackers, or quantified numerical thresholds typically peaks at B, not A.",
+    "2. Before assigning A on any dimension, identify and quote the specific evidence-of-execution artifact that justifies it. If you cannot quote one, assign B.",
+    "3. Default to the LOWER grade when between two grades.",
+    "4. Pure 'we shall'/'we will'/'must'/'should' language is policy intent — it caps at B on relevance and completeness, however thoroughly the topic is covered.",
+    "5. Qualitative risk scales (High/Medium/Low) do NOT count as quantified thresholds for specificity grade A.",
+    "6. The OVERALL grade is holistic — weigh the dimensions with judgement (relevance and completeness matter most), do NOT mechanically average.",
+    "",
+    "## Judging RECENCY and RELIABILITY from metadata",
+    "You are given today's date, the file's upload date, expiry date, file type, and a parse-fidelity signal (how cleanly the document text was extracted).",
+    "- RECENCY: judge from upload/effective/expiry dates and any dated content. If no dates exist anywhere, grade D (cannot confirm currency), not F.",
+    "- RELIABILITY: judge from approval/signature/version signals, draft status, and parse fidelity. Low parse fidelity or draft/unsigned status lowers the grade.",
     "",
     "## Hard rules",
-    "- You MUST anchor every score to a rubric tier. Cite the tier in your rationale (e.g., 'tier 90 — Substantial: covers procedures + roles + measurement, but lacks completed audit logs').",
-    "- Your rationale MUST identify what is MISSING for the next tier up, unless you scored 100. Example: 'Scored 90 because completed audit log entries are not present in the document.'",
-    "- If you cannot find textual support for a tier, drop one tier.",
-    "- If the document is shorter than ~150 readable words, garbled, or clearly off-topic for AI governance / compliance, set abstain_reason and cap all scores at 30.",
-    "- Do NOT score above tier 70 without naming concrete procedures.",
+    "- Anchor every grade to a rubric anchor and cite the concrete signal in the rationale.",
+    "- Your rationale should identify what is MISSING for the next grade up, unless you assigned A.",
+    "- If the document is shorter than ~150 readable words, garbled, or clearly off-topic for AI governance/compliance, set abstain_reason and grade every dimension and overall as F.",
     "- Do NOT invent text. evidence_quote MUST be a verbatim substring of the document.",
     "",
     "## RELEVANCE rubric",
@@ -164,27 +186,29 @@ export function buildAnalyzerSystemPrompt(): string {
     "## COMPLETENESS rubric",
     formatRubric("completeness"),
     "",
+    "## RECENCY rubric",
+    formatRubric("recency"),
+    "",
+    "## RELIABILITY rubric",
+    formatRubric("reliability"),
+    "",
     "## SPECIFICITY rubric",
     formatRubric("specificity"),
     "",
     "## Calibration examples",
-    "- A board-approved EU AI Act compliance policy citing Articles 10/13/14/15 with named owners (CAIGO), version 3.2, qualitative risk matrix (High/Medium/Low), but NO completed audit logs and NO numerical SLA thresholds → relevance 90, completeness 90, specificity 85-90. Overall ~92.",
-    "- The SAME policy plus a populated audit table showing 6 months of monthly reviews with signoffs and exception reports → relevance 95-100, completeness 95-100, specificity 90.",
-    "- The SAME policy plus the audit table plus quantified thresholds ('bias rate <5%', 'response within 24h', '99.5% uptime SLA') → relevance 100, completeness 100, specificity 100.",
-    "- A 2-page draft 'AI Ethics Policy' with no version, no owner, generic 'we are committed to fairness' language → relevance 50, completeness 30, specificity 30.",
+    "- A board-approved EU AI Act policy citing Articles 10/13/14/15, named owner (CAIGO), version 3.2, qualitative risk matrix, uploaded 2 months ago, clean parse, but NO completed audit logs and NO numerical SLAs → relevance B, completeness B, recency A, reliability A, specificity B, overall B.",
+    "- The SAME policy plus a populated audit table (6 months of monthly reviews with signoffs) plus quantified thresholds ('bias <5%', 'response within 24h') → relevance A, completeness A, recency A, reliability A, specificity A, overall A.",
+    "- A 2-page draft 'AI Ethics Policy', no version, no owner, generic 'we are committed to fairness', low parse fidelity, no dates → relevance D, completeness F, recency D, reliability D, specificity D, overall D.",
+    "",
+    "## Filename check",
+    "Compare the given filename against what the document content is actually about.",
+    "Set filename_check.mismatch=true ONLY when the name is clearly misleading or generic relative to the content (e.g. 'Untitled.docx', 'scan001.pdf', 'final_v2_FINAL.pdf', or a name describing a different topic than the content).",
+    "When true, suggested_filename must be short, descriptive, and keep the original extension; reason must be one plain-language sentence.",
+    "When the name is already reasonably descriptive, set mismatch=false with suggested_filename and reason both null. Do not flag stylistic nitpicks (casing, dashes vs underscores).",
     "",
     "## Compliance areas (normalized labels)",
-    "Use canonical labels with title case. Prefer existing categories: 'Risk management', 'Data governance', 'Human oversight', 'Transparency', 'Accountability', 'Robustness', 'Security', 'Privacy', 'Bias and fairness', 'Incident management', 'Training', 'Vendor management', 'Model monitoring', 'Documentation', 'Audit'.",
-    "Add custom labels only when none of the above fits. Maximum 10 labels.",
-    "",
-    "## Authority signal (0-100)",
-    "Anchors:",
-    "- 100: board- or executive-approved AND signed/dated AND has version",
-    "- 80: management-approved with signature OR named approver and date",
-    "- 60: published internal policy with version",
-    "- 40: internal memo or working document",
-    "- 20: draft, notes, or unsigned working copy",
-    "- 0: unknown / unattributed",
+    "Use canonical title-case labels. Prefer: 'Risk management', 'Data governance', 'Human oversight', 'Transparency', 'Accountability', 'Robustness', 'Security', 'Privacy', 'Bias and fairness', 'Incident management', 'Training', 'Vendor management', 'Model monitoring', 'Documentation', 'Audit'.",
+    "Add custom labels only when none fits. Maximum 10 labels.",
     "",
     "## Output",
     "Return JSON exactly matching the requested schema. Be terse, factual, evidence-grounded.",
@@ -192,7 +216,7 @@ export function buildAnalyzerSystemPrompt(): string {
 }
 
 function formatRubric(dim: keyof typeof RUBRIC): string {
-  return RUBRIC[dim].map((r) => `- tier ${r.tier} (${r.label}): ${r.anchor}`).join("\n");
+  return RUBRIC[dim].map((r) => `- ${r.grade}: ${r.anchor}`).join("\n");
 }
 
 /**
@@ -205,17 +229,18 @@ export function buildAnalyzerUserPrompt(input: {
   fileType: string;
   uploadDate: string | null;
   expiryDate: string | null;
+  parseFidelity?: "high" | "medium" | "low";
   characterCount: number;
 }): string {
   const meta = [
+    `today: ${new Date().toISOString().slice(0, 10)}`,
     `filename: ${input.filename}`,
     `file_type: ${input.fileType}`,
     `character_count: ${input.characterCount}`,
-    input.uploadDate ? `upload_date: ${input.uploadDate}` : null,
-    input.expiryDate ? `expiry_date: ${input.expiryDate}` : null,
-  ]
-    .filter(Boolean)
-    .join("\n");
+    `parse_fidelity: ${input.parseFidelity ?? "unknown"}`,
+    input.uploadDate ? `upload_date: ${input.uploadDate}` : "upload_date: unknown",
+    input.expiryDate ? `expiry_date: ${input.expiryDate}` : "expiry_date: none",
+  ].join("\n");
 
   return [
     "Analyze the following compliance evidence document.",
@@ -228,7 +253,7 @@ export function buildAnalyzerUserPrompt(input: {
     input.documentText,
     "```",
     "",
-    "Score relevance, completeness, specificity per the rubric. Detect document signals. Return JSON.",
+    "Grade relevance, completeness, recency, reliability, specificity (A–F each) and an overall grade. Return JSON.",
   ].join("\n");
 }
 
@@ -250,6 +275,10 @@ export function buildControlMatcherSystemPrompt(): string {
     "",
     "## Hard rules",
     "- Use ONLY control_ids from the provided candidate list. Do NOT invent ids.",
+    // The two catalogues number their controls independently, so the same id
+    // appears in both naming unrelated controls. A match without the framework
+    // cannot be resolved back to what was scored.
+    "- ALWAYS return framework_type exactly as shown in square brackets beside the id. The same id means a DIFFERENT control in each framework.",
     "- Skip any control with score < 50. Do NOT pad the list.",
     "- Each match MUST cite which compliance area(s) link the evidence to the control.",
     "- Sort matches by descending match_score.",
@@ -293,6 +322,6 @@ export function buildControlMatcherUserPrompt(input: {
     "## Candidate controls",
     candidatesList,
     "",
-    "Score each candidate. Skip <50. Return JSON.",
+    "Score each candidate. Skip <50. Return JSON, and give each match the framework_type shown in brackets beside its id.",
   ].join("\n");
 }

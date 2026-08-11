@@ -2,7 +2,7 @@ import { useState, ReactNode } from "react";
 
 import { Stack, Typography, Box } from "@mui/material";
 import { ArrowRight as RightArrow } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { background, border as borderPalette } from "../../../themes/palette";
 
 interface HeaderCardProps {

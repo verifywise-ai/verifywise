@@ -6,7 +6,7 @@
  * navigateSearch('/projects', { id: '123' }); // Navigates to /projects?id=123
  */
 
-import { createSearchParams, URLSearchParamsInit, useNavigate } from "react-router-dom";
+import { createSearchParams, URLSearchParamsInit, useNavigate } from "react-router";
 
 const useNavigateSearch = () => {
   const navigate = useNavigate();

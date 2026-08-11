@@ -1,4 +1,5 @@
 import json as _json
+import logging
 import re
 from typing import Any, Optional
 
@@ -416,7 +417,8 @@ async def test_prompt(request: Request, body: TestPromptRequest):
             ):
                 yield chunk_str
         except Exception as e:
-            yield f"data: {_json.dumps({'error': str(e)})}\n\n"
+            logging.getLogger("uvicorn").error("prompt test stream failed: %s", e, exc_info=True)
+            yield f"data: {_json.dumps({'error': 'Stream failed. Please try again.'})}\n\n"
             yield "data: [DONE]\n\n"
 
     return StreamingResponse(_stream(), media_type="text/event-stream")

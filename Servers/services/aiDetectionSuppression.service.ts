@@ -17,6 +17,7 @@ import {
   ValidationException,
   NotFoundException,
 } from "../domain.layer/exceptions/custom.exception";
+import { RE2JS } from "re2js";
 import {
   createSuppressionQuery,
   listSuppressionsQuery,
@@ -48,7 +49,9 @@ function validateInput(input: ICreateSuppressionInput): void {
 
   if (input.match_type === "pattern") {
     try {
-      new RegExp(input.value);
+      // RE2JS is a linear-time regex engine, which prevents ReDoS attacks
+      // that could be triggered by user-supplied patterns.
+      RE2JS.compile(input.value);
     } catch {
       throw new ValidationException("value must be a valid regular expression", "value");
     }

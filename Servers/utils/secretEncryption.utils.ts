@@ -13,7 +13,9 @@ function getKey(): Buffer {
 
 export function encryptSecret(plaintext: string): string {
   const iv = crypto.randomBytes(IV_LENGTH_BYTES);
-  const cipher = crypto.createCipheriv(ALGORITHM, getKey(), iv);
+  const cipher = crypto.createCipheriv(ALGORITHM, getKey(), iv, {
+    authTagLength: 16,
+  });
   const ciphertext = Buffer.concat([cipher.update(plaintext, "utf8"), cipher.final()]);
   const authTag = cipher.getAuthTag();
   return [iv.toString("hex"), authTag.toString("hex"), ciphertext.toString("hex")].join(":");
@@ -25,7 +27,9 @@ export function decryptSecret(payload: string): string {
     throw new Error("Invalid encrypted secret format");
   }
   const [ivHex, authTagHex, ciphertextHex] = parts;
-  const decipher = crypto.createDecipheriv(ALGORITHM, getKey(), Buffer.from(ivHex, "hex"));
+  const decipher = crypto.createDecipheriv(ALGORITHM, getKey(), Buffer.from(ivHex, "hex"), {
+    authTagLength: 16,
+  });
   decipher.setAuthTag(Buffer.from(authTagHex, "hex"));
   const plaintext = Buffer.concat([
     decipher.update(Buffer.from(ciphertextHex, "hex")),

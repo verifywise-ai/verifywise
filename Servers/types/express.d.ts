@@ -28,6 +28,8 @@ declare module "express" {
     isSuperAdmin?: boolean;
     /** Test bypass flag set by createTestApp({ bypassAuth: true }) for integration tests */
     testBypassAuth?: boolean;
+    /** Per-request correlation id. Set by requestMetricsMiddleware. */
+    requestId?: string;
     /**
      * RLS Phase 2 (flag-gated): per-request transaction scoped by
      * `SET LOCAL app.current_org`. Set by rlsEnforcement (invoked from

@@ -50,26 +50,6 @@ import { ReactComponent as MistralLogo } from "../../assets/icons/mistral_logo.s
 import { ReactComponent as XAILogo } from "../../assets/icons/xai_logo.svg";
 import { ReactComponent as OpenRouterLogo } from "../../assets/icons/openrouter_logo.svg";
 import { ReactComponent as FolderFilledIcon } from "../../assets/icons/folder_filled.svg";
-
-// Large SVGs loaded from public/ to avoid bundling
-const HuggingFaceLogo = (props: React.SVGProps<SVGSVGElement>) => (
-  <img
-    src="/assets/icons/huggingface_logo.svg"
-    alt="Hugging Face"
-    width={props.width || 24}
-    height={props.height || 24}
-    style={{ display: "inline-block" }}
-  />
-);
-const BuildIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <img
-    src="/assets/icons/build.svg"
-    alt="Build"
-    width={props.width || 24}
-    height={props.height || 24}
-    style={{ display: "inline-block" }}
-  />
-);
 import {
   createExperiment,
   listDatasets,
@@ -88,6 +68,17 @@ import { getAllEntities } from "../../../application/repository/entity.repositor
 import { PROVIDERS, type ModelInfo } from "../../utils/providers";
 import { evalModelsService, type SavedModel } from "../../../infrastructure/api/evalModelsService";
 import { useModelPreferences } from "../../../application/hooks/useModelPreferences";
+import { BuildIcon, HuggingFaceLogo } from "./NewExperiment/experimentIcons";
+import {
+  datasetNameFromPresetPath,
+  generateDefaultExperimentName,
+} from "./NewExperiment/experimentNameHelpers";
+import {
+  type JudgeMode,
+  type ProviderType,
+  WIZARD_STEPS,
+} from "./NewExperiment/newExperimentConfig";
+import { canProceedToNextStep, getMissingKeyProviders } from "./NewExperiment/stepValidation";
 
 interface NewExperimentModalProps {
   isOpen: boolean;
@@ -111,59 +102,6 @@ interface NewExperimentModalProps {
    */
   existingExperimentNames?: string[];
 }
-
-const steps = ["Model", "Dataset", "Scorer / Judge", "Metrics"];
-
-/**
- * Strip noise from a model identifier so it reads cleanly as part of an
- * experiment name:
- *   "openai/gpt-4o-mini"            -> "gpt-4o-mini"
- *   "mistralai/mistral-medium-3-5"  -> "mistral-medium-3-5"
- *   "claude-3-5-sonnet-20241022"    -> "claude-3-5-sonnet"
- */
-const shortenForExperimentName = (s?: string | null): string => {
-  if (!s) return "";
-  const dateless = s.replace(/-\d{8}$/, "").replace(/-\d{4}-\d{2}-\d{2}$/, "");
-  const slashIdx = dateless.lastIndexOf("/");
-  return slashIdx >= 0 ? dateless.slice(slashIdx + 1) : dateless;
-};
-
-/**
- * Build the default name for a new experiment as `<model> × <dataset>`.
- * If that exact name is already used in this project, append #2, #3, ...
- * until we hit one that's free.
- */
-const generateDefaultExperimentName = (
-  modelName: string,
-  datasetName: string,
-  existing: readonly string[],
-): string => {
-  const m = shortenForExperimentName(modelName) || "model";
-  const d = (datasetName || "dataset").trim() || "dataset";
-  const base = `${m} × ${d}`;
-  if (!existing.includes(base)) return base;
-  let n = 2;
-  while (existing.includes(`${base} #${n}`)) n++;
-  return `${base} #${n}`;
-};
-
-/**
- * Derive a human-friendly dataset name from a preset filename like
- * "chatbot/chatbot_coding_helper.json" -> "Chatbot Coding Helper".
- */
-const datasetNameFromPresetPath = (path?: string | null): string => {
-  if (!path) return "";
-  const fileName =
-    path
-      .split("/")
-      .pop()
-      ?.replace(/\.json$/i, "") || "";
-  return fileName
-    .split("_")
-    .filter(Boolean)
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
-};
 
 export default function NewExperimentModal({
   isOpen,
@@ -223,7 +161,7 @@ export default function NewExperimentModal({
   const [selectedPresetPath, setSelectedPresetPath] = useState<string>("");
 
   // Scorer / Judge mode state: scorer = custom only, standard = judge only, both = run both
-  const [judgeMode, setJudgeMode] = useState<"scorer" | "standard" | "both">("standard");
+  const [judgeMode, setJudgeMode] = useState<JudgeMode>("standard");
   const [userScorers, setUserScorers] = useState<DeepEvalScorer[]>([]);
   const [selectedScorer, setSelectedScorer] = useState<DeepEvalScorer | null>(null);
   const [selectedScorerIds, setSelectedScorerIds] = useState<string[]>([]); // Multi-select scorer IDs
@@ -1091,18 +1029,6 @@ export default function NewExperimentModal({
       },
     });
   };
-
-  type ProviderType =
-    | "openai"
-    | "anthropic"
-    | "google"
-    | "xai"
-    | "huggingface"
-    | "mistral"
-    | "ollama"
-    | "local"
-    | "custom_api"
-    | "openrouter";
 
   // Check if a provider has a configured API key
   const hasApiKey = (providerId: string): boolean => {
@@ -3840,99 +3766,29 @@ export default function NewExperimentModal({
   };
 
   // Providers required by selected scorers that have no saved API key in org settings.
-  // Self-hosted / Ollama scorers are excluded since they don't need a cloud key.
-  const missingKeyProviders = useMemo(() => {
-    if (judgeMode !== "scorer" && judgeMode !== "both") return [];
-    const scorersToCheck =
-      selectedScorerIds.length > 0
-        ? userScorers.filter((s) => selectedScorerIds.includes(s.id))
-        : userScorers;
-    const missing: string[] = [];
-    for (const scorer of scorersToCheck) {
-      const judgeModel = scorer.config?.judgeModel;
-      if (typeof judgeModel === "object" && judgeModel?.provider) {
-        const provider = judgeModel.provider.toLowerCase();
-        if (provider !== "self-hosted" && provider !== "ollama") {
-          const hasKey = configuredApiKeys.some((k) => k.provider === provider);
-          if (!hasKey && !missing.includes(provider)) {
-            missing.push(provider);
-          }
-        }
-      }
-    }
-    return missing;
-  }, [judgeMode, selectedScorerIds, userScorers, configuredApiKeys]);
+  const missingKeyProviders = useMemo(
+    () =>
+      getMissingKeyProviders({
+        judgeMode,
+        selectedScorerIds,
+        userScorers,
+        configuredApiKeys,
+      }),
+    [judgeMode, selectedScorerIds, userScorers, configuredApiKeys],
+  );
 
-  const canProceed = (() => {
-    if (activeStep === 0) {
-      // A saved model selection is always sufficient to proceed
-      if (selectedSavedModelId) return true;
-
-      // Step 1: Model validation
-      const hasName = !!config.model.name;
-      const hasAccessMethod = !!config.model.accessMethod;
-
-      if (!hasName || !hasAccessMethod) return false;
-
-      // Check conditional fields based on access method
-      if (
-        selectedModelProvider &&
-        "needsUrl" in selectedModelProvider &&
-        selectedModelProvider.needsUrl &&
-        !config.model.endpointUrl
-      )
-        return false;
-
-      // Providers that don't need API keys
-      const noApiKeyNeeded = ["ollama", "local"];
-
-      // For all cloud providers (including custom_api), require either a saved API key OR an entered API key
-      if (!noApiKeyNeeded.includes(config.model.accessMethod)) {
-        // Map custom_api to "custom" for checking saved keys
-        const providerForKeyCheck =
-          config.model.accessMethod === "custom_api" ? "custom" : config.model.accessMethod;
-        const hasSavedKey = hasApiKey(providerForKeyCheck);
-        const hasEnteredKey = !!config.model.apiKey;
-        if (!hasSavedKey && !hasEnteredKey) return false;
-      }
-
-      return true;
-    }
-
-    if (activeStep === 1) {
-      // Step 2: Dataset validation - must have loaded prompts
-      return datasetPrompts.length > 0;
-    }
-
-    if (activeStep === 2) {
-      // Step 3: Scorer / Judge validation
-      if (judgeMode === "scorer") {
-        // Custom scorer only - must have at least one scorer and all required API keys
-        if (userScorers.length === 0) return false;
-        if (missingKeyProviders.length > 0) return false;
-        return true;
-      } else if (judgeMode === "standard") {
-        // Standard judge only - must have provider and model (API key is from saved settings)
-        const hasBase = !!(config.judgeLlm.provider && config.judgeLlm.model);
-        // Custom / Self-hosted also requires endpoint URL
-        if (config.judgeLlm.provider === "custom_api") {
-          return hasBase && !!config.judgeLlm.endpointUrl;
-        }
-        return hasBase;
-      } else {
-        // Both mode - scorers exist, all scorer API keys present, AND standard judge configured
-        const hasScorers = userScorers.length > 0;
-        if (missingKeyProviders.length > 0) return false;
-        let hasJudge = !!(config.judgeLlm.provider && config.judgeLlm.model);
-        if (config.judgeLlm.provider === "custom_api") {
-          hasJudge = hasJudge && !!config.judgeLlm.endpointUrl;
-        }
-        return hasScorers && hasJudge;
-      }
-    }
-
-    return true;
-  })();
+  const canProceed = canProceedToNextStep({
+    activeStep,
+    selectedSavedModelId,
+    model: config.model,
+    selectedModelProvider,
+    hasApiKey,
+    datasetPromptCount: datasetPrompts.length,
+    judgeMode,
+    userScorersCount: userScorers.length,
+    missingKeyProviders,
+    judgeLlm: config.judgeLlm,
+  });
 
   return (
     <>
@@ -3944,7 +3800,7 @@ export default function NewExperimentModal({
           setAlert(null);
         }}
         title="Create new experiment"
-        steps={steps}
+        steps={[...WIZARD_STEPS]}
         activeStep={activeStep}
         onNext={handleNext}
         onBack={handleBack}
