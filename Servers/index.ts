@@ -34,7 +34,11 @@ try {
 
   // Adding background jobs in the Queue
   (async () => {
-    await addAllJobs();
+    try {
+      await addAllJobs();
+    } catch (error) {
+      console.error("Failed to add background jobs:", error);
+    }
   })();
 
   // Setup notification subscriber for real-time notifications

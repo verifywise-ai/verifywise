@@ -24,6 +24,30 @@ async function seedTestData() {
   try {
     console.log("Seeding test data...");
 
+    // 0. Ensure the E2E super-admin exists. The migration step is supposed to
+    // create this from SUPERADMIN_EMAIL / SUPERADMIN_PASSWORD, but running the
+    // script independently (or a migration that skipped the insert) can leave
+    // the account missing. Upserting here guarantees the credentials the E2E
+    // suite expects are always available.
+    const superAdminEmail = process.env.SUPERADMIN_EMAIL;
+    const superAdminPassword = process.env.SUPERADMIN_PASSWORD;
+    if (superAdminEmail && superAdminPassword) {
+      const superAdminHash = await bcrypt.hash(superAdminPassword, SALT_ROUNDS);
+      await sequelize.query(
+        `INSERT INTO users (name, surname, email, password_hash, role_id, organization_id, created_at, last_login, is_demo)
+         VALUES ('Super', 'Admin', :email, :passwordHash, 5, NULL, NOW(), NOW(), false)
+         ON CONFLICT ((role_id)) WHERE role_id = 5 DO UPDATE
+           SET password_hash = :passwordHash, email = :email, updated_at = NOW()`,
+        {
+          replacements: { email: superAdminEmail, passwordHash: superAdminHash },
+          transaction,
+        },
+      );
+      console.log(`  Super-admin ensured: ${superAdminEmail}`);
+    } else {
+      console.log("  SUPERADMIN_EMAIL/PASSWORD not set — skipping super-admin upsert");
+    }
+
     // 1. Create organization (if not exists)
     const [orgRows] = await sequelize.query(
       `INSERT INTO organizations (name, created_at, updated_at)
