@@ -81,6 +81,9 @@ jobs:
           DB_NAME: verifywise_test
           DB_USER: postgres
           DB_PASSWORD: postgres
+          # Re-create/refresh the super-admin so E2E login credentials are always valid.
+          SUPERADMIN_EMAIL: admin@verifywise-test.com
+          SUPERADMIN_PASSWORD: TestAdmin!Str0ng
         run: node dist/scripts/seedTestData.js
 
       # ---- AIGateway setup ----
