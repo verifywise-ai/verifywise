@@ -18,6 +18,18 @@
       "package": "brace-expansion",
       "title": "brace-expansion: DoS via unbounded expansion length causing an out-of-memory process crash",
       "justification": "No patched releases exist for the minimatch@3 / minimatch@5 lines that still satisfy the transitive constraints of glob@7-based dependencies used by the server runtime (e.g., sequelize-typescript, yamljs, mjml). Upgrading those dependencies would require breaking API changes. The application does not expose brace-expansion to untrusted user input, so practical DoS exposure is limited. We will revisit once upstream releases compatible patched versions."
+    },
+    {
+      "id": "ghsa-w3rx-r6r6-pgpr",
+      "package": "image-size",
+      "title": "image-size: ICNS parser allows denial of service through an infinite loop",
+      "justification": "The advisory affects all published versions of image-size. The library is only used transitively by @mastra/memory for parsing image metadata, and the application does not pass untrusted image data to it directly. We will revisit once a patched version is released."
+    },
+    {
+      "id": "ghsa-5p2g-fcmc-qvqq",
+      "package": "image-size",
+      "title": "image-size: JXL and HEIF parsers allow denial of service through infinite loops",
+      "justification": "The advisory affects all published versions of image-size. The library is only used transitively by @mastra/memory for parsing image metadata, and the application does not pass untrusted image data to it directly. We will revisit once a patched version is released."
     }
   ]
 }
