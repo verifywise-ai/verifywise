@@ -57,6 +57,11 @@ export async function createTestFile(
 export interface CreateTestRiskOptions {
   risk_name?: string;
   risk_owner?: number;
+  /** Scoring signals. Omitted columns stay NULL, which never matches. */
+  risk_category?: string[];
+  controls_mapping?: string;
+  assessment_mapping?: string;
+  ai_lifecycle_phase?: string;
 }
 
 export async function createTestRisk(
@@ -65,13 +70,24 @@ export async function createTestRisk(
 ): Promise<number> {
   const name = options.risk_name ?? `Risk ${Date.now()}`;
   const [result] = await sequelize.query(
-    `INSERT INTO risks (organization_id, risk_name, risk_owner, created_at, updated_at)
-     VALUES (:orgId, :name, :riskOwner, NOW(), NOW()) RETURNING id`,
+    `INSERT INTO risks (organization_id, risk_name, risk_owner, risk_category,
+                        controls_mapping, assessment_mapping, ai_lifecycle_phase,
+                        created_at, updated_at)
+     VALUES (:orgId, :name, :riskOwner,
+             CAST(:riskCategory AS enum_projectrisks_risk_category[]),
+             :controlsMapping, :assessmentMapping,
+             CAST(:aiLifecyclePhase AS enum_projectrisks_ai_lifecycle_phase),
+             NOW(), NOW())
+     RETURNING id`,
     {
       replacements: {
         orgId,
         name,
         riskOwner: options.risk_owner ?? null,
+        riskCategory: options.risk_category ?? null,
+        controlsMapping: options.controls_mapping ?? null,
+        assessmentMapping: options.assessment_mapping ?? null,
+        aiLifecyclePhase: options.ai_lifecycle_phase ?? null,
       },
     },
   );
