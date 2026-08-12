@@ -22,9 +22,10 @@ const PROVIDERS: LinkSignalProvider[] = [fieldOverlapProvider];
 /**
  * Rebuild the stored edges for one risk.
  *
- * Idempotent and safe to run concurrently with a recompute of the other
+ * Idempotent, and safe to run concurrently with a recompute of the other
  * endpoint: writes go through ON CONFLICT, and pruning is driven by the score,
- * which is symmetric.
+ * which is symmetric. Three at once can still deadlock on a triangle — see the
+ * retry note on `enqueueRiskLinkRecompute`.
  */
 export async function recomputeRiskLinks(
   organizationId: number,

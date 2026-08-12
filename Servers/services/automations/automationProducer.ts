@@ -24,6 +24,14 @@ export async function enqueueAutomationAction(
  * failed job would suppress every later recompute for that risk forever.
  * Known limitation: a save landing while the job is already active is dropped;
  * the next save or POST /riskLinks/recompute picks it up.
+ *
+ * Retries because the recompute can lose a deadlock. Two runs share at most the
+ * one edge between them, but a triangle of three risks recomputing at once can
+ * cycle: the cap makes an edge a keeper for one endpoint and a plain incident
+ * row for the other, so the score order does not fix the lock order. The
+ * backfill enqueues every risk in the org at once, so this is not exotic.
+ * Postgres aborts one side with 40P01, and without a retry that risk would
+ * silently keep no links until its next save.
  */
 export async function enqueueRiskLinkRecompute(organizationId: number, riskId: number) {
   return automationQueue.add(
@@ -33,6 +41,8 @@ export async function enqueueRiskLinkRecompute(organizationId: number, riskId: n
       jobId: `risk-link:${organizationId}:${riskId}`,
       removeOnComplete: true,
       removeOnFail: true,
+      attempts: 3,
+      backoff: { type: "exponential", delay: 1000 },
     },
   );
 }

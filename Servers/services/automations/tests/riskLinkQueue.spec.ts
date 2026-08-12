@@ -36,4 +36,14 @@ describe("enqueueRiskLinkRecompute", () => {
     expect(options.removeOnComplete).toBe(true);
     expect(options.removeOnFail).toBe(true);
   });
+
+  // A triangle of risks recomputing at once can deadlock; Postgres aborts one
+  // side with 40P01. `removeOnFail` only fires after the last attempt, so the
+  // two coexist: without the retry that risk keeps no links until its next save.
+  it("retries a failed recompute instead of dropping the risk", async () => {
+    await enqueueRiskLinkRecompute(7, 42);
+    const options = mockAdd.mock.calls[0][2];
+    expect(options.attempts).toBe(3);
+    expect(options.backoff).toEqual({ type: "exponential", delay: 1000 });
+  });
 });
