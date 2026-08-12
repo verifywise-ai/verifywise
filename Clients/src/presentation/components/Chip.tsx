@@ -161,6 +161,10 @@ const LABEL_TO_VARIANT: Record<string, ChipVariant> = {
  * Get variant from label if no explicit variant provided
  */
 const getVariantFromLabel = (label: string): ChipVariant | undefined => {
+  // The prop is typed string, but nullable columns still reach callers as null
+  // at runtime. Deriving a variant is a convenience, so give up quietly rather
+  // than throw — a throw here escapes to the error boundary and blanks the page.
+  if (typeof label !== "string") return undefined;
   const normalizedLabel = label.toLowerCase().trim();
   return LABEL_TO_VARIANT[normalizedLabel];
 };

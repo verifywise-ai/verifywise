@@ -14,7 +14,7 @@ import { CustomizableButton } from "../../components/button/customizable-button"
 import { extractUserToken } from "../../../application/tools/extractToken";
 import { useSelector } from "react-redux";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router";
 import TabBar from "../../components/TabBar";
 import { useAITrustCentreResourcesQuery } from "../../../application/hooks/useAITrustCentreResourcesQuery";
 import { useAITrustCentreSubprocessorsQuery } from "../../../application/hooks/useAITrustCentreSubprocessorsQuery";

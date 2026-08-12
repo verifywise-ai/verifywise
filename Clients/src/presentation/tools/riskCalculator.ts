@@ -38,6 +38,15 @@ export class RiskCalculator {
     return this.mapRiskLevel(score);
   }
 
+  /**
+   * The weighted score behind {@link getRiskLevel}, for views that show the
+   * number itself (the risk heat map). Exposed so nothing re-implements the
+   * formula and drifts away from the levels the rest of the app displays.
+   */
+  public static getRiskScore(likelihood: AppRiskLikelihood, severity: AppRiskSeverity): number {
+    return this.calculateWeightedRisk(likelihood, severity);
+  }
+
   private static calculateWeightedRisk(
     likelihood: AppRiskLikelihood,
     severity: AppRiskSeverity,

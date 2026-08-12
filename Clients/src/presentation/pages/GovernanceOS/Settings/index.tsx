@@ -9,7 +9,7 @@ import {
   alpha,
 } from "@mui/material";
 import { Power, Bell, Target, Filter, Save } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import GovernanceLayout from "../shared/GovernanceLayout";
 import Toggle from "../../../components/Inputs/Toggle";
 import Checkbox from "../../../components/Inputs/Checkbox";

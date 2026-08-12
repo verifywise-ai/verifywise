@@ -1,30 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-vi.mock("../../repository/entity.repository", () => ({
-  generateReport: vi.fn(),
-}));
-
 vi.mock("../../repository/file.repository", () => ({
   downloadFileFromManager: vi.fn(),
 }));
 
-vi.mock("../../../presentation/utils/browserDownload.utils", () => ({
-  triggerBrowserDownload: vi.fn(),
-  extractFilenameFromHeaders: vi.fn(),
-}));
-
-import { handleDownload, handleAutoDownload } from "../fileDownload";
-import { generateReport } from "../../repository/entity.repository";
+import { handleDownload } from "../fileDownload";
 import { downloadFileFromManager } from "../../repository/file.repository";
-import {
-  triggerBrowserDownload,
-  extractFilenameFromHeaders,
-} from "../../../presentation/utils/browserDownload.utils";
 
-const mockGenerateReport = vi.mocked(generateReport);
 const mockDownloadFile = vi.mocked(downloadFileFromManager);
-const mockTriggerDownload = vi.mocked(triggerBrowserDownload);
-const mockExtractFilename = vi.mocked(extractFilenameFromHeaders);
 
 describe("fileDownload", () => {
   beforeEach(() => {
@@ -61,55 +44,6 @@ describe("fileDownload", () => {
       mockDownloadFile.mockRejectedValue(new Error("Network error"));
 
       await expect(handleDownload("file-1", "report.pdf")).rejects.toThrow("Network error");
-    });
-  });
-
-  describe("handleAutoDownload", () => {
-    const requestBody = {
-      projectId: 1,
-      projectTitle: "Test Project",
-      projectOwner: "Owner",
-      reportType: "compliance",
-      reportName: "Report",
-      frameworkId: 1,
-      projectFrameworkId: 1,
-      format: "pdf" as const,
-    };
-
-    it("generates report and triggers download on success", async () => {
-      const mockHeaders = new Headers({ "Content-Type": "application/pdf" });
-      mockGenerateReport.mockResolvedValue({
-        status: 200,
-        data: new ArrayBuffer(8),
-        headers: mockHeaders,
-      });
-      mockExtractFilename.mockReturnValue("report.pdf");
-
-      const status = await handleAutoDownload(requestBody);
-
-      expect(status).toBe(200);
-      expect(mockTriggerDownload).toHaveBeenCalled();
-    });
-
-    it("returns non-200 status without triggering download", async () => {
-      mockGenerateReport.mockResolvedValue({
-        status: 404,
-        data: null,
-        headers: new Headers(),
-      });
-
-      const status = await handleAutoDownload(requestBody);
-
-      expect(status).toBe(404);
-      expect(mockTriggerDownload).not.toHaveBeenCalled();
-    });
-
-    it("returns 500 when an exception occurs", async () => {
-      mockGenerateReport.mockRejectedValue(new Error("Server error"));
-
-      const status = await handleAutoDownload(requestBody);
-
-      expect(status).toBe(500);
     });
   });
 });

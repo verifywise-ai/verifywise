@@ -1,6 +1,6 @@
 import { Box, CircularProgress, Stack, Typography, useTheme } from "@mui/material";
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import { Settings } from "lucide-react";
 import Toggle from "../../../components/Inputs/Toggle";

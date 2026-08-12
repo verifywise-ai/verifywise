@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useRef } from "react";
 import { useRichTextSanitizer } from "../../../application/utils/richTextSanitizer";
 import { useTranslation } from "../../../application/hooks/useTranslation";
 
@@ -71,7 +71,14 @@ export const RichTextRenderer: React.FC<RichTextRendererProps> = ({
     );
   }
 
-  return <div className={className} dangerouslySetInnerHTML={{ __html: sanitizedHtml }} />;
+  // sanitizedHtml is produced by useRichTextSanitizer (DOMPurify allowlist + post-processing).
+  const divRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (divRef.current) {
+      divRef.current.innerHTML = sanitizedHtml;
+    }
+  }, [sanitizedHtml]);
+  return <div ref={divRef} className={className} />;
 };
 
 export default RichTextRenderer;

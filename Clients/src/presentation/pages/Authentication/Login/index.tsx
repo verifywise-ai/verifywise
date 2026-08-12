@@ -5,7 +5,7 @@ import { ReactComponent as Background } from "../../../assets/imgs/background-gr
 import Checkbox from "../../../components/Inputs/Checkbox";
 import Field from "../../../components/Inputs/Field";
 import singleTheme from "../../../themes/v1SingleTheme";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { logEngine } from "../../../../application/tools/log.engine";
 import { useDispatch } from "react-redux";
 import {

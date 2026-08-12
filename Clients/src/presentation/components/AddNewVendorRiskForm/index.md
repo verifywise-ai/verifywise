@@ -123,7 +123,7 @@ The component uses React hooks for state management:
 - `@mui/material` - UI components and theming
 - `react` - Core React functionality
 - `dayjs` - Date manipulation
-- `react-router-dom` - URL parameter access
+- `react-router` - URL parameter access
 
 ### Internal Dependencies
 

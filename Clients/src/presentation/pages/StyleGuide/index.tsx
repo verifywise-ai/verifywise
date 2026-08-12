@@ -8,7 +8,7 @@ import {
   InputAdornment,
   Divider,
 } from "@mui/material";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router";
 import {
   TextCursorInput,
   ToggleLeft,

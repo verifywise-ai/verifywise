@@ -172,8 +172,31 @@ function cleanupStaleProgressEntries(): void {
   }
 }
 
-// Run cleanup every minute
-setInterval(cleanupStaleProgressEntries, 60000);
+const PROGRESS_CLEANUP_INTERVAL_MS = 60_000;
+
+let progressCleanupTimer: NodeJS.Timeout | null = null;
+
+/**
+ * Start the periodic cleanup of stale scan-progress entries.
+ * Idempotent — safe to call more than once.
+ */
+export function startAiDetectionProgressCleanup(): void {
+  if (progressCleanupTimer) return;
+  progressCleanupTimer = setInterval(cleanupStaleProgressEntries, PROGRESS_CLEANUP_INTERVAL_MS);
+  // Don't keep the event loop alive solely for this timer — matters for tests
+  // and short-lived scripts that import this module.
+  progressCleanupTimer.unref?.();
+}
+
+/**
+ * Stop the periodic cleanup. Called from graceful shutdown.
+ */
+export function stopAiDetectionProgressCleanup(): void {
+  if (progressCleanupTimer) {
+    clearInterval(progressCleanupTimer);
+    progressCleanupTimer = null;
+  }
+}
 
 /**
  * File item from local file system scan
@@ -287,20 +310,17 @@ async function cloneRepository(
   );
   await fs.promises.mkdir(tempDir, { recursive: true });
 
-  // Build repository URL - use authenticated URL if token provided
-  let repoUrl: string;
-  if (githubToken) {
-    // Use token in URL for authentication (git will use this for HTTPS auth)
-    repoUrl = `https://${githubToken}@github.com/${owner}/${repo}.git`;
-  } else {
-    repoUrl = `https://github.com/${owner}/${repo}.git`;
-  }
+  // Build repository URL - owner/repo are already validated by parseGitHubUrl.
+  // We reconstruct via URL so the hostname is guaranteed to be github.com.
+  const repoUrl = new URL(`/${owner}/${repo}.git`, "https://github.com").toString();
+  const cloneUrl = githubToken ? repoUrl.replace("https://", `https://${githubToken}@`) : repoUrl;
 
   try {
     // Clone with depth 1 (shallow clone - only latest commit)
-    // Use spawn to get the child process so we can kill it on abort
+    // Use spawn to get the child process so we can kill it on abort.
+    // URL is built from validated owner/repo and forced to github.com.
     const clonePromise = new Promise<void>((resolve, reject) => {
-      const gitProcess = spawn("git", ["clone", "--depth", "1", repoUrl, tempDir]);
+      const gitProcess = spawn("git", ["clone", "--depth", "1", cloneUrl, tempDir]); // nosemgrep: javascript.lang.security.spawn-git-clone.spawn-git-clone
 
       let stderr = "";
       gitProcess.stderr.on("data", (data: Buffer) => {

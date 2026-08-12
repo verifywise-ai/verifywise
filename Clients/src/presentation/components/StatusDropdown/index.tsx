@@ -33,7 +33,7 @@ const STATUS_OPTIONS = [
   "Awaiting review",
   "Awaiting approval",
   "Implemented",
-  // "Audited",
+  "Audited",
   "Needs rework",
 ];
 

@@ -3,6 +3,13 @@ import { UserModel } from "../user/user.model";
 import { ProjectModel } from "../project/project.model";
 import { OrganizationModel } from "../organization/organization.model";
 
+/**
+ * Every allowed value for `files.source`. Built-in labels (from EU AI Act /
+ * ISO 42001 / ISO 27001 / NIST AI RMF controllers, plus report + file-
+ * manager paths) come first; per-framework generic labels for the 21
+ * frameworks in `Servers/structures/` follow. Any new generic-framework
+ * label added to a structure's `source_labels` must also be added here.
+ */
 export type FileSource =
   | "Assessment tracker group"
   | "Compliance tracker group"
@@ -24,7 +31,31 @@ export type FileSource =
   | "File Manager"
   | "policy_editor"
   | "Post-Market Monitoring report"
-  | "dataset_bulk_upload";
+  | "dataset_bulk_upload"
+  // Per-framework generic labels (mirror Servers/structures/*.source_labels)
+  | "AI Ethics requirements"
+  | "ALTAI assessment areas"
+  | "Bahrain PDPL articles"
+  | "CCPA requirements"
+  | "CIS Controls safeguards"
+  | "Colorado AI Act sections"
+  | "Data Governance practices"
+  | "DORA requirements"
+  | "FTC AI Guidelines requirements"
+  | "GDPR articles"
+  | "HIPAA standards"
+  | "HIPAA implementation specifications"
+  | "NIST CSF categories"
+  | "NIST CSF subcategories"
+  | "NYC Local Law 144 requirements"
+  | "OECD AI Principles requirements"
+  | "PCI DSS requirements"
+  | "Qatar PDPL articles"
+  | "Quebec Law 25 articles"
+  | "Saudi PDPL articles"
+  | "SOC 2 controls"
+  | "Texas AI Act sections"
+  | "UAE PDPL articles";
 
 export type ReviewStatus =
   | "draft"
@@ -190,6 +221,32 @@ export class FileModel extends Model<File> {
       "Policy manager report",
       "File Manager",
       "policy_editor",
+      "Post-Market Monitoring report",
+      "dataset_bulk_upload",
+      // Per-framework generic labels (mirror Servers/structures/*.source_labels)
+      "AI Ethics requirements",
+      "ALTAI assessment areas",
+      "Bahrain PDPL articles",
+      "CCPA requirements",
+      "CIS Controls safeguards",
+      "Colorado AI Act sections",
+      "Data Governance practices",
+      "DORA requirements",
+      "FTC AI Guidelines requirements",
+      "GDPR articles",
+      "HIPAA standards",
+      "HIPAA implementation specifications",
+      "NIST CSF categories",
+      "NIST CSF subcategories",
+      "NYC Local Law 144 requirements",
+      "OECD AI Principles requirements",
+      "PCI DSS requirements",
+      "Qatar PDPL articles",
+      "Quebec Law 25 articles",
+      "Saudi PDPL articles",
+      "SOC 2 controls",
+      "Texas AI Act sections",
+      "UAE PDPL articles",
     ),
   })
   source!: FileSource;

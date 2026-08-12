@@ -1,7 +1,7 @@
 import { vi } from "vitest";
 import React from "react";
 
-vi.mock("react-router-dom", async (importOriginal) => {
+vi.mock("react-router", async (importOriginal) => {
   const actual = await importOriginal<any>();
   return { ...actual, useSearchParams: () => [new URLSearchParams(), vi.fn()] };
 });

@@ -43,6 +43,18 @@ ADMIN_HEADERS = {
 PASS, FAIL = [], []
 
 
+def _validated_url(path: str) -> str:
+    """Build a URL from GATEWAY and path, constraining the base to http/https."""
+    import urllib.parse
+    base = os.environ.get("GATEWAY", "http://127.0.0.1:8101")
+    parsed = urllib.parse.urlparse(base)
+    if parsed.scheme not in ("http", "https"):
+        raise ValueError(f"Unsupported GATEWAY scheme: {parsed.scheme}")
+    if not parsed.netloc:
+        raise ValueError(f"Invalid GATEWAY value: {base}")
+    return urllib.parse.urljoin(base, path)
+
+
 def _req(method, url, headers, body=None, timeout=60):
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(url, data=data, headers=headers, method=method)
@@ -59,7 +71,7 @@ def _req(method, url, headers, body=None, timeout=60):
 
 
 def internal(method, path, body=None):
-    return _req(method, f"{GATEWAY}/internal{path}", ADMIN_HEADERS, body)
+    return _req(method, _validated_url(f"/internal{path}"), ADMIN_HEADERS, body)
 
 
 def check(name, cond, detail=""):
@@ -192,14 +204,14 @@ def model_call(vkey, slug, run_id, messages):
         "Authorization": f"Bearer {vkey}",
         "x-vw-agent-run-id": run_id,        # <-- the correlation header
     }
-    return _req("POST", f"{GATEWAY}/v1/chat/completions", headers,
+    return _req("POST", _validated_url("/v1/chat/completions"), headers,
                 {"model": slug, "messages": messages, "max_tokens": 128})
 
 
 def tool_call(akey, run_id, tool_use_id, tool_name, arguments):
     """An agent's tool call through the native hook, tagged with the same run id as session_id."""
     headers = {"Content-Type": "application/json", "Authorization": f"Bearer {akey}"}
-    return _req("POST", f"{GATEWAY}/v1/mcp/hook", headers, {
+    return _req("POST", _validated_url("/v1/mcp/hook"), headers, {
         "tool_name": tool_name,
         "arguments": arguments,
         "session_id": run_id,           # hook uses session_id AS the run id
@@ -303,7 +315,7 @@ def verify_runs(devops_run, support_run):
     # Graceful: a model call with NO run id must still succeed and NOT appear as a run
     print("\n=== Verifying graceful no-run-id behavior ===")
     headers = {"Content-Type": "application/json", "Authorization": f"Bearer {env['vkey']}"}
-    st, r = _req("POST", f"{GATEWAY}/v1/chat/completions", headers,
+    st, r = _req("POST", _validated_url("/v1/chat/completions"), headers,
                  {"model": env["slug"], "messages": [{"role": "user", "content": "Say hi."}], "max_tokens": 16})
     check("no-run-id model call still works", st == 200, f"status {st} {str(r)[:150]}")
     st, r = internal("GET", "/mcp/runs?limit=200")

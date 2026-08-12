@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Box, Typography, Stack, IconButton } from "@mui/material";
-import { Link } from "react-router-dom";
+import { Link } from "react-router";
 import {
   CirclePlus,
   KeyRound,
