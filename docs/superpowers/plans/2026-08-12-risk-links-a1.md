@@ -2217,7 +2217,9 @@ export async function createTestRisk(
         orgId,
         name,
         riskOwner: options.risk_owner ?? null,
-        riskCategory: options.risk_category ?? null,
+        riskCategory: options.risk_category
+          ? `{${options.risk_category.map((value) => `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`).join(",")}}`
+          : null,
         controlsMapping: options.controls_mapping ?? null,
         assessmentMapping: options.assessment_mapping ?? null,
         aiLifecyclePhase: options.ai_lifecycle_phase ?? null,
@@ -2228,7 +2230,7 @@ export async function createTestRisk(
 }
 ```
 
-`risk_category` is passed as a JS array; the `pg` driver serialises it to a Postgres array literal, and the explicit `CAST` resolves it to the enum array type. The enum type names are **unqualified**, exactly like the table name — `database/db.ts:133-134` sets `search_path TO verifywise` in `afterConnect`, and `search_path` resolves type names in a cast just as it resolves relations. Verified against the dev database:
+`risk_category` must be hand-serialised into a Postgres array literal. Sequelize `replacements` are escaped and inlined as SQL literals *before* the statement reaches `pg`, so the driver's array serialiser never runs — passing the JS array directly yields a live `22P02 invalid input syntax` at `CAST(... AS enum_projectrisks_risk_category[])`. Build the `{"a","b"}` literal yourself, escaping backslashes then double quotes, and let the explicit `CAST` resolve it to the enum array type. The enum type names are **unqualified**, exactly like the table name — `database/db.ts:133-134` sets `search_path TO verifywise` in `afterConnect`, and `search_path` resolves type names in a cast just as it resolves relations. Verified against the dev database:
 
 ```
 $ psql -d verifywise -tAc "SET search_path TO verifywise; SELECT CAST(ARRAY['Strategic risk'] AS enum_projectrisks_risk_category[]);"
@@ -2236,6 +2238,8 @@ $ psql -d verifywise -tAc "SET search_path TO verifywise; SELECT CAST(ARRAY['Str
 ```
 
 Do not add a `verifywise.` prefix here. `Servers/CLAUDE.md` forbids it in application code, and a test factory is the last place to teach the codebase a pattern others will copy.
+
+Anything this factory writes must be a **real** enum member — `enum_range(NULL::enum_projectrisks_ai_lifecycle_phase)` gives `Deployment & integration`, not `Deployment`. The unit-test fixtures above are plain JS objects that never reach Postgres, so their lifecycle strings only have to be equal to each other; these do not have that freedom.
 
 - [ ] **Step 2: Write the isolation test**
 
@@ -2263,15 +2267,15 @@ describe("risk_links tenant isolation", () => {
     const { owner, attacker } = await seedTwoTenantContexts();
     const ownerRiskA = await createTestRisk(owner.orgId, {
       risk_category: CATEGORY,
-      ai_lifecycle_phase: "Deployment",
+      ai_lifecycle_phase: "Deployment & integration",
     });
     const ownerRiskB = await createTestRisk(owner.orgId, {
       risk_category: CATEGORY,
-      ai_lifecycle_phase: "Deployment",
+      ai_lifecycle_phase: "Deployment & integration",
     });
     const attackerRisk = await createTestRisk(attacker.orgId, {
       risk_category: CATEGORY,
-      ai_lifecycle_phase: "Deployment",
+      ai_lifecycle_phase: "Deployment & integration",
     });
 
     await recomputeRiskLinks(owner.orgId, ownerRiskA);
@@ -2291,8 +2295,8 @@ describe("risk_links tenant isolation", () => {
 
   it("hides the owner's links from the attacker org", async () => {
     const { owner, attacker } = await seedTwoTenantContexts();
-    const riskA = await createTestRisk(owner.orgId, { risk_category: CATEGORY, ai_lifecycle_phase: "Deployment" });
-    await createTestRisk(owner.orgId, { risk_category: CATEGORY, ai_lifecycle_phase: "Deployment" });
+    const riskA = await createTestRisk(owner.orgId, { risk_category: CATEGORY, ai_lifecycle_phase: "Deployment & integration" });
+    await createTestRisk(owner.orgId, { risk_category: CATEGORY, ai_lifecycle_phase: "Deployment & integration" });
     await recomputeRiskLinks(owner.orgId, riskA);
 
     expect(await getRiskLinksForRiskQuery(owner.orgId, riskA, ["suggested"])).toHaveLength(1);
@@ -2306,8 +2310,8 @@ describe("risk_links tenant isolation", () => {
 
   it("keeps the edge but hides it once the partner risk is soft-deleted (R7)", async () => {
     const { owner } = await seedTwoTenantContexts();
-    const riskA = await createTestRisk(owner.orgId, { risk_category: CATEGORY, ai_lifecycle_phase: "Deployment" });
-    const riskB = await createTestRisk(owner.orgId, { risk_category: CATEGORY, ai_lifecycle_phase: "Deployment" });
+    const riskA = await createTestRisk(owner.orgId, { risk_category: CATEGORY, ai_lifecycle_phase: "Deployment & integration" });
+    const riskB = await createTestRisk(owner.orgId, { risk_category: CATEGORY, ai_lifecycle_phase: "Deployment & integration" });
     await recomputeRiskLinks(owner.orgId, riskA);
 
     await sequelize.query(`UPDATE risks SET is_deleted = true WHERE id = :id`, {
