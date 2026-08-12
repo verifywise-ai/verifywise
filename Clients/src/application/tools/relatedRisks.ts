@@ -41,8 +41,15 @@ const sharesProject = (a?: number[], b?: number[]): boolean => {
   return a.some((id) => other.has(id));
 };
 
-/** Equal and non-empty. Two blanks are not a match. */
-const sameText = (a?: string, b?: string): boolean => norm(a) !== "" && norm(a) === norm(b);
+/**
+ * Equal and non-empty. Two blanks are not a match, and neither is "0": the risk
+ * form has no control/assessment picker, so it always sends 0, which lands in
+ * these text columns as "0". That is "nothing mapped", not a shared mapping.
+ */
+const sameText = (a?: string, b?: string): boolean => {
+  const left = norm(a);
+  return left !== "" && left !== "0" && left === norm(b);
+};
 
 const rank = (risk: RiskModel): number => RISK_LEVEL_RANK[risk.risk_level_autocalculated] ?? 0;
 

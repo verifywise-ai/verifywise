@@ -95,6 +95,13 @@ describe("findRelatedRisks", () => {
     expect(findRelatedRisks(subject, [candidate])).toEqual([]);
   });
 
+  it('does not treat the unset "0" mapping sentinel as a match', () => {
+    const subject = makeRisk({ id: 1, controls_mapping: "0", assessment_mapping: "0" });
+    const candidate = makeRisk({ id: 2, controls_mapping: "0", assessment_mapping: "0" });
+
+    expect(findRelatedRisks(subject, [candidate])).toEqual([]);
+  });
+
   it("matches categories and mappings case-insensitively, ignoring surrounding space", () => {
     const subject = makeRisk({ id: 1, risk_category: ["Security"], controls_mapping: "AC-1" });
     const candidate = makeRisk({

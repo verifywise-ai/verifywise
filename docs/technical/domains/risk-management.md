@@ -507,7 +507,9 @@ The relation is **derived, not stored** — there is no risk-to-risk table. Two
 risks are related when they overlap on shared category (3 points), shared
 `controls_mapping` (2), shared `assessment_mapping` (2), same
 `ai_lifecycle_phase` (2), or a shared project (1). Matches are ranked by score,
-then by risk level, then by id, and capped at 5. Empty values never match.
+then by risk level, then by id, and capped at 5. Empty values never match, and
+neither does the `"0"` that the risk form writes to `controls_mapping` /
+`assessment_mapping` when nothing is mapped.
 
 Each row shows badges naming the values that matched and a recommendation: the
 related risk's `mitigation_plan` if it has one, otherwise a template sentence

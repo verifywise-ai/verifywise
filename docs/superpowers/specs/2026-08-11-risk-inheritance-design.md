@@ -91,6 +91,8 @@ Rules:
 
 Empty, `null`, or missing values never match — a risk with no `controls_mapping` does not match another risk with no `controls_mapping`. Category comparison ignores case and surrounding whitespace.
 
+The string `"0"` counts as unset for `controls_mapping` and `assessment_mapping`. The risk form has no control or assessment picker: `useRiskForm.ts` hardcodes `0` and `RiskDatabaseModal` sends `DEFAULT_VALUES.*_MAPPING`, also `0`, so every risk created through the UI stores `"0"` in these text columns. Treating that as a real mapping awarded a bogus +4 to every pair of UI-created risks. Drop the guard once the form gains a real picker.
+
 Return shape:
 
 ```ts
