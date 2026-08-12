@@ -1,5 +1,7 @@
 # Risk Management Domain
 
+**Last Updated:** 2026-08-12
+
 ## Overview
 
 VerifyWise implements comprehensive risk management across three risk types: Project Risks, Vendor Risks, and Model Risks. The system supports risk assessment, lifecycle tracking, mitigation planning, and historical trend analysis aligned with EU AI Act and ISO frameworks.
@@ -498,28 +500,57 @@ recordProjectRiskDeletion(riskId, userId, tenant)
 | `tools/riskCalculator.ts` | Risk calculation |
 | `application/repository/risk.repository.ts` | API calls |
 
-## Related Risks (risk inheritance, phase 1)
+### Risk links (risk inheritance)
 
-After a project risk is created or updated on the Risk Management page, a
-summary lists up to 5 other risks that may be affected by the change.
+Risks are linked to each other in `verifywise.risk_links` — one row per pair,
+stored canonically (smaller risk id first) for undirected `related_to` edges.
+An edge carries a `score`, a structured `reasons` array, a `source`
+(`derived` | `user` | `agent`) and a `status` (`suggested` | `confirmed` |
+`dismissed`). Source and status are orthogonal: a derived suggestion can be
+confirmed, and a user-created link can be dismissed.
 
-The relation is **derived, not stored** — there is no risk-to-risk table. Two
-risks are related when they overlap on shared category (3 points), shared
-`controls_mapping` (2), shared `assessment_mapping` (2), same
-`ai_lifecycle_phase` (2), or a shared project (1). Matches are ranked by score,
-then by risk level, then by id, and capped at 5. Empty values never match, and
-neither does the `"0"` that the risk form writes to `controls_mapping` /
-`assessment_mapping` when nothing is mapped.
+**Scoring.** `Servers/services/riskLinks/` holds a `LinkSignalProvider`
+interface and, today, one provider: `field_overlap` (tier 0). It scores shared
+category 3, shared control mapping 2, shared assessment mapping 2, same
+lifecycle phase 2, shared project 1. `"0"` in a control or assessment mapping
+means "nothing mapped" and never matches — the risk form has no picker for
+those fields and always sends `0`. Providers are merged by summing scores and
+concatenating reasons; a provider that throws is logged and skipped, and if
+*every* provider fails the recompute writes and deletes nothing.
 
-Each row shows badges naming the values that matched and a recommendation: the
-related risk's `mitigation_plan` if it has one, otherwise a template sentence
-keyed to the highest-weight matched signal.
+**Persistence.** A pair at or above score 3 becomes a `derived` / `suggested`
+edge, up to 20 new edges per recompute, best score first with ties broken by
+risk id. The cap gates creation only. Pruning is driven by the score alone —
+an edge is deleted only when it is `derived` + `suggested` *and* its score fell
+below 3 — because scores are symmetric between two risks but cap membership is
+not, and pruning on the cap would make the two endpoints delete and recreate
+the same edge on alternating saves. `confirmed` edges are never pruned, and a
+`dismissed` edge stays dismissed however high its score climbs.
 
-The summary is read-only — nothing is written to the related risks.
+**When it runs.** A BullMQ job (`risk_link_recompute` on the shared
+`automation-actions` queue) recomputes one risk at a time, enqueued after a
+risk is created, after it is updated, and after a bulk `set_category`.
+Deleting a risk does *not* trigger a recompute: `risks` is soft-deleted, edges
+survive, and the read path filters soft-deleted risks on both endpoints.
+`POST /api/riskLinks/recompute` (Admin) fans out one job per active risk and is
+required at least once per org, since the table starts empty.
 
-Scoring lives in `Clients/src/application/tools/relatedRisks.ts` as a pure
-function with no React or network imports, so it can be lifted to a
-`GET /projectRisks/:id/related` endpoint if a second consumer needs it.
+**Endpoints.**
+
+| Method | Path | Role | Purpose |
+|---|---|---|---|
+| GET | `/api/riskLinks/:riskId` | any authenticated | Links in either direction. Defaults to `suggested` + `confirmed`; `?status=dismissed` for the dismissed list. |
+| PATCH | `/api/riskLinks/:id` | any authenticated | `{ status }`. Allowed: `suggested→confirmed`, `suggested→dismissed`, `confirmed→dismissed`, `dismissed→confirmed`, and `dismissed→suggested` as an explicit undo that clears the decision fields. Anything else is a 400. |
+| POST | `/api/riskLinks/recompute` | Admin | Backfill the whole org. |
+
+There is no delete endpoint: a hard delete would be recreated by the next
+recompute, so dismissal is the durable way to remove a link.
+
+> The older client-side summary in
+> `Clients/src/application/tools/relatedRisks.ts` still renders after a risk is
+> saved. It computes the same signals in the browser and stores nothing; it is
+> superseded by the endpoints above and is removed when the linked-risks UI
+> lands.
 
 Design: `docs/superpowers/specs/2026-08-11-risk-inheritance-design.md`
 
