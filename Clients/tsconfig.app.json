@@ -24,7 +24,7 @@
       "*": ["./*"],
       "@user-guide-content/*": ["../shared/user-guide-content/*"]
     },
-    "ignoreDeprecations": "6.0"
+
   },
   "include": ["src", "env.vars.ts", "../shared/user-guide-content"],
   "exclude": [
