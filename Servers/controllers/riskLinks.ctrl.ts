@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import * as statusCodeUtils from "../utils/statusCode.utils";
+import { STATUS_CODE } from "../utils/statusCode.utils";
 import { logFailure, logProcessing, logSuccess } from "../utils/logger/logHelper";
 import { enqueueRiskLinkRecompute } from "../services/automations/automationProducer";
 import {
@@ -12,9 +12,6 @@ import {
 import { RISK_LINK_STATUSES, RiskLinkStatus } from "../services/riskLinks/types";
 
 const FILE_NAME = "riskLinks.ctrl.ts";
-const STATUS_CODE =
-  (statusCodeUtils as typeof statusCodeUtils & { default?: typeof statusCodeUtils.STATUS_CODE }).default ??
-  statusCodeUtils.STATUS_CODE;
 
 /** What the list endpoint shows by default: open suggestions plus accepted links. */
 const DEFAULT_STATUSES: RiskLinkStatus[] = ["suggested", "confirmed"];

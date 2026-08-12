@@ -8,8 +8,7 @@ jest.mock("../../utils/logger/logHelper", () => ({
   logFailure: jest.fn(),
 }));
 jest.mock("../../utils/statusCode.utils", () => ({
-  __esModule: true,
-  default: {
+  STATUS_CODE: {
     200: (data: any) => ({ message: "OK", data }),
     202: (data: any) => ({ message: "Accepted", data }),
     400: (data: any) => ({ message: "Bad request", data }),
