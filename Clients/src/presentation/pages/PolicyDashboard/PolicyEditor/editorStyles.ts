@@ -2,7 +2,7 @@ import type { GlobalStylesProps } from "@mui/material";
 import { palette } from "../../../themes/palette";
 import { fontFamily, fontSize, fontWeight } from "../../../themes/typography";
 
-const { text, background, border, brand, accent } = palette;
+const { text, background, border, brand, accent, editor } = palette;
 
 /**
  * TipTap / ProseMirror styles for the policy editor surface.
@@ -33,7 +33,7 @@ export const policyEditorStyles: GlobalStylesProps["styles"] = {
       height: 0,
     },
     "& mark": {
-      backgroundColor: "#fef08a",
+      backgroundColor: editor.highlight,
       padding: "0 2px",
       borderRadius: "2px",
     },
@@ -46,8 +46,8 @@ export const policyEditorStyles: GlobalStylesProps["styles"] = {
       borderRadius: "0 4px 4px 0",
     },
     "& pre": {
-      backgroundColor: "#1e1e1e",
-      color: "#d4d4d4",
+      backgroundColor: editor.codeBlockBg,
+      color: editor.codeBlockText,
       padding: "12px 16px",
       borderRadius: "6px",
       fontFamily: fontFamily.mono,
@@ -186,9 +186,9 @@ export const policyEditorStyles: GlobalStylesProps["styles"] = {
       verticalAlign: "sub",
     },
     "& .search-highlight": {
-      backgroundColor: "#fef08a",
+      backgroundColor: editor.highlight,
       borderRadius: "2px",
-      boxShadow: "0 0 0 1px #eab308",
+      boxShadow: `0 0 0 1px ${editor.searchRing}`,
     },
   },
 };
