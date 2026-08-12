@@ -117,7 +117,7 @@ const THIRTY_DAYS_MS = 1 * 3600 * 1000 * 24 * 30;
 /**
  * Internal helper to generate JWT tokens with configurable expiration and secret
  */
-const signToken = (payload: Object, expiresInMs: number, secret: string): string | undefined => {
+const signToken = (payload: object, expiresInMs: number, secret: string): string | undefined => {
   try {
     return Jwt.sign(
       {
@@ -139,7 +139,7 @@ const signToken = (payload: Object, expiresInMs: number, secret: string): string
 /**
  * Generates a short-lived JWT access token (1 hour)
  */
-const generateToken = (payload: Object) => {
+const generateToken = (payload: object) => {
   return signToken(payload, ONE_HOUR_MS, process.env.JWT_SECRET as string);
 };
 
@@ -148,7 +148,7 @@ const generateToken = (payload: Object) => {
  * Defaults to 1 week (invitations); pass a shorter lifetime for
  * password-reset links.
  */
-const generateInviteToken = (payload: Object, expiresInMs: number = ONE_WEEK_MS) => {
+const generateInviteToken = (payload: object, expiresInMs: number = ONE_WEEK_MS) => {
   return signToken(payload, expiresInMs, process.env.JWT_SECRET as string);
 };
 
@@ -156,7 +156,7 @@ const generateInviteToken = (payload: Object, expiresInMs: number = ONE_WEEK_MS)
  * Generates a long-lived JWT refresh token (30 days)
  * Signed with REFRESH_TOKEN_SECRET for added security
  */
-const generateRefreshToken = (payload: Object) => {
+const generateRefreshToken = (payload: object) => {
   return signToken(payload, THIRTY_DAYS_MS, process.env.REFRESH_TOKEN_SECRET as string);
 };
 
@@ -172,7 +172,7 @@ const generateRefreshToken = (payload: Object) => {
  * @param payload - Token payload (user info, organization, role, etc.)
  * @param expiresInDays - Optional expiration in days (default: 30 days)
  */
-const generateApiToken = (payload: Object, expiresInDays?: number) => {
+const generateApiToken = (payload: object, expiresInDays?: number) => {
   const expiresInMs = expiresInDays ? expiresInDays * 24 * 60 * 60 * 1000 : THIRTY_DAYS_MS;
   return signToken(
     { ...payload, type: "api_token" },

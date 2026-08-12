@@ -9,8 +9,8 @@ export const automationQueue = new Queue("automation-actions", {
 
 export async function enqueueAutomationAction(
   actionKey: string,
-  data: Object,
-  options: Object = {},
+  data: object,
+  options: object = {},
 ) {
   return automationQueue.add(actionKey, data, options);
 }

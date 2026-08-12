@@ -249,7 +249,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
 
     // Only create frameworks immediately if NO approval workflow is assigned
     // Otherwise, store frameworks for creation after approval
-    const frameworks: { [key: string]: Object } = {};
+    const frameworks: { [key: string]: object } = {};
     if (!createdProject.approval_workflow_id) {
       // No approval workflow - create frameworks immediately
       for (const framework of newProject.framework || []) {

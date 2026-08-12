@@ -57,21 +57,33 @@ export function parseFrameworkSelection(raw: unknown): ParsedFrameworkSelection 
     const bare = BARE.exec(text);
     if (bare) {
       const id = Number(bare[0]);
-      id > 0 ? pushUnique(out.native, id) : pushUnique(out.invalid, text);
+      if (id > 0) {
+        pushUnique(out.native, id);
+      } else {
+        pushUnique(out.invalid, text);
+      }
       continue;
     }
 
     const native = NATIVE.exec(text);
     if (native) {
       const id = Number(native[1]);
-      id > 0 ? pushUnique(out.native, id) : pushUnique(out.invalid, text);
+      if (id > 0) {
+        pushUnique(out.native, id);
+      } else {
+        pushUnique(out.invalid, text);
+      }
       continue;
     }
 
     const custom = CUSTOM.exec(text);
     if (custom) {
       const id = Number(custom[1]);
-      id > 0 ? pushUnique(out.custom, id) : pushUnique(out.invalid, text);
+      if (id > 0) {
+        pushUnique(out.custom, id);
+      } else {
+        pushUnique(out.invalid, text);
+      }
       continue;
     }
 

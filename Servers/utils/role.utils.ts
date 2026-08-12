@@ -75,7 +75,7 @@ export const updateRoleByIdQuery = async (
 export const deleteRoleByIdQuery = async (
   id: number,
   transaction: Transaction,
-): Promise<Boolean> => {
+): Promise<boolean> => {
   const result = await sequelize.query(`DELETE FROM roles WHERE id = :id RETURNING *`, {
     replacements: { id },
     mapToModel: true,

@@ -1,6 +1,6 @@
 // pdf-parse v2 exposes a `PDFParse` class (the v1 default callable was
 // removed). Instantiate per buffer, extract text, then release resources.
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+
 const { PDFParse } = require("pdf-parse");
 import logger from "../../utils/logger/fileLogger";
 

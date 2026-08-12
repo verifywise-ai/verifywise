@@ -214,7 +214,7 @@ type CreateFn = (
   enableAiDataInsertion: boolean,
   organizationId: number,
   transaction: Transaction,
-) => Promise<Object>;
+) => Promise<object>;
 
 type DeleteFn = (
   projectId: number,

@@ -29,6 +29,7 @@
 // Triple-slash reference: ts-node (used by scripts/*.ts) compiles files
 // lazily and does not load the tsconfig `include` set, so the global Request
 // augmentation in types/express.d.ts would otherwise be invisible here.
+// eslint-disable-next-line @typescript-eslint/triple-slash-reference
 /// <reference path="../types/express.d.ts" />
 
 import { NextFunction, Request, Response } from "express";
@@ -82,7 +83,7 @@ export const rlsEnforcement = async (
 
   // Lazy require: the Sequelize pool must not be initialized when the flag
   // is off or in unit tests that never reach this branch.
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
+
   const { sequelize } = require("../database/db");
 
   let transaction: Transaction;

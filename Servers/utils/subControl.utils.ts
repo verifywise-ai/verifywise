@@ -445,7 +445,7 @@ export const deleteSubcontrolByIdQuery = async (
   id: number,
   organizationId: number,
   transaction: Transaction,
-): Promise<Boolean> => {
+): Promise<boolean> => {
   // Clean up file_entity_links first (both evidence and feedback)
   await sequelize.query(
     `DELETE FROM file_entity_links

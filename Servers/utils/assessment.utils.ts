@@ -52,7 +52,7 @@ export const createNewAssessmentQuery = async (
   enable_ai_data_insertion: boolean,
   organizationId: number,
   transaction: Transaction,
-): Promise<Object> => {
+): Promise<object> => {
   const result = await sequelize.query(
     `INSERT INTO assessments (organization_id, project_id) VALUES (:organizationId, :project_id) RETURNING *`,
     {
@@ -76,7 +76,7 @@ export const updateAssessmentByIdQuery = async (
   assessment: Partial<AssessmentModel>,
   organizationId: number,
   transaction: Transaction,
-): Promise<Boolean> => {
+): Promise<boolean> => {
   const result = await sequelize.query(
     `UPDATE assessments SET project_id = :project_id WHERE organization_id = :organizationId AND id = :id RETURNING *`,
     {
@@ -98,7 +98,7 @@ export const deleteAssessmentByIdQuery = async (
   id: number,
   organizationId: number,
   transaction: Transaction,
-): Promise<Boolean> => {
+): Promise<boolean> => {
   const result = await sequelize.query(
     `DELETE FROM assessments WHERE organization_id = :organizationId AND id = :id RETURNING *`,
     {
