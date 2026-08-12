@@ -28,8 +28,11 @@ export async function enqueueAutomationAction(
  * Retries because the recompute can lose a deadlock. Two runs share at most the
  * one edge between them, but a triangle of three risks recomputing at once can
  * cycle: the cap makes an edge a keeper for one endpoint and a plain incident
- * row for the other, so the score order does not fix the lock order. The
- * backfill enqueues every risk in the org at once, so this is not exotic.
+ * row for the other, so the score order does not fix the lock order. That cap
+ * asymmetry is the mechanism on its own; `getIncidentLinksQuery` having no
+ * ORDER BY is a second, independent route, so adding one does not remove the
+ * need for this retry. The backfill enqueues every risk in the org at once
+ * against a worker running ten at a time, so none of this is exotic.
  * Postgres aborts one side with 40P01, and without a retry that risk would
  * silently keep no links until its next save.
  */
