@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router";
 import { Box, Stack } from "@mui/material";
 import CustomizableSkeleton from "../../../components/Skeletons";
 import { Bot } from "lucide-react";

@@ -8,6 +8,6 @@ export const rowStyle = {
 export const columnStyle = {
   display: "flex",
   flexDirection: "column",
-  gap: 10,
+  gap: 5,
   width: "100%",
 };

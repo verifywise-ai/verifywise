@@ -9,10 +9,12 @@
 jest.mock("bullmq", () => {
   const mockAdd = jest.fn().mockResolvedValue({ id: "job-1" });
   const mockObliterate = jest.fn().mockResolvedValue(undefined);
+  const mockUpsertJobScheduler = jest.fn().mockResolvedValue({ id: "job-1" });
   return {
     Queue: jest.fn().mockImplementation(() => ({
       add: mockAdd,
       obliterate: mockObliterate,
+      upsertJobScheduler: mockUpsertJobScheduler,
     })),
   };
 });
@@ -45,11 +47,29 @@ const mockAdd = automationQueue.add as jest.MockedFunction<typeof automationQueu
 const mockObliterate = automationQueue.obliterate as jest.MockedFunction<
   typeof automationQueue.obliterate
 >;
+const mockUpsertJobScheduler = automationQueue.upsertJobScheduler as jest.MockedFunction<
+  typeof automationQueue.upsertJobScheduler
+>;
 
 describe("automationProducer", () => {
   beforeEach(() => {
     jest.clearAllMocks();
   });
+
+  const expectSchedulerCall = (name: string, data: object, pattern: string, tz?: string) => {
+    expect(mockUpsertJobScheduler).toHaveBeenCalledWith(
+      name,
+      tz ? { pattern, tz } : { pattern },
+      expect.objectContaining({
+        name,
+        data,
+        opts: expect.objectContaining({
+          removeOnComplete: true,
+          removeOnFail: false,
+        }),
+      }),
+    );
+  };
 
   describe("enqueueAutomationAction", () => {
     it("should add a job to the queue", async () => {
@@ -71,15 +91,7 @@ describe("automationProducer", () => {
       await scheduleVendorReviewDateNotification();
 
       expect(mockObliterate).toHaveBeenCalledWith({ force: true });
-      expect(mockAdd).toHaveBeenCalledWith(
-        "send_vendor_notification",
-        { type: "review_date" },
-        expect.objectContaining({
-          repeat: { pattern: "0 0 * * *" },
-          removeOnComplete: true,
-          removeOnFail: false,
-        }),
-      );
+      expectSchedulerCall("send_vendor_notification", { type: "review_date" }, "0 0 * * *");
     });
   });
 
@@ -87,12 +99,10 @@ describe("automationProducer", () => {
     it("should add a repeating job at 8 AM daily", async () => {
       await schedulePolicyDueSoonNotification();
 
-      expect(mockAdd).toHaveBeenCalledWith(
+      expectSchedulerCall(
         "send_policy_due_soon_notification",
         { type: "policy_due_soon" },
-        expect.objectContaining({
-          repeat: { pattern: "0 8 * * *" },
-        }),
+        "0 8 * * *",
       );
     });
   });
@@ -102,13 +112,7 @@ describe("automationProducer", () => {
       await scheduleReportNotification();
 
       expect(mockObliterate).toHaveBeenCalledWith({ force: true });
-      expect(mockAdd).toHaveBeenCalledWith(
-        "send_report_notification",
-        { type: "report_notification" },
-        expect.objectContaining({
-          repeat: { pattern: "0 0 * * *" },
-        }),
-      );
+      expectSchedulerCall("send_report_notification", { type: "report_notification" }, "0 0 * * *");
     });
   });
 
@@ -116,13 +120,7 @@ describe("automationProducer", () => {
     it("should add a repeating job every hour", async () => {
       await schedulePMMHourlyCheck();
 
-      expect(mockAdd).toHaveBeenCalledWith(
-        "pmm_hourly_check",
-        { type: "pmm" },
-        expect.objectContaining({
-          repeat: { pattern: "0 * * * *" },
-        }),
-      );
+      expectSchedulerCall("pmm_hourly_check", { type: "pmm" }, "0 * * * *");
     });
   });
 
@@ -130,28 +128,28 @@ describe("automationProducer", () => {
     it("should schedule 5 shadow AI jobs", async () => {
       await scheduleShadowAiJobs();
 
-      expect(mockAdd).toHaveBeenCalledTimes(5);
-      expect(mockAdd).toHaveBeenCalledWith(
+      expect(mockUpsertJobScheduler).toHaveBeenCalledTimes(5);
+      expect(mockUpsertJobScheduler).toHaveBeenCalledWith(
         "shadow_ai_daily_rollup",
         expect.any(Object),
         expect.any(Object),
       );
-      expect(mockAdd).toHaveBeenCalledWith(
+      expect(mockUpsertJobScheduler).toHaveBeenCalledWith(
         "shadow_ai_monthly_rollup",
         expect.any(Object),
         expect.any(Object),
       );
-      expect(mockAdd).toHaveBeenCalledWith(
+      expect(mockUpsertJobScheduler).toHaveBeenCalledWith(
         "shadow_ai_risk_scoring",
         expect.any(Object),
         expect.any(Object),
       );
-      expect(mockAdd).toHaveBeenCalledWith(
+      expect(mockUpsertJobScheduler).toHaveBeenCalledWith(
         "shadow_ai_purge_events",
         expect.any(Object),
         expect.any(Object),
       );
-      expect(mockAdd).toHaveBeenCalledWith(
+      expect(mockUpsertJobScheduler).toHaveBeenCalledWith(
         "ai_gateway_budget_reset",
         expect.any(Object),
         expect.any(Object),
@@ -163,13 +161,7 @@ describe("automationProducer", () => {
     it("should add a repeating job every 6 hours", async () => {
       await scheduleAgentDiscoverySync();
 
-      expect(mockAdd).toHaveBeenCalledWith(
-        "agent_discovery_sync",
-        { type: "agent_discovery" },
-        expect.objectContaining({
-          repeat: { pattern: "0 */6 * * *" },
-        }),
-      );
+      expectSchedulerCall("agent_discovery_sync", { type: "agent_discovery" }, "0 */6 * * *");
     });
   });
 
@@ -177,12 +169,10 @@ describe("automationProducer", () => {
     it("should add a repeating job every 5 minutes", async () => {
       await scheduleAiDetectionScanCheck();
 
-      expect(mockAdd).toHaveBeenCalledWith(
+      expectSchedulerCall(
         "ai_detection_scheduled_scan_check",
         { type: "ai_detection" },
-        expect.objectContaining({
-          repeat: { pattern: "*/5 * * * *" },
-        }),
+        "*/5 * * * *",
       );
     });
   });
@@ -191,13 +181,7 @@ describe("automationProducer", () => {
     it("should add a repeating job at 6 AM daily", async () => {
       await scheduleAiGatewayRiskDetection();
 
-      expect(mockAdd).toHaveBeenCalledWith(
-        "ai_gateway_risk_detection",
-        { type: "ai_gateway_risk" },
-        expect.objectContaining({
-          repeat: { pattern: "0 6 * * *" },
-        }),
-      );
+      expectSchedulerCall("ai_gateway_risk_detection", { type: "ai_gateway_risk" }, "0 6 * * *");
     });
   });
 
@@ -205,13 +189,7 @@ describe("automationProducer", () => {
     it("should add a repeating job at 3 AM daily", async () => {
       await scheduleAiGatewayCacheCleanup();
 
-      expect(mockAdd).toHaveBeenCalledWith(
-        "ai_gateway_cache_cleanup",
-        { type: "ai_gateway_cache" },
-        expect.objectContaining({
-          repeat: { pattern: "0 3 * * *" },
-        }),
-      );
+      expectSchedulerCall("ai_gateway_cache_cleanup", { type: "ai_gateway_cache" }, "0 3 * * *");
     });
   });
 
@@ -219,13 +197,7 @@ describe("automationProducer", () => {
     it("should add a repeating job at 3 AM daily", async () => {
       await scheduleMcpGatewayCleanup();
 
-      expect(mockAdd).toHaveBeenCalledWith(
-        "mcp_audit_cleanup",
-        { type: "mcp_gateway" },
-        expect.objectContaining({
-          repeat: { pattern: "0 3 * * *" },
-        }),
-      );
+      expectSchedulerCall("mcp_audit_cleanup", { type: "mcp_gateway" }, "0 3 * * *");
     });
   });
 });

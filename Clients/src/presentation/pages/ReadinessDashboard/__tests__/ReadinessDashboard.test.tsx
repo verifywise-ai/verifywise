@@ -7,6 +7,7 @@ const mockControlScores = vi.fn();
 const mockWeakest = vi.fn();
 const mockHistory = vi.fn();
 const mockTriggerCalculate = vi.fn();
+const mockTriggerCalculateFramework = vi.fn();
 
 vi.mock("../../../../application/hooks/useReadiness", () => ({
   useReadinessScores: (...args: any[]) => mockScores(...args),
@@ -14,6 +15,7 @@ vi.mock("../../../../application/hooks/useReadiness", () => ({
   useWeakestControls: (...args: any[]) => mockWeakest(...args),
   useReadinessHistory: (...args: any[]) => mockHistory(...args),
   useTriggerCalculateAll: (...args: any[]) => mockTriggerCalculate(...args),
+  useTriggerCalculateFramework: (...args: any[]) => mockTriggerCalculateFramework(...args),
 }));
 
 vi.mock("../../../components/ReadinessHeatmap", () => ({
@@ -66,6 +68,7 @@ describe("ReadinessDashboard", () => {
     mockWeakest.mockReturnValue({ data: [], isLoading: false });
     mockHistory.mockReturnValue({ data: [], isLoading: false });
     mockTriggerCalculate.mockReturnValue(defaultTriggerCalculate);
+    mockTriggerCalculateFramework.mockReturnValue({ mutate: vi.fn(), isPending: false });
   });
 
   it("renders the page title and description", () => {
@@ -83,10 +86,52 @@ describe("ReadinessDashboard", () => {
     expect(screen.getByText("45")).toBeInTheDocument();
   });
 
-  it("shows loading spinner for scores when loading", () => {
+  // framework_readiness_scores keys its upsert on created_by, so the same
+  // framework comes back once per user that has calculated it.
+  const twoUsersSameFramework = [
+    {
+      id: 1,
+      framework_type: "eu_ai_act",
+      project_id: 1,
+      created_by: 2,
+      avg_score: 29,
+      calculated_at: "2026-07-28T18:07:14.235Z",
+    },
+    {
+      id: 6,
+      framework_type: "eu_ai_act",
+      project_id: 1,
+      created_by: 1,
+      avg_score: 36,
+      calculated_at: "2026-07-30T14:05:35.633Z",
+    },
+  ];
+
+  it("renders one card per framework when two users have scored the same framework", () => {
+    mockScores.mockReturnValue({ data: twoUsersSameFramework, isLoading: false });
+    // Scoped mode hides the framework tabs, so "EU AI Act" here is the card title.
+    renderWithProviders(<ReadinessDashboard projectId={1} frameworkType="eu_ai_act" />);
+    expect(screen.getAllByText("EU AI Act")).toHaveLength(1);
+    expect(screen.getByText("36")).toBeInTheDocument();
+    expect(screen.queryByText("29")).not.toBeInTheDocument();
+  });
+
+  it("dedupes on the org-wide path too, keeping the newest regardless of API order", () => {
+    // getFrameworkScoresQuery sorts by avg_score ASC, not by recency, so the
+    // newest row is not reliably last.
+    mockScores.mockReturnValue({
+      data: [...twoUsersSameFramework].reverse(),
+      isLoading: false,
+    });
+    renderWithProviders(<ReadinessDashboard />);
+    expect(screen.getByText("36")).toBeInTheDocument();
+    expect(screen.queryByText("29")).not.toBeInTheDocument();
+  });
+
+  it("shows loading skeleton for scores when loading", () => {
     mockScores.mockReturnValue({ data: undefined, isLoading: true });
     renderWithProviders(<ReadinessDashboard />);
-    expect(document.querySelector(".MuiCircularProgress-root")).toBeInTheDocument();
+    expect(document.querySelector(".MuiSkeleton-root")).toBeInTheDocument();
   });
 
   it("shows empty state when no scores", () => {
@@ -138,5 +183,45 @@ describe("ReadinessDashboard", () => {
     renderWithProviders(<ReadinessDashboard />);
     expect(screen.getByText("Calculating...")).toBeInTheDocument();
     expect(screen.queryByText("Calculate readiness")).not.toBeInTheDocument();
+  });
+
+  describe("scoped to a use case and framework", () => {
+    const scopedProps = { projectId: 7, frameworkType: "iso_42001" };
+
+    it("scopes every query to the project and framework", () => {
+      renderWithProviders(<ReadinessDashboard {...scopedProps} />);
+      expect(mockScores).toHaveBeenCalledWith(7, undefined);
+      expect(mockControlScores).toHaveBeenCalledWith("iso_42001", {
+        projectId: 7,
+        visibility: undefined,
+      });
+      expect(mockWeakest).toHaveBeenCalledWith(10, 7, undefined);
+      expect(mockHistory).toHaveBeenCalledWith("iso_42001", 7, undefined);
+    });
+
+    it("hides the framework tabs and the page title", () => {
+      renderWithProviders(<ReadinessDashboard {...scopedProps} />);
+      expect(screen.queryAllByRole("tab")).toHaveLength(0);
+      expect(screen.queryByText("Audit readiness")).not.toBeInTheDocument();
+    });
+
+    it("shows a score card only for the pinned framework", () => {
+      renderWithProviders(<ReadinessDashboard {...scopedProps} />);
+      expect(screen.getByText("ISO 42001")).toBeInTheDocument();
+      expect(screen.queryByText("EU AI Act")).not.toBeInTheDocument();
+    });
+
+    it("recalculates only the pinned framework for this project", async () => {
+      const mutate = vi.fn();
+      mockTriggerCalculateFramework.mockReturnValue({ mutate, isPending: false });
+      const user = userEvent.setup();
+      renderWithProviders(<ReadinessDashboard {...scopedProps} />);
+      await user.click(screen.getByText("Calculate readiness"));
+      expect(mutate).toHaveBeenCalledWith({
+        frameworkType: "iso_42001",
+        projectId: 7,
+        visibility: "public",
+      });
+    });
   });
 });

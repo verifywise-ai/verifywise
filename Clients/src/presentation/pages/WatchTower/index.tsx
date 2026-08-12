@@ -3,7 +3,7 @@ import TabContext from "@mui/lab/TabContext";
 import TabPanel from "@mui/lab/TabPanel";
 import WatchTowerEvents from "./Events";
 import WatchTowerLogs from "./Loggings";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router";
 import TabBar from "../../components/TabBar";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 

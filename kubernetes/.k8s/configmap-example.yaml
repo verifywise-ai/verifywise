@@ -41,17 +41,14 @@ data:
   # SMTP Settings (when EMAIL_PROVIDER=smtp)
   SMTP_HOST: "smtp.gmail.com"
   SMTP_PORT: "587"
-  SMTP_USER: "your-email@company.com"
   SMTP_SECURE: "false"
 
   # Exchange Online Settings (when EMAIL_PROVIDER=exchange-online)
-  EXCHANGE_ONLINE_USER: "noreply@company.onmicrosoft.com"
   EXCHANGE_ONLINE_TENANT_ID: ""  # Optional
 
   # Exchange On-Premises Settings (when EMAIL_PROVIDER=exchange-onprem)
   EXCHANGE_ONPREM_HOST: "mail.company.com"
   EXCHANGE_ONPREM_PORT: "587"
-  EXCHANGE_ONPREM_USER: "your-username"
   EXCHANGE_ONPREM_DOMAIN: "COMPANY"
   EXCHANGE_ONPREM_SECURE: "false"
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef, useMemo } from "react";
-import { useParams, useSearchParams, useNavigate } from "react-router-dom";
+import { useParams, useSearchParams, useNavigate } from "react-router";
 import { sanitizeRichText } from "../../../application/utils/richTextSanitizer";
 import { Box, Stack, Typography, Skeleton, Snackbar, Alert } from "@mui/material";
 

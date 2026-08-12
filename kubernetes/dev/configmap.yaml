@@ -1,3 +1,4 @@
+# NOTE: sensitive values must be supplied via a Secret (see kubernetes/.k8s/secrets-example.yaml).
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -12,10 +13,6 @@ data:
   NODE_ENV: "production"
   DB_SSL: "false"
   MULTI_TENANCY_ENABLED: "false"
-  RESEND_API_KEY: "your-resend-api-key"
   DB_HOST: "localhost"
   DB_PORT: "5432"
-  DB_NAME: "verifywise"
-  DB_USER: "verifyuser"
   MOCK_DATA_ON: "false"
-  EMAIL_ID: "your-email@gmail.com"

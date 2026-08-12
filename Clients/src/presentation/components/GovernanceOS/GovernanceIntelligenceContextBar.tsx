@@ -1,6 +1,6 @@
 import React from "react";
 import { Stack, Typography, Box } from "@mui/material";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { GitCompareArrows, BarChart3, ArrowRight, Sparkles } from "lucide-react";
 import { useGovernancePreferences } from "../../../application/hooks/useGovernanceOs";
 import { CustomizableButton } from "../button/customizable-button";

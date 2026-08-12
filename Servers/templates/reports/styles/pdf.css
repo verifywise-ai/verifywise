@@ -336,6 +336,15 @@ body {
   color: #027A48;
 }
 
+/* Every risk vocabulary that reaches a chip ranks "Very high" above "High"
+   (see `levelRank`, services/reporting/analyzers/prompts.ts) but the palette
+   stopped at `high`. Callers strip the " risk" suffix the project/vendor
+   `risk_level_autocalculated` enum carries before building the class name. */
+.chip-very-high {
+  background: #FEF3F2;
+  color: #B42318;
+}
+
 .chip-very-low {
   background: #F0F9FF;
   color: #026AA2;
@@ -498,4 +507,21 @@ body {
   .stats-row {
     flex-direction: column;
   }
+}
+
+/* Sections with no data (section notices) */
+.section-notice-intro {
+  font-size: 11px;
+  color: #667085;
+  margin-bottom: 8px;
+}
+
+.section-notice {
+  font-size: 12px;
+  color: #344054;
+  padding-left: 18px;
+}
+
+.section-notice li {
+  margin-bottom: 4px;
 }

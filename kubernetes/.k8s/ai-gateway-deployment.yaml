@@ -24,8 +24,8 @@ spec:
           type: RuntimeDefault
       containers:
       - name: ai-gateway
-        image: ghcr.io/verifywise-ai/verifywise-ai-gateway:latest
-        imagePullPolicy: Always
+        image: ghcr.io/verifywise-ai/verifywise-ai-gateway:1.7.0
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8100
           name: http
@@ -103,6 +103,11 @@ spec:
           periodSeconds: 5
           timeoutSeconds: 3
           failureThreshold: 3
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
         resources:
           requests:
             memory: "512Mi"

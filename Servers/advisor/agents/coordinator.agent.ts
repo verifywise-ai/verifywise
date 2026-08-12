@@ -6,7 +6,7 @@
  */
 
 import { classifyIntent, executeMultiAgent } from "../network/routingEngine";
-import { getAgent, getAllAgents, registerAgent } from "../network/agentRegistry";
+import { getAgent, registerAgent } from "../network/agentRegistry";
 import type { RegisteredAgent } from "../network/agentRegistry";
 import {
   createAgentRequest,

@@ -9,7 +9,13 @@ import {
 import { sequelize } from "./database/db";
 import redisClient from "./database/redis";
 import { startTimeoutHandler } from "./advisor/approval/timeoutHandler";
+import { bootstrapAgentNetwork } from "./advisor/network/agentNetwork";
+import { registerAllWorkflows } from "./services/workflows";
 import { initObservability, shutdownObservability } from "./observability/otel";
+import {
+  startAiDetectionProgressCleanup,
+  stopAiDetectionProgressCleanup,
+} from "./services/aiDetection.service";
 
 const DEFAULT_PORT = "3000";
 const DEFAULT_HOST = "localhost";
@@ -32,7 +38,11 @@ try {
 
   // Adding background jobs in the Queue
   (async () => {
-    await addAllJobs();
+    try {
+      await addAllJobs();
+    } catch (error) {
+      console.error("Failed to add background jobs:", error);
+    }
   })();
 
   // Setup notification subscriber for real-time notifications
@@ -90,6 +100,12 @@ try {
   // Start approval timeout handler (expires pending approvals past TTL)
   startTimeoutHandler();
 
+  // Bootstrap the multi-agent network (registers all domain agents) and
+  // register the autopilot workflow definitions at startup.
+  bootstrapAgentNetwork();
+  registerAllWorkflows();
+  startAiDetectionProgressCleanup();
+
   const server = app.listen(port, () => {
     console.log(`Server running on port http://${host}:${port}/`);
   });
@@ -99,6 +115,8 @@ try {
 
     server.close(async () => {
       console.log("HTTP server closed");
+
+      stopAiDetectionProgressCleanup();
 
       try {
         await closeNotificationSubscriber();

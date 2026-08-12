@@ -1,5 +1,5 @@
 import { useEffect, useCallback } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router";
 import { useDispatch, useSelector } from "react-redux";
 import { AppModule, setActiveModule } from "../redux/ui/uiSlice";
 import { RootState } from "../redux/store";

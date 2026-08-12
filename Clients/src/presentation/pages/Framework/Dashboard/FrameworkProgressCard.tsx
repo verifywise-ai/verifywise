@@ -30,6 +30,9 @@ interface FrameworkData {
     measure: { total: number; done: number };
     manage: { total: number; done: number };
   };
+  // Generic frameworks (SOC 2, GDPR, HIPAA, Data Governance, ...) —
+  // aggregated across L2 (+ L3 for three-level) impls.
+  genericProgress?: { total: number; done: number };
 }
 
 interface FrameworkProgressCardProps {
@@ -209,6 +212,8 @@ const FrameworkProgressCard = ({ frameworksData }: FrameworkProgressCardProps) =
               );
             }
 
+            const isISO = isISO27001 || isISO42001;
+
             // For ISO frameworks
             const clauseDone = framework.clauseProgress?.doneSubclauses || 0;
             const clauseTotal = framework.clauseProgress?.totalSubclauses || 0;
@@ -222,6 +227,13 @@ const FrameworkProgressCard = ({ frameworksData }: FrameworkProgressCardProps) =
               ? framework.annexProgress?.totalAnnexControls || 0
               : framework.annexProgress?.totalAnnexcategories || 0;
             const annexPercent = calculateProgress(annexDone, annexTotal);
+
+            // Generic frameworks (SOC 2, GDPR, HIPAA, ...) don't have a
+            // clause / annex split — a single "Requirements" row over the
+            // whole tree is the right shape.
+            const genericDone = framework.genericProgress?.done || 0;
+            const genericTotal = framework.genericProgress?.total || 0;
+            const genericPercent = calculateProgress(genericDone, genericTotal);
 
             return (
               <Box key={framework.frameworkId}>
@@ -249,7 +261,7 @@ const FrameworkProgressCard = ({ frameworksData }: FrameworkProgressCardProps) =
                   {framework.frameworkName}
                 </Typography>
 
-                {/* Controls/Clauses Progress */}
+                {/* Controls/Clauses/Requirements Progress */}
                 <Box sx={{ mb: 2 }}>
                   <Box
                     sx={{
@@ -260,7 +272,7 @@ const FrameworkProgressCard = ({ frameworksData }: FrameworkProgressCardProps) =
                     }}
                   >
                     <Typography sx={{ fontSize: 12, color: "#666666" }}>
-                      {isISO27001 || isISO42001 ? "Clauses" : "Requirements"}
+                      {isISO ? "Clauses" : "Requirements"}
                     </Typography>
                     <Box
                       sx={{
@@ -271,13 +283,13 @@ const FrameworkProgressCard = ({ frameworksData }: FrameworkProgressCardProps) =
                       }}
                     >
                       <Typography sx={{ fontSize: 12, color: `${text.black}`, fontWeight: 500 }}>
-                        {clauseDone}
+                        {isISO ? clauseDone : genericDone}
                       </Typography>
                       <Typography sx={{ fontSize: 12, color: `${text.black}`, fontWeight: 500 }}>
                         /
                       </Typography>
                       <Typography sx={{ fontSize: 12, color: "#999999", fontWeight: 500 }}>
-                        {clauseTotal}
+                        {isISO ? clauseTotal : genericTotal}
                       </Typography>
                     </Box>
                     <Box
@@ -288,96 +300,101 @@ const FrameworkProgressCard = ({ frameworksData }: FrameworkProgressCardProps) =
                         justifyContent: "flex-end",
                       }}
                     >
-                      {getProgressIcon(clausePercent)}
+                      {getProgressIcon(isISO ? clausePercent : genericPercent)}
                       <Typography
                         sx={{
                           fontSize: 12,
-                          color: clausePercent === 100 ? `${brand.primary}` : "#666666",
+                          color:
+                            (isISO ? clausePercent : genericPercent) === 100
+                              ? `${brand.primary}`
+                              : "#666666",
                           fontWeight: 500,
                         }}
                       >
-                        {clausePercent}%
+                        {isISO ? clausePercent : genericPercent}%
                       </Typography>
                     </Box>
                   </Box>
                   <LinearProgress
                     variant="determinate"
-                    value={clausePercent}
+                    value={isISO ? clausePercent : genericPercent}
                     sx={{
                       "height": 6,
                       "borderRadius": 3,
                       "backgroundColor": `${background.hover}`,
                       "& .MuiLinearProgress-bar": {
-                        backgroundColor: getProgressColor(clausePercent),
+                        backgroundColor: getProgressColor(isISO ? clausePercent : genericPercent),
                         borderRadius: 3,
                       },
                     }}
                   />
                 </Box>
 
-                {/* Annexes Progress */}
-                <Box>
-                  <Box
-                    sx={{
-                      display: "grid",
-                      gridTemplateColumns: "1fr auto 1fr",
-                      alignItems: "center",
-                      mb: 1,
-                    }}
-                  >
-                    <Typography sx={{ fontSize: 12, color: "#666666" }}>Annexes</Typography>
+                {/* Annexes Progress (ISO only) */}
+                {isISO && (
+                  <Box>
                     <Box
                       sx={{
-                        display: "flex",
+                        display: "grid",
+                        gridTemplateColumns: "1fr auto 1fr",
                         alignItems: "center",
-                        gap: 0.5,
-                        justifyContent: "flex-end",
+                        mb: 1,
                       }}
                     >
-                      <Typography sx={{ fontSize: 12, color: `${text.black}`, fontWeight: 500 }}>
-                        {annexDone}
-                      </Typography>
-                      <Typography sx={{ fontSize: 12, color: `${text.black}`, fontWeight: 500 }}>
-                        /
-                      </Typography>
-                      <Typography sx={{ fontSize: 12, color: "#999999", fontWeight: 500 }}>
-                        {annexTotal}
-                      </Typography>
-                    </Box>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 1,
-                        justifyContent: "flex-end",
-                      }}
-                    >
-                      {getProgressIcon(annexPercent)}
-                      <Typography
+                      <Typography sx={{ fontSize: 12, color: "#666666" }}>Annexes</Typography>
+                      <Box
                         sx={{
-                          fontSize: 12,
-                          color: annexPercent === 100 ? `${brand.primary}` : "#666666",
-                          fontWeight: 500,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 0.5,
+                          justifyContent: "flex-end",
                         }}
                       >
-                        {annexPercent}%
-                      </Typography>
+                        <Typography sx={{ fontSize: 12, color: `${text.black}`, fontWeight: 500 }}>
+                          {annexDone}
+                        </Typography>
+                        <Typography sx={{ fontSize: 12, color: `${text.black}`, fontWeight: 500 }}>
+                          /
+                        </Typography>
+                        <Typography sx={{ fontSize: 12, color: "#999999", fontWeight: 500 }}>
+                          {annexTotal}
+                        </Typography>
+                      </Box>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1,
+                          justifyContent: "flex-end",
+                        }}
+                      >
+                        {getProgressIcon(annexPercent)}
+                        <Typography
+                          sx={{
+                            fontSize: 12,
+                            color: annexPercent === 100 ? `${brand.primary}` : "#666666",
+                            fontWeight: 500,
+                          }}
+                        >
+                          {annexPercent}%
+                        </Typography>
+                      </Box>
                     </Box>
+                    <LinearProgress
+                      variant="determinate"
+                      value={annexPercent}
+                      sx={{
+                        "height": 6,
+                        "borderRadius": 3,
+                        "backgroundColor": `${background.hover}`,
+                        "& .MuiLinearProgress-bar": {
+                          backgroundColor: getProgressColor(annexPercent),
+                          borderRadius: 3,
+                        },
+                      }}
+                    />
                   </Box>
-                  <LinearProgress
-                    variant="determinate"
-                    value={annexPercent}
-                    sx={{
-                      "height": 6,
-                      "borderRadius": 3,
-                      "backgroundColor": `${background.hover}`,
-                      "& .MuiLinearProgress-bar": {
-                        backgroundColor: getProgressColor(annexPercent),
-                        borderRadius: 3,
-                      },
-                    }}
-                  />
-                </Box>
+                )}
 
                 {/* Add bottom margin for spacing before next section */}
                 {index < frameworksData.length - 1 && <Box sx={{ mb: 4 }} />}

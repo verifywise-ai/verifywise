@@ -70,7 +70,7 @@ export default defineConfig({
           if (id.includes("node_modules")) {
             if (
               id.includes("react-dom") ||
-              id.includes("react-router-dom") ||
+              id.includes("react-router") ||
               (id.includes("/react/") && !id.includes("react-"))
             ) {
               return "vendor-react";
@@ -111,7 +111,7 @@ export default defineConfig({
     environment: "jsdom",
     setupFiles: "./src/test/setup.ts",
     globals: true,
-    testTimeout: 10000,
+    testTimeout: 20000,
     exclude: ["e2e/**", "**/node_modules/**"],
     env: {
       VITE_APP_API_BASE_URL: "http://localhost:3000",

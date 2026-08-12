@@ -55,36 +55,39 @@ describe("routing / real catalogue smoke", () => {
     expect(FULL).toBeGreaterThan(60);
   });
 
-  it("OBSERVABILITY: log routing metrics for sample queries", async () => {
+  it("covers every core domain agent across the sample queries", async () => {
     const samples = [
       "List all my vendors and their SLA status",
       "Show me the risk register entries for our top projects",
       "What's our gap analysis for EU AI Act Article 10?",
       "Any open incidents from this week's data breach?",
       "List all foundation models in our model inventory",
-      "Hello, what can you help me with?",
       "Vendor risk assessment with related compliance gap evidence",
     ];
-    // eslint-disable-next-line no-console
-    console.log(`\n  Full catalogue size: ${FULL} tools\n  ${"─".repeat(95)}`);
+    const agentsSeen = new Set<string>();
     for (const q of samples) {
       const r = await selectActiveTools({
         message: q,
         availableTools,
         toolsDefinition,
       });
-      const reduction =
-        r.metrics.fullCount > 0
-          ? Math.round(((r.metrics.fullCount - r.metrics.activeCount) / r.metrics.fullCount) * 100)
-          : 0;
-      // eslint-disable-next-line no-console
-      console.log(
-        `  Q="${q.slice(0, 55).padEnd(55)}" → ${r.reason.padEnd(22)} agents=[${(r.selectedAgents.join(", ") || "—").padEnd(35)}] ${String(r.metrics.activeCount).padStart(3)}/${r.metrics.fullCount} (-${reduction}%)`,
-      );
+      for (const agent of r.selectedAgents) agentsSeen.add(agent);
+      // Every routed query must yield a well-formed subset
+      expect(r.metrics.fullCount).toBe(FULL);
+      expect(r.metrics.activeCount).toBeGreaterThan(0);
+      expect(r.metrics.activeCount).toBeLessThanOrEqual(FULL);
+      expect(r.selectedAgents.length).toBeGreaterThan(0);
     }
-    // eslint-disable-next-line no-console
-    console.log(`  ${"─".repeat(95)}\n`);
-    expect(true).toBe(true); // observability-only test
+    // The core domain agents must all be reachable by the router
+    for (const agent of [
+      "vendor-agent",
+      "risk-agent",
+      "compliance-agent",
+      "incident-agent",
+      "model-agent",
+    ]) {
+      expect(agentsSeen).toContain(agent);
+    }
   });
 
   it("vendor query selects vendor-agent and reduces the catalogue", async () => {

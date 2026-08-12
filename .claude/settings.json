@@ -13,19 +13,6 @@
         "matcher": ""
       }
     ],
-    "PreToolUse": [
-      {
-        "hooks": [
-          {
-            "command": "dfmt hook claude-code pretooluse",
-            "statusMessage": "Routing through dfmt for token savings...",
-            "timeout": 5,
-            "type": "command"
-          }
-        ],
-        "matcher": "Bash|Read|WebFetch|Grep|Task|Edit|Write|Glob"
-      }
-    ],
     "SessionStart": [
       {
         "hooks": [

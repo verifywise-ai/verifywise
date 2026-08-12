@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Background circle - US Government blue -->
+  <circle cx="32" cy="32" r="30" fill="#002868"/>
+
+  <!-- Shield for consumer protection -->
+  <path d="M32 10 L48 18 L48 34 C48 44 40 52 32 54 C24 52 16 44 16 34 L16 18 Z" fill="#FFFFFF" stroke="#BF0A30" stroke-width="1.5"/>
+
+  <!-- Inner shield with stripes (US flag inspired) -->
+  <path d="M32 14 L44 20 L44 34 C44 42 38 48 32 50 C26 48 20 42 20 34 L20 20 Z" fill="#002868"/>
+
+  <!-- Stripes -->
+  <rect x="20" y="26" width="24" height="3" fill="#BF0A30"/>
+  <rect x="20" y="32" width="24" height="3" fill="#BF0A30"/>
+  <rect x="20" y="38" width="24" height="3" fill="#BF0A30"/>
+
+  <!-- Scales of justice -->
+  <g stroke="#FFFFFF" stroke-width="2" fill="none">
+    <line x1="32" y1="16" x2="32" y2="24"/>
+    <line x1="26" y1="18" x2="38" y2="18"/>
+    <circle cx="26" cy="21" r="2" fill="#FFFFFF"/>
+    <circle cx="38" cy="21" r="2" fill="#FFFFFF"/>
+  </g>
+
+  <!-- FTC text -->
+  <text x="32" y="58" font-family="Arial, sans-serif" font-size="7" font-weight="bold" fill="#FFFFFF" text-anchor="middle">FTC AI</text>
+</svg>

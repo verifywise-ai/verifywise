@@ -1,6 +1,6 @@
 # Servers — Backend Development Guide
 
-> **Last Updated:** 2026-05-05
+> **Last Updated:** 2026-07-20
 
 ---
 
@@ -181,9 +181,12 @@ risk while keeping the generated spec available for the frontend build pipeline.
 
 ### CI enforcement
 
-The `api-docs-drift` CI job regenerates the spec and registry, runs
-`npm run check:api-drift`, and fails if the committed generated files are out of
-sync with the route layer.
+The `api-docs-drift` job in `.github/workflows/backend-checks.yml` runs on every
+push and PR touching `Servers/**`. It regenerates `swagger.yaml` and
+`endpoints.ts`, fails via `git diff --exit-code` if the committed files differ
+from the regenerated output, then runs `npm run check:api-drift` as a semantic
+backstop. Skipping step 3 above will therefore break CI — regenerate and commit
+the generated files with your route change.
 
 ---
 

@@ -4,7 +4,7 @@
  * Initializes the Langfuse client for tracing agent executions.
  */
 
-import Langfuse from "langfuse";
+import type Langfuse from "langfuse";
 import { logStructured } from "../../utils/logger/fileLogger";
 
 const fileName = "langfuseConfig.ts";
@@ -33,7 +33,14 @@ export function getLangfuse(): Langfuse | null {
   }
 
   try {
-    langfuseClient = new Langfuse({
+    // Lazy-require the runtime constructor only when Langfuse is actually
+    // configured. `langfuse` pulls in an ESM-only dependency at import time,
+    // so loading it eagerly would break CJS consumers (e.g. the Jest test
+    // runner) even when tracing is disabled. Importing only here keeps the
+    // rest of the advisor pipeline loadable without Langfuse present.
+
+    const LangfuseCtor = require("langfuse").default as typeof Langfuse;
+    langfuseClient = new LangfuseCtor({
       publicKey,
       secretKey,
       baseUrl,

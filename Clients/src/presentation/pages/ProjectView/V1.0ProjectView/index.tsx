@@ -4,7 +4,7 @@ import TabPanel from "@mui/lab/TabPanel";
 import { SyntheticEvent, useState, useEffect, useMemo } from "react";
 import TabContext from "@mui/lab/TabContext";
 import VWProjectOverview from "./Overview";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 import CustomizableSkeleton from "../../../components/Skeletons";
 import VWProjectRisks from "./ProjectRisks";
 import LinkedModels from "./LinkedModels";
@@ -279,6 +279,7 @@ const VWProjectView = () => {
             activeTab={value}
             onChange={handleChange}
             disabledTabTooltip={getDisabledTooltip()}
+            scrollable
           />
 
           <TabPanel value="overview" sx={tabPanelStyle}>
