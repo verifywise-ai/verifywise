@@ -6,6 +6,7 @@ import cookieParser from "cookie-parser";
 import assessmentRoutes from "./routes/assessment.route";
 import projectRoutes from "./routes/project.route";
 import risksRoutes from "./routes/risks.route";
+import riskLinksRoutes from "./routes/riskLinks.route";
 import questionRoutes from "./routes/question.route";
 import userRoutes from "./routes/user.route";
 import vendorRoutes from "./routes/vendor.route";
@@ -220,6 +221,7 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
   app.use("/api/autoDrivers", autoDriverRoutes);
   app.use("/api/assessments", assessmentRoutes);
   app.use("/api/projectRisks", risksRoutes);
+  app.use("/api/riskLinks", riskLinksRoutes);
   app.use("/api/roles", roleRoutes);
   app.use("/api/files", fileRoutes);
   app.use("/api/mail", mailRoutes);

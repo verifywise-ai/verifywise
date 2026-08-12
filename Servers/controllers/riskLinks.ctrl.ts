@@ -1,0 +1,211 @@
+import { Request, Response } from "express";
+import * as statusCodeUtils from "../utils/statusCode.utils";
+import { logFailure, logProcessing, logSuccess } from "../utils/logger/logHelper";
+import { enqueueRiskLinkRecompute } from "../services/automations/automationProducer";
+import {
+  getActiveRiskIdsQuery,
+  getRiskLinkByIdQuery,
+  getRiskLinksForRiskQuery,
+  RiskLinkWithRelated,
+  updateRiskLinkStatusQuery,
+} from "../utils/riskLink.utils";
+import { RISK_LINK_STATUSES, RiskLinkStatus } from "../services/riskLinks/types";
+
+const FILE_NAME = "riskLinks.ctrl.ts";
+const STATUS_CODE =
+  (statusCodeUtils as typeof statusCodeUtils & { default?: typeof statusCodeUtils.STATUS_CODE }).default ??
+  statusCodeUtils.STATUS_CODE;
+
+/** What the list endpoint shows by default: open suggestions plus accepted links. */
+const DEFAULT_STATUSES: RiskLinkStatus[] = ["suggested", "confirmed"];
+
+/**
+ * R6. `dismissed -> suggested` is the explicit undo and clears the decision
+ * fields. `confirmed -> suggested` is not a thing: un-confirming means
+ * dismissing.
+ */
+const ALLOWED_TRANSITIONS: Record<RiskLinkStatus, RiskLinkStatus[]> = {
+  suggested: ["confirmed", "dismissed"],
+  confirmed: ["dismissed"],
+  dismissed: ["confirmed", "suggested"],
+};
+
+const isRiskLinkStatus = (value: unknown): value is RiskLinkStatus =>
+  typeof value === "string" && (RISK_LINK_STATUSES as string[]).includes(value);
+
+/**
+ * Rewrite a stored edge from the caller's point of view. The store is canonical
+ * (smaller id first); the caller only cares which risk is the *other* one.
+ */
+const toResponse = (link: RiskLinkWithRelated, riskId: number) => ({
+  id: link.id,
+  status: link.status,
+  source: link.source,
+  relationType: link.relation_type,
+  score: link.score,
+  reasons: link.reasons,
+  direction:
+    link.relation_type === "inherits_from"
+      ? link.source_risk_id === riskId
+        ? "outgoing"
+        : "incoming"
+      : "undirected",
+  decidedAt: link.decided_at,
+  lastComputedAt: link.last_computed_at,
+  relatedRisk: {
+    id: link.related_id,
+    name: link.related_risk_name,
+    riskLevel: link.related_risk_level,
+    ownerId: link.related_risk_owner,
+  },
+});
+
+export async function getRiskLinks(req: Request, res: Response): Promise<any> {
+  logProcessing({
+    description: "starting getRiskLinks",
+    functionName: "getRiskLinks",
+    fileName: FILE_NAME,
+    userId: req.userId!,
+    organizationId: req.organizationId!,
+  });
+
+  try {
+    const riskId = parseInt(String(req.params.riskId), 10);
+    if (isNaN(riskId)) {
+      return res.status(400).json(STATUS_CODE[400]("Invalid risk ID"));
+    }
+
+    const requested = req.query.status;
+    if (requested !== undefined && !isRiskLinkStatus(requested)) {
+      return res.status(400).json(STATUS_CODE[400]("Invalid status filter"));
+    }
+    const statuses = requested ? [requested] : DEFAULT_STATUSES;
+
+    const links = await getRiskLinksForRiskQuery(req.organizationId!, riskId, statuses);
+
+    logSuccess({
+      eventType: "Read",
+      description: `fetched ${links.length} links for risk ${riskId}`,
+      functionName: "getRiskLinks",
+      fileName: FILE_NAME,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+
+    return res.status(200).json(STATUS_CODE[200](links.map((link) => toResponse(link, riskId))));
+  } catch (error) {
+    logFailure({
+      eventType: "Read",
+      description: "failed to fetch risk links",
+      functionName: "getRiskLinks",
+      fileName: FILE_NAME,
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+  }
+}
+
+export async function updateRiskLinkStatus(req: Request, res: Response): Promise<any> {
+  logProcessing({
+    description: "starting updateRiskLinkStatus",
+    functionName: "updateRiskLinkStatus",
+    fileName: FILE_NAME,
+    userId: req.userId!,
+    organizationId: req.organizationId!,
+  });
+
+  try {
+    const id = parseInt(String(req.params.id), 10);
+    if (isNaN(id)) {
+      return res.status(400).json(STATUS_CODE[400]("Invalid link ID"));
+    }
+
+    const next = req.body?.status;
+    if (!isRiskLinkStatus(next)) {
+      return res.status(400).json(STATUS_CODE[400]("Invalid status"));
+    }
+
+    const link = await getRiskLinkByIdQuery(id, req.organizationId!);
+    if (!link) {
+      return res.status(404).json(STATUS_CODE[404]("Risk link not found"));
+    }
+
+    if (!ALLOWED_TRANSITIONS[link.status].includes(next)) {
+      return res
+        .status(400)
+        .json(STATUS_CODE[400](`Cannot change status from ${link.status} to ${next}`));
+    }
+
+    // The undo back to `suggested` erases the decision so a later recompute may
+    // prune the edge normally again.
+    const decidedByUserId = next === "suggested" ? null : req.userId!;
+    await updateRiskLinkStatusQuery(id, req.organizationId!, next, decidedByUserId);
+
+    logSuccess({
+      eventType: "Update",
+      description: `risk link ${id} set to ${next}`,
+      functionName: "updateRiskLinkStatus",
+      fileName: FILE_NAME,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+
+    return res.status(200).json(STATUS_CODE[200]({ id, status: next }));
+  } catch (error) {
+    logFailure({
+      eventType: "Update",
+      description: "failed to update risk link status",
+      functionName: "updateRiskLinkStatus",
+      fileName: FILE_NAME,
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+  }
+}
+
+/**
+ * Backfill. The table starts empty and only fills as risks are saved, so an org
+ * needs one full pass before the feature shows anything. Fan out one job per
+ * risk rather than one big job: the jobs dedup, retry, and progress
+ * independently.
+ */
+export async function recomputeAllRiskLinks(req: Request, res: Response): Promise<any> {
+  logProcessing({
+    description: "starting recomputeAllRiskLinks",
+    functionName: "recomputeAllRiskLinks",
+    fileName: FILE_NAME,
+    userId: req.userId!,
+    organizationId: req.organizationId!,
+  });
+
+  try {
+    const riskIds = await getActiveRiskIdsQuery(req.organizationId!);
+    await Promise.all(riskIds.map((riskId) => enqueueRiskLinkRecompute(req.organizationId!, riskId)));
+
+    logSuccess({
+      eventType: "Create",
+      description: `enqueued ${riskIds.length} risk link recompute jobs`,
+      functionName: "recomputeAllRiskLinks",
+      fileName: FILE_NAME,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+
+    return res.status(202).json(STATUS_CODE[202]({ enqueued: riskIds.length }));
+  } catch (error) {
+    logFailure({
+      eventType: "Create",
+      description: "failed to enqueue risk link recompute",
+      functionName: "recomputeAllRiskLinks",
+      fileName: FILE_NAME,
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+  }
+}

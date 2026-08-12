@@ -8183,6 +8183,44 @@ export const riskHistoryEndpoints: Endpoint[] = [
   },
 ];
 
+// RiskLinks endpoints
+export const risklinksEndpoints: Endpoint[] = [
+  {
+    method: 'POST',
+    path: '/riskLinks/recompute',
+    summary: "Recompute All Risk Links",
+    description: "Requires role: Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "RiskLinks",
+  },
+  {
+    method: 'GET',
+    path: '/riskLinks/{riskId}',
+    summary: "Get Risk Links",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "RiskLinks",
+  },
+  {
+    method: 'PATCH',
+    path: '/riskLinks/{id}',
+    summary: "Update Risk Link Status",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "RiskLinks",
+  },
+];
+
 // Roles endpoints
 export const roleEndpoints: Endpoint[] = [
   {
@@ -9314,6 +9352,19 @@ export const userEndpoints: Endpoint[] = [
   },
   {
     method: 'GET',
+    path: '/users/preferences',
+    summary: "Get current user preferences",
+    description: "Returns the authenticated user's persisted preferences (date_format, language) from user_preferences. If no row exists, returns safe defaults including a transient theme default.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Preferences found or defaults returned" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Users",
+  },
+  {
+    method: 'GET',
     path: '/users/{id}',
     summary: "Get user by ID",
     description: "Retrieves a single user by their numeric ID. Super-admins can access any user; regular users can only access users within their organization (or their own record).",
@@ -9913,6 +9964,7 @@ export const allEndpoints = {
   reporting: reportingEndpoints,
   riskBenchmark: riskBenchmarkEndpoints,
   riskHistory: riskHistoryEndpoints,
+  risklinks: risklinksEndpoints,
   role: roleEndpoints,
   search: searchEndpoints,
   setting: settingEndpoints,
