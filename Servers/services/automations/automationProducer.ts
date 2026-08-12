@@ -15,6 +15,28 @@ export async function enqueueAutomationAction(
   return automationQueue.add(actionKey, data, options);
 }
 
+/**
+ * Recompute one risk's stored link edges in the background.
+ *
+ * `jobId` collapses a burst of saves for the same risk into one run. That only
+ * works because the job is removed as soon as it settles: BullMQ silently
+ * ignores an `add` whose jobId still exists, so a *retained* completed or
+ * failed job would suppress every later recompute for that risk forever.
+ * Known limitation: a save landing while the job is already active is dropped;
+ * the next save or POST /riskLinks/recompute picks it up.
+ */
+export async function enqueueRiskLinkRecompute(organizationId: number, riskId: number) {
+  return automationQueue.add(
+    "risk_link_recompute",
+    { organizationId, riskId },
+    {
+      jobId: `risk-link:${organizationId}:${riskId}`,
+      removeOnComplete: true,
+      removeOnFail: true,
+    },
+  );
+}
+
 export async function scheduleVendorReviewDateNotification() {
   await automationQueue.obliterate({ force: true });
   logger.info("Adding Vendor Review Date Notification jobs to the queue...");
