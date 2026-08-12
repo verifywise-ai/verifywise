@@ -21,15 +21,15 @@ describe("risk_links tenant isolation", () => {
     const { owner, attacker } = await seedTwoTenantContexts();
     const ownerRiskA = await createTestRisk(owner.orgId, {
       risk_category: CATEGORY,
-      ai_lifecycle_phase: "Deployment",
+      ai_lifecycle_phase: "Deployment & integration",
     });
     const ownerRiskB = await createTestRisk(owner.orgId, {
       risk_category: CATEGORY,
-      ai_lifecycle_phase: "Deployment",
+      ai_lifecycle_phase: "Deployment & integration",
     });
     const attackerRisk = await createTestRisk(attacker.orgId, {
       risk_category: CATEGORY,
-      ai_lifecycle_phase: "Deployment",
+      ai_lifecycle_phase: "Deployment & integration",
     });
 
     await recomputeRiskLinks(owner.orgId, ownerRiskA);
@@ -49,8 +49,8 @@ describe("risk_links tenant isolation", () => {
 
   it("hides the owner's links from the attacker org", async () => {
     const { owner, attacker } = await seedTwoTenantContexts();
-    const riskA = await createTestRisk(owner.orgId, { risk_category: CATEGORY, ai_lifecycle_phase: "Deployment" });
-    await createTestRisk(owner.orgId, { risk_category: CATEGORY, ai_lifecycle_phase: "Deployment" });
+    const riskA = await createTestRisk(owner.orgId, { risk_category: CATEGORY, ai_lifecycle_phase: "Deployment & integration" });
+    await createTestRisk(owner.orgId, { risk_category: CATEGORY, ai_lifecycle_phase: "Deployment & integration" });
     await recomputeRiskLinks(owner.orgId, riskA);
 
     expect(await getRiskLinksForRiskQuery(owner.orgId, riskA, ["suggested"])).toHaveLength(1);
@@ -64,8 +64,8 @@ describe("risk_links tenant isolation", () => {
 
   it("keeps the edge but hides it once the partner risk is soft-deleted (R7)", async () => {
     const { owner } = await seedTwoTenantContexts();
-    const riskA = await createTestRisk(owner.orgId, { risk_category: CATEGORY, ai_lifecycle_phase: "Deployment" });
-    const riskB = await createTestRisk(owner.orgId, { risk_category: CATEGORY, ai_lifecycle_phase: "Deployment" });
+    const riskA = await createTestRisk(owner.orgId, { risk_category: CATEGORY, ai_lifecycle_phase: "Deployment & integration" });
+    const riskB = await createTestRisk(owner.orgId, { risk_category: CATEGORY, ai_lifecycle_phase: "Deployment & integration" });
     await recomputeRiskLinks(owner.orgId, riskA);
 
     await sequelize.query(`UPDATE risks SET is_deleted = true WHERE id = :id`, {
