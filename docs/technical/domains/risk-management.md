@@ -535,6 +535,17 @@ survive, and the read path filters soft-deleted risks on both endpoints.
 `POST /api/riskLinks/recompute` (Admin) fans out one job per active risk and is
 required at least once per org, since the table starts empty.
 
+The job carries `jobId: risk-link:<org>:<risk>` so a burst of saves collapses
+into one run, plus `removeOnComplete` and `removeOnFail` — a retained job of
+either kind would make BullMQ ignore every later `add` for that risk. It also
+retries three times with exponential backoff. Two recomputes share at most the
+single edge between them and cannot deadlock, but three risks forming a
+triangle can, because the top-N cap makes an edge a keeper for one endpoint and
+an ordinary incident row for the other. The backfill puts the whole org on a
+worker running ten jobs at a time, so Postgres aborting one side with 40P01 is
+an ordinary event; the retry is what keeps that risk from silently ending up
+with no links.
+
 **Endpoints.**
 
 | Method | Path | Role | Purpose |
