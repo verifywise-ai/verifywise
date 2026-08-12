@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Background circle - AI purple -->
+  <circle cx="32" cy="32" r="30" fill="#7C3AED"/>
+
+  <!-- Brain outline -->
+  <path d="M32 12 C22 12 16 20 16 28 C16 32 18 36 22 38 C20 40 18 44 20 48 C22 52 28 54 32 52 C36 54 42 52 44 48 C46 44 44 40 42 38 C46 36 48 32 48 28 C48 20 42 12 32 12 Z" fill="#A78BFA" stroke="#FFFFFF" stroke-width="1.5"/>
+
+  <!-- Brain folds -->
+  <path d="M26 20 C30 22 34 20 38 22" stroke="#FFFFFF" stroke-width="1" fill="none"/>
+  <path d="M24 28 C28 30 36 28 40 30" stroke="#FFFFFF" stroke-width="1" fill="none"/>
+  <path d="M26 36 C30 38 34 36 38 38" stroke="#FFFFFF" stroke-width="1" fill="none"/>
+  <line x1="32" y1="16" x2="32" y2="48" stroke="#FFFFFF" stroke-width="1" opacity="0.5"/>
+
+  <!-- Balance scale -->
+  <g transform="translate(32, 44)">
+    <line x1="0" y1="0" x2="0" y2="8" stroke="#FFFFFF" stroke-width="2"/>
+    <line x1="-10" y1="2" x2="10" y2="2" stroke="#FFFFFF" stroke-width="2"/>
+    <circle cx="-10" cy="6" r="4" fill="#FFFFFF" opacity="0.8"/>
+    <circle cx="10" cy="6" r="4" fill="#FFFFFF" opacity="0.8"/>
+  </g>
+
+  <!-- AI Ethics text -->
+  <text x="32" y="58" font-family="Arial, sans-serif" font-size="5" font-weight="bold" fill="#FFFFFF" text-anchor="middle">AI ETHICS</text>
+</svg>

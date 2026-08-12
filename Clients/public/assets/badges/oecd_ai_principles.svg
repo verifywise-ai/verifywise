@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Background circle - OECD blue -->
+  <circle cx="32" cy="32" r="30" fill="#005A9C"/>
+
+  <!-- Globe -->
+  <circle cx="32" cy="32" r="18" fill="none" stroke="#FFFFFF" stroke-width="2"/>
+
+  <!-- Globe latitude lines -->
+  <ellipse cx="32" cy="32" rx="18" ry="7" fill="none" stroke="#FFFFFF" stroke-width="1.5"/>
+  <ellipse cx="32" cy="32" rx="18" ry="14" fill="none" stroke="#FFFFFF" stroke-width="1"/>
+
+  <!-- Globe longitude lines -->
+  <ellipse cx="32" cy="32" rx="7" ry="18" fill="none" stroke="#FFFFFF" stroke-width="1.5"/>
+  <line x1="14" y1="32" x2="50" y2="32" stroke="#FFFFFF" stroke-width="1"/>
+  <line x1="32" y1="14" x2="32" y2="50" stroke="#FFFFFF" stroke-width="1"/>
+
+  <!-- AI nodes on globe -->
+  <circle cx="32" cy="14" r="3" fill="#FFFFFF"/>
+  <circle cx="32" cy="50" r="3" fill="#FFFFFF"/>
+  <circle cx="14" cy="32" r="3" fill="#FFFFFF"/>
+  <circle cx="50" cy="32" r="3" fill="#FFFFFF"/>
+  <circle cx="32" cy="32" r="4" fill="#FFFFFF"/>
+
+  <!-- Connection lines -->
+  <g stroke="#90CDF4" stroke-width="1.5">
+    <line x1="32" y1="18" x2="32" y2="28"/>
+    <line x1="32" y1="36" x2="32" y2="46"/>
+    <line x1="18" y1="32" x2="28" y2="32"/>
+    <line x1="36" y1="32" x2="46" y2="32"/>
+  </g>
+
+  <!-- OECD text -->
+  <text x="32" y="58" font-family="Arial, sans-serif" font-size="6" font-weight="bold" fill="#FFFFFF" text-anchor="middle">OECD AI</text>
+</svg>

@@ -26,6 +26,8 @@ import allowedRoles from "../../../../../application/constants/permissions";
 import { Project } from "../../../../../domain/types/Project";
 import { useModalKeyHandling } from "../../../../../application/hooks/useModalKeyHandling";
 import { TabFilterBar } from "../../../../components/FrameworkFilter/TabFilterBar";
+import { StatsCard } from "../../../../components/Cards/StatsCard";
+import { brand } from "../../../../themes/palette";
 
 const ISO27001Clause = ({
   project,
@@ -78,7 +80,7 @@ const ISO27001Clause = ({
   const [loadingSubClauses, setLoadingSubClauses] = useState<{
     [key: number]: boolean;
   }>({});
-  const [, setClauseProgress] = useState<{
+  const [clauseProgress, setClauseProgress] = useState<{
     totalSubclauses: number;
     doneSubclauses: number;
   }>();
@@ -493,6 +495,14 @@ const ISO27001Clause = ({
         searchTerm={searchTerm}
         setSearchTerm={onSearchTermChange as any}
       />
+      <Stack sx={{ mt: 2 }}>
+        <StatsCard
+          title="Clauses"
+          completed={clauseProgress?.doneSubclauses ?? 0}
+          total={clauseProgress?.totalSubclauses ?? 0}
+          progressbarColor={brand.primary}
+        />
+      </Stack>
       {filteredClauses &&
         filteredClauses.map((clause: any) => {
           const count = filteredSubClausesCountMemo[clause.id ?? 0];

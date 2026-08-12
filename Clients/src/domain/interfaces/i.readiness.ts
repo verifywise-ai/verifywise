@@ -5,6 +5,7 @@ export interface ControlReadinessScore {
   control_id: number;
   framework_type: string;
   project_id: number | null;
+  requirements_score: number | null;
   evidence_quality_score: number | null;
   evidence_count_score: number | null;
   evidence_recency_score: number | null;
@@ -28,6 +29,8 @@ export interface FrameworkReadinessScore {
   project_id: number | null;
   total_controls: number | null;
   avg_score: number | null;
+  controls_avg_score: number | null;
+  assessment_score: number | null;
   ready_count: number | null;
   needs_work_count: number | null;
   at_risk_count: number | null;

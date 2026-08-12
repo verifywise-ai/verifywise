@@ -6,14 +6,11 @@ vi.mock("../../../../application/repository/superAdmin.repository", () => ({
   }),
 }));
 
-vi.mock("react-router", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("react-router")>();
-  return {
-    ...actual,
-    useNavigate: () => vi.fn(),
-    useLocation: () => ({ pathname: "/super-admin" }),
-  };
-});
+vi.mock("react-router", () => ({
+  MemoryRouter: ({ children }: any) => <>{children}</>,
+  useNavigate: () => vi.fn(),
+  useLocation: () => ({ pathname: "/super-admin" }),
+}));
 
 vi.mock("../../Sidebar/SidebarShell", () => ({
   default: (props: { topItems: Array<{ id: string; label: string }> }) => (

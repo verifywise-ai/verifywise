@@ -1,4 +1,29 @@
-<!DOCTYPE html>
+<%
+/*
+ * Risk levels reach this template in three vocabularies and only one of them
+ * is bare: project risks carry the `risk_level_autocalculated` enum WITH a
+ * " risk" suffix ('No risk' | 'Very low risk' | ... | 'Very high risk'),
+ * vendor risks repeat those labels as free text, the NIST subcategory rows
+ * read the project-risk column, and model risks use bare 'Low' | 'Medium' |
+ * 'High' | 'Critical'. Hyphenating the whole string yields
+ * `chip-very-high-risk`, which styles/pdf.css has no rule for, so the chip
+ * prints as unstyled text — hence the suffix strip.
+ *
+ * Anything the palette does not cover — 'No risk', the collectors' "Unknown"
+ * fallback for a NULL, and the free-text `level` the risk analyzer copies out
+ * of its input — falls back to the grey `chip-default` rather than to a class
+ * name with nothing behind it. Keep this list in step with pdf.css.
+ */
+const RISK_CHIP_LEVELS = /^(critical|very-high|high|medium|low|very-low)$/;
+const riskChipClass = (level) => {
+  const key = String(level == null ? '' : level)
+    .trim()
+    .toLowerCase()
+    .replace(/\s+risk$/, '')
+    .replace(/\s+/g, '-');
+  return RISK_CHIP_LEVELS.test(key) ? 'chip-' + key : 'chip-default';
+};
+%><!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -79,9 +104,12 @@
       margin: 16px 0 24px 0;
       border-radius: 0 4px 4px 0;
     }
-    .ai-executive-summary {
-      page-break-inside: avoid;
-    }
+    /* Page-break avoidance sits on the individual finding, never on the whole
+       AI block: an executive summary plus eight findings is taller than a
+       page, and avoiding a break on a block that cannot fit only pushes a
+       blank page ahead of it. The executive-summary wrapper div in the body
+       keeps its class — it is the block's structural hook — it just no
+       longer carries a break rule. */
     .ai-findings-list {
       padding-left: 20px;
       margin: 8px 0;
@@ -90,6 +118,23 @@
       margin-bottom: 6px;
       font-size: 12px;
       color: #344054;
+      page-break-inside: avoid;
+    }
+    .ai-finding {
+      page-break-inside: avoid;
+      margin: 0 0 12px 0;
+      padding-left: 10px;
+      border-left: 2px solid var(--color-border);
+    }
+    .ai-finding-text {
+      font-size: 12px;
+      line-height: 1.5;
+      color: #344054;
+    }
+    .ai-finding-meta {
+      font-size: 10px;
+      color: #667085;
+      margin-top: 3px;
     }
   </style>
 </head>
@@ -140,6 +185,24 @@
         </li>
         <% } %>
 
+        <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.recommendedActions && aiSummaries.recommendedActions.length > 0) { %>
+        <li class="toc-item">
+          <span><span class="toc-item-number"><%= sectionNum++ %>.</span> Recommended actions</span>
+        </li>
+        <% } %>
+
+        <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.complianceGap) { %>
+        <li class="toc-item">
+          <span><span class="toc-item-number"><%= sectionNum++ %>.</span> Compliance gap analysis</span>
+        </li>
+        <% } %>
+
+        <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.vendorRisk) { %>
+        <li class="toc-item">
+          <span><span class="toc-item-number"><%= sectionNum++ %>.</span> Third-party risk analysis</span>
+        </li>
+        <% } %>
+
         <% if (hasRiskAnalysis) { %>
         <li class="toc-item">
           <span><span class="toc-item-number"><%= sectionNum++ %>.</span> Risk analysis</span>
@@ -173,7 +236,28 @@
         <div class="ai-analysis-content"><%= aiSummaries.executiveSummary %></div>
       </div>
 
-      <% if (aiSummaries.keyFindings && aiSummaries.keyFindings.length > 0) { %>
+      <% if (aiSummaries.keyFindingsDetailed && aiSummaries.keyFindingsDetailed.length > 0) { %>
+      <div class="subsection">
+        <div class="subsection-header">
+          <h3 class="subsection-title">Key Findings</h3>
+        </div>
+        <% aiSummaries.keyFindingsDetailed.forEach(function(f) { %>
+        <div class="ai-finding">
+          <div>
+            <span class="chip chip-<%= String(f.severity || 'default').toLowerCase() %>"><%= f.severity || 'unrated' %></span>
+            <span class="ai-finding-meta">Section: <%= f.section %><% if (f.basis) { %> &middot; Basis: <%= f.basis %><% } %></span>
+          </div>
+          <div class="ai-finding-text"><%= f.text %></div>
+          <% if (f.what_would_close_this) { %>
+          <div class="ai-finding-meta">Closes when: <%= f.what_would_close_this %></div>
+          <% } %>
+          <% if (f.related_sections && f.related_sections.length > 0) { %>
+          <div class="ai-finding-meta">Related sections: <%= f.related_sections.join(', ') %></div>
+          <% } %>
+        </div>
+        <% }); %>
+      </div>
+      <% } else if (aiSummaries.keyFindings && aiSummaries.keyFindings.length > 0) { %>
       <div class="subsection">
         <div class="subsection-header">
           <h3 class="subsection-title">Key Findings</h3>
@@ -198,6 +282,121 @@
         </ul>
       </div>
       <% } %>
+    </div>
+    <% } %>
+
+      <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.recommendedActions && aiSummaries.recommendedActions.length > 0) { %>
+      <div class="subsection">
+        <div class="subsection-header">
+          <h3 class="subsection-title">Recommended actions</h3>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Action</th>
+              <th>Why</th>
+              <th>Priority</th>
+              <th>Basis</th>
+              <th>Suggested owner</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% aiSummaries.recommendedActions.forEach(function(a) { %>
+            <tr>
+              <td><%= a.action %></td>
+              <td><%= a.sourceSignal || '—' %></td>
+              <td><%= a.priority || '—' %></td>
+              <td><%= a.basis || '—' %></td>
+              <td><%= a.suggestedOwner || 'Unassigned' %></td>
+            </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+      <% } %>
+
+    <!-- ============================================ -->
+    <!-- COMPLIANCE GAP ANALYSIS (AI-Generated) -->
+    <!-- ============================================ -->
+    <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.complianceGap) { %>
+    <div>
+      <div class="group-header">
+        <h2 class="group-title">Compliance Gap Analysis</h2>
+      </div>
+      <div class="ai-analysis-box">
+        <div class="ai-analysis-label">AI-Generated Analysis</div>
+        <div class="ai-analysis-content"><%= aiSummaries.complianceGap.narrative %></div>
+      </div>
+
+      <% if (aiSummaries.complianceGap.scores_caveat) { %>
+      <div class="ai-risk-highlights-box">
+        <div class="ai-analysis-label">Scope note</div>
+        <div class="ai-analysis-content"><%= aiSummaries.complianceGap.scores_caveat %></div>
+      </div>
+      <% } %>
+
+      <% if (aiSummaries.complianceGap.gaps && aiSummaries.complianceGap.gaps.length > 0) { %>
+      <div class="subsection">
+        <div class="subsection-header">
+          <h3 class="subsection-title">Prioritised gaps</h3>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr><th>Control</th><th>Gap</th><th>Basis</th><th>Priority</th></tr>
+          </thead>
+          <tbody>
+            <% aiSummaries.complianceGap.gaps.forEach(function(g) { %>
+            <tr>
+              <td><strong><%= g.control %></strong></td>
+              <td>
+                <%= g.gap %>
+                <% if (g.what_would_close_this) { %>
+                <div class="ai-finding-meta">Closes when: <%= g.what_would_close_this %></div>
+                <% } %>
+              </td>
+              <td><%= g.basis || '—' %></td>
+              <td><span class="chip chip-<%= String(g.priority).toLowerCase() %>"><%= g.priority %></span></td>
+            </tr>
+            <% }); %>
+          </tbody>
+        </table>
+      </div>
+      <% } %>
+    </div>
+    <% } %>
+
+    <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.vendorRisk) { %>
+    <div class="subsection">
+      <div class="subsection-header">
+        <h3 class="subsection-title">Third-party risk analysis</h3>
+      </div>
+      <div class="ai-analysis-box">
+        <div class="ai-analysis-label">AI-Generated Analysis</div>
+        <div class="ai-analysis-content"><%= aiSummaries.vendorRisk.narrative %></div>
+      </div>
+      <% if (aiSummaries.vendorRisk.concerns && aiSummaries.vendorRisk.concerns.length > 0) { %>
+      <ul class="ai-findings-list">
+        <% aiSummaries.vendorRisk.concerns.forEach(function(c) { %>
+        <li><strong><%= c.vendor %>:</strong> <%= c.concern %> (<%= c.severity %><%= c.basis ? ', Basis: ' + c.basis : '' %>)</li>
+        <% }); %>
+      </ul>
+      <% } %>
+    </div>
+    <% } %>
+
+    <!-- ============================================ -->
+    <!-- ANALYSES NOT PRODUCED (AI abstentions) -->
+    <!-- ============================================ -->
+    <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.abstentions && Object.keys(aiSummaries.abstentions).length > 0) { %>
+    <div class="subsection">
+      <div class="subsection-header">
+        <h3 class="subsection-title">Analyses not produced</h3>
+      </div>
+      <ul class="ai-findings-list">
+        <% Object.keys(aiSummaries.abstentions).forEach(function(k) { %>
+        <li><strong><%= (typeof analysisLabels !== 'undefined' && analysisLabels[k]) || k %>:</strong> <%= aiSummaries.abstentions[k] %></li>
+        <% }); %>
+      </ul>
     </div>
     <% } %>
 
@@ -260,7 +459,7 @@
             <td><%= risk.impact %></td>
             <td><%= risk.likelihood %></td>
             <td><span class="chip chip-<%= risk.mitigationStatus.toLowerCase().replace(/\s+/g, '-') %>"><%= risk.mitigationStatus %></span></td>
-            <td><span class="chip chip-<%= risk.riskLevel.toLowerCase().replace(/\s+/g, '-') %>"><%= risk.riskLevel %></span></td>
+            <td><span class="chip <%= riskChipClass(risk.riskLevel) %>"><%= risk.riskLevel %></span></td>
           </tr>
           <% }); %>
         </tbody>
@@ -303,7 +502,7 @@
           <tr>
             <td><%= risk.vendorName %></td>
             <td><%= risk.riskName %></td>
-            <td><span class="chip chip-<%= risk.riskLevel.toLowerCase().replace(/\s+/g, '-') %>"><%= risk.riskLevel %></span></td>
+            <td><span class="chip <%= riskChipClass(risk.riskLevel) %>"><%= risk.riskLevel %></span></td>
             <td><%= risk.actionOwner || '-' %></td>
             <td><%= risk.actionPlan || '-' %></td>
           </tr>
@@ -347,7 +546,7 @@
           <tr>
             <td><%= risk.modelName %></td>
             <td><%= risk.riskName %></td>
-            <td><span class="chip chip-<%= risk.riskLevel.toLowerCase().replace(/\s+/g, '-') %>"><%= risk.riskLevel %></span></td>
+            <td><span class="chip <%= riskChipClass(risk.riskLevel) %>"><%= risk.riskLevel %></span></td>
             <td><%= risk.mitigationStatus %></td>
           </tr>
           <% }); %>
@@ -367,6 +566,29 @@
     <div class="ai-risk-highlights-box">
       <div class="ai-analysis-label" style="color: #DC6803;">Risk Highlights</div>
       <div class="ai-analysis-content"><%= aiSummaries.riskHighlights %></div>
+    </div>
+    <% } %>
+
+    <% if (typeof aiSummaries !== 'undefined' && aiSummaries && aiSummaries.riskAnalysis && aiSummaries.riskAnalysis.top_risks && aiSummaries.riskAnalysis.top_risks.length > 0) { %>
+    <!-- Most material risks (AI-Generated) -->
+    <div class="subsection">
+      <div class="subsection-header">
+        <h3 class="subsection-title">Most material risks</h3>
+      </div>
+      <table class="data-table">
+        <thead>
+          <tr><th>Risk</th><th>Level</th><th>Why it ranks here</th></tr>
+        </thead>
+        <tbody>
+          <% aiSummaries.riskAnalysis.top_risks.forEach(function(r) { %>
+          <tr>
+            <td><strong><%= r.name %></strong></td>
+            <td><span class="chip <%= riskChipClass(r.level) %>"><%= r.level %></span></td>
+            <td><%= r.why %></td>
+          </tr>
+          <% }); %>
+        </tbody>
+      </table>
     </div>
     <% } %>
 
@@ -417,9 +639,17 @@
       </div>
 
       <% if (sections.compliance.controls.length > 0) { %>
+      <%
+        /* An organization report merges this table across every use case, and
+           control ids repeat -- each one has its own C1. mergeSections labels
+           the rows only when more than one contributed, so the column appears
+           exactly when it is needed and a single-project report is unchanged. */
+        var complianceUseCases = sections.compliance.controls.some(function (c) { return c.useCase; });
+      %>
       <table class="data-table">
         <thead>
           <tr>
+            <% if (complianceUseCases) { %><th>Use case</th><% } %>
             <th>Control ID</th>
             <th>Title</th>
             <th>Status</th>
@@ -429,6 +659,7 @@
         <tbody>
           <% sections.compliance.controls.forEach(function(control) { %>
           <tr>
+            <% if (complianceUseCases) { %><td><%= control.useCase || '-' %></td><% } %>
             <td><strong><%= control.controlId %></strong></td>
             <td><%= control.title %></td>
             <td>
@@ -478,7 +709,7 @@
 
       <% sections.assessment.topics.forEach(function(topic) { %>
       <div class="avoid-break">
-        <h4 class="section-subtitle"><%= topic.title %> (<%= topic.progress %>% complete)</h4>
+        <h4 class="section-subtitle"><% if (topic.useCase) { %><%= topic.useCase %> — <% } %><%= topic.title %> (<%= topic.progress %>% complete)</h4>
         <div class="progress-bar" style="margin-bottom: 16px;">
           <div class="progress-bar-fill" style="width: <%= topic.progress %>%"></div>
         </div>
@@ -525,11 +756,18 @@
       </div>
       <% } %>
 
+      <%
+        /* Merged across use cases -- and across ISO 42001 and ISO 27001, which
+           both land in this section. See the compliance table above. */
+        var clauseUseCases = sections.clausesAndAnnexes.clauses.some(function (c) { return c.useCase; });
+        var annexUseCases = sections.clausesAndAnnexes.annexes.some(function (a) { return a.useCase; });
+      %>
       <% if (sections.clausesAndAnnexes.clauses.length > 0) { %>
       <h4 class="section-subtitle">Clauses</h4>
       <table class="data-table">
         <thead>
           <tr>
+            <% if (clauseUseCases) { %><th>Use case</th><% } %>
             <th>Clause ID</th>
             <th>Title</th>
             <th>Status</th>
@@ -538,6 +776,7 @@
         <tbody>
           <% sections.clausesAndAnnexes.clauses.forEach(function(clause) { %>
           <tr>
+            <% if (clauseUseCases) { %><td><%= clause.useCase || '-' %></td><% } %>
             <td><strong><%= clause.clauseId %></strong></td>
             <td><%= clause.title %></td>
             <td><span class="chip chip-<%= clause.status === 'Compliant' ? 'success' : clause.status === 'In Progress' ? 'warning' : 'default' %>"><%= clause.status %></span></td>
@@ -552,6 +791,7 @@
       <table class="data-table">
         <thead>
           <tr>
+            <% if (annexUseCases) { %><th>Use case</th><% } %>
             <th>Annex ID</th>
             <th>Title</th>
             <th>Status</th>
@@ -560,6 +800,7 @@
         <tbody>
           <% sections.clausesAndAnnexes.annexes.forEach(function(annex) { %>
           <tr>
+            <% if (annexUseCases) { %><td><%= annex.useCase || '-' %></td><% } %>
             <td><strong><%= annex.annexId %></strong></td>
             <td><%= annex.title %></td>
             <td><span class="chip chip-<%= annex.status === 'Compliant' ? 'success' : annex.status === 'In Progress' ? 'warning' : 'default' %>"><%= annex.status %></span></td>
@@ -589,7 +830,7 @@
       <h4 class="section-subtitle"><%= func.name %></h4>
 
       <% func.categories.forEach(function(category) { %>
-      <h5 style="font-size: 12px; margin: 12px 0 8px 0; color: var(--color-text-secondary);"><%= category.name %></h5>
+      <h5 style="font-size: 12px; margin: 12px 0 8px 0; color: var(--color-text-secondary);"><% if (category.useCase) { %><%= category.useCase %> — <% } %><%= category.name %></h5>
 
       <% if (category.subcategories.length > 0) { %>
       <table class="data-table" style="font-size: 10px;">
@@ -610,7 +851,7 @@
             <td>
               <% if (sub.risks.length > 0) { %>
               <% sub.risks.forEach(function(risk, idx) { %>
-              <span class="chip chip-<%= risk.riskLevel.toLowerCase().replace(/\s+/g, '-') %>"><%= risk.riskName %></span><%= idx < sub.risks.length - 1 ? ' ' : '' %>
+              <span class="chip <%= riskChipClass(risk.riskLevel) %>"><%= risk.riskName %></span><%= idx < sub.risks.length - 1 ? ' ' : '' %>
               <% }); %>
               <% } else { %>
               -
@@ -656,7 +897,7 @@
             <th>Model Name</th>
             <th>Version</th>
             <th>Status</th>
-            <th>Owner</th>
+            <th>Approver</th>
           </tr>
         </thead>
         <tbody>
@@ -665,7 +906,7 @@
             <td><strong><%= model.name %></strong></td>
             <td><%= model.version || '-' %></td>
             <td><span class="chip chip-<%= model.status.toLowerCase().replace(/\s+/g, '-') %>"><%= model.status %></span></td>
-            <td><%= model.owner || '-' %></td>
+            <td><%= model.approver || '-' %></td>
           </tr>
           <% }); %>
         </tbody>
@@ -742,18 +983,14 @@
         <thead>
           <tr>
             <th>Training Name</th>
-            <th>Completion Date</th>
             <th>Status</th>
-            <th>Assignee</th>
           </tr>
         </thead>
         <tbody>
           <% sections.trainingRegistry.records.forEach(function(record) { %>
           <tr>
             <td><strong><%= record.trainingName %></strong></td>
-            <td><%= record.completionDate || '-' %></td>
             <td><span class="chip chip-<%= record.status === 'Completed' ? 'success' : record.status === 'In Progress' ? 'warning' : 'default' %>"><%= record.status %></span></td>
-            <td><%= record.assignee || '-' %></td>
           </tr>
           <% }); %>
         </tbody>
@@ -785,7 +1022,6 @@
         <thead>
           <tr>
             <th>Policy Name</th>
-            <th>Version</th>
             <th>Status</th>
             <th>Review Date</th>
             <th>Owner</th>
@@ -795,7 +1031,6 @@
           <% sections.policyManager.policies.forEach(function(policy) { %>
           <tr>
             <td><strong><%= policy.policyName %></strong></td>
-            <td><%= policy.version || '-' %></td>
             <td><span class="chip chip-<%= policy.status === 'Approved' ? 'success' : policy.status === 'Draft' ? 'default' : 'warning' %>"><%= policy.status %></span></td>
             <td><%= policy.reviewDate || '-' %></td>
             <td><%= policy.owner || '-' %></td>
@@ -830,24 +1065,22 @@
         <thead>
           <tr>
             <th>Incident ID</th>
-            <th>Title</th>
             <th>Type</th>
             <th>Severity</th>
             <th>Status</th>
             <th>Reported</th>
-            <th>Assignee</th>
+            <th>Reporter</th>
           </tr>
         </thead>
         <tbody>
           <% sections.incidentManagement.incidents.forEach(function(incident) { %>
           <tr>
             <td><strong><%= incident.incidentId %></strong></td>
-            <td><%= incident.title %></td>
             <td><%= incident.type %></td>
             <td><span class="chip chip-<%= incident.severity === 'Very serious' ? 'critical' : incident.severity === 'Serious' ? 'high' : 'medium' %>"><%= incident.severity %></span></td>
             <td><span class="chip chip-<%= incident.status === 'Closed' ? 'success' : incident.status === 'Mitigated' ? 'info' : 'warning' %>"><%= incident.status %></span></td>
             <td><%= incident.reportedDate || '-' %></td>
-            <td><%= incident.assignee || '-' %></td>
+            <td><%= incident.reporter || '-' %></td>
           </tr>
           <% }); %>
         </tbody>
@@ -859,6 +1092,57 @@
       <% } %>
     </div>
     <% } %>
+    <% } %>
+
+    <!-- ============================================ -->
+    <!-- SECTIONS WITH NO DATA (section notices) -->
+    <!-- Deliberately outside every group guard: a report whose only content -->
+    <!-- is notices must still say so. -->
+    <!-- ============================================ -->
+    <% if (typeof sectionNotices !== 'undefined' && sectionNotices && sectionNotices.length > 0) { %>
+    <%
+      /*
+       * Duplicated verbatim in services/reporting/docxGenerator.ts. The two
+       * renderers share no template layer and already duplicate every other
+       * section's copy — keep the two maps exactly in step.
+       */
+      const NOTICE_LABELS = {
+        projectRisks: 'Use case risks',
+        vendorRisks: 'Vendor risks',
+        modelRisks: 'Model risks',
+        compliance: 'Requirements',
+        assessment: 'Assessment tracker',
+        clausesAndAnnexes: 'Clauses and annexes',
+        nistSubcategories: 'NIST subcategories',
+        models: 'AI models',
+        vendors: 'Vendors',
+        trainingRegistry: 'Training registry',
+        policyManager: 'Policy manager',
+        incidentManagement: 'Incident management'
+      };
+      const NOTICE_REASONS = {
+        no_framework_target: 'No project in scope uses a framework that provides this section.',
+        no_data: 'No records were found in scope.',
+        unresolved_framework: 'The selected framework is a plugin framework, which reports do not yet cover.'
+      };
+    %>
+    <div class="subsection">
+      <div class="subsection-header">
+        <h3 class="subsection-title">Sections with no data</h3>
+      </div>
+      <p class="section-notice-intro">
+        These sections were requested but produced nothing. They are listed so an empty
+        report is never mistaken for a clean one.
+      </p>
+      <ul class="section-notice">
+        <% sectionNotices.forEach(function(n) { %>
+        <li>
+          <strong><%= NOTICE_LABELS[n.sectionKey] || n.sectionKey %></strong>
+          &mdash; <%= NOTICE_REASONS[n.reason] || n.reason %>
+        </li>
+        <% }); %>
+      </ul>
+    </div>
     <% } %>
 
     <!-- Page Footer (rendered as part of content) -->

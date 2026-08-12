@@ -57,7 +57,7 @@ export async function getAIAuditAnalytics(
 
   // Actions by state
   const byState = (await sequelize.query(
-    `SELECT state, COUNT(*) as count
+    `SELECT state, COUNT(*)::int as count
      FROM ai_action_approvals aa
      WHERE organization_id = :organizationId ${dc.sql}
      GROUP BY state ORDER BY count DESC`,
@@ -80,7 +80,7 @@ export async function getAIAuditAnalytics(
          WHEN tool_name LIKE '%admin%' THEN 'Admin'
          ELSE 'Other'
        END as category,
-       COUNT(*) as count
+       COUNT(*)::int as count
      FROM ai_action_approvals aa
      WHERE organization_id = :organizationId ${dc.sql}
      GROUP BY category ORDER BY count DESC`,
@@ -89,7 +89,7 @@ export async function getAIAuditAnalytics(
 
   // Top rules matched
   const topRules = (await sequelize.query(
-    `SELECT rule_matched, COUNT(*) as count
+    `SELECT rule_matched, COUNT(*)::int as count
      FROM ai_action_approvals aa
      WHERE organization_id = :organizationId AND rule_matched IS NOT NULL ${dc.sql}
      GROUP BY rule_matched ORDER BY count DESC LIMIT 10`,
@@ -98,7 +98,7 @@ export async function getAIAuditAnalytics(
 
   // Daily volume (last 30 days)
   const dailyVolume = (await sequelize.query(
-    `SELECT DATE(created_at) as date, COUNT(*) as count
+    `SELECT DATE(created_at) as date, COUNT(*)::int as count
      FROM ai_action_approvals aa
      WHERE organization_id = :organizationId
        AND created_at >= NOW() - INTERVAL '30 days' ${dc.sql}
@@ -108,7 +108,7 @@ export async function getAIAuditAnalytics(
 
   // Top users
   const topUsers = (await sequelize.query(
-    `SELECT aa.requested_by as user_id, u.name, u.surname, COUNT(*) as count
+    `SELECT aa.requested_by as user_id, u.name, u.surname, COUNT(*)::int as count
      FROM ai_action_approvals aa
      LEFT JOIN users u ON aa.requested_by = u.id
      WHERE aa.organization_id = :organizationId ${dc.sql}

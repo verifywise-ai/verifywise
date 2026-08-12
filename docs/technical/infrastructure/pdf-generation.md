@@ -192,10 +192,12 @@ Templates are in `Servers/templates/reports/`:
 | File | Purpose |
 |------|---------|
 | `report-pdf.ejs` | Main PDF template |
-| `report-docx.ejs` | DOCX template |
+| `report-docx.ejs` | **Dead file.** No generator loads it — `docxGenerator.ts` imports no EJS and builds the document programmatically with the `docx` library. |
 | `pmm-report.ejs` | Post-Market Monitoring reports |
 | `styles/pdf.css` | PDF styling |
 | `styles/docx.css` | DOCX styling |
+
+> Because PDF and DOCX use two unrelated rendering paths, **a new report section must be added in both `report-pdf.ejs` and `docxGenerator.ts`** — editing only the EJS template silently omits the section from every DOCX report.
 
 ### Template Structure
 

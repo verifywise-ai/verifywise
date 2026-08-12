@@ -14,9 +14,7 @@ import StatusBreakdownCard from "./StatusBreakdownCard";
 import ControlCategoriesCard from "./ControlCategoriesCard";
 import AnnexOverviewCard from "./AnnexOverviewCard";
 import NISTFunctionsOverviewCard from "./NISTFunctionsOverviewCard";
-import { PluginSlot } from "../../../components/PluginSlot";
-import { PLUGIN_SLOTS } from "../../../../domain/constants/pluginSlots";
-import { usePluginRegistry } from "../../../../application/contexts/PluginRegistry.context";
+import GenericFrameworkOverviewCard from "./GenericFrameworkOverviewCard";
 import { brand } from "../../../themes/palette";
 
 // localStorage keys for framework controls navigation
@@ -90,6 +88,19 @@ interface FrameworkData {
     pending: number;
     inProgress: number;
   };
+  // Generic-framework counts (SOC 2, GDPR, HIPAA, Data Governance, etc.)
+  // — from GET /api/frameworks/:frameworkId/dashboard/:projectFrameworkId.
+  genericProgress?: { total: number; done: number };
+  genericAssignments?: { total: number; assigned: number };
+  genericStatusBreakdown?: {
+    notStarted: number;
+    draft: number;
+    inProgress: number;
+    awaitingReview: number;
+    awaitingApproval: number;
+    implemented: number;
+    needsRework: number;
+  };
 }
 
 // Tab styles matching the existing Framework page design
@@ -121,7 +132,6 @@ const DASHBOARD_TAB_STORAGE_KEY = "verifywise_dashboard_active_tab";
 
 const FrameworkDashboard = ({ organizationalProject, filteredFrameworks }: DashboardProps) => {
   const navigate = useNavigate();
-  const { getComponentsForSlot } = usePluginRegistry();
   const [loading, setLoading] = useState(true);
   const [frameworksData, setFrameworksData] = useState<FrameworkData[]>([]);
   const [activeTab, setActiveTab] = useState(() => {
@@ -130,12 +140,14 @@ const FrameworkDashboard = ({ organizationalProject, filteredFrameworks }: Dashb
   });
 
   // Handle navigation from dashboard cards to controls page
-  const handleNavigateToControls = (frameworkName: string, section: string) => {
+  const handleNavigateToControls = (frameworkName: string, section?: string) => {
     const isISO27001 = frameworkName.toLowerCase().includes("iso 27001");
     const isISO42001 = frameworkName.toLowerCase().includes("iso 42001");
     const isNISTAIRMF = frameworkName.toLowerCase().includes("nist ai rmf");
 
-    // Determine framework index based on filtered frameworks
+    // Determine framework index based on filtered frameworks. For built-in
+    // frameworks we match by well-known substrings; for generic frameworks
+    // we fall back to an exact name match against filteredFrameworks.
     let frameworkIndex = 0;
     if (isISO27001) {
       frameworkIndex = filteredFrameworks.findIndex((f) =>
@@ -149,6 +161,8 @@ const FrameworkDashboard = ({ organizationalProject, filteredFrameworks }: Dashb
       frameworkIndex = filteredFrameworks.findIndex((f) =>
         f.name.toLowerCase().includes("nist ai rmf"),
       );
+    } else {
+      frameworkIndex = filteredFrameworks.findIndex((f) => f.name === frameworkName);
     }
 
     if (frameworkIndex === -1) frameworkIndex = 0;
@@ -163,7 +177,7 @@ const FrameworkDashboard = ({ organizationalProject, filteredFrameworks }: Dashb
     } else if (isISO42001) {
       const tabValue = section === "annexes" ? "annexes" : "clauses";
       localStorage.setItem(ISO42001_TAB_KEY, tabValue);
-    } else if (isNISTAIRMF) {
+    } else if (isNISTAIRMF && section) {
       // For NIST AI RMF, section is one of: govern, map, measure, manage
       localStorage.setItem(NIST_AI_RMF_TAB_KEY, section);
     }
@@ -183,6 +197,82 @@ const FrameworkDashboard = ({ organizationalProject, filteredFrameworks }: Dashb
 
       setLoading(true);
       try {
+        // NIST AI RMF endpoints are org-scoped (no framework/project id in the URL).
+        // Fetch once up front so we don't fan out 5 calls per framework in the
+        // .map() below (and again on every effect re-run).
+        const hasNISTAIRMF = filteredFrameworks.some((fw) =>
+          fw.name.toLowerCase().includes("nist ai rmf"),
+        );
+        let sharedNistProgress:
+          | { totalSubcategories: number; doneSubcategories: number }
+          | undefined;
+        let sharedNistProgressByFunction: FrameworkData["nistProgressByFunction"];
+        let sharedNistAssignments:
+          | { totalSubcategories: number; assignedSubcategories: number }
+          | undefined;
+        let sharedNistAssignmentsByFunction: FrameworkData["nistAssignmentsByFunction"];
+        let sharedNistStatusBreakdown: FrameworkData["nistStatusBreakdown"];
+        if (hasNISTAIRMF) {
+          const [
+            progressRes,
+            progressByFunctionRes,
+            assignmentsRes,
+            assignmentsByFunctionRes,
+            statusRes,
+          ] = await Promise.all([
+            getEntityById({ routeUrl: `/nist-ai-rmf/progress` }).catch((e) => {
+              if (!abortController.signal.aborted) console.error("NIST progress:", e);
+              return undefined;
+            }),
+            getEntityById({ routeUrl: `/nist-ai-rmf/progress-by-function` }).catch((e) => {
+              if (!abortController.signal.aborted) console.error("NIST progress-by-function:", e);
+              return undefined;
+            }),
+            getEntityById({ routeUrl: `/nist-ai-rmf/assignments` }).catch((e) => {
+              if (!abortController.signal.aborted) console.error("NIST assignments:", e);
+              return undefined;
+            }),
+            getEntityById({ routeUrl: `/nist-ai-rmf/assignments-by-function` }).catch((e) => {
+              if (!abortController.signal.aborted)
+                console.error("NIST assignments-by-function:", e);
+              return undefined;
+            }),
+            getEntityById({ routeUrl: `/nist-ai-rmf/status-breakdown` }).catch((e) => {
+              if (!abortController.signal.aborted) console.error("NIST status-breakdown:", e);
+              return undefined;
+            }),
+          ]);
+          // On a fetch failure leave progress undefined (unknown) rather than
+          // fabricating 0/0, which would render a populated NIST framework as
+          // "0% complete" after a transient error. nistProgress is optional, so
+          // downstream treats undefined as "no data", not "nothing done".
+          sharedNistProgress = progressRes?.data
+            ? {
+                totalSubcategories: progressRes.data.totalSubcategories || 0,
+                doneSubcategories: progressRes.data.doneSubcategories || 0,
+              }
+            : undefined;
+          sharedNistProgressByFunction = progressByFunctionRes?.data;
+          sharedNistAssignments = assignmentsRes?.data
+            ? {
+                totalSubcategories: assignmentsRes.data.totalSubcategories || 0,
+                assignedSubcategories: assignmentsRes.data.assignedSubcategories || 0,
+              }
+            : { totalSubcategories: 0, assignedSubcategories: 0 };
+          sharedNistAssignmentsByFunction = assignmentsByFunctionRes?.data;
+          sharedNistStatusBreakdown = statusRes?.data
+            ? {
+                notStarted: statusRes.data.notStarted || 0,
+                draft: statusRes.data.draft || 0,
+                inProgress: statusRes.data.inProgress || 0,
+                awaitingReview: statusRes.data.awaitingReview || 0,
+                awaitingApproval: statusRes.data.awaitingApproval || 0,
+                implemented: statusRes.data.implemented || 0,
+                needsRework: statusRes.data.needsRework || 0,
+              }
+            : undefined;
+        }
+
         const dataPromises = filteredFrameworks.map(async (framework) => {
           // Get project framework ID
           const projectFramework = organizationalProject.framework?.find(
@@ -200,89 +290,15 @@ const FrameworkDashboard = ({ organizationalProject, filteredFrameworks }: Dashb
             nistAssignments,
             nistAssignmentsByFunction,
             nistStatusBreakdown;
+          let genericProgress, genericAssignments, genericStatusBreakdown;
 
           if (isNISTAIRMF) {
-            // Fetch NIST AI RMF data
-            try {
-              const progressRes = await getEntityById({
-                routeUrl: `/nist-ai-rmf/progress`,
-              });
-              if (progressRes?.data) {
-                nistProgress = {
-                  totalSubcategories: progressRes.data.totalSubcategories || 0,
-                  doneSubcategories: progressRes.data.doneSubcategories || 0,
-                };
-              }
-            } catch (error) {
-              if (!abortController.signal.aborted) {
-                console.error(`Error fetching NIST AI RMF progress:`, error);
-              }
-              nistProgress = { totalSubcategories: 0, doneSubcategories: 0 };
-            }
-
-            try {
-              const progressByFunctionRes = await getEntityById({
-                routeUrl: `/nist-ai-rmf/progress-by-function`,
-              });
-              if (progressByFunctionRes?.data) {
-                nistProgressByFunction = progressByFunctionRes.data;
-              }
-            } catch (error) {
-              if (!abortController.signal.aborted) {
-                console.error(`Error fetching NIST AI RMF progress by function:`, error);
-              }
-            }
-
-            try {
-              const assignmentsRes = await getEntityById({
-                routeUrl: `/nist-ai-rmf/assignments`,
-              });
-              if (assignmentsRes?.data) {
-                nistAssignments = {
-                  totalSubcategories: assignmentsRes.data.totalSubcategories || 0,
-                  assignedSubcategories: assignmentsRes.data.assignedSubcategories || 0,
-                };
-              }
-            } catch (error) {
-              if (!abortController.signal.aborted) {
-                console.error(`Error fetching NIST AI RMF assignments:`, error);
-              }
-              nistAssignments = { totalSubcategories: 0, assignedSubcategories: 0 };
-            }
-
-            try {
-              const assignmentsByFunctionRes = await getEntityById({
-                routeUrl: `/nist-ai-rmf/assignments-by-function`,
-              });
-              if (assignmentsByFunctionRes?.data) {
-                nistAssignmentsByFunction = assignmentsByFunctionRes.data;
-              }
-            } catch (error) {
-              if (!abortController.signal.aborted) {
-                console.error(`Error fetching NIST AI RMF assignments by function:`, error);
-              }
-            }
-
-            try {
-              const statusRes = await getEntityById({
-                routeUrl: `/nist-ai-rmf/status-breakdown`,
-              });
-              if (statusRes?.data) {
-                nistStatusBreakdown = {
-                  notStarted: statusRes.data.notStarted || 0,
-                  draft: statusRes.data.draft || 0,
-                  inProgress: statusRes.data.inProgress || 0,
-                  awaitingReview: statusRes.data.awaitingReview || 0,
-                  awaitingApproval: statusRes.data.awaitingApproval || 0,
-                  implemented: statusRes.data.implemented || 0,
-                  needsRework: statusRes.data.needsRework || 0,
-                };
-              }
-            } catch (error) {
-              if (!abortController.signal.aborted) {
-                console.error(`Error fetching NIST AI RMF status breakdown:`, error);
-              }
-            }
+            // Reuse the org-scoped NIST responses fetched once above.
+            nistProgress = sharedNistProgress;
+            nistProgressByFunction = sharedNistProgressByFunction;
+            nistAssignments = sharedNistAssignments;
+            nistAssignmentsByFunction = sharedNistAssignmentsByFunction;
+            nistStatusBreakdown = sharedNistStatusBreakdown;
           } else if (isISO27001) {
             // Fetch ISO 27001 data
             try {
@@ -409,6 +425,41 @@ const FrameworkDashboard = ({ organizationalProject, filteredFrameworks }: Dashb
               }
               annexProgress = { totalAnnexcategories: 0, doneAnnexcategories: 0 };
             }
+          } else {
+            // Generic frameworks (SOC 2, GDPR, HIPAA, Data Governance, ...)
+            // — single endpoint returns progress + assignments + status
+            // breakdown in one call.
+            try {
+              const dashboardRes = await getEntityById({
+                routeUrl: `/frameworks/${framework.id}/dashboard/${projectFrameworkId}`,
+              });
+              if (dashboardRes?.data) {
+                genericProgress = {
+                  total: dashboardRes.data.progress?.total || 0,
+                  done: dashboardRes.data.progress?.done || 0,
+                };
+                genericAssignments = {
+                  total: dashboardRes.data.assignments?.total || 0,
+                  assigned: dashboardRes.data.assignments?.assigned || 0,
+                };
+                genericStatusBreakdown = {
+                  notStarted: dashboardRes.data.statusBreakdown?.notStarted || 0,
+                  draft: dashboardRes.data.statusBreakdown?.draft || 0,
+                  inProgress: dashboardRes.data.statusBreakdown?.inProgress || 0,
+                  awaitingReview: dashboardRes.data.statusBreakdown?.awaitingReview || 0,
+                  awaitingApproval: dashboardRes.data.statusBreakdown?.awaitingApproval || 0,
+                  implemented: dashboardRes.data.statusBreakdown?.implemented || 0,
+                  needsRework: dashboardRes.data.statusBreakdown?.needsRework || 0,
+                };
+              }
+            } catch (error) {
+              if (!abortController.signal.aborted) {
+                console.error(
+                  `Error fetching generic framework dashboard for ${framework.name} (${framework.id}):`,
+                  error instanceof Error ? error.message : error,
+                );
+              }
+            }
           }
 
           return {
@@ -424,6 +475,9 @@ const FrameworkDashboard = ({ organizationalProject, filteredFrameworks }: Dashb
             nistStatusBreakdown,
             assignmentStatus,
             statusBreakdown,
+            genericProgress,
+            genericAssignments,
+            genericStatusBreakdown,
           };
         });
 
@@ -477,24 +531,7 @@ const FrameworkDashboard = ({ organizationalProject, filteredFrameworks }: Dashb
     );
   }
 
-  // Check if plugin provides custom framework dashboard
-  const hasCustomFrameworkDashboard =
-    getComponentsForSlot(PLUGIN_SLOTS.FRAMEWORK_DASHBOARD_CUSTOM).length > 0;
-
   if (frameworksData.length === 0) {
-    // If plugin provides custom framework dashboard, render it
-    if (hasCustomFrameworkDashboard) {
-      return (
-        <PluginSlot
-          id={PLUGIN_SLOTS.FRAMEWORK_DASHBOARD_CUSTOM}
-          slotProps={{
-            project: organizationalProject,
-            onNavigate: () => navigate("/framework/controls"),
-          }}
-        />
-      );
-    }
-
     return (
       <Box
         sx={{
@@ -523,11 +560,23 @@ const FrameworkDashboard = ({ organizationalProject, filteredFrameworks }: Dashb
     f.frameworkName.toLowerCase().includes("nist ai rmf"),
   );
 
-  // Create tabs array with ISO 42001 first, then NIST AI RMF, then ISO 27001
+  // Organizational generic frameworks (Data Governance, Bahrain PDPL, UAE
+  // PDPL, GDPR, SOC 2, CIS Controls, DORA, ...). Anything on this
+  // dashboard that isn't one of the four built-in ids (1=EU AI Act,
+  // 2=ISO 42001, 3=ISO 27001, 4=NIST AI RMF) is a generic. EU AI Act is
+  // non-organizational so shouldn't appear here anyway.
+  const genericOrgFrameworks = frameworksData.filter(
+    (f) => f.frameworkId >= 5 && f.projectFrameworkId,
+  );
+
+  // Create tabs array: ISO 42001 → NIST AI RMF → ISO 27001 → generics
   const tabs: { id: string; label: string }[] = [];
   if (hasISO42001) tabs.push({ id: "iso42001", label: "ISO 42001" });
   if (hasNISTAIRMF) tabs.push({ id: "nist-ai-rmf", label: "NIST AI RMF" });
   if (hasISO27001) tabs.push({ id: "iso27001", label: "ISO 27001" });
+  for (const fw of genericOrgFrameworks) {
+    tabs.push({ id: `generic-${fw.frameworkId}`, label: fw.frameworkName });
+  }
 
   // Handle tab change
   const handleTabChange = (_event: React.SyntheticEvent, newValue: string) => {
@@ -538,39 +587,6 @@ const FrameworkDashboard = ({ organizationalProject, filteredFrameworks }: Dashb
 
   return (
     <Stack spacing={0}>
-      {/* System Frameworks Section Header - only show if custom frameworks also exist */}
-      {hasCustomFrameworkDashboard && (
-        <Box
-          sx={{
-            mb: 3,
-            pb: 2,
-            borderBottom: "2px solid brand.primary",
-            display: "flex",
-            alignItems: "center",
-            gap: 1.5,
-          }}
-        >
-          <Typography
-            sx={{
-              fontSize: 15,
-              fontWeight: 600,
-              color: "#101828",
-            }}
-          >
-            System Frameworks
-          </Typography>
-          <Typography
-            sx={{
-              fontSize: 12,
-              color: "text.icon",
-              ml: 1,
-            }}
-          >
-            ISO 42001, ISO 27001, NIST AI RMF
-          </Typography>
-        </Box>
-      )}
-
       {/* Framework Progress, Assignment Status, and Status Breakdown in a row */}
       <Box
         sx={{
@@ -654,26 +670,25 @@ const FrameworkDashboard = ({ organizationalProject, filteredFrameworks }: Dashb
               />
             </Stack>
           </TabPanel>
+
+          {genericOrgFrameworks.map((fw) => (
+            <TabPanel key={fw.frameworkId} value={`generic-${fw.frameworkId}`} sx={tabPanelStyle}>
+              <GenericFrameworkOverviewCard
+                frameworkId={fw.frameworkId}
+                projectId={organizationalProject.id!}
+                frameworkName={fw.frameworkName}
+                onNavigate={handleNavigateToControls}
+              />
+            </TabPanel>
+          ))}
         </TabContext>
       )}
 
-      {/* Fallback when no frameworks */}
-      {!hasISO27001 && !hasISO42001 && !hasNISTAIRMF && (
+      {/* Fallback when no known frameworks (no ISO/NIST built-in, no generic) */}
+      {tabs.length === 0 && (
         <ControlCategoriesCard
           frameworksData={frameworksData}
           onNavigate={handleNavigateToControls}
-        />
-      )}
-
-      {/* Custom Framework Dashboard - Plugin Slot */}
-      {/* Header is rendered inside the plugin component, so it only shows when there are custom frameworks */}
-      {hasCustomFrameworkDashboard && (
-        <PluginSlot
-          id={PLUGIN_SLOTS.FRAMEWORK_DASHBOARD_CUSTOM}
-          slotProps={{
-            project: organizationalProject,
-            onNavigate: () => navigate("/framework/controls"),
-          }}
         />
       )}
     </Stack>

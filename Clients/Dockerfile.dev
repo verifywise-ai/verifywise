@@ -13,4 +13,6 @@ RUN npm install
 # Step 5: Copy the rest of the application files
 COPY . .
 
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 CMD wget -qO- http://localhost:80/ >/dev/null || exit 1
+
 CMD ["npm", "run", "dev"]

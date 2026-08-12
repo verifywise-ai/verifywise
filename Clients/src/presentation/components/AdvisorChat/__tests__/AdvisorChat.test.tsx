@@ -1,3 +1,4 @@
+import { screen } from "@testing-library/react";
 import { vi } from "vitest";
 
 vi.mock("@assistant-ui/react", () => ({
@@ -30,13 +31,10 @@ vi.mock("../../../../application/hooks/useAuth", () => ({
   useAuth: () => ({ userId: 1 }),
 }));
 
-vi.mock("react-router", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("react-router")>();
-  return {
-    ...actual,
-    useNavigate: () => vi.fn(),
-  };
-});
+vi.mock("react-router", () => ({
+  MemoryRouter: ({ children }: any) => <>{children}</>,
+  useNavigate: () => vi.fn(),
+}));
 
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import AdvisorChat from "../index";
@@ -55,5 +53,11 @@ describe("AdvisorChat", () => {
   it("renders loading state when LLM keys are loading", () => {
     renderWithProviders(<AdvisorChat isLoadingLLMKeys={true} />);
     expect(document.body).toBeTruthy();
+  });
+
+  it("still renders the header and thread when no LLM key is configured", () => {
+    renderWithProviders(<AdvisorChat hasLLMKeys={false} isLoadingLLMKeys={false} />);
+    expect(screen.queryByTestId("advisor-header")).toBeInTheDocument();
+    expect(screen.queryByTestId("custom-thread")).toBeInTheDocument();
   });
 });

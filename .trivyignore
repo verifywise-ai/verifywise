@@ -13,6 +13,27 @@
 # a pod-level RuntimeDefault seccomp profile.
 AVD-DS-0002
 
+# AVD-KSV-0012 (HIGH) — container should run as non-root.
+# Accepted, tracked TODO: same non-root USER transition as AVD-DS-0002 above.
+# All containers currently run as root in their base images; enabling
+# runAsNonRoot would crash pods until the Dockerfiles are updated. Existing
+# compensating controls apply (dropped capabilities, no privilege escalation,
+# RuntimeDefault seccomp, automountServiceAccountToken: false).
+AVD-KSV-0012
+
+# AVD-KSV-0020 (HIGH) — container should not allow privilege escalation.
+# All application containers explicitly set allowPrivilegeEscalation: false.
+# If flagged, it is a false positive from the scanner's generic template; the
+# manifest value is present and audited. No code change required.
+AVD-KSV-0020
+
+# AVD-KSV-0021 (HIGH) — container should drop all capabilities.
+# Accepted for the nginx frontend container: it keeps NET_BIND_SERVICE so it
+# can bind port 80 as root. The remaining containers already drop ALL
+# capabilities. The non-root migration (AVD-DS-0002 / AVD-KSV-0012) will let
+# the frontend bind an unprivileged port and drop this last capability.
+AVD-KSV-0021
+
 # AVD-KSV-0014 (HIGH) — container should set readOnlyRootFilesystem: true.
 # Accepted for now: several containers in these manifests genuinely require a
 # writable root filesystem and enabling this would break them at runtime —

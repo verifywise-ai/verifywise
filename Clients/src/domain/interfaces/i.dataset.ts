@@ -7,12 +7,14 @@ export interface IDataset {
   description: string;
   version: string;
   owner: string;
-  type: DatasetType;
+  /** Nullable in the datasets table — a row can be saved without a type. */
+  type: DatasetType | null;
   function: string;
   source: string;
   license?: string;
   format?: string;
-  classification: DataClassification;
+  /** Nullable in the datasets table — a row can be saved without one. */
+  classification: DataClassification | null;
   contains_pii: boolean;
   pii_types?: string;
   status: DatasetStatus;
@@ -63,12 +65,14 @@ export interface NewDatasetFormValues {
   description: string;
   version: string;
   owner: string;
-  type: DatasetType;
+  /** Null until the user picks one — the column is nullable. */
+  type: DatasetType | null;
   function: string;
   source: string;
   license: string;
   format: string;
-  classification: DataClassification;
+  /** Null until the user picks one — the column is nullable. */
+  classification: DataClassification | null;
   contains_pii: boolean;
   pii_types: string;
   status: DatasetStatus;

@@ -28,6 +28,7 @@ import {
   ReportGenerationResult,
   AISummaries,
 } from "../../domain.layer/interfaces/i.reportGeneration";
+import { ANALYSIS_LABELS } from "./analyzers/mapToSummaries";
 
 // Color constants matching VerifyWise theme
 const COLORS = {
@@ -46,6 +47,33 @@ const COLORS = {
   aiBg: "F0FAF7",
   aiWarning: "DC6803",
   aiWarningBg: "FFFCF5",
+};
+
+/**
+ * Copy for the "sections with no data" block. Duplicated in report-pdf.ejs
+ * the same way every other section's copy is — the two renderers do not share
+ * a template layer. Keep the two copies exactly in step.
+ */
+const NOTICE_LABELS: Record<string, string> = {
+  projectRisks: "Use case risks",
+  vendorRisks: "Vendor risks",
+  modelRisks: "Model risks",
+  compliance: "Requirements",
+  assessment: "Assessment tracker",
+  clausesAndAnnexes: "Clauses and annexes",
+  nistSubcategories: "NIST subcategories",
+  models: "AI models",
+  vendors: "Vendors",
+  trainingRegistry: "Training registry",
+  policyManager: "Policy manager",
+  incidentManagement: "Incident management",
+};
+
+const NOTICE_REASONS: Record<string, string> = {
+  no_framework_target: "No project in scope uses a framework that provides this section.",
+  no_data: "No records were found in scope.",
+  unresolved_framework:
+    "The selected framework is a plugin framework, which reports do not yet cover.",
 };
 
 /**
@@ -249,6 +277,21 @@ function createTableOfContents(reportData: ReportData): Paragraph[] {
   // Executive Summary (only when AI summaries exist)
   if (reportData.aiSummaries?.executiveSummary) {
     paragraphs.push(createTocEntry(`${sectionNum++}. Executive summary`));
+  }
+
+  // Recommended Actions (only when the analyzer produced any)
+  if (reportData.aiSummaries?.recommendedActions?.length) {
+    paragraphs.push(createTocEntry(`${sectionNum++}. Recommended actions`));
+  }
+
+  // Compliance Gap Analysis (only when the analyzer produced one)
+  if (reportData.aiSummaries?.complianceGap) {
+    paragraphs.push(createTocEntry(`${sectionNum++}. Compliance gap analysis`));
+  }
+
+  // Third-Party Risk Analysis (only when the analyzer produced one)
+  if (reportData.aiSummaries?.vendorRisk) {
+    paragraphs.push(createTocEntry(`${sectionNum++}. Third-party risk analysis`));
   }
 
   // Risk Analysis (lowercase to match PDF)
@@ -532,13 +575,15 @@ function createAIAnalysisBox(
         fill: bgColor,
         type: ShadingType.CLEAR,
       },
-      children: [
-        new TextRun({
-          text: content,
-          size: 20,
-          color: COLORS.textPrimary,
-        }),
-      ],
+      children: content.split("\n").map(
+        (line, i) =>
+          new TextRun({
+            text: line,
+            size: 20,
+            color: COLORS.textPrimary,
+            ...(i > 0 && { break: 1 }),
+          }),
+      ),
     }),
   ];
 }
@@ -556,8 +601,64 @@ function createExecutiveSummarySection(aiSummaries: AISummaries): (Paragraph | T
   elements.push(createSectionHeader("Executive Summary"));
   elements.push(...createAIAnalysisBox(aiSummaries.executiveSummary, "AI-Generated Analysis"));
 
-  // Key Findings
-  if (aiSummaries.keyFindings && aiSummaries.keyFindings.length > 0) {
+  // Key Findings. Prefer the structured list; the flat strings remain the
+  // fallback for a payload that carries no detail.
+  const detailed = aiSummaries.keyFindingsDetailed;
+  if (detailed && detailed.length > 0) {
+    elements.push(createSubsectionHeader("Key Findings"));
+    detailed.forEach((f) => {
+      elements.push(
+        new Paragraph({
+          spacing: { before: 60, after: 20 },
+          indent: { left: convertInchesToTwip(0.3) },
+          bullet: { level: 0 },
+          children: [
+            new TextRun({
+              text: `[${f.severity}] `,
+              bold: true,
+              size: 20,
+              color: COLORS.textPrimary,
+            }),
+            new TextRun({ text: f.text, size: 20, color: COLORS.textPrimary }),
+          ],
+        }),
+      );
+
+      // basis is optional: an older stored payload predates it and the schema
+      // field is nullable. An absent label prints nothing rather than a
+      // fabricated provenance claim.
+      const meta = [
+        `Section: ${f.section}`,
+        f.basis ? `Basis: ${f.basis}` : null,
+        f.related_sections?.length ? `Related: ${f.related_sections.join(", ")}` : null,
+      ]
+        .filter(Boolean)
+        .join(" · ");
+      elements.push(
+        new Paragraph({
+          spacing: { after: 20 },
+          indent: { left: convertInchesToTwip(0.6) },
+          children: [new TextRun({ text: meta, size: 18, color: COLORS.textSecondary })],
+        }),
+      );
+
+      if (f.what_would_close_this) {
+        elements.push(
+          new Paragraph({
+            spacing: { after: 60 },
+            indent: { left: convertInchesToTwip(0.6) },
+            children: [
+              new TextRun({
+                text: `Closes when: ${f.what_would_close_this}`,
+                size: 18,
+                color: COLORS.textSecondary,
+              }),
+            ],
+          }),
+        );
+      }
+    });
+  } else if (aiSummaries.keyFindings && aiSummaries.keyFindings.length > 0) {
     elements.push(createSubsectionHeader("Key Findings"));
     aiSummaries.keyFindings.forEach((finding) => {
       elements.push(
@@ -601,6 +702,194 @@ function createExecutiveSummarySection(aiSummaries: AISummaries): (Paragraph | T
   // Page break after executive summary
   elements.push(new Paragraph({ children: [new PageBreak()] }));
 
+  return elements;
+}
+
+/**
+ * Recommended Actions section. Standalone rather than nested in the executive
+ * summary: the two analyzers are gated and abstain independently.
+ */
+function createRecommendedActionsSection(reportData: ReportData): (Paragraph | Table)[] {
+  const recommendedActions = reportData.aiSummaries?.recommendedActions;
+  const elements: (Paragraph | Table)[] = [];
+  if (!recommendedActions || recommendedActions.length === 0) {
+    return [];
+  }
+
+  elements.push(createSectionHeader("Recommended Actions"));
+  recommendedActions.forEach((a) => {
+    elements.push(
+      new Paragraph({
+        spacing: { before: 60, after: 20 },
+        indent: { left: convertInchesToTwip(0.3) },
+        bullet: { level: 0 },
+        children: [
+          new TextRun({ text: a.action, size: 20, color: COLORS.textPrimary }),
+          new TextRun({
+            text: `  [${a.priority ?? "—"} · ${a.suggestedOwner ?? "Unassigned"}${a.basis ? ` · Basis: ${a.basis}` : ""}]`,
+            size: 18,
+            color: COLORS.textSecondary,
+          }),
+        ],
+      }),
+    );
+
+    // The analyzer's one sentence tying this action to a signal in the input.
+    if (a.sourceSignal) {
+      elements.push(
+        new Paragraph({
+          spacing: { after: 60 },
+          indent: { left: convertInchesToTwip(0.6) },
+          children: [
+            new TextRun({
+              text: `Why: ${a.sourceSignal}`,
+              size: 18,
+              color: COLORS.textSecondary,
+            }),
+          ],
+        }),
+      );
+    }
+  });
+
+  elements.push(new Paragraph({ children: [new PageBreak()] }));
+  return elements;
+}
+
+/**
+ * Compliance Gap Analysis section (AI-generated). Explains the STORED
+ * readiness scores; it never re-scores anything.
+ */
+function createComplianceGapSection(reportData: ReportData): (Paragraph | Table)[] {
+  const gap = reportData.aiSummaries?.complianceGap;
+  if (!gap) return [];
+
+  const elements: (Paragraph | Table)[] = [];
+  elements.push(createSectionHeader("Compliance Gap Analysis"));
+  elements.push(...createAIAnalysisBox(gap.narrative, "AI-Generated Analysis"));
+
+  if (gap.scores_caveat) {
+    elements.push(
+      ...createAIAnalysisBox(gap.scores_caveat, "Scope note", COLORS.aiWarning, COLORS.aiWarningBg),
+    );
+  }
+
+  if (gap.gaps && gap.gaps.length > 0) {
+    elements.push(createSubsectionHeader("Prioritised gaps"));
+    gap.gaps.forEach((g) => {
+      elements.push(
+        new Paragraph({
+          spacing: { before: 60, after: 20 },
+          indent: { left: convertInchesToTwip(0.3) },
+          bullet: { level: 0 },
+          children: [
+            new TextRun({
+              text: `${g.control}: `,
+              bold: true,
+              size: 20,
+              color: COLORS.textPrimary,
+            }),
+            new TextRun({
+              text: `${g.gap} (${g.priority}${g.basis ? `, Basis: ${g.basis}` : ""})`,
+              size: 20,
+              color: COLORS.textPrimary,
+            }),
+          ],
+        }),
+      );
+
+      if (g.what_would_close_this) {
+        elements.push(
+          new Paragraph({
+            spacing: { after: 60 },
+            indent: { left: convertInchesToTwip(0.6) },
+            children: [
+              new TextRun({
+                text: `Closes when: ${g.what_would_close_this}`,
+                size: 18,
+                color: COLORS.textSecondary,
+              }),
+            ],
+          }),
+        );
+      }
+    });
+  }
+
+  elements.push(new Paragraph({ children: [new PageBreak()] }));
+  return elements;
+}
+
+/**
+ * Third-party risk analysis. Standalone: createRiskAnalysisSection returns []
+ * when no risk section is selected, and a vendors-only report still needs this.
+ */
+function createVendorRiskSection(reportData: ReportData): (Paragraph | Table)[] {
+  const vendorRisk = reportData.aiSummaries?.vendorRisk;
+  if (!vendorRisk) return [];
+
+  const elements: (Paragraph | Table)[] = [];
+  elements.push(createSectionHeader("Third-Party Risk Analysis"));
+  elements.push(...createAIAnalysisBox(vendorRisk.narrative, "AI-Generated Analysis"));
+  (vendorRisk.concerns ?? []).forEach((c) => {
+    elements.push(
+      new Paragraph({
+        spacing: { before: 60, after: 60 },
+        indent: { left: convertInchesToTwip(0.3) },
+        bullet: { level: 0 },
+        children: [
+          new TextRun({ text: `${c.vendor}: `, bold: true, size: 20, color: COLORS.textPrimary }),
+          new TextRun({
+            text: `${c.concern} (${c.severity}${c.basis ? `, Basis: ${c.basis}` : ""})`,
+            size: 20,
+            color: COLORS.textPrimary,
+          }),
+        ],
+      }),
+    );
+  });
+
+  elements.push(new Paragraph({ children: [new PageBreak()] }));
+  return elements;
+}
+
+/**
+ * Analyzer abstentions. Until now an abstention was completely silent in the
+ * document: a missing block with no explanation, indistinguishable from a
+ * block that was never enabled.
+ *
+ * The reasons arrive already filtered for presentation by
+ * mapAnalysesToSummaries — an operational failure has been replaced there, in
+ * one place, so this renderer and the PDF cannot disagree about what a reader
+ * is told. Headings come from the shared ANALYSIS_LABELS map for the same
+ * reason.
+ */
+function createAbstentionsSection(reportData: ReportData): (Paragraph | Table)[] {
+  const abstentions = reportData.aiSummaries?.abstentions;
+  if (!abstentions || Object.keys(abstentions).length === 0) return [];
+
+  const elements: (Paragraph | Table)[] = [];
+  elements.push(createSubsectionHeader("Analyses not produced"));
+  Object.entries(abstentions).forEach(([key, reason]) => {
+    elements.push(
+      new Paragraph({
+        spacing: { before: 60, after: 60 },
+        indent: { left: convertInchesToTwip(0.3) },
+        bullet: { level: 0 },
+        children: [
+          new TextRun({
+            text: `${ANALYSIS_LABELS[key] ?? key}: `,
+            bold: true,
+            size: 20,
+            color: COLORS.textPrimary,
+          }),
+          new TextRun({ text: reason, size: 20, color: COLORS.textPrimary }),
+        ],
+      }),
+    );
+  });
+
+  elements.push(new Paragraph({ children: [new PageBreak()] }));
   return elements;
 }
 
@@ -723,6 +1012,20 @@ function createRiskAnalysisSection(reportData: ReportData): (Paragraph | Table)[
     );
   }
 
+  // Most material risks. The analyzer has always produced top_risks; until now
+  // nothing rendered them in either format.
+  const topRisks = reportData.aiSummaries?.riskAnalysis?.top_risks;
+  if (topRisks && topRisks.length > 0) {
+    elements.push(createSubsectionHeader("Most material risks"));
+    elements.push(
+      createTable(
+        ["Risk", "Level", "Why it ranks here"],
+        topRisks.map((r) => [r.name, r.level || "-", r.why]),
+      ),
+    );
+    elements.push(createTableSpacing());
+  }
+
   // Add page break
   elements.push(new Paragraph({ children: [new PageBreak()] }));
 
@@ -769,8 +1072,16 @@ function createComplianceSection(reportData: ReportData): (Paragraph | Table)[] 
     );
 
     if (sections.compliance.controls.length > 0) {
-      const headers = ["Control ID", "Title", "Status", "Owner"];
+      // An organization report merges this table across every use case, and
+      // control ids repeat -- each project has its own C1. mergeSections
+      // labels rows only when more than one contributed, so the column shows
+      // up exactly when it is needed. Mirrors report-pdf.ejs.
+      const showUseCase = sections.compliance.controls.some((c) => c.useCase);
+      const headers = showUseCase
+        ? ["Use case", "Control ID", "Title", "Status", "Owner"]
+        : ["Control ID", "Title", "Status", "Owner"];
       const rows = sections.compliance.controls.map((control) => [
+        ...(showUseCase ? [control.useCase || "-"] : []),
         control.controlId,
         control.title,
         control.status || "-",
@@ -810,7 +1121,7 @@ function createComplianceSection(reportData: ReportData): (Paragraph | Table)[] 
           spacing: { before: 200, after: 100 },
           children: [
             new TextRun({
-              text: `${topic.title} (${topic.progress}%)`,
+              text: `${topic.useCase ? `${topic.useCase} — ` : ""}${topic.title} (${topic.progress}%)`,
               bold: true,
               size: 22,
               color: COLORS.textPrimary,
@@ -855,8 +1166,14 @@ function createComplianceSection(reportData: ReportData): (Paragraph | Table)[] 
           ],
         }),
       );
-      const headers = ["Clause ID", "Title", "Status"];
+      // Merged across use cases, and across ISO 42001 and ISO 27001, which
+      // both render into this section.
+      const showClauseUseCase = sections.clausesAndAnnexes.clauses.some((c) => c.useCase);
+      const headers = showClauseUseCase
+        ? ["Use case", "Clause ID", "Title", "Status"]
+        : ["Clause ID", "Title", "Status"];
       const rows = sections.clausesAndAnnexes.clauses.map((clause) => [
+        ...(showClauseUseCase ? [clause.useCase || "-"] : []),
         clause.clauseId,
         clause.title,
         clause.status || "-",
@@ -880,8 +1197,12 @@ function createComplianceSection(reportData: ReportData): (Paragraph | Table)[] 
           ],
         }),
       );
-      const headers = ["Annex ID", "Title", "Status"];
+      const showAnnexUseCase = sections.clausesAndAnnexes.annexes.some((a) => a.useCase);
+      const headers = showAnnexUseCase
+        ? ["Use case", "Annex ID", "Title", "Status"]
+        : ["Annex ID", "Title", "Status"];
       const rows = sections.clausesAndAnnexes.annexes.map((annex) => [
+        ...(showAnnexUseCase ? [annex.useCase || "-"] : []),
         annex.annexId,
         annex.title,
         annex.status || "-",
@@ -932,7 +1253,7 @@ function createComplianceSection(reportData: ReportData): (Paragraph | Table)[] 
             spacing: { before: 120, after: 80 },
             children: [
               new TextRun({
-                text: category.name,
+                text: `${category.useCase ? `${category.useCase} — ` : ""}${category.name}`,
                 bold: true,
                 size: 22,
                 color: COLORS.textSecondary,
@@ -991,12 +1312,12 @@ function createOrganizationSection(reportData: ReportData): (Paragraph | Table)[
     }
 
     if (sections.models.models.length > 0) {
-      const headers = ["Model Name", "Version", "Status", "Owner"];
+      const headers = ["Model Name", "Version", "Status", "Approver"];
       const rows = sections.models.models.map((model) => [
         model.name,
         model.version || "-",
         model.status || "-",
-        model.owner || "-",
+        model.approver || "-",
       ]);
       elements.push(createTable(headers, rows));
       elements.push(createTableSpacing());
@@ -1042,12 +1363,10 @@ function createOrganizationSection(reportData: ReportData): (Paragraph | Table)[
     }
 
     if (sections.trainingRegistry.records.length > 0) {
-      const headers = ["Training Name", "Completion Date", "Status", "Assignee"];
+      const headers = ["Training Name", "Status"];
       const rows = sections.trainingRegistry.records.map((record) => [
         record.trainingName,
-        record.completionDate || "-",
         record.status || "-",
-        record.assignee || "-",
       ]);
       elements.push(createTable(headers, rows));
       elements.push(createTableSpacing());
@@ -1069,10 +1388,9 @@ function createOrganizationSection(reportData: ReportData): (Paragraph | Table)[
     }
 
     if (sections.policyManager.policies.length > 0) {
-      const headers = ["Policy Name", "Version", "Status", "Review Date", "Owner"];
+      const headers = ["Policy Name", "Status", "Review Date", "Owner"];
       const rows = sections.policyManager.policies.map((policy) => [
         policy.policyName,
-        policy.version || "-",
         policy.status || "-",
         policy.reviewDate || "-",
         policy.owner || "-",
@@ -1097,29 +1415,77 @@ function createOrganizationSection(reportData: ReportData): (Paragraph | Table)[
     }
 
     if (sections.incidentManagement.incidents.length > 0) {
-      const headers = [
-        "Incident ID",
-        "Title",
-        "Type",
-        "Severity",
-        "Status",
-        "Reported",
-        "Assignee",
-      ];
+      const headers = ["Incident ID", "Type", "Severity", "Status", "Reported", "Reporter"];
       const rows = sections.incidentManagement.incidents.map((incident) => [
         incident.incidentId,
-        incident.title,
         incident.type || "-",
         incident.severity || "-",
         incident.status || "-",
         incident.reportedDate || "-",
-        incident.assignee || "-",
+        incident.reporter || "-",
       ]);
       elements.push(createTable(headers, rows));
       elements.push(createTableSpacing());
     } else {
       elements.push(createEmptyState("No incidents have been reported."));
     }
+  }
+
+  return elements;
+}
+
+/**
+ * Create the "sections with no data" block.
+ *
+ * Deliberately its own top-level section rather than a tail on
+ * createOrganizationSection: that function returns [] when no organization
+ * section is present, so a report whose only content is notices would print
+ * nothing at all. The two "has any section" guards stay untouched.
+ */
+function createSectionNoticesSection(reportData: ReportData): (Paragraph | Table)[] {
+  // `?? []` so a caller constructing ReportData without sectionNotices — every
+  // caller that predates the field — renders nothing rather than throwing.
+  const notices = reportData.sectionNotices ?? [];
+  if (notices.length === 0) return [];
+
+  const elements: (Paragraph | Table)[] = [];
+  elements.push(createSubsectionHeader("Sections with no data"));
+  elements.push(
+    new Paragraph({
+      spacing: { after: 120 },
+      children: [
+        new TextRun({
+          text:
+            "These sections were requested but produced nothing. They are listed so an " +
+            "empty report is never mistaken for a clean one.",
+          size: 20,
+          color: COLORS.textSecondary,
+        }),
+      ],
+    }),
+  );
+
+  for (const notice of notices) {
+    elements.push(
+      new Paragraph({
+        spacing: { before: 60, after: 60 },
+        indent: { left: convertInchesToTwip(0.3) },
+        bullet: { level: 0 },
+        children: [
+          new TextRun({
+            text: NOTICE_LABELS[notice.sectionKey] ?? notice.sectionKey,
+            bold: true,
+            size: 20,
+            color: COLORS.textPrimary,
+          }),
+          new TextRun({
+            text: ` — ${NOTICE_REASONS[notice.reason] ?? notice.reason}`,
+            size: 20,
+            color: COLORS.textPrimary,
+          }),
+        ],
+      }),
+    );
   }
 
   return elements;
@@ -1185,9 +1551,14 @@ export async function generateDOCX(reportData: ReportData): Promise<ReportGenera
       ...coverPage,
       ...toc,
       ...aiExecutiveSummary,
+      ...createRecommendedActionsSection(reportData),
+      ...createComplianceGapSection(reportData),
+      ...createVendorRiskSection(reportData),
+      ...createAbstentionsSection(reportData),
       ...riskSection,
       ...complianceSection,
       ...organizationSection,
+      ...createSectionNoticesSection(reportData),
     ];
 
     // Create document

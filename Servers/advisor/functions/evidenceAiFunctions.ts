@@ -264,7 +264,9 @@ const detectEvidenceGaps = async (
          SELECT
            fel.entity_id,
            COUNT(DISTINCT fel.file_id) as evidence_count,
-           COALESCE(AVG(eaa.overall_quality_score), 0) as avg_quality
+           COALESCE(AVG(CASE eaa.overall_quality_grade
+             WHEN 'A' THEN 95 WHEN 'B' THEN 80 WHEN 'C' THEN 65
+             WHEN 'D' THEN 45 WHEN 'F' THEN 20 END), 0) as avg_quality
          FROM file_entity_links fel
          LEFT JOIN evidence_ai_analysis eaa
            ON eaa.file_id = fel.file_id AND eaa.organization_id = :organizationId

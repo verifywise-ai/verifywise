@@ -97,7 +97,7 @@
     "react-markdown": "^10.1.0",
     "react-plotly.js": "^4.0.0",
     "react-redux": "^9.3.0",
-    "react-router": "8.3.0",
+    "react-router": "^8.3.0",
     "recharts": "^3.8.1",
     "redux": "^5.0.1",
     "redux-persist": "^6.0.0",
@@ -136,7 +136,7 @@
     "baseline-browser-mapping": "^2.10.38",
     "concurrently": "^10.0.4",
     "dotenv-webpack": "^9.0.0",
-    "jsdom": "^29.1.1",
+    "jsdom": "^30.0.1",
     "msw": "^2.14.6",
     "prettier": "^3.8.4",
     "typescript": "^7.0.2",
@@ -146,6 +146,7 @@
   "overrides": {
     "archiver": "^7.0.1",
     "readdir-glob": "^3.0.0",
+    "undici@7": "^7.29.0",
     "minimatch@9": "9.0.8",
     "uuid": "^11.1.1",
     "postcss": "^8.5.23",
@@ -153,6 +154,8 @@
     "brace-expansion@2": "^2.1.4",
     "brace-expansion@3": "^3.0.6",
     "brace-expansion@4": "^5.0.9",
-    "brace-expansion@5": "^5.0.9"
+    "brace-expansion@5": "^5.0.9",
+    "nanoid@3": "^3.3.17",
+    "nanoid@5": "^5.1.16"
   }
 }

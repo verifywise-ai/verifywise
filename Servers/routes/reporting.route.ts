@@ -6,6 +6,7 @@ import {
   getAllGeneratedReports,
   deleteGeneratedReportById,
 } from "../controllers/reporting.ctrl";
+import { listSections } from "../controllers/reportTemplate.ctrl";
 
 import authenticateJWT from "../middleware/auth.middleware";
 import authorize from "../middleware/accessControl.middleware";
@@ -35,9 +36,12 @@ router.post(
   generateReportsV2,
 );
 
+// GET request
+// Declared before the "/:id" route so the literal path is never captured as an id.
+router.get("/sections", authenticateJWT, listSections);
+
 router.delete("/:id", authenticateJWT, deleteGeneratedReportById);
 
-// GET request
 router.get("/generate-report", authenticateJWT, getAllGeneratedReports);
 
 export default router;

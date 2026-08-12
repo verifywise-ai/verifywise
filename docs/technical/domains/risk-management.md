@@ -51,18 +51,18 @@ project_risks
 ├── controls_mapping
 ├── date_of_assessment
 │
-├── likelihood (ENUM)
-├── severity (ENUM)
-├── risk_level_autocalculated (ENUM)
-├── risk_severity (ENUM)
+├── likelihood (ENUM)                 # current risk
+├── severity (ENUM)                   # current risk
+├── risk_level_autocalculated (ENUM)  # derived from likelihood + severity
+├── risk_severity (ENUM)              # RESIDUAL severity (mitigation)
 ├── current_risk_level (ENUM)
 │
 ├── mitigation_status (ENUM)
 ├── mitigation_plan
 ├── implementation_strategy
 ├── mitigation_evidence_document
-├── likelihood_mitigation (ENUM)
-├── final_risk_level
+├── likelihood_mitigation (ENUM)      # residual likelihood (mitigation)
+├── final_risk_level                  # derived from the two residual fields
 │
 ├── risk_approval (FK → users)
 ├── approval_status
@@ -236,11 +236,17 @@ Severity is weighted 3x heavier than likelihood.
 
 | Score Range | Risk Level |
 |-------------|------------|
-| ≤4 | Very low risk |
+| ≤4 | No risk |
 | 5-8 | Low risk |
 | 9-12 | Medium risk |
 | 13-16 | High risk |
 | ≥17 | Very high risk |
+
+`RiskCalculator` (`Clients/src/presentation/tools/riskCalculator.ts`) is the only
+implementation of this formula. Views that show a score — including the risk heat
+map on the use case's **Use case risks** tab — must call `getRiskLevel` /
+`getRiskScore` rather than re-deriving it, or they will report a different level
+than the summary cards and the risks table for the same risk.
 
 ### Example Calculation
 

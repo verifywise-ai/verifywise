@@ -51,7 +51,7 @@ import {
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import { displayFormattedDate } from "../../tools/isoDateToString";
-import { DatasetStatus, DataClassification } from "../../../domain/enums/dataset.enum";
+import { DatasetStatus, DataClassification, DatasetType } from "../../../domain/enums/dataset.enum";
 import Chip from "../../components/Chip";
 import { palette } from "../../themes/palette";
 
@@ -102,9 +102,20 @@ const StatusBadge: React.FC<{ status: DatasetStatus }> = ({ status }) => {
   return <Chip label={status} />;
 };
 
-const ClassificationBadge: React.FC<{ classification: DataClassification }> = ({
+/**
+ * type and classification are nullable columns with no default, so a dataset
+ * saved without them arrives here as null. An empty chip says nothing, so these
+ * fall back to the same "-" the text cells use.
+ */
+const TypeBadge: React.FC<{ type: DatasetType | null }> = ({ type }) => {
+  if (!type) return <TooltipCell value={type} />;
+  return <Chip label={type} />;
+};
+
+const ClassificationBadge: React.FC<{ classification: DataClassification | null }> = ({
   classification,
 }) => {
+  if (!classification) return <TooltipCell value={classification} />;
   return <Chip label={classification} />;
 };
 
@@ -378,7 +389,7 @@ const DatasetTable: React.FC<DatasetTableProps> = ({
                 )}
                 {isVisible("type") && (
                   <TableCell>
-                    <Chip label={dataset.type} />
+                    <TypeBadge type={dataset.type} />
                   </TableCell>
                 )}
                 {isVisible("source") && (

@@ -10,13 +10,42 @@
 import { sequelize } from "../../database/db";
 import { QueryTypes } from "sequelize";
 import { logStructured } from "../../utils/logger/fileLogger";
+import { startTrace, startSpan, endSpan, logError } from "../observability/traceManager";
 
 const fileName = "memoryService.ts";
 const DEFAULT_MESSAGE_WINDOW = 50;
 
 // ── Message History (Short-term) ────────────────────────────────
 
+/**
+ * Persist a message to short-term history.
+ *
+ * Thin Langfuse-instrumented wrapper: a span is recorded around the DB
+ * write (no-op when Langfuse is unconfigured). The underlying write still
+ * swallows its own errors so memory failures never affect the caller.
+ */
 export async function saveMessage(
+  organizationId: number,
+  agentName: string,
+  userId: number,
+  sessionId: string,
+  role: "user" | "assistant" | "system" | "tool",
+  content: string,
+  metadata?: Record<string, unknown>,
+): Promise<void> {
+  const trace = startTrace(userId, sessionId, { fn: "saveMessage", agentName }, organizationId);
+  const span = startSpan(trace, "memory:write", { agentName, role });
+  try {
+    await saveMessageImpl(organizationId, agentName, userId, sessionId, role, content, metadata);
+    endSpan(span, { status: "success" });
+  } catch (error) {
+    logError(trace, error, { fn: "saveMessage" });
+    endSpan(span, { status: "error" });
+    throw error;
+  }
+}
+
+async function saveMessageImpl(
   organizationId: number,
   agentName: string,
   userId: number,
@@ -68,7 +97,34 @@ export async function saveMessage(
   }
 }
 
+/**
+ * Read recent messages for a session.
+ *
+ * Thin Langfuse-instrumented wrapper: a span is recorded around the DB
+ * read (no-op when Langfuse is unconfigured).
+ */
 export async function getMessages(
+  organizationId: number,
+  agentName: string,
+  sessionId: string,
+  limit: number = DEFAULT_MESSAGE_WINDOW,
+): Promise<
+  Array<{ role: string; content: string; created_at: string; metadata: Record<string, unknown> }>
+> {
+  const trace = startTrace(0, sessionId, { fn: "getMessages", agentName }, organizationId);
+  const span = startSpan(trace, "memory:read", { agentName });
+  try {
+    const rows = await getMessagesImpl(organizationId, agentName, sessionId, limit);
+    endSpan(span, { output: { count: rows.length }, status: "success" });
+    return rows;
+  } catch (error) {
+    logError(trace, error, { fn: "getMessages" });
+    endSpan(span, { status: "error" });
+    throw error;
+  }
+}
+
+async function getMessagesImpl(
   organizationId: number,
   agentName: string,
   sessionId: string,

@@ -1,5 +1,8 @@
 import { Box, Typography, LinearProgress } from "@mui/material";
-import { status, accent, text as textColors, background } from "../../themes/palette";
+import { TrendingUp } from "lucide-react";
+import { status, text as textColors, background } from "../../themes/palette";
+import CustomizableSkeleton from "../Skeletons";
+import { EmptyState } from "../EmptyState";
 import type { FrameworkReadinessScore } from "../../../domain/interfaces/i.readiness";
 import { displayFormattedDateTime } from "../../tools/isoDateToString";
 
@@ -20,7 +23,7 @@ function formatFrameworkName(type: string): string {
 
 function getScoreColor(score: number) {
   if (score >= 80) return status.success.text;
-  if (score >= 60) return accent.primary.text;
+  if (score >= 60) return status.info.text;
   if (score >= 40) return status.warning.text;
   return status.error.text;
 }
@@ -30,29 +33,21 @@ const FIXED_HEIGHT = 340;
 export default function ReadinessTrend({ data, isLoading }: ReadinessTrendProps) {
   if (isLoading) {
     return (
-      <Box sx={{ p: 2, height: FIXED_HEIGHT, display: "flex", alignItems: "center" }}>
-        <LinearProgress sx={{ width: "100%" }} />
+      <Box sx={{ height: FIXED_HEIGHT }}>
+        <CustomizableSkeleton variant="rounded" width="100%" height={FIXED_HEIGHT - 16} />
       </Box>
     );
   }
 
   if (!data || data.length === 0) {
     return (
-      <Box
-        sx={{
-          height: FIXED_HEIGHT,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          p: 3,
-          textAlign: "center",
-          backgroundColor: background.accent,
-          borderRadius: 2,
-        }}
-      >
-        <Typography sx={{ fontSize: 13, color: textColors.tertiary }}>
-          No readiness history available. Run a calculation to start tracking trends.
-        </Typography>
+      <Box sx={{ height: FIXED_HEIGHT }}>
+        <EmptyState
+          icon={TrendingUp}
+          message="No readiness history available. Run a calculation to start tracking trends."
+          fillContainer
+          showBorder={false}
+        />
       </Box>
     );
   }
@@ -62,11 +57,12 @@ export default function ReadinessTrend({ data, isLoading }: ReadinessTrendProps)
       {/* Fixed header */}
       <Typography
         sx={{
-          fontSize: 15,
+          fontSize: 16,
           fontWeight: 600,
           color: textColors.primary,
-          mb: 1,
-          px: 0.5,
+          fontFamily: "'Red Hat Display', 'Geist', sans-serif",
+          lineHeight: 1.4,
+          mb: "12px",
           flexShrink: 0,
         }}
       >
@@ -79,13 +75,16 @@ export default function ReadinessTrend({ data, isLoading }: ReadinessTrendProps)
           "flex": 1,
           "overflowY": "auto",
           "overflowX": "hidden",
-          "pr": 0.5,
+          "pr": "4px",
+          "display": "flex",
+          "flexDirection": "column",
+          "gap": "16px",
           // Subtle scrollbar
           "&::-webkit-scrollbar": { width: 4 },
           "&::-webkit-scrollbar-track": { backgroundColor: "transparent" },
           "&::-webkit-scrollbar-thumb": {
             "backgroundColor": background.hover,
-            "borderRadius": 2,
+            "borderRadius": "4px",
             "&:hover": { backgroundColor: textColors.muted },
           },
         }}
@@ -95,24 +94,24 @@ export default function ReadinessTrend({ data, isLoading }: ReadinessTrendProps)
           const date = item.calculated_at ? displayFormattedDateTime(item.calculated_at) : "";
 
           return (
-            <Box key={idx} sx={{ mb: 2, px: 0.5 }}>
-              <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0.5 }}>
+            <Box key={idx}>
+              <Box sx={{ display: "flex", justifyContent: "space-between", mb: "4px" }}>
                 <Typography sx={{ fontSize: 12, color: textColors.secondary, fontWeight: 500 }}>
                   {formatFrameworkName(item.framework_type)}
                 </Typography>
-                <Typography sx={{ fontSize: 11, color: textColors.muted }}>{date}</Typography>
+                <Typography sx={{ fontSize: 11, color: textColors.accent }}>{date}</Typography>
               </Box>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: "8px" }}>
                 <LinearProgress
                   variant="determinate"
                   value={score}
                   sx={{
                     "flex": 1,
                     "height": 8,
-                    "borderRadius": 4,
+                    "borderRadius": "4px",
                     "backgroundColor": background.hover,
                     "& .MuiLinearProgress-bar": {
-                      borderRadius: 4,
+                      borderRadius: "4px",
                       backgroundColor: getScoreColor(score),
                     },
                   }}
@@ -120,7 +119,7 @@ export default function ReadinessTrend({ data, isLoading }: ReadinessTrendProps)
                 <Typography
                   sx={{
                     fontSize: 13,
-                    fontWeight: 700,
+                    fontWeight: 500,
                     color: getScoreColor(score),
                     minWidth: 32,
                     textAlign: "right",
@@ -130,17 +129,17 @@ export default function ReadinessTrend({ data, isLoading }: ReadinessTrendProps)
                 </Typography>
               </Box>
               {/* Distribution summary */}
-              <Box sx={{ display: "flex", gap: 1.5, mt: 0.5 }}>
-                <Typography sx={{ fontSize: 10, color: status.success.text }}>
+              <Box sx={{ display: "flex", gap: "12px", mt: "4px", flexWrap: "wrap" }}>
+                <Typography sx={{ fontSize: 11, color: status.success.text }}>
                   {item.ready_count ?? 0} ready
                 </Typography>
-                <Typography sx={{ fontSize: 10, color: accent.primary.text }}>
+                <Typography sx={{ fontSize: 11, color: status.info.text }}>
                   {item.needs_work_count ?? 0} needs work
                 </Typography>
-                <Typography sx={{ fontSize: 10, color: status.warning.text }}>
+                <Typography sx={{ fontSize: 11, color: status.warning.text }}>
                   {item.at_risk_count ?? 0} at risk
                 </Typography>
-                <Typography sx={{ fontSize: 10, color: status.error.text }}>
+                <Typography sx={{ fontSize: 11, color: status.error.text }}>
                   {item.not_started_count ?? 0} not started
                 </Typography>
               </Box>

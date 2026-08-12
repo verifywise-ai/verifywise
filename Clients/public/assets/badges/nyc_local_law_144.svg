@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Background circle - NYC official blue -->
+  <circle cx="32" cy="32" r="30" fill="#002D72"/>
+
+  <!-- Statue of Liberty torch inspired / NYC skyline -->
+  <g fill="#FFFFFF">
+    <!-- Buildings -->
+    <rect x="12" y="30" width="6" height="18"/>
+    <rect x="20" y="24" width="7" height="24"/>
+    <rect x="29" y="18" width="8" height="30"/>
+    <rect x="39" y="26" width="6" height="22"/>
+    <rect x="47" y="32" width="5" height="16"/>
+  </g>
+
+  <!-- Windows -->
+  <g fill="#002D72">
+    <rect x="14" y="33" width="2" height="2"/>
+    <rect x="14" y="38" width="2" height="2"/>
+    <rect x="14" y="43" width="2" height="2"/>
+    <rect x="22" y="27" width="2" height="2"/>
+    <rect x="22" y="32" width="2" height="2"/>
+    <rect x="22" y="37" width="2" height="2"/>
+    <rect x="22" y="42" width="2" height="2"/>
+    <rect x="31" y="21" width="3" height="3"/>
+    <rect x="31" y="27" width="3" height="3"/>
+    <rect x="31" y="33" width="3" height="3"/>
+    <rect x="31" y="39" width="3" height="3"/>
+    <rect x="41" y="29" width="2" height="2"/>
+    <rect x="41" y="34" width="2" height="2"/>
+    <rect x="41" y="39" width="2" height="2"/>
+    <rect x="49" y="35" width="2" height="2"/>
+    <rect x="49" y="40" width="2" height="2"/>
+  </g>
+
+  <!-- AI/Person icon for hiring -->
+  <circle cx="32" cy="10" r="4" fill="#FFFFFF"/>
+  <path d="M26 20 Q32 16 38 20" stroke="#FFFFFF" stroke-width="2" fill="none"/>
+
+  <!-- Checkmark badge -->
+  <circle cx="50" cy="14" r="8" fill="#4CAF50"/>
+  <path d="M46 14 L49 17 L55 11" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+  <!-- NYC LL144 text -->
+  <text x="32" y="58" font-family="Arial, sans-serif" font-size="5.5" font-weight="bold" fill="#FFFFFF" text-anchor="middle">NYC LL144</text>
+</svg>
