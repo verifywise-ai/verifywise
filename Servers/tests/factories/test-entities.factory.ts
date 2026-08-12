@@ -84,7 +84,9 @@ export async function createTestRisk(
         orgId,
         name,
         riskOwner: options.risk_owner ?? null,
-        riskCategory: options.risk_category ?? null,
+        riskCategory: options.risk_category
+          ? `{${options.risk_category.map((value) => `"${value.replace(/"/g, '\\"')}"`).join(",")}}`
+          : null,
         controlsMapping: options.controls_mapping ?? null,
         assessmentMapping: options.assessment_mapping ?? null,
         aiLifecyclePhase: options.ai_lifecycle_phase ?? null,
