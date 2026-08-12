@@ -28,6 +28,8 @@
     "i18n:audit:strict": "node scripts/i18n-audit.mjs --strict",
     "format": "prettier --write .",
     "format-check": "prettier --check .",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
     "prepare": "node -e \"try { require('fs').accessSync('.git'); require('child_process').spawnSync('husky', {stdio: 'inherit', shell: true}); } catch(e) {}\""
   },
   "author": "",
@@ -134,6 +136,9 @@
     "@types/swagger-ui-express": "^4.1.6",
     "@types/winston": "^2.4.4",
     "@types/yamljs": "^0.2.34",
+    "@typescript-eslint/eslint-plugin": "^8.62.1",
+    "@typescript-eslint/parser": "^8.62.1",
+    "eslint": "^9.39.4",
     "husky": "^9.1.7",
     "jest": "^30.4.2",
     "jszip": "^3.10.1",
@@ -150,7 +155,11 @@
     "tsc-watch": "^7.2.0"
   },
   "lint-staged": {
-    "*.{ts,tsx,js,jsx,json,md}": [
+    "**/*.ts": [
+      "npx eslint --fix",
+      "npx prettier --write"
+    ],
+    "*.{js,jsx,json,md}": [
       "prettier --write"
     ]
   },

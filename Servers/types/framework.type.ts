@@ -61,7 +61,7 @@ export const frameworkAdditionMap: Record<
     enable_ai_data_insertion: boolean,
     organizationId: number,
     transaction: Transaction,
-  ) => Promise<Object>
+  ) => Promise<object>
 > = {
   1: createEUFrameworkQuery,
   2: createISOFrameworkQuery,

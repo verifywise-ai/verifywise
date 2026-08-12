@@ -672,17 +672,15 @@ export const processApprovalQuery = async (
       // executor throws, the transaction rolls back and the approval state
       // change is reverted — the approver will see an error.
       if (entityType === "ai_action") {
-        // eslint-disable-next-line no-console
         console.log(
           `[processApprovalQuery] ai_action branch — invoking executeAiAction(requestId=${requestId}, org=${organizationId})`,
         );
         await executeAiAction(requestId, organizationId, transaction);
-        // eslint-disable-next-line no-console
+
         console.log(
           `[processApprovalQuery] executeAiAction returned for requestId=${requestId} — transaction will commit on outer return`,
         );
       } else {
-        // eslint-disable-next-line no-console
         console.log(
           `[processApprovalQuery] entityType=${entityType} (not ai_action) — no executor dispatched for requestId=${requestId}`,
         );

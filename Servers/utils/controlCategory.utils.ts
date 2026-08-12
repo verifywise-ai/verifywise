@@ -134,7 +134,7 @@ export const deleteControlCategoryByIdQuery = async (
   id: number,
   organizationId: number,
   transaction: Transaction,
-): Promise<Boolean> => {
+): Promise<boolean> => {
   const result = await sequelize.query(
     `DELETE FROM controlcategories WHERE organization_id = :organizationId AND id = :id RETURNING *`,
     {

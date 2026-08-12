@@ -25,7 +25,7 @@ import {
 } from "../../domain.layer/interfaces/i.modelSecurity";
 
 // Import pickleparser - handles the bytecode parsing
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+
 const pickleparser = require("pickleparser");
 
 /**
