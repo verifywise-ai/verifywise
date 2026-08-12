@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Background circle - Texas blue -->
+  <circle cx="32" cy="32" r="30" fill="#002868"/>
+
+  <!-- Texas flag stripe pattern -->
+  <rect x="2" y="32" width="60" height="15" fill="#FFFFFF"/>
+  <rect x="2" y="47" width="60" height="15" fill="#BF0A30"/>
+
+  <!-- Circular mask to maintain circle shape -->
+  <circle cx="32" cy="32" r="30" fill="none" stroke="#002868" stroke-width="4"/>
+
+  <!-- Texas Lone Star -->
+  <polygon points="32,8 35,20 48,20 38,28 42,40 32,32 22,40 26,28 16,20 29,20" fill="#FFFFFF"/>
+
+  <!-- AI Circuit pattern inside star -->
+  <g stroke="#002868" stroke-width="0.75" fill="none">
+    <circle cx="32" cy="24" r="3"/>
+    <line x1="32" y1="27" x2="32" y2="32"/>
+    <line x1="28" y1="30" x2="36" y2="30"/>
+    <circle cx="28" cy="30" r="1.5" fill="#002868"/>
+    <circle cx="36" cy="30" r="1.5" fill="#002868"/>
+  </g>
+
+  <!-- Shield overlay for governance -->
+  <path d="M32 36 L42 40 L42 48 C42 52 37 55 32 57 C27 55 22 52 22 48 L22 40 Z" fill="#002868" stroke="#FFFFFF" stroke-width="1"/>
+
+  <!-- Checkmark in shield -->
+  <path d="M27 46 L30 49 L38 41" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+  <!-- TEXAS AI text -->
+  <text x="32" y="58" font-family="Arial, sans-serif" font-size="5" font-weight="bold" fill="#FFFFFF" text-anchor="middle">TEXAS AI</text>
+</svg>

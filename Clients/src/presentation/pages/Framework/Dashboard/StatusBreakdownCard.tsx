@@ -31,6 +31,17 @@ interface FrameworkData {
     implemented: number;
     needsRework: number;
   };
+  // Generic frameworks (SOC 2, GDPR, HIPAA, ...) — real per-status
+  // counts from the dashboard endpoint.
+  genericStatusBreakdown?: {
+    notStarted: number;
+    draft: number;
+    inProgress: number;
+    awaitingReview: number;
+    awaitingApproval: number;
+    implemented: number;
+    needsRework: number;
+  };
 }
 
 interface StatusBreakdownCardProps {
@@ -347,6 +358,116 @@ const StatusBreakdownCard = ({ frameworksData }: StatusBreakdownCardProps) => {
                   </Box>
 
                   {/* Add bottom margin for spacing before next section */}
+                  {index < frameworksData.length - 1 && <Box sx={{ mb: 4 }} />}
+                </Box>
+              );
+            }
+
+            const isISO27001Fw = framework.frameworkName.toLowerCase().includes("iso 27001");
+            const isISO42001Fw = framework.frameworkName.toLowerCase().includes("iso 42001");
+
+            // Generic frameworks (SOC 2, GDPR, HIPAA, ...) — single donut
+            // sourced from pre-fetched genericStatusBreakdown counts.
+            if (!isISO27001Fw && !isISO42001Fw) {
+              const g = framework.genericStatusBreakdown;
+              const genericData: StatusData = {
+                "not started": g?.notStarted || 0,
+                "draft": g?.draft || 0,
+                "in progress": g?.inProgress || 0,
+                "awaiting review": (g?.awaitingReview || 0) + (g?.awaitingApproval || 0),
+                "implemented": g?.implemented || 0,
+                "needs rework": g?.needsRework || 0,
+              };
+              const genericPie = createPieData(genericData);
+              const genericAll = getAllStatuses(genericData);
+              const genericTotal =
+                genericData["not started"] +
+                genericData["draft"] +
+                genericData["in progress"] +
+                genericData["awaiting review"] +
+                genericData["implemented"] +
+                genericData["needs rework"];
+
+              return (
+                <Box key={framework.frameworkId}>
+                  {index > 0 && (
+                    <Box
+                      sx={{
+                        height: "1px",
+                        backgroundColor: `${status.default.border}`,
+                        mx: "-16px",
+                        mb: 4,
+                        mt: 1,
+                      }}
+                    />
+                  )}
+                  <Typography
+                    sx={{
+                      fontSize: 13,
+                      fontWeight: 500,
+                      color: `${text.black}`,
+                      mb: 1,
+                    }}
+                  >
+                    {framework.frameworkName}
+                  </Typography>
+                  {genericTotal === 0 ? (
+                    <Typography sx={{ fontSize: 12, color: "#666666" }}>
+                      No status data available
+                    </Typography>
+                  ) : (
+                    <Box
+                      sx={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr",
+                        gap: 3,
+                        alignItems: "center",
+                      }}
+                    >
+                      <Box sx={{ display: "flex", justifyContent: "center" }}>
+                        <VWDonutChart
+                          data={genericPie}
+                          dataKey="value"
+                          nameKey="name"
+                          colors={STATUS_COLORS}
+                          size={120}
+                          innerRadius={30}
+                          outerRadius={48}
+                        />
+                      </Box>
+                      <Stack spacing={0.5}>
+                        {genericAll.map((item) => (
+                          <Box
+                            key={item.id}
+                            sx={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                            }}
+                          >
+                            <Box sx={{ display: "flex", alignItems: "center", gap: 2.5 }}>
+                              <Box
+                                sx={{
+                                  width: 12,
+                                  height: 12,
+                                  borderRadius: "50%",
+                                  backgroundColor: item.color,
+                                }}
+                              />
+                              <Typography sx={{ fontSize: 12, color: "#666666" }}>
+                                {item.label}
+                              </Typography>
+                            </Box>
+                            <Typography
+                              sx={{ fontSize: 12, color: `${text.black}`, fontWeight: 500 }}
+                            >
+                              {item.value}
+                            </Typography>
+                          </Box>
+                        ))}
+                      </Stack>
+                    </Box>
+                  )}
                   {index < frameworksData.length - 1 && <Box sx={{ mb: 4 }} />}
                 </Box>
               );

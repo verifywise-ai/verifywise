@@ -59,12 +59,6 @@ import {
   configTextField,
   configSelect,
   configCheckbox,
-  frameworkDetailsGrid,
-  frameworkDetailItem,
-  frameworkDetailLabel,
-  frameworkDetailValue,
-  frameworkTypeChip,
-  frameworkTypeDescription,
 } from "./style";
 import { brand, background, status } from "../../../themes/palette";
 
@@ -92,9 +86,6 @@ const PluginManagement: React.FC = () => {
   const [connectingOAuth, setConnectingOAuth] = useState(false);
 
   const isAdmin = userRoleName === "Admin";
-
-  // Check if plugin is a compliance/framework plugin
-  const isFrameworkPlugin = plugin?.category === "compliance";
 
   // Custom breadcrumb items
   const breadcrumbItems: BreadcrumbItem[] = useMemo(() => {
@@ -425,55 +416,6 @@ const PluginManagement: React.FC = () => {
                     {plugin.longDescription || plugin.description}
                   </Typography>
                 </Box>
-
-                {/* Framework Details - Only for compliance/framework plugins */}
-                {isFrameworkPlugin && (
-                  <>
-                    <Divider />
-                    <Box>
-                      <Typography variant="subtitle2" fontWeight={600} fontSize={14} mb={2}>
-                        Framework Details
-                      </Typography>
-                      <Box sx={frameworkDetailsGrid}>
-                        {/* Region */}
-                        <Box sx={frameworkDetailItem}>
-                          <Box component="span" sx={frameworkDetailLabel}>
-                            Region
-                          </Box>
-                          <Box component="span" sx={frameworkDetailValue}>
-                            {plugin.region || "Global"}
-                          </Box>
-                        </Box>
-
-                        {/* Framework Type */}
-                        <Box sx={frameworkDetailItem}>
-                          <Box component="span" sx={frameworkDetailLabel}>
-                            Framework Type
-                          </Box>
-                          <Box>
-                            <MuiChip
-                              size="small"
-                              label={
-                                plugin.frameworkType === "organizational"
-                                  ? "Organizational"
-                                  : "Project-Based"
-                              }
-                              sx={frameworkTypeChip(plugin.frameworkType === "organizational")}
-                            />
-                            <Typography
-                              component="span"
-                              sx={{ ...frameworkTypeDescription, display: "block" }}
-                            >
-                              {plugin.frameworkType === "organizational"
-                                ? "Organization-wide framework that applies globally across all projects"
-                                : "Project-specific framework that can be applied to individual projects"}
-                            </Typography>
-                          </Box>
-                        </Box>
-                      </Box>
-                    </Box>
-                  </>
-                )}
 
                 {/* Features */}
                 {plugin.features && plugin.features.length > 0 && (

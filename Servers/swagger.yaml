@@ -10576,6 +10576,75 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
+  '/frameworks/{frameworkId}/tree/{projectId}':
+    get:
+      summary: 'Get Framework Tree'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Frameworks
+      operationId: getFrameworkTree
+      security:
+        -
+          bearerAuth: []
+  '/frameworks/{frameworkId}/dashboard/{projectFrameworkId}':
+    get:
+      summary: 'Get Framework Dashboard'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Frameworks
+      operationId: getFrameworkDashboard
+      security:
+        -
+          bearerAuth: []
+  '/frameworks/{frameworkId}/impl/{level}/{id}':
+    get:
+      summary: 'Get Impl By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Frameworks
+      operationId: getImplById
+      security:
+        -
+          bearerAuth: []
+    patch:
+      summary: 'Update Impl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Frameworks
+      operationId: updateImpl
+      security:
+        -
+          bearerAuth: []
+  '/frameworks/{frameworkId}/impl/{level}/{id}/risks':
+    get:
+      summary: 'Get Impl Risks'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Frameworks
+      operationId: getImplRisks
+      security:
+        -
+          bearerAuth: []
   /eu-ai-act/controlCategories:
     get:
       tags:

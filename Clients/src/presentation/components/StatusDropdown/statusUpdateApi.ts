@@ -311,3 +311,42 @@ export async function updateISO42001AnnexStatus({
     return false;
   }
 }
+
+/**
+ * Update status for a generic-framework impl row (SOC2, GDPR, HIPAA, etc).
+ * Hits the shared PATCH /frameworks/:frameworkId/impl/:level/:id endpoint.
+ * The controller uses partial-update semantics, so status-only FormData
+ * leaves every other field untouched.
+ */
+export async function updateGenericImplStatus({
+  frameworkId,
+  level,
+  implId,
+  newStatus,
+  userId = 1,
+}: {
+  frameworkId: number;
+  level: "l2" | "l3";
+  implId: number;
+  newStatus: string;
+  userId?: number;
+}): Promise<boolean> {
+  try {
+    const formData = new FormData();
+    formData.append("status", newStatus);
+    formData.append("user_id", userId.toString());
+
+    const response = await updateEntityById({
+      routeUrl: `/frameworks/${frameworkId}/impl/${level}/${implId}`,
+      body: formData,
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    return response?.status ? isSuccessResponse(response.status) : false;
+  } catch (error) {
+    console.error("Error updating generic framework impl status:", error);
+    return false;
+  }
+}

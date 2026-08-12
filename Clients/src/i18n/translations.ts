@@ -9048,6 +9048,19 @@ export const translations: Record<string, Record<string, string>> = {
       "Was dieser Bericht abdeckt und für wen er gedacht ist",
     "Word (DOCX)": "Word (DOCX)",
     "You haven&apos;t created any templates yet.": "Sie haben noch keine Vorlagen erstellt.",
+    "Annex controls": "Anhangskontrollen",
+    "Failed to load framework": "Rahmenwerk konnte nicht geladen werden",
+    "Failed to load record": "Datensatz konnte nicht geladen werden",
+    "Items": "Elemente",
+    "Justification for Exclusion (if Not Applicable):":
+      "Begründung für den Ausschluss (falls nicht zutreffend):",
+    "No matching items": "Keine passenden Elemente",
+    "No organizational frameworks assigned yet.":
+      "Noch keine organisatorischen Rahmenwerke zugewiesen.",
+    "No record selected for update": "Kein Datensatz zur Aktualisierung ausgewählt",
+    "Subcategories": "Unterkategorien",
+    'Use the "Manage Frameworks" button to add frameworks to your organizational project.':
+      'Verwenden Sie die Schaltfläche "Rahmenwerke verwalten", um Ihrem organisatorischen Projekt Rahmenwerke hinzuzufügen.',
   },
 
   fr: {
@@ -18024,6 +18037,19 @@ export const translations: Record<string, Record<string, string>> = {
     "What this report covers and who it is for": "Ce que couvre ce rapport et à qui il est destiné",
     "Word (DOCX)": "Word (DOCX)",
     "You haven&apos;t created any templates yet.": "Vous n'avez encore créé aucun modèle.",
+    "Annex controls": "Contrôles d'annexe",
+    "Failed to load framework": "Impossible de charger le cadre",
+    "Failed to load record": "Impossible de charger l'enregistrement",
+    "Items": "Éléments",
+    "Justification for Exclusion (if Not Applicable):":
+      "Justification de l'exclusion (le cas échéant) :",
+    "No matching items": "Aucun élément correspondant",
+    "No organizational frameworks assigned yet.":
+      "Aucun cadre organisationnel attribué pour le moment.",
+    "No record selected for update": "Aucun enregistrement sélectionné pour la mise à jour",
+    "Subcategories": "Sous-catégories",
+    'Use the "Manage Frameworks" button to add frameworks to your organizational project.':
+      'Utilisez le bouton "Gérer les cadres" pour ajouter des cadres à votre projet organisationnel.',
   },
   es: {
     "Deployment name": "Nombre del despliegue",
@@ -26921,5 +26947,17 @@ export const translations: Record<string, Record<string, string>> = {
     "What this report covers and who it is for": "Qué abarca este informe y a quién está dirigido",
     "Word (DOCX)": "Word (DOCX)",
     "You haven&apos;t created any templates yet.": "Aún no ha creado ninguna plantilla.",
+    "Annex controls": "Controles de anexo",
+    "Failed to load framework": "No se pudo cargar el marco",
+    "Failed to load record": "No se pudo cargar el registro",
+    "Items": "Elementos",
+    "Justification for Exclusion (if Not Applicable):":
+      "Justificación de la exclusión (si no corresponde):",
+    "No matching items": "No hay elementos coincidentes",
+    "No organizational frameworks assigned yet.": "Aún no se han asignado marcos organizacionales.",
+    "No record selected for update": "Ningún registro seleccionado para actualizar",
+    "Subcategories": "Subcategorías",
+    'Use the "Manage Frameworks" button to add frameworks to your organizational project.':
+      'Utilice el botón "Gestionar marcos" para añadir marcos a su proyecto organizacional.',
   },
 };

@@ -22,24 +22,6 @@ export const PLUGIN_SLOTS = {
   // Plugin Management Page (for plugin-specific config UI)
   PLUGIN_CONFIG: "page.plugin.config", // Config panel for each plugin
 
-  // Framework Selection (Add Framework Modal)
-  FRAMEWORK_SELECTION: "modal.framework.selection", // Custom framework cards in Add Framework modal
-
-  // Organizational Framework Management (Framework Settings page)
-  ORG_FRAMEWORK_MANAGEMENT: "page.org-framework.management", // Custom frameworks in organizational framework management
-
-  // Controls and Requirements - Custom Framework Viewer (Organizational)
-  CONTROLS_CUSTOM_FRAMEWORK: "page.controls.custom-framework", // Custom framework viewer in Controls tab (organizational)
-
-  // Controls and Requirements - Custom Framework Viewer (Project/Use-case)
-  PROJECT_CONTROLS_CUSTOM_FRAMEWORK: "page.project-controls.custom-framework", // Custom framework viewer in project Controls tab
-
-  // Framework Dashboard - Custom Framework Dashboard
-  FRAMEWORK_DASHBOARD_CUSTOM: "page.framework-dashboard.custom", // Custom framework dashboard content
-
-  // Use-case Overview - Custom Framework Progress
-  PROJECT_OVERVIEW_CUSTOM_FRAMEWORK: "page.project-overview.custom-framework", // Custom framework progress in use-case overview
-
   // Use-case Detail View - All tabs can be overridden by plugins
   USE_CASE_DETAIL_VIEW: "page.usecase.detail-view", // Full detail view override
   USE_CASE_OVERVIEW: "page.usecase.overview", // Overview tab

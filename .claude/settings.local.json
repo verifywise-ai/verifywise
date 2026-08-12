@@ -111,6 +111,15 @@
       "Bash(npx jest *)",
       "Bash(xargs cat)",
       "Bash(npm test *)",
+      "Read(//Users/harsh/Data/vw/plugin-marketplace/**)",
+      "Read(//Users/harsh/Data/**)",
+      "WebFetch(domain:x.com)",
+      "Bash(sort -t: -k2 -n)",
+      "Bash(cp plugin-marketplace/plugins/ai-ethics/icon.svg verifywise/Clients/public/assets/badges/ai_ethics.svg)",
+      "Bash(cp plugin-marketplace/plugins/altai/icon.svg verifywise/Clients/public/assets/badges/altai.svg)",
+      "Bash(cp plugin-marketplace/plugins/bahrain-pdpl/icon.svg verifywise/Clients/public/assets/badges/bahrain_pdpl.svg)",
+      "Bash(cp plugin-marketplace/plugins/cis-controls/icon.svg verifywise/Clients/public/assets/badges/cis_controls.svg)",
+      "Bash(cp plugin-marketplace/plugins/colorado-ai-act/icon.svg verifywise/Clients/public/assets/badges/colorado_ai_act.svg)",
       "Bash(npm -v)",
       "Bash(timeout 10 npm ping)",
       "Bash(ps eww *)",
@@ -129,7 +138,8 @@
       "Bash(pkill -9 -f 'node dist/index.js')",
       "Bash(cat)",
       "Bash(git check-ignore *)",
-      "Bash(docker manifest *)"
+      "Bash(docker manifest *)",
+      "Bash(npm audit *)"
     ]
   }
 }

@@ -1,4 +1,5 @@
 import { Box, Typography, Stack, CircularProgress } from "@mui/material";
+import { isCompletedStatus } from "../../../../domain/types/Status";
 import { useEffect, useState } from "react";
 import {
   Building2,
@@ -408,7 +409,7 @@ const ControlCategoriesCard = ({ frameworksData, onNavigate }: ControlCategories
                           fontWeight: 600,
                         }}
                       >
-                        {category.subClauses.filter((sub) => sub.status === "Implemented").length}/
+                        {category.subClauses.filter((sub) => isCompletedStatus(sub.status)).length}/
                         {category.subClauses.length}
                       </Typography>
                       <Typography
