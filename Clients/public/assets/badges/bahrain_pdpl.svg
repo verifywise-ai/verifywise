@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Background circle - Bahrain red -->
+  <circle cx="32" cy="32" r="30" fill="#CE1126"/>
+
+  <!-- Bahrain flag serrated pattern (white/red) -->
+  <path d="M8 8 L8 56 L20 52 L8 48 L20 44 L8 40 L20 36 L8 32 L20 28 L8 24 L20 20 L8 16 L20 12 L8 8 Z" fill="#FFFFFF"/>
+
+  <!-- Privacy shield -->
+  <path d="M38 12 L54 20 L54 36 C54 48 46 54 38 58 C30 54 22 48 22 36 L22 20 Z" fill="#FFFFFF" opacity="0.95"/>
+
+  <!-- Inner shield -->
+  <path d="M38 16 L50 22 L50 36 C50 46 44 50 38 54 C32 50 26 46 26 36 L26 22 Z" fill="#CE1126"/>
+
+  <!-- Lock icon -->
+  <rect x="34" y="32" width="8" height="6" rx="1" fill="#FFFFFF"/>
+  <path d="M35.5 32 L35.5 29 C35.5 27 36.5 26 38 26 C39.5 26 40.5 27 40.5 29 L40.5 32" stroke="#FFFFFF" stroke-width="1.5" fill="none"/>
+  <circle cx="38" cy="35" r="1" fill="#CE1126"/>
+
+  <!-- Bank/Financial symbol (CBB) -->
+  <g transform="translate(38, 44)">
+    <rect x="-6" y="0" width="12" height="2" fill="#FFFFFF"/>
+    <rect x="-5" y="2" width="2" height="4" fill="#FFFFFF"/>
+    <rect x="-1" y="2" width="2" height="4" fill="#FFFFFF"/>
+    <rect x="3" y="2" width="2" height="4" fill="#FFFFFF"/>
+    <rect x="-6" y="6" width="12" height="2" fill="#FFFFFF"/>
+  </g>
+
+  <!-- Bahrain text -->
+  <text x="38" y="58" font-family="Arial, sans-serif" font-size="4" font-weight="bold" fill="#FFFFFF" text-anchor="middle">BAHRAIN PDPL</text>
+</svg>

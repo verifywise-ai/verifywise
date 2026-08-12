@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { screen, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import SetupModal from "../SetupModal";
@@ -46,7 +46,9 @@ describe("SetupModal", () => {
     const onSkip = vi.fn();
     renderWithProviders(<SetupModal onComplete={vi.fn()} onSkip={onSkip} />);
     await user.click(screen.getByText("Skip for now"));
-    vi.advanceTimersByTime(400);
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
     expect(onSkip).toHaveBeenCalledTimes(1);
   });
 
@@ -60,7 +62,9 @@ describe("SetupModal", () => {
     const onComplete = vi.fn();
     renderWithProviders(<SetupModal onComplete={onComplete} onSkip={vi.fn()} />);
     await user.click(screen.getByText("Add demo data"));
-    vi.advanceTimersByTime(400);
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
     expect(onComplete).toHaveBeenCalledTimes(1);
     expect(reloadSpy).toHaveBeenCalledTimes(1);
   });
@@ -70,7 +74,9 @@ describe("SetupModal", () => {
     const onComplete = vi.fn();
     renderWithProviders(<SetupModal onComplete={onComplete} onSkip={vi.fn()} />);
     await user.click(screen.getByText("Start blank"));
-    vi.advanceTimersByTime(400);
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
     expect(onComplete).toHaveBeenCalledTimes(1);
   });
 

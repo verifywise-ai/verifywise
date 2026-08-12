@@ -128,7 +128,7 @@ describe("useCreateScenario", () => {
     mockCreateScenario.mockResolvedValue({ data: { id: 3 } });
     const { result } = renderHook(() => useCreateScenario(), { wrapper: createWrapper() });
     await act(async () => {
-      result.current.mutateAsync({ name: "New Scenario" });
+      await result.current.mutateAsync({ name: "New Scenario" });
     });
     expect(mockCreateScenario).toHaveBeenCalledWith({ body: { name: "New Scenario" } });
   });
@@ -141,7 +141,7 @@ describe("useUpdateScenario", () => {
     mockUpdateScenario.mockResolvedValue({ data: { id: 3, name: "Updated" } });
     const { result } = renderHook(() => useUpdateScenario(), { wrapper: createWrapper() });
     await act(async () => {
-      result.current.mutateAsync({ id: 3, body: { name: "Updated" } });
+      await result.current.mutateAsync({ id: 3, body: { name: "Updated" } });
     });
     expect(mockUpdateScenario).toHaveBeenCalledWith({ id: 3, body: { name: "Updated" } });
   });
@@ -154,7 +154,7 @@ describe("useDeleteScenario", () => {
     mockDeleteScenario.mockResolvedValue({ success: true });
     const { result } = renderHook(() => useDeleteScenario(), { wrapper: createWrapper() });
     await act(async () => {
-      result.current.mutateAsync(7);
+      await result.current.mutateAsync(7);
     });
     expect(mockDeleteScenario).toHaveBeenCalledWith({ id: 7 });
   });
@@ -183,7 +183,7 @@ describe("useRefreshCoverage", () => {
     mockRefreshCoverage.mockResolvedValue({ data: { status: "completed" } });
     const { result } = renderHook(() => useRefreshCoverage(), { wrapper: createWrapper() });
     await act(async () => {
-      result.current.mutateAsync(1);
+      await result.current.mutateAsync(1);
     });
     expect(mockRefreshCoverage).toHaveBeenCalledWith({ projectId: 1 });
   });
@@ -234,7 +234,7 @@ describe("useUpdatePreferences", () => {
     mockUpdatePreferences.mockResolvedValue({ data: { id: 1, organization_id: 1 } });
     const { result } = renderHook(() => useUpdatePreferences(), { wrapper: createWrapper() });
     await act(async () => {
-      result.current.mutateAsync({ organization_id: 1 });
+      await result.current.mutateAsync({ organization_id: 1 });
     });
     expect(mockUpdatePreferences).toHaveBeenCalledWith({ body: { organization_id: 1 } });
   });

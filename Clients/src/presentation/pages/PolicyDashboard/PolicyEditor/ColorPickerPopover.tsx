@@ -1,26 +1,15 @@
-import { Box, Popover } from "@mui/material";
+import { Box, Popover, alpha } from "@mui/material";
 import type { Editor } from "@tiptap/react";
-import { palette } from "../../../themes/palette";
+import { palette, userTextColors } from "../../../themes/palette";
 
-const { border } = palette;
+const { border, text } = palette;
 
 const COLOR_PALETTE = [
   "text.black",
   "text.secondary",
   "text.tertiary",
   "text.icon",
-  "#dc2626",
-  "#ea580c",
-  "#d97706",
-  "#ca8a04",
-  "#16a34a",
-  "#059669",
-  "#0d9488",
-  "#0891b2",
-  "#2563eb",
-  "#4f46e5",
-  "#7c3aed",
-  "#9333ea",
+  ...userTextColors,
 ];
 
 export interface ColorPickerPopoverProps {
@@ -45,7 +34,7 @@ export function ColorPickerPopover({ editor, anchorEl, onClose }: ColorPickerPop
             borderRadius: "6px",
             border: "1px solid",
             borderColor: border.dark,
-            boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+            boxShadow: `0 4px 12px ${alpha(text.black, 0.1)}`,
           },
         },
       }}
@@ -64,7 +53,7 @@ export function ColorPickerPopover({ editor, anchorEl, onClose }: ColorPickerPop
               "borderRadius": "4px",
               "backgroundColor": c,
               "cursor": "pointer",
-              "border": "1px solid rgba(0,0,0,0.1)",
+              "border": `1px solid ${alpha(text.black, 0.1)}`,
               "&:hover": { transform: "scale(1.15)", transition: "transform 0.1s" },
             }}
           />

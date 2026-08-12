@@ -32,7 +32,7 @@ interface AssignmentCounts {
   annexTotal: number;
 }
 
-/** Extended framework data with NIST assignments */
+/** Extended framework data with NIST + generic-framework assignments */
 interface ExtendedFrameworkData extends BaseFrameworkData {
   nistAssignments?: {
     totalSubcategories: number;
@@ -44,6 +44,9 @@ interface ExtendedFrameworkData extends BaseFrameworkData {
     measure: { total: number; assigned: number };
     manage: { total: number; assigned: number };
   };
+  // Generic frameworks (SOC 2, GDPR, HIPAA, ...) — pre-fetched by
+  // Dashboard from /api/frameworks/:frameworkId/dashboard/:pfId.
+  genericAssignments?: { total: number; assigned: number };
 }
 
 /** Component props */
@@ -73,6 +76,12 @@ const AssignmentStatusCard = ({ frameworksData }: AssignmentStatusCardProps) => 
         // Process each framework sequentially to fetch assignment data
         for (const framework of frameworksData) {
           const isISO27001 = framework.frameworkName.toLowerCase().includes("iso 27001");
+          const isISO42001 = framework.frameworkName.toLowerCase().includes("iso 42001");
+          const isISO = isISO27001 || isISO42001;
+          // Non-ISO frameworks (NIST + generics) get their counts from
+          // Dashboard-level fetches and don't need this per-framework
+          // clause/annex fetch.
+          if (!isISO) continue;
 
           let clauseAssigned = 0;
           let clauseTotal = 0;
@@ -365,6 +374,66 @@ const AssignmentStatusCard = ({ frameworksData }: AssignmentStatusCardProps) => 
                   </Stack>
 
                   {/* Add bottom margin for spacing before next section */}
+                  {index < frameworksData.length - 1 && <Box sx={{ mb: 4 }} />}
+                </Box>
+              );
+            }
+
+            const isISO = isISO27001 || isISO42001;
+
+            // Generic frameworks (SOC 2, GDPR, HIPAA, ...) — single
+            // "Requirements" row backed by pre-fetched genericAssignments.
+            if (!isISO) {
+              const generic = framework.genericAssignments || { total: 0, assigned: 0 };
+              return (
+                <Box key={framework.frameworkId}>
+                  {index > 0 && (
+                    <Box
+                      sx={{
+                        height: "1px",
+                        backgroundColor: "status.default.border",
+                        mx: "-16px",
+                        mb: 4,
+                        mt: 1,
+                      }}
+                    />
+                  )}
+                  <Typography
+                    sx={{
+                      fontSize: 13,
+                      fontWeight: 500,
+                      mb: 2,
+                      color: "text.black",
+                    }}
+                  >
+                    {framework.frameworkName}
+                  </Typography>
+                  <Stack spacing={1.5}>
+                    <Box
+                      sx={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                      }}
+                    >
+                      <Typography sx={{ fontSize: 12, color: "#666666" }}>Requirements</Typography>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        {getAssignmentIcon(generic.assigned, generic.total)}
+                        <Typography sx={{ fontSize: 12, color: "text.black", fontWeight: 500 }}>
+                          {generic.assigned}
+                        </Typography>
+                        <Typography sx={{ fontSize: 12, color: "text.black", fontWeight: 500 }}>
+                          /
+                        </Typography>
+                        <Typography sx={{ fontSize: 12, color: "#999999", fontWeight: 500 }}>
+                          {generic.total}
+                        </Typography>
+                        <Typography sx={{ fontSize: 12, color: "#666666", fontWeight: 400, ml: 1 }}>
+                          assigned
+                        </Typography>
+                      </Box>
+                    </Box>
+                  </Stack>
                   {index < frameworksData.length - 1 && <Box sx={{ mb: 4 }} />}
                 </Box>
               );

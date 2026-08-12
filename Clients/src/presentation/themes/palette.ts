@@ -22,7 +22,8 @@
 // ---------------------------------------------------------------------------
 
 export const status = {
-  success: { bg: "#E6F4EA", text: "#138A5E", border: "#C8E6D0" },
+  // strong = vivid green reserved for transient confirmations (e.g. save success)
+  success: { bg: "#E6F4EA", text: "#138A5E", border: "#C8E6D0", strong: "#079455" },
   error: { bg: "#FFD6D6", text: "#D32F2F", border: "#F5B8B8" },
   warning: { bg: "#FFF8E1", text: "#795548", border: "#F5E6B8" },
   info: { bg: "#E3F2FD", text: "#1565C0", border: "#BBDEFB" },
@@ -140,6 +141,45 @@ export const brand = {
 } as const;
 
 // ---------------------------------------------------------------------------
+// 10. Policy editor tokens (TipTap surface, toolbar, image node)
+//     Module-specific values without a semantic slot above — kept here so
+//     editor component files stay free of hardcoded hex literals.
+// ---------------------------------------------------------------------------
+
+export const editor = {
+  highlight: "#fef08a", // <mark> and search-match fill
+  searchRing: "#eab308", // ring around the active search match
+  codeBlockBg: "#1e1e1e",
+  codeBlockText: "#d4d4d4",
+  historyActiveBg: "#E6F4F1", // history sidebar toggle, active
+  historyActiveHoverBg: "#D1EDE6", // history sidebar toggle, active hover
+  imageErrorBg: "#fee2e2",
+  imageErrorText: "#991b1b",
+  imagePlaceholderBg: "#f0f0f0",
+  imagePlaceholderText: "#666666",
+} as const;
+
+// ---------------------------------------------------------------------------
+// 11. User-facing text colors (policy editor color-picker swatches)
+//     Content colors chosen by the document author — not theme colors.
+// ---------------------------------------------------------------------------
+
+export const userTextColors = [
+  "#dc2626",
+  "#ea580c",
+  "#d97706",
+  "#ca8a04",
+  "#16a34a",
+  "#059669",
+  "#0d9488",
+  "#0891b2",
+  "#2563eb",
+  "#4f46e5",
+  "#7c3aed",
+  "#9333ea",
+] as const;
+
+// ---------------------------------------------------------------------------
 // Combined export
 // ---------------------------------------------------------------------------
 
@@ -153,6 +193,7 @@ export const palette = {
   background,
   border,
   brand,
+  editor,
 } as const;
 
 export default palette;

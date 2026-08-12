@@ -46,6 +46,7 @@ const PageNotFound = lazyRoute(() => import("../../presentation/pages/PageNotFou
 
 // ── Compliance & framework routes ─────────────────────────────────────
 const Framework = lazyRoute(() => import("../../presentation/pages/Framework"));
+const GenericFramework = lazyRoute(() => import("../../presentation/pages/Framework/Generic"));
 const Training = lazyRoute(() => import("../../presentation/pages/TrainingRegistar"));
 const PolicyDashboard = lazyRoute(
   () => import("../../presentation/pages/PolicyDashboard/PoliciesDashboard"),
@@ -377,6 +378,14 @@ export const createRoutes = (
       element={
         <Suspense fallback={<LazyFallback />}>
           <Framework />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/projects/:projectId/framework/:frameworkId"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <GenericFramework />
         </Suspense>
       }
     />

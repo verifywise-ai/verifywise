@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Background circle - governance teal -->
+  <circle cx="32" cy="32" r="30" fill="#0D9488"/>
+
+  <!-- Database cylinder -->
+  <ellipse cx="32" cy="18" rx="14" ry="5" fill="#FFFFFF"/>
+  <rect x="18" y="18" width="28" height="20" fill="#FFFFFF"/>
+  <ellipse cx="32" cy="38" rx="14" ry="5" fill="#FFFFFF"/>
+
+  <!-- Database lines -->
+  <ellipse cx="32" cy="24" rx="14" ry="4" fill="none" stroke="#0D9488" stroke-width="1"/>
+  <ellipse cx="32" cy="31" rx="14" ry="4" fill="none" stroke="#0D9488" stroke-width="1"/>
+
+  <!-- Governance crown/top -->
+  <path d="M24 10 L28 6 L32 10 L36 6 L40 10 L38 14 L26 14 Z" fill="#FCD34D"/>
+
+  <!-- Checkmark badge -->
+  <circle cx="44" cy="44" r="9" fill="#059669"/>
+  <path d="M40 44 L43 47 L49 41" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+
+  <!-- Data Gov text -->
+  <text x="32" y="58" font-family="Arial, sans-serif" font-size="4.5" font-weight="bold" fill="#FFFFFF" text-anchor="middle">DATA GOV</text>
+</svg>

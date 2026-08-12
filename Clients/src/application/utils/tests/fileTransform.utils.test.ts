@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // IMPORTANT: the mock path must be EXACTLY the same string used in the tested file.
 vi.mock("../../../domain/models/Common/file/file.model", () => {
@@ -15,6 +15,11 @@ import { transformFileData, transformFilesData } from "../fileTransform.utils";
 describe("fileTransform.utils", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   describe("transformFileData", () => {

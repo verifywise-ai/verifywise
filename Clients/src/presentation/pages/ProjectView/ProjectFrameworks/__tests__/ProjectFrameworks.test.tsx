@@ -9,6 +9,7 @@ const FRAMEWORKS = [
 ];
 
 const readinessProps = vi.fn();
+const genericFrameworkProps = vi.fn();
 
 vi.mock("../../../../../application/hooks/useFrameworks", () => ({
   default: () => ({
@@ -51,6 +52,13 @@ vi.mock("../../../ReadinessDashboard", () => ({
   },
 }));
 
+vi.mock("../../../Framework/Generic", () => ({
+  default: (props: any) => {
+    genericFrameworkProps(props);
+    return <div data-testid="generic-framework" />;
+  },
+}));
+
 vi.mock("../../AddNewFramework", () => ({
   default: () => null,
 }));
@@ -90,31 +98,41 @@ describe("ProjectFrameworks tracker tabs", () => {
     expect(tabNames()).toEqual(["Requirements", "Assessments", "AI readiness"]);
   });
 
-  it("hides Assessments for ISO 42001 but keeps AI readiness", () => {
+  it("dispatches ISO 42001 to <GenericFramework/> without tracker tabs", () => {
     renderWithProviders(<ProjectFrameworks project={project} initialFrameworkId={2} />);
-    expect(tabNames()).toEqual(["Requirements", "AI readiness"]);
+    expect(screen.queryAllByRole("tab")).toHaveLength(0);
+    expect(screen.getByTestId("generic-framework")).toBeInTheDocument();
+    expect(genericFrameworkProps).toHaveBeenCalledWith(
+      expect.objectContaining({ projectId: 7, frameworkId: 2 }),
+    );
   });
 
-  it("offers only Requirements for a framework with neither assessments nor readiness", () => {
+  it("dispatches ISO 27001 to <GenericFramework/> without tracker tabs", () => {
     renderWithProviders(<ProjectFrameworks project={project} initialFrameworkId={3} />);
-    expect(tabNames()).toEqual(["Requirements"]);
+    expect(screen.queryAllByRole("tab")).toHaveLength(0);
+    expect(screen.getByTestId("generic-framework")).toBeInTheDocument();
+    expect(genericFrameworkProps).toHaveBeenCalledWith(
+      expect.objectContaining({ projectId: 7, frameworkId: 3 }),
+    );
   });
 
-  it("falls back to Requirements when ?subtab points at an unavailable tab", () => {
+  it("ignores ?subtab for non-EU-AI-Act frameworks (still dispatches to <GenericFramework/>)", () => {
     renderWithProviders(<ProjectFrameworks project={project} initialFrameworkId={2} />, {
       route: "/project-view?subtab=assessment",
     });
-    expect(screen.getByTestId("compliance-tracker")).toBeInTheDocument();
+    expect(screen.getByTestId("generic-framework")).toBeInTheDocument();
+    expect(screen.queryByTestId("compliance-tracker")).not.toBeInTheDocument();
     expect(screen.queryByTestId("assessment-tracker")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("readiness-dashboard")).not.toBeInTheDocument();
   });
 
-  it("scopes the readiness dashboard to the use case and the selected framework", () => {
-    renderWithProviders(<ProjectFrameworks project={project} initialFrameworkId={2} />, {
+  it("scopes the readiness dashboard to the EU AI Act use case via ?subtab=readiness", () => {
+    renderWithProviders(<ProjectFrameworks project={project} initialFrameworkId={1} />, {
       route: "/project-view?subtab=readiness",
     });
     expect(screen.getByTestId("readiness-dashboard")).toBeInTheDocument();
     expect(readinessProps).toHaveBeenCalledWith(
-      expect.objectContaining({ projectId: 7, frameworkType: "iso_42001" }),
+      expect.objectContaining({ projectId: 7, frameworkType: "eu_ai_act" }),
     );
   });
 });

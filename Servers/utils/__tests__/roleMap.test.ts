@@ -1,4 +1,4 @@
-import { describe, it, expect, jest, beforeEach } from "@jest/globals";
+import { describe, it, expect, jest, beforeEach, afterEach } from "@jest/globals";
 
 jest.mock("../role.utils", () => ({
   getAllRolesQuery: jest.fn(),
@@ -16,6 +16,10 @@ describe("roleMap cache", () => {
   beforeEach(() => {
     invalidateRoleMapCache();
     mockGetAllRoles.mockReset();
+    jest.useRealTimers();
+  });
+
+  afterEach(() => {
     jest.useRealTimers();
   });
 

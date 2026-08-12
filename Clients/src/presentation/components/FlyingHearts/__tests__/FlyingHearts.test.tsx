@@ -1,4 +1,5 @@
 import { renderWithProviders } from "../../../../test/renderWithProviders";
+import { act } from "@testing-library/react";
 import { FlyingHearts } from "../index";
 
 describe("FlyingHearts Component", () => {
@@ -29,7 +30,9 @@ describe("FlyingHearts Component", () => {
 
     expect(onComplete).not.toHaveBeenCalled();
 
-    vi.advanceTimersByTime(7000);
+    act(() => {
+      vi.advanceTimersByTime(7000);
+    });
 
     expect(onComplete).toHaveBeenCalledTimes(1);
   });

@@ -25,6 +25,8 @@ import allowedRoles from "../../../../../application/constants/permissions";
 import { Project } from "../../../../../domain/types/Project";
 import { useSearchParams } from "react-router";
 import { TabFilterBar } from "../../../../components/FrameworkFilter/TabFilterBar";
+import { StatsCard } from "../../../../components/Cards/StatsCard";
+import { brand } from "../../../../themes/palette";
 
 const ISO27001Annex = ({
   project,
@@ -69,7 +71,10 @@ const ISO27001Annex = ({
 }) => {
   const { userId, userRoleName } = useAuth();
   const [expanded, setExpanded] = useState<number | false>(false);
-  const [, setAnnexesProgress] = useState<any>({});
+  const [annexesProgress, setAnnexesProgress] = useState<{
+    totalAnnexControls?: number;
+    doneAnnexControls?: number;
+  }>({});
   const [annexes, setAnnexes] = useState<any>();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [selectedControl, setSelectedControl] = useState<any>(null);
@@ -351,6 +356,14 @@ const ISO27001Annex = ({
             searchTerm={searchTerm}
             setSearchTerm={onSearchTermChange as any}
           />
+          <Stack sx={{ mt: 2 }}>
+            <StatsCard
+              title="Annex controls"
+              completed={annexesProgress?.doneAnnexControls ?? 0}
+              total={annexesProgress?.totalAnnexControls ?? 0}
+              progressbarColor={brand.primary}
+            />
+          </Stack>
           {filteredAnnexes &&
             filteredAnnexes.map((annex: any) => {
               const count = filteredControlsCountMemo[annex.id ?? 0];

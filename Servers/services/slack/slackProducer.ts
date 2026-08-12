@@ -12,15 +12,18 @@ export async function scheduleDailyNotification() {
   logger.info("Adding Slack notification jobs to the queue...");
 
   // Policy Due Soon Slack Notification Every day at 9 am
-  await notificationQueue.add(
+  await notificationQueue.upsertJobScheduler(
     "slack-notification-policy",
-    { type: "policies" },
     {
-      repeat: {
-        pattern: "0 9 * * *",
+      pattern: "0 9 * * *",
+    },
+    {
+      name: "slack-notification-policy",
+      data: { type: "policies" },
+      opts: {
+        removeOnComplete: true,
+        removeOnFail: false,
       },
-      removeOnComplete: true,
-      removeOnFail: false,
     },
   );
 }
