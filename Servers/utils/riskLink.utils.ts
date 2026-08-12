@@ -138,7 +138,8 @@ export async function upsertRiskLinkQuery(
      DO UPDATE SET score = EXCLUDED.score,
                    reasons = EXCLUDED.reasons,
                    last_computed_at = NOW(),
-                   updated_at = NOW()`,
+                   updated_at = NOW()
+     WHERE risk_links.organization_id = EXCLUDED.organization_id`,
     {
       replacements: {
         organizationId: input.organizationId,
