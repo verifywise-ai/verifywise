@@ -475,29 +475,6 @@ recordProjectRiskDeletion(riskId, userId, tenant)
 
 ## Key Files
 
-## Related Risks (risk inheritance, phase 1)
-
-After a project risk is created or updated on the Risk Management page, a
-summary lists up to 5 other risks that may be affected by the change.
-
-The relation is **derived, not stored** — there is no risk-to-risk table. Two
-risks are related when they overlap on shared category (3 points), shared
-`controls_mapping` (2), shared `assessment_mapping` (2), same
-`ai_lifecycle_phase` (2), or a shared project (1). Matches are ranked by score,
-then by risk level, then by id, and capped at 5. Empty values never match.
-
-Each row shows badges naming the values that matched and a recommendation: the
-related risk's `mitigation_plan` if it has one, otherwise a template sentence
-keyed to the highest-weight matched signal.
-
-The summary is read-only — nothing is written to the related risks.
-
-Scoring lives in `Clients/src/application/tools/relatedRisks.ts` as a pure
-function with no React or network imports, so it can be lifted to a
-`GET /projectRisks/:id/related` endpoint if a second consumer needs it.
-
-Design: `docs/superpowers/specs/2026-08-11-risk-inheritance-design.md`
-
 ### Backend
 
 | File | Purpose |
@@ -520,6 +497,29 @@ Design: `docs/superpowers/specs/2026-08-11-risk-inheritance-design.md`
 | `components/AddNewRiskForm/` | Risk form modal |
 | `tools/riskCalculator.ts` | Risk calculation |
 | `application/repository/risk.repository.ts` | API calls |
+
+## Related Risks (risk inheritance, phase 1)
+
+After a project risk is created or updated on the Risk Management page, a
+summary lists up to 5 other risks that may be affected by the change.
+
+The relation is **derived, not stored** — there is no risk-to-risk table. Two
+risks are related when they overlap on shared category (3 points), shared
+`controls_mapping` (2), shared `assessment_mapping` (2), same
+`ai_lifecycle_phase` (2), or a shared project (1). Matches are ranked by score,
+then by risk level, then by id, and capped at 5. Empty values never match.
+
+Each row shows badges naming the values that matched and a recommendation: the
+related risk's `mitigation_plan` if it has one, otherwise a template sentence
+keyed to the highest-weight matched signal.
+
+The summary is read-only — nothing is written to the related risks.
+
+Scoring lives in `Clients/src/application/tools/relatedRisks.ts` as a pure
+function with no React or network imports, so it can be lifted to a
+`GET /projectRisks/:id/related` endpoint if a second consumer needs it.
+
+Design: `docs/superpowers/specs/2026-08-11-risk-inheritance-design.md`
 
 ## Related Documentation
 
