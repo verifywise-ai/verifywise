@@ -1031,8 +1031,11 @@ const link = (overrides: Partial<RiskLinkRow>): RiskLinkRow => ({
 
 const CAT = { risk_category: ["Strategic risk"] };
 
+// resetAllMocks, not clearAllMocks: clearAllMocks wipes call history but keeps
+// implementations, so a mockRejectedValue set in one test leaks into the next.
+// The two mocks every test needs are re-established right here.
 beforeEach(() => {
-  jest.clearAllMocks();
+  jest.resetAllMocks();
   (sequelize.transaction as jest.Mock).mockResolvedValue({ commit, rollback });
   mockUtils.getIncidentLinksQuery.mockResolvedValue([]);
 });
@@ -1161,8 +1164,8 @@ describe("recomputeRiskLinks", () => {
     expect(mockUtils.deleteRiskLinksQuery).not.toHaveBeenCalled();
     expect(mockUtils.upsertRiskLinkQuery).not.toHaveBeenCalled();
 
-    // jest.clearAllMocks() does not undo a spy — restore it or the next test
-    // gets a provider that still throws.
+    // Neither clearAllMocks nor resetAllMocks undoes a spy — restore it, or the
+    // next test gets a provider that still throws.
     spy.mockRestore();
   });
 
@@ -1532,7 +1535,9 @@ const req = (overrides: any = {}) => ({
   ...overrides,
 });
 
-beforeEach(() => jest.clearAllMocks());
+// resetAllMocks, not clearAllMocks — see the note in recompute.spec.ts: a
+// rejected implementation set in an error-path test must not leak forward.
+beforeEach(() => jest.resetAllMocks());
 
 describe("getRiskLinks", () => {
   it("defaults to suggested and confirmed", async () => {
@@ -2202,9 +2207,9 @@ export async function createTestRisk(
                         controls_mapping, assessment_mapping, ai_lifecycle_phase,
                         created_at, updated_at)
      VALUES (:orgId, :name, :riskOwner,
-             CAST(:riskCategory AS verifywise.enum_projectrisks_risk_category[]),
+             CAST(:riskCategory AS enum_projectrisks_risk_category[]),
              :controlsMapping, :assessmentMapping,
-             CAST(:aiLifecyclePhase AS verifywise.enum_projectrisks_ai_lifecycle_phase),
+             CAST(:aiLifecyclePhase AS enum_projectrisks_ai_lifecycle_phase),
              NOW(), NOW())
      RETURNING id`,
     {
@@ -2223,7 +2228,14 @@ export async function createTestRisk(
 }
 ```
 
-`risk_category` is passed as a JS array; the `pg` driver serialises it to a Postgres array literal, and the explicit `CAST` resolves it to the enum array type. The two enum casts are the only place in application-adjacent code that names the `verifywise.` schema — allowed here because a type name is not a table name and `search_path` does not cover the cast target reliably in a test connection.
+`risk_category` is passed as a JS array; the `pg` driver serialises it to a Postgres array literal, and the explicit `CAST` resolves it to the enum array type. The enum type names are **unqualified**, exactly like the table name — `database/db.ts:133-134` sets `search_path TO verifywise` in `afterConnect`, and `search_path` resolves type names in a cast just as it resolves relations. Verified against the dev database:
+
+```
+$ psql -d verifywise -tAc "SET search_path TO verifywise; SELECT CAST(ARRAY['Strategic risk'] AS enum_projectrisks_risk_category[]);"
+{"Strategic risk"}
+```
+
+Do not add a `verifywise.` prefix here. `Servers/CLAUDE.md` forbids it in application code, and a test factory is the last place to teach the codebase a pattern others will copy.
 
 - [ ] **Step 2: Write the isolation test**
 
@@ -2322,6 +2334,11 @@ describe("risk_links tenant isolation", () => {
 ```
 
 The last test is the one that catches a canonicalisation bug: without `canonicalPair`, recomputing both endpoints produces two rows for one pair.
+
+Two harness facts these tests depend on, both verified:
+
+- **The exact-count assertions (`toHaveLength(1)`, `COUNT(*) = 1`) are safe.** `seedTwoTenantContexts` → `seedTwoOrgsAndUsers` (`tests/integration/helpers.ts:66-75`) inserts two organizations and two users and nothing else. It seeds no risks, so every risk row in the table is one this test created.
+- **`risk_links` needs no entry in `cleanupDatabase`.** Its `TRUNCATE` list (`tests/integration/helpers.ts:92-115`) ends in `RESTART IDENTITY CASCADE`, and `risk_links` has FKs to `risks`, `organizations`, and `users` — CASCADE truncates it along with them. Do not edit that list.
 
 - [ ] **Step 3: Run the isolation test**
 
