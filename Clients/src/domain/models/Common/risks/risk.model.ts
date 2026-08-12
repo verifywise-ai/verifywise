@@ -33,6 +33,7 @@ export class RiskModel {
   approval_status!: string;
   date_of_assessment!: Date;
   is_demo?: boolean;
+  projects?: number[];
   created_at?: Date;
   updated_at?: Date;
   is_deleted?: boolean;
