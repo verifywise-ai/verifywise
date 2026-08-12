@@ -152,8 +152,6 @@ router.post("/register", authLimiter, registerJWT, createNewUser);
 // Apply rate limiting specifically to login route. Relaxed in explicit
 // dev/test so a single localhost IP running repeated E2E logins is not
 // locked out; production keeps the strict 5/min ceiling.
-const nodeEnv = (process.env.NODE_ENV ?? "").trim().toLowerCase();
-const isNonProduction = nodeEnv === "development" || nodeEnv === "test" || nodeEnv === "local";
 const loginLimiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
   // Relaxed in explicit dev/test so the E2E suite's repeated UI logins are not
