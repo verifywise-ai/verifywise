@@ -34,6 +34,7 @@ import { QueryTypes } from "sequelize";
 import { computeDerivedFields, recordPortfolioSnapshot } from "../utils/quantitativeRisk.utils";
 import { validateQuantitativeRiskFields } from "../utils/validations/quantitativeRiskValidation.utils";
 import { createRiskService } from "../services/risk.service";
+import { enqueueRiskLinkRecompute } from "../services/automations/automationProducer";
 
 import { translateError } from "../utils/i18n.utils";
 // Helper function to get user name
@@ -280,6 +281,11 @@ export async function createRisk(req: Request, res: Response): Promise<any> {
           console.error("Failed to record portfolio snapshot:", err),
         );
       }
+
+      // Recompute this risk's stored links (fire-and-forget)
+      enqueueRiskLinkRecompute(req.organizationId!, newProjectRisk.id!).catch((err) =>
+        console.error("Failed to enqueue risk link recompute:", err),
+      );
 
       // Send risk owner assignment notification (fire-and-forget)
       if (newProjectRisk.risk_owner) {
@@ -535,6 +541,11 @@ export async function updateRiskById(req: Request, res: Response): Promise<any> 
           console.error("Failed to record portfolio snapshot:", err),
         );
       }
+
+      // Recompute this risk's stored links (fire-and-forget)
+      enqueueRiskLinkRecompute(req.organizationId!, projectRiskId).catch((err) =>
+        console.error("Failed to enqueue risk link recompute:", err),
+      );
 
       // Send risk owner assignment notification if owner changed (fire-and-forget)
       const oldRiskOwner = existingProjectRisk.risk_owner;
@@ -816,6 +827,16 @@ export async function bulkUpdateProjectRisks(req: Request, res: Response): Promi
         }
       },
     );
+
+    // Only set_category moves a scoring signal. set_owner does not affect
+    // scoring, and archive is a soft delete — see R7.
+    if (action === "set_category") {
+      for (const riskId of ids) {
+        enqueueRiskLinkRecompute(req.organizationId!, riskId).catch((err) =>
+          console.error("Failed to enqueue risk link recompute:", err),
+        );
+      }
+    }
 
     return res.status(200).json(STATUS_CODE[200]({ updated: ids.length, action }));
   } catch (error) {

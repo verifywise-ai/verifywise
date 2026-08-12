@@ -25,6 +25,7 @@
 import { QueryTypes } from "sequelize";
 import { sequelize } from "../../../database/db";
 import { createRiskService } from "../../../services/risk.service";
+import { enqueueRiskLinkRecompute } from "../../../services/automations/automationProducer";
 import { createNewTaskQuery } from "../../../utils/task.utils";
 import { calculateRiskLevel } from "../../../utils/validations/riskValidation.utils";
 import { sendInAppNotification } from "../../../services/inAppNotification.service";
@@ -166,6 +167,19 @@ export async function executeCreateRisk(
       "createRiskService returned a risk without an id — refusing to record an empty execution result.",
     );
   }
+
+  // The generic executor owns this transaction and commits it after we return,
+  // so there is no post-commit hook to hang this on. Enqueueing inline would
+  // race: the worker would read a risk that is not committed yet, find nothing,
+  // and exit quietly, leaving the risk permanently unlinked.
+  // Safe to use afterCommit here: every caller of processApprovalQuery opens a
+  // top-level sequelize.transaction(), so this fires on a real commit rather
+  // than a savepoint release.
+  ctx.transaction.afterCommit(() => {
+    void enqueueRiskLinkRecompute(ctx.organizationId, newRisk.id!).catch((err) =>
+      console.error("Failed to enqueue risk link recompute:", err),
+    );
+  });
 
   // ═══════════════════════════════════════════════════════
   // 2. Auto-create a review task for the risk owner
