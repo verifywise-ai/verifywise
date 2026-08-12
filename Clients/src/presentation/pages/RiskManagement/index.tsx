@@ -18,7 +18,9 @@ import CustomizableSkeleton from "../../components/Skeletons";
 import allowedRoles from "../../../application/constants/permissions";
 import AddNewRiskMITModal from "../../components/AddNewRiskMITForm";
 import AddNewRiskIBMModal from "../../components/AddNewRiskIBMForm";
+import RelatedRisksSummary from "../../components/RelatedRisksSummary";
 import { getAllProjectRisks } from "../../../application/repository/projectRisk.repository";
+import { findRelatedRisks, RelatedRisk } from "../../../application/tools/relatedRisks";
 import { useAuth } from "../../../application/hooks/useAuth";
 import useUsers from "../../../application/hooks/useUsers";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
@@ -115,6 +117,10 @@ const RiskManagement = () => {
 
   // Modal state for StandardModal pattern
   const [isRiskModalOpen, setIsRiskModalOpen] = useState(false);
+  const [relatedSummary, setRelatedSummary] = useState<{
+    subject: RiskModel;
+    related: RelatedRisk[];
+  } | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isAiRiskModalOpen, setIsAiRiskModalOpen] = useState(false);
   const [isSubmitting] = useState(false);
@@ -468,9 +474,11 @@ const RiskManagement = () => {
       const response = await getAllProjectRisks({ filter });
       setShowCustomizableSkeleton(false);
       setProjectRisks(response.data);
+      return response.data as RiskModel[];
     } catch (error) {
       console.error("Error fetching project risks:", error);
       handleToast("error", "Unexpected error occurs while fetching project risks.");
+      return [] as RiskModel[];
     }
   }, []);
 
@@ -625,7 +633,22 @@ const RiskManagement = () => {
     }, 3000);
   };
 
+  /**
+   * Finds the risk that was just saved in the freshly fetched list and, if it
+   * has related risks, opens the summary. Silent when nothing matches.
+   */
+  const showRelatedRisks = (fresh: RiskModel[], matchSubject: (risk: RiskModel) => boolean) => {
+    const subject = fresh.find(matchSubject);
+    if (!subject) return;
+    const related = findRelatedRisks(subject, fresh);
+    if (related.length > 0) {
+      setRelatedSummary({ subject, related });
+    }
+  };
+
   const handleSuccess = () => {
+    const previousIds = new Set(projectRisks.map((risk) => risk.id));
+
     setTimeout(() => {
       setIsLoading(initialLoadingState);
       handleToast("success", "Risk created successfully");
@@ -636,19 +659,24 @@ const RiskManagement = () => {
     const pageCount = Math.floor(projectRisks.length / rowsPerPage);
     setCurrentPage(pageCount);
 
-    fetchProjectRisks();
+    void fetchProjectRisks().then((fresh) => {
+      showRelatedRisks(fresh, (risk) => !previousIds.has(risk.id));
+    });
     setRefreshKey((prevKey) => prevKey + 1);
   };
 
   const handleUpdate = () => {
+    const subjectId = selectedRow[0]?.id;
     // Set flash immediately to ensure visibility
-    setCurrentRow(selectedRow[0].id!); // set current row to trigger flash-feedback
+    setCurrentRow(subjectId!); // set current row to trigger flash-feedback
 
     setTimeout(() => {
       setIsLoading(initialLoadingState);
       handleToast("success", "Risk updated successfully");
       // Fetch fresh data after flash is set
-      fetchProjectRisks();
+      void fetchProjectRisks().then((fresh) => {
+        showRelatedRisks(fresh, (risk) => risk.id === subjectId);
+      });
     }, 500);
 
     setTimeout(() => {
@@ -1046,6 +1074,18 @@ const RiskManagement = () => {
           />
         </StandardModal>
       </Stack>
+      {relatedSummary && (
+        <RelatedRisksSummary
+          subject={relatedSummary.subject}
+          related={relatedSummary.related}
+          onClose={() => setRelatedSummary(null)}
+          onOpenRisk={(risk) => {
+            setRelatedSummary(null);
+            setSelectedRow([risk]);
+            setIsRiskModalOpen(true);
+          }}
+        />
+      )}
       <AddNewRiskMITModal
         isOpen={isAIModalOpen}
         setIsOpen={setIsAIModalOpen}
