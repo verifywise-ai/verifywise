@@ -58,7 +58,7 @@ const optionalProjectBodyFields = [
     .withMessage("enable_ai_data_insertion must be a boolean"),
   body("uc_id").optional({ nullable: true }).isString().withMessage("uc_id must be a string"),
   body("approval_workflow_id")
-    .optional({ nullable: true })
+    .optional({ checkFalsy: true })
     .isInt({ min: 1 })
     .withMessage("approval_workflow_id must be a positive integer"),
   body("members")

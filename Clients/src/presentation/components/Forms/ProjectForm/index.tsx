@@ -490,6 +490,12 @@ export const ProjectForm = ({
           deploymentContextItems.find((item) => item._id === values.deployment_context)?.name ||
           null;
 
+        // Approval workflow is optional; a value of 0 means "not selected" and
+        // should not be sent to the backend as a foreign-key value.
+        if (body.approval_workflow_id === 0) {
+          delete body.approval_workflow_id;
+        }
+
         let res;
         if (projectToEdit) {
           // Update existing project

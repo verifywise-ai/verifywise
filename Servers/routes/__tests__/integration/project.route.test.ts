@@ -88,6 +88,19 @@ describe("POST /api/projects", () => {
       ]),
     );
   });
+
+  it("should return 201 when approval_workflow_id is 0 (treated as unset)", async () => {
+    const app = createProjectTestApp();
+    const res = await request(app).post("/api/projects").send({
+      project_title: "New Project",
+      owner: 1,
+      start_date: "2024-06-01",
+      approval_workflow_id: 0,
+    });
+
+    expect(res.status).toBe(201);
+    expect(res.body).toHaveProperty("id");
+  });
 });
 
 describe("PATCH /api/projects/:id", () => {
