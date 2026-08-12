@@ -20,9 +20,7 @@ import {
 } from "@mui/material";
 import {
   Check,
-  Database,
   ExternalLink,
-  Upload,
   Sparkles,
   Settings,
   Plus,
@@ -55,7 +53,6 @@ import {
   listDatasets,
   listMyDatasets,
   readDataset,
-  uploadDataset,
   listScorers,
   getAllLlmApiKeys,
   addLlmApiKey,
@@ -74,11 +71,14 @@ import {
   generateDefaultExperimentName,
 } from "./NewExperiment/experimentNameHelpers";
 import {
+  type DatasetPrompt,
   type JudgeMode,
   type ProviderType,
+  type UserDataset,
   WIZARD_STEPS,
 } from "./NewExperiment/newExperimentConfig";
 import { canProceedToNextStep, getMissingKeyProviders } from "./NewExperiment/stepValidation";
+import DatasetStep from "./NewExperiment/DatasetStep";
 
 interface NewExperimentModalProps {
   isOpen: boolean;
@@ -129,33 +129,11 @@ export default function NewExperimentModal({
   const [apiKeyWarningAcknowledged, setApiKeyWarningAcknowledged] = useState(false);
 
   // Dataset prompts state
-  interface DatasetPrompt {
-    id: string;
-    category: string;
-    prompt: string;
-    expected_output: string;
-    expected_keywords: string[];
-    difficulty: string;
-  }
   const [datasetPrompts, setDatasetPrompts] = useState<DatasetPrompt[]>([]);
   const [datasetLoaded, setDatasetLoaded] = useState(false);
   // User's saved datasets (for "My datasets" option)
-  const [userDatasets, setUserDatasets] = useState<
-    Array<{
-      id: string;
-      name: string;
-      path: string;
-      promptCount: number;
-      turnType?: "single-turn" | "multi-turn" | "simulated";
-    }>
-  >([]);
-  const [selectedUserDataset, setSelectedUserDataset] = useState<{
-    id: string;
-    name: string;
-    path: string;
-    promptCount: number;
-    turnType?: "single-turn" | "multi-turn" | "simulated";
-  } | null>(null);
+  const [userDatasets, setUserDatasets] = useState<UserDataset[]>([]);
+  const [selectedUserDataset, setSelectedUserDataset] = useState<UserDataset | null>(null);
   const [loadingUserDatasets, setLoadingUserDatasets] = useState(false);
   const [uploadingDataset, setUploadingDataset] = useState(false);
   const [selectedPresetPath, setSelectedPresetPath] = useState<string>("");
@@ -1867,492 +1845,65 @@ export default function NewExperimentModal({
       case 1:
         // Step 2: Dataset
         return (
-          <Stack spacing="16px">
-            {/* Description */}
-            <Typography sx={{ fontSize: "13px", color: palette.text.tertiary, lineHeight: 1.5 }}>
-              Choose a dataset containing prompts and expected outputs. Upload your own JSON file,
-              select from saved datasets, or use a template.
-            </Typography>
-
-            {/* Option 1: Custom dataset */}
-            <Box>
-              <Typography
-                sx={{
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  color: palette.text.disabled,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.5px",
-                  mb: "8px",
-                }}
-              >
-                Option 1: Use custom dataset
-              </Typography>
-              {/* Upload Section - Compact drop zone */}
-              <Box
-                component="label"
-                sx={{
-                  "display": "flex",
-                  "alignItems": "center",
-                  "gap": "8px",
-                  "p": "8px",
-                  "border": "1px dashed",
-                  "borderColor": uploadingDataset ? palette.brand.primary : palette.border.dark,
-                  "borderRadius": "4px",
-                  "backgroundColor": palette.background.accent,
-                  "cursor": uploadingDataset ? "wait" : "pointer",
-                  "transition": "all 0.15s ease",
-                  "&:hover": {
-                    borderColor: palette.brand.primary,
-                    backgroundColor: palette.status.success.bg,
-                  },
-                }}
-              >
-                <Box
-                  sx={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: "6px",
-                    backgroundColor: palette.brand.primary,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                  }}
-                >
-                  <Upload size={16} color={palette.background.main} />
-                </Box>
-                <Box sx={{ flex: 1 }}>
-                  <Typography
-                    sx={{ fontSize: "13px", fontWeight: 500, color: palette.text.secondary }}
-                  >
-                    {uploadingDataset ? "Uploading..." : "Upload dataset"}
-                  </Typography>
-                  <Typography sx={{ fontSize: "11px", color: palette.text.disabled }}>
-                    JSON file with prompts and expected outputs
-                  </Typography>
-                </Box>
-                <input
-                  type="file"
-                  accept="application/json"
-                  hidden
-                  disabled={uploadingDataset}
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    try {
-                      setUploadingDataset(true);
-                      // Validate file content before uploading
-                      const fileContent = await file.text();
-                      let parsedData: unknown[];
-                      try {
-                        parsedData = JSON.parse(fileContent);
-                      } catch {
-                        setAlert({
-                          show: true,
-                          variant: "error",
-                          title: "Invalid JSON",
-                          body: "The file does not contain valid JSON",
-                        });
-                        setTimeout(() => setAlert(null), 15000);
-                        return;
-                      }
-                      if (!Array.isArray(parsedData) || parsedData.length === 0) {
-                        setAlert({
-                          show: true,
-                          variant: "error",
-                          title: "Empty dataset",
-                          body: "Cannot use an empty dataset. Please upload a file with at least one prompt.",
-                        });
-                        setTimeout(() => setAlert(null), 15000);
-                        return;
-                      }
-                      // Count only prompts with actual content
-                      const validPromptCount = parsedData.filter((item) => {
-                        if (typeof item !== "object" || item === null) return false;
-                        const obj = item as Record<string, unknown>;
-                        // Single-turn: check if prompt field has content
-                        if (obj.prompt && typeof obj.prompt === "string" && obj.prompt.trim())
-                          return true;
-                        // Multi-turn: check if turns array has at least one turn with content
-                        if (Array.isArray(obj.turns) && obj.turns.length > 0) {
-                          return obj.turns.some((turn) => {
-                            if (typeof turn !== "object" || turn === null) return false;
-                            const t = turn as Record<string, unknown>;
-                            return t.content && typeof t.content === "string" && t.content.trim();
-                          });
-                        }
-                        return false;
-                      }).length;
-                      if (validPromptCount === 0) {
-                        setAlert({
-                          show: true,
-                          variant: "error",
-                          title: "Empty dataset",
-                          body: "Cannot use an empty dataset. Please upload a file with prompts that have actual content.",
-                        });
-                        setTimeout(() => setAlert(null), 15000);
-                        return;
-                      }
-                      const resp = await uploadDataset(
-                        file,
-                        "chatbot",
-                        "single-turn",
-                        orgId || undefined,
-                      );
-                      const newDataset = {
-                        id: resp.path,
-                        name: file.name.replace(/\.json$/i, ""),
-                        path: resp.path,
-                        promptCount: validPromptCount,
-                      };
-                      setUserDatasets((prev) => [newDataset, ...prev]);
-                      setSelectedUserDataset(newDataset);
-                      setConfig((prev) => ({
-                        ...prev,
-                        dataset: { ...prev.dataset, useBuiltin: false },
-                      }));
-                      try {
-                        const { prompts } = await readDataset(resp.path);
-                        setDatasetPrompts((prompts || []) as DatasetPrompt[]);
-                        setDatasetLoaded(true);
-                      } catch {
-                        setDatasetPrompts([]);
-                      }
-                      setAlert({
-                        show: true,
-                        variant: "success",
-                        title: "Uploaded!",
-                        body: `${file.name} is ready to use`,
-                      });
-                      setTimeout(() => setAlert(null), 5000);
-                    } catch (err) {
-                      setAlert({
-                        show: true,
-                        variant: "error",
-                        title: "Upload failed",
-                        body: err instanceof Error ? err.message : "Failed to upload",
-                      });
-                      setTimeout(() => setAlert(null), 15000);
-                    } finally {
-                      setUploadingDataset(false);
-                      e.target.value = "";
-                    }
-                  }}
-                />
-              </Box>
-            </Box>
-
-            {/* My Datasets Section */}
-            {loadingUserDatasets ? (
-              <Box sx={{ py: 2, textAlign: "center" }}>
-                <Typography sx={{ fontSize: "13px", color: palette.text.tertiary }}>
-                  Loading your datasets...
-                </Typography>
-              </Box>
-            ) : userDatasets.length > 0 ? (
-              <Box>
-                <Stack
-                  direction="row"
-                  alignItems="center"
-                  justifyContent="space-between"
-                  sx={{ mb: 1 }}
-                >
-                  <Typography
-                    sx={{
-                      fontSize: "12px",
-                      fontWeight: 600,
-                      color: palette.text.disabled,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.5px",
-                    }}
-                  >
-                    Option 2: Your datasets
-                  </Typography>
-                  <Button
-                    size="small"
-                    variant="text"
-                    startIcon={<ExternalLink size={12} />}
-                    onClick={() => window.open(`/evals/${projectId}#datasets`, "_blank")}
-                    sx={{
-                      "textTransform": "none",
-                      "fontSize": "11px",
-                      "color": palette.text.tertiary,
-                      "p": 0.5,
-                      "minWidth": "auto",
-                      "&:hover": { color: palette.brand.primary },
-                    }}
-                  >
-                    Manage
-                  </Button>
-                </Stack>
-                <Stack spacing="8px">
-                  {userDatasets.slice(0, 4).map((dataset) => {
-                    const isSelected =
-                      selectedUserDataset?.id === dataset.id && !config.dataset.useBuiltin;
-                    const isMultiTurn = dataset.turnType === "multi-turn";
-                    const isSimulated = dataset.turnType === "simulated";
-                    const isEmpty = dataset.promptCount === 0;
-                    const typeChip = isEmpty ? (
-                      <Chip
-                        label="Empty"
-                        backgroundColor={palette.status.error.bg}
-                        textColor={palette.status.error.text}
-                        uppercase={false}
-                      />
-                    ) : isMultiTurn ? (
-                      <Chip
-                        label={
-                          isSelected && datasetPrompts.length > 0
-                            ? `${datasetPrompts.length} prompts`
-                            : "Multi-Turn"
-                        }
-                        backgroundColor={palette.accent.blue.bg}
-                        textColor={palette.accent.blue.text}
-                        uppercase={false}
-                      />
-                    ) : isSimulated ? (
-                      <Chip
-                        label={
-                          isSelected && datasetPrompts.length > 0
-                            ? `${datasetPrompts.length} prompts`
-                            : "Simulated"
-                        }
-                        backgroundColor={palette.accent.purple.bg}
-                        textColor={palette.accent.purple.text}
-                        uppercase={false}
-                      />
-                    ) : (
-                      <Chip
-                        label={
-                          isSelected && datasetPrompts.length > 0
-                            ? `${datasetPrompts.length} prompts`
-                            : "Single-Turn"
-                        }
-                        backgroundColor={palette.status.warning.bg}
-                        textColor={palette.status.warning.text}
-                        uppercase={false}
-                      />
-                    );
-                    return (
-                      <SelectableCard
-                        key={dataset.id}
-                        isSelected={isSelected}
-                        disabled={isEmpty}
-                        onClick={async () => {
-                          if (isEmpty) return;
-                          setConfig((prev) => ({
-                            ...prev,
-                            dataset: { ...prev.dataset, useBuiltin: false },
-                          }));
-                          setSelectedUserDataset(dataset);
-                          setSelectedPresetPath("");
-                          try {
-                            const { prompts } = await readDataset(dataset.path);
-                            setDatasetPrompts((prompts || []) as DatasetPrompt[]);
-                            setDatasetLoaded(true);
-                          } catch {
-                            setDatasetPrompts([]);
-                          }
-                        }}
-                        icon={
-                          <Database
-                            size={14}
-                            color={
-                              isEmpty
-                                ? palette.status.error.text
-                                : isSelected
-                                  ? palette.brand.primary
-                                  : palette.text.disabled
-                            }
-                          />
-                        }
-                        title={dataset.name}
-                        description={
-                          isEmpty ? "Cannot use empty dataset" : "Custom uploaded dataset"
-                        }
-                        chip={typeChip}
-                      />
-                    );
-                  })}
-                </Stack>
-              </Box>
-            ) : null}
-
-            {/* Template Datasets Section */}
-            <Box>
-              <Typography
-                sx={{
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  color: palette.text.disabled,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.5px",
-                  mb: 1,
-                }}
-              >
-                Option 3:{" "}
-                {config.taskType === "chatbot"
-                  ? "Chatbot"
-                  : config.taskType === "rag"
-                    ? "RAG"
-                    : "Agent"}{" "}
-                templates
-              </Typography>
-              <Stack spacing="8px">
-                {[
-                  ...(config.taskType === "chatbot"
-                    ? [
-                        // Single-turn chatbot templates
-                        {
-                          name: "Basic Chatbot",
-                          path: "chatbot/chatbot_basic.json",
-                          desc: "Standard question-answer pairs",
-                          type: "single-turn" as const,
-                        },
-                        {
-                          name: "Coding Helper",
-                          path: "chatbot/chatbot_coding_helper.json",
-                          desc: "Code assistance scenarios",
-                          type: "single-turn" as const,
-                        },
-                        {
-                          name: "Customer Support (Single-Turn)",
-                          path: "chatbot/chatbot_customer_support.json",
-                          desc: "Support Q&A pairs",
-                          type: "single-turn" as const,
-                        },
-                        // Multi-turn chatbot templates
-                        {
-                          name: "General Assistant Multi-Turn",
-                          path: "chatbot/chatbot_general_assistant_multiturn.json",
-                          desc: "Multi-turn conversations",
-                          type: "multi-turn" as const,
-                        },
-                        {
-                          name: "Customer Support Multi-Turn",
-                          path: "chatbot/chatbot_customer_support_multiturn.json",
-                          desc: "Support conversations",
-                          type: "multi-turn" as const,
-                        },
-                        {
-                          name: "Tech Support Multi-Turn",
-                          path: "chatbot/chatbot_tech_support_multiturn.json",
-                          desc: "Technical help conversations",
-                          type: "multi-turn" as const,
-                        },
-                      ]
-                    : []),
-                  ...(config.taskType === "rag"
-                    ? [
-                        {
-                          name: "Product Docs",
-                          path: "rag/rag_product_docs.json",
-                          desc: "Product documentation queries",
-                          type: "single-turn" as const,
-                        },
-                        {
-                          name: "Wikipedia QA",
-                          path: "rag/rag_wikipedia_small.json",
-                          desc: "Wikipedia-based questions",
-                          type: "single-turn" as const,
-                        },
-                        {
-                          name: "Research Papers",
-                          path: "rag/rag_research_papers.json",
-                          desc: "Academic content retrieval",
-                          type: "single-turn" as const,
-                        },
-                        {
-                          name: "Document Q&A Multi-Turn",
-                          path: "rag/rag_document_qa_multiturn.json",
-                          desc: "Multi-turn document conversations",
-                          type: "multi-turn" as const,
-                        },
-                      ]
-                    : []),
-                  ...(config.taskType === "agent"
-                    ? [
-                        {
-                          name: "Agent Planning",
-                          path: "agent/agent_planning_multiturn.json",
-                          desc: "Multi-step planning scenarios",
-                          type: "multi-turn" as const,
-                        },
-                        {
-                          name: "Agent Task Execution",
-                          path: "agent/agent_task_execution_multiturn.json",
-                          desc: "Tool usage and task completion",
-                          type: "multi-turn" as const,
-                        },
-                        {
-                          name: "Agent Workflow Automation",
-                          path: "agent/agent_workflow_automation_multiturn.json",
-                          desc: "Automated workflow tasks",
-                          type: "multi-turn" as const,
-                        },
-                      ]
-                    : []),
-                ].map((template) => {
-                  const isSelected =
-                    selectedPresetPath === template.path && config.dataset.useBuiltin;
-                  const chipLabel =
-                    isSelected && datasetPrompts.length > 0
-                      ? `${datasetPrompts.length} prompts`
-                      : template.type === "multi-turn"
-                        ? "Multi-Turn"
-                        : "Single-Turn";
-                  const typeChip =
-                    template.type === "multi-turn" ? (
-                      <Chip
-                        label={chipLabel}
-                        backgroundColor={palette.accent.blue.bg}
-                        textColor={palette.accent.blue.text}
-                        uppercase={false}
-                      />
-                    ) : (
-                      <Chip
-                        label={chipLabel}
-                        backgroundColor={palette.status.warning.bg}
-                        textColor={palette.status.warning.text}
-                        uppercase={false}
-                      />
-                    );
-                  return (
-                    <SelectableCard
-                      key={template.path}
-                      isSelected={isSelected}
-                      onClick={async () => {
-                        setConfig((prev) => ({
-                          ...prev,
-                          dataset: { ...prev.dataset, useBuiltin: true },
-                        }));
-                        setSelectedUserDataset(null);
-                        setSelectedPresetPath(template.path);
-                        try {
-                          const { prompts } = await readDataset(template.path);
-                          setDatasetPrompts((prompts || []) as DatasetPrompt[]);
-                          setDatasetLoaded(true);
-                        } catch {
-                          setDatasetPrompts([]);
-                        }
-                      }}
-                      icon={
-                        <Database
-                          size={14}
-                          color={isSelected ? palette.accent.indigo.text : palette.text.disabled}
-                        />
-                      }
-                      title={template.name}
-                      description={template.desc}
-                      accentColor={palette.accent.indigo.text}
-                      chip={typeChip}
-                    />
-                  );
-                })}
-              </Stack>
-            </Box>
-          </Stack>
+          <DatasetStep
+            taskType={config.taskType}
+            useBuiltin={config.dataset.useBuiltin}
+            userDatasets={userDatasets}
+            selectedUserDataset={selectedUserDataset}
+            loadingUserDatasets={loadingUserDatasets}
+            uploadingDataset={uploadingDataset}
+            selectedPresetPath={selectedPresetPath}
+            datasetPromptCount={datasetPrompts.length}
+            orgId={orgId}
+            projectId={projectId}
+            onUploadingChange={setUploadingDataset}
+            onAlert={({ variant, title, body, autoHideMs }) => {
+              setAlert({ show: true, variant, title, body });
+              setTimeout(() => setAlert(null), autoHideMs);
+            }}
+            onUploadComplete={(dataset, prompts) => {
+              setUserDatasets((prev) => [dataset, ...prev]);
+              setSelectedUserDataset(dataset);
+              setConfig((prev) => ({
+                ...prev,
+                dataset: { ...prev.dataset, useBuiltin: false },
+              }));
+              if (prompts !== null) {
+                setDatasetPrompts(prompts);
+                setDatasetLoaded(true);
+              } else {
+                setDatasetPrompts([]);
+              }
+            }}
+            onUserDatasetSelect={(dataset, prompts) => {
+              setConfig((prev) => ({
+                ...prev,
+                dataset: { ...prev.dataset, useBuiltin: false },
+              }));
+              setSelectedUserDataset(dataset);
+              setSelectedPresetPath("");
+              if (prompts !== null) {
+                setDatasetPrompts(prompts);
+                setDatasetLoaded(true);
+              } else {
+                setDatasetPrompts([]);
+              }
+            }}
+            onPresetSelect={(path, prompts) => {
+              setConfig((prev) => ({
+                ...prev,
+                dataset: { ...prev.dataset, useBuiltin: true },
+              }));
+              setSelectedUserDataset(null);
+              setSelectedPresetPath(path);
+              if (prompts !== null) {
+                setDatasetPrompts(prompts);
+                setDatasetLoaded(true);
+              } else {
+                setDatasetPrompts([]);
+              }
+            }}
+          />
         );
 
       case 2:
