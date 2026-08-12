@@ -1,4 +1,5 @@
 import { Box, Typography, Stack, CircularProgress } from "@mui/material";
+import { isCompletedStatus } from "../../../../domain/types/Status";
 import { useEffect, useState } from "react";
 import { Shield, Map, Gauge, Settings, ChevronRight } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -179,7 +180,7 @@ const NISTFunctionsOverviewCard = ({
   const renderFunctionCard = (func: FunctionData) => {
     const IconComponent = func.icon;
     const allSubcategories = func.categories.flatMap((cat) => cat.subcategories);
-    const implementedCount = allSubcategories.filter((sub) => sub.status === "Implemented").length;
+    const implementedCount = allSubcategories.filter((sub) => isCompletedStatus(sub.status)).length;
     const assignedCount = allSubcategories.filter(
       (sub) => sub.owner !== null && sub.owner !== undefined,
     ).length;

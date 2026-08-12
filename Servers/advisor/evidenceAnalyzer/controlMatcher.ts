@@ -243,15 +243,25 @@ export async function matchControlsSemantic(
     return [];
   }
 
-  // Build a lookup so we can attach control_title and framework_type
-  // back from the candidate list (LLM only returns id + score).
-  const lookup = new Map<number, ControlCandidate>();
-  for (const c of candidates) lookup.set(c.control_id, c);
+  // Build a lookup so we can attach control_title back from the candidate
+  // list. Keyed by framework AND id: controls_struct_eu numbers 1-103 and
+  // annexcategories_struct_iso 1-46, independently, so id 5 names one control
+  // in each. A map keyed by id alone silently resolved every collision to
+  // whichever candidate was stored last — and applySuggestionsQuery persists
+  // the result into file_entity_links, so an EU match became evidence filed
+  // against an unrelated ISO annex category. Measured 2026-07-29: 3 collisions
+  // in a 36-candidate list.
+  const key = (frameworkType: string, controlId: number) => `${frameworkType}:${controlId}`;
+  const lookup = new Map<string, ControlCandidate>();
+  for (const c of candidates) lookup.set(key(c.framework_type, c.control_id), c);
 
   const merged: MatchedControl[] = [];
   for (const m of result.matches) {
-    const cand = lookup.get(m.control_id);
-    if (!cand) continue; // LLM hallucinated an id — drop
+    // A pairing that is not in the candidate list is dropped rather than
+    // guessed at: the id may well exist in the OTHER framework, and picking it
+    // would file the evidence against a control that was never scored.
+    const cand = lookup.get(key(m.framework_type, m.control_id));
+    if (!cand) continue; // LLM hallucinated an id or framework — drop
     if (m.match_score < 50) continue; // double-guard
     merged.push({
       control_id: cand.control_id,

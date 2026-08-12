@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { Box, Typography, Stack, Button } from "@mui/material";
-import { Check as CheckGreenIcon } from "lucide-react";
+import { Check as CheckGreenIcon, Shield as ShieldIcon } from "lucide-react";
+import { getFrameworkBadgePath } from "../../../tools/frameworkBadge";
 import StandardModal from "../../../components/Modals/StandardModal";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import { Project } from "../../../../domain/types/Project";
@@ -22,8 +23,6 @@ import { AlertProps } from "../../../types/alert.types";
 import CustomizableToast from "../../../components/Toast";
 import ConfirmationModal from "../../../components/Dialogs/ConfirmationModal";
 import { useModalKeyHandling } from "../../../../application/hooks/useModalKeyHandling";
-import { PluginSlot } from "../../../components/PluginSlot";
-import { PLUGIN_SLOTS } from "../../../../domain/constants/pluginSlots";
 // Governance OS prompt imports removed while the module is not broadly released.
 // The module remains reachable by direct URL for authorized users.
 
@@ -159,10 +158,41 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
         >
           {frameworks.map((fw) => {
             const isAdded = isFrameworkAdded(fw);
+            const badgePath = getFrameworkBadgePath(fw.name);
             return (
               <Box key={fw.id} sx={frameworkCardStyle}>
                 <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
-                  <Typography sx={frameworkCardTitleStyle}>{fw.name}</Typography>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, minWidth: 0 }}>
+                    {badgePath ? (
+                      <Box
+                        component="img"
+                        src={badgePath}
+                        alt=""
+                        sx={{
+                          width: 32,
+                          height: 32,
+                          objectFit: "contain",
+                          flexShrink: 0,
+                        }}
+                      />
+                    ) : (
+                      <Box
+                        sx={{
+                          width: 32,
+                          height: 32,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          backgroundColor: "#F1F3F4",
+                          borderRadius: "4px",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <ShieldIcon size={18} color="#666666" />
+                      </Box>
+                    )}
+                    <Typography sx={frameworkCardTitleStyle}>{fw.name}</Typography>
+                  </Box>
                   {isAdded && (
                     <Box sx={frameworkAddedBadgeStyle}>
                       <CheckGreenIcon size={16} />
@@ -218,19 +248,6 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
             );
           })}
         </Box>
-        {/* Plugin slot for custom frameworks */}
-        <PluginSlot
-          id={PLUGIN_SLOTS.FRAMEWORK_SELECTION}
-          slotProps={{
-            project,
-            isLoading,
-            onFrameworkAdded: () => onFrameworksChanged?.("add"),
-            onFrameworkRemoved: (frameworkId: number) =>
-              onFrameworksChanged?.("remove", frameworkId),
-            setAlert,
-            setIsLoading,
-          }}
-        />
         {isRemoveModalOpen && frameworkToRemove && (
           <ConfirmationModal
             title="Confirm framework removal"

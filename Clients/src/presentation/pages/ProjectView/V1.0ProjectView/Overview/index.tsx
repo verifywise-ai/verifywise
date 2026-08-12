@@ -7,10 +7,10 @@ import { InfoCard } from "../../../../components/Cards/InfoCard";
 import { DescriptionCard } from "../../../../components/Cards/DescriptionCard";
 import { TeamCard } from "../../../../components/Cards/TeamCard";
 import { Project } from "../../../../../domain/types/Project";
-import useProjectData from "../../../../../application/hooks/useProjectData";
 import CustomizableSkeleton from "../../../../components/Skeletons";
 import { displayFormattedDate } from "../../../../tools/isoDateToString";
-import { useEffect, useState } from "react";
+import { pluralizeEntityType } from "../../../../tools/pluralizeEntityType";
+import { useEffect, useMemo, useState } from "react";
 import { User } from "../../../../../domain/types/User";
 import { getEntityById } from "../../../../../application/repository/entity.repository";
 import useProjectRisks from "../../../../../application/hooks/useProjectRisks";
@@ -23,8 +23,6 @@ import {
   Users as UsersIcon,
   Clock as ClockIcon,
 } from "lucide-react";
-import { PluginSlot } from "../../../../components/PluginSlot";
-import { PLUGIN_SLOTS } from "../../../../../domain/constants/pluginSlots";
 import { brand } from "../../../../themes/palette";
 
 const VWProjectOverview = ({ project }: { project?: Project }) => {
@@ -34,9 +32,15 @@ const VWProjectOverview = ({ project }: { project?: Project }) => {
 
   const projectId = project?.id;
 
-  const { projectOwner } = useProjectData({
-    projectId: String(projectId ?? ""),
-  });
+  // Derive owner locally from the `project` prop + users list. Previously
+  // this called useProjectData again, which triggered a duplicate
+  // GET /projects/:id on every mount — parent VWProjectView already
+  // fetched the project and passed it down as a prop.
+  const projectOwner = useMemo<string | null>(() => {
+    if (!project) return null;
+    const ownerUser = users.find((u: User) => u.id === project.owner);
+    return ownerUser ? `${ownerUser.name} ${ownerUser.surname}` : null;
+  }, [project, users]);
 
   // Update framework IDs when project changes
   useEffect(() => {
@@ -84,73 +88,120 @@ const VWProjectOverview = ({ project }: { project?: Project }) => {
     doneSubclauses: number;
   }>();
 
+  // Progress cards for the 9 project-attachable generic frameworks (HIPAA,
+  // Texas AI Act, OECD AI Principles, Colorado AI Act, AI Ethics, PCI-DSS,
+  // FTC AI Guidelines, NYC Local Law 144, ALTAI). Framework IDs 1-4 are
+  // handled above (EU AI Act, ISO 42001) or are organizational-only and
+  // never appear on a use case (ISO 27001, NIST AI RMF).
+  type GenericFrameworkProgress = {
+    framework_id: number;
+    name: string;
+    entity_label: string;
+    done: number;
+    total: number;
+  };
+  const [genericFrameworkProgress, setGenericFrameworkProgress] = useState<
+    GenericFrameworkProgress[]
+  >([]);
+
+  // EU AI Act progress — only refires when the EU pfId resolves. Was
+  // previously bundled with the generic + ISO fetches in one effect that
+  // depended on [project, projectFrameworkId, projectFrameworkId2], which
+  // fired everything twice because pfId is set by a separate effect after
+  // the first render.
   useEffect(() => {
-    const fetchProgressData = async () => {
-      if (!project) return; // Don't fetch if no project
-
+    if (!project) return;
+    const hasEuAiActFramework = project.framework.some((f) => f.framework_id === 1);
+    if (!hasEuAiActFramework || !projectFrameworkId || isNaN(projectFrameworkId)) {
+      setComplianceProgress(undefined);
+      setAssessmentProgress(undefined);
+      return;
+    }
+    (async () => {
       try {
-        // Only fetch EU AI Act data if the project has framework ID 1
-        const hasEuAiActFramework = project.framework.some((f) => f.framework_id === 1);
-        if (hasEuAiActFramework && projectFrameworkId && !isNaN(projectFrameworkId)) {
-          try {
-            const complianceData = await getEntityById({
-              routeUrl: `/eu-ai-act/compliances/progress/${projectFrameworkId}`,
-            });
-            if (complianceData?.data) {
-              setComplianceProgress(complianceData.data);
-            }
-
-            const assessmentData = await getEntityById({
-              routeUrl: `/eu-ai-act/assessments/progress/${projectFrameworkId}`,
-            });
-            if (assessmentData?.data) {
-              setAssessmentProgress(assessmentData.data);
-            }
-          } catch (error) {
-            console.error("Error fetching EU AI Act data:", error);
-            setComplianceProgress(undefined);
-            setAssessmentProgress(undefined);
-          }
-        } else {
-          // Reset EU AI Act progress data if the project doesn't have framework ID 1
-          setComplianceProgress(undefined);
-          setAssessmentProgress(undefined);
-        }
-
-        // Only fetch ISO 42001 data if the project has framework ID 2
-        const hasIso42001Framework = project.framework.some((f) => f.framework_id === 2);
-        if (hasIso42001Framework && projectFrameworkId2 && !isNaN(projectFrameworkId2)) {
-          try {
-            const annexesData = await getEntityById({
-              routeUrl: `/iso-42001/annexes/progress/${projectFrameworkId2}`,
-            });
-            if (annexesData?.data) {
-              setAnnexesProgress(annexesData.data);
-            }
-
-            const clausesData = await getEntityById({
-              routeUrl: `/iso-42001/clauses/progress/${projectFrameworkId2}`,
-            });
-            if (clausesData?.data) {
-              setClausesProgress(clausesData.data);
-            }
-          } catch (error) {
-            console.error("Error fetching ISO 42001 data:", error);
-            setAnnexesProgress(undefined);
-            setClausesProgress(undefined);
-          }
-        } else {
-          // Reset ISO 42001 progress data if the project doesn't have framework ID 2
-          setAnnexesProgress(undefined);
-          setClausesProgress(undefined);
-        }
+        const complianceData = await getEntityById({
+          routeUrl: `/eu-ai-act/compliances/progress/${projectFrameworkId}`,
+        });
+        if (complianceData?.data) setComplianceProgress(complianceData.data);
+        const assessmentData = await getEntityById({
+          routeUrl: `/eu-ai-act/assessments/progress/${projectFrameworkId}`,
+        });
+        if (assessmentData?.data) setAssessmentProgress(assessmentData.data);
       } catch (error) {
-        console.error("Error in fetchProgressData:", error);
+        console.error("Error fetching EU AI Act data:", error);
+        setComplianceProgress(undefined);
+        setAssessmentProgress(undefined);
       }
-    };
+    })();
+  }, [project, projectFrameworkId]);
 
-    fetchProgressData();
-  }, [project, projectFrameworkId, projectFrameworkId2]);
+  // ISO 42001 progress — same rationale, isolated on projectFrameworkId2.
+  useEffect(() => {
+    if (!project) return;
+    const hasIso42001Framework = project.framework.some((f) => f.framework_id === 2);
+    if (!hasIso42001Framework || !projectFrameworkId2 || isNaN(projectFrameworkId2)) {
+      setAnnexesProgress(undefined);
+      setClausesProgress(undefined);
+      return;
+    }
+    (async () => {
+      try {
+        const annexesData = await getEntityById({
+          routeUrl: `/iso-42001/annexes/progress/${projectFrameworkId2}`,
+        });
+        if (annexesData?.data) setAnnexesProgress(annexesData.data);
+        const clausesData = await getEntityById({
+          routeUrl: `/iso-42001/clauses/progress/${projectFrameworkId2}`,
+        });
+        if (clausesData?.data) setClausesProgress(clausesData.data);
+      } catch (error) {
+        console.error("Error fetching ISO 42001 data:", error);
+        setAnnexesProgress(undefined);
+        setClausesProgress(undefined);
+      }
+    })();
+  }, [project, projectFrameworkId2]);
+
+  // Generic-framework dashboards (framework_id >= 5). Depends only on
+  // `project` — pfId comes from the framework list itself, not state.
+  useEffect(() => {
+    if (!project) return;
+    const genericFrameworks = project.framework.filter((f) => f.framework_id >= 5);
+    if (genericFrameworks.length === 0) {
+      setGenericFrameworkProgress([]);
+      return;
+    }
+    (async () => {
+      try {
+        const results = await Promise.all(
+          genericFrameworks.map(async (f) => {
+            try {
+              const response = await getEntityById({
+                routeUrl: `/frameworks/${f.framework_id}/dashboard/${f.project_framework_id}`,
+              });
+              const data = response?.data;
+              if (!data) return null;
+              return {
+                framework_id: f.framework_id,
+                name: f.name,
+                entity_label: pluralizeEntityType(data.entity_type),
+                done: data.progress?.done ?? 0,
+                total: data.progress?.total ?? 0,
+              } satisfies GenericFrameworkProgress;
+            } catch (error) {
+              console.error(`Error fetching progress for framework ${f.framework_id}:`, error);
+              return null;
+            }
+          }),
+        );
+        setGenericFrameworkProgress(
+          results.filter((r): r is GenericFrameworkProgress => r !== null),
+        );
+      } catch (error) {
+        console.error("Error fetching generic framework progress:", error);
+      }
+    })();
+  }, [project]);
 
   if (!project) {
     return <div>No project selected</div>;
@@ -243,7 +294,7 @@ const VWProjectOverview = ({ project }: { project?: Project }) => {
             </>
           )}
         </Stack>
-        <Stack className="vw-project-overview-frameworks" sx={{ width: "100%", gap: 10, mb: 10 }}>
+        <Stack className="vw-project-overview-frameworks" sx={{ width: "100%", gap: 2, mb: 10 }}>
           {project ? (
             <>
               {projectFrameworkId && (
@@ -268,15 +319,17 @@ const VWProjectOverview = ({ project }: { project?: Project }) => {
                   />
                 </Stack>
               )}
-              {/* Custom Framework Progress - Plugin Slot */}
-              <PluginSlot
-                id={PLUGIN_SLOTS.PROJECT_OVERVIEW_CUSTOM_FRAMEWORK}
-                slotProps={{
-                  project,
-                  columnStyle,
-                  projectRiskSection,
-                }}
-              />
+              {genericFrameworkProgress.map((fw) => (
+                <Stack key={fw.framework_id} sx={columnStyle}>
+                  <Typography sx={projectRiskSection}>{`${fw.name} Completion Status`}</Typography>
+                  <GroupStatsCard
+                    completed={[fw.done]}
+                    total={[fw.total]}
+                    title={[fw.entity_label]}
+                    progressbarColor={brand.primary}
+                  />
+                </Stack>
+              ))}
             </>
           ) : (
             <>

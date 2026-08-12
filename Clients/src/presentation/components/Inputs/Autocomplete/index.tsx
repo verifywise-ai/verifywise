@@ -171,6 +171,7 @@ function AutoCompleteField<
       {error && (
         <Typography
           component="span"
+          role="alert"
           className="input-error"
           color={theme.palette.status.error.text}
           mt={theme.spacing(2)}

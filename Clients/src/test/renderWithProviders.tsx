@@ -10,7 +10,7 @@ import React, { type PropsWithChildren } from "react";
 import { render, type RenderOptions } from "@testing-library/react";
 import { configureStore, combineReducers } from "@reduxjs/toolkit";
 import { Provider } from "react-redux";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter } from "react-router";
 import { ThemeProvider } from "@mui/material/styles";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { light } from "../presentation/themes";

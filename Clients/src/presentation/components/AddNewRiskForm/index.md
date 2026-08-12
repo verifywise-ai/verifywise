@@ -169,7 +169,7 @@ const COMPONENT_CONSTANTS = {
 
 ### React Router
 
-- `react-router-dom` - useSearchParams for URL parameter access
+- `react-router` - useSearchParams for URL parameter access
 
 ### Material-UI
 

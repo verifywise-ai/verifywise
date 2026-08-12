@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate } from "react-router";
 import { Box, Typography, Stack, IconButton, Collapse } from "@mui/material";
 import TabContext from "@mui/lab/TabContext";
 import {

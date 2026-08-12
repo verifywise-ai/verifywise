@@ -68,6 +68,13 @@ spec:
               key: DB_NAME
         - name: PGDATA
           value: /var/lib/postgresql/data/pgdata
+        securityContext:
+          runAsNonRoot: true
+          runAsUser: 999
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
         volumeMounts:
         - name: postgres-storage
           mountPath: /var/lib/postgresql/data

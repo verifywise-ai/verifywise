@@ -10,7 +10,7 @@ import {
   TableRow,
   useTheme,
 } from "@mui/material";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { Cpu } from "lucide-react";
 import { IModelInventory } from "../../../domain/interfaces/i.modelInventory";
 import CustomizableSkeleton from "../Skeletons";

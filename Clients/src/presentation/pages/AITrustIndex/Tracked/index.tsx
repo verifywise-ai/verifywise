@@ -9,7 +9,7 @@
  */
 
 import { useMemo, useState, useCallback, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { Box, Stack, TablePagination, CircularProgress } from "@mui/material";
 import { Star, Compass, Bell, AlertTriangle } from "lucide-react";
 import { CustomizableButton } from "../../../components/button/customizable-button";

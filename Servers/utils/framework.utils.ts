@@ -43,6 +43,7 @@ export const getAllFrameworkByIdQuery = async (
     },
   );
   const framework = result[0];
+  if (!framework) return null;
   const frameworkProjects = await sequelize.query(
     `SELECT * FROM projects_frameworks WHERE organization_id = :organizationId AND framework_id = :frameworkId`,
     {
@@ -152,12 +153,11 @@ export const addFrameworkToProjectQuery = async (
     return false;
   }
 
-  const frameworkAdditionFunction = frameworkAdditionMap[frameworkId];
-  if (!frameworkAdditionFunction) {
+  const addFn = frameworkAdditionMap[frameworkId];
+  if (!addFn) {
     return false;
   }
 
-  // add the framework to the project
   const result = (await sequelize.query(
     `INSERT INTO projects_frameworks (organization_id, project_id, framework_id) VALUES (:organizationId, :projectId, :frameworkId) RETURNING *;`,
     { replacements: { projectId, frameworkId, organizationId }, transaction },
@@ -165,8 +165,8 @@ export const addFrameworkToProjectQuery = async (
   if (!result[0]?.length) {
     return false;
   }
-  // call framework addition function only if insert was successful
-  await frameworkAdditionFunction(projectId, false, organizationId, transaction);
+
+  await addFn(projectId, false, organizationId, transaction);
   return true;
 };
 
@@ -176,6 +176,8 @@ const deleteFrameworkEvidenceFiles = async (
   organizationId: number,
   transaction: Transaction,
 ): Promise<void> => {
+  if (source.length === 0) return;
+
   // First clean up any virtual folder mappings for these files
   await sequelize.query(
     `DELETE FROM file_folder_mappings
@@ -214,7 +216,6 @@ export const deleteFrameworkFromProjectQuery = async (
     return false;
   }
 
-  // delete evidence files for the framework
   const frameworkFilesDeletionSource = frameworkFilesDeletionSourceMap[frameworkId];
   if (!frameworkFilesDeletionSource) {
     return false;
@@ -230,7 +231,5 @@ export const deleteFrameworkFromProjectQuery = async (
   if (!frameworkDeletionFunction) {
     return false;
   }
-  // call framework deletion function
-  const result = await frameworkDeletionFunction(projectId, organizationId, transaction);
-  return result;
+  return await frameworkDeletionFunction(projectId, organizationId, transaction);
 };

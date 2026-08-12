@@ -1,7 +1,7 @@
 # Core dependencies
 aiohttp>=3.14.3
 cryptography>=50.0.0
-numpy>=1.26.4,<3.0.0
+numpy>=2.5.1,<3.0.0
 pandas>=3.0.4
 pydantic>=2.11.0
 pyyaml>=6.0.3
@@ -9,13 +9,13 @@ pyyaml>=6.0.3
 # Machine learning and fairness
 scikit-learn>=1.9.0
 fairlearn>=0.14.0
-langfair>=0.8.0
 
 # Deep learning and transformers
 torch>=2.13.0,<3.0.0
-transformers>=5.12.1
+transformers>=5.14.1
 sentence-transformers>=5.6.1
-huggingface-hub>=1.16.1
+# huggingface-hub 1.16.3+ requires click>=8.4.0, which conflicts with deepeval<4.2.0
+huggingface-hub>=1.16.1,<1.16.3
 
 # Data handling
 datasets>=5.0.1
@@ -23,13 +23,13 @@ pyarrow>=25.0.0
 
 # Utilities
 tqdm>=4.68.2
-textblob>=0.20.0
+textblob>=0.20.1
 python-dotenv>=1.2.2
 
 # LLM API Clients
 httpx>=0.27.0
 openai>=2.49.0
-anthropic>=0.111.0
+anthropic>=0.120.2
 google-generativeai>=0.8.6
 ollama>=0.6.2
 xai-sdk>=1.15.0

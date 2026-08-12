@@ -1,4 +1,4 @@
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router";
 import { AppModule } from "../../../application/redux/ui/uiSlice";
 import { useEvalsSidebarContextSafe } from "../../../application/contexts/EvalsSidebar.context";
 import { useAIDetectionSidebarContextSafe } from "../../../application/contexts/AIDetectionSidebar.context";

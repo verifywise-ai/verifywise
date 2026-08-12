@@ -34,6 +34,11 @@ export interface UseFormValidationReturn<TValues extends object> {
    */
   clearFieldError: (field: keyof TValues) => void;
   /**
+   * Merges server-side (backend) validation errors into the error state so
+   * they render inline exactly like client-side errors.
+   */
+  setServerErrors: (serverErrors: Partial<Record<keyof TValues, string>>) => void;
+  /**
    * Runs all validators against the provided values, updates errors state,
    * and returns true if the form is valid (no errors).
    * Pass fieldOrder to track which invalid field should receive focus first.
@@ -87,6 +92,10 @@ export function useFormValidation<TValues extends object>(
     setErrors((prev) => ({ ...prev, [field]: "" }));
   }, []);
 
+  const setServerErrors = useCallback((serverErrors: Partial<Record<keyof TValues, string>>) => {
+    setErrors((prev) => ({ ...prev, ...serverErrors }));
+  }, []);
+
   const validateAll = useCallback((values: TValues, fieldOrder?: (keyof TValues)[]): boolean => {
     const newErrors: Partial<Record<keyof TValues, string>> = {};
     let valid = true;
@@ -115,6 +124,7 @@ export function useFormValidation<TValues extends object>(
     errors,
     validateField,
     clearFieldError,
+    setServerErrors,
     validateAll,
     getFirstInvalidField,
     hasErrors,

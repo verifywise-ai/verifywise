@@ -1,7 +1,7 @@
 import { Button, useTheme } from "@mui/material";
 import { useEffect } from "react";
 import { useDispatch } from "react-redux";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { setAuthToken, setExpiration } from "../../../application/redux/auth/authSlice";
 import { ReactComponent as MicrosoftIcon } from "../../assets/icons/microsoft-icon.svg";
 

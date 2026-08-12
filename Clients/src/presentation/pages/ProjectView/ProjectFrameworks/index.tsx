@@ -6,23 +6,22 @@ import TabContext from "@mui/lab/TabContext";
 import { tabStyle, tabPanelStyle } from "../V1.0ProjectView/style";
 import CustomizableSkeleton from "../../../components/Skeletons";
 import ComplianceTracker from "../../../pages/ComplianceTracker/1.0ComplianceTracker";
+import GenericFramework from "../../../pages/Framework/Generic";
 import { Project } from "../../../../domain/types/Project";
 import { Framework } from "../../../../domain/types/Framework";
 import AssessmentTracker from "../../Assessment/1.0AssessmentTracker";
+import ReadinessDashboard from "../../ReadinessDashboard";
 import useFrameworks from "../../../../application/hooks/useFrameworks";
 import AddFrameworkModal from "../AddNewFramework";
 import useMultipleOnScreen from "../../../../application/hooks/useMultipleOnScreen";
 import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
 import { ButtonToggle } from "../../../components/button-toggle";
-import { PluginSlot } from "../../../components/PluginSlot";
-import { PLUGIN_SLOTS } from "../../../../domain/constants/pluginSlots";
-import { usePluginRegistry } from "../../../../application/contexts/PluginRegistry.context";
 
 import { containerStyle, headerContainerStyle, tabListStyle } from "./styles";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import allowedRoles from "../../../../application/constants/permissions";
 import { TabFilterBar } from "../../../components/FrameworkFilter/TabFilterBar";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 import { useAuth } from "../../../../application/hooks/useAuth";
 import useUsers from "../../../../application/hooks/useUsers";
 import { text } from "../../../themes/palette";
@@ -34,9 +33,20 @@ const FRAMEWORK_IDS = {
 const TRACKER_TABS = [
   { label: "Requirements", value: "compliance" },
   { label: "Assessments", value: "assessment" },
+  { label: "AI readiness", value: "readiness" },
 ] as const;
 
 type TrackerTab = (typeof TRACKER_TABS)[number]["value"];
+
+/**
+ * Frameworks the readiness engine can score, keyed by framework name.
+ * The backend silently falls back to EU AI Act controls for unknown types, so the
+ * readiness tab is only offered for names listed here.
+ */
+const READINESS_FRAMEWORK_TYPES: Record<string, string> = {
+  "EU AI Act": "eu_ai_act",
+  "ISO 42001": "iso_42001",
+};
 
 const ProjectFrameworks = ({
   project,
@@ -47,9 +57,12 @@ const ProjectFrameworks = ({
   triggerRefresh?: (isTrigger: boolean, toastMessage?: string) => void;
   initialFrameworkId: number;
 }) => {
+  // Stable reference — avoids re-triggering useFrameworks memo + downstream
+  // re-renders on every parent render.
+  const projectFrameworkList = useMemo(() => project.framework ?? [], [project.framework]);
   const { filteredFrameworks, loading, error, refreshFilteredFrameworks, allFrameworks } =
     useFrameworks({
-      listOfFrameworks: project.framework,
+      listOfFrameworks: projectFrameworkList,
     });
   const [selectedFrameworkId, setSelectedFrameworkId] = useState<number>(initialFrameworkId);
   const [selectedFramework, setSelectedFramework] = useState<number>(0);
@@ -61,7 +74,6 @@ const ProjectFrameworks = ({
 
   const { changeComponentVisibility } = useContext(VerifyWiseContext);
   const { userRoleName } = useAuth();
-  const { getComponentsForSlot } = usePluginRegistry();
 
   const { refs, allVisible } = useMultipleOnScreen<HTMLElement>({
     countToTrigger: 1,
@@ -100,7 +112,11 @@ const ProjectFrameworks = ({
         );
         setSelectedFramework(index >= 0 ? index : 0);
         // Check for subtab parameter first, then controlId, default to assessment
-        if (subtabParam === "compliance" || subtabParam === "assessment") {
+        if (
+          subtabParam === "compliance" ||
+          subtabParam === "assessment" ||
+          subtabParam === "readiness"
+        ) {
           setTracker(subtabParam as TrackerTab);
         } else {
           setTracker(searchParams.get("controlId") ? "compliance" : "assessment");
@@ -136,7 +152,37 @@ const ProjectFrameworks = ({
   };
 
   const isEUAIAct = Number(selectedFrameworkId) === FRAMEWORK_IDS.EU_AI_ACT;
-  const tabs = TRACKER_TABS;
+
+  const readinessFrameworkType = useMemo(() => {
+    const selected = projectFrameworks.find(
+      (fw: Framework) => Number(fw.id) === Number(selectedFrameworkId),
+    );
+    return selected ? READINESS_FRAMEWORK_TYPES[selected.name] : undefined;
+  }, [projectFrameworks, selectedFrameworkId]);
+
+  // Only EU AI Act has an assessment tracker, and only some frameworks are scored
+  // by the readiness engine — offering those tabs elsewhere renders a blank panel.
+  const isTabAvailable = useCallback(
+    (tab: TrackerTab) => {
+      if (tab === "assessment") return isEUAIAct;
+      if (tab === "readiness") return Boolean(readinessFrameworkType);
+      return true;
+    },
+    [isEUAIAct, readinessFrameworkType],
+  );
+
+  const tabs = useMemo(
+    () => TRACKER_TABS.filter((tab) => isTabAvailable(tab.value)),
+    [isTabAvailable],
+  );
+
+  // Selecting a framework that doesn't offer the active tab (or landing on it via
+  // ?subtab=) removes it — fall back to Requirements so the panel is never blank.
+  useEffect(() => {
+    if (!isTabAvailable(tracker)) {
+      setTracker("compliance");
+    }
+  }, [tracker, isTabAvailable]);
 
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [applicabilityFilter, setApplicabilityFilter] = useState<string>("all");
@@ -230,6 +276,17 @@ const ProjectFrameworks = ({
       );
     }
 
+    if (!isEUAIAct) {
+      console.debug("[fw] ProjectFrameworks dispatch → GenericFramework", {
+        projectId: project.id,
+        frameworkId: selectedFrameworkId,
+      });
+      return <GenericFramework projectId={Number(project.id)} frameworkId={selectedFrameworkId} />;
+    }
+    console.debug("[fw] ProjectFrameworks dispatch → ComplianceTracker (EU AI Act)", {
+      projectId: project.id,
+    });
+
     return (
       <>
         <TabFilterBar
@@ -237,7 +294,7 @@ const ProjectFrameworks = ({
           onStatusChange={setStatusFilter}
           applicabilityFilter={applicabilityFilter}
           onApplicabilityChange={setApplicabilityFilter}
-          showStatusFilter={isEUAIAct && (tracker === "compliance" || tracker === "assessment")}
+          showStatusFilter={tracker === "compliance" || tracker === "assessment"}
           showApplicabilityFilter={false}
           statusOptions={statusOptions}
           ownerFilter={ownerFilter}
@@ -246,9 +303,9 @@ const ProjectFrameworks = ({
           onApproverChange={setApproverFilter}
           dueDateFilter={dueDateFilter}
           onDueDateChange={setDueDateFilter}
-          showOwnerFilter={isEUAIAct && tracker === "compliance"}
-          showApproverFilter={isEUAIAct && tracker === "compliance"}
-          showDueDateFilter={isEUAIAct && tracker === "compliance"}
+          showOwnerFilter={tracker === "compliance"}
+          showApproverFilter={tracker === "compliance"}
+          showDueDateFilter={tracker === "compliance"}
           ownerOptions={userOptions}
           approverOptions={userOptions}
         />
@@ -298,6 +355,16 @@ const ProjectFrameworks = ({
               />
             </TabPanel>
           )}
+          {readinessFrameworkType && (
+            // Tighter top padding than the sibling panels: readiness opens with a
+            // right-aligned control strip, so the default 20px reads as dead space.
+            <TabPanel value="readiness" sx={{ ...tabPanelStyle, pt: 6 }}>
+              <ReadinessDashboard
+                projectId={Number(project.id)}
+                frameworkType={readinessFrameworkType}
+              />
+            </TabPanel>
+          )}
         </TabContext>
       </>
     );
@@ -308,12 +375,14 @@ const ProjectFrameworks = ({
     approverFilter,
     dueDateFilter,
     isEUAIAct,
+    readinessFrameworkType,
     tracker,
     statusOptions,
     userOptions,
     tabs,
     refs,
     project,
+    selectedFrameworkId,
     tabListStyle,
     projectFrameworks.length,
     loading,
@@ -332,10 +401,6 @@ const ProjectFrameworks = ({
     );
   }
 
-  // Check if plugin is providing custom framework controls
-  const hasCustomFrameworkPlugin =
-    getComponentsForSlot(PLUGIN_SLOTS.PROJECT_CONTROLS_CUSTOM_FRAMEWORK).length > 0;
-
   // Render the "Manage frameworks" button
   const renderManageButton = () => (
     <CustomizableButton
@@ -348,12 +413,19 @@ const ProjectFrameworks = ({
 
   return (
     <Box sx={containerStyle}>
-      {/* Header with toggle and button - only shown when NO plugin */}
-      {!hasCustomFrameworkPlugin && (
-        <Box sx={headerContainerStyle}>
-          {loading ? (
-            <CustomizableSkeleton variant="rectangular" width={200} height={40} />
-          ) : projectFrameworks.length > 0 ? (
+      <Box sx={headerContainerStyle}>
+        {loading ? (
+          <CustomizableSkeleton variant="rectangular" width={200} height={40} />
+        ) : projectFrameworks.length > 0 ? (
+          <Box
+            sx={{
+              flex: 1,
+              minWidth: 0,
+              overflowX: "auto",
+              overflowY: "hidden",
+              pb: 0.5,
+            }}
+          >
             <ButtonToggle
               options={projectFrameworks.map((fw: Framework, index: number) => ({
                 value: index.toString(),
@@ -363,27 +435,10 @@ const ProjectFrameworks = ({
               onChange={(value) => handleFrameworkSelect(parseInt(value))}
               height={34}
             />
-          ) : null}
-          {renderManageButton()}
-        </Box>
-      )}
-
-      {/* Plugin slot - renders header (toggle + button) + content when plugin is loaded */}
-      <PluginSlot
-        id={PLUGIN_SLOTS.PROJECT_CONTROLS_CUSTOM_FRAMEWORK}
-        slotProps={{
-          project: project,
-          builtInFrameworks: projectFrameworks,
-          selectedBuiltInFramework: selectedFramework,
-          onBuiltInFrameworkSelect: handleFrameworkSelect,
-          renderBuiltInContent: renderBuiltInContent,
-          renderHeaderActions: renderManageButton,
-          onRefresh: () => {
-            if (triggerRefresh) triggerRefresh(true);
-            refreshFilteredFrameworks();
-          },
-        }}
-      />
+          </Box>
+        ) : null}
+        {renderManageButton()}
+      </Box>
 
       <AddFrameworkModal
         open={isModalOpen}
@@ -411,11 +466,10 @@ const ProjectFrameworks = ({
         }}
       />
 
-      {/* Default content when no plugin is loaded */}
-      {!hasCustomFrameworkPlugin && projectFrameworks.length > 0 && renderBuiltInContent()}
+      {projectFrameworks.length > 0 && renderBuiltInContent()}
 
       {/* Empty state when no frameworks installed */}
-      {!hasCustomFrameworkPlugin && projectFrameworks.length === 0 && !loading && (
+      {projectFrameworks.length === 0 && !loading && (
         <Box
           sx={{
             display: "flex",

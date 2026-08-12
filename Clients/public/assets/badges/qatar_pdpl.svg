@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Background circle - Qatar maroon -->
+  <circle cx="32" cy="32" r="30" fill="#8A1538"/>
+
+  <!-- Qatar flag serrated pattern (white/maroon) -->
+  <path d="M12 8 L24 12 L12 16 L24 20 L12 24 L24 28 L12 32 L24 36 L12 40 L24 44 L12 48 L24 52 L12 56 L12 8 Z" fill="#FFFFFF"/>
+
+  <!-- Privacy shield in center -->
+  <path d="M36 14 L52 22 L52 36 C52 46 44 52 36 56 C28 52 20 46 20 36 L20 22 Z" fill="#FFFFFF" opacity="0.95"/>
+
+  <!-- Inner shield -->
+  <path d="M36 18 L48 24 L48 36 C48 44 42 48 36 52 C30 48 24 44 24 36 L24 24 Z" fill="#8A1538"/>
+
+  <!-- Lock icon -->
+  <rect x="32" y="34" width="8" height="6" rx="1" fill="#FFFFFF"/>
+  <path d="M33.5 34 L33.5 31 C33.5 29 34.5 28 36 28 C37.5 28 38.5 29 38.5 31 L38.5 34" stroke="#FFFFFF" stroke-width="1.5" fill="none"/>
+  <circle cx="36" cy="37" r="1" fill="#8A1538"/>
+
+  <!-- Qatar text -->
+  <text x="36" y="58" font-family="Arial, sans-serif" font-size="4.5" font-weight="bold" fill="#FFFFFF" text-anchor="middle">QATAR PDPL</text>
+</svg>

@@ -8,11 +8,13 @@
 
 const mockObliterate = jest.fn().mockResolvedValue(undefined);
 const mockAdd = jest.fn().mockResolvedValue({ id: "job-1" });
+const mockUpsertJobScheduler = jest.fn().mockResolvedValue({ id: "job-1" });
 
 jest.mock("bullmq", () => ({
   Queue: jest.fn().mockImplementation(() => ({
     obliterate: mockObliterate,
     add: mockAdd,
+    upsertJobScheduler: mockUpsertJobScheduler,
   })),
 }));
 
@@ -32,6 +34,7 @@ describe("slackProducer", () => {
   beforeEach(() => {
     mockObliterate.mockClear();
     mockAdd.mockClear();
+    mockUpsertJobScheduler.mockClear();
   });
 
   describe("scheduleDailyNotification", () => {
@@ -40,15 +43,18 @@ describe("slackProducer", () => {
       expect(mockObliterate).toHaveBeenCalledWith({ force: true });
     });
 
-    it("should add policy notification job with cron pattern", async () => {
+    it("should schedule policy notification job with cron pattern", async () => {
       await scheduleDailyNotification();
-      expect(mockAdd).toHaveBeenCalledWith(
+      expect(mockUpsertJobScheduler).toHaveBeenCalledWith(
         "slack-notification-policy",
-        { type: "policies" },
+        { pattern: "0 9 * * *" },
         expect.objectContaining({
-          repeat: { pattern: "0 9 * * *" },
-          removeOnComplete: true,
-          removeOnFail: false,
+          name: "slack-notification-policy",
+          data: { type: "policies" },
+          opts: expect.objectContaining({
+            removeOnComplete: true,
+            removeOnFail: false,
+          }),
         }),
       );
     });

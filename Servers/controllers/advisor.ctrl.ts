@@ -107,6 +107,7 @@ import { toolsDefinition as projectToolsDefinition } from "../advisor/tools/proj
 import { toolsDefinition as frameworkLookupToolsDefinition } from "../advisor/tools/frameworkLookupTools";
 import { translateError } from "../utils/i18n.utils";
 import { aiActionToolDefinitions, aiActionFilers } from "../advisor/aiActions";
+import { orchestrate } from "../advisor/orchestrator";
 
 const fileName = "advisor.ctrl.ts";
 
@@ -129,7 +130,9 @@ function selectLLMKey(clients: any[], llmKeyId?: number): any {
 // AI write tools (agent_create_*, agent_update_*, etc.) are composed via
 // the AI Actions registry — adding one only requires creating a new
 // `advisor/aiActions/<action>/` module and registering it there.
-const availableTools = {
+// Exported so the command-plane controller can resolve read-step tool
+// executors from the same canonical registry.
+export const availableTools = {
   ...availableRiskTools,
   ...availableModelInventoryTools,
   ...availableModelRiskTools,
@@ -256,8 +259,8 @@ export async function runAdvisor(req: Request, res: Response) {
         .json(STATUS_CODE[400]("No LLM keys configured for this organization."));
     }
 
-    const apiKey = selectLLMKey(clients, llmKeyId);
-    const url = apiKey.url || getLLMProviderUrl(apiKey.name as LLMProvider);
+    const llmKey = selectLLMKey(clients, llmKeyId);
+    const url = llmKey.url || getLLMProviderUrl(llmKey.name as LLMProvider);
 
     // sessionId for agent memory: same plumbing as the streaming endpoints.
     const memorySessionId =
@@ -268,16 +271,16 @@ export async function runAdvisor(req: Request, res: Response) {
           : undefined;
 
     const agentParams = {
-      apiKey: apiKey.key || "",
+      apiKey: llmKey.key || "",
       baseURL: url,
-      model: apiKey.model,
+      model: llmKey.model,
       userPrompt: prompt,
       tenant: organizationId,
       userId,
       availableTools,
       toolsDefinition,
-      provider: apiKey.name as "Anthropic" | "OpenAI" | "OpenRouter" | "Custom",
-      headers: apiKey.custom_headers || undefined,
+      provider: llmKey.name as "Anthropic" | "OpenAI" | "OpenRouter" | "Custom",
+      headers: llmKey.custom_headers || undefined,
       sessionId: memorySessionId,
       agentName: "advisor" as const,
     };
@@ -660,8 +663,8 @@ export async function streamAdvisor(req: Request, res: Response) {
       return;
     }
 
-    const apiKey = selectLLMKey(clients, llmKeyId);
-    const url = apiKey.url || getLLMProviderUrl(apiKey.name as LLMProvider);
+    const llmKey = selectLLMKey(clients, llmKeyId);
+    const url = llmKey.url || getLLMProviderUrl(llmKey.name as LLMProvider);
 
     // Set SSE headers — disable ALL buffering for real-time streaming
     res.setHeader("Content-Type", "text/event-stream");
@@ -692,16 +695,16 @@ export async function streamAdvisor(req: Request, res: Response) {
           : undefined;
 
     const agentParams = {
-      apiKey: apiKey.key || "",
+      apiKey: llmKey.key || "",
       baseURL: url,
-      model: apiKey.model,
+      model: llmKey.model,
       userPrompt: prompt,
       tenant: organizationId,
       userId,
       availableTools,
       toolsDefinition,
-      provider: apiKey.name as "Anthropic" | "OpenAI" | "OpenRouter" | "Custom",
-      headers: apiKey.custom_headers || undefined,
+      provider: llmKey.name as "Anthropic" | "OpenAI" | "OpenRouter" | "Custom",
+      headers: llmKey.custom_headers || undefined,
       sessionId: memorySessionId,
       agentName: "advisor" as const,
     };
@@ -809,8 +812,8 @@ export async function streamAdvisorV2(req: Request, res: Response) {
       return;
     }
 
-    const apiKey = selectLLMKey(clients, llmKeyId);
-    const url = apiKey.url || getLLMProviderUrl(apiKey.name as LLMProvider);
+    const llmKey = selectLLMKey(clients, llmKeyId);
+    const url = llmKey.url || getLLMProviderUrl(llmKey.name as LLMProvider);
 
     // sessionId for agent memory: chat endpoint may carry an explicit
     // `conversationId` from the client (which the frontend uses to group
@@ -827,10 +830,10 @@ export async function streamAdvisorV2(req: Request, res: Response) {
             ? `user-${userId}-${new Date().toISOString().slice(0, 10)}`
             : undefined;
 
-    const result = await getStreamTextResult({
-      apiKey: apiKey.key || "",
+    const agentParams = {
+      apiKey: llmKey.key || "",
       baseURL: url,
-      model: apiKey.model,
+      model: llmKey.model,
       // `messages` carries the full multi-turn history; `userPrompt` is kept
       // as an empty string because it's ignored when `messages` is set but
       // the type still requires it.
@@ -840,11 +843,19 @@ export async function streamAdvisorV2(req: Request, res: Response) {
       userId,
       availableTools,
       toolsDefinition,
-      provider: apiKey.name as "Anthropic" | "OpenAI" | "OpenRouter" | "Custom",
-      headers: apiKey.custom_headers || undefined,
+      provider: llmKey.name as "Anthropic" | "OpenAI" | "OpenRouter" | "Custom",
+      headers: llmKey.custom_headers || undefined,
       sessionId: memorySessionId,
       agentName: "advisor" as const,
-    });
+    };
+
+    // Parallel multi-agent mode is opt-in via a body flag. On single/dependent
+    // prompts or any planner failure, orchestrate() itself falls back to the
+    // single-agent stream, so this branch never regresses default behavior.
+    const parallelRequested = (req.body as { parallel?: unknown })?.parallel === true;
+    const result = parallelRequested
+      ? await orchestrate(agentParams)
+      : await getStreamTextResult(agentParams);
 
     // Pipe the stream. Critical: supply `onError` to convert errors into
     // user-visible text. Without it, the AI SDK silently closes the stream

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Project } from "../../domain/types/Project";
 import { User } from "../../domain/types/User";
 import { getProjectById } from "../repository/project.repository";
@@ -19,12 +19,14 @@ interface UseProjectDataResult {
 
 const useProjectData = ({ projectId, refreshKey }: UseProjectDataParams): UseProjectDataResult => {
   const [project, setProject] = useState<Project | null>(null);
-  const [projectOwner, setProjectOwner] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [projectRisks, setProjectRisks] = useState<any>(null); // Add state for projectRisks
   const { users } = useUsers();
 
+  // Fetch effect: depends ONLY on the identity of the project being loaded.
+  // `users` used to be in the deps, which caused the whole project fetch to
+  // re-fire every time the users list ref changed (which is frequently).
   useEffect(() => {
     if (!projectId) {
       setError("No project ID provided");
@@ -40,24 +42,6 @@ const useProjectData = ({ projectId, refreshKey }: UseProjectDataParams): UsePro
       signal: controller.signal,
     })
       .then(({ data }) => {
-        const ownerUser = users.find((user: User) => user.id === data.owner);
-
-        /* 
-          ** It should be data.last_updated_by: number instead of string
-          // const lastUpdatedByUser = users.find(
-          //   (user: User) => user.id === data.last_updated_by
-          // );
-          // if (lastUpdatedByUser) {
-          //   data.last_updated_by =
-          //     lastUpdatedByUser.name + ` ` + lastUpdatedByUser.surname;
-          // }        
-        */
-
-        if (ownerUser) {
-          const temp = ownerUser.name + ` ` + ownerUser.surname;
-          setProjectOwner(temp);
-        }
-
         setProjectRisks(data.risks); // Set projectRisks from the fetched data
         setProject(data); // Ensure project is set correctly
         setError(null);
@@ -74,9 +58,17 @@ const useProjectData = ({ projectId, refreshKey }: UseProjectDataParams): UsePro
         }
       });
     return () => controller.abort();
-  }, [projectId, users, refreshKey]);
+  }, [projectId, refreshKey]);
 
-  return { project, projectOwner, error, isLoading, projectRisks, setProject }; // Return setProject
+  // Derive owner name lazily from users + project — doesn't need to re-fetch
+  // the project when the users list updates.
+  const projectOwner = useMemo<string | null>(() => {
+    if (!project) return null;
+    const ownerUser = users.find((user: User) => user.id === project.owner);
+    return ownerUser ? `${ownerUser.name} ${ownerUser.surname}` : null;
+  }, [project, users]);
+
+  return { project, projectOwner, error, isLoading, projectRisks, setProject };
 };
 
 export default useProjectData;

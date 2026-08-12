@@ -8,7 +8,7 @@
  */
 
 import { useState, useEffect, Suspense } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router";
 import { Box, Typography } from "@mui/material";
 import { TabContext } from "@mui/lab";
 import {
