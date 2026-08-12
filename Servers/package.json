@@ -8,7 +8,7 @@
     "test:smoke": "jest --config jest.config.js --globalSetup=\"<rootDir>/tests/integration/globalSetup.js\" --testPathPatterns=deadline-summary --runInBand",
     "test": "npm run test:unit",
     "test:watch": "jest --watch",
-    "test:integration": "jest --config jest.config.js --globalSetup=\"<rootDir>/tests/integration/globalSetup.js\" --testMatch=\"**/tests/integration/**/*.test.ts\" --runInBand",
+    "test:integration": "node --max-old-space-size=4096 node_modules/jest/bin/jest.js --config jest.config.js --globalSetup=\"<rootDir>/tests/integration/globalSetup.js\" --testMatch=\"**/tests/integration/**/*.test.ts\" --runInBand",
     "build": "tsc",
     "start": "npm run migrate-db && node dist/index.js",
     "postbuild": "node scripts/copyFiles.js",

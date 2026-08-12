@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { renderHook, waitFor, act } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 import { useDashboard } from "../useDashboard";
@@ -108,9 +108,13 @@ describe("useDashboard", () => {
   });
 
   it("should handle fetchDashboard being called before initial data loads", async () => {
-    // Keep the initial promise pending
+    // Keep the initial promise pending until resolved manually (no real timers)
+    let resolveInitial: ((value: unknown) => void) | undefined;
     mockGetAllEntities.mockImplementation(
-      () => new Promise((resolve) => setTimeout(() => resolve({ data: { projects: 1 } }), 100)),
+      () =>
+        new Promise((resolve) => {
+          resolveInitial = resolve;
+        }),
     );
 
     const { result } = renderHook(() => useDashboard(), {
@@ -120,6 +124,10 @@ describe("useDashboard", () => {
     // fetchDashboard returns a promise even when called during loading
     const fetchPromise = result.current.fetchDashboard();
     expect(fetchPromise).toBeInstanceOf(Promise);
+
+    await act(async () => {
+      resolveInitial?.({ data: { projects: 1 } });
+    });
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);

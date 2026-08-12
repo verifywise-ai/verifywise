@@ -29,7 +29,8 @@ import logger from "../utils/logger/fileLogger";
 // production must NOT silently relax brute-force protection, so anything we
 // don't recognise as dev/test is treated as production.
 const nodeEnv = (process.env.NODE_ENV ?? "").trim().toLowerCase();
-const isNonProduction = nodeEnv === "development" || nodeEnv === "test" || nodeEnv === "local";
+export const isNonProduction =
+  nodeEnv === "development" || nodeEnv === "test" || nodeEnv === "local";
 
 /**
  * Rate limit configuration with time window and request limits

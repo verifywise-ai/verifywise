@@ -125,6 +125,7 @@ describe("useNotifications", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -705,10 +706,12 @@ describe("useNotifications", () => {
         expect(global.fetch).toHaveBeenCalledTimes(1);
       });
 
+      vi.useFakeTimers();
       await act(async () => {
         result.current.reconnect();
-        await new Promise((r) => setTimeout(r, 150));
+        await vi.advanceTimersByTimeAsync(150);
       });
+      vi.useRealTimers();
 
       // disconnect + reconnect via setTimeout(100)
       await waitFor(() => {

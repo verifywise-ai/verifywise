@@ -27,6 +27,7 @@ describe("frameworkDataUtils", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
