@@ -1,6 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ThemeProvider } from "@mui/material";
+import { light } from "../../../themes";
 import { RiskLink } from "../../../../domain/interfaces/i.riskLink";
 
 const mockUseRiskLinks = vi.fn();
@@ -17,6 +20,10 @@ vi.mock("../../../../application/hooks/useRiskLinks", () => ({
 
 vi.mock("../../../../application/hooks/useIsAdmin", () => ({
   useIsAdmin: () => mockIsAdmin(),
+}));
+
+vi.mock("../../../../application/repository/projectRisk.repository", () => ({
+  getAllProjectRisks: vi.fn().mockResolvedValue({ data: [] }),
 }));
 
 import LinkedRisksPanel from "../index";
@@ -179,6 +186,25 @@ describe("LinkedRisksPanel empty state", () => {
     expect(
       screen.queryByRole("button", { name: "Scan for related risks" }),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe("LinkedRisksPanel link form", () => {
+  it("opens the form for a non-admin with no links", async () => {
+    mockIsAdmin.mockReturnValue(false);
+    mockUseRiskLinks.mockReturnValue(queryResult([]));
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <ThemeProvider theme={light}>
+        <QueryClientProvider client={client}>
+          <LinkedRisksPanel riskId={42} />
+        </QueryClientProvider>
+      </ThemeProvider>,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Link a risk" }));
+
+    expect(screen.getByRole("radio", { name: "Related to" })).toBeInTheDocument();
   });
 });
 

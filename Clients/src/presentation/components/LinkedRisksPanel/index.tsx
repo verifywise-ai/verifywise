@@ -7,6 +7,7 @@ import {
 } from "../../../application/hooks/useRiskLinks";
 import { useIsAdmin } from "../../../application/hooks/useIsAdmin";
 import { RiskLink, RiskLinkStatus } from "../../../domain/interfaces/i.riskLink";
+import LinkRiskForm from "./LinkRiskForm";
 
 interface LinkedRisksPanelProps {
   riskId: number;
@@ -53,6 +54,7 @@ const reasonLabel = (reason: RiskLink["reasons"][number]) =>
 
 export default function LinkedRisksPanel({ riskId }: LinkedRisksPanelProps) {
   const [showDismissed, setShowDismissed] = useState(false);
+  const [showForm, setShowForm] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const isAdmin = useIsAdmin();
 
@@ -104,11 +106,18 @@ export default function LinkedRisksPanel({ riskId }: LinkedRisksPanelProps) {
 
   return (
     <Stack spacing={2} sx={{ py: 2 }}>
-      <Stack direction="row" justifyContent="flex-end">
+      <Stack direction="row" justifyContent="space-between">
+        <Button size="small" onClick={() => setShowForm((open) => !open)}>
+          {showForm ? "Cancel" : "Link a risk"}
+        </Button>
         <Button size="small" onClick={() => setShowDismissed((shown) => !shown)}>
           {showDismissed ? "Hide dismissed" : "Show dismissed"}
         </Button>
       </Stack>
+
+      {showForm && (
+        <LinkRiskForm riskId={riskId} existingLinks={links} onClose={() => setShowForm(false)} />
+      )}
 
       {notice && <Alert severity="info">{notice}</Alert>}
 
