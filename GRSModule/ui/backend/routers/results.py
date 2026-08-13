@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from .. import app as _app
 from ..services.watcher import count_lines
-from ..services.path_utils import resolve_dataset_path
+from ..services.path_utils import resolve_dataset_path, assert_within
 
 router = APIRouter()
 
@@ -13,6 +13,7 @@ router = APIRouter()
 @router.get("/results/leaderboard")
 def get_leaderboard(dataset_version: str = Query(...)):
     path = resolve_dataset_path(_app.GRS_ROOT, dataset_version, "final", "leaderboard.json")
+    path = assert_within(_app.GRS_ROOT, path)
     if not path.exists():
         raise HTTPException(status_code=404, detail="Leaderboard not found for this dataset version")
     return json.loads(path.read_text(encoding="utf-8"))
@@ -29,28 +30,29 @@ class SummaryResponse(BaseModel):
 @router.get("/results/summary", response_model=SummaryResponse)
 def get_summary(dataset_version: str = Query(...)):
     final = resolve_dataset_path(_app.GRS_ROOT, dataset_version, "final")
+    final = assert_within(_app.GRS_ROOT, final)
 
     def _count(path):
-        return count_lines(path) if path.exists() else None
+        return count_lines(path, base=_app.GRS_ROOT) if path.exists() else None
 
-    scenarios_path = final / "scenarios.jsonl"
+    scenarios_path = assert_within(_app.GRS_ROOT, final / "scenarios.jsonl")
     scenarios = _count(scenarios_path)
 
-    responses_dir = final / "responses"
+    responses_dir = assert_within(_app.GRS_ROOT, final / "responses")
     if responses_dir.exists():
         success_files = [f for f in responses_dir.glob("*.jsonl")
                          if ".failures" not in f.name and ".patch_failures" not in f.name]
-        responses = sum(count_lines(f) for f in success_files)
+        responses = sum(count_lines(f, base=_app.GRS_ROOT) for f in success_files)
         models_inferred = len(success_files)
     else:
         responses = None
         models_inferred = None
 
-    scores_dir = final / "judge_scores"
+    scores_dir = assert_within(_app.GRS_ROOT, final / "judge_scores")
     if scores_dir.exists():
         score_files = [f for f in scores_dir.glob("*.jsonl")
                        if ".failures" not in f.name and ".patch_failures" not in f.name]
-        scores = sum(count_lines(f) for f in score_files)
+        scores = sum(count_lines(f, base=_app.GRS_ROOT) for f in score_files)
         models_scored = len(score_files)
     else:
         scores = None
