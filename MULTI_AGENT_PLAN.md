@@ -9,7 +9,8 @@ Close all 136 open GitHub code-scanning alerts in `verifywise-ai/verifywise` usi
 |-------|-------|-------------|---------------|----------|--------|-------------------|
 | 0 | Planning & tooling setup | — | Master Orchestrator | — | 🟢 Done | — |
 | 4 | Secret / hash exposure cleanup | 3 | Full-Stack Developer | AppSec Engineer | 🟢 Done | pushed |
-| 3a | Kubernetes Trivy hardening — safe contexts pass | 47 | DevSecOps Engineer | Cloud Architect / SRE | 🟡 In progress | — |
+| 3a | Kubernetes Trivy hardening — safe contexts pass | 47 | DevSecOps Engineer | Cloud Architect / SRE | 🟢 Done | pushed |
+| 2 | Path injection hardening | 16 | Senior Backend Developer | AppSec Engineer | 🟡 In progress | — |
 | 2 | Path injection hardening | 16 | Senior Backend Developer | AppSec Engineer | ⚪ Not started | — |
 | 5 | CodeQL JS/TS fixes | 18 | Senior Backend / Full-Stack Developer | AppSec Engineer | ⚪ Not started | — |
 | 6 | Remaining Semgrep miscellany | ~10 | Full-Stack Developer | AppSec Engineer | ⚪ Not started | — |
