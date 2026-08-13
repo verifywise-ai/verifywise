@@ -8,12 +8,13 @@ Close all 136 open GitHub code-scanning alerts in `verifywise-ai/verifywise` usi
 | Batch | Title | Open Alerts | Primary Agent | Reviewer | Status | PR / Commit Range |
 |-------|-------|-------------|---------------|----------|--------|-------------------|
 | 0 | Planning & tooling setup | — | Master Orchestrator | — | 🟢 Done | — |
-| 4 | Secret / hash exposure cleanup | 3 | Full-Stack Developer | AppSec Engineer | 🟡 Ready | — |
-| 3 | Kubernetes Trivy hardening | 47 | DevSecOps Engineer | Cloud Architect / SRE | ⚪ Not started | — |
+| 4 | Secret / hash exposure cleanup | 3 | Full-Stack Developer | AppSec Engineer | 🟢 Done | pushed |
+| 3a | Kubernetes Trivy hardening — safe contexts pass | 47 | DevSecOps Engineer | Cloud Architect / SRE | 🟡 In progress | — |
 | 2 | Path injection hardening | 16 | Senior Backend Developer | AppSec Engineer | ⚪ Not started | — |
-| 1 | SQLAlchemy `text()` parameterization | 58 | Senior Backend Developer | AppSec Engineer / DBA | ⚪ Not started | — |
 | 5 | CodeQL JS/TS fixes | 18 | Senior Backend / Full-Stack Developer | AppSec Engineer | ⚪ Not started | — |
 | 6 | Remaining Semgrep miscellany | ~10 | Full-Stack Developer | AppSec Engineer | ⚪ Not started | — |
+| 1 | SQLAlchemy `text()` parameterization | 58 | Senior Backend Developer | AppSec Engineer / DBA | ⚪ Not started | — |
+| 3b | Kubernetes Trivy hardening — runAsNonRoot + Dockerfile USER | 47 | DevSecOps Engineer | Cloud Architect / SRE | ⚪ Not started | — |
 | 7 | Validation, regression, docs | — | QA Engineer | AppSec Engineer / Tech Writer | ⚪ Not started | — |
 
 ## Git Convention
@@ -23,19 +24,25 @@ Close all 136 open GitHub code-scanning alerts in `verifywise-ai/verifywise` usi
 
 ## Batches Detail
 
-### Batch 4 — Secret / hash exposure cleanup (3 alerts)
+### Batch 4 — Secret / hash exposure cleanup (3 alerts) ✅
 **Agent:** Full-Stack Developer (lead) + Application Security Engineer (review)  
 **Files:**
 - `Servers/domain.layer/models/user/users.mock.data.ts`
 - `Servers/documentation/mocks/users.md`
 **Rule:** `generic.secrets.security.detected-bcrypt-hash.detected-bcrypt-hash`  
-**Plan:** Replace mock bcrypt hashes with clearly fake placeholders or move them to a fixture generator; add Semgrep ignore annotations only where absolutely necessary and justified.
+**Done:** Updated TS file to use rule-specific `nosemgrep` annotation; redacted mock hash in docs MD file.
 
-### Batch 3 — Kubernetes Trivy hardening (47 alerts)
+### Batch 3a — Kubernetes Trivy hardening: safe securityContext pass
 **Agent:** DevSecOps Engineer (lead) + Cloud Architect (review) + Site Reliability Engineer (ops impact)  
-**Files:** `kubernetes/dev/set-resources.yaml`, `kubernetes/base/deployment.yaml`, `kubernetes/base/frontend-nginx-mount.yaml`, `kubernetes/.k8s/*-deployment.yaml`, `kubernetes/dev/configmap.yaml`  
-**Rules:** KSV-0125, KSV-0106, KSV-0004, KSV-0003, KSV-0001, KSV-0022, KSV-0110, KSV-0117, KSV-0018, KSV-0016, KSV-0015, KSV-0011  
-**Plan:** Add `securityContext` blocks (drop capabilities, runAsNonRoot, allowPrivilegeEscalation false, readOnlyRootFilesystem), pin images to trusted registry/digest, move sensitive ConfigMap data to Secrets where flagged.
+**Files:** `kubernetes/dev/set-resources.yaml`, `kubernetes/base/deployment.yaml`, `kubernetes/base/frontend-nginx-mount.yaml`, `kubernetes/.k8s/*-deployment.yaml`  
+**Rules:** KSV-0004, KSV-0003, KSV-0106, KSV-0022  
+**Plan:** Add `securityContext.allowPrivilegeEscalation: false` and `capabilities.drop: [ALL]` to every container that is missing them. Do **not** add `runAsNonRoot` in this pass (images currently run as root; see Batch 3b).
+
+### Batch 3b — Kubernetes Trivy hardening: non-root images
+**Agent:** DevSecOps Engineer (lead) + Cloud Architect (review) + Site Reliability Engineer (ops impact)  
+**Files:** `Servers/Dockerfile`, `Clients/Dockerfile`, `AIGateway/Dockerfile`, `EvalServer/Dockerfile`, plus all Kubernetes manifests  
+**Rules:** KSV-0001, KSV-0125, KSV-0110, KSV-0117, KSV-0018, KSV-0016, KSV-0015, KSV-0011  
+**Plan:** Add non-root `USER` to Dockerfiles, adjust ports if needed (e.g., frontend nginx 80→8080), then add `runAsNonRoot: true`, `runAsUser`, `runAsGroup`, and image-digest pinning to manifests.
 
 ### Batch 2 — Path injection hardening (16 alerts)
 **Agent:** Senior Backend Developer (lead) + Application Security Engineer (review)  
@@ -60,6 +67,17 @@ Close all 136 open GitHub code-scanning alerts in `verifywise-ai/verifywise` usi
 ### Batch 7 — Validation, regression, documentation
 **Agent:** QA Engineer (lead) + Application Security Engineer + Technical Writer  
 **Plan:** Re-run Semgrep, Trivy, CodeQL; run affected unit/integration tests; update security runbook and changelog; verify GitHub Security tab shows zero open alerts.
+
+## Execution Order
+
+1. Batch 4 ✅
+2. Batch 3a (safe K8s contexts)
+3. Batch 2 (path injection)
+4. Batch 5 (JS/TS CodeQL)
+5. Batch 6 (misc Semgrep)
+6. Batch 1 (SQLAlchemy — largest, saved for focused effort)
+7. Batch 3b (K8s non-root — requires Dockerfile rebuilds)
+8. Batch 7 (validation + docs)
 
 ## Notes / Decisions
 - Scope is the 136 **open** alerts. Dismissed alerts are out of scope unless they re-open during validation.
