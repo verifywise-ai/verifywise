@@ -95,10 +95,11 @@ async def cleanup_orphaned_experiments():
             schemas = [row[0] for row in result.fetchall()]
             for schema in schemas:
                 try:
+                    safe_schema = schema.replace('"', '""')
                     res = await db.execute(text(
-                        f'UPDATE "{schema}".llm_evals_experiments '
-                        f"SET status = 'failed', error_message = 'Server restarted during execution', "
-                        f"completed_at = NOW() WHERE status = 'running'"
+                        'UPDATE "' + safe_schema + '".llm_evals_experiments '
+                        + "SET status = 'failed', error_message = 'Server restarted during execution', "
+                        + "completed_at = NOW() WHERE status = 'running'"
                     ))
                     if res.rowcount > 0:
                         logger.info(f"Marked {res.rowcount} orphaned experiment(s) as failed in schema '{schema}'")
