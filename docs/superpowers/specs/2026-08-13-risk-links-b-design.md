@@ -104,11 +104,24 @@ For `inherits_from`, `sourceRiskId` is the risk that **inherits** and `targetRis
 | 2 | `sourceRiskId !== targetRiskId` | `400 A risk cannot link to itself` |
 | 3 | both ids are live risks in `req.organizationId` — one query, expect two rows | `404 Risk not found` |
 | 4 | if `inherits_from`: the reverse row must not exist | `409 These risks would inherit from each other` |
-| 5 | insert with `ON CONFLICT DO NOTHING RETURNING id`; zero rows returned | `409 These risks are already linked` |
+| 5 | insert with `ON CONFLICT DO NOTHING RETURNING id`; zero rows returned | `409 These risks are already linked. If the link was dismissed, use "Show dismissed" to restore it.` |
 
-Step 3 is the tenant boundary. Without it a caller can name another organisation's risk id: the table's `organization_id` column is set from the token, so the row would land in the caller's org while pointing at a foreign risk. It is the same class of hole A2a's degree query had to close.
+**Step 3 is the tenant boundary, and it is narrower than it looks.** Both `source_risk_id` and `target_risk_id` carry real foreign keys to `risks` (§3.2), so an id that exists nowhere is already rejected by the database. This is the opposite of the `controls_eu__risks` situation A2a exploited, where the only FK was on `organization_id` and `projects_risks_id = 999999` was therefore insertable.
+
+What the FK does **not** catch is an id that exists and belongs to someone else, or one that is soft-deleted. The check must be all three conditions:
+
+```sql
+SELECT id FROM risks
+ WHERE id IN (:ids) AND organization_id = :organizationId AND is_deleted = false
+```
+
+Two rows or reject. Drop `organization_id` and org A can write a row into its own org pointing at org B's risk — `organization_id` comes from the token, so the row looks legitimate and the FK is satisfied. Drop `is_deleted = false` and a link can be created to a risk the read query at `riskLink.utils.ts:301` will then hide, leaving an invisible edge nobody can dismiss. Neither clause has a constraint behind it; both are load-bearing.
+
+The check also turns what would otherwise be a raw FK violation — a 500 — into a clean 404 for a genuinely unknown id.
 
 Step 4 runs before step 5 so the two 409s carry different messages. `ON CONFLICT DO NOTHING` is used in preference to catching a unique-violation error code — the store returns rows or it does not, and the controller does not sniff driver errors.
+
+Step 5's message names the dismissed case because that is the only way the picker can reach it: active partners are already excluded (§6.4), dismissed ones deliberately are not. The message carries the whole explanation, so neither the controller nor the client has to look up the existing row's status to say something useful.
 
 `canonicalPair` (from `services/riskLinks/types`) is applied **only** when `relationType === "related_to"`, mirroring the CHECK constraint. Getting this backwards is the single most likely implementation error in B; §8.1 pins it with a test.
 
@@ -263,10 +276,12 @@ Candidates come from `getAllProjectRisks({ filter: "active" })` (`projectRisk.re
 Candidates exclude:
 
 - the subject itself
-- any risk already linked to the subject **with the currently selected relation type** — not merely already linked, since a pair may legitimately hold both a `related_to` and an `inherits_from`
-- for either inheritance choice, any risk holding the reverse `inherits_from`
+- any risk **actively** linked to the subject with the currently selected relation type — not merely already linked, since a pair may legitimately hold both a `related_to` and an `inherits_from`
+- for either inheritance choice, any risk actively holding the reverse `inherits_from`
 
-All three are computed from the link list the panel already fetched. This reduces both 409s from §4.3 to genuine races.
+**Actively** is load-bearing, and the exclusions are deliberately incomplete because of it. The panel fetches `suggested` + `confirmed` only (§6.3), so a *dismissed* link is not in the list these exclusions are computed from. Dismiss a suggestion, then try to link that same risk by hand, and the row still exists in the table: the insert hits `ON CONFLICT DO NOTHING` and returns 409. That is the ordinary flow, not a race — it happens the first time anyone dismisses something and then changes their mind.
+
+Fetching the dismissed list too would let the picker hide those risks, but hiding is the wrong answer: the user would look for a risk they know exists, not find it, and get no explanation. Let the 409 do the explaining instead (§6.6). No second query.
 
 ### 6.5 Empty state
 
@@ -306,7 +321,9 @@ If discovery proves too weak in practice, the cheapest fix is a link count on th
 
 ### 8.1 `controllers/__tests__/riskLinks.ctrl.test.ts` (modified)
 
-Cases for `createRiskLink`: malformed body → 400; self-link → 400; unknown or cross-org risk id → 404; duplicate pair → 409; reverse `inherits_from` → 409; and 201 for each relation type.
+Cases for `createRiskLink`: malformed body → 400; self-link → 400; unknown id → 404; cross-org id → 404; **soft-deleted id → 404**; duplicate pair → 409; reverse `inherits_from` → 409; and 201 for each relation type.
+
+The soft-deleted case is listed separately on purpose. It is the one clause of §4.3's step-3 query with no constraint standing behind it and no other test covering it, so dropping `is_deleted = false` must turn a test red.
 
 The load-bearing assertion is **column placement**: a `related_to` posted as `{ source: 9, target: 4 }` must be stored as `{ 4, 9 }`, while an `inherits_from` posted identically must be stored as `{ 9, 4 }`. That is the entire point of the CHECK exemption in §3.2, and it is the one thing an implementer can silently invert — with no visible symptom until someone reads an inheritance backwards.
 
@@ -314,13 +331,15 @@ The load-bearing assertion is **column placement**: a `related_to` posted as `{ 
 
 One real-database case: organisation A cannot create a link naming organisation B's risk. The controller test's 404 is mocked; this is the tier where the isolation claim is actually tested.
 
+The id must be one that genuinely exists in org B. A fabricated id proves nothing here — the FK on `target_risk_id` (§4.3) would reject it with or without the `organization_id` clause, so the test would pass against a query that has no tenant scoping at all.
+
 ### 8.3 `application/hooks/__tests__/useRiskLinks.test.ts` (new)
 
 Query key shape, and that each of the three mutations invalidates `["riskLinks", riskId]`. Follows `useVendorRiskMutations.test.ts`, which is the closest existing React Query mutation-hook test.
 
 ### 8.4 `LinkRiskForm` tests (new)
 
-Each of the three relation choices produces the exact payload in §6.4 — the client half of the §8.1 assertion. Plus candidate exclusion for the reverse-inheritance case.
+Each of the three relation choices produces the exact payload in §6.4 — the client half of the §8.1 assertion. Plus candidate exclusion for the reverse-inheritance case, and its counterpart: a risk whose only link is `dismissed` stays selectable.
 
 ### 8.5 `LinkedRisksPanel` tests (new)
 
