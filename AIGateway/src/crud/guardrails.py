@@ -150,9 +150,9 @@ async def update_guardrail(org_id: int, rule_id: int, data: dict) -> Optional[di
 
         result = await db.execute(
             text(
-                f"""
+                """
                 UPDATE ai_gateway_guardrails
-                SET {set_sql}
+                SET """ + set_sql + """
                 WHERE organization_id = :org_id AND id = :rule_id
                 RETURNING *
                 """
