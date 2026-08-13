@@ -50,6 +50,9 @@ beforeEach(() => {
   jest.resetAllMocks();
   (sequelize.transaction as jest.Mock).mockResolvedValue({ commit, rollback });
   mockUtils.getIncidentLinksQuery.mockResolvedValue([]);
+  // Registering tier 1 makes this a dependency of every test in this file: the
+  // automock returns undefined, and a provider that throws now aborts the run.
+  mockUtils.getStructuralNeighboursQuery.mockResolvedValue([]);
 });
 
 describe("recomputeRiskLinks", () => {
@@ -162,7 +165,7 @@ describe("recomputeRiskLinks", () => {
     expect(order).toEqual([3, 20, 50]);
   });
 
-  it("writes nothing and deletes nothing when every provider throws", async () => {
+  it("aborts the run and rethrows when a provider throws", async () => {
     mockUtils.getRiskScoringRowsQuery.mockResolvedValue([risk(7, CAT), risk(3, CAT)]);
     mockUtils.getIncidentLinksQuery.mockResolvedValue([link({ id: 100 })]);
     const provider = require("../providers/fieldOverlap");
@@ -170,7 +173,7 @@ describe("recomputeRiskLinks", () => {
       .spyOn(provider.fieldOverlapProvider, "score")
       .mockRejectedValue(new Error("boom"));
 
-    await recomputeRiskLinks(1, 7);
+    await expect(recomputeRiskLinks(1, 7)).rejects.toThrow("boom");
 
     expect(sequelize.transaction).not.toHaveBeenCalled();
     expect(mockUtils.deleteRiskLinksQuery).not.toHaveBeenCalled();
@@ -178,6 +181,26 @@ describe("recomputeRiskLinks", () => {
 
     // Neither clearAllMocks nor resetAllMocks undoes a spy — restore it, or the
     // next test gets a provider that still throws.
+    spy.mockRestore();
+  });
+
+  // Spec §5. Partial knowledge is not knowledge: tier 0 alone would strip every
+  // pair's tier-1 points and prune the suggestions that fell below the threshold.
+  it("aborts even though the other provider succeeded", async () => {
+    mockUtils.getRiskScoringRowsQuery.mockResolvedValue([risk(7, CAT), risk(3, CAT)]);
+    mockUtils.getIncidentLinksQuery.mockResolvedValue([link({ id: 100 })]);
+    const provider = require("../providers/structuralGraph");
+    const spy = jest
+      .spyOn(provider.structuralGraphProvider, "score")
+      .mockRejectedValue(new Error("graph down"));
+
+    // fieldOverlap succeeds on the shared category and would have scored 3.
+    await expect(recomputeRiskLinks(1, 7)).rejects.toThrow("graph down");
+
+    expect(mockUtils.upsertRiskLinkQuery).not.toHaveBeenCalled();
+    expect(mockUtils.deleteRiskLinksQuery).not.toHaveBeenCalled();
+    expect(mockUtils.updateRiskLinkScoreQuery).not.toHaveBeenCalled();
+
     spy.mockRestore();
   });
 
@@ -192,5 +215,20 @@ describe("recomputeRiskLinks", () => {
   it("exports the spec's threshold and cap", () => {
     expect(LINK_SCORE_THRESHOLD).toBe(3);
     expect(MAX_LINKS_PER_RISK).toBe(20);
+  });
+
+  // Spec §6, second layer. Tier 1 issues its own SQL; if that SQL ever loses an
+  // organization filter, the merge must not turn a foreign id into an edge.
+  it("ignores a tier-1 target that is not an active risk in this org", async () => {
+    mockUtils.getRiskScoringRowsQuery.mockResolvedValue([risk(7), risk(3)]);
+    const provider = require("../providers/structuralGraph");
+    const spy = jest
+      .spyOn(provider.structuralGraphProvider, "score")
+      .mockResolvedValue([{ targetRiskId: 999, score: 5, reasons: [] }]);
+
+    await recomputeRiskLinks(1, 7);
+
+    expect(mockUtils.upsertRiskLinkQuery).not.toHaveBeenCalled();
+    spy.mockRestore();
   });
 });

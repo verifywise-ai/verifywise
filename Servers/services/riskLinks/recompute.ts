@@ -8,6 +8,7 @@ import {
   upsertRiskLinkQuery,
 } from "../../utils/riskLink.utils";
 import { fieldOverlapProvider } from "./providers/fieldOverlap";
+import { structuralGraphProvider } from "./providers/structuralGraph";
 import { canonicalPair, LinkCandidate, LinkSignalProvider } from "./types";
 
 /** A pair scoring below this is not worth suggesting. */
@@ -16,8 +17,8 @@ export const LINK_SCORE_THRESHOLD = 3;
 /** How many new suggestions one recompute may create for one risk. */
 export const MAX_LINKS_PER_RISK = 20;
 
-/** A2 appends the structural-graph and embedding providers here. */
-const PROVIDERS: LinkSignalProvider[] = [fieldOverlapProvider];
+/** A2b appends the embedding provider here. */
+const PROVIDERS: LinkSignalProvider[] = [fieldOverlapProvider, structuralGraphProvider];
 
 /**
  * Rebuild the stored edges for one risk.
@@ -26,6 +27,11 @@ const PROVIDERS: LinkSignalProvider[] = [fieldOverlapProvider];
  * endpoint: writes go through ON CONFLICT, and pruning is driven by the score,
  * which is symmetric. Three at once can still deadlock on a triangle — see the
  * retry note on `enqueueRiskLinkRecompute`.
+ *
+ * Rejects if any provider throws. With more than one provider, finishing on a
+ * partial set would strip the missing tier's points from every pair and prune
+ * the suggestions that then fell below the threshold — a transient error would
+ * silently delete real data. Stale edges are better than wrong ones.
  */
 export async function recomputeRiskLinks(
   organizationId: number,
@@ -38,15 +44,19 @@ export async function recomputeRiskLinks(
 
   const candidates = rows.filter((row) => row.id !== riskId);
 
-  // 1. Run every provider. One that throws must not cost us the others.
+  // 1. Run every provider. Any one that throws aborts the run.
   const merged = new Map<number, LinkCandidate>();
-  let anyProviderSucceeded = false;
+  const candidateIds = new Set(candidates.map((row) => row.id));
 
   for (const provider of PROVIDERS) {
     try {
       const results = await provider.score({ organizationId, subject, candidates });
-      anyProviderSucceeded = true;
       for (const candidate of results) {
+        // Tier 1 and up issue their own SQL. `candidates` is every other active
+        // risk in this org, so a target outside it is another org's risk or a
+        // soft-deleted one — never an edge we may write.
+        if (!candidateIds.has(candidate.targetRiskId)) continue;
+
         const existing = merged.get(candidate.targetRiskId);
         if (existing) {
           existing.score += candidate.score;
@@ -60,12 +70,9 @@ export async function recomputeRiskLinks(
         `[riskLinks] provider ${provider.name} failed for risk ${riskId} (org ${organizationId})`,
         error,
       );
+      throw error;
     }
   }
-
-  // Every provider failed: we know nothing, so we must not act on nothing.
-  // Writing would zero real scores; deleting would wipe live suggestions.
-  if (!anyProviderSucceeded) return;
 
   // 2. Keepers: at or above threshold, best first, ties by target id.
   const keepers = [...merged.values()]
