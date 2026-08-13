@@ -1,6 +1,6 @@
 # VerifyWise - Development Guide
 
-> **Last Updated:** 2026-07-03
+> **Last Updated:** 2026-08-13
 
 This document contains cross-cutting rules for the VerifyWise codebase. Directory-scoped guides load automatically when working in each area:
 
@@ -112,7 +112,8 @@ fix(dashboard): resolve chart rendering issue
 
 ### PR Checklist
 
-- [ ] Build passes locally (`cd Servers && npm run build` and `cd Clients && npm run build`)
+- [ ] Build passes locally (`cd Servers && npm run build` and `cd Clients && npm run typecheck && npm run build`)
+      — `typecheck` is not optional: the frontend `build` does not run `tsc`, so type errors pass a green build
 - [ ] Self-review completed
 - [ ] Issue number included
 - [ ] No hardcoded values
@@ -126,8 +127,8 @@ fix(dashboard): resolve chart rendering issue
 ## Testing
 
 - **Minimum coverage:** 80%
-- **Frontend:** `cd Clients && npm run test` (Vitest)
-- **Backend:** `cd Servers && npm run test` (Jest)
+- **Frontend:** `cd Clients && npx vitest run` (Vitest — `npm run test` is `vitest watch` and never exits)
+- **Backend:** `cd Servers && npm run test` (Jest — this is `test:unit`; it *excludes* `tests/integration/`, which must be run separately)
 
 ---
 

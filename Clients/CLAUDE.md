@@ -1,6 +1,6 @@
 # Clients — Frontend Development Guide
 
-> **Last Updated:** 2026-05-05
+> **Last Updated:** 2026-08-13
 
 ---
 
@@ -50,11 +50,14 @@ VITE_IS_MULTI_TENANT=false
 
 ```bash
 npm install && npm run dev       # Start development
-npm run build                    # Build → /dist
-npm run test                     # Vitest
+npm run typecheck                # tsc -b — the ONLY thing that typechecks
+npm run build                    # Build → /dist (esbuild; does NOT typecheck)
+npx vitest run                   # Vitest, single run
 ```
 
-**Always run `npm run build` and verify it succeeds before opening a PR.** Build failures are the most common reason PRs fail CI.
+**Always run `npm run typecheck` and `npm run build` before opening a PR.** Both are required: `build` is `node scripts/build.js`, which strips types with esbuild and never invokes `tsc`, so **type errors survive a green build**. A build that succeeds is not evidence the code typechecks.
+
+**Do not use `npm run test` here** — it is `vitest watch` and never exits. Use `npx vitest run`.
 
 ---
 

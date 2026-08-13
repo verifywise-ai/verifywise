@@ -2212,10 +2212,12 @@ Note also that `npm run test` in `Clients` is `vitest watch`, which never exits.
 - [ ] **Step 6: Commit**
 
 ```bash
-git add Clients/src/presentation/components/AddNewRiskForm/index.tsx Clients/src/presentation/pages/RiskManagement/index.tsx && git rm -r --cached --ignore-unmatch -q Clients/src/application/tools/relatedRisks.ts Clients/src/application/tools/__tests__/relatedRisks.test.ts Clients/src/presentation/components/RelatedRisksSummary && git commit -m "feat(risk-links): mount the linked risks tab and drop the client-side heuristic"
+git add Clients/src/presentation/components/AddNewRiskForm/index.tsx Clients/src/presentation/pages/RiskManagement/index.tsx && git commit -m "feat(risk-links): mount the linked risks tab and drop the client-side heuristic"
 ```
 
-Stage explicit paths. **Do not use `git add -A Clients/src`**: this working tree carries untracked `.megasaver/` tooling directories under `Clients/src/` that are not git-ignored, and `-A` sweeps them into the commit. Run `git show --stat HEAD` after committing and confirm no `.megasaver` path appears.
+The four deleted files need no staging here — Step 3's `git rm` already removed them from both the worktree and the index.
+
+Stage explicit paths. **Do not use `git add -A Clients/src`**: this working tree carries untracked `.megasaver/` tooling directories under `Clients/src/` that are not git-ignored, and `-A` sweeps them into the commit. Run `git show --stat HEAD` after committing and confirm no `.megasaver` path appears. Then check the commit actually recorded all four deletions: `git show --stat HEAD | grep -c "relatedRisks\|RelatedRisksSummary"` must print `4`.
 
 - [ ] **Step 7: Final verification of the whole feature**
 

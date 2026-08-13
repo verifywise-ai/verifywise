@@ -381,8 +381,8 @@ No migration. No model change. No change to `services/riskLinks/`.
 
 ## 10. Done when
 
-- `cd Servers && npm run build` clean; `npm test` green.
+- `cd Servers && npm run build` clean; `npm test` green. That script is `test:unit` and *excludes* `tests/integration/`, so §7's isolation test is not in its count — run and report that tier separately.
 - `cd Servers && npm run generate:swagger && npm run generate:endpoints && npm run check:api-drift` — agreeing on the new count, pinned in the plan.
-- `cd Clients && npm run build` clean; `npm run test` green.
+- `cd Clients && npm run typecheck && npm run build` clean; `npx vitest run` green. `typecheck` is required separately — `build` never invokes tsc — and `npm run test` is `vitest watch`, which never exits.
 - The four files in §5.3 are gone and nothing imports them.
 - `git grep -n "findRelatedRisks\|RelatedRisksSummary"` returns nothing.
