@@ -49,7 +49,10 @@ def _decrypt_api_key(encrypted_text: str) -> str:
     key = ENCRYPTION_KEY.encode("ascii").ljust(32, b"0")[:32]
 
     if len(parts) == 2:
-        # Legacy AES-256-CBC format
+        # Legacy AES-256-CBC format. Kept only to decrypt data encrypted before the
+        # GCM migration; all new data uses AES-256-GCM. This branch intentionally
+        # uses CBC because the legacy ciphertext has no authenticated alternative.
+        # nosemgrep: python.cryptography.security.mode-without-authentication.crypto-mode-without-authentication
         iv_hex, data_hex = parts
         iv = bytes.fromhex(iv_hex)
         ct = bytes.fromhex(data_hex)
