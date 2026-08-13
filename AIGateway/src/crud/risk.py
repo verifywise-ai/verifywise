@@ -69,23 +69,17 @@ async def create_suggestion(
     suggested_mitigation: Optional[str] = None,
 ) -> dict:
     evidence_json = json.dumps(evidence)
-    # Build a PostgreSQL array literal: ARRAY['tag1','tag2']
-    tags_literal = (
-        "ARRAY[" + ",".join(f"'{t}'" for t in compliance_tags) + "]"
-        if compliance_tags
-        else "ARRAY[]::text[]"
-    )
 
     async with get_db() as db:
         result = await db.execute(
             text(
-                f"""
+                """
                 INSERT INTO ai_gateway_risk_suggestions
                     (organization_id, condition_id, title, description, severity,
                      evidence, compliance_tags, suggested_mitigation, status)
                 VALUES
                     (:org_id, :condition_id, :title, :description, :severity,
-                     :evidence::jsonb, {tags_literal}, :suggested_mitigation, 'pending')
+                     :evidence::jsonb, CAST(:compliance_tags AS text[]), :suggested_mitigation, 'pending')
                 RETURNING *
                 """
             ),
@@ -96,6 +90,7 @@ async def create_suggestion(
                 "description": description,
                 "severity": severity,
                 "evidence": evidence_json,
+                "compliance_tags": compliance_tags,
                 "suggested_mitigation": suggested_mitigation,
             },
         )
@@ -111,14 +106,16 @@ async def get_suggestions(org_id: int, status: Optional[str] = None) -> list[dic
     async with get_db() as db:
         result = await db.execute(
             text(
-                f"""
+                """
                 SELECT
                     s.*,
                     u.name AS reviewed_by_name
                 FROM ai_gateway_risk_suggestions s
                 LEFT JOIN users u ON u.id = s.reviewed_by
                 WHERE s.organization_id = :org_id
-                {status_clause}
+                """
+                + status_clause
+                + """
                 ORDER BY s.created_at DESC
                 """
             ),
