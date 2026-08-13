@@ -13,6 +13,7 @@ export {
   createTestVendor,
   createTestAssessment,
   createTestControlEU,
+  attachRiskToEuControl,
   createTestProjectFramework,
   createTestEvidenceHub,
   createTestAuditLedger,

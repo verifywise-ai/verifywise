@@ -198,6 +198,25 @@ export async function createTestControlEU(
   return (result as any[])[0].id;
 }
 
+/**
+ * Attach a risk to an EU AI Act control instance.
+ *
+ * `controls_eu__risks` has no foreign key on `control_id`, so `controlId` need
+ * not exist in `controls_eu`. That is exactly what lets a test seed the
+ * cross-org element collision the schema otherwise makes unreachable.
+ */
+export async function attachRiskToEuControl(
+  orgId: number,
+  riskId: number,
+  controlId: number,
+): Promise<void> {
+  await sequelize.query(
+    `INSERT INTO controls_eu__risks (organization_id, control_id, projects_risks_id)
+     VALUES (:orgId, :controlId, :riskId)`,
+    { replacements: { orgId, controlId, riskId } },
+  );
+}
+
 export async function createTestProjectFramework(
   orgId: number,
   projectId: number,
