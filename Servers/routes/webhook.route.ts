@@ -12,10 +12,16 @@
 
 import express from "express";
 import { githubWebhookController } from "../controllers/webhook.ctrl";
+import { webhookLimiter } from "../middleware/rateLimit.middleware";
 
 const router = express.Router();
 
-// GitHub webhook — raw body needed for HMAC signature verification
-router.post("/github", express.raw({ type: "application/json" }), githubWebhookController);
+// GitHub webhook — rate-limited, then raw body needed for HMAC signature verification
+router.post(
+  "/github",
+  webhookLimiter,
+  express.raw({ type: "application/json" }),
+  githubWebhookController,
+);
 
 export default router;

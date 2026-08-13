@@ -103,6 +103,11 @@ const RATE_LIMIT_CONFIGS: Record<string, RateLimitConfig> = {
       return tokenId !== undefined ? `mrm-token:${tokenId}` : ipKeyGenerator(req.ip ?? "");
     },
   },
+  webhook: {
+    windowMinutes: 1,
+    maxRequests: isNonProduction ? 100000 : 100,
+    message: "Too many webhook requests from this IP, please slow down and retry",
+  },
 };
 
 /**
@@ -175,3 +180,10 @@ export const aiDetectionScanLimiter = createRateLimiter(RATE_LIMIT_CONFIGS.aiDet
  * but still bounded so a runaway pusher cannot flood the system.
  */
 export const mrmIngestionLimiter = createRateLimiter(RATE_LIMIT_CONFIGS.mrmIngestion);
+
+/**
+ * Rate limiter for public webhook endpoints.
+ * Generous because webhooks are legitimate machine-to-machine pushes, but still
+ * bounded so a misconfigured or malicious sender cannot flood the system.
+ */
+export const webhookLimiter = createRateLimiter(RATE_LIMIT_CONFIGS.webhook);
