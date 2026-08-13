@@ -217,7 +217,15 @@ So the cross-tenant edge cannot arise from two orgs legitimately touching one el
 - **Nothing in the schema enforces what the ids imply.** `organization_id` is **nullable** on the eight `*__risks` tables, and there is **no foreign key** from `control_id` (or any sibling) to its element table. A row in org B naming org A's element id is schema-legal. A bad import, demo seeding, or a bug elsewhere produces one, and an unfiltered query turns it into a cross-tenant edge that the A1 endpoints then serve happily, since they filter `risk_links` by `organization_id` and the row would carry the reader's own org id. The filter is what makes the query correct rather than making it depend on ids happening not to collide. (A NULL `organization_id` fails `= :organizationId` and so drops out — the safe direction.)
 - **Degree scoping is semantics, not only safety.** Rarity must be a property of *this org's* graph. A control that forty of your own risks touch is not rare to you; a large neighbour org's volume must not depress your scores. An unscoped `degrees` CTE would get this wrong even with no leak at all.
 
-Both are covered by tests in §7, not only by review. Because the collision is not naturally reachable, §7.4 seeds it deliberately — which the missing foreign key makes possible.
+There is a second layer, and A2a adds it: **`recompute.ts` filters merged candidates to the id set it already holds.** Tier 0 reads `ctx.candidates`, which `getRiskScoringRowsQuery` scopes to the org, so tier 0 cannot emit a foreign target. Tier 1 issues its own SQL and merges by target id with nothing checking that the id belongs to the org — so a single missing `WHERE` becomes a written cross-tenant row. One `if` at the merge closes it:
+
+```typescript
+const candidateIds = new Set(candidates.map((row) => row.id));
+// …inside the merge loop
+if (!candidateIds.has(candidate.targetRiskId)) continue;
+```
+
+This is exact, not merely defensive: `candidates` is *every other active risk in the org*, so any legitimate tier-1 target is already in it, and anything else is either another org's risk or a soft-deleted one. Both are covered by tests in §7, not only by review. Because the collision is not naturally reachable, §7.4 seeds it deliberately — which the missing foreign key makes possible.
 
 ---
 
@@ -233,8 +241,10 @@ Both are covered by tests in §7, not only by review. Because the collision is n
 - One element of degree 40 → 0.37; well below the threshold, still returned (the threshold belongs to `recompute`, not the provider).
 - Symmetry: the same inputs read from either risk's side produce the same total.
 - Empty result → `[]`, not a throw.
-- `degree` arriving as the string `"2"` (see §8) is coerced before the arithmetic — a regression guard for `2 / log2(1 + "2")`.
 - `detail` for a mixed set is ordered by count descending, then label, and pluralizes.
+- `custom_l2` and `custom_l3` share the label "custom framework item", so a pair sharing one of each reads `2 custom framework items` — the breakdown groups by label, not by prefix.
+
+The string-`degree` regression guard lives in §7.3, not here: coercion happens once, in the utils function, and a provider test that mocks that function cannot exercise it. The provider takes `number` and means it.
 
 ### 7.2 `services/riskLinks/tests/recompute.spec.ts` (modified)
 
@@ -244,14 +254,18 @@ Both are covered by tests in §7, not only by review. Because the collision is n
 
 ### 7.3 `utils/__tests__/riskLink.utils.test.ts` (modified)
 
-Assert the emitted SQL carries `organization_id` on every `UNION` arm, `is_deleted = false` on the `risks` join, and a `GROUP BY` for degrees that sees only the filtered set — the same shape of assertion A1 uses for its soft-delete filters.
+Assert the emitted SQL carries `organization_id` on every `UNION` arm *and* on the `risks` join — count the occurrences and require exactly **11**, so dropping any single arm's filter goes red — plus `is_deleted = false` on the `risks` join and a `degrees` CTE that reads `FROM active`. Same shape of assertion A1 uses for its soft-delete filters.
+
+Also the coercion, which is only reachable here: a row whose `degree` is the string `"3"` comes back as the number `3`. Without it `Math.log2(1 + "3")` is `Math.log2("13")`, and the score is wrong with no type error anywhere (§8).
 
 ### 7.4 `tests/integration/tenant-isolation/riskLinks.isolation.test.ts` (modified)
 
 Against a real database, two new cases. Both seed the element collision **deliberately** — per §6 it is not naturally reachable, and the absent foreign key on `control_id` is what lets a test write it.
 
-- **Cross-tenant edge.** Two organizations each own a risk, and both risks get a `controls_eu__risks` row naming the *same* `control_id`, each with its own `organization_id`. Recompute in the first org. No edge to the other org's risk, and `getRiskLinksForRiskQuery` returns nothing cross-tenant. Goes red if the `UNION` arm filter or the `risks`-join filter is dropped.
-- **Degree scoping.** In the owner org, one live risk shares the element with the subject; additionally seed (a) several risks in a *second* org on the same `control_id` and (b) one *soft-deleted* risk in the owner org on the same `control_id`. Assert the resulting score matches the degree the owner org's own live rows predict — degree 2, so 1.26. This is the only test that catches a `degrees` CTE computed over an unscoped source or over `element_links` instead of `active`; the cross-tenant case above stays green under both of those mutations.
+Both use **three** shared controls rather than one, because one element of degree 2 scores 1.26 and never crosses the threshold of 3 — a leak would be invisible in `risk_links`. Three of degree 2 score 3.79 and do cross it, so the assertion is "a row exists / does not exist" against real stored data.
+
+- **Cross-tenant edge.** Owner org and attacker org each own one risk, and both risks get `controls_eu__risks` rows naming the *same three* `control_id`s, each row with its own `organization_id`. No shared category, so tier 0 contributes nothing. Recompute in the owner org: `risk_links` stays empty, because within the owner org each control has degree 1 and the pair join needs two distinct risks. Drop either org filter and each control reaches degree 2, tier 1 scores 3.79, and an edge to the attacker's risk id is written — red.
+- **Degree scoping.** Subject and one partner risk in the owner org, both on the *same three* controls. Also seed (a) five risks in a second org on those controls and (b) one **soft-deleted** owner-org risk on them. Recompute the subject and assert the stored `score` is **3.79** — three elements at the owner org's own live degree of 2. Three distinct mutations each turn this red and leave the cross-tenant case above green: degrees over an unscoped source gives degree 7 → 2.00 → below threshold → no row at all; degrees over `element_links` instead of `active` gives degree 3 → 3.00 → a row with the wrong score; both together give degree 8 → 1.89 → no row.
 
 ---
 
