@@ -25,6 +25,19 @@ export interface RiskScoringRow {
   projects: number[];
 }
 
+/**
+ * One (neighbour, shared element) row from the tier-1 graph query.
+ *
+ * `element_key` is namespaced by table, e.g. "eu_control:412". `degree` is how
+ * many active risks in this org are attached to that element — always >= 2,
+ * since the row only exists because two distinct risks share it.
+ */
+export interface StructuralNeighbourRow {
+  target_risk_id: number;
+  element_key: string;
+  degree: number;
+}
+
 export interface RecomputeContext {
   organizationId: number;
   subject: RiskScoringRow;

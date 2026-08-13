@@ -5,6 +5,7 @@ import {
   RiskLinkRow,
   RiskLinkStatus,
   RiskScoringRow,
+  StructuralNeighbourRow,
 } from "../services/riskLinks/types";
 
 /**
@@ -88,6 +89,76 @@ export async function getActiveRiskIdsQuery(organizationId: number): Promise<num
     { replacements: { organizationId }, type: QueryTypes.SELECT },
   );
   return (rows as any[]).map((row) => row.id);
+}
+
+/**
+ * Every active risk in the org that shares a framework element with this one,
+ * one row per (neighbour, shared element), with that element's degree.
+ *
+ * Eight of the ten join tables call the risk column `projects_risks_id`. That is
+ * a legacy misnomer: it holds a risk id and joins straight to `risks.id` — there
+ * is no hop through `projects_risks`.
+ *
+ * The org filter appears on every arm AND on the risks join. Element ids are not
+ * global — each of the ten element tables is org-scoped — but `organization_id`
+ * is nullable on these join tables and nothing declares a foreign key to the
+ * element table, so a row naming another org's element is schema-legal. The
+ * filter is what makes this correct instead of dependent on ids not colliding.
+ */
+export async function getStructuralNeighboursQuery(
+  organizationId: number,
+  riskId: number,
+): Promise<StructuralNeighbourRow[]> {
+  const rows = await sequelize.query(
+    `WITH element_links AS (
+       SELECT projects_risks_id AS risk_id, 'iso42001_subclause:'     || subclause_id                 AS element_key FROM subclauses_iso__risks            WHERE organization_id = :organizationId
+       UNION ALL
+       SELECT projects_risks_id,            'iso27001_subclause:'     || subclause_id                                FROM subclauses_iso27001__risks       WHERE organization_id = :organizationId
+       UNION ALL
+       SELECT projects_risks_id,            'iso42001_annexcategory:' || annexcategory_id                            FROM annexcategories_iso__risks       WHERE organization_id = :organizationId
+       UNION ALL
+       SELECT projects_risks_id,            'iso27001_annexcontrol:'  || annexcontrol_id                             FROM annexcontrols_iso27001__risks    WHERE organization_id = :organizationId
+       UNION ALL
+       SELECT projects_risks_id,            'eu_control:'             || control_id                                  FROM controls_eu__risks               WHERE organization_id = :organizationId
+       UNION ALL
+       SELECT projects_risks_id,            'eu_subcontrol:'          || subcontrol_id                               FROM subcontrols_eu__risks            WHERE organization_id = :organizationId
+       UNION ALL
+       SELECT projects_risks_id,            'eu_answer:'              || answer_id                                   FROM answers_eu__risks                WHERE organization_id = :organizationId
+       UNION ALL
+       SELECT projects_risks_id,            'nist_subcategory:'       || nist_ai_rmf_subcategory_id                  FROM nist_ai_rmf_subcategories__risks WHERE organization_id = :organizationId
+       UNION ALL
+       SELECT risk_id,                      'custom_l2:'              || level2_impl_id                              FROM custom_framework_level2_risks    WHERE organization_id = :organizationId
+       UNION ALL
+       SELECT risk_id,                      'custom_l3:'              || level3_impl_id                              FROM custom_framework_level3_risks    WHERE organization_id = :organizationId
+     ),
+     active AS (
+       SELECT DISTINCT el.risk_id, el.element_key
+       FROM element_links el
+       JOIN risks r
+         ON r.id = el.risk_id
+        AND r.organization_id = :organizationId
+        AND r.is_deleted = false
+     ),
+     degrees AS (
+       SELECT element_key, COUNT(*) AS degree
+       FROM active
+       GROUP BY element_key
+     )
+     SELECT a2.risk_id  AS target_risk_id,
+            a1.element_key,
+            d.degree
+     FROM active a1
+     JOIN active a2 ON a2.element_key = a1.element_key AND a2.risk_id <> a1.risk_id
+     JOIN degrees d ON d.element_key = a1.element_key
+     WHERE a1.risk_id = :riskId`,
+    { replacements: { organizationId, riskId }, type: QueryTypes.SELECT },
+  );
+
+  return (rows as any[]).map((row) => ({
+    target_risk_id: row.target_risk_id,
+    element_key: row.element_key,
+    degree: toNumber(row.degree),
+  }));
 }
 
 /** Every stored edge touching this risk, in either direction, any status. */

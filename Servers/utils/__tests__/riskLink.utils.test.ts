@@ -9,6 +9,7 @@ import {
   getRiskLinksForRiskQuery,
   getRiskScoringRowsQuery,
   getIncidentLinksQuery,
+  getStructuralNeighboursQuery,
 } from "../riskLink.utils";
 
 const mockQuery = sequelize.query as jest.Mock;
@@ -71,5 +72,34 @@ describe("riskLink.utils", () => {
     const [link] = await getRiskLinksForRiskQuery(7, 42, ["suggested"]);
     expect(link.score).toBe(5);
     expect(link.reasons).toEqual([{ signal: "shared_category", weight: 3 }]);
+  });
+
+  it("filters by organization on every UNION arm and on the risks join", async () => {
+    await getStructuralNeighboursQuery(7, 42);
+    const [sql, options] = mockQuery.mock.calls[0];
+    // Ten UNION arms plus the risks join. Drop any single one and this goes red.
+    expect(sql.match(/organization_id = :organizationId/g)).toHaveLength(11);
+    expect(sql).toContain("r.is_deleted = false");
+    expect(options.replacements).toEqual({ organizationId: 7, riskId: 42 });
+    expect(options.type).toBe(QueryTypes.SELECT);
+  });
+
+  it("computes degrees from the filtered set, not from the raw links", async () => {
+    await getStructuralNeighboursQuery(7, 42);
+    const sql: string = mockQuery.mock.calls[0][0];
+    expect(sql).toContain("COUNT(*) AS degree");
+    // Rarity is a property of this org's own graph (spec §6). Counting over
+    // element_links instead would include soft-deleted risks.
+    expect(sql.slice(sql.indexOf("degrees AS"))).toContain("FROM active");
+  });
+
+  it("coerces the bigint degree that pg hands back as a string", async () => {
+    mockQuery.mockResolvedValue([
+      { target_risk_id: 3, element_key: "eu_control:412", degree: "3" },
+    ]);
+    const [row] = await getStructuralNeighboursQuery(7, 42);
+    // Math.log2(1 + "3") is Math.log2("13") — wrong, and no type error anywhere.
+    expect(row.degree).toBe(3);
+    expect(typeof row.degree).toBe("number");
   });
 });
