@@ -8198,6 +8198,17 @@ export const risklinksEndpoints: Endpoint[] = [
     tag: "RiskLinks",
   },
   {
+    method: 'POST',
+    path: '/riskLinks',
+    summary: "Create Risk Link",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "RiskLinks",
+  },
+  {
     method: 'GET',
     path: '/riskLinks/{riskId}',
     summary: "Get Risk Links",

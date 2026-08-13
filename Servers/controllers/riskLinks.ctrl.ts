@@ -3,13 +3,21 @@ import { STATUS_CODE } from "../utils/statusCode.utils";
 import { logFailure, logProcessing, logSuccess } from "../utils/logger/logHelper";
 import { enqueueRiskLinkRecompute } from "../services/automations/automationProducer";
 import {
+  createUserRiskLinkQuery,
   getActiveRiskIdsQuery,
+  getLiveRiskIdsQuery,
   getRiskLinkByIdQuery,
   getRiskLinksForRiskQuery,
+  riskLinkPairExistsQuery,
   RiskLinkWithRelated,
   updateRiskLinkStatusQuery,
 } from "../utils/riskLink.utils";
-import { RISK_LINK_STATUSES, RiskLinkStatus } from "../services/riskLinks/types";
+import {
+  canonicalPair,
+  RISK_LINK_STATUSES,
+  RiskLinkRelationType,
+  RiskLinkStatus,
+} from "../services/riskLinks/types";
 
 const FILE_NAME = "riskLinks.ctrl.ts";
 
@@ -29,6 +37,11 @@ const ALLOWED_TRANSITIONS: Record<RiskLinkStatus, RiskLinkStatus[]> = {
 
 const isRiskLinkStatus = (value: unknown): value is RiskLinkStatus =>
   typeof value === "string" && (RISK_LINK_STATUSES as string[]).includes(value);
+
+const RELATION_TYPES: RiskLinkRelationType[] = ["related_to", "inherits_from"];
+
+const isRelationType = (value: unknown): value is RiskLinkRelationType =>
+  typeof value === "string" && (RELATION_TYPES as string[]).includes(value);
 
 /**
  * Rewrite a stored edge from the caller's point of view. The store is canonical
@@ -155,6 +168,104 @@ export async function updateRiskLinkStatus(req: Request, res: Response): Promise
       eventType: "Update",
       description: "failed to update risk link status",
       functionName: "updateRiskLinkStatus",
+      fileName: FILE_NAME,
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+  }
+}
+
+/**
+ * A human asserting a link the engine did not find. For `inherits_from`,
+ * `sourceRiskId` is the risk that inherits and `targetRiskId` is the risk
+ * inherited from — matching how `toResponse` reads direction back out.
+ */
+export async function createRiskLink(req: Request, res: Response): Promise<any> {
+  logProcessing({
+    description: "starting createRiskLink",
+    functionName: "createRiskLink",
+    fileName: FILE_NAME,
+    userId: req.userId!,
+    organizationId: req.organizationId!,
+  });
+
+  try {
+    const sourceRiskId = parseInt(String(req.body?.sourceRiskId), 10);
+    const targetRiskId = parseInt(String(req.body?.targetRiskId), 10);
+    const relationType = req.body?.relationType;
+
+    if (isNaN(sourceRiskId) || isNaN(targetRiskId) || !isRelationType(relationType)) {
+      return res.status(400).json(STATUS_CODE[400]("Invalid request"));
+    }
+    if (sourceRiskId === targetRiskId) {
+      return res.status(400).json(STATUS_CODE[400]("A risk cannot link to itself"));
+    }
+
+    const live = await getLiveRiskIdsQuery([sourceRiskId, targetRiskId], req.organizationId!);
+    if (live.length !== 2) {
+      return res.status(404).json(STATUS_CODE[404]("Risk not found"));
+    }
+
+    // ponytail: application-level cycle check. Two admins asserting opposite
+    // inheritance in the same instant both pass here and both rows land. Closing
+    // it needs a database constraint, i.e. another migration; the result is
+    // displayable rather than corrupting and either row can be dismissed.
+    if (relationType === "inherits_from") {
+      const reverseExists = await riskLinkPairExistsQuery(
+        req.organizationId!,
+        targetRiskId,
+        sourceRiskId,
+        "inherits_from",
+      );
+      if (reverseExists) {
+        return res
+          .status(409)
+          .json(STATUS_CODE[409]("These risks would inherit from each other"));
+      }
+    }
+
+    // The risk_links_canonical CHECK exempts inherits_from: direction is carried
+    // by which column an id sits in, so only related_to is reordered.
+    const [storedSource, storedTarget] =
+      relationType === "related_to"
+        ? canonicalPair(sourceRiskId, targetRiskId)
+        : [sourceRiskId, targetRiskId];
+
+    const id = await createUserRiskLinkQuery({
+      organizationId: req.organizationId!,
+      sourceRiskId: storedSource,
+      targetRiskId: storedTarget,
+      relationType,
+      userId: req.userId!,
+    });
+
+    if (id === null) {
+      return res
+        .status(409)
+        .json(
+          STATUS_CODE[409](
+            'These risks are already linked. If the link was dismissed, use "Show dismissed" to restore it.',
+          ),
+        );
+    }
+
+    logSuccess({
+      eventType: "Create",
+      description: `linked risk ${storedSource} to ${storedTarget} as ${relationType}`,
+      functionName: "createRiskLink",
+      fileName: FILE_NAME,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+
+    return res.status(201).json(STATUS_CODE[201]({ id }));
+  } catch (error) {
+    logFailure({
+      eventType: "Create",
+      description: "failed to create risk link",
+      functionName: "createRiskLink",
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,

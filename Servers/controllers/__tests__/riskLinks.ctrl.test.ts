@@ -10,16 +10,23 @@ jest.mock("../../utils/logger/logHelper", () => ({
 jest.mock("../../utils/statusCode.utils", () => ({
   STATUS_CODE: {
     200: (data: any) => ({ message: "OK", data }),
+    201: (data: any) => ({ message: "Created", data }),
     202: (data: any) => ({ message: "Accepted", data }),
     400: (data: any) => ({ message: "Bad request", data }),
     404: (data: any) => ({ message: "Not found", data }),
+    409: (data: any) => ({ message: "Conflict", data }),
     500: (error: any) => ({ message: "Internal server error", error }),
   },
 }));
 
 import * as utils from "../../utils/riskLink.utils";
 import { enqueueRiskLinkRecompute } from "../../services/automations/automationProducer";
-import { getRiskLinks, updateRiskLinkStatus, recomputeAllRiskLinks } from "../riskLinks.ctrl";
+import {
+  getRiskLinks,
+  updateRiskLinkStatus,
+  recomputeAllRiskLinks,
+  createRiskLink,
+} from "../riskLinks.ctrl";
 
 const mockUtils = utils as jest.Mocked<typeof utils>;
 
@@ -174,5 +181,148 @@ describe("recomputeAllRiskLinks", () => {
     expect(enqueueRiskLinkRecompute).toHaveBeenCalledWith(7, 42);
     expect(r.status).toHaveBeenCalledWith(202);
     expect(r.json).toHaveBeenCalledWith(expect.objectContaining({ data: { enqueued: 3 } }));
+  });
+});
+
+describe("createRiskLink", () => {
+  const body = (overrides: any = {}) => ({
+    sourceRiskId: 4,
+    targetRiskId: 9,
+    relationType: "related_to",
+    ...overrides,
+  });
+
+  it("rejects a malformed body with 400", async () => {
+    const r = res();
+    await createRiskLink(req({ body: { sourceRiskId: "abc", targetRiskId: 9 } }) as any, r as any);
+    expect(r.status).toHaveBeenCalledWith(400);
+    expect(r.json).toHaveBeenCalledWith(expect.objectContaining({ data: "Invalid request" }));
+    expect(mockUtils.createUserRiskLinkQuery).not.toHaveBeenCalled();
+  });
+
+  it("rejects an unknown relationType with 400", async () => {
+    const r = res();
+    await createRiskLink(req({ body: body({ relationType: "banana" }) }) as any, r as any);
+    expect(r.status).toHaveBeenCalledWith(400);
+    expect(mockUtils.getLiveRiskIdsQuery).not.toHaveBeenCalled();
+  });
+
+  it("rejects a self-link with 400", async () => {
+    const r = res();
+    await createRiskLink(req({ body: body({ targetRiskId: 4 }) }) as any, r as any);
+    expect(r.status).toHaveBeenCalledWith(400);
+    expect(r.json).toHaveBeenCalledWith(
+      expect.objectContaining({ data: "A risk cannot link to itself" }),
+    );
+    expect(mockUtils.getLiveRiskIdsQuery).not.toHaveBeenCalled();
+  });
+
+  it("checks both ids against the caller's org in one query", async () => {
+    mockUtils.getLiveRiskIdsQuery.mockResolvedValue([4, 9]);
+    mockUtils.createUserRiskLinkQuery.mockResolvedValue(77);
+    await createRiskLink(req({ body: body() }) as any, res() as any);
+    expect(mockUtils.getLiveRiskIdsQuery).toHaveBeenCalledWith([4, 9], 7);
+  });
+
+  // Unknown, cross-org and soft-deleted ids are one code path: the store returns
+  // fewer than two rows. They are listed separately because the SQL clause behind
+  // each differs, and Task 2 pins them against a real database.
+  it.each([
+    ["an unknown id", [4]],
+    ["a cross-org id", [4]],
+    ["a soft-deleted id", [4]],
+  ])("404s on %s", async (_label, live) => {
+    mockUtils.getLiveRiskIdsQuery.mockResolvedValue(live as number[]);
+    const r = res();
+    await createRiskLink(req({ body: body() }) as any, r as any);
+    expect(r.status).toHaveBeenCalledWith(404);
+    expect(r.json).toHaveBeenCalledWith(expect.objectContaining({ data: "Risk not found" }));
+    expect(mockUtils.createUserRiskLinkQuery).not.toHaveBeenCalled();
+  });
+
+  it("409s when the reverse inherits_from already exists", async () => {
+    mockUtils.getLiveRiskIdsQuery.mockResolvedValue([4, 9]);
+    mockUtils.riskLinkPairExistsQuery.mockResolvedValue(true);
+    const r = res();
+    await createRiskLink(
+      req({ body: body({ relationType: "inherits_from" }) }) as any,
+      r as any,
+    );
+    // reverse of {source: 4, target: 9} is {source: 9, target: 4}
+    expect(mockUtils.riskLinkPairExistsQuery).toHaveBeenCalledWith(7, 9, 4, "inherits_from");
+    expect(r.status).toHaveBeenCalledWith(409);
+    expect(r.json).toHaveBeenCalledWith(
+      expect.objectContaining({ data: "These risks would inherit from each other" }),
+    );
+    expect(mockUtils.createUserRiskLinkQuery).not.toHaveBeenCalled();
+  });
+
+  it("does not look for a reverse row on related_to", async () => {
+    mockUtils.getLiveRiskIdsQuery.mockResolvedValue([4, 9]);
+    mockUtils.createUserRiskLinkQuery.mockResolvedValue(77);
+    await createRiskLink(req({ body: body() }) as any, res() as any);
+    expect(mockUtils.riskLinkPairExistsQuery).not.toHaveBeenCalled();
+  });
+
+  it("409s with the dismissed hint when the pair already exists", async () => {
+    mockUtils.getLiveRiskIdsQuery.mockResolvedValue([4, 9]);
+    mockUtils.createUserRiskLinkQuery.mockResolvedValue(null);
+    const r = res();
+    await createRiskLink(req({ body: body() }) as any, r as any);
+    expect(r.status).toHaveBeenCalledWith(409);
+    expect(r.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data:
+          'These risks are already linked. If the link was dismissed, use "Show dismissed" to restore it.',
+      }),
+    );
+  });
+
+  // The load-bearing assertion. Identical input, two relation types, two
+  // different column placements. Inverting this has no visible symptom until
+  // someone reads an inheritance backwards.
+  it("canonicalises related_to to smaller-id-first", async () => {
+    mockUtils.getLiveRiskIdsQuery.mockResolvedValue([9, 4]);
+    mockUtils.createUserRiskLinkQuery.mockResolvedValue(77);
+    const r = res();
+    await createRiskLink(
+      req({ body: { sourceRiskId: 9, targetRiskId: 4, relationType: "related_to" } }) as any,
+      r as any,
+    );
+    expect(mockUtils.createUserRiskLinkQuery).toHaveBeenCalledWith({
+      organizationId: 7,
+      sourceRiskId: 4,
+      targetRiskId: 9,
+      relationType: "related_to",
+      userId: 5,
+    });
+    expect(r.status).toHaveBeenCalledWith(201);
+    expect(r.json).toHaveBeenCalledWith(expect.objectContaining({ data: { id: 77 } }));
+  });
+
+  it("leaves inherits_from in the order the caller sent", async () => {
+    mockUtils.getLiveRiskIdsQuery.mockResolvedValue([9, 4]);
+    mockUtils.riskLinkPairExistsQuery.mockResolvedValue(false);
+    mockUtils.createUserRiskLinkQuery.mockResolvedValue(78);
+    const r = res();
+    await createRiskLink(
+      req({ body: { sourceRiskId: 9, targetRiskId: 4, relationType: "inherits_from" } }) as any,
+      r as any,
+    );
+    expect(mockUtils.createUserRiskLinkQuery).toHaveBeenCalledWith({
+      organizationId: 7,
+      sourceRiskId: 9,
+      targetRiskId: 4,
+      relationType: "inherits_from",
+      userId: 5,
+    });
+    expect(r.status).toHaveBeenCalledWith(201);
+  });
+
+  it("500s when the store throws", async () => {
+    mockUtils.getLiveRiskIdsQuery.mockRejectedValue(new Error("boom"));
+    const r = res();
+    await createRiskLink(req({ body: body() }) as any, r as any);
+    expect(r.status).toHaveBeenCalledWith(500);
   });
 });

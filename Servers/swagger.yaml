@@ -10077,6 +10077,20 @@ paths:
         -
           bearerAuth: []
       description: 'Requires role: Admin'
+  /riskLinks:
+    post:
+      summary: 'Create Risk Link'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - RiskLinks
+      operationId: createRiskLink
+      security:
+        -
+          bearerAuth: []
   '/riskLinks/{riskId}':
     get:
       summary: 'Get Risk Links'

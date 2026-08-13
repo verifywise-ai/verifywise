@@ -4,6 +4,7 @@ const router = express.Router();
 import authenticateJWT from "../middleware/auth.middleware";
 import authorize from "../middleware/accessControl.middleware";
 import {
+  createRiskLink,
   getRiskLinks,
   recomputeAllRiskLinks,
   updateRiskLinkStatus,
@@ -13,6 +14,7 @@ import {
 // so the backfill route is the obvious one in this file.
 router.post("/recompute", authenticateJWT, authorize(["Admin"]), recomputeAllRiskLinks);
 
+router.post("/", authenticateJWT, createRiskLink);
 router.get("/:riskId", authenticateJWT, getRiskLinks);
 router.patch("/:id", authenticateJWT, updateRiskLinkStatus);
 

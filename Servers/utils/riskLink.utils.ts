@@ -2,6 +2,7 @@ import { QueryTypes, Transaction } from "sequelize";
 import { sequelize } from "../database/db";
 import {
   LinkSignal,
+  RiskLinkRelationType,
   RiskLinkRow,
   RiskLinkStatus,
   RiskScoringRow,
@@ -223,6 +224,91 @@ export async function upsertRiskLinkQuery(
       transaction,
     },
   );
+}
+
+/**
+ * Which of these ids are live risks in this org.
+ *
+ * Both risk id columns on `risk_links` carry real foreign keys to `risks`, so an
+ * id that exists nowhere is already rejected by the database. What no constraint
+ * catches is an id that exists and belongs to another org, or one that is
+ * soft-deleted — so both clauses below are load-bearing, and neither has a
+ * safety net behind it. Callers compare the result length against the input.
+ */
+export async function getLiveRiskIdsQuery(
+  ids: number[],
+  organizationId: number,
+): Promise<number[]> {
+  if (ids.length === 0) return [];
+  const rows = await sequelize.query(
+    `SELECT id FROM risks
+      WHERE id IN (:ids) AND organization_id = :organizationId AND is_deleted = false`,
+    { replacements: { ids, organizationId }, type: QueryTypes.SELECT },
+  );
+  return (rows as { id: number }[]).map((row) => row.id);
+}
+
+/** Does this exact directed edge already exist? Used to refuse a two-cycle. */
+export async function riskLinkPairExistsQuery(
+  organizationId: number,
+  sourceRiskId: number,
+  targetRiskId: number,
+  relationType: RiskLinkRelationType,
+): Promise<boolean> {
+  const rows = await sequelize.query(
+    `SELECT 1 FROM risk_links
+      WHERE organization_id = :organizationId
+        AND source_risk_id = :sourceRiskId
+        AND target_risk_id = :targetRiskId
+        AND relation_type = :relationType
+      LIMIT 1`,
+    {
+      replacements: { organizationId, sourceRiskId, targetRiskId, relationType },
+      type: QueryTypes.SELECT,
+    },
+  );
+  return (rows as unknown[]).length > 0;
+}
+
+export interface CreateUserRiskLinkInput {
+  organizationId: number;
+  sourceRiskId: number;
+  targetRiskId: number;
+  relationType: RiskLinkRelationType;
+  userId: number;
+}
+
+/**
+ * Write a human-asserted link. `confirmed` + `user` makes the row immune to the
+ * recompute prune on both of that prune's two conditions. `score` and `reasons`
+ * are left to their column defaults (0, []) — a human link has no score.
+ *
+ * Returns null when the pair already exists: ON CONFLICT DO NOTHING rather than
+ * catching a driver error code, so the controller never sniffs SQLSTATE.
+ */
+export async function createUserRiskLinkQuery(
+  input: CreateUserRiskLinkInput,
+): Promise<number | null> {
+  const [rows] = await sequelize.query(
+    `INSERT INTO risk_links
+       (organization_id, source_risk_id, target_risk_id, relation_type,
+        status, source, created_by_user_id, decided_by_user_id, decided_at)
+     VALUES (:organizationId, :sourceRiskId, :targetRiskId, :relationType,
+             'confirmed', 'user', :userId, :userId, NOW())
+     ON CONFLICT (source_risk_id, target_risk_id, relation_type) DO NOTHING
+     RETURNING id`,
+    {
+      replacements: {
+        organizationId: input.organizationId,
+        sourceRiskId: input.sourceRiskId,
+        targetRiskId: input.targetRiskId,
+        relationType: input.relationType,
+        userId: input.userId,
+      },
+    },
+  );
+  const row = (rows as { id: number }[])[0];
+  return row ? row.id : null;
 }
 
 /** Refresh score and reasons on an edge the recompute is keeping but not upserting. */
