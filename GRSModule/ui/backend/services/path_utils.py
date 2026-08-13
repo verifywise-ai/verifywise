@@ -25,6 +25,23 @@ def _sanitize_path_part(value: str) -> str:
     return value
 
 
+def assert_within(base: Path, target: Path) -> Path:
+    """Resolve `target` and verify it stays inside `base`.
+
+    This is a sink-level guard for CodeQL py/path-injection: even when the
+    caller already used `resolve_dataset_path`, re-asserting containment at the
+    file-operation site proves to the analyzer (and at runtime) that the path
+    cannot escape the intended root.
+    """
+    base_resolved = base.resolve()
+    target_resolved = target.resolve()
+    if not target_resolved.is_relative_to(base_resolved):
+        raise ValueError(
+            f"Path {target_resolved} escapes allowed base {base_resolved}"
+        )
+    return target_resolved
+
+
 def resolve_dataset_path(grs_root: Path, dataset_version: str, *parts: str) -> Path:
     """Resolve a path inside GR_ROOT/datasets/{dataset_version} safely.
 
