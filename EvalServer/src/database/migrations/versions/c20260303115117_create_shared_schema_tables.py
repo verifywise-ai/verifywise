@@ -427,6 +427,6 @@ def downgrade() -> None:
     ]
 
     for table in tables:
-        op.execute(sa.text(f'DROP TABLE IF EXISTS verifywise."{table}" CASCADE;'))
+        op.execute(sa.text('DROP TABLE IF EXISTS verifywise."' + table + '" CASCADE;'))
 
     print("✓ Dropped all shared-schema tables from verifywise schema")
