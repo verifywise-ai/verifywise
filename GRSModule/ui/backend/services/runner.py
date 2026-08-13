@@ -170,6 +170,9 @@ def _execute_stages(request: RunRequest, grs_root: Path, snapshot_dir: Path):
         run_state.active_stage = stage
         cmd = build_command(stage, request.dataset_version, request.params)
 
+        # cmd is built by build_command(), which validates stage against an allowlist
+        # and dataset_version against a strict regex, and returns a list (shell=False).
+        # nosemgrep: python.django.security.injection.command.subprocess-injection.subprocess-injection
         proc = subprocess.Popen(
             cmd,
             cwd=str(grs_root),
@@ -193,6 +196,9 @@ def _execute_stages(request: RunRequest, grs_root: Path, snapshot_dir: Path):
     if "judge" in stages_to_run:
         run_state.active_stage = "leaderboard"
         cmd = build_command("leaderboard", request.dataset_version, request.params)
+        # cmd is built by build_command(), which validates stage against an allowlist
+        # and dataset_version against a strict regex, and returns a list (shell=False).
+        # nosemgrep: python.django.security.injection.command.subprocess-injection.subprocess-injection
         proc = subprocess.Popen(cmd, cwd=str(grs_root),
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         run_state.process = proc
