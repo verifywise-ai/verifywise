@@ -56,8 +56,9 @@ Two imports near the deleted ones **stay**: `getAllProjectRisks` at `:22` (used 
 - All six tasks committed.
 - `cd Servers && npm run build && npm run test` — clean and green.
 - `cd Servers && npm run check:api-drift` — `706/706`.
-- `cd Clients && npm run build && npx vitest run` — clean and green, with four fewer test files than before.
-- `git status --porcelain` — empty.
+- `cd Clients && npm run typecheck && npm run build && npx vitest run` — all three clean and green, net one *more* test file than before (three added in Tasks 3–5, two deleted in Task 6).
+- `npm run typecheck` is required and not covered by `npm run build`: `build` is `node scripts/build.js` and never runs tsc, so type errors survive a green build. Do not use `npm run test` in `Clients` — it is `vitest watch` and never exits.
+- `git status --porcelain` — no new entries. Untracked `.megasaver/` directories are pre-existing tooling noise; leave them alone and never `git add -A` a directory containing one.
 - Task 2 Step 3's mutations each produced the distinct failure the plan predicted, and you say so explicitly in your report.
 - Task 2 needs a live PostgreSQL. If the database is unavailable, **say so** — do not quietly skip the task and call B done.
 

@@ -593,7 +593,7 @@ describe("manual risk links respect the tenant boundary", () => {
   });
 
   it("keeps both directions of inherits_from distinguishable", async () => {
-    const { owner } = await seedTwoTenantContexts();
+    const { owner, attacker } = await seedTwoTenantContexts();
     const child = await createTestRisk(owner.orgId);
     const parent = await createTestRisk(owner.orgId);
 
@@ -620,6 +620,18 @@ describe("manual risk links respect the tenant boundary", () => {
         owner.orgId,
         Math.min(child, parent),
         Math.max(child, parent),
+        "inherits_from",
+      ),
+    ).toBe(false);
+
+    // The controller's two-cycle refusal routes through this query. Unscoped, it
+    // would answer "yes" for another org's pair — a 409 on a link the caller may
+    // legitimately make, which also discloses that the other org has it linked.
+    expect(
+      await riskLinkPairExistsQuery(
+        attacker.orgId,
+        Math.max(child, parent),
+        Math.min(child, parent),
         "inherits_from",
       ),
     ).toBe(false);
@@ -651,8 +663,9 @@ Mutate, run, revert. Each must produce a *different* red.
 
 1. In `getLiveRiskIdsQuery`, delete `AND organization_id = :organizationId`. Re-run. Expected: "does not treat another org's live risk as linkable" fails — `live` comes back with both ids. Revert.
 2. Delete `AND is_deleted = false`. Re-run. Expected: "does not treat this org's soft-deleted risk as linkable" fails — `live` comes back with both ids, and the cross-org test still passes. Revert.
+3. In `riskLinkPairExistsQuery`, delete `AND organization_id = :organizationId`. Re-run. Expected: "keeps both directions of inherits_from distinguishable" fails on its last assertion — the attacker org is told the owner's pair exists. Revert. This clause is a separate one from the two above and no other test reaches it: `getLiveRiskIdsQuery` guards which risks may be linked, while this one guards the controller's two-cycle refusal, so an unscoped version leaks a 409 across the tenant boundary while every other test stays green.
 
-If either mutation leaves the suite green, the test is not testing what it claims and must be fixed before committing.
+If any mutation leaves the suite green, the test is not testing what it claims and must be fixed before committing.
 
 - [ ] **Step 5: Commit**
 
@@ -1023,7 +1036,7 @@ export function useRecomputeRiskLinks(riskId: number) {
 cd Clients && npx vitest run src/application/hooks/__tests__/useRiskLinks.test.ts
 ```
 
-Expected: PASS, eight cases.
+Expected: PASS, seven cases.
 
 - [ ] **Step 7: Commit**
 
@@ -1480,6 +1493,8 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ThemeProvider } from "@mui/material";
+import { light } from "../../../themes";
 import { RiskLink } from "../../../../domain/interfaces/i.riskLink";
 
 const mockCreate = vi.fn();
@@ -1495,9 +1510,16 @@ vi.mock("../../../../application/repository/projectRisk.repository", () => ({
 
 import LinkRiskForm from "../LinkRiskForm";
 
+// The app theme is required, not decorative: AutoCompleteField reads
+// theme.palette.border.dark, a custom key MUI's default theme does not define,
+// so a bare render throws before any assertion runs.
 const wrap = (ui: React.ReactElement) => {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(<QueryClientProvider client={client}>{ui}</QueryClientProvider>);
+  return render(
+    <ThemeProvider theme={light}>
+      <QueryClientProvider client={client}>{ui}</QueryClientProvider>
+    </ThemeProvider>,
+  );
 };
 
 const link = (overrides: Partial<RiskLink>): RiskLink => ({
@@ -1893,26 +1915,52 @@ In `Clients/src/presentation/components/LinkedRisksPanel/index.tsx`, add the imp
         </Button>
       </Stack>
 
+      {/*
+        With the dismissed view open, `links` holds dismissed rows, not the
+        active ones the form's exclusions are defined over. Passing them would
+        invert the rule: it would hide the dismissed partners §6.4 keeps
+        selectable and stop excluding the actively-linked ones. Pass nothing
+        instead and let the server's 409 do the explaining.
+      */}
       {showForm && (
-        <LinkRiskForm riskId={riskId} existingLinks={links} onClose={() => setShowForm(false)} />
+        <LinkRiskForm
+          riskId={riskId}
+          existingLinks={showDismissed ? [] : links}
+          onClose={() => setShowForm(false)}
+        />
       )}
 ```
 
 Add `const [showForm, setShowForm] = useState(false);` next to the other state, and `import LinkRiskForm from "./LinkRiskForm";`.
 
+**Do not write `existingLinks={links}`.** The panel queries `useRiskLinks(riskId, showDismissed ? "dismissed" : undefined)`, so with the dismissed view open `links` is the dismissed set — the exact inverse of what the prop is documented to take. Every test in Task 4 passes either way, because none of them opens the form while the dismissed view is on; Step 5 below adds the case that does.
+
 **Link a risk stays available to everyone**, admin or not, and in the empty state as well as the populated one — manual linking does not need the engine.
 
 - [ ] **Step 5: Add the panel-level test for the button**
 
-Append to `LinkedRisksPanel.test.tsx`. The existing `vi.mock` for `useRiskLinks` already stubs `useCreateRiskLink`; add a stub for the repository so the form's query resolves:
+Append to `LinkedRisksPanel.test.tsx`. The existing `vi.mock` for `useRiskLinks` already stubs `useCreateRiskLink`; add a stub for the repository so the form's query resolves. It must be a named mock set in `beforeEach`, not a one-shot inline resolve — the second case below needs candidates in it, and `vi.clearAllMocks()` in the existing `beforeEach` wipes the calls of an inline mock while leaving stale implementations behind:
 
 ```tsx
+const mockGetAllProjectRisks = vi.fn();
+
 vi.mock("../../../../application/repository/projectRisk.repository", () => ({
-  getAllProjectRisks: vi.fn().mockResolvedValue({ data: [] }),
+  getAllProjectRisks: (...args: unknown[]) => mockGetAllProjectRisks(...args),
 }));
 ```
 
-and the case (wrap the render in a `QueryClientProvider` the same way `LinkRiskForm.test.tsx` does):
+and, inside the existing `beforeEach`:
+
+```tsx
+  mockGetAllProjectRisks.mockResolvedValue({
+    data: [
+      { id: 42, risk_name: "Subject risk" },
+      { id: 9, risk_name: "Model drift" },
+    ],
+  });
+```
+
+then the two cases (wrapped in both providers the same way `LinkRiskForm.test.tsx` does — the theme is required, see Step 1):
 
 ```tsx
 describe("LinkedRisksPanel link form", () => {
@@ -1921,19 +1969,55 @@ describe("LinkedRisksPanel link form", () => {
     mockUseRiskLinks.mockReturnValue(queryResult([]));
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(
-      <QueryClientProvider client={client}>
-        <LinkedRisksPanel riskId={42} />
-      </QueryClientProvider>,
+      <ThemeProvider theme={light}>
+        <QueryClientProvider client={client}>
+          <LinkedRisksPanel riskId={42} />
+        </QueryClientProvider>
+      </ThemeProvider>,
     );
 
     await userEvent.click(screen.getByRole("button", { name: "Link a risk" }));
 
     expect(screen.getByRole("radio", { name: "Related to" })).toBeInTheDocument();
   });
+
+  // Pins Step 4's `showDismissed ? [] : links`. The form's exclusions are defined
+  // over suggested + confirmed; with the dismissed view open the panel holds
+  // dismissed rows instead, so passing them down would invert the rule and hide
+  // exactly the partners §6.4 keeps selectable. Queried inside the listbox
+  // because the panel's own list shows the same name.
+  it("keeps a dismissed partner selectable while the dismissed view is open", async () => {
+    mockUseRiskLinks.mockReturnValue(
+      queryResult([
+        link({
+          status: "dismissed",
+          relationType: "related_to",
+          relatedRisk: { id: 9, name: "Model drift", riskLevel: null, ownerId: null },
+        }),
+      ]),
+    );
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <ThemeProvider theme={light}>
+        <QueryClientProvider client={client}>
+          <LinkedRisksPanel riskId={42} />
+        </QueryClientProvider>
+      </ThemeProvider>,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Show dismissed" }));
+    await userEvent.click(screen.getByRole("button", { name: "Link a risk" }));
+    await userEvent.click(screen.getByPlaceholderText("Search risks"));
+
+    const listbox = await screen.findByRole("listbox");
+    expect(within(listbox).getByText("Model drift")).toBeInTheDocument();
+  });
 });
 ```
 
-Add `import { QueryClient, QueryClientProvider } from "@tanstack/react-query";` to that file.
+Add to that file: `import { QueryClient, QueryClientProvider } from "@tanstack/react-query";`, `import { ThemeProvider } from "@mui/material";`, `import { light } from "../../../themes";`, and `within` to the existing `@testing-library/react` import.
+
+Verify the second case bites: change Step 4's wiring back to `existingLinks={links}` and re-run. Expected: FAIL at `findByRole("listbox")` — with every candidate excluded MUI renders no listbox element at all, so the query times out rather than merely missing the option. Revert.
 
 - [ ] **Step 6: Run both component suites**
 
@@ -2116,16 +2200,22 @@ annotation and `showRelatedRisks`'s signature go away with it.
 - [ ] **Step 5: Build and run the full frontend suite**
 
 ```bash
-cd Clients && npm run build && npx vitest run
+cd Clients && npm run typecheck && npm run build && npx vitest run
 ```
 
-Expected: build clean; suite green with four fewer test files. If TypeScript reports an unused import or variable in `RiskManagement/index.tsx`, a deletion region was missed — go back to Step 3.
+Expected: all three clean; the suite runs two fewer test files than before this task (`relatedRisks.test.ts` and `RelatedRisksSummary/__tests__/index.test.tsx`), which is net +1 across the whole feature against the three added in Tasks 3–5.
+
+`npm run typecheck` is not redundant with `npm run build`. **`build` is `node scripts/build.js` and never invokes tsc** — only `typecheck` (`tsc -b`) and `build:original` do. So an unused import or a stale type left behind by this task's deletions will sail straight through a green `build`. If `tsc` reports one in `RiskManagement/index.tsx`, a deletion region was missed — go back to Step 3.
+
+Note also that `npm run test` in `Clients` is `vitest watch`, which never exits. Use `npx vitest run`.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add -A Clients/src && git commit -m "feat(risk-links): mount the linked risks tab and drop the client-side heuristic"
+git add Clients/src/presentation/components/AddNewRiskForm/index.tsx Clients/src/presentation/pages/RiskManagement/index.tsx && git rm -r --cached --ignore-unmatch -q Clients/src/application/tools/relatedRisks.ts Clients/src/application/tools/__tests__/relatedRisks.test.ts Clients/src/presentation/components/RelatedRisksSummary && git commit -m "feat(risk-links): mount the linked risks tab and drop the client-side heuristic"
 ```
+
+Stage explicit paths. **Do not use `git add -A Clients/src`**: this working tree carries untracked `.megasaver/` tooling directories under `Clients/src/` that are not git-ignored, and `-A` sweeps them into the commit. Run `git show --stat HEAD` after committing and confirm no `.megasaver` path appears.
 
 - [ ] **Step 7: Final verification of the whole feature**
 
@@ -2134,10 +2224,12 @@ cd Servers && npm run build && npm run test && npm run check:api-drift
 ```
 
 ```bash
-cd Clients && npm run build && npx vitest run
+cd Clients && npm run typecheck && npm run build && npx vitest run
 ```
 
-Expected: both builds clean, both suites green, drift `706/706`.
+Expected: both builds clean, `tsc -b` exit 0, both suites green, drift `706/706`.
+
+The `Servers` `npm run test` above excludes the integration tier — its script appends `--testPathIgnorePatterns=/tests/integration/`, so Task 2's isolation tests are *not* in that count and must be run and reported separately, with the command in Task 2 Step 2.
 
 ---
 
