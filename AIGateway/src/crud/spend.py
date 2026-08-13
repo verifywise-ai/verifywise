@@ -461,11 +461,14 @@ async def get_spend_logs_detail(
         LEFT JOIN ai_gateway_virtual_keys vk ON vk.id = sl.virtual_key_id
     """
 
-    count_sql = text(f"SELECT COUNT(*) AS total {base_joins} WHERE {where_sql}")
+    count_sql = text(
+        "SELECT COUNT(*) AS total " + base_joins + " WHERE " + where_sql
+    )
     count_result = await db.execute(count_sql, params)
     total = count_result.scalar() or 0
 
-    rows_sql = text(f"""
+    rows_sql = text(
+        """
         SELECT
             sl.id,
             sl.endpoint_id,
@@ -486,11 +489,17 @@ async def get_spend_logs_detail(
             u.email     AS user_email,
             sl.virtual_key_id,
             vk.name     AS virtual_key_name
-        {base_joins}
-        WHERE {where_sql}
+        """
+        + base_joins
+        + """
+        WHERE 
+        """
+        + where_sql
+        + """
         ORDER BY sl.created_at DESC
         LIMIT :limit OFFSET :offset
-    """)
+        """
+    )
     rows_result = await db.execute(rows_sql, params)
     rows = [_row_to_dict(r) for r in rows_result.fetchall()]
 
