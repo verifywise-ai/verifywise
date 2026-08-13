@@ -241,9 +241,9 @@ async def update_mcp_server(
 
     async with get_db() as db:
         result = await db.execute(
-            text(f"""
+            text("""
                 UPDATE ai_gateway_mcp_servers
-                SET {set_sql}
+                SET """ + set_sql + """
                 WHERE organization_id = :org_id
                   AND id = :server_id
                 RETURNING *
