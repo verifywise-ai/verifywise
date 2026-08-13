@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "@mui/material";
@@ -22,8 +22,10 @@ vi.mock("../../../../application/hooks/useIsAdmin", () => ({
   useIsAdmin: () => mockIsAdmin(),
 }));
 
+const mockGetAllProjectRisks = vi.fn();
+
 vi.mock("../../../../application/repository/projectRisk.repository", () => ({
-  getAllProjectRisks: vi.fn().mockResolvedValue({ data: [] }),
+  getAllProjectRisks: (...args: unknown[]) => mockGetAllProjectRisks(...args),
 }));
 
 import LinkedRisksPanel from "../index";
@@ -53,6 +55,12 @@ const queryResult = (links: RiskLink[], extra: any = {}) => ({
 beforeEach(() => {
   vi.clearAllMocks();
   mockIsAdmin.mockReturnValue(false);
+  mockGetAllProjectRisks.mockResolvedValue({
+    data: [
+      { id: 42, risk_name: "Subject risk" },
+      { id: 9, risk_name: "Model drift" },
+    ],
+  });
 });
 
 describe("LinkedRisksPanel grouping", () => {
@@ -205,6 +213,38 @@ describe("LinkedRisksPanel link form", () => {
     await userEvent.click(screen.getByRole("button", { name: "Link a risk" }));
 
     expect(screen.getByRole("radio", { name: "Related to" })).toBeInTheDocument();
+  });
+
+  // The form's exclusions are defined over suggested + confirmed. With the
+  // dismissed view open the panel holds dismissed rows instead, so passing them
+  // down would invert the rule and hide exactly the partners §6.4 keeps
+  // selectable. Queried inside the listbox because the panel's own list shows
+  // the same name.
+  it("keeps a dismissed partner selectable while the dismissed view is open", async () => {
+    mockUseRiskLinks.mockReturnValue(
+      queryResult([
+        link({
+          status: "dismissed",
+          relationType: "related_to",
+          relatedRisk: { id: 9, name: "Model drift", riskLevel: null, ownerId: null },
+        }),
+      ]),
+    );
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <ThemeProvider theme={light}>
+        <QueryClientProvider client={client}>
+          <LinkedRisksPanel riskId={42} />
+        </QueryClientProvider>
+      </ThemeProvider>,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Show dismissed" }));
+    await userEvent.click(screen.getByRole("button", { name: "Link a risk" }));
+    await userEvent.click(screen.getByPlaceholderText("Search risks"));
+
+    const listbox = await screen.findByRole("listbox");
+    expect(within(listbox).getByText("Model drift")).toBeInTheDocument();
   });
 });
 

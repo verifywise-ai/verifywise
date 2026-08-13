@@ -115,8 +115,19 @@ export default function LinkedRisksPanel({ riskId }: LinkedRisksPanelProps) {
         </Button>
       </Stack>
 
+      {/*
+        With the dismissed view open, `links` holds dismissed rows, not the
+        active ones the form's exclusions are defined over. Passing them would
+        invert the rule: it would hide the dismissed partners §6.4 keeps
+        selectable and stop excluding the actively-linked ones. Pass nothing
+        instead and let the server's 409 do the explaining.
+      */}
       {showForm && (
-        <LinkRiskForm riskId={riskId} existingLinks={links} onClose={() => setShowForm(false)} />
+        <LinkRiskForm
+          riskId={riskId}
+          existingLinks={showDismissed ? [] : links}
+          onClose={() => setShowForm(false)}
+        />
       )}
 
       {notice && <Alert severity="info">{notice}</Alert>}
