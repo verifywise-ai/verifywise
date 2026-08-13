@@ -113,8 +113,8 @@ WHERE a1.risk_id = :riskId
 
 Three things this shape buys, each load-bearing:
 
-- **`SELECT DISTINCT` in `active`.** None of the ten join tables has a unique constraint on its pair, so a risk can appear twice against the same element. Without the `DISTINCT`, the degree inflates and the pair join emits duplicate rows, double-counting the same evidence. With it, `COUNT(*)` is a correct degree.
-- **`organization_id` on every `UNION` arm *and* on the `risks` join.** Framework struct rows are global: `eu_control:412` is the same string in every org. Omitting either filter lets two orgs' risks match on a shared global element and produces a cross-tenant edge. See §6.
+- **`SELECT DISTINCT` in `active`.** Redundant today and kept anyway: all ten join tables have a primary key on exactly `(element_id, risk_id)` (verified against the live schema), and the arm prefixes keep two arms from ever producing the same `element_key`, so a duplicate `(risk_id, element_key)` cannot occur. `DISTINCT` costs one hash over a small set and keeps `COUNT(*)` a correct degree if a future join table ships without that constraint. Do not remove it as dead weight.
+- **`organization_id` on every `UNION` arm *and* on the `risks` join.** Defense in depth, and not optional. See §6 for why the ids alone do not protect this.
 - **`is_deleted = false` on the `risks` join.** Soft-deleted risks stay in the join tables. Without this filter they would both inflate degrees and appear as neighbours.
 
 ### 3.3 `projects_risks_id` holds a risk id
@@ -148,7 +148,7 @@ The **cap of 4** keeps tier 1 from dominating. Tier 0's maximum is 10 (3+2+2+2+1
 
 ### 4.2 Symmetry
 
-A1 §5.1 makes `score(A,B) == score(B,A)` an invariant; pruning is unstable without it. This formula satisfies it by construction: the shared-element set is the same read from either side, and `degree` is a global property of the element, not of either risk.
+A1 §5.1 makes `score(A,B) == score(B,A)` an invariant; pruning is unstable without it. This formula satisfies it by construction: the shared-element set is the same read from either side, and `degree` is a property of the element within the org (§6), not of either risk — so both endpoints read the same number.
 
 ### 4.3 Rounding
 
@@ -210,13 +210,14 @@ Implementation is a net deletion in `recompute.ts`: the `catch` logs as it does 
 
 ## 6. Tenant isolation
 
-This is the sharpest risk in A2a and the reason §3.2 filters twice.
+**Correcting an earlier reading of the schema.** Element ids here are *not* global. Every one of the ten join tables references an **org-scoped instance** table — `controls_eu`, `subcontrols_eu`, `answers_eu`, `subclauses_iso`, `subclauses_iso27001`, `annexcategories_iso`, `annexcontrols_iso27001`, `nist_ai_rmf_subcategories`, `custom_framework_level2_impl`, `custom_framework_level3_impl` — each carrying its own `organization_id`. The genuinely global tables are the `*_struct` ones (`nist_ai_rmf_subcategories_struct` and friends), and **no join table points at them**. Each instance table's `id` comes from a single sequence shared across orgs, so a given id belongs to exactly one organization. Two orgs running the EU AI Act do *not* share control id 412.
 
-Framework struct rows are global. Two organizations both running the EU AI Act both have risks attached to control id 412. The `element_key` string `eu_control:412` is identical across them. A query that joined on `element_key` without an organization filter would match org A's risk to org B's risk and write an edge across the tenant boundary — a data leak dressed as a feature, and one the A1 endpoints would then happily serve, since they filter by `organization_id` on `risk_links` and the row would carry the reader's own org id.
+So the cross-tenant edge cannot arise from two orgs legitimately touching one element. The filters stay anyway, for two independent reasons:
 
-Degrees have the same shape of problem in a milder form: an unscoped `degrees` CTE would let a large org's density depress a small org's scores.
+- **Nothing in the schema enforces what the ids imply.** `organization_id` is **nullable** on the eight `*__risks` tables, and there is **no foreign key** from `control_id` (or any sibling) to its element table. A row in org B naming org A's element id is schema-legal. A bad import, demo seeding, or a bug elsewhere produces one, and an unfiltered query turns it into a cross-tenant edge that the A1 endpoints then serve happily, since they filter `risk_links` by `organization_id` and the row would carry the reader's own org id. The filter is what makes the query correct rather than making it depend on ids happening not to collide. (A NULL `organization_id` fails `= :organizationId` and so drops out — the safe direction.)
+- **Degree scoping is semantics, not only safety.** Rarity must be a property of *this org's* graph. A control that forty of your own risks touch is not rare to you; a large neighbour org's volume must not depress your scores. An unscoped `degrees` CTE would get this wrong even with no leak at all.
 
-Both are covered by tests in §7, not only by review.
+Both are covered by tests in §7, not only by review. Because the collision is not naturally reachable, §7.4 seeds it deliberately — which the missing foreign key makes possible.
 
 ---
 
@@ -239,6 +240,7 @@ Both are covered by tests in §7, not only by review.
 
 - The existing *"writes nothing and deletes nothing when every provider throws"* now asserts `rejects.toThrow("boom")` alongside the unchanged no-write assertions. Under the new rule the function propagates instead of returning quietly.
 - **New, and the closure of A1's third parked minor:** one provider succeeds, the other throws → nothing written, nothing pruned, the error propagates. A1 could not write this test with a single provider.
+- **Every other test in this file needs a one-line stub, or the whole suite goes red.** The file does `jest.mock("../../../utils/riskLink.utils")` and `jest.resetAllMocks()` in `beforeEach`, so the auto-mocked `getStructuralNeighboursQuery` returns `undefined`. The new provider would then iterate `undefined`, throw a `TypeError`, and — under §5 — abort every run. Add `mockUtils.getStructuralNeighboursQuery.mockResolvedValue([])` to the existing `beforeEach` beside `getIncidentLinksQuery`. This is a consequence of registering the provider, not of any test's own subject.
 
 ### 7.3 `utils/__tests__/riskLink.utils.test.ts` (modified)
 
@@ -246,16 +248,16 @@ Assert the emitted SQL carries `organization_id` on every `UNION` arm, `is_delet
 
 ### 7.4 `tests/integration/tenant-isolation/riskLinks.isolation.test.ts` (modified)
 
-Against a real database, two new cases:
+Against a real database, two new cases. Both seed the element collision **deliberately** — per §6 it is not naturally reachable, and the absent foreign key on `control_id` is what lets a test write it.
 
-- Two organizations each own a risk attached to the **same global framework element**. Recompute both. Neither org gets an edge to the other's risk, and `getRiskLinksForRiskQuery` returns nothing cross-tenant.
-- One organization's element degrees are unaffected by another organization's volume: seed a second org with many risks on the same element, recompute in the first, and assert its score is what the first org's own degree predicts.
+- **Cross-tenant edge.** Two organizations each own a risk, and both risks get a `controls_eu__risks` row naming the *same* `control_id`, each with its own `organization_id`. Recompute in the first org. No edge to the other org's risk, and `getRiskLinksForRiskQuery` returns nothing cross-tenant. Goes red if the `UNION` arm filter or the `risks`-join filter is dropped.
+- **Degree scoping.** In the owner org, one live risk shares the element with the subject; additionally seed (a) several risks in a *second* org on the same `control_id` and (b) one *soft-deleted* risk in the owner org on the same `control_id`. Assert the resulting score matches the degree the owner org's own live rows predict — degree 2, so 1.26. This is the only test that catches a `degrees` CTE computed over an unscoped source or over `element_links` instead of `active`; the cross-tenant case above stays green under both of those mutations.
 
 ---
 
 ## 8. Type coercion at the read boundary
 
-A1's constraint D applies unchanged. `COUNT(*)` is `bigint`, and `node-pg` returns `bigint` as a **string** to avoid silent precision loss. `degree` must be coerced with the existing `toNumber` helper before it reaches the formula, or `2 / Math.log2(1 + "2")` evaluates against a string and the arithmetic is wrong in a way no type error catches. The coercion belongs in `riskLink.utils.ts` with the others, so the provider receives real numbers.
+A1's constraint D applies unchanged. `COUNT(*)` is `bigint`, and `node-pg` returns `bigint` as a **string** to avoid silent precision loss. Verified against this database, not assumed: `pg_typeof(count(*))` is `bigint`, and the same aggregate read back through `sequelize.query(..., { type: QueryTypes.SELECT })` arrives as `typeof "string"`, with `1 + degree` evaluating to `"14"`. `degree` must be coerced with the existing `toNumber` helper before it reaches the formula, or `2 / Math.log2(1 + "2")` evaluates against a string and the arithmetic is wrong in a way no type error catches. The coercion belongs in `riskLink.utils.ts` with the others, so the provider receives real numbers.
 
 ---
 
@@ -286,7 +288,7 @@ The query is a ten-table `UNION ALL` filtered by `organization_id`, and every on
 | `Servers/services/riskLinks/tests/recompute.spec.ts` | §7.2. |
 | `Servers/utils/__tests__/riskLink.utils.test.ts` | §7.3. |
 | `Servers/tests/integration/tenant-isolation/riskLinks.isolation.test.ts` | §7.4. |
-| `Servers/tests/factories/test-entities.factory.ts` | A helper to attach a risk to a framework element, for §7.4. |
+| `Servers/tests/factories/test-entities.factory.ts` | `attachRiskToEuControl(orgId, riskId, controlId)` — one insert into `controls_eu__risks`, for §7.4. One table, not a generic helper: `controls_eu__risks` has no foreign key on `control_id`, so the test needs no `controls_eu` row, and one element type exercises every branch of the query. |
 | `docs/technical/domains/risk-management.md` | Document tier 1 and the new failure rule. |
 
 No migration. No route, controller, or swagger change — `npm run check:api-drift` must still report 705/705. Nothing under `Clients/`.
