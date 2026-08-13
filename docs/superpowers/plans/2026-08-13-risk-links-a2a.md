@@ -689,7 +689,7 @@ The `let anyProviderSucceeded = false;` declaration, the `anyProviderSucceeded =
 npm test -- services/riskLinks/tests/recompute.spec.ts
 ```
 
-Expected: PASS, 13 tests. If any *pre-existing* test now fails, the `beforeEach` stub from Step 1(a) is missing.
+Expected: PASS, 14 tests (12 existing, one of which is replaced by two, plus the merge-guard test). If any *pre-existing* test now fails, the `beforeEach` stub from Step 1(a) is missing.
 
 - [ ] **Step 5: Run the whole risk-links unit surface**
 
@@ -800,6 +800,16 @@ Add `attachRiskToEuControl` to the `../../factories` import at line 6, and `getS
       replacements: { id: softDeleted },
     });
 
+    // An orphan join row. `controls_eu__risks` has no FK on projects_risks_id
+    // (its only FK is organization_id), so 999999 is insertable and names no risk
+    // at all. It passes the arm's organization filter and is removed only by the
+    // join to `risks` — dropping `is_deleted = false` does not remove it. This is
+    // what makes Step 3's mutations 1 and 2 produce two different failures instead
+    // of the same one twice.
+    for (const controlId of controls) {
+      await attachRiskToEuControl(owner.orgId, 999999, controlId);
+    }
+
     for (let i = 0; i < 5; i++) {
       const noisy = await createTestRisk(attacker.orgId);
       for (const controlId of controls) {
@@ -810,10 +820,12 @@ Add `attachRiskToEuControl` to the `../../factories` import at line 6, and `getS
     await recomputeRiskLinks(owner.orgId, subject);
 
     // Three elements at the owner org's own live degree of 2: 3 x 1.26 = 3.79.
-    // Computing degrees FROM element_links instead of FROM active, or dropping
-    // is_deleted = false, gives degree 3 and a stored 3.00. The second org's five
-    // risks cannot enter under either mutation; they pin the property end to end,
-    // and with both org filters gone the degree is 8, the score 1.89, and no row.
+    // Each mutation in Step 3 fails this differently, which is why all three are
+    // worth running. Computing degrees FROM element_links counts the soft-deleted
+    // risk AND the orphan row: degree 4, score 2.58, under the threshold, no row
+    // at all. Dropping is_deleted = false counts only the soft-deleted risk:
+    // degree 3, a row stored at 3.00. Losing both org filters lets the second
+    // org's five risks in: degree 8, score 1.89, again no row.
     const [rows] = await sequelize.query(
       `SELECT source_risk_id, target_risk_id, score::float8 AS score FROM risk_links`,
     );
@@ -834,8 +846,8 @@ npm test -- --config jest.config.js --globalSetup="<rootDir>/tests/integration/g
 
 With Tasks 1-3 already committed, both tests should pass on the first run — **if either fails, the query is wrong, not the test.** A test that has never been red proves nothing, so verify each can fail, one mutation at a time, restoring the file after every one:
 
-1. In `getStructuralNeighboursQuery`, change `FROM active` inside the `degrees` CTE to `FROM element_links`. Re-run. Expected: the **degree-scoping** test goes red on `score` — 3.00 instead of 3.79. The cross-tenant test stays green. Restore.
-2. Delete `AND r.is_deleted = false` from the `risks` join. Re-run. Expected: the degree-scoping test goes red the same way. Restore.
+1. In `getStructuralNeighboursQuery`, change `FROM active` inside the `degrees` CTE to `FROM element_links`. Re-run. Expected: the **degree-scoping** test goes red on the row count — degree 4 scores 2.58, below the threshold, so `rows` is empty rather than length 1. The cross-tenant test stays green. Restore.
+2. Delete `AND r.is_deleted = false` from the `risks` join. Re-run. Expected: the degree-scoping test goes red on `score` — degree 3 gives a stored 3.00 instead of 3.79. This is a **different** failure from mutation 1; if both mutations produce the same red, the orphan row from Step 2 is missing. Restore.
 3. Delete **both** `WHERE organization_id = :organizationId` from the `controls_eu__risks` arm **and** `AND r.organization_id = :organizationId` from the `risks` join. Re-run. Expected: the **cross-tenant** test goes red on `getStructuralNeighboursQuery(...)` returning rows instead of `[]`. Both filters must go — each alone is sufficient, which is the point of filtering twice. Restore.
 
 If a mutation does not produce the expected red, stop and report it rather than proceeding: the test is not measuring what it claims.
