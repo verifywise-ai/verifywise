@@ -510,14 +510,14 @@ An edge carries a `score`, a structured `reasons` array, a `source`
 confirmed, and a user-created link can be dismissed.
 
 **Scoring.** `Servers/services/riskLinks/` holds a `LinkSignalProvider`
-interface and two providers: `field_overlap` (tier 0) and
-`shared_framework_element` (tier 1). It scores shared
-category 3, shared control mapping 2, shared assessment mapping 2, same
-lifecycle phase 2, shared project 1. `"0"` in a control or assessment mapping
-means "nothing mapped" and never matches — the risk form has no picker for
-those fields and always sends `0`. Providers are merged by summing scores and
-concatenating reasons; any provider that throws aborts the recompute, so
-nothing is written or deleted and the risk keeps its existing edges.
+interface and two providers: `field_overlap` (tier 0) and `structural_graph`
+(tier 1). Tier 0 scores shared category 3, shared control mapping 2, shared
+assessment mapping 2, same lifecycle phase 2, shared project 1. `"0"` in a
+control or assessment mapping means "nothing mapped" and never matches — the
+risk form has no picker for those fields and always sends `0`. Providers are
+merged by summing scores and concatenating reasons; any provider that throws
+aborts the recompute, so nothing is written or deleted and the risk keeps its
+existing edges.
 
 ### Tier 1 — shared framework elements
 
@@ -550,7 +550,7 @@ strip the missing tier's points from every pair and delete the `derived` +
 `suggested` edges that then fell below the threshold — a transient database
 error would silently destroy real suggestions. A provider returning an empty
 array still means "ran, found nothing" and the run continues. The failed job
-retries three times with exponential backoff.
+is retried with exponential backoff, three attempts in total.
 
 **Persistence.** A pair at or above score 3 becomes a `derived` / `suggested`
 edge, up to 20 new edges per recompute, best score first with ties broken by
@@ -572,13 +572,13 @@ required at least once per org, since the table starts empty.
 The job carries `jobId: risk-link:<org>:<risk>` so a burst of saves collapses
 into one run, plus `removeOnComplete` and `removeOnFail` — a retained job of
 either kind would make BullMQ ignore every later `add` for that risk. It also
-retries three times with exponential backoff. Two recomputes share at most the
-single edge between them and cannot deadlock, but three risks forming a
-triangle can, because the top-N cap makes an edge a keeper for one endpoint and
-an ordinary incident row for the other. The backfill puts the whole org on a
-worker running ten jobs at a time, so Postgres aborting one side with 40P01 is
-an ordinary event; the retry is what keeps that risk from silently ending up
-with no links.
+makes three attempts in total, with exponential backoff between them. Two
+recomputes share at most the single edge between them and cannot deadlock, but
+three risks forming a triangle can, because the top-N cap makes an edge a
+keeper for one endpoint and an ordinary incident row for the other. The
+backfill puts the whole org on a worker running ten jobs at a time, so Postgres
+aborting one side with 40P01 is an ordinary event; the retry is what keeps that
+risk from silently ending up with no links.
 
 **Endpoints.**
 
