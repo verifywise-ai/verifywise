@@ -165,18 +165,21 @@ async def update_arena_comparison(
 
     updates.append("updated_at = CURRENT_TIMESTAMP")
 
-    result = await db.execute(
-        text(
-            f'''
+    query = (
+        '''
             UPDATE llm_evals_arena_comparisons
-            SET {", ".join(updates)}
+            SET '''
+        + ", ".join(updates)
+        + '''
             WHERE organization_id = :organization_id AND id = :id
             RETURNING id, name, description, organization_id, contestants, contestant_names,
                       metric_config, judge_model, status, progress, winner, win_counts,
                       detailed_results, error_message, created_at, updated_at,
                       completed_at, created_by
-            '''
-        ),
+        '''
+    )
+    result = await db.execute(
+        text(query),
         params,
     )
 
