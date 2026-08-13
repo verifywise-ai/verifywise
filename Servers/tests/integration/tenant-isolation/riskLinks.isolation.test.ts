@@ -9,6 +9,9 @@ import {
   getRiskLinksForRiskQuery,
   getRiskLinkByIdQuery,
   getStructuralNeighboursQuery,
+  getLiveRiskIdsQuery,
+  createUserRiskLinkQuery,
+  riskLinkPairExistsQuery,
 } from "../../../utils/riskLink.utils";
 
 afterEach(async () => {
@@ -168,5 +171,102 @@ describe("risk_links tenant isolation", () => {
       target_risk_id: Math.max(subject, partner),
       score: 3.79,
     });
+  });
+});
+
+describe("manual risk links respect the tenant boundary", () => {
+  it("does not treat another org's live risk as linkable", async () => {
+    const { owner, attacker } = await seedTwoTenantContexts();
+    const ownerRisk = await createTestRisk(owner.orgId);
+    // A real row in the other org. A fabricated id would prove nothing: the FK on
+    // target_risk_id rejects it with or without the organization_id clause, so the
+    // test would pass against a query that has no tenant scoping at all.
+    const attackerRisk = await createTestRisk(attacker.orgId);
+
+    const live = await getLiveRiskIdsQuery([ownerRisk, attackerRisk], owner.orgId);
+
+    expect(live).toEqual([ownerRisk]);
+  });
+
+  it("does not treat this org's soft-deleted risk as linkable", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const ownerRisk = await createTestRisk(owner.orgId);
+    const deletedRisk = await createTestRisk(owner.orgId);
+    await sequelize.query(`UPDATE risks SET is_deleted = true WHERE id = :id`, {
+      replacements: { id: deletedRisk },
+    });
+
+    const live = await getLiveRiskIdsQuery([ownerRisk, deletedRisk], owner.orgId);
+
+    expect(live).toEqual([ownerRisk]);
+  });
+
+  it("stores a manual link as confirmed/user and refuses the pair twice", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const riskA = await createTestRisk(owner.orgId);
+    const riskB = await createTestRisk(owner.orgId);
+    const input = {
+      organizationId: owner.orgId,
+      sourceRiskId: Math.min(riskA, riskB),
+      targetRiskId: Math.max(riskA, riskB),
+      relationType: "related_to" as const,
+      userId: owner.userId,
+    };
+
+    const id = await createUserRiskLinkQuery(input);
+    expect(id).not.toBeNull();
+    expect(await createUserRiskLinkQuery(input)).toBeNull();
+
+    const [rows] = await sequelize.query(
+      `SELECT status, source, score::float8 AS score, decided_at FROM risk_links WHERE id = :id`,
+      { replacements: { id } },
+    );
+    expect(rows[0]).toMatchObject({ status: "confirmed", source: "user", score: 0 });
+    expect((rows[0] as any).decided_at).not.toBeNull();
+  });
+
+  it("keeps both directions of inherits_from distinguishable", async () => {
+    const { owner, attacker } = await seedTwoTenantContexts();
+    const child = await createTestRisk(owner.orgId);
+    const parent = await createTestRisk(owner.orgId);
+
+    // Deliberately non-canonical order — the CHECK constraint exempts
+    // inherits_from, so the database must accept it exactly as given.
+    await createUserRiskLinkQuery({
+      organizationId: owner.orgId,
+      sourceRiskId: Math.max(child, parent),
+      targetRiskId: Math.min(child, parent),
+      relationType: "inherits_from",
+      userId: owner.userId,
+    });
+
+    expect(
+      await riskLinkPairExistsQuery(
+        owner.orgId,
+        Math.max(child, parent),
+        Math.min(child, parent),
+        "inherits_from",
+      ),
+    ).toBe(true);
+    expect(
+      await riskLinkPairExistsQuery(
+        owner.orgId,
+        Math.min(child, parent),
+        Math.max(child, parent),
+        "inherits_from",
+      ),
+    ).toBe(false);
+
+    // The controller's two-cycle refusal routes through this query. Unscoped, it
+    // would answer "yes" for another org's pair — a 409 on a link the caller may
+    // legitimately make, which also discloses that the other org has it linked.
+    expect(
+      await riskLinkPairExistsQuery(
+        attacker.orgId,
+        Math.max(child, parent),
+        Math.min(child, parent),
+        "inherits_from",
+      ),
+    ).toBe(false);
   });
 });
