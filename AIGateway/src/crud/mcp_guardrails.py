@@ -146,9 +146,9 @@ async def update_mcp_guardrail(org_id: int, rule_id: int, data: dict) -> Optiona
 
     set_clauses.append("updated_at = NOW()")
 
-    sql = f"""
+    sql = """
         UPDATE ai_gateway_mcp_guardrail_rules
-        SET {", ".join(set_clauses)}
+        SET """ + ", ".join(set_clauses) + """
         WHERE organization_id = :org_id
           AND id = :rule_id
         RETURNING
