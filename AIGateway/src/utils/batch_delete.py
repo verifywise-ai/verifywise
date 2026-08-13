@@ -14,29 +14,29 @@ async def batch_delete_expired(
     """Delete rows matching where_clause older than retention_days in batches.
 
     ``where_clause`` is appended after
-    ``WHERE created_at < NOW() - INTERVAL '<retention_days> days'``.
+    ``WHERE created_at < NOW() - INTERVAL '1 day' * :retention_days``.
     Pass an empty string if no extra conditions are needed.
 
     Returns total number of deleted rows.
     """
     retention_days = int(retention_days)
-    extra = f" AND {where_clause}" if where_clause else ""
+    extra = " AND " + where_clause if where_clause else ""
     total_deleted = 0
 
     async with get_db() as db:
         while True:
             result = await db.execute(
-                text(f"""
-                    DELETE FROM {table}
+                text("""
+                    DELETE FROM """ + table + """
                     WHERE id IN (
-                        SELECT id FROM {table}
-                        WHERE created_at < NOW() - INTERVAL '{retention_days} days'
-                        {extra}
+                        SELECT id FROM """ + table + """
+                        WHERE created_at < NOW() - INTERVAL '1 day' * :retention_days
+                        """ + extra + """
                         LIMIT :batch_size
                     )
                     RETURNING id
                 """),
-                {"batch_size": batch_size},
+                {"batch_size": batch_size, "retention_days": retention_days},
             )
             deleted = len(result.fetchall())
             await db.commit()
