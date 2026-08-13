@@ -37,6 +37,8 @@ describe("RichTextRenderer", () => {
   it("calls onStripped when dangerous content is removed", () => {
     const onStripped = vi.fn();
     render(
+      // Intentional script tag used to test that RichTextRenderer strips dangerous content.
+      // nosemgrep: javascript.lang.security.audit.unknown-value-with-script-tag.unknown-value-with-script-tag
       <RichTextRenderer html="<p>safe</p><script>alert(1)</script>" onStripped={onStripped} />,
     );
     expect(onStripped).toHaveBeenCalledTimes(1);
