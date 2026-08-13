@@ -133,12 +133,12 @@ async def get_logs(
     where_clause = "WHERE " + " AND ".join(where_clauses)
 
     result = await db.execute(
-        text(f'''
+        text('''
             SELECT id, project_id, experiment_id, trace_id, span_name,
                    input_text, output_text, model_name, metadata, latency_ms, token_count,
                    cost, status, error_message, timestamp
             FROM llm_evals_logs
-            {where_clause}
+            ''' + where_clause + '''
             ORDER BY timestamp DESC
             LIMIT :limit OFFSET :offset
         '''),
@@ -189,7 +189,7 @@ async def get_log_count(
     where_clause = "WHERE " + " AND ".join(where_clauses)
 
     result = await db.execute(
-        text(f'SELECT COUNT(*) as count FROM llm_evals_logs {where_clause}'),
+        text('SELECT COUNT(*) as count FROM llm_evals_logs ' + where_clause),
         params
     )
 
@@ -273,14 +273,14 @@ async def get_metric_aggregates(
     where_clause = "WHERE " + " AND ".join(where_clauses)
 
     result = await db.execute(
-        text(f'''
+        text('''
             SELECT
                 AVG(value) as avg,
                 MIN(value) as min,
                 MAX(value) as max,
                 COUNT(*) as count
             FROM llm_evals_metrics
-            {where_clause}
+            ''' + where_clause + '''
         '''),
         params
     )
@@ -428,11 +428,11 @@ async def get_experiments(
     where_clause = "WHERE " + " AND ".join(where_clauses)
 
     result = await db.execute(
-        text(f'''
+        text('''
             SELECT id, project_id, name, description, config, status,
                    results, created_at, updated_at, started_at, completed_at, model_inventory_id
             FROM llm_evals_experiments
-            {where_clause}
+            ''' + where_clause + '''
             ORDER BY created_at DESC
             LIMIT :limit OFFSET :offset
         '''),
@@ -476,7 +476,7 @@ async def get_experiment_count(
     where_clause = "WHERE " + " AND ".join(where_clauses)
 
     result = await db.execute(
-        text(f'SELECT COUNT(*) as count FROM llm_evals_experiments {where_clause}'),
+        text('SELECT COUNT(*) as count FROM llm_evals_experiments ' + where_clause),
         params
     )
 
@@ -514,9 +514,9 @@ async def update_experiment_status(
     update_clause = ", ".join(updates)
 
     result = await db.execute(
-        text(f'''
+        text('''
             UPDATE llm_evals_experiments
-            SET {update_clause}
+            SET ''' + update_clause + '''
             WHERE organization_id = :organization_id AND id = :experiment_id
             RETURNING id, status, updated_at
         '''),
@@ -562,9 +562,9 @@ async def update_experiment(
     update_clause = ", ".join(updates)
 
     result = await db.execute(
-        text(f'''
+        text('''
             UPDATE llm_evals_experiments
-            SET {update_clause}
+            SET ''' + update_clause + '''
             WHERE organization_id = :organization_id AND id = :experiment_id
             RETURNING *
         '''),
