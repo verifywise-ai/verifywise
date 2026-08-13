@@ -2464,7 +2464,6 @@ export default function ScanDetailsPage() {
                   approver: 0,
                   approvalStatus: 0,
                   dateOfAssessment: "",
-                  recommendations: "",
                 }
               : undefined
           }
