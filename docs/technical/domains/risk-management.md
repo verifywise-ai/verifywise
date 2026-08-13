@@ -510,13 +510,47 @@ An edge carries a `score`, a structured `reasons` array, a `source`
 confirmed, and a user-created link can be dismissed.
 
 **Scoring.** `Servers/services/riskLinks/` holds a `LinkSignalProvider`
-interface and, today, one provider: `field_overlap` (tier 0). It scores shared
+interface and two providers: `field_overlap` (tier 0) and
+`shared_framework_element` (tier 1). It scores shared
 category 3, shared control mapping 2, shared assessment mapping 2, same
 lifecycle phase 2, shared project 1. `"0"` in a control or assessment mapping
 means "nothing mapped" and never matches — the risk form has no picker for
 those fields and always sends `0`. Providers are merged by summing scores and
-concatenating reasons; a provider that throws is logged and skipped, and if
-*every* provider fails the recompute writes and deletes nothing.
+concatenating reasons; any provider that throws aborts the recompute, so
+nothing is written or deleted and the risk keeps its existing edges.
+
+### Tier 1 — shared framework elements
+
+Two risks attached to the same framework element score
+`min(4, Σ 2 / log2(1 + degree))`, where `degree` is how many active risks in the
+organization are attached to that element. A control only these two risks touch
+is worth 1.26; one that forty risks touch is worth 0.37. Roughly three exclusive
+shared elements reach the suggestion threshold of 3 on structure alone.
+
+The rarity weight is the point. In a single-framework organization every risk
+shares the framework, so a flat weight would push every pair over the threshold
+and leave the per-risk cap as the real filter. The cap of 4 sits below tier 0's
+maximum of 10, so strong field overlap still outranks pure structure.
+
+Ten join tables contribute elements: ISO 42001 subclauses and annex categories,
+ISO 27001 subclauses and annex controls, EU AI Act controls, subcontrols and
+assessment answers, NIST AI RMF subcategories, and custom framework level-2 and
+level-3 items. Projects are excluded — tier 0 already scores `shared_project` —
+and so is `frameworks_risks`, which rarity would flatten to noise anyway.
+
+The user sees one signal per pair, not one per element:
+`{ "signal": "shared_framework_element", "weight": 3.1,
+   "detail": "2 EU AI Act controls, 1 ISO 42001 subclause" }`.
+
+### A provider that fails aborts the recompute
+
+Any provider throwing rejects the whole run: nothing is written and nothing is
+pruned, so the risk keeps the edges it had. Finishing on a partial set would
+strip the missing tier's points from every pair and delete the `derived` +
+`suggested` edges that then fell below the threshold — a transient database
+error would silently destroy real suggestions. A provider returning an empty
+array still means "ran, found nothing" and the run continues. The failed job
+retries three times with exponential backoff.
 
 **Persistence.** A pair at or above score 3 becomes a `derived` / `suggested`
 edge, up to 20 new edges per recompute, best score first with ties broken by
