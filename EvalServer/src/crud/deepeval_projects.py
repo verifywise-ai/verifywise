@@ -192,13 +192,18 @@ async def update_project(
 
     updates.append("updated_at = CURRENT_TIMESTAMP")
 
-    result = await db.execute(
-        text(f'''
+    query = (
+        '''
             UPDATE llm_evals_projects
-            SET {", ".join(updates)}
+            SET '''
+        + ", ".join(updates)
+        + '''
             WHERE organization_id = :organization_id AND id = :id
             RETURNING id, name, description, organization_id, created_at, updated_at, created_by, use_case
-        '''),
+        '''
+    )
+    result = await db.execute(
+        text(query),
         params
     )
 
