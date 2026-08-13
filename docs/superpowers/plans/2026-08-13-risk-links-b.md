@@ -2098,10 +2098,20 @@ import { findRelatedRisks, RelatedRisk } from "../../../application/tools/relate
 - [ ] **Step 4: Verify nothing references the deleted code**
 
 ```bash
-cd /Users/ozger/Desktop/verifywise && git grep -n "findRelatedRisks\|RelatedRisksSummary\|RelatedRisk\b\|relatedSummary\|showRelatedRisks" -- Clients/
+cd /Users/ozger/Desktop/verifywise && git grep -nE "findRelatedRisks|RelatedRisksSummary|relatedSummary|showRelatedRisks" -- Clients/
 ```
 
 Expected: no output. Any hit is a reference the deletion missed.
+
+`-E` so the alternation is unambiguous. Do not add a `\b`-anchored `RelatedRisk`
+term: word boundaries are not portable across git's regex backends, and a term
+that silently matches nothing reads as a pass. The four names above only ever
+appear in the deleted imports, the deleted state block, and the two deleted
+handlers, so they cover the same ground.
+
+Note the `RiskModel` import at `index.tsx:29` **stays**. It is still used at
+lines 82, 83, 266, 294, 455, 477, 749 and 1036 — only `relatedSummary`'s
+annotation and `showRelatedRisks`'s signature go away with it.
 
 - [ ] **Step 5: Build and run the full frontend suite**
 
