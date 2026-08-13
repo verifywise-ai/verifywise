@@ -158,12 +158,12 @@ async def get_row_count(
 
     if organization_id is not None and schema_name == "verifywise":
         result = await session.execute(
-            text(f'SELECT COUNT(*) FROM "{schema_name}"."{table_name}" WHERE organization_id = :org_id'),
+            text('SELECT COUNT(*) FROM "' + schema_name + '"."' + table_name + '" WHERE organization_id = :org_id'),
             {"org_id": organization_id}
         )
     else:
         result = await session.execute(
-            text(f'SELECT COUNT(*) FROM "{schema_name}"."{table_name}"')
+            text('SELECT COUNT(*) FROM "' + schema_name + '"."' + table_name + '"')
         )
 
     row = result.fetchone()
@@ -264,7 +264,7 @@ async def update_migration_status(session: AsyncSession, **kwargs):
             updates.append("completed_at = :now")
 
         await session.execute(
-            text(f"UPDATE verifywise.evalserver_migration_status SET {', '.join(updates)} WHERE migration_key = :key"),
+            text("UPDATE verifywise.evalserver_migration_status SET " + ", ".join(updates) + " WHERE migration_key = :key"),
             params
         )
     else:
@@ -363,8 +363,8 @@ async def migrate_table(
 
     # Fetch all rows from source
     fetch_result = await session.execute(
-        text(f'SELECT * FROM "{tenant_hash}"."{source_table}" ORDER BY id' if "id" in common_columns
-             else f'SELECT * FROM "{tenant_hash}"."{source_table}"')
+        text('SELECT * FROM "' + tenant_hash + '"."' + source_table + '" ORDER BY id' if "id" in common_columns
+             else 'SELECT * FROM "' + tenant_hash + '"."' + source_table + '"')
     )
     rows = fetch_result.mappings().all()
 
@@ -435,11 +435,7 @@ async def migrate_table(
                 if is_serial_id_table:
                     # For SERIAL ID tables, get the new ID from RETURNING
                     insert_result = await session.execute(
-                        text(f"""
-                            INSERT INTO verifywise."{table_name}" ({column_list})
-                            VALUES ({placeholder_list})
-                            RETURNING id
-                        """),
+                        text('INSERT INTO verifywise."' + table_name + '" (' + column_list + ') VALUES (' + placeholder_list + ') RETURNING id'),
                         values_dict
                     )
                     new_row = insert_result.fetchone()
@@ -449,11 +445,7 @@ async def migrate_table(
                 else:
                     # For VARCHAR ID tables, just insert
                     await session.execute(
-                        text(f"""
-                            INSERT INTO verifywise."{table_name}" ({column_list})
-                            VALUES ({placeholder_list})
-                            ON CONFLICT DO NOTHING
-                        """),
+                        text('INSERT INTO verifywise."' + table_name + '" (' + column_list + ') VALUES (' + placeholder_list + ') ON CONFLICT DO NOTHING'),
                         values_dict
                     )
                     # Map old ID to itself for VARCHAR IDs
@@ -545,7 +537,7 @@ async def migrate_organization(
         # Optionally drop tenant schema after successful migration
         if drop_schema_after and not dry_run:
             print(f"    🗑️  Dropping tenant schema {tenant_hash}...")
-            await session.execute(text(f'DROP SCHEMA IF EXISTS "{tenant_hash}" CASCADE'))
+            await session.execute(text('DROP SCHEMA IF EXISTS "' + tenant_hash + '" CASCADE'))
 
         # Commit entire org migration as one transaction
         await session.commit()
@@ -731,7 +723,7 @@ async def check_and_run_migration(database_url: str) -> MigrationResult:
         # Use a dedicated connection for the advisory lock so it spans the entire migration
         async with engine.connect() as lock_conn:
             # Acquire advisory lock — blocks until available (one worker at a time)
-            await lock_conn.execute(text(f"SELECT pg_advisory_lock({MIGRATION_LOCK_ID})"))
+            await lock_conn.execute(text("SELECT pg_advisory_lock(" + str(MIGRATION_LOCK_ID) + ")"))
 
             try:
                 async with Session() as session:
@@ -786,7 +778,7 @@ async def check_and_run_migration(database_url: str) -> MigrationResult:
 
             finally:
                 # Release advisory lock so other workers can proceed
-                await lock_conn.execute(text(f"SELECT pg_advisory_unlock({MIGRATION_LOCK_ID})"))
+                await lock_conn.execute(text("SELECT pg_advisory_unlock(" + str(MIGRATION_LOCK_ID) + ")"))
 
     finally:
         await engine.dispose()
