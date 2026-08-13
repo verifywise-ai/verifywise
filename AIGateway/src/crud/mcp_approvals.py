@@ -144,21 +144,22 @@ async def get_pending_request(
     two surfaces never share a row.
     """
     tool_id_clause = "AND tool_id IS NULL" if native else "AND tool_id IS NOT NULL"
+    sql = (
+        "SELECT id, status, expires_at\n"
+        "FROM ai_gateway_mcp_approval_requests\n"
+        "WHERE organization_id = :org_id\n"
+        "  AND agent_key_id = :agent_key_id\n"
+        "  AND tool_name = :tool_name\n"
+        "  AND arguments_hash = :arguments_hash\n"
+        "  " + tool_id_clause + "\n"
+        "  AND status = 'pending'\n"
+        "  AND expires_at > NOW()\n"
+        "ORDER BY created_at DESC\n"
+        "LIMIT 1"
+    )
     async with get_db() as db:
         result = await db.execute(
-            text(f"""
-                SELECT id, status, expires_at
-                FROM ai_gateway_mcp_approval_requests
-                WHERE organization_id = :org_id
-                  AND agent_key_id = :agent_key_id
-                  AND tool_name = :tool_name
-                  AND arguments_hash = :arguments_hash
-                  {tool_id_clause}
-                  AND status = 'pending'
-                  AND expires_at > NOW()
-                ORDER BY created_at DESC
-                LIMIT 1
-            """),
+            text(sql),
             {
                 "org_id": org_id,
                 "agent_key_id": agent_key_id,
@@ -184,21 +185,22 @@ async def get_approved_request(
     so the two surfaces never share a row.
     """
     tool_id_clause = "AND tool_id IS NULL" if native else "AND tool_id IS NOT NULL"
+    sql = (
+        "SELECT id, status, expires_at\n"
+        "FROM ai_gateway_mcp_approval_requests\n"
+        "WHERE organization_id = :org_id\n"
+        "  AND agent_key_id = :agent_key_id\n"
+        "  AND tool_name = :tool_name\n"
+        "  AND arguments_hash = :arguments_hash\n"
+        "  " + tool_id_clause + "\n"
+        "  AND status = 'approved'\n"
+        "  AND expires_at > NOW()\n"
+        "ORDER BY decided_at DESC\n"
+        "LIMIT 1"
+    )
     async with get_db() as db:
         result = await db.execute(
-            text(f"""
-                SELECT id, status, expires_at
-                FROM ai_gateway_mcp_approval_requests
-                WHERE organization_id = :org_id
-                  AND agent_key_id = :agent_key_id
-                  AND tool_name = :tool_name
-                  AND arguments_hash = :arguments_hash
-                  {tool_id_clause}
-                  AND status = 'approved'
-                  AND expires_at > NOW()
-                ORDER BY decided_at DESC
-                LIMIT 1
-            """),
+            text(sql),
             {
                 "org_id": org_id,
                 "agent_key_id": agent_key_id,
@@ -226,23 +228,24 @@ async def get_active_request(
     other, so the two surfaces never share an approval row.
     """
     tool_id_clause = "AND tool_id IS NULL" if native else "AND tool_id IS NOT NULL"
+    sql = (
+        "SELECT id, status, expires_at\n"
+        "FROM ai_gateway_mcp_approval_requests\n"
+        "WHERE organization_id = :org_id\n"
+        "  AND agent_key_id = :agent_key_id\n"
+        "  AND tool_name = :tool_name\n"
+        "  AND arguments_hash = :arguments_hash\n"
+        "  " + tool_id_clause + "\n"
+        "  AND status IN ('approved', 'pending')\n"
+        "  AND expires_at > NOW()\n"
+        "ORDER BY\n"
+        "    CASE status WHEN 'approved' THEN 0 ELSE 1 END,\n"
+        "    created_at DESC\n"
+        "LIMIT 1"
+    )
     async with get_db() as db:
         result = await db.execute(
-            text(f"""
-                SELECT id, status, expires_at
-                FROM ai_gateway_mcp_approval_requests
-                WHERE organization_id = :org_id
-                  AND agent_key_id = :agent_key_id
-                  AND tool_name = :tool_name
-                  AND arguments_hash = :arguments_hash
-                  {tool_id_clause}
-                  AND status IN ('approved', 'pending')
-                  AND expires_at > NOW()
-                ORDER BY
-                    CASE status WHEN 'approved' THEN 0 ELSE 1 END,
-                    created_at DESC
-                LIMIT 1
-            """),
+            text(sql),
             {
                 "org_id": org_id,
                 "agent_key_id": agent_key_id,
