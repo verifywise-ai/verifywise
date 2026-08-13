@@ -198,9 +198,9 @@ async def update_virtual_key(org_id: int, key_id: int, data: dict) -> Optional[d
 
     set_clauses.append("updated_at = NOW()")
 
-    sql = f"""
+    sql = """
         UPDATE ai_gateway_virtual_keys
-        SET {", ".join(set_clauses)}
+        SET """ + ", ".join(set_clauses) + """
         WHERE organization_id = :org_id
           AND id = :key_id
         RETURNING
