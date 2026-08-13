@@ -11,7 +11,8 @@ Close all 136 open GitHub code-scanning alerts in `verifywise-ai/verifywise` usi
 | 4 | Secret / hash exposure cleanup | 3 | Full-Stack Developer | AppSec Engineer | 🟢 Done | pushed |
 | 3a | Kubernetes Trivy hardening — safe contexts pass | 47 | DevSecOps Engineer | Cloud Architect / SRE | 🟢 Done | pushed |
 | 2 | Path injection hardening | 16 | Senior Backend Developer | AppSec Engineer | 🟢 Done | pushed |
-| 5 | CodeQL JS/TS fixes | 18 | Senior Backend / Full-Stack Developer | AppSec Engineer | 🟡 In progress | — |
+| 5 | CodeQL JS/TS fixes | 18 | Senior Backend / Full-Stack Developer | AppSec Engineer | 🟢 Done | pushed |
+| 6 | Remaining Semgrep miscellany | ~10 | Full-Stack Developer | AppSec Engineer | 🟡 In progress | — |
 | 6 | Remaining Semgrep miscellany | ~10 | Full-Stack Developer | AppSec Engineer | ⚪ Not started | — |
 | 1 | SQLAlchemy `text()` parameterization | 58 | Senior Backend Developer | AppSec Engineer / DBA | ⚪ Not started | — |
 | 3b | Kubernetes Trivy hardening — runAsNonRoot + Dockerfile USER | 47 | DevSecOps Engineer | Cloud Architect / SRE | ⚪ Not started | — |
