@@ -97,12 +97,15 @@ async def delete_user_datasets(organization_id: int, db: AsyncSession, paths: Li
     params = {f"path_{i}": path for i, path in enumerate(paths)}
     params["organization_id"] = organization_id
 
-    await db.execute(
-        text(
-            f'''
+    query = (
+        '''
             DELETE FROM llm_evals_datasets
-            WHERE organization_id = :organization_id AND path IN ({placeholders});
-            '''
-        ),
+            WHERE organization_id = :organization_id AND path IN ('''
+        + placeholders
+        + ''');
+        '''
+    )
+    await db.execute(
+        text(query),
         params
     )
