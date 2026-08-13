@@ -15,6 +15,9 @@ import {
   getMonitoring,
   updateMonitoring,
   generateMonitoringToken,
+  listSuperAdmins,
+  grantSuperAdmin,
+  revokeSuperAdmin,
 } from "../controllers/superAdmin.ctrl";
 
 const router = express.Router();
@@ -37,5 +40,10 @@ router.delete("/users/:id", removeUser);
 router.get("/monitoring", getMonitoring);
 router.put("/monitoring", updateMonitoring);
 router.post("/monitoring/token", generateMonitoringToken);
+
+// SuperAdmin membership: list current SuperAdmins, elect a user, revoke.
+router.get("/super-admins", listSuperAdmins);
+router.post("/super-admins", grantSuperAdmin);
+router.delete("/super-admins/:user_id", revokeSuperAdmin);
 
 export default router;

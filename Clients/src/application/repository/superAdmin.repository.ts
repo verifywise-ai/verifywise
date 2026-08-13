@@ -108,3 +108,28 @@ export async function updateMonitoringConfig(data: MonitoringConfigInput) {
 export async function generateMonitoringToken() {
   return apiServices.post<ServerResponse<MonitoringConfig>>("/super-admin/monitoring/token", {});
 }
+
+export interface SuperAdminEntry {
+  user_id: number;
+  name: string;
+  surname: string;
+  email: string;
+  role_id: number | null;
+  role_name: string | null;
+  organization_id: number | null;
+  organization_name: string | null;
+}
+
+export async function listSuperAdmins() {
+  return apiServices.get<ServerResponse<SuperAdminEntry[]>>("/super-admin/super-admins");
+}
+
+export async function grantSuperAdmin(userId: number) {
+  return apiServices.post<ServerResponse<{ user_id: number }>>("/super-admin/super-admins", {
+    user_id: userId,
+  });
+}
+
+export async function revokeSuperAdmin(userId: number) {
+  return apiServices.delete(`/super-admin/super-admins/${userId}`);
+}

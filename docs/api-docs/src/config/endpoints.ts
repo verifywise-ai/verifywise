@@ -9455,6 +9455,42 @@ export const superAdminEndpoints: Endpoint[] = [
     ],
     tag: "Super Admin",
   },
+  {
+    method: 'GET',
+    path: '/super-admin/super-admins',
+    summary: "List Super Admins",
+    description: "Requires role: Super Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Super Admin",
+  },
+  {
+    method: 'POST',
+    path: '/super-admin/super-admins',
+    summary: "Grant Super Admin",
+    description: "Requires role: Super Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Super Admin",
+  },
+  {
+    method: 'DELETE',
+    path: '/super-admin/super-admins/{user_id}',
+    summary: "Revoke Super Admin",
+    description: "Requires role: Super Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Super Admin",
+  },
 ];
 
 // System endpoints

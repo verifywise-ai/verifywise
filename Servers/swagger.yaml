@@ -23556,6 +23556,50 @@ paths:
         -
           bearerAuth: []
       description: 'Requires role: Super Admin'
+  /super-admin/super-admins:
+    get:
+      summary: 'List Super Admins'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Super Admin'
+      operationId: listSuperAdmins
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Super Admin'
+    post:
+      summary: 'Grant Super Admin'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Super Admin'
+      operationId: grantSuperAdmin
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Super Admin'
+  '/super-admin/super-admins/{user_id}':
+    delete:
+      summary: 'Revoke Super Admin'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Super Admin'
+      operationId: revokeSuperAdmin
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Super Admin'
   /internal/ai-gateway/notify:
     post:
       tags:

@@ -8,6 +8,13 @@ import { deleteUserByIdQuery } from "../utils/user.utils";
 import { invite } from "./vwmailer.ctrl";
 import { OrganizationModel } from "../domain.layer/models/organization/organization.model";
 import { getMonitoringConfig, upsertMonitoringConfig } from "../utils/monitoringConfig.utils";
+import {
+  countSuperAdmins,
+  grantSuperAdmin as grantSuperAdminUtil,
+  isUserSuperAdmin,
+  listSuperAdmins as listSuperAdminsUtil,
+  revokeSuperAdmin as revokeSuperAdminUtil,
+} from "../utils/superAdmin.utils";
 
 import { translateError } from "../utils/i18n.utils";
 
@@ -160,12 +167,12 @@ export async function updateOrg(req: Request, res: Response) {
 }
 
 /**
- * Get total user count (excludes super-admins)
+ * Get total user count (excludes pure super-admins with no org/role).
  */
 export async function getUserCount(_req: Request, res: Response) {
   try {
     const [result]: any[] = await sequelize.query(
-      `SELECT COUNT(*) AS count FROM users WHERE role_id != 5`,
+      `SELECT COUNT(*) AS count FROM users WHERE organization_id IS NOT NULL`,
       { type: "SELECT" as any },
     );
     return res.status(200).json(STATUS_CODE[200]({ count: parseInt(result.count, 10) }));
@@ -175,7 +182,7 @@ export async function getUserCount(_req: Request, res: Response) {
 }
 
 /**
- * List all users across all organizations
+ * List all users across all organizations (excludes pure super-admins).
  */
 export async function listAllUsers(_req: Request, res: Response) {
   try {
@@ -186,7 +193,7 @@ export async function listAllUsers(_req: Request, res: Response) {
        FROM users u
        LEFT JOIN roles r ON u.role_id = r.id
        LEFT JOIN organizations o ON u.organization_id = o.id
-       WHERE u.role_id != 5
+       WHERE u.organization_id IS NOT NULL
        ORDER BY u.created_at DESC`,
       { type: "SELECT" as any },
     );
@@ -232,13 +239,6 @@ export async function inviteUserToOrg(req: Request, res: Response) {
       .json(STATUS_CODE[400]({ message: req.t!("email, name, and roleId are required") }));
   }
 
-  // Prevent creating super-admin users via invite
-  if (roleId === 5) {
-    return res
-      .status(403)
-      .json(STATUS_CODE[403](req.t!("Cannot invite users with SuperAdmin role")));
-  }
-
   // Check if a user with this email already exists
   const existing: any[] = await sequelize.query(`SELECT id FROM users WHERE email = :email`, {
     replacements: { email },
@@ -265,21 +265,18 @@ export async function updateUser(req: Request, res: Response) {
     const userId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
     const { name, surname, email, roleId } = req.body;
 
-    // Prevent updating to super-admin role
-    if (roleId === 5) {
-      return res.status(403).json(STATUS_CODE[403](req.t!("Cannot assign SuperAdmin role")));
-    }
-
-    const rows: any[] = await sequelize.query(`SELECT id, role_id FROM users WHERE id = :userId`, {
-      replacements: { userId },
-      type: "SELECT" as any,
-    });
+    const rows: any[] = await sequelize.query(
+      `SELECT id, role_id, organization_id FROM users WHERE id = :userId`,
+      { replacements: { userId }, type: "SELECT" as any },
+    );
 
     if (rows.length === 0) {
       return res.status(404).json(STATUS_CODE[404](req.t!("User not found")));
     }
 
-    if (rows[0].role_id === 5) {
+    // Pure SuperAdmin (no role, no org) cannot be edited through the
+    // tenant user endpoint — they have no org role to change.
+    if (rows[0].role_id == null && rows[0].organization_id == null) {
       return res.status(403).json(STATUS_CODE[403](req.t!("Super-admin user cannot be modified")));
     }
 
@@ -346,8 +343,10 @@ export async function removeUser(req: Request, res: Response) {
       return res.status(404).json(STATUS_CODE[404](req.t!("User not found")));
     }
 
-    // Prevent deletion of super-admin
-    if (user.role_id === 5) {
+    // Pure SuperAdmin (no role, no org) is not deletable through this
+    // endpoint — the DB trigger would also block it since revoking their
+    // super_admins row would orphan them.
+    if (user.role_id == null && user.organization_id == null) {
       await transaction.rollback();
       return res.status(403).json(STATUS_CODE[403](req.t!("Super-admin user cannot be deleted")));
     }
@@ -419,6 +418,88 @@ export async function updateMonitoring(req: Request, res: Response) {
     });
 
     return res.status(200).json(STATUS_CODE[200](redactMonitoringConfig(updated)));
+  } catch (error) {
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+/**
+ * List all SuperAdmins.
+ */
+export async function listSuperAdmins(_req: Request, res: Response) {
+  try {
+    const rows = await listSuperAdminsUtil();
+    return res.status(200).json(STATUS_CODE[200](rows));
+  } catch (error) {
+    return res.status(500).json(STATUS_CODE[500](translateError(_req, error)));
+  }
+}
+
+/**
+ * Elect a user as SuperAdmin. Only existing SuperAdmins may call this
+ * (enforced by superAdminOnly middleware). Target must be an existing user
+ * that isn't already a SuperAdmin.
+ */
+export async function grantSuperAdmin(req: Request, res: Response) {
+  try {
+    const rawUserId = req.body?.user_id;
+    const targetUserId = typeof rawUserId === "number" ? rawUserId : parseInt(rawUserId, 10);
+    if (!targetUserId || isNaN(targetUserId)) {
+      return res.status(400).json(STATUS_CODE[400]({ message: req.t!("user_id is required") }));
+    }
+
+    const rows: any[] = await sequelize.query(`SELECT id FROM users WHERE id = :userId LIMIT 1`, {
+      replacements: { userId: targetUserId },
+      type: "SELECT" as any,
+    });
+    if (!rows[0]) {
+      return res.status(404).json(STATUS_CODE[404](req.t!("User not found")));
+    }
+    if (await isUserSuperAdmin(targetUserId)) {
+      return res
+        .status(409)
+        .json(STATUS_CODE[409]({ message: req.t!("User is already a SuperAdmin") }));
+    }
+
+    await grantSuperAdminUtil(targetUserId);
+    return res.status(201).json(STATUS_CODE[201]({ user_id: targetUserId }));
+  } catch (error) {
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+/**
+ * Revoke a user's SuperAdmin status. Blocks the request when the target is
+ * the last remaining SuperAdmin — the only rule; prevents lockout.
+ */
+export async function revokeSuperAdmin(req: Request, res: Response) {
+  try {
+    const rawUserId = Array.isArray(req.params.user_id)
+      ? req.params.user_id[0]
+      : req.params.user_id;
+    const targetUserId = parseInt(rawUserId, 10);
+    if (!targetUserId || isNaN(targetUserId)) {
+      return res.status(400).json(STATUS_CODE[400]({ message: req.t!("Invalid user id") }));
+    }
+
+    if (targetUserId === req.userId) {
+      return res
+        .status(400)
+        .json(STATUS_CODE[400]({ message: req.t!("You cannot revoke your own Super Admin role") }));
+    }
+    if (!(await isUserSuperAdmin(targetUserId))) {
+      return res
+        .status(404)
+        .json(STATUS_CODE[404]({ message: req.t!("User is not a SuperAdmin") }));
+    }
+    if ((await countSuperAdmins()) <= 1) {
+      return res
+        .status(400)
+        .json(STATUS_CODE[400]({ message: req.t!("Cannot revoke the last SuperAdmin") }));
+    }
+
+    await revokeSuperAdminUtil(targetUserId);
+    return res.status(200).json(STATUS_CODE[200]({ revoked: true, user_id: targetUserId }));
   } catch (error) {
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }

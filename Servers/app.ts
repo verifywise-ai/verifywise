@@ -157,13 +157,7 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
         }
       },
       credentials: true,
-      allowedHeaders: [
-        "Authorization",
-        "Content-Type",
-        "X-Requested-With",
-        "X-Organization-Id",
-        "X-CSRF-Token",
-      ],
+      allowedHeaders: ["Authorization", "Content-Type", "X-Requested-With", "X-CSRF-Token"],
     }),
   );
   app.use(helmet());

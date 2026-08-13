@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import { useAuth } from "../../../../application/hooks/useAuth";
 import {
   Box,
   Typography,
@@ -83,7 +82,6 @@ function getUserDisplay(name: string | null, surname: string | null): string {
 
 export default function AuditLedger() {
   const theme = useTheme();
-  const { isSuperAdmin } = useAuth();
   const { settings, isLoading: featureLoading, update: updateFeature } = useFeatureSettings();
   const isEnabled = settings?.audit_ledger_enabled ?? true;
 
@@ -238,7 +236,7 @@ export default function AuditLedger() {
               text={isVerifying ? "Verifying..." : "Verify chain"}
               variant="contained"
               onClick={verify}
-              isDisabled={isVerifying || isSuperAdmin}
+              isDisabled={isVerifying}
               sx={{ height: 34, minWidth: 120 }}
             />
           </Stack>

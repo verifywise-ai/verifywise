@@ -7,9 +7,15 @@ import { getAllEntities } from "../../../application/repository/entity.repositor
 import { extractUserToken } from "../../../application/tools/extractToken";
 import { IProtectedRouteProps } from "../../types/widget.types";
 
-const ProtectedRoute = ({ Component, ...rest }: IProtectedRouteProps) => {
+const ProtectedRoute = ({
+  Component,
+  requireSuperAdmin = false,
+  ...rest
+}: IProtectedRouteProps) => {
   const authState = useSelector(
-    (state: { auth: { authToken: string; userExists: boolean } }) => state.auth,
+    (state: {
+      auth: { authToken: string; userExists: boolean; isSuperAdmin?: boolean };
+    }) => state.auth,
   );
   const location = useLocation();
   const dispatch = useDispatch();
@@ -81,9 +87,13 @@ const ProtectedRoute = ({ Component, ...rest }: IProtectedRouteProps) => {
     }
   }, [dispatch, authState.authToken, isPublicRoute]);
 
+  // SuperAdmin-only routes: after auth passes, block non-SuperAdmins.
+  // Sends them to `/` (tenant dashboard) so they don't see a broken shell.
+  const superAdminOk = !requireSuperAdmin || authState.isSuperAdmin === true;
+
   if (loading) {
     if (authState.authToken) {
-      return <Component {...rest} />;
+      return superAdminOk ? <Component {...rest} /> : <Navigate to="/" replace />;
     }
     return null;
   }
@@ -95,7 +105,7 @@ const ProtectedRoute = ({ Component, ...rest }: IProtectedRouteProps) => {
 
   // If users exist and we have an auth token, allow access to protected routes
   if (authState.authToken) {
-    return <Component {...rest} />;
+    return superAdminOk ? <Component {...rest} /> : <Navigate to="/" replace />;
   }
 
   // If users exist but no auth token, redirect to login

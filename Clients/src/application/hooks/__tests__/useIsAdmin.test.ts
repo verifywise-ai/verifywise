@@ -28,7 +28,6 @@ function createWrapper(authToken: string) {
         onboardingStatus: "completed",
         isOrgCreator: false,
         isSuperAdmin: false,
-        activeOrganizationId: null,
       },
     },
   });
