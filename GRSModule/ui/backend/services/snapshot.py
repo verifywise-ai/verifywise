@@ -15,9 +15,11 @@ def _safe_path(base: Path, target: Path) -> Path:
     Uses os.path.normpath + startswith so CodeQL recognizes the check as a
     py/path-injection sanitizer.
     """
-    fullpath = os.path.normpath(os.path.join(str(base), str(target)))
-    basepath = os.path.normpath(str(base))
-    if not fullpath.startswith(basepath + os.sep) and fullpath != basepath:
+    base_str = str(base)
+    target_str = str(target)
+    basepath = os.path.normpath(base_str)
+    fullpath = os.path.normpath(os.path.join(base_str, target_str))
+    if not fullpath.startswith(basepath):
         raise ValueError(f"Path {fullpath} escapes allowed base {basepath}")
     return Path(fullpath)
 

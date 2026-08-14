@@ -34,9 +34,9 @@ def assert_within(base: Path, target: Path) -> Path:
     """
     base_str = str(base)
     target_str = str(target)
-    fullpath = os.path.normpath(os.path.join(base_str, target_str))
     basepath = os.path.normpath(base_str)
-    if not fullpath.startswith(basepath + os.sep) and fullpath != basepath:
+    fullpath = os.path.normpath(os.path.join(base_str, target_str))
+    if not fullpath.startswith(basepath):
         raise ValueError(f"Path {fullpath} escapes allowed base {basepath}")
     return Path(fullpath)
 

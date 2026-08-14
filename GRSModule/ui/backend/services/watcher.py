@@ -10,9 +10,11 @@ from ..models import ProgressCounts
 def count_lines(path: Path, base: Path) -> int:
     """Count non-empty lines in a file. Returns 0 if file doesn't exist."""
     # CodeQL-recognized containment check at the sink.
-    fullpath = os.path.normpath(os.path.join(str(base), str(path)))
-    basepath = os.path.normpath(str(base))
-    if not fullpath.startswith(basepath + os.sep) and fullpath != basepath:
+    base_str = str(base)
+    path_str = str(path)
+    basepath = os.path.normpath(base_str)
+    fullpath = os.path.normpath(os.path.join(base_str, path_str))
+    if not fullpath.startswith(basepath):
         raise ValueError(f"Path {fullpath} escapes allowed base {basepath}")
     resolved = Path(fullpath)
     if not resolved.exists():
