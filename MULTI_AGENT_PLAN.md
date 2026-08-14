@@ -15,7 +15,7 @@ Close all 136 open GitHub code-scanning alerts in `verifywise-ai/verifywise` usi
 | 6 | Remaining Semgrep miscellany | ~10 | Full-Stack Developer | AppSec Engineer | 🟢 Done | pushed |
 | 1 | SQLAlchemy `text()` parameterization | 58 | Senior Backend Developer | AppSec Engineer / DBA | 🟢 Done | pushed |
 | 3b | Kubernetes Trivy hardening — namespace/resources + accepted-risk docs | 47 | DevSecOps Engineer | Cloud Architect / SRE | 🟢 Done | pushed |
-| 7 | Validation, regression, docs | — | QA Engineer | AppSec Engineer / Tech Writer | 🟡 In progress | — |
+| 7 | Validation, regression, docs | — | QA Engineer | AppSec Engineer / Tech Writer | 🟢 Done | pushed |
 
 ## Git Convention
 - Branch: `mo-384-aug-13-vulnerability-issues`
