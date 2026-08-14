@@ -85,28 +85,20 @@ describe("riskHistory.repository", () => {
       expect(result).toEqual(response);
     });
 
-    it("should log and rethrow errors", async () => {
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    it("should rethrow errors", async () => {
       const error = new Error("Network error");
       vi.mocked(apiServices.get).mockRejectedValue(error);
 
       await expect(getRiskTimeseries("severity")).rejects.toThrow("Network error");
-      expect(consoleErrorSpy).toHaveBeenCalledWith("Error fetching risk timeseries:", error);
-
-      consoleErrorSpy.mockRestore();
     });
 
     it("should rethrow structured API errors", async () => {
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
       const error = {
         response: { status: 500, statusText: "Internal Server Error" },
       };
       vi.mocked(apiServices.get).mockRejectedValue(error);
 
       await expect(getRiskTimeseries("severity")).rejects.toEqual(error);
-      expect(consoleErrorSpy).toHaveBeenCalledWith("Error fetching risk timeseries:", error);
-
-      consoleErrorSpy.mockRestore();
     });
   });
 
@@ -129,8 +121,9 @@ describe("riskHistory.repository", () => {
     });
 
     it("should pass provided parameter in query params", async () => {
+      const responseData = { mitigated: 3, unmitigated: 5 };
       const response = {
-        data: { mitigated: 3, unmitigated: 5 },
+        data: responseData,
         status: 200,
         statusText: "OK",
       };
@@ -143,20 +136,13 @@ describe("riskHistory.repository", () => {
       });
     });
 
-    it("should log and rethrow errors", async () => {
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    it("should rethrow errors", async () => {
       const error = new Error("Counts fetch failed");
       vi.mocked(apiServices.get).mockRejectedValue(error);
 
       await expect(getCurrentRiskParameterCounts("severity")).rejects.toThrow(
         "Counts fetch failed",
       );
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Error fetching current risk parameter counts:",
-        error,
-      );
-
-      consoleErrorSpy.mockRestore();
     });
   });
 
@@ -201,19 +187,14 @@ describe("riskHistory.repository", () => {
       expect(result).toEqual(responseData);
     });
 
-    it("should log and rethrow snapshot creation errors", async () => {
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    it("should rethrow snapshot creation errors", async () => {
       const error = new Error("Snapshot failed");
       vi.mocked(apiServices.post).mockRejectedValue(error);
 
       await expect(createRiskHistorySnapshot("risk_level")).rejects.toThrow("Snapshot failed");
-      expect(consoleErrorSpy).toHaveBeenCalledWith("Error creating risk history snapshot:", error);
-
-      consoleErrorSpy.mockRestore();
     });
 
     it("should rethrow API conflict errors", async () => {
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
       const error = {
         response: { status: 409, statusText: "Conflict" },
       };
@@ -222,9 +203,6 @@ describe("riskHistory.repository", () => {
       await expect(createRiskHistorySnapshot("severity", "duplicate snapshot")).rejects.toEqual(
         error,
       );
-      expect(consoleErrorSpy).toHaveBeenCalledWith("Error creating risk history snapshot:", error);
-
-      consoleErrorSpy.mockRestore();
     });
   });
 });

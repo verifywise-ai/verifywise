@@ -23,18 +23,13 @@ export async function UpdateSubClauseById({
   body: FormData;
   headers?: Record<string, string>;
 }): Promise<any> {
-  try {
-    const response = await apiServices.patch(routeUrl, body, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-        ...headers,
-      },
-    });
-    return response;
-  } catch (error) {
-    console.error("Error updating subclause by ID:", error);
-    throw error;
-  }
+  const response = await apiServices.patch(routeUrl, body, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+      ...headers,
+    },
+  });
+  return response;
 }
 
 export async function ISO27001GetSubClauseByClauseId({
@@ -54,14 +49,9 @@ export async function ISO27001GetSubClauseById({
   signal,
   responseType = "json",
 }: GetRequestParams): Promise<any> {
-  try {
-    const response = await apiServices.get(routeUrl, {
-      signal,
-      responseType,
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error getting subclause by ID:", error);
-    throw error;
-  }
+  const response = await apiServices.get(routeUrl, {
+    signal,
+    responseType,
+  });
+  return response.data;
 }

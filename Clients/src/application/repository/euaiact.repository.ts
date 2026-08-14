@@ -35,8 +35,7 @@ export async function updateEUAIActQuestionStatus(
     });
 
     return !!response;
-  } catch (error) {
-    console.error("Failed to update EU AI Act question status:", error);
+  } catch {
     return false;
   }
 }

@@ -64,16 +64,14 @@ describe("Test Annex Category ISO Repository", () => {
       expect(response).toEqual("blob-data");
     });
 
-    it("should throw and log when request fails", async () => {
+    it("should throw when request fails", async () => {
       const routeUrl = "/annex-categories/1";
       const signal: AbortSignal = new AbortController().signal;
       const error = new Error("API Error");
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
       vi.mocked(apiServices.get).mockRejectedValueOnce(error);
 
       await expect(GetAnnexCategoriesById({ routeUrl, signal })).rejects.toThrow("API Error");
-      expect(consoleErrorSpy).toHaveBeenCalledWith("Error getting annex categories by ID:", error);
     });
   });
 
@@ -114,12 +112,10 @@ describe("Test Annex Category ISO Repository", () => {
       const error = Object.assign(new Error("Request failed"), {
         response: { status: 400 },
       });
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
       vi.mocked(apiServices.patch).mockRejectedValueOnce(error);
 
       await expect(UpdateAnnexCategoryById({ routeUrl, body })).rejects.toBe(error);
-      expect(consoleErrorSpy).toHaveBeenCalledWith("Error updating annex category by ID:", error);
     });
 
     it("should map network errors to a user-friendly error message", async () => {
@@ -128,27 +124,22 @@ describe("Test Annex Category ISO Repository", () => {
       const error = Object.assign(new Error("Network down"), {
         request: {},
       });
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
       vi.mocked(apiServices.patch).mockRejectedValueOnce(error);
 
       await expect(UpdateAnnexCategoryById({ routeUrl, body })).rejects.toThrow(
         "Network error - unable to reach the server",
       );
-      expect(consoleErrorSpy).toHaveBeenCalledWith("Error updating annex category by ID:", error);
-      expect(consoleErrorSpy).toHaveBeenCalledWith("Network error - no response received");
     });
 
     it("should throw unknown non-network errors as-is", async () => {
       const routeUrl = "/annex-categories/1";
       const body = new FormData();
       const error = "Unknown failure";
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
       vi.mocked(apiServices.patch).mockRejectedValueOnce(error);
 
       await expect(UpdateAnnexCategoryById({ routeUrl, body })).rejects.toBe(error);
-      expect(consoleErrorSpy).toHaveBeenCalledWith("Error updating annex category by ID:", error);
     });
   });
 });

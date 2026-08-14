@@ -17,19 +17,14 @@ export async function getModelInventoryTimeseries(
   endDate?: string,
   intervalHours?: number,
 ): Promise<any> {
-  try {
-    const response = await apiServices.get("/modelInventoryHistory/timeseries", {
-      parameter,
-      startDate,
-      endDate,
-      intervalHours,
-      timeframe,
-    });
-    return response;
-  } catch (error: any) {
-    console.error("Error fetching model inventory timeseries:", error);
-    throw error;
-  }
+  const response = await apiServices.get("/modelInventoryHistory/timeseries", {
+    parameter,
+    startDate,
+    endDate,
+    intervalHours,
+    timeframe,
+  });
+  return response;
 }
 
 /**
@@ -39,15 +34,10 @@ export async function getModelInventoryTimeseries(
  * @returns {Promise<any>} The current counts
  */
 export async function getCurrentParameterCounts(parameter: string): Promise<any> {
-  try {
-    const response = await apiServices.get("/api/modelInventoryHistory/current-counts", {
-      params: { parameter },
-    });
-    return response.data;
-  } catch (error: any) {
-    console.error("Error fetching current parameter counts:", error);
-    throw error;
-  }
+  const response = await apiServices.get("/api/modelInventoryHistory/current-counts", {
+    params: { parameter },
+  });
+  return response.data;
 }
 
 /**
@@ -58,14 +48,9 @@ export async function getCurrentParameterCounts(parameter: string): Promise<any>
  * @returns {Promise<any>} The created snapshot
  */
 export async function createHistorySnapshot(parameter: string, description?: string): Promise<any> {
-  try {
-    const response = await apiServices.post("/api/modelInventoryHistory/snapshot", {
-      parameter,
-      description,
-    });
-    return response.data;
-  } catch (error: any) {
-    console.error("Error creating history snapshot:", error);
-    throw error;
-  }
+  const response = await apiServices.post("/api/modelInventoryHistory/snapshot", {
+    parameter,
+    description,
+  });
+  return response.data;
 }
