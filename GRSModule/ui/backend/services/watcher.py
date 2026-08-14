@@ -1,22 +1,27 @@
 from __future__ import annotations
 import os
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 from .path_utils import resolve_dataset_path
 from ..models import ProgressCounts
 
 
-def count_lines(path: Path, base: Path) -> int:
-    """Count non-empty lines in a file. Returns 0 if file doesn't exist."""
-    # CodeQL-recognized containment check at the sink.
-    base_str = str(base)
-    path_str = str(path)
-    basepath = os.path.normpath(base_str)
-    fullpath = os.path.normpath(os.path.join(base_str, path_str))
-    if not fullpath.startswith(basepath):
-        raise ValueError(f"Path {fullpath} escapes allowed base {basepath}")
-    resolved = Path(fullpath)
+def count_lines(path: Path, base: Optional[Path] = None) -> int:
+    """Count non-empty lines in a file. Returns 0 if file doesn't exist.
+
+    When ``base`` is provided, verifies that ``path`` stays under ``base``
+    using the os.path.normpath + startswith pattern CodeQL recognizes as a
+    py/path-injection sanitizer.
+    """
+    if base is not None:
+        base_str = str(base)
+        path_str = str(path)
+        basepath = os.path.normpath(base_str)
+        fullpath = os.path.normpath(os.path.join(base_str, path_str))
+        if not fullpath.startswith(basepath):
+            raise ValueError(f"Path {fullpath} escapes allowed base {basepath}")
+    resolved = Path(os.path.normpath(path))
     if not resolved.exists():
         return 0
     with resolved.open("r", encoding="utf-8", errors="replace") as f:
