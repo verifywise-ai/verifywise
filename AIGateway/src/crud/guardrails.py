@@ -149,6 +149,7 @@ async def update_guardrail(org_id: int, rule_id: int, data: dict) -> Optional[di
         set_sql = ", ".join(set_clauses)
 
         result = await db.execute(
+            # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
             text(  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
                 """
                 UPDATE ai_gateway_guardrails

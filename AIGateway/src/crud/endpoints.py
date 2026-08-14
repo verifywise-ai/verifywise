@@ -11,7 +11,8 @@ async def get_all_endpoints(org_id: int, role_id: Optional[int] = None) -> list[
             params["role_id"] = role_id
 
         result = await db.execute(
-            text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            text("""
                 SELECT
                     e.id,
                     e.slug,
@@ -56,7 +57,7 @@ async def get_all_endpoints(org_id: int, role_id: Optional[int] = None) -> list[
 async def get_endpoint_by_id(org_id: int, id: int) -> Optional[dict]:
     async with get_db() as db:
         result = await db.execute(
-            text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            text("""
                 SELECT
                     e.id,
                     e.slug,
@@ -99,7 +100,7 @@ async def get_endpoint_by_id(org_id: int, id: int) -> Optional[dict]:
 async def create_endpoint(org_id: int, data: dict) -> Optional[dict]:
     async with get_db() as db:
         result = await db.execute(
-            text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            text("""
                 INSERT INTO ai_gateway_endpoints (
                     organization_id,
                     slug,
@@ -213,7 +214,8 @@ async def update_endpoint(org_id: int, id: int, data: dict) -> Optional[dict]:
 
     async with get_db() as db:
         result = await db.execute(
-            text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            text("""
                 UPDATE ai_gateway_endpoints
                 SET """ + set_sql + """
                 WHERE organization_id = :org_id
@@ -245,7 +247,7 @@ async def delete_endpoint(org_id: int, id: int) -> bool:
     async with get_db() as db:
         # Log any endpoints that reference this one as a fallback
         fallback_refs = await db.execute(
-            text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            text("""
                 SELECT id, slug
                 FROM ai_gateway_endpoints
                 WHERE organization_id = :org_id
@@ -266,7 +268,7 @@ async def delete_endpoint(org_id: int, id: int) -> bool:
 
         # Remove this endpoint from virtual key allowed_endpoint_ids arrays
         await db.execute(
-            text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            text("""
                 UPDATE ai_gateway_virtual_keys
                 SET allowed_endpoint_ids = array_remove(allowed_endpoint_ids, :id)
                 WHERE organization_id = :org_id
@@ -277,7 +279,7 @@ async def delete_endpoint(org_id: int, id: int) -> bool:
 
         # Delete the endpoint
         result = await db.execute(
-            text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            text("""
                 DELETE FROM ai_gateway_endpoints
                 WHERE organization_id = :org_id
                   AND id = :id

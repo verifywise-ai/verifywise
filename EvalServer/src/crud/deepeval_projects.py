@@ -37,7 +37,7 @@ async def create_project(
     """
 
     result = await db.execute(
-        text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+        text('''
             INSERT INTO llm_evals_projects
             (id, name, description, organization_id, created_by, use_case)
             VALUES (:id, :name, :description, :organization_id, :created_by, :use_case)
@@ -81,7 +81,7 @@ async def get_all_projects(organization_id: int, db: AsyncSession) -> List[Dict[
     """
 
     result = await db.execute(
-        text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+        text('''
             SELECT id, name, description, organization_id, created_at, updated_at, created_by, use_case
             FROM llm_evals_projects
             WHERE organization_id = :organization_id
@@ -124,7 +124,7 @@ async def get_project_by_id(
     """
 
     result = await db.execute(
-        text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+        text('''
             SELECT id, name, description, organization_id, created_at, updated_at, created_by, use_case
             FROM llm_evals_projects
             WHERE organization_id = :organization_id AND id = :id
@@ -203,6 +203,7 @@ async def update_project(
         '''
     )
     result = await db.execute(
+        # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
         text(query),  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
         params
     )
@@ -240,7 +241,7 @@ async def delete_project(
     """
 
     result = await db.execute(
-        text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+        text('''
             DELETE FROM llm_evals_projects
             WHERE organization_id = :organization_id AND id = :id
             RETURNING id

@@ -48,7 +48,7 @@ async def create_prompt(
 ) -> dict:
     async with get_db() as db:
         result = await db.execute(
-            text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            text("""
                 INSERT INTO ai_gateway_prompts
                     (organization_id, slug, name, description, created_by, created_at, updated_at)
                 VALUES
@@ -71,7 +71,7 @@ async def create_prompt(
 async def get_all_prompts(org_id: int) -> list:
     async with get_db() as db:
         result = await db.execute(
-            text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            text("""
                 SELECT
                     p.*,
                     pv.id            AS published_version_id,
@@ -99,7 +99,7 @@ async def get_all_prompts(org_id: int) -> list:
 async def get_prompt_by_id(org_id: int, id: int) -> Optional[dict]:
     async with get_db() as db:
         result = await db.execute(
-            text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            text("""
                 SELECT
                     p.*,
                     pv.id            AS published_version_id,
@@ -126,7 +126,7 @@ async def get_prompt_by_id(org_id: int, id: int) -> Optional[dict]:
 async def get_prompt_by_slug(org_id: int, slug: str) -> Optional[dict]:
     async with get_db() as db:
         result = await db.execute(
-            text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            text("""
                 SELECT *
                 FROM ai_gateway_prompts
                 WHERE organization_id = :org_id AND slug = :slug
@@ -155,6 +155,7 @@ async def update_prompt(org_id: int, id: int, data: dict) -> Optional[dict]:
 
     async with get_db() as db:
         result = await db.execute(
+            # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
             text(  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
                 """
                 UPDATE ai_gateway_prompts
@@ -176,7 +177,7 @@ async def update_prompt(org_id: int, id: int, data: dict) -> Optional[dict]:
 async def delete_prompt(org_id: int, id: int) -> bool:
     async with get_db() as db:
         result = await db.execute(
-            text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            text("""
                 DELETE FROM ai_gateway_prompts
                 WHERE organization_id = :org_id AND id = :id
                 RETURNING id
@@ -204,7 +205,7 @@ async def create_version(
 
     async with get_db() as db:
         result = await db.execute(
-            text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            text("""
                 INSERT INTO ai_gateway_prompt_versions
                     (organization_id, prompt_id, version, content, variables, model, config,
                      commit_message, created_by, status, created_at)
@@ -238,7 +239,7 @@ async def create_version(
             },
         )
         await db.execute(
-            text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            text("""
                 UPDATE ai_gateway_prompts
                 SET updated_at = NOW()
                 WHERE id = :prompt_id AND organization_id = :org_id
@@ -253,7 +254,7 @@ async def create_version(
 async def get_versions(org_id: int, prompt_id: int) -> list:
     async with get_db() as db:
         result = await db.execute(
-            text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            text("""
                 SELECT
                     pv.*,
                     u1.email AS created_by_name,
@@ -277,7 +278,7 @@ async def get_versions(org_id: int, prompt_id: int) -> list:
 async def get_published_version(org_id: int, prompt_id: int) -> Optional[dict]:
     async with get_db() as db:
         result = await db.execute(
-            text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            text("""
                 SELECT pv.*
                 FROM ai_gateway_prompt_versions pv
                 JOIN ai_gateway_prompts p ON p.id = pv.prompt_id
@@ -301,7 +302,7 @@ async def publish_version(
     async with get_db() as db:
         # Unpublish all versions for this prompt
         await db.execute(
-            text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            text("""
                 UPDATE ai_gateway_prompt_versions
                 SET status = 'draft', published_at = NULL, published_by = NULL
                 WHERE prompt_id = :prompt_id
@@ -315,7 +316,7 @@ async def publish_version(
 
         # Publish the target version
         result = await db.execute(
-            text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            text("""
                 UPDATE ai_gateway_prompt_versions
                 SET status = 'published',
                     published_at = NOW(),
@@ -342,7 +343,7 @@ async def publish_version(
 
         # Touch parent prompt
         await db.execute(
-            text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            text("""
                 UPDATE ai_gateway_prompts
                 SET updated_at = NOW()
                 WHERE id = :prompt_id AND organization_id = :org_id
@@ -356,7 +357,7 @@ async def publish_version(
 async def resolve_prompt(org_id: int, prompt_id: int) -> Optional[dict]:
     async with get_db() as db:
         result = await db.execute(
-            text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            text("""
                 SELECT pv.content, pv.variables, pv.model, pv.config
                 FROM ai_gateway_prompt_versions pv
                 JOIN ai_gateway_prompts p ON p.id = pv.prompt_id
@@ -374,7 +375,7 @@ async def resolve_prompt(org_id: int, prompt_id: int) -> Optional[dict]:
 async def get_labels(org_id: int, prompt_id: int) -> list:
     async with get_db() as db:
         result = await db.execute(
-            text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            text("""
                 SELECT
                     pl.*,
                     pv.version AS version_number,
@@ -404,7 +405,7 @@ async def assign_label(
 ) -> dict:
     async with get_db() as db:
         result = await db.execute(
-            text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            text("""
                 INSERT INTO ai_gateway_prompt_labels
                     (organization_id, prompt_id, label_name, version_id, assigned_by, assigned_at)
                 VALUES
@@ -432,7 +433,7 @@ async def assign_label(
 async def remove_label(org_id: int, prompt_id: int, label_name: str) -> bool:
     async with get_db() as db:
         result = await db.execute(
-            text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            text("""
                 DELETE FROM ai_gateway_prompt_labels
                 WHERE prompt_id = :prompt_id AND label_name = :label_name
                   AND EXISTS (
@@ -456,7 +457,7 @@ async def resolve_prompt_by_label(
     async with get_db() as db:
         # Try label first
         result = await db.execute(
-            text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            text("""
                 SELECT pv.content, pv.variables, pv.model, pv.config, pv.version
                 FROM ai_gateway_prompt_labels pl
                 JOIN ai_gateway_prompt_versions pv ON pv.id = pl.version_id
@@ -474,7 +475,7 @@ async def resolve_prompt_by_label(
 
         # Fallback to published version
         result = await db.execute(
-            text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            text("""
                 SELECT pv.content, pv.variables, pv.model, pv.config, pv.version
                 FROM ai_gateway_prompt_versions pv
                 JOIN ai_gateway_prompts p ON p.id = pv.prompt_id
@@ -499,7 +500,7 @@ async def create_test_dataset(
     test_cases_json = json.dumps(test_cases) if test_cases is not None else json.dumps([])
     async with get_db() as db:
         result = await db.execute(
-            text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            text("""
                 INSERT INTO ai_gateway_prompt_test_datasets
                     (organization_id, prompt_id, name, test_cases, created_by, created_at, updated_at)
                 VALUES
@@ -522,7 +523,7 @@ async def create_test_dataset(
 async def get_test_datasets(org_id: int, prompt_id: int) -> list:
     async with get_db() as db:
         result = await db.execute(
-            text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            text("""
                 SELECT td.*
                 FROM ai_gateway_prompt_test_datasets td
                 WHERE td.prompt_id = :prompt_id
@@ -565,6 +566,7 @@ async def update_test_dataset(
 
     async with get_db() as db:
         result = await db.execute(
+            # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
             text(  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
                 """
                 UPDATE ai_gateway_prompt_test_datasets
@@ -591,7 +593,7 @@ async def update_test_dataset(
 async def delete_test_dataset(org_id: int, prompt_id: int, dataset_id: int) -> bool:
     async with get_db() as db:
         result = await db.execute(
-            text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            text("""
                 DELETE FROM ai_gateway_prompt_test_datasets
                 WHERE id = :dataset_id
                   AND prompt_id = :prompt_id

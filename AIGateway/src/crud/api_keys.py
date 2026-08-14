@@ -19,7 +19,7 @@ async def get_all_api_keys(organization_id: int) -> list[dict[str, Any]]:
     """Get all API keys for an org (masked, no encrypted_key)."""
     async with get_db() as db:
         result = await db.execute(
-            text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            text("""
                 SELECT id, provider, key_name, encrypted_key, is_active,
                        created_at, updated_at
                 FROM ai_gateway_api_keys
@@ -59,7 +59,7 @@ async def get_api_key_by_id(
     """Get a single API key by ID (includes encrypted_key for internal use)."""
     async with get_db() as db:
         result = await db.execute(
-            text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            text("""
                 SELECT id, organization_id, provider, key_name, encrypted_key,
                        is_active, created_at, updated_at
                 FROM ai_gateway_api_keys
@@ -84,7 +84,7 @@ async def create_api_key(
 
     async with get_db() as db:
         result = await db.execute(
-            text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            text("""
                 INSERT INTO ai_gateway_api_keys
                     (organization_id, provider, key_name, encrypted_key,
                      is_active, created_at, updated_at)
@@ -132,7 +132,8 @@ async def update_api_key(
 
     async with get_db() as db:
         result = await db.execute(
-            text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            text("""
                 UPDATE ai_gateway_api_keys
                 SET """ + ", ".join(set_clauses) + """
                 WHERE organization_id = :org_id AND id = :id
@@ -152,7 +153,7 @@ async def delete_api_key(organization_id: int, key_id: int) -> bool:
     """Delete an API key. Returns True if deleted."""
     async with get_db() as db:
         result = await db.execute(
-            text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            text("""
                 DELETE FROM ai_gateway_api_keys
                 WHERE organization_id = :org_id AND id = :id
                 RETURNING id

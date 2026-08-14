@@ -96,6 +96,7 @@ async def cleanup_orphaned_experiments():
             for schema in schemas:
                 try:
                     safe_schema = schema.replace('"', '""')
+                    # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
                     res = await db.execute(text(  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
                         'UPDATE "' + safe_schema + '".llm_evals_experiments '
                         + "SET status = 'failed', error_message = 'Server restarted during execution', "

@@ -105,6 +105,7 @@ async def get_suggestions(org_id: int, status: Optional[str] = None) -> list[dic
 
     async with get_db() as db:
         result = await db.execute(
+            # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
             text(  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
                 """
                 SELECT

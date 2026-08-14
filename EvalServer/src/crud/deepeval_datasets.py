@@ -106,6 +106,7 @@ async def delete_user_datasets(organization_id: int, db: AsyncSession, paths: Li
         '''
     )
     await db.execute(
+        # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
         text(query),  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
         params
     )

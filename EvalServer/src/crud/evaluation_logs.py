@@ -39,7 +39,7 @@ async def create_log(
     metadata_json = json.dumps(metadata) if metadata else '{}'
 
     result = await db.execute(
-        text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+        text('''
             INSERT INTO llm_evals_logs
             (id, organization_id, project_id, experiment_id, trace_id, parent_trace_id, span_name,
              input_text, output_text, model_name, metadata, latency_ms, token_count,
@@ -94,7 +94,7 @@ async def update_log_metadata(
     """Merge/replace metadata for a specific log id"""
     metadata_json = json.dumps(metadata) if metadata else '{}'
     result = await db.execute(
-        text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+        text('''
             UPDATE llm_evals_logs
             SET metadata = COALESCE(metadata, '{}'::jsonb) || CAST(:metadata_json AS jsonb)
             WHERE organization_id = :organization_id AND id = :log_id
@@ -133,7 +133,8 @@ async def get_logs(
     where_clause = "WHERE " + " AND ".join(where_clauses)
 
     result = await db.execute(
-        text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+        # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+        text('''
             SELECT id, project_id, experiment_id, trace_id, span_name,
                    input_text, output_text, model_name, metadata, latency_ms, token_count,
                    cost, status, error_message, timestamp
@@ -189,7 +190,8 @@ async def get_log_count(
     where_clause = "WHERE " + " AND ".join(where_clauses)
 
     result = await db.execute(
-        text('SELECT COUNT(*) as count FROM llm_evals_logs ' + where_clause),  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+        # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+        text('SELECT COUNT(*) as count FROM llm_evals_logs ' + where_clause),
         params
     )
 
@@ -214,7 +216,7 @@ async def create_metric(
     dimensions_json = json.dumps(dimensions) if dimensions else '{}'
 
     result = await db.execute(
-        text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+        text('''
             INSERT INTO llm_evals_metrics
             (id, organization_id, project_id, experiment_id, metric_name, metric_type, value, dimensions)
             VALUES (:id, :organization_id, :project_id, :experiment_id, :metric_name, :metric_type, :value, CAST(:dimensions_json AS jsonb))
@@ -273,7 +275,8 @@ async def get_metric_aggregates(
     where_clause = "WHERE " + " AND ".join(where_clauses)
 
     result = await db.execute(
-        text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+        # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+        text('''
             SELECT
                 AVG(value) as avg,
                 MIN(value) as min,
@@ -324,7 +327,7 @@ async def create_experiment(
         config_json = json.dumps(config) if config else '{}'
 
         result = await db.execute(
-            text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            text('''
                 INSERT INTO llm_evals_experiments
                 (id, organization_id, project_id, name, description, config, baseline_experiment_id, status, created_by, model_inventory_id)
                 VALUES (:id, :organization_id, :project_id, :name, :description, CAST(:config_json AS jsonb), :baseline_experiment_id, :status, :created_by, :model_inventory_id)
@@ -372,7 +375,7 @@ async def get_experiment_by_id(
     """Get a specific experiment by ID"""
 
     result = await db.execute(
-        text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+        text('''
             SELECT id, project_id, name, description, config, baseline_experiment_id,
                    status, results, error_message, started_at, completed_at,
                    created_at, updated_at, created_by, model_inventory_id
@@ -428,7 +431,8 @@ async def get_experiments(
     where_clause = "WHERE " + " AND ".join(where_clauses)
 
     result = await db.execute(
-        text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+        # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+        text('''
             SELECT id, project_id, name, description, config, status,
                    results, created_at, updated_at, started_at, completed_at, model_inventory_id
             FROM llm_evals_experiments
@@ -476,7 +480,8 @@ async def get_experiment_count(
     where_clause = "WHERE " + " AND ".join(where_clauses)
 
     result = await db.execute(
-        text('SELECT COUNT(*) as count FROM llm_evals_experiments ' + where_clause),  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+        # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+        text('SELECT COUNT(*) as count FROM llm_evals_experiments ' + where_clause),
         params
     )
 
@@ -514,7 +519,8 @@ async def update_experiment_status(
     update_clause = ", ".join(updates)
 
     result = await db.execute(
-        text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+        # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+        text('''
             UPDATE llm_evals_experiments
             SET ''' + update_clause + '''
             WHERE organization_id = :organization_id AND id = :experiment_id
@@ -562,7 +568,8 @@ async def update_experiment(
     update_clause = ", ".join(updates)
 
     result = await db.execute(
-        text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+        # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+        text('''
             UPDATE llm_evals_experiments
             SET ''' + update_clause + '''
             WHERE organization_id = :organization_id AND id = :experiment_id
@@ -599,7 +606,7 @@ async def delete_experiment(
     try:
         # First, delete associated evaluation logs
         await db.execute(
-            text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            text('''
                 DELETE FROM llm_evals_logs
                 WHERE organization_id = :organization_id AND experiment_id = :experiment_id
             '''),
@@ -608,7 +615,7 @@ async def delete_experiment(
 
         # Then delete the experiment
         result = await db.execute(
-            text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            text('''
                 DELETE FROM llm_evals_experiments
                 WHERE organization_id = :organization_id AND id = :experiment_id
                 RETURNING id

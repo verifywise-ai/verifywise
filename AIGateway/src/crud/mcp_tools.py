@@ -8,7 +8,7 @@ async def get_all_tools(org_id: int) -> list[dict]:
     """Get all active tools for an organization, joined with server details."""
     async with get_db() as db:
         result = await db.execute(
-            text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            text("""
                 SELECT
                     t.id,
                     t.organization_id,
@@ -47,7 +47,7 @@ async def get_tool_by_name(org_id: int, tool_name: str) -> Optional[dict]:
     """Get a single active tool by name, joined with server connection details."""
     async with get_db() as db:
         result = await db.execute(
-            text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            text("""
                 SELECT
                     t.id,
                     t.organization_id,
@@ -89,7 +89,7 @@ async def get_tools_by_server(org_id: int, server_id: int) -> list[dict]:
     """Get all tools for a specific server."""
     async with get_db() as db:
         result = await db.execute(
-            text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            text("""
                 SELECT
                     t.id,
                     t.organization_id,
@@ -134,7 +134,7 @@ async def upsert_tools(org_id: int, server_id: int, tools: list[dict]) -> int:
                 input_schema = json.dumps(input_schema)
 
             await db.execute(
-                text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+                text("""
                     INSERT INTO ai_gateway_mcp_tools (
                         organization_id,
                         server_id,
@@ -188,7 +188,7 @@ async def update_tool(org_id: int, tool_id: int, data: dict) -> Optional[dict]:
         # Nothing to update — return existing row
         async with get_db() as db:
             result = await db.execute(
-                text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+                text("""
                     SELECT * FROM ai_gateway_mcp_tools
                     WHERE organization_id = :org_id AND id = :tool_id
                 """),
@@ -209,7 +209,8 @@ async def update_tool(org_id: int, tool_id: int, data: dict) -> Optional[dict]:
 
     async with get_db() as db:
         result = await db.execute(
-            text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            text("""
                 UPDATE ai_gateway_mcp_tools
                 SET """ + set_sql + """
                 WHERE organization_id = :org_id
@@ -238,7 +239,7 @@ async def deactivate_stale_tools(
         # Deactivate all tools for the server
         async with get_db() as db:
             result = await db.execute(
-                text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+                text("""
                     UPDATE ai_gateway_mcp_tools
                     SET is_active = false, updated_at = NOW()
                     WHERE organization_id = :org_id
@@ -253,7 +254,7 @@ async def deactivate_stale_tools(
 
     async with get_db() as db:
         result = await db.execute(
-            text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            text("""
                 UPDATE ai_gateway_mcp_tools
                 SET is_active = false, updated_at = NOW()
                 WHERE organization_id = :org_id

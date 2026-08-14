@@ -25,14 +25,14 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     """Create shared-schema tables in verifywise schema."""
     print("Creating verifywise schema if not exists...")
-    op.execute(sa.text('CREATE SCHEMA IF NOT EXISTS verifywise;'))  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+    op.execute(sa.text('CREATE SCHEMA IF NOT EXISTS verifywise;'))
 
     print("Creating shared-schema tables in verifywise schema...")
 
     # ============================================================
     # 1. ORGANIZATIONS TABLE (org_id is VARCHAR for eval-specific orgs)
     # ============================================================
-    op.execute(sa.text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+    op.execute(sa.text('''
         CREATE TABLE verifywise.llm_evals_organizations (
             id VARCHAR(255) PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
@@ -43,7 +43,7 @@ def upgrade() -> None:
             UNIQUE (organization_id, name)
         );
     '''))
-    op.execute(sa.text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+    op.execute(sa.text('''
         CREATE INDEX IF NOT EXISTS idx_llm_evals_organizations_org_id
         ON verifywise.llm_evals_organizations(organization_id);
     '''))
@@ -51,7 +51,7 @@ def upgrade() -> None:
     # ============================================================
     # 2. ORG MEMBERS TABLE
     # ============================================================
-    op.execute(sa.text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+    op.execute(sa.text('''
         CREATE TABLE verifywise.llm_evals_org_members (
             org_id VARCHAR(255) NOT NULL REFERENCES verifywise.llm_evals_organizations(id) ON DELETE CASCADE,
             user_id INTEGER NOT NULL REFERENCES verifywise.users(id) ON DELETE CASCADE,
@@ -61,11 +61,11 @@ def upgrade() -> None:
             PRIMARY KEY (org_id, user_id)
         );
     '''))
-    op.execute(sa.text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+    op.execute(sa.text('''
         CREATE INDEX IF NOT EXISTS idx_llm_evals_org_members_user_id
         ON verifywise.llm_evals_org_members(user_id);
     '''))
-    op.execute(sa.text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+    op.execute(sa.text('''
         CREATE INDEX IF NOT EXISTS idx_llm_evals_org_members_org_id
         ON verifywise.llm_evals_org_members(organization_id);
     '''))
@@ -73,7 +73,7 @@ def upgrade() -> None:
     # ============================================================
     # 3. API KEYS TABLE
     # ============================================================
-    op.execute(sa.text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+    op.execute(sa.text('''
         CREATE TABLE verifywise.llm_evals_api_keys (
             id SERIAL PRIMARY KEY,
             provider VARCHAR(50) NOT NULL,
@@ -85,7 +85,7 @@ def upgrade() -> None:
             created_by VARCHAR(255)
         );
     '''))
-    op.execute(sa.text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+    op.execute(sa.text('''
         CREATE INDEX IF NOT EXISTS idx_llm_evals_api_keys_org_id
         ON verifywise.llm_evals_api_keys(organization_id);
     '''))
@@ -93,7 +93,7 @@ def upgrade() -> None:
     # ============================================================
     # 4. PROJECTS TABLE
     # ============================================================
-    op.execute(sa.text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+    op.execute(sa.text('''
         CREATE TABLE verifywise.llm_evals_projects (
             id VARCHAR(255) PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
@@ -105,11 +105,11 @@ def upgrade() -> None:
             created_by VARCHAR(255)
         );
     '''))
-    op.execute(sa.text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+    op.execute(sa.text('''
         CREATE INDEX IF NOT EXISTS idx_llm_evals_projects_org_id
         ON verifywise.llm_evals_projects(organization_id);
     '''))
-    op.execute(sa.text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+    op.execute(sa.text('''
         CREATE INDEX IF NOT EXISTS idx_llm_evals_projects_created_at
         ON verifywise.llm_evals_projects(created_at DESC);
     '''))
@@ -117,7 +117,7 @@ def upgrade() -> None:
     # ============================================================
     # 5. DATASETS TABLE
     # ============================================================
-    op.execute(sa.text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+    op.execute(sa.text('''
         CREATE TABLE verifywise.llm_evals_datasets (
             id SERIAL PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
@@ -132,7 +132,7 @@ def upgrade() -> None:
             created_by VARCHAR(255)
         );
     '''))
-    op.execute(sa.text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+    op.execute(sa.text('''
         CREATE INDEX IF NOT EXISTS idx_llm_evals_datasets_org_id
         ON verifywise.llm_evals_datasets(organization_id);
     '''))
@@ -140,7 +140,7 @@ def upgrade() -> None:
     # ============================================================
     # 6. SCORERS TABLE
     # ============================================================
-    op.execute(sa.text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+    op.execute(sa.text('''
         CREATE TABLE verifywise.llm_evals_scorers (
             id VARCHAR(255) PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
@@ -157,7 +157,7 @@ def upgrade() -> None:
             created_by VARCHAR(255)
         );
     '''))
-    op.execute(sa.text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+    op.execute(sa.text('''
         CREATE INDEX IF NOT EXISTS idx_llm_evals_scorers_org_id
         ON verifywise.llm_evals_scorers(organization_id);
     '''))
@@ -165,7 +165,7 @@ def upgrade() -> None:
     # ============================================================
     # 7. MODELS TABLE
     # ============================================================
-    op.execute(sa.text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+    op.execute(sa.text('''
         CREATE TABLE verifywise.llm_evals_models (
             id VARCHAR(255) PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
@@ -178,7 +178,7 @@ def upgrade() -> None:
             created_by VARCHAR(255)
         );
     '''))
-    op.execute(sa.text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+    op.execute(sa.text('''
         CREATE INDEX IF NOT EXISTS idx_llm_evals_models_org_id
         ON verifywise.llm_evals_models(organization_id);
     '''))
@@ -186,7 +186,7 @@ def upgrade() -> None:
     # ============================================================
     # 8. EXPERIMENTS TABLE
     # ============================================================
-    op.execute(sa.text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+    op.execute(sa.text('''
         CREATE TABLE verifywise.llm_evals_experiments (
             id VARCHAR(255) PRIMARY KEY,
             project_id VARCHAR(255) NOT NULL REFERENCES verifywise.llm_evals_projects(id) ON DELETE CASCADE,
@@ -205,15 +205,15 @@ def upgrade() -> None:
             created_by VARCHAR(255)
         );
     '''))
-    op.execute(sa.text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+    op.execute(sa.text('''
         CREATE INDEX IF NOT EXISTS idx_llm_evals_experiments_project_id
         ON verifywise.llm_evals_experiments(project_id);
     '''))
-    op.execute(sa.text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+    op.execute(sa.text('''
         CREATE INDEX IF NOT EXISTS idx_llm_evals_experiments_org_id
         ON verifywise.llm_evals_experiments(organization_id);
     '''))
-    op.execute(sa.text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+    op.execute(sa.text('''
         CREATE INDEX IF NOT EXISTS idx_llm_evals_experiments_status
         ON verifywise.llm_evals_experiments(status);
     '''))
@@ -221,7 +221,7 @@ def upgrade() -> None:
     # ============================================================
     # 9. ARENA COMPARISONS TABLE
     # ============================================================
-    op.execute(sa.text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+    op.execute(sa.text('''
         CREATE TABLE verifywise.llm_evals_arena_comparisons (
             id VARCHAR(255) PRIMARY KEY,
             name VARCHAR(255) NOT NULL,
@@ -243,11 +243,11 @@ def upgrade() -> None:
             created_by VARCHAR(255)
         );
     '''))
-    op.execute(sa.text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+    op.execute(sa.text('''
         CREATE INDEX IF NOT EXISTS idx_llm_evals_arena_comparisons_org_id
         ON verifywise.llm_evals_arena_comparisons(organization_id);
     '''))
-    op.execute(sa.text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+    op.execute(sa.text('''
         CREATE INDEX IF NOT EXISTS idx_llm_evals_arena_comparisons_status
         ON verifywise.llm_evals_arena_comparisons(status);
     '''))
@@ -255,7 +255,7 @@ def upgrade() -> None:
     # ============================================================
     # 10. BIAS AUDITS TABLE
     # ============================================================
-    op.execute(sa.text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+    op.execute(sa.text('''
         CREATE TABLE verifywise.llm_evals_bias_audits (
             id VARCHAR(255) PRIMARY KEY,
             project_id VARCHAR(255),
@@ -273,11 +273,11 @@ def upgrade() -> None:
             created_by VARCHAR(255)
         );
     '''))
-    op.execute(sa.text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+    op.execute(sa.text('''
         CREATE INDEX IF NOT EXISTS idx_llm_evals_bias_audits_org_id
         ON verifywise.llm_evals_bias_audits(organization_id);
     '''))
-    op.execute(sa.text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+    op.execute(sa.text('''
         CREATE INDEX IF NOT EXISTS idx_llm_evals_bias_audits_status
         ON verifywise.llm_evals_bias_audits(status);
     '''))
@@ -285,7 +285,7 @@ def upgrade() -> None:
     # ============================================================
     # 11. LOGS TABLE
     # ============================================================
-    op.execute(sa.text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+    op.execute(sa.text('''
         CREATE TABLE verifywise.llm_evals_logs (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             project_id VARCHAR(255) NOT NULL REFERENCES verifywise.llm_evals_projects(id) ON DELETE CASCADE,
@@ -307,19 +307,19 @@ def upgrade() -> None:
             created_by VARCHAR(255)
         );
     '''))
-    op.execute(sa.text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+    op.execute(sa.text('''
         CREATE INDEX IF NOT EXISTS idx_llm_evals_logs_project_id
         ON verifywise.llm_evals_logs(project_id);
     '''))
-    op.execute(sa.text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+    op.execute(sa.text('''
         CREATE INDEX IF NOT EXISTS idx_llm_evals_logs_experiment_id
         ON verifywise.llm_evals_logs(experiment_id);
     '''))
-    op.execute(sa.text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+    op.execute(sa.text('''
         CREATE INDEX IF NOT EXISTS idx_llm_evals_logs_org_id
         ON verifywise.llm_evals_logs(organization_id);
     '''))
-    op.execute(sa.text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+    op.execute(sa.text('''
         CREATE INDEX IF NOT EXISTS idx_llm_evals_logs_timestamp
         ON verifywise.llm_evals_logs(timestamp DESC);
     '''))
@@ -327,7 +327,7 @@ def upgrade() -> None:
     # ============================================================
     # 12. METRICS TABLE
     # ============================================================
-    op.execute(sa.text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+    op.execute(sa.text('''
         CREATE TABLE verifywise.llm_evals_metrics (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
             project_id VARCHAR(255) NOT NULL REFERENCES verifywise.llm_evals_projects(id) ON DELETE CASCADE,
@@ -340,15 +340,15 @@ def upgrade() -> None:
             timestamp TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
     '''))
-    op.execute(sa.text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+    op.execute(sa.text('''
         CREATE INDEX IF NOT EXISTS idx_llm_evals_metrics_project_id
         ON verifywise.llm_evals_metrics(project_id);
     '''))
-    op.execute(sa.text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+    op.execute(sa.text('''
         CREATE INDEX IF NOT EXISTS idx_llm_evals_metrics_experiment_id
         ON verifywise.llm_evals_metrics(experiment_id);
     '''))
-    op.execute(sa.text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+    op.execute(sa.text('''
         CREATE INDEX IF NOT EXISTS idx_llm_evals_metrics_org_id
         ON verifywise.llm_evals_metrics(organization_id);
     '''))
@@ -356,7 +356,7 @@ def upgrade() -> None:
     # ============================================================
     # 13. BIAS AUDIT RESULTS TABLE
     # ============================================================
-    op.execute(sa.text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+    op.execute(sa.text('''
         CREATE TABLE verifywise.llm_evals_bias_audit_results (
             id SERIAL PRIMARY KEY,
             audit_id VARCHAR(255) NOT NULL REFERENCES verifywise.llm_evals_bias_audits(id) ON DELETE CASCADE,
@@ -372,11 +372,11 @@ def upgrade() -> None:
             created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
         );
     '''))
-    op.execute(sa.text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+    op.execute(sa.text('''
         CREATE INDEX IF NOT EXISTS idx_llm_evals_bias_audit_results_audit_id
         ON verifywise.llm_evals_bias_audit_results(audit_id);
     '''))
-    op.execute(sa.text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+    op.execute(sa.text('''
         CREATE INDEX IF NOT EXISTS idx_llm_evals_bias_audit_results_org_id
         ON verifywise.llm_evals_bias_audit_results(organization_id);
     '''))
@@ -384,7 +384,7 @@ def upgrade() -> None:
     # ============================================================
     # 14. MIGRATION STATUS TABLE (for tracking data migration)
     # ============================================================
-    op.execute(sa.text('''  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+    op.execute(sa.text('''
         CREATE TABLE verifywise.evalserver_migration_status (
             migration_key VARCHAR(255) PRIMARY KEY,
             status VARCHAR(50) NOT NULL,
@@ -427,6 +427,7 @@ def downgrade() -> None:
     ]
 
     for table in tables:
-        op.execute(sa.text('DROP TABLE IF EXISTS verifywise."' + table + '" CASCADE;'))  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+        # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+        op.execute(sa.text('DROP TABLE IF EXISTS verifywise."' + table + '" CASCADE;'))
 
     print("✓ Dropped all shared-schema tables from verifywise schema")
