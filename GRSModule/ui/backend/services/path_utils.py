@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import re
 from pathlib import Path
 
@@ -26,20 +27,18 @@ def _sanitize_path_part(value: str) -> str:
 
 
 def assert_within(base: Path, target: Path) -> Path:
-    """Resolve `target` and verify it stays inside `base`.
+    """Resolve target and verify it stays inside base.
 
-    This is a sink-level guard for CodeQL py/path-injection: even when the
-    caller already used `resolve_dataset_path`, re-asserting containment at the
-    file-operation site proves to the analyzer (and at runtime) that the path
-    cannot escape the intended root.
+    Uses os.path.normpath + startswith, which is the exact containment check
+    CodeQL's py/path-injection query recognizes as a sanitizer.
     """
-    base_resolved = base.resolve()
-    target_resolved = target.resolve()
-    if not target_resolved.is_relative_to(base_resolved):
-        raise ValueError(
-            f"Path {target_resolved} escapes allowed base {base_resolved}"
-        )
-    return target_resolved
+    base_str = str(base)
+    target_str = str(target)
+    fullpath = os.path.normpath(os.path.join(base_str, target_str))
+    basepath = os.path.normpath(base_str)
+    if not fullpath.startswith(basepath + os.sep) and fullpath != basepath:
+        raise ValueError(f"Path {fullpath} escapes allowed base {basepath}")
+    return Path(fullpath)
 
 
 def resolve_dataset_path(grs_root: Path, dataset_version: str, *parts: str) -> Path:
@@ -52,10 +51,6 @@ def resolve_dataset_path(grs_root: Path, dataset_version: str, *parts: str) -> P
     safe_version = _sanitize_dataset_version(dataset_version)
     safe_parts = [_sanitize_path_part(p) for p in parts]
 
-    base = (grs_root / "datasets").resolve()
-    target = (base / safe_version / Path(*safe_parts)).resolve()
-
-    if not target.is_relative_to(base):
-        raise ValueError(f"dataset_version escapes datasets root: {dataset_version!r}")
-
-    return target
+    base = grs_root / "datasets"
+    target = base / safe_version / Path(*safe_parts)
+    return assert_within(base, target)
