@@ -69,7 +69,8 @@ Close all 136 open GitHub code-scanning alerts in `verifywise-ai/verifywise` usi
 **Validation:**
 - Local Semgrep scan (`p/javascript`, `p/typescript`, `p/python`, `p/security-audit`, `p/secrets`) against the PR diff reports **0 new findings** with `--baseline-commit origin/develop`.
 - All modified Python files pass `py_compile`.
-**Pending:** CI re-run on GitHub to confirm CodeQL `py/path-injection` alerts close.
+- GRSModule test suite: **147 passed** (including the previously failing `test_watcher.py` tests after making `count_lines` `base` optional).
+**Pending:** CI re-run on GitHub to confirm Semgrep OSS annotations clear and CodeQL `py/path-injection` alerts close.
 - Standardized all GRSModule containment helpers to the canonical `os.path.normpath(os.path.join(base, target)).startswith(os.path.normpath(base))` pattern recognized by CodeQL's `py/path-injection` sanitizer.
 
 ## Execution Order

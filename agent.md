@@ -42,6 +42,7 @@ All open code-scanning alerts were remediated in focused batches using the Verif
 - Pre-commit hooks passed for TypeScript/Markdown changes.
 - Local Semgrep baseline scan (`origin/develop`) reports **0 new findings** on the PR diff.
 - All modified Python files pass `py_compile`.
+- GRSModule test suite: **147 passed**.
 
 ---
 
