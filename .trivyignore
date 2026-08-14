@@ -44,3 +44,26 @@ AVD-KSV-0021
 # Compensating controls as above (no privilege escalation, dropped
 # capabilities, seccomp RuntimeDefault).
 AVD-KSV-0014
+
+# AVD-KSV-0125 (MEDIUM/HIGH) — restrict container images to trusted registries.
+# Accepted: all project images are published to ghcr.io/verifywise-ai, the
+# organization's own GitHub Container Registry. Enforcing a registry allow-list
+# requires an admission controller (OPA Gatekeeper / Kyverno) or cloud provider
+# image policy webhook, which is out of scope for this manifest-only hardening
+# pass. Image tags are pinned and imagePullPolicy is IfNotPresent.
+AVD-KSV-0125
+
+# AVD-KSV-0117 (MEDIUM) — prevent binding to privileged ports.
+# Accepted for the nginx frontend container: it currently binds port 80 and
+# uses the NET_BIND_SERVICE capability. Moving to an unprivileged port (8080)
+# requires updating the Clients/Dockerfile base image to nginx-unprivileged,
+# the Clients/nginx.conf, Service/ingress targets, and health checks. This is
+# tracked as a follow-up hardening item tied to the non-root migration above.
+AVD-KSV-0117
+
+# AVD-KSV-01010 (MEDIUM) — ConfigMap with sensitive content.
+# Accepted: the flagged ConfigMaps contain only non-sensitive configuration
+# (ports, URLs, feature flags). All credentials, tokens, and passwords are
+# referenced from Kubernetes Secrets via envFrom/secretKeyRef or mounted
+# secret volumes. No sensitive values are stored in ConfigMap data.
+AVD-KSV-01010
