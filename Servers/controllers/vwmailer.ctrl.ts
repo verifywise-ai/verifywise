@@ -63,10 +63,12 @@ export const invite = async (
         userId: req.userId!,
         organizationId: req.organizationId!,
       });
-      return res.status(206).json({
-        error: `${info.error.name}: ${info.error.message}`,
-        message: link,
-      });
+      return res.status(206).json(
+        STATUS_CODE[206]({
+          error: `${info.error.name}: ${info.error.message}`,
+          link,
+        }),
+      );
     } else {
       await logSuccess({
         eventType: "Create",
