@@ -104,7 +104,10 @@ describe("registerJWT middleware", () => {
     await registerJWT(req, res as Response, next);
 
     expect(res.status).toHaveBeenCalledWith(403);
-    expect(res.json).toHaveBeenCalledWith({ message: "Role or Organization mismatch" });
+    expect(res.json).toHaveBeenCalledWith({
+      message: "Forbidden",
+      data: "Role or Organization mismatch",
+    });
     expect(next).not.toHaveBeenCalled();
   });
 

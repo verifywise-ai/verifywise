@@ -9,6 +9,7 @@
  */
 
 import { Request, Response, NextFunction } from "express";
+import { STATUS_CODE } from "../utils/statusCode.utils";
 
 /**
  * Middleware to ensure users can only operate on their own data
@@ -35,34 +36,28 @@ export const selfOnly = (req: Request, res: Response, next: NextFunction): void 
   const bodyId = req.body.id;
 
   if (!jwtUserId) {
-    return res.status(401).json({ message: req.t!("Authentication required") });
+    return res.status(401).json(STATUS_CODE[401](req.t!("Authentication required")));
   }
 
   // At least one target ID must be provided
   if (!paramsId && !bodyId) {
-    return res.status(400).json({ message: req.t!("Target user ID is required") });
+    return res.status(400).json(STATUS_CODE[400](req.t!("Target user ID is required")));
   }
 
   // Check all provided IDs match the JWT user ID
   const jwtIdStr = String(jwtUserId);
 
   if (paramsId && String(paramsId) !== jwtIdStr) {
-    return res.status(403).json({
-      message: req.t!("You can only modify your own data"),
-    });
+    return res.status(403).json(STATUS_CODE[403](req.t!("You can only modify your own data")));
   }
 
   if (bodyId && String(bodyId) !== jwtIdStr) {
-    return res.status(403).json({
-      message: req.t!("You can only modify your own data"),
-    });
+    return res.status(403).json(STATUS_CODE[403](req.t!("You can only modify your own data")));
   }
 
   // Also ensure params and body IDs match each other if both provided
   if (paramsId && bodyId && String(paramsId) !== String(bodyId)) {
-    return res.status(400).json({
-      message: req.t!("Mismatched user IDs in request"),
-    });
+    return res.status(400).json(STATUS_CODE[400](req.t!("Mismatched user IDs in request")));
   }
 
   next();
