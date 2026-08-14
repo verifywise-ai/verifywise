@@ -165,18 +165,82 @@ describe("customAxios", () => {
       });
     });
 
-    it("does not show a toast for 4xx client errors", async () => {
+    it("shows a translated toast with the envelope detail for 4xx client errors", async () => {
+      vi.mocked(getLanguage).mockReturnValue("en");
+      const callback = vi.fn();
+      setShowAlertCallback(callback);
+
+      // Standardized 4xx envelope: reason phrase in `message`, detail in `data`
+      const error = {
+        config: { url: "/test" },
+        response: { status: 400, data: { message: "Bad Request", data: "Name is required" } },
+        message: "Bad Request",
+      };
+
+      await expect(rejected(error)).rejects.toEqual(error);
+      expect(callback).toHaveBeenCalledWith({
+        variant: "error",
+        title: "Error",
+        body: "Name is required",
+      });
+    });
+
+    it("falls back to the top-level message for legacy raw 4xx bodies", async () => {
+      vi.mocked(getLanguage).mockReturnValue("en");
       const callback = vi.fn();
       setShowAlertCallback(callback);
 
       const error = {
         config: { url: "/test" },
-        response: { status: 400, data: { message: "Bad request" } },
-        message: "Bad Request",
+        response: { status: 409, data: { message: "Already exists" } },
+        message: "Conflict",
+      };
+
+      await expect(rejected(error)).rejects.toEqual(error);
+      expect(callback).toHaveBeenCalledWith({
+        variant: "error",
+        title: "Error",
+        body: "Already exists",
+      });
+    });
+
+    it("does not show a toast for 404 (callers handle it as empty state)", async () => {
+      const callback = vi.fn();
+      setShowAlertCallback(callback);
+
+      const error = {
+        config: { url: "/test" },
+        response: { status: 404, data: { message: "Not Found", data: "Resource not found" } },
+        message: "Not Found",
       };
 
       await expect(rejected(error)).rejects.toEqual(error);
       expect(callback).not.toHaveBeenCalled();
+    });
+
+    it("matches the 403 org-mismatch logout flow on the envelope `data` detail", async () => {
+      vi.useFakeTimers(); // keep the scheduled performLogout from firing
+      const callback = vi.fn();
+      setShowAlertCallback(callback);
+
+      const error = {
+        config: { url: "/test", headers: {} },
+        response: {
+          status: 403,
+          data: { message: "Forbidden", data: "User does not belong to this organization" },
+        },
+        message: "Forbidden",
+      };
+
+      await expect(rejected(error)).rejects.toThrow(
+        "User does not belong to this organization",
+      );
+      expect(callback).toHaveBeenCalledWith({
+        variant: "info",
+        title: "Access Denied",
+        body: "Please login again to continue.",
+      });
+      vi.useRealTimers();
     });
 
     // Hooks that abort in-flight requests on cleanup (the assessment hooks do)
