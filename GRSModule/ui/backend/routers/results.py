@@ -1,19 +1,34 @@
 from __future__ import annotations
 import json
+import os
+from pathlib import Path
 from typing import Optional
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel
 from .. import app as _app
 from ..services.watcher import count_lines
-from ..services.path_utils import resolve_dataset_path, assert_within
+from ..services.path_utils import resolve_dataset_path
 
 router = APIRouter()
+
+
+def _safe_path(base: Path, target: Path) -> Path:
+    """Return target resolved under base, or raise if it escapes.
+
+    Uses os.path.normpath + startswith so CodeQL recognizes the check as a
+    py/path-injection sanitizer.
+    """
+    fullpath = os.path.normpath(os.path.join(str(base), str(target)))
+    basepath = os.path.normpath(str(base))
+    if not fullpath.startswith(basepath + os.sep) and fullpath != basepath:
+        raise ValueError(f"Path {fullpath} escapes allowed base {basepath}")
+    return Path(fullpath)
 
 
 @router.get("/results/leaderboard")
 def get_leaderboard(dataset_version: str = Query(...)):
     path = resolve_dataset_path(_app.GRS_ROOT, dataset_version, "final", "leaderboard.json")
-    path = assert_within(_app.GRS_ROOT, path)
+    path = _safe_path(_app.GRS_ROOT, path)
     if not path.exists():
         raise HTTPException(status_code=404, detail="Leaderboard not found for this dataset version")
     return json.loads(path.read_text(encoding="utf-8"))
@@ -30,15 +45,11 @@ class SummaryResponse(BaseModel):
 @router.get("/results/summary", response_model=SummaryResponse)
 def get_summary(dataset_version: str = Query(...)):
     final = resolve_dataset_path(_app.GRS_ROOT, dataset_version, "final")
-    final = assert_within(_app.GRS_ROOT, final)
 
-    def _count(path):
-        return count_lines(path, base=_app.GRS_ROOT) if path.exists() else None
+    scenarios_path = _safe_path(_app.GRS_ROOT, final / "scenarios.jsonl")
+    scenarios = count_lines(scenarios_path, base=_app.GRS_ROOT) if scenarios_path.exists() else None
 
-    scenarios_path = assert_within(_app.GRS_ROOT, final / "scenarios.jsonl")
-    scenarios = _count(scenarios_path)
-
-    responses_dir = assert_within(_app.GRS_ROOT, final / "responses")
+    responses_dir = _safe_path(_app.GRS_ROOT, final / "responses")
     if responses_dir.exists():
         success_files = [f for f in responses_dir.glob("*.jsonl")
                          if ".failures" not in f.name and ".patch_failures" not in f.name]
@@ -48,7 +59,7 @@ def get_summary(dataset_version: str = Query(...)):
         responses = None
         models_inferred = None
 
-    scores_dir = assert_within(_app.GRS_ROOT, final / "judge_scores")
+    scores_dir = _safe_path(_app.GRS_ROOT, final / "judge_scores")
     if scores_dir.exists():
         score_files = [f for f in scores_dir.glob("*.jsonl")
                        if ".failures" not in f.name and ".patch_failures" not in f.name]
