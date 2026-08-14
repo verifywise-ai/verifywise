@@ -62,13 +62,15 @@ const registerJWT = async (
 
     if (!hasPendingInvitation) {
       console.error("❌ Registration rejected: invitation was revoked or doesn't exist");
-      return res.status(403).json(
-        STATUS_CODE[403](
-          req.t!(
-            "This invitation has been revoked. Please contact your administrator for a new invitation.",
+      return res
+        .status(403)
+        .json(
+          STATUS_CODE[403](
+            req.t!(
+              "This invitation has been revoked. Please contact your administrator for a new invitation.",
+            ),
           ),
-        ),
-      );
+        );
     }
 
     // Proceed to next middleware or route handler

@@ -8,16 +8,16 @@ export const validateTokenCreation = async (
   next: NextFunction,
 ): Promise<void | Response> => {
   if (req.role !== "Admin") {
-    return res.status(403).json(
-      STATUS_CODE[403](req.t!("Only Admin users can create API tokens.")),
-    );
+    return res
+      .status(403)
+      .json(STATUS_CODE[403](req.t!("Only Admin users can create API tokens.")));
   }
 
   const numberOfTokens = await getNumberOfApiTokensQuery(req.organizationId!);
   if (numberOfTokens >= 10) {
-    return res.status(403).json(
-      STATUS_CODE[403](req.t!("Token limit reached. Maximum 10 tokens allowed.")),
-    );
+    return res
+      .status(403)
+      .json(STATUS_CODE[403](req.t!("Token limit reached. Maximum 10 tokens allowed.")));
   }
   next();
 };
@@ -28,9 +28,9 @@ export const validateTokenDeletion = async (
   next: NextFunction,
 ): Promise<void | Response> => {
   if (req.role !== "Admin") {
-    return res.status(403).json(
-      STATUS_CODE[403](req.t!("Only Admin users can delete API tokens.")),
-    );
+    return res
+      .status(403)
+      .json(STATUS_CODE[403](req.t!("Only Admin users can delete API tokens.")));
   }
   next();
 };

@@ -26,9 +26,7 @@ export function requirePlugin(pluginKey: string) {
 
       const installation = await findByPlugin(pluginKey, organizationId);
       if (!installation || installation.status !== "installed") {
-        return res
-          .status(404)
-          .json(STATUS_CODE[404](`The '${pluginKey}' plugin is not installed`));
+        return res.status(404).json(STATUS_CODE[404](`The '${pluginKey}' plugin is not installed`));
       }
 
       return next();

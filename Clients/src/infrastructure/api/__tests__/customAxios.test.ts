@@ -232,9 +232,7 @@ describe("customAxios", () => {
         message: "Forbidden",
       };
 
-      await expect(rejected(error)).rejects.toThrow(
-        "User does not belong to this organization",
-      );
+      await expect(rejected(error)).rejects.toThrow("User does not belong to this organization");
       expect(callback).toHaveBeenCalledWith({
         variant: "info",
         title: "Access Denied",
