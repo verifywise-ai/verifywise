@@ -155,9 +155,8 @@ async def update_prompt(org_id: int, id: int, data: dict) -> Optional[dict]:
 
     async with get_db() as db:
         result = await db.execute(
-            # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
             text(  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
-                """
+                ("""
                 UPDATE ai_gateway_prompts
                 SET 
                 """
@@ -166,7 +165,7 @@ async def update_prompt(org_id: int, id: int, data: dict) -> Optional[dict]:
                 WHERE organization_id = :org_id AND id = :id
                 RETURNING *
                 """
-            ),
+            )),
             params,
         )
         await db.commit()
@@ -566,9 +565,8 @@ async def update_test_dataset(
 
     async with get_db() as db:
         result = await db.execute(
-            # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
             text(  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
-                """
+                ("""
                 UPDATE ai_gateway_prompt_test_datasets
                 SET 
                 """
@@ -582,7 +580,7 @@ async def update_test_dataset(
                   )
                 RETURNING *
                 """
-            ),
+            )),
             params,
         )
         await db.commit()

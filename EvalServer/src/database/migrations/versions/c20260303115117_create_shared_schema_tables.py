@@ -427,7 +427,6 @@ def downgrade() -> None:
     ]
 
     for table in tables:
-        # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
-        op.execute(sa.text('DROP TABLE IF EXISTS verifywise."' + table + '" CASCADE;'))
+        op.execute(sa.text(('DROP TABLE IF EXISTS verifywise."' + table + '" CASCADE;')))  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
 
     print("✓ Dropped all shared-schema tables from verifywise schema")

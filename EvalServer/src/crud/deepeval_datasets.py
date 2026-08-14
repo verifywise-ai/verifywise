@@ -21,7 +21,7 @@ async def create_user_dataset(
     created_by: Optional[str] = None,
 ) -> Dict[str, Any]:
     res = await db.execute(
-        text(  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+        text(
             '''
             INSERT INTO llm_evals_datasets (organization_id, name, path, size, prompt_count, dataset_type, turn_type, created_by)
             VALUES (:organization_id, :name, :path, :size, :prompt_count, :dataset_type, :turn_type, :created_by)
@@ -61,7 +61,7 @@ async def list_user_datasets(
     List user datasets for an organization.
     """
     res = await db.execute(
-        text(  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+        text(
             '''
             SELECT id, name, path, size, prompt_count, dataset_type, turn_type, created_at, created_by
             FROM llm_evals_datasets
@@ -106,7 +106,6 @@ async def delete_user_datasets(organization_id: int, db: AsyncSession, paths: Li
         '''
     )
     await db.execute(
-        # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
-        text(query),  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+        text((query)),  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
         params
     )

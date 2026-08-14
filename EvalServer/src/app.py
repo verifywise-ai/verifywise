@@ -76,7 +76,7 @@ async def cleanup_orphaned_experiments():
         async with get_db() as db:
             # First, try shared-schema (llm_evals_experiments)
             try:
-                res = await db.execute(text(  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+                res = await db.execute(text(
                     "UPDATE llm_evals_experiments "
                     "SET status = 'failed', error_message = 'Server restarted during execution', "
                     "completed_at = NOW() WHERE status = 'running'"
@@ -87,7 +87,7 @@ async def cleanup_orphaned_experiments():
                 pass
 
             # Also check legacy tenant schemas (for backward compatibility during migration)
-            result = await db.execute(text(  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            result = await db.execute(text(
                 "SELECT schema_name FROM information_schema.schemata "
                 "WHERE schema_name NOT IN ('public', 'information_schema', 'pg_catalog', 'pg_toast') "
                 "AND schema_name NOT LIKE 'pg_%'"
@@ -96,12 +96,11 @@ async def cleanup_orphaned_experiments():
             for schema in schemas:
                 try:
                     safe_schema = schema.replace('"', '""')
-                    # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
                     res = await db.execute(text(  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
-                        'UPDATE "' + safe_schema + '".llm_evals_experiments '
+                        ('UPDATE "' + safe_schema + '".llm_evals_experiments '
                         + "SET status = 'failed', error_message = 'Server restarted during execution', "
                         + "completed_at = NOW() WHERE status = 'running'"
-                    ))
+                    )))
                     if res.rowcount > 0:
                         logger.info(f"Marked {res.rowcount} orphaned experiment(s) as failed in schema '{schema}'")
                 except Exception:

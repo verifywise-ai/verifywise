@@ -28,7 +28,7 @@ async def create_arena_comparison(
     Create a new arena comparison record.
     """
     result = await db.execute(
-        text(  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+        text(
             '''
             INSERT INTO llm_evals_arena_comparisons
             (id, name, description, organization_id, contestants, contestant_names,
@@ -73,7 +73,7 @@ async def get_arena_comparison(
     Get an arena comparison by ID.
     """
     result = await db.execute(
-        text(  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+        text(
             '''
             SELECT id, name, description, organization_id, contestants, contestant_names,
                    metric_config, judge_model, status, progress, winner, win_counts,
@@ -101,7 +101,7 @@ async def list_arena_comparisons(
     List all arena comparisons for an organization.
     """
     result = await db.execute(
-        text(  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+        text(
             '''
             SELECT id, name, description, organization_id, contestants, contestant_names,
                    metric_config, judge_model, status, progress, winner, win_counts,
@@ -179,8 +179,7 @@ async def update_arena_comparison(
         '''
     )
     result = await db.execute(
-        # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
-        text(query),  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+        text((query)),  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
         params,
     )
 
@@ -201,7 +200,7 @@ async def delete_arena_comparison(
     Delete an arena comparison.
     """
     result = await db.execute(
-        text(  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+        text(
             '''
             DELETE FROM llm_evals_arena_comparisons
             WHERE organization_id = :organization_id AND id = :id

@@ -31,7 +31,7 @@ async def create_bias_audit(
 ) -> Optional[Dict[str, Any]]:
     """Create a new bias audit record."""
     result = await db.execute(
-        text(  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+        text(
             '''
             INSERT INTO llm_evals_bias_audits
             (id, organization_id, project_id, preset_id, preset_name, mode, status, config, created_by, model_inventory_id)
@@ -66,7 +66,7 @@ async def get_bias_audit(
 ) -> Optional[Dict[str, Any]]:
     """Get a single bias audit by ID."""
     result = await db.execute(
-        text(  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+        text(
             '''
             SELECT id, organization_id, project_id, preset_id, preset_name, mode, status,
                    config, results, error, created_at, updated_at, completed_at, created_by, model_inventory_id
@@ -120,8 +120,7 @@ async def update_bias_audit_status(
         '''
     )
     result = await db.execute(
-        # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
-        text(query),  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+        text((query)),  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
         params,
     )
     row = result.mappings().first()
@@ -138,7 +137,7 @@ async def update_bias_audit_system_name(
 ) -> Optional[Dict[str, Any]]:
     """Update the user-editable system name stored in config.systemName."""
     result = await db.execute(
-        text(  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+        text(
             '''
             UPDATE llm_evals_bias_audits
             SET config = jsonb_set(
@@ -192,8 +191,7 @@ async def list_bias_audits(
         '''
     )
     result = await db.execute(
-        # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
-        text(query),  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+        text((query)),  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
         params,
     )
     rows = result.mappings().all()
@@ -207,7 +205,7 @@ async def delete_bias_audit(
 ) -> bool:
     """Delete a bias audit and its result rows (CASCADE)."""
     result = await db.execute(
-        text(  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+        text(
             '''
             DELETE FROM llm_evals_bias_audits
             WHERE organization_id = :organization_id AND id = :id
@@ -230,7 +228,7 @@ async def create_bias_audit_result_rows(
     inserted = 0
     for row_data in rows:
         await db.execute(
-            text(  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+            text(
                 '''
                 INSERT INTO llm_evals_bias_audit_results
                 (organization_id, audit_id, category_type, category_name, applicant_count,
@@ -264,7 +262,7 @@ async def get_bias_audit_result_rows(
 ) -> List[Dict[str, Any]]:
     """Get all per-group result rows for an audit."""
     result = await db.execute(
-        text(  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+        text(
             '''
             SELECT id, audit_id, category_type, category_name, applicant_count,
                    selected_count, selection_rate, impact_ratio, excluded, flagged, created_at
