@@ -950,9 +950,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
               <Typography component="span" fontWeight={500}>
                 {user.name} {user.surname}
               </Typography>
-              <Typography sx={{ textTransform: "capitalize" }}>
-                {roleLabel}
-              </Typography>
+              <Typography sx={{ textTransform: "capitalize" }}>{roleLabel}</Typography>
             </Box>
             <IconButton
               disableRipple={theme.components?.MuiIconButton?.defaultProps?.disableRipple}

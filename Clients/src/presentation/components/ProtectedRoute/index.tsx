@@ -13,9 +13,8 @@ const ProtectedRoute = ({
   ...rest
 }: IProtectedRouteProps) => {
   const authState = useSelector(
-    (state: {
-      auth: { authToken: string; userExists: boolean; isSuperAdmin?: boolean };
-    }) => state.auth,
+    (state: { auth: { authToken: string; userExists: boolean; isSuperAdmin?: boolean } }) =>
+      state.auth,
   );
   const location = useLocation();
   const dispatch = useDispatch();
