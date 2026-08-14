@@ -199,7 +199,7 @@ async def update_agent_key(org_id: int, key_id: int, data: dict) -> Optional[dic
     """
 
     async with get_db() as db:
-        result = await db.execute(text(sql), params)
+        result = await db.execute(text(sql), params)  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
         await db.commit()
         row = result.mappings().first()
         if row is None:

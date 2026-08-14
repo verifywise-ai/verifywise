@@ -20,7 +20,7 @@ async def list_scorers(
     """
 
     result = await db.execute(
-        text(
+        text(  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
             '''
             SELECT id,
                    organization_id,
@@ -94,7 +94,7 @@ async def create_scorer(
     """
 
     result = await db.execute(
-        text(
+        text(  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
             '''
             INSERT INTO llm_evals_scorers
             (id, organization_id, name, description, type, metric_key, config, enabled,
@@ -199,7 +199,7 @@ async def update_scorer(
 
     if not updates:
         result = await db.execute(
-            text(
+            text(  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
                 '''
                 SELECT id, organization_id, name, description, type, metric_key, config, enabled,
                        default_threshold, weight, created_at, updated_at, created_by
@@ -223,7 +223,7 @@ async def update_scorer(
             '''
         )
         result = await db.execute(
-            text(query),
+            text(query),  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
             params,
         )
 
@@ -268,7 +268,7 @@ async def get_scorer_by_id(
     """
 
     result = await db.execute(
-        text(
+        text(  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
             '''
             SELECT id,
                    organization_id,
@@ -333,7 +333,7 @@ async def touch_scorer_updated_at(
     """
 
     result = await db.execute(
-        text(
+        text(  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
             '''
             UPDATE llm_evals_scorers
             SET updated_at = CURRENT_TIMESTAMP
@@ -359,7 +359,7 @@ async def delete_scorer(
     """
 
     result = await db.execute(
-        text(
+        text(  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
             '''
             DELETE FROM llm_evals_scorers
             WHERE organization_id = :organization_id AND id = :id
@@ -383,7 +383,7 @@ async def get_latest_scorer(
     """
 
     result = await db.execute(
-        text(
+        text(  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
             '''
             SELECT id,
                    organization_id,

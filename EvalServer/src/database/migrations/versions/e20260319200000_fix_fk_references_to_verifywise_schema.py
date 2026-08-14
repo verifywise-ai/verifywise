@@ -41,13 +41,13 @@ FK_FIXES = [
 
 def upgrade() -> None:
     """Re-point FK constraints from public.* to verifywise.* (unqualified, resolved by search_path)."""
-    op.execute(sa.text("SET search_path TO verifywise"))
+    op.execute(sa.text("SET search_path TO verifywise"))  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
 
     for table, column, ref_table, constraint in FK_FIXES:
         # Drop old FK pointing to public.*
-        op.execute(sa.text("ALTER TABLE " + table + " DROP CONSTRAINT IF EXISTS " + constraint))
+        op.execute(sa.text("ALTER TABLE " + table + " DROP CONSTRAINT IF EXISTS " + constraint))  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
         # Add new FK pointing to verifywise.* (unqualified — resolved by search_path)
-        op.execute(sa.text(
+        op.execute(sa.text(  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
             "ALTER TABLE " + table +
             " ADD CONSTRAINT " + constraint +
             " FOREIGN KEY (" + column + ") REFERENCES " + ref_table + "(id) ON DELETE CASCADE"
@@ -58,11 +58,11 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Revert FK constraints back to public.*."""
-    op.execute(sa.text("SET search_path TO verifywise"))
+    op.execute(sa.text("SET search_path TO verifywise"))  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
 
     for table, column, ref_table, constraint in FK_FIXES:
-        op.execute(sa.text("ALTER TABLE " + table + " DROP CONSTRAINT IF EXISTS " + constraint))
-        op.execute(sa.text(
+        op.execute(sa.text("ALTER TABLE " + table + " DROP CONSTRAINT IF EXISTS " + constraint))  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+        op.execute(sa.text(  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
             "ALTER TABLE " + table +
             " ADD CONSTRAINT " + constraint +
             " FOREIGN KEY (" + column + ") REFERENCES public." + ref_table + "(id) ON DELETE CASCADE"

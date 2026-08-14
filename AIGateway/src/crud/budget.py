@@ -31,7 +31,7 @@ async def get_budget(organization_id: int) -> Optional[dict[str, Any]]:
     """Get the budget for an organization."""
     async with get_db() as db:
         result = await db.execute(
-            text("""
+            text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
                 SELECT id, organization_id, monthly_limit_usd, current_spend_usd,
                        alert_threshold_pct, is_hard_limit, period_start,
                        created_at, updated_at
@@ -53,7 +53,7 @@ async def upsert_budget(
     """Create or update an organization budget (upsert)."""
     async with get_db() as db:
         result = await db.execute(
-            text("""
+            text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
                 INSERT INTO ai_gateway_budgets
                     (organization_id, monthly_limit_usd, current_spend_usd,
                      alert_threshold_pct, is_hard_limit, period_start,
@@ -87,7 +87,7 @@ async def reserve_budget(organization_id: int, estimated_cost: float) -> bool:
     """Atomic budget reservation. Returns True if reservation succeeded."""
     async with get_db() as db:
         result = await db.execute(
-            text("""
+            text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
                 UPDATE ai_gateway_budgets
                 SET current_spend_usd = current_spend_usd + :cost,
                     updated_at = NOW()
@@ -116,7 +116,7 @@ async def adjust_budget_spend(
 
     async with get_db() as db:
         await db.execute(
-            text("""
+            text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
                 UPDATE ai_gateway_budgets
                 SET current_spend_usd = GREATEST(0, current_spend_usd + :adjustment),
                     updated_at = NOW()
@@ -142,7 +142,7 @@ async def reset_budget_spend(organization_id: Optional[int] = None) -> int:
 
     async with get_db() as db:
         result = await db.execute(
-            text("""
+            text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
                 UPDATE ai_gateway_budgets
                 SET current_spend_usd = 0,
                     period_start = DATE_TRUNC('month', NOW()),

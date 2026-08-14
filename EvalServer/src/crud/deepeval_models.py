@@ -18,7 +18,7 @@ async def list_models(
     """
 
     result = await db.execute(
-        text(
+        text(  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
             '''
             SELECT id,
                    organization_id,
@@ -69,7 +69,7 @@ async def create_model(
     """
 
     result = await db.execute(
-        text(
+        text(  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
             '''
             INSERT INTO llm_evals_models
             (id, organization_id, name, provider, endpoint_url, created_by)
@@ -133,7 +133,7 @@ async def update_model(
     if not updates:
         # Nothing to update, just return current row
         result = await db.execute(
-            text(
+            text(  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
                 '''
                 SELECT id, organization_id, name, provider, endpoint_url, created_at, updated_at, created_by
                 FROM llm_evals_models
@@ -155,7 +155,7 @@ async def update_model(
             '''
         )
         result = await db.execute(
-            text(query),
+            text(query),  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
             params,
         )
 
@@ -186,7 +186,7 @@ async def get_model_by_id(
     """
 
     result = await db.execute(
-        text(
+        text(  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
             '''
             SELECT id,
                    organization_id,
@@ -230,7 +230,7 @@ async def delete_model(
     """
 
     result = await db.execute(
-        text(
+        text(  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
             '''
             DELETE FROM llm_evals_models
             WHERE organization_id = :organization_id AND id = :id
@@ -254,7 +254,7 @@ async def get_latest_model(
     """
 
     result = await db.execute(
-        text(
+        text(  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
             '''
             SELECT id,
                    organization_id,

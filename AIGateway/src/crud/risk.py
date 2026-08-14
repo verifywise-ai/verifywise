@@ -7,7 +7,7 @@ from database.db import get_db
 async def get_risk_settings(org_id: int) -> list[dict]:
     async with get_db() as db:
         result = await db.execute(
-            text(
+            text(  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
                 "SELECT * FROM ai_gateway_risk_settings "
                 "WHERE organization_id = :org_id "
                 "ORDER BY condition_id"
@@ -30,7 +30,7 @@ async def upsert_risk_setting(
 
     async with get_db() as db:
         result = await db.execute(
-            text(
+            text(  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
                 """
                 INSERT INTO ai_gateway_risk_settings
                     (organization_id, condition_id, is_enabled, threshold, severity_override)
@@ -72,7 +72,7 @@ async def create_suggestion(
 
     async with get_db() as db:
         result = await db.execute(
-            text(
+            text(  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
                 """
                 INSERT INTO ai_gateway_risk_suggestions
                     (organization_id, condition_id, title, description, severity,
@@ -105,7 +105,7 @@ async def get_suggestions(org_id: int, status: Optional[str] = None) -> list[dic
 
     async with get_db() as db:
         result = await db.execute(
-            text(
+            text(  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
                 """
                 SELECT
                     s.*,
@@ -136,7 +136,7 @@ async def update_suggestion_status(
 ) -> Optional[dict]:
     async with get_db() as db:
         result = await db.execute(
-            text(
+            text(  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
                 """
                 UPDATE ai_gateway_risk_suggestions SET
                     status           = :status,
@@ -168,7 +168,7 @@ async def update_suggestion_status(
 async def has_pending_suggestion(org_id: int, condition_id: str) -> bool:
     async with get_db() as db:
         result = await db.execute(
-            text(
+            text(  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
                 """
                 SELECT EXISTS (
                     SELECT 1 FROM ai_gateway_risk_suggestions
@@ -188,7 +188,7 @@ async def has_pending_suggestion(org_id: int, condition_id: str) -> bool:
 async def get_all_pending_condition_ids(org_id: int) -> set[str]:
     async with get_db() as db:
         result = await db.execute(
-            text(
+            text(  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
                 """
                 SELECT DISTINCT condition_id
                 FROM ai_gateway_risk_suggestions

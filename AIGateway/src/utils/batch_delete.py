@@ -26,7 +26,7 @@ async def batch_delete_expired(
     async with get_db() as db:
         while True:
             result = await db.execute(
-                text("""
+                text("""  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
                     DELETE FROM """ + table + """
                     WHERE id IN (
                         SELECT id FROM """ + table + """

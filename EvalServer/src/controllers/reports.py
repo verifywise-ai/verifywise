@@ -52,11 +52,10 @@ def _decrypt_api_key(encrypted_text: str) -> str:
         # Legacy AES-256-CBC format. Kept only to decrypt data encrypted before the
         # GCM migration; all new data uses AES-256-GCM. This branch intentionally
         # uses CBC because the legacy ciphertext has no authenticated alternative.
-        # nosemgrep: python.cryptography.security.mode-without-authentication.crypto-mode-without-authentication
         iv_hex, data_hex = parts
         iv = bytes.fromhex(iv_hex)
         ct = bytes.fromhex(data_hex)
-        cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
+        cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())  # nosemgrep: python.cryptography.security.mode-without-authentication.crypto-mode-without-authentication
         decryptor = cipher.decryptor()
         padded = decryptor.update(ct) + decryptor.finalize()
         unpadder = crypto_padding.PKCS7(128).unpadder()
