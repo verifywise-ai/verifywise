@@ -9061,6 +9061,19 @@ export const translations: Record<string, Record<string, string>> = {
     "Subcategories": "Unterkategorien",
     'Use the "Manage Frameworks" button to add frameworks to your organizational project.':
       'Verwenden Sie die Schaltfläche "Rahmenwerke verwalten", um Ihrem organisatorischen Projekt Rahmenwerke hinzuzufügen.',
+    "Elect": "Wählen",
+    "Elect Super Admin": "Super Admin wählen",
+    "Elect a Super Admin": "Einen Super Admin wählen",
+    "Elect other users as Super Admins": "Andere Benutzer als Super Admins wählen",
+    "Grant an existing user cross-organization Super Admin capabilities. Their base organization role is unchanged.":
+      "Einem bestehenden Benutzer organisationsübergreifende Super Admin-Berechtigungen erteilen. Seine Basisrolle in der Organisation bleibt unverändert.",
+    "No Super Admins yet.": "Noch keine Super Admins.",
+    "Revoke Super Admin": "Super Admin widerrufen",
+    "Search by name or email": "Nach Name oder E-Mail suchen",
+    "Sent": "Gesendet",
+    "Super Admins": "Super Admins",
+    "They will keep their normal organization role but lose cross-organization access.":
+      "Er behält seine normale Organisationsrolle, verliert jedoch den organisationsübergreifenden Zugriff.",
   },
 
   fr: {
@@ -18050,6 +18063,19 @@ export const translations: Record<string, Record<string, string>> = {
     "Subcategories": "Sous-catégories",
     'Use the "Manage Frameworks" button to add frameworks to your organizational project.':
       'Utilisez le bouton "Gérer les cadres" pour ajouter des cadres à votre projet organisationnel.',
+    "Elect": "Élire",
+    "Elect Super Admin": "Élire un Super Admin",
+    "Elect a Super Admin": "Élire un Super Admin",
+    "Elect other users as Super Admins": "Élire d'autres utilisateurs comme Super Admins",
+    "Grant an existing user cross-organization Super Admin capabilities. Their base organization role is unchanged.":
+      "Accordez à un utilisateur existant des capacités de Super Admin inter-organisations. Son rôle de base dans l'organisation reste inchangé.",
+    "No Super Admins yet.": "Aucun Super Admin pour le moment.",
+    "Revoke Super Admin": "Révoquer Super Admin",
+    "Search by name or email": "Rechercher par nom ou e-mail",
+    "Sent": "Envoyé",
+    "Super Admins": "Super Admins",
+    "They will keep their normal organization role but lose cross-organization access.":
+      "Il conservera son rôle normal dans l'organisation mais perdra l'accès inter-organisations.",
   },
   es: {
     "Deployment name": "Nombre del despliegue",
@@ -26959,5 +26985,18 @@ export const translations: Record<string, Record<string, string>> = {
     "Subcategories": "Subcategorías",
     'Use the "Manage Frameworks" button to add frameworks to your organizational project.':
       'Utilice el botón "Gestionar marcos" para añadir marcos a su proyecto organizacional.',
+    "Elect": "Elegir",
+    "Elect Super Admin": "Elegir Super Admin",
+    "Elect a Super Admin": "Elegir un Super Admin",
+    "Elect other users as Super Admins": "Elegir a otros usuarios como Super Admins",
+    "Grant an existing user cross-organization Super Admin capabilities. Their base organization role is unchanged.":
+      "Conceda a un usuario existente capacidades de Super Admin entre organizaciones. Su rol base en la organización no cambia.",
+    "No Super Admins yet.": "Aún no hay Super Admins.",
+    "Revoke Super Admin": "Revocar Super Admin",
+    "Search by name or email": "Buscar por nombre o correo electrónico",
+    "Sent": "Enviado",
+    "Super Admins": "Super Admins",
+    "They will keep their normal organization role but lose cross-organization access.":
+      "Mantendrá su rol normal en la organización pero perderá el acceso entre organizaciones.",
   },
 };
