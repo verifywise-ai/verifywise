@@ -42,7 +42,7 @@ describe("customAxios", () => {
     vi.clearAllMocks();
     setShowAlertCallback(null as any);
     mockStore.getState.mockReturnValue({
-      auth: { authToken: "test-token", activeOrganizationId: null },
+      auth: { authToken: "test-token" },
     } as any);
   });
 
@@ -69,18 +69,6 @@ describe("customAxios", () => {
         url: "/users/register",
       });
       expect(config.headers.Authorization).toBeUndefined();
-    });
-
-    it("adds X-Organization-Id header when activeOrganizationId exists", async () => {
-      mockStore.getState.mockReturnValue({
-        auth: { authToken: "token", activeOrganizationId: 5 },
-      } as any);
-
-      const config = await (CustomAxios.interceptors.request as any).handlers[0].fulfilled({
-        headers: {} as any,
-        url: "/some-endpoint",
-      });
-      expect(config.headers["X-Organization-Id"]).toBe("5");
     });
 
     it("sets withCredentials for login endpoint", async () => {

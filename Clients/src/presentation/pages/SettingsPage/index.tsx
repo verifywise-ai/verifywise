@@ -45,19 +45,14 @@ const BUILT_IN_TABS = [
 ];
 
 export default function ProfilePage() {
-  const { userRoleName, isSuperAdmin } = useAuth();
+  const { userRoleName } = useAuth();
   const ssoFeatureEnabled = useSsoFeatureEnabled();
   const location = useLocation();
   const navigate = useNavigate();
-  const isTeamManagementDisabled =
-    !isSuperAdmin && !allowedRoles.projects.editTeamMembers.includes(userRoleName);
-  const isApiKeysDisabled = !isSuperAdmin && !allowedRoles.apiKeys?.view?.includes(userRoleName);
-  const isFeaturesDisabled =
-    !isSuperAdmin && !allowedRoles.features?.manage?.includes(userRoleName);
-  // Audit ledger: Admin-only (or super admin)
-  const isAuditLedgerDisabled = !isSuperAdmin && userRoleName !== "Admin";
-  // Custom fields: strictly Admin role only (not SuperAdmin) — defining
-  // per-org custom fields is an org admin's concern, not a system-level one.
+  const isTeamManagementDisabled = !allowedRoles.projects.editTeamMembers.includes(userRoleName);
+  const isApiKeysDisabled = !allowedRoles.apiKeys?.view?.includes(userRoleName);
+  const isFeaturesDisabled = !allowedRoles.features?.manage?.includes(userRoleName);
+  const isAuditLedgerDisabled = userRoleName !== "Admin";
   const isCustomFieldsDisabled = userRoleName !== "Admin";
 
   // Get plugin tabs dynamically from the plugin registry
@@ -66,19 +61,16 @@ export default function ProfilePage() {
 
   const { tab } = useParams<{ tab?: string }>();
 
-  const defaultTab = isSuperAdmin ? "team" : "profile";
+  const defaultTab = "profile";
   const [activeTab, setActiveTab] = useState(tab || defaultTab);
 
   const validTabs = useMemo(() => {
     let tabs = [...BUILT_IN_TABS];
-    if (isSuperAdmin) {
-      tabs = tabs.filter((t) => !["profile", "password", "preferences"].includes(t));
-    }
     if (!ssoFeatureEnabled) {
       tabs = tabs.filter((t) => t !== "sso");
     }
     return [...tabs, ...pluginTabs.map((t) => t.value)];
-  }, [pluginTabs, isSuperAdmin, ssoFeatureEnabled]);
+  }, [pluginTabs, ssoFeatureEnabled]);
 
   // keep state synced with URL
   useEffect(() => {
@@ -137,42 +129,32 @@ export default function ProfilePage() {
 
   return (
     <PageHeaderExtended
-      title={isSuperAdmin ? "Organization Settings" : "Settings"}
-      description={
-        isSuperAdmin
-          ? "View organization settings for the selected organization."
-          : "Manage your profile, security, team members, and application preferences."
-      }
+      title="Settings"
+      description="Manage your profile, security, team members, and application preferences."
       helpArticlePath="settings/user-management"
       tipBoxEntity="settings"
     >
       <TabContext value={activeTab}>
         <TabBar
           tabs={[
-            // User-level tabs: hidden for super admin
-            ...(!isSuperAdmin
-              ? [
-                  {
-                    label: "Profile",
-                    value: "profile",
-                    icon: "User" as TabItem["icon"],
-                    tooltip: "Your name, email and personal details",
-                  },
-                  {
-                    label: "Password",
-                    value: "password",
-                    icon: "Lock" as TabItem["icon"],
-                    tooltip: "Update your account password",
-                  },
-                  {
-                    label: "Preferences",
-                    value: "preferences",
-                    icon: "Settings" as TabItem["icon"],
-                    tooltip: "Customize your display and notification preferences",
-                  },
-                ]
-              : []),
-            // Org-level tabs: always shown
+            {
+              label: "Profile",
+              value: "profile",
+              icon: "User" as TabItem["icon"],
+              tooltip: "Your name, email and personal details",
+            },
+            {
+              label: "Password",
+              value: "password",
+              icon: "Lock" as TabItem["icon"],
+              tooltip: "Update your account password",
+            },
+            {
+              label: "Preferences",
+              value: "preferences",
+              icon: "Settings" as TabItem["icon"],
+              tooltip: "Customize your display and notification preferences",
+            },
             {
               label: "Team",
               value: "team",
@@ -254,21 +236,17 @@ export default function ProfilePage() {
           scrollable
         />
 
-        {!isSuperAdmin && (
-          <>
-            <TabPanel sx={{ p: 0 }} value="profile">
-              <Profile />
-            </TabPanel>
+        <TabPanel sx={{ p: 0 }} value="profile">
+          <Profile />
+        </TabPanel>
 
-            <TabPanel sx={{ p: 0 }} value="password">
-              <Password />
-            </TabPanel>
+        <TabPanel sx={{ p: 0 }} value="password">
+          <Password />
+        </TabPanel>
 
-            <TabPanel sx={{ p: 0 }} value="preferences">
-              <Preferences />
-            </TabPanel>
-          </>
-        )}
+        <TabPanel sx={{ p: 0 }} value="preferences">
+          <Preferences />
+        </TabPanel>
 
         <TabPanel sx={{ p: 0 }} value="team">
           <TeamManagement />

@@ -27,8 +27,8 @@ interface UserOption {
 }
 
 export default function Settings() {
-  const { userRoleName, isSuperAdmin } = useAuth();
-  const isAdmin = isSuperAdmin || userRoleName === "Admin" || userRoleName === "SuperAdmin";
+  const { userRoleName } = useAuth();
+  const isAdmin = userRoleName === "Admin";
 
   const { data: settingsData, isLoading: settingsLoading } = useSettings();
   const { users, loading: usersLoading } = useUsers();

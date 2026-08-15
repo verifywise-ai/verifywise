@@ -59,6 +59,25 @@ export async function getOrgUsers(orgId: number) {
   return apiServices.get<ServerResponse<OrgUser[]>>(`/super-admin/organizations/${orgId}/users`);
 }
 
+export interface OrgInvitation {
+  id: number;
+  email: string;
+  name: string;
+  surname: string;
+  role_id: number;
+  role_name: string | null;
+  status: string;
+  invited_by: number;
+  created_at: string;
+  expires_at: string;
+}
+
+export async function getOrgInvitations(orgId: number) {
+  return apiServices.get<ServerResponse<OrgInvitation[]>>(
+    `/super-admin/organizations/${orgId}/invitations`,
+  );
+}
+
 export async function inviteUserToOrg(
   orgId: number,
   data: { email: string; name: string; surname?: string; roleId: number },
@@ -107,4 +126,29 @@ export async function updateMonitoringConfig(data: MonitoringConfigInput) {
  */
 export async function generateMonitoringToken() {
   return apiServices.post<ServerResponse<MonitoringConfig>>("/super-admin/monitoring/token", {});
+}
+
+export interface SuperAdminEntry {
+  user_id: number;
+  name: string;
+  surname: string;
+  email: string;
+  role_id: number | null;
+  role_name: string | null;
+  organization_id: number | null;
+  organization_name: string | null;
+}
+
+export async function listSuperAdmins() {
+  return apiServices.get<ServerResponse<SuperAdminEntry[]>>("/super-admin/super-admins");
+}
+
+export async function grantSuperAdmin(userId: number) {
+  return apiServices.post<ServerResponse<{ user_id: number }>>("/super-admin/super-admins", {
+    user_id: userId,
+  });
+}
+
+export async function revokeSuperAdmin(userId: number) {
+  return apiServices.delete(`/super-admin/super-admins/${userId}`);
 }

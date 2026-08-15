@@ -33,7 +33,6 @@ function createWrapper(authToken: string, overrides?: Record<string, unknown>) {
         onboardingStatus: "completed",
         isOrgCreator: false,
         isSuperAdmin: false,
-        activeOrganizationId: null,
         ...overrides,
       },
     },
@@ -106,25 +105,6 @@ describe("useAuth", () => {
     expect(result.current.userId).toBeNaN(); // parseInt("not-a-number") is NaN
   });
 
-  it("should return activeOrganizationId when user is super admin", () => {
-    const token = fakeJwt({
-      id: "1",
-      roleName: "SuperAdmin",
-      organizationId: "7",
-    });
-
-    const { result } = renderHook(() => useAuth(), {
-      wrapper: createWrapper(token, {
-        isSuperAdmin: true,
-        activeOrganizationId: 99,
-      }),
-    });
-
-    expect(result.current.isSuperAdmin).toBe(true);
-    // When super admin, organizationId should come from activeOrganizationId, not the token
-    expect(result.current.organizationId).toBe(99);
-  });
-
   it("should return null organizationId when token has no organizationId", () => {
     const token = fakeJwt({
       id: "5",
@@ -160,32 +140,10 @@ describe("useAuth", () => {
     const { result } = renderHook(() => useAuth(), {
       wrapper: createWrapper(token, {
         isSuperAdmin: undefined,
-        activeOrganizationId: undefined,
       }),
     });
 
     expect(result.current.isSuperAdmin).toBe(false);
-    expect(result.current.activeOrganizationId).toBeNull();
-    // organizationId falls back to tokenOrgId since isSuperAdmin is false
     expect(result.current.organizationId).toBe(7);
-  });
-
-  it("should return null organizationId when super admin has no activeOrganizationId", () => {
-    const token = fakeJwt({
-      id: "1",
-      roleName: "SuperAdmin",
-      organizationId: "7",
-    });
-
-    const { result } = renderHook(() => useAuth(), {
-      wrapper: createWrapper(token, {
-        isSuperAdmin: true,
-        activeOrganizationId: null,
-      }),
-    });
-
-    expect(result.current.isSuperAdmin).toBe(true);
-    // When super admin but no activeOrganizationId, organizationId should be null
-    expect(result.current.organizationId).toBeNull();
   });
 });

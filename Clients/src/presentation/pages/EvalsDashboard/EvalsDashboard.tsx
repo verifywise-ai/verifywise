@@ -220,10 +220,10 @@ export default function EvalsDashboard() {
   const { projectId } = useParams<{ projectId?: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const { userRoleName, isSuperAdmin } = useAuth();
+  const { userRoleName } = useAuth();
 
   // Helper to check if user can perform write operations
-  const canManageApiKeys = allowedRoles.evals.manageApiKeys.includes(userRoleName) && !isSuperAdmin;
+  const canManageApiKeys = allowedRoles.evals.manageApiKeys.includes(userRoleName);
 
   // Determine tab from URL hash or default
   const [openModelsAddModal, setOpenModelsAddModal] = useState(false);
