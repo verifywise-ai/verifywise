@@ -1,4 +1,4 @@
-FROM python:3.14-slim
+FROM python:3.12-slim
 WORKDIR /app
 COPY requirements.txt .
 # presidio-anonymizer 2.2.364 caps cryptography<49.0.0, but VerifyWise requires >=50.0.0.
