@@ -9374,6 +9374,18 @@ export const superAdminEndpoints: Endpoint[] = [
     tag: "Super Admin",
   },
   {
+    method: 'GET',
+    path: '/super-admin/organizations/{id}/invitations',
+    summary: "List Org Invitations",
+    description: "Requires role: Super Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Super Admin",
+  },
+  {
     method: 'POST',
     path: '/super-admin/organizations/{id}/invite',
     summary: "Invite User To Org",

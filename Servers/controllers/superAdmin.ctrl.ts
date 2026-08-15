@@ -8,6 +8,7 @@ import { deleteUserByIdQuery } from "../utils/user.utils";
 import { invite } from "./vwmailer.ctrl";
 import { OrganizationModel } from "../domain.layer/models/organization/organization.model";
 import { getMonitoringConfig, upsertMonitoringConfig } from "../utils/monitoringConfig.utils";
+import { getInvitationsByOrganizationQuery } from "../utils/invitation.utils";
 import {
   countSuperAdmins,
   grantSuperAdmin as grantSuperAdminUtil,
@@ -221,6 +222,22 @@ export async function listOrgUsers(req: Request, res: Response) {
     );
 
     return res.status(200).json(STATUS_CODE[200](users));
+  } catch (error) {
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+/**
+ * List pending invitations for an organization.
+ */
+export async function listOrgInvitations(req: Request, res: Response) {
+  try {
+    const orgId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+    if (isNaN(orgId)) {
+      return res.status(400).json(STATUS_CODE[400]({ message: req.t!("Invalid organization ID") }));
+    }
+    const invitations = await getInvitationsByOrganizationQuery(orgId);
+    return res.status(200).json(STATUS_CODE[200](invitations));
   } catch (error) {
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }

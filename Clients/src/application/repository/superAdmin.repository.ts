@@ -59,6 +59,25 @@ export async function getOrgUsers(orgId: number) {
   return apiServices.get<ServerResponse<OrgUser[]>>(`/super-admin/organizations/${orgId}/users`);
 }
 
+export interface OrgInvitation {
+  id: number;
+  email: string;
+  name: string;
+  surname: string;
+  role_id: number;
+  role_name: string | null;
+  status: string;
+  invited_by: number;
+  created_at: string;
+  expires_at: string;
+}
+
+export async function getOrgInvitations(orgId: number) {
+  return apiServices.get<ServerResponse<OrgInvitation[]>>(
+    `/super-admin/organizations/${orgId}/invitations`,
+  );
+}
+
 export async function inviteUserToOrg(
   orgId: number,
   data: { email: string; name: string; surname?: string; roleId: number },

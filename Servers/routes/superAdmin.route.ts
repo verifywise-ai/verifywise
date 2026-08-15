@@ -9,6 +9,7 @@ import {
   getUserCount,
   listAllUsers,
   listOrgUsers,
+  listOrgInvitations,
   inviteUserToOrg,
   updateUser,
   removeUser,
@@ -32,6 +33,7 @@ router.patch("/organizations/:id", updateOrg);
 router.get("/users/count", getUserCount);
 router.get("/users", listAllUsers);
 router.get("/organizations/:id/users", listOrgUsers);
+router.get("/organizations/:id/invitations", listOrgInvitations);
 router.post("/organizations/:id/invite", inviteUserToOrg);
 router.patch("/users/:id", updateUser);
 router.delete("/users/:id", removeUser);

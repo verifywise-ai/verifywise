@@ -23441,6 +23441,21 @@ paths:
           description: 'Forbidden - insufficient role'
         '500':
           description: 'Internal server error'
+  '/super-admin/organizations/{id}/invitations':
+    get:
+      summary: 'List Org Invitations'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Super Admin'
+      operationId: listOrgInvitations
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Super Admin'
   '/super-admin/organizations/{id}/invite':
     post:
       tags:
