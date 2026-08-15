@@ -42,7 +42,7 @@ The file contains predefined user records with various roles. Example:
   name: "Alice",
   surname: "Smith",
   email: "alice.smith@example.com",
-  password_hash: "$2b$10$c7Mtd3kRpMjr6VexlxuAleT8Sy3SwPcT.YLCazH5QWBgnATDo5N6O", // nosemgrep: test/demo bcrypt hash
+  password_hash: "[REDACTED_MOCK_BCRYPT_HASH]", // docs example only — not a real secret
   role: 1,
   created_at: new Date("2024-01-01"),
   last_login: new Date("2024-10-01")

@@ -59,6 +59,9 @@ def _req(method, url, headers, body=None, timeout=60):
     data = json.dumps(body).encode() if body is not None else None
     req = urllib.request.Request(url, data=data, headers=headers, method=method)
     try:
+        # URL is built by _validated_url(), which constrains the base to http/https
+        # and rejects empty hosts. This is an E2E test helper, not production code.
+        # nosemgrep: python.lang.security.audit.dynamic-urllib-use-detected.dynamic-urllib-use-detected
         with urllib.request.urlopen(req, timeout=timeout) as r:
             raw = r.read().decode()
             return r.status, (json.loads(raw) if raw else {})
