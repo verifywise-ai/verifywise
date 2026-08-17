@@ -232,6 +232,20 @@ jobs:
       # Persist Playwright's last-run metadata across workflow runs so a push
       # that targets a previously-failing test can start with just that test
       # instead of waiting for the whole suite.
+      #
+      # To only re-run previously failing tests, either:
+      #  - trigger the workflow manually with only_last_failed=true, or
+      #  - include "[e2e-only-failed]" in the HEAD commit message.
+      - name: Determine test mode
+        id: test_mode
+        run: |
+          HEAD_MSG=$(git log -1 --pretty=%B)
+          if [[ "$HEAD_MSG" == *"[e2e-only-failed]"* ]] || [[ "${{ inputs.only_last_failed }}" == "true" ]]; then
+            echo "only_last_failed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "only_last_failed=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Restore last-run metadata
         uses: actions/cache/restore@v4
         with:
@@ -259,7 +273,7 @@ jobs:
           fi
 
       - name: Run full E2E test suite
-        if: ${{ !inputs.only_last_failed }}
+        if: ${{ steps.test_mode.outputs.only_last_failed != 'true' }}
         working-directory: Clients
         env:
           E2E_BASE_URL: http://localhost:5173
