@@ -29,7 +29,7 @@ google-auth-httplib2==0.2.1
 google-genai==1.48.0
 googleapis-common-protos==1.71.0
 greenlet==3.2.4
-grpcio==1.76.0
+grpcio==1.83.0
 grpcio-status==1.83.0
 h11==0.16.0
 hf-xet==1.5.2
