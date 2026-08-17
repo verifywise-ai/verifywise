@@ -23,6 +23,7 @@
 import rateLimit, { Options, ipKeyGenerator } from "express-rate-limit";
 import { Request, Response } from "express";
 import logger from "../utils/logger/fileLogger";
+import { STATUS_CODE } from "../utils/statusCode.utils";
 
 // Fail closed: the strict (production) limits apply unless NODE_ENV is
 // EXPLICITLY a known non-production value. A missing or misspelled NODE_ENV in
@@ -112,13 +113,14 @@ const RATE_LIMIT_CONFIGS: Record<string, RateLimitConfig> = {
 
 /**
  * Creates a standardized rate limit error handler
- * Returns consistent error format using STATUS_CODE utility
+ * Responds with the canonical STATUS_CODE[429] envelope:
+ * { message: "Too Many Requests", data: <limiter-specific message> }
  */
 const createRateLimitHandler = (message: string) => {
   return (req: Request, res: Response) => {
     const clientIp = req.ip || req.socket?.remoteAddress || "unknown";
     logger.warn(`Rate limit exceeded for IP ${clientIp} on ${req.path}: ${message}`);
-    res.status(429).json({ message, statusCode: 429 });
+    res.status(429).json(STATUS_CODE[429](message));
   };
 };
 

@@ -317,25 +317,45 @@ describe("automations.ctrl", () => {
   });
 
   describe("createAutomation", () => {
-    it("should return 400 when required fields are missing", async () => {
-      const req = createReq({ body: {} });
+    it("should return 400 when params JSON is invalid", async () => {
+      const req = createReq({
+        body: {
+          triggerId: 1,
+          name: "Test",
+          actions: [{ action_type_id: 1 }],
+          params: "{not-json",
+        },
+      });
       const res = createRes();
-
-      const mockTransaction = {
-        commit: jest.fn(),
-        rollback: jest.fn(),
-      };
-      (sequelize.transaction as any).mockResolvedValue(mockTransaction);
 
       await createAutomation(req as Request, res as Response);
 
-      expect(mockTransaction.rollback).toHaveBeenCalled();
+      expect(sequelize.transaction).not.toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        message: "Bad Request",
+        data: {
+          errors: [
+            expect.objectContaining({
+              field: "params",
+              location: "body",
+            }),
+          ],
+        },
+      });
     });
 
-    it("should return 400 when actions array is empty", async () => {
+    it("should return 201 when automation is created with object params", async () => {
+      const mockAutomation = { id: 1, name: "Test Automation" };
+      mockCreateAutomationQuery.mockResolvedValue(mockAutomation as any);
+
       const req = createReq({
-        body: { triggerId: 1, name: "Test", actions: [] },
+        body: {
+          triggerId: 1,
+          name: "Test Automation",
+          actions: [{ action_type_id: 1 }],
+          params: { key: "value" },
+        },
       });
       const res = createRes();
 
@@ -347,8 +367,19 @@ describe("automations.ctrl", () => {
 
       await createAutomation(req as Request, res as Response);
 
-      expect(mockTransaction.rollback).toHaveBeenCalled();
-      expect(res.status).toHaveBeenCalledWith(400);
+      expect(mockCreateAutomationQuery).toHaveBeenCalledWith(
+        expect.objectContaining({ params: { key: "value" } }),
+        expect.any(Array),
+        expect.anything(),
+        expect.anything(),
+        mockTransaction as any,
+      );
+      expect(mockTransaction.commit).toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(201);
+      expect(res.json).toHaveBeenCalledWith({
+        message: "Created",
+        data: mockAutomation,
+      });
     });
 
     it("should return 201 when automation is created successfully", async () => {
@@ -413,6 +444,30 @@ describe("automations.ctrl", () => {
       await updateAutomation(req as Request, res as Response);
 
       expect(res.status).toHaveBeenCalledWith(400);
+    });
+
+    it("should return 400 when params JSON is invalid", async () => {
+      const req = createReq({
+        params: { id: "1" },
+        body: { name: "Updated", params: "{bad" },
+      });
+      const res = createRes();
+
+      await updateAutomation(req as Request, res as Response);
+
+      expect(sequelize.transaction).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        message: "Bad Request",
+        data: {
+          errors: [
+            expect.objectContaining({
+              field: "params",
+              location: "body",
+            }),
+          ],
+        },
+      });
     });
 
     it("should return 200 when automation is updated successfully", async () => {

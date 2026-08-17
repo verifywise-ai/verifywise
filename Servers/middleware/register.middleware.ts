@@ -51,7 +51,7 @@ const registerJWT = async (
       !roleIsKnown
     ) {
       console.error("❌ Registration validation failed");
-      return res.status(403).json({ message: req.t!("Role or Organization mismatch") });
+      return res.status(403).json(STATUS_CODE[403](req.t!("Role or Organization mismatch")));
     }
 
     // Check if invitation is still pending (not revoked)
@@ -62,11 +62,15 @@ const registerJWT = async (
 
     if (!hasPendingInvitation) {
       console.error("❌ Registration rejected: invitation was revoked or doesn't exist");
-      return res.status(403).json({
-        message: req.t!(
-          "This invitation has been revoked. Please contact your administrator for a new invitation.",
-        ),
-      });
+      return res
+        .status(403)
+        .json(
+          STATUS_CODE[403](
+            req.t!(
+              "This invitation has been revoked. Please contact your administrator for a new invitation.",
+            ),
+          ),
+        );
     }
 
     // Proceed to next middleware or route handler

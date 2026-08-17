@@ -224,8 +224,11 @@ describe("invitation.ctrl", () => {
       expect(mockUpdateExpiry).toHaveBeenCalledWith(1, 1, "date");
       expect(res.status).toHaveBeenCalledWith(206);
       expect(res.json).toHaveBeenCalledWith({
-        error: "SendError: fail",
-        message: "link",
+        message: "Partial Content",
+        data: {
+          error: "SendError: fail",
+          link: "link",
+        },
       });
     });
 

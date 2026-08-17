@@ -50,8 +50,8 @@ export const removeStepLinkContainer = {
 
 export const verticalStepDividerStyle = {
   borderRightWidth: "1px",
-  height: "216px",
-  borderColor: "#E0E0E0",
+  alignSelf: "stretch",
+  borderColor: borderPalette.dark,
   mt: 4,
   ml: 6,
   mr: 12,

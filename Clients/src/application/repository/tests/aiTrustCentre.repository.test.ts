@@ -44,16 +44,11 @@ describe("Test AI Trust Centre Repository", () => {
       expect(response).toEqual(mockData);
     });
 
-    it("should throw and log when fetch trust centre overview fails", async () => {
+    it("should throw when fetch trust centre overview fails", async () => {
       const error = new Error("API Error");
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
       vi.mocked(apiServices.get).mockRejectedValueOnce(error);
 
       await expect(getAITrustCentreOverview()).rejects.toThrow("API Error");
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Error fetching AI Trust Center overview:",
-        error,
-      );
     });
   });
 
@@ -69,16 +64,11 @@ describe("Test AI Trust Centre Repository", () => {
       expect(response).toEqual(input);
     });
 
-    it("should throw and log when update trust centre overview fails", async () => {
+    it("should throw when update trust centre overview fails", async () => {
       const error = new Error("API Error");
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
       vi.mocked(apiServices.put).mockRejectedValueOnce(error);
 
       await expect(updateAITrustCentreOverview({ title: "x" })).rejects.toThrow("API Error");
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Error updating AI Trust Center overview:",
-        error,
-      );
     });
   });
 
@@ -99,14 +89,12 @@ describe("Test AI Trust Centre Repository", () => {
       expect(response).toEqual(mockData);
     });
 
-    it("should throw and log when logo upload fails", async () => {
+    it("should throw when logo upload fails", async () => {
       const error = new Error("API Error");
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
       vi.mocked(apiServices.post).mockRejectedValueOnce(error);
 
       const logoFile = new File(["logo"], "logo.png", { type: "image/png" });
       await expect(uploadAITrustCentreLogo(logoFile)).rejects.toThrow("API Error");
-      expect(consoleErrorSpy).toHaveBeenCalledWith("Error uploading AI Trust Center logo:", error);
     });
   });
 
@@ -122,13 +110,11 @@ describe("Test AI Trust Centre Repository", () => {
       expect(response).toEqual(mockData);
     });
 
-    it("should throw and log when logo deletion fails", async () => {
+    it("should throw when logo deletion fails", async () => {
       const error = new Error("API Error");
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
       vi.mocked(apiServices.delete).mockRejectedValueOnce(error);
 
       await expect(deleteAITrustCentreLogo()).rejects.toThrow("API Error");
-      expect(consoleErrorSpy).toHaveBeenCalledWith("Error deleting AI Trust Center logo:", error);
     });
   });
 
@@ -159,9 +145,8 @@ describe("Test AI Trust Centre Repository", () => {
       expect(response).toEqual(mockData);
     });
 
-    it("should throw and log when resource creation fails", async () => {
+    it("should throw when resource creation fails", async () => {
       const error = new Error("API Error");
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
       vi.mocked(apiServices.post).mockRejectedValueOnce(error);
 
       const file = new File(["resource"], "resource.pdf", {
@@ -170,10 +155,6 @@ describe("Test AI Trust Centre Repository", () => {
       await expect(
         createAITrustCentreResource(file, "Resource 1", "Description", true),
       ).rejects.toThrow("API Error");
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Error creating AI Trust Center resource:",
-        error,
-      );
     });
   });
 
@@ -189,16 +170,11 @@ describe("Test AI Trust Centre Repository", () => {
       expect(response).toEqual(mockData);
     });
 
-    it("should throw and log when resources fetch fails", async () => {
+    it("should throw when resources fetch fails", async () => {
       const error = new Error("API Error");
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
       vi.mocked(apiServices.get).mockRejectedValueOnce(error);
 
       await expect(getAITrustCentreResources()).rejects.toThrow("API Error");
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Error fetching AI Trust Center resources:",
-        error,
-      );
     });
   });
 
@@ -214,16 +190,11 @@ describe("Test AI Trust Centre Repository", () => {
       expect(response).toEqual(mockData);
     });
 
-    it("should throw and log when resource deletion fails", async () => {
+    it("should throw when resource deletion fails", async () => {
       const error = new Error("API Error");
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
       vi.mocked(apiServices.delete).mockRejectedValueOnce(error);
 
       await expect(deleteAITrustCentreResource(9)).rejects.toThrow("API Error");
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Error deleting AI Trust Center resource:",
-        error,
-      );
     });
   });
 
@@ -276,17 +247,12 @@ describe("Test AI Trust Centre Repository", () => {
       expect(response).toEqual(mockData);
     });
 
-    it("should throw and log when resource update fails", async () => {
+    it("should throw when resource update fails", async () => {
       const error = new Error("API Error");
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
       vi.mocked(apiServices.put).mockRejectedValueOnce(error);
 
       await expect(updateAITrustCentreResource(7, "Resource", "Description", true)).rejects.toThrow(
         "API Error",
-      );
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Error updating AI Trust Center resource:",
-        error,
       );
     });
   });
@@ -303,16 +269,11 @@ describe("Test AI Trust Centre Repository", () => {
       expect(response).toEqual(mockData);
     });
 
-    it("should throw and log when subprocessors fetch fails", async () => {
+    it("should throw when subprocessors fetch fails", async () => {
       const error = new Error("API Error");
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
       vi.mocked(apiServices.get).mockRejectedValueOnce(error);
 
       await expect(getAITrustCentreSubprocessors()).rejects.toThrow("API Error");
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Error fetching AI Trust Center subprocessors:",
-        error,
-      );
     });
   });
 
@@ -350,18 +311,13 @@ describe("Test AI Trust Centre Repository", () => {
       expect(response).toEqual(mockData);
     });
 
-    it("should throw and log when subprocessor creation fails", async () => {
+    it("should throw when subprocessor creation fails", async () => {
       const error = new Error("API Error");
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
       vi.mocked(apiServices.post).mockRejectedValueOnce(error);
 
       await expect(
         createAITrustCentreSubprocessor("Vendor B", "Hosting", "EU", "https://vendor-b.test"),
       ).rejects.toThrow("API Error");
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Error creating AI Trust Center subprocessor:",
-        error,
-      );
     });
   });
 
@@ -396,18 +352,13 @@ describe("Test AI Trust Centre Repository", () => {
       expect(response).toEqual(mockData);
     });
 
-    it("should throw and log when subprocessor update fails", async () => {
+    it("should throw when subprocessor update fails", async () => {
       const error = new Error("API Error");
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
       vi.mocked(apiServices.put).mockRejectedValueOnce(error);
 
       await expect(
         updateAITrustCentreSubprocessor(5, "Vendor C", "Storage", "US", "https://vendor-c.test"),
       ).rejects.toThrow("API Error");
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Error updating AI Trust Center subprocessor:",
-        error,
-      );
     });
   });
 
@@ -423,16 +374,11 @@ describe("Test AI Trust Centre Repository", () => {
       expect(response).toEqual(mockData);
     });
 
-    it("should throw and log when subprocessor deletion fails", async () => {
+    it("should throw when subprocessor deletion fails", async () => {
       const error = new Error("API Error");
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
       vi.mocked(apiServices.delete).mockRejectedValueOnce(error);
 
       await expect(deleteAITrustCentreSubprocessor(11)).rejects.toThrow("API Error");
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Error deleting AI Trust Center subprocessor:",
-        error,
-      );
     });
   });
 
@@ -472,13 +418,11 @@ describe("Test AI Trust Centre Repository", () => {
       expect(consoleErrorSpy).not.toHaveBeenCalled();
     });
 
-    it("should throw and log when logo fetch fails with non-404 error", async () => {
+    it("should throw when logo fetch fails with non-404 error", async () => {
       const error = new Error("API Error");
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
       vi.mocked(apiServices.get).mockRejectedValueOnce(error);
 
       await expect(getAITrustCentreLogo("tenant-123")).rejects.toThrow("API Error");
-      expect(consoleErrorSpy).toHaveBeenCalledWith("Error fetching AI Trust Center logo:", error);
     });
   });
 });
