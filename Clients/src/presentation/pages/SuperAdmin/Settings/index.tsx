@@ -8,6 +8,7 @@ import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtende
 import Profile from "../../SettingsPage/Profile";
 import Password from "../../SettingsPage/Password";
 import Monitoring from "./Monitoring";
+import SuperAdmins from "./SuperAdmins";
 
 export default function SuperAdminSettings() {
   const navigate = useNavigate();
@@ -56,6 +57,12 @@ export default function SuperAdminSettings() {
               icon: "Activity" as TabItem["icon"],
               tooltip: "Send logs and metrics to a central observability stack",
             },
+            {
+              label: "Super Admins",
+              value: "super-admins",
+              icon: "Crown" as TabItem["icon"],
+              tooltip: "Elect other users as Super Admins",
+            },
           ]}
           activeTab={activeTab}
           onChange={handleTabChange}
@@ -71,6 +78,10 @@ export default function SuperAdminSettings() {
 
         <TabPanel sx={{ p: 0 }} value="monitoring">
           <Monitoring />
+        </TabPanel>
+
+        <TabPanel sx={{ p: 0 }} value="super-admins">
+          <SuperAdmins />
         </TabPanel>
       </TabContext>
     </PageHeaderExtended>

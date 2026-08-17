@@ -13,7 +13,6 @@ vi.mock("../../../../../application/hooks/useAuth", () => ({
     isAuthenticated: true,
     isSuperAdmin: false,
     organizationId: 1,
-    activeOrganizationId: null,
     userToken: null,
   }),
 }));

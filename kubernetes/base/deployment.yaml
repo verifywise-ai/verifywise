@@ -400,6 +400,10 @@ spec:
           securityContext:
             runAsNonRoot: true
             runAsUser: 999
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           env:
             - name: POSTGRES_DB
               valueFrom:

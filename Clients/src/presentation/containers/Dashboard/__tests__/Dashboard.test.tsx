@@ -9,7 +9,6 @@ vi.mock("../../../../application/hooks/useAuth", () => ({
   useAuth: () => ({
     userRoleName: "Admin",
     isSuperAdmin: false,
-    activeOrganizationId: 1,
   }),
 }));
 
@@ -49,10 +48,6 @@ vi.mock("../../../../application/repository/entity.repository", () => ({
   getAllEntities: vi.fn().mockResolvedValue({ data: [] }),
 }));
 
-vi.mock("../../../../application/repository/superAdmin.repository", () => ({
-  getOrganizations: vi.fn().mockResolvedValue({ data: { data: [] } }),
-}));
-
 vi.mock("../../../../application/tools/log.engine", () => ({
   logEngine: vi.fn(),
 }));
@@ -83,9 +78,6 @@ vi.mock("../../../components/ContextSidebar", () => ({
       data-has-demo={String(props.hasDemoData)}
     />
   ),
-}));
-vi.mock("../../../components/ReadOnlyBanner", () => ({
-  default: () => <div data-testid="read-only-banner" />,
 }));
 vi.mock("../../../components/DemoBanner/DemoAppBanner", () => ({
   default: () => <div data-testid="demo-app-banner" />,
@@ -132,11 +124,6 @@ describe("Dashboard container", () => {
   it("renders ContextSidebar", () => {
     renderWithProviders(<Dashboard reloadTrigger={false} />);
     expect(screen.getByTestId("context-sidebar")).toBeInTheDocument();
-  });
-
-  it("renders ReadOnlyBanner", () => {
-    renderWithProviders(<Dashboard reloadTrigger={false} />);
-    expect(screen.getByTestId("read-only-banner")).toBeInTheDocument();
   });
 
   it("renders Outlet for nested routes", () => {

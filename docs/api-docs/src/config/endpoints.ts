@@ -9374,6 +9374,18 @@ export const superAdminEndpoints: Endpoint[] = [
     tag: "Super Admin",
   },
   {
+    method: 'GET',
+    path: '/super-admin/organizations/{id}/invitations',
+    summary: "List Org Invitations",
+    description: "Requires role: Super Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Super Admin",
+  },
+  {
     method: 'POST',
     path: '/super-admin/organizations/{id}/invite',
     summary: "Invite User To Org",
@@ -9447,6 +9459,42 @@ export const superAdminEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/super-admin/monitoring/token',
     summary: "Generate Monitoring Token",
+    description: "Requires role: Super Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Super Admin",
+  },
+  {
+    method: 'GET',
+    path: '/super-admin/super-admins',
+    summary: "List Super Admins",
+    description: "Requires role: Super Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Super Admin",
+  },
+  {
+    method: 'POST',
+    path: '/super-admin/super-admins',
+    summary: "Grant Super Admin",
+    description: "Requires role: Super Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Super Admin",
+  },
+  {
+    method: 'DELETE',
+    path: '/super-admin/super-admins/{user_id}',
+    summary: "Revoke Super Admin",
     description: "Requires role: Super Admin",
     requiresAuth: true,
     responses: [

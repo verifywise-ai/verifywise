@@ -26,7 +26,6 @@ vi.mock("../../../../application/hooks/useAuth", () => ({
     userRoleName: "Admin",
     userId: 1,
     isSuperAdmin: false,
-    activeOrganizationId: null,
   }),
 }));
 

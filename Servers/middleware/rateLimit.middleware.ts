@@ -29,7 +29,8 @@ import logger from "../utils/logger/fileLogger";
 // production must NOT silently relax brute-force protection, so anything we
 // don't recognise as dev/test is treated as production.
 const nodeEnv = (process.env.NODE_ENV ?? "").trim().toLowerCase();
-const isNonProduction = nodeEnv === "development" || nodeEnv === "test" || nodeEnv === "local";
+export const isNonProduction =
+  nodeEnv === "development" || nodeEnv === "test" || nodeEnv === "local";
 
 /**
  * Rate limit configuration with time window and request limits
@@ -101,6 +102,11 @@ const RATE_LIMIT_CONFIGS: Record<string, RateLimitConfig> = {
       // IPv6 addresses are normalized (raw req.ip is rejected by express-rate-limit v8).
       return tokenId !== undefined ? `mrm-token:${tokenId}` : ipKeyGenerator(req.ip ?? "");
     },
+  },
+  webhook: {
+    windowMinutes: 1,
+    maxRequests: isNonProduction ? 100000 : 100,
+    message: "Too many webhook requests from this IP, please slow down and retry",
   },
 };
 
@@ -174,3 +180,10 @@ export const aiDetectionScanLimiter = createRateLimiter(RATE_LIMIT_CONFIGS.aiDet
  * but still bounded so a runaway pusher cannot flood the system.
  */
 export const mrmIngestionLimiter = createRateLimiter(RATE_LIMIT_CONFIGS.mrmIngestion);
+
+/**
+ * Rate limiter for public webhook endpoints.
+ * Generous because webhooks are legitimate machine-to-machine pushes, but still
+ * bounded so a misconfigured or malicious sender cannot flood the system.
+ */
+export const webhookLimiter = createRateLimiter(RATE_LIMIT_CONFIGS.webhook);

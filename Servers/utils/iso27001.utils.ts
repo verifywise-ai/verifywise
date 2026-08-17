@@ -21,7 +21,7 @@ import {
   deleteAllFileEntityLinksForEntities,
 } from "./files/evidenceFiles.utils";
 
-const getDemoSubClauses = (): Object[] => {
+const getDemoSubClauses = (): object[] => {
   const subClauses = [];
   for (let clause of ISO27001Clause) {
     for (let subClause of clause.subclauses) {
@@ -35,7 +35,7 @@ const getDemoSubClauses = (): Object[] => {
   return subClauses;
 };
 
-const getDemoAnnexControls = (): Object[] => {
+const getDemoAnnexControls = (): object[] => {
   const annexControls = [];
   for (let annex of ISO27001Annex) {
     for (let annexControl of annex.controls) {

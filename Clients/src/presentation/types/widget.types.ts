@@ -172,6 +172,9 @@ export interface ISearchBoxProps {
  */
 export interface IProtectedRouteProps {
   Component: React.ComponentType<any>;
+  /** When true, only authenticated SuperAdmins render Component; others are
+   * redirected to `/`. Backed by state.auth.isSuperAdmin. */
+  requireSuperAdmin?: boolean;
   [key: string]: any; // Allow rest props to be passed through
 }
 

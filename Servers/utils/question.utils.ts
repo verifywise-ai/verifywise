@@ -17,7 +17,7 @@ const ENTITY_TYPE = "question";
 
 export const getAllQuestionsQuery = async (
   organizationId: number,
-): Promise<(IQuestion & { evidence_files: Object[] })[]> => {
+): Promise<(IQuestion & { evidence_files: object[] })[]> => {
   const questions = await sequelize.query(
     `SELECT * FROM questions WHERE organization_id = :organizationId ORDER BY created_at DESC, id ASC`,
     {
@@ -48,7 +48,7 @@ export const getAllQuestionsQuery = async (
       ...question.dataValues,
       evidence_files: evidenceFiles.map((f) => ({ id: f.id, filename: f.filename })),
     };
-  }) as (QuestionModel & { evidence_files: Object[] })[];
+  }) as (QuestionModel & { evidence_files: object[] })[];
 
   return questionsUpdated;
 };
@@ -56,7 +56,7 @@ export const getAllQuestionsQuery = async (
 export const getQuestionByIdQuery = async (
   id: number,
   organizationId: number,
-): Promise<IQuestion & { evidence_files: Object[] }> => {
+): Promise<IQuestion & { evidence_files: object[] }> => {
   const result = await sequelize.query(
     `SELECT * FROM questions WHERE organization_id = :organizationId AND id = :id`,
     {
@@ -82,7 +82,7 @@ export const getQuestionByIdQuery = async (
   return {
     ...result[0].dataValues,
     evidence_files: evidenceFiles.map((f) => ({ id: f.id, filename: f.fileName })),
-  } as QuestionModel & { evidence_files: Object[] };
+  } as QuestionModel & { evidence_files: object[] };
 };
 
 export interface UploadedFile {
@@ -287,7 +287,7 @@ export const deleteQuestionByIdQuery = async (
   id: number,
   organizationId: number,
   transaction: Transaction,
-): Promise<Boolean> => {
+): Promise<boolean> => {
   // First get the linked files so we can delete them after
   const linkedFiles = await getEvidenceFilesForEntity(
     organizationId,

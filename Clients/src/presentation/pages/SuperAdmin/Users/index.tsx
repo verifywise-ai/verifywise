@@ -14,9 +14,11 @@ import {
 import { UserPlus, Users as UsersIcon } from "lucide-react";
 import {
   getOrgUsers,
+  getOrgInvitations,
   inviteUserToOrg,
   removeUser,
   OrgUser,
+  OrgInvitation,
 } from "../../../../application/repository/superAdmin.repository";
 import { useParams } from "react-router";
 import StandardModal from "../../../components/Modals/StandardModal";
@@ -31,6 +33,7 @@ import { displayFormattedDate } from "../../../tools/isoDateToString";
 const Users = () => {
   const { id: orgId } = useParams<{ id: string }>();
   const [users, setUsers] = useState<OrgUser[]>([]);
+  const [invitations, setInvitations] = useState<OrgInvitation[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -51,11 +54,14 @@ const Users = () => {
   const fetchUsers = useCallback(async () => {
     if (!orgId) return;
     try {
-      const response = await getOrgUsers(parseInt(orgId));
-      const serverData = response.data as any;
-      setUsers(serverData?.data || []);
+      const [userRes, inviteRes] = await Promise.all([
+        getOrgUsers(parseInt(orgId)),
+        getOrgInvitations(parseInt(orgId)),
+      ]);
+      setUsers(((userRes.data as any)?.data ?? []) as OrgUser[]);
+      setInvitations(((inviteRes.data as any)?.data ?? []) as OrgInvitation[]);
     } catch (error) {
-      console.error("Failed to fetch users:", error);
+      console.error("Failed to fetch users/invitations:", error);
     } finally {
       setLoading(false);
     }
@@ -269,6 +275,87 @@ const Users = () => {
             </TableBody>
           </Table>
         </TableContainer>
+      )}
+
+      {/* Pending invitations */}
+      {!loading && (
+        <Stack sx={{ mt: 5 }}>
+          <Typography sx={{ fontSize: "13px", fontWeight: 600, color: "text.primary", mb: 2 }}>
+            Pending invitations ({invitations.length})
+          </Typography>
+          <TableContainer sx={{ ...tableStyles.frame, overflowX: "auto" }}>
+            <Table>
+              <TableHead>
+                <TableRow sx={tableStyles.header.row}>
+                  <TableCell sx={tableStyles.header.cell}>Name</TableCell>
+                  <TableCell sx={tableStyles.header.cell}>Email</TableCell>
+                  <TableCell sx={tableStyles.header.cell}>Role</TableCell>
+                  <TableCell sx={tableStyles.header.cell}>Sent</TableCell>
+                  <TableCell sx={tableStyles.header.cell}>Expires</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {invitations.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={5}
+                      sx={{
+                        ...tableStyles.body.cell,
+                        textAlign: "center",
+                        py: 4,
+                        color: "text.secondary",
+                        fontSize: 13,
+                      }}
+                    >
+                      No pending invitations
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  invitations.map((inv) => {
+                    const roleName = inv.role_name || "—";
+                    const colors = ROLE_COLORS[roleName] || { bg: "#f3f4f6", text: "#6b7280" };
+                    return (
+                      <TableRow key={inv.id} sx={tableStyles.body.row}>
+                        <TableCell sx={tableStyles.body.cell}>
+                          <Typography sx={{ fontSize: 13 }}>
+                            {inv.name}
+                            {inv.surname ? ` ${inv.surname}` : ""}
+                          </Typography>
+                        </TableCell>
+                        <TableCell sx={tableStyles.body.cell}>
+                          <Typography sx={{ fontSize: 13 }}>{inv.email}</Typography>
+                        </TableCell>
+                        <TableCell sx={tableStyles.body.cell}>
+                          <Box
+                            sx={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              px: 1,
+                              py: 0.25,
+                              borderRadius: "4px",
+                              fontSize: 12,
+                              fontWeight: 500,
+                              backgroundColor: colors.bg,
+                              color: colors.text,
+                            }}
+                          >
+                            {roleName}
+                          </Box>
+                        </TableCell>
+                        <TableCell sx={tableStyles.body.cell}>
+                          {displayFormattedDate(inv.created_at)}
+                        </TableCell>
+                        <TableCell sx={tableStyles.body.cell}>
+                          {displayFormattedDate(inv.expires_at)}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </Stack>
       )}
 
       {/* Invite User Modal */}

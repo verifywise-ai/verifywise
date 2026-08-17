@@ -35,8 +35,8 @@ const getDemoAnswers = (): string[] => {
   return answers;
 };
 
-const getDemoControls = (): Object[] => {
-  let controls: Object[] = [];
+const getDemoControls = (): object[] => {
+  let controls: object[] = [];
   for (let controlCategory of ControlCategories) {
     controls = controls.concat([...controlCategory.controls]);
   }
@@ -757,7 +757,7 @@ export const createNewAssessmentEUQuery = async (
   organizationId: number,
   transaction: Transaction,
   is_mock_data: boolean,
-): Promise<Object> => {
+): Promise<object> => {
   const projectFrameworkId = (await sequelize.query(
     `SELECT id FROM projects_frameworks WHERE organization_id = :organizationId AND project_id = :project_id AND framework_id = 1`,
     {
@@ -951,7 +951,7 @@ export const createEUFrameworkQuery = async (
   transaction: Transaction,
   is_mock_data: boolean = false,
 ) => {
-  const assessments: Object = await createNewAssessmentEUQuery(
+  const assessments: object = await createNewAssessmentEUQuery(
     { project_id: projectId },
     enable_ai_data_insertion,
     organizationId,

@@ -28,6 +28,12 @@
     "i18n:audit": "node scripts/i18n-audit.mjs",
     "i18n:audit:strict": "node scripts/i18n-audit.mjs --strict"
   },
+  "lint-staged": {
+    "src/**/*.{ts,tsx}": [
+      "npx eslint --fix",
+      "npx prettier --write"
+    ]
+  },
   "dependencies": {
     "@ai-sdk/react": "^4.0.5",
     "@assistant-ui/react": "^0.14.23",
@@ -136,10 +142,12 @@
     "baseline-browser-mapping": "^2.10.38",
     "concurrently": "^10.0.4",
     "dotenv-webpack": "^9.0.0",
+    "eslint": "^9.20.0",
+    "lint-staged": "^15.4.0",
     "jsdom": "^30.0.1",
     "msw": "^2.14.6",
     "prettier": "^3.8.4",
-    "typescript": "^7.0.2",
+    "typescript": "^5.7.3",
     "url-loader": "^4.1.1",
     "vitest": "^4.1.9"
   },

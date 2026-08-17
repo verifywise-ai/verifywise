@@ -30,7 +30,6 @@ function createWrapper() {
         onboardingStatus: "completed",
         isOrgCreator: false,
         isSuperAdmin: false,
-        activeOrganizationId: null,
       },
     },
   });

@@ -7,4 +7,4 @@ else
   echo "\033[33mWARNING: gitleaks not found on PATH — skipping staged secret scan. Install gitleaks to enable pre-commit secret detection.\033[0m"
 fi
 
-cd Servers && npx lint-staged
+cd Servers && npx lint-staged && cd ../Clients && npx lint-staged

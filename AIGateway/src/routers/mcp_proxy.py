@@ -240,7 +240,9 @@ async def mcp_jsonrpc(request: Request):
 
         except ValueError as e:
             await _audit("error", str(e), True)
-            return JSONResponse(content=_jsonrpc_error(msg_id, -32602, str(e)), status_code=200)
+            # Return a generic JSON-RPC error message to avoid leaking internal
+            # exception details to the client; the original error is logged/audited.
+            return JSONResponse(content=_jsonrpc_error(msg_id, -32602, "Invalid params"), status_code=200)
         except HTTPException:
             raise
         except Exception as e:

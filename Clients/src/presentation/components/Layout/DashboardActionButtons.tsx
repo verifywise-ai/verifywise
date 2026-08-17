@@ -80,8 +80,12 @@ export const DashboardActionButtons = memo(function DashboardActionButtons({
     () => location.pathname === "/" || location.pathname === "",
     [location.pathname],
   );
+  // Tenant chrome (approvals, notifications, etc.) has no place in the
+  // super-admin module — its API calls target the caller's org, which a
+  // pure SuperAdmin doesn't have.
+  const isSuperAdminRoute = location.pathname.startsWith("/super-admin");
 
-  const shouldHide = hideOnMainDashboard && isMainDashboard;
+  const shouldHide = (hideOnMainDashboard && isMainDashboard) || isSuperAdminRoute;
 
   const handleOpenCommandPalette = useCallback(() => {
     const event = new KeyboardEvent("keydown", {
@@ -123,10 +127,11 @@ export const DashboardActionButtons = memo(function DashboardActionButtons({
     }
   }, []);
 
-  // Initial fetch on mount
+  // Initial fetch on mount (skip on super-admin routes — no org context)
   useEffect(() => {
+    if (isSuperAdminRoute) return;
     fetchApprovalCounts();
-  }, [fetchApprovalCounts]);
+  }, [fetchApprovalCounts, isSuperAdminRoute]);
 
   return (
     <Stack

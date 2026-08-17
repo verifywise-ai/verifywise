@@ -102,7 +102,7 @@ function normalizeDocument(raw: string): {
 } {
   // Strip control chars except newlines and tabs.
   let cleaned = raw
-    // eslint-disable-next-line no-control-regex
+
     .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, "")
     // PDF and DOCX extraction emits non-breaking and typographic spaces. They
     // have to become plain spaces before the run below can collapse them —

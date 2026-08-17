@@ -8,6 +8,11 @@ describe("InfoBox Component", () => {
     localStorage.clear();
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
+  });
+
   it("renders the message text", () => {
     renderWithProviders(<InfoBox message="This is an info message" storageKey="test-info" />);
 
