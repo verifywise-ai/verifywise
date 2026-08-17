@@ -493,6 +493,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
           error={errors.vendorName}
           isRequired
           disabled={isEditingDisabled}
+          placeholder="Enter vendor name"
         />
         <AutoCompleteField
           multiple
@@ -567,6 +568,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
           error={errors.vendorContactPerson}
           isRequired
           disabled={isEditingDisabled}
+          placeholder="Enter vendor contact person"
         />
         <Select // assignee (not in the server model!)
           items={formattedUsers}
