@@ -16,9 +16,9 @@ middleware stack), so the verifier returns a denial ``JSONResponse`` instead.
 
 import hmac
 import os
-from typing import Optional
+from typing import Optional, Tuple
 
-from fastapi import Request
+from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
 
 INTERNAL_KEY_ENV = "EVAL_SERVER_INTERNAL_KEY"
@@ -36,8 +36,8 @@ def is_configured() -> bool:
     return get_internal_key() not in PLACEHOLDER_VALUES
 
 
-def verify_internal_key(request: Request) -> Optional[JSONResponse]:
-    """Return a denial response when the request is not from the backend.
+def _deny(request: Request) -> Optional[Tuple[int, str]]:
+    """Return ``(status_code, detail)`` when the request must be rejected.
 
     Returns ``None`` when the request is allowed to proceed.
     """
@@ -45,10 +45,36 @@ def verify_internal_key(request: Request) -> Optional[JSONResponse]:
         return None
 
     if not is_configured():
-        return JSONResponse(status_code=503, content={"detail": "Internal key not configured"})
+        return 503, "Internal key not configured"
 
     provided = request.headers.get("x-internal-key", "")
     if not hmac.compare_digest(provided, get_internal_key()):
-        return JSONResponse(status_code=401, content={"detail": "Invalid internal key"})
+        return 401, "Invalid internal key"
 
     return None
+
+
+def verify_internal_key(request: Request) -> Optional[JSONResponse]:
+    """Return a denial response when the request is not from the backend.
+
+    Returns ``None`` when the request is allowed to proceed.
+    """
+    denial = _deny(request)
+    if denial is None:
+        return None
+    status_code, detail = denial
+    return JSONResponse(status_code=status_code, content={"detail": detail})
+
+
+def verify_internal_key_dependency(request: Request) -> None:
+    """FastAPI dependency form of :func:`verify_internal_key`.
+
+    Applied at the router level (``include_router(..., dependencies=[...])``)
+    so every route rejects unauthenticated requests even if the middleware
+    stack is bypassed. Raises instead of returning a response — inside the
+    routing layer ``HTTPException`` is converted by FastAPI as usual.
+    """
+    denial = _deny(request)
+    if denial is not None:
+        status_code, detail = denial
+        raise HTTPException(status_code=status_code, detail=detail)

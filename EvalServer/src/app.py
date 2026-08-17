@@ -2,7 +2,7 @@ import os
 import dotenv
 dotenv.load_dotenv()
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routers.deepeval import router as deepeval
 from routers.deepeval_projects import router as deepeval_projects
@@ -12,7 +12,7 @@ from routers.deepeval_arena import router as deepeval_arena
 from routers.bias_audits import router as bias_audits
 from routers.reports import router as reports
 from middlewares.middleware import TenantMiddleware
-from middlewares.auth import is_configured, INTERNAL_KEY_ENV
+from middlewares.auth import is_configured, verify_internal_key_dependency, INTERNAL_KEY_ENV
 from database.redis import close_redis
 from database.config import settings
 from sqlalchemy import text
@@ -131,13 +131,13 @@ async def startup_event():
 def root():
     return {"message": "Welcome to the Eval Server!"}
 
-app.include_router(deepeval, prefix="/deepeval", tags=["DeepEval"])
-app.include_router(deepeval_projects, prefix="/deepeval", tags=["DeepEval Projects"])
-app.include_router(deepeval_orgs, prefix="/deepeval", tags=["DeepEval Orgs"])
-app.include_router(deepeval_arena, prefix="/deepeval", tags=["DeepEval Arena"])
-app.include_router(bias_audits, prefix="/deepeval", tags=["Bias Audits"])
-app.include_router(evaluation_logs, tags=["Evaluation Logs & Monitoring"])
-app.include_router(reports, tags=["Reports"])
+app.include_router(deepeval, prefix="/deepeval", tags=["DeepEval"], dependencies=[Depends(verify_internal_key_dependency)])
+app.include_router(deepeval_projects, prefix="/deepeval", tags=["DeepEval Projects"], dependencies=[Depends(verify_internal_key_dependency)])
+app.include_router(deepeval_orgs, prefix="/deepeval", tags=["DeepEval Orgs"], dependencies=[Depends(verify_internal_key_dependency)])
+app.include_router(deepeval_arena, prefix="/deepeval", tags=["DeepEval Arena"], dependencies=[Depends(verify_internal_key_dependency)])
+app.include_router(bias_audits, prefix="/deepeval", tags=["Bias Audits"], dependencies=[Depends(verify_internal_key_dependency)])
+app.include_router(evaluation_logs, tags=["Evaluation Logs & Monitoring"], dependencies=[Depends(verify_internal_key_dependency)])
+app.include_router(reports, tags=["Reports"], dependencies=[Depends(verify_internal_key_dependency)])
 
 if __name__ == "__main__":
     import uvicorn
