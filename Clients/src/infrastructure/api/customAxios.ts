@@ -81,6 +81,11 @@ const getEnvelopeErrorMessage = (data: ApiErrorEnvelope): string | undefined => 
   return data.message;
 };
 
+// Endpoints whose UI already renders its own error message (e.g. the login
+// page shows an inline alert). Skip the global toast for these so users don't
+// see duplicate notifications.
+const ENDPOINTS_WITH_CUSTOM_ERROR_UI = ["/users/login"];
+
 // Show a translated error toast for server or network failures, and for 4xx
 // client errors using the backend's message from the { message, data }
 // envelope. 404 is excluded: callers deliberately handle it as empty state.
@@ -89,6 +94,9 @@ const showGlobalErrorAlert = (error: AxiosError) => {
   // unmounted or superseded it (the assessment hooks abort on effect cleanup).
   // Without this guard, switching tabs mid-request shows a bogus error toast.
   if (axios.isCancel(error) || error.code === "ERR_CANCELED") return;
+
+  const requestUrl = error.config?.url ?? "";
+  if (ENDPOINTS_WITH_CUSTOM_ERROR_UI.some((path) => requestUrl.includes(path))) return;
 
   const status = error.response?.status;
   const isServerError = status != null && status >= 500;
