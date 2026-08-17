@@ -19,7 +19,7 @@ litellm==1.89.3
 # Database migrations (Alembic)
 sqlalchemy[asyncio]>=2.0.0
 asyncpg>=0.29.0
-alembic>=1.13.0
+alembic>=1.19.1
 
 # Guardrails — PII detection (in-process, no Docker)
 presidio-analyzer>=2.2.364
