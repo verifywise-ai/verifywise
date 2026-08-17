@@ -131,7 +131,7 @@
     "@types/file-saver": "^2.0.7",
     "@types/ms": "^2.1.0",
     "@types/node": "^26.0.0",
-    "@types/pako": "^2.0.3",
+    "@types/pako": "^3.0.0",
     "@types/papaparse": "^5.5.2",
     "@types/prismjs": "^1.26.6",
     "@types/react": "^19.2.17",
