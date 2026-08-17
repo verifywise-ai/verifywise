@@ -6,16 +6,11 @@ export async function GetAnnexCategoriesById({
   signal,
   responseType = "json",
 }: GetRequestParams) {
-  try {
-    const response = await apiServices.get(routeUrl, {
-      signal,
-      responseType,
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error getting annex categories by ID:", error);
-    throw error;
-  }
+  const response = await apiServices.get(routeUrl, {
+    signal,
+    responseType,
+  });
+  return response.data;
 }
 
 // Update annex category by ID (with file upload)
@@ -37,13 +32,11 @@ export async function UpdateAnnexCategoryById({
     });
     return response;
   } catch (error: any) {
-    console.error("Error updating annex category by ID:", error);
     if (error instanceof Error && "response" in error && error.response) {
       // Handle specific HTTP error responses
       throw error;
     } else if (error instanceof Error && "request" in error) {
       // Handle network errors
-      console.error("Network error - no response received");
       throw new Error("Network error - unable to reach the server");
     } else {
       // Handle other errors

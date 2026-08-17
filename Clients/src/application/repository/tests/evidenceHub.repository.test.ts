@@ -36,18 +36,14 @@ describe("Test Evidence Hub Repository", () => {
       expect(response).toEqual(mockData);
     });
 
-    it("should log and rethrow when post fails", async () => {
+    it("should rethrow when post fails", async () => {
       const routeUrl = "/evidenceHub";
       const data = { name: "Bad Evidence" };
       const error = new Error("Post failed");
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
       vi.mocked(apiServices.post).mockRejectedValue(error);
 
       await expect(createEvidenceHub(routeUrl, data)).rejects.toThrow(error);
-      expect(consoleErrorSpy).toHaveBeenCalledWith("Error creating incident management:", error);
-
-      consoleErrorSpy.mockRestore();
     });
   });
 });

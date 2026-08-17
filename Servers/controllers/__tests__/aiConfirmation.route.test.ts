@@ -34,7 +34,9 @@ describe("ai-confirmations route guards", () => {
       .post("/api/ai-confirmations/approve/appr-1")
       .set("x-test-role", "Editor");
     expect(res.status).toBe(403);
-    expect(res.body.message).toBe("Access denied");
+    // Standardized envelope: reason phrase in `message`, detail in `data`
+    expect(res.body.message).toBe("Forbidden");
+    expect(res.body.data).toBe("Access denied");
   });
 
   it("refuses a non-Admin rejecting a confirmation", async () => {
@@ -42,7 +44,8 @@ describe("ai-confirmations route guards", () => {
       .post("/api/ai-confirmations/reject/appr-1")
       .set("x-test-role", "Auditor");
     expect(res.status).toBe(403);
-    expect(res.body.message).toBe("Access denied");
+    expect(res.body.message).toBe("Forbidden");
+    expect(res.body.data).toBe("Access denied");
   });
 
   it("allows an Admin", async () => {
