@@ -33,6 +33,6 @@ spacy>=3.8.14
 mcp>=1.0.0
 
 # Observability — OpenTelemetry metrics + logs (pushed to central OTLP collector)
-opentelemetry-api>=1.27.0
+opentelemetry-api>=1.44.0
 opentelemetry-sdk>=1.27.0
 opentelemetry-exporter-otlp-proto-http>=1.27.0
