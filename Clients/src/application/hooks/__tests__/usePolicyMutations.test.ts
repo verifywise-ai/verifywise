@@ -2,17 +2,25 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, act, waitFor } from "@testing-library/react";
 import React from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { useCreatePolicy, useUpdatePolicy } from "../usePolicyMutations";
+import { useCreatePolicy, useUpdatePolicy, useDeletePolicy } from "../usePolicyMutations";
 import { policyQueryKeys } from "../usePolicies";
+import { tagQueryKeys } from "../useTags";
 import { PolicyManagerModel } from "../../../domain/models/Common/policy/policyManager.model";
 import { PolicyInput } from "../../../domain/interfaces/i.policy";
 
 const mockCreatePolicy = vi.fn();
 const mockUpdatePolicy = vi.fn();
+const mockDeletePolicy = vi.fn();
+const mockShowAlert = vi.fn();
 
 vi.mock("../../repository/policy.repository", () => ({
   createPolicy: (...args: unknown[]) => mockCreatePolicy(...args),
   updatePolicy: (...args: unknown[]) => mockUpdatePolicy(...args),
+  deletePolicy: (...args: unknown[]) => mockDeletePolicy(...args),
+}));
+
+vi.mock("../../tools/alertUtils", () => ({
+  showAlert: (...args: unknown[]) => mockShowAlert(...args),
 }));
 
 function createPolicy(id: number, overrides: Partial<PolicyManagerModel> = {}): PolicyManagerModel {
@@ -162,5 +170,91 @@ describe("useUpdatePolicy", () => {
 
     expect(mockUpdatePolicy).toHaveBeenCalledWith(1, input);
     expect(returned).toEqual(updated);
+  });
+});
+
+describe("useDeletePolicy", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("removes the policy optimistically and invalidates only policy-tags on success", async () => {
+    let resolveMutation: () => void = () => {};
+    mockDeletePolicy.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveMutation = resolve;
+        }),
+    );
+
+    const queryKey = policyQueryKeys.list();
+    const { queryClient, wrapper } = createWrapper();
+
+    queryClient.setQueryData(queryKey, [createPolicy(1), createPolicy(2)]);
+
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+
+    const { result } = renderHook(() => useDeletePolicy(), { wrapper });
+
+    act(() => {
+      result.current.mutate(1);
+    });
+
+    // Optimistic removal is visible before the repository promise resolves.
+    await waitFor(() => {
+      const data = queryClient.getQueryData<PolicyManagerModel[]>(queryKey);
+      expect(data?.map((p) => p.id)).toEqual([2]);
+    });
+    expect(mockDeletePolicy).toHaveBeenCalledWith(1);
+
+    act(() => {
+      resolveMutation();
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    // Deleting a policy can orphan a tag, so only the tags query refreshes.
+    const keys = invalidateSpy.mock.calls.map(
+      (call) => (call[0] as { queryKey: unknown[] }).queryKey,
+    );
+    expect(keys).toContainEqual([...tagQueryKeys.all]);
+    expect(keys.every((key) => key[0] !== "policies")).toBe(true);
+
+    // The exact removal stands — no list refetch needed.
+    expect(queryClient.getQueryData<PolicyManagerModel[]>(queryKey)?.map((p) => p.id)).toEqual([2]);
+  });
+
+  it("rolls back the removal and toasts when deletion fails with a 4xx", async () => {
+    let rejectMutation: (error: unknown) => void = () => {};
+    mockDeletePolicy.mockImplementation(
+      () =>
+        new Promise<never>((_resolve, reject) => {
+          rejectMutation = reject;
+        }),
+    );
+
+    const queryKey = policyQueryKeys.list();
+    const { queryClient, wrapper } = createWrapper();
+
+    const original = [createPolicy(1), createPolicy(2)];
+    queryClient.setQueryData(queryKey, original);
+
+    const { result } = renderHook(() => useDeletePolicy(), { wrapper });
+
+    act(() => {
+      result.current.mutate(1);
+    });
+
+    await waitFor(() =>
+      expect(queryClient.getQueryData<PolicyManagerModel[]>(queryKey)).toHaveLength(1),
+    );
+
+    act(() => {
+      rejectMutation({ response: { status: 403 }, message: "Forbidden" });
+    });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(queryClient.getQueryData<PolicyManagerModel[]>(queryKey)).toEqual(original);
+    expect(mockShowAlert).toHaveBeenCalledWith(expect.objectContaining({ variant: "error" }));
   });
 });
