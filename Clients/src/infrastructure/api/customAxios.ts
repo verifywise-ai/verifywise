@@ -162,12 +162,6 @@ CustomAxios.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    // Attach X-Organization-Id header when super-admin is viewing an org
-    const activeOrgId = state.auth.activeOrganizationId;
-    if (activeOrgId) {
-      config.headers["X-Organization-Id"] = String(activeOrgId);
-    }
-
     const lang = storageService.get("language", "en");
     if (lang) {
       config.headers["Accept-Language"] = lang;

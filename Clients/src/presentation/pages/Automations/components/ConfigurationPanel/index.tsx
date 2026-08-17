@@ -41,6 +41,10 @@ interface ConfigurationPanelProps {
   automationName?: string;
   onAutomationNameChange?: (newName: string) => void;
   projects?: Project[];
+  nameError?: string;
+  triggerError?: string;
+  actionsError?: string;
+  paramsError?: string;
 }
 
 const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
@@ -53,6 +57,10 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
   automationName,
   onAutomationNameChange,
   projects = [],
+  nameError,
+  triggerError,
+  actionsError,
+  paramsError,
 }) => {
   const theme = useTheme();
   const [configuration, setConfiguration] = useState<Record<string, any>>({});
@@ -700,6 +708,41 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
 
   const templateVariables = getTemplateVariables();
 
+  const serverFieldHints = (
+    <>
+      {triggerError && (
+        <Typography
+          component="span"
+          role="alert"
+          color={theme.palette.status.error.text}
+          sx={{ fontSize: 11, opacity: 0.8 }}
+        >
+          {triggerError}
+        </Typography>
+      )}
+      {actionsError && (
+        <Typography
+          component="span"
+          role="alert"
+          color={theme.palette.status.error.text}
+          sx={{ fontSize: 11, opacity: 0.8 }}
+        >
+          {actionsError}
+        </Typography>
+      )}
+      {paramsError && (
+        <Typography
+          component="span"
+          role="alert"
+          color={theme.palette.status.error.text}
+          sx={{ fontSize: 11, opacity: 0.8 }}
+        >
+          {paramsError}
+        </Typography>
+      )}
+    </>
+  );
+
   if (!selectedItem || !template) {
     return (
       <Stack
@@ -724,7 +767,10 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
                 value={automationName}
                 onChange={(e) => onAutomationNameChange(e.target.value)}
                 placeholder="Enter automation name"
+                error={nameError}
+                isRequired
               />
+              {serverFieldHints}
             </Stack>
           </Box>
         )}
@@ -780,7 +826,10 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
               value={automationName}
               onChange={(e) => onAutomationNameChange(e.target.value)}
               placeholder="Enter automation name"
+              error={nameError}
+              isRequired
             />
+            {serverFieldHints}
           </Stack>
         </Box>
       )}

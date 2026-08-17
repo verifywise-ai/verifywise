@@ -96,7 +96,6 @@ export interface TestAppOptions {
     userId?: number;
     role?: string;
     organizationId?: number;
-    isSuperAdmin?: boolean;
   };
 }
 
@@ -104,7 +103,6 @@ const DEFAULT_MOCK_USER = {
   userId: 1,
   role: "Admin",
   organizationId: 1,
-  isSuperAdmin: false,
 };
 
 export function createTestApp(options?: TestAppOptions): Application {
@@ -117,7 +115,6 @@ export function createTestApp(options?: TestAppOptions): Application {
       req.userId = mockUser.userId;
       req.role = mockUser.role;
       req.organizationId = mockUser.organizationId;
-      req.isSuperAdmin = mockUser.isSuperAdmin;
       req.tenantHash = getTenantHash(mockUser.organizationId);
       req.testBypassAuth = true;
       next();

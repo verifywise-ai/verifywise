@@ -14,9 +14,6 @@ import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.cont
 import { storageService } from "../../../infrastructure/storage";
 import { ITask, TaskSummary } from "../../../domain/interfaces/i.task";
 import {
-  createTask,
-  updateTask,
-  deleteTask,
   getTaskById,
   restoreTask,
   hardDeleteTask,
@@ -32,6 +29,11 @@ import useUsers from "../../../application/hooks/useUsers";
 import { useTasks, taskQueryKeys } from "../../../application/hooks/useTasks";
 import { useUpdateTaskStatus } from "../../../application/hooks/useUpdateTaskStatus";
 import { useUpdateTaskPriority } from "../../../application/hooks/useUpdateTaskPriority";
+import {
+  useCreateTask,
+  useUpdateTask,
+  useArchiveTask,
+} from "../../../application/hooks/useTaskMutations";
 
 import Toggle from "../../components/Inputs/Toggle";
 import { TaskPriority, TaskStatus } from "../../../domain/enums/task.enum";
@@ -96,6 +98,9 @@ const Tasks: React.FC = () => {
   const tasks = useMemo(() => rawTasks.map((task) => new TaskModel(task)), [rawTasks]);
   const updateTaskStatusMutation = useUpdateTaskStatus();
   const updateTaskPriorityMutation = useUpdateTaskPriority();
+  const createTaskMutation = useCreateTask();
+  const updateTaskMutation = useUpdateTask();
+  const archiveTaskMutation = useArchiveTask();
   const error = queryError ? "Failed to load tasks. Please try again later." : null;
   const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<ITask | null>(null);
@@ -351,7 +356,7 @@ const Tasks: React.FC = () => {
       // but also sync them separately after creation
       const { entity_links, ...taskData } = formData;
 
-      const response = await createTask({
+      const response = await createTaskMutation.mutateAsync({
         body: {
           ...taskData,
           // Include entity_links for notification email (backend uses these immediately)
@@ -378,11 +383,6 @@ const Tasks: React.FC = () => {
           }
         }
 
-        // Add the new task to the cache
-        queryClient.setQueryData(
-          taskQueryKeys.list({ includeArchived }),
-          (old: ITask[] | undefined) => (old ? [response.data, ...old] : [response.data]),
-        );
         setAlert({
           variant: "success",
           title: "Task created successfully",
@@ -395,13 +395,9 @@ const Tasks: React.FC = () => {
       }
       return undefined;
     } catch (error) {
+      // The mutation hook surfaces a global error toast (and the axios
+      // interceptor covers 5xx/network), so no local alert here.
       console.error("Error creating task:", error);
-      setAlert({
-        variant: "error",
-        title: "Error creating task",
-        body: "Failed to create the task. Please try again.",
-      });
-      setTimeout(() => setAlert(null), 4000);
       return undefined;
     }
   };
@@ -416,11 +412,7 @@ const Tasks: React.FC = () => {
     if (!task) return;
 
     try {
-      await deleteTask({ id: taskId });
-      queryClient.setQueryData(
-        taskQueryKeys.list({ includeArchived }),
-        (old: ITask[] | undefined) => old?.filter((t) => t.id !== taskId) ?? [],
-      );
+      await archiveTaskMutation.mutateAsync({ id: taskId });
       setAlert({
         variant: "success",
         title: "Task archived successfully",
@@ -428,13 +420,8 @@ const Tasks: React.FC = () => {
       });
       setTimeout(() => setAlert(null), 4000);
     } catch (error) {
+      // Global error toast handled by the mutation hook / axios interceptor.
       console.error("Error archiving task:", error);
-      setAlert({
-        variant: "error",
-        title: "Error archiving task",
-        body: "Failed to archive the task. Please try again.",
-      });
-      setTimeout(() => setAlert(null), 4000);
     }
   };
 
@@ -446,7 +433,7 @@ const Tasks: React.FC = () => {
       // but also sync them separately after the update
       const { entity_links: newEntityLinks, ...taskData } = formData;
 
-      const response = await updateTask({
+      const response = await updateTaskMutation.mutateAsync({
         id: editingTask.id!,
         body: {
           ...taskData,
@@ -500,17 +487,8 @@ const Tasks: React.FC = () => {
           }
         }
 
-        // Update task in cache with new entity links
-        const updatedTaskWithLinks = {
-          ...response.data,
-          entity_links: newEntityLinks || [],
-        };
-
-        queryClient.setQueryData(
-          taskQueryKeys.list({ includeArchived }),
-          (old: ITask[] | undefined) =>
-            old?.map((task) => (task.id === editingTask.id ? updatedTaskWithLinks : task)) ?? [],
-        );
+        // The mutation hook already patched the cache (optimistic merge keeps
+        // entity_links; the server entity is merged in on success).
 
         // Flash the updated row
         setFlashRowId(editingTask.id!);
@@ -527,13 +505,8 @@ const Tasks: React.FC = () => {
         setTimeout(() => setAlert(null), 4000);
       }
     } catch (error) {
+      // Global error toast handled by the mutation hook / axios interceptor.
       console.error("Error updating task:", error);
-      setAlert({
-        variant: "error",
-        title: "Error updating task",
-        body: "Failed to update the task. Please try again.",
-      });
-      setTimeout(() => setAlert(null), 4000);
     }
   };
 

@@ -71,17 +71,6 @@ export async function createApprovalRequest(req: Request, res: Response): Promis
       return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
 
-    // Validation
-    if (!request_name?.trim()) {
-      await transaction.rollback();
-      return res.status(400).json(STATUS_CODE[400](req.t!("Request name is required")));
-    }
-
-    if (!workflow_id) {
-      await transaction.rollback();
-      return res.status(400).json(STATUS_CODE[400](req.t!("Workflow ID is required")));
-    }
-
     // Get workflow and steps
     const workflow = await getApprovalWorkflowByIdQuery(workflow_id, organizationId, transaction);
 
@@ -94,7 +83,17 @@ export async function createApprovalRequest(req: Request, res: Response): Promis
 
     if (!workflowSteps || workflowSteps.length === 0) {
       await transaction.rollback();
-      return res.status(400).json(STATUS_CODE[400](req.t!("Workflow must have at least one step")));
+      return res.status(400).json(
+        STATUS_CODE[400]({
+          errors: [
+            {
+              field: "workflow_id",
+              message: req.t!("Workflow must have at least one step"),
+              location: "body",
+            },
+          ],
+        }),
+      );
     }
 
     // Create request
@@ -286,10 +285,8 @@ export async function getApprovalRequestById(req: Request, res: Response): Promi
       return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
 
-    const requestId = parseInt(id, 10);
-    if (isNaN(requestId)) {
-      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid request ID")));
-    }
+    // id validated by validateApprovalIdParam
+    const requestId = parseInt(String(id), 10);
 
     const request = await getApprovalRequestByIdQuery(requestId, organizationId);
 
@@ -336,11 +333,8 @@ export async function approveRequest(req: Request, res: Response): Promise<any> 
       return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
 
-    const requestId = parseInt(id, 10);
-    if (isNaN(requestId)) {
-      await transaction.rollback();
-      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid request ID")));
-    }
+    // id validated by validateApprovalActionBody
+    const requestId = parseInt(String(id), 10);
 
     // Process the approval
     const notificationInfo = await processApprovalQuery(
@@ -520,11 +514,8 @@ export async function rejectRequest(req: Request, res: Response): Promise<any> {
       return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
 
-    const requestId = parseInt(id, 10);
-    if (isNaN(requestId)) {
-      await transaction.rollback();
-      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid request ID")));
-    }
+    // id validated by validateApprovalActionBody
+    const requestId = parseInt(String(id), 10);
 
     // Process the rejection
     const notificationInfo = await processApprovalQuery(
@@ -633,11 +624,8 @@ export async function withdrawRequest(req: Request, res: Response): Promise<any>
       return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
 
-    const requestId = parseInt(id, 10);
-    if (isNaN(requestId)) {
-      await transaction.rollback();
-      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid request ID")));
-    }
+    // id validated by validateApprovalIdParam
+    const requestId = parseInt(String(id), 10);
 
     // Verify user is the requestor
     const request = await getApprovalRequestByIdQuery(requestId, organizationId, transaction);

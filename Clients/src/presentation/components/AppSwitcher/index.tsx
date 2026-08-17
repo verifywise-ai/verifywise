@@ -8,6 +8,7 @@ interface AppSwitcherProps {
   activeModule: AppModule;
   onModuleChange: (module: AppModule) => void;
   isSuperAdmin?: boolean;
+  hasOrg?: boolean;
 }
 
 interface ModuleItem {
@@ -68,15 +69,23 @@ const AppSwitcher: FC<AppSwitcherProps> = ({
   activeModule,
   onModuleChange,
   isSuperAdmin = false,
+  hasOrg = false,
 }) => {
   const theme = useTheme();
 
-  const allModules = isSuperAdmin ? [...modules, superAdminModule] : modules;
+  // Bootstrap SuperAdmin (no org): only super-admin module.
+  // Elected SuperAdmin (has org + isSuperAdmin): tenant modules + super-admin.
+  // Regular user: tenant modules only.
+  const visibleModules = isSuperAdmin
+    ? hasOrg
+      ? [...modules, superAdminModule]
+      : [superAdminModule]
+    : modules;
 
   return (
     <Stack className="app-switcher">
       <Stack className="app-switcher-modules">
-        {allModules.map((module) => (
+        {visibleModules.map((module) => (
           <Tooltip
             key={module.id}
             title={

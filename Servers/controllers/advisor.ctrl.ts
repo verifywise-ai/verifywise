@@ -1024,7 +1024,7 @@ export async function adminClearAgentMemory(req: Request, res: Response) {
     if (!organizationId) {
       return res.status(400).json(STATUS_CODE[400]("Auth context required"));
     }
-    if (req.role !== "Admin" && !req.isSuperAdmin) {
+    if (req.role !== "Admin") {
       return res.status(403).json(STATUS_CODE[403]("Admin role required to clear agent memory"));
     }
     if (!agentName || agentName.trim().length === 0) {
@@ -1070,7 +1070,7 @@ export async function adminListAgentMessages(req: Request, res: Response) {
     if (!organizationId) {
       return res.status(400).json(STATUS_CODE[400]("Auth context required"));
     }
-    if (req.role !== "Admin" && !req.isSuperAdmin) {
+    if (req.role !== "Admin") {
       return res.status(403).json(STATUS_CODE[403]("Admin role required"));
     }
     if (!agentName || agentName.trim().length === 0) {

@@ -6,7 +6,6 @@ import reducer, {
   setOnboardingStatus,
   setIsOrgCreator,
   setIsSuperAdmin,
-  setActiveOrganizationId,
 } from "../authSlice";
 
 const initialState = {
@@ -20,7 +19,6 @@ const initialState = {
   onboardingStatus: "completed",
   isOrgCreator: false,
   isSuperAdmin: false,
-  activeOrganizationId: null,
 };
 
 describe("authSlice", () => {
@@ -36,13 +34,11 @@ describe("authSlice", () => {
         authToken: "some-token",
         user: "john",
         isSuperAdmin: true,
-        activeOrganizationId: 5,
       };
       const state = reducer(modified, clearAuthState());
       expect(state.authToken).toBe("");
       expect(state.user).toBe("");
       expect(state.isSuperAdmin).toBe(false);
-      expect(state.activeOrganizationId).toBeNull();
       expect(state.userExists).toBe(true);
       expect(state.message).toBe("Logged out successfully");
     });
@@ -93,13 +89,6 @@ describe("authSlice", () => {
     it("sets isSuperAdmin to true", () => {
       const state = reducer(initialState, setIsSuperAdmin(true));
       expect(state.isSuperAdmin).toBe(true);
-    });
-  });
-
-  describe("setActiveOrganizationId", () => {
-    it("sets activeOrganizationId", () => {
-      const state = reducer(initialState, setActiveOrganizationId(3));
-      expect(state.activeOrganizationId).toBe(3);
     });
   });
 });
