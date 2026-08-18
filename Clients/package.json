@@ -142,7 +142,7 @@
     "baseline-browser-mapping": "^2.10.38",
     "concurrently": "^10.0.4",
     "dotenv-webpack": "^9.0.0",
-    "eslint": "^9.20.0",
+    "eslint": "^10.8.1",
     "lint-staged": "^15.4.0",
     "jsdom": "^30.0.1",
     "msw": "^2.14.6",
