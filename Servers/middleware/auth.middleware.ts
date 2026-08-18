@@ -140,7 +140,7 @@ const authenticateJWT = async (
       !decoded.roleName ||
       typeof decoded.roleName !== "string"
     ) {
-      return res.status(400).json({ message: req.t!("Invalid token") });
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid token")));
     }
 
     // API tokens carry a `type: "api_token"` claim and must additionally exist
@@ -183,7 +183,7 @@ const authenticateJWT = async (
     if (user.role_id !== null && user.role_id !== undefined) {
       const expectedRoleName = await getRoleNameById(user.role_id);
       if (decoded.roleName !== expectedRoleName) {
-        return res.status(403).json({ message: req.t!("Not allowed to access") });
+        return res.status(403).json(STATUS_CODE[403](req.t!("Not allowed to access")));
       }
     }
 
@@ -200,7 +200,7 @@ const authenticateJWT = async (
       if (!belongs.belongs) {
         return res
           .status(403)
-          .json({ message: req.t!("User does not belong to this organization") });
+          .json(STATUS_CODE[403](req.t!("User does not belong to this organization")));
       }
 
       req.userId = decoded.id;

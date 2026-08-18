@@ -1,4 +1,4 @@
-aiohappyeyeballs==2.6.1
+aiohappyeyeballs==2.7.1
 aiohttp==3.14.3
 aiosignal==1.4.0
 alembic==1.17.1
@@ -10,7 +10,7 @@ asyncpg==0.30.0
 attrs==25.4.0
 backoff==2.2.1
 cachetools==6.2.1
-certifi==2025.10.5
+certifi==2026.7.22
 cryptography==50.0.0
 charset-normalizer==3.4.4
 click==8.3.3
@@ -22,17 +22,15 @@ fastapi==0.139.2
 filelock==3.20.3
 frozenlist==1.8.0
 fsspec==2025.10.0
-google-ai-generativelanguage==0.6.15
-google-api-core==2.33.0
+google-api-core==2.34.0
 google-api-python-client==2.186.0
 google-auth==2.42.1
 google-auth-httplib2==0.2.1
 google-genai==1.48.0
-google-generativeai==0.8.5
 googleapis-common-protos==1.71.0
 greenlet==3.2.4
-grpcio==1.76.0
-grpcio-status==1.71.2
+grpcio==1.83.0
+grpcio-status==1.83.0
 h11==0.16.0
 hf-xet==1.5.2
 httpcore==1.0.9
@@ -66,7 +64,7 @@ posthog==7.35.0
 prompt-toolkit==3.0.52
 propcache==0.4.1
 proto-plus==1.26.1
-protobuf==5.29.6
+protobuf==6.33.5
 psycopg2-binary==2.9.11
 pyasn1==0.6.4
 pyasn1_modules==0.4.2

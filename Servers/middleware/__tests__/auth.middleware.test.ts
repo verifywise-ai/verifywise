@@ -184,7 +184,7 @@ describe("authenticateJWT middleware", () => {
       await authenticateJWT(req as Request, res as Response, next);
 
       expect(res.status).toHaveBeenCalledWith(400);
-      expect(res.json).toHaveBeenCalledWith({ message: "Invalid token" });
+      expect(res.json).toHaveBeenCalledWith({ message: "Bad Request", data: "Invalid token" });
     });
 
     it("should return 400 when id is not a positive number", async () => {
@@ -226,7 +226,8 @@ describe("authenticateJWT middleware", () => {
 
       expect(res.status).toHaveBeenCalledWith(403);
       expect(res.json).toHaveBeenCalledWith({
-        message: "User does not belong to this organization",
+        message: "Forbidden",
+        data: "User does not belong to this organization",
       });
     });
   });
@@ -245,7 +246,8 @@ describe("authenticateJWT middleware", () => {
 
       expect(res.status).toHaveBeenCalledWith(403);
       expect(res.json).toHaveBeenCalledWith({
-        message: "Not allowed to access",
+        message: "Forbidden",
+        data: "Not allowed to access",
       });
     });
 

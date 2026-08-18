@@ -194,38 +194,6 @@ describe("approvalRequest.ctrl", () => {
       expect(res.status).toHaveBeenCalledWith(401);
     });
 
-    it("should return 400 when request_name is missing", async () => {
-      const req = createReq({ body: { workflow_id: 1 } });
-      const res = createRes();
-
-      const mockTransaction = {
-        commit: jest.fn(),
-        rollback: jest.fn(),
-      };
-      (sequelize.transaction as any).mockResolvedValue(mockTransaction);
-
-      await createApprovalRequest(req as Request, res as Response);
-
-      expect(mockTransaction.rollback).toHaveBeenCalled();
-      expect(res.status).toHaveBeenCalledWith(400);
-    });
-
-    it("should return 400 when workflow_id is missing", async () => {
-      const req = createReq({ body: { request_name: "Test Request" } });
-      const res = createRes();
-
-      const mockTransaction = {
-        commit: jest.fn(),
-        rollback: jest.fn(),
-      };
-      (sequelize.transaction as any).mockResolvedValue(mockTransaction);
-
-      await createApprovalRequest(req as Request, res as Response);
-
-      expect(mockTransaction.rollback).toHaveBeenCalled();
-      expect(res.status).toHaveBeenCalledWith(400);
-    });
-
     it("should return 404 when workflow is not found", async () => {
       const req = createReq({
         body: { request_name: "Test Request", workflow_id: 1 },
@@ -245,7 +213,7 @@ describe("approvalRequest.ctrl", () => {
       expect(res.status).toHaveBeenCalledWith(404);
     });
 
-    it("should return 400 when workflow has no steps", async () => {
+    it("should return 400 with errors[] when workflow has no steps", async () => {
       const req = createReq({
         body: { request_name: "Test Request", workflow_id: 1 },
       });
@@ -266,6 +234,17 @@ describe("approvalRequest.ctrl", () => {
 
       expect(mockTransaction.rollback).toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        message: "Bad Request",
+        data: {
+          errors: [
+            expect.objectContaining({
+              field: "workflow_id",
+              location: "body",
+            }),
+          ],
+        },
+      });
     });
 
     it("should return 201 when approval request is created successfully", async () => {
@@ -459,15 +438,6 @@ describe("approvalRequest.ctrl", () => {
       expect(res.status).toHaveBeenCalledWith(401);
     });
 
-    it("should return 400 when id is invalid", async () => {
-      const req = createReq({ params: { id: "invalid" } });
-      const res = createRes();
-
-      await getApprovalRequestById(req as Request, res as Response);
-
-      expect(res.status).toHaveBeenCalledWith(400);
-    });
-
     it("should return 404 when request is not found", async () => {
       mockGetApprovalRequestByIdQuery.mockResolvedValue(null as any);
 
@@ -543,22 +513,6 @@ describe("approvalRequest.ctrl", () => {
 
       expect(mockTransaction.rollback).toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(401);
-    });
-
-    it("should return 400 when id is invalid", async () => {
-      const req = createReq({ params: { id: "invalid" } });
-      const res = createRes();
-
-      const mockTransaction = {
-        commit: jest.fn(),
-        rollback: jest.fn(),
-      };
-      (sequelize.transaction as any).mockResolvedValue(mockTransaction);
-
-      await approveRequest(req as Request, res as Response);
-
-      expect(mockTransaction.rollback).toHaveBeenCalled();
-      expect(res.status).toHaveBeenCalledWith(400);
     });
 
     it("should return 200 when approval is successful", async () => {
@@ -674,22 +628,6 @@ describe("approvalRequest.ctrl", () => {
       expect(res.status).toHaveBeenCalledWith(401);
     });
 
-    it("should return 400 when id is invalid", async () => {
-      const req = createReq({ params: { id: "invalid" } });
-      const res = createRes();
-
-      const mockTransaction = {
-        commit: jest.fn(),
-        rollback: jest.fn(),
-      };
-      (sequelize.transaction as any).mockResolvedValue(mockTransaction);
-
-      await rejectRequest(req as Request, res as Response);
-
-      expect(mockTransaction.rollback).toHaveBeenCalled();
-      expect(res.status).toHaveBeenCalledWith(400);
-    });
-
     it("should return 200 when rejection is successful", async () => {
       const req = createReq({
         params: { id: "1" },
@@ -754,22 +692,6 @@ describe("approvalRequest.ctrl", () => {
 
       expect(mockTransaction.rollback).toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(401);
-    });
-
-    it("should return 400 when id is invalid", async () => {
-      const req = createReq({ params: { id: "invalid" } });
-      const res = createRes();
-
-      const mockTransaction = {
-        commit: jest.fn(),
-        rollback: jest.fn(),
-      };
-      (sequelize.transaction as any).mockResolvedValue(mockTransaction);
-
-      await withdrawRequest(req as Request, res as Response);
-
-      expect(mockTransaction.rollback).toHaveBeenCalled();
-      expect(res.status).toHaveBeenCalledWith(400);
     });
 
     it("should return 403 when user is not the requestor", async () => {

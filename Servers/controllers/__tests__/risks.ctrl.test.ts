@@ -272,6 +272,35 @@ describe("risks.ctrl", () => {
       expect(res.status).toHaveBeenCalledWith(201);
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: risk }));
     });
+    it("should return the full created risk entity including server-computed fields", async () => {
+      const risk = {
+        ...buildRisk(),
+        risk_owner: 3,
+        risk_category: ["operational"],
+        likelihood: "Rare",
+        severity: "Minor",
+        risk_level_autocalculated: "Low risk",
+        current_risk_level: "Low risk",
+        mitigation_status: "Not Started",
+        ale_estimate: null,
+        created_at: "2026-08-14T00:00:00.000Z",
+        updated_at: "2026-08-14T00:00:00.000Z",
+      };
+      mockCreateService.mockResolvedValue(risk as any);
+      const req = createReq({ body: { risk_name: "R1", projects: [], frameworks: [] } });
+      const res = createRes();
+      await createRisk(req, res);
+      expect(res.status).toHaveBeenCalledWith(201);
+      expect(res.json).toHaveBeenCalledWith({
+        message: "Created",
+        data: expect.objectContaining({
+          id: 1,
+          risk_name: "R1",
+          risk_level_autocalculated: "Low risk",
+          created_at: "2026-08-14T00:00:00.000Z",
+        }),
+      });
+    });
     it("should return 400 when creation returns null", async () => {
       mockCreateService.mockResolvedValue(null as any);
       const req = createReq({ body: { risk_name: "R1" } });
@@ -306,6 +335,40 @@ describe("risks.ctrl", () => {
       await updateRiskById(req, res);
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: updated }));
+    });
+    it("should return the full updated risk entity including server-computed fields", async () => {
+      const existing = { ...buildRisk(), risk_owner: null, event_frequency_min: null };
+      const updated = {
+        ...buildRisk({ risk_name: "R2" }),
+        risk_owner: 3,
+        risk_category: ["financial"],
+        likelihood: "Possible",
+        severity: "Major",
+        risk_level_autocalculated: "High risk",
+        current_risk_level: "High risk",
+        mitigation_status: "In Progress",
+        ale_estimate: 12500,
+        roi_percentage: 42,
+        created_at: "2026-08-01T00:00:00.000Z",
+        updated_at: "2026-08-14T00:00:00.000Z",
+      };
+      mockGetById.mockResolvedValue(existing as any);
+      mockUpdate.mockResolvedValue(updated as any);
+      const req = createReq({ params: { id: "1" }, body: { risk_name: "R2" } });
+      const res = createRes();
+      await updateRiskById(req, res);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        message: "OK",
+        data: expect.objectContaining({
+          id: 1,
+          risk_name: "R2",
+          risk_level_autocalculated: "High risk",
+          ale_estimate: 12500,
+          roi_percentage: 42,
+          updated_at: "2026-08-14T00:00:00.000Z",
+        }),
+      });
     });
     it("should return 500 on error", async () => {
       mockGetById.mockRejectedValue(new Error("DB error"));

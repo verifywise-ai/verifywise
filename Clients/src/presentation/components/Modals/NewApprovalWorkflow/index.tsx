@@ -233,10 +233,8 @@ const CreateNewApprovalWorkflow: FC<ICreateApprovalWorkflowProps> = ({
                   />
                 </Box>
               </Stack>
-              <Stack direction="row" alignItems="flex-start">
-                <Box>
-                  <Divider orientation="vertical" flexItem sx={verticalStepDividerStyle} />
-                </Box>
+              <Stack direction="row" alignItems="stretch">
+                <Divider orientation="vertical" flexItem sx={verticalStepDividerStyle} />
                 <Stack sx={stepFieldsContainer} spacing={6}>
                   <Field
                     id={`step_name_${stepIndex}`}
