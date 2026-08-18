@@ -23,21 +23,12 @@ vi.mock("../../../infrastructure/api/customAxios", () => ({
   showAlert: vi.fn(),
 }));
 
-vi.mock("../../redux/store", () => ({
-  store: {
-    getState: vi.fn(() => ({ auth: { activeOrganizationId: null } })),
-    dispatch: vi.fn(),
-    subscribe: vi.fn(),
-  },
-}));
-
 import { useNotifications } from "../useNotifications";
 import authReducer from "../../redux/auth/authSlice";
 import uiSlice from "../../redux/ui/uiSlice";
 import fileSlice from "../../redux/file/fileSlice";
 import { apiServices } from "../../../infrastructure/api/networkServices";
 import { showAlert } from "../../../infrastructure/api/customAxios";
-import * as storeModule from "../../redux/store";
 
 // ---- Helpers ----
 
@@ -56,7 +47,6 @@ function createTestStore(authToken = "mock-token") {
         onboardingStatus: "completed",
         isOrgCreator: false,
         isSuperAdmin: false,
-        activeOrganizationId: null,
       },
     },
     middleware: (gD) => gD({ serializableCheck: false }),
@@ -125,6 +115,7 @@ describe("useNotifications", () => {
   });
 
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
@@ -442,40 +433,6 @@ describe("useNotifications", () => {
       expect(global.fetch).not.toHaveBeenCalled();
     });
 
-    it("includes X-Organization-Id header when activeOrganizationId is set", async () => {
-      vi.mocked(storeModule.store.getState).mockReturnValue({
-        auth: {
-          isLoading: false,
-          authToken: "mock-token",
-          user: "test@test.com",
-          userExists: true,
-          success: null,
-          message: null,
-          expirationDate: null,
-          onboardingStatus: "completed",
-          isOrgCreator: false,
-          isSuperAdmin: false,
-          activeOrganizationId: 5,
-        },
-      } as any);
-
-      const { wrapper } = createWrapper();
-      renderHook(() => useNotifications({ autoReconnect: false, fetchOnMount: false }), {
-        wrapper,
-      });
-
-      await waitFor(() => {
-        expect(global.fetch).toHaveBeenCalledWith(
-          expect.any(String),
-          expect.objectContaining({
-            headers: expect.objectContaining({
-              "X-Organization-Id": "5",
-            }),
-          }),
-        );
-      });
-    });
-
     it("disconnect sets isConnected to false", async () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
@@ -705,10 +662,12 @@ describe("useNotifications", () => {
         expect(global.fetch).toHaveBeenCalledTimes(1);
       });
 
+      vi.useFakeTimers();
       await act(async () => {
         result.current.reconnect();
-        await new Promise((r) => setTimeout(r, 150));
+        await vi.advanceTimersByTimeAsync(150);
       });
+      vi.useRealTimers();
 
       // disconnect + reconnect via setTimeout(100)
       await waitFor(() => {

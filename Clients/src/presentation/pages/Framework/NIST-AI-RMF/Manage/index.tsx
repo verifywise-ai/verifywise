@@ -22,6 +22,8 @@ import { AlertProps } from "../../../../types/alert.types";
 import NISTAIRMFDrawerDialog from "../../../../components/Drawer/NISTAIRMFDashboardDrawerDialog";
 import { NISTAIRMFFunction } from "../types";
 import { TabFilterBar } from "../../../../components/FrameworkFilter/TabFilterBar";
+import { StatsCard } from "../../../../components/Cards/StatsCard";
+import { brand } from "../../../../themes/palette";
 
 interface NISTAIRMFManageProps {
   project: Project;
@@ -59,6 +61,10 @@ const NISTAIRMFManage = ({
   }>({});
   const [searchParams, setSearchParams] = useSearchParams();
   const [alert, setAlert] = useState<AlertProps | null>(null);
+  const [progress, setProgress] = useState<{ total: number; done: number }>({
+    total: 0,
+    done: 0,
+  });
   const categoryId = searchParams.get("categoryId");
 
   // Drawer state
@@ -85,6 +91,21 @@ const NISTAIRMFManage = ({
   useEffect(() => {
     fetchCategories();
   }, [fetchCategories, refreshTrigger]);
+
+  useEffect(() => {
+    const fetchProgress = async () => {
+      try {
+        const response = await getEntityById({
+          routeUrl: `/nist-ai-rmf/progress-by-function`,
+        });
+        const manage = response?.data?.manage;
+        if (manage) setProgress({ total: manage.total || 0, done: manage.done || 0 });
+      } catch (error) {
+        console.error("Error fetching NIST AI RMF Manage progress:", error);
+      }
+    };
+    fetchProgress();
+  }, [refreshTrigger]);
 
   const fetchSubcategories = useCallback(
     async (categoryId: number, title: string) => {
@@ -410,6 +431,14 @@ const NISTAIRMFManage = ({
           setSearchTerm={onSearchTermChange as any}
         />
       )}
+      <Stack sx={{ mt: 2 }}>
+        <StatsCard
+          title="Subcategories"
+          completed={progress.done}
+          total={progress.total}
+          progressbarColor={brand.primary}
+        />
+      </Stack>
       {filteredCategories &&
         filteredCategories.map((category: any) => (
           <Stack key={category.id} sx={{ ...styles.container, marginBottom: "2px" }}>

@@ -5,6 +5,7 @@ import { SHOW_AI_GATEWAY_PROMPTS } from "./featureFlags";
 
 // Eager imports — app shell, route guard, and Use cases page (mounts with layout for table skeleton UX)
 import Dashboard from "../../presentation/containers/Dashboard";
+import SuperAdminLayout from "../../presentation/containers/SuperAdminLayout";
 import ProtectedRoute from "../../presentation/components/ProtectedRoute";
 import VWHome from "../../presentation/pages/Home/1.0Home";
 
@@ -46,6 +47,7 @@ const PageNotFound = lazyRoute(() => import("../../presentation/pages/PageNotFou
 
 // ── Compliance & framework routes ─────────────────────────────────────
 const Framework = lazyRoute(() => import("../../presentation/pages/Framework"));
+const GenericFramework = lazyRoute(() => import("../../presentation/pages/Framework/Generic"));
 const Training = lazyRoute(() => import("../../presentation/pages/TrainingRegistar"));
 const PolicyDashboard = lazyRoute(
   () => import("../../presentation/pages/PolicyDashboard/PoliciesDashboard"),
@@ -377,6 +379,14 @@ export const createRoutes = (
       element={
         <Suspense fallback={<LazyFallback />}>
           <Framework />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/projects/:projectId/framework/:frameworkId"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <GenericFramework />
         </Suspense>
       }
     />
@@ -1109,8 +1119,14 @@ export const createRoutes = (
         </Suspense>
       }
     />
+  </Route>,
+  <Route
+    key="super-admin"
+    path="/super-admin"
+    element={<ProtectedRoute Component={SuperAdminLayout} requireSuperAdmin />}
+  >
     <Route
-      path="/super-admin"
+      index
       element={
         <Suspense fallback={<LazyFallback />}>
           <SuperAdminOrganizations />
@@ -1118,7 +1134,7 @@ export const createRoutes = (
       }
     />
     <Route
-      path="/super-admin/users"
+      path="users"
       element={
         <Suspense fallback={<LazyFallback />}>
           <SuperAdminAllUsers />
@@ -1126,7 +1142,7 @@ export const createRoutes = (
       }
     />
     <Route
-      path="/super-admin/organizations/:id/users"
+      path="organizations/:id/users"
       element={
         <Suspense fallback={<LazyFallback />}>
           <SuperAdminUsers />
@@ -1134,7 +1150,7 @@ export const createRoutes = (
       }
     />
     <Route
-      path="/super-admin/settings"
+      path="settings"
       element={
         <Suspense fallback={<LazyFallback />}>
           <SuperAdminSettings />
@@ -1142,7 +1158,7 @@ export const createRoutes = (
       }
     />
     <Route
-      path="/super-admin/settings/:tab"
+      path="settings/:tab"
       element={
         <Suspense fallback={<LazyFallback />}>
           <SuperAdminSettings />

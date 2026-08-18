@@ -233,21 +233,6 @@ describe("policyLinkedObjects.repository", () => {
       );
     });
 
-    it("should log errors to console", async () => {
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-      const error = new Error("Test error");
-      vi.mocked(apiServices.post).mockRejectedValue(error);
-
-      try {
-        await createPolicyLinkedObjects("/policies/5/linked-objects", {});
-      } catch {
-        // expected
-      }
-
-      expect(consoleErrorSpy).toHaveBeenCalledWith("Error creating policy linked objects:", error);
-      consoleErrorSpy.mockRestore();
-    });
-
     it("should handle empty data object", async () => {
       const response = { data: { id: 1 } };
       vi.mocked(apiServices.post).mockResolvedValue(response as any);

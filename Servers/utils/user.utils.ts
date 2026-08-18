@@ -347,7 +347,7 @@ export const deleteUserByIdQuery = async (
   id: number,
   organizationId: number,
   transaction: Transaction,
-): Promise<Boolean> => {
+): Promise<boolean> => {
   const usersFK = [
     {
       table: "projects",

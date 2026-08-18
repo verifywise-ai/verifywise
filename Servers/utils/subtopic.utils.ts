@@ -88,7 +88,7 @@ export const deleteSubtopicByIdQuery = async (
   id: number,
   organizationId: number,
   transaction: Transaction,
-): Promise<Boolean> => {
+): Promise<boolean> => {
   const result = await sequelize.query(
     `DELETE FROM subtopics WHERE organization_id = :organizationId AND id = :id RETURNING *`,
     {

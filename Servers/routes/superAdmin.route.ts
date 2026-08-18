@@ -9,12 +9,16 @@ import {
   getUserCount,
   listAllUsers,
   listOrgUsers,
+  listOrgInvitations,
   inviteUserToOrg,
   updateUser,
   removeUser,
   getMonitoring,
   updateMonitoring,
   generateMonitoringToken,
+  listSuperAdmins,
+  grantSuperAdmin,
+  revokeSuperAdmin,
 } from "../controllers/superAdmin.ctrl";
 
 const router = express.Router();
@@ -29,6 +33,7 @@ router.patch("/organizations/:id", updateOrg);
 router.get("/users/count", getUserCount);
 router.get("/users", listAllUsers);
 router.get("/organizations/:id/users", listOrgUsers);
+router.get("/organizations/:id/invitations", listOrgInvitations);
 router.post("/organizations/:id/invite", inviteUserToOrg);
 router.patch("/users/:id", updateUser);
 router.delete("/users/:id", removeUser);
@@ -37,5 +42,10 @@ router.delete("/users/:id", removeUser);
 router.get("/monitoring", getMonitoring);
 router.put("/monitoring", updateMonitoring);
 router.post("/monitoring/token", generateMonitoringToken);
+
+// SuperAdmin membership: list current SuperAdmins, elect a user, revoke.
+router.get("/super-admins", listSuperAdmins);
+router.post("/super-admins", grantSuperAdmin);
+router.delete("/super-admins/:user_id", revokeSuperAdmin);
 
 export default router;

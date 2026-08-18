@@ -125,7 +125,6 @@ function createTestStore() {
         onboardingStatus: "completed",
         isOrgCreator: false,
         isSuperAdmin: false,
-        activeOrganizationId: null,
       },
     },
     middleware: (getDefault) => getDefault({ serializableCheck: false }),

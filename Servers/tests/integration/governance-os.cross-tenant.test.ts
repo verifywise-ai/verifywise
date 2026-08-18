@@ -1,11 +1,5 @@
 import { createTestApp, testRequest } from "./setup";
-import {
-  createTestOrganization,
-  createTestUser,
-  seedFrameworks,
-  cleanupDatabase,
-  runMigrations,
-} from "./helpers";
+import { createTestOrganization, createTestUser, seedFrameworks, cleanupDatabase } from "./helpers";
 
 const ADMIN_PASSWORD = "GovAdmin1!";
 
@@ -14,10 +8,6 @@ describe("Governance OS cross-tenant isolation", () => {
   let orgB: number;
   let userA: number;
   let userB: number;
-
-  beforeAll(() => {
-    runMigrations();
-  });
 
   beforeEach(async () => {
     orgA = await createTestOrganization("Org A");

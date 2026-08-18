@@ -97,11 +97,6 @@ export interface BulkUpdateProjectRisksPayload {
 }
 
 export async function bulkUpdateProjectRisks(payload: BulkUpdateProjectRisksPayload): Promise<any> {
-  try {
-    const response = await apiServices.patch("/projectRisks/bulk", payload);
-    return response.data;
-  } catch (error) {
-    console.error("Error performing bulk project-risk update:", error);
-    throw error;
-  }
+  const response = await apiServices.patch("/projectRisks/bulk", payload);
+  return response.data;
 }

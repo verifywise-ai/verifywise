@@ -97,7 +97,7 @@ vi.mock("../../../components/TabBar", () => ({
   default: () => <div data-testid="tab-bar" />,
 }));
 
-// Mock react-router-dom
+// Mock react-router
 vi.mock("react-router", async () => {
   const actual = await vi.importActual("react-router");
   return {

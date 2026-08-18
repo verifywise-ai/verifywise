@@ -41,7 +41,7 @@ import {
   touchApiTokenLastUsedQuery,
 } from "../utils/tokens.utils";
 import { rlsEnforcement } from "./rls.middleware";
-import { logEvent } from "../utils/logger/dbLogger";
+import { isUserSuperAdmin } from "../utils/superAdmin.utils";
 
 /**
  * Express middleware for JWT authentication and authorization
@@ -140,7 +140,7 @@ const authenticateJWT = async (
       !decoded.roleName ||
       typeof decoded.roleName !== "string"
     ) {
-      return res.status(400).json({ message: req.t!("Invalid token") });
+      return res.status(400).json(STATUS_CODE[400](req.t!("Invalid token")));
     }
 
     // API tokens carry a `type: "api_token"` claim and must additionally exist
@@ -177,76 +177,40 @@ const authenticateJWT = async (
         }),
       );
     }
-    const expectedRoleName = await getRoleNameById(user.role_id);
-    if (decoded.roleName !== expectedRoleName) {
-      return res.status(403).json({ message: req.t!("Not allowed to access") });
+    // Pure SuperAdmin has no role and no org — everyone else has both, so
+    // role_name is validated against roles table. Skip that check when
+    // role_id is NULL.
+    if (user.role_id !== null && user.role_id !== undefined) {
+      const expectedRoleName = await getRoleNameById(user.role_id);
+      if (decoded.roleName !== expectedRoleName) {
+        return res.status(403).json(STATUS_CODE[403](req.t!("Not allowed to access")));
+      }
     }
 
-    const isSuperAdmin = decoded.roleName === "SuperAdmin";
-
-    if (isSuperAdmin) {
-      // Super-admin: skip org membership check, resolve org from header
+    if (user.organization_id === null || user.organization_id === undefined) {
+      // Pure SuperAdmin (no org, no role). Their identity is proven by the
+      // super_admins mapping — a users row without role/org must have one
+      // (enforced by DB trigger).
       req.userId = decoded.id;
+      req.role = decoded.roleName || "SuperAdmin";
       req.isSuperAdmin = true;
-
-      req.role = decoded.roleName;
-
-      const headerOrgId = req.headers["x-organization-id"];
-      if (headerOrgId) {
-        const orgId = parseInt(headerOrgId as string, 10);
-        if (!isNaN(orgId) && orgId > 0) {
-          req.organizationId = orgId;
-          req.tenantHash = getTenantHash(orgId);
-
-          // Audit every SuperAdmin cross-organization access (actor + target
-          // org) to the event log / audit ledger. Fire-and-forget: logging
-          // must never block or fail the request.
-          try {
-            logEvent(
-              "Read",
-              `SuperAdmin cross-org access: user ${decoded.id} accessed organization ${orgId} (${req.method} ${req.originalUrl})`,
-              decoded.id,
-              orgId,
-            ).catch((err) => console.error("Failed to audit SuperAdmin cross-org access:", err));
-          } catch (err) {
-            console.error("Failed to audit SuperAdmin cross-org access:", err);
-          }
-        }
-      }
-      // If no X-Organization-Id header, organizationId stays undefined (super-admin-only routes)
     } else {
       // Normal user: verify org membership
       const belongs = await doesUserBelongsToOrganizationQuery(decoded.id, decoded.organizationId);
       if (!belongs.belongs) {
         return res
           .status(403)
-          .json({ message: req.t!("User does not belong to this organization") });
+          .json(STATUS_CODE[403](req.t!("User does not belong to this organization")));
       }
 
-      // Attach user context to request for downstream handlers
       req.userId = decoded.id;
       req.role = decoded.roleName;
       req.organizationId = decoded.organizationId;
       // tenantHash is the cache-key seed derived from organizationId.
-      // It is NOT a schema name; the shared-schema design uses
-      // unqualified table names + the search_path.
       req.tenantHash = getTenantHash(decoded.organizationId);
-    }
-
-    // Enforce read-only mode for super-admin viewing an org
-    if (req.isSuperAdmin && req.organizationId) {
-      const readOnlyMethods = ["GET", "HEAD", "OPTIONS"];
-      const isSuperAdminRoute =
-        req.path.startsWith("/api/super-admin") || req.baseUrl?.startsWith("/api/super-admin");
-      if (!readOnlyMethods.includes(req.method.toUpperCase()) && !isSuperAdminRoute) {
-        return res
-          .status(403)
-          .json(
-            STATUS_CODE[403](
-              req.t!("Super-admin has read-only access when viewing an organization"),
-            ),
-          );
-      }
+      // Elected SuperAdmin overlay: checked per request so grants/revokes
+      // take effect without a token refresh.
+      req.isSuperAdmin = await isUserSuperAdmin(decoded.id);
     }
 
     // Record API token usage on the fully-authenticated path. Best-effort:

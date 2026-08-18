@@ -25,9 +25,39 @@ import { useRiskAssessmentMode } from "../../../../application/hooks/useRiskAsse
 import { useMitigationSection, mitigationInitialState } from "./useMitigationSection";
 import {
   MITIGATION_FORM_FIELD_IDS,
+  MITIGATION_FORM_FIELD_ORDER,
   RISK_FORM_FIELD_IDS,
+  RISK_FORM_FIELD_ORDER,
 } from "../../../constants/formValidationFieldMaps";
 import { focusFormFieldById } from "../../../../application/utils/formValidationFocus";
+
+/** Maps backend (snake_case) risk field names to RiskFormValues fields. */
+const RISK_SERVER_FIELD_MAP: Record<string, keyof RiskFormValues> = {
+  risk_name: "riskName",
+  risk_owner: "actionOwner",
+  ai_lifecycle_phase: "aiLifecyclePhase",
+  risk_description: "riskDescription",
+  risk_category: "riskCategory",
+  impact: "potentialImpact",
+  review_notes: "reviewNotes",
+  assessment_mapping: "assessmentMapping",
+  controls_mapping: "controlsMapping",
+  projects: "applicableProjects",
+  frameworks: "applicableFrameworks",
+};
+
+/** Maps backend (snake_case) mitigation field names to MitigationFormValues fields. */
+const MITIGATION_SERVER_FIELD_MAP: Record<string, keyof MitigationFormValues> = {
+  mitigation_status: "mitigationStatus",
+  current_risk_level: "currentRiskLevel",
+  deadline: "deadline",
+  mitigation_plan: "mitigationPlan",
+  implementation_strategy: "implementationStrategy",
+  mitigation_evidence_document: "doc",
+  risk_approval: "approver",
+  approval_status: "approvalStatus",
+  date_of_assessment: "dateOfAssessment",
+};
 
 const riskInitialState: RiskFormValues = {
   riskName: "",
@@ -68,6 +98,13 @@ export interface UseRiskFormReturn {
     onPendingChange: (ids: ReadonlySet<number>) => void;
   };
   riskFormSubmitHandler: () => Promise<void>;
+  /** True when both sections pass client-side validation (drives submit disabled state). */
+  isFormValid: boolean;
+  /** Backend validation errors mapped to each section's fields, shown inline. */
+  riskServerErrors: Partial<Record<keyof RiskFormValues, string>> | undefined;
+  mitigationServerErrors: Partial<Record<keyof MitigationFormValues, string>> | undefined;
+  handleRiskValidityChange: (isValid: boolean) => void;
+  handleMitigationValidityChange: (isValid: boolean) => void;
   users: import("../../../../domain/types/User").User[] | undefined;
   usersLoading: boolean;
   userRoleName: string;
@@ -131,6 +168,65 @@ export function useRiskForm(props: AddNewRiskFormProps): UseRiskFormReturn {
   const isCreatingDisabled = !allowedRoles.projectRisks.create.includes(userRoleName);
 
   const mitigation = useMitigationSection(initialMitigationValues);
+
+  // Live client-side validity reported by each section (drives submit disabled state).
+  const [riskSectionValid, setRiskSectionValid] = useState(false);
+  const [mitigationSectionValid, setMitigationSectionValid] = useState(false);
+  // Backend validation errors mapped to each section's form fields.
+  const [riskServerErrors, setRiskServerErrors] = useState<
+    Partial<Record<keyof RiskFormValues, string>> | undefined
+  >(undefined);
+  const [mitigationServerErrors, setMitigationServerErrors] = useState<
+    Partial<Record<keyof MitigationFormValues, string>> | undefined
+  >(undefined);
+
+  const handleRiskValidityChange = useCallback((isValid: boolean) => {
+    setRiskSectionValid(isValid);
+  }, []);
+  const handleMitigationValidityChange = useCallback((isValid: boolean) => {
+    setMitigationSectionValid(isValid);
+  }, []);
+
+  const isFormValid = riskSectionValid && mitigationSectionValid;
+
+  /**
+   * Splits backend field-level errors between the two sections, pushes them
+   * into the inline error states, and focuses the first offending field.
+   */
+  const applyServerErrors = useCallback((errors: Array<{ field?: string; message?: string }>) => {
+    const riskErrors: Partial<Record<keyof RiskFormValues, string>> = {};
+    const mitigationErrors: Partial<Record<keyof MitigationFormValues, string>> = {};
+    for (const err of errors) {
+      if (!err?.field || !err.message) continue;
+      const riskField = RISK_SERVER_FIELD_MAP[err.field];
+      if (riskField) {
+        riskErrors[riskField] = err.message;
+        continue;
+      }
+      const mitigationField = MITIGATION_SERVER_FIELD_MAP[err.field];
+      if (mitigationField) {
+        mitigationErrors[mitigationField] = err.message;
+      }
+    }
+
+    const hasRiskErrors = Object.keys(riskErrors).length > 0;
+    const hasMitigationErrors = Object.keys(mitigationErrors).length > 0;
+
+    setRiskServerErrors(hasRiskErrors ? { ...riskErrors } : undefined);
+    setMitigationServerErrors(hasMitigationErrors ? { ...mitigationErrors } : undefined);
+
+    if (hasRiskErrors) {
+      setValue("risks");
+      const firstField = RISK_FORM_FIELD_ORDER.find((field) => riskErrors[field]);
+      const fieldId = firstField ? RISK_FORM_FIELD_IDS[firstField] : undefined;
+      if (fieldId) focusFormFieldById(fieldId);
+    } else if (hasMitigationErrors) {
+      setValue("mitigation");
+      const firstField = MITIGATION_FORM_FIELD_ORDER.find((field) => mitigationErrors[field]);
+      const fieldId = firstField ? MITIGATION_FORM_FIELD_IDS[firstField] : undefined;
+      if (fieldId) focusFormFieldById(fieldId);
+    }
+  }, []);
 
   const handleTabChange = useCallback((_: React.SyntheticEvent, newValue: string) => {
     setValue(newValue);
@@ -561,16 +657,26 @@ export function useRiskForm(props: AddNewRiskFormProps): UseRiskFormReturn {
 
         if (error instanceof Error && error.name === "CustomException") {
           const customError = error as Error & {
-            response?: { errors?: Array<{ message?: string }> };
+            status?: number;
+            response?: {
+              errors?: Array<{ field?: string; message?: string }>;
+              data?: { errors?: Array<{ field?: string; message?: string }> };
+            };
           };
 
           let errorMessage = error.message || "Unknown error occurred";
 
-          if (customError.response?.errors && Array.isArray(customError.response.errors)) {
-            const fieldErrors = customError.response.errors
-              .map((err: { message?: string }) => `• ${err.message ?? "Unknown error"}`)
+          const serverErrors = customError.response?.data?.errors ?? customError.response?.errors;
+          if (Array.isArray(serverErrors) && serverErrors.length > 0) {
+            const fieldErrors = serverErrors
+              .map((err) => `• ${err.message ?? "Unknown error"}`)
               .join("\n");
             errorMessage = `${errorMessage}:\n${fieldErrors}`;
+
+            // Show backend validation errors inline, next to the offending fields.
+            if (customError.status === 400) {
+              applyServerErrors(serverErrors);
+            }
           }
 
           onError(errorMessage);
@@ -618,6 +724,11 @@ export function useRiskForm(props: AddNewRiskFormProps): UseRiskFormReturn {
     customFieldsRef,
     customFieldsGate,
     riskFormSubmitHandler,
+    isFormValid,
+    riskServerErrors,
+    mitigationServerErrors,
+    handleRiskValidityChange,
+    handleMitigationValidityChange,
     users,
     usersLoading,
     userRoleName,

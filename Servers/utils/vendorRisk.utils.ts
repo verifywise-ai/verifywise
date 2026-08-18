@@ -191,7 +191,7 @@ export const deleteVendorRiskByIdQuery = async (
   id: number,
   organizationId: number,
   transaction: Transaction,
-): Promise<Boolean> => {
+): Promise<boolean> => {
   await deleteAllCustomFieldValuesForEntityQuery("vendor_risk", id, organizationId, transaction);
   const result = await sequelize.query(
     `UPDATE vendorrisks SET is_deleted = true, deleted_at = NOW(), updated_at = NOW() WHERE organization_id = :organizationId AND id = :id AND is_deleted = false RETURNING *`,
@@ -210,7 +210,7 @@ export const deleteVendorRisksForVendorQuery = async (
   vendorId: number,
   organizationId: number,
   transaction: Transaction,
-): Promise<Boolean> => {
+): Promise<boolean> => {
   const result = await sequelize.query(
     `DELETE FROM vendorrisks WHERE organization_id = :organizationId AND vendor_id = :vendor_id RETURNING id`,
     {

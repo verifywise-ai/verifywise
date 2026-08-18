@@ -128,7 +128,7 @@ export const updateSlackWebhookByIdQuery = async (
 export const deleteSlackWebhookByIdQuery = async (
   id: number,
   transaction: Transaction,
-): Promise<Boolean> => {
+): Promise<boolean> => {
   const result = await sequelize.query(`DELETE FROM slack_webhooks WHERE id = :id RETURNING *`, {
     replacements: { id },
     mapToModel: true,

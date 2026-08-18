@@ -452,29 +452,12 @@ describe("user.ctrl", () => {
       await updateUserById(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
     });
-    it("should return 403 when assigning SuperAdmin role (roleId 5)", async () => {
-      mockGetById.mockResolvedValue(mockUser(buildUser({ id: 2, organization_id: 1 })) as any);
-      const req = createReq({ params: { id: "2" }, body: { name: "X", roleId: 5 } });
-      const res = createRes();
-      await updateUserById(req, res);
-      expect(res.status).toHaveBeenCalledWith(403);
-    });
-    it("should return 403 when assigning SuperAdmin role as string ('5')", async () => {
-      mockGetById.mockResolvedValue(mockUser(buildUser({ id: 2, organization_id: 1 })) as any);
-      const req = createReq({ params: { id: "2" }, body: { name: "X", roleId: "5" } });
-      const res = createRes();
-      await updateUserById(req, res);
-      expect(res.status).toHaveBeenCalledWith(403);
-    });
-    it("should return 403 when changing the role of a SuperAdmin user", async () => {
-      mockGetById.mockResolvedValue(
-        mockUser(buildUser({ id: 2, organization_id: 1, role_id: 5 })) as any,
-      );
-      const req = createReq({ params: { id: "2" }, body: { name: "X", roleId: 1 } });
-      const res = createRes();
-      await updateUserById(req, res);
-      expect(res.status).toHaveBeenCalledWith(403);
-    });
+    // SuperAdmin is no longer a role (role_id=5 removed); it's a mapping-
+    // table overlay. The old "cannot assign role 5" / "cannot change role
+    // 5" guards are gone. Assigning a non-existent role (e.g. 5) falls
+    // through to the getRoleByIdQuery check → 400 (see "role does not
+    // exist" test below). Editing a pure SuperAdmin (NULL role + NULL org)
+    // through this endpoint is prevented separately.
     it("should return 400 when the requested role does not exist", async () => {
       const mockGetRole = getRoleByIdQuery as jest.MockedFunction<typeof getRoleByIdQuery>;
       mockGetRole.mockResolvedValueOnce(null as any);
@@ -496,8 +479,10 @@ describe("user.ctrl", () => {
   });
 
   describe("deleteUserById", () => {
-    it("should return 403 for super-admin", async () => {
-      mockGetById.mockResolvedValue(mockUser(buildUser({ role_id: 5 })) as any);
+    it("should return 403 for pure super-admin (no role, no org)", async () => {
+      mockGetById.mockResolvedValue(
+        mockUser(buildUser({ role_id: null as any, organization_id: null as any })) as any,
+      );
       const req = createReq({ params: { id: "1" } });
       const res = createRes();
       await deleteUserById(req, res);

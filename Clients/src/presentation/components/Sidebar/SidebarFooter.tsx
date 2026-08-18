@@ -45,6 +45,7 @@ import { getUserById } from "../../../application/repository/user.repository";
 import { User } from "../../../domain/types/User";
 import { useProfilePhotoFetch } from "../../../application/hooks/useProfilePhotoFetch";
 import { useActiveModule } from "../../../application/hooks/useActiveModule";
+import { useAuth } from "../../../application/hooks/useAuth";
 import ReadyToSubscribeBox from "../ReadyToSubscribeBox/ReadyToSubscribeBox";
 
 interface IManagementItem {
@@ -167,6 +168,17 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
 
   const user: User =
     selfUser || (users ? users.find((u: User) => u.id === userId) : null) || DEFAULT_USER;
+
+  const { isSuperAdmin } = useAuth();
+  const baseRoleName = ROLES[user.roleId as keyof typeof ROLES];
+  // Pure SuperAdmin (no base role) → just "Super Admin".
+  // Elected SuperAdmin (has base role) → "Admin (Super Admin)".
+  // Everyone else → their base role.
+  const roleLabel = !baseRoleName
+    ? "Super Admin"
+    : isSuperAdmin
+      ? `${baseRoleName} (Super Admin)`
+      : baseRoleName;
 
   const [avatarUrl, setAvatarUrl] = useState<string>("");
   const { fetchProfilePhotoAsBlobUrl } = useProfilePhotoFetch();
@@ -938,9 +950,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
               <Typography component="span" fontWeight={500}>
                 {user.name} {user.surname}
               </Typography>
-              <Typography sx={{ textTransform: "capitalize" }}>
-                {ROLES[user.roleId as keyof typeof ROLES]}
-              </Typography>
+              <Typography sx={{ textTransform: "capitalize" }}>{roleLabel}</Typography>
             </Box>
             <IconButton
               disableRipple={theme.components?.MuiIconButton?.defaultProps?.disableRipple}
@@ -1055,7 +1065,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                             textTransform: "capitalize",
                           }}
                         >
-                          {ROLES[user.roleId as keyof typeof ROLES]}
+                          {roleLabel}
                         </Typography>
                       </Box>
                       <Typography

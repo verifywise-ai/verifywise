@@ -5,7 +5,7 @@ import React from "react";
 import { buildUser } from "../../../test/factories/user.factory";
 
 vi.mock("../useAuth", () => ({
-  useAuth: () => ({ userId: 1 }),
+  useAuth: () => ({ userId: 1, organizationId: 1 }),
 }));
 
 vi.mock("../../repository/user.repository", () => ({

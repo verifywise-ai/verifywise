@@ -9,7 +9,7 @@ async def list_runs(org_id: int, limit: int = 50, offset: int = 0) -> dict:
     """One row per agent_run_id with model/tool counts, denied count, totals."""
     params = {"org_id": org_id, "limit": limit, "offset": offset}
 
-    base = """
+    count_sql = """
         WITH model_calls AS (
             SELECT agent_run_id,
                    COUNT(*) AS model_count,
@@ -46,10 +46,46 @@ async def list_runs(org_id: int, limit: int = 50, offset: int = 0) -> dict:
             FROM model_calls m
             FULL OUTER JOIN tool_calls t ON m.agent_run_id = t.agent_run_id
         )
+        SELECT COUNT(*) AS total FROM runs
     """
 
-    count_sql = base + " SELECT COUNT(*) AS total FROM runs"
-    data_sql = base + """
+    data_sql = """
+        WITH model_calls AS (
+            SELECT agent_run_id,
+                   COUNT(*) AS model_count,
+                   COALESCE(SUM(total_tokens), 0) AS tokens,
+                   COALESCE(SUM(cost_usd), 0) AS cost,
+                   MIN(created_at) AS first_at,
+                   MAX(created_at) AS last_at
+            FROM ai_gateway_spend_logs
+            WHERE organization_id = :org_id AND agent_run_id IS NOT NULL
+            GROUP BY agent_run_id
+        ),
+        tool_calls AS (
+            SELECT agent_run_id,
+                   COUNT(*) AS tool_count,
+                   COUNT(*) FILTER (WHERE result_status = 'blocked') AS denied_count,
+                   MIN(created_at) AS first_at,
+                   MAX(created_at) AS last_at,
+                   MAX(agent_key_id) AS agent_key_id
+            FROM ai_gateway_mcp_audit_logs
+            WHERE organization_id = :org_id AND agent_run_id IS NOT NULL
+            GROUP BY agent_run_id
+        ),
+        runs AS (
+            SELECT
+                COALESCE(m.agent_run_id, t.agent_run_id) AS agent_run_id,
+                COALESCE(m.model_count, 0) AS model_count,
+                COALESCE(t.tool_count, 0) AS tool_count,
+                COALESCE(t.denied_count, 0) AS denied_count,
+                COALESCE(m.tokens, 0) AS total_tokens,
+                COALESCE(m.cost, 0) AS total_cost,
+                t.agent_key_id AS agent_key_id,
+                LEAST(COALESCE(m.first_at, t.first_at), COALESCE(t.first_at, m.first_at)) AS started_at,
+                GREATEST(COALESCE(m.last_at, t.last_at), COALESCE(t.last_at, m.last_at)) AS last_at
+            FROM model_calls m
+            FULL OUTER JOIN tool_calls t ON m.agent_run_id = t.agent_run_id
+        )
         SELECT r.*, ak.name AS agent_key_name
         FROM runs r
         LEFT JOIN ai_gateway_mcp_agent_keys ak ON ak.id = r.agent_key_id

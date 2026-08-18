@@ -420,8 +420,11 @@ describe("githubWebhookController", () => {
 
     expect(res.status).toHaveBeenCalledWith(200);
     expect(res.json).toHaveBeenCalledWith({
-      triggered: false,
-      reason: "Internal processing error",
+      message: "OK",
+      data: {
+        triggered: false,
+        reason: "Internal processing error",
+      },
     });
   });
 });

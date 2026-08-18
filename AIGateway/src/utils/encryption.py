@@ -31,8 +31,14 @@ def _get_key() -> bytes:
 
 
 def _legacy_decrypt(iv: bytes, ciphertext: bytes) -> str:
-    """Decrypt a legacy AES-256-CBC ciphertext."""
+    """Decrypt a legacy AES-256-CBC ciphertext.
+
+    Kept only for backward compatibility with data encrypted before the GCM
+    migration. New data is encrypted with AES-256-GCM. This function intentionally
+    uses CBC because the legacy ciphertext has no authenticated alternative.
+    """
     key = _get_key()
+    # nosemgrep: python.cryptography.security.mode-without-authentication.crypto-mode-without-authentication
     cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
     decryptor = cipher.decryptor()
     padded = decryptor.update(ciphertext) + decryptor.finalize()

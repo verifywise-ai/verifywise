@@ -11,7 +11,6 @@ const initialState = {
   onboardingStatus: "completed" as string,
   isOrgCreator: false as boolean,
   isSuperAdmin: false as boolean,
-  activeOrganizationId: null as number | null,
 };
 
 export const register = createAsyncThunk("user/register", async (_form, _thunkApi) => {});
@@ -114,7 +113,6 @@ const authSlice = createSlice({
       state.onboardingStatus = "completed";
       state.isOrgCreator = false;
       state.isSuperAdmin = false;
-      state.activeOrganizationId = null;
     },
     setAuthToken: (state, action: PayloadAction<string>) => {
       state.authToken = action.payload;
@@ -133,9 +131,6 @@ const authSlice = createSlice({
     },
     setIsSuperAdmin: (state, action: PayloadAction<boolean>) => {
       state.isSuperAdmin = action.payload;
-    },
-    setActiveOrganizationId: (state, action: PayloadAction<number | null>) => {
-      state.activeOrganizationId = action.payload;
     },
   },
   extraReducers(builder) {
@@ -200,6 +195,5 @@ export const {
   setOnboardingStatus,
   setIsOrgCreator,
   setIsSuperAdmin,
-  setActiveOrganizationId,
 } = authSlice.actions;
 export default authSlice.reducer;

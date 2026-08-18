@@ -1,6 +1,6 @@
 import { sendAutomationEmail } from "../../emailService";
 
-const sendEmail = async (data: Object): Promise<{ success: boolean; error?: string }> => {
+const sendEmail = async (data: object): Promise<{ success: boolean; error?: string }> => {
   try {
     // Convert plain text line breaks to HTML <br> tags for proper email formatting
     const htmlBody = (data as any).body.replace(/\n/g, "<br>");

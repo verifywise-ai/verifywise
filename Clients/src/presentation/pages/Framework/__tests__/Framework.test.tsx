@@ -159,6 +159,8 @@ vi.mock("../../../components/GovernanceOS/GovernanceIntelligenceContextBar", () 
 // Mock react-router-dom
 const mockNavigate = vi.fn();
 const mockUseParams = vi.fn(() => ({}));
+
+// Mock react-router
 vi.mock("react-router", async () => {
   const actual = await vi.importActual("react-router");
   return {

@@ -14,13 +14,12 @@ import {
   setOnboardingStatus,
   setIsOrgCreator,
   setIsSuperAdmin,
-  setActiveOrganizationId,
 } from "../../../../application/redux/auth/authSlice";
 import Alert from "../../../components/Alert";
 import { ENV_VARs } from "../../../../../env.vars";
 import { loginUser } from "../../../../application/repository/user.repository";
-import { getOrganizations } from "../../../../application/repository/superAdmin.repository";
 import { checkOrganizationExists } from "../../../../application/repository/organization.repository";
+import { extractUserToken } from "../../../../application/tools/extractToken";
 import {
   CheckSsoStatus,
   GetSsoOrgs,
@@ -222,29 +221,22 @@ const Login: React.FC = () => {
             dispatch(setExpiration(null));
           }
 
+          dispatch(setIsSuperAdmin(isSuperAdminFlag));
+
+          // Bootstrap SuperAdmin: JWT has no organizationId — take them
+          // straight to /super-admin. Elected SuperAdmins have their own
+          // org and fall through to the normal tenant landing page; they
+          // can jump to /super-admin from the AppSwitcher.
           if (isSuperAdminFlag) {
-            dispatch(setIsSuperAdmin(true));
-            localStorage.setItem("root_version", __APP_VERSION__);
-            logEngine({ type: "info", message: "Super-admin login successful." });
-
-            // Auto-select the first organization so super-admin can view org data
-            try {
-              const orgsResponse = await getOrganizations();
-              const orgsData = (orgsResponse.data as any)?.data || [];
-              if (orgsData.length > 0) {
-                dispatch(setActiveOrganizationId(orgsData[0].id));
-              }
-            } catch (err) {
-              console.error("Failed to fetch organizations for auto-select:", err);
+            const tokenPayload = extractUserToken(token);
+            if (!tokenPayload?.organizationId) {
+              localStorage.setItem("root_version", __APP_VERSION__);
+              logEngine({ type: "info", message: "Super-admin login successful." });
+              setIsSubmitting(false);
+              navigate("/super-admin");
+              return;
             }
-
-            // Always go to super-admin panel
-            setIsSubmitting(false);
-            navigate("/super-admin");
-            return;
           }
-
-          dispatch(setIsSuperAdmin(false));
 
           const onboardingStatus = response.data.data.onboarding_status || "completed";
           const isOrgCreatorFlag = response.data.data.is_org_creator || false;

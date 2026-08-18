@@ -53,6 +53,10 @@ describe("useDashboardMetrics", () => {
     mockGetEntityById.mockResolvedValue({ data: {} });
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("should set loading=false after all groups complete", async () => {
     const { result } = renderHook(() => useDashboardMetrics());
 

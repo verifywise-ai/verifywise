@@ -1,5 +1,5 @@
 import React, { useRef, useState } from "react";
-import { Box, IconButton, Popover, Tooltip, Typography } from "@mui/material";
+import { Box, IconButton, Popover, Tooltip, Typography, alpha } from "@mui/material";
 import {
   Check,
   FileDown,
@@ -13,10 +13,10 @@ import { CustomizableButton } from "../../../components/button/customizable-butt
 import { brand, palette } from "../../../themes/palette";
 import { textStyles } from "../../../themes/typography";
 
-/** History active fill — prior `#E6F4F1` chrome. */
-const HISTORY_ACTIVE_BG = "#E6F4F1";
-const HISTORY_ACTIVE_HOVER_BG = "#D1EDE6";
-const SAVE_SUCCESS_BG = "#079455";
+/** History active fill — brand-tinted chrome for the sidebar toggle. */
+const HISTORY_ACTIVE_BG = palette.editor.historyActiveBg;
+const HISTORY_ACTIVE_HOVER_BG = palette.editor.historyActiveHoverBg;
+const SAVE_SUCCESS_BG = palette.status.success.strong;
 
 export interface PolicyEditorActionsBarProps {
   isNew: boolean;
@@ -141,7 +141,7 @@ export function PolicyEditorActionsBar({
                   mt: 0.5,
                   borderRadius: "4px",
                   border: `1px solid ${palette.border.light}`,
-                  boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                  boxShadow: `0 4px 12px ${alpha(palette.text.black, 0.08)}`,
                   minWidth: 140,
                   p: 0.5,
                   display: "flex",

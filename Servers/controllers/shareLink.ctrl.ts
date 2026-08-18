@@ -779,6 +779,9 @@ export const getSharedDataByToken = async (req: Request, res: Response) => {
     if (resourceId === 0) {
       resourceQuery = queries.tableView;
 
+      // resourceQuery is selected from a static, parameterized map above and is
+      // never built from user input; binds are used for all variable values.
+      // nosemgrep: javascript.sequelize.security.audit.sequelize-injection-express.express-sequelize-injection
       resourceResult = (await sequelize.query(resourceQuery, {
         bind: [shareLinkOrgId],
         type: QueryTypes.SELECT,
@@ -799,6 +802,9 @@ export const getSharedDataByToken = async (req: Request, res: Response) => {
       // Fetch single record
       resourceQuery = queries.singleRecord;
 
+      // resourceQuery is selected from a static, parameterized map above and is
+      // never built from user input; binds are used for all variable values.
+      // nosemgrep: javascript.sequelize.security.audit.sequelize-injection-express.express-sequelize-injection
       resourceResult = (await sequelize.query(resourceQuery, {
         bind: [resourceId, shareLinkOrgId],
         type: QueryTypes.SELECT,

@@ -133,10 +133,10 @@ const InviteUserModal: React.FC<InviteUserModalProps> = ({ isOpen, setIsOpen, on
         });
         const data = response.data as {
           message: string;
-          error?: string;
+          data?: { link?: string; error?: string };
         };
         if (response.status === 206) {
-          onSendInvite(values.email, response.status, data.message);
+          onSendInvite(values.email, response.status, data.data?.link);
         } else {
           onSendInvite(values.email, response.status);
         }

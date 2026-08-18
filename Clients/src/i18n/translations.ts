@@ -7045,6 +7045,7 @@ export const translations: Record<string, Record<string, string>> = {
     "My submissions": "Meine Einreichungen",
     "NEXT SCAN": "NÄCHSTER SCAN",
     "NIST Subcategories": "NIST-Unterkategorien",
+    "Name is required": "Name ist erforderlich",
     "Name of the AI model": "Name des KI-Modells",
     "Name saved": "Name gespeichert",
     "Navigate project sections": "Projektabschnitte navigieren",
@@ -7165,6 +7166,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Planen Sie Reaktionen auf KI-Systemrisiken, einschließlich der Festlegung von Risikotoleranz und Minderungsstrategien.",
     "Please add at least one recipient to the Send Email action before saving.":
       'Bitte fügen Sie mindestens einen Empfänger zur Aktion "E-Mail senden" hinzu, bevor Sie speichern.',
+    "Please complete the required fields before saving.":
+      "Bitte füllen Sie die erforderlichen Felder aus, bevor Sie speichern.",
     "Please create a model first before adding model risks. Redirecting to models tab...":
       "Bitte erstellen Sie zuerst ein Modell, bevor Sie Modellrisiken hinzufügen. Weiterleitung zum Modelle-Tab...",
     "Please create a vendor first before adding vendor risks. Redirecting to vendors tab...":
@@ -7173,6 +7176,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Please enter a token to test": "Bitte geben Sie ein Token zum Testen ein",
     "Please enter an API key for this provider":
       "Bitte geben Sie einen API-Schlüssel für diesen Anbieter ein",
+    "Please enter an automation name before saving.":
+      "Bitte geben Sie einen Automatisierungsnamen ein, bevor Sie speichern.",
     "Please enter an email address": "Bitte geben Sie eine E-Mail-Adresse ein",
     "Please login again to continue.": "Bitte melden Sie sich erneut an, um fortzufahren.",
     "Please save the changes to attach the selected files.":
@@ -9048,6 +9053,32 @@ export const translations: Record<string, Record<string, string>> = {
       "Was dieser Bericht abdeckt und für wen er gedacht ist",
     "Word (DOCX)": "Word (DOCX)",
     "You haven&apos;t created any templates yet.": "Sie haben noch keine Vorlagen erstellt.",
+    "Annex controls": "Anhangskontrollen",
+    "Failed to load framework": "Rahmenwerk konnte nicht geladen werden",
+    "Failed to load record": "Datensatz konnte nicht geladen werden",
+    "Items": "Elemente",
+    "Justification for Exclusion (if Not Applicable):":
+      "Begründung für den Ausschluss (falls nicht zutreffend):",
+    "No matching items": "Keine passenden Elemente",
+    "No organizational frameworks assigned yet.":
+      "Noch keine organisatorischen Rahmenwerke zugewiesen.",
+    "No record selected for update": "Kein Datensatz zur Aktualisierung ausgewählt",
+    "Subcategories": "Unterkategorien",
+    'Use the "Manage Frameworks" button to add frameworks to your organizational project.':
+      'Verwenden Sie die Schaltfläche "Rahmenwerke verwalten", um Ihrem organisatorischen Projekt Rahmenwerke hinzuzufügen.',
+    "Elect": "Wählen",
+    "Elect Super Admin": "Super Admin wählen",
+    "Elect a Super Admin": "Einen Super Admin wählen",
+    "Elect other users as Super Admins": "Andere Benutzer als Super Admins wählen",
+    "Grant an existing user cross-organization Super Admin capabilities. Their base organization role is unchanged.":
+      "Einem bestehenden Benutzer organisationsübergreifende Super Admin-Berechtigungen erteilen. Seine Basisrolle in der Organisation bleibt unverändert.",
+    "No Super Admins yet.": "Noch keine Super Admins.",
+    "Revoke Super Admin": "Super Admin widerrufen",
+    "Search by name or email": "Nach Name oder E-Mail suchen",
+    "Sent": "Gesendet",
+    "Super Admins": "Super Admins",
+    "They will keep their normal organization role but lose cross-organization access.":
+      "Er behält seine normale Organisationsrolle, verliert jedoch den organisationsübergreifenden Zugriff.",
   },
 
   fr: {
@@ -16024,6 +16055,7 @@ export const translations: Record<string, Record<string, string>> = {
     "My submissions": "Mes soumissions",
     "NEXT SCAN": "PROCHAINE ANALYSE",
     "NIST Subcategories": "Sous-catégories NIST",
+    "Name is required": "Le nom est requis",
     "Name of the AI model": "Nom du modèle IA",
     "Name saved": "Nom enregistré",
     "Navigate project sections": "Naviguer dans les sections du projet",
@@ -16142,6 +16174,8 @@ export const translations: Record<string, Record<string, string>> = {
       "Planifiez les réponses aux risques du système IA, y compris la définition de la tolérance au risque et des stratégies d'atténuation.",
     "Please add at least one recipient to the Send Email action before saving.":
       "Veuillez ajouter au moins un destinataire à l'action Envoyer un e-mail avant d'enregistrer.",
+    "Please complete the required fields before saving.":
+      "Veuillez renseigner les champs obligatoires avant d'enregistrer.",
     "Please create a model first before adding model risks. Redirecting to models tab...":
       "Veuillez d'abord créer un modèle avant d'ajouter des risques de modèle. Redirection vers l'onglet Modèles...",
     "Please create a vendor first before adding vendor risks. Redirecting to vendors tab...":
@@ -16149,6 +16183,8 @@ export const translations: Record<string, Record<string, string>> = {
     "Please enter a token": "Veuillez saisir un jeton",
     "Please enter a token to test": "Veuillez saisir un jeton à tester",
     "Please enter an API key for this provider": "Veuillez saisir une clé API pour ce fournisseur",
+    "Please enter an automation name before saving.":
+      "Veuillez saisir un nom d'automatisation avant d'enregistrer.",
     "Please enter an email address": "Veuillez saisir une adresse e-mail",
     "Please login again to continue.": "Veuillez vous reconnecter pour continuer.",
     "Please save the changes to attach the selected files.":
@@ -18024,6 +18060,32 @@ export const translations: Record<string, Record<string, string>> = {
     "What this report covers and who it is for": "Ce que couvre ce rapport et à qui il est destiné",
     "Word (DOCX)": "Word (DOCX)",
     "You haven&apos;t created any templates yet.": "Vous n'avez encore créé aucun modèle.",
+    "Annex controls": "Contrôles d'annexe",
+    "Failed to load framework": "Impossible de charger le cadre",
+    "Failed to load record": "Impossible de charger l'enregistrement",
+    "Items": "Éléments",
+    "Justification for Exclusion (if Not Applicable):":
+      "Justification de l'exclusion (le cas échéant) :",
+    "No matching items": "Aucun élément correspondant",
+    "No organizational frameworks assigned yet.":
+      "Aucun cadre organisationnel attribué pour le moment.",
+    "No record selected for update": "Aucun enregistrement sélectionné pour la mise à jour",
+    "Subcategories": "Sous-catégories",
+    'Use the "Manage Frameworks" button to add frameworks to your organizational project.':
+      'Utilisez le bouton "Gérer les cadres" pour ajouter des cadres à votre projet organisationnel.',
+    "Elect": "Élire",
+    "Elect Super Admin": "Élire un Super Admin",
+    "Elect a Super Admin": "Élire un Super Admin",
+    "Elect other users as Super Admins": "Élire d'autres utilisateurs comme Super Admins",
+    "Grant an existing user cross-organization Super Admin capabilities. Their base organization role is unchanged.":
+      "Accordez à un utilisateur existant des capacités de Super Admin inter-organisations. Son rôle de base dans l'organisation reste inchangé.",
+    "No Super Admins yet.": "Aucun Super Admin pour le moment.",
+    "Revoke Super Admin": "Révoquer Super Admin",
+    "Search by name or email": "Rechercher par nom ou e-mail",
+    "Sent": "Envoyé",
+    "Super Admins": "Super Admins",
+    "They will keep their normal organization role but lose cross-organization access.":
+      "Il conservera son rôle normal dans l'organisation mais perdra l'accès inter-organisations.",
   },
   es: {
     "Deployment name": "Nombre del despliegue",
@@ -22230,6 +22292,7 @@ export const translations: Record<string, Record<string, string>> = {
     "My submissions": "Mis envíos",
     "NEXT SCAN": "PRÓXIMO ESCANEO",
     "NIST Subcategories": "Subcategorías de NIST",
+    "Name is required": "El nombre es obligatorio",
     "Name of the AI model": "Nombre del modelo de IA",
     "Name saved": "Nombre guardado",
     "Navigate project sections": "Navegar por las secciones del proyecto",
@@ -25511,10 +25574,14 @@ export const translations: Record<string, Record<string, string>> = {
       "Planifique las respuestas a los riesgos del sistema de IA, incluida la definición de la tolerancia al riesgo y las estrategias de mitigación.",
     "Please add at least one recipient to the Send Email action before saving.":
       "Añada al menos un destinatario a la acción Enviar correo electrónico antes de guardar.",
+    "Please complete the required fields before saving.":
+      "Complete los campos obligatorios antes de guardar.",
     "Please create a model first before adding model risks. Redirecting to models tab...":
       "Cree primero un modelo antes de añadir riesgos de modelo. Redirigiendo a la pestaña de modelos...",
     "Please create a vendor first before adding vendor risks. Redirecting to vendors tab...":
       "Cree primero un proveedor antes de añadir riesgos de proveedor. Redirigiendo a la pestaña de proveedores...",
+    "Please enter an automation name before saving.":
+      "Introduzca un nombre de automatización antes de guardar.",
     "Please save the changes to attach the selected files.":
       "Guarde los cambios para adjuntar los archivos seleccionados.",
     "Please save the changes to save the file changes.":
@@ -26921,5 +26988,30 @@ export const translations: Record<string, Record<string, string>> = {
     "What this report covers and who it is for": "Qué abarca este informe y a quién está dirigido",
     "Word (DOCX)": "Word (DOCX)",
     "You haven&apos;t created any templates yet.": "Aún no ha creado ninguna plantilla.",
+    "Annex controls": "Controles de anexo",
+    "Failed to load framework": "No se pudo cargar el marco",
+    "Failed to load record": "No se pudo cargar el registro",
+    "Items": "Elementos",
+    "Justification for Exclusion (if Not Applicable):":
+      "Justificación de la exclusión (si no corresponde):",
+    "No matching items": "No hay elementos coincidentes",
+    "No organizational frameworks assigned yet.": "Aún no se han asignado marcos organizacionales.",
+    "No record selected for update": "Ningún registro seleccionado para actualizar",
+    "Subcategories": "Subcategorías",
+    'Use the "Manage Frameworks" button to add frameworks to your organizational project.':
+      'Utilice el botón "Gestionar marcos" para añadir marcos a su proyecto organizacional.',
+    "Elect": "Elegir",
+    "Elect Super Admin": "Elegir Super Admin",
+    "Elect a Super Admin": "Elegir un Super Admin",
+    "Elect other users as Super Admins": "Elegir a otros usuarios como Super Admins",
+    "Grant an existing user cross-organization Super Admin capabilities. Their base organization role is unchanged.":
+      "Conceda a un usuario existente capacidades de Super Admin entre organizaciones. Su rol base en la organización no cambia.",
+    "No Super Admins yet.": "Aún no hay Super Admins.",
+    "Revoke Super Admin": "Revocar Super Admin",
+    "Search by name or email": "Buscar por nombre o correo electrónico",
+    "Sent": "Enviado",
+    "Super Admins": "Super Admins",
+    "They will keep their normal organization role but lose cross-organization access.":
+      "Mantendrá su rol normal en la organización pero perderá el acceso entre organizaciones.",
   },
 };

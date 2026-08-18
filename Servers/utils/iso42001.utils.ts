@@ -25,7 +25,7 @@ import {
   deleteAllFileEntityLinksForEntities,
 } from "./files/evidenceFiles.utils";
 
-const getDemoSubClauses = (): Object[] => {
+const getDemoSubClauses = (): object[] => {
   const subClauses = [];
   for (let clause of Clauses) {
     for (let subClause of clause.subclauses) {
@@ -38,7 +38,7 @@ const getDemoSubClauses = (): Object[] => {
   return subClauses;
 };
 
-const getDemoAnnexCategories = (): Object[] => {
+const getDemoAnnexCategories = (): object[] => {
   const annexCategories = [];
   for (let annex of Annex) {
     for (let annexCategory of annex.annexcategories) {

@@ -79,6 +79,7 @@ import { getAzureADConfigForLoginQuery, isSSOFeatureEnabled } from "../utils/sso
 
 import { translateError } from "../utils/i18n.utils";
 import { getPreferencesByUserQuery } from "../utils/userPreference.utils";
+import { isUserSuperAdmin as isUserSuperAdminUtil } from "../utils/superAdmin.utils";
 import { UserDateFormat } from "../domain.layer/enums/user-preferences.enum";
 /**
  * Retrieves all users within the authenticated user's organization
@@ -133,7 +134,7 @@ async function getPreferencesForCurrentUser(req: Request, res: Response): Promis
     }
 
     const isSelfLookup = req.userId === user.id;
-    if (!req.isSuperAdmin && !isSelfLookup && user.organization_id !== req.organizationId) {
+    if (!isSelfLookup && user.organization_id !== req.organizationId) {
       return res
         .status(403)
         .json(STATUS_CODE[403](req.t!("Forbidden: Access to this user is denied")));
@@ -180,24 +181,6 @@ async function getAllUsers(req: Request, res: Response): Promise<any> {
   logger.debug("🔍 Fetching all users");
 
   try {
-    // /api/users is the org-scoped member endpoint. A SuperAdmin isn't an org
-    // member and lists users through the dedicated /super-admin/* routes, so a
-    // SuperAdmin hitting this endpoint (e.g. an incidental call from the app
-    // shell before an org is selected) has no org context: req.organizationId
-    // is unset, and feeding it into the tenant-scoped query makes Sequelize
-    // throw "Named replacement ':organization_id' has no entry in the
-    // replacement map", surfacing as a 500. Short-circuit on the role instead.
-    if (req.isSuperAdmin) {
-      logStructured(
-        "successful",
-        "SuperAdmin request; returning empty org user list",
-        "getAllUsers",
-        "user.ctrl.ts",
-      );
-      return res.status(200).json(STATUS_CODE[200]([]));
-    }
-
-    // Non-SuperAdmins always carry an organizationId (set by auth middleware).
     const users = (await getAllUsersQuery(req.organizationId!)) as UserModel[];
 
     if (users && users.length > 0) {
@@ -245,9 +228,8 @@ async function getUserById(req: Request, res: Response) {
 
   try {
     const user = (await getUserByIdQuery(id)) as UserModel;
-    // Super-admin can access their own record (no org) or any user when viewing an org
     const isSelfLookup = id === req.userId;
-    if (!req.isSuperAdmin && !isSelfLookup && user.organization_id !== req.organizationId) {
+    if (!isSelfLookup && user.organization_id !== req.organizationId) {
       logStructured("error", `access denied to user ID ${id}`, "getUserById", "user.ctrl.ts");
       return res
         .status(403)
@@ -546,20 +528,21 @@ async function loginUser(req: Request, res: Response): Promise<any> {
       if (passwordIsMatched) {
         user.updateLastLogin();
 
-        const isSuperAdmin = user.role_id === 5;
+        // Pure SuperAdmin: no org, no role. Identified by organization_id
+        // being NULL; a DB trigger guarantees they have a super_admins row.
+        const isPureSuperAdmin = (userData as any).organization_id == null;
 
-        // Generate JWT tokens (access + refresh)
         const { accessToken } = await generateUserTokens(
           {
             id: user.id!,
             email: email,
-            roleName: (userData as any).role_name || (isSuperAdmin ? "SuperAdmin" : ""),
-            organizationId: isSuperAdmin ? null : (userData as any).organization_id,
+            roleName: (userData as any).role_name || (isPureSuperAdmin ? "SuperAdmin" : ""),
+            organizationId: isPureSuperAdmin ? null : (userData as any).organization_id,
           },
           res,
         );
 
-        if (isSuperAdmin) {
+        if (isPureSuperAdmin) {
           logStructured(
             "successful",
             `super-admin login successful for ${email}`,
@@ -602,6 +585,10 @@ async function loginUser(req: Request, res: Response): Promise<any> {
           }
         }
 
+        // Elected SuperAdmin overlay: normal user + row in super_admins.
+        // Bootstrap SuperAdmins take the isSuperAdmin=true branch above.
+        const electedSuperAdmin = await isUserSuperAdminUtil(user.id!);
+
         logStructured("successful", `login successful for ${email}`, "loginUser", "user.ctrl.ts");
 
         return res.status(202).json(
@@ -609,6 +596,7 @@ async function loginUser(req: Request, res: Response): Promise<any> {
             token: accessToken,
             onboarding_status: onboardingStatus,
             is_org_creator: isOrgCreator,
+            isSuperAdmin: electedSuperAdmin,
           }),
         );
       } else {
@@ -759,13 +747,17 @@ async function loginUserWithMicrosoft(req: Request, res: Response): Promise<any>
 
     await transaction.commit();
 
+    const electedSuperAdmin = await isUserSuperAdminUtil(user!.id!);
+
     logStructured(
       "successful",
       `Microsoft SSO login successful for ${user!.email}`,
       "loginUserWithMicrosoft",
       "user.ctrl.ts",
     );
-    return res.status(202).json(STATUS_CODE[202]({ token: accessToken }));
+    return res
+      .status(202)
+      .json(STATUS_CODE[202]({ token: accessToken, isSuperAdmin: electedSuperAdmin }));
   } catch (error) {
     await transaction.rollback();
     logStructured(
@@ -1014,7 +1006,8 @@ async function updateUserById(req: Request, res: Response) {
     const currentUserId = (req as any).user?.id;
     const user = await getUserByIdQuery(id);
 
-    if (user.organization_id !== req.organizationId) {
+    const isSelf = req.userId === id;
+    if (!isSelf && user.organization_id !== req.organizationId) {
       logStructured("error", `access denied to user ID ${id}`, "updateUserById", "user.ctrl.ts");
       await transaction.rollback();
       return res
@@ -1022,11 +1015,10 @@ async function updateUserById(req: Request, res: Response) {
         .json(STATUS_CODE[403](req.t!("Forbidden: Access to this user is denied")));
     }
 
-    // Authorization: only Admins/SuperAdmins may edit other users.
+    // Authorization: only Admins may edit other users.
     // Non-privileged users may only edit their own profile and may never
     // change a role (prevents privilege escalation via roleId in the body).
-    const isPrivileged = req.role === "Admin" || req.role === "SuperAdmin";
-    const isSelf = req.userId === id;
+    const isPrivileged = req.role === "Admin";
 
     if (!isPrivileged && !isSelf) {
       logStructured(
@@ -1052,31 +1044,6 @@ async function updateUserById(req: Request, res: Response) {
       return res
         .status(403)
         .json(STATUS_CODE[403](req.t!("Forbidden: Only admins can change user roles")));
-    }
-
-    // Prevent privilege escalation: the SuperAdmin role (id 5) can never be
-    // assigned through this endpoint, not even by Admins/SuperAdmins.
-    if (roleId === 5) {
-      logStructured(
-        "error",
-        `user ${req.userId} attempted to assign SuperAdmin role to user ID ${id}`,
-        "updateUserById",
-        "user.ctrl.ts",
-      );
-      await transaction.rollback();
-      return res.status(403).json(STATUS_CODE[403](req.t!("Cannot assign SuperAdmin role")));
-    }
-
-    // Prevent modifying a SuperAdmin's role through this endpoint.
-    if (user.role_id === 5 && roleId !== undefined && roleId !== user.role_id) {
-      logStructured(
-        "error",
-        `user ${req.userId} attempted to change SuperAdmin role of user ID ${id}`,
-        "updateUserById",
-        "user.ctrl.ts",
-      );
-      await transaction.rollback();
-      return res.status(403).json(STATUS_CODE[403](req.t!("Cannot modify SuperAdmin role")));
     }
 
     // Validate that the requested role actually exists.
@@ -1253,8 +1220,9 @@ async function deleteUserById(req: Request, res: Response) {
   try {
     const user = await getUserByIdQuery(id);
 
-    // Prevent deletion of super-admin user
-    if (user && user.role_id === 5) {
+    // Pure SuperAdmin (no role, no org) cannot be deleted through the
+    // tenant endpoint.
+    if (user && user.role_id == null && user.organization_id == null) {
       await transaction.rollback();
       return res.status(403).json(STATUS_CODE[403](req.t!("Super-admin user cannot be deleted")));
     }
@@ -1597,8 +1565,8 @@ async function updateUserRole(req: Request, res: Response) {
       return res.status(404).json(STATUS_CODE[404](req.t!("User not found")));
     }
 
-    // Prevent changing super-admin's role
-    if (targetUser.role_id === 5) {
+    // Pure SuperAdmin has no role — nothing to change here.
+    if (targetUser.role_id == null && targetUser.organization_id == null) {
       await transaction.rollback();
       return res.status(403).json(STATUS_CODE[403](req.t!("Cannot modify SuperAdmin role")));
     }

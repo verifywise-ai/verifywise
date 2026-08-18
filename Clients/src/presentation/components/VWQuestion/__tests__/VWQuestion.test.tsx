@@ -160,7 +160,6 @@ describe("VWQuestion", () => {
       organizationId: 1,
       isAuthenticated: true,
       isSuperAdmin: false,
-      activeOrganizationId: null,
     });
     mockHandleAlert.mockImplementation(({ variant, body, setAlert }: any) => {
       setAlert({ variant, body });
@@ -377,7 +376,6 @@ describe("VWQuestion", () => {
       organizationId: 1,
       isAuthenticated: true,
       isSuperAdmin: false,
-      activeOrganizationId: null,
     });
 
     renderVWQuestion();
