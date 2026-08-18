@@ -22,7 +22,11 @@ beforeEach(() => {
 describe("evidenceAi.repository", () => {
   describe("triggerAnalysis", () => {
     it("makes a post request with the visibility payload", async () => {
-      vi.mocked(apiServices.post).mockResolvedValue({ data: { status: "queued" } });
+      vi.mocked(apiServices.post).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { status: "queued" },
+      });
 
       const result = await triggerAnalysis(10, "internal");
 
@@ -33,7 +37,11 @@ describe("evidenceAi.repository", () => {
     });
 
     it("makes a post request without visibility when not provided", async () => {
-      vi.mocked(apiServices.post).mockResolvedValue({ data: { status: "queued" } });
+      vi.mocked(apiServices.post).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { status: "queued" },
+      });
 
       await triggerAnalysis(11);
 
@@ -45,7 +53,11 @@ describe("evidenceAi.repository", () => {
 
   describe("getAnalysis", () => {
     it("makes a get request scoped to the file id", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { score: 0.8 } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { score: 0.8 },
+      });
 
       const result = await getAnalysis(10);
 
@@ -56,7 +68,11 @@ describe("evidenceAi.repository", () => {
 
   describe("getQualityScores", () => {
     it("makes a get request for quality scores", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: [{ fileId: 1, score: 0.9 }] });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: [{ fileId: 1, score: 0.9 }],
+      });
 
       const result = await getQualityScores();
 
@@ -67,7 +83,7 @@ describe("evidenceAi.repository", () => {
 
   describe("getEvidenceGaps", () => {
     it("makes a get request with query params when provided", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: [] });
+      vi.mocked(apiServices.get).mockResolvedValue({ status: 200, statusText: "OK", data: [] });
 
       await getEvidenceGaps({ framework_type: "iso42001", quality_threshold: 0.5 });
 
@@ -77,7 +93,7 @@ describe("evidenceAi.repository", () => {
     });
 
     it("makes a get request without a query string when no params are provided", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: [] });
+      vi.mocked(apiServices.get).mockResolvedValue({ status: 200, statusText: "OK", data: [] });
 
       await getEvidenceGaps();
 
@@ -87,7 +103,11 @@ describe("evidenceAi.repository", () => {
 
   describe("getSuggestions", () => {
     it("makes a get request scoped to the file id", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: [{ control_id: 1 }] });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: [{ control_id: 1 }],
+      });
 
       const result = await getSuggestions(20);
 
@@ -99,7 +119,11 @@ describe("evidenceAi.repository", () => {
   describe("applySuggestions", () => {
     it("makes a post request with the suggestions payload", async () => {
       const suggestions = [{ control_id: 1, framework_type: "iso42001" }];
-      vi.mocked(apiServices.post).mockResolvedValue({ data: { applied: 1 } });
+      vi.mocked(apiServices.post).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { applied: 1 },
+      });
 
       const result = await applySuggestions(20, suggestions);
 

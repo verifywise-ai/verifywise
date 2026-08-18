@@ -19,7 +19,11 @@ beforeEach(() => {
 describe("aiAudit.repository", () => {
   describe("getAuditLog", () => {
     it("builds a query string from all provided filters", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { data: [{ id: 1 }] } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: [{ id: 1 }] },
+      });
 
       const result = await getAuditLog({
         state: "completed",
@@ -39,7 +43,11 @@ describe("aiAudit.repository", () => {
     });
 
     it("makes a get request with an empty query string when no filters are provided", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { data: [] } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: [] },
+      });
 
       await getAuditLog();
 
@@ -47,7 +55,11 @@ describe("aiAudit.repository", () => {
     });
 
     it("falls back to response.data when data.data is absent", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: [{ id: 2 }] });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: [{ id: 2 }],
+      });
 
       const result = await getAuditLog();
 
@@ -57,7 +69,11 @@ describe("aiAudit.repository", () => {
 
   describe("getActionAuditTrail", () => {
     it("makes a get request scoped to the action id", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { data: { id: "a1" } } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { id: "a1" } },
+      });
 
       const result = await getActionAuditTrail("a1");
 
@@ -68,7 +84,11 @@ describe("aiAudit.repository", () => {
 
   describe("getAuditAnalytics", () => {
     it("builds a query string from the provided date range", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { data: { total: 5 } } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { total: 5 } },
+      });
 
       await getAuditAnalytics("2026-01-01", "2026-01-31");
 
@@ -78,7 +98,11 @@ describe("aiAudit.repository", () => {
     });
 
     it("makes a get request with an empty query string when no dates are provided", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { data: {} } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: {} },
+      });
 
       await getAuditAnalytics();
 
@@ -88,7 +112,11 @@ describe("aiAudit.repository", () => {
 
   describe("exportAuditLog", () => {
     it("returns json data directly when format is json", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { data: [{ id: 1 }] } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: [{ id: 1 }] },
+      });
 
       const result = await exportAuditLog("json", "2026-01-01", "2026-01-31");
 
@@ -99,7 +127,11 @@ describe("aiAudit.repository", () => {
     });
 
     it("triggers a CSV file download and returns undefined when format is csv", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: "id,name\n1,test" });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: "id,name\n1,test",
+      });
 
       const createObjectURL = vi.fn().mockReturnValue("blob:mock-url");
       const revokeObjectURL = vi.fn();

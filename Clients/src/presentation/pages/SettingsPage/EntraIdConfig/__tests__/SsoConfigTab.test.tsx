@@ -89,7 +89,6 @@ describe("SsoConfigTab", () => {
   });
 
   it("shows required errors on submit with empty fields", async () => {
-    const user = userEvent.setup();
     renderWithProviders(<SsoConfigTab />);
     await waitFor(() => {
       expect(screen.getByText("Save configuration").closest("button")).toBeDisabled();

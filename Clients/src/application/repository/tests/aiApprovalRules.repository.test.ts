@@ -29,7 +29,11 @@ const rulePartial: Partial<ApprovalRule> = {
 describe("aiApprovalRules.repository", () => {
   describe("listApprovalRules", () => {
     it("makes a get request and returns the nested data array", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { data: [{ id: 1 }] } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: [{ id: 1 }] },
+      });
 
       const result = await listApprovalRules();
 
@@ -38,7 +42,11 @@ describe("aiApprovalRules.repository", () => {
     });
 
     it("falls back to response.data when data.data is absent", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: [{ id: 2 }] });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: [{ id: 2 }],
+      });
 
       const result = await listApprovalRules();
 
@@ -46,7 +54,11 @@ describe("aiApprovalRules.repository", () => {
     });
 
     it("falls back to an empty array when no data is present", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: undefined });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: undefined,
+      });
 
       const result = await listApprovalRules();
 
@@ -56,7 +68,11 @@ describe("aiApprovalRules.repository", () => {
 
   describe("createApprovalRule", () => {
     it("makes a post request with the rule payload", async () => {
-      vi.mocked(apiServices.post).mockResolvedValue({ data: { data: { id: 1, ...rulePartial } } });
+      vi.mocked(apiServices.post).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { id: 1, ...rulePartial } },
+      });
 
       const result = await createApprovalRule(rulePartial);
 
@@ -67,7 +83,11 @@ describe("aiApprovalRules.repository", () => {
 
   describe("updateApprovalRule", () => {
     it("makes a put request scoped to the rule id", async () => {
-      vi.mocked(apiServices.put).mockResolvedValue({ data: { data: { id: 5, ...rulePartial } } });
+      vi.mocked(apiServices.put).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { id: 5, ...rulePartial } },
+      });
 
       const result = await updateApprovalRule(5, rulePartial);
 
@@ -78,7 +98,11 @@ describe("aiApprovalRules.repository", () => {
 
   describe("deleteApprovalRule", () => {
     it("makes a delete request scoped to the rule id", async () => {
-      vi.mocked(apiServices.delete).mockResolvedValue({ data: undefined });
+      vi.mocked(apiServices.delete).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: undefined,
+      });
 
       await deleteApprovalRule(7);
 
@@ -90,7 +114,11 @@ describe("aiApprovalRules.repository", () => {
     it("makes a post request with rule and facts and returns the evaluation result", async () => {
       const facts = { risk_score: 80 };
       const evaluation = { matched: true, decision: "auto-reject", evaluatedFacts: facts };
-      vi.mocked(apiServices.post).mockResolvedValue({ data: { data: evaluation } });
+      vi.mocked(apiServices.post).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: evaluation },
+      });
 
       const result = await testApprovalRule(rulePartial, facts);
 

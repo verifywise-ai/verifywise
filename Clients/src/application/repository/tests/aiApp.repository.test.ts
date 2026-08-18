@@ -31,6 +31,8 @@ describe("aiApp.repository", () => {
   describe("getAllAiApps", () => {
     it("builds a query string from the provided filters", async () => {
       vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
         data: { data: { ai_apps: [], total: 0 } },
       });
 
@@ -54,7 +56,11 @@ describe("aiApp.repository", () => {
     });
 
     it("makes a get request without a query string when no filters are given", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { data: { ai_apps: [], total: 0 } } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { ai_apps: [], total: 0 } },
+      });
 
       const result = await getAllAiApps();
 
@@ -65,7 +71,11 @@ describe("aiApp.repository", () => {
 
   describe("getAiAppById", () => {
     it("makes a get request scoped to the app id", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { data: { id: 1 } } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { id: 1 } },
+      });
 
       const result = await getAiAppById(1);
 
@@ -77,7 +87,11 @@ describe("aiApp.repository", () => {
   describe("createAiApp", () => {
     it("makes a post request with the app payload", async () => {
       const payload = { name: "New App" } as any;
-      vi.mocked(apiServices.post).mockResolvedValue({ data: { data: { id: 2, ...payload } } });
+      vi.mocked(apiServices.post).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { id: 2, ...payload } },
+      });
 
       const result = await createAiApp(payload);
 
@@ -89,7 +103,11 @@ describe("aiApp.repository", () => {
   describe("updateAiApp", () => {
     it("makes a patch request scoped to the app id", async () => {
       const payload = { name: "Updated" } as any;
-      vi.mocked(apiServices.patch).mockResolvedValue({ data: { data: { id: 3, ...payload } } });
+      vi.mocked(apiServices.patch).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { id: 3, ...payload } },
+      });
 
       const result = await updateAiApp(3, payload);
 
@@ -101,6 +119,8 @@ describe("aiApp.repository", () => {
   describe("updateAiAppStatus", () => {
     it("makes a patch request with the new status", async () => {
       vi.mocked(apiServices.patch).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
         data: { data: { id: 4, status: AiAppStatus.RESTRICTED } },
       });
 
@@ -115,7 +135,11 @@ describe("aiApp.repository", () => {
 
   describe("deleteAiApp", () => {
     it("makes a delete request scoped to the app id", async () => {
-      vi.mocked(apiServices.delete).mockResolvedValue({ data: { data: { id: 5 } } });
+      vi.mocked(apiServices.delete).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { id: 5 } },
+      });
 
       const result = await deleteAiApp(5);
 
@@ -126,7 +150,11 @@ describe("aiApp.repository", () => {
 
   describe("linkModelsToAiApp", () => {
     it("makes a post request with the model inventory ids", async () => {
-      vi.mocked(apiServices.post).mockResolvedValue({ data: { data: { id: 6 } } });
+      vi.mocked(apiServices.post).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { id: 6 } },
+      });
 
       await linkModelsToAiApp(6, [10, 11]);
 
@@ -139,7 +167,11 @@ describe("aiApp.repository", () => {
   describe("setPoliciesForAiApp", () => {
     it("makes a post request with the policies payload", async () => {
       const policies = [{ policy_id: 1, status: "applicable" }];
-      vi.mocked(apiServices.post).mockResolvedValue({ data: { data: { id: 7 } } });
+      vi.mocked(apiServices.post).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { id: 7 } },
+      });
 
       await setPoliciesForAiApp(7, policies);
 
@@ -150,7 +182,11 @@ describe("aiApp.repository", () => {
   describe("setDataExposureForAiApp", () => {
     it("makes a post request with the data exposure payload", async () => {
       const dataExposure = [{ data_type: "pii", allowed: false }];
-      vi.mocked(apiServices.post).mockResolvedValue({ data: { data: { id: 8 } } });
+      vi.mocked(apiServices.post).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { id: 8 } },
+      });
 
       await setDataExposureForAiApp(8, dataExposure);
 
@@ -162,7 +198,11 @@ describe("aiApp.repository", () => {
 
   describe("getPolicySuggestions", () => {
     it("makes a get request with the encoded name", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { data: [{ id: 1 }] } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: [{ id: 1 }] },
+      });
 
       const result = await getPolicySuggestions("My App");
 
@@ -175,7 +215,11 @@ describe("aiApp.repository", () => {
 
   describe("promoteFromShadowAi", () => {
     it("makes a post request scoped to the shadow ai tool id", async () => {
-      vi.mocked(apiServices.post).mockResolvedValue({ data: { data: { id: 9 } } });
+      vi.mocked(apiServices.post).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { id: 9 } },
+      });
 
       const result = await promoteFromShadowAi(20);
 

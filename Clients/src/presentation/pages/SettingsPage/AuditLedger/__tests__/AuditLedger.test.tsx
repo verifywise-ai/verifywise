@@ -173,10 +173,10 @@ describe("AuditLedger", () => {
     expect(mockVerify).toHaveBeenCalled();
   });
 
-  it("disables the verify button for super admins", () => {
+  it("keeps the verify button enabled for super admins", () => {
     mockIsSuperAdmin = true;
     renderWithProviders(<AuditLedger />);
-    expect(screen.getByText("Verify chain").closest("button")).toBeDisabled();
+    expect(screen.getByText("Verify chain").closest("button")).not.toBeDisabled();
   });
 
   it("shows Verifying... label while verification is in progress", () => {

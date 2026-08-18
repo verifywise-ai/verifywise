@@ -2,11 +2,7 @@ import { screen, waitFor, fireEvent } from "@testing-library/react";
 import { Routes, Route } from "react-router";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import ModelRiskManagementTab from "./index";
-import {
-  MrmAttestationStatus,
-  MrmFindingSeverity,
-  MrmTier,
-} from "../../../../domain/enums/mrm.enum";
+import { MrmAttestationStatus, MrmFindingSeverity } from "../../../../domain/enums/mrm.enum";
 import { MrmUser } from "./types";
 
 // Broad hook stub covering every hook the nested sub-tabs might call, so the

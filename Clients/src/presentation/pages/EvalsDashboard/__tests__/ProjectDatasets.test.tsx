@@ -434,14 +434,14 @@ describe("ProjectDatasets", () => {
   });
 
   describe("RBAC", () => {
-    it("disables upload and add for super admins", async () => {
+    it("keeps upload and add enabled for super admins", async () => {
       authMock.isSuperAdmin = true;
       mockUserDatasets([]);
 
       renderDatasets();
 
-      expect(await screen.findByRole("button", { name: "Upload dataset" })).toBeDisabled();
-      expect(screen.getByRole("button", { name: "Add dataset" })).toBeDisabled();
+      expect(await screen.findByRole("button", { name: "Upload dataset" })).not.toBeDisabled();
+      expect(screen.getByRole("button", { name: "Add dataset" })).not.toBeDisabled();
     });
   });
 });

@@ -315,7 +315,7 @@ describe("Framework", () => {
     });
     mockUseParams.mockReturnValue({ tab: "controls" });
     renderWithProviders(<Framework />, { route: "/framework/controls" });
-    expect(screen.getByText("No ISO frameworks assigned to this project yet.")).toBeInTheDocument();
+    expect(screen.getByText("No organizational frameworks assigned yet.")).toBeInTheDocument();
   });
 
   it("renders the dashboard tab with the governance context bar and dashboard component", () => {

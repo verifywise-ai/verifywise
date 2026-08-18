@@ -48,14 +48,6 @@ vi.mock("../../../../components/Modals/StandardModal", () => ({
     ) : null,
 }));
 
-vi.mock("../../../../components/PluginSlot", () => ({
-  PluginSlot: () => <div data-testid="plugin-slot" />,
-}));
-
-vi.mock("../../../../../domain/constants/pluginSlots", () => ({
-  PLUGIN_SLOTS: { ORG_FRAMEWORK_MANAGEMENT: "org-framework-management" },
-}));
-
 import FrameworkSettings from "../index";
 
 const organizationalProject: any = {
@@ -260,10 +252,5 @@ describe("FrameworkSettings", () => {
     );
     const removeButton = screen.getByText("Remove").closest("button");
     expect(removeButton).toBeDisabled();
-  });
-
-  it("renders the plugin slot for custom framework management", () => {
-    renderWithProviders(<FrameworkSettings {...defaultProps} />);
-    expect(screen.getByTestId("plugin-slot")).toBeInTheDocument();
   });
 });

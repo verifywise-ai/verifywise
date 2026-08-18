@@ -24,7 +24,11 @@ beforeEach(() => {
 describe("readiness.repository", () => {
   describe("triggerCalculateAll", () => {
     it("makes a post request with project id and visibility", async () => {
-      vi.mocked(apiServices.post).mockResolvedValue({ data: { status: "queued" } });
+      vi.mocked(apiServices.post).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { status: "queued" },
+      });
 
       const result = await triggerCalculateAll(1, "public");
 
@@ -38,7 +42,11 @@ describe("readiness.repository", () => {
 
   describe("triggerCalculateFramework", () => {
     it("makes a post request scoped to the framework type", async () => {
-      vi.mocked(apiServices.post).mockResolvedValue({ data: { status: "queued" } });
+      vi.mocked(apiServices.post).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { status: "queued" },
+      });
 
       await triggerCalculateFramework("iso42001", 2, "private");
 
@@ -51,7 +59,11 @@ describe("readiness.repository", () => {
 
   describe("getReadinessScores", () => {
     it("builds a query string from project id and visibility", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { score: 80 } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { score: 80 },
+      });
 
       await getReadinessScores(3, "public");
 
@@ -61,7 +73,11 @@ describe("readiness.repository", () => {
     });
 
     it("makes a get request without a query string when no params are given", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { score: 0 } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { score: 0 },
+      });
 
       await getReadinessScores();
 
@@ -71,7 +87,11 @@ describe("readiness.repository", () => {
 
   describe("getReadinessScoresByFramework", () => {
     it("builds a query string and scopes to the framework type", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { score: 80 } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { score: 80 },
+      });
 
       await getReadinessScoresByFramework("iso27001", 3);
 
@@ -81,7 +101,7 @@ describe("readiness.repository", () => {
 
   describe("getControlScores", () => {
     it("builds a query string and scopes to the framework type", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: [] });
+      vi.mocked(apiServices.get).mockResolvedValue({ status: 200, statusText: "OK", data: [] });
 
       await getControlScores("iso27001", 3, "public");
 
@@ -93,7 +113,7 @@ describe("readiness.repository", () => {
 
   describe("getWeakestControls", () => {
     it("builds a query string with limit, project id, and visibility", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: [] });
+      vi.mocked(apiServices.get).mockResolvedValue({ status: 200, statusText: "OK", data: [] });
 
       await getWeakestControls(5, 3, "public");
 
@@ -105,7 +125,7 @@ describe("readiness.repository", () => {
 
   describe("getRecommendations", () => {
     it("builds a query string with limit, project id, and visibility", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: [] });
+      vi.mocked(apiServices.get).mockResolvedValue({ status: 200, statusText: "OK", data: [] });
 
       await getRecommendations(10, 3);
 
@@ -117,7 +137,7 @@ describe("readiness.repository", () => {
 
   describe("getReadinessHistory", () => {
     it("builds a query string with framework type, project id, and visibility", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: [] });
+      vi.mocked(apiServices.get).mockResolvedValue({ status: 200, statusText: "OK", data: [] });
 
       await getReadinessHistory("iso42001", 3, "public");
 
@@ -127,7 +147,7 @@ describe("readiness.repository", () => {
     });
 
     it("makes a get request without a query string when no params are given", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: [] });
+      vi.mocked(apiServices.get).mockResolvedValue({ status: 200, statusText: "OK", data: [] });
 
       await getReadinessHistory();
 

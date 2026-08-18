@@ -15,7 +15,11 @@ beforeEach(() => {
 describe("ssoConfig.repository", () => {
   describe("GetSsoFeatureEnabled", () => {
     it("returns true when the backend reports the feature enabled", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { data: { enabled: true } } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { enabled: true } },
+      });
       const { GetSsoFeatureEnabled } = await import("../ssoConfig.repository");
 
       const result = await GetSsoFeatureEnabled();
@@ -25,7 +29,11 @@ describe("ssoConfig.repository", () => {
     });
 
     it("returns false when the backend reports the feature disabled", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { data: { enabled: false } } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { enabled: false } },
+      });
       const { GetSsoFeatureEnabled } = await import("../ssoConfig.repository");
 
       const result = await GetSsoFeatureEnabled();
@@ -34,7 +42,11 @@ describe("ssoConfig.repository", () => {
     });
 
     it("falls back to response.data when data.data is absent", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { enabled: true } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { enabled: true },
+      });
       const { GetSsoFeatureEnabled } = await import("../ssoConfig.repository");
 
       const result = await GetSsoFeatureEnabled();
@@ -52,7 +64,11 @@ describe("ssoConfig.repository", () => {
     });
 
     it("caches the promise and only calls the API once across multiple calls", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { data: { enabled: true } } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { enabled: true } },
+      });
       const { GetSsoFeatureEnabled } = await import("../ssoConfig.repository");
 
       await GetSsoFeatureEnabled();
@@ -64,7 +80,11 @@ describe("ssoConfig.repository", () => {
 
   describe("GetSsoConfig", () => {
     it("makes a get request with signal and responseType", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { enabled: true } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { enabled: true },
+      });
       const { GetSsoConfig } = await import("../ssoConfig.repository");
       const signal = new AbortController().signal;
 
@@ -74,13 +94,17 @@ describe("ssoConfig.repository", () => {
         signal,
         responseType: "json",
       });
-      expect(result).toEqual({ data: { enabled: true } });
+      expect(result).toEqual({ status: 200, statusText: "OK", data: { enabled: true } });
     });
   });
 
   describe("UpdateSsoConfig", () => {
     it("makes a put request with the body and returns response data", async () => {
-      vi.mocked(apiServices.put).mockResolvedValue({ data: { updated: true } });
+      vi.mocked(apiServices.put).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { updated: true },
+      });
       const { UpdateSsoConfig } = await import("../ssoConfig.repository");
 
       const result = await UpdateSsoConfig({ routeUrl: "ssoConfig/1", body: { enabled: true } });
@@ -92,7 +116,11 @@ describe("ssoConfig.repository", () => {
 
   describe("ToggleSsoStatus", () => {
     it("makes a put request with the body and returns response data", async () => {
-      vi.mocked(apiServices.put).mockResolvedValue({ data: { enabled: false } });
+      vi.mocked(apiServices.put).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { enabled: false },
+      });
       const { ToggleSsoStatus } = await import("../ssoConfig.repository");
 
       const result = await ToggleSsoStatus({
@@ -108,6 +136,8 @@ describe("ssoConfig.repository", () => {
   describe("CheckSsoStatus", () => {
     it("makes a get request with the default provider when none is given", async () => {
       vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
         data: { data: { isEnabled: true, hasConfig: true } },
       });
       const { CheckSsoStatus } = await import("../ssoConfig.repository");
@@ -120,6 +150,8 @@ describe("ssoConfig.repository", () => {
 
     it("includes organizationId in the query when provided", async () => {
       vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
         data: { data: { isEnabled: false, hasConfig: false } },
       });
       const { CheckSsoStatus } = await import("../ssoConfig.repository");
@@ -132,7 +164,11 @@ describe("ssoConfig.repository", () => {
     });
 
     it("falls back to response.data when data.data is absent", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { isEnabled: true, hasConfig: true } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { isEnabled: true, hasConfig: true },
+      });
       const { CheckSsoStatus } = await import("../ssoConfig.repository");
 
       const result = await CheckSsoStatus();
@@ -143,7 +179,11 @@ describe("ssoConfig.repository", () => {
 
   describe("GetSsoOrgs", () => {
     it("makes a get request with the default provider when none is given", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { data: [{ id: 1, name: "Org" }] } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: [{ id: 1, name: "Org" }] },
+      });
       const { GetSsoOrgs } = await import("../ssoConfig.repository");
 
       const result = await GetSsoOrgs();
@@ -153,7 +193,11 @@ describe("ssoConfig.repository", () => {
     });
 
     it("makes a get request with the given provider", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { data: [] } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: [] },
+      });
       const { GetSsoOrgs } = await import("../ssoConfig.repository");
 
       await GetSsoOrgs("Okta");

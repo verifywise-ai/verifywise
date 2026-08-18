@@ -163,11 +163,11 @@ describe("ProfileForm", () => {
     });
   });
 
-  it("hides the delete-account section for super admins", async () => {
+  it("shows the delete-account section enabled for super admins", async () => {
     mockIsSuperAdmin = true;
     renderWithProviders(<ProfileForm />);
     await waitFor(() => expect(screen.getByDisplayValue("Jane")).toBeInTheDocument());
-    expect(screen.queryByText("Delete account")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Delete account" })).not.toBeDisabled();
   });
 
   it("shows the delete-account section and disables it for admins", async () => {

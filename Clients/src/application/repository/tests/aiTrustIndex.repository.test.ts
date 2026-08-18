@@ -26,7 +26,11 @@ beforeEach(() => {
 describe("aiTrustIndex.repository", () => {
   describe("getApps", () => {
     it("builds a query string from the provided params", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { apps: [] } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { apps: [] },
+      });
 
       await getApps({ search: "chat", category: "llm", page: 2, pageSize: 20 });
 
@@ -36,7 +40,11 @@ describe("aiTrustIndex.repository", () => {
     });
 
     it("skips empty-string params and defaults to no params", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { apps: [] } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { apps: [] },
+      });
 
       await getApps();
 
@@ -46,7 +54,11 @@ describe("aiTrustIndex.repository", () => {
 
   describe("getApp", () => {
     it("makes a get request scoped to the encoded slug", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { slug: "my app" } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { slug: "my app" },
+      });
 
       const result = await getApp("my app");
 
@@ -57,7 +69,7 @@ describe("aiTrustIndex.repository", () => {
 
   describe("getTracked", () => {
     it("makes a get request for tracked apps", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: [] });
+      vi.mocked(apiServices.get).mockResolvedValue({ status: 200, statusText: "OK", data: [] });
 
       await getTracked();
 
@@ -67,7 +79,11 @@ describe("aiTrustIndex.repository", () => {
 
   describe("trackApp", () => {
     it("makes a post request with the slug", async () => {
-      vi.mocked(apiServices.post).mockResolvedValue({ data: { tracked: true } });
+      vi.mocked(apiServices.post).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { tracked: true },
+      });
 
       const result = await trackApp("chat-gpt");
 
@@ -80,7 +96,11 @@ describe("aiTrustIndex.repository", () => {
 
   describe("trackAppsBulk", () => {
     it("makes a post request with a list of slugs", async () => {
-      vi.mocked(apiServices.post).mockResolvedValue({ data: { tracked: 2 } });
+      vi.mocked(apiServices.post).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { tracked: 2 },
+      });
 
       await trackAppsBulk(["a", "b"]);
 
@@ -92,7 +112,11 @@ describe("aiTrustIndex.repository", () => {
 
   describe("untrackApp", () => {
     it("makes a delete request scoped to the encoded slug", async () => {
-      vi.mocked(apiServices.delete).mockResolvedValue({ data: { tracked: false } });
+      vi.mocked(apiServices.delete).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { tracked: false },
+      });
 
       await untrackApp("chat gpt");
 
@@ -103,6 +127,8 @@ describe("aiTrustIndex.repository", () => {
   describe("getSettings", () => {
     it("makes a get request for settings", async () => {
       vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
         data: { recipientUserIds: [1], recipientEmails: [] },
       });
 
@@ -116,7 +142,7 @@ describe("aiTrustIndex.repository", () => {
   describe("updateSettings", () => {
     it("makes a put request with the settings payload", async () => {
       const body = { recipientUserIds: [1, 2], recipientEmails: ["a@b.com"] };
-      vi.mocked(apiServices.put).mockResolvedValue({ data: body });
+      vi.mocked(apiServices.put).mockResolvedValue({ status: 200, statusText: "OK", data: body });
 
       const result = await updateSettings(body);
 

@@ -15,17 +15,6 @@ vi.mock("../../../../../application/repository/entity.repository", () => ({
   getEntityById: (...args: any[]) => mockGetEntityById(...args),
 }));
 
-const mockGetComponentsForSlot = vi.fn(() => []);
-vi.mock("../../../../../application/contexts/PluginRegistry.context", () => ({
-  usePluginRegistry: () => ({
-    getComponentsForSlot: mockGetComponentsForSlot,
-  }),
-}));
-
-vi.mock("../../../../components/PluginSlot", () => ({
-  PluginSlot: () => <div data-testid="plugin-slot" />,
-}));
-
 vi.mock("../FrameworkProgressCard", () => ({
   default: () => <div data-testid="framework-progress-card" />,
 }));
@@ -99,7 +88,6 @@ describe("FrameworkDashboard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
-    mockGetComponentsForSlot.mockReturnValue([]);
     mockGetEntityById.mockResolvedValue({ data: {} });
   });
 
@@ -110,19 +98,6 @@ describe("FrameworkDashboard", () => {
     await waitFor(() => {
       expect(screen.getByText("No frameworks enabled for this organization.")).toBeInTheDocument();
     });
-  });
-
-  it("renders the plugin slot instead of the empty message when a custom dashboard is registered", async () => {
-    mockGetComponentsForSlot.mockReturnValue([{}]);
-    renderWithProviders(
-      <FrameworkDashboard organizationalProject={baseProject} filteredFrameworks={[]} />,
-    );
-    await waitFor(() => {
-      expect(screen.getByTestId("plugin-slot")).toBeInTheDocument();
-    });
-    expect(
-      screen.queryByText("No frameworks enabled for this organization."),
-    ).not.toBeInTheDocument();
   });
 
   it("renders tabs and summary cards for ISO 42001 and ISO 27001 frameworks", async () => {

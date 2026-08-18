@@ -48,7 +48,11 @@ beforeEach(() => {
 describe("mrm.repository", () => {
   describe("getFleetTiering", () => {
     it("makes a get request and returns the fleet rows", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { data: [{ id: 1 }] } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: [{ id: 1 }] },
+      });
 
       const result = await getFleetTiering();
 
@@ -57,7 +61,7 @@ describe("mrm.repository", () => {
     });
 
     it("returns an empty array when data is absent", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: {} });
+      vi.mocked(apiServices.get).mockResolvedValue({ status: 200, statusText: "OK", data: {} });
 
       const result = await getFleetTiering();
 
@@ -68,7 +72,11 @@ describe("mrm.repository", () => {
   describe("assignModelTier", () => {
     it("makes a put request scoped to the model id", async () => {
       const payload = { tier: "tier_1" } as any;
-      vi.mocked(apiServices.put).mockResolvedValue({ data: { data: { id: 1, ...payload } } });
+      vi.mocked(apiServices.put).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { id: 1, ...payload } },
+      });
 
       const result = await assignModelTier(1, payload);
 
@@ -79,7 +87,11 @@ describe("mrm.repository", () => {
 
   describe("getValidations", () => {
     it("builds a query string when modelId is given", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { data: [] } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: [] },
+      });
 
       await getValidations(5);
 
@@ -89,7 +101,11 @@ describe("mrm.repository", () => {
     });
 
     it("makes a get request without a query string when modelId is not given", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { data: [] } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: [] },
+      });
 
       await getValidations();
 
@@ -100,7 +116,11 @@ describe("mrm.repository", () => {
   describe("createValidation", () => {
     it("makes a post request scoped to the model id", async () => {
       const payload = { validation_type: "initial" } as any;
-      vi.mocked(apiServices.post).mockResolvedValue({ data: { data: { id: 1, ...payload } } });
+      vi.mocked(apiServices.post).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { id: 1, ...payload } },
+      });
 
       await createValidation(5, payload);
 
@@ -111,7 +131,11 @@ describe("mrm.repository", () => {
   describe("updateValidation", () => {
     it("makes a patch request scoped to the validation id", async () => {
       const payload = { status: "completed" } as any;
-      vi.mocked(apiServices.patch).mockResolvedValue({ data: { data: { id: 1, ...payload } } });
+      vi.mocked(apiServices.patch).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { id: 1, ...payload } },
+      });
 
       await updateValidation(1, payload);
 
@@ -122,7 +146,11 @@ describe("mrm.repository", () => {
   describe("signoffValidation", () => {
     it("makes a post request scoped to the validation id", async () => {
       const payload = { signed_off_by: 1 } as any;
-      vi.mocked(apiServices.post).mockResolvedValue({ data: { data: { id: 1, ...payload } } });
+      vi.mocked(apiServices.post).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { id: 1, ...payload } },
+      });
 
       await signoffValidation(1, payload);
 
@@ -132,7 +160,11 @@ describe("mrm.repository", () => {
 
   describe("getFindings", () => {
     it("builds a query string from provided filters", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { data: [] } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: [] },
+      });
 
       await getFindings({ modelId: 1, validationId: 2 });
 
@@ -142,7 +174,11 @@ describe("mrm.repository", () => {
     });
 
     it("makes a get request without a query string when no filters are given", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { data: [] } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: [] },
+      });
 
       await getFindings();
 
@@ -153,7 +189,11 @@ describe("mrm.repository", () => {
   describe("createFinding", () => {
     it("makes a post request scoped to the validation id", async () => {
       const payload = { severity: "high" } as any;
-      vi.mocked(apiServices.post).mockResolvedValue({ data: { data: { id: 1, ...payload } } });
+      vi.mocked(apiServices.post).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { id: 1, ...payload } },
+      });
 
       await createFinding(1, payload);
 
@@ -164,7 +204,11 @@ describe("mrm.repository", () => {
   describe("updateFinding", () => {
     it("makes a patch request scoped to the finding id", async () => {
       const payload = { status: "resolved" } as any;
-      vi.mocked(apiServices.patch).mockResolvedValue({ data: { data: { id: 1, ...payload } } });
+      vi.mocked(apiServices.patch).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { id: 1, ...payload } },
+      });
 
       await updateFinding(1, payload);
 
@@ -174,7 +218,11 @@ describe("mrm.repository", () => {
 
   describe("getModelRoles", () => {
     it("makes a get request scoped to the model id", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { data: [{ id: 1 }] } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: [{ id: 1 }] },
+      });
 
       const result = await getModelRoles(1);
 
@@ -186,7 +234,11 @@ describe("mrm.repository", () => {
   describe("setModelRoles", () => {
     it("makes a put request with the assignments payload", async () => {
       const assignments = [{ user_id: 1, role: "owner" }] as any;
-      vi.mocked(apiServices.put).mockResolvedValue({ data: { data: assignments } });
+      vi.mocked(apiServices.put).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: assignments },
+      });
 
       await setModelRoles(1, assignments);
 
@@ -196,7 +248,11 @@ describe("mrm.repository", () => {
 
   describe("getModelMonitoring", () => {
     it("makes a get request scoped to the model id", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { data: [] } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: [] },
+      });
 
       await getModelMonitoring(1);
 
@@ -208,7 +264,11 @@ describe("mrm.repository", () => {
 
   describe("getMetricTrend", () => {
     it("makes a get request with the encoded metric name", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { data: [] } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: [] },
+      });
 
       await getMetricTrend(1, "accuracy score");
 
@@ -221,7 +281,11 @@ describe("mrm.repository", () => {
 
   describe("getModelBreaches", () => {
     it("makes a get request scoped to the model id", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { data: [] } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: [] },
+      });
 
       await getModelBreaches(1);
 
@@ -233,7 +297,11 @@ describe("mrm.repository", () => {
 
   describe("getIngestionTokens", () => {
     it("makes a get request for ingestion tokens", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { data: [] } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: [] },
+      });
 
       await getIngestionTokens();
 
@@ -244,7 +312,11 @@ describe("mrm.repository", () => {
   describe("createIngestionToken", () => {
     it("makes a post request with the token payload", async () => {
       const payload = { model_id: 1 } as any;
-      vi.mocked(apiServices.post).mockResolvedValue({ data: { data: { token: "abc" } } });
+      vi.mocked(apiServices.post).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { token: "abc" } },
+      });
 
       await createIngestionToken(payload);
 
@@ -254,7 +326,11 @@ describe("mrm.repository", () => {
 
   describe("rotateIngestionToken", () => {
     it("makes a post request scoped to the token id", async () => {
-      vi.mocked(apiServices.post).mockResolvedValue({ data: { data: { token: "new" } } });
+      vi.mocked(apiServices.post).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { token: "new" } },
+      });
 
       await rotateIngestionToken(1);
 
@@ -264,7 +340,11 @@ describe("mrm.repository", () => {
 
   describe("revokeIngestionToken", () => {
     it("makes a post request scoped to the token id", async () => {
-      vi.mocked(apiServices.post).mockResolvedValue({ data: { data: { id: 1, revoked: true } } });
+      vi.mocked(apiServices.post).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { id: 1, revoked: true } },
+      });
 
       await revokeIngestionToken(1);
 
@@ -274,7 +354,11 @@ describe("mrm.repository", () => {
 
   describe("getThresholds", () => {
     it("builds a query string from provided filters", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { data: [] } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: [] },
+      });
 
       await getThresholds({ modelId: 1, metric: "accuracy" });
 
@@ -287,7 +371,11 @@ describe("mrm.repository", () => {
   describe("createThreshold", () => {
     it("makes a post request scoped to the model id", async () => {
       const payload = { metric: "accuracy", min: 0.8 } as any;
-      vi.mocked(apiServices.post).mockResolvedValue({ data: { data: { id: 1, ...payload } } });
+      vi.mocked(apiServices.post).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { id: 1, ...payload } },
+      });
 
       await createThreshold(1, payload);
 
@@ -298,7 +386,11 @@ describe("mrm.repository", () => {
   describe("updateThreshold", () => {
     it("makes a patch request scoped to the threshold id", async () => {
       const payload = { min: 0.9 } as any;
-      vi.mocked(apiServices.patch).mockResolvedValue({ data: { data: { id: 1, ...payload } } });
+      vi.mocked(apiServices.patch).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { id: 1, ...payload } },
+      });
 
       await updateThreshold(1, payload);
 
@@ -308,7 +400,11 @@ describe("mrm.repository", () => {
 
   describe("deleteThreshold", () => {
     it("makes a delete request scoped to the threshold id", async () => {
-      vi.mocked(apiServices.delete).mockResolvedValue({ data: undefined });
+      vi.mocked(apiServices.delete).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: undefined,
+      });
 
       await deleteThreshold(1);
 
@@ -318,7 +414,11 @@ describe("mrm.repository", () => {
 
   describe("getMetricKeys", () => {
     it("makes a get request for metric keys", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { data: [] } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: [] },
+      });
 
       await getMetricKeys();
 
@@ -329,7 +429,11 @@ describe("mrm.repository", () => {
   describe("createMetricKey", () => {
     it("makes a post request with the metric key payload", async () => {
       const payload = { key: "accuracy" } as any;
-      vi.mocked(apiServices.post).mockResolvedValue({ data: { data: { id: 1, ...payload } } });
+      vi.mocked(apiServices.post).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { id: 1, ...payload } },
+      });
 
       await createMetricKey(payload);
 
@@ -339,7 +443,11 @@ describe("mrm.repository", () => {
 
   describe("getRevalidationEvents", () => {
     it("makes a get request scoped to the model id", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { data: [] } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: [] },
+      });
 
       await getRevalidationEvents(1);
 
@@ -351,7 +459,11 @@ describe("mrm.repository", () => {
 
   describe("getAttestationSummary", () => {
     it("makes a get request for the attestation summary", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { data: { totalModels: 10 } } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { totalModels: 10 } },
+      });
 
       const result = await getAttestationSummary();
 
@@ -366,8 +478,10 @@ describe("mrm.repository", () => {
     it("triggers a browser download when the response is a non-empty blob", async () => {
       const blob = new Blob(["docx-content"]);
       vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
         data: blob,
-        headers: { "content-disposition": 'attachment; filename="report.docx"' },
+        headers: { "content-disposition": 'attachment; filename="report.docx"' } as any,
       });
 
       const createObjectURL = vi.fn().mockReturnValue("blob:mock-url");
@@ -388,7 +502,12 @@ describe("mrm.repository", () => {
     });
 
     it("throws when the response is not a Blob", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { error: "failed" }, headers: {} });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { error: "failed" },
+        headers: {} as any,
+      });
 
       await expect(downloadAttestationReport()).rejects.toThrow(
         "Attestation report generation failed on the server.",
@@ -397,7 +516,12 @@ describe("mrm.repository", () => {
 
     it("throws when the response blob is empty", async () => {
       const emptyBlob = new Blob([]);
-      vi.mocked(apiServices.get).mockResolvedValue({ data: emptyBlob, headers: {} });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: emptyBlob,
+        headers: {} as any,
+      });
 
       await expect(downloadAttestationReport()).rejects.toThrow(
         "Attestation report generation failed on the server.",
@@ -407,7 +531,11 @@ describe("mrm.repository", () => {
 
   describe("getMrmSettings", () => {
     it("makes a get request for mrm settings", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { data: { retentionDays: 90 } } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { retentionDays: 90 } },
+      });
 
       const result = await getMrmSettings();
 
@@ -419,7 +547,11 @@ describe("mrm.repository", () => {
   describe("updateMrmSettings", () => {
     it("makes a put request with the settings update", async () => {
       const update = { retentionDays: 120 } as any;
-      vi.mocked(apiServices.put).mockResolvedValue({ data: { data: update } });
+      vi.mocked(apiServices.put).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: update },
+      });
 
       const result = await updateMrmSettings(update);
 

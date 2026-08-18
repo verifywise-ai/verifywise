@@ -15,7 +15,7 @@ beforeEach(() => {
 describe("aiContent.repository", () => {
   describe("getBadges", () => {
     it("makes a get request for badges of an entity", async () => {
-      const mockResponse = { data: [{ badge: "reviewed" }] };
+      const mockResponse = { status: 200, statusText: "OK", data: [{ badge: "reviewed" }] };
       vi.mocked(apiServices.get).mockResolvedValue(mockResponse);
 
       const result = await getBadges("task", 5);
@@ -27,7 +27,11 @@ describe("aiContent.repository", () => {
 
   describe("reviewContent", () => {
     it("makes a patch request with review action and notes", async () => {
-      const mockResponse = { data: { id: 1, review_action: "approve" } };
+      const mockResponse = {
+        status: 200,
+        statusText: "OK",
+        data: { id: 1, review_action: "approve" },
+      };
       vi.mocked(apiServices.patch).mockResolvedValue(mockResponse);
 
       const result = await reviewContent(1, "approve", "looks good");
@@ -40,7 +44,11 @@ describe("aiContent.repository", () => {
     });
 
     it("makes a patch request without notes when not provided", async () => {
-      const mockResponse = { data: { id: 2, review_action: "reject" } };
+      const mockResponse = {
+        status: 200,
+        statusText: "OK",
+        data: { id: 2, review_action: "reject" },
+      };
       vi.mocked(apiServices.patch).mockResolvedValue(mockResponse);
 
       await reviewContent(2, "reject");
@@ -54,7 +62,7 @@ describe("aiContent.repository", () => {
 
   describe("getUnreviewed", () => {
     it("makes a get request with limit and offset query params", async () => {
-      const mockResponse = { data: [] };
+      const mockResponse = { status: 200, statusText: "OK", data: [] };
       vi.mocked(apiServices.get).mockResolvedValue(mockResponse);
 
       await getUnreviewed(10, 20);
@@ -63,7 +71,7 @@ describe("aiContent.repository", () => {
     });
 
     it("makes a get request without query string when no params are provided", async () => {
-      const mockResponse = { data: [] };
+      const mockResponse = { status: 200, statusText: "OK", data: [] };
       vi.mocked(apiServices.get).mockResolvedValue(mockResponse);
 
       await getUnreviewed();
@@ -72,7 +80,7 @@ describe("aiContent.repository", () => {
     });
 
     it("returns the response data", async () => {
-      const mockResponse = { data: [{ id: 1 }] };
+      const mockResponse = { status: 200, statusText: "OK", data: [{ id: 1 }] };
       vi.mocked(apiServices.get).mockResolvedValue(mockResponse);
 
       const result = await getUnreviewed(5);
@@ -83,7 +91,7 @@ describe("aiContent.repository", () => {
 
   describe("getStats", () => {
     it("makes a get request for content stats", async () => {
-      const mockResponse = { data: { total: 10, reviewed: 4 } };
+      const mockResponse = { status: 200, statusText: "OK", data: { total: 10, reviewed: 4 } };
       vi.mocked(apiServices.get).mockResolvedValue(mockResponse);
 
       const result = await getStats();

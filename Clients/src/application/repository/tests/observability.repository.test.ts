@@ -14,7 +14,11 @@ beforeEach(() => {
 describe("observability.repository", () => {
   describe("getTraces", () => {
     it("makes a get request with all filters applied as query params", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { data: [{ id: "t1" }] } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: [{ id: "t1" }] },
+      });
 
       const result = await getTraces({
         status: "error",
@@ -32,7 +36,11 @@ describe("observability.repository", () => {
     });
 
     it("makes a get request with an empty query string when no filters are provided", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { data: [] } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: [] },
+      });
 
       await getTraces();
 
@@ -40,7 +48,11 @@ describe("observability.repository", () => {
     });
 
     it("falls back to response.data when response.data.data is absent", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: [{ id: "t2" }] });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: [{ id: "t2" }],
+      });
 
       const result = await getTraces();
 
@@ -50,7 +62,11 @@ describe("observability.repository", () => {
 
   describe("getTraceDetail", () => {
     it("makes a get request for a specific trace", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { data: { id: "t1" } } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { id: "t1" } },
+      });
 
       const result = await getTraceDetail("t1");
 
@@ -61,7 +77,11 @@ describe("observability.repository", () => {
 
   describe("getObservabilityMetrics", () => {
     it("makes a get request with date range query params", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { data: { total: 42 } } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { total: 42 } },
+      });
 
       const result = await getObservabilityMetrics("2026-01-01", "2026-01-31");
 
@@ -72,7 +92,11 @@ describe("observability.repository", () => {
     });
 
     it("makes a get request with an empty query string when no dates are provided", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { data: { total: 0 } } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { total: 0 } },
+      });
 
       await getObservabilityMetrics();
 

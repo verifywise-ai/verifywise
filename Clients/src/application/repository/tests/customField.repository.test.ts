@@ -27,7 +27,11 @@ beforeEach(() => {
 describe("customField.repository", () => {
   describe("listCustomFieldDefinitions", () => {
     it("makes a get request scoped to the entity type", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { data: [{ id: 1 }] } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: [{ id: 1 }] },
+      });
       const signal = new AbortController().signal;
 
       const result = await listCustomFieldDefinitions({ entityType: "vendor", signal } as any);
@@ -37,7 +41,11 @@ describe("customField.repository", () => {
     });
 
     it("returns an empty array when data is absent", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: undefined });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: undefined,
+      });
 
       const result = await listCustomFieldDefinitions({ entityType: "vendor" } as any);
 
@@ -48,7 +56,11 @@ describe("customField.repository", () => {
   describe("createCustomFieldDefinition", () => {
     it("makes a post request with the definition payload", async () => {
       const body = { label: "Custom", entity_type: "vendor" } as any;
-      vi.mocked(apiServices.post).mockResolvedValue({ data: { data: { id: 1, ...body } } });
+      vi.mocked(apiServices.post).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { id: 1, ...body } },
+      });
 
       const result = await createCustomFieldDefinition(body);
 
@@ -60,7 +72,11 @@ describe("customField.repository", () => {
   describe("updateCustomFieldDefinition", () => {
     it("makes a patch request scoped to the definition id", async () => {
       const body = { label: "Updated" } as any;
-      vi.mocked(apiServices.patch).mockResolvedValue({ data: { data: { id: 2, ...body } } });
+      vi.mocked(apiServices.patch).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { id: 2, ...body } },
+      });
 
       const result = await updateCustomFieldDefinition({ id: 2, body });
 
@@ -71,7 +87,11 @@ describe("customField.repository", () => {
 
   describe("deleteCustomFieldDefinition", () => {
     it("makes a delete request scoped to the definition id", async () => {
-      vi.mocked(apiServices.delete).mockResolvedValue({ data: undefined });
+      vi.mocked(apiServices.delete).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: undefined,
+      });
 
       await deleteCustomFieldDefinition(3);
 
@@ -81,7 +101,11 @@ describe("customField.repository", () => {
 
   describe("getCustomFieldValuesForEntity", () => {
     it("makes a get request scoped to entity type and id", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { data: [{ id: 1, value: "x" }] } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: [{ id: 1, value: "x" }] },
+      });
       const signal = new AbortController().signal;
 
       const result = await getCustomFieldValuesForEntity({
@@ -95,7 +119,11 @@ describe("customField.repository", () => {
     });
 
     it("returns an empty array when data is absent", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: undefined });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: undefined,
+      });
 
       const result = await getCustomFieldValuesForEntity({
         entityType: "vendor",
@@ -109,7 +137,11 @@ describe("customField.repository", () => {
   describe("setCustomFieldValue", () => {
     it("makes a put request with the value payload", async () => {
       const body = { definition_id: 1, entity_id: 5, value: "x" };
-      vi.mocked(apiServices.put).mockResolvedValue({ data: undefined });
+      vi.mocked(apiServices.put).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: undefined,
+      });
 
       await setCustomFieldValue(body);
 
@@ -119,7 +151,11 @@ describe("customField.repository", () => {
 
   describe("deleteCustomFieldValue", () => {
     it("makes a delete request scoped to definition and entity id", async () => {
-      vi.mocked(apiServices.delete).mockResolvedValue({ data: undefined });
+      vi.mocked(apiServices.delete).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: undefined,
+      });
 
       await deleteCustomFieldValue({ definitionId: 1, entityId: 5 });
 
@@ -130,6 +166,8 @@ describe("customField.repository", () => {
   describe("getMissingRequiredCustomFields", () => {
     it("makes a get request scoped to entity type and id", async () => {
       vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
         data: { data: [{ id: 1, field_key: "x", label: "X" }] },
       });
 
@@ -146,7 +184,11 @@ describe("customField.repository", () => {
     });
 
     it("returns an empty array when data is absent", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: undefined });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: undefined,
+      });
 
       const result = await getMissingRequiredCustomFields({
         entityType: "vendor",

@@ -27,7 +27,7 @@ function createMockEditor(
         if (res === false) break;
       }
     }),
-    textBetween: vi.fn((from: number, to: number) => "match"),
+    textBetween: vi.fn(() => "match"),
   };
 
   const tr: any = { setMeta: vi.fn(() => tr), replaceWith: vi.fn(() => tr) };

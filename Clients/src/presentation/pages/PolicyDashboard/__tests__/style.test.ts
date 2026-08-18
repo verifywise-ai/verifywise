@@ -31,10 +31,10 @@ describe("searchBoxStyle", () => {
 
 describe("inputStyle", () => {
   it("is fully opaque when the search bar is visible", () => {
-    expect(inputStyle(true).opacity).toBe(1);
+    expect((inputStyle(true) as Record<string, unknown>).opacity).toBe(1);
   });
 
   it("is transparent when the search bar is hidden", () => {
-    expect(inputStyle(false).opacity).toBe(0);
+    expect((inputStyle(false) as Record<string, unknown>).opacity).toBe(0);
   });
 });

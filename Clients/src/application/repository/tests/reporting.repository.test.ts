@@ -39,7 +39,11 @@ beforeEach(() => {
 describe("reporting.repository", () => {
   describe("getTemplates", () => {
     it("makes a get request and extracts nested data", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { data: [{ id: 1 }] } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: [{ id: 1 }] },
+      });
 
       const result = await getTemplates();
 
@@ -48,7 +52,11 @@ describe("reporting.repository", () => {
     });
 
     it("falls back to response.data when data.data is absent", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: [{ id: 2 }] });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: [{ id: 2 }],
+      });
 
       const result = await getTemplates();
 
@@ -58,7 +66,11 @@ describe("reporting.repository", () => {
 
   describe("getTemplate", () => {
     it("makes a get request scoped to the template id", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { data: { id: 1 } } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { id: 1 } },
+      });
 
       const result = await getTemplate(1);
 
@@ -69,7 +81,11 @@ describe("reporting.repository", () => {
 
   describe("getScheduledReports", () => {
     it("makes a get request for scheduled reports", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { data: [] } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: [] },
+      });
 
       await getScheduledReports();
 
@@ -80,7 +96,11 @@ describe("reporting.repository", () => {
   describe("createScheduledReport", () => {
     it("makes a post request with the body", async () => {
       const body = { name: "Weekly" };
-      vi.mocked(apiServices.post).mockResolvedValue({ data: { data: { id: 1, ...body } } });
+      vi.mocked(apiServices.post).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { id: 1, ...body } },
+      });
 
       const result = await createScheduledReport(body);
 
@@ -91,7 +111,11 @@ describe("reporting.repository", () => {
 
   describe("runScheduledReportNow", () => {
     it("makes a post request scoped to the report id", async () => {
-      vi.mocked(apiServices.post).mockResolvedValue({ data: { data: { runId: 1 } } });
+      vi.mocked(apiServices.post).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { runId: 1 } },
+      });
 
       await runScheduledReportNow(5);
 
@@ -101,7 +125,11 @@ describe("reporting.repository", () => {
 
   describe("setScheduledReportActive", () => {
     it("calls the resume endpoint when active is true", async () => {
-      vi.mocked(apiServices.post).mockResolvedValue({ data: { data: { active: true } } });
+      vi.mocked(apiServices.post).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { active: true } },
+      });
 
       await setScheduledReportActive(5, true);
 
@@ -109,7 +137,11 @@ describe("reporting.repository", () => {
     });
 
     it("calls the pause endpoint when active is false", async () => {
-      vi.mocked(apiServices.post).mockResolvedValue({ data: { data: { active: false } } });
+      vi.mocked(apiServices.post).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { active: false } },
+      });
 
       await setScheduledReportActive(5, false);
 
@@ -120,7 +152,11 @@ describe("reporting.repository", () => {
   describe("updateScheduledReport", () => {
     it("makes a patch request with the body", async () => {
       const body = { name: "Updated" } as any;
-      vi.mocked(apiServices.patch).mockResolvedValue({ data: { data: { id: 5, ...body } } });
+      vi.mocked(apiServices.patch).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { id: 5, ...body } },
+      });
 
       await updateScheduledReport(5, body);
 
@@ -130,7 +166,11 @@ describe("reporting.repository", () => {
 
   describe("deleteScheduledReport", () => {
     it("makes a delete request scoped to the report id", async () => {
-      vi.mocked(apiServices.delete).mockResolvedValue({ data: { data: { ok: true } } });
+      vi.mocked(apiServices.delete).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { ok: true } },
+      });
 
       const result = await deleteScheduledReport(5);
 
@@ -141,7 +181,11 @@ describe("reporting.repository", () => {
 
   describe("getRuns", () => {
     it("builds a query string from the provided params, including archived=false", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { data: { runs: [], total: 0 } } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { runs: [], total: 0 } },
+      });
 
       await getRuns({ scheduledReportId: 3, archived: false, limit: 10, offset: 0 });
 
@@ -151,7 +195,11 @@ describe("reporting.repository", () => {
     });
 
     it("makes a get request without a query string when no params are given", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { data: { runs: [], total: 0 } } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { runs: [], total: 0 } },
+      });
 
       await getRuns();
 
@@ -161,7 +209,11 @@ describe("reporting.repository", () => {
 
   describe("archiveRun", () => {
     it("makes a patch request scoped to the run id", async () => {
-      vi.mocked(apiServices.patch).mockResolvedValue({ data: { data: { archived: true } } });
+      vi.mocked(apiServices.patch).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { archived: true } },
+      });
 
       await archiveRun(9);
 
@@ -171,7 +223,11 @@ describe("reporting.repository", () => {
 
   describe("restoreRun", () => {
     it("makes a patch request scoped to the run id", async () => {
-      vi.mocked(apiServices.patch).mockResolvedValue({ data: { data: { archived: false } } });
+      vi.mocked(apiServices.patch).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { archived: false } },
+      });
 
       await restoreRun(9);
 
@@ -181,7 +237,11 @@ describe("reporting.repository", () => {
 
   describe("deleteRun", () => {
     it("makes a delete request scoped to the run id", async () => {
-      vi.mocked(apiServices.delete).mockResolvedValue({ data: { data: { ok: true } } });
+      vi.mocked(apiServices.delete).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { ok: true } },
+      });
 
       await deleteRun(9);
 
@@ -192,7 +252,7 @@ describe("reporting.repository", () => {
   describe("downloadReportRun", () => {
     it("makes a get request with responseType blob and returns the blob", async () => {
       const blob = new Blob(["pdf-content"]);
-      vi.mocked(apiServices.get).mockResolvedValue({ data: blob });
+      vi.mocked(apiServices.get).mockResolvedValue({ status: 200, statusText: "OK", data: blob });
 
       const result = await downloadReportRun(9);
 
@@ -206,7 +266,11 @@ describe("reporting.repository", () => {
   describe("generateReportV2", () => {
     it("makes a post request with the generation body", async () => {
       const body = { template_id: 1 } as any;
-      vi.mocked(apiServices.post).mockResolvedValue({ data: { data: { runId: 1 } } });
+      vi.mocked(apiServices.post).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { runId: 1 } },
+      });
 
       await generateReportV2(body);
 
@@ -216,7 +280,11 @@ describe("reporting.repository", () => {
 
   describe("getReportRun", () => {
     it("makes a get request scoped to the run id", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { data: { id: 9, status: "done" } } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { id: 9, status: "done" } },
+      });
 
       const result = await getReportRun(9);
 
@@ -227,7 +295,11 @@ describe("reporting.repository", () => {
 
   describe("getSectionCatalog", () => {
     it("makes a get request for the section catalog", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { data: [] } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: [] },
+      });
 
       await getSectionCatalog();
 
@@ -238,7 +310,11 @@ describe("reporting.repository", () => {
   describe("createTemplate", () => {
     it("makes a post request with the template body", async () => {
       const body = { name: "Template" } as any;
-      vi.mocked(apiServices.post).mockResolvedValue({ data: { data: { id: 1, ...body } } });
+      vi.mocked(apiServices.post).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { id: 1, ...body } },
+      });
 
       await createTemplate(body);
 
@@ -249,7 +325,11 @@ describe("reporting.repository", () => {
   describe("updateTemplate", () => {
     it("makes a patch request scoped to the template id", async () => {
       const body = { name: "Updated" } as any;
-      vi.mocked(apiServices.patch).mockResolvedValue({ data: { data: { id: 1, ...body } } });
+      vi.mocked(apiServices.patch).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { id: 1, ...body } },
+      });
 
       await updateTemplate(1, body);
 
@@ -259,7 +339,11 @@ describe("reporting.repository", () => {
 
   describe("archiveTemplate", () => {
     it("makes a delete request scoped to the template id", async () => {
-      vi.mocked(apiServices.delete).mockResolvedValue({ data: { data: { ok: true } } });
+      vi.mocked(apiServices.delete).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { ok: true } },
+      });
 
       const result = await archiveTemplate(1);
 
@@ -271,7 +355,11 @@ describe("reporting.repository", () => {
   describe("runTemplateNow", () => {
     it("makes a post request with the run body", async () => {
       const body = { project_id: 1 };
-      vi.mocked(apiServices.post).mockResolvedValue({ data: { data: { runId: 1 } } });
+      vi.mocked(apiServices.post).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: { runId: 1 } },
+      });
 
       await runTemplateNow(1, body);
 
@@ -281,7 +369,11 @@ describe("reporting.repository", () => {
 
   describe("getRunAnalyses", () => {
     it("makes a get request scoped to the run id", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: { data: [] } });
+      vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
+        data: { data: [] },
+      });
 
       await getRunAnalyses(9);
 

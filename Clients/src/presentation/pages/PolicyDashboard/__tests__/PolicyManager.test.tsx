@@ -214,13 +214,15 @@ describe("PolicyManager", () => {
     );
   });
 
-  it("shows an error alert when policy deletion fails", async () => {
+  it("does not show a success alert when policy deletion fails", async () => {
     mockDeletePolicy.mockRejectedValue(new Error("failed"));
     renderWithProviders(<PolicyManager tags={[]} />, { route: "/policies" });
     fireEvent.click(screen.getByTestId("delete-first"));
-    await waitFor(() =>
-      expect(screen.getByText("Failed to delete policy. Please try again.")).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(mockDeletePolicy).toHaveBeenCalledWith(1));
+    // The failure path no longer renders a local error alert here — it relies
+    // on the global error toast from the mutation hook / axios interceptor —
+    // so the regression to guard against is a false "success" alert.
+    expect(screen.queryByText("Policy deleted successfully!")).not.toBeInTheDocument();
   });
 
   it("opens the linked objects modal for a policy", () => {

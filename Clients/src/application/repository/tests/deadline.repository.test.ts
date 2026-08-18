@@ -15,6 +15,8 @@ describe("deadline.repository", () => {
   describe("getDeadlineSummary", () => {
     it("makes a get request without a query string when days is not provided", async () => {
       vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
         data: { data: { tasks: { overdue: 2, dueSoon: 3, threshold: 7 } } },
       });
 
@@ -25,6 +27,8 @@ describe("deadline.repository", () => {
 
     it("makes a get request with a threshold query string when days is provided", async () => {
       vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
         data: { data: { tasks: { overdue: 1, dueSoon: 2, threshold: 14 } } },
       });
 
@@ -35,6 +39,8 @@ describe("deadline.repository", () => {
 
     it("maps the backend task counts into the summary shape", async () => {
       vi.mocked(apiServices.get).mockResolvedValue({
+        status: 200,
+        statusText: "OK",
         data: { data: { tasks: { overdue: 5, dueSoon: 8, threshold: 7 } } },
       });
 
@@ -46,7 +52,7 @@ describe("deadline.repository", () => {
     });
 
     it("defaults to zero counts when the backend response has no tasks payload", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: {} });
+      vi.mocked(apiServices.get).mockResolvedValue({ status: 200, statusText: "OK", data: {} });
 
       const result = await getDeadlineSummary();
 
@@ -56,7 +62,7 @@ describe("deadline.repository", () => {
     });
 
     it("defaults dueSoonDays to the provided days when tasks payload is missing", async () => {
-      vi.mocked(apiServices.get).mockResolvedValue({ data: {} });
+      vi.mocked(apiServices.get).mockResolvedValue({ status: 200, statusText: "OK", data: {} });
 
       const result = await getDeadlineSummary(21);
 

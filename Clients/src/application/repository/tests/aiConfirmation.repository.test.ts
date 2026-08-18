@@ -19,7 +19,7 @@ beforeEach(() => {
 describe("aiConfirmation.repository", () => {
   describe("approveConfirmation", () => {
     it("makes a post request to approve the confirmation and returns response data", async () => {
-      const mockResponse = { data: { success: true } };
+      const mockResponse = { status: 200, statusText: "OK", data: { success: true } };
       vi.mocked(apiServices.post).mockResolvedValue(mockResponse);
 
       const result = await approveConfirmation("conf-1");
@@ -31,7 +31,7 @@ describe("aiConfirmation.repository", () => {
 
   describe("rejectConfirmation", () => {
     it("makes a post request to reject the confirmation and returns response data", async () => {
-      const mockResponse = { data: { success: true } };
+      const mockResponse = { status: 200, statusText: "OK", data: { success: true } };
       vi.mocked(apiServices.post).mockResolvedValue(mockResponse);
 
       const result = await rejectConfirmation("conf-2");
@@ -43,7 +43,7 @@ describe("aiConfirmation.repository", () => {
 
   describe("getPendingConfirmations", () => {
     it("makes a get request to fetch pending confirmations", async () => {
-      const mockResponse = { data: [{ id: "conf-1" }] };
+      const mockResponse = { status: 200, statusText: "OK", data: [{ id: "conf-1" }] };
       vi.mocked(apiServices.get).mockResolvedValue(mockResponse);
 
       const result = await getPendingConfirmations();
