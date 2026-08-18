@@ -114,14 +114,12 @@ describe("usePlaygroundRuntime", () => {
   });
 
   it("yields a guardrail-blocked message when the response is not ok with guardrail_blocked", async () => {
-    global.fetch = vi
-      .fn()
-      .mockResolvedValue(
-        makeSSEResponse([JSON.stringify({ guardrail_blocked: true, message: "PII detected" })], {
-          ok: false,
-          status: 403,
-        }),
-      );
+    global.fetch = vi.fn().mockResolvedValue(
+      makeSSEResponse([JSON.stringify({ guardrail_blocked: true, message: "PII detected" })], {
+        ok: false,
+        status: 403,
+      }),
+    );
     const configRef = { current: { endpointSlug: "prod", temperature: 0.5, maxTokens: 500 } };
     const { result } = renderHook(() => usePlaygroundRuntime(configRef as any), { wrapper });
     const adapter = result.current as any;
