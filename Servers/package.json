@@ -138,7 +138,7 @@
     "@types/yamljs": "^0.2.34",
     "@typescript-eslint/eslint-plugin": "^8.62.1",
     "@typescript-eslint/parser": "^8.62.1",
-    "eslint": "^9.39.4",
+    "eslint": "^10.8.1",
     "husky": "^9.1.7",
     "jest": "^30.4.2",
     "jszip": "^3.10.1",
