@@ -1,7 +1,12 @@
 import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import ScanPage from "../ScanPage";
-import type { AIDetectionStats, Scan, ScanResponse, ScanStatusResponse } from "../../../../domain/ai-detection/types";
+import type {
+  AIDetectionStats,
+  Scan,
+  ScanResponse,
+  ScanStatusResponse,
+} from "../../../../domain/ai-detection/types";
 
 const mockNavigate = vi.fn();
 vi.mock("react-router", async () => {
@@ -128,9 +133,9 @@ describe("ScanPage", () => {
 
     fireEvent.click(screen.getByText("Shubhamsaboo/awesome-llm-apps"));
 
-    expect(screen.getByPlaceholderText("e.g., https://github.com/owner/repo or owner/repo")).toHaveValue(
-      "Shubhamsaboo/awesome-llm-apps",
-    );
+    expect(
+      screen.getByPlaceholderText("e.g., https://github.com/owner/repo or owner/repo"),
+    ).toHaveValue("Shubhamsaboo/awesome-llm-apps");
   });
 
   it("disables the scan button when the URL is empty", async () => {
@@ -315,16 +320,18 @@ describe("ScanPage", () => {
 
   it("resumes and cancels an in-progress scan", async () => {
     mockGetActiveScan.mockResolvedValue(makeScan({ status: "scanning" }));
-    mockPollScanStatus.mockImplementation((_id: number, onProgress: (s: ScanStatusResponse) => void) => {
-      onProgress({
-        id: 55,
-        status: "scanning",
-        progress: 20,
-        files_scanned: 5,
-        findings_count: 0,
-      });
-      return new Promise(() => {});
-    });
+    mockPollScanStatus.mockImplementation(
+      (_id: number, onProgress: (s: ScanStatusResponse) => void) => {
+        onProgress({
+          id: 55,
+          status: "scanning",
+          progress: 20,
+          files_scanned: 5,
+          findings_count: 0,
+        });
+        return new Promise(() => {});
+      },
+    );
 
     renderWithProviders(<ScanPage />);
 

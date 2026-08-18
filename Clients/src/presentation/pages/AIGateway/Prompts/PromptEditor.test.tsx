@@ -99,15 +99,19 @@ const mockVersion2 = {
 
 const mockPromptData = { id: 1, slug: "support-agent", name: "Support agent", description: null };
 
-function mockLoad(overrides: {
-  prompt?: any;
-  versions?: any[];
-  endpoints?: any[];
-  labels?: any[];
-} = {}) {
+function mockLoad(
+  overrides: {
+    prompt?: any;
+    versions?: any[];
+    endpoints?: any[];
+    labels?: any[];
+  } = {},
+) {
   mockGet.mockImplementation((url: string) => {
     if (url.includes("/versions")) {
-      return Promise.resolve({ data: { versions: overrides.versions ?? [mockVersion1, mockVersion2] } });
+      return Promise.resolve({
+        data: { versions: overrides.versions ?? [mockVersion1, mockVersion2] },
+      });
     }
     if (url.includes("/labels")) {
       return Promise.resolve({ data: { labels: overrides.labels ?? [] } });
@@ -180,7 +184,11 @@ describe("AIGateway - PromptEditor", () => {
 
   it("shows a not-found state and navigates back when the prompt is missing", async () => {
     mockGet.mockImplementation((url: string) => {
-      if (url.includes("/ai-gateway/prompts/1") && !url.includes("versions") && !url.includes("labels")) {
+      if (
+        url.includes("/ai-gateway/prompts/1") &&
+        !url.includes("versions") &&
+        !url.includes("labels")
+      ) {
         return Promise.resolve({ data: {} });
       }
       return Promise.resolve({ data: { versions: [], endpoints: [], labels: [] } });

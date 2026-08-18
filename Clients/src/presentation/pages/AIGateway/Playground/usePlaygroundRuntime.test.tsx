@@ -73,20 +73,20 @@ describe("usePlaygroundRuntime", () => {
       adapter.run({ messages: [], abortSignal: new AbortController().signal }),
     );
 
-    expect(chunks).toEqual([
-      { content: [{ type: "text", text: "Select an endpoint first." }] },
-    ]);
+    expect(chunks).toEqual([{ content: [{ type: "text", text: "Select an endpoint first." }] }]);
   });
 
   it("streams accumulated content deltas from the SSE response", async () => {
-    global.fetch = vi.fn().mockResolvedValue(
-      makeSSEResponse([
-        'data: {"choices":[{"delta":{"content":"Hel"}}]}\n\n',
-        'data: {"cost_usd":0.001}\n\n',
-        'data: {"choices":[{"delta":{"content":"lo"}}]}\n\n',
-        "data: [DONE]\n\n",
-      ]),
-    );
+    global.fetch = vi
+      .fn()
+      .mockResolvedValue(
+        makeSSEResponse([
+          'data: {"choices":[{"delta":{"content":"Hel"}}]}\n\n',
+          'data: {"cost_usd":0.001}\n\n',
+          'data: {"choices":[{"delta":{"content":"lo"}}]}\n\n',
+          "data: [DONE]\n\n",
+        ]),
+      );
     const configRef = {
       current: { endpointSlug: "prod", temperature: 0.5, maxTokens: 500 },
     };
@@ -114,12 +114,14 @@ describe("usePlaygroundRuntime", () => {
   });
 
   it("yields a guardrail-blocked message when the response is not ok with guardrail_blocked", async () => {
-    global.fetch = vi.fn().mockResolvedValue(
-      makeSSEResponse(
-        [JSON.stringify({ guardrail_blocked: true, message: "PII detected" })],
-        { ok: false, status: 403 },
-      ),
-    );
+    global.fetch = vi
+      .fn()
+      .mockResolvedValue(
+        makeSSEResponse([JSON.stringify({ guardrail_blocked: true, message: "PII detected" })], {
+          ok: false,
+          status: 403,
+        }),
+      );
     const configRef = { current: { endpointSlug: "prod", temperature: 0.5, maxTokens: 500 } };
     const { result } = renderHook(() => usePlaygroundRuntime(configRef as any), { wrapper });
     const adapter = result.current as any;
@@ -152,9 +154,9 @@ describe("usePlaygroundRuntime", () => {
   });
 
   it("falls back to a raw status/text error when the error body isn't JSON", async () => {
-    global.fetch = vi.fn().mockResolvedValue(
-      makeSSEResponse(["Internal Server Error"], { ok: false, status: 500 }),
-    );
+    global.fetch = vi
+      .fn()
+      .mockResolvedValue(makeSSEResponse(["Internal Server Error"], { ok: false, status: 500 }));
     const configRef = { current: { endpointSlug: "prod", temperature: 0.5, maxTokens: 500 } };
     const { result } = renderHook(() => usePlaygroundRuntime(configRef as any), { wrapper });
     const adapter = result.current as any;
@@ -182,14 +184,16 @@ describe("usePlaygroundRuntime", () => {
   });
 
   it("silently skips malformed SSE lines and non-text message parts", async () => {
-    global.fetch = vi.fn().mockResolvedValue(
-      makeSSEResponse([
-        "data: {not valid json\n\n",
-        'data: {"choices":[{"delta":{}}]}\n\n',
-        'data: {"choices":[{"delta":{"content":"ok"}}]}\n\n',
-        "data: [DONE]\n\n",
-      ]),
-    );
+    global.fetch = vi
+      .fn()
+      .mockResolvedValue(
+        makeSSEResponse([
+          "data: {not valid json\n\n",
+          'data: {"choices":[{"delta":{}}]}\n\n',
+          'data: {"choices":[{"delta":{"content":"ok"}}]}\n\n',
+          "data: [DONE]\n\n",
+        ]),
+      );
     const configRef = { current: { endpointSlug: "prod", temperature: 0.5, maxTokens: 500 } };
     const { result } = renderHook(() => usePlaygroundRuntime(configRef as any), { wrapper });
     const adapter = result.current as any;
@@ -197,7 +201,13 @@ describe("usePlaygroundRuntime", () => {
     const chunks = await collect(
       adapter.run({
         messages: [
-          { role: "user", content: [{ type: "image", url: "x" }, { type: "text", text: "hi" }] },
+          {
+            role: "user",
+            content: [
+              { type: "image", url: "x" },
+              { type: "text", text: "hi" },
+            ],
+          },
         ],
         abortSignal: new AbortController().signal,
       }),

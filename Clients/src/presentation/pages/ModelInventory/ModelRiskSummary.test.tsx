@@ -1,7 +1,11 @@
 import { screen, fireEvent } from "@testing-library/react";
 import { renderWithProviders } from "../../../test/renderWithProviders";
 import ModelRiskSummary from "./ModelRiskSummary";
-import { ModelRiskCategory, ModelRiskLevel, ModelRiskStatus } from "../../../domain/interfaces/i.modelRisk";
+import {
+  ModelRiskCategory,
+  ModelRiskLevel,
+  ModelRiskStatus,
+} from "../../../domain/interfaces/i.modelRisk";
 import type { IModelRisk } from "../../../domain/interfaces/i.modelRisk";
 
 const modelRisks: IModelRisk[] = [

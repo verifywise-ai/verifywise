@@ -71,7 +71,9 @@ describe("RightsMatrixSection", () => {
     );
 
     expect(
-      screen.getByText("No fundamental rights loaded. Save the FRIA to generate the rights matrix."),
+      screen.getByText(
+        "No fundamental rights loaded. Save the FRIA to generate the rights matrix.",
+      ),
     ).toBeInTheDocument();
   });
 

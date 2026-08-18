@@ -91,9 +91,7 @@ describe("MappingFormModal", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Create Mapping" }));
 
-    expect(onSubmit).toHaveBeenCalledWith(
-      expect.objectContaining({ source_framework_id: 3 }),
-    );
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ source_framework_id: 3 }));
   });
 
   it("changes mapping strength when a strength chip is clicked", () => {

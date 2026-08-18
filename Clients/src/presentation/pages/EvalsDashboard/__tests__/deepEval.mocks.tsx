@@ -262,10 +262,7 @@ export const mockCsvContent = [
 ].join("\n");
 
 /** Build a File whose content the jsdom FileReader can read as text. */
-export function makeCsvFile(
-  content = mockCsvContent,
-  name = "applicants.csv",
-): File {
+export function makeCsvFile(content = mockCsvContent, name = "applicants.csv"): File {
   return new File([content], name, { type: "text/csv" });
 }
 
@@ -358,7 +355,9 @@ export function resetDeepEvalMocks(): void {
   deepEvalMocks.updateExperiment.mockReset().mockResolvedValue({ experiment: mockExperiment });
   deepEvalMocks.listBiasAuditPresets.mockReset().mockResolvedValue(mockPresetSummaries);
   deepEvalMocks.getBiasAuditPreset.mockReset().mockResolvedValue(mockFullPreset);
-  deepEvalMocks.runBiasAudit.mockReset().mockResolvedValue({ auditId: "audit-1", status: "running" });
+  deepEvalMocks.runBiasAudit
+    .mockReset()
+    .mockResolvedValue({ auditId: "audit-1", status: "running" });
   deepEvalMocks.getAllExperiments.mockReset().mockResolvedValue({ experiments: [] });
   deepEvalMocks.deleteExperiment.mockReset().mockResolvedValue({ success: true });
   deepEvalMocks.createArenaComparison

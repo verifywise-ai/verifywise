@@ -97,7 +97,10 @@ describe("customField.repository", () => {
     it("returns an empty array when data is absent", async () => {
       vi.mocked(apiServices.get).mockResolvedValue({ data: undefined });
 
-      const result = await getCustomFieldValuesForEntity({ entityType: "vendor", entityId: 5 } as any);
+      const result = await getCustomFieldValuesForEntity({
+        entityType: "vendor",
+        entityId: 5,
+      } as any);
 
       expect(result).toEqual([]);
     });
@@ -130,7 +133,10 @@ describe("customField.repository", () => {
         data: { data: [{ id: 1, field_key: "x", label: "X" }] },
       });
 
-      const result = await getMissingRequiredCustomFields({ entityType: "vendor", entityId: 5 } as any);
+      const result = await getMissingRequiredCustomFields({
+        entityType: "vendor",
+        entityId: 5,
+      } as any);
 
       expect(apiServices.get).toHaveBeenCalledWith(
         "/custom-fields/values/vendor/5/missing-required",
@@ -142,7 +148,10 @@ describe("customField.repository", () => {
     it("returns an empty array when data is absent", async () => {
       vi.mocked(apiServices.get).mockResolvedValue({ data: undefined });
 
-      const result = await getMissingRequiredCustomFields({ entityType: "vendor", entityId: 5 } as any);
+      const result = await getMissingRequiredCustomFields({
+        entityType: "vendor",
+        entityId: 5,
+      } as any);
 
       expect(result).toEqual([]);
     });

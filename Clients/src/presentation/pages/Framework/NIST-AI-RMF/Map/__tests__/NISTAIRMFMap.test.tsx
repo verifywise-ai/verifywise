@@ -91,12 +91,7 @@ describe("NISTAIRMFMap", () => {
   });
 
   it("does not render filter bar when handlers missing", () => {
-    renderWithProviders(
-      <NISTAIRMFMap
-        project={defaultProps.project}
-        projectFrameworkId={1}
-      />,
-    );
+    renderWithProviders(<NISTAIRMFMap project={defaultProps.project} projectFrameworkId={1} />);
     expect(screen.queryByTestId("tab-filter-bar")).not.toBeInTheDocument();
   });
 
@@ -197,9 +192,7 @@ describe("NISTAIRMFMap", () => {
   });
 
   it("filters categories by search term", async () => {
-    renderWithProviders(
-      <NISTAIRMFMap {...defaultProps} searchTerm="Accountability Structures" />,
-    );
+    renderWithProviders(<NISTAIRMFMap {...defaultProps} searchTerm="Accountability Structures" />);
     await waitFor(() => {
       expect(screen.getByText(/Accountability Structures/)).toBeInTheDocument();
     });
@@ -229,11 +222,7 @@ describe("NISTAIRMFMap", () => {
 
   it("auto-opens drawer when initial category/subcategory ids provided", async () => {
     renderWithProviders(
-      <NISTAIRMFMap
-        {...defaultProps}
-        initialCategoryId="1"
-        initialSubcategoryId="101"
-      />,
+      <NISTAIRMFMap {...defaultProps} initialCategoryId="1" initialSubcategoryId="101" />,
     );
     await waitFor(() => {
       expect(screen.getByTestId("nist-drawer")).toBeInTheDocument();

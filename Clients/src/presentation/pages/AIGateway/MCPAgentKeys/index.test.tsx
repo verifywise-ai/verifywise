@@ -89,9 +89,7 @@ describe("MCPAgentKeysPage", () => {
     renderWithProviders(<MCPAgentKeysPage />);
 
     await waitFor(() => {
-      expect(
-        screen.getByText("Failed to load agent keys. Please try again."),
-      ).toBeInTheDocument();
+      expect(screen.getByText("Failed to load agent keys. Please try again.")).toBeInTheDocument();
     });
 
     (apiServices.get as any).mockResolvedValue({ data: { data: [] } });
@@ -229,9 +227,7 @@ describe("MCPAgentKeysPage", () => {
     // would just get overwritten. Set up user-event first, then spy on the
     // stub's writeText method so we can assert on it.
     const user = userEvent.setup();
-    const writeTextSpy = vi
-      .spyOn(navigator.clipboard, "writeText")
-      .mockResolvedValue(undefined);
+    const writeTextSpy = vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue(undefined);
     renderWithProviders(<MCPAgentKeysPage />);
 
     await waitFor(() => {

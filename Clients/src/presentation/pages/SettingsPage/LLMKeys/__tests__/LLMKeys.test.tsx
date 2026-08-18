@@ -128,7 +128,9 @@ describe("LLMKeys", () => {
     await waitFor(() => expect(screen.getByText("Anthropic")).toBeInTheDocument());
 
     const editButtons = screen.getAllByRole("button");
-    const editIcon = editButtons.find((btn) => btn.querySelector("svg.lucide-edit, svg.lucide-square-pen"));
+    const editIcon = editButtons.find((btn) =>
+      btn.querySelector("svg.lucide-edit, svg.lucide-square-pen"),
+    );
     expect(editIcon).toBeTruthy();
     await user.click(editIcon!);
     expect(screen.getByText("Edit API key")).toBeInTheDocument();

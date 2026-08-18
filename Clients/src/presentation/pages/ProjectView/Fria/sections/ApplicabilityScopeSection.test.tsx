@@ -54,7 +54,11 @@ describe("ApplicabilityScopeSection", () => {
     const onUpdate = vi.fn();
     const user = userEvent.setup();
     renderWithProviders(
-      <ApplicabilityScopeSection assessment={baseAssessment} onUpdate={onUpdate} isSaving={false} />,
+      <ApplicabilityScopeSection
+        assessment={baseAssessment}
+        onUpdate={onUpdate}
+        isSaving={false}
+      />,
     );
 
     const comboboxes = screen.getAllByRole("combobox");
@@ -68,7 +72,11 @@ describe("ApplicabilityScopeSection", () => {
   it("calls onUpdate with the new period frequency on blur when changed", () => {
     const onUpdate = vi.fn();
     renderWithProviders(
-      <ApplicabilityScopeSection assessment={baseAssessment} onUpdate={onUpdate} isSaving={false} />,
+      <ApplicabilityScopeSection
+        assessment={baseAssessment}
+        onUpdate={onUpdate}
+        isSaving={false}
+      />,
     );
 
     const field = screen.getByLabelText("Period / frequency details");
@@ -81,7 +89,11 @@ describe("ApplicabilityScopeSection", () => {
   it("calls onUpdate with the new FRIA rationale on blur when changed", () => {
     const onUpdate = vi.fn();
     renderWithProviders(
-      <ApplicabilityScopeSection assessment={baseAssessment} onUpdate={onUpdate} isSaving={false} />,
+      <ApplicabilityScopeSection
+        assessment={baseAssessment}
+        onUpdate={onUpdate}
+        isSaving={false}
+      />,
     );
 
     const field = screen.getByLabelText("FRIA rationale");
@@ -94,7 +106,11 @@ describe("ApplicabilityScopeSection", () => {
   it("does not call onUpdate on blur when text fields are unchanged", () => {
     const onUpdate = vi.fn();
     renderWithProviders(
-      <ApplicabilityScopeSection assessment={baseAssessment} onUpdate={onUpdate} isSaving={false} />,
+      <ApplicabilityScopeSection
+        assessment={baseAssessment}
+        onUpdate={onUpdate}
+        isSaving={false}
+      />,
     );
 
     fireEvent.blur(screen.getByLabelText("Period / frequency details"));

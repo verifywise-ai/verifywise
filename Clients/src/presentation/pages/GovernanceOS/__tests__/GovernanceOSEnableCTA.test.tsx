@@ -70,9 +70,7 @@ describe("GovernanceOSEnableCTA", () => {
     mockUserRoleName = "Editor";
     renderWithProviders(<GovernanceOSEnableCTA />);
 
-    expect(
-      screen.getByRole("button", { name: "Enable Governance Intelligence" }),
-    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Enable Governance Intelligence" })).toBeDisabled();
   });
 
   it("shows an 'Enabling...' label while the mutation is pending", () => {

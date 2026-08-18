@@ -84,9 +84,7 @@ describe("AuditLedger", () => {
   it("shows the disabled message and hides ledger content when disabled", () => {
     mockAuditLedgerEnabled = false;
     renderWithProviders(<AuditLedger />);
-    expect(
-      screen.getByText(/The audit ledger is currently disabled/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/The audit ledger is currently disabled/)).toBeInTheDocument();
     expect(screen.queryByText("Verify chain")).not.toBeInTheDocument();
   });
 
@@ -130,9 +128,7 @@ describe("AuditLedger", () => {
 
   it("shows the unverified banner by default", () => {
     renderWithProviders(<AuditLedger />);
-    expect(
-      screen.getByText(/Chain not yet verified/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Chain not yet verified/)).toBeInTheDocument();
   });
 
   it("shows an intact banner when verifyResult status is intact", () => {

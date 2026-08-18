@@ -2,7 +2,12 @@
 // handles, so Vitest requires it to be imported before any other module (its
 // vi.mock registrations also need to run before the component module graph
 // loads).
-import { deepEvalMocks, installBrowserStubs, makeCsvFile, resetDeepEvalMocks } from "./deepEval.mocks";
+import {
+  deepEvalMocks,
+  installBrowserStubs,
+  makeCsvFile,
+  resetDeepEvalMocks,
+} from "./deepEval.mocks";
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { useState } from "react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
@@ -16,13 +21,17 @@ function getByTextContent(text: string) {
   );
 }
 
-function renderModal(
-  props: Partial<Parameters<typeof NewBiasAuditModal>[0]> = {},
-) {
+function renderModal(props: Partial<Parameters<typeof NewBiasAuditModal>[0]> = {}) {
   const onClose = vi.fn();
   const onAuditCreated = vi.fn();
   const utils = renderWithProviders(
-    <NewBiasAuditModal isOpen onClose={onClose} orgId="org-1" onAuditCreated={onAuditCreated} {...props} />,
+    <NewBiasAuditModal
+      isOpen
+      onClose={onClose}
+      orgId="org-1"
+      onAuditCreated={onAuditCreated}
+      {...props}
+    />,
   );
   return { ...utils, onClose, onAuditCreated };
 }
@@ -121,7 +130,12 @@ describe("NewBiasAuditModal", () => {
 
     it("does not load presets when the modal is closed", () => {
       renderWithProviders(
-        <NewBiasAuditModal isOpen={false} onClose={vi.fn()} orgId="org-1" onAuditCreated={vi.fn()} />,
+        <NewBiasAuditModal
+          isOpen={false}
+          onClose={vi.fn()}
+          orgId="org-1"
+          onAuditCreated={vi.fn()}
+        />,
       );
 
       expect(deepEvalMocks.listBiasAuditPresets).not.toHaveBeenCalled();
@@ -304,7 +318,7 @@ describe("NewBiasAuditModal", () => {
       expect(screen.getByText("2 columns detected")).toBeInTheDocument();
       expect(screen.getByText("full name")).toBeInTheDocument();
       expect(screen.getByText("Doe, Jane")).toBeInTheDocument();
-      expect(screen.getByText('Smith &quot;Sam&quot;')).toBeInTheDocument();
+      expect(screen.getByText("Smith &quot;Sam&quot;")).toBeInTheDocument();
       expect(screen.getByText("a &amp; b")).toBeInTheDocument();
     });
 

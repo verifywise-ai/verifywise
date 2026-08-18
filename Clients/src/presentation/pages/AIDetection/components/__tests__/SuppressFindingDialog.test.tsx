@@ -27,9 +27,7 @@ describe("SuppressFindingDialog", () => {
   });
 
   it("renders nothing when finding is null", () => {
-    const { container } = render(
-      <SuppressFindingDialog isOpen finding={null} onClose={vi.fn()} />,
-    );
+    const { container } = render(<SuppressFindingDialog isOpen finding={null} onClose={vi.fn()} />);
     expect(container).toBeEmptyDOMElement();
   });
 
@@ -64,12 +62,7 @@ describe("SuppressFindingDialog", () => {
     const onClose = vi.fn();
 
     render(
-      <SuppressFindingDialog
-        isOpen
-        finding={finding}
-        onClose={onClose}
-        onSuccess={onSuccess}
-      />,
+      <SuppressFindingDialog isOpen finding={finding} onClose={onClose} onSuccess={onSuccess} />,
     );
 
     fireEvent.change(screen.getByLabelText(/Reason/), {

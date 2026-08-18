@@ -17,9 +17,7 @@ describe("FrameworkMapperModule", () => {
     renderWithProviders(<FrameworkMapperModule />, { route: "/governance/framework-mapper" });
 
     expect(screen.getAllByText("Framework Mapper").length).toBeGreaterThan(0);
-    expect(
-      screen.getByText(/Explore cross-framework control mappings/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Explore cross-framework control mappings/)).toBeInTheDocument();
     expect(
       screen.getByText("No mappings found for the selected frameworks and filters."),
     ).toBeInTheDocument();

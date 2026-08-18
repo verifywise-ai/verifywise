@@ -52,12 +52,7 @@ describe("VersionDiffModal", () => {
 
   it("does not render modal content when isOpen is false", () => {
     renderWithProviders(
-      <VersionDiffModal
-        isOpen={false}
-        onClose={vi.fn()}
-        versionA={versionA}
-        versionB={versionB}
-      />,
+      <VersionDiffModal isOpen={false} onClose={vi.fn()} versionA={versionA} versionB={versionB} />,
     );
     expect(screen.queryByText("v1 vs v2")).not.toBeInTheDocument();
   });
@@ -129,7 +124,12 @@ describe("VersionDiffModal", () => {
     const withEmpty: Version = { ...versionA, content: [{ role: "user", content: "" }] };
     const withEmpty2: Version = { ...versionB, content: [{ role: "user", content: "" }] };
     renderWithProviders(
-      <VersionDiffModal isOpen={true} onClose={vi.fn()} versionA={withEmpty} versionB={withEmpty2} />,
+      <VersionDiffModal
+        isOpen={true}
+        onClose={vi.fn()}
+        versionA={withEmpty}
+        versionB={withEmpty2}
+      />,
     );
     expect(screen.getAllByText("(empty)")).toHaveLength(2);
   });

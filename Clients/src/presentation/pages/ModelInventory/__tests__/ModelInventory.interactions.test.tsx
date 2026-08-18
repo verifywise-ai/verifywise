@@ -365,7 +365,9 @@ describe("ModelInventory interactions", () => {
     renderWithProviders(<ModelInventory />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Failed to load .+ data\. Please try again later\./)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Failed to load .+ data\. Please try again later\./),
+      ).toBeInTheDocument();
     });
   });
 });

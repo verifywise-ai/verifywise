@@ -60,12 +60,7 @@ describe("scanDetailsConfig", () => {
     });
 
     it("defines border colors for every severity level", () => {
-      expect(Object.keys(SEVERITY_BORDER_COLORS)).toEqual([
-        "critical",
-        "high",
-        "medium",
-        "low",
-      ]);
+      expect(Object.keys(SEVERITY_BORDER_COLORS)).toEqual(["critical", "high", "medium", "low"]);
     });
 
     it("defines tooltips for every confidence level", () => {

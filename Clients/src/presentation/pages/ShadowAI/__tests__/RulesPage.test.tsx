@@ -120,7 +120,9 @@ describe("ShadowAI - RulesPage", () => {
       expect(mockUpdateRule).toHaveBeenCalledWith(1, { is_active: false });
     });
     await waitFor(() => {
-      expect(screen.getByText('Rule "Alert on new tools" disabled successfully')).toBeInTheDocument();
+      expect(
+        screen.getByText('Rule "Alert on new tools" disabled successfully'),
+      ).toBeInTheDocument();
     });
   });
 

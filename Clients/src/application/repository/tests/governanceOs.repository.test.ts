@@ -55,7 +55,9 @@ describe("governanceOs.repository", () => {
 
       await getAllMappings();
 
-      expect(apiServices.get).toHaveBeenCalledWith("/governance-os/mappings", { signal: undefined });
+      expect(apiServices.get).toHaveBeenCalledWith("/governance-os/mappings", {
+        signal: undefined,
+      });
     });
   });
 

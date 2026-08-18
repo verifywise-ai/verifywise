@@ -102,9 +102,7 @@ describe("RepositoriesPage", () => {
     renderWithProviders(<RepositoriesPage />);
 
     await waitFor(() => {
-      expect(
-        screen.getByText(/No repositories added yet/),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/No repositories added yet/)).toBeInTheDocument();
     });
   });
 
@@ -140,7 +138,12 @@ describe("RepositoriesPage", () => {
   it("formats a daily schedule label", async () => {
     mockGetRepositories.mockResolvedValue({
       repositories: [
-        makeRepo({ schedule_enabled: true, schedule_frequency: "daily", schedule_hour: 3, schedule_minute: 30 }),
+        makeRepo({
+          schedule_enabled: true,
+          schedule_frequency: "daily",
+          schedule_hour: 3,
+          schedule_minute: 30,
+        }),
       ],
       pagination: { total: 1, page: 1, limit: 10, total_pages: 1 },
     });

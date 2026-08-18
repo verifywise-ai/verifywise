@@ -28,11 +28,7 @@ const baseFinding: SecurityFinding = {
 describe("SecurityFindingRow", () => {
   it("renders the finding name, module, cwe and owasp ids", () => {
     render(
-      <SecurityFindingRow
-        finding={baseFinding}
-        repositoryOwner="acme"
-        repositoryName="widgets"
-      />,
+      <SecurityFindingRow finding={baseFinding} repositoryOwner="acme" repositoryName="widgets" />,
     );
 
     expect(screen.getByText("unsafe_pickle_load")).toBeInTheDocument();
@@ -57,11 +53,7 @@ describe("SecurityFindingRow", () => {
 
   it("expands to show description, details and file paths on click", () => {
     render(
-      <SecurityFindingRow
-        finding={baseFinding}
-        repositoryOwner="acme"
-        repositoryName="widgets"
-      />,
+      <SecurityFindingRow finding={baseFinding} repositoryOwner="acme" repositoryName="widgets" />,
     );
 
     expect(screen.queryByText("Found in:")).not.toBeVisible();
@@ -77,11 +69,7 @@ describe("SecurityFindingRow", () => {
 
   it("renders CWE and OWASP reference links with correct hrefs", () => {
     render(
-      <SecurityFindingRow
-        finding={baseFinding}
-        repositoryOwner="acme"
-        repositoryName="widgets"
-      />,
+      <SecurityFindingRow finding={baseFinding} repositoryOwner="acme" repositoryName="widgets" />,
     );
 
     fireEvent.click(screen.getByText("unsafe_pickle_load"));

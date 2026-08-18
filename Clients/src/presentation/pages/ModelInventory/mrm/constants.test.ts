@@ -117,9 +117,9 @@ describe("mrm constants helpers", () => {
     });
 
     it("summarises a band threshold", () => {
-      expect(
-        thresholdSummary({ op: MrmThresholdOp.OUTSIDE, value_lo: 0.1, value_hi: 0.2 }),
-      ).toBe("outside 0.1–0.2");
+      expect(thresholdSummary({ op: MrmThresholdOp.OUTSIDE, value_lo: 0.1, value_hi: 0.2 })).toBe(
+        "outside 0.1–0.2",
+      );
       expect(thresholdSummary({ op: MrmThresholdOp.OUTSIDE })).toBe("band");
     });
 

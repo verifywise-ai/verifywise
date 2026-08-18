@@ -55,18 +55,14 @@ vi.mock("../../../components/GovernanceOS/CoverageChart", () => ({
 }));
 
 vi.mock("../../../components/GovernanceOS/MappingStatsPanel", () => ({
-  default: ({ projectId }: any) => (
-    <div data-testid="mapping-stats-panel">stats-{projectId}</div>
-  ),
+  default: ({ projectId }: any) => <div data-testid="mapping-stats-panel">stats-{projectId}</div>,
 }));
 
 vi.mock("../../../components/Modals/CreateTask", () => ({
   default: ({ isOpen, onSuccess }: any) =>
     isOpen ? (
       <div data-testid="create-task-modal">
-        <button onClick={() => onSuccess({ title: "test", entity_links: [] })}>
-          submit-task
-        </button>
+        <button onClick={() => onSuccess({ title: "test", entity_links: [] })}>submit-task</button>
       </div>
     ) : null,
 }));
@@ -76,7 +72,11 @@ import UnifiedInsights from "../UnifiedInsights";
 describe("UnifiedInsights", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockContextValue = { projects: [{ id: 3, project_title: "Project A" }], userId: 1, organizationId: 1 };
+    mockContextValue = {
+      projects: [{ id: 3, project_title: "Project A" }],
+      userId: 1,
+      organizationId: 1,
+    };
     mockCoverage = undefined;
     mockCoverageLoading = false;
     mockRefreshPending = false;

@@ -2,7 +2,12 @@
 // handles, so Vitest requires it to be imported before any other module (its
 // vi.mock registrations also need to run before the component module graph
 // loads).
-import { deepEvalMocks, installBrowserStubs, resetDeepEvalMocks, mockArenaComparisons } from "./deepEval.mocks";
+import {
+  deepEvalMocks,
+  installBrowserStubs,
+  resetDeepEvalMocks,
+  mockArenaComparisons,
+} from "./deepEval.mocks";
 import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import ArenaPage from "../ArenaPage";
@@ -106,7 +111,9 @@ vi.mock("../../../components/Modals/StepperModal", () => ({
 // the judge and per-contestant selectors stay controllable in tests.
 vi.mock("../../../components/Inputs/ModelSelector", () => ({
   default: ({ provider, model, onProviderChange, onModelChange, label }: any) => (
-    <div data-testid={label === "Judge model" ? "judge-model-selector" : "contestant-model-selector"}>
+    <div
+      data-testid={label === "Judge model" ? "judge-model-selector" : "contestant-model-selector"}
+    >
       <span data-testid="model-provider">{provider}</span>
       <span data-testid="model-value">{model}</span>
       <button onClick={() => onProviderChange("anthropic")}>set-provider-anthropic</button>
@@ -181,7 +188,9 @@ const mockMyDataset = {
 function mockDatasets() {
   deepEvalMocks.listMyDatasets.mockResolvedValue({ datasets: [mockMyDataset] });
   deepEvalMocks.listDatasets.mockResolvedValue({
-    chatbot: [{ key: "t1", name: "Template bot", path: "templates/template.json", use_case: "chatbot" }],
+    chatbot: [
+      { key: "t1", name: "Template bot", path: "templates/template.json", use_case: "chatbot" },
+    ],
   });
 }
 
@@ -205,7 +214,9 @@ describe("ArenaPage", () => {
     it("loads comparisons, datasets and configured providers on mount", async () => {
       mockComparisons(mockArenaComparisons);
       mockDatasets();
-      deepEvalMocks.getAllLlmApiKeys.mockResolvedValue([{ id: 1, provider: "openai", apiKey: "sk-test" }]);
+      deepEvalMocks.getAllLlmApiKeys.mockResolvedValue([
+        { id: 1, provider: "openai", apiKey: "sk-test" },
+      ]);
       renderArena();
 
       expect(await screen.findByTestId("arena-row-battle-1")).toBeInTheDocument();
@@ -220,12 +231,16 @@ describe("ArenaPage", () => {
 
     it("passes org_id to listArenaComparisons when orgId is provided", async () => {
       renderArena({ orgId: "org-1" });
-      await waitFor(() => expect(deepEvalMocks.listArenaComparisons).toHaveBeenCalledWith({ org_id: "org-1" }));
+      await waitFor(() =>
+        expect(deepEvalMocks.listArenaComparisons).toHaveBeenCalledWith({ org_id: "org-1" }),
+      );
     });
 
     it("calls listArenaComparisons without arguments when orgId is absent", async () => {
       renderArena();
-      await waitFor(() => expect(deepEvalMocks.listArenaComparisons).toHaveBeenCalledWith(undefined));
+      await waitFor(() =>
+        expect(deepEvalMocks.listArenaComparisons).toHaveBeenCalledWith(undefined),
+      );
     });
 
     it("shows a loading spinner while the initial fetch is pending", async () => {
@@ -406,7 +421,9 @@ describe("ArenaPage", () => {
 
       fireEvent.click(screen.getByText("download-battle-1"));
 
-      await waitFor(() => expect(deepEvalMocks.getArenaComparisonResults).toHaveBeenCalledWith("battle-1"));
+      await waitFor(() =>
+        expect(deepEvalMocks.getArenaComparisonResults).toHaveBeenCalledWith("battle-1"),
+      );
       expect(URL.createObjectURL).toHaveBeenCalled();
       expect(URL.revokeObjectURL).toHaveBeenCalled();
       expect(await screen.findByText("Battle results downloaded")).toBeInTheDocument();
@@ -433,7 +450,9 @@ describe("ArenaPage", () => {
 
       fireEvent.click(screen.getByText("copy-battle-1"));
 
-      await waitFor(() => expect(deepEvalMocks.getArenaComparisonResults).toHaveBeenCalledWith("battle-1"));
+      await waitFor(() =>
+        expect(deepEvalMocks.getArenaComparisonResults).toHaveBeenCalledWith("battle-1"),
+      );
       await waitFor(() => expect(writeText).toHaveBeenCalled());
       expect(writeText.mock.calls[0][0]).toContain('"gpt-4o": 8');
       expect(await screen.findByText("Results copied to clipboard")).toBeInTheDocument();
@@ -458,7 +477,9 @@ describe("ArenaPage", () => {
 
       fireEvent.click(screen.getByText("delete-battle-1"));
 
-      await waitFor(() => expect(deepEvalMocks.deleteArenaComparison).toHaveBeenCalledWith("battle-1"));
+      await waitFor(() =>
+        expect(deepEvalMocks.deleteArenaComparison).toHaveBeenCalledWith("battle-1"),
+      );
       expect(await screen.findByText("Arena comparison deleted")).toBeInTheDocument();
       await waitFor(() => expect(deepEvalMocks.listArenaComparisons).toHaveBeenCalledTimes(2));
     });
@@ -513,8 +534,12 @@ describe("ArenaPage", () => {
       expect(screen.getByTestId("grouped-select")).toBeInTheDocument();
 
       // default judge: openai / gpt-4o
-      expect(within(screen.getByTestId("judge-model-selector")).getByTestId("model-provider")).toHaveTextContent("openai");
-      expect(within(screen.getByTestId("judge-model-selector")).getByTestId("model-value")).toHaveTextContent("gpt-4o");
+      expect(
+        within(screen.getByTestId("judge-model-selector")).getByTestId("model-provider"),
+      ).toHaveTextContent("openai");
+      expect(
+        within(screen.getByTestId("judge-model-selector")).getByTestId("model-value"),
+      ).toHaveTextContent("gpt-4o");
 
       // criteria defaults
       expect(screen.getByTestId("checkbox-helpfulness")).toHaveAttribute("data-checked", "true");
@@ -549,10 +574,16 @@ describe("ArenaPage", () => {
         within(screen.getByTestId("judge-model-selector")).getByTestId("model-value"),
       ).toHaveTextContent("claude-sonnet-4");
 
-      fireEvent.click(within(screen.getByTestId("judge-model-selector")).getByText("set-provider-anthropic"));
+      fireEvent.click(
+        within(screen.getByTestId("judge-model-selector")).getByText("set-provider-anthropic"),
+      );
 
-      expect(within(screen.getByTestId("judge-model-selector")).getByTestId("model-provider")).toHaveTextContent("anthropic");
-      expect(within(screen.getByTestId("judge-model-selector")).getByTestId("model-value")).toHaveTextContent("");
+      expect(
+        within(screen.getByTestId("judge-model-selector")).getByTestId("model-provider"),
+      ).toHaveTextContent("anthropic");
+      expect(
+        within(screen.getByTestId("judge-model-selector")).getByTestId("model-value"),
+      ).toHaveTextContent("");
     });
 
     it("disables Next until a battle name is provided", async () => {
@@ -582,12 +613,16 @@ describe("ArenaPage", () => {
       // criterion twice so nothing stays selected
       fireEvent.click(screen.getByText("Accuracy"));
       fireEvent.click(screen.getByText("Coherence"));
-      ["Conciseness", "Relevance", "Safety", "Creativity", "Instruction Following"].forEach((name) => {
-        fireEvent.click(screen.getByText(name));
-        fireEvent.click(screen.getByText(name));
-      });
+      ["Conciseness", "Relevance", "Safety", "Creativity", "Instruction Following"].forEach(
+        (name) => {
+          fireEvent.click(screen.getByText(name));
+          fireEvent.click(screen.getByText(name));
+        },
+      );
 
-      expect(screen.getByText("Please select at least one evaluation criterion")).toBeInTheDocument();
+      expect(
+        screen.getByText("Please select at least one evaluation criterion"),
+      ).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
     });
 
@@ -620,7 +655,9 @@ describe("ArenaPage", () => {
       fireEvent.click(screen.getByRole("button", { name: "Add player" }));
       expect(screen.getByText("3 players")).toBeInTheDocument();
 
-      const removeButtons = screen.getAllByRole("button").filter((b) => b.querySelector(".lucide-x"));
+      const removeButtons = screen
+        .getAllByRole("button")
+        .filter((b) => b.querySelector(".lucide-x"));
       expect(removeButtons).toHaveLength(3);
       fireEvent.click(removeButtons[0]);
       expect(screen.getByText("2 players")).toBeInTheDocument();
@@ -696,7 +733,9 @@ describe("ArenaPage", () => {
       expect(payload.datasetPath).toBe("datasets/chatbot.json");
       expect(payload.metric.name).toBe("Helpfulness, Accuracy");
       expect(payload.metric.evaluationParams).toEqual(["input", "actual_output"]);
-      expect(payload.metric.criteria).toContain("Evaluate the responses based on the following criteria:");
+      expect(payload.metric.criteria).toContain(
+        "Evaluate the responses based on the following criteria:",
+      );
       expect(payload.metric.criteria).toContain("**Helpfulness**:");
       expect(payload.metric.criteria).toContain("**Accuracy**:");
       expect(payload.judgeModel).toBe("gpt-4o");
@@ -709,7 +748,9 @@ describe("ArenaPage", () => {
       await waitFor(() => expect(screen.queryByTestId("stepper-modal")).not.toBeInTheDocument());
 
       // silent reload happens after creation
-      await waitFor(() => expect(deepEvalMocks.listArenaComparisons.mock.calls.length).toBeGreaterThanOrEqual(2));
+      await waitFor(() =>
+        expect(deepEvalMocks.listArenaComparisons.mock.calls.length).toBeGreaterThanOrEqual(2),
+      );
 
       // reopening shows a reset form
       fireEvent.click(screen.getByRole("button", { name: "New battle" }));

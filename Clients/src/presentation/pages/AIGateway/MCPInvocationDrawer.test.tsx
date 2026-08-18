@@ -191,7 +191,9 @@ describe("MCPInvocationDrawer", () => {
       expect(mockGet).toHaveBeenCalledWith("/ai-gateway/mcp/audit/logs/42");
     });
 
-    mockGet.mockResolvedValue({ data: { data: { ...baseDetail, id: 99, tool_name: "other_tool" } } });
+    mockGet.mockResolvedValue({
+      data: { data: { ...baseDetail, id: 99, tool_name: "other_tool" } },
+    });
     rerender(<MCPInvocationDrawer logId={99} open onClose={vi.fn()} />);
 
     await waitFor(() => {

@@ -97,9 +97,7 @@ describe("AIGateway - VirtualKeys", () => {
     renderWithProviders(<VirtualKeysPage />);
 
     await waitFor(() => {
-      expect(
-        screen.getByText(/Give your developers a single API key/),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/Give your developers a single API key/)).toBeInTheDocument();
     });
 
     expect(screen.getByText("No endpoints configured")).toBeInTheDocument();
@@ -111,9 +109,7 @@ describe("AIGateway - VirtualKeys", () => {
     renderWithProviders(<VirtualKeysPage />);
 
     await waitFor(() => {
-      expect(
-        screen.getByText(/Give your developers a single API key/),
-      ).toBeInTheDocument();
+      expect(screen.getByText(/Give your developers a single API key/)).toBeInTheDocument();
     });
 
     expect(screen.queryByText("No endpoints configured")).not.toBeInTheDocument();
@@ -285,9 +281,7 @@ describe("AIGateway - VirtualKeys", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Revoke key" }));
 
-    expect(
-      screen.getByText(/Are you sure you want to revoke "Backend key"/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Are you sure you want to revoke "Backend key"/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Revoke key" }));
 

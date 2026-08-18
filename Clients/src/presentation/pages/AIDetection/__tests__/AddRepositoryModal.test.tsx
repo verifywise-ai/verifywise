@@ -15,7 +15,11 @@ vi.mock("../../../components/Inputs/Select", () => ({
   default: ({ id, label, value, items, onChange }: any) => (
     <div>
       {label && <label htmlFor={id}>{label}</label>}
-      <select id={id} value={value} onChange={(e) => onChange({ target: { value: e.target.value } })}>
+      <select
+        id={id}
+        value={value}
+        onChange={(e) => onChange({ target: { value: e.target.value } })}
+      >
         {items.map((item: any) => (
           <option key={item._id} value={item._id}>
             {item.name}
@@ -58,13 +62,13 @@ describe("AddRepositoryModal", () => {
   });
 
   it("shows the add-repository title and submit label when not editing", () => {
-    renderWithProviders(
-      <AddRepositoryModal isOpen onClose={vi.fn()} onSubmit={vi.fn()} />,
-    );
+    renderWithProviders(<AddRepositoryModal isOpen onClose={vi.fn()} onSubmit={vi.fn()} />);
 
     expect(screen.getByRole("heading", { name: "Add repository" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Add repository" })).toBeInTheDocument();
-    expect(screen.getByText("Register a GitHub repository for monitoring and optional scheduled scans.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Register a GitHub repository for monitoring and optional scheduled scans."),
+    ).toBeInTheDocument();
   });
 
   it("shows the edit title and pre-fills fields when editing", () => {

@@ -148,7 +148,9 @@ describe("ProjectExperiments", () => {
       mockExperiments(makeExperiment());
       renderExperiments();
 
-      await waitFor(() => expect(deepEvalMocks.getAllExperiments).toHaveBeenCalledWith({ project_id: "proj-1" }));
+      await waitFor(() =>
+        expect(deepEvalMocks.getAllExperiments).toHaveBeenCalledWith({ project_id: "proj-1" }),
+      );
 
       expect(await screen.findByTestId("experiment-row-exp-1")).toBeInTheDocument();
       expect(screen.getByTestId("name-exp-1")).toHaveTextContent("Chat bot eval");
@@ -334,8 +336,17 @@ describe("ProjectExperiments", () => {
 
     it("opens the rerun confirmation with an estimated time based on prompt count", async () => {
       mockExperiments(
-        makeExperiment({ id: "few", name: "Few prompts", results: { avg_scores: {}, total_prompts: 3 } }),
-        makeExperiment({ id: "none", name: "No prompts", results: undefined, config: { ...baseConfig, dataset: {} } }),
+        makeExperiment({
+          id: "few",
+          name: "Few prompts",
+          results: { avg_scores: {}, total_prompts: 3 },
+        }),
+        makeExperiment({
+          id: "none",
+          name: "No prompts",
+          results: undefined,
+          config: { ...baseConfig, dataset: {} },
+        }),
         makeExperiment({
           id: "many",
           name: "Many prompts",
@@ -383,7 +394,12 @@ describe("ProjectExperiments", () => {
       fireEvent.click(await screen.findByText("rerun-exp-1"));
       fireEvent.click(screen.getByRole("button", { name: "Rerun" }));
 
-      await waitFor(() => expect(deepEvalMocks.validateModel).toHaveBeenCalledWith("claude-sonnet-4-20250514", "anthropic"));
+      await waitFor(() =>
+        expect(deepEvalMocks.validateModel).toHaveBeenCalledWith(
+          "claude-sonnet-4-20250514",
+          "anthropic",
+        ),
+      );
       await waitFor(() => expect(deepEvalMocks.createExperiment).toHaveBeenCalled());
 
       const payload = deepEvalMocks.createExperiment.mock.calls[0][0];
@@ -429,7 +445,9 @@ describe("ProjectExperiments", () => {
       await screen.findByText("API key may not be configured");
 
       fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
-      await waitFor(() => expect(screen.queryByText("API key may not be configured")).not.toBeInTheDocument());
+      await waitFor(() =>
+        expect(screen.queryByText("API key may not be configured")).not.toBeInTheDocument(),
+      );
       expect(deepEvalMocks.createExperiment).not.toHaveBeenCalled();
     });
 
@@ -662,7 +680,9 @@ describe("ProjectExperiments", () => {
       fireEvent.click(await screen.findByRole("button", { name: "New experiment" }));
       fireEvent.click(screen.getByText("simulate-success"));
 
-      await waitFor(() => expect(screen.queryByTestId("new-experiment-modal")).not.toBeInTheDocument());
+      await waitFor(() =>
+        expect(screen.queryByTestId("new-experiment-modal")).not.toBeInTheDocument(),
+      );
       await waitFor(() => expect(deepEvalMocks.getAllExperiments).toHaveBeenCalledTimes(2));
     });
 

@@ -54,9 +54,7 @@ describe("PolicyEditorHeader", () => {
   });
 
   it("shows export/import/history actions for an existing policy", () => {
-    renderWithProviders(
-      <PolicyEditorHeader {...baseProps({ isNew: false, hasPolicyId: true })} />,
-    );
+    renderWithProviders(<PolicyEditorHeader {...baseProps({ isNew: false, hasPolicyId: true })} />);
     expect(screen.getByLabelText("Activity history")).toBeInTheDocument();
     expect(screen.getByText("Export")).toBeInTheDocument();
   });

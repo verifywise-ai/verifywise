@@ -22,7 +22,11 @@ const mockCreateMutate = vi.fn();
 const mockUpdateMutate = vi.fn();
 const mockDeleteMutate = vi.fn();
 
-let mockQueryState: { data: ICustomFieldDefinition[] | undefined; isLoading: boolean; isError: boolean };
+let mockQueryState: {
+  data: ICustomFieldDefinition[] | undefined;
+  isLoading: boolean;
+  isError: boolean;
+};
 
 vi.mock("../../../../../application/hooks/useCustomFields", () => ({
   useCustomFieldDefinitions: () => mockQueryState,
@@ -124,9 +128,7 @@ describe("CustomFieldsTab", () => {
     await user.type(screen.getByPlaceholderText("e.g., department_owner"), "Bad Key!");
     await user.click(screen.getByText("Create"));
 
-    expect(
-      screen.getByText(/Field key must start with a lowercase letter/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Field key must start with a lowercase letter/)).toBeInTheDocument();
     expect(mockCreateMutate).not.toHaveBeenCalled();
   });
 

@@ -12,7 +12,9 @@ vi.mock("../../../../infrastructure/api/networkServices", () => ({
 }));
 
 vi.mock("recharts", () => ({
-  ResponsiveContainer: ({ children }: any) => <div data-testid="responsive-container">{children}</div>,
+  ResponsiveContainer: ({ children }: any) => (
+    <div data-testid="responsive-container">{children}</div>
+  ),
   BarChart: ({ children }: any) => <div>{children}</div>,
   Bar: () => <div />,
   XAxis: () => <div />,
@@ -86,7 +88,12 @@ import SpendDashboardPage from "./index";
 const mockGet = apiServices.get as unknown as ReturnType<typeof vi.fn>;
 
 const mockSpendData = {
-  summary: { total_cost: 12.3456, total_requests: 500, total_tokens: 123456, avg_latency_ms: 245.6 },
+  summary: {
+    total_cost: 12.3456,
+    total_requests: 500,
+    total_tokens: 123456,
+    avg_latency_ms: 245.6,
+  },
   by_day: [{ day: "2025-01-01", total_cost: 5 }],
   by_model: [
     { group_key: "gpt-4o", total_cost: 8, total_requests: 300, total_tokens: 90000 },
@@ -97,13 +104,15 @@ const mockSpendData = {
   tokens_per_endpoint: [{ endpoint: "prod", avg_tokens_per_request: 300 }],
 };
 
-function mockNonFirstTime(overrides: {
-  spend?: any;
-  byEndpoint?: any[];
-  byUser?: any[];
-  guardrails?: any;
-  cache?: any;
-} = {}) {
+function mockNonFirstTime(
+  overrides: {
+    spend?: any;
+    byEndpoint?: any[];
+    byUser?: any[];
+    guardrails?: any;
+    cache?: any;
+  } = {},
+) {
   mockGet.mockImplementation((url: string) => {
     if (url.includes("/ai-gateway/spend/logs?limit=1")) {
       return Promise.resolve({ data: { total: 1 } });
@@ -115,7 +124,12 @@ function mockNonFirstTime(overrides: {
       return Promise.resolve({
         data: {
           data: overrides.byUser ?? [
-            { group_key: "jane@example.com", total_requests: 100, total_tokens: 5000, total_cost: 3.5 },
+            {
+              group_key: "jane@example.com",
+              total_requests: 100,
+              total_tokens: 5000,
+              total_cost: 3.5,
+            },
           ],
         },
       });

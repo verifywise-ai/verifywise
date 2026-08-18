@@ -91,8 +91,7 @@ vi.mock("../../../components/breadcrumbs/PageBreadcrumbs", () => ({
 }));
 
 vi.mock("../../../components/Common/HistorySidebar", () => ({
-  HistorySidebar: ({ isOpen }: any) =>
-    isOpen ? <div data-testid="history-sidebar" /> : null,
+  HistorySidebar: ({ isOpen }: any) => (isOpen ? <div data-testid="history-sidebar" /> : null),
 }));
 
 const mockGetPolicyById = vi.fn();
@@ -194,7 +193,9 @@ describe("PolicyEditorPage", () => {
     });
 
     fireEvent.click(screen.getByTestId("fill-valid-form"));
-    await waitFor(() => expect(screen.getByTestId("form-title").textContent).toBe("AI Ethics Policy"));
+    await waitFor(() =>
+      expect(screen.getByTestId("form-title").textContent).toBe("AI Ethics Policy"),
+    );
 
     fireEvent.click(screen.getByText("Save"));
 
@@ -219,7 +220,12 @@ describe("PolicyEditorPage", () => {
     globalThis.fetch = vi.fn().mockResolvedValue({
       json: () =>
         Promise.resolve([
-          { id: 5, title: "Data Governance Template", tags: ["Data governance"], content: "<p>t</p>" },
+          {
+            id: 5,
+            title: "Data Governance Template",
+            tags: ["Data governance"],
+            content: "<p>t</p>",
+          },
         ]),
     }) as any;
 

@@ -158,12 +158,28 @@ describe("getToolbarConfig", () => {
   it("invokes undo/redo/align actions without error", () => {
     const editor = createMockEditor();
     const config = getToolbarConfig({ editor, ...baseOptions });
-    ["undo", "redo", "align-left", "align-center", "align-right", "hr", "ol", "ul", "taskList", "blockquote", "code", "italic", "underline", "strike", "superscript", "subscript", "highlight"].forEach(
-      (key) => {
-        const entry = config.find((c) => c.key === key)!;
-        expect(() => entry.action()).not.toThrow();
-      },
-    );
+    [
+      "undo",
+      "redo",
+      "align-left",
+      "align-center",
+      "align-right",
+      "hr",
+      "ol",
+      "ul",
+      "taskList",
+      "blockquote",
+      "code",
+      "italic",
+      "underline",
+      "strike",
+      "superscript",
+      "subscript",
+      "highlight",
+    ].forEach((key) => {
+      const entry = config.find((c) => c.key === key)!;
+      expect(() => entry.action()).not.toThrow();
+    });
   });
 });
 

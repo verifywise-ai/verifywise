@@ -131,7 +131,9 @@ describe("Activity", () => {
 
   it("labels a deleted user's changes", async () => {
     mockUseEntityChangeHistory.mockReturnValue({
-      data: buildData([makeEntry({ changed_by_user_id: 0, user_name: undefined, user_surname: undefined })]),
+      data: buildData([
+        makeEntry({ changed_by_user_id: 0, user_name: undefined, user_surname: undefined }),
+      ]),
       isLoading: false,
       isError: false,
       fetchNextPage: vi.fn(),

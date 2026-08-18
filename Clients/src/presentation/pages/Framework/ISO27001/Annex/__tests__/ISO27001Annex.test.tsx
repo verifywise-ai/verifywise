@@ -232,11 +232,7 @@ describe("ISO27001Annex", () => {
 
   it("auto-opens drawer when initial annex/control ids are provided", async () => {
     renderWithProviders(
-      <ISO27001Annex
-        {...defaultProps}
-        initialAnnexId="1"
-        initialAnnexControlId="101"
-      />,
+      <ISO27001Annex {...defaultProps} initialAnnexId="1" initialAnnexControlId="101" />,
     );
     await waitFor(() => {
       expect(screen.getByTestId("annex-drawer")).toBeInTheDocument();

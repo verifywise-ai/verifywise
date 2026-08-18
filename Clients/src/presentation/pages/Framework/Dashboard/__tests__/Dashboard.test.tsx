@@ -37,7 +37,10 @@ vi.mock("../StatusBreakdownCard", () => ({
 }));
 vi.mock("../ControlCategoriesCard", () => ({
   default: ({ onNavigate }: any) => (
-    <button data-testid="control-categories-card" onClick={() => onNavigate("ISO 42001", "clauses")}>
+    <button
+      data-testid="control-categories-card"
+      onClick={() => onNavigate("ISO 42001", "clauses")}
+    >
       control-categories
     </button>
   ),

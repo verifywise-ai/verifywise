@@ -47,9 +47,7 @@ const iso27001Clauses = [
     id: 1,
     title: "Custom title 27001",
     arrangement: "6",
-    subClauses: [
-      { id: 1, title: "Sub A", status: "Implemented", owner: 5 },
-    ],
+    subClauses: [{ id: 1, title: "Sub A", status: "Implemented", owner: 5 }],
   },
 ];
 

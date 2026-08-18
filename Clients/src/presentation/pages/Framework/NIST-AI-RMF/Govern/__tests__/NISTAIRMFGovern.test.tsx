@@ -91,12 +91,7 @@ describe("NISTAIRMFGovern", () => {
   });
 
   it("does not render filter bar when handlers missing", () => {
-    renderWithProviders(
-      <NISTAIRMFGovern
-        project={defaultProps.project}
-        projectFrameworkId={1}
-      />,
-    );
+    renderWithProviders(<NISTAIRMFGovern project={defaultProps.project} projectFrameworkId={1} />);
     expect(screen.queryByTestId("tab-filter-bar")).not.toBeInTheDocument();
   });
 
@@ -229,11 +224,7 @@ describe("NISTAIRMFGovern", () => {
 
   it("auto-opens drawer when initial category/subcategory ids provided", async () => {
     renderWithProviders(
-      <NISTAIRMFGovern
-        {...defaultProps}
-        initialCategoryId="1"
-        initialSubcategoryId="101"
-      />,
+      <NISTAIRMFGovern {...defaultProps} initialCategoryId="1" initialSubcategoryId="101" />,
     );
     await waitFor(() => {
       expect(screen.getByTestId("nist-drawer")).toBeInTheDocument();

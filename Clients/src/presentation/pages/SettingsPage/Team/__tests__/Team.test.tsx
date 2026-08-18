@@ -117,7 +117,10 @@ describe("TeamManagement", () => {
   });
 
   it("filters members by role via the toggle buttons", async () => {
-    mockUsers = [buildUser({ id: 2, name: "Jane", roleId: 2 }), buildUser({ id: 3, name: "Al", roleId: 1 })];
+    mockUsers = [
+      buildUser({ id: 2, name: "Jane", roleId: 2 }),
+      buildUser({ id: 3, name: "Al", roleId: 1 }),
+    ];
     const user = userEvent.setup();
     renderWithProviders(<TeamManagement />);
     expect(screen.getByText("Jane Doe")).toBeInTheDocument();

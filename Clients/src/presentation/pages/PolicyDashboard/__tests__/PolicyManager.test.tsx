@@ -57,7 +57,14 @@ vi.mock("../../../../application/hooks/useVirtualFolders", () => ({
 }));
 
 vi.mock("../../../components/Policies/PolicyTable", () => ({
-  default: ({ data, onOpen, onDelete, onLinkedObjects, onAssignToFolder, onBulkActionSuccess }: any) => (
+  default: ({
+    data,
+    onOpen,
+    onDelete,
+    onLinkedObjects,
+    onAssignToFolder,
+    onBulkActionSuccess,
+  }: any) => (
     <div data-testid="policy-table">
       <span data-testid="policy-row-count">{data.length}</span>
       {data.map((p: any) => (
@@ -72,10 +79,7 @@ vi.mock("../../../components/Policies/PolicyTable", () => ({
       <button data-testid="delete-first" onClick={() => data[0] && onDelete(data[0].id)}>
         delete
       </button>
-      <button
-        data-testid="linked-first"
-        onClick={() => data[0] && onLinkedObjects(data[0].id)}
-      >
+      <button data-testid="linked-first" onClick={() => data[0] && onLinkedObjects(data[0].id)}>
         linked
       </button>
       <button
@@ -84,10 +88,7 @@ vi.mock("../../../components/Policies/PolicyTable", () => ({
       >
         assign folder
       </button>
-      <button
-        data-testid="bulk-archive"
-        onClick={() => onBulkActionSuccess?.("archive", 2)}
-      >
+      <button data-testid="bulk-archive" onClick={() => onBulkActionSuccess?.("archive", 2)}>
         bulk archive
       </button>
     </div>
@@ -138,9 +139,7 @@ describe("PolicyManager", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUserRoleName = "Admin";
-    mockUsers = [
-      { id: 1, name: "Jane", surname: "Doe", email: "jane@test.com" },
-    ];
+    mockUsers = [{ id: 1, name: "Jane", surname: "Doe", email: "jane@test.com" }];
     mockPolicies = [
       buildPolicy({ id: 1, title: "AI Ethics Policy", status: "Draft" }),
       buildPolicy({ id: 2, title: "Data Governance Policy", status: "Approved" }),
@@ -167,9 +166,7 @@ describe("PolicyManager", () => {
   it("shows an empty state when there are no policies", () => {
     mockPolicies = [];
     renderWithProviders(<PolicyManager tags={[]} />, { route: "/policies" });
-    expect(
-      screen.getByText(/No policies yet\. Policies define the rules/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/No policies yet\. Policies define the rules/)).toBeInTheDocument();
   });
 
   it("navigates to the new policy editor when 'Add new policy' is clicked", () => {
@@ -236,9 +233,7 @@ describe("PolicyManager", () => {
     renderWithProviders(<PolicyManager tags={[]} />, { route: "/policies" });
     fireEvent.click(screen.getByTestId("assign-folder-first"));
     await waitFor(() => expect(mockGetPolicyFolders).toHaveBeenCalledWith(1));
-    await waitFor(() =>
-      expect(screen.getByTestId("assign-folder-modal")).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByTestId("assign-folder-modal")).toBeInTheDocument());
   });
 
   it("shows a bulk action success alert", () => {

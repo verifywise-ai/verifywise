@@ -36,7 +36,14 @@ describe("aiApp.repository", () => {
 
       const signal = new AbortController().signal;
       await getAllAiApps(
-        { status: AiAppStatus.APPROVED, vendorId: 3, page: 1, limit: 20, sortBy: "name", order: "asc" },
+        {
+          status: AiAppStatus.APPROVED,
+          vendorId: 3,
+          page: 1,
+          limit: 20,
+          sortBy: "name",
+          order: "asc",
+        },
         signal,
       );
 

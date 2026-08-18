@@ -102,7 +102,9 @@ describe("ModelEvaluationsTab", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("1 evaluation flagged a potential risk. Consider adding this to the risk register."),
+        screen.getByText(
+          "1 evaluation flagged a potential risk. Consider adding this to the risk register.",
+        ),
       ).toBeInTheDocument();
     });
     expect(screen.getByText("accuracy: 0.50")).toBeInTheDocument();

@@ -82,12 +82,14 @@ const mockLogs = [
   },
 ];
 
-function mockLoad(overrides: {
-  stats?: any;
-  toolStats?: any[];
-  logs?: any[];
-  total?: number;
-} = {}) {
+function mockLoad(
+  overrides: {
+    stats?: any;
+    toolStats?: any[];
+    logs?: any[];
+    total?: number;
+  } = {},
+) {
   mockGet.mockImplementation((url: string) => {
     if (url.includes("/audit/stats/by-tool")) {
       return Promise.resolve({ data: { data: overrides.toolStats ?? mockToolStats } });

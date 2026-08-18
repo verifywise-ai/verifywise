@@ -100,12 +100,18 @@ describe("AIGateway - Playground", () => {
     // active endpoint's auto-select fallback by clearing localStorage and
     // returning an empty active list alongside a present (but filtered) one.
     mockGet.mockResolvedValue({
-      data: { endpoints: [{ id: 2, slug: "inactive-ep", display_name: "Inactive", is_active: false }] },
+      data: {
+        endpoints: [{ id: 2, slug: "inactive-ep", display_name: "Inactive", is_active: false }],
+      },
     });
     renderWithProviders(<PlaygroundPage />);
 
     await waitFor(() => {
-      expect(screen.getByText("No endpoints available. Configure an endpoint before using the playground.")).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          "No endpoints available. Configure an endpoint before using the playground.",
+        ),
+      ).toBeInTheDocument();
     });
   });
 

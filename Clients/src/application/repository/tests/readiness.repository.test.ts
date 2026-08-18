@@ -55,7 +55,9 @@ describe("readiness.repository", () => {
 
       await getReadinessScores(3, "public");
 
-      expect(apiServices.get).toHaveBeenCalledWith("/readiness/scores?project_id=3&visibility=public");
+      expect(apiServices.get).toHaveBeenCalledWith(
+        "/readiness/scores?project_id=3&visibility=public",
+      );
     });
 
     it("makes a get request without a query string when no params are given", async () => {
@@ -107,7 +109,9 @@ describe("readiness.repository", () => {
 
       await getRecommendations(10, 3);
 
-      expect(apiServices.get).toHaveBeenCalledWith("/readiness/recommendations?limit=10&project_id=3");
+      expect(apiServices.get).toHaveBeenCalledWith(
+        "/readiness/recommendations?limit=10&project_id=3",
+      );
     });
   });
 

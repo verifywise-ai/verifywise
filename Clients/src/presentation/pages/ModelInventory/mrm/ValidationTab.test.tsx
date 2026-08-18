@@ -1,7 +1,11 @@
 import { screen, waitFor, fireEvent } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import ValidationTab from "./ValidationTab";
-import { MrmTier, MrmValidationStage, MrmValidationTrigger } from "../../../../domain/enums/mrm.enum";
+import {
+  MrmTier,
+  MrmValidationStage,
+  MrmValidationTrigger,
+} from "../../../../domain/enums/mrm.enum";
 import { IMrmFleetRow, IMrmValidation } from "../../../../domain/interfaces/i.mrm";
 import { MrmUser } from "./types";
 

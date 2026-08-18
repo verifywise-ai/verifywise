@@ -71,7 +71,9 @@ describe("aiTrustIndex.repository", () => {
 
       const result = await trackApp("chat-gpt");
 
-      expect(apiServices.post).toHaveBeenCalledWith("/ai-trust-index/tracked", { slug: "chat-gpt" });
+      expect(apiServices.post).toHaveBeenCalledWith("/ai-trust-index/tracked", {
+        slug: "chat-gpt",
+      });
       expect(result).toEqual({ tracked: true });
     });
   });

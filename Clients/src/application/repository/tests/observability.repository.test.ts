@@ -1,8 +1,4 @@
-import {
-  getTraces,
-  getTraceDetail,
-  getObservabilityMetrics,
-} from "../observability.repository";
+import { getTraces, getTraceDetail, getObservabilityMetrics } from "../observability.repository";
 import { apiServices } from "../../../infrastructure/api/networkServices";
 
 vi.mock("../../../infrastructure/api/networkServices", () => ({

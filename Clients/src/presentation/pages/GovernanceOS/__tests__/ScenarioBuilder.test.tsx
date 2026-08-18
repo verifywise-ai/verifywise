@@ -38,8 +38,16 @@ vi.mock("../../../../application/hooks/useGovernanceOs", () => ({
   useCreateScenario: () => ({ mutate: mockCreateScenarioMutate, isPending: false }),
   useUpdateScenario: () => ({ mutate: mockUpdateScenarioMutate, isPending: false }),
   useDeleteScenario: () => ({ mutate: mockDeleteScenarioMutate, isPending: false }),
-  useActivateScenario: () => ({ mutate: mockActivateScenarioMutate, isPending: mockActivatePending }),
-  useSimulateScenario: () => ({ mutate: mockSimulateMutate, data: undefined, isPending: false, error: null }),
+  useActivateScenario: () => ({
+    mutate: mockActivateScenarioMutate,
+    isPending: mockActivatePending,
+  }),
+  useSimulateScenario: () => ({
+    mutate: mockSimulateMutate,
+    data: undefined,
+    isPending: false,
+    error: null,
+  }),
 }));
 
 vi.mock("../../../../application/hooks/useProjects", () => ({
@@ -161,7 +169,7 @@ describe("ScenarioBuilder", () => {
     renderWithProviders(<ScenarioBuilder />);
 
     fireEvent.click(screen.getByText("delete-1"));
-    expect(screen.getByText('Delete Scenario')).toBeInTheDocument();
+    expect(screen.getByText("Delete Scenario")).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
     expect(mockDeleteScenarioMutate).toHaveBeenCalledWith(1);

@@ -46,9 +46,7 @@ describe("useTranslation", () => {
     expect(result.current.lang).toBe("en");
 
     act(() => {
-      window.dispatchEvent(
-        new CustomEvent("vw:languagechange", { detail: { lang: "tr" } }),
-      );
+      window.dispatchEvent(new CustomEvent("vw:languagechange", { detail: { lang: "tr" } }));
     });
 
     expect(result.current.lang).toBe("tr");

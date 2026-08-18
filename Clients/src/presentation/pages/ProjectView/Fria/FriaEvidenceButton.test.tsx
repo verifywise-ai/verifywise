@@ -40,9 +40,7 @@ describe("FriaEvidenceButton", () => {
   });
 
   it("fetches evidence for the given fria id and section on mount", async () => {
-    mockGetEvidence.mockResolvedValue([
-      { id: 1, link_id: 10, file_name: "doc.pdf" },
-    ]);
+    mockGetEvidence.mockResolvedValue([{ id: 1, link_id: 10, file_name: "doc.pdf" }]);
     renderWithProviders(<FriaEvidenceButton friaId={1} entityType="section_1" />);
 
     await waitFor(() => {

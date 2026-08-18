@@ -95,7 +95,10 @@ describe("ssoConfig.repository", () => {
       vi.mocked(apiServices.put).mockResolvedValue({ data: { enabled: false } });
       const { ToggleSsoStatus } = await import("../ssoConfig.repository");
 
-      const result = await ToggleSsoStatus({ routeUrl: "ssoConfig/1/toggle", body: { enabled: false } });
+      const result = await ToggleSsoStatus({
+        routeUrl: "ssoConfig/1/toggle",
+        body: { enabled: false },
+      });
 
       expect(apiServices.put).toHaveBeenCalledWith("ssoConfig/1/toggle", { enabled: false });
       expect(result).toEqual({ enabled: false });

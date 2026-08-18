@@ -215,7 +215,9 @@ describe("MCPToolCatalogPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "Edit tool" }));
 
     expect(screen.getByText("Edit tool settings")).toBeInTheDocument();
-    expect(screen.getByText(/Configure risk level and approval for "search_docs"/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Configure risk level and approval for "search_docs"/),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
 
@@ -237,9 +239,7 @@ describe("MCPToolCatalogPage", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Edit tool" }));
 
-    expect(
-      screen.queryByText(/This tool is marked as high risk/),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/This tool is marked as high risk/)).not.toBeInTheDocument();
 
     fireEvent.mouseDown(screen.getByRole("combobox"));
     fireEvent.click(screen.getByRole("option", { name: "High" }));

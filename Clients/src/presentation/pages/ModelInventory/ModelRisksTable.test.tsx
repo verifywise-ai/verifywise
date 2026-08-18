@@ -1,7 +1,11 @@
 import { screen, fireEvent } from "@testing-library/react";
 import { renderWithProviders } from "../../../test/renderWithProviders";
 import ModelRisksTable from "./ModelRisksTable";
-import { ModelRiskCategory, ModelRiskLevel, ModelRiskStatus } from "../../../domain/interfaces/i.modelRisk";
+import {
+  ModelRiskCategory,
+  ModelRiskLevel,
+  ModelRiskStatus,
+} from "../../../domain/interfaces/i.modelRisk";
 import type { IModelRisk } from "../../../domain/interfaces/i.modelRisk";
 import type { IModelInventory } from "../../../domain/interfaces/i.modelInventory";
 import type { User } from "../../../domain/types/User";
@@ -64,8 +68,12 @@ describe("ModelRisksTable", () => {
   });
 
   it("shows an empty state when there is no data", () => {
-    renderWithProviders(<ModelRisksTable data={[]} isLoading={false} onEdit={vi.fn()} onDelete={vi.fn()} />);
-    expect(screen.getByText("There are currently no model risks in this table.")).toBeInTheDocument();
+    renderWithProviders(
+      <ModelRisksTable data={[]} isLoading={false} onEdit={vi.fn()} onDelete={vi.fn()} />,
+    );
+    expect(
+      screen.getByText("There are currently no model risks in this table."),
+    ).toBeInTheDocument();
   });
 
   it("renders risk rows with resolved names for owner and model", () => {
@@ -105,7 +113,14 @@ describe("ModelRisksTable", () => {
   it("calls onEdit when a row is clicked", () => {
     const onEdit = vi.fn();
     renderWithProviders(
-      <ModelRisksTable data={risks} isLoading={false} onEdit={onEdit} onDelete={vi.fn()} users={users} models={models} />,
+      <ModelRisksTable
+        data={risks}
+        isLoading={false}
+        onEdit={onEdit}
+        onDelete={vi.fn()}
+        users={users}
+        models={models}
+      />,
     );
 
     fireEvent.click(screen.getByText("Bias in scoring"));
@@ -114,7 +129,14 @@ describe("ModelRisksTable", () => {
 
   it("sorts by risk name when the column header is clicked", () => {
     renderWithProviders(
-      <ModelRisksTable data={risks} isLoading={false} onEdit={vi.fn()} onDelete={vi.fn()} users={users} models={models} />,
+      <ModelRisksTable
+        data={risks}
+        isLoading={false}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        users={users}
+        models={models}
+      />,
     );
 
     fireEvent.click(screen.getByText("risk name"));

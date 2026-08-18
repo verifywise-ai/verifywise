@@ -42,8 +42,24 @@ vi.mock("../../../../components/button-toggle", () => ({
 }));
 
 const filteredFrameworks = [
-  { id: "1", is_demo: false, project_id: "1", framework_id: "1", name: "ISO 42001", description: "", is_organizational: true },
-  { id: "2", is_demo: false, project_id: "1", framework_id: "2", name: "ISO 27001", description: "", is_organizational: true },
+  {
+    id: "1",
+    is_demo: false,
+    project_id: "1",
+    framework_id: "1",
+    name: "ISO 42001",
+    description: "",
+    is_organizational: true,
+  },
+  {
+    id: "2",
+    is_demo: false,
+    project_id: "1",
+    framework_id: "2",
+    name: "ISO 27001",
+    description: "",
+    is_organizational: true,
+  },
 ] as any;
 
 describe("FrameworkLinkedModels", () => {

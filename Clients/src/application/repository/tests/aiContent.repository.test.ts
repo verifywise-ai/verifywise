@@ -1,9 +1,4 @@
-import {
-  getBadges,
-  reviewContent,
-  getUnreviewed,
-  getStats,
-} from "../aiContent.repository";
+import { getBadges, reviewContent, getUnreviewed, getStats } from "../aiContent.repository";
 import { apiServices } from "../../../infrastructure/api/networkServices";
 
 vi.mock("../../../infrastructure/api/networkServices", () => ({

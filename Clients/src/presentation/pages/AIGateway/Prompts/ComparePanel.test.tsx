@@ -192,9 +192,7 @@ describe("ComparePanel", () => {
   });
 
   it("sends message on Enter key press without Shift", async () => {
-    global.fetch = vi
-      .fn()
-      .mockResolvedValue(makeSSEResponse({ deltas: ["ok"] }));
+    global.fetch = vi.fn().mockResolvedValue(makeSSEResponse({ deltas: ["ok"] }));
 
     renderWithProviders(
       <ComparePanel

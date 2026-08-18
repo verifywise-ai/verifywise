@@ -7,7 +7,10 @@ function textNode(text: string) {
 }
 
 /** Builds a fake TipTap editor whose doc contains the given text nodes at given positions. */
-function createMockEditor(nodes: Array<{ pos: number; text: string }>, selection = { from: 0, to: 0 }) {
+function createMockEditor(
+  nodes: Array<{ pos: number; text: string }>,
+  selection = { from: 0, to: 0 },
+) {
   const dispatch = vi.fn();
   const chain: any = {
     setTextSelection: vi.fn(() => chain),
@@ -77,9 +80,7 @@ describe("usePolicyFindReplace", () => {
   });
 
   it("counts matches across text nodes when searchText changes", () => {
-    const editor = createMockEditor([
-      { pos: 0, text: "the quick fox jumps over the lazy fox" },
-    ]);
+    const editor = createMockEditor([{ pos: 0, text: "the quick fox jumps over the lazy fox" }]);
     const { result } = renderHook(() => usePolicyFindReplace(editor));
 
     act(() => {
@@ -119,10 +120,7 @@ describe("usePolicyFindReplace", () => {
   });
 
   it("handleSearchNext finds the next match after the current selection", () => {
-    const editor = createMockEditor(
-      [{ pos: 0, text: "cat dog cat" }],
-      { from: 0, to: 0 },
-    );
+    const editor = createMockEditor([{ pos: 0, text: "cat dog cat" }], { from: 0, to: 0 });
     const { result } = renderHook(() => usePolicyFindReplace(editor));
 
     act(() => {
@@ -148,10 +146,7 @@ describe("usePolicyFindReplace", () => {
   });
 
   it("handleSearchPrev finds a match before the current selection", () => {
-    const editor = createMockEditor(
-      [{ pos: 0, text: "cat dog cat" }],
-      { from: 11, to: 11 },
-    );
+    const editor = createMockEditor([{ pos: 0, text: "cat dog cat" }], { from: 11, to: 11 });
     const { result } = renderHook(() => usePolicyFindReplace(editor));
 
     act(() => {
@@ -167,10 +162,7 @@ describe("usePolicyFindReplace", () => {
   });
 
   it("handleSearchPrev wraps to the last match when nothing precedes the cursor", () => {
-    const editor = createMockEditor(
-      [{ pos: 0, text: "cat dog cat" }],
-      { from: 0, to: 0 },
-    );
+    const editor = createMockEditor([{ pos: 0, text: "cat dog cat" }], { from: 0, to: 0 });
     const { result } = renderHook(() => usePolicyFindReplace(editor));
 
     act(() => {
@@ -186,10 +178,7 @@ describe("usePolicyFindReplace", () => {
   });
 
   it("handleReplaceCurrent replaces the selected text when it matches the search term", () => {
-    const editor = createMockEditor(
-      [{ pos: 0, text: "cat dog cat" }],
-      { from: 0, to: 3 },
-    );
+    const editor = createMockEditor([{ pos: 0, text: "cat dog cat" }], { from: 0, to: 3 });
     editor.state.doc.textBetween = vi.fn(() => "cat");
     const { result } = renderHook(() => usePolicyFindReplace(editor));
 
@@ -207,10 +196,7 @@ describe("usePolicyFindReplace", () => {
   });
 
   it("handleReplaceCurrent advances to next match when selection doesn't match", () => {
-    const editor = createMockEditor(
-      [{ pos: 0, text: "cat dog cat" }],
-      { from: 4, to: 7 },
-    );
+    const editor = createMockEditor([{ pos: 0, text: "cat dog cat" }], { from: 4, to: 7 });
     editor.state.doc.textBetween = vi.fn(() => "dog");
     const { result } = renderHook(() => usePolicyFindReplace(editor));
 

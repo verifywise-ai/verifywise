@@ -1,7 +1,12 @@
 import { screen, waitFor, fireEvent } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import MonitoringTab from "./MonitoringTab";
-import { MrmEvalStatus, MrmThresholdOp, MrmThresholdSeverity, MrmTier } from "../../../../domain/enums/mrm.enum";
+import {
+  MrmEvalStatus,
+  MrmThresholdOp,
+  MrmThresholdSeverity,
+  MrmTier,
+} from "../../../../domain/enums/mrm.enum";
 import {
   IMrmBreachHistoryRow,
   IMrmFleetRow,
@@ -163,7 +168,9 @@ describe("MonitoringTab", () => {
     fireEvent.mouseDown(screen.getByRole("combobox"));
     fireEvent.click(await screen.findByRole("option", { name: "OpenAI · GPT-4 (v1.0)" }));
 
-    expect(screen.getByText("No breaches recorded. Every metric is within its threshold.")).toBeInTheDocument();
+    expect(
+      screen.getByText("No breaches recorded. Every metric is within its threshold."),
+    ).toBeInTheDocument();
   });
 
   it("surfaces monitoring and threshold query errors", async () => {

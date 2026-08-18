@@ -66,9 +66,7 @@ describe("SuggestedRisksSection", () => {
 
     expect(screen.getByText("Sensitive data exposure")).toBeVisible();
     expect(
-      screen.getByText(
-        "User data may be sent to a third-party LLM provider without redaction.",
-      ),
+      screen.getByText("User data may be sent to a third-party LLM provider without redaction."),
     ).toBeVisible();
     expect(screen.getByText("Data sovereignty")).toBeInTheDocument();
     expect(screen.getByText("Cybersecurity risk")).toBeInTheDocument();

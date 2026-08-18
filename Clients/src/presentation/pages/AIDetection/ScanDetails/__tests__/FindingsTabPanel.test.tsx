@@ -126,20 +126,14 @@ describe("FindingsTabPanel", () => {
   });
 
   it("renders stat cards row content when provided", () => {
-    render(
-      <FindingsTabPanel {...defaultProps} statCardsRow={<div>Stat cards row</div>} />,
-    );
+    render(<FindingsTabPanel {...defaultProps} statCardsRow={<div>Stat cards row</div>} />);
 
     expect(screen.getByText("Stat cards row")).toBeInTheDocument();
   });
 
   it("uses the grouped layout with a list heading when listHeading is set", () => {
     render(
-      <FindingsTabPanel
-        {...defaultProps}
-        listHeading="Libraries"
-        findings={[makeFinding()]}
-      />,
+      <FindingsTabPanel {...defaultProps} listHeading="Libraries" findings={[makeFinding()]} />,
     );
 
     expect(screen.getByText("Libraries")).toBeInTheDocument();

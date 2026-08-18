@@ -109,11 +109,13 @@ const mockProvidersData = {
 };
 
 /** Route apiServices.get calls to the right fixture based on URL. */
-function mockGetImplementation(overrides: {
-  endpoints?: any[];
-  apiKeys?: any[];
-  guardrails?: any[];
-} = {}) {
+function mockGetImplementation(
+  overrides: {
+    endpoints?: any[];
+    apiKeys?: any[];
+    guardrails?: any[];
+  } = {},
+) {
   return (url: string) => {
     if (url.includes("/ai-gateway/endpoints")) {
       return Promise.resolve({ data: { endpoints: overrides.endpoints ?? mockEndpoints } });
@@ -273,7 +275,9 @@ describe("AIGateway - Endpoints", () => {
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Add endpoint" }));
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Add endpoint" })).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: "Add endpoint" })).toBeInTheDocument(),
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "Create endpoint" }));
 
@@ -293,7 +297,9 @@ describe("AIGateway - Endpoints", () => {
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Add endpoint" }));
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Add endpoint" })).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: "Add endpoint" })).toBeInTheDocument(),
+    );
 
     fireEvent.change(screen.getByLabelText(/^Endpoint name/), {
       target: { value: "New Endpoint" },
@@ -323,8 +329,11 @@ describe("AIGateway - Endpoints", () => {
       expect(screen.queryByRole("heading", { name: "Add endpoint" })).not.toBeInTheDocument();
     });
     // Initial load + reload after create
-    expect((apiServices.get as any).mock.calls.filter((c: any[]) => c[0].includes("/ai-gateway/endpoints")))
-      .toHaveLength(2);
+    expect(
+      (apiServices.get as any).mock.calls.filter((c: any[]) =>
+        c[0].includes("/ai-gateway/endpoints"),
+      ),
+    ).toHaveLength(2);
   });
 
   it("updates an existing endpoint via patch", async () => {
@@ -362,7 +371,9 @@ describe("AIGateway - Endpoints", () => {
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Add endpoint" }));
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Add endpoint" })).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: "Add endpoint" })).toBeInTheDocument(),
+    );
 
     fireEvent.change(screen.getByLabelText(/^Endpoint name/), { target: { value: "New One" } });
     selectComboboxOption(0, "openai");
@@ -406,7 +417,9 @@ describe("AIGateway - Endpoints", () => {
     await waitFor(() => {
       expect(screen.getByText("Delete endpoint")).toBeInTheDocument();
     });
-    expect(screen.getByText(/Are you sure you want to delete "Production GPT-4o"/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Are you sure you want to delete "Production GPT-4o"/),
+    ).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
 
@@ -423,7 +436,9 @@ describe("AIGateway - Endpoints", () => {
     });
 
     fireEvent.click(screen.getByRole("button", { name: "Add endpoint" }));
-    await waitFor(() => expect(screen.getByRole("heading", { name: "Add endpoint" })).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByRole("heading", { name: "Add endpoint" })).toBeInTheDocument(),
+    );
 
     expect(screen.queryByLabelText(/^Cache TTL \(seconds\)/)).not.toBeInTheDocument();
 

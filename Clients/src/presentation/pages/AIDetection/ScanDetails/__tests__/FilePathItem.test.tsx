@@ -3,9 +3,7 @@ import { FilePathItem } from "../FilePathItem";
 
 describe("FilePathItem", () => {
   it("renders the file path as plain text when there is no file URL", () => {
-    render(
-      <FilePathItem path="src/app.py" lineNumber={null} matchedText="" fileUrl={null} />,
-    );
+    render(<FilePathItem path="src/app.py" lineNumber={null} matchedText="" fileUrl={null} />);
 
     expect(screen.getByText("src/app.py")).toBeInTheDocument();
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
@@ -40,21 +38,14 @@ describe("FilePathItem", () => {
   });
 
   it("does not show a line number marker when null", () => {
-    render(
-      <FilePathItem path="src/app.py" lineNumber={null} matchedText="" fileUrl={null} />,
-    );
+    render(<FilePathItem path="src/app.py" lineNumber={null} matchedText="" fileUrl={null} />);
 
     expect(screen.queryByText(/^:/)).not.toBeInTheDocument();
   });
 
   it("wraps the row in a tooltip when matchedText is provided", () => {
     const { container } = render(
-      <FilePathItem
-        path="src/app.py"
-        lineNumber={10}
-        matchedText="import openai"
-        fileUrl={null}
-      />,
+      <FilePathItem path="src/app.py" lineNumber={10} matchedText="import openai" fileUrl={null} />,
     );
 
     // VWTooltip typically attaches aria-describedby or similar wrapper; assert the row itself

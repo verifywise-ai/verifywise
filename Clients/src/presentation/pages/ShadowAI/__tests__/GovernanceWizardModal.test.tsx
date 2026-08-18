@@ -71,7 +71,12 @@ describe("GovernanceWizardModal", () => {
 
   it("pre-fills provider and model from the tool", () => {
     renderWithProviders(
-      <GovernanceWizardModal isOpen={true} onClose={onClose} tool={baseTool} onSuccess={onSuccess} />,
+      <GovernanceWizardModal
+        isOpen={true}
+        onClose={onClose}
+        tool={baseTool}
+        onSuccess={onSuccess}
+      />,
     );
 
     expect(screen.getByLabelText("Provider")).toHaveValue("OpenAI");
@@ -83,7 +88,12 @@ describe("GovernanceWizardModal", () => {
 
   it("shows a validation error when provider/model are cleared", async () => {
     renderWithProviders(
-      <GovernanceWizardModal isOpen={true} onClose={onClose} tool={baseTool} onSuccess={onSuccess} />,
+      <GovernanceWizardModal
+        isOpen={true}
+        onClose={onClose}
+        tool={baseTool}
+        onSuccess={onSuccess}
+      />,
     );
 
     fireEvent.change(screen.getByLabelText("Provider"), { target: { value: "" } });
@@ -97,7 +107,12 @@ describe("GovernanceWizardModal", () => {
 
   it("shows a validation error when no governance owner is selected", async () => {
     renderWithProviders(
-      <GovernanceWizardModal isOpen={true} onClose={onClose} tool={baseTool} onSuccess={onSuccess} />,
+      <GovernanceWizardModal
+        isOpen={true}
+        onClose={onClose}
+        tool={baseTool}
+        onSuccess={onSuccess}
+      />,
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Start governance" }));
@@ -112,7 +127,12 @@ describe("GovernanceWizardModal", () => {
     mockStartGovernance.mockResolvedValue({ model_inventory_id: 99 });
 
     renderWithProviders(
-      <GovernanceWizardModal isOpen={true} onClose={onClose} tool={baseTool} onSuccess={onSuccess} />,
+      <GovernanceWizardModal
+        isOpen={true}
+        onClose={onClose}
+        tool={baseTool}
+        onSuccess={onSuccess}
+      />,
     );
 
     fireEvent.change(screen.getByLabelText("Owner"), { target: { value: "1" } });
@@ -152,7 +172,12 @@ describe("GovernanceWizardModal", () => {
     mockStartGovernance.mockResolvedValue({});
 
     renderWithProviders(
-      <GovernanceWizardModal isOpen={true} onClose={onClose} tool={baseTool} onSuccess={onSuccess} />,
+      <GovernanceWizardModal
+        isOpen={true}
+        onClose={onClose}
+        tool={baseTool}
+        onSuccess={onSuccess}
+      />,
     );
 
     fireEvent.change(screen.getByLabelText("Owner"), { target: { value: "2" } });
@@ -177,7 +202,12 @@ describe("GovernanceWizardModal", () => {
     mockStartGovernance.mockRejectedValue(new Error("Network down"));
 
     renderWithProviders(
-      <GovernanceWizardModal isOpen={true} onClose={onClose} tool={baseTool} onSuccess={onSuccess} />,
+      <GovernanceWizardModal
+        isOpen={true}
+        onClose={onClose}
+        tool={baseTool}
+        onSuccess={onSuccess}
+      />,
     );
 
     fireEvent.change(screen.getByLabelText("Owner"), { target: { value: "1" } });
@@ -194,7 +224,12 @@ describe("GovernanceWizardModal", () => {
     mockStartGovernance.mockRejectedValue("boom");
 
     renderWithProviders(
-      <GovernanceWizardModal isOpen={true} onClose={onClose} tool={baseTool} onSuccess={onSuccess} />,
+      <GovernanceWizardModal
+        isOpen={true}
+        onClose={onClose}
+        tool={baseTool}
+        onSuccess={onSuccess}
+      />,
     );
 
     fireEvent.change(screen.getByLabelText("Owner"), { target: { value: "1" } });
@@ -207,7 +242,12 @@ describe("GovernanceWizardModal", () => {
 
   it("closes via the cancel button without submitting", () => {
     renderWithProviders(
-      <GovernanceWizardModal isOpen={true} onClose={onClose} tool={baseTool} onSuccess={onSuccess} />,
+      <GovernanceWizardModal
+        isOpen={true}
+        onClose={onClose}
+        tool={baseTool}
+        onSuccess={onSuccess}
+      />,
     );
 
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));

@@ -86,11 +86,13 @@ describe("CEMarking", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetCEMarking.mockResolvedValue(baseData);
-    mockUseProjectData.mockReturnValue({ project: { goal: "Automate support" }, error: null, isLoading: false });
+    mockUseProjectData.mockReturnValue({
+      project: { goal: "Automate support" },
+      error: null,
+      isLoading: false,
+    });
     mockGetAllPolicies.mockResolvedValue([{ id: 1, title: "Policy A", status: "Approved" }]);
-    mockGetAllEvidences.mockResolvedValue([
-      { id: 2, filename: "evidence.pdf", source: "Upload" },
-    ]);
+    mockGetAllEvidences.mockResolvedValue([{ id: 2, filename: "evidence.pdf", source: "Upload" }]);
     mockGetAllIncidents.mockResolvedValue([
       { id: 3, type: "Bias", severity: "High", status: "Open" },
     ]);
@@ -103,7 +105,11 @@ describe("CEMarking", () => {
   });
 
   it("shows the project error when project data fails to load", async () => {
-    mockUseProjectData.mockReturnValue({ project: null, error: "Project not found", isLoading: false });
+    mockUseProjectData.mockReturnValue({
+      project: null,
+      error: "Project not found",
+      isLoading: false,
+    });
     renderWithProviders(<CEMarking projectId="1" />);
     expect(await screen.findByText("Project not found")).toBeInTheDocument();
   });
@@ -111,9 +117,7 @@ describe("CEMarking", () => {
   it("shows a fallback message when CE Marking data fails to load", async () => {
     mockGetCEMarking.mockRejectedValue(new Error("network error"));
     renderWithProviders(<CEMarking projectId="1" />);
-    expect(
-      await screen.findByText(/Unable to load CE Marking data/),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/Unable to load CE Marking data/)).toBeInTheDocument();
   });
 
   it("renders classification, completion and step summary once loaded", async () => {
@@ -154,9 +158,7 @@ describe("CEMarking", () => {
 
     const comboboxes = screen.getAllByRole("combobox");
     fireEvent.mouseDown(comboboxes[1]); // annex III category select
-    fireEvent.click(
-      await screen.findByRole("option", { name: /Annex III 1/ }),
-    );
+    fireEvent.click(await screen.findByRole("option", { name: /Annex III 1/ }));
 
     await waitFor(() => {
       expect(mockUpdateClassificationAndScope).toHaveBeenCalledWith("1", {
@@ -190,7 +192,10 @@ describe("CEMarking", () => {
       expect(mockUpdateConformityStep).toHaveBeenCalledWith(
         "1",
         1,
-        expect.objectContaining({ description: "Assess risk", status: ConformityStepStatus.InProgress }),
+        expect.objectContaining({
+          description: "Assess risk",
+          status: ConformityStepStatus.InProgress,
+        }),
       );
     });
   });

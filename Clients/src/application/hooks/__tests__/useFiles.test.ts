@@ -38,9 +38,7 @@ describe("useFiles", () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(mockGetFiles).toHaveBeenCalledWith(
-      expect.objectContaining({ page: 1, pageSize: 20 }),
-    );
+    expect(mockGetFiles).toHaveBeenCalledWith(expect.objectContaining({ page: 1, pageSize: 20 }));
     expect(mockTransform).toHaveBeenCalledWith([{ id: "f1" }]);
     expect(result.current.data).toEqual([{ id: "f1", transformed: true }]);
   });

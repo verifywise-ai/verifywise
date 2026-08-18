@@ -22,9 +22,7 @@ function makeDetails(overrides: Partial<RiskScoreDetails> = {}): RiskScoreDetail
 
 describe("RiskScoreCard", () => {
   it("shows the not-scored state when score/grade are null", () => {
-    render(
-      <RiskScoreCard score={null} grade={null} details={null} calculatedAt={null} />,
-    );
+    render(<RiskScoreCard score={null} grade={null} details={null} calculatedAt={null} />);
 
     expect(
       screen.getByText(/No risk score has been calculated for this scan yet/),
@@ -59,9 +57,7 @@ describe("RiskScoreCard", () => {
   });
 
   it("renders the dimension breakdown labels", () => {
-    render(
-      <RiskScoreCard score={82} grade="B" details={makeDetails()} calculatedAt={null} />,
-    );
+    render(<RiskScoreCard score={82} grade="B" details={makeDetails()} calculatedAt={null} />);
 
     expect(screen.getByText("Data sovereignty")).toBeInTheDocument();
     expect(screen.getByText("Transparency")).toBeInTheDocument();
@@ -71,9 +67,7 @@ describe("RiskScoreCard", () => {
   });
 
   it("does not render the AI analysis section when llm_enhanced is false", () => {
-    render(
-      <RiskScoreCard score={82} grade="B" details={makeDetails()} calculatedAt={null} />,
-    );
+    render(<RiskScoreCard score={82} grade="B" details={makeDetails()} calculatedAt={null} />);
 
     expect(screen.queryByText("AI analysis")).not.toBeInTheDocument();
   });

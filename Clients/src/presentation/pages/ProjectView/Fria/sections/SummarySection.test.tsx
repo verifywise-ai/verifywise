@@ -58,7 +58,12 @@ const rights: FriaRight[] = [
 describe("SummarySection", () => {
   it("renders the summary statistics", () => {
     renderWithProviders(
-      <SummarySection assessment={baseAssessment} rights={rights} onUpdate={vi.fn()} isSaving={false} />,
+      <SummarySection
+        assessment={baseAssessment}
+        rights={rights}
+        onUpdate={vi.fn()}
+        isSaving={false}
+      />,
     );
 
     expect(screen.getByText("65%")).toBeInTheDocument();
@@ -70,7 +75,12 @@ describe("SummarySection", () => {
 
   it("lists flagged rights as chips when present", () => {
     renderWithProviders(
-      <SummarySection assessment={baseAssessment} rights={rights} onUpdate={vi.fn()} isSaving={false} />,
+      <SummarySection
+        assessment={baseAssessment}
+        rights={rights}
+        onUpdate={vi.fn()}
+        isSaving={false}
+      />,
     );
 
     expect(screen.getByText("Flagged rights")).toBeInTheDocument();
@@ -95,7 +105,12 @@ describe("SummarySection", () => {
     const onUpdate = vi.fn();
     const user = userEvent.setup();
     renderWithProviders(
-      <SummarySection assessment={baseAssessment} rights={rights} onUpdate={onUpdate} isSaving={false} />,
+      <SummarySection
+        assessment={baseAssessment}
+        rights={rights}
+        onUpdate={onUpdate}
+        isSaving={false}
+      />,
     );
 
     await user.click(screen.getByRole("combobox"));
@@ -108,7 +123,12 @@ describe("SummarySection", () => {
   it("calls onUpdate with decision conditions on blur when changed", () => {
     const onUpdate = vi.fn();
     renderWithProviders(
-      <SummarySection assessment={baseAssessment} rights={rights} onUpdate={onUpdate} isSaving={false} />,
+      <SummarySection
+        assessment={baseAssessment}
+        rights={rights}
+        onUpdate={onUpdate}
+        isSaving={false}
+      />,
     );
 
     const field = screen.getByLabelText("Decision conditions / rationale");
@@ -121,7 +141,12 @@ describe("SummarySection", () => {
   it("does not call onUpdate on blur when decision conditions are unchanged", () => {
     const onUpdate = vi.fn();
     renderWithProviders(
-      <SummarySection assessment={baseAssessment} rights={rights} onUpdate={onUpdate} isSaving={false} />,
+      <SummarySection
+        assessment={baseAssessment}
+        rights={rights}
+        onUpdate={onUpdate}
+        isSaving={false}
+      />,
     );
 
     fireEvent.blur(screen.getByLabelText("Decision conditions / rationale"));

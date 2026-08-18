@@ -50,7 +50,9 @@ interface ModelInfo {
   supports_parallel_function_calling: boolean;
 }
 
-const baseModel = (overrides: Partial<ModelInfo> & { id: string; provider: string }): ModelInfo => ({
+const baseModel = (
+  overrides: Partial<ModelInfo> & { id: string; provider: string },
+): ModelInfo => ({
   mode: "chat",
   max_input_tokens: 128000,
   max_output_tokens: 4096,
@@ -347,9 +349,7 @@ describe("AIGateway - ModelsPage", () => {
     const addButtons = screen.getAllByRole("button", { name: "Add" });
     fireEvent.click(addButtons[0]);
 
-    expect(mockNavigate).toHaveBeenCalledWith(
-      "/ai-gateway/endpoints?add=gpt-4o&provider=openai",
-    );
+    expect(mockNavigate).toHaveBeenCalledWith("/ai-gateway/endpoints?add=gpt-4o&provider=openai");
   });
 
   it("renders the cost calculator tab with default inputs and estimated costs", async () => {
@@ -453,9 +453,7 @@ describe("AIGateway - ModelsPage", () => {
     renderModels("/ai-gateway/models/compare");
     await screen.findByRole("table");
 
-    const removeSpan = document
-      .querySelector("svg.lucide-trash-2")
-      ?.closest("span") as HTMLElement;
+    const removeSpan = document.querySelector("svg.lucide-trash-2")?.closest("span") as HTMLElement;
     expect(removeSpan).toBeTruthy();
     fireEvent.click(removeSpan);
 

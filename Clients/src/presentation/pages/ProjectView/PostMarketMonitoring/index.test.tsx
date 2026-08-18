@@ -113,9 +113,7 @@ describe("PostMarketMonitoring", () => {
     mockGetConfigByProjectId.mockRejectedValue({ response: { status: 500 } });
     renderWithProviders(<PostMarketMonitoring />);
 
-    expect(
-      await screen.findByText("Failed to load monitoring configuration"),
-    ).toBeInTheDocument();
+    expect(await screen.findByText("Failed to load monitoring configuration")).toBeInTheDocument();
   });
 
   it("renders the questions list with default and required badges", async () => {

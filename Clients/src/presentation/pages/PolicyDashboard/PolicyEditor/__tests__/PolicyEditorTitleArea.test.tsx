@@ -2,7 +2,9 @@ import { screen, fireEvent } from "@testing-library/react";
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
 import { PolicyEditorTitleArea, type PolicyEditorTitleAreaProps } from "../PolicyEditorTitleArea";
 
-function baseProps(overrides: Partial<PolicyEditorTitleAreaProps> = {}): PolicyEditorTitleAreaProps {
+function baseProps(
+  overrides: Partial<PolicyEditorTitleAreaProps> = {},
+): PolicyEditorTitleAreaProps {
   return {
     pageTitle: "AI Ethics Policy",
     isEditingTitle: false,
@@ -105,7 +107,9 @@ describe("PolicyEditorTitleArea", () => {
   });
 
   it("disables the confirm button when the edited title is blank", () => {
-    renderWithProviders(<PolicyEditorTitleArea {...baseProps({ isEditingTitle: true, editedTitle: "   " })} />);
+    renderWithProviders(
+      <PolicyEditorTitleArea {...baseProps({ isEditingTitle: true, editedTitle: "   " })} />,
+    );
     const buttons = screen.getAllByRole("button");
     expect(buttons[1]).toBeDisabled();
   });

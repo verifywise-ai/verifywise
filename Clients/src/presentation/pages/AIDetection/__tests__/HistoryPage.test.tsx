@@ -81,7 +81,10 @@ describe("HistoryPage", () => {
 
   it("renders a table row for each scan with repository and status", async () => {
     mockGetScans.mockResolvedValue({
-      scans: [makeScan({ id: 1 }), makeScan({ id: 2, repository_name: "gadgets", status: "failed" })],
+      scans: [
+        makeScan({ id: 1 }),
+        makeScan({ id: 2, repository_name: "gadgets", status: "failed" }),
+      ],
       pagination: { total: 2, page: 1, limit: 10, total_pages: 1 },
     });
     renderWithProviders(<HistoryPage />);

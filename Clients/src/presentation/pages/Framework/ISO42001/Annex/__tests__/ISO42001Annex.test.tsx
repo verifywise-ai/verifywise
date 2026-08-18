@@ -220,11 +220,7 @@ describe("ISO42001Annex", () => {
 
   it("auto-opens drawer when initial annex/category ids are provided", async () => {
     renderWithProviders(
-      <ISO42001Annex
-        {...defaultProps}
-        initialAnnexId="1"
-        initialAnnexCategoryId="101"
-      />,
+      <ISO42001Annex {...defaultProps} initialAnnexId="1" initialAnnexCategoryId="101" />,
     );
     await waitFor(() => {
       expect(screen.getByTestId("annex-drawer")).toBeInTheDocument();

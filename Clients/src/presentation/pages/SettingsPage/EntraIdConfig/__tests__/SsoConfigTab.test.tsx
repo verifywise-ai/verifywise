@@ -70,7 +70,9 @@ describe("SsoConfigTab", () => {
     await waitFor(() => {
       expect(screen.getByPlaceholderText("Enter your Azure AD Tenant ID")).toBeInTheDocument();
     });
-    expect((screen.getByPlaceholderText("Enter your Azure AD Tenant ID") as HTMLInputElement).value).toBe("");
+    expect(
+      (screen.getByPlaceholderText("Enter your Azure AD Tenant ID") as HTMLInputElement).value,
+    ).toBe("");
   });
 
   it("shows validation errors for invalid tenant/client ids", async () => {
@@ -102,9 +104,7 @@ describe("SsoConfigTab", () => {
     });
     await user.type(screen.getByPlaceholderText("Enter your client secret"), "short");
     await waitFor(() => {
-      expect(
-        screen.getByText("Client Secret must be at least 10 characters"),
-      ).toBeInTheDocument();
+      expect(screen.getByText("Client Secret must be at least 10 characters")).toBeInTheDocument();
     });
   });
 

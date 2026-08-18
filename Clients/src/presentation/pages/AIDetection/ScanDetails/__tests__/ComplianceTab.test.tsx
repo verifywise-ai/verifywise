@@ -83,9 +83,7 @@ describe("ComplianceTab", () => {
   it("renders a checklist item with article, category and priority badges", () => {
     render(<ComplianceTab complianceData={makeComplianceData()} complianceLoading={false} />);
 
-    expect(
-      screen.getByText("Document AI system transparency measures"),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Document AI system transparency measures")).toBeInTheDocument();
     expect(screen.getByText("Article 13")).toBeInTheDocument();
     expect(screen.getByText("High")).toBeInTheDocument();
   });

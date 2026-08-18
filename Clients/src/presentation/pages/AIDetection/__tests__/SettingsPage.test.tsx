@@ -274,7 +274,9 @@ describe("SettingsPage", () => {
     fireEvent.click(screen.getByRole("tab", { name: /Risk scoring/ }));
 
     await waitFor(() => {
-      expect(screen.getByText("Enable LLM-enhanced analysis above to use vulnerability detection.")).toBeInTheDocument();
+      expect(
+        screen.getByText("Enable LLM-enhanced analysis above to use vulnerability detection."),
+      ).toBeInTheDocument();
     });
 
     const llmToggle = screen.getAllByRole("switch")[0];

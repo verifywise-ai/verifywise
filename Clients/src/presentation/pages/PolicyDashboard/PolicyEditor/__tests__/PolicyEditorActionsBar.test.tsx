@@ -38,7 +38,9 @@ describe("PolicyEditorActionsBar", () => {
   });
 
   it("hides history and export controls for a brand new policy", () => {
-    renderWithProviders(<PolicyEditorActionsBar {...baseProps({ isNew: true, hasPolicyId: false })} />);
+    renderWithProviders(
+      <PolicyEditorActionsBar {...baseProps({ isNew: true, hasPolicyId: false })} />,
+    );
     expect(screen.queryByTitle("Activity history")).not.toBeInTheDocument();
     expect(screen.queryByText("Export")).not.toBeInTheDocument();
   });

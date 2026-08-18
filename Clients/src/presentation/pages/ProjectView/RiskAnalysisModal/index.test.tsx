@@ -13,7 +13,9 @@ const noop = () => {};
 const answerAllQuestions = async () => {
   // Q1 -> pick "conversational_assistance" (no conditional follow-up)
   fireEvent.click(
-    screen.getByLabelText("Provide conversational assistance without making decisions about people"),
+    screen.getByLabelText(
+      "Provide conversational assistance without making decisions about people",
+    ),
   );
   fireEvent.click(screen.getByRole("button", { name: /next/i }));
 
@@ -128,7 +130,9 @@ describe("RiskAnalysisModal", () => {
     fireEvent.click(screen.getByLabelText("Make or support decisions about people"));
     fireEvent.click(screen.getByRole("button", { name: /next/i }));
 
-    expect(await screen.findByText(/in which domain are those decisions made/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/in which domain are those decisions made/i),
+    ).toBeInTheDocument();
   });
 
   it("shows the classification result after answering all questions", async () => {

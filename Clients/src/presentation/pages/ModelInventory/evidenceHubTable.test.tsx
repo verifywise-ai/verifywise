@@ -84,7 +84,11 @@ describe("EvidenceHubTable", () => {
 
   it("falls back to a dash for evidence with no files, mapping, or tags", () => {
     renderWithProviders(
-      <EvidenceHubTable data={[evidence2]} isLoading={false} modelInventoryData={modelInventoryData} />,
+      <EvidenceHubTable
+        data={[evidence2]}
+        isLoading={false}
+        modelInventoryData={modelInventoryData}
+      />,
     );
     expect(screen.getAllByText("-").length).toBeGreaterThan(0);
   });

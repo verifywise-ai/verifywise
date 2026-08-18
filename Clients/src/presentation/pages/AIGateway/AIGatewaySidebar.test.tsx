@@ -4,9 +4,7 @@ import AIGatewaySidebar from "./AIGatewaySidebar";
 
 describe("AIGatewaySidebar", () => {
   it("renders the core flat nav items", () => {
-    renderWithProviders(
-      <AIGatewaySidebar activeTab="dashboard" onTabChange={vi.fn()} />,
-    );
+    renderWithProviders(<AIGatewaySidebar activeTab="dashboard" onTabChange={vi.fn()} />);
 
     expect(screen.getByLabelText("Dashboard")).toBeInTheDocument();
     expect(screen.getByLabelText("Endpoints")).toBeInTheDocument();
@@ -59,9 +57,7 @@ describe("AIGatewaySidebar", () => {
     const logsButton = screen.getByLabelText("Logs").closest('[role="button"]');
     expect(logsButton).toHaveClass("selected-path");
 
-    const dashboardButton = screen
-      .getByLabelText("Dashboard")
-      .closest('[role="button"]');
+    const dashboardButton = screen.getByLabelText("Dashboard").closest('[role="button"]');
     expect(dashboardButton).toHaveClass("unselected");
   });
 

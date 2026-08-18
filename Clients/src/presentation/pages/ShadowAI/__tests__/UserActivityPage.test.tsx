@@ -175,9 +175,7 @@ describe("ShadowAI - UserActivityPage", () => {
     fireEvent.click(screen.getByRole("option", { name: "Last 90 days" }));
 
     await waitFor(() => {
-      expect(mockGetUsers).toHaveBeenLastCalledWith(
-        expect.objectContaining({ period: "90d" }),
-      );
+      expect(mockGetUsers).toHaveBeenLastCalledWith(expect.objectContaining({ period: "90d" }));
     });
   });
 

@@ -108,7 +108,9 @@ describe("AIApprovalRules", () => {
 
   it("deletes a rule after confirmation", async () => {
     renderWithProviders(<AIApprovalRules />);
-    await waitFor(() => expect(screen.getByText("High risk requires approval")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText("High risk requires approval")).toBeInTheDocument(),
+    );
     mockDeleteApprovalRule.mockResolvedValue(undefined);
     mockListApprovalRules.mockResolvedValue([]);
 
@@ -124,7 +126,9 @@ describe("AIApprovalRules", () => {
   it("does not delete when confirm is cancelled", async () => {
     vi.spyOn(window, "confirm").mockReturnValue(false);
     renderWithProviders(<AIApprovalRules />);
-    await waitFor(() => expect(screen.getByText("High risk requires approval")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText("High risk requires approval")).toBeInTheDocument(),
+    );
 
     const deleteButtons = screen.getAllByRole("button");
     const trashButton = deleteButtons.find((btn) => btn.querySelector("svg.lucide-trash2"));
@@ -135,7 +139,9 @@ describe("AIApprovalRules", () => {
 
   it("shows an error alert when delete fails", async () => {
     renderWithProviders(<AIApprovalRules />);
-    await waitFor(() => expect(screen.getByText("High risk requires approval")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText("High risk requires approval")).toBeInTheDocument(),
+    );
     mockDeleteApprovalRule.mockRejectedValue(new Error("fail"));
 
     const deleteButtons = screen.getAllByRole("button");
@@ -150,7 +156,9 @@ describe("AIApprovalRules", () => {
   it("opens the create dialog and creates a new rule", async () => {
     const user = userEvent.setup();
     renderWithProviders(<AIApprovalRules />);
-    await waitFor(() => expect(screen.getByText("High risk requires approval")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText("High risk requires approval")).toBeInTheDocument(),
+    );
 
     await user.click(screen.getByText("Add Rule"));
     expect(screen.getByText("Create Rule")).toBeInTheDocument();
@@ -172,7 +180,9 @@ describe("AIApprovalRules", () => {
   it("opens the edit dialog for a non-default rule and saves changes", async () => {
     const user = userEvent.setup();
     renderWithProviders(<AIApprovalRules />);
-    await waitFor(() => expect(screen.getByText("High risk requires approval")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText("High risk requires approval")).toBeInTheDocument(),
+    );
 
     const editButtons = screen.getAllByRole("button");
     const editButton = editButtons.find((btn) => btn.querySelector("svg.lucide-pen"));
@@ -192,7 +202,9 @@ describe("AIApprovalRules", () => {
   it("shows an error alert when saving fails", async () => {
     const user = userEvent.setup();
     renderWithProviders(<AIApprovalRules />);
-    await waitFor(() => expect(screen.getByText("High risk requires approval")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText("High risk requires approval")).toBeInTheDocument(),
+    );
 
     await user.click(screen.getByText("Add Rule"));
     const dialog = screen.getByRole("dialog");
@@ -209,7 +221,9 @@ describe("AIApprovalRules", () => {
   it("closes the create dialog on cancel", async () => {
     const user = userEvent.setup();
     renderWithProviders(<AIApprovalRules />);
-    await waitFor(() => expect(screen.getByText("High risk requires approval")).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByText("High risk requires approval")).toBeInTheDocument(),
+    );
 
     await user.click(screen.getByText("Add Rule"));
     expect(screen.getByText("Create Rule")).toBeInTheDocument();
@@ -226,7 +240,9 @@ describe("AIApprovalRules", () => {
     await waitFor(() => {
       expect(screen.getByText("Failed to load approval rules")).toBeInTheDocument();
     });
-    const alert = screen.getByText("Failed to load approval rules").closest('[role="alert"]') as HTMLElement;
+    const alert = screen
+      .getByText("Failed to load approval rules")
+      .closest('[role="alert"]') as HTMLElement;
     const closeBtn = within(alert).getByRole("button");
     fireEvent.click(closeBtn);
     await waitFor(() => {

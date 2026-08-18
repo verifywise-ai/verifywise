@@ -34,7 +34,9 @@ describe("ColorPickerPopover", () => {
     document.body.appendChild(anchorEl);
     const editor = createMockEditor();
     const onClose = vi.fn();
-    renderWithProviders(<ColorPickerPopover editor={editor} anchorEl={anchorEl} onClose={onClose} />);
+    renderWithProviders(
+      <ColorPickerPopover editor={editor} anchorEl={anchorEl} onClose={onClose} />,
+    );
 
     // Query the swatch grid cells directly since they carry no accessible text.
     const swatches = document.querySelectorAll(
@@ -53,7 +55,9 @@ describe("ColorPickerPopover", () => {
     document.body.appendChild(anchorEl);
     const editor = createMockEditor();
     const onClose = vi.fn();
-    renderWithProviders(<ColorPickerPopover editor={editor} anchorEl={anchorEl} onClose={onClose} />);
+    renderWithProviders(
+      <ColorPickerPopover editor={editor} anchorEl={anchorEl} onClose={onClose} />,
+    );
 
     fireEvent.click(screen.getByText("Reset to default"));
 

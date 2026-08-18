@@ -182,7 +182,9 @@ describe("AIGateway - Guardrails", () => {
     fireEvent.mouseDown(combos[1]); // action select
     fireEvent.click(screen.getByRole("option", { name: "Mask" }));
 
-    expect(screen.getByText(/Masking replaces personal data with placeholders/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Masking replaces personal data with placeholders/),
+    ).toBeInTheDocument();
   });
 
   it("toggles a PII rule's active state", async () => {
@@ -302,7 +304,9 @@ describe("AIGateway - Guardrails", () => {
       data: {
         data: {
           would_block: true,
-          detections: [{ entity_type: "EMAIL_ADDRESS", matched_text: "j@example.com", action: "block" }],
+          detections: [
+            { entity_type: "EMAIL_ADDRESS", matched_text: "j@example.com", action: "block" },
+          ],
           execution_time_ms: 4,
         },
       },

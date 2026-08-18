@@ -130,12 +130,12 @@ describe("AIGateway shared utilities", () => {
           data: {
             providers: ["openai", "anthropic", "empty-provider"],
             models: {
-              openai: [
+              "openai": [
                 { id: "gpt-4o", mode: "chat" },
                 { id: "text-embedding-3", mode: "embedding" },
                 { id: "gpt-3.5-turbo-instruct", mode: "completion" },
               ],
-              anthropic: [{ id: "claude-3-opus", mode: "chat" }],
+              "anthropic": [{ id: "claude-3-opus", mode: "chat" }],
               "empty-provider": [{ id: "x", mode: "embedding" }],
             },
           },
@@ -281,10 +281,7 @@ describe("AIGateway shared utilities", () => {
     });
 
     it("leaves unresolved variables as-is when no value is provided", () => {
-      const resolved = resolveMessageVariables(
-        [{ role: "user", content: "Hi {{name}}." }],
-        {},
-      );
+      const resolved = resolveMessageVariables([{ role: "user", content: "Hi {{name}}." }], {});
       expect(resolved[0].content).toBe("Hi {{name}}.");
     });
 
@@ -444,9 +441,7 @@ describe("AIGateway shared utilities", () => {
     });
 
     it("surfaces a chunk-level error when the stream ends with no content", async () => {
-      const reader = makeReader([
-        `data: ${JSON.stringify({ error: "guardrail blocked" })}\n`,
-      ]);
+      const reader = makeReader([`data: ${JSON.stringify({ error: "guardrail blocked" })}\n`]);
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
         body: { getReader: () => reader },

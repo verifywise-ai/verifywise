@@ -25,9 +25,7 @@ describe("BulkImportModal", () => {
   });
 
   it("does not render when closed", () => {
-    renderWithProviders(
-      <BulkImportModal open={false} onClose={onClose} onImport={onImport} />,
-    );
+    renderWithProviders(<BulkImportModal open={false} onClose={onClose} onImport={onImport} />);
 
     expect(screen.queryByText("Bulk Import Mappings")).not.toBeInTheDocument();
   });
@@ -40,9 +38,7 @@ describe("BulkImportModal", () => {
   });
 
   it("parses a valid CSV file and shows the preview with the row's data", async () => {
-    renderWithProviders(
-      <BulkImportModal open onClose={onClose} onImport={onImport} />,
-    );
+    renderWithProviders(<BulkImportModal open onClose={onClose} onImport={onImport} />);
 
     const input = document.querySelector('input[type="file"]') as HTMLInputElement;
     const file = makeFile(validCsv);
@@ -58,9 +54,7 @@ describe("BulkImportModal", () => {
   });
 
   it("marks invalid rows and shows the invalid count", async () => {
-    renderWithProviders(
-      <BulkImportModal open onClose={onClose} onImport={onImport} />,
-    );
+    renderWithProviders(<BulkImportModal open onClose={onClose} onImport={onImport} />);
 
     const input = document.querySelector('input[type="file"]') as HTMLInputElement;
     fireEvent.change(input, { target: { files: [makeFile(invalidCsv)] } });
@@ -71,9 +65,7 @@ describe("BulkImportModal", () => {
   });
 
   it("shows a parse error when the CSV has no data rows", async () => {
-    renderWithProviders(
-      <BulkImportModal open onClose={onClose} onImport={onImport} />,
-    );
+    renderWithProviders(<BulkImportModal open onClose={onClose} onImport={onImport} />);
 
     const input = document.querySelector('input[type="file"]') as HTMLInputElement;
     fireEvent.change(input, { target: { files: [makeFile("just_header")] } });
@@ -86,9 +78,7 @@ describe("BulkImportModal", () => {
   });
 
   it("shows a parse error when required columns are missing", async () => {
-    renderWithProviders(
-      <BulkImportModal open onClose={onClose} onImport={onImport} />,
-    );
+    renderWithProviders(<BulkImportModal open onClose={onClose} onImport={onImport} />);
 
     const input = document.querySelector('input[type="file"]') as HTMLInputElement;
     fireEvent.change(input, { target: { files: [makeFile("foo,bar\n1,2")] } });
@@ -99,9 +89,7 @@ describe("BulkImportModal", () => {
   });
 
   it("calls onImport with only valid rows when submitted", async () => {
-    renderWithProviders(
-      <BulkImportModal open onClose={onClose} onImport={onImport} />,
-    );
+    renderWithProviders(<BulkImportModal open onClose={onClose} onImport={onImport} />);
 
     const input = document.querySelector('input[type="file"]') as HTMLInputElement;
     fireEvent.change(input, { target: { files: [makeFile(validCsv)] } });

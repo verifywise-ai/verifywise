@@ -119,7 +119,9 @@ describe("AIGateway - Settings", () => {
   });
 
   it("renders API key rows with provider, masked key, and active status", async () => {
-    mockLoad({ keys: [makeApiKey(), makeApiKey({ id: 2, key_name: "Old key", is_active: false })] });
+    mockLoad({
+      keys: [makeApiKey(), makeApiKey({ id: 2, key_name: "Old key", is_active: false })],
+    });
     renderWithProviders(<AIGatewaySettingsPage />);
 
     await waitFor(() => {
@@ -193,7 +195,9 @@ describe("AIGateway - Settings", () => {
   it("shows a verification failure message without saving the key", async () => {
     mockPost.mockImplementation((url: string) => {
       if (url.includes("/keys/verify")) {
-        return Promise.resolve({ data: { data: { valid: false, message: "Key rejected by provider" } } });
+        return Promise.resolve({
+          data: { data: { valid: false, message: "Key rejected by provider" } },
+        });
       }
       return Promise.resolve({ data: {} });
     });
@@ -444,8 +448,10 @@ describe("AIGateway - Settings", () => {
   it("runs risk detection and shows the result message", async () => {
     mockParams = { tab: "risks" };
     mockGet.mockImplementation((url: string) => {
-      if (url.includes("/ai-gateway/risk-settings")) return Promise.resolve({ data: { settings: [] } });
-      if (url.includes("/ai-gateway/risk-suggestions")) return Promise.resolve({ data: { suggestions: [] } });
+      if (url.includes("/ai-gateway/risk-settings"))
+        return Promise.resolve({ data: { settings: [] } });
+      if (url.includes("/ai-gateway/risk-suggestions"))
+        return Promise.resolve({ data: { suggestions: [] } });
       return Promise.resolve({ data: { data: [] } });
     });
     mockPost.mockImplementation((url: string) => {
@@ -470,7 +476,8 @@ describe("AIGateway - Settings", () => {
   it("accepts a pending risk suggestion", async () => {
     mockParams = { tab: "risks" };
     mockGet.mockImplementation((url: string) => {
-      if (url.includes("/ai-gateway/risk-settings")) return Promise.resolve({ data: { settings: [] } });
+      if (url.includes("/ai-gateway/risk-settings"))
+        return Promise.resolve({ data: { settings: [] } });
       if (url.includes("/ai-gateway/risk-suggestions")) {
         return Promise.resolve({
           data: {
@@ -515,7 +522,8 @@ describe("AIGateway - Settings", () => {
   it("dismisses a pending risk suggestion with a reason", async () => {
     mockParams = { tab: "risks" };
     mockGet.mockImplementation((url: string) => {
-      if (url.includes("/ai-gateway/risk-settings")) return Promise.resolve({ data: { settings: [] } });
+      if (url.includes("/ai-gateway/risk-settings"))
+        return Promise.resolve({ data: { settings: [] } });
       if (url.includes("/ai-gateway/risk-suggestions")) {
         return Promise.resolve({
           data: {
@@ -560,7 +568,8 @@ describe("AIGateway - Settings", () => {
   it("expands the history section for reviewed suggestions", async () => {
     mockParams = { tab: "risks" };
     mockGet.mockImplementation((url: string) => {
-      if (url.includes("/ai-gateway/risk-settings")) return Promise.resolve({ data: { settings: [] } });
+      if (url.includes("/ai-gateway/risk-settings"))
+        return Promise.resolve({ data: { settings: [] } });
       if (url.includes("/ai-gateway/risk-suggestions")) {
         return Promise.resolve({
           data: {
@@ -602,7 +611,10 @@ describe("AIGateway - Settings", () => {
     // than surfacing the (effectively unreachable) riskError state.
     mockParams = { tab: "risks" };
     mockGet.mockImplementation((url: string) => {
-      if (url.includes("/ai-gateway/risk-settings") || url.includes("/ai-gateway/risk-suggestions")) {
+      if (
+        url.includes("/ai-gateway/risk-settings") ||
+        url.includes("/ai-gateway/risk-suggestions")
+      ) {
         return Promise.reject(new Error("boom"));
       }
       return Promise.resolve({ data: { data: [] } });

@@ -28,7 +28,12 @@ function mockDefaultGet() {
   mockGet.mockImplementation((url: string) => {
     if (url.includes("/ai-gateway/providers")) {
       return Promise.resolve({
-        data: { data: { providers: ["openai"], models: { openai: [{ id: "gpt-4o", provider: "openai", mode: "chat" }] } } },
+        data: {
+          data: {
+            providers: ["openai"],
+            models: { openai: [{ id: "gpt-4o", provider: "openai", mode: "chat" }] },
+          },
+        },
       });
     }
     if (url.includes("/ai-gateway/keys")) {
@@ -225,7 +230,9 @@ describe("OnboardingOverlay", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Create endpoint" }));
     await waitFor(() => {
-      expect(screen.getByText(/Name, provider, model, and API key are required/)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Name, provider, model, and API key are required/),
+      ).toBeInTheDocument();
     });
     expect(mockPost).not.toHaveBeenCalledWith("/ai-gateway/endpoints", expect.anything());
   });
@@ -248,7 +255,9 @@ describe("OnboardingOverlay", () => {
 
     // Wait for available keys to load before interacting with comboboxes.
     await waitFor(() => {
-      expect(screen.queryByText("No API keys available. Complete step 1 first.")).not.toBeInTheDocument();
+      expect(
+        screen.queryByText("No API keys available. Complete step 1 first."),
+      ).not.toBeInTheDocument();
     });
 
     const combos = screen.getAllByRole("combobox");
@@ -264,7 +273,11 @@ describe("OnboardingOverlay", () => {
     await waitFor(() => {
       expect(mockPost).toHaveBeenCalledWith(
         "/ai-gateway/endpoints",
-        expect.objectContaining({ display_name: "Prod", provider: "openai", model: "openai/gpt-4o" }),
+        expect.objectContaining({
+          display_name: "Prod",
+          provider: "openai",
+          model: "openai/gpt-4o",
+        }),
       );
     });
     await waitFor(() => {
@@ -275,7 +288,8 @@ describe("OnboardingOverlay", () => {
   it("shows a fallback message when no API keys are available for the endpoint modal", async () => {
     mockGet.mockImplementation((url: string) => {
       if (url.includes("/ai-gateway/keys")) return Promise.resolve({ data: { data: [] } });
-      if (url.includes("/ai-gateway/providers")) return Promise.resolve({ data: { data: { providers: [] } } });
+      if (url.includes("/ai-gateway/providers"))
+        return Promise.resolve({ data: { data: { providers: [] } } });
       return Promise.resolve({ data: {} });
     });
     renderWithProviders(
@@ -386,9 +400,11 @@ describe("OnboardingOverlay", () => {
 
   it("shows an error when the first request has no endpoint configured", async () => {
     mockGet.mockImplementation((url: string) => {
-      if (url.includes("/ai-gateway/endpoints")) return Promise.resolve({ data: { endpoints: [] } });
+      if (url.includes("/ai-gateway/endpoints"))
+        return Promise.resolve({ data: { endpoints: [] } });
       if (url.includes("/ai-gateway/virtual-keys")) return Promise.resolve({ data: { data: [] } });
-      if (url.includes("/ai-gateway/providers")) return Promise.resolve({ data: { data: { providers: [] } } });
+      if (url.includes("/ai-gateway/providers"))
+        return Promise.resolve({ data: { data: { providers: [] } } });
       return Promise.resolve({ data: {} });
     });
     renderWithProviders(

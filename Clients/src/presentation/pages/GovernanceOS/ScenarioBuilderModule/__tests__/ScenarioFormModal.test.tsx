@@ -48,7 +48,9 @@ describe("ScenarioFormModal", () => {
   it("submits with the name and selected framework once valid", async () => {
     renderWithProviders(<ScenarioFormModal open onClose={onClose} onSubmit={onSubmit} />);
 
-    fireEvent.change(screen.getByLabelText("Name", { exact: false }), { target: { value: "New Scenario Name" } });
+    fireEvent.change(screen.getByLabelText("Name", { exact: false }), {
+      target: { value: "New Scenario Name" },
+    });
     fireEvent.click(screen.getByText("EU AI Act"));
 
     const submitButton = screen.getByRole("button", { name: "Create Scenario" });
@@ -70,7 +72,9 @@ describe("ScenarioFormModal", () => {
     fireEvent.click(screen.getByText("healthcare"));
     fireEvent.click(screen.getByText("US"));
 
-    fireEvent.change(screen.getByLabelText("Name", { exact: false }), { target: { value: "Test" } });
+    fireEvent.change(screen.getByLabelText("Name", { exact: false }), {
+      target: { value: "Test" },
+    });
     fireEvent.click(screen.getByText("ISO 42001"));
 
     fireEvent.click(screen.getByRole("button", { name: "Create Scenario" }));
@@ -83,13 +87,13 @@ describe("ScenarioFormModal", () => {
   it("adds a second framework as secondary priority", () => {
     renderWithProviders(<ScenarioFormModal open onClose={onClose} onSubmit={onSubmit} />);
 
-    fireEvent.change(screen.getByLabelText("Name", { exact: false }), { target: { value: "Multi Framework" } });
+    fireEvent.change(screen.getByLabelText("Name", { exact: false }), {
+      target: { value: "Multi Framework" },
+    });
     fireEvent.click(screen.getByText("EU AI Act"));
     fireEvent.click(screen.getByText("ISO 42001"));
 
-    expect(
-      screen.getByText(/First selected framework becomes primary/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/First selected framework becomes primary/)).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole("button", { name: "Create Scenario" }));
 

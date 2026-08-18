@@ -106,9 +106,7 @@ describe("ProjectDatasets", () => {
       await waitFor(() => expect(deepEvalMocks.listMyDatasets).toHaveBeenCalled());
       await waitFor(() => expect(deepEvalMocks.listDatasets).toHaveBeenCalled());
 
-      expect(
-        screen.getByRole("button", { name: "Upload dataset" }),
-      ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Upload dataset" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Add dataset" })).toBeInTheDocument();
       expect(await screen.findByText(/No datasets found/)).toBeInTheDocument();
     });
@@ -157,11 +155,9 @@ describe("ProjectDatasets", () => {
       fireEvent.click(screen.getByRole("button", { name: "Upload file" }));
 
       const fileInput = document.querySelector('input[type="file"]') as HTMLInputElement;
-      const file = new File(
-        [JSON.stringify([{ scenario: "hi", turns: [] }])],
-        "my-dataset.json",
-        { type: "application/json" },
-      );
+      const file = new File([JSON.stringify([{ scenario: "hi", turns: [] }])], "my-dataset.json", {
+        type: "application/json",
+      });
       fireEvent.change(fileInput, { target: { files: [file] } });
 
       await waitFor(() => expect(deepEvalMocks.uploadDataset).toHaveBeenCalled());
@@ -216,9 +212,7 @@ describe("ProjectDatasets", () => {
       openRowMenu(container);
       fireEvent.click(screen.getByText("View prompts"));
 
-      expect(
-        await screen.findByText("No prompts found in this dataset."),
-      ).toBeInTheDocument();
+      expect(await screen.findByText("No prompts found in this dataset.")).toBeInTheDocument();
     });
 
     it("deletes a dataset through the confirmation modal", async () => {
@@ -332,7 +326,7 @@ describe("ProjectDatasets", () => {
       );
 
       fireEvent.click(screen.getByRole("button", { name: "Download" }));
-      expect((URL.createObjectURL as ReturnType<typeof vi.fn>)).toHaveBeenCalled();
+      expect(URL.createObjectURL as ReturnType<typeof vi.fn>).toHaveBeenCalled();
     });
 
     it("lets you add and delete prompts from an empty dataset", async () => {
@@ -415,9 +409,7 @@ describe("ProjectDatasets", () => {
 
       fireEvent.click(screen.getByText("Customer asks about plan"));
       expect(screen.getByText("Hi, what features are included?")).toBeInTheDocument();
-      expect(
-        screen.getByText("The premium plan includes unlimited storage."),
-      ).toBeInTheDocument();
+      expect(screen.getByText("The premium plan includes unlimited storage.")).toBeInTheDocument();
     });
   });
 

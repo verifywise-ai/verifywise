@@ -1,5 +1,8 @@
 import { renderHook, act, waitFor } from "@testing-library/react";
-import type { AuditLedgerEntry, VerifyResult } from "../../../../../../application/repository/auditLedger.repository";
+import type {
+  AuditLedgerEntry,
+  VerifyResult,
+} from "../../../../../../application/repository/auditLedger.repository";
 
 const mockGetAuditLedger = vi.fn();
 const mockVerifyAuditLedger = vi.fn();
@@ -34,7 +37,13 @@ const buildEntry = (overrides: Partial<AuditLedgerEntry> = {}): AuditLedgerEntry
 describe("useAuditLedger", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetAuditLedger.mockResolvedValue({ entries: [buildEntry()], total: 1, limit: 10, offset: 0, hasMore: false });
+    mockGetAuditLedger.mockResolvedValue({
+      entries: [buildEntry()],
+      total: 1,
+      limit: 10,
+      offset: 0,
+      hasMore: false,
+    });
   });
 
   it("fetches entries on mount", async () => {

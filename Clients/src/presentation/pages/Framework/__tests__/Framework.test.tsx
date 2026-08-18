@@ -481,8 +481,12 @@ describe("Framework", () => {
     fireEvent.click(screen.getByText("Add/remove frameworks"));
     expect(screen.getByTestId("add-framework-modal")).toBeInTheDocument();
     // Both ISO 27001 and ISO 42001 should be offered (EU AI Act excluded elsewhere)
-    expect(within(screen.getByTestId("add-framework-modal")).getByText("ISO 27001")).toBeInTheDocument();
-    expect(within(screen.getByTestId("add-framework-modal")).getByText("ISO 42001")).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId("add-framework-modal")).getByText("ISO 27001"),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId("add-framework-modal")).getByText("ISO 42001"),
+    ).toBeInTheDocument();
   });
 
   it("opens the edit project modal from the manage frameworks menu", () => {

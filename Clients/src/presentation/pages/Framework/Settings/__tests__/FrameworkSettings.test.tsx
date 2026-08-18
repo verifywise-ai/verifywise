@@ -241,9 +241,7 @@ describe("FrameworkSettings", () => {
     fireEvent.click(screen.getAllByText("Remove")[0]);
     fireEvent.click(within(screen.getByTestId("confirmation-modal")).getByText("Remove"));
     await waitFor(() => {
-      expect(
-        screen.getByText("Failed to remove framework. Please try again."),
-      ).toBeInTheDocument();
+      expect(screen.getByText("Failed to remove framework. Please try again.")).toBeInTheDocument();
     });
   });
 

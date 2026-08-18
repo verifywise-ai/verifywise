@@ -5,8 +5,7 @@ import type { Finding } from "../../../../../domain/ai-detection/types";
 const mockUpdateFindingGovernanceStatus = vi.fn();
 
 vi.mock("../../../../../application/repository/aiDetection.repository", () => ({
-  updateFindingGovernanceStatus: (...args: unknown[]) =>
-    mockUpdateFindingGovernanceStatus(...args),
+  updateFindingGovernanceStatus: (...args: unknown[]) => mockUpdateFindingGovernanceStatus(...args),
   createSuppression: vi.fn(),
 }));
 
@@ -228,9 +227,7 @@ describe("FindingRow", () => {
   });
 
   it("does not link file paths when repositoryOwner/repositoryName are missing", () => {
-    render(
-      <FindingRow finding={baseFinding} repositoryOwner="" repositoryName="" scanId={1} />,
-    );
+    render(<FindingRow finding={baseFinding} repositoryOwner="" repositoryName="" scanId={1} />);
 
     fireEvent.click(screen.getByText("openai"));
     expect(screen.queryByRole("link")).not.toBeInTheDocument();

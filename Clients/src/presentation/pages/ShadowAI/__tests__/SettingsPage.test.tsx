@@ -1,6 +1,10 @@
 import { screen, waitFor, fireEvent } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
-import { IShadowAiApiKey, IShadowAiSyslogConfig, IShadowAiSettings } from "../../../../domain/interfaces/i.shadowAi";
+import {
+  IShadowAiApiKey,
+  IShadowAiSyslogConfig,
+  IShadowAiSettings,
+} from "../../../../domain/interfaces/i.shadowAi";
 
 const mockCreateApiKey = vi.fn();
 const mockListApiKeys = vi.fn();
@@ -292,7 +296,10 @@ describe("ShadowAI - SettingsPage", () => {
   // ─── Rate limiting ──────────────────────────────────────────────────
 
   it("shows the current rate limit and saves a new one", async () => {
-    mockUpdateSettingsConfig.mockResolvedValue({ ...settings, rate_limit_max_events_per_hour: 1000 });
+    mockUpdateSettingsConfig.mockResolvedValue({
+      ...settings,
+      rate_limit_max_events_per_hour: 1000,
+    });
     renderWithProviders(<SettingsPage />);
 
     await waitFor(() => {

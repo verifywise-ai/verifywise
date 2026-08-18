@@ -50,7 +50,9 @@ describe("GovernanceSettings", () => {
     expect(screen.getByText("Mapping Filters")).toBeInTheDocument();
     expect(screen.getByText("No active scenario selected.")).toBeInTheDocument();
     expect(
-      screen.getByText("No default filters configured. Filters are set per-session in the Framework Mapper."),
+      screen.getByText(
+        "No default filters configured. Filters are set per-session in the Framework Mapper.",
+      ),
     ).toBeInTheDocument();
   });
 

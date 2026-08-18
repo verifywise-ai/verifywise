@@ -110,9 +110,7 @@ describe("PolicyEditorToolbar", () => {
 
   it("reflects the active heading level from the editor state", () => {
     const editor = createMockEditor({
-      isActive: vi.fn(
-        (name: string, attrs?: any) => name === "heading" && attrs?.level === 2,
-      ),
+      isActive: vi.fn((name: string, attrs?: any) => name === "heading" && attrs?.level === 2),
     });
     renderWithProviders(<PolicyEditorToolbar editor={editor} {...baseProps} />);
     expect(screen.getByText("Header 2")).toBeInTheDocument();

@@ -250,7 +250,9 @@ describe("ProjectSettings", () => {
     fireEvent.click(screen.getByRole("button", { name: "Delete use case" }));
     fireEvent.click(screen.getByRole("button", { name: "Delete" }));
 
-    expect(await screen.findByText("Failed to delete project. Please try again.")).toBeInTheDocument();
+    expect(
+      await screen.findByText("Failed to delete project. Please try again."),
+    ).toBeInTheDocument();
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 

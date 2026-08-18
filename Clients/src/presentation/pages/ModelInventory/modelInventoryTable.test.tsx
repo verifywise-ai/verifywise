@@ -3,7 +3,11 @@ import { renderWithProviders } from "../../../test/renderWithProviders";
 import ModelInventoryTable from "./modelInventoryTable";
 import { ModelInventoryStatus } from "../../../domain/enums/modelInventory.enum";
 import type { IModelInventory } from "../../../domain/interfaces/i.modelInventory";
-import { ModelRiskCategory, ModelRiskLevel, ModelRiskStatus } from "../../../domain/interfaces/i.modelRisk";
+import {
+  ModelRiskCategory,
+  ModelRiskLevel,
+  ModelRiskStatus,
+} from "../../../domain/interfaces/i.modelRisk";
 import type { IModelRisk } from "../../../domain/interfaces/i.modelRisk";
 
 let mockUserRoleName = "Admin";
@@ -94,14 +98,18 @@ describe("ModelInventoryTable", () => {
   });
 
   it("shows 'No risks' when a model has none, and a risks link otherwise", () => {
-    renderWithProviders(<ModelInventoryTable data={models} isLoading={false} modelRisks={modelRisks} />);
+    renderWithProviders(
+      <ModelInventoryTable data={models} isLoading={false} modelRisks={modelRisks} />,
+    );
 
     expect(screen.getByText("1 risk")).toBeInTheDocument();
     expect(screen.getByText("No risks")).toBeInTheDocument();
   });
 
   it("opens the model risks dialog when the risk link is clicked", async () => {
-    renderWithProviders(<ModelInventoryTable data={models} isLoading={false} modelRisks={modelRisks} />);
+    renderWithProviders(
+      <ModelInventoryTable data={models} isLoading={false} modelRisks={modelRisks} />,
+    );
 
     fireEvent.click(screen.getByText("1 risk"));
 

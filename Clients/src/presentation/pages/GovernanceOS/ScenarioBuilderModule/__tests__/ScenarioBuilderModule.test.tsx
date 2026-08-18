@@ -44,7 +44,9 @@ describe("ScenarioBuilderModule", () => {
     renderWithProviders(<ScenarioBuilderModule />, { route: "/governance/scenarios" });
 
     expect(screen.getAllByText("Scenario Builder").length).toBeGreaterThan(0);
-    expect(screen.getByText(/Get framework recommendations based on your organization context/)).toBeInTheDocument();
+    expect(
+      screen.getByText(/Get framework recommendations based on your organization context/),
+    ).toBeInTheDocument();
     expect(screen.getByText("All Governance Scenarios")).toBeInTheDocument();
   });
 
