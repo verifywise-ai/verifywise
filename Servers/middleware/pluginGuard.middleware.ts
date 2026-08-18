@@ -7,6 +7,7 @@
 
 import { Request, Response, NextFunction } from "express";
 import { findByPlugin } from "../utils/pluginInstallation.utils";
+import { STATUS_CODE } from "../utils/statusCode.utils";
 
 /**
  * Returns Express middleware that checks if a plugin is installed for the tenant.
@@ -20,20 +21,18 @@ export function requirePlugin(pluginKey: string) {
     try {
       const organizationId = req.organizationId;
       if (!organizationId) {
-        return res.status(401).json({ message: req.t!("Authentication required") });
+        return res.status(401).json(STATUS_CODE[401](req.t!("Authentication required")));
       }
 
       const installation = await findByPlugin(pluginKey, organizationId);
       if (!installation || installation.status !== "installed") {
-        return res.status(404).json({
-          message: `The '${pluginKey}' plugin is not installed`,
-        });
+        return res.status(404).json(STATUS_CODE[404](`The '${pluginKey}' plugin is not installed`));
       }
 
       return next();
     } catch (error) {
       console.error(`[pluginGuard] Error checking plugin '${pluginKey}':`, error);
-      return res.status(500).json({ message: req.t!("Internal server error") });
+      return res.status(500).json(STATUS_CODE[500]((error as Error).message));
     }
   };
 }

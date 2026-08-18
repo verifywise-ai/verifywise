@@ -40,7 +40,10 @@ describe("pluginGuard.middleware (requirePlugin)", () => {
     await middleware(req, res as Response, next);
 
     expect(res.status).toHaveBeenCalledWith(401);
-    expect(res.json).toHaveBeenCalledWith({ message: "Authentication required" });
+    expect(res.json).toHaveBeenCalledWith({
+      message: "Unauthorized",
+      data: "Authentication required",
+    });
     expect(next).not.toHaveBeenCalled();
   });
 
@@ -67,7 +70,8 @@ describe("pluginGuard.middleware (requirePlugin)", () => {
 
     expect(res.status).toHaveBeenCalledWith(404);
     expect(res.json).toHaveBeenCalledWith({
-      message: "The 'jira' plugin is not installed",
+      message: "Not Found",
+      data: "The 'jira' plugin is not installed",
     });
     expect(next).not.toHaveBeenCalled();
   });
@@ -93,7 +97,10 @@ describe("pluginGuard.middleware (requirePlugin)", () => {
     await middleware(req, res as Response, next);
 
     expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.json).toHaveBeenCalledWith({ message: "Internal server error" });
+    expect(res.json).toHaveBeenCalledWith({
+      message: "Internal Server Error",
+      error: "DB error",
+    });
     expect(next).not.toHaveBeenCalled();
   });
 });

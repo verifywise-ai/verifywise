@@ -8,11 +8,6 @@ import { RequestParams } from "../../domain/interfaces/i.requestParams";
  * @throws Will throw an error if the request fails.
  */
 export async function getAllEvents({ routeUrl }: RequestParams): Promise<any> {
-  try {
-    const response = await apiServices.get(routeUrl);
-    return response;
-  } catch (error) {
-    console.error("Error fetching events:", error);
-    throw error;
-  }
+  const response = await apiServices.get(routeUrl);
+  return response;
 }

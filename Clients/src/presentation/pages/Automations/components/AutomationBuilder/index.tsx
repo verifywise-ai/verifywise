@@ -82,6 +82,7 @@ interface AutomationBuilderProps {
   onUpdateAutomationDescription: (newDescription: string) => void;
   onSave: () => void;
   isSaving: boolean;
+  isSaveDisabled?: boolean;
 }
 
 const AutomationBuilder: React.FC<AutomationBuilderProps> = ({
@@ -96,6 +97,7 @@ const AutomationBuilder: React.FC<AutomationBuilderProps> = ({
   onDeleteAction,
   onSave,
   isSaving,
+  isSaveDisabled = false,
 }) => {
   const theme = useTheme();
   const [triggerMenuAnchor, setTriggerMenuAnchor] = React.useState<null | HTMLElement>(null);
@@ -748,7 +750,7 @@ const AutomationBuilder: React.FC<AutomationBuilderProps> = ({
                 variant="contained"
                 startIcon={isSaving ? undefined : <Check size={16} />}
                 onClick={onSave}
-                isDisabled={isSaving}
+                isDisabled={isSaveDisabled}
                 loading={isSaving}
                 sx={{ minWidth: 200 }}
               >

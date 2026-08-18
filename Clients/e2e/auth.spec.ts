@@ -40,7 +40,9 @@ test.describe("Authentication", () => {
     await page.getByRole("button", { name: /sign in/i }).click();
 
     // An error alert should appear
-    await expect(page.getByRole("alert")).toBeVisible({ timeout: 10_000 });
+    await expect(
+      page.getByRole("alert").filter({ hasText: /Invalid email or password/i }),
+    ).toBeVisible({ timeout: 10_000 });
   });
 
   test("forgot password link navigates correctly", async ({ page }) => {

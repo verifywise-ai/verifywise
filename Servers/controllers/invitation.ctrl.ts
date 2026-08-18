@@ -78,10 +78,12 @@ export const resendInvitation = async (req: Request, res: Response): Promise<Res
     await updateInvitationExpiryQuery(organizationId, id, expiresAt);
 
     if (info.error) {
-      return res.status(206).json({
-        error: `${info.error.name}: ${info.error.message}`,
-        message: link,
-      });
+      return res.status(206).json(
+        STATUS_CODE[206]({
+          error: `${info.error.name}: ${info.error.message}`,
+          link,
+        }),
+      );
     }
 
     return res.status(200).json({ message: req.t!("Invitation resent successfully") });

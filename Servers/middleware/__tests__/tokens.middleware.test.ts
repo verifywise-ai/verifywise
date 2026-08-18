@@ -44,7 +44,8 @@ describe("tokens.middleware", () => {
 
       expect(res.status).toHaveBeenCalledWith(403);
       expect(res.json).toHaveBeenCalledWith({
-        message: "Only Admin users can create API tokens.",
+        message: "Forbidden",
+        data: "Only Admin users can create API tokens.",
       });
       expect(next).not.toHaveBeenCalled();
     });
@@ -59,7 +60,8 @@ describe("tokens.middleware", () => {
       expect(mockGetNumberOfApiTokensQuery).toHaveBeenCalledWith(1);
       expect(res.status).toHaveBeenCalledWith(403);
       expect(res.json).toHaveBeenCalledWith({
-        message: "Token limit reached. Maximum 10 tokens allowed.",
+        message: "Forbidden",
+        data: "Token limit reached. Maximum 10 tokens allowed.",
       });
       expect(next).not.toHaveBeenCalled();
     });
@@ -85,7 +87,8 @@ describe("tokens.middleware", () => {
 
       expect(res.status).toHaveBeenCalledWith(403);
       expect(res.json).toHaveBeenCalledWith({
-        message: "Only Admin users can delete API tokens.",
+        message: "Forbidden",
+        data: "Only Admin users can delete API tokens.",
       });
       expect(next).not.toHaveBeenCalled();
     });

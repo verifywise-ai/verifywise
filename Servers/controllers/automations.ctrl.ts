@@ -17,6 +17,35 @@ import {
   getAutomationExecutionStats,
 } from "../utils/automationExecutionLog.utils";
 
+/**
+ * Normalize automation `params` from a JSON string or plain object.
+ * Route validators usually sanitize to an object already; this is a
+ * defensive fallback for direct controller calls and keeps invalid JSON
+ * from throwing inside a DB transaction (which would surface as 500).
+ */
+function parseAutomationParams(raw: unknown): Record<string, unknown> {
+  if (raw == null || raw === "") {
+    return {};
+  }
+  if (typeof raw === "object" && !Array.isArray(raw)) {
+    return raw as Record<string, unknown>;
+  }
+  if (typeof raw === "string") {
+    const parsed = JSON.parse(raw) as unknown;
+    if (parsed !== null && typeof parsed === "object" && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>;
+    }
+    throw new SyntaxError("params must be a JSON object");
+  }
+  throw new SyntaxError("params must be a JSON string or object");
+}
+
+function paramsValidationError(message: string) {
+  return STATUS_CODE[400]({
+    errors: [{ field: "params", message, location: "body" }],
+  });
+}
+
 export const getAllAutomationTriggers = async (_req: Request, res: Response) => {
   try {
     const result = await getAllAutomationTriggersQuery();
@@ -75,41 +104,19 @@ export const getAutomationById = async (req: Request, res: Response) => {
 };
 
 export const createAutomation = async (req: Request, res: Response) => {
+  let params: Record<string, unknown>;
+  try {
+    params = parseAutomationParams(req.body.params);
+  } catch {
+    return res.status(400).json(paramsValidationError(req.t!("params must be valid JSON")));
+  }
+
+  const triggerId = req.body.triggerId as number;
+  const name = req.body.name as string;
+  const actions = req.body.actions as Partial<ITenantAutomationAction>[];
+
   const transaction = await sequelize.transaction();
   try {
-    const triggerId = req.body.triggerId as number;
-    const name = req.body.name as string;
-    const actions = req.body.actions as Partial<ITenantAutomationAction>[];
-    const params = JSON.parse(req.body.params || "{}") as Record<string, any>;
-
-    if (!triggerId || !name || !Array.isArray(actions) || actions.length === 0) {
-      await transaction.rollback();
-      return res.status(400).json(
-        STATUS_CODE[400]({
-          message: req.t!("Missing required fields: triggerId, name, actions"),
-        }),
-      );
-    }
-
-    // Fetch action types to validate send_email actions
-    // const actionTypes = await getAllAutomationActionsByTriggerIdQuery(triggerId);
-
-    // // Validate send_email actions have recipients
-    // for (const action of actions) {
-    //   const actionType = actionTypes.find((at: any) => at.id === action.action_type_id);
-    //   if (actionType && actionType.key === 'send_email') {
-    //     const actionParams = typeof action.params === 'string' ? JSON.parse(action.params) : action.params;
-    //     const recipients = actionParams?.to;
-
-    //     if (!Array.isArray(recipients) || recipients.length === 0) {
-    //       await transaction.rollback();
-    //       return res.status(400).json(STATUS_CODE[400]({
-    //         message: "Send email action must have at least one recipient"
-    //       }));
-    //     }
-    //   }
-    // }
-
     const automation = await createAutomationQuery(
       { name, trigger_id: triggerId, params },
       actions,
@@ -133,31 +140,16 @@ export const updateAutomation = async (req: Request, res: Response) => {
     return res.status(400).json(STATUS_CODE[400]({ message: req.t!("Invalid automation ID") }));
   }
 
+  let params: Record<string, unknown>;
+  try {
+    params = parseAutomationParams(req.body.params);
+  } catch {
+    return res.status(400).json(paramsValidationError(req.t!("params must be valid JSON")));
+  }
+
   const transaction = await sequelize.transaction();
   try {
     const actions = req.body.actions as Partial<ITenantAutomationAction>[];
-    // const triggerId = req.body.triggerId;
-
-    // // Validate send_email actions have recipients if actions are provided
-    // if (actions && actions.length > 0 && triggerId) {
-    //   // Fetch action types to validate send_email actions
-    //   const actionTypes = await getAllAutomationActionsByTriggerIdQuery(triggerId);
-
-    //   for (const action of actions) {
-    //     const actionType = actionTypes.find((at: any) => at.id === action.action_type_id);
-    //     if (actionType && actionType.key === 'send_email') {
-    //       const actionParams = typeof action.params === 'string' ? JSON.parse(action.params) : action.params;
-    //       const recipients = actionParams?.to;
-
-    //       if (!Array.isArray(recipients) || recipients.length === 0) {
-    //         await transaction.rollback();
-    //         return res.status(400).json(STATUS_CODE[400]({
-    //           message: "Send email action must have at least one recipient"
-    //         }));
-    //       }
-    //     }
-    //   }
-    // }
 
     const automation = await updateAutomationByIdQuery(
       id,
@@ -165,7 +157,7 @@ export const updateAutomation = async (req: Request, res: Response) => {
         name: req.body.name,
         is_active: req.body.is_active,
         trigger_id: req.body.triggerId,
-        params: JSON.parse(req.body.params || "{}") as Record<string, any>,
+        params,
       },
       actions,
       req.organizationId!,

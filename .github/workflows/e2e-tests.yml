@@ -9,6 +9,12 @@ on:
       - "Clients/**"
       - "Servers/**"
   workflow_dispatch:
+    inputs:
+      only_last_failed:
+        description: "Only re-run tests that failed in the previous workflow run"
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   e2e-tests:
@@ -223,7 +229,51 @@ jobs:
           fi
 
       # ---- Run E2E tests ----
-      - name: Run Playwright tests
+      # Persist Playwright's last-run metadata across workflow runs so a push
+      # that targets a previously-failing test can start with just that test
+      # instead of waiting for the whole suite.
+      #
+      # To only re-run previously failing tests, either:
+      #  - trigger the workflow manually with only_last_failed=true, or
+      #  - include "[e2e-only-failed]" in the HEAD commit message.
+      - name: Determine test mode
+        id: test_mode
+        run: |
+          HEAD_MSG=$(git log -1 --pretty=%B)
+          if [[ "$HEAD_MSG" == *"[e2e-only-failed]"* ]] || [[ "${{ inputs.only_last_failed }}" == "true" ]]; then
+            echo "only_last_failed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "only_last_failed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Restore last-run metadata
+        uses: actions/cache/restore@v4
+        with:
+          path: Clients/test-results/.last-run.json
+          key: playwright-last-run-${{ github.ref }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            playwright-last-run-${{ github.ref }}-
+
+      - name: Run previously failed E2E tests
+        working-directory: Clients
+        env:
+          E2E_BASE_URL: http://localhost:5173
+          E2E_EMAIL: admin@verifywise-test.com
+          E2E_PASSWORD: TestAdmin!Str0ng
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: verifywise_test
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+        run: |
+          if [ -f test-results/.last-run.json ]; then
+            npx playwright test --last-failed
+          else
+            echo "No previous run metadata found; skipping last-failed step."
+          fi
+
+      - name: Run full E2E test suite
+        if: ${{ steps.test_mode.outputs.only_last_failed != 'true' }}
         working-directory: Clients
         env:
           E2E_BASE_URL: http://localhost:5173
@@ -239,6 +289,13 @@ jobs:
           DB_USER: postgres
           DB_PASSWORD: postgres
         run: npx playwright test
+
+      - name: Save last-run metadata
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: Clients/test-results/.last-run.json
+          key: playwright-last-run-${{ github.ref }}-${{ github.run_id }}-${{ github.run_attempt }}
 
       - name: Upload Playwright report
         if: always()

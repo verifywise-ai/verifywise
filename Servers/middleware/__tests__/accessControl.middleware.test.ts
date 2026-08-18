@@ -57,7 +57,8 @@ describe("accessControl.middleware (authorize)", () => {
 
     expect(res.status).toHaveBeenCalledWith(401);
     expect(res.json).toHaveBeenCalledWith({
-      message: "Authentication required",
+      message: "Unauthorized",
+      data: "Authentication required",
     });
     expect(next).not.toHaveBeenCalled();
   });
@@ -69,7 +70,10 @@ describe("accessControl.middleware (authorize)", () => {
     authorize(["Admin", "Editor"])(req as Request, res as Response, next);
 
     expect(res.status).toHaveBeenCalledWith(403);
-    expect(res.json).toHaveBeenCalledWith({ message: "Access denied" });
+    expect(res.json).toHaveBeenCalledWith({
+      message: "Forbidden",
+      data: "Access denied",
+    });
     expect(next).not.toHaveBeenCalled();
   });
 

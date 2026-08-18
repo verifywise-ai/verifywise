@@ -1,4 +1,4 @@
-import { describe, it, expect, jest } from "@jest/globals";
+import { beforeEach, describe, it, expect, jest } from "@jest/globals";
 import express from "express";
 import supertest from "supertest";
 import { body } from "express-validator";
@@ -104,8 +104,10 @@ describe("handleValidationErrors (shared middleware)", () => {
   it("returns STATUS_CODE[400] envelope with structured errors", async () => {
     const app = express();
     app.use(express.json());
-    app.post("/x", validate(body("name").isString().notEmpty()), (_req, res) =>
-      res.status(200).json({ ok: true }),
+    app.post(
+      "/x",
+      validate(body("name").isString().notEmpty()),
+      (_req: express.Request, res: express.Response) => res.status(200).json({ ok: true }),
     );
 
     const res = await supertest(app).post("/x").send({}).expect(400);
@@ -118,8 +120,10 @@ describe("handleValidationErrors (shared middleware)", () => {
   it("passes through when validation succeeds", async () => {
     const app = express();
     app.use(express.json());
-    app.post("/x", validate(body("name").isString().notEmpty()), (_req, res) =>
-      res.status(200).json({ ok: true }),
+    app.post(
+      "/x",
+      validate(body("name").isString().notEmpty()),
+      (_req: express.Request, res: express.Response) => res.status(200).json({ ok: true }),
     );
 
     const res = await supertest(app).post("/x").send({ name: "foo" }).expect(200);
@@ -130,7 +134,9 @@ describe("handleValidationErrors (shared middleware)", () => {
 describe("controllers reject malformed payloads with 400 + consistent shape", () => {
   const app = makeApp();
 
-  beforeEach(() => noopHandler.mockClear());
+  beforeEach(() => {
+    noopHandler.mockClear();
+  });
 
   describe("approvalRequest", () => {
     it("POST / — missing request_name and workflow_id", async () => {
@@ -179,6 +185,73 @@ describe("controllers reject malformed payloads with 400 + consistent shape", ()
         .send({ is_active: "yes-please" })
         .expect(400);
       assertConsistentValidationErrorShape(res.body);
+    });
+
+    it("POST / — invalid params JSON string", async () => {
+      const res = await supertest(app)
+        .post("/automations")
+        .send({
+          triggerId: 1,
+          name: "Test",
+          actions: [{ action_type_id: 1 }],
+          params: "{not-json",
+        })
+        .expect(400);
+      assertConsistentValidationErrorShape(res.body);
+      const fields = res.body.data.errors.map((e: any) => e.field);
+      expect(fields).toContain("params");
+    });
+
+    it("POST / — params as JSON array is rejected", async () => {
+      const res = await supertest(app)
+        .post("/automations")
+        .send({
+          triggerId: 1,
+          name: "Test",
+          actions: [{ action_type_id: 1 }],
+          params: "[]",
+        })
+        .expect(400);
+      assertConsistentValidationErrorShape(res.body);
+      const fields = res.body.data.errors.map((e: any) => e.field);
+      expect(fields).toContain("params");
+    });
+
+    it("POST / — valid params object is accepted", async () => {
+      const res = await supertest(app)
+        .post("/automations")
+        .send({
+          triggerId: 1,
+          name: "Test",
+          actions: [{ action_type_id: 1 }],
+          params: { foo: "bar" },
+        })
+        .expect(200);
+      expect(res.body).toEqual({ ok: true });
+      expect(noopHandler).toHaveBeenCalled();
+    });
+
+    it("POST / — valid params JSON string is accepted and sanitized", async () => {
+      const res = await supertest(app)
+        .post("/automations")
+        .send({
+          triggerId: 1,
+          name: "Test",
+          actions: [{ action_type_id: 1 }],
+          params: '{"foo":"bar"}',
+        })
+        .expect(200);
+      expect(res.body).toEqual({ ok: true });
+      expect(noopHandler).toHaveBeenCalled();
+      const req = (noopHandler.mock.calls[0] as any)[0];
+      expect(req.body.params).toEqual({ foo: "bar" });
+    });
+
+    it("PUT /:id — invalid params JSON string", async () => {
+      const res = await supertest(app).put("/automations/1").send({ params: "{bad" }).expect(400);
+      assertConsistentValidationErrorShape(res.body);
+      const fields = res.body.data.errors.map((e: any) => e.field);
+      expect(fields).toContain("params");
     });
   });
 

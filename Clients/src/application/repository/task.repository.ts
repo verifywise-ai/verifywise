@@ -39,44 +39,39 @@ export async function getAllTasks({
   page?: string;
   page_size?: string;
 } = {}): Promise<any> {
-  try {
-    // Build query parameters
-    const params = new URLSearchParams();
+  // Build query parameters
+  const params = new URLSearchParams();
 
-    if (status?.length) {
-      status.forEach((s) => params.append("status", s));
-    }
-    if (priority?.length) {
-      priority.forEach((p) => params.append("priority", p));
-    }
-    if (category?.length) {
-      category.forEach((c) => params.append("category", c));
-    }
-    if (assignee?.length) {
-      assignee.forEach((a) => params.append("assignee", a.toString()));
-    }
-    if (due_date_start) params.append("due_date_start", due_date_start);
-    if (due_date_end) params.append("due_date_end", due_date_end);
-    if (search) params.append("search", search);
-    if (include_archived) params.append("include_archived", "true");
-
-    params.append("sort_by", sort_by);
-    params.append("sort_order", sort_order);
-    params.append("page", page);
-    params.append("page_size", page_size);
-
-    const queryString = params.toString();
-    const url = `/tasks${queryString ? `?${queryString}` : ""}`;
-
-    const response = await apiServices.get(url, {
-      signal,
-    });
-
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching tasks:", error);
-    throw error;
+  if (status?.length) {
+    status.forEach((s) => params.append("status", s));
   }
+  if (priority?.length) {
+    priority.forEach((p) => params.append("priority", p));
+  }
+  if (category?.length) {
+    category.forEach((c) => params.append("category", c));
+  }
+  if (assignee?.length) {
+    assignee.forEach((a) => params.append("assignee", a.toString()));
+  }
+  if (due_date_start) params.append("due_date_start", due_date_start);
+  if (due_date_end) params.append("due_date_end", due_date_end);
+  if (search) params.append("search", search);
+  if (include_archived) params.append("include_archived", "true");
+
+  params.append("sort_by", sort_by);
+  params.append("sort_order", sort_order);
+  params.append("page", page);
+  params.append("page_size", page_size);
+
+  const queryString = params.toString();
+  const url = `/tasks${queryString ? `?${queryString}` : ""}`;
+
+  const response = await apiServices.get(url, {
+    signal,
+  });
+
+  return response.data;
 }
 
 /**
@@ -95,15 +90,10 @@ export async function getTaskById({
   id: string | number;
   signal?: AbortSignal;
 }): Promise<any> {
-  try {
-    const response = await apiServices.get(`/tasks/${id}`, {
-      signal,
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching task by ID:", error);
-    throw error;
-  }
+  const response = await apiServices.get(`/tasks/${id}`, {
+    signal,
+  });
+  return response.data;
 }
 
 /**
@@ -115,13 +105,8 @@ export async function getTaskById({
  * @throws Will throw an error if the request fails
  */
 export async function createTask({ body }: { body: Partial<ITask> }): Promise<any> {
-  try {
-    const response = await apiServices.post("/tasks", body);
-    return response.data;
-  } catch (error) {
-    console.error("Error creating task:", error);
-    throw error;
-  }
+  const response = await apiServices.post("/tasks", body);
+  return response.data;
 }
 
 /**
@@ -140,13 +125,8 @@ export async function updateTask({
   id: string | number;
   body: Partial<ITask>;
 }): Promise<any> {
-  try {
-    const response = await apiServices.put(`/tasks/${id}`, body);
-    return response.data;
-  } catch (error) {
-    console.error("Error updating task:", error);
-    throw error;
-  }
+  const response = await apiServices.put(`/tasks/${id}`, body);
+  return response.data;
 }
 
 /**
@@ -158,13 +138,8 @@ export async function updateTask({
  * @throws Will throw an error if the request fails
  */
 export async function deleteTask({ id }: { id: string | number }): Promise<any> {
-  try {
-    const response = await apiServices.delete(`/tasks/${id}`);
-    return response.data;
-  } catch (error) {
-    console.error("Error deleting task:", error);
-    throw error;
-  }
+  const response = await apiServices.delete(`/tasks/${id}`);
+  return response.data;
 }
 
 /**
@@ -183,13 +158,8 @@ export async function updateTaskStatus({
   id: string | number;
   status: TaskStatus;
 }): Promise<any> {
-  try {
-    const response = await apiServices.put(`/tasks/${id}`, { status });
-    return response.data;
-  } catch (error) {
-    console.error("Error updating task status:", error);
-    throw error;
-  }
+  const response = await apiServices.put(`/tasks/${id}`, { status });
+  return response.data;
 }
 
 /**
@@ -208,13 +178,8 @@ export async function updateTaskPriority({
   id: string | number;
   priority: TaskPriority;
 }): Promise<any> {
-  try {
-    const response = await apiServices.put(`/tasks/${id}`, { priority });
-    return response.data;
-  } catch (error) {
-    console.error("Error updating priority:", error);
-    throw error;
-  }
+  const response = await apiServices.put(`/tasks/${id}`, { priority });
+  return response.data;
 }
 
 /**
@@ -226,13 +191,8 @@ export async function updateTaskPriority({
  * @throws Will throw an error if the request fails
  */
 export async function restoreTask({ id }: { id: string | number }): Promise<any> {
-  try {
-    const response = await apiServices.put(`/tasks/${id}/restore`, {});
-    return response.data;
-  } catch (error) {
-    console.error("Error restoring task:", error);
-    throw error;
-  }
+  const response = await apiServices.put(`/tasks/${id}/restore`, {});
+  return response.data;
 }
 
 /**
@@ -244,13 +204,8 @@ export async function restoreTask({ id }: { id: string | number }): Promise<any>
  * @throws Will throw an error if the request fails
  */
 export async function hardDeleteTask({ id }: { id: string | number }): Promise<any> {
-  try {
-    const response = await apiServices.delete(`/tasks/${id}/hard`);
-    return response.data;
-  } catch (error) {
-    console.error("Error permanently deleting task:", error);
-    throw error;
-  }
+  const response = await apiServices.delete(`/tasks/${id}/hard`);
+  return response.data;
 }
 
 export type BulkTaskAction = "mark_complete" | "set_categories";
@@ -262,11 +217,6 @@ export interface BulkUpdateTasksPayload {
 }
 
 export async function bulkUpdateTasks(payload: BulkUpdateTasksPayload): Promise<any> {
-  try {
-    const response = await apiServices.patch("/tasks/bulk", payload);
-    return response.data;
-  } catch (error) {
-    console.error("Error performing bulk task update:", error);
-    throw error;
-  }
+  const response = await apiServices.patch("/tasks/bulk", payload);
+  return response.data;
 }

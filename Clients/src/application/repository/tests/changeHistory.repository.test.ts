@@ -69,18 +69,12 @@ describe("Test Change History Repository", () => {
       expect(response).toEqual(mockPayload);
     });
 
-    it("should throw and log when request fails", async () => {
+    it("should throw when request fails", async () => {
       const error = new Error("API Error");
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
       vi.mocked(apiServices.get).mockRejectedValueOnce(error);
 
       await expect(getEntityChangeHistory("project_risk" as any, 99)).rejects.toThrow("API Error");
-
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Error getting project_risk change history:",
-        error,
-      );
     });
   });
 });
