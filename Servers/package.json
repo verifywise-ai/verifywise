@@ -40,7 +40,7 @@
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.38",
-    "@ai-sdk/openai": "^3.0.63",
+    "@ai-sdk/openai": "^4.0.42",
     "@aws-sdk/client-ses": "^3.1045.0",
     "@azure/communication-email": "^1.1.0",
     "@azure/msal-node": "^5.4.2",
@@ -64,7 +64,7 @@
     "bullmq": "^6.0.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
-    "cron-parser": "^4.9.0",
+    "cron-parser": "^5.9.0",
     "crypto": "^1.0.1",
     "docx": "^9.6.1",
     "dotenv": "^17.4.2",
@@ -83,7 +83,6 @@
     "lusca": "^1.7.0",
     "mammoth": "^1.12.0",
     "mjml": "^5.2.0",
-    "mlflow": "^2.0.7",
     "multer": "^2.2.0",
     "node-cron": "^4.2.1",
     "nodemailer": "^9.0.3",
@@ -93,6 +92,7 @@
     "pg-pool": "^3.7.0",
     "pickleparser": "^0.2.1",
     "playwright": "^1.59.1",
+    "re2js": "^2.8.6",
     "redis": "^6.0.0",
     "reflect-metadata": "^0.2.2",
     "resend": "^6.12.3",
@@ -110,8 +110,7 @@
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "xstate": "^5.30.0",
     "yamljs": "^0.3.0",
-    "zod": "^4.4.3",
-    "re2js": "^2.8.6"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
