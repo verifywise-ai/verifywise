@@ -1,0 +1,3774 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "FastAPI",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/": {
+      "get": {
+        "summary": "Root",
+        "operationId": "root__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/evaluate": {
+      "post": {
+        "tags": ["DeepEval"],
+        "summary": "Create Deepeval Evaluation",
+        "description": "Create and run a DeepEval evaluation.\n\nRequest body:\n{\n    \"model\": {\n        \"name\": \"TinyLlama/TinyLlama-1.1B-Chat-v1.0\",\n        \"provider\": \"huggingface\",\n        \"generation\": {\n            \"max_tokens\": 500,\n            \"temperature\": 0.7\n        }\n    },\n    \"dataset\": {\n        \"use_builtin\": true,\n        \"categories\": [\"coding\", \"mathematics\"],  // optional\n        \"difficulties\": [\"easy\", \"medium\"],  // optional\n        \"limit\": 10  // optional\n    },\n    \"metrics\": {\n        \"answer_relevancy\": true,\n        \"bias\": true,\n        \"toxicity\": true,\n        \"faithfulness\": false,\n        \"hallucination\": false,\n        \"contextual_relevancy\": false\n    },\n    \"metric_thresholds\": {\n        \"answer_relevancy\": 0.5,\n        \"bias\": 0.5,\n        \"toxicity\": 0.5\n    },\n    \"selectedScorers\": [\"scorer_id_1\", \"scorer_id_2\"]  // optional - if not specified, all enabled scorers will run\n}",
+        "operationId": "create_deepeval_evaluation_deepeval_evaluate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvaluateConfig"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/evaluate/status/{eval_id}": {
+      "get": {
+        "tags": ["DeepEval"],
+        "summary": "Get Evaluation Status",
+        "description": "Get the status of a DeepEval evaluation.\n\nReturns:\n{\n    \"eval_id\": \"deepeval_20250130_120000\",\n    \"status\": \"running\" | \"completed\" | \"failed\",\n    \"progress\": \"3/10 prompts evaluated\",\n    \"created_at\": \"2025-01-30T12:00:00\",\n    \"updated_at\": \"2025-01-30T12:01:30\"\n}",
+        "operationId": "get_evaluation_status_deepeval_evaluate_status__eval_id__get",
+        "parameters": [
+          {
+            "name": "eval_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Eval Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/evaluate/results/{eval_id}": {
+      "get": {
+        "tags": ["DeepEval"],
+        "summary": "Get Evaluation Results",
+        "description": "Get the results of a completed DeepEval evaluation.\n\nReturns:\n{\n    \"eval_id\": \"deepeval_20250130_120000\",\n    \"status\": \"completed\",\n    \"results\": {\n        \"model\": \"TinyLlama/TinyLlama-1.1B-Chat-v1.0\",\n        \"total_samples\": 10,\n        \"metric_summaries\": {\n            \"answer_relevancy\": {\n                \"average_score\": 0.745,\n                \"pass_rate\": 80.0,\n                \"min_score\": 0.267,\n                \"max_score\": 1.0\n            },\n            \"bias\": {...},\n            \"toxicity\": {...}\n        },\n        \"category_breakdown\": {...},\n        \"detailed_results\": [...]\n    }\n}",
+        "operationId": "get_evaluation_results_deepeval_evaluate_results__eval_id__get",
+        "parameters": [
+          {
+            "name": "eval_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Eval Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/evaluations": {
+      "get": {
+        "tags": ["DeepEval"],
+        "summary": "Get All Evaluations",
+        "description": "Get all DeepEval evaluations for the current tenant.\n\nReturns:\n{\n    \"evaluations\": [\n        {\n            \"eval_id\": \"deepeval_20250130_120000\",\n            \"status\": \"completed\",\n            \"model\": \"TinyLlama/TinyLlama-1.1B-Chat-v1.0\",\n            \"total_samples\": 10,\n            \"created_at\": \"2025-01-30T12:00:00\",\n            \"completed_at\": \"2025-01-30T12:05:30\"\n        },\n        ...\n    ]\n}",
+        "operationId": "get_all_evaluations_deepeval_evaluations_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/evaluations/{eval_id}": {
+      "delete": {
+        "tags": ["DeepEval"],
+        "summary": "Delete Evaluation",
+        "description": "Delete a DeepEval evaluation and its results.\n\nReturns:\n{\n    \"message\": \"Evaluation deleted successfully\",\n    \"eval_id\": \"deepeval_20250130_120000\"\n}",
+        "operationId": "delete_evaluation_deepeval_evaluations__eval_id__delete",
+        "parameters": [
+          {
+            "name": "eval_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Eval Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/metrics/available": {
+      "get": {
+        "tags": ["DeepEval"],
+        "summary": "Get Available Metrics",
+        "description": "Get list of available DeepEval metrics.\n\nReturns:\n{\n    \"metrics\": [\n        {\n            \"name\": \"answer_relevancy\",\n            \"description\": \"Measures if the answer is relevant to the input\",\n            \"requires_context\": false,\n            \"requires_openai_key\": true\n        },\n        ...\n    ]\n}",
+        "operationId": "get_available_metrics_deepeval_metrics_available_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/dataset/info": {
+      "get": {
+        "tags": ["DeepEval"],
+        "summary": "Get Dataset Info",
+        "description": "Get information about the evaluation dataset.\n\nReturns:\n{\n    \"total_prompts\": 20,\n    \"categories\": [\"coding\", \"mathematics\", \"reasoning\", ...],\n    \"difficulties\": [\"easy\", \"medium\", \"hard\"],\n    \"category_counts\": {\n        \"coding\": 3,\n        \"mathematics\": 3,\n        ...\n    }\n}",
+        "operationId": "get_dataset_info_deepeval_dataset_info_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/datasets/upload": {
+      "post": {
+        "tags": ["DeepEval"],
+        "summary": "Upload Dataset",
+        "description": "Upload a custom JSON dataset to be used in evaluations.\n\nReturns:\n{\n    \"message\": \"Dataset uploaded successfully\",\n    \"path\": \"data/uploads/{tenant}/{filename}.json\",\n    \"filename\": \"{filename}.json\",\n    \"size\": 12345,\n    \"tenant\": \"default\",\n    \"datasetType\": \"chatbot\",\n    \"turnType\": \"single-turn\"\n}",
+        "operationId": "upload_dataset_deepeval_datasets_upload_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_dataset_deepeval_datasets_upload_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/datasets/list": {
+      "get": {
+        "tags": ["DeepEval"],
+        "summary": "List Datasets",
+        "description": "List available built-in datasets grouped by use case.",
+        "operationId": "list_datasets_deepeval_datasets_list_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/datasets/read": {
+      "get": {
+        "tags": ["DeepEval"],
+        "summary": "Read Dataset",
+        "description": "Read and return the JSON content of a dataset file by relative path.\nExample: /deepeval/datasets/read?path=chatbot/chatbot_basic.json",
+        "operationId": "read_dataset_deepeval_datasets_read_get",
+        "parameters": [
+          {
+            "name": "path",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Path"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/datasets/uploads": {
+      "get": {
+        "tags": ["DeepEval"],
+        "summary": "List Uploaded Datasets",
+        "description": "List uploaded JSON datasets for the current organization.\nDocker: /app/data/uploads/{organization_id}\nLocal: EvaluationModule/data/uploads/{organization_id}",
+        "operationId": "list_uploaded_datasets_deepeval_datasets_uploads_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/datasets/user": {
+      "get": {
+        "tags": ["DeepEval"],
+        "summary": "List User Datasets",
+        "description": "List user-uploaded datasets from DB for the current organization.\nOptionally filter by org_id.",
+        "operationId": "list_user_datasets_deepeval_datasets_user_get",
+        "parameters": [
+          {
+            "name": "org_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Org Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["DeepEval"],
+        "summary": "Delete User Datasets",
+        "description": "Delete user-uploaded datasets from DB and filesystem for the current organization.\nExpects JSON body with {\"paths\": [\"path1\", \"path2\", ...]}",
+        "operationId": "delete_user_datasets_deepeval_datasets_user_delete",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/scorers": {
+      "get": {
+        "tags": ["DeepEval"],
+        "summary": "List Scorers Endpoint",
+        "description": "List scorer definitions for the current organization (optionally for a single project).",
+        "operationId": "list_scorers_endpoint_deepeval_scorers_get",
+        "parameters": [
+          {
+            "name": "org_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Org Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["DeepEval"],
+        "summary": "Create Scorer Endpoint",
+        "description": "Create a new scorer definition.",
+        "operationId": "create_scorer_endpoint_deepeval_scorers_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateScorerRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/scorers/{scorer_id}": {
+      "put": {
+        "tags": ["DeepEval"],
+        "summary": "Update Scorer Endpoint",
+        "description": "Update an existing scorer definition.",
+        "operationId": "update_scorer_endpoint_deepeval_scorers__scorer_id__put",
+        "parameters": [
+          {
+            "name": "scorer_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Scorer Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateScorerRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["DeepEval"],
+        "summary": "Delete Scorer Endpoint",
+        "description": "Delete a scorer definition.",
+        "operationId": "delete_scorer_endpoint_deepeval_scorers__scorer_id__delete",
+        "parameters": [
+          {
+            "name": "scorer_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Scorer Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/scorers/{scorer_id}/test": {
+      "post": {
+        "tags": ["DeepEval"],
+        "summary": "Test Scorer Endpoint",
+        "description": "Test a scorer with sample input/output.\n\nExpected payload:\n{\n  \"input\": \"The source text...\",\n  \"output\": \"The model's output...\",\n  \"expected\": \"Optional expected output...\"\n}",
+        "operationId": "test_scorer_endpoint_deepeval_scorers__scorer_id__test_post",
+        "parameters": [
+          {
+            "name": "scorer_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Scorer Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScorerTestRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/models": {
+      "get": {
+        "tags": ["DeepEval"],
+        "summary": "List Models Endpoint",
+        "description": "List saved model configurations for the current organization.",
+        "operationId": "list_models_endpoint_deepeval_models_get",
+        "parameters": [
+          {
+            "name": "org_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Org Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["DeepEval"],
+        "summary": "Create Model Endpoint",
+        "description": "Create a new saved model configuration.",
+        "operationId": "create_model_endpoint_deepeval_models_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateModelRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/models/{model_id}": {
+      "put": {
+        "tags": ["DeepEval"],
+        "summary": "Update Model Endpoint",
+        "description": "Update an existing saved model configuration.",
+        "operationId": "update_model_endpoint_deepeval_models__model_id__put",
+        "parameters": [
+          {
+            "name": "model_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Model Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateModelRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["DeepEval"],
+        "summary": "Delete Model Endpoint",
+        "description": "Delete a saved model configuration.",
+        "operationId": "delete_model_endpoint_deepeval_models__model_id__delete",
+        "parameters": [
+          {
+            "name": "model_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Model Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/models/latest": {
+      "get": {
+        "tags": ["DeepEval"],
+        "summary": "Get Latest Model Endpoint",
+        "description": "Get the most recently added/updated model configuration.\nUsed for auto-populating experiment forms.",
+        "operationId": "get_latest_model_endpoint_deepeval_models_latest_get",
+        "parameters": [
+          {
+            "name": "org_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Org Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/scorers/latest": {
+      "get": {
+        "tags": ["DeepEval"],
+        "summary": "Get Latest Scorer Endpoint",
+        "description": "Get the most recently added/updated scorer (judge) configuration.\nUsed for auto-populating experiment forms.",
+        "operationId": "get_latest_scorer_endpoint_deepeval_scorers_latest_get",
+        "parameters": [
+          {
+            "name": "org_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Org Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/projects": {
+      "get": {
+        "tags": ["DeepEval Projects"],
+        "summary": "Get All Projects",
+        "description": "Get all DeepEval projects for the current organization.",
+        "operationId": "get_all_projects_deepeval_projects_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["DeepEval Projects"],
+        "summary": "Create Project",
+        "description": "Create a new DeepEval project.\n\nRequest body:\n{\n    \"name\": \"Coding Tasks Evaluation\",\n    \"description\": \"Evaluating model performance on coding tasks\",\n    \"useCase\": \"chatbot\"\n}",
+        "operationId": "create_project_deepeval_projects_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "type": "object",
+                "title": "Project Data"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/projects/{project_id}": {
+      "get": {
+        "tags": ["DeepEval Projects"],
+        "summary": "Get Project",
+        "description": "Get a specific project by ID.",
+        "operationId": "get_project_deepeval_projects__project_id__get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["DeepEval Projects"],
+        "summary": "Update Project",
+        "description": "Update an existing project.",
+        "operationId": "update_project_deepeval_projects__project_id__put",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "title": "Project Data"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["DeepEval Projects"],
+        "summary": "Delete Project",
+        "description": "Delete a project and all its associated experiments.",
+        "operationId": "delete_project_deepeval_projects__project_id__delete",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/projects/{project_id}/stats": {
+      "get": {
+        "tags": ["DeepEval Projects"],
+        "summary": "Get Project Stats",
+        "description": "Get project statistics (number of experiments, avg metrics, etc.).",
+        "operationId": "get_project_stats_deepeval_projects__project_id__stats_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/orgs": {
+      "get": {
+        "tags": ["DeepEval Orgs"],
+        "summary": "List Orgs",
+        "operationId": "list_orgs_deepeval_orgs_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["DeepEval Orgs"],
+        "summary": "Create Org",
+        "operationId": "create_org_deepeval_orgs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "type": "object",
+                "title": "Body"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/orgs/{org_id}/projects": {
+      "get": {
+        "tags": ["DeepEval Orgs"],
+        "summary": "Org Projects",
+        "operationId": "org_projects_deepeval_orgs__org_id__projects_get",
+        "parameters": [
+          {
+            "name": "org_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Org Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/orgs/{org_id}": {
+      "put": {
+        "tags": ["DeepEval Orgs"],
+        "summary": "Update Org",
+        "description": "Update an organization.",
+        "operationId": "update_org_deepeval_orgs__org_id__put",
+        "parameters": [
+          {
+            "name": "org_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Org Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": true,
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["DeepEval Orgs"],
+        "summary": "Delete Org",
+        "description": "Delete an organization.",
+        "operationId": "delete_org_deepeval_orgs__org_id__delete",
+        "parameters": [
+          {
+            "name": "org_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Org Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/arena/compare": {
+      "post": {
+        "tags": ["DeepEval Arena"],
+        "summary": "Create Arena Comparison",
+        "description": "Create and run an LLM Arena comparison.\n\nRequest body:\n{\n    \"name\": \"Model Comparison Test\",\n    \"description\": \"Comparing different model versions\",\n    \"contestants\": [\n        {\n            \"name\": \"GPT-4 Turbo\",\n            \"hyperparameters\": {\n                \"model\": \"gpt-4-turbo\",\n                \"temperature\": 0.7\n            },\n            \"testCases\": [\n                {\n                    \"input\": \"What is the capital of France?\",\n                    \"actualOutput\": \"Paris is the capital of France.\"\n                }\n            ]\n        },\n        {\n            \"name\": \"GPT-3.5 Turbo\",\n            \"hyperparameters\": {\n                \"model\": \"gpt-3.5-turbo\",\n                \"temperature\": 0.7\n            },\n            \"testCases\": [\n                {\n                    \"input\": \"What is the capital of France?\",\n                    \"actualOutput\": \"Paris\"\n                }\n            ]\n        }\n    ],\n    \"metric\": {\n        \"name\": \"Helpfulness\",\n        \"criteria\": \"Choose the winner based on which response is more helpful and informative\",\n        \"evaluationParams\": [\"input\", \"actual_output\"]\n    },\n    \"judgeModel\": \"gpt-4o\"  // Model used as judge\n}",
+        "operationId": "create_arena_comparison_deepeval_arena_compare_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "type": "object",
+                "title": "Config Data"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/arena/comparisons": {
+      "get": {
+        "tags": ["DeepEval Arena"],
+        "summary": "List Arena Comparisons",
+        "description": "List all arena comparisons for the current tenant.\n\nReturns:\n{\n    \"comparisons\": [\n        {\n            \"id\": \"arena_20250130_120000\",\n            \"name\": \"Model Comparison Test\",\n            \"status\": \"completed\",\n            \"contestants\": [\"GPT-4 Turbo\", \"GPT-3.5 Turbo\"],\n            \"winner\": \"GPT-4 Turbo\",\n            \"createdAt\": \"2025-01-30T12:00:00\",\n            \"completedAt\": \"2025-01-30T12:05:30\"\n        },\n        ...\n    ]\n}",
+        "operationId": "list_arena_comparisons_deepeval_arena_comparisons_get",
+        "parameters": [
+          {
+            "name": "org_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Org Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/arena/comparisons/{comparison_id}": {
+      "get": {
+        "tags": ["DeepEval Arena"],
+        "summary": "Get Arena Comparison Status",
+        "description": "Get the status of an arena comparison.\n\nReturns:\n{\n    \"id\": \"arena_20250130_120000\",\n    \"status\": \"running\" | \"completed\" | \"failed\",\n    \"progress\": \"3/10 test cases evaluated\",\n    \"createdAt\": \"2025-01-30T12:00:00\",\n    \"updatedAt\": \"2025-01-30T12:01:30\"\n}",
+        "operationId": "get_arena_comparison_status_deepeval_arena_comparisons__comparison_id__get",
+        "parameters": [
+          {
+            "name": "comparison_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Comparison Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["DeepEval Arena"],
+        "summary": "Delete Arena Comparison",
+        "description": "Delete an arena comparison.\n\nReturns:\n{\n    \"message\": \"Arena comparison deleted successfully\",\n    \"id\": \"arena_20250130_120000\"\n}",
+        "operationId": "delete_arena_comparison_deepeval_arena_comparisons__comparison_id__delete",
+        "parameters": [
+          {
+            "name": "comparison_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Comparison Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/arena/comparisons/{comparison_id}/results": {
+      "get": {
+        "tags": ["DeepEval Arena"],
+        "summary": "Get Arena Comparison Results",
+        "description": "Get the results of a completed arena comparison.\n\nReturns:\n{\n    \"id\": \"arena_20250130_120000\",\n    \"name\": \"Model Comparison Test\",\n    \"status\": \"completed\",\n    \"metric\": {\n        \"name\": \"Helpfulness\",\n        \"criteria\": \"Choose the winner based on which response is more helpful\"\n    },\n    \"results\": {\n        \"winner\": \"GPT-4 Turbo\",\n        \"winCounts\": {\n            \"GPT-4 Turbo\": 7,\n            \"GPT-3.5 Turbo\": 3\n        },\n        \"detailedResults\": [\n            {\n                \"testCaseIndex\": 0,\n                \"input\": \"What is the capital of France?\",\n                \"winner\": \"GPT-4 Turbo\",\n                \"reason\": \"More comprehensive and informative response\"\n            },\n            ...\n        ]\n    }\n}",
+        "operationId": "get_arena_comparison_results_deepeval_arena_comparisons__comparison_id__results_get",
+        "parameters": [
+          {
+            "name": "comparison_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Comparison Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/bias-audits/presets": {
+      "get": {
+        "tags": ["Bias Audits"],
+        "summary": "List Presets",
+        "description": "List all available bias audit preset summaries.",
+        "operationId": "list_presets_deepeval_bias_audits_presets_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/bias-audits/presets/{preset_id}": {
+      "get": {
+        "tags": ["Bias Audits"],
+        "summary": "Get Preset",
+        "description": "Get full details of a single preset.",
+        "operationId": "get_preset_deepeval_bias_audits_presets__preset_id__get",
+        "parameters": [
+          {
+            "name": "preset_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Preset Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/bias-audits/run": {
+      "post": {
+        "tags": ["Bias Audits"],
+        "summary": "Create Bias Audit",
+        "description": "Create and execute a bias audit.\n\nMultipart form: dataset CSV file + config_json string + org_id.\nReturns 202 with auditId for polling.",
+        "operationId": "create_bias_audit_deepeval_bias_audits_run_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_create_bias_audit_deepeval_bias_audits_run_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/bias-audits/{audit_id}/status": {
+      "get": {
+        "tags": ["Bias Audits"],
+        "summary": "Get Audit Status",
+        "description": "Poll the status of a bias audit.",
+        "operationId": "get_audit_status_deepeval_bias_audits__audit_id__status_get",
+        "parameters": [
+          {
+            "name": "audit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Audit Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/bias-audits/{audit_id}/results": {
+      "get": {
+        "tags": ["Bias Audits"],
+        "summary": "Get Audit Results",
+        "description": "Get full results of a completed bias audit.",
+        "operationId": "get_audit_results_deepeval_bias_audits__audit_id__results_get",
+        "parameters": [
+          {
+            "name": "audit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Audit Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/bias-audits/{audit_id}": {
+      "patch": {
+        "tags": ["Bias Audits"],
+        "summary": "Update Audit",
+        "description": "Update the user-editable system name for an audit.",
+        "operationId": "update_audit_deepeval_bias_audits__audit_id__patch",
+        "parameters": [
+          {
+            "name": "audit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Audit Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateAuditNameRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Bias Audits"],
+        "summary": "Delete Audit",
+        "description": "Delete a bias audit and its results.",
+        "operationId": "delete_audit_deepeval_bias_audits__audit_id__delete",
+        "parameters": [
+          {
+            "name": "audit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Audit Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/bias-audits/{audit_id}/report.pdf": {
+      "get": {
+        "tags": ["Bias Audits"],
+        "summary": "Get Audit Report",
+        "description": "Download a formal PDF report for a completed bias audit.",
+        "operationId": "get_audit_report_deepeval_bias_audits__audit_id__report_pdf_get",
+        "parameters": [
+          {
+            "name": "audit_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Audit Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/bias-audits": {
+      "get": {
+        "tags": ["Bias Audits"],
+        "summary": "List Audits",
+        "description": "List all bias audits for the organization.",
+        "operationId": "list_audits_deepeval_bias_audits_get",
+        "parameters": [
+          {
+            "name": "org_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Org Id"
+            }
+          },
+          {
+            "name": "project_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/bias-audits/parse-headers": {
+      "post": {
+        "tags": ["Bias Audits"],
+        "summary": "Parse Csv Headers",
+        "description": "Parse CSV headers for column mapping UI.",
+        "operationId": "parse_csv_headers_deepeval_bias_audits_parse_headers_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_parse_csv_headers_deepeval_bias_audits_parse_headers_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/models/validate": {
+      "post": {
+        "tags": [
+          "Evaluation Logs & Monitoring",
+          "Evaluation Logs & Monitoring"
+        ],
+        "summary": "Validate Model Api Key",
+        "description": "Validate that the required API key is available for a model.\n\nChecks both environment variables AND the database for stored API keys.\n\nReturns:\n{\n    \"valid\": true/false,\n    \"model_name\": \"mistral-large-latest\",\n    \"provider\": \"mistral\",\n    \"has_api_key\": true/false,\n    \"has_openrouter_fallback\": true/false,\n    \"error_message\": \"MISTRAL_API_KEY not configured\" (if invalid)\n}",
+        "operationId": "validate_model_api_key_deepeval_models_validate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ValidateModelRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/logs": {
+      "post": {
+        "tags": [
+          "Evaluation Logs & Monitoring",
+          "Evaluation Logs & Monitoring"
+        ],
+        "summary": "Create Log",
+        "description": "Create a new evaluation log entry",
+        "operationId": "create_log_deepeval_logs_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateLogRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Evaluation Logs & Monitoring",
+          "Evaluation Logs & Monitoring"
+        ],
+        "summary": "Get Logs",
+        "description": "Get logs with optional filtering",
+        "operationId": "get_logs_deepeval_logs_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "experiment_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Experiment Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/logs/{log_id}": {
+      "get": {
+        "tags": [
+          "Evaluation Logs & Monitoring",
+          "Evaluation Logs & Monitoring"
+        ],
+        "summary": "Get Log",
+        "description": "Get a specific log by ID",
+        "operationId": "get_log_deepeval_logs__log_id__get",
+        "parameters": [
+          {
+            "name": "log_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Log Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/logs/trace/{trace_id}": {
+      "get": {
+        "tags": [
+          "Evaluation Logs & Monitoring",
+          "Evaluation Logs & Monitoring"
+        ],
+        "summary": "Get Trace",
+        "description": "Get all logs for a specific trace",
+        "operationId": "get_trace_deepeval_logs_trace__trace_id__get",
+        "parameters": [
+          {
+            "name": "trace_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Trace Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/metrics": {
+      "get": {
+        "tags": [
+          "Evaluation Logs & Monitoring",
+          "Evaluation Logs & Monitoring"
+        ],
+        "summary": "Get Metrics",
+        "description": "Get metrics with optional filtering",
+        "operationId": "get_metrics_deepeval_metrics_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Evaluation Logs & Monitoring",
+          "Evaluation Logs & Monitoring"
+        ],
+        "summary": "Create Metric",
+        "description": "Create a new metric entry",
+        "operationId": "create_metric_deepeval_metrics_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMetricRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/metrics/aggregates": {
+      "get": {
+        "tags": [
+          "Evaluation Logs & Monitoring",
+          "Evaluation Logs & Monitoring"
+        ],
+        "summary": "Get Metric Aggregates",
+        "description": "Get aggregated statistics for a metric",
+        "operationId": "get_metric_aggregates_deepeval_metrics_aggregates_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "metric_name",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Metric Name"
+            }
+          },
+          {
+            "name": "start_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start Date"
+            }
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "End Date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/experiments": {
+      "post": {
+        "tags": [
+          "Evaluation Logs & Monitoring",
+          "Evaluation Logs & Monitoring"
+        ],
+        "summary": "Create Experiment",
+        "description": "Create a new experiment",
+        "operationId": "create_experiment_deepeval_experiments_post",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateExperimentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Evaluation Logs & Monitoring",
+          "Evaluation Logs & Monitoring"
+        ],
+        "summary": "Get Experiments",
+        "description": "Get experiments with optional filtering",
+        "operationId": "get_experiments_deepeval_experiments_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 1000,
+              "minimum": 1,
+              "default": 100,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/experiments/all": {
+      "get": {
+        "tags": [
+          "Evaluation Logs & Monitoring",
+          "Evaluation Logs & Monitoring"
+        ],
+        "summary": "Get All Experiments",
+        "description": "Get all experiments (no pagination) for optional project/status filters",
+        "operationId": "get_all_experiments_deepeval_experiments_all_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/experiments/{experiment_id}": {
+      "get": {
+        "tags": [
+          "Evaluation Logs & Monitoring",
+          "Evaluation Logs & Monitoring"
+        ],
+        "summary": "Get Experiment",
+        "description": "Get a specific experiment by ID",
+        "operationId": "get_experiment_deepeval_experiments__experiment_id__get",
+        "parameters": [
+          {
+            "name": "experiment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Experiment Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Evaluation Logs & Monitoring",
+          "Evaluation Logs & Monitoring"
+        ],
+        "summary": "Update Experiment",
+        "description": "Update experiment name and/or description",
+        "operationId": "update_experiment_deepeval_experiments__experiment_id__patch",
+        "parameters": [
+          {
+            "name": "experiment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Experiment Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateExperimentRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Evaluation Logs & Monitoring",
+          "Evaluation Logs & Monitoring"
+        ],
+        "summary": "Delete Experiment",
+        "description": "Delete an experiment and all associated logs",
+        "operationId": "delete_experiment_deepeval_experiments__experiment_id__delete",
+        "parameters": [
+          {
+            "name": "experiment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Experiment Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/experiments/{experiment_id}/status": {
+      "put": {
+        "tags": [
+          "Evaluation Logs & Monitoring",
+          "Evaluation Logs & Monitoring"
+        ],
+        "summary": "Update Experiment Status",
+        "description": "Update experiment status and results",
+        "operationId": "update_experiment_status_deepeval_experiments__experiment_id__status_put",
+        "parameters": [
+          {
+            "name": "experiment_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Experiment Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateExperimentStatusRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/projects/{project_id}/monitor/dashboard": {
+      "get": {
+        "tags": [
+          "Evaluation Logs & Monitoring",
+          "Evaluation Logs & Monitoring"
+        ],
+        "summary": "Get Monitor Dashboard",
+        "description": "Get monitoring dashboard data for a project",
+        "operationId": "get_monitor_dashboard_deepeval_projects__project_id__monitor_dashboard_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "start_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start Date"
+            }
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "End Date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/reports/generate": {
+      "post": {
+        "tags": ["Reports", "Reports"],
+        "summary": "Generate Report",
+        "description": "Generate a PDF or CSV evaluation report and save it to the database.",
+        "operationId": "generate_report_deepeval_reports_generate_post",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/reports": {
+      "get": {
+        "tags": ["Reports", "Reports"],
+        "summary": "List Reports",
+        "description": "List stored reports for the current organization.",
+        "operationId": "list_reports_deepeval_reports_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/reports/{report_id}/file": {
+      "get": {
+        "tags": ["Reports", "Reports"],
+        "summary": "Get Report File",
+        "description": "Download a stored report file.",
+        "operationId": "get_report_file_deepeval_reports__report_id__file_get",
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Report Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/deepeval/reports/{report_id}": {
+      "delete": {
+        "tags": ["Reports", "Reports"],
+        "summary": "Delete Report",
+        "description": "Delete a stored report.",
+        "operationId": "delete_report_deepeval_reports__report_id__delete",
+        "parameters": [
+          {
+            "name": "report_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Report Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Body_create_bias_audit_deepeval_bias_audits_run_post": {
+        "properties": {
+          "dataset": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "Dataset"
+          },
+          "config_json": {
+            "type": "string",
+            "title": "Config Json"
+          },
+          "org_id": {
+            "type": "string",
+            "title": "Org Id"
+          }
+        },
+        "type": "object",
+        "required": ["dataset", "config_json", "org_id"],
+        "title": "Body_create_bias_audit_deepeval_bias_audits_run_post"
+      },
+      "Body_parse_csv_headers_deepeval_bias_audits_parse_headers_post": {
+        "properties": {
+          "dataset": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "Dataset"
+          }
+        },
+        "type": "object",
+        "required": ["dataset"],
+        "title": "Body_parse_csv_headers_deepeval_bias_audits_parse_headers_post"
+      },
+      "Body_upload_dataset_deepeval_datasets_upload_post": {
+        "properties": {
+          "dataset": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "Dataset"
+          },
+          "dataset_type": {
+            "type": "string",
+            "title": "Dataset Type",
+            "default": "chatbot"
+          },
+          "turn_type": {
+            "type": "string",
+            "title": "Turn Type",
+            "default": "single-turn"
+          },
+          "org_id": {
+            "type": "string",
+            "title": "Org Id"
+          }
+        },
+        "type": "object",
+        "required": ["dataset", "org_id"],
+        "title": "Body_upload_dataset_deepeval_datasets_upload_post"
+      },
+      "CreateExperimentRequest": {
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "config": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Config"
+          },
+          "baseline_experiment_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Baseline Experiment Id"
+          },
+          "model_inventory_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Inventory Id"
+          }
+        },
+        "type": "object",
+        "required": ["project_id", "name", "config"],
+        "title": "CreateExperimentRequest"
+      },
+      "CreateLogRequest": {
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "experiment_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Experiment Id"
+          },
+          "trace_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trace Id"
+          },
+          "parent_trace_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Trace Id"
+          },
+          "span_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Span Name"
+          },
+          "input": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input"
+          },
+          "output": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output"
+          },
+          "model_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Name"
+          },
+          "metadata": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metadata"
+          },
+          "latency_ms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latency Ms"
+          },
+          "token_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token Count"
+          },
+          "cost": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status",
+            "default": "success"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          }
+        },
+        "type": "object",
+        "required": ["project_id"],
+        "title": "CreateLogRequest"
+      },
+      "CreateMetricRequest": {
+        "properties": {
+          "project_id": {
+            "type": "string",
+            "title": "Project Id"
+          },
+          "experiment_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Experiment Id"
+          },
+          "metric_name": {
+            "type": "string",
+            "title": "Metric Name"
+          },
+          "metric_type": {
+            "type": "string",
+            "title": "Metric Type"
+          },
+          "value": {
+            "type": "number",
+            "title": "Value"
+          },
+          "dimensions": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dimensions"
+          }
+        },
+        "type": "object",
+        "required": ["project_id", "metric_name", "metric_type", "value"],
+        "title": "CreateMetricRequest"
+      },
+      "CreateModelRequest": {
+        "properties": {
+          "orgId": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Orgid"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Name"
+          },
+          "provider": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Provider"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "endpointUrl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Endpointurl"
+          },
+          "createdBy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Createdby"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": ["orgId", "name", "provider"],
+        "title": "CreateModelRequest",
+        "description": "Body for ``POST /deepeval/models``."
+      },
+      "CreateScorerRequest": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Name"
+          },
+          "metricKey": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Metrickey"
+          },
+          "id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Id"
+          },
+          "orgId": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Orgid"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Type"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "config": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          },
+          "defaultThreshold": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Defaultthreshold"
+          },
+          "weight": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weight"
+          },
+          "createdBy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Createdby"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": ["name", "metricKey"],
+        "title": "CreateScorerRequest",
+        "description": "Body for ``POST /deepeval/scorers``."
+      },
+      "EvaluateConfig": {
+        "properties": {
+          "dataset": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "judgeLlm": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Judgellm"
+          },
+          "metrics": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metrics"
+          },
+          "metric_thresholds": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metric Thresholds"
+          },
+          "selectedScorers": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selectedscorers"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "EvaluateConfig",
+        "description": "Body for ``POST /deepeval/evaluate``.\n\nEverything is optional \u2014 the controller/runner apply their own defaults.\nNested objects stay free-form; only the top-level shape is validated."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "ScorerTestRequest": {
+        "properties": {
+          "input": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Input"
+          },
+          "output": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Output"
+          },
+          "expected": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": ["input", "output"],
+        "title": "ScorerTestRequest",
+        "description": "Body for ``POST /deepeval/scorers/{scorer_id}/test``."
+      },
+      "UpdateAuditNameRequest": {
+        "properties": {
+          "systemName": {
+            "type": "string",
+            "title": "Systemname"
+          }
+        },
+        "type": "object",
+        "required": ["systemName"],
+        "title": "UpdateAuditNameRequest"
+      },
+      "UpdateExperimentRequest": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          }
+        },
+        "type": "object",
+        "title": "UpdateExperimentRequest"
+      },
+      "UpdateExperimentStatusRequest": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "results": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Results"
+          },
+          "error_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Message"
+          }
+        },
+        "type": "object",
+        "required": ["status"],
+        "title": "UpdateExperimentStatusRequest"
+      },
+      "UpdateModelRequest": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "endpointUrl": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Endpointurl"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "UpdateModelRequest",
+        "description": "Body for ``PUT /deepeval/models/{model_id}`` \u2014 partial update."
+      },
+      "UpdateScorerRequest": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Type"
+          },
+          "metricKey": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Metrickey"
+          },
+          "config": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config"
+          },
+          "enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Enabled"
+          },
+          "defaultThreshold": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Defaultthreshold"
+          },
+          "weight": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weight"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "title": "UpdateScorerRequest",
+        "description": "Body for ``PUT /deepeval/scorers/{scorer_id}`` \u2014 partial update."
+      },
+      "ValidateModelRequest": {
+        "properties": {
+          "model_name": {
+            "type": "string",
+            "title": "Model Name"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          }
+        },
+        "type": "object",
+        "required": ["model_name"],
+        "title": "ValidateModelRequest"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": ["loc", "msg", "type"],
+        "title": "ValidationError"
+      }
+    }
+  }
+}

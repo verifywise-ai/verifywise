@@ -224,6 +224,45 @@ def test_get_experiment_by_id(client, patched_controllers) -> None:
 
 
 # --------------------------------------------------------------------------- #
+# PATCH /deepeval/experiments/{id}                                             #
+# --------------------------------------------------------------------------- #
+
+
+def test_update_experiment_with_name(client, patched_controllers) -> None:
+    res = client.patch(
+        "/deepeval/experiments/exp-1", headers=_headers(), json={"name": "renamed"}
+    )
+    assert res.status_code == 200
+    assert res.json()["experiment"]["name"] == "renamed"
+    call_kwargs = patched_controllers["update"].await_args.kwargs
+    assert call_kwargs["experiment_id"] == "exp-1"
+    assert call_kwargs["name"] == "renamed"
+    assert call_kwargs["description"] is None
+
+
+def test_update_experiment_with_description(client, patched_controllers) -> None:
+    res = client.patch(
+        "/deepeval/experiments/exp-1", headers=_headers(), json={"description": "new desc"}
+    )
+    assert res.status_code == 200
+    call_kwargs = patched_controllers["update"].await_args.kwargs
+    assert call_kwargs["name"] is None
+    assert call_kwargs["description"] == "new desc"
+
+
+def test_update_experiment_empty_body_422(client, patched_controllers) -> None:
+    res = client.patch("/deepeval/experiments/exp-1", headers=_headers(), json={})
+    assert res.status_code == 422  # at least one of name/description is required
+    patched_controllers["update"].assert_not_called()
+
+
+def test_update_experiment_wrong_type_422(client, patched_controllers) -> None:
+    res = client.patch("/deepeval/experiments/exp-1", headers=_headers(), json={"name": 123})
+    assert res.status_code == 422
+    patched_controllers["update"].assert_not_called()
+
+
+# --------------------------------------------------------------------------- #
 # Model API key validation endpoint                                            #
 # --------------------------------------------------------------------------- #
 

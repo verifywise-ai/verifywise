@@ -1,4 +1,4 @@
-import { parseExpression } from "cron-parser";
+import { CronExpressionParser } from "cron-parser";
 import type { ScheduleConfig } from "../../domain.layer/interfaces/i.reportTemplate";
 
 // Build a 5-field cron from the schedule config, then ask cron-parser for the
@@ -11,6 +11,6 @@ export function computeNextRun(cfg: ScheduleConfig, from: Date = new Date()): Da
   else if (cfg.frequency === "weekly") cron = `${m} ${h} * * ${cfg.dayOfWeek ?? 1}`;
   else cron = `${m} ${h} ${cfg.dayOfMonth ?? 1} * *`; // monthly
 
-  const it = parseExpression(cron, { currentDate: from, tz: cfg.timezone || "UTC" });
+  const it = CronExpressionParser.parse(cron, { currentDate: from, tz: cfg.timezone || "UTC" });
   return it.next().toDate();
 }

@@ -5,7 +5,7 @@ Endpoints for running DeepEval LLM evaluations.
 Shared-schema multi-tenancy: Uses organization_id from request.state.
 """
 
-from fastapi import APIRouter, BackgroundTasks, Request, Body, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, BackgroundTasks, Request, HTTPException, UploadFile, File, Form
 from fastapi.responses import JSONResponse
 from pathlib import Path
 import json
@@ -35,6 +35,14 @@ from controllers.deepeval import (
     get_latest_scorer_controller,
     _get_uploads_root,
 )
+from request_schemas import (
+    CreateModelRequest,
+    CreateScorerRequest,
+    EvaluateConfig,
+    ScorerTestRequest,
+    UpdateModelRequest,
+    UpdateScorerRequest,
+)
 
 router = APIRouter()
 
@@ -51,7 +59,7 @@ def _get_organization_id(request: Request) -> int:
 async def create_deepeval_evaluation(
     request: Request,
     background_tasks: BackgroundTasks,
-    config_data: dict = Body(...)
+    config_data: EvaluateConfig
 ):
     """
     Create and run a DeepEval evaluation.
@@ -91,7 +99,7 @@ async def create_deepeval_evaluation(
     organization_id = _get_organization_id(request)
     return await create_deepeval_evaluation_controller(
         background_tasks=background_tasks,
-        config_data=config_data,
+        config_data=config_data.model_dump(exclude_none=True),
         organization_id=organization_id
     )
 
@@ -343,26 +351,29 @@ async def list_scorers_endpoint(request: Request, org_id: str | None = None):
 
 
 @router.post("/scorers")
-async def create_scorer_endpoint(request: Request, payload: dict = Body(...)):
+async def create_scorer_endpoint(request: Request, payload: CreateScorerRequest):
     """
     Create a new scorer definition.
     """
     organization_id = _get_organization_id(request)
+    data = payload.model_dump(exclude_none=True)
     # Add user_id from headers if not already in payload
-    if "createdBy" not in payload:
+    if "createdBy" not in data:
         user_id = request.headers.get("x-user-id")
         if user_id:
-            payload["createdBy"] = user_id
-    return await create_deepeval_scorer_controller(organization_id=organization_id, payload=payload)
+            data["createdBy"] = user_id
+    return await create_deepeval_scorer_controller(organization_id=organization_id, payload=data)
 
 
 @router.put("/scorers/{scorer_id}")
-async def update_scorer_endpoint(request: Request, scorer_id: str, payload: dict = Body(...)):
+async def update_scorer_endpoint(request: Request, scorer_id: str, payload: UpdateScorerRequest):
     """
     Update an existing scorer definition.
     """
     organization_id = _get_organization_id(request)
-    return await update_deepeval_scorer_controller(scorer_id, organization_id=organization_id, payload=payload)
+    return await update_deepeval_scorer_controller(
+        scorer_id, organization_id=organization_id, payload=payload.model_dump(exclude_unset=True)
+    )
 
 
 @router.delete("/scorers/{scorer_id}")
@@ -375,7 +386,7 @@ async def delete_scorer_endpoint(request: Request, scorer_id: str):
 
 
 @router.post("/scorers/{scorer_id}/test")
-async def test_scorer_endpoint(request: Request, scorer_id: str, payload: dict = Body(...)):
+async def test_scorer_endpoint(request: Request, scorer_id: str, payload: ScorerTestRequest):
     """
     Test a scorer with sample input/output.
 
@@ -387,7 +398,9 @@ async def test_scorer_endpoint(request: Request, scorer_id: str, payload: dict =
     }
     """
     organization_id = _get_organization_id(request)
-    return await test_deepeval_scorer_controller(scorer_id, organization_id=organization_id, payload=payload)
+    return await test_deepeval_scorer_controller(
+        scorer_id, organization_id=organization_id, payload=payload.model_dump(exclude_none=True)
+    )
 
 
 # ==================== MODELS ====================
@@ -402,26 +415,29 @@ async def list_models_endpoint(request: Request, org_id: str | None = None):
 
 
 @router.post("/models")
-async def create_model_endpoint(request: Request, payload: dict = Body(...)):
+async def create_model_endpoint(request: Request, payload: CreateModelRequest):
     """
     Create a new saved model configuration.
     """
     organization_id = _get_organization_id(request)
+    data = payload.model_dump(exclude_none=True)
     # Add user_id from headers if not already in payload
-    if "createdBy" not in payload:
+    if "createdBy" not in data:
         user_id = request.headers.get("x-user-id")
         if user_id:
-            payload["createdBy"] = user_id
-    return await create_deepeval_model_controller(organization_id=organization_id, payload=payload)
+            data["createdBy"] = user_id
+    return await create_deepeval_model_controller(organization_id=organization_id, payload=data)
 
 
 @router.put("/models/{model_id}")
-async def update_model_endpoint(request: Request, model_id: str, payload: dict = Body(...)):
+async def update_model_endpoint(request: Request, model_id: str, payload: UpdateModelRequest):
     """
     Update an existing saved model configuration.
     """
     organization_id = _get_organization_id(request)
-    return await update_deepeval_model_controller(model_id, organization_id=organization_id, payload=payload)
+    return await update_deepeval_model_controller(
+        model_id, organization_id=organization_id, payload=payload.model_dump(exclude_unset=True)
+    )
 
 
 @router.delete("/models/{model_id}")
