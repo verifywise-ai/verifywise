@@ -61,6 +61,7 @@ import {
   getAllUsers,
   getUserById,
   getPreferencesForCurrentUser,
+  patchPreferencesForCurrentUser,
   loginUser,
   loginUserWithMicrosoft,
   updateUserById,
@@ -120,6 +121,22 @@ router.get("/", authenticateJWT, getAllUsers);
  * @param {express.Response} res - Express response object
  */
 router.get("/preferences", authenticateJWT, getPreferencesForCurrentUser);
+
+/**
+ * GET /users/me/preferences
+ *
+ * Returns the authenticated user's persisted date_format and language.
+ * Alias of GET /users/preferences; preferred self-scoped path.
+ */
+router.get("/me/preferences", authenticateJWT, getPreferencesForCurrentUser);
+
+/**
+ * PATCH /users/me/preferences
+ *
+ * Upserts the authenticated user's date_format and/or language.
+ * Body user_id is ignored; the JWT user is always the target.
+ */
+router.patch("/me/preferences", authenticateJWT, patchPreferencesForCurrentUser);
 
 router.get("/:id", authenticateJWT, getUserById);
 

@@ -26,6 +26,9 @@ jest.mock("../../../controllers/user.ctrl", () => ({
   getPreferencesForCurrentUser: jest.fn((_req: any, res: any) =>
     res.status(200).json({ date_format: "DD-MM-YYYY", language: "en" }),
   ),
+  patchPreferencesForCurrentUser: jest.fn((_req: any, res: any) =>
+    res.status(200).json({ date_format: "MM-DD-YYYY", language: "de" }),
+  ),
 }));
 
 jest.mock("../../../middleware/auth.middleware", () =>
@@ -132,5 +135,29 @@ describe("POST /api/users/logout", () => {
     const res = await request(app).post("/api/users/logout");
 
     expect(res.status).toBe(200);
+  });
+});
+
+describe("GET /api/users/me/preferences", () => {
+  it("should return 200 with current user preferences", async () => {
+    const app = createUserTestApp();
+    const res = await request(app).get("/api/users/me/preferences");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty("date_format");
+    expect(res.body).toHaveProperty("language");
+  });
+});
+
+describe("PATCH /api/users/me/preferences", () => {
+  it("should return 200 when preferences are upserted", async () => {
+    const app = createUserTestApp();
+    const res = await request(app)
+      .patch("/api/users/me/preferences")
+      .send({ date_format: "MM-DD-YYYY", language: "de" });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveProperty("date_format");
+    expect(res.body).toHaveProperty("language");
   });
 });
