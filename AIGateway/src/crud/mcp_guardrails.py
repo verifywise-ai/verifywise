@@ -167,7 +167,9 @@ async def update_mcp_guardrail(org_id: int, rule_id: int, data: dict) -> Optiona
     """
 
     async with get_db() as db:
-        result = await db.execute(text(sql), params)  # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+        # Column list is static; all user values are bound via params.
+        # nosemgrep: python.sqlalchemy.security.audit.avoid-sqlalchemy-text.avoid-sqlalchemy-text
+        result = await db.execute(text(sql), params)
         await db.commit()
         row = result.mappings().first()
         if row is None:
