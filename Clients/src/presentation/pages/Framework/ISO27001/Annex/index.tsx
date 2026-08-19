@@ -209,7 +209,7 @@ const ISO27001Annex = ({
   }, [annexId, annexes, annexControlId, initialAnnexId, initialAnnexControlId, lastProcessedLink]);
 
   const filteredAnnexes = useMemo(() => {
-    if (!searchTerm.trim()) {
+    if (!annexes || !searchTerm.trim()) {
       return annexes;
     }
     return annexes.filter((annex: any) =>
