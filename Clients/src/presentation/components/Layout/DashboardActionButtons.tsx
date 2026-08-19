@@ -219,11 +219,11 @@ export const DashboardActionButtons = memo(function DashboardActionButtons({
         </VWTooltip>
       )}
 
-      {/* Integrations */}
+      {/* Extensions */}
       <VWTooltip
-        header="Plugins"
+        header="Extensions"
         content={
-          isAdmin ? "Browse and manage plugins from the marketplace." : "Admin access required."
+          isAdmin ? "Enable or disable extensions for your organization." : "Admin access required."
         }
         placement="bottom"
         maxWidth={200}
@@ -231,9 +231,9 @@ export const DashboardActionButtons = memo(function DashboardActionButtons({
         <span>
           <IconButton
             size="small"
-            onClick={isAdmin ? () => navigate("/plugins/marketplace") : undefined}
+            onClick={isAdmin ? () => navigate("/extensions") : undefined}
             disabled={!isAdmin}
-            aria-label="Plugins marketplace"
+            aria-label="Extensions"
             sx={{ ...baseStyles, ...actionButtonsStyles.integrations }}
           >
             <Package size={16} />

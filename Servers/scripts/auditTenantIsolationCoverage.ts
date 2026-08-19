@@ -833,9 +833,9 @@ const deferredScopedTables: SharedTableEntry[] = [
       "Deferred to a future isolation wave; not covered by the first-pass matrix. See runbook section 2.4.",
   },
   {
-    name: "plugin_installations",
+    name: "extension_enablements",
     justification:
-      "Deferred to a future isolation wave; not covered by the first-pass matrix. See runbook section 2.4.",
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. See runbook section 2.4. Replaces the legacy plugin_installations entry (extensions migration 20260811102307).",
   },
   {
     name: "policy_change_history",

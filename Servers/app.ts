@@ -37,7 +37,13 @@ import modelInventoryHistoryRoutes from "./routes/modelInventoryHistory.route";
 import modelInventoryChangeHistoryRoutes from "./routes/modelInventoryChangeHistory.route";
 import mrmRoutes from "./routes/mrm.route";
 import mrmIngestionRoutes from "./routes/mrmIngestion.route";
-import datasetBulkUploadRoutes from "./routes/datasetBulkUpload.route";
+import datasetBulkUploadRoutes from "./extensions/dataset-bulk-upload/datasetBulkUpload.route";
+import riskImportRoutes from "./extensions/risk-import/riskImport.route";
+import slackExtensionRoutes from "./extensions/slack/slack.route";
+import mlflowExtensionRoutes from "./extensions/mlflow/mlflow.route";
+import azureAiFoundryExtensionRoutes from "./extensions/azure-ai-foundry/azureAiFoundry.route";
+import jiraAssetsExtensionRoutes from "./extensions/jira-assets/jiraAssets.route";
+import modelLifecycleExtensionRoutes from "./extensions/model-lifecycle/modelLifecycle.route";
 import datasetRoutes from "./routes/dataset.route";
 import riskHistoryRoutes from "./routes/riskHistory.route";
 import modelRiskRoutes from "./routes/modelRisk.route";
@@ -47,7 +53,7 @@ import autoDriverRoutes from "./routes/autoDriver.route";
 import taskRoutes from "./routes/task.route";
 import deadlineRoutes from "./routes/deadline.route";
 import slackWebhookRoutes from "./routes/slackWebhook.route";
-import pluginRoutes from "./routes/plugin.route";
+import extensionRoutes from "./routes/extension.route";
 import tokenRoutes from "./routes/tokens.route";
 import shareLinkRoutes from "./routes/shareLink.route";
 import automation from "./routes/automation.route.js";
@@ -281,7 +287,23 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
   app.use("/api/logger", loggerRoutes);
   app.use("/api/modelInventory", modelInventoryRoutes);
   app.use("/api/modelInventoryHistory", modelInventoryHistoryRoutes);
-  app.use("/api/dataset-bulk-upload", datasetBulkUploadRoutes);
+  // The generic /api/extensions catalog router MUST be mounted BEFORE the
+  // per-extension routers below. Express matches app.use() prefixes in
+  // registration order, and a per-extension mount (e.g. /api/extensions/slack)
+  // would otherwise swallow catalog requests like GET /api/extensions/slack
+  // and 403 via requireExtensionEnabled — even when the caller just wants
+  // the catalog detail. Generic routes here are /, /:key, /:key/enable,
+  // /:key/disable, /:key/configuration; none collide with per-extension
+  // sub-paths (which all use multi-segment paths like /oauth/workspaces,
+  // /models, /config, /import, /sync, /use-cases, etc.).
+  app.use("/api/extensions", extensionRoutes);
+  app.use("/api/extensions/dataset-bulk-upload", datasetBulkUploadRoutes);
+  app.use("/api/extensions/risk-import", riskImportRoutes);
+  app.use("/api/extensions/slack", slackExtensionRoutes);
+  app.use("/api/extensions/mlflow", mlflowExtensionRoutes);
+  app.use("/api/extensions/azure-ai-foundry", azureAiFoundryExtensionRoutes);
+  app.use("/api/extensions/jira-assets", jiraAssetsExtensionRoutes);
+  app.use("/api/extensions/model-lifecycle", modelLifecycleExtensionRoutes);
   app.use("/api/model-inventory-change-history", modelInventoryChangeHistoryRoutes);
   app.use("/api/mrm", mrmRoutes);
   // Token-authed machine ingestion surface, mounted on the same base path.
@@ -306,7 +328,6 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
   app.use("/api/policies", policyRoutes);
   app.use("/api/policies", policyFolderRoutes);
   app.use("/api/slackWebhooks", slackWebhookRoutes);
-  app.use("/api/plugins", pluginRoutes);
   app.use("/api/tokens", tokenRoutes);
   app.use("/api/shares", shareLinkRoutes);
   app.use("/api/file-manager", fileManagerRoutes);

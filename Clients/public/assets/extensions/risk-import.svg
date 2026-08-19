@@ -1,0 +1,36 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background circle -->
+  <circle cx="64" cy="64" r="60" fill="#E6F4F0"/>
+
+  <!-- Spreadsheet/Excel base -->
+  <rect x="28" y="24" width="52" height="64" rx="4" fill="#13715B"/>
+
+  <!-- Spreadsheet grid cells -->
+  <!-- Header row -->
+  <rect x="34" y="32" width="40" height="8" rx="2" fill="#FFFFFF"/>
+
+  <!-- Data rows -->
+  <rect x="34" y="44" width="18" height="6" rx="1" fill="#FFFFFF" opacity="0.9"/>
+  <rect x="56" y="44" width="18" height="6" rx="1" fill="#FFFFFF" opacity="0.9"/>
+
+  <rect x="34" y="54" width="18" height="6" rx="1" fill="#FFFFFF" opacity="0.8"/>
+  <rect x="56" y="54" width="18" height="6" rx="1" fill="#FFFFFF" opacity="0.8"/>
+
+  <rect x="34" y="64" width="18" height="6" rx="1" fill="#FFFFFF" opacity="0.7"/>
+  <rect x="56" y="64" width="18" height="6" rx="1" fill="#FFFFFF" opacity="0.7"/>
+
+  <rect x="34" y="74" width="18" height="6" rx="1" fill="#FFFFFF" opacity="0.6"/>
+  <rect x="56" y="74" width="18" height="6" rx="1" fill="#FFFFFF" opacity="0.6"/>
+
+  <!-- Import arrow -->
+  <g transform="translate(68, 50)">
+    <!-- Arrow body -->
+    <rect x="8" y="12" width="28" height="10" rx="2" fill="#4C7BF4"/>
+    <!-- Arrow head -->
+    <path d="M8 17L20 6L20 28L8 17Z" fill="#4C7BF4"/>
+  </g>
+
+  <!-- Checkmark badge for validation -->
+  <circle cx="96" cy="96" r="16" fill="#10B981"/>
+  <path d="M88 96L93 101L104 90" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

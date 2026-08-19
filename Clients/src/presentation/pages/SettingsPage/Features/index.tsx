@@ -1,8 +1,5 @@
 import { Box, CircularProgress, Stack, Typography, useTheme } from "@mui/material";
 import React, { useState } from "react";
-import { useNavigate } from "react-router";
-import { CustomizableButton } from "../../../components/button/customizable-button";
-import { Settings } from "lucide-react";
 import Toggle from "../../../components/Inputs/Toggle";
 import { useRiskAssessmentMode } from "../../../../application/hooks/useRiskAssessmentMode";
 import { useAuth } from "../../../../application/hooks/useAuth";
@@ -10,7 +7,6 @@ import { text } from "../../../themes/palette";
 
 const Features: React.FC = () => {
   const theme = useTheme();
-  const navigate = useNavigate();
   const { userRoleName } = useAuth();
   const { isQuantitative, isLoading: modeLoading, toggleMode } = useRiskAssessmentMode();
   const [toggling, setToggling] = useState(false);
@@ -84,39 +80,6 @@ const Features: React.FC = () => {
                 disabled={!isAdmin || toggling}
               />
             )}
-          </Box>
-
-          {/* Model Lifecycle (plugin-managed) */}
-          <Box
-            sx={{
-              border: `1px solid ${theme.palette.border.light}`,
-              borderRadius: "4px",
-              p: "16px",
-              backgroundColor: theme.palette.background.main,
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <Box>
-              <Typography sx={{ fontSize: 14, fontWeight: 600 }}>Model Lifecycle</Typography>
-              <Typography sx={{ fontSize: 13, color: theme.palette.text.secondary }}>
-                Model Lifecycle is now managed via the Plugins page. Install or uninstall the "Model
-                Lifecycle" plugin to control this feature.
-              </Typography>
-            </Box>
-            <CustomizableButton
-              variant="contained"
-              text="Manage plugins"
-              sx={{
-                backgroundColor: "brand.primary",
-                border: "1px solid brand.primary",
-                gap: 2,
-                whiteSpace: "nowrap",
-              }}
-              icon={<Settings size={16} />}
-              onClick={() => navigate("/plugins")}
-            />
           </Box>
         </Stack>
       </Stack>

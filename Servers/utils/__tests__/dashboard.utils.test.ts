@@ -11,22 +11,12 @@ jest.mock("../project.utils", () => ({
   getAllProjectsQuery: jest.fn<any>(),
 }));
 
-jest.mock("../../services/plugin/pluginService", () => ({
-  PluginService: {
-    getDataFromProviders: jest.fn<any>(),
-  },
-}));
-
 import { getDashboardDataQuery } from "../dashboard.utils";
 import { sequelize } from "../../database/db";
 import { getAllProjectsQuery } from "../project.utils";
-import { PluginService } from "../../services/plugin/pluginService";
 
 const mockQuery = sequelize.query as jest.MockedFunction<typeof sequelize.query>;
 const mockGetAllProjects = getAllProjectsQuery as jest.MockedFunction<typeof getAllProjectsQuery>;
-const mockGetDataFromProviders = PluginService.getDataFromProviders as jest.MockedFunction<
-  typeof PluginService.getDataFromProviders
->;
 
 describe("getDashboardDataQuery", () => {
   const organizationId = 1;
@@ -41,7 +31,6 @@ describe("getDashboardDataQuery", () => {
     jest.spyOn(console, "warn").mockImplementation(() => {});
     // Default mocks
     mockGetAllProjects.mockResolvedValue([]);
-    mockGetDataFromProviders.mockResolvedValue([]);
     // Default: trainings=0, models=0, reports=0, tasks=0/0/0
     mockQuery.mockResolvedValue([[{ count: "0" }], 0] as any);
   });
@@ -150,32 +139,6 @@ describe("getDashboardDataQuery", () => {
     expect(result!.task_radar.overdue).toBe(2);
     expect(result!.task_radar.due).toBe(5);
     expect(result!.task_radar.upcoming).toBe(8);
-  });
-
-  it("should merge plugin use-cases into projects_list", async () => {
-    const nativeProjects = [{ id: 1, project_title: "Native" }];
-    const pluginUseCases = [{ id: 100, project_title: "Jira Use Case", source: "jira-assets" }];
-
-    mockGetAllProjects.mockResolvedValue(nativeProjects as any);
-    mockGetDataFromProviders.mockResolvedValue(pluginUseCases as any);
-
-    const result = await getDashboardDataQuery(organizationId, userId, role);
-
-    expect(result!.projects).toBe(2);
-    expect(result!.projects_list).toHaveLength(2);
-    expect(mockGetDataFromProviders).toHaveBeenCalledWith("use-cases", organizationId, sequelize);
-  });
-
-  it("should continue gracefully when plugin fetch fails", async () => {
-    const nativeProjects = [{ id: 1, project_title: "Native" }];
-    mockGetAllProjects.mockResolvedValue(nativeProjects as any);
-    mockGetDataFromProviders.mockRejectedValue(new Error("Plugin error"));
-
-    const result = await getDashboardDataQuery(organizationId, userId, role);
-
-    // Should still return native projects
-    expect(result!.projects).toBe(1);
-    expect(result!.projects_list).toHaveLength(1);
   });
 
   it("should continue gracefully when tasks table does not exist (task radar defaults to 0)", async () => {

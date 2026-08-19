@@ -13,8 +13,9 @@ import {
 import { createDataset } from "../../../application/repository/dataset.repository";
 import { logEngine } from "../../../application/tools/log.engine";
 import { useAuth } from "../../../application/hooks/useAuth";
-import { PluginSlot } from "../../components/PluginSlot";
-import { PLUGIN_SLOTS } from "../../../domain/constants/pluginSlots";
+import { useExtensions } from "../../../application/contexts/Extensions.context";
+import BulkUploadButton from "../Extensions/dataset-bulk-upload/BulkUploadButton";
+import BulkUploadModal from "../Extensions/dataset-bulk-upload/BulkUploadModal";
 import {
   IDataset,
   DatasetSummary as DatasetSummaryType,
@@ -135,10 +136,10 @@ const Datasets: React.FC = () => {
   const [modelInventoryData, setModelInventoryData] = useState<IModelInventory[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Bulk upload modal state (bridged between button and modal PluginSlots)
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
 
   const { userRoleName } = useAuth();
+  const { isEnabled } = useExtensions();
 
   // GroupBy state
   const { groupBy, groupSortOrder, handleGroupChange } = useGroupByState();
@@ -480,14 +481,9 @@ const Datasets: React.FC = () => {
             />
           </Stack>
           <Stack direction="row" gap="8px" alignItems="center">
-            <PluginSlot
-              id={PLUGIN_SLOTS.DATASETS_TOOLBAR}
-              renderType="button"
-              slotProps={{
-                onSuccess: fetchDatasetData,
-                onTriggerModal: () => setIsBulkUploadOpen(true),
-              }}
-            />
+            {isEnabled("dataset-bulk-upload") && (
+              <BulkUploadButton onClick={() => setIsBulkUploadOpen(true)} />
+            )}
             <CustomizableButton
               variant="contained"
               sx={{
@@ -522,16 +518,13 @@ const Datasets: React.FC = () => {
         )}
       />
 
-      {/* Plugin modals (e.g., bulk upload) */}
-      <PluginSlot
-        id={PLUGIN_SLOTS.DATASETS_TOOLBAR}
-        renderType="modal"
-        slotProps={{
-          open: isBulkUploadOpen,
-          onClose: () => setIsBulkUploadOpen(false),
-          onSuccess: fetchDatasetData,
-        }}
-      />
+      {isEnabled("dataset-bulk-upload") && (
+        <BulkUploadModal
+          open={isBulkUploadOpen}
+          onClose={() => setIsBulkUploadOpen(false)}
+          onSuccess={fetchDatasetData}
+        />
+      )}
 
       {/* Dataset modal */}
       <NewDataset

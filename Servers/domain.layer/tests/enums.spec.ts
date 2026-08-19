@@ -16,7 +16,6 @@ import { IntakeFormStatus } from "../enums/intake-form-status.enum";
 import { IntakeSubmissionStatus } from "../enums/intake-submission-status.enum";
 import { ModelInventoryStatus } from "../enums/model-inventory-status.enum";
 import { NISTAIMRFFunctionType, NISTFunctionTitles } from "../enums/nist-ai-rmf-function.enum";
-import { PluginInstallationStatus } from "../enums/plugin.enum";
 import { SlackNotificationRoutingType } from "../enums/slack.enum";
 import { UserDateFormat } from "../enums/user-preferences.enum";
 import {
@@ -186,12 +185,6 @@ describe("Domain Enums", () => {
       expect(NISTFunctionTitles[NISTAIMRFFunctionType.MAP]).toBe("Map");
       expect(NISTFunctionTitles[NISTAIMRFFunctionType.MEASURE]).toBe("Measure");
       expect(NISTFunctionTitles[NISTAIMRFFunctionType.MANAGE]).toBe("Manage");
-    });
-  });
-
-  describe("PluginInstallationStatus", () => {
-    it("should have expected values", () => {
-      verifyEnum(PluginInstallationStatus, ["INSTALLED"]);
     });
   });
 

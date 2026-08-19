@@ -33,10 +33,6 @@ vi.mock("../../../../../application/hooks/useMultipleOnScreen", () => ({
   default: () => ({ refs: [{ current: null }], allVisible: false }),
 }));
 
-vi.mock("../../../../../application/contexts/PluginRegistry.context", () => ({
-  usePluginRegistry: () => ({ getComponentsForSlot: () => [] }),
-}));
-
 vi.mock("../../../ComplianceTracker/1.0ComplianceTracker", () => ({
   default: () => <div data-testid="compliance-tracker" />,
 }));
@@ -61,10 +57,6 @@ vi.mock("../../../Framework/Generic", () => ({
 
 vi.mock("../../AddNewFramework", () => ({
   default: () => null,
-}));
-
-vi.mock("../../../../components/PluginSlot", () => ({
-  PluginSlot: () => null,
 }));
 
 vi.mock("../../../../components/FrameworkFilter/TabFilterBar", () => ({

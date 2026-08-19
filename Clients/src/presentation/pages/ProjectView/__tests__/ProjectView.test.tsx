@@ -14,10 +14,18 @@ vi.mock("../../../../application/hooks/useAuth", () => ({
 }));
 
 // Mock contexts
-vi.mock("../../../../application/contexts/PluginRegistry.context", () => ({
-  usePluginRegistry: () => ({
-    getComponentsForSlot: () => [],
-  }),
+vi.mock("../../../../application/contexts/Extensions.context", () => ({
+  useExtensions: () => ({ isEnabled: () => false }),
+}));
+
+vi.mock("../../Extensions/jira-assets/JiraUseCaseOverview", () => ({
+  JiraUseCaseOverview: () => null,
+}));
+vi.mock("../../Extensions/jira-assets/JiraUseCaseMonitoring", () => ({
+  JiraUseCaseMonitoring: () => null,
+}));
+vi.mock("../../Extensions/jira-assets/JiraUseCaseSettings", () => ({
+  JiraUseCaseSettings: () => null,
 }));
 
 // Mock repositories
@@ -37,19 +45,6 @@ vi.mock("../../../../infrastructure/api/networkServices", () => ({
 vi.mock("../../../../application/constants/permissions", () => ({
   default: {
     projects: { edit: ["Admin"] },
-  },
-}));
-
-vi.mock("../../../../domain/constants/pluginSlots", () => ({
-  PLUGIN_SLOTS: {
-    USE_CASE_OVERVIEW: "use-case-overview",
-    USE_CASE_RISKS: "use-case-risks",
-    USE_CASE_MODELS: "use-case-models",
-    USE_CASE_FRAMEWORKS: "use-case-frameworks",
-    USE_CASE_CE_MARKING: "use-case-ce-marking",
-    USE_CASE_ACTIVITY: "use-case-activity",
-    USE_CASE_MONITORING: "use-case-monitoring",
-    USE_CASE_SETTINGS: "use-case-settings",
   },
 }));
 

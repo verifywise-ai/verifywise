@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- Yellow rounded square background -->
+  <rect width="256" height="256" rx="40" fill="#F5B800"/>
+
+  <!-- Network/graph icon - nodes and connections -->
+  <g fill="none" stroke="#1D2125" stroke-width="12" stroke-linecap="round" stroke-linejoin="round">
+    <!-- Vertical line -->
+    <line x1="128" y1="64" x2="128" y2="192"/>
+    <!-- Horizontal line -->
+    <line x1="64" y1="128" x2="192" y2="128"/>
+    <!-- Diagonal lines -->
+    <line x1="128" y1="64" x2="64" y2="128"/>
+    <line x1="128" y1="64" x2="192" y2="128"/>
+  </g>
+
+  <!-- Nodes (circles) -->
+  <g fill="#1D2125">
+    <!-- Top node -->
+    <circle cx="128" cy="64" r="20"/>
+    <!-- Left node -->
+    <circle cx="64" cy="128" r="20"/>
+    <!-- Right node -->
+    <circle cx="192" cy="128" r="20"/>
+    <!-- Bottom node -->
+    <circle cx="128" cy="192" r="20"/>
+  </g>
+</svg>

@@ -130,8 +130,16 @@ vi.mock("../../../components/PageTour", () => ({
   default: () => null,
 }));
 
-vi.mock("../../../components/PluginSlot", () => ({
-  PluginSlot: () => null,
+vi.mock("../../../../application/contexts/Extensions.context", () => ({
+  useExtensions: () => ({ isEnabled: () => false }),
+}));
+
+vi.mock("../../Extensions/risk-import/RiskImportMenuItem", () => ({
+  default: () => null,
+}));
+
+vi.mock("../../Extensions/risk-import/RiskImportModal", () => ({
+  default: () => null,
 }));
 
 vi.mock("../../../components/Layout/PageHeaderExtended", () => ({
