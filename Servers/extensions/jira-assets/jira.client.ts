@@ -4,9 +4,21 @@
  * Supports both cloud (api.atlassian.com/jsm/assets/workspace/{id}/v1) and
  * datacenter (`{baseUrl}/rest/insight/1.0`) deployments. All authentication
  * is Basic email:api_token.
+ *
+ * SSRF hardening: the datacenter path composes URLs from a user-provided
+ * `baseUrl`, and `workspaceId` is user-provided even on cloud. Both go
+ * through `utils/safeOutboundUrl.ts` before hitting `fetch()` — protocol
+ * check, cloud-metadata block, ReDoS-safe trailing-slash trim.
  */
 
+import { assertSafeOutboundUrl } from "../../utils/safeOutboundUrl";
+
 export type JiraDeploymentType = "cloud" | "datacenter";
+
+// JIRA workspace IDs are UUIDs (e.g. "12345678-1234-1234-1234-123456789012").
+// Constrained here so a malicious value can't inject additional path
+// segments into the composed cloud URL.
+const WORKSPACE_ID_PATTERN = /^[a-zA-Z0-9-]{1,64}$/;
 
 export interface JiraSchema {
   id: string;
@@ -58,7 +70,17 @@ export class JiraAssetsClient {
     apiToken: string,
     deploymentType: JiraDeploymentType = "cloud",
   ) {
-    this.baseUrl = baseUrl.replace(/\/$/, "");
+    if (!WORKSPACE_ID_PATTERN.test(workspaceId)) {
+      throw new Error("JIRA workspace ID has an invalid format");
+    }
+    // For datacenter, validate baseUrl now so the constructor fails fast
+    // instead of every request. Cloud ignores baseUrl but we still normalize
+    // to keep this.baseUrl predictable.
+    if (deploymentType === "datacenter") {
+      this.baseUrl = assertSafeOutboundUrl(baseUrl);
+    } else {
+      this.baseUrl = baseUrl.replace(/\/{1,32}$/, "");
+    }
     this.workspaceId = workspaceId;
     this.deploymentType = deploymentType;
     const credentials = Buffer.from(`${email}:${apiToken}`).toString("base64");
@@ -66,10 +88,15 @@ export class JiraAssetsClient {
   }
 
   private async request<T>(endpoint: string, method: string = "GET", body?: any): Promise<T> {
-    const url =
+    // Both branches feed the composed URL through assertSafeOutboundUrl so
+    // CodeQL's SSRF taint stops here. The cloud host is fixed
+    // (api.atlassian.com); assertSafeOutboundUrl on it is defence-in-depth
+    // in case someone later parameterises it.
+    const rawUrl =
       this.deploymentType === "cloud"
         ? `https://api.atlassian.com/jsm/assets/workspace/${this.workspaceId}/v1/${endpoint}`
         : `${this.baseUrl}/rest/insight/1.0/${endpoint}`;
+    const url = assertSafeOutboundUrl(rawUrl);
     const response = await fetch(url, {
       method,
       headers: {

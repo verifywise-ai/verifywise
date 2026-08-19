@@ -1,6 +1,11 @@
 import { QueryTypes } from "sequelize";
 import { sequelize } from "../../database/db";
 import { ExtensionService } from "../../services/extension/extensionService";
+import {
+  assertSafeOutboundUrl,
+  composeSafeOutboundUrl,
+  UnsafeOutboundUrlError,
+} from "../../utils/safeOutboundUrl";
 
 /**
  * mlflow extension — talks to a user-configured MLflow tracking server and
@@ -57,9 +62,10 @@ function buildHeaders(config: MLflowConfig): Record<string, string> {
   return headers;
 }
 
-function trimTrailingSlash(url: string): string {
-  return url.replace(/\/$/, "");
-}
+// URL composition goes through utils/safeOutboundUrl.ts — that helper
+// validates protocol, blocks cloud metadata endpoints, and trims trailing
+// slashes with a bounded quantifier (ReDoS-safe). Every fetch below MUST
+// use it.
 
 // ---------------------------------------------------------------------------
 // Test connection
@@ -73,15 +79,25 @@ export async function testConnection(config: MLflowConfig): Promise<MLflowTestCo
       testedAt: new Date().toISOString(),
     };
   }
+  let url: string;
   try {
-    const response = await fetch(
-      `${trimTrailingSlash(config.tracking_server_url)}/api/2.0/mlflow/experiments/search`,
-      {
-        method: "POST",
-        headers: buildHeaders(config),
-        body: JSON.stringify({ max_results: 1 }),
-      },
+    url = composeSafeOutboundUrl(
+      config.tracking_server_url,
+      "/api/2.0/mlflow/experiments/search",
     );
+  } catch (err) {
+    return {
+      success: false,
+      message: err instanceof UnsafeOutboundUrlError ? err.message : String(err),
+      testedAt: new Date().toISOString(),
+    };
+  }
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: buildHeaders(config),
+      body: JSON.stringify({ max_results: 1 }),
+    });
     if (!response.ok) {
       const text = await response.text();
       return {
@@ -253,7 +269,17 @@ export async function syncModels(
   }
 
   const headers = buildHeaders(config);
-  const baseUrl = trimTrailingSlash(config.tracking_server_url);
+  let baseUrl: string;
+  try {
+    baseUrl = assertSafeOutboundUrl(config.tracking_server_url);
+  } catch (err) {
+    return {
+      success: false,
+      modelCount: 0,
+      syncedAt: new Date().toISOString(),
+      status: `failed: ${err instanceof UnsafeOutboundUrlError ? err.message : String(err)}`,
+    };
+  }
 
   try {
     // 1. Experiments

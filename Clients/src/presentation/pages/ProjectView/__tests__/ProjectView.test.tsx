@@ -13,9 +13,11 @@ vi.mock("../../../../application/hooks/useAuth", () => ({
   }),
 }));
 
-// Mock contexts
+// Mock contexts. renderWithProviders now mounts <ExtensionsProvider> so
+// the mock must re-export it (as a passthrough that just renders children).
 vi.mock("../../../../application/contexts/Extensions.context", () => ({
   useExtensions: () => ({ isEnabled: () => false }),
+  ExtensionsProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
 
 vi.mock("../../Extensions/jira-assets/JiraUseCaseOverview", () => ({

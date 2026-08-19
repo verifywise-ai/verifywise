@@ -42,6 +42,7 @@ vi.mock("../../../../application/hooks/useColumnVisibility", () => ({
 
 vi.mock("../../../../application/contexts/Extensions.context", () => ({
   useExtensions: () => ({ isEnabled: () => false }),
+  ExtensionsProvider: ({ children }: { children: any }) => children,
 }));
 
 vi.mock("../../Extensions/mlflow/MLFlowTab", () => ({

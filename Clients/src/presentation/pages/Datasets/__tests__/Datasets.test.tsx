@@ -75,6 +75,7 @@ vi.mock("../../../components/Modals/NewDataset", () => ({
 
 vi.mock("../../../../application/contexts/Extensions.context", () => ({
   useExtensions: () => ({ isEnabled: () => false }),
+  ExtensionsProvider: ({ children }: { children: any }) => children,
 }));
 
 vi.mock("../../Extensions/dataset-bulk-upload/BulkUploadButton", () => ({

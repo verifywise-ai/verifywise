@@ -5,6 +5,24 @@ vi.mock("../../repository/user.repository", () => ({
   getUserProfilePhoto: vi.fn(),
 }));
 
+// useProfilePhotoFetch depends on useAuth which reads authToken from Redux
+// (state.auth.authToken → extracted to userToken.organizationId → gates the
+// fetch). Stub useAuth so the hook can render outside a Redux <Provider>
+// and treat the caller as an org user with a valid organizationId; the
+// tests here exercise the blob-processing branches, not the SSRF-style
+// org-scope gate (that has its own coverage in the extension audit).
+vi.mock("../useAuth", () => ({
+  useAuth: () => ({
+    token: "mock",
+    userToken: { organizationId: "1" },
+    userRoleName: "Admin",
+    userId: 1,
+    organizationId: 1,
+    isAuthenticated: true,
+    isSuperAdmin: false,
+  }),
+}));
+
 import { getUserProfilePhoto } from "../../repository/user.repository";
 
 const mockGetUserProfilePhoto = vi.mocked(getUserProfilePhoto);

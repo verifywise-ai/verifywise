@@ -1,6 +1,7 @@
 import { QueryTypes } from "sequelize";
 import { sequelize } from "../../database/db";
 import { ExtensionService } from "../../services/extension/extensionService";
+import { composeSafeOutboundUrl, UnsafeOutboundUrlError } from "../../utils/safeOutboundUrl";
 
 /**
  * azure-ai-foundry extension — pulls deployments from an Azure AI Foundry
@@ -51,9 +52,10 @@ export async function loadConfiguration(organizationId: number): Promise<AzureAi
   )) as AzureAiFoundryConfig;
 }
 
-function trimTrailingSlash(url: string): string {
-  return url.replace(/\/+$/, "");
-}
+// URL composition goes through utils/safeOutboundUrl.ts. That helper trims
+// trailing slashes with a bounded quantifier (ReDoS-safe), rejects
+// non-http(s) protocols, cloud metadata hosts (169.254.169.254), and
+// URL-embedded credentials. Every fetch below MUST use it.
 
 // ---------------------------------------------------------------------------
 // Test connection
@@ -69,8 +71,17 @@ export async function testConnection(
       testedAt: new Date().toISOString(),
     };
   }
+  let url: string;
   try {
-    const url = `${trimTrailingSlash(config.project_endpoint)}/deployments?api-version=v1&limit=1`;
+    url = composeSafeOutboundUrl(config.project_endpoint, "/deployments?api-version=v1&limit=1");
+  } catch (err) {
+    return {
+      success: false,
+      message: err instanceof UnsafeOutboundUrlError ? err.message : String(err),
+      testedAt: new Date().toISOString(),
+    };
+  }
+  try {
     const response = await fetch(url, {
       method: "GET",
       headers: { "api-key": config.api_key, "Content-Type": "application/json" },
@@ -173,7 +184,7 @@ export async function syncModels(
     };
   }
   try {
-    const url = `${trimTrailingSlash(config.project_endpoint)}/deployments?api-version=v1`;
+    const url = composeSafeOutboundUrl(config.project_endpoint, "/deployments?api-version=v1");
     const response = await fetch(url, {
       method: "GET",
       headers: { "api-key": config.api_key, "Content-Type": "application/json" },
@@ -217,7 +228,10 @@ export async function discoverAgents(
 ): Promise<Array<Record<string, unknown>>> {
   if (!config.project_endpoint || !config.api_key) return [];
   try {
-    const url = `${trimTrailingSlash(config.project_endpoint)}/assistants?api-version=v1&limit=100`;
+    const url = composeSafeOutboundUrl(
+      config.project_endpoint,
+      "/assistants?api-version=v1&limit=100",
+    );
     const response = await fetch(url, {
       method: "GET",
       headers: { "api-key": config.api_key, "Content-Type": "application/json" },

@@ -132,6 +132,7 @@ vi.mock("../../../components/PageTour", () => ({
 
 vi.mock("../../../../application/contexts/Extensions.context", () => ({
   useExtensions: () => ({ isEnabled: () => false }),
+  ExtensionsProvider: ({ children }: { children: any }) => children,
 }));
 
 vi.mock("../../Extensions/risk-import/RiskImportMenuItem", () => ({
