@@ -78,9 +78,15 @@ import { ConfidentialClientApplication } from "@azure/msal-node";
 import { getAzureADConfigForLoginQuery, isSSOFeatureEnabled } from "../utils/ssoConfig.utils";
 
 import { translateError } from "../utils/i18n.utils";
-import { getPreferencesByUserQuery } from "../utils/userPreference.utils";
+import {
+  createNewUserPreferencesQuery,
+  getPreferencesByUserQuery,
+  updateUserPreferencesByIdQuery,
+} from "../utils/userPreference.utils";
 import { isUserSuperAdmin as isUserSuperAdminUtil } from "../utils/superAdmin.utils";
 import { UserDateFormat } from "../domain.layer/enums/user-preferences.enum";
+import { UserPreferencesModel } from "../domain.layer/models/userPreferences/userPreferences.model";
+import { UserLanguage } from "../domain.layer/interfaces/i.userPreferences";
 /**
  * Retrieves all users within the authenticated user's organization
  *
@@ -172,6 +178,112 @@ async function getPreferencesForCurrentUser(req: Request, res: Response): Promis
       "user.ctrl.ts",
     );
     logger.error("❌ Error in getPreferencesForCurrentUser:", error);
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+/**
+ * Upserts the currently authenticated user's preferences.
+ *
+ * Persists `date_format` and/or `language` for `req.userId`. Any `user_id` in
+ * the body is ignored so callers cannot write another user's preferences.
+ * Creates a row when none exists; updates the existing row otherwise.
+ *
+ * @async
+ * @param {Request} req - Express request with userId from JWT middleware
+ * @param {Response} res - Express response object
+ * @returns {Promise<Response>} Saved preferences or a validation error
+ */
+async function patchPreferencesForCurrentUser(req: Request, res: Response): Promise<any> {
+  const functionName = "patchPreferencesForCurrentUser";
+  logStructured(
+    "processing",
+    "starting patchPreferencesForCurrentUser",
+    functionName,
+    "user.ctrl.ts",
+  );
+
+  const dateFormat = req.body?.date_format as UserDateFormat | undefined;
+  const language = req.body?.language as UserLanguage | undefined;
+
+  if (dateFormat === undefined && language === undefined) {
+    logStructured(
+      "error",
+      "missing date_format and language in request body",
+      functionName,
+      "user.ctrl.ts",
+    );
+    return res
+      .status(400)
+      .json(STATUS_CODE[400](req.t!("At least one of date_format or language is required")));
+  }
+
+  const transaction = await sequelize.transaction();
+
+  try {
+    const user = (await getUserByIdQuery(req.userId!)) as UserModel;
+    if (!user) {
+      await transaction.rollback();
+      return res.status(404).json(STATUS_CODE[404](req.t!("User not found")));
+    }
+
+    const userId = req.userId!;
+    const existing = await getPreferencesByUserQuery(userId);
+    let saved: UserPreferencesModel;
+
+    if (!existing) {
+      saved = await UserPreferencesModel.createNewUserPreferences(
+        userId,
+        dateFormat ?? UserDateFormat.DD_MM_YYYY_DASH,
+        language,
+      );
+      await createNewUserPreferencesQuery(saved, transaction);
+    } else {
+      saved = new UserPreferencesModel(existing);
+      await saved.updateUserPreferences({
+        date_format: dateFormat,
+        language,
+      });
+      await updateUserPreferencesByIdQuery(userId, saved, transaction);
+    }
+
+    await transaction.commit();
+
+    logStructured(
+      "successful",
+      `Preferences upserted for user ${userId}`,
+      functionName,
+      "user.ctrl.ts",
+    );
+    await logEvent(
+      existing ? "Update" : "Create",
+      `User preferences ${existing ? "updated" : "created"} for user ${userId}`,
+      userId,
+      req.organizationId!,
+    );
+
+    return res.status(200).json(
+      STATUS_CODE[200]({
+        ...saved.toJSON(),
+        date_format: saved.date_format,
+        language: saved.language,
+      }),
+    );
+  } catch (error) {
+    await transaction.rollback();
+
+    if (error instanceof ValidationException) {
+      logStructured("error", `validation failed: ${error.message}`, functionName, "user.ctrl.ts");
+      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
+    }
+
+    logStructured(
+      "error",
+      "failed to upsert current user preferences",
+      functionName,
+      "user.ctrl.ts",
+    );
+    logger.error("❌ Error in patchPreferencesForCurrentUser:", error);
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }
@@ -2039,6 +2151,7 @@ export {
   getUserByEmail,
   getUserById,
   getPreferencesForCurrentUser,
+  patchPreferencesForCurrentUser,
   createNewUserWrapper,
   createNewUser,
   loginUser,
