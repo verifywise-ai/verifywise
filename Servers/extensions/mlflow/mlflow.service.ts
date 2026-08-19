@@ -81,10 +81,7 @@ export async function testConnection(config: MLflowConfig): Promise<MLflowTestCo
   }
   let url: string;
   try {
-    url = composeSafeOutboundUrl(
-      config.tracking_server_url,
-      "/api/2.0/mlflow/experiments/search",
-    );
+    url = composeSafeOutboundUrl(config.tracking_server_url, "/api/2.0/mlflow/experiments/search");
   } catch (err) {
     return {
       success: false,

@@ -7,9 +7,7 @@ import {
 
 describe("assertSafeOutboundUrl", () => {
   it("accepts a normal https URL and preserves the path", () => {
-    expect(assertSafeOutboundUrl("https://mlflow.example.com")).toBe(
-      "https://mlflow.example.com",
-    );
+    expect(assertSafeOutboundUrl("https://mlflow.example.com")).toBe("https://mlflow.example.com");
     expect(assertSafeOutboundUrl("https://mlflow.example.com/api/v1")).toBe(
       "https://mlflow.example.com/api/v1",
     );
@@ -31,9 +29,7 @@ describe("assertSafeOutboundUrl", () => {
   });
 
   it("trims trailing slashes with a bounded quantifier (ReDoS-safe)", () => {
-    expect(assertSafeOutboundUrl("https://mlflow.example.com/")).toBe(
-      "https://mlflow.example.com",
-    );
+    expect(assertSafeOutboundUrl("https://mlflow.example.com/")).toBe("https://mlflow.example.com");
     // Even a pathological input finishes quickly and normalizes.
     const bomb = "https://mlflow.example.com" + "/".repeat(1000);
     const start = Date.now();
@@ -114,8 +110,8 @@ describe("composeSafeOutboundUrl", () => {
   });
 
   it("propagates UnsafeOutboundUrlError from the base check", () => {
-    expect(() =>
-      composeSafeOutboundUrl("http://169.254.169.254", "/latest/meta-data/"),
-    ).toThrow(UnsafeOutboundUrlError);
+    expect(() => composeSafeOutboundUrl("http://169.254.169.254", "/latest/meta-data/")).toThrow(
+      UnsafeOutboundUrlError,
+    );
   });
 });
