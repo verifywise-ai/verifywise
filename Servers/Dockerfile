@@ -1,4 +1,4 @@
-FROM node:24-alpine3.20
+FROM node:24-alpine3.22
 
 # Security: guarantee production mode in the published image.
 # Without this, cookies lose the Secure flag, Swagger docs are exposed,
@@ -19,7 +19,10 @@ RUN npm config set fetch-timeout 600000 && \
 # Install Playwright dependencies and git for Alpine
 # Note: Playwright requires chromium and its dependencies
 # Git is required for AI detection repository scanning
-RUN apk add --no-cache \
+# apk upgrade pulls the latest security patches so Trivy release scans
+# don't fail on fixable base-image CVEs.
+RUN apk upgrade --no-cache && \
+    apk add --no-cache \
     chromium \
     nss \
     freetype \
