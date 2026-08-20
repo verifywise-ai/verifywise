@@ -81,6 +81,8 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
       <IconButton
         onClick={handleClick}
         aria-label="Export options"
+        aria-haspopup="menu"
+        aria-expanded={Boolean(anchorEl)}
         disabled={disabled}
         sx={singleTheme.iconButtonsRectangle}
       >

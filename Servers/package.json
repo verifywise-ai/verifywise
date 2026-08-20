@@ -93,6 +93,7 @@
     "pg-pool": "^3.7.0",
     "pickleparser": "^0.2.1",
     "playwright": "^1.59.1",
+    "re2js": "^2.8.6",
     "redis": "^6.0.0",
     "reflect-metadata": "^0.2.2",
     "resend": "^6.12.3",
@@ -110,8 +111,7 @@
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
     "xstate": "^5.30.0",
     "yamljs": "^0.3.0",
-    "zod": "^4.4.3",
-    "re2js": "^2.8.6"
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
@@ -141,6 +141,7 @@
     "eslint": "^9.39.4",
     "husky": "^9.1.7",
     "jest": "^30.4.2",
+    "jest-environment-jsdom": "^30.4.1",
     "jszip": "^3.10.1",
     "lint-staged": "^17.0.5",
     "npm-run-all": "^4.1.5",
