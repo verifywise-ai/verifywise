@@ -133,7 +133,12 @@ export async function deletePhase(organizationId: number, phaseId: number): Prom
   );
 }
 
+const MAX_REORDER_ENTRIES = 1000;
+
 export async function reorderPhases(organizationId: number, orderedIds: number[]): Promise<void> {
+  if (orderedIds.length > MAX_REORDER_ENTRIES) {
+    throw new Error(`Cannot reorder more than ${MAX_REORDER_ENTRIES} phases`);
+  }
   for (let i = 0; i < orderedIds.length; i++) {
     await sequelize.query(
       `UPDATE model_lifecycle_phases
@@ -270,6 +275,9 @@ export async function reorderItems(
   phaseId: number,
   orderedIds: number[],
 ): Promise<void> {
+  if (orderedIds.length > MAX_REORDER_ENTRIES) {
+    throw new Error(`Cannot reorder more than ${MAX_REORDER_ENTRIES} items`);
+  }
   for (let i = 0; i < orderedIds.length; i++) {
     await sequelize.query(
       `UPDATE model_lifecycle_items

@@ -48,9 +48,11 @@ jobs:
               # raw, unchecked calls. See the file header for the full threat
               # model and compensating controls (Admin role gate, protocol
               # allowlist, cloud-metadata block, credential-embedding block,
-              # ReDoS-safe trailing-slash trim). Unit tests: the sibling
-              # safeOutboundUrl.test.ts, 13 cases.
+              # ReDoS-safe trailing-slash trim).
               - Servers/utils/safeOutboundUrl.ts
+              # Companion unit tests for the sanitizer. Assertions intentionally
+              # use URL substring checks against fixed, test-controlled strings.
+              - Servers/utils/safeOutboundUrl.test.ts
 
       - name: Perform CodeQL analysis
         uses: github/codeql-action/analyze@v4

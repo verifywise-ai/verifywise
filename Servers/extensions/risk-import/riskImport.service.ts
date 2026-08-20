@@ -421,7 +421,9 @@ export async function importRisks(
               organization_id: organizationId,
               ...data,
               risk_category: data.risk_category
-                ? `{${(data.risk_category as string[]).map((c) => `"${c.replace(/"/g, '\\"')}"`).join(",")}}`
+                ? `{${(data.risk_category as string[])
+                    .map((c) => `"${c.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`)
+                    .join(",")}}`
                 : null,
             },
             transaction,
