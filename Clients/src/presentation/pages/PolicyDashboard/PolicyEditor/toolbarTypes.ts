@@ -1,0 +1,50 @@
+export type ToolbarKey =
+  | "bold"
+  | "italic"
+  | "underline"
+  | "undo"
+  | "redo"
+  | "strike"
+  | "ol"
+  | "ul"
+  | "align-left"
+  | "align-center"
+  | "align-right"
+  | "link"
+  | "image"
+  | "highlight"
+  | "blockquote"
+  | "table"
+  | "code"
+  | "hr"
+  | "taskList"
+  | "superscript"
+  | "subscript"
+  | "color"
+  | "search";
+
+export const defaultToolbarState: Record<ToolbarKey, boolean> = {
+  "bold": false,
+  "italic": false,
+  "underline": false,
+  "undo": false,
+  "redo": false,
+  "strike": false,
+  "ol": false,
+  "ul": false,
+  "align-left": false,
+  "align-center": false,
+  "align-right": false,
+  "link": false,
+  "image": false,
+  "highlight": false,
+  "blockquote": false,
+  "table": false,
+  "code": false,
+  "hr": false,
+  "taskList": false,
+  "superscript": false,
+  "subscript": false,
+  "color": false,
+  "search": false,
+};

@@ -1,0 +1,338 @@
+name: E2E Tests
+
+permissions:
+  contents: read
+
+on:
+  pull_request:
+    paths:
+      - "Clients/**"
+      - "Servers/**"
+  workflow_dispatch:
+    inputs:
+      only_last_failed:
+        description: "Only re-run tests that failed in the previous workflow run"
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  e2e-tests:
+    name: Playwright E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: verifywise_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          # jsdom 30.x (used by Servers) requires Node >= 22.22.2.
+          node-version: '22'
+
+      # ---- Backend setup ----
+      - name: Install backend dependencies
+        working-directory: Servers
+        run: npm ci --legacy-peer-deps
+
+      - name: Build backend
+        working-directory: Servers
+        run: npm run build
+
+      - name: Run migrations
+        working-directory: Servers
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: verifywise_test
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          # Required by the RLS runtime-role migration (rls-app-role.js), which
+          # fails closed without it. CI-only value; not a real credential.
+          DB_APP_PASSWORD: test-app-role-password-for-ci
+          SUPERADMIN_EMAIL: admin@verifywise-test.com
+          SUPERADMIN_PASSWORD: TestAdmin!Str0ng
+        run: npx sequelize db:migrate
+
+      - name: Seed test data
+        working-directory: Servers
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: verifywise_test
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          # Re-create/refresh the super-admin so E2E login credentials are always valid.
+          SUPERADMIN_EMAIL: admin@verifywise-test.com
+          SUPERADMIN_PASSWORD: TestAdmin!Str0ng
+        run: node dist/scripts/seedTestData.js
+
+      # ---- AIGateway setup ----
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Install AIGateway dependencies
+        working-directory: AIGateway
+        run: |
+          # presidio-anonymizer 2.2.364 caps cryptography<49.0.0, but VerifyWise requires >=50.0.0.
+          # Install presidio-anonymizer without deps; its only required dependency is cryptography,
+          # which is already declared in requirements.txt.
+          grep -v '^presidio-anonymizer' requirements.txt > /tmp/requirements-install.txt
+          pip install -r /tmp/requirements-install.txt
+          pip install --no-deps presidio-anonymizer>=2.2.364
+
+      - name: Start AIGateway
+        working-directory: AIGateway/src
+        env:
+          AI_GATEWAY_PORT: 8100
+          AI_GATEWAY_INTERNAL_KEY: test-ai-gateway-key-for-e2e
+          REDIS_URL: redis://localhost:6379/0
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: verifywise_test
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          ENCRYPTION_KEY: test-encryption-key-32chars!!
+          EXPRESS_BACKEND_URL: http://localhost:3000
+        run: |
+          alembic upgrade head
+          uvicorn app:app --host 0.0.0.0 --port 8100 > /tmp/aigateway.log 2>&1 &
+          # Wait for AIGateway to be ready
+          AIGATEWAY_READY=false
+          for i in $(seq 1 30); do
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8100/health || true)
+            echo "AIGateway health check attempt $i: HTTP $HTTP_STATUS"
+            if [ "$HTTP_STATUS" = "200" ]; then
+              echo "AIGateway is ready"
+              AIGATEWAY_READY=true
+              break
+            fi
+            sleep 1
+          done
+          if [ "$AIGATEWAY_READY" != "true" ]; then
+            echo "AIGateway did not become ready; tailing logs..."
+            tail -n 100 /tmp/aigateway.log || true
+            exit 1
+          fi
+
+      - name: Start backend
+        working-directory: Servers
+        env:
+          PORT: 3000
+          NODE_ENV: test
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: verifywise_test
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+          JWT_SECRET: test-jwt-secret-for-e2e
+          REFRESH_TOKEN_SECRET: test-refresh-secret-for-e2e
+          ENCRYPTION_KEY: test-encryption-key-32chars!!
+          MULTI_TENANCY_ENABLED: false
+          AI_GATEWAY_URL: http://localhost:8100
+          AI_GATEWAY_INTERNAL_KEY: test-ai-gateway-key-for-e2e
+        run: |
+          node dist/index.js > /tmp/backend.log 2>&1 &
+          # Wait for backend to be ready
+          BACKEND_READY=false
+          for i in $(seq 1 30); do
+            HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/api/users/check/exists || true)
+            echo "Backend health check attempt $i: HTTP $HTTP_STATUS"
+            if [ "$HTTP_STATUS" = "200" ] || [ "$HTTP_STATUS" = "400" ] || [ "$HTTP_STATUS" = "401" ]; then
+              echo "Backend is responding (HTTP $HTTP_STATUS)"
+              BACKEND_READY=true
+              break
+            fi
+            sleep 1
+          done
+          if [ "$BACKEND_READY" != "true" ]; then
+            echo "Backend did not become ready; tailing logs..."
+            tail -n 100 /tmp/backend.log || true
+            exit 1
+          fi
+
+      # ---- Frontend setup ----
+      - name: Install frontend dependencies
+        working-directory: Clients
+        run: npm ci --legacy-peer-deps
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-browsers-${{ runner.os }}-${{ hashFiles('Clients/package-lock.json', 'Clients/package.json') }}
+          restore-keys: |
+            playwright-browsers-${{ runner.os }}-
+
+      - name: Install Playwright browsers
+        working-directory: Clients
+        run: npx playwright install --with-deps chromium
+
+      - name: Start frontend
+        working-directory: Clients
+        env:
+          VITE_APP_API_BASE_URL: http://localhost:3000
+        run: |
+          npm run dev:vite &
+          # Wait for frontend to be ready
+          FRONTEND_READY=false
+          for i in $(seq 1 30); do
+            if curl -s http://localhost:5173 >/dev/null; then
+              echo "Frontend is ready"
+              FRONTEND_READY=true
+              break
+            fi
+            echo "Frontend health check attempt $i"
+            sleep 1
+          done
+          if [ "$FRONTEND_READY" != "true" ]; then
+            echo "Frontend did not become ready"
+            exit 1
+          fi
+
+      # ---- Smoke test backend login before Playwright ----
+      - name: Smoke test backend login
+        run: |
+          echo "Smoke testing backend login endpoint..."
+          LOGIN_RESPONSE=$(curl -s -X POST http://localhost:3000/api/users/login \
+            -H "Content-Type: application/json" \
+            -d '{"email":"admin@verifywise-test.com","password":"TestAdmin!Str0ng"}' \
+            -w "\nHTTP_STATUS:%{http_code}\n")
+          echo "$LOGIN_RESPONSE"
+          LOGIN_STATUS=$(echo "$LOGIN_RESPONSE" | tail -n 1 | sed 's/HTTP_STATUS://')
+          if [ "$LOGIN_STATUS" != "202" ]; then
+            echo "Login smoke test failed with HTTP $LOGIN_STATUS; tailing backend logs..."
+            tail -n 100 /tmp/backend.log || true
+            exit 1
+          fi
+
+      # ---- Run E2E tests ----
+      # Persist Playwright's last-run metadata across workflow runs so a push
+      # that targets a previously-failing test can start with just that test
+      # instead of waiting for the whole suite.
+      #
+      # To only re-run previously failing tests, either:
+      #  - trigger the workflow manually with only_last_failed=true, or
+      #  - include "[e2e-only-failed]" in the HEAD commit message.
+      - name: Determine test mode
+        id: test_mode
+        run: |
+          HEAD_MSG=$(git log -1 --pretty=%B)
+          if [[ "$HEAD_MSG" == *"[e2e-only-failed]"* ]] || [[ "${{ inputs.only_last_failed }}" == "true" ]]; then
+            echo "only_last_failed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "only_last_failed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Restore last-run metadata
+        uses: actions/cache/restore@v4
+        with:
+          path: Clients/test-results/.last-run.json
+          key: playwright-last-run-${{ github.ref }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            playwright-last-run-${{ github.ref }}-
+
+      - name: Run previously failed E2E tests
+        working-directory: Clients
+        env:
+          E2E_BASE_URL: http://localhost:5173
+          E2E_EMAIL: admin@verifywise-test.com
+          E2E_PASSWORD: TestAdmin!Str0ng
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: verifywise_test
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+        run: |
+          if [ -f test-results/.last-run.json ]; then
+            npx playwright test --last-failed
+          else
+            echo "No previous run metadata found; skipping last-failed step."
+          fi
+
+      - name: Run full E2E test suite
+        if: ${{ steps.test_mode.outputs.only_last_failed != 'true' }}
+        working-directory: Clients
+        env:
+          E2E_BASE_URL: http://localhost:5173
+          # Must match the super-admin seeded by the migration step, otherwise
+          # global.setup logs in as a non-super-admin and the flow cannot create
+          # organizations. seedE2EAdmin (spawned by global.setup) also needs the
+          # DB_* vars to connect, since there is no Servers/.env in CI.
+          E2E_EMAIL: admin@verifywise-test.com
+          E2E_PASSWORD: TestAdmin!Str0ng
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: verifywise_test
+          DB_USER: postgres
+          DB_PASSWORD: postgres
+        run: npx playwright test
+
+      - name: Save last-run metadata
+        if: always()
+        uses: actions/cache/save@v4
+        with:
+          path: Clients/test-results/.last-run.json
+          key: playwright-last-run-${{ github.ref }}-${{ github.run_id }}-${{ github.run_attempt }}
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: Clients/playwright-report/
+          retention-days: 14
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-results
+          path: Clients/test-results/
+          retention-days: 7
+
+      - name: Upload backend logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: backend-logs
+          path: /tmp/backend.log
+          retention-days: 7
+
+      - name: Upload AIGateway logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: aigateway-logs
+          path: /tmp/aigateway.log
+          retention-days: 7

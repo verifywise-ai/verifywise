@@ -7,6 +7,7 @@ import os
 import re
 from typing import Any, Dict, List, Optional, Tuple
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from cryptography.hazmat.primitives import padding as crypto_padding
 from cryptography.hazmat.backends import default_backend
 from fastapi import HTTPException
@@ -33,23 +34,47 @@ DEFAULT_MODELS = {
 }
 
 
+GCM_AUTH_TAG_SIZE = 16
+
+
 def _decrypt_api_key(encrypted_text: str) -> str:
-    """Decrypt an API key encrypted by the Node.js backend (AES-256-CBC, hex-encoded)."""
+    """Decrypt an API key encrypted by the Node.js backend.
+
+    Supports the current AES-256-GCM format (iv:authTag:ciphertext) and the
+    legacy AES-256-CBC format (iv:ciphertext).
+    """
     if not ENCRYPTION_KEY:
         raise ValueError("ENCRYPTION_KEY not configured")
     parts = encrypted_text.split(":")
-    if len(parts) != 2:
-        raise ValueError("Invalid encrypted format")
-    iv_hex, data_hex = parts
     key = ENCRYPTION_KEY.encode("ascii").ljust(32, b"0")[:32]
-    iv = bytes.fromhex(iv_hex)
-    ct = bytes.fromhex(data_hex)
-    cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
-    decryptor = cipher.decryptor()
-    padded = decryptor.update(ct) + decryptor.finalize()
-    unpadder = crypto_padding.PKCS7(128).unpadder()
-    plaintext = unpadder.update(padded) + unpadder.finalize()
-    return plaintext.decode("utf-8")
+
+    if len(parts) == 2:
+        # Legacy AES-256-CBC format. Kept only to decrypt data encrypted before the
+        # GCM migration; all new data uses AES-256-GCM. This branch intentionally
+        # uses CBC because the legacy ciphertext has no authenticated alternative.
+        iv_hex, data_hex = parts
+        iv = bytes.fromhex(iv_hex)
+        ct = bytes.fromhex(data_hex)
+        # Legacy CBC branch: ciphertext has no authenticated alternative.
+        # nosemgrep: python.cryptography.security.mode-without-authentication.crypto-mode-without-authentication
+        cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
+        decryptor = cipher.decryptor()
+        padded = decryptor.update(ct) + decryptor.finalize()
+        unpadder = crypto_padding.PKCS7(128).unpadder()
+        plaintext = unpadder.update(padded) + unpadder.finalize()
+        return plaintext.decode("utf-8")
+
+    if len(parts) == 3:
+        # Current AES-256-GCM format
+        iv_hex, tag_hex, data_hex = parts
+        nonce = bytes.fromhex(iv_hex)
+        tag = bytes.fromhex(tag_hex)
+        ct = bytes.fromhex(data_hex)
+        aesgcm = AESGCM(key)
+        plaintext = aesgcm.decrypt(nonce, ct + tag, None)
+        return plaintext.decode("utf-8")
+
+    raise ValueError("Invalid encrypted format")
 
 
 async def _get_best_api_key(db, organization_id: int) -> Optional[Tuple[str, str]]:
@@ -141,7 +166,7 @@ async def generate_report_controller(
                     provider, api_key = key_info
                     model = DEFAULT_MODELS.get(provider, "gpt-4o-mini")
                     try:
-                        logger.info(f"Generating AI summaries with {provider}/{model}")
+                        logger.info("Generating AI summaries")
                         executive_summary, metric_summaries, recommendations_summary = generate_all_summaries(
                             experiments,
                             provider=provider,

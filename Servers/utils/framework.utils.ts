@@ -43,6 +43,7 @@ export const getAllFrameworkByIdQuery = async (
     },
   );
   const framework = result[0];
+  if (!framework) return null;
   const frameworkProjects = await sequelize.query(
     `SELECT * FROM projects_frameworks WHERE organization_id = :organizationId AND framework_id = :frameworkId`,
     {
@@ -84,18 +85,14 @@ const canRemoveFrameworkFromProjectQuery = async (
     return false; // Framework not found in the project
   }
 
-  // Count both system frameworks and custom frameworks (from plugin if installed) for the project
-  // A framework can only be removed if total count > 1
-  // Use safe query that handles missing plugin table
+  // Allow removing the framework as long as it is assigned to the project.
+  // The "at least one framework must remain" guard was removed so users can
+  // delete the last framework from a use case from the AI Frameworks modal.
   const [[{ can_remove }]] = (await sequelize.query(
-    `SELECT (
-      (SELECT COUNT(*) FROM projects_frameworks WHERE organization_id = :organizationId AND project_id = :projectId) +
-      CASE
-        WHEN EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'verifywise' AND table_name = 'custom_framework_projects')
-        THEN (SELECT COUNT(*) FROM custom_framework_projects WHERE organization_id = :organizationId AND project_id = :projectId)
-        ELSE 0
-      END
-    ) > 1 AND EXISTS (SELECT 1 FROM projects_frameworks WHERE organization_id = :organizationId AND project_id = :projectId AND framework_id = :frameworkId) AS can_remove;`,
+    `SELECT EXISTS (
+      SELECT 1 FROM projects_frameworks
+      WHERE organization_id = :organizationId AND project_id = :projectId AND framework_id = :frameworkId
+    ) AS can_remove;`,
     { replacements: { projectId, frameworkId, organizationId }, transaction },
   )) as [[{ can_remove: boolean }], number];
   return can_remove;
@@ -156,12 +153,11 @@ export const addFrameworkToProjectQuery = async (
     return false;
   }
 
-  const frameworkAdditionFunction = frameworkAdditionMap[frameworkId];
-  if (!frameworkAdditionFunction) {
+  const addFn = frameworkAdditionMap[frameworkId];
+  if (!addFn) {
     return false;
   }
 
-  // add the framework to the project
   const result = (await sequelize.query(
     `INSERT INTO projects_frameworks (organization_id, project_id, framework_id) VALUES (:organizationId, :projectId, :frameworkId) RETURNING *;`,
     { replacements: { projectId, frameworkId, organizationId }, transaction },
@@ -169,8 +165,8 @@ export const addFrameworkToProjectQuery = async (
   if (!result[0]?.length) {
     return false;
   }
-  // call framework addition function only if insert was successful
-  await frameworkAdditionFunction(projectId, false, organizationId, transaction);
+
+  await addFn(projectId, false, organizationId, transaction);
   return true;
 };
 
@@ -180,6 +176,8 @@ const deleteFrameworkEvidenceFiles = async (
   organizationId: number,
   transaction: Transaction,
 ): Promise<void> => {
+  if (source.length === 0) return;
+
   // First clean up any virtual folder mappings for these files
   await sequelize.query(
     `DELETE FROM file_folder_mappings
@@ -218,7 +216,6 @@ export const deleteFrameworkFromProjectQuery = async (
     return false;
   }
 
-  // delete evidence files for the framework
   const frameworkFilesDeletionSource = frameworkFilesDeletionSourceMap[frameworkId];
   if (!frameworkFilesDeletionSource) {
     return false;
@@ -234,7 +231,5 @@ export const deleteFrameworkFromProjectQuery = async (
   if (!frameworkDeletionFunction) {
     return false;
   }
-  // call framework deletion function
-  const result = await frameworkDeletionFunction(projectId, organizationId, transaction);
-  return result;
+  return await frameworkDeletionFunction(projectId, organizationId, transaction);
 };

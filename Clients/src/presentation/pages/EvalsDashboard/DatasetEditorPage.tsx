@@ -14,7 +14,7 @@ import {
 } from "@mui/material";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import VWChip from "../../components/Chip";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router";
 import {
   readDataset,
   getCurrentOrg,

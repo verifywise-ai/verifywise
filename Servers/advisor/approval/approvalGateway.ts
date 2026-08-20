@@ -15,13 +15,15 @@ import type { SubmitForApprovalConfig, ApprovalContext, StateHistoryEntry } from
 import { sequelize } from "../../database/db";
 import { QueryTypes } from "sequelize";
 import { v4 as uuidv4 } from "uuid";
-import { logStructured } from "../../utils/logger/fileLogger";
+import logger, { logStructured } from "../../utils/logger/fileLogger";
 import { createNotificationQuery } from "../../utils/notification.utils";
 import {
   NotificationType,
   NotificationEntityType,
 } from "../../domain.layer/interfaces/i.notification";
 import { logStateHistory } from "../../services/aiAuditTrail.service";
+import { startTrace, startSpan, endSpan, logError } from "../observability/traceManager";
+import { resumeWorkflow, cancelRunForRejectedApproval } from "../../services/workflows/engine";
 
 const fileName = "approvalGateway.ts";
 
@@ -57,6 +59,15 @@ export interface ApprovalSubmitResult {
   /** If outcome=rejected, the error message */
   errorMessage?: string;
 }
+
+/**
+ * tool_name marking an approval as a workflow gate rather than an AI tool call.
+ *
+ * A gate has no executor: the write is performed by the workflow step itself
+ * when the run resumes. approveActionImpl branches on this value so it resumes
+ * instead of looking for an executor that will never exist.
+ */
+export const WORKFLOW_GATE_TOOL = "workflow_gate";
 
 // ── Helpers ─────────────────────────────────────────────────────
 
@@ -101,7 +112,7 @@ async function insertApprovalRecord(
         riskLevel: config.riskLevel,
         state,
         ruleMatched: extra?.ruleMatched || null,
-        requestedBy: config.userId,
+        requestedBy: config.userId ?? null,
         approvedBy: extra?.approvedBy || null,
         approvedAt: extra?.approvedAt || null,
         executedAt: extra?.executedAt || null,
@@ -144,8 +155,37 @@ async function updateApprovalRecord(
 /**
  * Submit a write tool operation for approval.
  * Uses the rule engine to evaluate, then routes through XState machine.
+ *
+ * Thin Langfuse-instrumented wrapper. Opens a trace + span around the
+ * underlying evaluation/execution. Every traceManager call no-ops when
+ * Langfuse is unconfigured, so behaviour is unchanged when tracing is off.
  */
 export async function submitForApproval(
+  config: SubmitForApprovalConfig,
+): Promise<ApprovalSubmitResult> {
+  const trace = startTrace(
+    config.userId ?? 0,
+    "",
+    {
+      fn: "submitForApproval",
+      toolName: config.toolName,
+      riskLevel: config.riskLevel,
+    },
+    config.organizationId,
+  );
+  const span = startSpan(trace, "approval:submit", { toolName: config.toolName });
+  try {
+    const result = await submitForApprovalImpl(config);
+    endSpan(span, { output: { outcome: result.outcome }, status: "success" });
+    return result;
+  } catch (error) {
+    logError(trace, error, { fn: "submitForApproval" });
+    endSpan(span, { status: "error" });
+    throw error;
+  }
+}
+
+async function submitForApprovalImpl(
   config: SubmitForApprovalConfig,
 ): Promise<ApprovalSubmitResult> {
   const functionName = "submitForApproval";
@@ -380,12 +420,109 @@ export async function submitForApproval(
   }
 }
 
+/**
+ * Create a pending approval for a gated workflow step.
+ *
+ * Deliberately does NOT go through submitForApproval: that path runs the rule
+ * engine and an executor pre-check, and auto-rejects anything whose tool has no
+ * registered executor (approvalGateway isAutoRejectable). Both exist to decide
+ * whether a *tool* should run; a workflow gate has no tool. The consequence is
+ * that org-level auto-approve rules do not apply to gates — see the design doc.
+ *
+ * @returns the approval id, which the step returns as StepResult.approvalId so
+ *          the engine can persist it to ai_workflow_runs.awaiting_approval_id.
+ */
+export async function submitWorkflowGate(config: {
+  organizationId: number;
+  userId?: number;
+  workflowId: string;
+  workflowRunId: number;
+  stepId: string;
+  description: string;
+}): Promise<string> {
+  const id = uuidv4();
+  const now = new Date().toISOString();
+  const stateHistory: StateHistoryEntry[] = [
+    { state: "idle", timestamp: now, actor: "system" },
+    {
+      state: "pending_approval",
+      timestamp: now,
+      actor: "system",
+      reason: `workflow gate: ${config.workflowId}.${config.stepId}`,
+    },
+  ];
+
+  const gateConfig: SubmitForApprovalConfig = {
+    organizationId: config.organizationId,
+    // requested_by is nullable: most gated runs are started by a trigger, not
+    // a person, and inventing a synthetic user id would corrupt the audit trail.
+    userId: config.userId as number,
+    toolName: WORKFLOW_GATE_TOOL,
+    actionType: "workflow_gate",
+    riskLevel: "warning",
+    description: config.description,
+    inputParams: {
+      workflowId: config.workflowId,
+      workflowRunId: config.workflowRunId,
+      stepId: config.stepId,
+    },
+  };
+
+  await insertApprovalRecord(id, gateConfig, "pending_approval", stateHistory);
+  logStateHistory(config.organizationId, id, stateHistory, WORKFLOW_GATE_TOOL).catch(() => {});
+
+  // Non-fatal, matching submitForApprovalImpl's pending-approval path: a
+  // notification failure must never surface as a rejection here. This is the
+  // approval id the workflow step returns as StepResult.approvalId — if this
+  // throws, the caller never gets the id, the engine persists
+  // awaiting_approval_id = NULL, and the run strands with no resume path
+  // (the exact failure class this task exists to fix).
+  try {
+    await notifyPendingApproval(gateConfig);
+  } catch (notifyError) {
+    logStructured(
+      "error",
+      `notification failed (non-fatal): ${notifyError}`,
+      "submitWorkflowGate",
+      fileName,
+    );
+  }
+
+  logStructured(
+    "successful",
+    `workflow gate ${config.workflowId}.${config.stepId} awaiting approval (run ${config.workflowRunId})`,
+    "submitWorkflowGate",
+    fileName,
+  );
+  return id;
+}
+
 // ── Approve / Reject Actions ────────────────────────────────────
 
 /**
  * Approve a pending approval and execute the write operation.
+ *
+ * Thin Langfuse-instrumented wrapper (no-ops when Langfuse is unconfigured).
  */
 export async function approveAction(
+  organizationId: number,
+  id: string,
+  userId: number,
+): Promise<{ success: boolean; result?: unknown; error?: string }> {
+  const trace = startTrace(userId, "", { fn: "approveAction", approvalId: id }, organizationId);
+  const span = startSpan(trace, "approval:approve", { approvalId: id });
+  try {
+    const result = await approveActionImpl(organizationId, id, userId);
+    endSpan(span, { output: { success: result.success }, status: "success" });
+    return result;
+  } catch (error) {
+    logError(trace, error, { fn: "approveAction" });
+    endSpan(span, { status: "error" });
+    throw error;
+  }
+}
+
+async function approveActionImpl(
   organizationId: number,
   id: string,
   userId: number,
@@ -412,6 +549,126 @@ export async function approveAction(
     typeof record.state_history === "string"
       ? JSON.parse(record.state_history)
       : record.state_history || [];
+
+  // A workflow gate has no executor by design: the write is performed by the
+  // workflow step itself when the run resumes. The resume IS the execution.
+  if (record.tool_name === WORKFLOW_GATE_TOOL) {
+    stateHistory.push({
+      state: "approved",
+      timestamp: new Date().toISOString(),
+      actor: `user:${userId}`,
+    });
+    stateHistory.push({ state: "executing", timestamp: new Date().toISOString(), actor: "system" });
+    await updateApprovalRecord(id, organizationId, {
+      state: "executing",
+      stateHistory,
+      approvedBy: userId,
+      approvedAt: new Date().toISOString(),
+    });
+
+    const runs = (await sequelize.query(
+      `SELECT id FROM ai_workflow_runs
+        WHERE organization_id = :organizationId
+          AND awaiting_approval_id = :approvalId
+          AND state = 'awaiting_approval'
+        LIMIT 1`,
+      { replacements: { organizationId, approvalId: id }, type: QueryTypes.SELECT },
+    )) as Array<{ id: number }>;
+
+    if (!runs[0]) {
+      // Never report success for a gate that resumed nothing.
+      stateHistory.push({
+        state: "failed",
+        timestamp: new Date().toISOString(),
+        actor: "system",
+        reason: "no workflow run linked",
+      });
+      await updateApprovalRecord(id, organizationId, {
+        state: "failed",
+        stateHistory,
+        errorMessage: "no workflow run linked to this gate",
+      });
+      return { success: false, error: "no workflow run linked to this gate" };
+    }
+
+    try {
+      // The return value isn't the discriminator (see below) — we only need
+      // resumeWorkflow to run to completion or throw.
+      await resumeWorkflow(runs[0].id, id, organizationId);
+    } catch (resumeError) {
+      // Mirror the tool-executor path's handling of a throwing execution:
+      // without this, the approval is stuck at "executing" (already
+      // persisted above) and the entry guard `record.state !==
+      // "pending_approval"` blocks every retry forever.
+      const errorMsg = resumeError instanceof Error ? resumeError.message : "Unknown error";
+      stateHistory.push({
+        state: "failed",
+        timestamp: new Date().toISOString(),
+        actor: "system",
+        reason: errorMsg,
+      });
+      await updateApprovalRecord(id, organizationId, {
+        state: "failed",
+        stateHistory,
+        errorMessage: errorMsg,
+        executedAt: new Date().toISOString(),
+      });
+      logStateHistory(organizationId, id, stateHistory, record.tool_name).catch(() => {});
+      logStructured(
+        "error",
+        `workflow resume threw after gate approval: ${errorMsg}`,
+        functionName,
+        fileName,
+      );
+      return { success: false, error: errorMsg };
+    }
+
+    // A workflow's `state` alone cannot tell "nothing advanced" apart from
+    // "advanced into a NEW gate": incident_response has two sequential gates
+    // (create_remediation_tasks, then escalate_notify_admins), so a
+    // successful resume legitimately re-pauses on a different approval, and
+    // that pause looks identical — state === 'awaiting_approval' — to a
+    // resume that didn't move at all (e.g. an unregistered workflow
+    // definition, where resumeWorkflow returns the run UNCHANGED rather than
+    // throwing). The only reliable discriminator is whether the run is still
+    // waiting on THIS SAME approval id.
+    const afterResume = (await sequelize.query(
+      `SELECT state, awaiting_approval_id FROM ai_workflow_runs
+        WHERE id = :runId AND organization_id = :organizationId`,
+      { replacements: { runId: runs[0].id, organizationId }, type: QueryTypes.SELECT },
+    )) as Array<{ state: string; awaiting_approval_id: string | null }>;
+    const runAfter = afterResume[0];
+
+    const nothingAdvanced =
+      !runAfter || (runAfter.state === "awaiting_approval" && runAfter.awaiting_approval_id === id);
+
+    if (nothingAdvanced) {
+      // Never report success for a gate that resumed nothing.
+      stateHistory.push({
+        state: "failed",
+        timestamp: new Date().toISOString(),
+        actor: "system",
+        reason: "resume did not advance the run",
+      });
+      await updateApprovalRecord(id, organizationId, {
+        state: "failed",
+        stateHistory,
+        errorMessage: "workflow resume did not advance the run",
+      });
+      logStateHistory(organizationId, id, stateHistory, record.tool_name).catch(() => {});
+      return { success: false, error: "workflow resume did not advance the run" };
+    }
+
+    stateHistory.push({ state: "completed", timestamp: new Date().toISOString(), actor: "system" });
+    await updateApprovalRecord(id, organizationId, {
+      state: "completed",
+      stateHistory,
+      executedAt: new Date().toISOString(),
+      result: { workflowRunId: runs[0].id, state: runAfter.state },
+    });
+    logStateHistory(organizationId, id, stateHistory, record.tool_name).catch(() => {});
+    return { success: true, result: { workflowRunId: runs[0].id, state: runAfter.state } };
+  }
 
   // Look up executor
   const executor = writeToolExecutors.get(record.tool_name);
@@ -533,14 +790,68 @@ export async function approveAction(
   // Log audit trail for approve + execute + complete
   logStateHistory(organizationId, id, stateHistory, record.tool_name).catch(() => {});
 
+  // Phase 6 / issue 3813 — if this approval is gating a paused workflow run,
+  // resume it now that the action has been approved. Non-fatal.
+  resumePausedWorkflowForApproval(organizationId, id).catch((resumeError) => {
+    logStructured(
+      "error",
+      `workflow resume after approval failed (non-fatal): ${resumeError}`,
+      functionName,
+      fileName,
+    );
+  });
+
   logStructured("successful", `approved and executed ${record.tool_name}`, functionName, fileName);
   return { success: true, result };
 }
 
 /**
+ * Resume any workflow run parked in 'awaiting_approval' that is linked to the
+ * given approval. Looks the run up by ai_workflow_runs.awaiting_approval_id;
+ * a no-op when nothing is linked.
+ */
+async function resumePausedWorkflowForApproval(
+  organizationId: number,
+  approvalId: string,
+): Promise<void> {
+  const runs = (await sequelize.query(
+    `SELECT id FROM ai_workflow_runs
+      WHERE organization_id = :organizationId
+        AND awaiting_approval_id = :approvalId
+        AND state = 'awaiting_approval'
+      LIMIT 1`,
+    { replacements: { organizationId, approvalId }, type: QueryTypes.SELECT },
+  )) as Array<{ id: number }>;
+  const run = runs[0];
+  if (!run) return;
+  await resumeWorkflow(run.id, approvalId, organizationId);
+}
+
+/**
  * Reject a pending approval.
+ *
+ * Thin Langfuse-instrumented wrapper (no-ops when Langfuse is unconfigured).
  */
 export async function rejectAction(
+  organizationId: number,
+  id: string,
+  userId: number,
+  reason?: string,
+): Promise<{ success: boolean; error?: string }> {
+  const trace = startTrace(userId, "", { fn: "rejectAction", approvalId: id }, organizationId);
+  const span = startSpan(trace, "approval:reject", { approvalId: id });
+  try {
+    const result = await rejectActionImpl(organizationId, id, userId, reason);
+    endSpan(span, { output: { success: result.success }, status: "success" });
+    return result;
+  } catch (error) {
+    logError(trace, error, { fn: "rejectAction" });
+    endSpan(span, { status: "error" });
+    throw error;
+  }
+}
+
+async function rejectActionImpl(
   organizationId: number,
   id: string,
   userId: number,
@@ -579,11 +890,39 @@ export async function rejectAction(
     stateHistory,
   });
 
-  // Also resolve in Redis
-  try {
-    await resolveConfirmation(organizationId, id, "rejected", userId);
-  } catch {
-    /* non-fatal */
+  // A rejected gate must not leave its run parked forever: the approval can
+  // never return to pending_approval, so no future approve could recover it.
+  if (record.tool_name === WORKFLOW_GATE_TOOL) {
+    try {
+      await cancelRunForRejectedApproval(id, organizationId, userId, reason);
+    } catch (error) {
+      logStructured(
+        "error",
+        `failed to cancel workflow run for rejected gate ${id}`,
+        functionName,
+        fileName,
+      );
+      logger.error("cancelRunForRejectedApproval failed:", error);
+    }
+  }
+
+  // Also resolve in Redis — but only for tool approvals. submitWorkflowGate
+  // never calls storeConfirmation (a gate has no confirmation-polling UI), so
+  // there is no key for a gate rejection to resolve. This is not just an
+  // optimization: the shared client (Servers/database/redis.ts) has
+  // `maxRetriesPerRequest: null` and no `commandTimeout`, so a command issued
+  // while Redis is unreachable sits in ioredis's offline queue indefinitely
+  // — no job in .github/workflows/backend-checks.yml provisions a Redis
+  // service, so calling this unconditionally hung every gate rejection in
+  // CI, bounded only by Jest's own test timeout. Skipping the call for gates
+  // avoids the Redis round trip entirely, which is both correct (there is
+  // nothing to resolve) and what keeps this path from hanging.
+  if (record.tool_name !== WORKFLOW_GATE_TOOL) {
+    try {
+      await resolveConfirmation(organizationId, id, "rejected", userId);
+    } catch {
+      /* non-fatal */
+    }
   }
 
   logStateHistory(organizationId, id, stateHistory, record.tool_name).catch(() => {});

@@ -11,7 +11,6 @@ import {
   Select,
   MenuItem,
   FormControl,
-  CircularProgress,
   Accordion,
   AccordionSummary,
   AccordionDetails,
@@ -20,9 +19,7 @@ import {
 } from "@mui/material";
 import {
   Check,
-  Database,
   ExternalLink,
-  Upload,
   Sparkles,
   Settings,
   Plus,
@@ -40,42 +37,11 @@ import Checkbox from "../../components/Inputs/Checkbox";
 import Alert from "../../components/Alert";
 import Chip from "../../components/Chip";
 import { palette } from "../../themes/palette";
-
-// Import provider logos
-import { ReactComponent as OpenAILogo } from "../../assets/icons/openai_logo.svg";
-import { ReactComponent as AnthropicLogo } from "../../assets/icons/anthropic_logo.svg";
-import { ReactComponent as OllamaLogo } from "../../assets/icons/ollama_logo.svg";
-import { ReactComponent as GeminiLogo } from "../../assets/icons/gemini_logo.svg";
-import { ReactComponent as MistralLogo } from "../../assets/icons/mistral_logo.svg";
-import { ReactComponent as XAILogo } from "../../assets/icons/xai_logo.svg";
-import { ReactComponent as OpenRouterLogo } from "../../assets/icons/openrouter_logo.svg";
-import { ReactComponent as FolderFilledIcon } from "../../assets/icons/folder_filled.svg";
-
-// Large SVGs loaded from public/ to avoid bundling
-const HuggingFaceLogo = (props: React.SVGProps<SVGSVGElement>) => (
-  <img
-    src="/assets/icons/huggingface_logo.svg"
-    alt="Hugging Face"
-    width={props.width || 24}
-    height={props.height || 24}
-    style={{ display: "inline-block" }}
-  />
-);
-const BuildIcon = (props: React.SVGProps<SVGSVGElement>) => (
-  <img
-    src="/assets/icons/build.svg"
-    alt="Build"
-    width={props.width || 24}
-    height={props.height || 24}
-    style={{ display: "inline-block" }}
-  />
-);
 import {
   createExperiment,
   listDatasets,
   listMyDatasets,
   readDataset,
-  uploadDataset,
   listScorers,
   getAllLlmApiKeys,
   addLlmApiKey,
@@ -88,6 +54,25 @@ import { getAllEntities } from "../../../application/repository/entity.repositor
 import { PROVIDERS, type ModelInfo } from "../../utils/providers";
 import { evalModelsService, type SavedModel } from "../../../infrastructure/api/evalModelsService";
 import { useModelPreferences } from "../../../application/hooks/useModelPreferences";
+import {
+  datasetNameFromPresetPath,
+  generateDefaultExperimentName,
+} from "./NewExperiment/experimentNameHelpers";
+import {
+  type DatasetPrompt,
+  type JudgeMode,
+  type ProviderType,
+  type UserDataset,
+  WIZARD_STEPS,
+} from "./NewExperiment/newExperimentConfig";
+import {
+  availableJudgeProviders,
+  availableModelProviders,
+  CLOUD_PROVIDER_IDS,
+} from "./NewExperiment/providerConfig";
+import { canProceedToNextStep, getMissingKeyProviders } from "./NewExperiment/stepValidation";
+import DatasetStep from "./NewExperiment/DatasetStep";
+import ModelStep from "./NewExperiment/ModelStep";
 
 interface NewExperimentModalProps {
   isOpen: boolean;
@@ -111,59 +96,6 @@ interface NewExperimentModalProps {
    */
   existingExperimentNames?: string[];
 }
-
-const steps = ["Model", "Dataset", "Scorer / Judge", "Metrics"];
-
-/**
- * Strip noise from a model identifier so it reads cleanly as part of an
- * experiment name:
- *   "openai/gpt-4o-mini"            -> "gpt-4o-mini"
- *   "mistralai/mistral-medium-3-5"  -> "mistral-medium-3-5"
- *   "claude-3-5-sonnet-20241022"    -> "claude-3-5-sonnet"
- */
-const shortenForExperimentName = (s?: string | null): string => {
-  if (!s) return "";
-  const dateless = s.replace(/-\d{8}$/, "").replace(/-\d{4}-\d{2}-\d{2}$/, "");
-  const slashIdx = dateless.lastIndexOf("/");
-  return slashIdx >= 0 ? dateless.slice(slashIdx + 1) : dateless;
-};
-
-/**
- * Build the default name for a new experiment as `<model> × <dataset>`.
- * If that exact name is already used in this project, append #2, #3, ...
- * until we hit one that's free.
- */
-const generateDefaultExperimentName = (
-  modelName: string,
-  datasetName: string,
-  existing: readonly string[],
-): string => {
-  const m = shortenForExperimentName(modelName) || "model";
-  const d = (datasetName || "dataset").trim() || "dataset";
-  const base = `${m} × ${d}`;
-  if (!existing.includes(base)) return base;
-  let n = 2;
-  while (existing.includes(`${base} #${n}`)) n++;
-  return `${base} #${n}`;
-};
-
-/**
- * Derive a human-friendly dataset name from a preset filename like
- * "chatbot/chatbot_coding_helper.json" -> "Chatbot Coding Helper".
- */
-const datasetNameFromPresetPath = (path?: string | null): string => {
-  if (!path) return "";
-  const fileName =
-    path
-      .split("/")
-      .pop()
-      ?.replace(/\.json$/i, "") || "";
-  return fileName
-    .split("_")
-    .filter(Boolean)
-    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(" ");
-};
 
 export default function NewExperimentModal({
   isOpen,
@@ -191,39 +123,17 @@ export default function NewExperimentModal({
   const [apiKeyWarningAcknowledged, setApiKeyWarningAcknowledged] = useState(false);
 
   // Dataset prompts state
-  interface DatasetPrompt {
-    id: string;
-    category: string;
-    prompt: string;
-    expected_output: string;
-    expected_keywords: string[];
-    difficulty: string;
-  }
   const [datasetPrompts, setDatasetPrompts] = useState<DatasetPrompt[]>([]);
   const [datasetLoaded, setDatasetLoaded] = useState(false);
   // User's saved datasets (for "My datasets" option)
-  const [userDatasets, setUserDatasets] = useState<
-    Array<{
-      id: string;
-      name: string;
-      path: string;
-      promptCount: number;
-      turnType?: "single-turn" | "multi-turn" | "simulated";
-    }>
-  >([]);
-  const [selectedUserDataset, setSelectedUserDataset] = useState<{
-    id: string;
-    name: string;
-    path: string;
-    promptCount: number;
-    turnType?: "single-turn" | "multi-turn" | "simulated";
-  } | null>(null);
+  const [userDatasets, setUserDatasets] = useState<UserDataset[]>([]);
+  const [selectedUserDataset, setSelectedUserDataset] = useState<UserDataset | null>(null);
   const [loadingUserDatasets, setLoadingUserDatasets] = useState(false);
   const [uploadingDataset, setUploadingDataset] = useState(false);
   const [selectedPresetPath, setSelectedPresetPath] = useState<string>("");
 
   // Scorer / Judge mode state: scorer = custom only, standard = judge only, both = run both
-  const [judgeMode, setJudgeMode] = useState<"scorer" | "standard" | "both">("standard");
+  const [judgeMode, setJudgeMode] = useState<JudgeMode>("standard");
   const [userScorers, setUserScorers] = useState<DeepEvalScorer[]>([]);
   const [selectedScorer, setSelectedScorer] = useState<DeepEvalScorer | null>(null);
   const [selectedScorerIds, setSelectedScorerIds] = useState<string[]>([]); // Multi-select scorer IDs
@@ -1092,57 +1002,10 @@ export default function NewExperimentModal({
     });
   };
 
-  type ProviderType =
-    | "openai"
-    | "anthropic"
-    | "google"
-    | "xai"
-    | "huggingface"
-    | "mistral"
-    | "ollama"
-    | "local"
-    | "custom_api"
-    | "openrouter";
-
   // Check if a provider has a configured API key
   const hasApiKey = (providerId: string): boolean => {
     return configuredApiKeys.some((k) => k.provider === providerId);
   };
-
-  // All cloud providers that need API keys (using the saved models)
-  const cloudProviders = [
-    {
-      id: "openrouter" as ProviderType,
-      name: "OpenRouter",
-      Logo: OpenRouterLogo,
-      needsApiKey: true,
-    },
-    { id: "openai" as ProviderType, name: "OpenAI", Logo: OpenAILogo, needsApiKey: true },
-    { id: "anthropic" as ProviderType, name: "Anthropic", Logo: AnthropicLogo, needsApiKey: true },
-    { id: "google" as ProviderType, name: "Gemini", Logo: GeminiLogo, needsApiKey: true },
-    { id: "xai" as ProviderType, name: "xAI", Logo: XAILogo, needsApiKey: true },
-    { id: "mistral" as ProviderType, name: "Mistral", Logo: MistralLogo, needsApiKey: true },
-  ];
-
-  // Local providers that don't need API keys
-  const localProviders = [
-    {
-      id: "huggingface" as ProviderType,
-      name: "HuggingFace",
-      Logo: HuggingFaceLogo,
-      needsApiKey: false,
-    },
-    { id: "ollama" as ProviderType, name: "Ollama", Logo: OllamaLogo, needsApiKey: false },
-    {
-      id: "custom_api" as ProviderType,
-      name: "Custom / Self-hosted",
-      Logo: BuildIcon,
-      needsApiKey: false,
-    },
-  ];
-
-  // All available providers for judge selection (all cloud + local)
-  const availableJudgeProviders = [...cloudProviders, ...localProviders];
 
   const selectedProvider = availableJudgeProviders.find((p) => p.id === config.judgeLlm.provider);
 
@@ -1205,15 +1068,7 @@ export default function NewExperimentModal({
     const loadForProvider = async (provider: string) => {
       if (!provider || gatewayModelsLoaded.current.has(provider)) return;
       // Only cloud providers — local/custom providers don't have a LiteLLM catalog entry
-      const cloudProviders = new Set([
-        "openai",
-        "anthropic",
-        "google",
-        "mistral",
-        "xai",
-        "openrouter",
-      ]);
-      if (!cloudProviders.has(provider)) return;
+      if (!(CLOUD_PROVIDER_IDS as readonly string[]).includes(provider)) return;
       gatewayModelsLoaded.current.add(provider); // mark before fetch to prevent concurrent calls
       try {
         const models = await evalModelsService.getGatewayModelsForProvider(provider);
@@ -1230,15 +1085,7 @@ export default function NewExperimentModal({
   useEffect(() => {
     const loadForProvider = async (provider: string) => {
       if (!provider || gatewayModelsLoaded.current.has(provider)) return;
-      const cloudProviders = new Set([
-        "openai",
-        "anthropic",
-        "google",
-        "mistral",
-        "xai",
-        "openrouter",
-      ]);
-      if (!cloudProviders.has(provider)) return;
+      if (!(CLOUD_PROVIDER_IDS as readonly string[]).includes(provider)) return;
       gatewayModelsLoaded.current.add(provider);
       try {
         const models = await evalModelsService.getGatewayModelsForProvider(provider);
@@ -1258,22 +1105,6 @@ export default function NewExperimentModal({
       handleLoadBuiltinDataset();
     }
   }, [activeStep, config.dataset.useBuiltin, datasetLoaded, handleLoadBuiltinDataset]);
-
-  // Model providers - show ALL providers (cloud + local)
-  const allModelProviders = [
-    ...cloudProviders.map((p) => ({ ...p, needsUrl: false })),
-    ...localProviders.map((p) => ({ ...p, needsUrl: false })),
-    {
-      id: "local" as ProviderType,
-      name: "Local",
-      Logo: FolderFilledIcon,
-      needsApiKey: false,
-      needsUrl: true,
-    },
-  ];
-
-  // Show all providers - we'll handle missing API keys with a message
-  const availableModelProviders = allModelProviders;
 
   const selectedModelProvider = availableModelProviders.find(
     (p) => p.id === config.model.accessMethod,
@@ -1297,1136 +1128,120 @@ export default function NewExperimentModal({
       case 0:
         // Step 1: Model - Model to be evaluated
         return (
-          <Stack spacing={4}>
-            <Box>
-              <Typography variant="body2" color="text.secondary">
-                Select the model you want to evaluate.
-              </Typography>
-            </Box>
-
-            {loadingApiKeys ? (
-              <Box sx={{ py: 4, textAlign: "center" }}>
-                <CircularProgress size={24} />
-                <Typography sx={{ mt: 1, fontSize: "13px", color: palette.text.tertiary }}>
-                  Loading providers...
-                </Typography>
-              </Box>
-            ) : (
-              <Box>
-                <Typography
-                  sx={{ mb: 2.5, fontSize: "14px", fontWeight: 500, color: palette.text.secondary }}
-                >
-                  Model provider
-                </Typography>
-                <Grid container spacing={1.5}>
-                  {/* Show all providers */}
-                  {availableModelProviders.map((provider) => {
-                    const { Logo } = provider;
-                    const isSelected = config.model.accessMethod === provider.id;
-
-                    return (
-                      <Grid size={{ xs: 4, sm: 3 }} key={provider.id}>
-                        <Card
-                          onClick={() => {
-                            setSelectedSavedModelId(null); // deselect saved model when picking a provider
-                            setConfig((prev) => ({
-                              ...prev,
-                              model: {
-                                ...prev.model,
-                                accessMethod: provider.id as typeof config.model.accessMethod,
-                                name: "", // Reset model name when changing provider
-                              },
-                            }));
-                            setUseCustomModelName(false);
-                          }}
-                          sx={{
-                            "cursor": "pointer",
-                            "border": "1px solid",
-                            "borderColor": isSelected ? palette.brand.primary : palette.border.dark,
-                            "backgroundColor": palette.background.main,
-                            "boxShadow": "none",
-                            "transition": "all 0.2s ease",
-                            "position": "relative",
-                            "height": "100%",
-                            "&:hover": {
-                              borderColor: palette.brand.primary,
-                              boxShadow: "0 2px 6px rgba(0,0,0,0.06)",
-                            },
-                          }}
-                        >
-                          <CardContent
-                            sx={{
-                              "textAlign": "center",
-                              "py": 3,
-                              "px": 2,
-                              "height": "100%",
-                              "display": "flex",
-                              "flexDirection": "column",
-                              "alignItems": "center",
-                              "justifyContent": "center",
-                              "&:last-child": { pb: 3 },
-                            }}
-                          >
-                            {isSelected && (
-                              <Box
-                                sx={{
-                                  position: "absolute",
-                                  top: 8,
-                                  right: 8,
-                                  backgroundColor: palette.brand.primary,
-                                  borderRadius: "50%",
-                                  width: 20,
-                                  height: 20,
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                }}
-                              >
-                                <Check size={12} color={palette.background.main} strokeWidth={3} />
-                              </Box>
-                            )}
-
-                            {/* Provider Logo */}
-                            <Box
-                              sx={{
-                                "display": "flex",
-                                "alignItems": "center",
-                                "justifyContent": "center",
-                                "width": 40,
-                                "height": 40,
-                                "mb": 1.5,
-                                "& svg": {
-                                  width: 32,
-                                  height: 32,
-                                },
-                              }}
-                            >
-                              <Logo />
-                            </Box>
-
-                            {/* Provider Name */}
-                            <Typography
-                              sx={{
-                                fontSize: "12px",
-                                fontWeight: isSelected ? 600 : 500,
-                                color: isSelected ? palette.brand.primary : palette.text.secondary,
-                                textAlign: "center",
-                              }}
-                            >
-                              {provider.name}
-                            </Typography>
-                          </CardContent>
-                        </Card>
-                      </Grid>
-                    );
-                  })}
-                </Grid>
-              </Box>
-            )}
-
-            {/* Saved Models — toggle selection; bypasses provider/model UI when active */}
-            {savedModels.length > 0 && (
-              <Box>
-                <Typography
-                  sx={{
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    color: palette.text.disabled,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.06em",
-                    mb: 1.5,
-                  }}
-                >
-                  Saved Models
-                </Typography>
-                <Stack spacing={1}>
-                  {savedModels.map((m) => {
-                    const providerKey = m.provider.toLowerCase();
-                    const providerEntry = availableModelProviders.find((p) => p.id === providerKey);
-                    const ProviderLogo = providerEntry?.Logo ?? null;
-                    const isSelected = selectedSavedModelId === m.id;
-                    return (
-                      <Box
-                        key={m.id}
-                        onClick={() => {
-                          // Just toggle the saved model ID — don't touch config at all
-                          setSelectedSavedModelId(isSelected ? null : m.id);
-                        }}
-                        sx={{
-                          "display": "flex",
-                          "alignItems": "center",
-                          "justifyContent": "space-between",
-                          "px": 2,
-                          "py": 1.25,
-                          "borderRadius": "8px",
-                          "border": `1.5px solid ${isSelected ? palette.brand.primary : palette.border.light}`,
-                          "backgroundColor": isSelected
-                            ? palette.brand.primaryLight
-                            : "transparent",
-                          "cursor": "pointer",
-                          "transition": "all 0.15s ease",
-                          "&:hover": {
-                            borderColor: palette.brand.primary,
-                            backgroundColor: palette.brand.primaryLight,
-                          },
-                        }}
-                      >
-                        <Stack direction="row" alignItems="center" spacing={1.5}>
-                          {ProviderLogo && (
-                            <Box
-                              sx={{
-                                width: 20,
-                                height: 20,
-                                flexShrink: 0,
-                                display: "flex",
-                                alignItems: "center",
-                              }}
-                            >
-                              <ProviderLogo style={{ width: 20, height: 20 }} />
-                            </Box>
-                          )}
-                          <Typography
-                            sx={{
-                              fontSize: "13px",
-                              fontWeight: 500,
-                              color: isSelected ? palette.brand.primary : palette.text.primary,
-                            }}
-                          >
-                            {m.name}
-                          </Typography>
-                        </Stack>
-                        <Box
-                          sx={{
-                            width: 18,
-                            height: 18,
-                            borderRadius: "50%",
-                            border: `1.5px solid ${isSelected ? palette.brand.primary : palette.border.dark}`,
-                            backgroundColor: isSelected ? palette.brand.primary : "transparent",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            flexShrink: 0,
-                            transition: "all 0.15s ease",
-                          }}
-                        >
-                          {isSelected && (
-                            <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
-                              <path
-                                d="M1 4L3.5 6.5L9 1"
-                                stroke="white"
-                                strokeWidth="1.5"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              />
-                            </svg>
-                          )}
-                        </Box>
-                      </Box>
-                    );
-                  })}
-                </Stack>
-              </Box>
-            )}
-
-            {/* Conditional Fields Based on Provider */}
-            {config.model.accessMethod && (
-              <Box ref={formFieldsRef}>
-                <Stack spacing={3}>
-                  {/* Model Selection - Dropdown for cloud providers, text input for local/OpenRouter */}
-                  {config.model.accessMethod === "openrouter" ? (
-                    /* OpenRouter - Custom model input with suggestions */
-                    <Box>
-                      <Typography
-                        sx={{
-                          fontSize: "13px",
-                          fontWeight: 500,
-                          color: palette.text.secondary,
-                          mb: 1,
-                        }}
-                      >
-                        Model
-                      </Typography>
-                      <Typography sx={{ fontSize: "11px", color: palette.text.tertiary, mb: 1.5 }}>
-                        OpenRouter supports any model. Enter the model ID or select from saved or
-                        popular options.
-                      </Typography>
-                      <Field
-                        label=""
-                        value={config.model.name}
-                        onChange={(e) =>
-                          setConfig((prev) => ({
-                            ...prev,
-                            model: { ...prev.model, name: e.target.value },
-                          }))
-                        }
-                        placeholder="e.g., openai/gpt-4o, anthropic/claude-3-opus"
-                      />
-                      <Typography
-                        sx={{
-                          fontSize: "11px",
-                          fontWeight: 600,
-                          color: palette.text.disabled,
-                          mt: 2,
-                          mb: 1,
-                          textTransform: "uppercase",
-                        }}
-                      >
-                        Popular Models
-                      </Typography>
-                      <Stack direction="row" flexWrap="wrap" gap={1}>
-                        {[
-                          { id: "openai/gpt-4o", name: "GPT-4o" },
-                          { id: "anthropic/claude-3.5-sonnet", name: "Claude 3.5 Sonnet" },
-                          { id: "google/gemini-pro-1.5", name: "Gemini Pro 1.5" },
-                          { id: "meta-llama/llama-3.1-70b-instruct", name: "Llama 3.1 70B" },
-                          { id: "mistralai/mistral-large", name: "Mistral Large" },
-                        ].map((m) => (
-                          <MuiChip
-                            key={m.id}
-                            label={m.name}
-                            variant={config.model.name === m.id ? "filled" : "outlined"}
-                            onClick={() =>
-                              setConfig((prev) => ({
-                                ...prev,
-                                model: { ...prev.model, name: m.id },
-                              }))
-                            }
-                            sx={{
-                              "cursor": "pointer",
-                              "backgroundColor":
-                                config.model.name === m.id
-                                  ? palette.brand.primaryLight
-                                  : "transparent",
-                              "borderColor":
-                                config.model.name === m.id
-                                  ? palette.brand.primary
-                                  : palette.border.dark,
-                              "color":
-                                config.model.name === m.id
-                                  ? palette.brand.primary
-                                  : palette.text.secondary,
-                              "&:hover": {
-                                backgroundColor:
-                                  config.model.name === m.id
-                                    ? palette.brand.primaryLight
-                                    : palette.background.accent,
-                                borderColor: palette.brand.primary,
-                              },
-                            }}
-                          />
-                        ))}
-                      </Stack>
-                    </Box>
-                  ) : PROVIDERS[config.model.accessMethod] ? (
-                    <Box>
-                      <Typography
-                        sx={{
-                          fontSize: "13px",
-                          fontWeight: 500,
-                          color: palette.text.secondary,
-                          mb: 1,
-                        }}
-                      >
-                        Model
-                      </Typography>
-                      <FormControl fullWidth size="small">
-                        <Select
-                          value={config.model.name}
-                          onChange={(e) =>
-                            setConfig((prev) => ({
-                              ...prev,
-                              model: { ...prev.model, name: e.target.value as string },
-                            }))
-                          }
-                          displayEmpty
-                          sx={{
-                            "fontSize": "13px",
-                            "& .MuiOutlinedInput-notchedOutline": {
-                              borderColor: palette.border.dark,
-                            },
-                            "&:hover .MuiOutlinedInput-notchedOutline": {
-                              borderColor: palette.border.dark,
-                            },
-                            "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                              borderColor: palette.brand.primary,
-                            },
-                          }}
-                        >
-                          <MenuItem value="" disabled>
-                            <Typography sx={{ color: palette.text.disabled, fontSize: "13px" }}>
-                              Select a model
-                            </Typography>
-                          </MenuItem>
-                          {getProviderModels(config.model.accessMethod).map((model) => (
-                            <MenuItem key={model.id} value={model.id}>
-                              <Stack
-                                direction="row"
-                                alignItems="center"
-                                justifyContent="space-between"
-                                sx={{ width: "100%" }}
-                              >
-                                <Typography sx={{ fontSize: "13px" }}>{model.name}</Typography>
-                                {model.inputCost !== undefined && (
-                                  <Typography
-                                    sx={{ fontSize: "11px", color: palette.text.disabled }}
-                                  >
-                                    ${model.inputCost}/1M in • ${model.outputCost}/1M out
-                                  </Typography>
-                                )}
-                              </Stack>
-                            </MenuItem>
-                          ))}
-                        </Select>
-                      </FormControl>
-                    </Box>
-                  ) : (
-                    /* Local/self-hosted/custom providers: show dropdown if saved models exist, else text input */
-                    (() => {
-                      const providerSavedModels = getProviderModels(config.model.accessMethod);
-                      const showDropdown = providerSavedModels.length > 0 && !useCustomModelName;
-                      const placeholder =
-                        config.model.accessMethod === "ollama"
-                          ? "e.g., llama2, mistral, codellama"
-                          : config.model.accessMethod === "huggingface"
-                            ? "e.g., TinyLlama/TinyLlama-1.1B-Chat-v1.0"
-                            : "e.g., gpt-4, claude-3-opus";
-
-                      if (showDropdown) {
-                        return (
-                          <Box>
-                            <Typography
-                              sx={{
-                                fontSize: "13px",
-                                fontWeight: 500,
-                                color: palette.text.secondary,
-                                mb: 1,
-                              }}
-                            >
-                              Model
-                            </Typography>
-                            <FormControl fullWidth size="small">
-                              <Select
-                                value={config.model.name}
-                                onChange={(e) => {
-                                  const val = e.target.value as string;
-                                  if (val === "__other__") {
-                                    setUseCustomModelName(true);
-                                    setConfig((prev) => ({
-                                      ...prev,
-                                      model: { ...prev.model, name: "" },
-                                    }));
-                                  } else {
-                                    setConfig((prev) => ({
-                                      ...prev,
-                                      model: { ...prev.model, name: val },
-                                    }));
-                                  }
-                                }}
-                                displayEmpty
-                                sx={{
-                                  "fontSize": "13px",
-                                  "& .MuiOutlinedInput-notchedOutline": {
-                                    borderColor: palette.border.dark,
-                                  },
-                                  "&:hover .MuiOutlinedInput-notchedOutline": {
-                                    borderColor: palette.border.dark,
-                                  },
-                                  "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                                    borderColor: palette.brand.primary,
-                                  },
-                                }}
-                              >
-                                <MenuItem value="" disabled>
-                                  <Typography
-                                    sx={{ color: palette.text.disabled, fontSize: "13px" }}
-                                  >
-                                    Select a model
-                                  </Typography>
-                                </MenuItem>
-                                {providerSavedModels.map((model) => (
-                                  <MenuItem key={model.id} value={model.id}>
-                                    <Stack
-                                      direction="row"
-                                      alignItems="center"
-                                      justifyContent="space-between"
-                                      sx={{ width: "100%" }}
-                                    >
-                                      <Typography sx={{ fontSize: "13px" }}>
-                                        {model.name}
-                                      </Typography>
-                                      {model.description && (
-                                        <Typography
-                                          sx={{ fontSize: "11px", color: palette.text.disabled }}
-                                        >
-                                          {model.description}
-                                        </Typography>
-                                      )}
-                                    </Stack>
-                                  </MenuItem>
-                                ))}
-                                <Divider />
-                                <MenuItem value="__other__">
-                                  <Typography
-                                    sx={{
-                                      fontSize: "13px",
-                                      color: palette.text.tertiary,
-                                      fontStyle: "italic",
-                                    }}
-                                  >
-                                    Other (type custom)
-                                  </Typography>
-                                </MenuItem>
-                              </Select>
-                            </FormControl>
-                          </Box>
-                        );
-                      }
-
-                      return (
-                        <Box>
-                          {providerSavedModels.length > 0 && (
-                            <Button
-                              size="small"
-                              variant="text"
-                              onClick={() => {
-                                setUseCustomModelName(false);
-                                setConfig((prev) => ({
-                                  ...prev,
-                                  model: { ...prev.model, name: "" },
-                                }));
-                              }}
-                              sx={{
-                                "textTransform": "none",
-                                "fontSize": "11px",
-                                "color": palette.text.tertiary,
-                                "p": 0,
-                                "mb": 0.5,
-                                "minWidth": "auto",
-                                "&:hover": { color: palette.brand.primary },
-                              }}
-                            >
-                              &larr; Back to saved models
-                            </Button>
-                          )}
-                          <Field
-                            label="Model name"
-                            value={config.model.name}
-                            onChange={(e) =>
-                              setConfig((prev) => ({
-                                ...prev,
-                                model: { ...prev.model, name: e.target.value },
-                              }))
-                            }
-                            placeholder={placeholder}
-                          />
-                        </Box>
-                      );
-                    })()
-                  )}
-
-                  {/* URL field for Local, Custom / Self-hosted */}
-                  {selectedModelProvider &&
-                    (("needsUrl" in selectedModelProvider && selectedModelProvider.needsUrl) ||
-                      config.model.accessMethod === "custom_api") && (
-                      <Field
-                        label="Endpoint URL"
-                        value={config.model.endpointUrl}
-                        onChange={(e) =>
-                          setConfig((prev) => ({
-                            ...prev,
-                            model: { ...prev.model, endpointUrl: e.target.value },
-                          }))
-                        }
-                        placeholder={
-                          config.model.accessMethod === "local"
-                            ? "http://localhost:11434/api/generate"
-                            : "https://api.example.com/v1/chat/completions"
-                        }
-                      />
-                    )}
-
-                  {/* API Key - show configured status OR input field */}
-                  {/* Cloud providers: required. Custom / Self-hosted: optional */}
-                  {(selectedModelProvider?.needsApiKey ||
-                    config.model.accessMethod === "custom_api") &&
-                    (hasApiKey(config.model.accessMethod) ? (
-                      <Box
-                        sx={{
-                          p: 1.5,
-                          backgroundColor: palette.status.success.bg,
-                          borderRadius: "8px",
-                          border: `1px solid ${palette.status.success.border}`,
-                        }}
-                      >
-                        <Stack direction="row" alignItems="center" spacing={1}>
-                          <Check size={16} color={palette.status.success.text} />
-                          <Typography sx={{ fontSize: "12px", color: palette.status.success.text }}>
-                            API key configured — will be saved for future experiments
-                          </Typography>
-                        </Stack>
-                      </Box>
-                    ) : (
-                      <Field
-                        label={
-                          config.model.accessMethod === "custom_api"
-                            ? "API key (optional)"
-                            : "API key"
-                        }
-                        type="password"
-                        value={config.model.apiKey}
-                        onChange={(e) =>
-                          setConfig((prev) => ({
-                            ...prev,
-                            model: { ...prev.model, apiKey: e.target.value },
-                          }))
-                        }
-                        placeholder={
-                          config.model.accessMethod === "custom_api"
-                            ? "Leave blank if not required"
-                            : `Enter your ${selectedModelProvider?.name || ""} API key`
-                        }
-                        autoComplete="off"
-                        helperText={
-                          config.model.accessMethod === "custom_api"
-                            ? undefined
-                            : "Your key will be saved securely for future experiments"
-                        }
-                      />
-                    ))}
-                </Stack>
-              </Box>
-            )}
-
-            {/* Link to model inventory (optional) */}
-            <Box sx={{ mt: "16px" }}>
-              <Typography
-                variant="body2"
-                sx={{ mb: "4px", fontWeight: 500, fontSize: "13px", color: palette.text.secondary }}
-              >
-                Link to model inventory (optional)
-              </Typography>
-              <FormControl fullWidth size="small">
-                <Select
-                  value={selectedModelInventoryId !== null ? selectedModelInventoryId : ""}
-                  onChange={(e) => {
-                    const val = String(e.target.value);
-                    setSelectedModelInventoryId(val === "" ? null : Number(val));
-                  }}
-                  displayEmpty
-                  sx={{ height: "34px", fontSize: "13px", borderRadius: "4px" }}
-                >
-                  <MenuItem value="">
-                    <Typography sx={{ fontSize: "13px", color: palette.text.secondary }}>
-                      None — don't link to inventory
-                    </Typography>
-                  </MenuItem>
-                  {modelInventories.map((m) => (
-                    <MenuItem key={m.id} value={m.id}>
-                      <Stack direction="row" spacing={1} alignItems="center">
-                        <Typography sx={{ fontSize: "13px" }}>
-                          {m.provider} — {m.model}
-                        </Typography>
-                        <Typography sx={{ fontSize: "11px", color: palette.text.secondary }}>
-                          v{m.version}
-                        </Typography>
-                      </Stack>
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Box>
-          </Stack>
+          <ModelStep
+            loadingApiKeys={loadingApiKeys}
+            savedModels={savedModels}
+            selectedSavedModelId={selectedSavedModelId}
+            modelConfig={{
+              name: config.model.name,
+              accessMethod: config.model.accessMethod,
+              endpointUrl: config.model.endpointUrl,
+              apiKey: config.model.apiKey,
+            }}
+            useCustomModelName={useCustomModelName}
+            modelInventories={modelInventories}
+            selectedModelInventoryId={selectedModelInventoryId}
+            fieldsRef={formFieldsRef}
+            getProviderModels={getProviderModels}
+            hasApiKey={hasApiKey}
+            onProviderSelect={(providerId) => {
+              setSelectedSavedModelId(null);
+              setConfig((prev) => ({
+                ...prev,
+                model: {
+                  ...prev.model,
+                  accessMethod: providerId,
+                  name: "",
+                },
+              }));
+              setUseCustomModelName(false);
+            }}
+            onModelNameChange={(name) =>
+              setConfig((prev) => ({
+                ...prev,
+                model: { ...prev.model, name },
+              }))
+            }
+            onEndpointUrlChange={(url) =>
+              setConfig((prev) => ({
+                ...prev,
+                model: { ...prev.model, endpointUrl: url },
+              }))
+            }
+            onApiKeyChange={(key) =>
+              setConfig((prev) => ({
+                ...prev,
+                model: { ...prev.model, apiKey: key },
+              }))
+            }
+            onSavedModelSelect={setSelectedSavedModelId}
+            onUseCustomModelNameChange={setUseCustomModelName}
+            onModelInventoryChange={setSelectedModelInventoryId}
+          />
         );
 
       case 1:
         // Step 2: Dataset
         return (
-          <Stack spacing="16px">
-            {/* Description */}
-            <Typography sx={{ fontSize: "13px", color: palette.text.tertiary, lineHeight: 1.5 }}>
-              Choose a dataset containing prompts and expected outputs. Upload your own JSON file,
-              select from saved datasets, or use a template.
-            </Typography>
-
-            {/* Option 1: Custom dataset */}
-            <Box>
-              <Typography
-                sx={{
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  color: palette.text.disabled,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.5px",
-                  mb: "8px",
-                }}
-              >
-                Option 1: Use custom dataset
-              </Typography>
-              {/* Upload Section - Compact drop zone */}
-              <Box
-                component="label"
-                sx={{
-                  "display": "flex",
-                  "alignItems": "center",
-                  "gap": "8px",
-                  "p": "8px",
-                  "border": "1px dashed",
-                  "borderColor": uploadingDataset ? palette.brand.primary : palette.border.dark,
-                  "borderRadius": "4px",
-                  "backgroundColor": palette.background.accent,
-                  "cursor": uploadingDataset ? "wait" : "pointer",
-                  "transition": "all 0.15s ease",
-                  "&:hover": {
-                    borderColor: palette.brand.primary,
-                    backgroundColor: palette.status.success.bg,
-                  },
-                }}
-              >
-                <Box
-                  sx={{
-                    width: 32,
-                    height: 32,
-                    borderRadius: "6px",
-                    backgroundColor: palette.brand.primary,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    flexShrink: 0,
-                  }}
-                >
-                  <Upload size={16} color={palette.background.main} />
-                </Box>
-                <Box sx={{ flex: 1 }}>
-                  <Typography
-                    sx={{ fontSize: "13px", fontWeight: 500, color: palette.text.secondary }}
-                  >
-                    {uploadingDataset ? "Uploading..." : "Upload dataset"}
-                  </Typography>
-                  <Typography sx={{ fontSize: "11px", color: palette.text.disabled }}>
-                    JSON file with prompts and expected outputs
-                  </Typography>
-                </Box>
-                <input
-                  type="file"
-                  accept="application/json"
-                  hidden
-                  disabled={uploadingDataset}
-                  onChange={async (e) => {
-                    const file = e.target.files?.[0];
-                    if (!file) return;
-                    try {
-                      setUploadingDataset(true);
-                      // Validate file content before uploading
-                      const fileContent = await file.text();
-                      let parsedData: unknown[];
-                      try {
-                        parsedData = JSON.parse(fileContent);
-                      } catch {
-                        setAlert({
-                          show: true,
-                          variant: "error",
-                          title: "Invalid JSON",
-                          body: "The file does not contain valid JSON",
-                        });
-                        setTimeout(() => setAlert(null), 15000);
-                        return;
-                      }
-                      if (!Array.isArray(parsedData) || parsedData.length === 0) {
-                        setAlert({
-                          show: true,
-                          variant: "error",
-                          title: "Empty dataset",
-                          body: "Cannot use an empty dataset. Please upload a file with at least one prompt.",
-                        });
-                        setTimeout(() => setAlert(null), 15000);
-                        return;
-                      }
-                      // Count only prompts with actual content
-                      const validPromptCount = parsedData.filter((item) => {
-                        if (typeof item !== "object" || item === null) return false;
-                        const obj = item as Record<string, unknown>;
-                        // Single-turn: check if prompt field has content
-                        if (obj.prompt && typeof obj.prompt === "string" && obj.prompt.trim())
-                          return true;
-                        // Multi-turn: check if turns array has at least one turn with content
-                        if (Array.isArray(obj.turns) && obj.turns.length > 0) {
-                          return obj.turns.some((turn) => {
-                            if (typeof turn !== "object" || turn === null) return false;
-                            const t = turn as Record<string, unknown>;
-                            return t.content && typeof t.content === "string" && t.content.trim();
-                          });
-                        }
-                        return false;
-                      }).length;
-                      if (validPromptCount === 0) {
-                        setAlert({
-                          show: true,
-                          variant: "error",
-                          title: "Empty dataset",
-                          body: "Cannot use an empty dataset. Please upload a file with prompts that have actual content.",
-                        });
-                        setTimeout(() => setAlert(null), 15000);
-                        return;
-                      }
-                      const resp = await uploadDataset(
-                        file,
-                        "chatbot",
-                        "single-turn",
-                        orgId || undefined,
-                      );
-                      const newDataset = {
-                        id: resp.path,
-                        name: file.name.replace(/\.json$/i, ""),
-                        path: resp.path,
-                        promptCount: validPromptCount,
-                      };
-                      setUserDatasets((prev) => [newDataset, ...prev]);
-                      setSelectedUserDataset(newDataset);
-                      setConfig((prev) => ({
-                        ...prev,
-                        dataset: { ...prev.dataset, useBuiltin: false },
-                      }));
-                      try {
-                        const { prompts } = await readDataset(resp.path);
-                        setDatasetPrompts((prompts || []) as DatasetPrompt[]);
-                        setDatasetLoaded(true);
-                      } catch {
-                        setDatasetPrompts([]);
-                      }
-                      setAlert({
-                        show: true,
-                        variant: "success",
-                        title: "Uploaded!",
-                        body: `${file.name} is ready to use`,
-                      });
-                      setTimeout(() => setAlert(null), 5000);
-                    } catch (err) {
-                      setAlert({
-                        show: true,
-                        variant: "error",
-                        title: "Upload failed",
-                        body: err instanceof Error ? err.message : "Failed to upload",
-                      });
-                      setTimeout(() => setAlert(null), 15000);
-                    } finally {
-                      setUploadingDataset(false);
-                      e.target.value = "";
-                    }
-                  }}
-                />
-              </Box>
-            </Box>
-
-            {/* My Datasets Section */}
-            {loadingUserDatasets ? (
-              <Box sx={{ py: 2, textAlign: "center" }}>
-                <Typography sx={{ fontSize: "13px", color: palette.text.tertiary }}>
-                  Loading your datasets...
-                </Typography>
-              </Box>
-            ) : userDatasets.length > 0 ? (
-              <Box>
-                <Stack
-                  direction="row"
-                  alignItems="center"
-                  justifyContent="space-between"
-                  sx={{ mb: 1 }}
-                >
-                  <Typography
-                    sx={{
-                      fontSize: "12px",
-                      fontWeight: 600,
-                      color: palette.text.disabled,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.5px",
-                    }}
-                  >
-                    Option 2: Your datasets
-                  </Typography>
-                  <Button
-                    size="small"
-                    variant="text"
-                    startIcon={<ExternalLink size={12} />}
-                    onClick={() => window.open(`/evals/${projectId}#datasets`, "_blank")}
-                    sx={{
-                      "textTransform": "none",
-                      "fontSize": "11px",
-                      "color": palette.text.tertiary,
-                      "p": 0.5,
-                      "minWidth": "auto",
-                      "&:hover": { color: palette.brand.primary },
-                    }}
-                  >
-                    Manage
-                  </Button>
-                </Stack>
-                <Stack spacing="8px">
-                  {userDatasets.slice(0, 4).map((dataset) => {
-                    const isSelected =
-                      selectedUserDataset?.id === dataset.id && !config.dataset.useBuiltin;
-                    const isMultiTurn = dataset.turnType === "multi-turn";
-                    const isSimulated = dataset.turnType === "simulated";
-                    const isEmpty = dataset.promptCount === 0;
-                    const typeChip = isEmpty ? (
-                      <Chip
-                        label="Empty"
-                        backgroundColor={palette.status.error.bg}
-                        textColor={palette.status.error.text}
-                        uppercase={false}
-                      />
-                    ) : isMultiTurn ? (
-                      <Chip
-                        label={
-                          isSelected && datasetPrompts.length > 0
-                            ? `${datasetPrompts.length} prompts`
-                            : "Multi-Turn"
-                        }
-                        backgroundColor={palette.accent.blue.bg}
-                        textColor={palette.accent.blue.text}
-                        uppercase={false}
-                      />
-                    ) : isSimulated ? (
-                      <Chip
-                        label={
-                          isSelected && datasetPrompts.length > 0
-                            ? `${datasetPrompts.length} prompts`
-                            : "Simulated"
-                        }
-                        backgroundColor={palette.accent.purple.bg}
-                        textColor={palette.accent.purple.text}
-                        uppercase={false}
-                      />
-                    ) : (
-                      <Chip
-                        label={
-                          isSelected && datasetPrompts.length > 0
-                            ? `${datasetPrompts.length} prompts`
-                            : "Single-Turn"
-                        }
-                        backgroundColor={palette.status.warning.bg}
-                        textColor={palette.status.warning.text}
-                        uppercase={false}
-                      />
-                    );
-                    return (
-                      <SelectableCard
-                        key={dataset.id}
-                        isSelected={isSelected}
-                        disabled={isEmpty}
-                        onClick={async () => {
-                          if (isEmpty) return;
-                          setConfig((prev) => ({
-                            ...prev,
-                            dataset: { ...prev.dataset, useBuiltin: false },
-                          }));
-                          setSelectedUserDataset(dataset);
-                          setSelectedPresetPath("");
-                          try {
-                            const { prompts } = await readDataset(dataset.path);
-                            setDatasetPrompts((prompts || []) as DatasetPrompt[]);
-                            setDatasetLoaded(true);
-                          } catch {
-                            setDatasetPrompts([]);
-                          }
-                        }}
-                        icon={
-                          <Database
-                            size={14}
-                            color={
-                              isEmpty
-                                ? palette.status.error.text
-                                : isSelected
-                                  ? palette.brand.primary
-                                  : palette.text.disabled
-                            }
-                          />
-                        }
-                        title={dataset.name}
-                        description={
-                          isEmpty ? "Cannot use empty dataset" : "Custom uploaded dataset"
-                        }
-                        chip={typeChip}
-                      />
-                    );
-                  })}
-                </Stack>
-              </Box>
-            ) : null}
-
-            {/* Template Datasets Section */}
-            <Box>
-              <Typography
-                sx={{
-                  fontSize: "12px",
-                  fontWeight: 600,
-                  color: palette.text.disabled,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.5px",
-                  mb: 1,
-                }}
-              >
-                Option 3:{" "}
-                {config.taskType === "chatbot"
-                  ? "Chatbot"
-                  : config.taskType === "rag"
-                    ? "RAG"
-                    : "Agent"}{" "}
-                templates
-              </Typography>
-              <Stack spacing="8px">
-                {[
-                  ...(config.taskType === "chatbot"
-                    ? [
-                        // Single-turn chatbot templates
-                        {
-                          name: "Basic Chatbot",
-                          path: "chatbot/chatbot_basic.json",
-                          desc: "Standard question-answer pairs",
-                          type: "single-turn" as const,
-                        },
-                        {
-                          name: "Coding Helper",
-                          path: "chatbot/chatbot_coding_helper.json",
-                          desc: "Code assistance scenarios",
-                          type: "single-turn" as const,
-                        },
-                        {
-                          name: "Customer Support (Single-Turn)",
-                          path: "chatbot/chatbot_customer_support.json",
-                          desc: "Support Q&A pairs",
-                          type: "single-turn" as const,
-                        },
-                        // Multi-turn chatbot templates
-                        {
-                          name: "General Assistant Multi-Turn",
-                          path: "chatbot/chatbot_general_assistant_multiturn.json",
-                          desc: "Multi-turn conversations",
-                          type: "multi-turn" as const,
-                        },
-                        {
-                          name: "Customer Support Multi-Turn",
-                          path: "chatbot/chatbot_customer_support_multiturn.json",
-                          desc: "Support conversations",
-                          type: "multi-turn" as const,
-                        },
-                        {
-                          name: "Tech Support Multi-Turn",
-                          path: "chatbot/chatbot_tech_support_multiturn.json",
-                          desc: "Technical help conversations",
-                          type: "multi-turn" as const,
-                        },
-                      ]
-                    : []),
-                  ...(config.taskType === "rag"
-                    ? [
-                        {
-                          name: "Product Docs",
-                          path: "rag/rag_product_docs.json",
-                          desc: "Product documentation queries",
-                          type: "single-turn" as const,
-                        },
-                        {
-                          name: "Wikipedia QA",
-                          path: "rag/rag_wikipedia_small.json",
-                          desc: "Wikipedia-based questions",
-                          type: "single-turn" as const,
-                        },
-                        {
-                          name: "Research Papers",
-                          path: "rag/rag_research_papers.json",
-                          desc: "Academic content retrieval",
-                          type: "single-turn" as const,
-                        },
-                        {
-                          name: "Document Q&A Multi-Turn",
-                          path: "rag/rag_document_qa_multiturn.json",
-                          desc: "Multi-turn document conversations",
-                          type: "multi-turn" as const,
-                        },
-                      ]
-                    : []),
-                  ...(config.taskType === "agent"
-                    ? [
-                        {
-                          name: "Agent Planning",
-                          path: "agent/agent_planning_multiturn.json",
-                          desc: "Multi-step planning scenarios",
-                          type: "multi-turn" as const,
-                        },
-                        {
-                          name: "Agent Task Execution",
-                          path: "agent/agent_task_execution_multiturn.json",
-                          desc: "Tool usage and task completion",
-                          type: "multi-turn" as const,
-                        },
-                        {
-                          name: "Agent Workflow Automation",
-                          path: "agent/agent_workflow_automation_multiturn.json",
-                          desc: "Automated workflow tasks",
-                          type: "multi-turn" as const,
-                        },
-                      ]
-                    : []),
-                ].map((template) => {
-                  const isSelected =
-                    selectedPresetPath === template.path && config.dataset.useBuiltin;
-                  const chipLabel =
-                    isSelected && datasetPrompts.length > 0
-                      ? `${datasetPrompts.length} prompts`
-                      : template.type === "multi-turn"
-                        ? "Multi-Turn"
-                        : "Single-Turn";
-                  const typeChip =
-                    template.type === "multi-turn" ? (
-                      <Chip
-                        label={chipLabel}
-                        backgroundColor={palette.accent.blue.bg}
-                        textColor={palette.accent.blue.text}
-                        uppercase={false}
-                      />
-                    ) : (
-                      <Chip
-                        label={chipLabel}
-                        backgroundColor={palette.status.warning.bg}
-                        textColor={palette.status.warning.text}
-                        uppercase={false}
-                      />
-                    );
-                  return (
-                    <SelectableCard
-                      key={template.path}
-                      isSelected={isSelected}
-                      onClick={async () => {
-                        setConfig((prev) => ({
-                          ...prev,
-                          dataset: { ...prev.dataset, useBuiltin: true },
-                        }));
-                        setSelectedUserDataset(null);
-                        setSelectedPresetPath(template.path);
-                        try {
-                          const { prompts } = await readDataset(template.path);
-                          setDatasetPrompts((prompts || []) as DatasetPrompt[]);
-                          setDatasetLoaded(true);
-                        } catch {
-                          setDatasetPrompts([]);
-                        }
-                      }}
-                      icon={
-                        <Database
-                          size={14}
-                          color={isSelected ? palette.accent.indigo.text : palette.text.disabled}
-                        />
-                      }
-                      title={template.name}
-                      description={template.desc}
-                      accentColor={palette.accent.indigo.text}
-                      chip={typeChip}
-                    />
-                  );
-                })}
-              </Stack>
-            </Box>
-          </Stack>
+          <DatasetStep
+            taskType={config.taskType}
+            useBuiltin={config.dataset.useBuiltin}
+            userDatasets={userDatasets}
+            selectedUserDataset={selectedUserDataset}
+            loadingUserDatasets={loadingUserDatasets}
+            uploadingDataset={uploadingDataset}
+            selectedPresetPath={selectedPresetPath}
+            datasetPromptCount={datasetPrompts.length}
+            orgId={orgId}
+            projectId={projectId}
+            onUploadingChange={setUploadingDataset}
+            onAlert={({ variant, title, body, autoHideMs }) => {
+              setAlert({ show: true, variant, title, body });
+              setTimeout(() => setAlert(null), autoHideMs);
+            }}
+            onUploadComplete={(dataset, prompts) => {
+              setUserDatasets((prev) => [dataset, ...prev]);
+              setSelectedUserDataset(dataset);
+              setConfig((prev) => ({
+                ...prev,
+                dataset: { ...prev.dataset, useBuiltin: false },
+              }));
+              if (prompts !== null) {
+                setDatasetPrompts(prompts);
+                setDatasetLoaded(true);
+              } else {
+                setDatasetPrompts([]);
+              }
+            }}
+            onUserDatasetSelect={(dataset, prompts) => {
+              setConfig((prev) => ({
+                ...prev,
+                dataset: { ...prev.dataset, useBuiltin: false },
+              }));
+              setSelectedUserDataset(dataset);
+              setSelectedPresetPath("");
+              if (prompts !== null) {
+                setDatasetPrompts(prompts);
+                setDatasetLoaded(true);
+              } else {
+                setDatasetPrompts([]);
+              }
+            }}
+            onPresetSelect={(path, prompts) => {
+              setConfig((prev) => ({
+                ...prev,
+                dataset: { ...prev.dataset, useBuiltin: true },
+              }));
+              setSelectedUserDataset(null);
+              setSelectedPresetPath(path);
+              if (prompts !== null) {
+                setDatasetPrompts(prompts);
+                setDatasetLoaded(true);
+              } else {
+                setDatasetPrompts([]);
+              }
+            }}
+          />
         );
 
       case 2:
@@ -3840,99 +2655,29 @@ export default function NewExperimentModal({
   };
 
   // Providers required by selected scorers that have no saved API key in org settings.
-  // Self-hosted / Ollama scorers are excluded since they don't need a cloud key.
-  const missingKeyProviders = useMemo(() => {
-    if (judgeMode !== "scorer" && judgeMode !== "both") return [];
-    const scorersToCheck =
-      selectedScorerIds.length > 0
-        ? userScorers.filter((s) => selectedScorerIds.includes(s.id))
-        : userScorers;
-    const missing: string[] = [];
-    for (const scorer of scorersToCheck) {
-      const judgeModel = scorer.config?.judgeModel;
-      if (typeof judgeModel === "object" && judgeModel?.provider) {
-        const provider = judgeModel.provider.toLowerCase();
-        if (provider !== "self-hosted" && provider !== "ollama") {
-          const hasKey = configuredApiKeys.some((k) => k.provider === provider);
-          if (!hasKey && !missing.includes(provider)) {
-            missing.push(provider);
-          }
-        }
-      }
-    }
-    return missing;
-  }, [judgeMode, selectedScorerIds, userScorers, configuredApiKeys]);
+  const missingKeyProviders = useMemo(
+    () =>
+      getMissingKeyProviders({
+        judgeMode,
+        selectedScorerIds,
+        userScorers,
+        configuredApiKeys,
+      }),
+    [judgeMode, selectedScorerIds, userScorers, configuredApiKeys],
+  );
 
-  const canProceed = (() => {
-    if (activeStep === 0) {
-      // A saved model selection is always sufficient to proceed
-      if (selectedSavedModelId) return true;
-
-      // Step 1: Model validation
-      const hasName = !!config.model.name;
-      const hasAccessMethod = !!config.model.accessMethod;
-
-      if (!hasName || !hasAccessMethod) return false;
-
-      // Check conditional fields based on access method
-      if (
-        selectedModelProvider &&
-        "needsUrl" in selectedModelProvider &&
-        selectedModelProvider.needsUrl &&
-        !config.model.endpointUrl
-      )
-        return false;
-
-      // Providers that don't need API keys
-      const noApiKeyNeeded = ["ollama", "local"];
-
-      // For all cloud providers (including custom_api), require either a saved API key OR an entered API key
-      if (!noApiKeyNeeded.includes(config.model.accessMethod)) {
-        // Map custom_api to "custom" for checking saved keys
-        const providerForKeyCheck =
-          config.model.accessMethod === "custom_api" ? "custom" : config.model.accessMethod;
-        const hasSavedKey = hasApiKey(providerForKeyCheck);
-        const hasEnteredKey = !!config.model.apiKey;
-        if (!hasSavedKey && !hasEnteredKey) return false;
-      }
-
-      return true;
-    }
-
-    if (activeStep === 1) {
-      // Step 2: Dataset validation - must have loaded prompts
-      return datasetPrompts.length > 0;
-    }
-
-    if (activeStep === 2) {
-      // Step 3: Scorer / Judge validation
-      if (judgeMode === "scorer") {
-        // Custom scorer only - must have at least one scorer and all required API keys
-        if (userScorers.length === 0) return false;
-        if (missingKeyProviders.length > 0) return false;
-        return true;
-      } else if (judgeMode === "standard") {
-        // Standard judge only - must have provider and model (API key is from saved settings)
-        const hasBase = !!(config.judgeLlm.provider && config.judgeLlm.model);
-        // Custom / Self-hosted also requires endpoint URL
-        if (config.judgeLlm.provider === "custom_api") {
-          return hasBase && !!config.judgeLlm.endpointUrl;
-        }
-        return hasBase;
-      } else {
-        // Both mode - scorers exist, all scorer API keys present, AND standard judge configured
-        const hasScorers = userScorers.length > 0;
-        if (missingKeyProviders.length > 0) return false;
-        let hasJudge = !!(config.judgeLlm.provider && config.judgeLlm.model);
-        if (config.judgeLlm.provider === "custom_api") {
-          hasJudge = hasJudge && !!config.judgeLlm.endpointUrl;
-        }
-        return hasScorers && hasJudge;
-      }
-    }
-
-    return true;
-  })();
+  const canProceed = canProceedToNextStep({
+    activeStep,
+    selectedSavedModelId,
+    model: config.model,
+    selectedModelProvider,
+    hasApiKey,
+    datasetPromptCount: datasetPrompts.length,
+    judgeMode,
+    userScorersCount: userScorers.length,
+    missingKeyProviders,
+    judgeLlm: config.judgeLlm,
+  });
 
   return (
     <>
@@ -3944,7 +2689,7 @@ export default function NewExperimentModal({
           setAlert(null);
         }}
         title="Create new experiment"
-        steps={steps}
+        steps={[...WIZARD_STEPS]}
         activeStep={activeStep}
         onNext={handleNext}
         onBack={handleBack}

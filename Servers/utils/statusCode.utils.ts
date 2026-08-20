@@ -29,6 +29,9 @@ export class STATUS_CODE {
   static 204 = (data: any) => {
     return { message: "No Content", data };
   };
+  static 206 = (data: any) => {
+    return { message: "Partial Content", data };
+  };
 
   // 3XX redirection
   static 300 = (data: any) => {

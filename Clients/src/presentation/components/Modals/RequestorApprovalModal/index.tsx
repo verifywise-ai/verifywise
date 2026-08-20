@@ -78,6 +78,31 @@ import EntityDetailsSection from "./EntityDetailsSection";
 import { extractEntityDetails } from "./entityTypeConfig";
 import { dispatchFileApprovalChanged } from "../../../../application/events/fileEvents";
 import { dispatchAiActionCompleted } from "../../../../application/events/aiActionEvents";
+import CustomException from "../../../../infrastructure/exceptions/customeException";
+import Alert from "../../Alert";
+
+type ValidationFieldError = { field: string; message: string };
+
+function extractApprovalValidationErrors(error: unknown): ValidationFieldError[] {
+  const collect = (errors: unknown): ValidationFieldError[] => {
+    if (!Array.isArray(errors)) return [];
+    return errors.filter(
+      (entry): entry is ValidationFieldError =>
+        Boolean(entry) &&
+        typeof (entry as ValidationFieldError).field === "string" &&
+        typeof (entry as ValidationFieldError).message === "string",
+    );
+  };
+
+  if (error instanceof CustomException && error.status === 400) {
+    return collect(error.response?.data?.errors ?? error.response?.errors);
+  }
+
+  const axiosBody = (
+    error as { response?: { data?: { data?: { errors?: unknown }; errors?: unknown } } }
+  )?.response?.data;
+  return collect(axiosBody?.data?.errors ?? axiosBody?.errors);
+}
 import { background } from "../../../themes/palette";
 
 const getWorkflowChipProps = (value: string) => {
@@ -126,6 +151,11 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
   const [selectedStepDetails, setSelectedStepDetails] = useState<IStepDetails | null>(null);
   const [selectedItem, setSelectedItem] = useState<IMenuItemExtended | null>(null);
   const [comment, setComment] = useState<string>("");
+  const [commentError, setCommentError] = useState<string | undefined>(undefined);
+  const [actionToast, setActionToast] = useState<{
+    variant: "success" | "info" | "warning" | "error";
+    body: string;
+  } | null>(null);
   const [isWithdrawConfirmationOpen, setIsWithdrawConfirmationOpen] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({
     PENDING: true,
@@ -159,6 +189,7 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
     setActiveTab(newValue);
     setSelectedItem(null);
     setComment("");
+    setCommentError(undefined);
   };
 
   const getOverallStatus = (): "approved" | "rejected" | "pending" | "withdrawn" => {
@@ -181,6 +212,37 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
     setIsStepDetailsModalOpen(true);
   };
 
+  const handleApprovalActionError = (error: unknown, actionLabel: string) => {
+    logEngine({
+      type: "error",
+      message: `Failed to ${actionLabel} request: ${error}`,
+    });
+
+    const fieldErrors = extractApprovalValidationErrors(error);
+    const commentsError = fieldErrors.find((entry) => entry.field === "comments");
+    const idError = fieldErrors.find((entry) => entry.field === "id");
+
+    if (commentsError) {
+      setCommentError(commentsError.message);
+    }
+
+    if (!commentsError) {
+      const fallbackMessage =
+        (error instanceof CustomException && error.message) ||
+        idError?.message ||
+        fieldErrors[0]?.message ||
+        `Failed to ${actionLabel} request`;
+
+      setActionToast({
+        variant: "error",
+        body:
+          fallbackMessage === "Bad Request"
+            ? `Failed to ${actionLabel} request. Please try again.`
+            : fallbackMessage,
+      });
+    }
+  };
+
   const handleApprove = async () => {
     if (!selectedItem?.id || isProcessing) {
       return;
@@ -188,6 +250,7 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
 
     const approvedRequestId = selectedItem.id;
     setIsProcessing(true);
+    setCommentError(undefined);
     try {
       await approveRequest({
         id: selectedItem.id,
@@ -203,6 +266,7 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
       setSelectedItem(null);
       await fetchRequestsData();
       setComment("");
+      setCommentError(undefined);
 
       // Refresh the count in the header
       onRefresh?.();
@@ -232,10 +296,7 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
         onClose();
       }
     } catch (error) {
-      logEngine({
-        type: "error",
-        message: `Failed to approve request: ${error}`,
-      });
+      handleApprovalActionError(error, "approve");
     } finally {
       setIsProcessing(false);
     }
@@ -245,6 +306,7 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
     if (!selectedItem?.id || isProcessing) return;
 
     setIsProcessing(true);
+    setCommentError(undefined);
     try {
       await rejectRequest({
         id: selectedItem.id,
@@ -272,16 +334,14 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
 
       fetchRequestsData();
       setComment("");
+      setCommentError(undefined);
 
       // Refresh the count in the header
       onRefresh?.();
 
       onClose();
     } catch (error) {
-      logEngine({
-        type: "error",
-        message: `Failed to reject request: ${error}`,
-      });
+      handleApprovalActionError(error, "reject");
     } finally {
       setIsProcessing(false);
     }
@@ -641,6 +701,7 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
                                         onClick={() => {
                                           if (item.id !== undefined) {
                                             setSelectedItem(item);
+                                            setCommentError(undefined);
                                           }
                                         }}
                                         sx={listItemButtonStyle(
@@ -848,7 +909,13 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
                       type="description"
                       placeholder="Provide additional context or feedback..."
                       value={comment}
-                      onChange={(e) => setComment(e.target.value)}
+                      onChange={(e) => {
+                        setComment(e.target.value);
+                        if (commentError) {
+                          setCommentError(undefined);
+                        }
+                      }}
+                      error={commentError}
                       sx={commentFieldStyle}
                     />
                   </Stack>
@@ -858,6 +925,14 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
           )}
         </TabPanel>
       </TabContext>
+      {actionToast && (
+        <Alert
+          variant={actionToast.variant}
+          body={actionToast.body}
+          isToast={true}
+          onClick={() => setActionToast(null)}
+        />
+      )}
       <StepDetailsModal
         isOpen={isStepDetailsModalOpen}
         onClose={() => {

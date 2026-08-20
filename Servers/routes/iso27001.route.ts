@@ -1,8 +1,9 @@
 import express from "express";
 import { validateId } from "../domain.layer/validations/id.valid";
 const router = express.Router();
-const multer = require("multer");
-const upload = multer({ storage: multer.memoryStorage() });
+import { createMemoryUpload } from "../utils/upload.utils";
+// Security: bounded upload config (30MB/file, 10 files, MIME allowlist).
+const upload = createMemoryUpload();
 
 import authenticateJWT from "../middleware/auth.middleware";
 import {

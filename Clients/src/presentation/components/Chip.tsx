@@ -2,6 +2,7 @@ import React from "react";
 import { Box } from "@mui/material";
 import { IChipProps, ChipVariant, ChipColorConfig } from "../types/interfaces/i.chip";
 import { background, status, risk } from "../themes/palette";
+import { fontSize, fontWeight } from "../themes/typography";
 
 /**
  * Color mappings for all chip variants
@@ -160,6 +161,10 @@ const LABEL_TO_VARIANT: Record<string, ChipVariant> = {
  * Get variant from label if no explicit variant provided
  */
 const getVariantFromLabel = (label: string): ChipVariant | undefined => {
+  // The prop is typed string, but nullable columns still reach callers as null
+  // at runtime. Deriving a variant is a convenience, so give up quietly rather
+  // than throw — a throw here escapes to the error boundary and blanks the page.
+  if (typeof label !== "string") return undefined;
   const normalizedLabel = label.toLowerCase().trim();
   return LABEL_TO_VARIANT[normalizedLabel];
 };
@@ -272,20 +277,21 @@ const Chip: React.FC<IChipProps> = ({
         alignItems: "center",
         justifyContent: "center",
         height,
-        padding: "4px 8px",
+        py: 2,
+        px: 4,
         borderRadius: "4px",
         background: `linear-gradient(180deg, ${gradientTop} 0%, ${gradientBottom} 100%)`,
         border: `1px solid ${borderColor}`,
         color: colors.textColor,
-        fontSize: 11,
-        fontWeight: 400,
+        fontSize: fontSize.caption,
+        fontWeight: fontWeight.regular,
         textTransform: uppercase ? "uppercase" : "none",
         whiteSpace: "nowrap",
         lineHeight: 1,
       }}
     >
       {icon && (
-        <Box component="span" sx={{ display: "inline-flex", alignItems: "center", mr: 0.5 }}>
+        <Box component="span" sx={{ display: "inline-flex", alignItems: "center", mr: 1 }}>
           {icon}
         </Box>
       )}

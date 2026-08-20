@@ -108,7 +108,7 @@ function tagToVarName(tag: string): string {
     Notes: "note",
     Notifications: "notification",
     Organizations: "organization",
-    Plugins: "plugin",
+    Extensions: "extension",
     Policies: "policy",
     "Post-Market Monitoring": "postMarketMonitoring",
     "Project Risks": "projectRisk",

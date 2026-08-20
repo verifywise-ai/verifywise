@@ -10,6 +10,35 @@ import { getDecryptedAiGatewayKeyForProviderQuery } from "../utils/aiGatewayEval
 // JSON body parser for routes that need to inspect/modify the body before proxying
 const jsonParser = express.json({ limit: "50mb" });
 
+/**
+ * Body shapes inspected/mutated by {@link injectApiKeys} before proxying to the
+ * EvalServer. All fields optional: absent fields must keep the current
+ * defensive "skip" behavior. Mirrors the EvalServer request schemas
+ * (EvalServer/src/request_schemas.py, EvalServer/src/routers/evaluation_logs.py).
+ */
+interface ExperimentProxyBody {
+  config?: {
+    evaluationMode?: string;
+    useCustomScorer?: boolean;
+    scorerProviders?: string[];
+    scorerApiKeys?: Record<string, string>;
+    judgeLlm?: { provider?: string; apiKey?: string };
+    model?: { provider?: string; accessMethod?: string; apiKey?: string };
+  };
+}
+
+interface ArenaCompareBody {
+  contestants?: Array<{ hyperparameters?: { provider?: string } }>;
+  judgeModel?: string;
+  judgeProvider?: string;
+  apiKeys?: Record<string, string>;
+}
+
+interface ReportGenerateBody {
+  judgeProvider?: string;
+  apiKey?: string;
+}
+
 // Headers are now set directly in the proxyReq handler to ensure they're forwarded
 
 /**
@@ -44,10 +73,7 @@ export async function injectApiKeys(req: Request, _res: Response, next: NextFunc
     return next();
   }
 
-  const evaluationMode = req.body?.config?.evaluationMode || "standard";
-
   try {
-    const body = req.body || {};
     const orgId = req.organizationId;
     if (orgId == null) {
       return next();
@@ -55,8 +81,9 @@ export async function injectApiKeys(req: Request, _res: Response, next: NextFunc
 
     // Handle Arena comparisons - inject API keys for contestants and judge
     if (isArena) {
+      const body = (req.body || {}) as ArenaCompareBody;
       // Ensure body has required fields
-      if (!body || !body.contestants) {
+      if (!body.contestants) {
         return next();
       }
 
@@ -114,7 +141,7 @@ export async function injectApiKeys(req: Request, _res: Response, next: NextFunc
       }
 
       if (Object.keys(apiKeys).length > 0) {
-        req.body.apiKeys = apiKeys;
+        body.apiKeys = apiKeys;
       }
 
       return next();
@@ -122,6 +149,7 @@ export async function injectApiKeys(req: Request, _res: Response, next: NextFunc
 
     // Handle report generation — inject the judge LLM's API key for AI summaries
     if (isReport) {
+      const body = (req.body || {}) as ReportGenerateBody;
       const judgeProvider = (body.judgeProvider || "").toLowerCase();
       if (judgeProvider && VALID_PROVIDERS.includes(judgeProvider as LLMProvider)) {
         try {
@@ -130,7 +158,7 @@ export async function injectApiKeys(req: Request, _res: Response, next: NextFunc
             judgeProvider as LLMProvider,
           );
           if (apiKey) {
-            req.body.apiKey = apiKey;
+            body.apiKey = apiKey;
           }
         } catch {
           // No key found — report will be generated without AI summaries
@@ -138,6 +166,10 @@ export async function injectApiKeys(req: Request, _res: Response, next: NextFunc
       }
       return next();
     }
+
+    // Experiment creation: inject scorer, judge and model API keys into the config
+    const body = (req.body || {}) as ExperimentProxyBody;
+    const evaluationMode = body.config?.evaluationMode || "standard";
 
     // 1. Inject API keys for custom scorers (scorer or both mode)
     // Frontend sends scorerProviders: ["mistral", "openai"] - only the providers actually needed
@@ -163,7 +195,7 @@ export async function injectApiKeys(req: Request, _res: Response, next: NextFunc
       }
 
       if (Object.keys(scorerApiKeys).length > 0) {
-        req.body.config.scorerApiKeys = scorerApiKeys;
+        body.config.scorerApiKeys = scorerApiKeys;
         console.log(
           `[DeepEval Proxy] Injecting API keys for scorer providers: ${Object.keys(scorerApiKeys).join(", ")}`,
         );
@@ -189,7 +221,7 @@ export async function injectApiKeys(req: Request, _res: Response, next: NextFunc
             judgeProvider as LLMProvider,
           );
           if (apiKey) {
-            req.body.config.judgeLlm.apiKey = apiKey;
+            body.config.judgeLlm.apiKey = apiKey;
           }
         } catch {
           // Key not available — EvalServer will surface the missing-key error
@@ -221,10 +253,10 @@ export async function injectApiKeys(req: Request, _res: Response, next: NextFunc
             modelProvider as LLMProvider,
           );
           if (apiKey) {
-            req.body.config.model.apiKey = apiKey;
+            body.config.model.apiKey = apiKey;
             // Also set provider explicitly if only accessMethod was set
             if (!body.config.model.provider) {
-              req.body.config.model.provider = modelProvider;
+              body.config.model.provider = modelProvider;
             }
           }
         } catch {
@@ -243,17 +275,17 @@ export async function injectApiKeys(req: Request, _res: Response, next: NextFunc
 
       if (VALID_PROVIDERS.includes(judgeProvider as LLMProvider)) {
         // Initialize scorerApiKeys if not already set
-        if (!req.body.config.scorerApiKeys) {
-          req.body.config.scorerApiKeys = {};
+        if (!body.config.scorerApiKeys) {
+          body.config.scorerApiKeys = {};
         }
 
         // Only fetch if we don't already have this provider's key
-        if (!req.body.config.scorerApiKeys[judgeProvider]) {
+        if (!body.config.scorerApiKeys[judgeProvider]) {
           // Reuse the key already resolved for the judge LLM (user-provided or injected
           // in step 2) before making a DB round-trip.
-          const resolvedJudgeKey = req.body.config.judgeLlm?.apiKey;
+          const resolvedJudgeKey = body.config.judgeLlm?.apiKey;
           if (resolvedJudgeKey && resolvedJudgeKey !== "***" && resolvedJudgeKey !== "") {
-            req.body.config.scorerApiKeys[judgeProvider] = resolvedJudgeKey;
+            body.config.scorerApiKeys[judgeProvider] = resolvedJudgeKey;
           } else {
             try {
               const apiKey = await getDecryptedAiGatewayKeyForProviderQuery(
@@ -261,7 +293,7 @@ export async function injectApiKeys(req: Request, _res: Response, next: NextFunc
                 judgeProvider as LLMProvider,
               );
               if (apiKey) {
-                req.body.config.scorerApiKeys[judgeProvider] = apiKey;
+                body.config.scorerApiKeys[judgeProvider] = apiKey;
               }
             } catch {
               // Skip if key not found
@@ -281,6 +313,7 @@ function deepEvalRoutes() {
   const router = Router();
 
   const targetUrl = process.env.LLM_EVALS_URL || "http://127.0.0.1:8000";
+  const EVAL_SERVER_KEY = process.env.EVAL_SERVER_INTERNAL_KEY || "";
 
   const AI_GATEWAY_URL = process.env.AI_GATEWAY_URL || "http://127.0.0.1:8100";
   const AI_GATEWAY_KEY = process.env.AI_GATEWAY_INTERNAL_KEY || "";
@@ -336,6 +369,7 @@ function deepEvalRoutes() {
             "x-internal-key": AI_GATEWAY_KEY,
             "x-organization-id": String(orgId || ""),
             "x-provider-key": apiKey,
+            ...(req.requestId ? { "x-request-id": req.requestId } : {}),
           },
           body: JSON.stringify({ model: litellmModel, messages, stream: false }),
           signal: AbortSignal.timeout(120_000),
@@ -378,6 +412,19 @@ function deepEvalRoutes() {
       proxyReq: (proxyReq, req) => {
         // Forward custom headers to the proxy target
         const expressReq = req as Request;
+        if (expressReq.requestId) {
+          proxyReq.setHeader("x-request-id", expressReq.requestId);
+        }
+
+        // Service-to-service shared secret (overwrites any client-supplied value)
+        proxyReq.setHeader("x-internal-key", EVAL_SERVER_KEY);
+
+        // Strip client-supplied tenant headers: the eval server trusts these,
+        // so they must only ever come from the authenticated JWT context.
+        proxyReq.removeHeader("x-organization-id");
+        proxyReq.removeHeader("x-user-id");
+        proxyReq.removeHeader("x-role");
+
         if (expressReq.organizationId) {
           proxyReq.setHeader("x-organization-id", expressReq.organizationId.toString());
         }

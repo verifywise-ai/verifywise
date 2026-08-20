@@ -57,9 +57,8 @@ describe("Test EU AI Act Repository", () => {
       expect(result).toBe(false);
     });
 
-    it("should log the error and return false when updateEntityById throws", async () => {
+    it("should return false when updateEntityById throws", async () => {
       const error = new Error("Patch failed");
-      const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => undefined);
 
       vi.mocked(updateEntityById).mockRejectedValue(error);
 
@@ -70,12 +69,6 @@ describe("Test EU AI Act Repository", () => {
       });
 
       expect(result).toBe(false);
-      expect(consoleErrorSpy).toHaveBeenCalledWith(
-        "Failed to update EU AI Act question status:",
-        error,
-      );
-
-      consoleErrorSpy.mockRestore();
     });
 
     it("should build the routeUrl using the provided answerId", async () => {

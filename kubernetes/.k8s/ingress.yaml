@@ -1,3 +1,7 @@
+# =============================================================================
+# DEV/LOCAL TEMPLATE ONLY — do not apply to production;
+# use kubernetes/prod/ingress-tls.yaml
+# =============================================================================
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -16,7 +20,9 @@ metadata:
     # CORS settings
     nginx.ingress.kubernetes.io/enable-cors: "true"
     nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, PATCH, OPTIONS"
-    nginx.ingress.kubernetes.io/cors-allow-origin: "*"
+    # Never use "*" together with allow-credentials "true" (browsers reject it
+    # and it defeats the Same-Origin policy). Restrict to the known app origin.
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://app.verifywise.ai"
     nginx.ingress.kubernetes.io/cors-allow-credentials: "true"
 
     # Proxy settings

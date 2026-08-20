@@ -32,7 +32,10 @@ describe("selfOnly middleware", () => {
     selfOnly(req, res as Response, next);
 
     expect(res.status).toHaveBeenCalledWith(401);
-    expect(res.json).toHaveBeenCalledWith({ message: "Authentication required" });
+    expect(res.json).toHaveBeenCalledWith({
+      message: "Unauthorized",
+      data: "Authentication required",
+    });
     expect(next).not.toHaveBeenCalled();
   });
 
@@ -43,7 +46,10 @@ describe("selfOnly middleware", () => {
     selfOnly(req, res as Response, next);
 
     expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith({ message: "Target user ID is required" });
+    expect(res.json).toHaveBeenCalledWith({
+      message: "Bad Request",
+      data: "Target user ID is required",
+    });
     expect(next).not.toHaveBeenCalled();
   });
 
@@ -74,7 +80,10 @@ describe("selfOnly middleware", () => {
     selfOnly(req, res as Response, next);
 
     expect(res.status).toHaveBeenCalledWith(403);
-    expect(res.json).toHaveBeenCalledWith({ message: "You can only modify your own data" });
+    expect(res.json).toHaveBeenCalledWith({
+      message: "Forbidden",
+      data: "You can only modify your own data",
+    });
     expect(next).not.toHaveBeenCalled();
   });
 

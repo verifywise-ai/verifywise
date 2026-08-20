@@ -7,9 +7,14 @@ const tsJestTransformCfg = createDefaultPreset({
 /** @type {import("jest").Config} **/
 module.exports = {
   testEnvironment: "node",
+  setupFiles: ["<rootDir>/utils/localStoragePolyfill.ts"],
   transform: {
     ...tsJestTransformCfg,
+    // ai >= 7 and its transitive deps ship ESM-only builds, so Jest must
+    // transform them. transformIgnorePatterns below allowlists those packages.
+    "node_modules[\\\\/].+\\.js$": ["ts-jest", { diagnostics: false }],
   },
+  transformIgnorePatterns: ["/node_modules/(?!(ai|@ai-sdk|@workflow|@standard-schema)/)"],
   modulePathIgnorePatterns: ["<rootDir>/dist/"],
   testPathIgnorePatterns: ["/helpers/"],
   moduleNameMapper: {

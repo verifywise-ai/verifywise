@@ -26,7 +26,6 @@ import {
   type LLMProvider,
 } from "../../../application/repository/deepEval.repository";
 import Alert from "../../components/Alert";
-import AsyncBoundary from "../../components/AsyncBoundary";
 import StandardModal from "../../components/Modals/StandardModal";
 import ModelsTable, { type ModelRow } from "../../components/Table/ModelsTable";
 import { PageHeader } from "../../components/Layout/PageHeader";
@@ -101,16 +100,13 @@ interface NewModelConfig {
 export default function ModelsPage({ orgId, openAddModal, onAddModalConsumed }: ModelsPageProps) {
   const [models, setModels] = useState<SavedModel[]>([]);
   const [loading, setLoading] = useState(false);
-  const [loadError, setLoadError] = useState<Error | string | unknown>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [alert, setAlert] = useState<AlertState | null>(null);
 
   // RBAC permissions
-  const { userRoleName, isSuperAdmin } = useAuth();
-  const canDeleteModel =
-    (allowedRoles.evals.deleteScorer?.includes(userRoleName) ?? true) && !isSuperAdmin;
-  const canCreateModel =
-    (allowedRoles.evals.createScorer?.includes(userRoleName) ?? true) && !isSuperAdmin;
+  const { userRoleName } = useAuth();
+  const canDeleteModel = allowedRoles.evals.deleteScorer?.includes(userRoleName) ?? true;
+  const canCreateModel = allowedRoles.evals.createScorer?.includes(userRoleName) ?? true;
 
   // Delete confirmation modal state
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -172,8 +168,7 @@ export default function ModelsPage({ orgId, openAddModal, onAddModalConsumed }: 
         if (!cancelled) {
           setGatewayModels(models.map((m) => ({ id: m.id, name: m.name })));
         }
-      } catch (err) {
-        console.warn("Failed to fetch gateway models:", err);
+      } catch {
         if (!cancelled) setGatewayModels([]);
       } finally {
         if (!cancelled) setLoadingGatewayModels(false);
@@ -198,13 +193,14 @@ export default function ModelsPage({ orgId, openAddModal, onAddModalConsumed }: 
   }, []);
 
   const loadModels = useCallback(async () => {
-    setLoading(true);
-    setLoadError(null);
     try {
+      setLoading(true);
       const allModels = await evalModelsService.listModels(orgId);
       setModels(allModels);
     } catch (err) {
-      setLoadError(err);
+      console.error("Failed to load models", err);
+      setAlert({ variant: "error", body: "Failed to load models" });
+      setTimeout(() => setAlert(null), 4000);
     } finally {
       setLoading(false);
     }
@@ -268,12 +264,16 @@ export default function ModelsPage({ orgId, openAddModal, onAddModalConsumed }: 
     if (!modelToDelete) return;
     setIsDeleting(true);
     try {
-      await evalModelsService.deleteModel(modelToDelete.id);
-      setAlert({ variant: "success", body: "Model deleted successfully" });
-      setTimeout(() => setAlert(null), 3000);
-      setDeleteModalOpen(false);
-      setModelToDelete(null);
-      void loadModels();
+      const success = await evalModelsService.deleteModel(modelToDelete.id);
+      if (success) {
+        setAlert({ variant: "success", body: "Model deleted successfully" });
+        setTimeout(() => setAlert(null), 3000);
+        setDeleteModalOpen(false);
+        setModelToDelete(null);
+        void loadModels();
+      } else {
+        throw new Error("Delete failed");
+      }
     } catch (err) {
       console.error("Failed to delete model", err);
       setAlert({ variant: "error", body: "Failed to delete model" });
@@ -328,17 +328,21 @@ export default function ModelsPage({ orgId, openAddModal, onAddModalConsumed }: 
       }
 
       // Create model using the new API
-      await evalModelsService.createModel({
+      const created = await evalModelsService.createModel({
         orgId: orgId,
         name: newModel.modelName,
         provider: newModel.accessMethod,
         endpointUrl: newModel.endpointUrl || undefined,
       });
 
-      setAlert({ variant: "success", body: "Model added successfully" });
-      setTimeout(() => setAlert(null), 3000);
-      setAddModalOpen(false);
-      void loadModels();
+      if (created) {
+        setAlert({ variant: "success", body: "Model added successfully" });
+        setTimeout(() => setAlert(null), 3000);
+        setAddModalOpen(false);
+        void loadModels();
+      } else {
+        throw new Error("Save failed");
+      }
     } catch (err) {
       console.error("Failed to add model", err);
       setAlert({ variant: "error", body: "Failed to add model" });
@@ -412,25 +416,11 @@ export default function ModelsPage({ orgId, openAddModal, onAddModalConsumed }: 
 
       {/* Models table */}
       <Box mb={4}>
-        <AsyncBoundary
-          isLoading={loading}
-          error={loadError}
-          isEmpty={!modelRows.length}
-          onRetry={loadModels}
-          emptyFallback={
-            <ModelsTable
-              rows={[]}
-              onDelete={canDeleteModel ? handleDelete : undefined}
-              loading={false}
-            />
-          }
-        >
-          <ModelsTable
-            rows={modelRows}
-            onDelete={canDeleteModel ? handleDelete : undefined}
-            loading={false}
-          />
-        </AsyncBoundary>
+        <ModelsTable
+          rows={modelRows}
+          onDelete={canDeleteModel ? handleDelete : undefined}
+          loading={loading}
+        />
       </Box>
 
       {/* Delete Confirmation Modal */}

@@ -353,15 +353,18 @@ export async function schedulePMMCheck(): Promise<void> {
 
   logger.info("Adding PMM hourly check jobs to the queue...");
 
-  await automationQueue.add(
+  await automationQueue.upsertJobScheduler(
     "pmm_hourly_check",
-    { type: "pmm" },
     {
-      repeat: {
-        pattern: "0 * * * *", // Every hour at minute 0
+      pattern: "0 * * * *", // Every hour at minute 0
+    },
+    {
+      name: "pmm_hourly_check",
+      data: { type: "pmm" },
+      opts: {
+        removeOnComplete: true,
+        removeOnFail: false,
       },
-      removeOnComplete: true,
-      removeOnFail: false,
     },
   );
 }

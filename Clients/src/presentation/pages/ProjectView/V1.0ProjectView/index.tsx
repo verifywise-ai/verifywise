@@ -4,7 +4,7 @@ import TabPanel from "@mui/lab/TabPanel";
 import { SyntheticEvent, useState, useEffect, useMemo } from "react";
 import TabContext from "@mui/lab/TabContext";
 import VWProjectOverview from "./Overview";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 import CustomizableSkeleton from "../../../components/Skeletons";
 import VWProjectRisks from "./ProjectRisks";
 import LinkedModels from "./LinkedModels";
@@ -25,9 +25,10 @@ import { FileText as FileTextIcon } from "lucide-react";
 import TabBar from "../../../components/TabBar";
 import { getAllProjectRisksByProjectId } from "../../../../application/repository/projectRisk.repository";
 import { getAllEntities } from "../../../../application/repository/entity.repository";
-import { usePluginRegistry } from "../../../../application/contexts/PluginRegistry.context";
-import { PLUGIN_SLOTS } from "../../../../domain/constants/pluginSlots";
-import { apiServices } from "../../../../infrastructure/api/networkServices";
+import { useExtensions } from "../../../../application/contexts/Extensions.context";
+import { JiraUseCaseOverview } from "../../Extensions/jira-assets/JiraUseCaseOverview";
+import { JiraUseCaseMonitoring } from "../../Extensions/jira-assets/JiraUseCaseMonitoring";
+import { JiraUseCaseSettings } from "../../Extensions/jira-assets/JiraUseCaseSettings";
 
 const VWProjectView = () => {
   const { userRoleName } = useAuth();
@@ -41,26 +42,10 @@ const VWProjectView = () => {
   const framework = searchParams.get("framework");
   const [refreshKey, setRefreshKey] = useState(0);
   const { project } = useProjectData({ projectId, refreshKey });
-  const { getComponentsForSlot } = usePluginRegistry();
+  const { isEnabled } = useExtensions();
 
-  // Get project source (if any) for slot matching
   const projectSource = (project as any)?._source;
-
-  // Helper to get plugin component for a slot
-  const getPluginComponent = (slotId: string) => {
-    const components = getComponentsForSlot(slotId);
-    return components.find((c) => c.pluginKey === projectSource);
-  };
-
-  // Get plugin components for each tab slot
-  const pluginOverview = getPluginComponent(PLUGIN_SLOTS.USE_CASE_OVERVIEW);
-  const pluginRisks = getPluginComponent(PLUGIN_SLOTS.USE_CASE_RISKS);
-  const pluginModels = getPluginComponent(PLUGIN_SLOTS.USE_CASE_MODELS);
-  const pluginFrameworks = getPluginComponent(PLUGIN_SLOTS.USE_CASE_FRAMEWORKS);
-  const pluginCeMarking = getPluginComponent(PLUGIN_SLOTS.USE_CASE_CE_MARKING);
-  const pluginActivity = getPluginComponent(PLUGIN_SLOTS.USE_CASE_ACTIVITY);
-  const pluginMonitoring = getPluginComponent(PLUGIN_SLOTS.USE_CASE_MONITORING);
-  const pluginSettings = getPluginComponent(PLUGIN_SLOTS.USE_CASE_SETTINGS);
+  const isJira = projectSource === "jira-assets" && isEnabled("jira-assets");
 
   // Initialize tab value from URL parameter or default to "overview"
   const [value, setValue] = useState(tabParam || "overview");
@@ -279,12 +264,13 @@ const VWProjectView = () => {
             activeTab={value}
             onChange={handleChange}
             disabledTabTooltip={getDisabledTooltip()}
+            scrollable
           />
 
           <TabPanel value="overview" sx={tabPanelStyle}>
             {project ? (
-              pluginOverview ? (
-                <pluginOverview.Component project={project} apiServices={apiServices} />
+              isJira ? (
+                <JiraUseCaseOverview project={project as any} />
               ) : (
                 <VWProjectOverview project={project} />
               )
@@ -295,11 +281,7 @@ const VWProjectView = () => {
 
           <TabPanel value="project-risks" sx={tabPanelStyle}>
             {project ? (
-              pluginRisks ? (
-                <pluginRisks.Component project={project} apiServices={apiServices} />
-              ) : (
-                <VWProjectRisks />
-              )
+              <VWProjectRisks />
             ) : (
               <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
             )}
@@ -307,11 +289,7 @@ const VWProjectView = () => {
 
           <TabPanel value="linked-models" sx={tabPanelStyle}>
             {project ? (
-              pluginModels ? (
-                <pluginModels.Component project={project} apiServices={apiServices} />
-              ) : (
-                <LinkedModels project={project} />
-              )
+              <LinkedModels project={project} />
             ) : (
               <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
             )}
@@ -319,23 +297,19 @@ const VWProjectView = () => {
 
           <TabPanel value="frameworks" sx={tabPanelStyle}>
             {project ? (
-              pluginFrameworks ? (
-                <pluginFrameworks.Component project={project} apiServices={apiServices} />
-              ) : (
-                <ProjectFrameworks
-                  project={project}
-                  triggerRefresh={handleRefresh}
-                  initialFrameworkId={
-                    framework === "iso-42001"
-                      ? 2
-                      : framework === "eu-ai-act"
-                        ? 1
-                        : project.framework && project.framework.length > 0
-                          ? project.framework[0].framework_id
-                          : 1
-                  }
-                />
-              )
+              <ProjectFrameworks
+                project={project}
+                triggerRefresh={handleRefresh}
+                initialFrameworkId={
+                  framework === "iso-42001"
+                    ? 2
+                    : framework === "eu-ai-act"
+                      ? 1
+                      : project.framework && project.framework.length > 0
+                        ? project.framework[0].framework_id
+                        : 1
+                }
+              />
             ) : (
               <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
             )}
@@ -343,11 +317,7 @@ const VWProjectView = () => {
 
           <TabPanel value="ce-marking" sx={tabPanelStyle}>
             {project ? (
-              pluginCeMarking ? (
-                <pluginCeMarking.Component project={project} apiServices={apiServices} />
-              ) : (
-                <CEMarking projectId={projectId} />
-              )
+              <CEMarking projectId={projectId} />
             ) : (
               <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
             )}
@@ -363,8 +333,8 @@ const VWProjectView = () => {
 
           <TabPanel value="settings" sx={tabPanelStyle}>
             {project ? (
-              pluginSettings ? (
-                <pluginSettings.Component project={project} apiServices={apiServices} />
+              isJira ? (
+                <JiraUseCaseSettings project={project as any} />
               ) : (
                 <ProjectSettings triggerRefresh={handleRefresh} />
               )
@@ -375,11 +345,7 @@ const VWProjectView = () => {
 
           <TabPanel value="activity" sx={tabPanelStyle}>
             {project ? (
-              pluginActivity ? (
-                <pluginActivity.Component project={project} apiServices={apiServices} />
-              ) : (
-                <Activity entityType="use_case" entityId={numericProjectId} />
-              )
+              <Activity entityType="use_case" entityId={numericProjectId} />
             ) : (
               <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
             )}
@@ -387,8 +353,8 @@ const VWProjectView = () => {
 
           <TabPanel value="monitoring" sx={tabPanelStyle}>
             {project ? (
-              pluginMonitoring ? (
-                <pluginMonitoring.Component project={project} apiServices={apiServices} />
+              isJira ? (
+                <JiraUseCaseMonitoring project={project as any} />
               ) : (
                 <PostMarketMonitoring />
               )

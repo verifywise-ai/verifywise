@@ -10,13 +10,14 @@ import React, { type PropsWithChildren } from "react";
 import { render, type RenderOptions } from "@testing-library/react";
 import { configureStore, combineReducers } from "@reduxjs/toolkit";
 import { Provider } from "react-redux";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter } from "react-router";
 import { ThemeProvider } from "@mui/material/styles";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { light } from "../presentation/themes";
 import authReducer from "../application/redux/auth/authSlice";
 import uiSlice from "../application/redux/ui/uiSlice";
 import fileReducer from "../application/redux/file/fileSlice";
+import { ExtensionsProvider } from "../application/contexts/Extensions.context";
 
 // ---- Types ----
 
@@ -92,7 +93,16 @@ export function renderWithProviders(
       <Provider store={store}>
         <QueryClientProvider client={queryClient}>
           <ThemeProvider theme={light}>
-            <MemoryRouter initialEntries={[route]}>{children}</MemoryRouter>
+            {/* ExtensionsProvider is safe with no auth — its effect guards
+                on `isAuthenticated && organizationId` and skips the fetch
+                when either is missing. Components under test that call
+                `useExtensions()` (e.g. ModelInventoryTable's
+                ViewLifecycleButton gate) get an empty extensions list,
+                which is the correct render for the default no-auth
+                test store. */}
+            <ExtensionsProvider>
+              <MemoryRouter initialEntries={[route]}>{children}</MemoryRouter>
+            </ExtensionsProvider>
           </ThemeProvider>
         </QueryClientProvider>
       </Provider>

@@ -216,6 +216,50 @@ describe("policy.ctrl", () => {
     });
   });
 
+  describe("save response shape", () => {
+    it("should return the persisted entity including status and last_updated_at for create and update", async () => {
+      const persisted = {
+        id: 1,
+        title: "P1",
+        content_html: "<p>test</p>",
+        status: "Under Review",
+        last_updated_by: 1,
+        last_updated_at: "2026-08-05T00:00:00.000Z",
+      };
+
+      // POST /policies — 201 body carries the full persisted row
+      mockCreate.mockResolvedValue(persisted as any);
+      const createReqObj = createReq({ body: { title: "P1", content_html: "<p>test</p>" } });
+      const createResObj = createRes();
+      await PolicyController.createPolicy(createReqObj, createResObj);
+      expect(createResObj.status).toHaveBeenCalledWith(201);
+      expect(createResObj.json).toHaveBeenCalledWith({
+        message: "Created",
+        data: expect.objectContaining({
+          id: 1,
+          status: "Under Review",
+          last_updated_at: "2026-08-05T00:00:00.000Z",
+        }),
+      });
+
+      // PUT /policies/:id — 202 body carries the full persisted row
+      mockGetById.mockResolvedValue([{ id: 1, title: "P1" }] as any);
+      mockUpdate.mockResolvedValue({ ...persisted, title: "P2" } as any);
+      const updateReqObj = createReq({ params: { id: "1" }, body: { title: "P2" } });
+      const updateResObj = createRes();
+      await PolicyController.updatePolicy(updateReqObj, updateResObj);
+      expect(updateResObj.status).toHaveBeenCalledWith(202);
+      expect(updateResObj.json).toHaveBeenCalledWith({
+        message: "Accepted",
+        data: expect.objectContaining({
+          id: 1,
+          status: "Under Review",
+          last_updated_at: "2026-08-05T00:00:00.000Z",
+        }),
+      });
+    });
+  });
+
   describe("deletePolicyById", () => {
     it("should return 202 when policy is deleted", async () => {
       mockDelete.mockResolvedValue({ id: 1 } as any);
@@ -352,6 +396,33 @@ describe("policy.ctrl", () => {
       await PolicyController.requestReview(req, res);
       expect(res.status).toHaveBeenCalledWith(200);
     });
+    it("should return the full updated policy entity in the response body", async () => {
+      const fullPolicy = {
+        id: 1,
+        title: "P1",
+        author_id: 1,
+        status: "Under Review",
+        tags: ["security"],
+        assigned_reviewer_ids: [2],
+        last_updated_by: 1,
+        last_updated_at: "2026-08-14T00:00:00.000Z",
+      };
+      mockGetById.mockResolvedValue([fullPolicy] as any);
+      const req = createReq({ params: { id: "1" }, body: { reviewer_ids: [2] } });
+      const res = createRes();
+      await PolicyController.requestReview(req, res);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        message: "OK",
+        data: expect.objectContaining({
+          id: 1,
+          title: "P1",
+          status: "Under Review",
+          assigned_reviewer_ids: [2],
+          last_updated_at: "2026-08-14T00:00:00.000Z",
+        }),
+      });
+    });
     it("should return 500 on error", async () => {
       mockGetById.mockRejectedValue(new Error("DB error"));
       const req = createReq({ params: { id: "1" }, body: { reviewer_ids: [2] } });
@@ -381,6 +452,32 @@ describe("policy.ctrl", () => {
       const res = createRes();
       await PolicyController.approveReview(req, res);
       expect(res.status).toHaveBeenCalledWith(200);
+    });
+    it("should return the full approved policy entity in the response body", async () => {
+      const fullPolicy = {
+        id: 1,
+        title: "P1",
+        author_id: 1,
+        status: "Approved",
+        tags: ["security"],
+        assigned_reviewer_ids: [2],
+        last_updated_by: 1,
+        last_updated_at: "2026-08-14T00:00:00.000Z",
+      };
+      mockGetById.mockResolvedValue([fullPolicy] as any);
+      const req = createReq({ params: { id: "1" }, body: { comment: "ok" } });
+      const res = createRes();
+      await PolicyController.approveReview(req, res);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        message: "OK",
+        data: expect.objectContaining({
+          id: 1,
+          title: "P1",
+          status: "Approved",
+          assigned_reviewer_ids: [2],
+        }),
+      });
     });
     it("should return 500 on error", async () => {
       mockGetById.mockRejectedValue(new Error("DB error"));
@@ -417,6 +514,32 @@ describe("policy.ctrl", () => {
       const res = createRes();
       await PolicyController.rejectReview(req, res);
       expect(res.status).toHaveBeenCalledWith(200);
+    });
+    it("should return the full rejected policy entity in the response body", async () => {
+      const fullPolicy = {
+        id: 1,
+        title: "P1",
+        author_id: 1,
+        status: "Changes Requested",
+        tags: ["security"],
+        assigned_reviewer_ids: [2],
+        last_updated_by: 1,
+        last_updated_at: "2026-08-14T00:00:00.000Z",
+      };
+      mockGetById.mockResolvedValue([fullPolicy] as any);
+      const req = createReq({ params: { id: "1" }, body: { comment: "fix" } });
+      const res = createRes();
+      await PolicyController.rejectReview(req, res);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({
+        message: "OK",
+        data: expect.objectContaining({
+          id: 1,
+          title: "P1",
+          status: "Changes Requested",
+          assigned_reviewer_ids: [2],
+        }),
+      });
     });
     it("should return 500 on error", async () => {
       mockGetById.mockRejectedValue(new Error("DB error"));

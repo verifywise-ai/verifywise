@@ -100,8 +100,14 @@ export default function ComparePanel({
     } catch (err: any) {
       if (err?.name !== "AbortError") {
         const fallback = { content: `Error: ${err.message}`, tokens: 0, cost: 0, latency: 0 };
-        setResultA((prev) => prev || fallback);
-        setResultB((prev) => prev || fallback);
+        // Each side is seeded with an empty-content placeholder the moment
+        // streaming starts (see runStream's initial setResult call below),
+        // so `prev` is always a truthy object here — `prev || fallback`
+        // would never fall through to the error fallback. Check for actual
+        // streamed content instead, so a side that already received partial
+        // output keeps it, and a side that got nothing shows the error.
+        setResultA((prev) => (prev?.content ? prev : fallback));
+        setResultB((prev) => (prev?.content ? prev : fallback));
       }
     } finally {
       setIsSending(false);

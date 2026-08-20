@@ -173,9 +173,16 @@ export class UserModel extends Model<UserModel> {
     sso_provider?: SSOProvider,
     sso_user_id?: string,
   ): Promise<UserModel> {
+    // Normalize before validating so a value pasted with surrounding whitespace
+    // is accepted and stored clean. The mail layer's strict address validation
+    // and the case-insensitive login/reset lookups both choke on stray
+    // whitespace, so an untrimmed email here would silently break password-reset
+    // emails for that user. Trim mirrors updateCurrentUser.
+    const normalizedEmail = typeof email === "string" ? email.trim() : email;
+
     // Validate email
-    if (!emailValidation(email)) {
-      throw new ValidationException("Invalid email format", "email", email);
+    if (!emailValidation(normalizedEmail)) {
+      throw new ValidationException("Invalid email format", "email", normalizedEmail);
     }
 
     const isSSO = !!sso_provider && !!sso_user_id;
@@ -204,7 +211,7 @@ export class UserModel extends Model<UserModel> {
     const user = new UserModel();
     user.name = name;
     user.surname = surname;
-    user.email = email;
+    user.email = normalizedEmail;
     user.password_hash = isSSO ? (null as unknown as string) : await bcrypt.hash(password!, 10);
     user.role_id = role_id;
     user.created_at = new Date();
@@ -270,12 +277,15 @@ export class UserModel extends Model<UserModel> {
       this.surname = updateData.surname.trim();
     }
 
-    // Validate email if provided
+    // Validate email if provided. Trim before validating so a value with
+    // surrounding whitespace is accepted and stored clean, rather than rejected.
     if (updateData.email !== undefined) {
-      if (!emailValidation(updateData.email)) {
-        throw new ValidationException("Valid email is required", "email", updateData.email);
+      const normalizedEmail =
+        typeof updateData.email === "string" ? updateData.email.trim() : updateData.email;
+      if (!emailValidation(normalizedEmail)) {
+        throw new ValidationException("Valid email is required", "email", normalizedEmail);
       }
-      this.email = updateData.email.trim();
+      this.email = normalizedEmail;
     }
   }
 

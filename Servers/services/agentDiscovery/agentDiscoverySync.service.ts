@@ -1,14 +1,31 @@
 import { getAllOrganizationsQuery } from "../../utils/organization.utils";
-import { getInstalledPlugins } from "../../utils/pluginInstallation.utils";
-import { PluginService, PluginRouteContext } from "../plugin/pluginService";
 import {
   upsertAgentPrimitivesQuery,
   flagStaleAgentsQuery,
   createSyncLogQuery,
   updateSyncLogQuery,
 } from "../../utils/agentDiscovery.utils";
-import { sequelize } from "../../database/db";
+import { ExtensionService } from "../extension/extensionService";
+import {
+  loadConfiguration as loadAzureConfig,
+  discoverAgents as discoverAzureAgents,
+} from "../../extensions/azure-ai-foundry/azureAiFoundry.service";
 import logger from "../../utils/logger/fileLogger";
+
+/**
+ * Extension-backed discovery sources. Each entry names the extension key and
+ * the concrete `discover()` implementation that returns raw agent primitives
+ * for that source. Add new sources here as more extensions expose /discover.
+ */
+const DISCOVERY_SOURCES = [
+  {
+    key: "azure-ai-foundry",
+    discover: async (organizationId: number) => {
+      const config = await loadAzureConfig(organizationId);
+      return discoverAzureAgents(config);
+    },
+  },
+];
 
 /**
  * Permission category mapping: maps raw permission segments to normalized categories.
@@ -132,8 +149,6 @@ function categorizePermissions(permissions: string[]): string[] {
  * Run agent discovery sync for a single tenant.
  * Called by the manual trigger endpoint and by the scheduled job.
  */
-const SKIP_DISCOVERY_CATEGORIES = new Set(["compliance", "communication"]);
-
 export async function runAgentDiscoverySyncForTenant(
   organizationId: number,
   triggeredBy: string = "manual",
@@ -141,157 +156,107 @@ export async function runAgentDiscoverySyncForTenant(
   const synced: string[] = [];
   const errors: string[] = [];
 
-  try {
-    const installations = await getInstalledPlugins(organizationId);
+  for (const source of DISCOVERY_SOURCES) {
+    const sourceKey = source.key;
 
-    // For each installed plugin, check if it's an agent_discovery plugin
-    for (const installation of installations) {
-      const pluginKey = installation.plugin_key;
+    let enabled = false;
+    try {
+      const status = await ExtensionService.getByKey(sourceKey, organizationId);
+      enabled = (status as any)?.enabled === true;
+    } catch {
+      continue;
+    }
+    if (!enabled) continue;
 
-      let plugin;
-      try {
-        plugin = await PluginService.getPluginByKey(pluginKey);
-      } catch {
-        continue;
-      }
+    let rawPrimitives: Array<Record<string, unknown>>;
+    try {
+      rawPrimitives = await source.discover(organizationId);
+    } catch (discoverErr: any) {
+      logger.warn(`[AgentDiscoverySync] ${sourceKey}: discover failed: ${discoverErr.message}`);
+      continue;
+    }
 
-      if (!plugin) continue;
+    if (!Array.isArray(rawPrimitives) || rawPrimitives.length === 0) continue;
 
-      // Skip plugins that are clearly not relevant (framework/compliance plugins)
-      if (SKIP_DISCOVERY_CATEGORIES.has(plugin.category)) {
-        continue;
-      }
+    const syncLog = await createSyncLogQuery(
+      { source_system: sourceKey, triggered_by: triggeredBy },
+      organizationId,
+    );
 
-      // Try to call /discover on the plugin — skip silently if route doesn't exist
-      let response;
-      try {
-        const context: PluginRouteContext = {
-          organizationId,
-          userId: 0,
-          method: "GET",
-          path: "/discover",
-          params: {},
-          query: {},
-          body: {},
-          sequelize,
-          configuration: installation.configuration || {},
-        };
-        response = await PluginService.forwardToPlugin(pluginKey, context);
-      } catch (routeError: any) {
-        // Plugin doesn't have a /discover route — skip silently
-        if (
-          routeError.message?.includes("No route") ||
-          routeError.message?.includes("not found") ||
-          routeError.statusCode === 404
-        ) {
-          continue;
+    try {
+      const primitives = rawPrimitives.filter((p: any) => {
+        if (!p.external_id || typeof p.external_id !== "string") {
+          logger.warn(
+            `[AgentDiscoverySync] ${sourceKey}: skipping primitive with missing/invalid external_id`,
+          );
+          return false;
         }
-        // Other errors — log and skip
+        if (!p.display_name || typeof p.display_name !== "string") {
+          logger.warn(
+            `[AgentDiscoverySync] ${sourceKey}: skipping primitive "${p.external_id}" with missing/invalid display_name`,
+          );
+          return false;
+        }
+        if (p.permissions && !Array.isArray(p.permissions)) {
+          logger.warn(
+            `[AgentDiscoverySync] ${sourceKey}: skipping primitive "${p.external_id}" — permissions must be an array`,
+          );
+          return false;
+        }
+        return true;
+      });
+
+      if (primitives.length < rawPrimitives.length) {
         logger.warn(
-          `[AgentDiscoverySync] ${pluginKey}: /discover call failed: ${routeError.message}`,
+          `[AgentDiscoverySync] ${sourceKey}: ${rawPrimitives.length - primitives.length} of ${rawPrimitives.length} primitives failed validation`,
         );
-        continue;
       }
 
-      const rawPrimitives = response.data || [];
-      if (!Array.isArray(rawPrimitives) || rawPrimitives.length === 0) {
-        continue;
-      }
+      const normalizedPrimitives = primitives.map((p: any) => ({
+        source_system: p.source_system || sourceKey,
+        primitive_type: p.primitive_type || "unknown",
+        external_id: p.external_id,
+        display_name: p.display_name,
+        owner_id: p.owner_id || null,
+        permissions: p.permissions || [],
+        permission_categories: categorizePermissions(p.permissions || []),
+        last_activity: p.last_activity || null,
+        metadata: p.metadata || {},
+      }));
 
-      // Plugin returned agent primitives — create sync log and process
-      const syncLog = await createSyncLogQuery(
-        { source_system: pluginKey, triggered_by: triggeredBy },
+      const { created, updated } = await upsertAgentPrimitivesQuery(
+        normalizedPrimitives,
         organizationId,
       );
 
-      try {
-        // Validate plugin output — skip records missing required fields
-        const primitives = rawPrimitives.filter((p: any) => {
-          if (!p.external_id || typeof p.external_id !== "string") {
-            logger.warn(
-              `[AgentDiscoverySync] ${pluginKey}: skipping primitive with missing/invalid external_id`,
-            );
-            return false;
-          }
-          if (!p.display_name || typeof p.display_name !== "string") {
-            logger.warn(
-              `[AgentDiscoverySync] ${pluginKey}: skipping primitive "${p.external_id}" with missing/invalid display_name`,
-            );
-            return false;
-          }
-          if (p.permissions && !Array.isArray(p.permissions)) {
-            logger.warn(
-              `[AgentDiscoverySync] ${pluginKey}: skipping primitive "${p.external_id}" — permissions must be an array`,
-            );
-            return false;
-          }
-          return true;
-        });
+      const staleFlagged = await flagStaleAgentsQuery(sourceKey, organizationId);
 
-        if (primitives.length < rawPrimitives.length) {
-          logger.warn(
-            `[AgentDiscoverySync] ${pluginKey}: ${rawPrimitives.length - primitives.length} of ${rawPrimitives.length} primitives failed validation`,
-          );
-        }
+      await updateSyncLogQuery(
+        syncLog.id!,
+        {
+          status: "success",
+          primitives_found: normalizedPrimitives.length,
+          primitives_created: created,
+          primitives_updated: updated,
+          primitives_stale_flagged: typeof staleFlagged === "number" ? staleFlagged : 0,
+        },
+        organizationId,
+      );
 
-        // Normalize permissions into categories
-        const normalizedPrimitives = primitives.map((p: any) => ({
-          source_system: p.source_system || pluginKey,
-          primitive_type: p.primitive_type || "unknown",
-          external_id: p.external_id,
-          display_name: p.display_name,
-          owner_id: p.owner_id || null,
-          permissions: p.permissions || [],
-          permission_categories: categorizePermissions(p.permissions || []),
-          last_activity: p.last_activity || null,
-          metadata: p.metadata || {},
-        }));
-
-        // Upsert primitives
-        const { created, updated } = await upsertAgentPrimitivesQuery(
-          normalizedPrimitives,
-          organizationId,
-        );
-
-        // Flag stale agents (inactive > 30 days)
-        const staleFlagged = await flagStaleAgentsQuery(pluginKey, organizationId);
-
-        // Update sync log with success
-        await updateSyncLogQuery(
-          syncLog.id!,
-          {
-            status: "success",
-            primitives_found: normalizedPrimitives.length,
-            primitives_created: created,
-            primitives_updated: updated,
-            primitives_stale_flagged: typeof staleFlagged === "number" ? staleFlagged : 0,
-          },
-          organizationId,
-        );
-
-        synced.push(pluginKey);
-        logger.info(
-          `[AgentDiscoverySync] ${pluginKey}: found=${normalizedPrimitives.length}, created=${created}, updated=${updated}, stale=${staleFlagged}`,
-        );
-      } catch (pluginError) {
-        const errMsg = (pluginError as Error).message;
-        await updateSyncLogQuery(
-          syncLog.id!,
-          {
-            status: "failed",
-            error_message: errMsg,
-          },
-          organizationId,
-        );
-        errors.push(`${pluginKey}: ${errMsg}`);
-        logger.error(`[AgentDiscoverySync] Error syncing ${pluginKey}: ${errMsg}`);
-      }
+      synced.push(sourceKey);
+      logger.info(
+        `[AgentDiscoverySync] ${sourceKey}: found=${normalizedPrimitives.length}, created=${created}, updated=${updated}, stale=${staleFlagged}`,
+      );
+    } catch (sourceError) {
+      const errMsg = (sourceError as Error).message;
+      await updateSyncLogQuery(
+        syncLog.id!,
+        { status: "failed", error_message: errMsg },
+        organizationId,
+      );
+      errors.push(`${sourceKey}: ${errMsg}`);
+      logger.error(`[AgentDiscoverySync] Error syncing ${sourceKey}: ${errMsg}`);
     }
-  } catch (error) {
-    logger.error(
-      `[AgentDiscoverySync] Error for tenant ${organizationId}: ${(error as Error).message}`,
-    );
-    errors.push((error as Error).message);
   }
 
   return { synced, errors };

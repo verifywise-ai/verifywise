@@ -1,5 +1,6 @@
 import { useCallback } from "react";
 import { getUserProfilePhoto } from "../repository/user.repository";
+import { useAuth } from "./useAuth";
 
 /**
  * Custom hook for fetching and converting user profile photo data to blob URL
@@ -8,8 +9,14 @@ import { getUserProfilePhoto } from "../repository/user.repository";
  * @returns Object containing the fetchProfilePhotoAsBlobUrl function
  */
 export const useProfilePhotoFetch = () => {
+  // Profile photos are org-scoped (the backend requires user.organization_id
+  // to match req.organizationId). Bootstrap SuperAdmin has no org and every
+  // /users/:id/profile-photo call 403s. Skip the fetch entirely for them.
+  const { organizationId } = useAuth();
+
   const fetchProfilePhotoAsBlobUrl = useCallback(
     async (userId: number | string): Promise<string | null> => {
+      if (!organizationId) return null;
       try {
         const response = await getUserProfilePhoto(userId);
 
@@ -60,7 +67,7 @@ export const useProfilePhotoFetch = () => {
         return null;
       }
     },
-    [],
+    [organizationId],
   );
 
   return { fetchProfilePhotoAsBlobUrl };

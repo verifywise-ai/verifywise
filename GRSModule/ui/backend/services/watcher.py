@@ -1,15 +1,30 @@
 from __future__ import annotations
+import os
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
+from .path_utils import resolve_dataset_path
 from ..models import ProgressCounts
 
 
-def count_lines(path: Path) -> int:
-    """Count non-empty lines in a file. Returns 0 if file doesn't exist."""
-    if not path.exists():
+def count_lines(path: Path, base: Optional[Path] = None) -> int:
+    """Count non-empty lines in a file. Returns 0 if file doesn't exist.
+
+    When ``base`` is provided, verifies that ``path`` stays under ``base``
+    using the os.path.normpath + startswith pattern CodeQL recognizes as a
+    py/path-injection sanitizer.
+    """
+    if base is not None:
+        base_str = str(base)
+        path_str = str(path)
+        basepath = os.path.normpath(base_str)
+        fullpath = os.path.normpath(os.path.join(base_str, path_str))
+        if not fullpath.startswith(basepath):
+            raise ValueError(f"Path {fullpath} escapes allowed base {basepath}")
+    resolved = Path(os.path.normpath(path))
+    if not resolved.exists():
         return 0
-    with path.open("r", encoding="utf-8", errors="replace") as f:
+    with resolved.open("r", encoding="utf-8", errors="replace") as f:
         return sum(1 for line in f if line.strip())
 
 
@@ -24,12 +39,15 @@ def get_progress(stage: str, dataset_version: str, grs_root: Path) -> List[Progr
     Returns:
         List of ProgressCounts per model_id, sorted by model_id.
     """
-    final_dir = grs_root / "datasets" / dataset_version / "final"
-    total_per_model = count_lines(final_dir / "scenarios.jsonl")
+    if stage not in {"infer", "judge"}:
+        raise ValueError(f"Invalid stage: {stage!r}; must be 'infer' or 'judge'")
+
+    final_dir = resolve_dataset_path(grs_root, dataset_version, "final")
+    total_per_model = count_lines(final_dir / "scenarios.jsonl", base=grs_root)
 
     # Determine output subdirectory based on stage
     sub_dir = "responses" if stage == "infer" else "judge_scores"
-    output_dir = final_dir / sub_dir
+    output_dir = resolve_dataset_path(grs_root, dataset_version, "final", sub_dir)
     if not output_dir.exists():
         return []
 
@@ -41,8 +59,8 @@ def get_progress(stage: str, dataset_version: str, grs_root: Path) -> List[Progr
 
         model_id = f.stem
         failure_file = f.parent / f"{f.name}.failures.jsonl"
-        successes = count_lines(f)
-        failures = count_lines(failure_file) if failure_file.exists() else 0
+        successes = count_lines(f, base=grs_root)
+        failures = count_lines(failure_file, base=grs_root) if failure_file.exists() else 0
 
         results.append(ProgressCounts(
             model_id=model_id,

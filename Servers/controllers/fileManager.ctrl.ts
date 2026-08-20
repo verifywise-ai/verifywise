@@ -682,13 +682,13 @@ export const downloadFile = async (req: Request, res: Response): Promise<any> =>
     }
 
     // Authorization check based on file type:
-    // - Organization files (project_id IS NULL): check org_id
+    // - Organization files (project_id IS NULL): check organization_id
     // - Project files (project_id IS NOT NULL): check project access
     const isOrganizationFile = file.project_id == null;
 
     if (isOrganizationFile) {
       // Organization-level file: verify user belongs to the same org
-      if (Number(file.org_id) !== orgId) {
+      if (Number(file.organization_id) !== orgId) {
         await logFailure({
           eventType: "Error",
           description: `Unauthorized access attempt to file ${fileId}`,
@@ -866,13 +866,13 @@ export const removeFile = async (req: Request, res: Response): Promise<any> => {
     }
 
     // Authorization check based on file type:
-    // - Organization files (project_id IS NULL): check org_id
+    // - Organization files (project_id IS NULL): check organization_id
     // - Project files (project_id IS NOT NULL): check project access
     const isOrganizationFile = file.project_id == null;
 
     if (isOrganizationFile) {
       // Organization-level file: verify user belongs to the same org
-      if (Number(file.org_id) !== orgId) {
+      if (Number(file.organization_id) !== orgId) {
         await logFailure({
           eventType: "Error",
           description: `Unauthorized deletion attempt for file ${fileId}`,
@@ -1035,7 +1035,7 @@ export const getFileMetadata = async (req: Request, res: Response): Promise<any>
 
     if (isOrganizationFile) {
       // Organization-level file: verify user belongs to the same org
-      if (Number(file.org_id) !== orgId) {
+      if (Number(file.organization_id) !== orgId) {
         return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
       }
     } else {
@@ -1132,7 +1132,7 @@ export const updateMetadata = async (req: Request, res: Response): Promise<any> 
 
     if (isOrganizationFile) {
       // Organization-level file: verify user belongs to the same org
-      if (Number(currentFile.org_id) !== orgId) {
+      if (Number(currentFile.organization_id) !== orgId) {
         return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
       }
     } else {
@@ -1406,7 +1406,7 @@ export const previewFile = async (req: Request, res: Response): Promise<any> => 
 
     if (isOrganizationFile) {
       // Organization-level file: verify user belongs to the same org
-      if (Number(fileMeta.org_id) !== orgId) {
+      if (Number(fileMeta.organization_id) !== orgId) {
         return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
       }
     } else {
@@ -1463,7 +1463,6 @@ export const previewFile = async (req: Request, res: Response): Promise<any> => 
       "image/svg+xml", // Note: SVG can contain scripts but browser should respect nosniff
       "text/plain",
       "text/csv",
-      "text/html", // Will be treated as plain text due to CSP
       "application/json",
       "application/xml",
       "text/xml",
@@ -1490,6 +1489,8 @@ export const previewFile = async (req: Request, res: Response): Promise<any> => 
     res.setHeader("Content-Disposition", `inline; filename="${safeFilename}"`);
     res.setHeader("Content-Length", preview.content.length);
 
+    // preview.content is sanitized binary/Buffer data loaded from storage; CSP is set above.
+    // nosemgrep: javascript.express.security.audit.xss.direct-response-write.direct-response-write
     res.send(preview.content);
 
     await logSuccess({

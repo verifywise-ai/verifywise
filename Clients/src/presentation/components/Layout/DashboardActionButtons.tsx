@@ -1,6 +1,6 @@
 import { useState, useMemo, memo, useCallback, useEffect, type ReactNode } from "react";
 import { Stack, IconButton, Box } from "@mui/material";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router";
 import { Search, Zap, WorkflowIcon, Package, ClipboardList } from "lucide-react";
 import { useAuth } from "../../../application/hooks/useAuth";
 import VWTooltip from "../VWTooltip";
@@ -80,8 +80,12 @@ export const DashboardActionButtons = memo(function DashboardActionButtons({
     () => location.pathname === "/" || location.pathname === "",
     [location.pathname],
   );
+  // Tenant chrome (approvals, notifications, etc.) has no place in the
+  // super-admin module — its API calls target the caller's org, which a
+  // pure SuperAdmin doesn't have.
+  const isSuperAdminRoute = location.pathname.startsWith("/super-admin");
 
-  const shouldHide = hideOnMainDashboard && isMainDashboard;
+  const shouldHide = (hideOnMainDashboard && isMainDashboard) || isSuperAdminRoute;
 
   const handleOpenCommandPalette = useCallback(() => {
     const event = new KeyboardEvent("keydown", {
@@ -123,10 +127,11 @@ export const DashboardActionButtons = memo(function DashboardActionButtons({
     }
   }, []);
 
-  // Initial fetch on mount
+  // Initial fetch on mount (skip on super-admin routes — no org context)
   useEffect(() => {
+    if (isSuperAdminRoute) return;
     fetchApprovalCounts();
-  }, [fetchApprovalCounts]);
+  }, [fetchApprovalCounts, isSuperAdminRoute]);
 
   return (
     <Stack
@@ -214,11 +219,11 @@ export const DashboardActionButtons = memo(function DashboardActionButtons({
         </VWTooltip>
       )}
 
-      {/* Integrations */}
+      {/* Extensions */}
       <VWTooltip
-        header="Plugins"
+        header="Extensions"
         content={
-          isAdmin ? "Browse and manage plugins from the marketplace." : "Admin access required."
+          isAdmin ? "Enable or disable extensions for your organization." : "Admin access required."
         }
         placement="bottom"
         maxWidth={200}
@@ -226,9 +231,9 @@ export const DashboardActionButtons = memo(function DashboardActionButtons({
         <span>
           <IconButton
             size="small"
-            onClick={isAdmin ? () => navigate("/plugins/marketplace") : undefined}
+            onClick={isAdmin ? () => navigate("/extensions") : undefined}
             disabled={!isAdmin}
-            aria-label="Plugins marketplace"
+            aria-label="Extensions"
             sx={{ ...baseStyles, ...actionButtonsStyles.integrations }}
           >
             <Package size={16} />

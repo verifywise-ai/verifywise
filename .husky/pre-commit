@@ -1,1 +1,10 @@
-cd Servers && npx lint-staged
+# Secret scanning: scan staged changes with gitleaks before linting.
+# Soft dependency: if gitleaks is not installed we warn and continue so
+# developers without it are not blocked (CI/server-side scans still apply).
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks protect --staged --verbose
+else
+  echo "\033[33mWARNING: gitleaks not found on PATH — skipping staged secret scan. Install gitleaks to enable pre-commit secret detection.\033[0m"
+fi
+
+cd Servers && npx lint-staged && cd ../Clients && npx lint-staged

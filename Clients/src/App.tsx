@@ -1,4 +1,4 @@
-import { Routes } from "react-router-dom";
+import { Routes } from "react-router";
 import "./App.css";
 import { ThemeProvider } from "@emotion/react";
 import light from "./presentation/themes/light";
@@ -28,7 +28,7 @@ import {
 import Alert from "./presentation/components/Alert";
 import useUsers from "./application/hooks/useUsers";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router";
 import { clearChunkReloadFlag } from "./application/utils/deploymentHelpers";
 import ChunkErrorBoundary from "./presentation/components/ChunkErrorBoundary";
 import { CommandPalette } from "./presentation/components/CommandPalette";
@@ -42,9 +42,8 @@ import {
   useUserGuideSidebarContext,
 } from "./presentation/components/UserGuide";
 import { AdvisorConversationProvider } from "./application/contexts/AdvisorConversation.context";
-import { PluginRegistryProvider } from "./application/contexts/PluginRegistry.context";
+import { ExtensionsProvider } from "./application/contexts/Extensions.context";
 import { SmartPromptProvider } from "./application/contexts/SmartPrompt.context";
-import PluginLoader from "./presentation/components/PluginLoader";
 import SmartPrompt from "./presentation/components/SmartPrompt";
 // SSE notifications disabled for now - can be re-enabled later if needed
 // import { useNotifications } from "./application/hooks/useNotifications";
@@ -265,8 +264,7 @@ function App() {
       <Provider store={store}>
         <PersistGate loading={null} persistor={persistor}>
           <VerifyWiseContext.Provider value={contextValues}>
-            <PluginRegistryProvider>
-              <PluginLoader />
+            <ExtensionsProvider>
               <UserGuideSidebarProvider>
                 <SmartPromptProvider>
                   <ConditionalThemeWrapper>
@@ -300,7 +298,7 @@ function App() {
                   </ConditionalThemeWrapper>
                 </SmartPromptProvider>
               </UserGuideSidebarProvider>
-            </PluginRegistryProvider>
+            </ExtensionsProvider>
           </VerifyWiseContext.Provider>
         </PersistGate>
       </Provider>

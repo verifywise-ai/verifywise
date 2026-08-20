@@ -26,14 +26,13 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@v7
         with:
           python-version: '3.12'
           cache: 'pip'
           cache-dependency-path: |
             EvalServer/requirements.txt
             EvalServer/requirements-test.txt
-            EvaluationModule/requirements.txt
 
       - name: Install EvalServer runtime + test dependencies
         working-directory: EvalServer
@@ -45,9 +44,11 @@ jobs:
           # import EvalServer source modules that require them.
           pip install -r requirements.txt
 
-      - name: Install EvaluationModule runtime dependencies
-        working-directory: EvaluationModule
-        run: pip install -r requirements.txt
+      - name: Audit EvalServer dependencies (pip-audit)
+        working-directory: EvalServer
+        run: |
+          python -m pip install pip-audit
+          python -m pip_audit -r requirements.txt
 
       - name: Run EvalServer tests (excluding integration smoke tests)
         working-directory: EvalServer
@@ -62,7 +63,55 @@ jobs:
             --ignore=tests/test_integration_openrouter.py \
             -m "not integration"
 
+  evaluation-module-tests:
+    name: EvaluationModule Tests (pytest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: EvaluationModule
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: |
+            EvaluationModule/requirements.txt
+
+      - name: Cache EvaluationModule virtualenv
+        uses: actions/cache@v6
+        with:
+          path: EvaluationModule/.venv
+          key: evaluationmodule-venv-${{ runner.os }}-3.12-${{ hashFiles('EvaluationModule/requirements.txt', 'EvaluationModule/requirements-test.txt') }}
+          restore-keys: |
+            evaluationmodule-venv-${{ runner.os }}-3.12-
+
+      - name: Create virtualenv
+        run: |
+          if [ ! -x .venv/bin/python ]; then
+            rm -rf .venv
+            python -m venv .venv
+          fi
+
+      - name: Install EvaluationModule runtime + test dependencies
+        run: |
+          .venv/bin/python -m pip install --upgrade pip
+          .venv/bin/python -m pip install pytest
+          .venv/bin/python -m pip install -r requirements.txt
+
+      - name: Audit EvaluationModule dependencies (pip-audit)
+        run: |
+          .venv/bin/python -m pip install pip-audit
+          .venv/bin/python -m pip_audit -r requirements.txt
+
+      - name: Install EvaluationModule test mocks
+        run: .venv/bin/python -m pip install respx
+
       - name: Run EvaluationModule tests
         working-directory: EvaluationModule
         run: |
-          python -m pytest tests/ -v -m "not integration"
+          .venv/bin/python -m pytest tests/ -v -m "not integration"

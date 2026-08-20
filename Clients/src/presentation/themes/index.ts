@@ -9,19 +9,6 @@ export { default as singleTheme } from "./v1SingleTheme";
 export { alertStyles } from "./alerts";
 export { tableStyles } from "./tables";
 export { palette, default as colorPalette } from "./palette";
-export {
-  grey,
-  green,
-  red,
-  amber,
-  orange,
-  blue,
-  indigo,
-  purple,
-  teal,
-  pink,
-  default as grayScale,
-} from "./primitives";
 
 export * from "./mixins";
 export * from "./components";

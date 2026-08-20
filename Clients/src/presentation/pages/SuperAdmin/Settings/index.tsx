@@ -1,12 +1,14 @@
 import { useState, type SyntheticEvent } from "react";
 import TabPanel from "@mui/lab/TabPanel";
 import TabContext from "@mui/lab/TabContext";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router";
 import { Settings } from "lucide-react";
 import TabBar, { TabItem } from "../../../components/TabBar";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
 import Profile from "../../SettingsPage/Profile";
 import Password from "../../SettingsPage/Password";
+import Monitoring from "./Monitoring";
+import SuperAdmins from "./SuperAdmins";
 
 export default function SuperAdminSettings() {
   const navigate = useNavigate();
@@ -49,6 +51,18 @@ export default function SuperAdminSettings() {
               icon: "Lock" as TabItem["icon"],
               tooltip: "Update your account password",
             },
+            {
+              label: "Monitoring",
+              value: "monitoring",
+              icon: "Activity" as TabItem["icon"],
+              tooltip: "Send logs and metrics to a central observability stack",
+            },
+            {
+              label: "Super Admins",
+              value: "super-admins",
+              icon: "Crown" as TabItem["icon"],
+              tooltip: "Elect other users as Super Admins",
+            },
           ]}
           activeTab={activeTab}
           onChange={handleTabChange}
@@ -60,6 +74,14 @@ export default function SuperAdminSettings() {
 
         <TabPanel sx={{ p: 0 }} value="password">
           <Password />
+        </TabPanel>
+
+        <TabPanel sx={{ p: 0 }} value="monitoring">
+          <Monitoring />
+        </TabPanel>
+
+        <TabPanel sx={{ p: 0 }} value="super-admins">
+          <SuperAdmins />
         </TabPanel>
       </TabContext>
     </PageHeaderExtended>

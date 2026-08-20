@@ -1,4 +1,5 @@
 import { Box, Typography, Stack, CircularProgress } from "@mui/material";
+import { isCompletedStatus } from "../../../../domain/types/Status";
 import { useEffect, useState } from "react";
 import {
   Shield,
@@ -394,7 +395,7 @@ const AnnexOverviewCard = ({ frameworksData, onNavigate }: AnnexOverviewCardProp
                           fontWeight: 600,
                         }}
                       >
-                        {category.items.filter((item) => item.status === "Implemented").length}/
+                        {category.items.filter((item) => isCompletedStatus(item.status)).length}/
                         {category.items.length}
                       </Typography>
                       <Typography

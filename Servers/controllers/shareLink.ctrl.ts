@@ -676,18 +676,89 @@ export const getSharedDataByToken = async (req: Request, res: Response) => {
     const resourceType = shareLink.resource_type;
     const resourceId = shareLink.resource_id;
 
-    // Map resource types to table names
-    const tableNameMap: { [key: string]: string } = {
-      model: "model_inventories",
-      vendor: "vendors",
-      project: "projects",
-      policy: "policies",
-      risk: "projectrisks",
+    // Map resource types to static, parameterized queries. Table names are kept
+    // literal to avoid identifier-injection false positives while still allowing
+    // only the allow-listed resource types below.
+    const resourceQueries: {
+      [key: string]: { tableView: string; singleRecord: string };
+    } = {
+      model: {
+        tableView: `
+          SELECT
+            mi.*,
+            COALESCE(
+              NULLIF(TRIM(CONCAT(COALESCE(u.name, ''), ' ', COALESCE(u.surname, ''))), ''),
+              NULL
+            ) as approver_name
+          FROM model_inventories mi
+          LEFT JOIN users u ON mi.approver = u.id
+          WHERE mi.organization_id = $1
+          ORDER BY mi.id DESC
+          LIMIT 100;
+        `,
+        singleRecord: `
+          SELECT * FROM model_inventories
+          WHERE id = $1 AND organization_id = $2
+          LIMIT 1;
+        `,
+      },
+      vendor: {
+        tableView: `
+          SELECT * FROM vendors
+          WHERE organization_id = $1
+          ORDER BY id DESC
+          LIMIT 100;
+        `,
+        singleRecord: `
+          SELECT * FROM vendors
+          WHERE id = $1 AND organization_id = $2
+          LIMIT 1;
+        `,
+      },
+      project: {
+        tableView: `
+          SELECT * FROM projects
+          WHERE organization_id = $1
+          ORDER BY id DESC
+          LIMIT 100;
+        `,
+        singleRecord: `
+          SELECT * FROM projects
+          WHERE id = $1 AND organization_id = $2
+          LIMIT 1;
+        `,
+      },
+      policy: {
+        tableView: `
+          SELECT * FROM policies
+          WHERE organization_id = $1
+          ORDER BY id DESC
+          LIMIT 100;
+        `,
+        singleRecord: `
+          SELECT * FROM policies
+          WHERE id = $1 AND organization_id = $2
+          LIMIT 1;
+        `,
+      },
+      risk: {
+        tableView: `
+          SELECT * FROM projectrisks
+          WHERE organization_id = $1
+          ORDER BY id DESC
+          LIMIT 100;
+        `,
+        singleRecord: `
+          SELECT * FROM projectrisks
+          WHERE id = $1 AND organization_id = $2
+          LIMIT 1;
+        `,
+      },
     };
 
-    const tableName = tableNameMap[resourceType];
+    const queries = resourceQueries[resourceType];
 
-    if (!tableName) {
+    if (!queries) {
       logStructured(
         "error",
         `unsupported resource type: ${resourceType}`,
@@ -706,30 +777,11 @@ export const getSharedDataByToken = async (req: Request, res: Response) => {
     // If resource_id is 0, fetch all records (table view)
     // Otherwise, fetch specific record
     if (resourceId === 0) {
-      // For model_inventories, join with users table to get approver name
-      if (resourceType === "model") {
-        resourceQuery = `
-          SELECT
-            mi.*,
-            COALESCE(
-              NULLIF(TRIM(CONCAT(COALESCE(u.name, ''), ' ', COALESCE(u.surname, ''))), ''),
-              NULL
-            ) as approver_name
-          FROM ${tableName} mi
-          LEFT JOIN users u ON mi.approver = u.id
-          WHERE mi.organization_id = $1
-          ORDER BY mi.id DESC
-          LIMIT 100;
-        `;
-      } else {
-        resourceQuery = `
-          SELECT * FROM ${tableName}
-          WHERE organization_id = $1
-          ORDER BY id DESC
-          LIMIT 100;
-        `;
-      }
+      resourceQuery = queries.tableView;
 
+      // resourceQuery is selected from a static, parameterized map above and is
+      // never built from user input; binds are used for all variable values.
+      // nosemgrep: javascript.sequelize.security.audit.sequelize-injection-express.express-sequelize-injection
       resourceResult = (await sequelize.query(resourceQuery, {
         bind: [shareLinkOrgId],
         type: QueryTypes.SELECT,
@@ -748,12 +800,11 @@ export const getSharedDataByToken = async (req: Request, res: Response) => {
       resourceData = resourceResult; // Return array of records for table view (can be empty)
     } else {
       // Fetch single record
-      resourceQuery = `
-        SELECT * FROM ${tableName}
-        WHERE id = $1 AND organization_id = $2
-        LIMIT 1;
-      `;
+      resourceQuery = queries.singleRecord;
 
+      // resourceQuery is selected from a static, parameterized map above and is
+      // never built from user input; binds are used for all variable values.
+      // nosemgrep: javascript.sequelize.security.audit.sequelize-injection-express.express-sequelize-injection
       resourceResult = (await sequelize.query(resourceQuery, {
         bind: [resourceId, shareLinkOrgId],
         type: QueryTypes.SELECT,

@@ -73,8 +73,17 @@ vi.mock("../../../components/Modals/NewDataset", () => ({
   default: () => null,
 }));
 
-vi.mock("../../../components/PluginSlot", () => ({
-  PluginSlot: () => null,
+vi.mock("../../../../application/contexts/Extensions.context", () => ({
+  useExtensions: () => ({ isEnabled: () => false }),
+  ExtensionsProvider: ({ children }: { children: any }) => children,
+}));
+
+vi.mock("../../Extensions/dataset-bulk-upload/BulkUploadButton", () => ({
+  default: () => null,
+}));
+
+vi.mock("../../Extensions/dataset-bulk-upload/BulkUploadModal", () => ({
+  default: () => null,
 }));
 
 import Datasets from "../index";

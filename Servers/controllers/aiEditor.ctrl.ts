@@ -72,10 +72,6 @@ export async function editorAICommand(req: Request, res: Response): Promise<void
     const url = apiKey.url || getLLMProviderUrl(apiKey.name as LLMProvider);
     const model = createModel(apiKey.name, apiKey.key || "", url, apiKey.model);
 
-    logger.debug(
-      `[AI Editor] Streaming for org: ${organizationId}, provider: ${apiKey.name}, model: ${apiKey.model}`,
-    );
-
     const result = streamText({
       model,
       system: SYSTEM_PROMPT,

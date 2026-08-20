@@ -4,9 +4,10 @@
  * Single source of truth for ALL colors across every module:
  * Governance, LLM Evals, AI Detection, Shadow AI, Model Inventory.
  *
- * Grey, green, red, amber, orange, blue, indigo, purple, teal, and pink tokens
- * derive from primitives.ts.
- * Other status, risk, accent, and chart hues remain here until their scales are defined.
+ * Design philosophy: calm, pastel backgrounds with muted text —
+ * derived from the Chip component's proven palette. All status,
+ * risk, chart, and accent colors live here so every module stays
+ * visually coherent.
  *
  * Usage:
  *   import { palette } from '@/presentation/themes/palette';
@@ -15,19 +16,18 @@
  * Migration guide: see /docs/COLOR_MIGRATION.md
  */
 
-import { grey, green, red, amber, orange, blue, indigo, purple, teal, pink } from "./primitives";
-
 // ---------------------------------------------------------------------------
 // 1. Semantic status colors (success / error / warning / info / default)
 //    Background = light pastel, text = muted dark tone.
 // ---------------------------------------------------------------------------
 
 export const status = {
-  success: { bg: green[200], text: green[600], border: green[300] },
-  error: { bg: red[200], text: red[500], border: red[300] },
-  warning: { bg: amber[100], text: amber[600], border: amber[200] },
-  info: { bg: blue[50], text: blue[800], border: blue[100] },
-  default: { bg: grey[100], text: grey[500], border: grey[200] },
+  // strong = vivid green reserved for transient confirmations (e.g. save success)
+  success: { bg: "#E6F4EA", text: "#138A5E", border: "#C8E6D0", strong: "#079455" },
+  error: { bg: "#FFD6D6", text: "#D32F2F", border: "#F5B8B8" },
+  warning: { bg: "#FFF8E1", text: "#795548", border: "#F5E6B8" },
+  info: { bg: "#E3F2FD", text: "#1565C0", border: "#BBDEFB" },
+  default: { bg: "#F3F4F6", text: "#6B7280", border: "#E5E7EB" },
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -36,10 +36,10 @@ export const status = {
 // ---------------------------------------------------------------------------
 
 export const risk = {
-  critical: { bg: red[200], text: red[500], border: red[300] },
-  high: { bg: orange[100], text: orange[600], border: orange[200] },
-  medium: { bg: amber[100], text: amber[600], border: amber[200] },
-  low: { bg: green[200], text: green[600], border: green[300] },
+  critical: { bg: "#FFD6D6", text: "#D32F2F", border: "#F5B8B8" },
+  high: { bg: "#FFE5D0", text: "#E64A19", border: "#F5CDB0" },
+  medium: { bg: "#FFF8E1", text: "#795548", border: "#F5E6B8" },
+  low: { bg: "#E6F4EA", text: "#138A5E", border: "#C8E6D0" },
   veryLow: { bg: "#E0F7FA", text: "#00695C", border: "#B2EBF2" },
 } as const;
 
@@ -61,14 +61,14 @@ export const severity = {
 // ---------------------------------------------------------------------------
 
 export const accent = {
-  primary: { bg: green[100], text: green[700], border: green[400] },
-  indigo: { bg: indigo[50], text: indigo[600], border: indigo[100] },
-  purple: { bg: purple[50], text: purple[600], border: purple[100] },
-  orange: { bg: orange[50], text: orange[600], border: orange[200] },
-  teal: { bg: teal[50], text: teal[800], border: teal[100] },
-  blue: { bg: blue[50], text: blue[800], border: blue[100] },
-  pink: { bg: pink[50], text: pink[800], border: pink[100] },
-  amber: { bg: amber[100], text: amber[700], border: amber[200] },
+  primary: { bg: "#E6F0EC", text: "#13715B", border: "#C2DDD3" },
+  indigo: { bg: "#E8EAF6", text: "#3949AB", border: "#C5CAE9" },
+  purple: { bg: "#EDE7F6", text: "#5E35B1", border: "#D1C4E9" },
+  orange: { bg: "#FFF3E0", text: "#E65100", border: "#FFE0B2" },
+  teal: { bg: "#E0F2F1", text: "#00695C", border: "#B2DFDB" },
+  blue: { bg: "#E3F2FD", text: "#1565C0", border: "#BBDEFB" },
+  pink: { bg: "#FCE4EC", text: "#AD1457", border: "#F8BBD0" },
+  amber: { bg: "#FFF8E1", text: "#FF8F00", border: "#FFECB3" },
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -89,19 +89,19 @@ export const chart = [
 ] as const;
 
 // ---------------------------------------------------------------------------
-// 6. Text hierarchy (Figma grey scale)
+// 6. Text hierarchy (from theme — repeated here for palette completeness)
 // ---------------------------------------------------------------------------
 
 export const text = {
-  primary: grey[900],
-  secondary: grey[700],
-  tertiary: grey[600],
-  accent: grey[400],
-  disabled: grey[350],
-  black: grey[950],
-  icon: grey[450],
-  muted: grey[600],
-  subdued: grey[450],
+  primary: "#1c2130",
+  secondary: "#344054",
+  tertiary: "#475467",
+  accent: "#838c99",
+  disabled: "#9CA3AF",
+  black: "#000000",
+  icon: "#667085",
+  muted: "#98A2B3",
+  subdued: "#616161",
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -109,24 +109,24 @@ export const text = {
 // ---------------------------------------------------------------------------
 
 export const background = {
-  main: grey[50],
-  alt: grey[100],
-  modal: grey[100],
-  fill: green[100],
-  accent: grey[100],
-  hover: grey[150],
-  selected: green[100],
-  surface: grey[150],
+  main: "#FFFFFF",
+  alt: "#FCFCFD",
+  modal: "#FCFCFD",
+  fill: "#E6F0EC",
+  accent: "#f9fafb",
+  hover: "#F3F4F6",
+  selected: "#E6F0EC",
+  surface: "#f5f5f5",
   gradientStop: "#f8fafc",
 } as const;
 
 // ---------------------------------------------------------------------------
-// 8. Borders (Figma grey scale)
+// 8. Borders
 // ---------------------------------------------------------------------------
 
 export const border = {
-  light: grey[200],
-  dark: grey[300],
+  light: "#eaecf0",
+  dark: "#d0d5dd",
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -134,11 +134,50 @@ export const border = {
 // ---------------------------------------------------------------------------
 
 export const brand = {
-  primary: green[700],
-  primaryHover: green[900],
-  primaryLight: green[100],
-  primaryDark: green[800],
+  primary: "#13715B",
+  primaryHover: "#0F5A47",
+  primaryLight: "#E6F0EC",
+  primaryDark: "#10614d",
 } as const;
+
+// ---------------------------------------------------------------------------
+// 10. Policy editor tokens (TipTap surface, toolbar, image node)
+//     Module-specific values without a semantic slot above — kept here so
+//     editor component files stay free of hardcoded hex literals.
+// ---------------------------------------------------------------------------
+
+export const editor = {
+  highlight: "#fef08a", // <mark> and search-match fill
+  searchRing: "#eab308", // ring around the active search match
+  codeBlockBg: "#1e1e1e",
+  codeBlockText: "#d4d4d4",
+  historyActiveBg: "#E6F4F1", // history sidebar toggle, active
+  historyActiveHoverBg: "#D1EDE6", // history sidebar toggle, active hover
+  imageErrorBg: "#fee2e2",
+  imageErrorText: "#991b1b",
+  imagePlaceholderBg: "#f0f0f0",
+  imagePlaceholderText: "#666666",
+} as const;
+
+// ---------------------------------------------------------------------------
+// 11. User-facing text colors (policy editor color-picker swatches)
+//     Content colors chosen by the document author — not theme colors.
+// ---------------------------------------------------------------------------
+
+export const userTextColors = [
+  "#dc2626",
+  "#ea580c",
+  "#d97706",
+  "#ca8a04",
+  "#16a34a",
+  "#059669",
+  "#0d9488",
+  "#0891b2",
+  "#2563eb",
+  "#4f46e5",
+  "#7c3aed",
+  "#9333ea",
+] as const;
 
 // ---------------------------------------------------------------------------
 // Combined export
@@ -154,6 +193,7 @@ export const palette = {
   background,
   border,
   brand,
+  editor,
 } as const;
 
 export default palette;

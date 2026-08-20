@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router";
 import {
   Box,
   Typography,
@@ -47,6 +47,7 @@ import { CustomizableButton } from "../../../components/button/customizable-butt
 import Chip from "../../../components/Chip";
 import Field from "../../../components/Inputs/Field";
 import Select from "../../../components/Inputs/Select";
+import AutoCompleteField from "../../../components/Inputs/Autocomplete";
 import StandardModal from "../../../components/Modals/StandardModal";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
 import { EmptyState } from "../../../components/EmptyState";
@@ -230,8 +231,13 @@ export default function PromptEditorPage() {
   const [model, setModel] = useState("");
   const [config, setConfig] = useState<Record<string, any>>({});
   const { providers: gwProviders, getModelsForProvider: gwModelsFor } = useGatewayModels();
-  // Build flat model list from all providers for the model metadata dropdown
-  const allModelItems = gwProviders.flatMap((p) => gwModelsFor(p));
+  // Build flat model list from all providers for the model metadata dropdown.
+  // Memoized so the (potentially 2,500+ item) array keeps a stable identity
+  // across unrelated re-renders — the Autocomplete below relies on this.
+  const allModelItems = useMemo(
+    () => gwProviders.flatMap((p) => gwModelsFor(p)),
+    [gwProviders, gwModelsFor],
+  );
   const [currentVersion, setCurrentVersion] = useState<number | null>(null);
   const [currentStatus, setCurrentStatus] = useState<"draft" | "published">("draft");
   const [isSaving, setIsSaving] = useState(false);
@@ -284,6 +290,15 @@ export default function PromptEditorPage() {
 
   const detectedVars = useMemo(() => extractVars(messages), [messages]);
   const detectedRefs = useMemo(() => extractPromptRefs(messages), [messages]);
+
+  // Resolve the currently-selected model to an option object. Fall back to a
+  // synthetic option when the saved model is not in the catalogue (still
+  // loading, deprecated, or its provider was filtered out) so the field keeps
+  // showing the saved value instead of silently going blank.
+  const selectedModelOption = useMemo(() => {
+    if (!model) return null;
+    return allModelItems.find((item) => item._id === model) ?? { _id: model, name: model };
+  }, [model, allModelItems]);
 
   const loadVersionIntoEditor = (v: Version) => {
     setMessages(
@@ -652,15 +667,16 @@ export default function PromptEditorPage() {
 
           {/* Model + config */}
           <Box sx={{ display: "flex", gap: "16px", mb: "16px", alignItems: "flex-end" }}>
-            <Select
+            <AutoCompleteField
               id="prompt-model-select"
               label="Model"
-              value={model}
-              onChange={(e) => setModel(e.target.value as string)}
-              items={allModelItems}
-              placeholder="Select model"
+              value={selectedModelOption}
+              onChange={(_, newValue) => setModel(newValue?._id ?? "")}
+              options={allModelItems}
+              getOptionLabel={(item) => item._id}
+              isOptionEqualToValue={(option, val) => option._id === val?._id}
+              placeholder="Search models..."
               sx={{ flex: 1 }}
-              getOptionValue={(item) => item._id}
             />
             <IconButton
               size="small"

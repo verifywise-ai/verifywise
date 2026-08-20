@@ -26,13 +26,45 @@ import { ScheduleFrequency } from "../domain.layer/interfaces/i.aiDetectionRepos
 import { generateWebhookSecret } from "../services/webhook.service";
 
 import { translateError } from "../utils/i18n.utils";
+const GITHUB_SSH_PREFIX = "git@github.com:";
+const MAX_GITHUB_URL_LENGTH = 500;
+
 /**
- * Parse GitHub URL to extract owner and repo name
+ * Parse a GitHub URL (HTTPS or SSH) to extract owner and repo name.
+ *
+ * Implemented without ambiguous regexes to avoid ReDoS on long/pathological
+ * inputs.
  */
 function parseGitHubUrl(url: string): { owner: string; name: string } | null {
-  const match = url.match(/github\.com[/:]([^/]+)\/([^/.]+)/);
-  if (!match) return null;
-  return { owner: match[1], name: match[2].replace(/\.git$/, "") };
+  if (typeof url !== "string" || url.length > MAX_GITHUB_URL_LENGTH) {
+    return null;
+  }
+
+  const trimmed = url.trim();
+  let path = "";
+
+  if (trimmed.toLowerCase().startsWith(GITHUB_SSH_PREFIX)) {
+    path = trimmed.slice(GITHUB_SSH_PREFIX.length);
+  } else {
+    try {
+      const parsed = new URL(trimmed);
+      if (!/^(?:www\.)?github\.com$/i.test(parsed.hostname)) {
+        return null;
+      }
+      path = parsed.pathname;
+    } catch {
+      return null;
+    }
+  }
+
+  // Strip optional .git suffix.
+  path = path.replace(/\.git$/i, "");
+  const parts = path.split("/").filter(Boolean);
+  if (parts.length < 2) return null;
+
+  const [owner, name] = parts;
+  if (!owner || !name) return null;
+  return { owner, name };
 }
 
 // ============================================================================

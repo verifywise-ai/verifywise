@@ -19,7 +19,6 @@ import {
 } from "lucide-react";
 import CustomizableSkeleton from "../../components/Skeletons";
 import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
-import { usePluginRegistry } from "../../../application/contexts/PluginRegistry.context";
 import useMultipleOnScreen from "../../../application/hooks/useMultipleOnScreen";
 import useFrameworks from "../../../application/hooks/useFrameworks";
 import useUsers from "../../../application/hooks/useUsers";
@@ -41,7 +40,7 @@ import StandardModal from "../../components/Modals/StandardModal";
 import { deleteProject } from "../../../application/repository/project.repository";
 import { FrameworkTypeEnum } from "../../components/Forms/ProjectForm/constants";
 import NoProject from "../../components/NoProject/NoProject";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import { ButtonToggle } from "../../components/button-toggle";
 import FrameworkDashboard from "./Dashboard";
@@ -51,14 +50,14 @@ import FrameworkLinkedModels from "./FrameworkLinkedModels";
 import PageTour from "../../components/PageTour";
 import FrameworkSteps from "./FrameworkSteps";
 import TabBar from "../../components/TabBar";
-import { PluginSlot } from "../../components/PluginSlot";
-import { PLUGIN_SLOTS } from "../../../domain/constants/pluginSlots";
 import NISTAIRMFGovern from "./NIST-AI-RMF/Govern";
 import NISTAIRMFMap from "./NIST-AI-RMF/Map";
 import NISTAIRMFMeasure from "./NIST-AI-RMF/Measure";
 import NISTAIRMFManage from "./NIST-AI-RMF/Manage";
+import GenericFramework from "./Generic";
 import { brand } from "../../themes/palette";
 import GovernanceIntelligenceContextBar from "../../components/GovernanceOS/GovernanceIntelligenceContextBar";
+import { storageService } from "../../../infrastructure/storage";
 
 // Tab styles following ProjectFrameworks pattern
 const tabStyle = {
@@ -84,12 +83,6 @@ const tabListStyle = {
     columnGap: "34px",
   },
 };
-
-// localStorage keys for persisting tab state
-const FRAMEWORK_SELECTED_KEY = "verifywise_framework_selected";
-const ISO27001_TAB_KEY = "verifywise_iso27001_tab";
-const ISO42001_TAB_KEY = "verifywise_iso42001_tab";
-const NIST_AI_RMF_TAB_KEY = "verifywise_nist_ai_rmf_tab";
 
 const Framework = () => {
   const [searchParams] = useSearchParams();
@@ -117,7 +110,6 @@ const Framework = () => {
 
   const { changeComponentVisibility, projects, userRoleName, setProjects } =
     useContext(VerifyWiseContext);
-  const { getComponentsForSlot } = usePluginRegistry();
   const { refs, allVisible } = useMultipleOnScreen<HTMLElement>({
     countToTrigger: 1,
   });
@@ -204,9 +196,15 @@ const Framework = () => {
     }
   };
 
-  // Fetch all frameworks
+  // Stable reference for the frameworks list — otherwise every render
+  // hands useFrameworks a fresh `[]` (or a new derived array) and the
+  // downstream memo recomputes, cascading re-renders + duplicate fetches.
+  const orgFrameworkList = useMemo(
+    () => organizationalProject?.framework ?? [],
+    [organizationalProject?.framework],
+  );
   const { allFrameworks, loading, error, refreshFilteredFrameworks } = useFrameworks({
-    listOfFrameworks: organizationalProject?.framework || [], // Use organizational project's frameworks
+    listOfFrameworks: orgFrameworkList,
   });
 
   // Only show frameworks that are actually assigned to the organizational project
@@ -218,17 +216,11 @@ const Framework = () => {
     // Get framework IDs from the organizational project
     const projectFrameworkIds = organizationalProject.framework.map((f) => Number(f.framework_id));
 
-    // Filter frameworks to only include those assigned to the project and exclude EU AI Act
+    // Filter to organizational frameworks assigned to the org project.
     const filtered = allFrameworks.filter((framework) => {
       const frameworkId = Number(framework.id);
       const isAssignedToProject = projectFrameworkIds.includes(frameworkId);
-      const isNotEuAiAct = !framework.name.toLowerCase().includes("eu ai act");
-      const isComplianceFramework =
-        framework.name.toLowerCase().includes("iso 27001") ||
-        framework.name.toLowerCase().includes("iso 42001") ||
-        framework.name.toLowerCase().includes("nist ai rmf");
-
-      return isAssignedToProject && isNotEuAiAct && isComplianceFramework;
+      return isAssignedToProject && framework.is_organizational;
     });
 
     // Sort to ensure ISO 42001 appears first, then ISO 27001, then NIST AI RMF
@@ -270,18 +262,18 @@ const Framework = () => {
   // Default to "dashboard"
   const [mainTabValue, setMainTabValue] = useState(tab || "dashboard");
   const [selectedFramework, setSelectedFramework] = useState<number>(() => {
-    const saved = localStorage.getItem(FRAMEWORK_SELECTED_KEY);
+    const saved = storageService.get("frameworkSelected", "0");
     return saved ? parseInt(saved, 10) : 0;
   });
-  const [iso27001TabValue, setIso27001TabValue] = useState(() => {
-    return localStorage.getItem(ISO27001_TAB_KEY) || "clause";
-  });
-  const [iso42001TabValue, setIso42001TabValue] = useState(() => {
-    return localStorage.getItem(ISO42001_TAB_KEY) || "clauses";
-  });
-  const [nistAiRmfTabValue, setNistAiRmfTabValue] = useState(() => {
-    return localStorage.getItem(NIST_AI_RMF_TAB_KEY) || "govern";
-  });
+  const [iso27001TabValue, setIso27001TabValue] = useState(() =>
+    storageService.get("iso27001Tab", "clause"),
+  );
+  const [iso42001TabValue, setIso42001TabValue] = useState(() =>
+    storageService.get("iso42001Tab", "clauses"),
+  );
+  const [nistAiRmfTabValue, setNistAiRmfTabValue] = useState(() =>
+    storageService.get("nistAiRmfTab", "govern"),
+  );
 
   const [risksFrameworkIndex, setRisksFrameworkIndex] = useState(0);
   const [linkedModelsFrameworkIndex, setLinkedModelsFrameworkIndex] = useState(0);
@@ -292,9 +284,9 @@ const Framework = () => {
     if (newTabValue !== mainTabValue) {
       setMainTabValue(newTabValue);
 
-      // When navigating to controls, re-read localStorage for framework/tab selection
+      // When navigating to controls, re-read storage for framework/tab selection
       if (newTabValue === "controls") {
-        const savedFramework = localStorage.getItem(FRAMEWORK_SELECTED_KEY);
+        const savedFramework = storageService.get("frameworkSelected", "0");
         if (savedFramework !== null) {
           const frameworkIndex = parseInt(savedFramework, 10);
           if (!isNaN(frameworkIndex) && frameworkIndex !== selectedFramework) {
@@ -302,18 +294,18 @@ const Framework = () => {
           }
         }
 
-        // Re-read sub-tab values from localStorage
-        const savedIso27001Tab = localStorage.getItem(ISO27001_TAB_KEY);
+        // Re-read sub-tab values from storage
+        const savedIso27001Tab = storageService.get("iso27001Tab", "clause");
         if (savedIso27001Tab && savedIso27001Tab !== iso27001TabValue) {
           setIso27001TabValue(savedIso27001Tab);
         }
 
-        const savedIso42001Tab = localStorage.getItem(ISO42001_TAB_KEY);
+        const savedIso42001Tab = storageService.get("iso42001Tab", "clauses");
         if (savedIso42001Tab && savedIso42001Tab !== iso42001TabValue) {
           setIso42001TabValue(savedIso42001Tab);
         }
 
-        const savedNistTab = localStorage.getItem(NIST_AI_RMF_TAB_KEY);
+        const savedNistTab = storageService.get("nistAiRmfTab", "govern");
         if (savedNistTab && savedNistTab !== nistAiRmfTabValue) {
           setNistAiRmfTabValue(savedNistTab);
         }
@@ -462,23 +454,23 @@ const Framework = () => {
         resetFilters();
       }
       setSelectedFramework(index);
-      localStorage.setItem(FRAMEWORK_SELECTED_KEY, index.toString());
+      storageService.set("frameworkSelected", index.toString());
     }
   };
 
   const handleIso27001TabChange = (_: React.SyntheticEvent, newValue: string) => {
     setIso27001TabValue(newValue);
-    localStorage.setItem(ISO27001_TAB_KEY, newValue);
+    storageService.set("iso27001Tab", newValue);
   };
 
   const handleIso42001TabChange = (_: React.SyntheticEvent, newValue: string) => {
     setIso42001TabValue(newValue);
-    localStorage.setItem(ISO42001_TAB_KEY, newValue);
+    storageService.set("iso42001Tab", newValue);
   };
 
   const handleNistAiRmfTabChange = (_: React.SyntheticEvent, newValue: string) => {
     setNistAiRmfTabValue(newValue);
-    localStorage.setItem(NIST_AI_RMF_TAB_KEY, newValue);
+    storageService.set("nistAiRmfTab", newValue);
   };
 
   const handleMainTabChange = (_: React.SyntheticEvent, newValue: string) => {
@@ -542,11 +534,10 @@ const Framework = () => {
           }}
         >
           <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-            No ISO frameworks assigned to this project yet.
+            No organizational frameworks assigned yet.
           </Typography>
           <Typography variant="body2" color="text.secondary">
-            Use the "Manage Frameworks" button to add ISO 27001 or ISO 42001 frameworks to your
-            organizational project.
+            Use the "Manage Frameworks" button to add frameworks to your organizational project.
           </Typography>
         </Box>
       );
@@ -769,31 +760,18 @@ const Framework = () => {
       );
     }
 
-    // Default content for other frameworks
+    // Organizational generic frameworks (SOC 2, GDPR, DORA, ...) render inline
+    // via the shared GenericFramework component, driven by Servers/structures/.
+    console.debug("[fw] Framework(org) dispatch → GenericFramework", {
+      projectId: organizationalProject.id,
+      frameworkId: framework.id,
+      name: framework.name,
+    });
     return (
-      <Box
-        sx={{
-          p: 6,
-          backgroundColor: "text.black",
-          borderRadius: 3,
-          minHeight: "400px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <Typography
-          variant="h5"
-          sx={{
-            color: "background.main",
-            textAlign: "center",
-            maxWidth: "600px",
-          }}
-        >
-          This is a dummy content space for {framework.name}. The actual framework content will be
-          implemented here.
-        </Typography>
-      </Box>
+      <GenericFramework
+        projectId={Number(organizationalProject.id)}
+        frameworkId={Number(framework.id)}
+      />
     );
   };
 
@@ -996,37 +974,28 @@ const Framework = () => {
 
               <TabPanel value="controls" sx={tabPanelStyle}>
                 <Stack className="frameworks-switch" spacing={3}>
-                  {/* Plugin slot for custom frameworks - renders toggle + content */}
-                  <PluginSlot
-                    id={PLUGIN_SLOTS.CONTROLS_CUSTOM_FRAMEWORK}
-                    slotProps={{
-                      project: organizationalProject,
-                      builtInFrameworks: filteredFrameworks,
-                      selectedBuiltInFramework: selectedFramework,
-                      onBuiltInFrameworkSelect: handleFrameworkSelect,
-                      renderBuiltInContent: renderFrameworkContent,
-                      onRefresh: refreshProjectData,
-                    }}
-                  />
-                  {/* Default content when no plugin is loaded */}
-                  {!getComponentsForSlot(PLUGIN_SLOTS.CONTROLS_CUSTOM_FRAMEWORK).length && (
-                    <>
-                      {organizationalProject && filteredFrameworks.length > 0 && (
-                        <Box data-joyride-id="framework-toggle">
-                          <ButtonToggle
-                            options={filteredFrameworks.map((framework, index) => ({
-                              value: index.toString(),
-                              label: framework.name,
-                            }))}
-                            value={selectedFramework.toString()}
-                            onChange={(value) => handleFrameworkSelect(parseInt(value))}
-                            height={34}
-                          />
-                        </Box>
-                      )}
-                      {renderFrameworkContent()}
-                    </>
+                  {organizationalProject && filteredFrameworks.length > 0 && (
+                    <Box
+                      data-joyride-id="framework-toggle"
+                      sx={{
+                        maxWidth: "100%",
+                        overflowX: "auto",
+                        overflowY: "hidden",
+                        pb: 0.5,
+                      }}
+                    >
+                      <ButtonToggle
+                        options={filteredFrameworks.map((framework, index) => ({
+                          value: index.toString(),
+                          label: framework.name,
+                        }))}
+                        value={selectedFramework.toString()}
+                        onChange={(value) => handleFrameworkSelect(parseInt(value))}
+                        height={34}
+                      />
+                    </Box>
                   )}
+                  {renderFrameworkContent()}
                 </Stack>
               </TabPanel>
 
@@ -1132,15 +1101,7 @@ const Framework = () => {
             open={isFrameworkModalOpen}
             onClose={() => setIsFrameworkModalOpen(false)}
             frameworks={allFrameworks
-              .filter((framework) => {
-                // Only show organizational frameworks (ISO 27001, ISO 42001, and NIST AI RMF) for organizational projects
-                const isNotEuAiAct = !framework.name.toLowerCase().includes("eu ai act");
-                const isOrganizationalFramework =
-                  framework.name.toLowerCase().includes("iso 27001") ||
-                  framework.name.toLowerCase().includes("iso 42001") ||
-                  framework.name.toLowerCase().includes("nist ai rmf");
-                return isNotEuAiAct && isOrganizationalFramework;
-              })
+              .filter((framework) => framework.is_organizational)
               .sort((a, b) => {
                 // Sort order: ISO 42001 first, then NIST AI RMF, then ISO 27001
                 const aIsISO42001 = a.name.toLowerCase().includes("iso 42001");

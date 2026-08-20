@@ -5,8 +5,10 @@
  * Uses express-rate-limit with IPv6-safe IP normalization.
  *
  * Rate Limiters:
- * - fileOperationsLimiter: 50 requests/15min (for file uploads, downloads, deletions)
- * - generalApiLimiter: 100 requests/15min (for standard API endpoints)
+ * - fileOperationsLimiter: 100 requests/15min (for file uploads, downloads, deletions)
+ * - generalApiLimiter: 300 requests/min per IP (loose global ceiling mounted
+ *   ahead of all route mounts in app.ts; stricter per-route limiters still
+ *   apply on top)
  * - authLimiter: 5 requests/15min (for login/register/reset to prevent brute force)
  * - tokenRefreshLimiter: 60 requests/15min (for automatic access-token refresh)
  *
@@ -21,13 +23,15 @@
 import rateLimit, { Options, ipKeyGenerator } from "express-rate-limit";
 import { Request, Response } from "express";
 import logger from "../utils/logger/fileLogger";
+import { STATUS_CODE } from "../utils/statusCode.utils";
 
 // Fail closed: the strict (production) limits apply unless NODE_ENV is
 // EXPLICITLY a known non-production value. A missing or misspelled NODE_ENV in
 // production must NOT silently relax brute-force protection, so anything we
 // don't recognise as dev/test is treated as production.
 const nodeEnv = (process.env.NODE_ENV ?? "").trim().toLowerCase();
-const isNonProduction = nodeEnv === "development" || nodeEnv === "test" || nodeEnv === "local";
+export const isNonProduction =
+  nodeEnv === "development" || nodeEnv === "test" || nodeEnv === "local";
 
 /**
  * Rate limit configuration with time window and request limits
@@ -50,10 +54,15 @@ const RATE_LIMIT_CONFIGS: Record<string, RateLimitConfig> = {
     maxRequests: 100,
     message: "Too many file operation requests from this IP, please try again after 15 minutes",
   },
+  // Loose global ceiling for all API traffic, mounted ahead of the route
+  // mounts in app.ts (audit 4.5). Deliberately generous — it only stops
+  // runaway/DoS-level volume; the stricter per-route limiters below remain
+  // the real abuse controls. Effectively unlimited in explicit dev/test so
+  // a developer hammering localhost from one IP is not locked out.
   generalApi: {
-    windowMinutes: 15,
-    maxRequests: 100,
-    message: "Too many requests from this IP, please try again after 15 minutes",
+    windowMinutes: 1,
+    maxRequests: isNonProduction ? 100000 : 300,
+    message: "Too many requests from this IP, please slow down and retry",
   },
   auth: {
     windowMinutes: 15,
@@ -95,17 +104,23 @@ const RATE_LIMIT_CONFIGS: Record<string, RateLimitConfig> = {
       return tokenId !== undefined ? `mrm-token:${tokenId}` : ipKeyGenerator(req.ip ?? "");
     },
   },
+  webhook: {
+    windowMinutes: 1,
+    maxRequests: isNonProduction ? 100000 : 100,
+    message: "Too many webhook requests from this IP, please slow down and retry",
+  },
 };
 
 /**
  * Creates a standardized rate limit error handler
- * Returns consistent error format using STATUS_CODE utility
+ * Responds with the canonical STATUS_CODE[429] envelope:
+ * { message: "Too Many Requests", data: <limiter-specific message> }
  */
 const createRateLimitHandler = (message: string) => {
   return (req: Request, res: Response) => {
     const clientIp = req.ip || req.socket?.remoteAddress || "unknown";
     logger.warn(`Rate limit exceeded for IP ${clientIp} on ${req.path}: ${message}`);
-    res.status(429).json({ message, statusCode: 429 });
+    res.status(429).json(STATUS_CODE[429](message));
   };
 };
 
@@ -113,7 +128,7 @@ const createRateLimitHandler = (message: string) => {
  * Creates a rate limiter with the specified configuration
  * Uses express-rate-limit's built-in IP extraction and IPv6 normalization
  */
-const createRateLimiter = (config: RateLimitConfig) => {
+export const createRateLimiter = (config: RateLimitConfig) => {
   const options: Partial<Options> = {
     windowMs: config.windowMinutes * 60 * 1000,
     max: config.maxRequests,
@@ -135,8 +150,9 @@ const createRateLimiter = (config: RateLimitConfig) => {
 export const fileOperationsLimiter = createRateLimiter(RATE_LIMIT_CONFIGS.fileOperations);
 
 /**
- * General API rate limiter for standard CRUD endpoints
- * Moderate limits for typical operations
+ * General API rate limiter: a loose per-IP ceiling for all API traffic,
+ * mounted globally in app.ts ahead of the route mounts. Stricter per-route
+ * limiters still apply on top of it.
  */
 export const generalApiLimiter = createRateLimiter(RATE_LIMIT_CONFIGS.generalApi);
 
@@ -166,3 +182,10 @@ export const aiDetectionScanLimiter = createRateLimiter(RATE_LIMIT_CONFIGS.aiDet
  * but still bounded so a runaway pusher cannot flood the system.
  */
 export const mrmIngestionLimiter = createRateLimiter(RATE_LIMIT_CONFIGS.mrmIngestion);
+
+/**
+ * Rate limiter for public webhook endpoints.
+ * Generous because webhooks are legitimate machine-to-machine pushes, but still
+ * bounded so a misconfigured or malicious sender cannot flood the system.
+ */
+export const webhookLimiter = createRateLimiter(RATE_LIMIT_CONFIGS.webhook);

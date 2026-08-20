@@ -18,10 +18,14 @@ spec:
         app: verifywise
         component: worker
     spec:
+      # Pod-level security context (KSV-0118): runtime-default seccomp profile.
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       containers:
       - name: worker
-        image: ghcr.io/verifywise-ai/verifywise-backend:latest
-        imagePullPolicy: Always
+        image: ghcr.io/verifywise-ai/verifywise-backend:1.7.0
+        imagePullPolicy: IfNotPresent
         # Override the default command to run the worker
         command: ["node", "dist/jobs/worker.js"]
         env:
@@ -112,6 +116,11 @@ spec:
           limits:
             memory: "512Mi"
             cpu: "500m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
         # Worker doesn't need health probes as it doesn't expose HTTP endpoints
         # but we can add liveness probe to restart if process crashes
         livenessProbe:

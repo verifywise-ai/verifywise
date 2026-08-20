@@ -195,10 +195,9 @@ async def call_llm_model(
             return response.content[0].text if response.content else ""
         
         elif provider == "google":
-            import google.generativeai as genai
-            genai.configure(api_key=api_key)
-            gen_model = genai.GenerativeModel(model)
-            response = gen_model.generate_content(prompt)
+            from google import genai
+            client = genai.Client(api_key=api_key)
+            response = client.models.generate_content(model=model, contents=prompt)
             return response.text or ""
         
         else:

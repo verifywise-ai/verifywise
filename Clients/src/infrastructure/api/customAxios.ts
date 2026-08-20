@@ -15,7 +15,8 @@
  * The response interceptor:
  * - Handles specific HTTP status codes such as 401 (Unauthorized), 403 (Forbidden), and 500 (Server Error).
  * - Handles 406 status code by attempting to refresh the token and retrying the original request.
- * - Logs appropriate error messages based on the status code or the type of error encountered.
+ * - Surfaces translated error toasts for 4xx/5xx and network failures, consuming the
+ *   standardized `{ message, data }` error envelope.
  *
  * This setup ensures that all HTTP requests made using this custom Axios instance are consistent in terms of configuration and error handling.
  */
@@ -24,6 +25,7 @@ import axios, { AxiosError } from "axios";
 import { store } from "../../application/redux/store";
 import { ENV_VARs } from "../../../env.vars";
 import { clearAuthState, setAuthToken } from "../../application/redux/auth/authSlice";
+import { storageService } from "../storage";
 import { AlertProps } from "../../presentation/types/alert.types";
 import { translations, type Lang } from "../../i18n/translations";
 import { getLanguage } from "../../i18n/domTranslator";
@@ -64,35 +66,59 @@ const translate = (key: string): string => {
   return translations[lang]?.[key] || key;
 };
 
-// Show a translated error toast for server or network failures.
-// 4xx errors are intentionally left for callers/UI layers to handle.
-const showGlobalErrorAlert = (error: AxiosError) => {
-  // Don't show alerts for deliberately cancelled requests (e.g. component unmount)
-  if (axios.isCancel(error)) {
-    return;
+// Extract the human-readable detail from the standardized error envelope:
+// 1xx-4xx responses carry it in `data` (a string, or an object with
+// `message`/`error`), 5xx responses in `error`; top-level `message` is the
+// final fallback (reason phrase, or the raw message from legacy responses).
+const getEnvelopeErrorMessage = (data: ApiErrorEnvelope): string | undefined => {
+  if (typeof data.data === "string") return data.data;
+  if (data.data && typeof data.data === "object") {
+    const inner = data.data as { message?: unknown; error?: unknown };
+    if (typeof inner.message === "string") return inner.message;
+    if (typeof inner.error === "string") return inner.error;
   }
+  if (typeof data.error === "string") return data.error;
+  return data.message;
+};
+
+// Endpoints whose UI already renders its own error message (e.g. the login
+// page shows an inline alert). Skip the global toast for these so users don't
+// see duplicate notifications.
+const ENDPOINTS_WITH_CUSTOM_ERROR_UI = ["/users/login"];
+
+// Show a translated error toast for server or network failures, and for 4xx
+// client errors using the backend's message from the { message, data }
+// envelope. 404 is excluded: callers deliberately handle it as empty state.
+const showGlobalErrorAlert = (error: AxiosError) => {
+  // A canceled request carries no response, but it is not a failure: the caller
+  // unmounted or superseded it (the assessment hooks abort on effect cleanup).
+  // Without this guard, switching tabs mid-request shows a bogus error toast.
+  if (axios.isCancel(error) || error.code === "ERR_CANCELED") return;
+
+  const requestUrl = error.config?.url ?? "";
+  if (ENDPOINTS_WITH_CUSTOM_ERROR_UI.some((path) => requestUrl.includes(path))) return;
 
   const status = error.response?.status;
   const isServerError = status != null && status >= 500;
   const isNetworkError = error.response == null;
-
-  // DEBUG: log every global alert trigger so we can identify the failing request
-  // eslint-disable-next-line no-console
-  console.error("[customAxios global alert]", {
-    url: error.config?.url,
-    method: error.config?.method,
-    status,
-    statusText: error.response?.statusText,
-    message: error.message,
-    responseData: (error.response as any)?.data,
-    code: (error as any).code,
-  });
+  const isClientError = status != null && status >= 400 && status < 500 && status !== 404;
 
   if (isServerError || isNetworkError) {
     showAlert({
       variant: "error",
       title: translate("Error"),
       body: translate("An error occurred. Please try again later"),
+    });
+    return;
+  }
+
+  if (isClientError) {
+    const responseData = (error.response?.data ?? {}) as ApiErrorEnvelope;
+    const detail = getEnvelopeErrorMessage(responseData);
+    showAlert({
+      variant: "error",
+      title: translate("Error"),
+      body: translate(detail ?? "An error occurred. Please try again later"),
     });
   }
 };
@@ -125,6 +151,12 @@ const processQueue = (error: unknown, token: string | null = null) => {
   failedQueue = [];
 };
 
+// Read a cookie value by name (used for the non-httpOnly CSRF cookie).
+const getCookieValue = (name: string): string | null => {
+  const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
+  return match ? decodeURIComponent(match[1]) : null;
+};
+
 // Request interceptor to handle both authorization token and credentials
 CustomAxios.interceptors.request.use(
   (config) => {
@@ -138,24 +170,26 @@ CustomAxios.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    // Attach X-Organization-Id header when super-admin is viewing an org
-    const activeOrgId = state.auth.activeOrganizationId;
-    if (activeOrgId) {
-      config.headers["X-Organization-Id"] = String(activeOrgId);
-    }
-
-    try {
-      const lang = localStorage.getItem("vw_lang_prototype");
-      if (lang) {
-        config.headers["Accept-Language"] = lang;
-      }
-    } catch {
-      // localStorage unavailable in sandboxed contexts.
+    const lang = storageService.get("language", "en");
+    if (lang) {
+      config.headers["Accept-Language"] = lang;
     }
 
     // Enable credentials for auth-related endpoints
     if (config.url?.includes("/users/login") || config.url?.includes("/users/refresh-token")) {
       config.withCredentials = true;
+    }
+
+    // Double-submit-cookie CSRF: echo the csrfToken cookie in the header so
+    // cookie-authenticated state-changing requests (refresh-token, logout)
+    // pass the server-side CSRF middleware. Harmless on all other requests.
+    try {
+      const csrfToken = getCookieValue("csrfToken");
+      if (csrfToken) {
+        config.headers["x-csrf-token"] = csrfToken;
+      }
+    } catch {
+      // document.cookie unavailable in sandboxed contexts.
     }
 
     return config;
@@ -173,6 +207,10 @@ CustomAxios.interceptors.response.use(
   async (error: AxiosError) => {
     const originalRequest = error.config as RetriableRequestConfig;
     const responseData = (error.response?.data ?? {}) as ApiErrorEnvelope;
+    // The standardized envelope carries the human-readable detail in `data`
+    // for 4xx (top-level `message` is the HTTP reason phrase); legacy/raw
+    // bodies are still matched via the `message` fallback.
+    const errorDetail = getEnvelopeErrorMessage(responseData);
     // Don't transform 404 errors - let them through as AxiosErrors so status is preserved
     // This allows downstream code to handle 404s differently (e.g., as empty state vs error)
     // if (error.response?.status === 404) {
@@ -182,8 +220,8 @@ CustomAxios.interceptors.response.use(
 
     if (
       error.response?.status === 403 &&
-      (responseData.message === "User does not belong to this organization" ||
-        responseData.message === "Not allowed to access")
+      (errorDetail === "User does not belong to this organization" ||
+        errorDetail === "Not allowed to access")
     ) {
       if (showAlertCallback) {
         showAlertCallback({
@@ -195,7 +233,7 @@ CustomAxios.interceptors.response.use(
       setTimeout(() => {
         performLogout();
       }, 1000);
-      return Promise.reject(new Error(responseData?.message || "Forbidden"));
+      return Promise.reject(new Error(errorDetail || "Forbidden"));
     }
 
     // If the auth/refresh limiter has been tripped (429), stop the retry

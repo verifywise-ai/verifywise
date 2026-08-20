@@ -7,11 +7,7 @@ import CustomizableToast from "../../../components/Toast";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import { SaveIcon } from "lucide-react";
 import { UserDateFormat } from "../../../../domain/enums/userDateFormat.enum";
-import {
-  createNewUserPreferences,
-  updateUserPreferencesById,
-} from "../../../../application/repository/userPreferences.repository";
-import { useAuth } from "../../../../application/hooks/useAuth";
+import { updateCurrentUserPreferences } from "../../../../application/repository/userPreferences.repository";
 import Select from "../../../components/Inputs/Select";
 import { brand } from "../../../themes/palette";
 import { setLanguage, getLanguage } from "../../../../i18n/domTranslator";
@@ -26,7 +22,6 @@ const LANGUAGE_OPTIONS: { _id: Lang; name: string }[] = [
 
 const Preferences: React.FC = () => {
   const theme = useTheme();
-  const { userId } = useAuth();
   const { userPreferences, isDefault, loading, refreshUserPreferences } = useUserPreferences();
   const [isSaveDisabled, setIsSaveDisabled] = useState(true);
   const [dateFormat, setDateFormat] = useState<UserDateFormat>(UserDateFormat.DD_MM_YYYY_DASH);
@@ -82,43 +77,26 @@ const Preferences: React.FC = () => {
   const handleSaveUserPreferences = async () => {
     setShowToast(true);
     try {
-      if (isDefault) {
-        const created = await createNewUserPreferences({
-          user_id: userId!,
-          date_format: dateFormat,
-          language,
+      const updated = await updateCurrentUserPreferences({
+        date_format: dateFormat,
+        language,
+      });
+
+      if (updated) {
+        // Server is the source of truth; App.tsx will sync the preferences
+        // blob into StorageService. Update the transient UI language via the
+        // translator, which persists through StorageService.
+        setLanguage(language);
+
+        setAlert({
+          variant: "success",
+          title: "Success",
+          body: isDefault
+            ? "User preferences set successfully."
+            : "User preferences updated successfully.",
+          isToast: true,
+          visible: true,
         });
-
-        if (created) {
-          localStorage.setItem("verifywise_preferences", JSON.stringify(created.data));
-          setLanguage(language);
-
-          setAlert({
-            variant: "success",
-            title: "Success",
-            body: "User preferences set successfully.",
-            isToast: true,
-            visible: true,
-          });
-        }
-      } else {
-        const updated = await updateUserPreferencesById({
-          userId: userId!,
-          data: { user_id: userId!, date_format: dateFormat, language },
-        });
-
-        if (updated) {
-          localStorage.setItem("verifywise_preferences", JSON.stringify(updated.data));
-          setLanguage(language);
-
-          setAlert({
-            variant: "success",
-            title: "Success",
-            body: "User preferences updated successfully.",
-            isToast: true,
-            visible: true,
-          });
-        }
       }
       refreshUserPreferences();
     } catch (error: any) {

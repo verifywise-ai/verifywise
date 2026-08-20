@@ -9,6 +9,7 @@
  */
 
 import logger from "../../utils/logger/fileLogger";
+import { RE2JS } from "re2js";
 import {
   ICreateFindingInput,
   ISuppression,
@@ -38,7 +39,9 @@ function ruleMatches(rule: ISuppression, finding: ICreateFindingInput): boolean 
 
   // pattern
   try {
-    return new RegExp(rule.value).test(value);
+    // RE2JS is a linear-time regex engine, so user-supplied patterns cannot
+    // trigger catastrophic backtracking.
+    return RE2JS.compile(rule.value).test(value);
   } catch (err) {
     logger.warn(
       `[suppressionMatcher] Skipping rule ${rule.id} with invalid regex "${rule.value}": ${(err as Error).message}`,

@@ -1,7 +1,6 @@
 import { sequelize } from "../database/db";
 import { IDashboard } from "../domain.layer/interfaces/i.Dashboard";
 import { getAllProjectsQuery } from "./project.utils";
-import { PluginService } from "../services/plugin/pluginService";
 
 export const getDashboardDataQuery = async (
   organizationId: number,
@@ -22,25 +21,8 @@ export const getDashboardDataQuery = async (
   } as IDashboard;
   const projects = await getAllProjectsQuery({ userId, role }, organizationId);
 
-  // Fetch additional use-cases from plugins (e.g., JIRA Assets)
-  let allProjects = [...projects];
-  try {
-    const pluginUseCases = await PluginService.getDataFromProviders(
-      "use-cases",
-      organizationId,
-      sequelize,
-    );
-    if (pluginUseCases.length > 0) {
-      console.log(`[Dashboard] Merging ${pluginUseCases.length} use-cases from plugins`);
-      allProjects = [...projects, ...pluginUseCases];
-    }
-  } catch (pluginError) {
-    console.error("[Dashboard] Error fetching plugin use-cases:", pluginError);
-    // Continue with native projects even if plugin fetch fails
-  }
-
-  dashboard.projects_list = allProjects as any;
-  dashboard.projects = allProjects.length;
+  dashboard.projects_list = projects as any;
+  dashboard.projects = projects.length;
 
   const trainings = (await sequelize.query(
     `SELECT COUNT(*) FROM trainingregistar WHERE organization_id = :organizationId`,

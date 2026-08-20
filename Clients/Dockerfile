@@ -40,7 +40,7 @@ ENV VITE_APP_VERSION=$VITE_APP_VERSION
 RUN npm run build
 
 # Step 9: Use a lightweight web server for production
-FROM nginx:1.31.2-alpine
+FROM nginx:1.31.3-alpine
 
 # Step 10: Copy the build output to NGINX's default public directory
 COPY --from=build /app/src/dist /usr/share/nginx/html
@@ -53,6 +53,8 @@ COPY Clients/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Step 13: Expose port 80
 EXPOSE 80
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 CMD wget -qO- http://localhost:80/ >/dev/null || exit 1
 
 # Step 14: Start NGINX server
 CMD ["nginx", "-g", "daemon off;"]

@@ -1,7 +1,7 @@
 import { renderHook, act } from "@testing-library/react";
 import { Provider } from "react-redux";
 import { configureStore } from "@reduxjs/toolkit";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter } from "react-router";
 import authReducer from "../../redux/auth/authSlice";
 import uiReducer from "../../redux/ui/uiSlice";
 import fileReducer from "../../redux/file/fileSlice";
@@ -30,7 +30,6 @@ function createWrapper() {
         onboardingStatus: "completed",
         isOrgCreator: false,
         isSuperAdmin: false,
-        activeOrganizationId: null,
       },
     },
   });

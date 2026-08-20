@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: verifywise
+  namespace: verifywise
 spec:
   selector:
     matchLabels:
@@ -18,15 +19,51 @@ spec:
         app: verifywise
     spec:
       automountServiceAccountToken: false
+      # Pod-level security context (KSV-0118): runtime-default seccomp profile.
+      # Container-level contexts below already drop capabilities and disable
+      # privilege escalation; runAsNonRoot is a tracked TODO pending non-root
+      # image USER directives (see per-container TODO comments).
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       containers:
         - name: verifywise-backend
-          image: ghcr.io/verifywise-ai/verifywise-backend:latest
-          imagePullPolicy: Always
+          image: ghcr.io/verifywise-ai/verifywise-backend:1.7.0
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 3000
               name: web
               protocol: TCP
-          resources: {}
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: 200m
+              memory: 768Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          # TODO: add `runAsNonRoot: true` once Servers/Dockerfile sets a
+          # non-root USER (the node:24-alpine3.20 image currently runs as root).
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           envFrom:
             - configMapRef:
                 name: verifywise-config
@@ -80,10 +117,21 @@ spec:
               value: http://localhost:8100
 
         - name: verifywise-worker
-          image: ghcr.io/verifywise-ai/verifywise-backend:latest
-          imagePullPolicy: Always
+          image: ghcr.io/verifywise-ai/verifywise-backend:1.7.0
+          imagePullPolicy: IfNotPresent
           command: ["node", "dist/jobs/worker.js"]
-          resources: {}
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: 200m
+              memory: 768Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           envFrom:
             - configMapRef:
                 name: verifywise-config
@@ -123,45 +171,111 @@ spec:
               value: http://localhost:8100
 
         - name: verifywise-frontend
-          image: ghcr.io/verifywise-ai/verifywise-frontend:latest
-          imagePullPolicy: Always
-          resources: {}
+          image: ghcr.io/verifywise-ai/verifywise-frontend:1.7.0
+          imagePullPolicy: IfNotPresent
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
           envFrom:
             - configMapRef:
                 name: verifywise-config
             - secretRef:
                 name: verifywise-secret
           ports:
-            - containerPort: 30
+            - containerPort: 80
               name: web
               protocol: TCP
-
-        - name: verifywise-redis
-          image: redis:7
-          imagePullPolicy: Always
-          ports:
-            - containerPort: 6379
-              name: web
-              protocol: TCP
-          resources: {}
+          # TODO: switch Clients/Dockerfile to nginxinc/nginx-unprivileged (or a
+          # non-root nginx variant) and then add `runAsNonRoot: true` here. The
+          # current image (nginx:1.31.3-alpine) starts its master process as root.
           securityContext:
             allowPrivilegeEscalation: false
             capabilities:
               drop:
-                - NET_RAW
-            privileged: false
-            readOnlyRootFilesystem: false
-            seccompProfile:
-              type: RuntimeDefault
+                - ALL
+              # nginx must bind port 80 as root, so keep NET_BIND_SERVICE.
+              add:
+                - NET_BIND_SERVICE
+
+        - name: verifywise-redis
+          image: redis:7
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 6379
+              name: web
+              protocol: TCP
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 200m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 999
+            capabilities:
+              drop:
+                - ALL
 
         - name: verifywise-ai-gateway
-          image: ghcr.io/verifywise-ai/verifywise-ai-gateway:latest
-          imagePullPolicy: Always
+          image: ghcr.io/verifywise-ai/verifywise-ai-gateway:1.7.0
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8100
               name: web
               protocol: TCP
-          resources: {}
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: 200m
+              memory: 768Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8100
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8100
+            initialDelaySeconds: 15
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          # TODO: add `runAsNonRoot: true` once AIGateway/Dockerfile sets a
+          # non-root USER (the python:3.12-slim image currently runs as root).
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           envFrom:
             - configMapRef:
                 name: verifywise-config
@@ -198,13 +312,42 @@ spec:
               value: "8100"
 
         - name: verifywise-eval-server
-          image: ghcr.io/verifywise-ai/verifywise-eval-server:latest
-          imagePullPolicy: Always
+          image: ghcr.io/verifywise-ai/verifywise-eval-server:1.7.0
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8000
               name: web
               protocol: TCP
-          resources: {}
+          resources:
+            requests:
+              cpu: 100m
+              memory: 512Mi
+            limits:
+              cpu: 200m
+              memory: 768Mi
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 15
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 3
+          # TODO: add `runAsNonRoot: true` once EvalServer/Dockerfile sets a
+          # non-root USER (the python:3.12-slim image currently runs as root).
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           envFrom:
             - configMapRef:
                 name: verifywise-config
@@ -243,14 +386,25 @@ spec:
 
         - name: verifywise-postgres-temp
           image: postgres:16.8
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 5432
               name: web
               protocol: TCP
-          resources: {}
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 200m
+              memory: 512Mi
           securityContext:
+            runAsNonRoot: true
             runAsUser: 999
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           env:
             - name: POSTGRES_DB
               valueFrom:

@@ -29,6 +29,20 @@ jest.mock("../../utils/jwt.utils", () => ({
 jest.mock("../../utils/auth.utils", () => ({
   generateUserTokens: jest.fn().mockReturnValue({ accessToken: "token" }),
 }));
+jest.mock("../../utils/refreshToken.utils", () => ({
+  findRefreshToken: jest.fn().mockResolvedValue({
+    id: 1,
+    user_id: 1,
+    organization_id: 1,
+    token_hash: "hash",
+    family_id: "family-1",
+    expires_at: new Date(Date.now() + 10000),
+    revoked_at: null,
+  }),
+  revokeRefreshTokenByHash: jest.fn().mockResolvedValue(undefined),
+  revokeTokenFamily: jest.fn().mockResolvedValue(undefined),
+  revokeAllUserTokens: jest.fn().mockResolvedValue(undefined),
+}));
 jest.mock("../../utils/logger/fileLogger", () => ({
   __esModule: true,
   default: { debug: jest.fn(), error: jest.fn(), info: jest.fn() },
@@ -96,17 +110,79 @@ jest.mock("../../utils/role.utils", () => ({
 jest.mock("../../utils/invitation.utils", () => ({
   markInvitationAcceptedQuery: jest.fn().mockResolvedValue(undefined),
 }));
+jest.mock("../../utils/userPreference.utils", () => ({
+  getPreferencesByUserQuery: jest.fn(),
+  createNewUserPreferencesQuery: jest.fn(),
+  updateUserPreferencesByIdQuery: jest.fn(),
+}));
 jest.mock("../../domain.layer/exceptions/custom.exception", () => ({
   ValidationException: class ValidationException extends Error {},
   BusinessLogicException: class BusinessLogicException extends Error {},
   ConflictException: class ConflictException extends Error {},
 }));
+jest.mock("../../domain.layer/models/userPreferences/userPreferences.model", () => {
+  const { ValidationException } = require("../../domain.layer/exceptions/custom.exception");
+  const validDateFormats = ["DD-MM-YYYY", "MM-DD-YYYY", "DD/MM/YY", "MM/DD/YY"];
+  const validLanguages = ["en", "de", "fr", "es"];
+
+  function assertValid(dateFormat?: string, language?: string) {
+    if (dateFormat !== undefined && dateFormat !== null && !validDateFormats.includes(dateFormat)) {
+      throw new ValidationException(
+        `Invalid date format. Must be one of: ${validDateFormats.join(", ")}`,
+      );
+    }
+    if (language !== undefined && !validLanguages.includes(language)) {
+      throw new ValidationException(
+        `Invalid language. Must be one of: ${validLanguages.join(", ")}`,
+      );
+    }
+  }
+
+  class UserPreferencesModel {
+    id?: number;
+    user_id!: number;
+    date_format!: string;
+    language?: string;
+
+    constructor(data: Record<string, unknown> = {}) {
+      Object.assign(this, data);
+    }
+
+    async updateUserPreferences(updates: { date_format?: string; language?: string }) {
+      assertValid(updates.date_format, updates.language);
+      if (updates.date_format !== undefined) this.date_format = updates.date_format;
+      if (updates.language !== undefined) this.language = updates.language;
+    }
+
+    toJSON() {
+      return {
+        id: this.id,
+        user_id: this.user_id,
+        date_format: this.date_format,
+        language: this.language,
+      };
+    }
+
+    static async createNewUserPreferences(userId: number, dateFormat: string, language?: string) {
+      assertValid(dateFormat, language);
+      return new UserPreferencesModel({
+        user_id: userId,
+        date_format: dateFormat,
+        language: language ?? "en",
+      });
+    }
+  }
+
+  return { UserPreferencesModel };
+});
 
 import { buildUser } from "../../tests/factories/user.factory";
 import {
   getAllUsers,
   getUserByEmail,
   getUserById,
+  getPreferencesForCurrentUser,
+  patchPreferencesForCurrentUser,
   createNewUser,
   loginUser,
   resetPassword,
@@ -114,6 +190,7 @@ import {
   deleteUserById,
   checkUserExists,
   refreshAccessToken,
+  logoutUser,
   ChangePassword,
   updateUserRole,
   getUserProfilePhoto,
@@ -131,6 +208,12 @@ import {
   getUserProfilePhotoQuery,
   deleteUserProfilePhotoQuery,
 } from "../../utils/user.utils";
+import { getRoleByIdQuery } from "../../utils/role.utils";
+import {
+  getPreferencesByUserQuery,
+  createNewUserPreferencesQuery,
+  updateUserPreferencesByIdQuery,
+} from "../../utils/userPreference.utils";
 
 const mockGetAll = getAllUsersQuery as jest.MockedFunction<typeof getAllUsersQuery>;
 const mockGetByEmail = getUserByEmailQuery as jest.MockedFunction<typeof getUserByEmailQuery>;
@@ -138,6 +221,15 @@ const mockGetById = getUserByIdQuery as jest.MockedFunction<typeof getUserByIdQu
 const mockCreate = createNewUserQuery as jest.MockedFunction<typeof createNewUserQuery>;
 const mockUpdate = updateUserByIdQuery as jest.MockedFunction<typeof updateUserByIdQuery>;
 const mockDelete = deleteUserByIdQuery as jest.MockedFunction<typeof deleteUserByIdQuery>;
+const mockGetPreferences = getPreferencesByUserQuery as jest.MockedFunction<
+  typeof getPreferencesByUserQuery
+>;
+const mockCreatePreferences = createNewUserPreferencesQuery as jest.MockedFunction<
+  typeof createNewUserPreferencesQuery
+>;
+const mockUpdatePreferences = updateUserPreferencesByIdQuery as jest.MockedFunction<
+  typeof updateUserPreferencesByIdQuery
+>;
 
 function createReq(overrides?: Partial<Request>): any {
   return {
@@ -159,6 +251,7 @@ function createRes(): any {
   res.json = jest.fn<any>().mockReturnValue(res);
   res.send = jest.fn<any>().mockReturnValue(res);
   res.cookie = jest.fn<any>().mockReturnValue(res);
+  res.clearCookie = jest.fn<any>().mockReturnValue(res);
   return res;
 }
 
@@ -361,6 +454,25 @@ describe("user.ctrl", () => {
       await resetPassword(req, res);
       expect(res.status).toHaveBeenCalledWith(202);
     });
+    it("updates by the stored email, not the raw request email", async () => {
+      // Stored email is canonical "a@b.com"; the request types a different
+      // case/whitespace variant. The case-sensitive UPDATE must target the
+      // stored value, or it would match zero rows and silently no-op.
+      const userMock = mockUser(buildUser({ email: "a@b.com", password_hash: "old" }));
+      mockGetByEmail.mockResolvedValue(userMock as any);
+      const UserModel = require("../../domain.layer/models/user/user.model").UserModel;
+      UserModel.createNewUser.mockResolvedValueOnce({
+        ...userMock,
+        updatePassword: jest.fn().mockResolvedValue(undefined),
+        password_hash: "newhash",
+      });
+      const resetMock = resetPasswordQuery as jest.MockedFunction<typeof resetPasswordQuery>;
+      resetMock.mockResolvedValue(mockUser(buildUser()) as any);
+      const req = createReq({ body: { email: "  A@B.COM  ", newPassword: "newpass" } });
+      const res = createRes();
+      await resetPassword(req, res);
+      expect(resetMock).toHaveBeenCalledWith("a@b.com", expect.anything(), expect.anything());
+    });
     it("should return 500 when user is not found (null access before check)", async () => {
       mockGetByEmail.mockResolvedValue(null as any);
       const req = createReq({ body: { email: "a@b.com", newPassword: "newpass" } });
@@ -408,11 +520,37 @@ describe("user.ctrl", () => {
       await updateUserById(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
     });
+    // SuperAdmin is no longer a role (role_id=5 removed); it's a mapping-
+    // table overlay. The old "cannot assign role 5" / "cannot change role
+    // 5" guards are gone. Assigning a non-existent role (e.g. 5) falls
+    // through to the getRoleByIdQuery check → 400 (see "role does not
+    // exist" test below). Editing a pure SuperAdmin (NULL role + NULL org)
+    // through this endpoint is prevented separately.
+    it("should return 400 when the requested role does not exist", async () => {
+      const mockGetRole = getRoleByIdQuery as jest.MockedFunction<typeof getRoleByIdQuery>;
+      mockGetRole.mockResolvedValueOnce(null as any);
+      mockGetById.mockResolvedValue(
+        mockUser(buildUser({ id: 2, organization_id: 1, role_id: 1 })) as any,
+      );
+      const req = createReq({ params: { id: "2" }, body: { name: "X", roleId: 99 } });
+      const res = createRes();
+      await updateUserById(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+    });
+    it("should return 403 when a non-admin updates another user", async () => {
+      mockGetById.mockResolvedValue(mockUser(buildUser({ id: 2, organization_id: 1 })) as any);
+      const req = createReq({ params: { id: "2" }, body: { name: "X" }, role: "Reviewer" } as any);
+      const res = createRes();
+      await updateUserById(req, res);
+      expect(res.status).toHaveBeenCalledWith(403);
+    });
   });
 
   describe("deleteUserById", () => {
-    it("should return 403 for super-admin", async () => {
-      mockGetById.mockResolvedValue(mockUser(buildUser({ role_id: 5 })) as any);
+    it("should return 403 for pure super-admin (no role, no org)", async () => {
+      mockGetById.mockResolvedValue(
+        mockUser(buildUser({ role_id: null as any, organization_id: null as any })) as any,
+      );
       const req = createReq({ params: { id: "1" } });
       const res = createRes();
       await deleteUserById(req, res);
@@ -492,6 +630,52 @@ describe("user.ctrl", () => {
       const res = createRes();
       await refreshAccessToken(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
+    });
+    it("should return 401 when the refresh token is unknown", async () => {
+      const { findRefreshToken } = require("../../utils/refreshToken.utils");
+      (findRefreshToken as jest.Mock).mockResolvedValueOnce(null);
+      const req = createReq({ cookies: { refresh_token: "valid" } });
+      const res = createRes();
+      await refreshAccessToken(req, res);
+      expect(res.status).toHaveBeenCalledWith(401);
+    });
+    it("should revoke the family and return 401 on token reuse", async () => {
+      const { findRefreshToken, revokeTokenFamily } = require("../../utils/refreshToken.utils");
+      (findRefreshToken as jest.Mock).mockResolvedValueOnce({
+        id: 1,
+        user_id: 1,
+        organization_id: 1,
+        token_hash: "hash",
+        family_id: "family-1",
+        expires_at: new Date(Date.now() + 10000),
+        revoked_at: new Date(),
+      });
+      const req = createReq({ cookies: { refresh_token: "valid" } });
+      const res = createRes();
+      await refreshAccessToken(req, res);
+      expect(revokeTokenFamily).toHaveBeenCalledWith("family-1");
+      expect(res.status).toHaveBeenCalledWith(401);
+    });
+  });
+
+  describe("logoutUser", () => {
+    it("should revoke the token, clear the cookie and return 200", async () => {
+      const { revokeRefreshTokenByHash } = require("../../utils/refreshToken.utils");
+      const req = createReq({ cookies: { refresh_token: "valid" } });
+      const res = createRes();
+      await logoutUser(req, res);
+      expect(revokeRefreshTokenByHash).toHaveBeenCalledWith("hash");
+      expect(res.clearCookie).toHaveBeenCalledWith(
+        "refresh_token",
+        expect.objectContaining({ path: "/api/users" }),
+      );
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+    it("should return 200 even without a refresh cookie", async () => {
+      const req = createReq({ cookies: {} });
+      const res = createRes();
+      await logoutUser(req, res);
+      expect(res.status).toHaveBeenCalledWith(200);
     });
   });
 
@@ -627,6 +811,205 @@ describe("user.ctrl", () => {
       const req = createReq({ params: { id: "1" } });
       const res = createRes();
       await deleteUserProfilePhoto(req, res);
+      expect(res.status).toHaveBeenCalledWith(500);
+    });
+  });
+
+  describe("getPreferencesForCurrentUser", () => {
+    const mockPreferences = {
+      toJSON: () => ({
+        id: 1,
+        user_id: 1,
+        date_format: "MM-DD-YYYY",
+        language: "de",
+      }),
+    };
+
+    it("should return stored preferences for the current user", async () => {
+      mockGetById.mockResolvedValue(mockUser(buildUser()) as any);
+      mockGetPreferences.mockResolvedValue(mockPreferences as any);
+      const req = createReq();
+      const res = createRes();
+      await getPreferencesForCurrentUser(req, res);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            date_format: "MM-DD-YYYY",
+            language: "de",
+          }),
+        }),
+      );
+    });
+
+    it("should return defaults when no preferences row exists", async () => {
+      mockGetById.mockResolvedValue(mockUser(buildUser()) as any);
+      mockGetPreferences.mockResolvedValue(null as any);
+      const req = createReq();
+      const res = createRes();
+      await getPreferencesForCurrentUser(req, res);
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            date_format: "DD-MM-YYYY",
+            language: "en",
+            theme: "light",
+          }),
+        }),
+      );
+    });
+
+    it("should return 404 when the user is not found", async () => {
+      mockGetById.mockResolvedValue(null as any);
+      const req = createReq();
+      const res = createRes();
+      await getPreferencesForCurrentUser(req, res);
+      expect(res.status).toHaveBeenCalledWith(404);
+    });
+
+    it("should return 403 for cross-organization access", async () => {
+      mockGetById.mockResolvedValue(mockUser(buildUser({ organization_id: 99 })) as any);
+      const req = createReq({ userId: 2 });
+      const res = createRes();
+      await getPreferencesForCurrentUser(req, res);
+      expect(res.status).toHaveBeenCalledWith(403);
+    });
+
+    it("should return 500 on query error", async () => {
+      mockGetById.mockResolvedValue(mockUser(buildUser()) as any);
+      mockGetPreferences.mockRejectedValue(new Error("DB error"));
+      const req = createReq();
+      const res = createRes();
+      await getPreferencesForCurrentUser(req, res);
+      expect(res.status).toHaveBeenCalledWith(500);
+    });
+  });
+
+  describe("patchPreferencesForCurrentUser", () => {
+    const savedPreferences = {
+      toJSON: () => ({
+        id: 1,
+        user_id: 1,
+        date_format: "MM-DD-YYYY",
+        language: "de",
+      }),
+    };
+
+    it("should persist valid date_format and language on an existing row", async () => {
+      mockGetById.mockResolvedValue(mockUser(buildUser()) as any);
+      mockGetPreferences.mockResolvedValue({
+        user_id: 1,
+        date_format: "DD-MM-YYYY",
+        language: "en",
+      } as any);
+      mockUpdatePreferences.mockResolvedValue(savedPreferences as any);
+
+      const req = createReq({ body: { date_format: "MM-DD-YYYY", language: "de" } });
+      const res = createRes();
+      await patchPreferencesForCurrentUser(req, res);
+
+      expect(mockUpdatePreferences).toHaveBeenCalledTimes(1);
+      expect(mockCreatePreferences).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            date_format: "MM-DD-YYYY",
+            language: "de",
+          }),
+        }),
+      );
+    });
+
+    it("should upsert when no preferences row exists", async () => {
+      mockGetById.mockResolvedValue(mockUser(buildUser()) as any);
+      mockGetPreferences.mockResolvedValue(null as any);
+      mockCreatePreferences.mockResolvedValue(savedPreferences as any);
+
+      const req = createReq({ body: { date_format: "MM-DD-YYYY", language: "de" } });
+      const res = createRes();
+      await patchPreferencesForCurrentUser(req, res);
+
+      expect(mockCreatePreferences).toHaveBeenCalledTimes(1);
+      expect(mockUpdatePreferences).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({
+            date_format: "MM-DD-YYYY",
+            language: "de",
+            user_id: 1,
+          }),
+        }),
+      );
+    });
+
+    it("should ignore body user_id and write the authenticated user", async () => {
+      mockGetById.mockResolvedValue(mockUser(buildUser()) as any);
+      mockGetPreferences.mockResolvedValue(null as any);
+      mockCreatePreferences.mockResolvedValue(savedPreferences as any);
+
+      const req = createReq({
+        userId: 1,
+        body: { user_id: 999, date_format: "DD-MM-YYYY", language: "en" },
+      });
+      const res = createRes();
+      await patchPreferencesForCurrentUser(req, res);
+
+      expect(mockCreatePreferences).toHaveBeenCalledTimes(1);
+      const createdArg = mockCreatePreferences.mock.calls[0][0] as { user_id: number };
+      expect(createdArg.user_id).toBe(1);
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    it("should return 400 for an unknown date_format", async () => {
+      mockGetById.mockResolvedValue(mockUser(buildUser()) as any);
+      mockGetPreferences.mockResolvedValue(null as any);
+
+      const req = createReq({ body: { date_format: "YYYY-MM-DD" } });
+      const res = createRes();
+      await patchPreferencesForCurrentUser(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(mockCreatePreferences).not.toHaveBeenCalled();
+    });
+
+    it("should return 400 for an unknown language", async () => {
+      mockGetById.mockResolvedValue(mockUser(buildUser()) as any);
+      mockGetPreferences.mockResolvedValue(null as any);
+
+      const req = createReq({ body: { language: "en-US" } });
+      const res = createRes();
+      await patchPreferencesForCurrentUser(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(mockCreatePreferences).not.toHaveBeenCalled();
+    });
+
+    it("should return 400 when the body has neither date_format nor language", async () => {
+      const req = createReq({ body: {} });
+      const res = createRes();
+      await patchPreferencesForCurrentUser(req, res);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(mockGetById).not.toHaveBeenCalled();
+    });
+
+    it("should return 404 when the user is not found", async () => {
+      mockGetById.mockResolvedValue(null as any);
+      const req = createReq({ body: { date_format: "DD-MM-YYYY" } });
+      const res = createRes();
+      await patchPreferencesForCurrentUser(req, res);
+      expect(res.status).toHaveBeenCalledWith(404);
+    });
+
+    it("should return 500 on query error", async () => {
+      mockGetById.mockResolvedValue(mockUser(buildUser()) as any);
+      mockGetPreferences.mockRejectedValue(new Error("DB error"));
+      const req = createReq({ body: { date_format: "DD-MM-YYYY" } });
+      const res = createRes();
+      await patchPreferencesForCurrentUser(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
     });
   });

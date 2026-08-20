@@ -2,12 +2,43 @@ import { createLogger, format, transports } from "winston";
 import DailyRotateFile from "winston-daily-rotate-file";
 import path from "path";
 import { getTenantIdForLogging, ensureTenantLogDirectory } from "../tenant/tenantContext";
+import { emitOtlpLog } from "../../observability/otel";
 
 const { combine, timestamp, printf, colorize } = format;
 const isDev = process.env.NODE_ENV !== "production";
 
+/**
+ * Defense-in-depth redaction for accidentally-logged secrets.
+ * Applied to every log message before it reaches the transport.
+ */
+function redactSensitiveInfo(input: string): string {
+  return (
+    input
+      // OpenAI-style API keys and similar long key prefixes
+      .replace(/\b(sk-[A-Za-z0-9_-]{10,})\b/g, "[REDACTED]")
+      // Authorization: Bearer <token>
+      .replace(/(\bAuthorization\s*:\s*Bearer\s+)\S+/gi, "$1[REDACTED]")
+      // key=value or key: value style sensitive fields
+      .replace(
+        /\b(password|secret|token|apiKey|api_key|refreshToken|accessToken)\b\s*[:=]\s*[^\s&,"{}]+/gi,
+        "$1=[REDACTED]",
+      )
+      // JSON double-quoted sensitive fields
+      .replace(
+        /"(password|secret|token|apiKey|api_key|refreshToken|accessToken)"\s*:\s*"[^"]*"/gi,
+        '"$1":"[REDACTED]"',
+      )
+      // JSON single-quoted sensitive fields
+      .replace(
+        /'(password|secret|token|apiKey|api_key|refreshToken|accessToken)'\s*:\s*'[^']*'/gi,
+        "'$1':'[REDACTED]'",
+      )
+  );
+}
+
 const logFormat = printf(({ level, message, timestamp }) => {
-  return `${timestamp} [${level}]: ${message}`;
+  const safeMessage = typeof message === "string" ? redactSensitiveInfo(message) : String(message);
+  return `${timestamp} [${level}]: ${safeMessage}`;
 });
 
 /**
@@ -77,13 +108,24 @@ export function logStructured(
 ) {
   // Use UTC timestamp to ensure consistency across timezones
   const timestamp = new Date().toISOString();
-  const line = `${logId++}, ${timestamp}, ${state}, ${description}, ${functionName}, ${fileName}`;
+  const safeDescription = redactSensitiveInfo(description);
+  const line = `${logId++}, ${timestamp}, ${state}, ${safeDescription}, ${functionName}, ${fileName}`;
 
   // Resolve the tenant scope from request context; falls back to 'default' when unset.
   const tenant = getTenantIdForLogging();
   const tenantLogger = getTenantLogger(tenant);
 
   tenantLogger.info(line);
+
+  // Ship the same line to the central stack (deployment name is added by
+  // emitOtlpLog). No-op when observability is disabled. File format unchanged.
+  emitOtlpLog(state === "error" ? "error" : "info", line, {
+    "tenant.hash": tenant,
+    "log.state": state,
+    "log.function": functionName,
+    "log.file": fileName,
+    "service.name": "verifywise-backend",
+  });
 }
 
 /**

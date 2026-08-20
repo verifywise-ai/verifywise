@@ -46,7 +46,7 @@ describe("validateAITrustCentreVisibility middleware", () => {
     await validateVisibility(req, res as Response, next);
 
     expect(res.status).toHaveBeenCalledWith(400);
-    expect(res.json).toHaveBeenCalledWith({ error: "Invalid hash" });
+    expect(res.json).toHaveBeenCalledWith({ message: "Bad Request", data: "Invalid hash" });
     expect(next).not.toHaveBeenCalled();
   });
 
@@ -79,7 +79,10 @@ describe("validateAITrustCentreVisibility middleware", () => {
 
     expect(mockGetOrganizationIdFromTenantHash).toHaveBeenCalledWith("abc123def4");
     expect(res.status).toHaveBeenCalledWith(404);
-    expect(res.json).toHaveBeenCalledWith({ error: "Organization not found" });
+    expect(res.json).toHaveBeenCalledWith({
+      message: "Not Found",
+      data: "Organization not found",
+    });
     expect(next).not.toHaveBeenCalled();
   });
 

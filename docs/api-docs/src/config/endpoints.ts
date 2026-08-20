@@ -45,6 +45,7 @@ export const agentDiscoveryEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/agent-primitives',
     summary: "Create Agent Primitive",
+    description: "Requires role: Admin",
     requiresAuth: true,
     responses: [
       { status: 201, description: "Created successfully" },
@@ -108,6 +109,7 @@ export const agentDiscoveryEndpoints: Endpoint[] = [
     method: 'PATCH',
     path: '/agent-primitives/{id}',
     summary: "Update Agent Primitive",
+    description: "Requires role: Admin",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
@@ -123,6 +125,7 @@ export const agentDiscoveryEndpoints: Endpoint[] = [
     method: 'DELETE',
     path: '/agent-primitives/{id}',
     summary: "Delete Agent Primitive By Id",
+    description: "Requires role: Admin",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
@@ -138,6 +141,7 @@ export const agentDiscoveryEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/agent-primitives/sync',
     summary: "Trigger Sync",
+    description: "Requires role: Admin",
     requiresAuth: true,
     responses: [
       { status: 201, description: "Created successfully" },
@@ -150,6 +154,7 @@ export const agentDiscoveryEndpoints: Endpoint[] = [
     method: 'PATCH',
     path: '/agent-primitives/{id}/review',
     summary: "Review Agent Primitive",
+    description: "Requires role: Admin",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
@@ -165,6 +170,7 @@ export const agentDiscoveryEndpoints: Endpoint[] = [
     method: 'PATCH',
     path: '/agent-primitives/{id}/link-model',
     summary: "Link Model To Agent",
+    description: "Requires role: Admin",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
@@ -180,6 +186,7 @@ export const agentDiscoveryEndpoints: Endpoint[] = [
     method: 'PATCH',
     path: '/agent-primitives/{id}/unlink-model',
     summary: "Unlink Model From Agent",
+    description: "Requires role: Admin",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
@@ -478,6 +485,7 @@ export const aiApprovalsEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/ai-approvals/{id}/approve',
     summary: "Approve Approval Ctrl",
+    description: "Requires role: Admin",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -489,6 +497,7 @@ export const aiApprovalsEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/ai-approvals/{id}/reject',
     summary: "Reject Approval Ctrl",
+    description: "Requires role: Admin",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -515,6 +524,7 @@ export const aiAppsEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/ai-apps',
     summary: "Create Ai App",
+    description: "Requires role: Admin or Editor",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -548,6 +558,7 @@ export const aiAppsEndpoints: Endpoint[] = [
     method: 'PATCH',
     path: '/ai-apps/{id}',
     summary: "Update Ai App By Id",
+    description: "Requires role: Admin or Editor",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -559,6 +570,7 @@ export const aiAppsEndpoints: Endpoint[] = [
     method: 'DELETE',
     path: '/ai-apps/{id}',
     summary: "Delete Ai App By Id",
+    description: "Requires role: Admin",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -570,6 +582,7 @@ export const aiAppsEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/ai-apps/{id}/models',
     summary: "Link Models To Ai App",
+    description: "Requires role: Admin or Editor",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -581,6 +594,7 @@ export const aiAppsEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/ai-apps/{id}/policies',
     summary: "Set Policies For Ai App",
+    description: "Requires role: Admin or Editor",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -592,6 +606,7 @@ export const aiAppsEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/ai-apps/{id}/data-exposure',
     summary: "Set Data Exposure For Ai App",
+    description: "Requires role: Admin or Editor",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -603,6 +618,7 @@ export const aiAppsEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/ai-apps/from-shadow-ai/{shadowAiToolId}',
     summary: "Promote From Shadow Ai",
+    description: "Requires role: Admin or Editor",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -614,6 +630,7 @@ export const aiAppsEndpoints: Endpoint[] = [
     method: 'PATCH',
     path: '/ai-apps/{id}/status',
     summary: "Update Ai App Status",
+    description: "Requires role: Admin or Editor",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -640,6 +657,7 @@ export const aiAuditEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/ai-audit/export',
     summary: "Export Audit Log",
+    description: "Requires role: Admin",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -677,6 +695,7 @@ export const aiConfirmationEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/ai-confirmation/approve/{id}',
     summary: "Approve Confirmation",
+    description: "Requires role: Admin",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -688,6 +707,7 @@ export const aiConfirmationEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/ai-confirmation/reject/{id}',
     summary: "Reject Confirmation",
+    description: "Requires role: Admin",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -747,6 +767,7 @@ export const aiContentEndpoints: Endpoint[] = [
     method: 'PATCH',
     path: '/ai-content/{id}/review',
     summary: "Review Content",
+    description: "Requires role: Admin or Editor",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -2519,14 +2540,12 @@ export const dashboardEndpoints: Endpoint[] = [
 export const datasetEndpoints: Endpoint[] = [
   {
     method: 'POST',
-    path: '/dataset-bulk-upload/upload',
-    summary: "Handle Multer Error",
+    path: '/extensions/dataset-bulk-upload/upload',
+    summary: "Upload Dataset File",
     description: "Requires role: Admin or Editor",
     requiresAuth: true,
     responses: [
-      { status: 201, description: "Created successfully" },
-      { status: 401, description: "Unauthorized" },
-      { status: 403, description: "Forbidden - insufficient role" },
+      { status: 200, description: "Success" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Datasets",
@@ -3266,6 +3285,621 @@ export const evidenceHubEndpoints: Endpoint[] = [
   },
 ];
 
+// Extensions endpoints
+export const extensionEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/extensions',
+    summary: "List Extensions",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'GET',
+    path: '/extensions/{key}',
+    summary: "Get Extension",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'POST',
+    path: '/extensions/{key}/enable',
+    summary: "Enable Extension",
+    description: "Requires role: Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'POST',
+    path: '/extensions/{key}/disable',
+    summary: "Disable Extension",
+    description: "Requires role: Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'PATCH',
+    path: '/extensions/{key}/configuration',
+    summary: "Update Extension Configuration",
+    description: "Requires role: Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'POST',
+    path: '/extensions/{key}/test-connection',
+    summary: "Test Extension Connection",
+    description: "Requires role: Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'GET',
+    path: '/extensions/risk-import/template',
+    summary: "Download Excel Template",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'POST',
+    path: '/extensions/risk-import/import',
+    summary: "Bulk Import Risks",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'GET',
+    path: '/extensions/slack/oauth/workspaces',
+    summary: "Get All Slack Webhooks",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'POST',
+    path: '/extensions/slack/oauth/workspaces',
+    summary: "Create New Slack Webhook",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'GET',
+    path: '/extensions/slack/oauth/workspaces/{id}',
+    summary: "Get Slack Webhook By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'PATCH',
+    path: '/extensions/slack/oauth/workspaces/{id}',
+    summary: "Update Slack Webhook By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'DELETE',
+    path: '/extensions/slack/oauth/workspaces/{id}',
+    summary: "Delete Slack Webhook By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'POST',
+    path: '/extensions/slack/oauth/workspaces/{id}/send',
+    summary: "Send Slack Message",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'GET',
+    path: '/extensions/mlflow/models',
+    summary: "List Models",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'POST',
+    path: '/extensions/mlflow/sync',
+    summary: "Sync From Mlflow",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'GET',
+    path: '/extensions/mlflow/models/{modelId}',
+    summary: "Get Model By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'GET',
+    path: '/extensions/azure-ai-foundry/models',
+    summary: "List Deployments",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'POST',
+    path: '/extensions/azure-ai-foundry/sync',
+    summary: "Sync From Azure",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'GET',
+    path: '/extensions/azure-ai-foundry/models/{deploymentId}',
+    summary: "Get Deployment By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'GET',
+    path: '/extensions/azure-ai-foundry/discover',
+    summary: "Discover Ai Agents",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'GET',
+    path: '/extensions/jira-assets/config',
+    summary: "Get Config",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'POST',
+    path: '/extensions/jira-assets/config',
+    summary: "Post Config",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'GET',
+    path: '/extensions/jira-assets/vw-attributes',
+    summary: "Get Vw Attributes",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'GET',
+    path: '/extensions/jira-assets/schemas',
+    summary: "Get Schemas",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'GET',
+    path: '/extensions/jira-assets/schemas/{schemaId}/object-types',
+    summary: "Get Object Types",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'GET',
+    path: '/extensions/jira-assets/object-types/{objectTypeId}/attributes',
+    summary: "Get Attributes",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'GET',
+    path: '/extensions/jira-assets/object-types/{objectTypeId}/objects',
+    summary: "Get Objects",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'POST',
+    path: '/extensions/jira-assets/import',
+    summary: "Post Import",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'POST',
+    path: '/extensions/jira-assets/sync',
+    summary: "Post Sync",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'GET',
+    path: '/extensions/jira-assets/sync/status',
+    summary: "Get Sync Status Ctrl",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'GET',
+    path: '/extensions/jira-assets/sync/history',
+    summary: "Get Sync History Ctrl",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'GET',
+    path: '/extensions/jira-assets/use-cases',
+    summary: "List Use Cases Ctrl",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'GET',
+    path: '/extensions/jira-assets/use-cases/{id}',
+    summary: "Get Use Case Ctrl",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'DELETE',
+    path: '/extensions/jira-assets/use-cases/{id}',
+    summary: "Delete Use Case Ctrl",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'GET',
+    path: '/extensions/jira-assets/projects/{projectId}/custom-frameworks-progress',
+    summary: "Get Custom Frameworks Progress Ctrl",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'GET',
+    path: '/extensions/model-lifecycle/config',
+    summary: "List Config",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'POST',
+    path: '/extensions/model-lifecycle/phases',
+    summary: "Create Phase Ctrl",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'PUT',
+    path: '/extensions/model-lifecycle/phases/reorder',
+    summary: "Reorder Phases Ctrl",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'PUT',
+    path: '/extensions/model-lifecycle/phases/{id}',
+    summary: "Update Phase Ctrl",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'DELETE',
+    path: '/extensions/model-lifecycle/phases/{id}',
+    summary: "Delete Phase Ctrl",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'POST',
+    path: '/extensions/model-lifecycle/phases/{phaseId}/items',
+    summary: "Create Item Ctrl",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'PUT',
+    path: '/extensions/model-lifecycle/phases/{phaseId}/items/reorder',
+    summary: "Reorder Items Ctrl",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'PUT',
+    path: '/extensions/model-lifecycle/items/{id}',
+    summary: "Update Item Ctrl",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'DELETE',
+    path: '/extensions/model-lifecycle/items/{id}',
+    summary: "Delete Item Ctrl",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'GET',
+    path: '/extensions/model-lifecycle/models/{id}/lifecycle',
+    summary: "Get Lifecycle Ctrl",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'GET',
+    path: '/extensions/model-lifecycle/models/{id}/lifecycle/progress',
+    summary: "Get Progress Ctrl",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'PUT',
+    path: '/extensions/model-lifecycle/models/{id}/lifecycle/items/{itemId}',
+    summary: "Upsert Value Ctrl",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'POST',
+    path: '/extensions/model-lifecycle/models/{id}/lifecycle/items/{itemId}/files',
+    summary: "Attach File Ctrl",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'DELETE',
+    path: '/extensions/model-lifecycle/models/{id}/lifecycle/items/{itemId}/files/{fileId}',
+    summary: "Detach File Ctrl",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'POST',
+    path: '/extensions/model-lifecycle/models/{id}/lifecycle/items/{itemId}/people',
+    summary: "Add Person Ctrl",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'DELETE',
+    path: '/extensions/model-lifecycle/models/{id}/lifecycle/items/{itemId}/people/{userId}',
+    summary: "Remove Person Ctrl",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'POST',
+    path: '/extensions/model-lifecycle/models/{id}/lifecycle/items/{itemId}/approvals',
+    summary: "Add Approver Ctrl",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'PUT',
+    path: '/extensions/model-lifecycle/models/{id}/lifecycle/items/{itemId}/approvals/{userId}',
+    summary: "Update Approval Status Ctrl",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'DELETE',
+    path: '/extensions/model-lifecycle/models/{id}/lifecycle/items/{itemId}/approvals/{userId}',
+    summary: "Remove Approver Ctrl",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+];
+
 // Files endpoints
 export const fileEndpoints: Endpoint[] = [
   {
@@ -3855,6 +4489,61 @@ export const frameworkEndpoints: Endpoint[] = [
     responses: [
       { status: 200, description: "Deleted successfully" },
       { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Frameworks",
+  },
+  {
+    method: 'GET',
+    path: '/frameworks/{frameworkId}/tree/{projectId}',
+    summary: "Get Framework Tree",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Frameworks",
+  },
+  {
+    method: 'GET',
+    path: '/frameworks/{frameworkId}/dashboard/{projectFrameworkId}',
+    summary: "Get Framework Dashboard",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Frameworks",
+  },
+  {
+    method: 'GET',
+    path: '/frameworks/{frameworkId}/impl/{level}/{id}',
+    summary: "Get Impl By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Frameworks",
+  },
+  {
+    method: 'PATCH',
+    path: '/frameworks/{frameworkId}/impl/{level}/{id}',
+    summary: "Update Impl",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Frameworks",
+  },
+  {
+    method: 'GET',
+    path: '/frameworks/{frameworkId}/impl/{level}/{id}/risks',
+    summary: "Get Impl Risks",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Frameworks",
@@ -4881,6 +5570,17 @@ export const internalEndpoints: Endpoint[] = [
     requiresAuth: false,
     responses: [
       { status: 201, description: "Created successfully" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Internal",
+  },
+  {
+    method: 'GET',
+    path: '/internal/observability-config',
+    summary: "Anonymous",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Internal",
@@ -6714,6 +7414,65 @@ export const notificationEndpoints: Endpoint[] = [
   },
 ];
 
+// Observability endpoints
+export const observabilityEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/observability/metrics',
+    summary: "Get Metrics",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Observability",
+  },
+  {
+    method: 'GET',
+    path: '/observability/traces',
+    summary: "Get Traces",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Observability",
+  },
+  {
+    method: 'GET',
+    path: '/observability/traces/{id}',
+    summary: "Get Trace Detail",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Observability",
+  },
+  {
+    method: 'GET',
+    path: '/observability/costs',
+    summary: "Get Costs",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Observability",
+  },
+  {
+    method: 'GET',
+    path: '/observability/performance',
+    summary: "Get Performance",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Observability",
+  },
+];
+
 // Organizations endpoints
 export const organizationEndpoints: Endpoint[] = [
   {
@@ -6746,6 +7505,7 @@ export const organizationEndpoints: Endpoint[] = [
     method: 'PATCH',
     path: '/organizations/{id}',
     summary: "Update Organization By Id",
+    description: "Requires role: Admin",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
@@ -6774,6 +7534,7 @@ export const organizationEndpoints: Endpoint[] = [
     method: 'PATCH',
     path: '/organizations/{id}/onboarding-status',
     summary: "Update Onboarding Status",
+    description: "Requires role: Admin",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
@@ -6784,146 +7545,6 @@ export const organizationEndpoints: Endpoint[] = [
       { status: 500, description: "Internal server error" },
     ],
     tag: "Organizations",
-  },
-];
-
-// Plugins endpoints
-export const pluginEndpoints: Endpoint[] = [
-  {
-    method: 'GET',
-    path: '/plugins/marketplace',
-    summary: "Get All Plugins",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 401, description: "Unauthorized" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Plugins",
-  },
-  {
-    method: 'GET',
-    path: '/plugins/marketplace/{key}',
-    summary: "Get Plugin By Key",
-    requiresAuth: true,
-    parameters: [
-      { name: 'key', in: 'path', type: 'string', required: true, description: "The key" },
-    ],
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 401, description: "Unauthorized" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Plugins",
-  },
-  {
-    method: 'GET',
-    path: '/plugins/marketplace/search',
-    summary: "Search Plugins",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 401, description: "Unauthorized" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Plugins",
-  },
-  {
-    method: 'GET',
-    path: '/plugins/categories',
-    summary: "Get Categories",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 401, description: "Unauthorized" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Plugins",
-  },
-  {
-    method: 'POST',
-    path: '/plugins/install',
-    summary: "Install Plugin",
-    requiresAuth: true,
-    responses: [
-      { status: 201, description: "Created successfully" },
-      { status: 401, description: "Unauthorized" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Plugins",
-  },
-  {
-    method: 'DELETE',
-    path: '/plugins/installations/{id}',
-    summary: "Uninstall Plugin",
-    requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
-    ],
-    responses: [
-      { status: 200, description: "Deleted successfully" },
-      { status: 401, description: "Unauthorized" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Plugins",
-  },
-  {
-    method: 'GET',
-    path: '/plugins/installations',
-    summary: "Get Installed Plugins",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 401, description: "Unauthorized" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Plugins",
-  },
-  {
-    method: 'PUT',
-    path: '/plugins/installations/{id}/configuration',
-    summary: "Update Plugin Configuration",
-    requiresAuth: true,
-    parameters: [
-      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
-    ],
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 401, description: "Unauthorized" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Plugins",
-  },
-  {
-    method: 'POST',
-    path: '/plugins/{key}/test-connection',
-    summary: "Test Plugin Connection",
-    requiresAuth: true,
-    parameters: [
-      { name: 'key', in: 'path', type: 'string', required: true, description: "The key" },
-    ],
-    responses: [
-      { status: 201, description: "Created successfully" },
-      { status: 401, description: "Unauthorized" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Plugins",
-  },
-  {
-    method: 'GET',
-    path: '/plugins/{key}/ui/dist/{filename}',
-    summary: "Serve plugin UI assets",
-    requiresAuth: true,
-    parameters: [
-      { name: 'key', in: 'path', type: 'string', required: true, description: "The key" },
-      { name: 'filename', in: 'path', type: 'string', required: true, description: "The filename" },
-    ],
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 401, description: "Unauthorized" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Plugins",
   },
 ];
 
@@ -8084,6 +8705,17 @@ export const reportingEndpoints: Endpoint[] = [
     tag: "Reporting",
   },
   {
+    method: 'GET',
+    path: '/reporting/sections',
+    summary: "List Sections",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting",
+  },
+  {
     method: 'DELETE',
     path: '/reporting/{id}',
     summary: "Delete Generated Report By Id",
@@ -8097,6 +8729,251 @@ export const reportingEndpoints: Endpoint[] = [
       { status: 500, description: "Internal server error" },
     ],
     tag: "Reporting",
+  },
+];
+
+// Reporting/Runs endpoints
+export const reportingrunsEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/reporting/runs',
+    summary: "List Runs",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Runs",
+  },
+  {
+    method: 'GET',
+    path: '/reporting/runs/{id}',
+    summary: "Get Run",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Runs",
+  },
+  {
+    method: 'DELETE',
+    path: '/reporting/runs/{id}',
+    summary: "Delete Run",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Runs",
+  },
+  {
+    method: 'GET',
+    path: '/reporting/runs/{id}/download',
+    summary: "Download Run",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Runs",
+  },
+  {
+    method: 'GET',
+    path: '/reporting/runs/{id}/analyses',
+    summary: "Get Run Analyses",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Runs",
+  },
+  {
+    method: 'PATCH',
+    path: '/reporting/runs/{id}/archive',
+    summary: "Archive Run",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Runs",
+  },
+  {
+    method: 'PATCH',
+    path: '/reporting/runs/{id}/restore',
+    summary: "Restore Run",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Runs",
+  },
+];
+
+// Reporting/Scheduled Reports endpoints
+export const reportingscheduledReportsEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/reporting/scheduled-reports',
+    summary: "List Scheduled Reports",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Scheduled Reports",
+  },
+  {
+    method: 'POST',
+    path: '/reporting/scheduled-reports',
+    summary: "Create Scheduled Report",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Scheduled Reports",
+  },
+  {
+    method: 'PATCH',
+    path: '/reporting/scheduled-reports/{id}',
+    summary: "Update Scheduled Report",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Scheduled Reports",
+  },
+  {
+    method: 'DELETE',
+    path: '/reporting/scheduled-reports/{id}',
+    summary: "Delete Scheduled Report",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Scheduled Reports",
+  },
+  {
+    method: 'POST',
+    path: '/reporting/scheduled-reports/{id}/pause',
+    summary: "Pause Scheduled Report",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Scheduled Reports",
+  },
+  {
+    method: 'POST',
+    path: '/reporting/scheduled-reports/{id}/resume',
+    summary: "Resume Scheduled Report",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Scheduled Reports",
+  },
+  {
+    method: 'POST',
+    path: '/reporting/scheduled-reports/{id}/run-now',
+    summary: "Run Scheduled Report Now",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Scheduled Reports",
+  },
+];
+
+// Reporting/Templates endpoints
+export const reportingtemplatesEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/reporting/templates',
+    summary: "List Templates",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Templates",
+  },
+  {
+    method: 'POST',
+    path: '/reporting/templates',
+    summary: "Create Template",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Templates",
+  },
+  {
+    method: 'GET',
+    path: '/reporting/templates/{id}',
+    summary: "Get Template",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Templates",
+  },
+  {
+    method: 'PATCH',
+    path: '/reporting/templates/{id}',
+    summary: "Update Template",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Templates",
+  },
+  {
+    method: 'DELETE',
+    path: '/reporting/templates/{id}',
+    summary: "Archive Template",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Templates",
+  },
+  {
+    method: 'POST',
+    path: '/reporting/templates/{id}/run',
+    summary: "Run Template Now",
+    description: "Requires role: Admin or Editor",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Reporting/Templates",
   },
 ];
 
@@ -8756,6 +9633,7 @@ export const ssoConfigEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/ssoConfig',
     summary: "Get S S O Config",
+    description: "Requires role: Admin",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -8767,6 +9645,7 @@ export const ssoConfigEndpoints: Endpoint[] = [
     method: 'PUT',
     path: '/ssoConfig',
     summary: "Save S S O Config",
+    description: "Requires role: Admin",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -8778,6 +9657,7 @@ export const ssoConfigEndpoints: Endpoint[] = [
     method: 'PUT',
     path: '/ssoConfig/enable',
     summary: "Enable S S O",
+    description: "Requires role: Admin",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -8789,6 +9669,7 @@ export const ssoConfigEndpoints: Endpoint[] = [
     method: 'PUT',
     path: '/ssoConfig/disable',
     summary: "Disable S S O",
+    description: "Requires role: Admin",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -8966,6 +9847,18 @@ export const superAdminEndpoints: Endpoint[] = [
     tag: "Super Admin",
   },
   {
+    method: 'GET',
+    path: '/super-admin/organizations/{id}/invitations',
+    summary: "List Org Invitations",
+    description: "Requires role: Super Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Super Admin",
+  },
+  {
     method: 'POST',
     path: '/super-admin/organizations/{id}/invite',
     summary: "Invite User To Org",
@@ -9011,6 +9904,78 @@ export const superAdminEndpoints: Endpoint[] = [
     ],
     tag: "Super Admin",
   },
+  {
+    method: 'GET',
+    path: '/super-admin/monitoring',
+    summary: "Get Monitoring",
+    description: "Requires role: Super Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Super Admin",
+  },
+  {
+    method: 'PUT',
+    path: '/super-admin/monitoring',
+    summary: "Update Monitoring",
+    description: "Requires role: Super Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Super Admin",
+  },
+  {
+    method: 'POST',
+    path: '/super-admin/monitoring/token',
+    summary: "Generate Monitoring Token",
+    description: "Requires role: Super Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Super Admin",
+  },
+  {
+    method: 'GET',
+    path: '/super-admin/super-admins',
+    summary: "List Super Admins",
+    description: "Requires role: Super Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Super Admin",
+  },
+  {
+    method: 'POST',
+    path: '/super-admin/super-admins',
+    summary: "Grant Super Admin",
+    description: "Requires role: Super Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Super Admin",
+  },
+  {
+    method: 'DELETE',
+    path: '/super-admin/super-admins/{user_id}',
+    summary: "Revoke Super Admin",
+    description: "Requires role: Super Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Super Admin",
+  },
 ];
 
 // System endpoints
@@ -9043,17 +10008,6 @@ export const systemEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/version',
     summary: "Get application version",
-    requiresAuth: false,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "System",
-  },
-  {
-    method: 'GET',
-    path: '/health',
-    summary: "Health Check",
     requiresAuth: false,
     responses: [
       { status: 200, description: "Success" },
@@ -9224,6 +10178,21 @@ export const taskEndpoints: Endpoint[] = [
   },
 ];
 
+// Telemetry endpoints
+export const telemetryEndpoints: Endpoint[] = [
+  {
+    method: 'POST',
+    path: '/telemetry',
+    summary: "Type",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Telemetry",
+  },
+];
+
 // Training endpoints
 export const trainingEndpoints: Endpoint[] = [
   {
@@ -9314,6 +10283,52 @@ export const userEndpoints: Endpoint[] = [
   },
   {
     method: 'GET',
+    path: '/users/preferences',
+    summary: "Get current user preferences",
+    description: "Returns the authenticated user's persisted preferences (date_format, language) from user_preferences. If no row exists, returns safe defaults including a transient theme default.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Preferences found or defaults returned" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Users",
+  },
+  {
+    method: 'GET',
+    path: '/users/me/preferences',
+    summary: "Get current user preferences",
+    description: "Returns the authenticated user's persisted preferences (date_format, language) from user_preferences. If no row exists, returns safe defaults including a transient theme default. Preferred alias of GET /users/preferences.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Preferences found or defaults returned" },
+      { status: 401, description: "Unauthorized" },
+      { status: 404, description: "User not found" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Users",
+  },
+  {
+    method: 'PATCH',
+    path: '/users/me/preferences',
+    summary: "Update current user preferences",
+    description: "Upserts the authenticated user's date_format and/or language. At least one field is required. Unknown format strings and languages are rejected. Any user_id in the body is ignored; the JWT user is always the target.",
+    requiresAuth: true,
+    requestBody: {
+      "date_format": "DD-MM-YYYY | MM-DD-YYYY | DD/MM/YY | MM/DD/YY (optional)",
+      "language": "en | de | fr | es (optional)",
+    },
+    responses: [
+      { status: 200, description: "Preferences saved" },
+      { status: 400, description: "Validation error (missing fields or unknown format/language)" },
+      { status: 401, description: "Unauthorized" },
+      { status: 404, description: "User not found" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Users",
+  },
+  {
+    method: 'GET',
     path: '/users/{id}',
     summary: "Get user by ID",
     description: "Retrieves a single user by their numeric ID. Super-admins can access any user; regular users can only access users within their organization (or their own record).",
@@ -9358,7 +10373,7 @@ export const userEndpoints: Endpoint[] = [
     method: 'DELETE',
     path: '/users/{id}',
     summary: "Delete user by ID",
-    description: "Deletes a user and nullifies all their foreign key references across projects, vendors, risks, vendor risks, files, automations, and invitations. Also removes the user from projects_members. Demo users and super-admins cannot be deleted.",
+    description: "Requires role: Admin or SuperAdmin",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "User ID to delete" },
@@ -9434,6 +10449,18 @@ export const userEndpoints: Endpoint[] = [
       { status: 400, description: "Refresh token missing from cookie" },
       { status: 401, description: "Invalid refresh token" },
       { status: 406, description: "Refresh token expired" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Users",
+  },
+  {
+    method: 'POST',
+    path: '/users/logout',
+    summary: "Log out current session",
+    description: "Revokes the presented refresh token server-side and clears the refresh_token cookie. No bearer token required: only the token presented in the cookie is revoked.",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Logged out; refresh token revoked and cookie cleared" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Users",
@@ -9884,6 +10911,7 @@ export const allEndpoints = {
   euAiAct: euAiActEndpoints,
   evidenceAi: evidenceAiEndpoints,
   evidenceHub: evidenceHubEndpoints,
+  extension: extensionEndpoints,
   file: fileEndpoints,
   framework: frameworkEndpoints,
   fria: friaEndpoints,
@@ -9902,8 +10930,8 @@ export const allEndpoints = {
   nistAiRmf: nistAiRmfEndpoints,
   note: noteEndpoints,
   notification: notificationEndpoints,
+  observability: observabilityEndpoints,
   organization: organizationEndpoints,
-  plugin: pluginEndpoints,
   policy: policyEndpoints,
   postMarketMonitoring: postMarketMonitoringEndpoints,
   project: projectEndpoints,
@@ -9911,6 +10939,9 @@ export const allEndpoints = {
   quantitativeRisk: quantitativeRiskEndpoints,
   readiness: readinessEndpoints,
   reporting: reportingEndpoints,
+  reportingruns: reportingrunsEndpoints,
+  reportingscheduledReports: reportingscheduledReportsEndpoints,
+  reportingtemplates: reportingtemplatesEndpoints,
   riskBenchmark: riskBenchmarkEndpoints,
   riskHistory: riskHistoryEndpoints,
   role: roleEndpoints,
@@ -9923,6 +10954,7 @@ export const allEndpoints = {
   superAdmin: superAdminEndpoints,
   system: systemEndpoints,
   task: taskEndpoints,
+  telemetry: telemetryEndpoints,
   training: trainingEndpoints,
   user: userEndpoints,
   vendor: vendorEndpoints,

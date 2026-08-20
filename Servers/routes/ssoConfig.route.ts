@@ -1,5 +1,6 @@
 import express from "express";
 import authenticateJWT from "../middleware/auth.middleware";
+import authorize from "../middleware/accessControl.middleware";
 import {
   checkSSOStatus,
   disableSSO,
@@ -25,9 +26,9 @@ router.use((_req, res, next) => {
 router.get("/check-status", checkSSOStatus);
 router.get("/orgs", listSSOOrgs);
 
-router.get("/", authenticateJWT, getSSOConfig);
-router.put("/", authenticateJWT, saveSSOConfig);
-router.put("/enable", authenticateJWT, enableSSO);
-router.put("/disable", authenticateJWT, disableSSO);
+router.get("/", authenticateJWT, authorize(["Admin"]), getSSOConfig);
+router.put("/", authenticateJWT, authorize(["Admin"]), saveSSOConfig);
+router.put("/enable", authenticateJWT, authorize(["Admin"]), enableSSO);
+router.put("/disable", authenticateJWT, authorize(["Admin"]), disableSSO);
 
 export default router;

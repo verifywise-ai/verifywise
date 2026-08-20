@@ -8,7 +8,7 @@
  * @module pages/AITrustIndex
  */
 
-import { Navigate } from "react-router-dom";
+import { Navigate } from "react-router";
 
 export default function AITrustIndex() {
   return <Navigate to="/ai-trust-index/browse" replace />;

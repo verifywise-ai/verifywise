@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <!-- Background circle -->
+  <circle cx="32" cy="32" r="30" fill="#003DA5"/>
+
+  <!-- Quebec fleur-de-lis stylized -->
+  <g fill="#FFFFFF">
+    <!-- Center fleur-de-lis petal -->
+    <path d="M32 12 C32 12 28 20 28 26 C28 30 30 32 32 32 C34 32 36 30 36 26 C36 20 32 12 32 12 Z"/>
+
+    <!-- Left petal -->
+    <path d="M20 28 C20 28 24 24 28 26 C30 27 30 29 29 31 C28 33 24 34 20 32 C16 30 20 28 20 28 Z"/>
+
+    <!-- Right petal -->
+    <path d="M44 28 C44 28 40 24 36 26 C34 27 34 29 35 31 C36 33 40 34 44 32 C48 30 44 28 44 28 Z"/>
+
+    <!-- Bottom stem -->
+    <rect x="30" y="32" width="4" height="12" rx="1"/>
+
+    <!-- Cross bar -->
+    <rect x="26" y="36" width="12" height="3" rx="1"/>
+  </g>
+
+  <!-- Shield outline for law/compliance -->
+  <path d="M32 48 L32 52 M26 50 L38 50" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"/>
+
+  <!-- Text: 25 -->
+  <text x="32" y="58" font-family="Arial, sans-serif" font-size="8" font-weight="bold" fill="#FFFFFF" text-anchor="middle">LAW 25</text>
+</svg>

@@ -3,20 +3,17 @@ import { renderWithProviders } from "../../../../test/renderWithProviders";
 
 const mockNavigate = vi.fn();
 
-vi.mock("react-router-dom", async () => {
-  const actual: any = await vi.importActual("react-router-dom");
+vi.mock("react-router", async () => {
+  const actual: any = await vi.importActual("react-router");
   return { ...actual, useNavigate: () => mockNavigate };
 });
 
 let mockUserRoleName = "Admin";
-let mockIsSuperAdmin = false;
 
 vi.mock("../../../../application/hooks/useAuth", () => ({
   useAuth: () => ({
     userRoleName: mockUserRoleName,
     userId: 1,
-    isSuperAdmin: mockIsSuperAdmin,
-    activeOrganizationId: null,
   }),
 }));
 
@@ -157,7 +154,6 @@ describe("ProjectOverview", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUserRoleName = "Admin";
-    mockIsSuperAdmin = false;
     mockGetProject.mockResolvedValue({ project: mockProject });
     mockGetExperiments.mockResolvedValue({ experiments: mockExperiments });
     mockGetLogs.mockResolvedValue({ logs: mockLogs });
@@ -266,22 +262,6 @@ describe("ProjectOverview", () => {
     });
   });
 
-  it("follows RBAC for super admins", async () => {
-    mockUserRoleName = "Admin";
-    mockIsSuperAdmin = true;
-
-    renderWithProviders(<ProjectOverview {...defaultProps} />);
-
-    await waitFor(() => {
-      expect(screen.getByText("Overview")).toBeInTheDocument();
-    });
-
-    const buttons = screen.getAllByTestId("customizable-button");
-    buttons.forEach((btn) => {
-      expect(btn).toBeDisabled();
-    });
-  });
-
   it("calls onViewExperiment when provided and row is clicked", async () => {
     const onViewExperiment = vi.fn();
 
@@ -331,7 +311,7 @@ describe("ProjectOverview", () => {
     expect(mockGetProject).not.toHaveBeenCalled();
   });
 
-  it("shows error state with retry when API calls fail", async () => {
+  it("handles API errors gracefully", async () => {
     mockGetExperiments.mockRejectedValue(new Error("API error"));
     mockGetLogs.mockRejectedValue(new Error("API error"));
     mockGetMonitorDashboard.mockRejectedValue(new Error("API error"));
@@ -339,12 +319,10 @@ describe("ProjectOverview", () => {
     renderWithProviders(<ProjectOverview {...defaultProps} />);
 
     await waitFor(() => {
-      expect(screen.getByRole("alert")).toBeInTheDocument();
+      expect(screen.getByText("Overview")).toBeInTheDocument();
     });
 
-    expect(screen.getByText("API error")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Retry loading data" })).toBeInTheDocument();
-    expect(screen.queryByText("Overview")).not.toBeInTheDocument();
+    expect(screen.getByText("No experiments yet")).toBeInTheDocument();
   });
 
   it("opens new experiment modal when button clicked", async () => {

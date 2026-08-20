@@ -18,10 +18,14 @@ spec:
         app: verifywise
         component: frontend
     spec:
+      # Pod-level security context (KSV-0118): runtime-default seccomp profile.
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       containers:
       - name: frontend
-        image: ghcr.io/verifywise-ai/verifywise-frontend:latest
-        imagePullPolicy: Always
+        image: ghcr.io/verifywise-ai/verifywise-frontend:1.7.0
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 80
           name: http
@@ -42,6 +46,13 @@ spec:
           periodSeconds: 5
           timeoutSeconds: 3
           failureThreshold: 3
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+            add:
+              - NET_BIND_SERVICE
         resources:
           requests:
             memory: "128Mi"

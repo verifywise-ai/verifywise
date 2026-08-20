@@ -38,12 +38,14 @@ import {
 import Avatar from "../Avatar/VWAvatar";
 import { brand, text, background } from "../../themes/palette";
 import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
+import { storageService } from "../../../infrastructure/storage";
 import { ROLES } from "../../../application/constants/roles";
 import useLogout from "../../../application/hooks/useLogout";
 import { getUserById } from "../../../application/repository/user.repository";
 import { User } from "../../../domain/types/User";
 import { useProfilePhotoFetch } from "../../../application/hooks/useProfilePhotoFetch";
 import { useActiveModule } from "../../../application/hooks/useActiveModule";
+import { useAuth } from "../../../application/hooks/useAuth";
 import ReadyToSubscribeBox from "../ReadyToSubscribeBox/ReadyToSubscribeBox";
 
 interface IManagementItem {
@@ -157,17 +159,26 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
   const drawerRef = useRef<HTMLDivElement>(null);
 
   // Dark mode (CSS filter experiment)
-  const [darkMode, setDarkMode] = useState(() => {
-    return localStorage.getItem("vw_dark_mode") === "true";
-  });
+  const [darkMode, setDarkMode] = useState(() => storageService.get("darkMode", false));
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark-mode", darkMode);
-    localStorage.setItem("vw_dark_mode", String(darkMode));
+    storageService.set("darkMode", darkMode);
   }, [darkMode]);
 
   const user: User =
     selfUser || (users ? users.find((u: User) => u.id === userId) : null) || DEFAULT_USER;
+
+  const { isSuperAdmin } = useAuth();
+  const baseRoleName = ROLES[user.roleId as keyof typeof ROLES];
+  // Pure SuperAdmin (no base role) → just "Super Admin".
+  // Elected SuperAdmin (has base role) → "Admin (Super Admin)".
+  // Everyone else → their base role.
+  const roleLabel = !baseRoleName
+    ? "Super Admin"
+    : isSuperAdmin
+      ? `${baseRoleName} (Super Admin)`
+      : baseRoleName;
 
   const [avatarUrl, setAvatarUrl] = useState<string>("");
   const { fetchProfilePhotoAsBlobUrl } = useProfilePhotoFetch();
@@ -939,9 +950,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
               <Typography component="span" fontWeight={500}>
                 {user.name} {user.surname}
               </Typography>
-              <Typography sx={{ textTransform: "capitalize" }}>
-                {ROLES[user.roleId as keyof typeof ROLES]}
-              </Typography>
+              <Typography sx={{ textTransform: "capitalize" }}>{roleLabel}</Typography>
             </Box>
             <IconButton
               disableRipple={theme.components?.MuiIconButton?.defaultProps?.disableRipple}
@@ -1056,7 +1065,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                             textTransform: "capitalize",
                           }}
                         >
-                          {ROLES[user.roleId as keyof typeof ROLES]}
+                          {roleLabel}
                         </Typography>
                       </Box>
                       <Typography

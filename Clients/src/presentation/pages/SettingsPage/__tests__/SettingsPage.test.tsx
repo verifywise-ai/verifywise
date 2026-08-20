@@ -8,14 +8,6 @@ vi.mock("../../../../application/hooks/useAuth", () => ({
   }),
 }));
 
-vi.mock("../../../../application/contexts/PluginRegistry.context", () => ({
-  usePluginRegistry: () => ({
-    getPluginTabs: () => [],
-    installedPlugins: [],
-    isLoading: false,
-  }),
-}));
-
 // Mock child tab components
 vi.mock("../Profile/index", () => ({
   default: () => <div data-testid="profile-tab" />,
@@ -47,10 +39,6 @@ vi.mock("../ApiKeys", () => ({
 
 vi.mock("../AuditLedger", () => ({
   default: () => <div data-testid="audit-ledger-tab" />,
-}));
-
-vi.mock("../../../components/PluginSlot", () => ({
-  PluginSlot: () => null,
 }));
 
 vi.mock("../../../components/HelperIcon", () => ({

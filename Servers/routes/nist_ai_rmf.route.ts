@@ -20,8 +20,9 @@ import {
   getNISTAIRMFStatusBreakdown,
   getNISTAIRMFOverview,
 } from "../controllers/nist_ai_rmf.subcategory.ctrl";
-const multer = require("multer");
-const upload = multer({ storage: multer.memoryStorage() });
+import { createMemoryUpload } from "../utils/upload.utils";
+// Security: bounded upload config (30MB/file, 10 files, MIME allowlist).
+const upload = createMemoryUpload();
 
 // CRUD requests for NIST AI RMF functions
 router.get("/functions", authenticateJWT, getAllNISTAIRMFfunctions); // getting all NIST AI RMF functions of the organization

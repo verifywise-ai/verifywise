@@ -6,13 +6,8 @@ import { apiServices } from "../../infrastructure/api/networkServices";
  * @returns {Promise<any>} The AI Trust Center overview data.
  */
 export async function getAITrustCentreOverview(): Promise<any> {
-  try {
-    const response = await apiServices.get("/aiTrustCentre/overview");
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching AI Trust Center overview:", error);
-    throw error;
-  }
+  const response = await apiServices.get("/aiTrustCentre/overview");
+  return response.data;
 }
 
 /**
@@ -22,13 +17,8 @@ export async function getAITrustCentreOverview(): Promise<any> {
  * @returns {Promise<any>} The response from the API.
  */
 export async function updateAITrustCentreOverview(data: any): Promise<any> {
-  try {
-    const response = await apiServices.put("/aiTrustCentre/overview", data);
-    return response.data;
-  } catch (error) {
-    console.error("Error updating AI Trust Center overview:", error);
-    throw error;
-  }
+  const response = await apiServices.put("/aiTrustCentre/overview", data);
+  return response.data;
 }
 
 /**
@@ -38,20 +28,15 @@ export async function updateAITrustCentreOverview(data: any): Promise<any> {
  * @returns {Promise<any>} The response from the API.
  */
 export async function uploadAITrustCentreLogo(logoFile: File): Promise<any> {
-  try {
-    const formData = new FormData();
-    formData.append("logo", logoFile);
+  const formData = new FormData();
+  formData.append("logo", logoFile);
 
-    const response = await apiServices.post("/aiTrustCentre/logo", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error uploading AI Trust Center logo:", error);
-    throw error;
-  }
+  const response = await apiServices.post("/aiTrustCentre/logo", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+  return response.data;
 }
 
 /**
@@ -60,13 +45,8 @@ export async function uploadAITrustCentreLogo(logoFile: File): Promise<any> {
  * @returns {Promise<any>} The response from the API.
  */
 export async function deleteAITrustCentreLogo(): Promise<any> {
-  try {
-    const response = await apiServices.delete("/aiTrustCentre/logo");
-    return response.data;
-  } catch (error) {
-    console.error("Error deleting AI Trust Center logo:", error);
-    throw error;
-  }
+  const response = await apiServices.delete("/aiTrustCentre/logo");
+  return response.data;
 }
 
 /**
@@ -84,23 +64,18 @@ export async function createAITrustCentreResource(
   description: string,
   visible: boolean = true,
 ): Promise<any> {
-  try {
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("name", name);
-    formData.append("description", description);
-    formData.append("visible", visible.toString());
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("name", name);
+  formData.append("description", description);
+  formData.append("visible", visible.toString());
 
-    const response = await apiServices.post("/aiTrustCentre/resources", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error creating AI Trust Center resource:", error);
-    throw error;
-  }
+  const response = await apiServices.post("/aiTrustCentre/resources", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+  return response.data;
 }
 
 /**
@@ -109,13 +84,8 @@ export async function createAITrustCentreResource(
  * @returns {Promise<any>} The AI Trust Center resources.
  */
 export async function getAITrustCentreResources(): Promise<any> {
-  try {
-    const response = await apiServices.get("/aiTrustCentre/resources");
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching AI Trust Center resources:", error);
-    throw error;
-  }
+  const response = await apiServices.get("/aiTrustCentre/resources");
+  return response.data;
 }
 
 /**
@@ -125,13 +95,8 @@ export async function getAITrustCentreResources(): Promise<any> {
  * @returns {Promise<any>} The response from the API.
  */
 export async function deleteAITrustCentreResource(resourceId: number): Promise<any> {
-  try {
-    const response = await apiServices.delete(`/aiTrustCentre/resources/${resourceId}`);
-    return response.data;
-  } catch (error) {
-    console.error("Error deleting AI Trust Center resource:", error);
-    throw error;
-  }
+  const response = await apiServices.delete(`/aiTrustCentre/resources/${resourceId}`);
+  return response.data;
 }
 
 /**
@@ -153,32 +118,27 @@ export async function updateAITrustCentreResource(
   file?: File,
   oldFileId?: number,
 ): Promise<any> {
-  try {
-    const formData = new FormData();
-    formData.append("name", name);
-    formData.append("description", description);
-    formData.append("visible", visible.toString());
+  const formData = new FormData();
+  formData.append("name", name);
+  formData.append("description", description);
+  formData.append("visible", visible.toString());
 
-    // Only append file if it's provided
-    if (file) {
-      formData.append("file", file);
-    }
-
-    // Append old file ID for deletion if provided
-    if (oldFileId) {
-      formData.append("delete", oldFileId.toString());
-    }
-
-    const response = await apiServices.put(`/aiTrustCentre/resources/${resourceId}`, formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
-    return response.data;
-  } catch (error) {
-    console.error("Error updating AI Trust Center resource:", error);
-    throw error;
+  // Only append file if it's provided
+  if (file) {
+    formData.append("file", file);
   }
+
+  // Append old file ID for deletion if provided
+  if (oldFileId) {
+    formData.append("delete", oldFileId.toString());
+  }
+
+  const response = await apiServices.put(`/aiTrustCentre/resources/${resourceId}`, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+  return response.data;
 }
 
 /**
@@ -187,13 +147,8 @@ export async function updateAITrustCentreResource(
  * @returns {Promise<any>} The AI Trust Center subprocessors.
  */
 export async function getAITrustCentreSubprocessors(): Promise<any> {
-  try {
-    const response = await apiServices.get("/aiTrustCentre/subprocessors");
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching AI Trust Center subprocessors:", error);
-    throw error;
-  }
+  const response = await apiServices.get("/aiTrustCentre/subprocessors");
+  return response.data;
 }
 
 /**
@@ -211,26 +166,21 @@ export async function createAITrustCentreSubprocessor(
   location: string,
   url: string,
 ): Promise<any> {
-  try {
-    const response = await apiServices.post(
-      "/aiTrustCentre/subprocessors",
-      {
-        name,
-        purpose,
-        location,
-        url,
+  const response = await apiServices.post(
+    "/aiTrustCentre/subprocessors",
+    {
+      name,
+      purpose,
+      location,
+      url,
+    },
+    {
+      headers: {
+        "Content-Type": "application/json",
       },
-      {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      },
-    );
-    return response.data;
-  } catch (error) {
-    console.error("Error creating AI Trust Center subprocessor:", error);
-    throw error;
-  }
+    },
+  );
+  return response.data;
 }
 
 /**
@@ -250,26 +200,21 @@ export async function updateAITrustCentreSubprocessor(
   location: string,
   url: string,
 ): Promise<any> {
-  try {
-    const response = await apiServices.put(
-      `/aiTrustCentre/subprocessors/${subprocessorId}`,
-      {
-        name,
-        purpose,
-        location,
-        url,
+  const response = await apiServices.put(
+    `/aiTrustCentre/subprocessors/${subprocessorId}`,
+    {
+      name,
+      purpose,
+      location,
+      url,
+    },
+    {
+      headers: {
+        "Content-Type": "application/json",
       },
-      {
-        headers: {
-          "Content-Type": "application/json",
-        },
-      },
-    );
-    return response.data;
-  } catch (error) {
-    console.error("Error updating AI Trust Center subprocessor:", error);
-    throw error;
-  }
+    },
+  );
+  return response.data;
 }
 
 /**
@@ -279,13 +224,8 @@ export async function updateAITrustCentreSubprocessor(
  * @returns {Promise<any>} The response from the API.
  */
 export async function deleteAITrustCentreSubprocessor(subprocessorId: number): Promise<any> {
-  try {
-    const response = await apiServices.delete(`/aiTrustCentre/subprocessors/${subprocessorId}`);
-    return response.data;
-  } catch (error) {
-    console.error("Error deleting AI Trust Center subprocessor:", error);
-    throw error;
-  }
+  const response = await apiServices.delete(`/aiTrustCentre/subprocessors/${subprocessorId}`);
+  return response.data;
 }
 
 /**
@@ -305,7 +245,6 @@ export async function getAITrustCentreLogo(tenantId: string): Promise<any> {
     if (error?.response?.status === 404 || error?.status === 404) {
       return null;
     }
-    console.error("Error fetching AI Trust Center logo:", error);
     throw error;
   }
 }

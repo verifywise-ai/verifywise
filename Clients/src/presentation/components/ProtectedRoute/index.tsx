@@ -1,5 +1,5 @@
 import { useSelector } from "react-redux";
-import { Navigate, useLocation } from "react-router-dom";
+import { Navigate, useLocation } from "react-router";
 import { useEffect, useState, useRef } from "react";
 import { useDispatch } from "react-redux";
 import { setUserExists, clearAuthState } from "../../../application/redux/auth/authSlice";
@@ -7,9 +7,14 @@ import { getAllEntities } from "../../../application/repository/entity.repositor
 import { extractUserToken } from "../../../application/tools/extractToken";
 import { IProtectedRouteProps } from "../../types/widget.types";
 
-const ProtectedRoute = ({ Component, ...rest }: IProtectedRouteProps) => {
+const ProtectedRoute = ({
+  Component,
+  requireSuperAdmin = false,
+  ...rest
+}: IProtectedRouteProps) => {
   const authState = useSelector(
-    (state: { auth: { authToken: string; userExists: boolean } }) => state.auth,
+    (state: { auth: { authToken: string; userExists: boolean; isSuperAdmin?: boolean } }) =>
+      state.auth,
   );
   const location = useLocation();
   const dispatch = useDispatch();
@@ -81,9 +86,25 @@ const ProtectedRoute = ({ Component, ...rest }: IProtectedRouteProps) => {
     }
   }, [dispatch, authState.authToken, isPublicRoute]);
 
+  // SuperAdmin-only routes: after auth passes, block non-SuperAdmins.
+  // Sends them to `/` (tenant dashboard) so they don't see a broken shell.
+  const superAdminOk = !requireSuperAdmin || authState.isSuperAdmin === true;
+
+  // Bootstrap SuperAdmin (isSuperAdmin=true AND no org in token) cannot use
+  // org-scoped screens — every org-scoped hook 401s without an organizationId.
+  // Pin them to /super-admin so Dashboard never mounts. Elected SuperAdmins
+  // (isSuperAdmin=true WITH an org) are unaffected — their token has an
+  // organizationId and this check is false.
+  const tokenPayload = authState.authToken ? extractUserToken(authState.authToken) : null;
+  const isBootstrapSuperAdmin = authState.isSuperAdmin === true && !tokenPayload?.organizationId;
+  const isSuperAdminRoute = location.pathname.startsWith("/super-admin");
+  const needsSuperAdminRedirect =
+    Boolean(authState.authToken) && isBootstrapSuperAdmin && !isSuperAdminRoute && !isPublicRoute;
+
   if (loading) {
     if (authState.authToken) {
-      return <Component {...rest} />;
+      if (needsSuperAdminRedirect) return <Navigate to="/super-admin" replace />;
+      return superAdminOk ? <Component {...rest} /> : <Navigate to="/" replace />;
     }
     return null;
   }
@@ -95,7 +116,8 @@ const ProtectedRoute = ({ Component, ...rest }: IProtectedRouteProps) => {
 
   // If users exist and we have an auth token, allow access to protected routes
   if (authState.authToken) {
-    return <Component {...rest} />;
+    if (needsSuperAdminRedirect) return <Navigate to="/super-admin" replace />;
+    return superAdminOk ? <Component {...rest} /> : <Navigate to="/" replace />;
   }
 
   // If users exist but no auth token, redirect to login

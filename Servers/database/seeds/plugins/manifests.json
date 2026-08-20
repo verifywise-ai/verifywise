@@ -1,0 +1,2872 @@
+[
+  {
+    "key": "slack",
+    "name": "Slack",
+    "displayName": "Slack",
+    "description": "Get real-time notifications about AI model updates, risk assessments, and compliance changes directly in your Slack workspace.",
+    "longDescription": "Slack integration enables your team to receive real-time notifications about critical events in VerifyWise. Configure notification routing to send different types of alerts to specific channels, ensuring your team stays informed about AI governance activities, policy changes, risk assessments, and compliance updates.",
+    "version": "1.0.0",
+    "author": "VerifyWise",
+    "category": "communication",
+    "region": null,
+    "frameworkType": null,
+    "iconUrl": "plugins/slack/icon.svg",
+    "documentationUrl": "https://docs.verifywise.com/integrations/slack",
+    "supportUrl": "https://support.verifywise.com",
+    "isOfficial": true,
+    "isPublished": true,
+    "requiresConfiguration": true,
+    "installationType": "standard",
+    "features": [
+      {
+        "name": "Real-time Notifications",
+        "description": "Receive instant alerts about critical events in your workspace",
+        "displayOrder": 1
+      },
+      {
+        "name": "Channel Routing",
+        "description": "Route different notification types to specific channels",
+        "displayOrder": 2
+      },
+      {
+        "name": "OAuth Integration",
+        "description": "Secure authentication with Slack workspace",
+        "displayOrder": 3
+      },
+      {
+        "name": "Policy Reminders",
+        "description": "Automated reminders for policy reviews and updates",
+        "displayOrder": 4
+      }
+    ],
+    "tags": ["notifications", "messaging", "collaboration", "alerts"],
+    "dependencies": {
+      "@slack/web-api": "^6.9.0"
+    },
+    "ui": {
+      "bundleUrl": "/api/plugins/slack/ui/dist/index.esm.js",
+      "globalName": "PluginSlack",
+      "slots": [
+        {
+          "slotId": "page.plugin.config",
+          "componentName": "SlackConfiguration",
+          "renderType": "card"
+        }
+      ]
+    },
+    "entryPoint": "index.ts",
+    "pluginPath": "plugins/slack",
+    "kind": "integration"
+  },
+  {
+    "key": "mlflow",
+    "name": "MLflow",
+    "displayName": "MLflow",
+    "description": "Track and manage machine learning experiments, models, and deployments with comprehensive ML lifecycle management.",
+    "longDescription": "MLflow integration connects VerifyWise with your MLflow tracking server, enabling automatic synchronization of ML models and experiments. Track model versions, monitor training metrics, and maintain a comprehensive inventory of all ML models used in your AI systems for compliance and governance purposes.",
+    "version": "1.0.0",
+    "author": "VerifyWise",
+    "category": "ml_ops",
+    "region": null,
+    "frameworkType": null,
+    "iconUrl": "plugins/mlflow/icon.svg",
+    "documentationUrl": "https://docs.verifywise.com/integrations/mlflow",
+    "supportUrl": "https://support.verifywise.com",
+    "isOfficial": true,
+    "isPublished": true,
+    "requiresConfiguration": true,
+    "installationType": "tenant_scoped",
+    "features": [
+      {
+        "name": "Model Tracking",
+        "description": "Automatically sync ML models from your MLflow server",
+        "displayOrder": 1
+      },
+      {
+        "name": "Experiment Management",
+        "description": "Track experiments and training runs",
+        "displayOrder": 2
+      },
+      {
+        "name": "Version Control",
+        "description": "Maintain model version history and lineage",
+        "displayOrder": 3
+      },
+      {
+        "name": "Metrics Monitoring",
+        "description": "Monitor model performance metrics and parameters",
+        "displayOrder": 4
+      },
+      {
+        "name": "Scheduled Sync",
+        "description": "Hourly automated synchronization of models",
+        "displayOrder": 5
+      }
+    ],
+    "tags": ["ml-ops", "model-tracking", "experiments", "model-registry"],
+    "dependencies": {
+      "axios": "^1.6.0"
+    },
+    "ui": {
+      "bundleUrl": "/api/plugins/mlflow/ui/dist/index.esm.js",
+      "globalName": "PluginMLFlow",
+      "slots": [
+        {
+          "slotId": "page.models.tabs",
+          "componentName": "MLFlowTab",
+          "renderType": "tab",
+          "props": {
+            "label": "MLFlow Data",
+            "icon": "Database"
+          }
+        },
+        {
+          "slotId": "page.plugin.config",
+          "componentName": "MLFlowConfiguration",
+          "renderType": "card"
+        }
+      ]
+    },
+    "entryPoint": "index.ts",
+    "pluginPath": "plugins/mlflow",
+    "kind": "integration"
+  },
+  {
+    "key": "azure-ai-foundry",
+    "name": "Azure AI Foundry",
+    "displayName": "Azure AI Foundry",
+    "description": "Import and manage AI model deployments from Microsoft Azure AI Foundry.",
+    "longDescription": "Azure AI Foundry integration enables automatic synchronization of AI model deployments from your Azure subscription. Track deployed models including GPT-4, GPT-3.5, embeddings, and other Azure OpenAI or custom models. Monitor deployment status, SKU capacity, rate limits, and maintain a comprehensive inventory of all AI models for compliance and governance purposes.",
+    "version": "1.0.0",
+    "author": "VerifyWise",
+    "category": "ml_ops",
+    "region": null,
+    "frameworkType": null,
+    "iconUrl": "plugins/azure-ai-foundry/icon.jpg",
+    "documentationUrl": "https://docs.verifywise.com/integrations/azure-ai-foundry",
+    "supportUrl": "https://support.verifywise.com",
+    "isOfficial": true,
+    "isPublished": true,
+    "requiresConfiguration": true,
+    "installationType": "tenant_scoped",
+    "features": [
+      {
+        "name": "Model Import",
+        "description": "Automatically sync AI model deployments from Azure AI Foundry",
+        "displayOrder": 1
+      },
+      {
+        "name": "Deployment Tracking",
+        "description": "Track deployment status, SKU, and capacity",
+        "displayOrder": 2
+      },
+      {
+        "name": "Rate Limit Monitoring",
+        "description": "Monitor API rate limits and quotas",
+        "displayOrder": 3
+      },
+      {
+        "name": "Multi-Model Support",
+        "description": "Support for GPT-4, GPT-3.5, embeddings, DeepSeek, and more",
+        "displayOrder": 4
+      },
+      {
+        "name": "Manual Sync",
+        "description": "On-demand synchronization of model deployments",
+        "displayOrder": 5
+      }
+    ],
+    "tags": ["azure", "ai-foundry", "openai", "model-registry", "cloud"],
+    "dependencies": {},
+    "ui": {
+      "bundleUrl": "/api/plugins/azure-ai-foundry/ui/dist/index.esm.js",
+      "globalName": "PluginAzureAIFoundry",
+      "slots": [
+        {
+          "slotId": "page.models.tabs",
+          "componentName": "AzureAIFoundryTab",
+          "renderType": "tab",
+          "props": {
+            "label": "Azure AI Foundry",
+            "icon": "Cloud"
+          }
+        },
+        {
+          "slotId": "page.plugin.config",
+          "componentName": "AzureAIFoundryConfiguration",
+          "renderType": "card"
+        }
+      ]
+    },
+    "entryPoint": "index.ts",
+    "pluginPath": "plugins/azure-ai-foundry",
+    "kind": "integration"
+  },
+  {
+    "key": "risk-import",
+    "name": "Risk Import",
+    "displayName": "Risk Import",
+    "description": "Import risks from Excel files for bulk risk creation and management.",
+    "longDescription": "Risk Import plugin enables bulk import of risks from Excel files with dropdown data validation. Download a pre-formatted Excel template with dropdown menus for enum fields, fill it with your risk data using the convenient dropdowns, and upload to create multiple risks at once. Features comprehensive validation, detailed error reporting, and support for all risk fields including lifecycle phases, severity levels, and mitigation plans.",
+    "version": "1.0.0",
+    "author": "VerifyWise",
+    "category": "data_management",
+    "region": null,
+    "frameworkType": null,
+    "iconUrl": "plugins/risk-import/icon.svg",
+    "documentationUrl": "https://docs.verifywise.com/integrations/risk-import",
+    "supportUrl": "https://support.verifywise.com",
+    "isOfficial": true,
+    "isPublished": true,
+    "requiresConfiguration": false,
+    "installationType": "tenant_scoped",
+    "features": [
+      {
+        "name": "Excel Template Download",
+        "description": "Download pre-formatted Excel template with dropdown validation",
+        "displayOrder": 1
+      },
+      {
+        "name": "Dropdown Data Validation",
+        "description": "Built-in dropdown menus for enum fields in Excel",
+        "displayOrder": 2
+      },
+      {
+        "name": "Bulk Import",
+        "description": "Upload Excel to create multiple risks at once",
+        "displayOrder": 3
+      },
+      {
+        "name": "Field Validation",
+        "description": "Comprehensive validation before import",
+        "displayOrder": 4
+      },
+      {
+        "name": "Import Results",
+        "description": "Detailed feedback on successful and failed imports",
+        "displayOrder": 5
+      }
+    ],
+    "tags": ["risk", "import", "excel", "bulk-operations", "data-management"],
+    "dependencies": {
+      "exceljs": "^4.4.0"
+    },
+    "ui": {
+      "bundleUrl": "/api/plugins/risk-import/ui/dist/index.esm.js",
+      "globalName": "PluginRiskImport",
+      "slots": [
+        {
+          "slotId": "page.risks.actions",
+          "componentName": "RiskImportMenuItem",
+          "renderType": "menuitem",
+          "props": {
+            "label": "Import from Excel",
+            "icon": "FileSpreadsheet"
+          }
+        },
+        {
+          "slotId": "page.risks.actions",
+          "componentName": "RiskImportModal",
+          "renderType": "modal",
+          "trigger": "RiskImportMenuItem"
+        }
+      ]
+    },
+    "entryPoint": "index.ts",
+    "pluginPath": "plugins/risk-import",
+    "kind": "integration"
+  },
+  {
+    "key": "jira-assets",
+    "name": "Jira Assets Integration",
+    "displayName": "Jira Assets Integration",
+    "description": "Import AI Systems from Jira Service Management Assets as use-cases.",
+    "longDescription": "Jira Assets Integration connects VerifyWise with your JSM Assets (formerly Insight) to import AI System objects as use-cases. Supports organizational and non-organizational classification, automatic scheduled sync, and stores all JIRA attributes as-is. Import AI Systems with a few clicks and keep them in sync with your JIRA data.",
+    "version": "1.0.0",
+    "author": "VerifyWise",
+    "category": "data_management",
+    "region": null,
+    "frameworkType": null,
+    "iconUrl": "plugins/jira-assets/icon.svg",
+    "documentationUrl": "https://docs.verifywise.com/integrations/jira-assets",
+    "supportUrl": "https://support.verifywise.com",
+    "isOfficial": true,
+    "isPublished": true,
+    "requiresConfiguration": true,
+    "installationType": "tenant_scoped",
+    "features": [
+      {
+        "name": "Import AI Systems",
+        "description": "Import AI System objects from JSM Assets as use-cases",
+        "displayOrder": 1
+      },
+      {
+        "name": "Organizational Support",
+        "description": "Classify imports as organizational or non-organizational",
+        "displayOrder": 2
+      },
+      {
+        "name": "Automatic Sync",
+        "description": "Scheduled synchronization to keep data in sync",
+        "displayOrder": 3
+      },
+      {
+        "name": "Full Attribute Storage",
+        "description": "All JIRA attributes stored as-is without field mapping",
+        "displayOrder": 4
+      },
+      {
+        "name": "UC-ID Generation",
+        "description": "Auto-generated unique UC-IDs for imported use-cases",
+        "displayOrder": 5
+      }
+    ],
+    "tags": ["jira", "assets", "import", "use-cases", "sync", "integration"],
+    "dependencies": {
+      "axios": "^1.6.0"
+    },
+    "ui": {
+      "bundleUrl": "/api/plugins/jira-assets/ui/dist/index.esm.js",
+      "globalName": "PluginJiraAssets",
+      "slots": [
+        {
+          "slotId": "page.plugin.config",
+          "componentName": "JiraAssetsConfiguration",
+          "renderType": "card"
+        },
+        {
+          "slotId": "page.usecase.overview",
+          "componentName": "JiraUseCaseOverview",
+          "renderType": "raw"
+        },
+        {
+          "slotId": "page.usecase.monitoring",
+          "componentName": "JiraUseCaseMonitoring",
+          "renderType": "raw"
+        },
+        {
+          "slotId": "page.usecase.settings",
+          "componentName": "JiraUseCaseSettings",
+          "renderType": "raw"
+        }
+      ]
+    },
+    "entryPoint": "index.ts",
+    "pluginPath": "plugins/jira-assets",
+    "kind": "integration"
+  },
+  {
+    "key": "soc2",
+    "name": "SOC 2 Type II",
+    "displayName": "SOC 2 Type II",
+    "description": "SOC 2 Type II compliance framework based on Trust Service Criteria.",
+    "longDescription": "SOC 2 Type II framework plugin provides comprehensive Trust Service Criteria (TSC) compliance management. Includes all five trust service categories: Security, Availability, Processing Integrity, Confidentiality, and Privacy. Auto-imports the complete framework on installation with full feature support including evidence management, risk linking, and progress tracking.",
+    "version": "1.0.0",
+    "author": "VerifyWise",
+    "category": "compliance",
+    "region": "United States",
+    "frameworkType": "organizational",
+    "iconUrl": "plugins/soc2/icon.svg",
+    "documentationUrl": "https://docs.verifywise.com/frameworks/soc2",
+    "supportUrl": "https://support.verifywise.com",
+    "isOfficial": true,
+    "isPublished": true,
+    "requiresConfiguration": false,
+    "installationType": "tenant_scoped",
+    "features": [
+      {
+        "name": "Trust Service Criteria",
+        "description": "Complete TSC coverage: Security, Availability, Processing Integrity, Confidentiality, Privacy",
+        "displayOrder": 1
+      },
+      {
+        "name": "Auto-Import",
+        "description": "Framework automatically imported on plugin installation",
+        "displayOrder": 2
+      },
+      {
+        "name": "Evidence Management",
+        "description": "Upload and link evidence files to controls",
+        "displayOrder": 3
+      },
+      {
+        "name": "Risk Linking",
+        "description": "Link controls to identified risks",
+        "displayOrder": 4
+      }
+    ],
+    "tags": ["soc2", "audit", "trust-services", "compliance", "security"],
+    "dependencies": {},
+    "ui": {
+      "bundleUrl": "/api/plugins/soc2/ui/dist/index.esm.js",
+      "globalName": "PluginCustomFrameworkImport",
+      "slots": [
+        {
+          "slotId": "page.settings.tabs",
+          "componentName": "CustomFrameworkConfig",
+          "renderType": "tab",
+          "props": {
+            "label": "Custom Frameworks",
+            "icon": "FileJson",
+            "value": "custom-frameworks",
+            "pluginKey": "soc2"
+          }
+        },
+        {
+          "slotId": "modal.framework.selection",
+          "componentName": "CustomFrameworkCards",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "soc2"
+          }
+        },
+        {
+          "slotId": "page.controls.custom-framework",
+          "componentName": "CustomFrameworkControls",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "soc2"
+          }
+        },
+        {
+          "slotId": "page.project-controls.custom-framework",
+          "componentName": "CustomFrameworkControls",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "soc2"
+          }
+        },
+        {
+          "slotId": "page.framework-dashboard.custom",
+          "componentName": "CustomFrameworkDashboard",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "soc2"
+          }
+        },
+        {
+          "slotId": "page.org-framework.management",
+          "componentName": "CustomFrameworkCards",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "soc2"
+          }
+        },
+        {
+          "slotId": "page.project-overview.custom-framework",
+          "componentName": "CustomFrameworkOverview",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "soc2"
+          }
+        }
+      ]
+    },
+    "entryPoint": "dist/index.js",
+    "pluginPath": "plugins/soc2",
+    "kind": "framework"
+  },
+  {
+    "key": "gdpr",
+    "name": "GDPR Compliance",
+    "displayName": "GDPR Compliance",
+    "description": "General Data Protection Regulation compliance framework for EU data protection.",
+    "longDescription": "GDPR compliance framework plugin provides comprehensive coverage of EU General Data Protection Regulation requirements. Includes data subject rights, lawful processing bases, data protection principles, international transfers, and accountability measures. Auto-imports the complete framework on installation.",
+    "version": "1.0.0",
+    "author": "VerifyWise",
+    "category": "compliance",
+    "region": "European Union",
+    "frameworkType": "organizational",
+    "iconUrl": "plugins/gdpr/icon.svg",
+    "documentationUrl": "https://docs.verifywise.com/frameworks/gdpr",
+    "supportUrl": "https://support.verifywise.com",
+    "isOfficial": true,
+    "isPublished": true,
+    "requiresConfiguration": false,
+    "installationType": "tenant_scoped",
+    "features": [
+      {
+        "name": "Data Subject Rights",
+        "description": "Track compliance with all GDPR data subject rights",
+        "displayOrder": 1
+      },
+      {
+        "name": "Processing Principles",
+        "description": "Ensure adherence to core data processing principles",
+        "displayOrder": 2
+      },
+      {
+        "name": "Auto-Import",
+        "description": "Framework automatically imported on plugin installation",
+        "displayOrder": 3
+      },
+      {
+        "name": "Evidence Management",
+        "description": "Upload and link evidence files to requirements",
+        "displayOrder": 4
+      }
+    ],
+    "tags": ["gdpr", "privacy", "data-protection", "eu", "compliance"],
+    "dependencies": {},
+    "ui": {
+      "bundleUrl": "/api/plugins/gdpr/ui/dist/index.esm.js",
+      "globalName": "PluginCustomFrameworkImport",
+      "slots": [
+        {
+          "slotId": "page.settings.tabs",
+          "componentName": "CustomFrameworkConfig",
+          "renderType": "tab",
+          "props": {
+            "label": "Custom Frameworks",
+            "icon": "FileJson",
+            "value": "custom-frameworks",
+            "pluginKey": "gdpr"
+          }
+        },
+        {
+          "slotId": "modal.framework.selection",
+          "componentName": "CustomFrameworkCards",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "gdpr"
+          }
+        },
+        {
+          "slotId": "page.controls.custom-framework",
+          "componentName": "CustomFrameworkControls",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "gdpr"
+          }
+        },
+        {
+          "slotId": "page.project-controls.custom-framework",
+          "componentName": "CustomFrameworkControls",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "gdpr"
+          }
+        },
+        {
+          "slotId": "page.framework-dashboard.custom",
+          "componentName": "CustomFrameworkDashboard",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "gdpr"
+          }
+        },
+        {
+          "slotId": "page.org-framework.management",
+          "componentName": "CustomFrameworkCards",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "gdpr"
+          }
+        },
+        {
+          "slotId": "page.project-overview.custom-framework",
+          "componentName": "CustomFrameworkOverview",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "gdpr"
+          }
+        }
+      ]
+    },
+    "entryPoint": "dist/index.js",
+    "pluginPath": "plugins/gdpr",
+    "kind": "framework"
+  },
+  {
+    "key": "hipaa",
+    "name": "HIPAA Security Rule",
+    "displayName": "HIPAA Security Rule",
+    "description": "HIPAA Security Rule compliance framework for healthcare data protection.",
+    "longDescription": "HIPAA Security Rule framework plugin provides comprehensive coverage of healthcare data protection requirements. Includes administrative safeguards, physical safeguards, technical safeguards, and organizational requirements for protecting electronic protected health information (ePHI).",
+    "version": "1.0.0",
+    "author": "VerifyWise",
+    "category": "compliance",
+    "region": "United States",
+    "frameworkType": "project",
+    "iconUrl": "plugins/hipaa/icon.svg",
+    "documentationUrl": "https://docs.verifywise.com/frameworks/hipaa",
+    "supportUrl": "https://support.verifywise.com",
+    "isOfficial": true,
+    "isPublished": true,
+    "requiresConfiguration": false,
+    "installationType": "tenant_scoped",
+    "features": [
+      {
+        "name": "Security Safeguards",
+        "description": "Administrative, physical, and technical safeguards",
+        "displayOrder": 1
+      },
+      {
+        "name": "ePHI Protection",
+        "description": "Controls for protecting electronic protected health information",
+        "displayOrder": 2
+      },
+      {
+        "name": "Auto-Import",
+        "description": "Framework automatically imported on plugin installation",
+        "displayOrder": 3
+      },
+      {
+        "name": "Evidence Management",
+        "description": "Upload and link evidence files to requirements",
+        "displayOrder": 4
+      }
+    ],
+    "tags": ["hipaa", "healthcare", "phi", "security", "compliance"],
+    "dependencies": {},
+    "ui": {
+      "bundleUrl": "/api/plugins/hipaa/ui/dist/index.esm.js",
+      "globalName": "PluginCustomFrameworkImport",
+      "slots": [
+        {
+          "slotId": "page.settings.tabs",
+          "componentName": "CustomFrameworkConfig",
+          "renderType": "tab",
+          "props": {
+            "label": "Custom Frameworks",
+            "icon": "FileJson",
+            "value": "custom-frameworks",
+            "pluginKey": "hipaa"
+          }
+        },
+        {
+          "slotId": "modal.framework.selection",
+          "componentName": "CustomFrameworkCards",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "hipaa"
+          }
+        },
+        {
+          "slotId": "page.controls.custom-framework",
+          "componentName": "CustomFrameworkControls",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "hipaa"
+          }
+        },
+        {
+          "slotId": "page.project-controls.custom-framework",
+          "componentName": "CustomFrameworkControls",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "hipaa"
+          }
+        },
+        {
+          "slotId": "page.framework-dashboard.custom",
+          "componentName": "CustomFrameworkDashboard",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "hipaa"
+          }
+        },
+        {
+          "slotId": "page.org-framework.management",
+          "componentName": "CustomFrameworkCards",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "hipaa"
+          }
+        },
+        {
+          "slotId": "page.project-overview.custom-framework",
+          "componentName": "CustomFrameworkOverview",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "hipaa"
+          }
+        }
+      ]
+    },
+    "entryPoint": "dist/index.js",
+    "pluginPath": "plugins/hipaa",
+    "kind": "framework"
+  },
+  {
+    "key": "pci-dss",
+    "name": "PCI-DSS",
+    "displayName": "PCI-DSS",
+    "description": "Payment Card Industry Data Security Standard compliance framework.",
+    "longDescription": "PCI-DSS framework plugin provides essential payment card security controls for organizations handling cardholder data. Covers network security, data protection, vulnerability management, access control, monitoring, and security policies.",
+    "version": "1.0.0",
+    "author": "VerifyWise",
+    "category": "compliance",
+    "region": "International",
+    "frameworkType": "project",
+    "iconUrl": "plugins/pci-dss/icon.svg",
+    "documentationUrl": "https://docs.verifywise.com/frameworks/pci-dss",
+    "supportUrl": "https://support.verifywise.com",
+    "isOfficial": true,
+    "isPublished": true,
+    "requiresConfiguration": false,
+    "installationType": "tenant_scoped",
+    "features": [
+      {
+        "name": "12 Requirements",
+        "description": "Coverage of all PCI-DSS requirement categories",
+        "displayOrder": 1
+      },
+      {
+        "name": "Cardholder Protection",
+        "description": "Controls for protecting cardholder data",
+        "displayOrder": 2
+      },
+      {
+        "name": "Auto-Import",
+        "description": "Framework automatically imported on plugin installation",
+        "displayOrder": 3
+      },
+      {
+        "name": "Evidence Management",
+        "description": "Upload and link evidence files to requirements",
+        "displayOrder": 4
+      }
+    ],
+    "tags": ["pci-dss", "payment", "cardholder", "security", "compliance"],
+    "dependencies": {},
+    "ui": {
+      "bundleUrl": "/api/plugins/pci-dss/ui/dist/index.esm.js",
+      "globalName": "PluginCustomFrameworkImport",
+      "slots": [
+        {
+          "slotId": "page.settings.tabs",
+          "componentName": "CustomFrameworkConfig",
+          "renderType": "tab",
+          "props": {
+            "label": "Custom Frameworks",
+            "icon": "FileJson",
+            "value": "custom-frameworks",
+            "pluginKey": "pci-dss"
+          }
+        },
+        {
+          "slotId": "modal.framework.selection",
+          "componentName": "CustomFrameworkCards",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "pci-dss"
+          }
+        },
+        {
+          "slotId": "page.controls.custom-framework",
+          "componentName": "CustomFrameworkControls",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "pci-dss"
+          }
+        },
+        {
+          "slotId": "page.project-controls.custom-framework",
+          "componentName": "CustomFrameworkControls",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "pci-dss"
+          }
+        },
+        {
+          "slotId": "page.framework-dashboard.custom",
+          "componentName": "CustomFrameworkDashboard",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "pci-dss"
+          }
+        },
+        {
+          "slotId": "page.org-framework.management",
+          "componentName": "CustomFrameworkCards",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "pci-dss"
+          }
+        },
+        {
+          "slotId": "page.project-overview.custom-framework",
+          "componentName": "CustomFrameworkOverview",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "pci-dss"
+          }
+        }
+      ]
+    },
+    "entryPoint": "dist/index.js",
+    "pluginPath": "plugins/pci-dss",
+    "kind": "framework"
+  },
+  {
+    "key": "ccpa",
+    "name": "CCPA Compliance",
+    "displayName": "CCPA Compliance",
+    "description": "California Consumer Privacy Act compliance framework for consumer data privacy.",
+    "longDescription": "CCPA compliance framework plugin provides coverage of California Consumer Privacy Act requirements. Includes consumer rights management, disclosure requirements, opt-out mechanisms, and data handling practices for California residents' personal information.",
+    "version": "1.0.0",
+    "author": "VerifyWise",
+    "category": "compliance",
+    "region": "United States",
+    "frameworkType": "organizational",
+    "iconUrl": "plugins/ccpa/icon.svg",
+    "documentationUrl": "https://docs.verifywise.com/frameworks/ccpa",
+    "supportUrl": "https://support.verifywise.com",
+    "isOfficial": true,
+    "isPublished": true,
+    "requiresConfiguration": false,
+    "installationType": "tenant_scoped",
+    "features": [
+      {
+        "name": "Consumer Rights",
+        "description": "Track compliance with CCPA consumer rights",
+        "displayOrder": 1
+      },
+      {
+        "name": "Disclosure Requirements",
+        "description": "Manage privacy notice and disclosure obligations",
+        "displayOrder": 2
+      },
+      {
+        "name": "Auto-Import",
+        "description": "Framework automatically imported on plugin installation",
+        "displayOrder": 3
+      },
+      {
+        "name": "Evidence Management",
+        "description": "Upload and link evidence files to requirements",
+        "displayOrder": 4
+      }
+    ],
+    "tags": ["ccpa", "privacy", "california", "consumer-rights", "compliance"],
+    "dependencies": {},
+    "ui": {
+      "bundleUrl": "/api/plugins/ccpa/ui/dist/index.esm.js",
+      "globalName": "PluginCustomFrameworkImport",
+      "slots": [
+        {
+          "slotId": "page.settings.tabs",
+          "componentName": "CustomFrameworkConfig",
+          "renderType": "tab",
+          "props": {
+            "label": "Custom Frameworks",
+            "icon": "FileJson",
+            "value": "custom-frameworks",
+            "pluginKey": "ccpa"
+          }
+        },
+        {
+          "slotId": "modal.framework.selection",
+          "componentName": "CustomFrameworkCards",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "ccpa"
+          }
+        },
+        {
+          "slotId": "page.controls.custom-framework",
+          "componentName": "CustomFrameworkControls",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "ccpa"
+          }
+        },
+        {
+          "slotId": "page.project-controls.custom-framework",
+          "componentName": "CustomFrameworkControls",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "ccpa"
+          }
+        },
+        {
+          "slotId": "page.framework-dashboard.custom",
+          "componentName": "CustomFrameworkDashboard",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "ccpa"
+          }
+        },
+        {
+          "slotId": "page.org-framework.management",
+          "componentName": "CustomFrameworkCards",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "ccpa"
+          }
+        },
+        {
+          "slotId": "page.project-overview.custom-framework",
+          "componentName": "CustomFrameworkOverview",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "ccpa"
+          }
+        }
+      ]
+    },
+    "entryPoint": "dist/index.js",
+    "pluginPath": "plugins/ccpa",
+    "kind": "framework"
+  },
+  {
+    "key": "dora",
+    "name": "DORA Compliance",
+    "displayName": "DORA Compliance",
+    "description": "Digital Operational Resilience Act compliance framework for financial services.",
+    "longDescription": "DORA compliance framework plugin provides comprehensive coverage of the EU Digital Operational Resilience Act requirements for financial sector entities. Includes ICT risk management, incident reporting, digital operational resilience testing, and third-party risk management.",
+    "version": "1.0.0",
+    "author": "VerifyWise",
+    "category": "compliance",
+    "region": "European Union",
+    "frameworkType": "organizational",
+    "iconUrl": "plugins/dora/icon.svg",
+    "documentationUrl": "https://docs.verifywise.com/frameworks/dora",
+    "supportUrl": "https://support.verifywise.com",
+    "isOfficial": true,
+    "isPublished": true,
+    "requiresConfiguration": false,
+    "installationType": "tenant_scoped",
+    "features": [
+      {
+        "name": "ICT Risk Management",
+        "description": "Comprehensive ICT risk management framework",
+        "displayOrder": 1
+      },
+      {
+        "name": "Incident Reporting",
+        "description": "ICT-related incident reporting requirements",
+        "displayOrder": 2
+      },
+      {
+        "name": "Auto-Import",
+        "description": "Framework automatically imported on plugin installation",
+        "displayOrder": 3
+      },
+      {
+        "name": "Third-Party Risk",
+        "description": "ICT third-party risk management controls",
+        "displayOrder": 4
+      }
+    ],
+    "tags": ["dora", "financial", "resilience", "eu", "compliance"],
+    "dependencies": {},
+    "ui": {
+      "bundleUrl": "/api/plugins/dora/ui/dist/index.esm.js",
+      "globalName": "PluginCustomFrameworkImport",
+      "slots": [
+        {
+          "slotId": "page.settings.tabs",
+          "componentName": "CustomFrameworkConfig",
+          "renderType": "tab",
+          "props": {
+            "label": "Custom Frameworks",
+            "icon": "FileJson",
+            "value": "custom-frameworks",
+            "pluginKey": "dora"
+          }
+        },
+        {
+          "slotId": "modal.framework.selection",
+          "componentName": "CustomFrameworkCards",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "dora"
+          }
+        },
+        {
+          "slotId": "page.controls.custom-framework",
+          "componentName": "CustomFrameworkControls",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "dora"
+          }
+        },
+        {
+          "slotId": "page.project-controls.custom-framework",
+          "componentName": "CustomFrameworkControls",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "dora"
+          }
+        },
+        {
+          "slotId": "page.framework-dashboard.custom",
+          "componentName": "CustomFrameworkDashboard",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "dora"
+          }
+        },
+        {
+          "slotId": "page.org-framework.management",
+          "componentName": "CustomFrameworkCards",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "dora"
+          }
+        },
+        {
+          "slotId": "page.project-overview.custom-framework",
+          "componentName": "CustomFrameworkOverview",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "dora"
+          }
+        }
+      ]
+    },
+    "entryPoint": "dist/index.js",
+    "pluginPath": "plugins/dora",
+    "kind": "framework"
+  },
+  {
+    "key": "altai",
+    "name": "ALTAI - Assessment List for Trustworthy AI",
+    "displayName": "ALTAI",
+    "description": "EU Commission's Assessment List for Trustworthy Artificial Intelligence based on the Ethics Guidelines for Trustworthy AI.",
+    "longDescription": "ALTAI (Assessment List for Trustworthy AI) is a practical tool developed by the High-Level Expert Group on AI for the European Commission. It helps organizations self-assess their AI systems against the seven key requirements for Trustworthy AI: Human Agency and Oversight, Technical Robustness and Safety, Privacy and Data Governance, Transparency, Diversity and Non-discrimination, Societal Well-being, and Accountability.",
+    "version": "1.0.0",
+    "author": "VerifyWise",
+    "category": "compliance",
+    "region": "European Union",
+    "frameworkType": "project",
+    "iconUrl": "plugins/altai/icon.svg",
+    "documentationUrl": "https://docs.verifywise.com/frameworks/altai",
+    "supportUrl": "https://support.verifywise.com",
+    "isOfficial": true,
+    "isPublished": true,
+    "requiresConfiguration": false,
+    "installationType": "tenant_scoped",
+    "features": [
+      {
+        "name": "7 Key Requirements",
+        "description": "Complete coverage of all Trustworthy AI requirements",
+        "displayOrder": 1
+      },
+      {
+        "name": "Self-Assessment",
+        "description": "Practical assessment questions for each requirement",
+        "displayOrder": 2
+      },
+      {
+        "name": "Auto-Import",
+        "description": "Framework automatically imported on plugin installation",
+        "displayOrder": 3
+      },
+      {
+        "name": "Evidence Tracking",
+        "description": "Track evidence and documentation for compliance",
+        "displayOrder": 4
+      }
+    ],
+    "tags": [
+      "altai",
+      "eu",
+      "ai-ethics",
+      "trustworthy-ai",
+      "ai-governance",
+      "european-commission",
+      "compliance"
+    ],
+    "dependencies": {},
+    "ui": {
+      "bundleUrl": "/api/plugins/altai/ui/dist/index.esm.js",
+      "globalName": "PluginCustomFrameworkImport",
+      "slots": [
+        {
+          "slotId": "page.settings.tabs",
+          "componentName": "CustomFrameworkConfig",
+          "renderType": "tab",
+          "props": {
+            "label": "Custom Frameworks",
+            "icon": "FileJson",
+            "value": "custom-frameworks",
+            "pluginKey": "altai"
+          }
+        },
+        {
+          "slotId": "modal.framework.selection",
+          "componentName": "CustomFrameworkCards",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "altai"
+          }
+        },
+        {
+          "slotId": "page.controls.custom-framework",
+          "componentName": "CustomFrameworkControls",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "altai"
+          }
+        },
+        {
+          "slotId": "page.project-controls.custom-framework",
+          "componentName": "CustomFrameworkControls",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "altai"
+          }
+        },
+        {
+          "slotId": "page.framework-dashboard.custom",
+          "componentName": "CustomFrameworkDashboard",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "altai"
+          }
+        },
+        {
+          "slotId": "page.org-framework.management",
+          "componentName": "CustomFrameworkCards",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "altai"
+          }
+        },
+        {
+          "slotId": "page.project-overview.custom-framework",
+          "componentName": "CustomFrameworkOverview",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "altai"
+          }
+        }
+      ]
+    },
+    "entryPoint": "dist/index.js",
+    "pluginPath": "plugins/altai",
+    "kind": "framework"
+  },
+  {
+    "key": "nist-csf",
+    "name": "NIST Cybersecurity Framework",
+    "displayName": "NIST CSF",
+    "description": "NIST Cybersecurity Framework for managing and reducing cybersecurity risk.",
+    "longDescription": "NIST Cybersecurity Framework plugin provides the five core functions: Identify, Protect, Detect, Respond, and Recover. Widely adopted framework for improving critical infrastructure cybersecurity with flexible implementation tiers.",
+    "version": "1.0.0",
+    "author": "VerifyWise",
+    "category": "compliance",
+    "region": "United States",
+    "frameworkType": "organizational",
+    "iconUrl": "plugins/nist-csf/icon.svg",
+    "documentationUrl": "https://docs.verifywise.com/frameworks/nist-csf",
+    "supportUrl": "https://support.verifywise.com",
+    "isOfficial": true,
+    "isPublished": true,
+    "requiresConfiguration": false,
+    "installationType": "tenant_scoped",
+    "features": [
+      {
+        "name": "Five Core Functions",
+        "description": "Identify, Protect, Detect, Respond, Recover",
+        "displayOrder": 1
+      },
+      {
+        "name": "Category Coverage",
+        "description": "23 categories across all core functions",
+        "displayOrder": 2
+      },
+      {
+        "name": "Auto-Import",
+        "description": "Framework automatically imported on plugin installation",
+        "displayOrder": 3
+      },
+      {
+        "name": "Evidence Management",
+        "description": "Upload and link evidence files to controls",
+        "displayOrder": 4
+      }
+    ],
+    "tags": ["nist", "cybersecurity", "framework", "critical-infrastructure", "compliance"],
+    "dependencies": {},
+    "ui": {
+      "bundleUrl": "/api/plugins/nist-csf/ui/dist/index.esm.js",
+      "globalName": "PluginCustomFrameworkImport",
+      "slots": [
+        {
+          "slotId": "page.settings.tabs",
+          "componentName": "CustomFrameworkConfig",
+          "renderType": "tab",
+          "props": {
+            "label": "Custom Frameworks",
+            "icon": "FileJson",
+            "value": "custom-frameworks",
+            "pluginKey": "nist-csf"
+          }
+        },
+        {
+          "slotId": "modal.framework.selection",
+          "componentName": "CustomFrameworkCards",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "nist-csf"
+          }
+        },
+        {
+          "slotId": "page.controls.custom-framework",
+          "componentName": "CustomFrameworkControls",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "nist-csf"
+          }
+        },
+        {
+          "slotId": "page.project-controls.custom-framework",
+          "componentName": "CustomFrameworkControls",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "nist-csf"
+          }
+        },
+        {
+          "slotId": "page.framework-dashboard.custom",
+          "componentName": "CustomFrameworkDashboard",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "nist-csf"
+          }
+        },
+        {
+          "slotId": "page.org-framework.management",
+          "componentName": "CustomFrameworkCards",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "nist-csf"
+          }
+        },
+        {
+          "slotId": "page.project-overview.custom-framework",
+          "componentName": "CustomFrameworkOverview",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "nist-csf"
+          }
+        }
+      ]
+    },
+    "entryPoint": "dist/index.js",
+    "pluginPath": "plugins/nist-csf",
+    "kind": "framework"
+  },
+  {
+    "key": "ftc-ai-guidelines",
+    "name": "FTC AI Guidelines",
+    "displayName": "FTC AI Guidelines",
+    "description": "US Federal Trade Commission guidelines for responsible AI use, covering truth in advertising, fairness, transparency, and consumer protection.",
+    "longDescription": "The FTC AI Guidelines framework helps organizations comply with Federal Trade Commission requirements for artificial intelligence. It covers truth in AI advertising, algorithmic fairness and non-discrimination, data privacy, transparency, accountability, consumer rights, and AI in marketing practices. Based on FTC enforcement priorities and guidance documents.",
+    "version": "1.0.0",
+    "author": "VerifyWise",
+    "category": "compliance",
+    "region": "United States",
+    "frameworkType": "project",
+    "iconUrl": "plugins/ftc-ai-guidelines/icon.svg",
+    "documentationUrl": "https://docs.verifywise.com/frameworks/ftc-ai-guidelines",
+    "supportUrl": "https://support.verifywise.com",
+    "isOfficial": true,
+    "isPublished": true,
+    "requiresConfiguration": false,
+    "installationType": "tenant_scoped",
+    "features": [
+      {
+        "name": "Truth in Advertising",
+        "description": "Ensure AI claims are truthful and substantiated",
+        "displayOrder": 1
+      },
+      {
+        "name": "Algorithmic Fairness",
+        "description": "ECOA, FCRA, and Fair Housing Act compliance",
+        "displayOrder": 2
+      },
+      {
+        "name": "Consumer Protection",
+        "description": "Data privacy, transparency, and redress mechanisms",
+        "displayOrder": 3
+      },
+      {
+        "name": "Auto-Import",
+        "description": "Framework automatically imported on plugin installation",
+        "displayOrder": 4
+      }
+    ],
+    "tags": [
+      "ftc",
+      "us",
+      "ai-guidelines",
+      "consumer-protection",
+      "fair-practices",
+      "advertising",
+      "compliance"
+    ],
+    "dependencies": {},
+    "ui": {
+      "bundleUrl": "/api/plugins/ftc-ai-guidelines/ui/dist/index.esm.js",
+      "globalName": "PluginCustomFrameworkImport",
+      "slots": [
+        {
+          "slotId": "page.settings.tabs",
+          "componentName": "CustomFrameworkConfig",
+          "renderType": "tab",
+          "props": {
+            "label": "Custom Frameworks",
+            "icon": "FileJson",
+            "value": "custom-frameworks",
+            "pluginKey": "ftc-ai-guidelines"
+          }
+        },
+        {
+          "slotId": "modal.framework.selection",
+          "componentName": "CustomFrameworkCards",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "ftc-ai-guidelines"
+          }
+        },
+        {
+          "slotId": "page.controls.custom-framework",
+          "componentName": "CustomFrameworkControls",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "ftc-ai-guidelines"
+          }
+        },
+        {
+          "slotId": "page.project-controls.custom-framework",
+          "componentName": "CustomFrameworkControls",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "ftc-ai-guidelines"
+          }
+        },
+        {
+          "slotId": "page.framework-dashboard.custom",
+          "componentName": "CustomFrameworkDashboard",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "ftc-ai-guidelines"
+          }
+        },
+        {
+          "slotId": "page.org-framework.management",
+          "componentName": "CustomFrameworkCards",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "ftc-ai-guidelines"
+          }
+        },
+        {
+          "slotId": "page.project-overview.custom-framework",
+          "componentName": "CustomFrameworkOverview",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "ftc-ai-guidelines"
+          }
+        }
+      ]
+    },
+    "entryPoint": "dist/index.js",
+    "pluginPath": "plugins/ftc-ai-guidelines",
+    "kind": "framework"
+  },
+  {
+    "key": "nyc-local-law-144",
+    "name": "NYC Local Law 144",
+    "displayName": "NYC Local Law 144",
+    "description": "New York City Local Law 144 compliance framework for automated employment decision tools (AEDTs) requiring bias audits and candidate notifications.",
+    "longDescription": "NYC Local Law 144, effective July 5, 2023, regulates the use of automated employment decision tools (AEDTs) in hiring and promotion decisions. This framework covers AEDT identification, annual bias audit requirements, public disclosure of audit results, candidate notice requirements, data privacy, vendor management, and governance structures.",
+    "version": "1.0.0",
+    "author": "VerifyWise",
+    "category": "compliance",
+    "region": "United States",
+    "frameworkType": "project",
+    "iconUrl": "plugins/nyc-local-law-144/icon.svg",
+    "documentationUrl": "https://docs.verifywise.com/frameworks/nyc-local-law-144",
+    "supportUrl": "https://support.verifywise.com",
+    "isOfficial": true,
+    "isPublished": true,
+    "requiresConfiguration": false,
+    "installationType": "tenant_scoped",
+    "features": [
+      {
+        "name": "Bias Audit Compliance",
+        "description": "Annual independent bias audit requirements",
+        "displayOrder": 1
+      },
+      {
+        "name": "Candidate Notices",
+        "description": "Required notices 10 days before AEDT use",
+        "displayOrder": 2
+      },
+      {
+        "name": "Public Disclosure",
+        "description": "Website publication of audit results",
+        "displayOrder": 3
+      },
+      {
+        "name": "Auto-Import",
+        "description": "Framework automatically imported on plugin installation",
+        "displayOrder": 4
+      }
+    ],
+    "tags": [
+      "nyc",
+      "local-law-144",
+      "aedt",
+      "hiring-ai",
+      "bias-audit",
+      "employment",
+      "united-states",
+      "compliance"
+    ],
+    "dependencies": {},
+    "ui": {
+      "bundleUrl": "/api/plugins/nyc-local-law-144/ui/dist/index.esm.js",
+      "globalName": "PluginCustomFrameworkImport",
+      "slots": [
+        {
+          "slotId": "page.settings.tabs",
+          "componentName": "CustomFrameworkConfig",
+          "renderType": "tab",
+          "props": {
+            "label": "Custom Frameworks",
+            "icon": "FileJson",
+            "value": "custom-frameworks",
+            "pluginKey": "nyc-local-law-144"
+          }
+        },
+        {
+          "slotId": "modal.framework.selection",
+          "componentName": "CustomFrameworkCards",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "nyc-local-law-144"
+          }
+        },
+        {
+          "slotId": "page.controls.custom-framework",
+          "componentName": "CustomFrameworkControls",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "nyc-local-law-144"
+          }
+        },
+        {
+          "slotId": "page.project-controls.custom-framework",
+          "componentName": "CustomFrameworkControls",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "nyc-local-law-144"
+          }
+        },
+        {
+          "slotId": "page.framework-dashboard.custom",
+          "componentName": "CustomFrameworkDashboard",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "nyc-local-law-144"
+          }
+        },
+        {
+          "slotId": "page.org-framework.management",
+          "componentName": "CustomFrameworkCards",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "nyc-local-law-144"
+          }
+        },
+        {
+          "slotId": "page.project-overview.custom-framework",
+          "componentName": "CustomFrameworkOverview",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "nyc-local-law-144"
+          }
+        }
+      ]
+    },
+    "entryPoint": "dist/index.js",
+    "pluginPath": "plugins/nyc-local-law-144",
+    "kind": "framework"
+  },
+  {
+    "key": "cis-controls",
+    "name": "CIS Controls v8",
+    "displayName": "CIS Controls v8",
+    "description": "CIS Critical Security Controls v8 for cyber defense best practices.",
+    "longDescription": "CIS Controls v8 plugin provides the 18 critical security controls developed by the Center for Internet Security. Prioritized set of actions to protect organizations and data from known cyber attack vectors with implementation groups for different maturity levels.",
+    "version": "1.0.0",
+    "author": "VerifyWise",
+    "category": "compliance",
+    "region": "International",
+    "frameworkType": "organizational",
+    "iconUrl": "plugins/cis-controls/icon.svg",
+    "documentationUrl": "https://docs.verifywise.com/frameworks/cis-controls",
+    "supportUrl": "https://support.verifywise.com",
+    "isOfficial": true,
+    "isPublished": true,
+    "requiresConfiguration": false,
+    "installationType": "tenant_scoped",
+    "features": [
+      {
+        "name": "18 Critical Controls",
+        "description": "Complete coverage of CIS v8 security controls",
+        "displayOrder": 1
+      },
+      {
+        "name": "Implementation Groups",
+        "description": "Support for IG1, IG2, and IG3 maturity levels",
+        "displayOrder": 2
+      },
+      {
+        "name": "Auto-Import",
+        "description": "Framework automatically imported on plugin installation",
+        "displayOrder": 3
+      },
+      {
+        "name": "Evidence Management",
+        "description": "Upload and link evidence files to controls",
+        "displayOrder": 4
+      }
+    ],
+    "tags": ["cis", "controls", "security", "cyber-defense", "compliance"],
+    "dependencies": {},
+    "ui": {
+      "bundleUrl": "/api/plugins/cis-controls/ui/dist/index.esm.js",
+      "globalName": "PluginCustomFrameworkImport",
+      "slots": [
+        {
+          "slotId": "page.settings.tabs",
+          "componentName": "CustomFrameworkConfig",
+          "renderType": "tab",
+          "props": {
+            "label": "Custom Frameworks",
+            "icon": "FileJson",
+            "value": "custom-frameworks",
+            "pluginKey": "cis-controls"
+          }
+        },
+        {
+          "slotId": "modal.framework.selection",
+          "componentName": "CustomFrameworkCards",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "cis-controls"
+          }
+        },
+        {
+          "slotId": "page.controls.custom-framework",
+          "componentName": "CustomFrameworkControls",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "cis-controls"
+          }
+        },
+        {
+          "slotId": "page.project-controls.custom-framework",
+          "componentName": "CustomFrameworkControls",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "cis-controls"
+          }
+        },
+        {
+          "slotId": "page.framework-dashboard.custom",
+          "componentName": "CustomFrameworkDashboard",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "cis-controls"
+          }
+        },
+        {
+          "slotId": "page.org-framework.management",
+          "componentName": "CustomFrameworkCards",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "cis-controls"
+          }
+        },
+        {
+          "slotId": "page.project-overview.custom-framework",
+          "componentName": "CustomFrameworkOverview",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "cis-controls"
+          }
+        }
+      ]
+    },
+    "entryPoint": "dist/index.js",
+    "pluginPath": "plugins/cis-controls",
+    "kind": "framework"
+  },
+  {
+    "key": "ai-ethics",
+    "name": "AI Ethics & Governance",
+    "displayName": "AI Ethics & Governance",
+    "description": "AI Ethics and Governance framework for responsible AI development and deployment.",
+    "longDescription": "AI Ethics & Governance framework plugin provides comprehensive controls for responsible AI development. Covers fairness and bias, transparency, accountability, privacy, safety, and human oversight requirements for AI systems.",
+    "version": "1.0.0",
+    "author": "VerifyWise",
+    "category": "compliance",
+    "region": "International",
+    "frameworkType": "project",
+    "iconUrl": "plugins/ai-ethics/icon.svg",
+    "documentationUrl": "https://docs.verifywise.com/frameworks/ai-ethics",
+    "supportUrl": "https://support.verifywise.com",
+    "isOfficial": true,
+    "isPublished": true,
+    "requiresConfiguration": false,
+    "installationType": "tenant_scoped",
+    "features": [
+      {
+        "name": "Fairness & Bias",
+        "description": "Controls for identifying and mitigating AI bias",
+        "displayOrder": 1
+      },
+      {
+        "name": "Transparency",
+        "description": "Explainability and transparency requirements",
+        "displayOrder": 2
+      },
+      {
+        "name": "Auto-Import",
+        "description": "Framework automatically imported on plugin installation",
+        "displayOrder": 3
+      },
+      {
+        "name": "Human Oversight",
+        "description": "Human-in-the-loop and oversight controls",
+        "displayOrder": 4
+      }
+    ],
+    "tags": ["ai", "ethics", "governance", "responsible-ai", "fairness"],
+    "dependencies": {},
+    "ui": {
+      "bundleUrl": "/api/plugins/ai-ethics/ui/dist/index.esm.js",
+      "globalName": "PluginCustomFrameworkImport",
+      "slots": [
+        {
+          "slotId": "page.settings.tabs",
+          "componentName": "CustomFrameworkConfig",
+          "renderType": "tab",
+          "props": {
+            "label": "Custom Frameworks",
+            "icon": "FileJson",
+            "value": "custom-frameworks",
+            "pluginKey": "ai-ethics"
+          }
+        },
+        {
+          "slotId": "modal.framework.selection",
+          "componentName": "CustomFrameworkCards",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "ai-ethics"
+          }
+        },
+        {
+          "slotId": "page.controls.custom-framework",
+          "componentName": "CustomFrameworkControls",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "ai-ethics"
+          }
+        },
+        {
+          "slotId": "page.project-controls.custom-framework",
+          "componentName": "CustomFrameworkControls",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "ai-ethics"
+          }
+        },
+        {
+          "slotId": "page.framework-dashboard.custom",
+          "componentName": "CustomFrameworkDashboard",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "ai-ethics"
+          }
+        },
+        {
+          "slotId": "page.org-framework.management",
+          "componentName": "CustomFrameworkCards",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "ai-ethics"
+          }
+        },
+        {
+          "slotId": "page.project-overview.custom-framework",
+          "componentName": "CustomFrameworkOverview",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "ai-ethics"
+          }
+        }
+      ]
+    },
+    "entryPoint": "dist/index.js",
+    "pluginPath": "plugins/ai-ethics",
+    "kind": "framework"
+  },
+  {
+    "key": "oecd-ai-principles",
+    "name": "OECD AI Principles",
+    "displayName": "OECD AI Principles",
+    "description": "OECD Principles on Artificial Intelligence for responsible stewardship of trustworthy AI that respects human rights and democratic values.",
+    "longDescription": "The OECD Principles on Artificial Intelligence, adopted in May 2019, were the first intergovernmental standard on AI. Endorsed by G20 leaders, this framework covers inclusive growth and sustainable development, human-centred values and fairness, transparency and explainability, robustness and safety, accountability, and stakeholder engagement.",
+    "version": "1.0.0",
+    "author": "VerifyWise",
+    "category": "compliance",
+    "region": "International",
+    "frameworkType": "project",
+    "iconUrl": "plugins/oecd-ai-principles/icon.svg",
+    "documentationUrl": "https://docs.verifywise.com/frameworks/oecd-ai-principles",
+    "supportUrl": "https://support.verifywise.com",
+    "isOfficial": true,
+    "isPublished": true,
+    "requiresConfiguration": false,
+    "installationType": "tenant_scoped",
+    "features": [
+      {
+        "name": "G20 Endorsed",
+        "description": "First intergovernmental AI standard endorsed by G20",
+        "displayOrder": 1
+      },
+      {
+        "name": "Five Core Principles",
+        "description": "Growth, Fairness, Transparency, Safety, Accountability",
+        "displayOrder": 2
+      },
+      {
+        "name": "Human-Centred AI",
+        "description": "Focus on human rights and democratic values",
+        "displayOrder": 3
+      },
+      {
+        "name": "Auto-Import",
+        "description": "Framework automatically imported on plugin installation",
+        "displayOrder": 4
+      }
+    ],
+    "tags": [
+      "oecd",
+      "international",
+      "ai-principles",
+      "g20",
+      "trustworthy-ai",
+      "ai-governance",
+      "compliance"
+    ],
+    "dependencies": {},
+    "ui": {
+      "bundleUrl": "/api/plugins/oecd-ai-principles/ui/dist/index.esm.js",
+      "globalName": "PluginCustomFrameworkImport",
+      "slots": [
+        {
+          "slotId": "page.settings.tabs",
+          "componentName": "CustomFrameworkConfig",
+          "renderType": "tab",
+          "props": {
+            "label": "Custom Frameworks",
+            "icon": "FileJson",
+            "value": "custom-frameworks",
+            "pluginKey": "oecd-ai-principles"
+          }
+        },
+        {
+          "slotId": "modal.framework.selection",
+          "componentName": "CustomFrameworkCards",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "oecd-ai-principles"
+          }
+        },
+        {
+          "slotId": "page.controls.custom-framework",
+          "componentName": "CustomFrameworkControls",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "oecd-ai-principles"
+          }
+        },
+        {
+          "slotId": "page.project-controls.custom-framework",
+          "componentName": "CustomFrameworkControls",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "oecd-ai-principles"
+          }
+        },
+        {
+          "slotId": "page.framework-dashboard.custom",
+          "componentName": "CustomFrameworkDashboard",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "oecd-ai-principles"
+          }
+        },
+        {
+          "slotId": "page.org-framework.management",
+          "componentName": "CustomFrameworkCards",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "oecd-ai-principles"
+          }
+        },
+        {
+          "slotId": "page.project-overview.custom-framework",
+          "componentName": "CustomFrameworkOverview",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "oecd-ai-principles"
+          }
+        }
+      ]
+    },
+    "entryPoint": "dist/index.js",
+    "pluginPath": "plugins/oecd-ai-principles",
+    "kind": "framework"
+  },
+  {
+    "key": "data-governance",
+    "name": "Data Governance",
+    "displayName": "Data Governance",
+    "description": "Data Governance framework for enterprise data management and quality.",
+    "longDescription": "Data Governance framework plugin provides comprehensive controls for enterprise data management. Covers data quality, data cataloging, metadata management, data lineage, data stewardship, and master data management.",
+    "version": "1.0.0",
+    "author": "VerifyWise",
+    "category": "compliance",
+    "region": "International",
+    "frameworkType": "organizational",
+    "iconUrl": "plugins/data-governance/icon.svg",
+    "documentationUrl": "https://docs.verifywise.com/frameworks/data-governance",
+    "supportUrl": "https://support.verifywise.com",
+    "isOfficial": true,
+    "isPublished": true,
+    "requiresConfiguration": false,
+    "installationType": "tenant_scoped",
+    "features": [
+      {
+        "name": "Data Quality",
+        "description": "Data quality management and monitoring",
+        "displayOrder": 1
+      },
+      {
+        "name": "Data Lineage",
+        "description": "Track data flow and transformations",
+        "displayOrder": 2
+      },
+      {
+        "name": "Auto-Import",
+        "description": "Framework automatically imported on plugin installation",
+        "displayOrder": 3
+      },
+      {
+        "name": "Data Stewardship",
+        "description": "Assign and manage data stewards",
+        "displayOrder": 4
+      }
+    ],
+    "tags": ["data", "governance", "quality", "management", "compliance"],
+    "dependencies": {},
+    "ui": {
+      "bundleUrl": "/api/plugins/data-governance/ui/dist/index.esm.js",
+      "globalName": "PluginCustomFrameworkImport",
+      "slots": [
+        {
+          "slotId": "page.settings.tabs",
+          "componentName": "CustomFrameworkConfig",
+          "renderType": "tab",
+          "props": {
+            "label": "Custom Frameworks",
+            "icon": "FileJson",
+            "value": "custom-frameworks",
+            "pluginKey": "data-governance"
+          }
+        },
+        {
+          "slotId": "modal.framework.selection",
+          "componentName": "CustomFrameworkCards",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "data-governance"
+          }
+        },
+        {
+          "slotId": "page.controls.custom-framework",
+          "componentName": "CustomFrameworkControls",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "data-governance"
+          }
+        },
+        {
+          "slotId": "page.project-controls.custom-framework",
+          "componentName": "CustomFrameworkControls",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "data-governance"
+          }
+        },
+        {
+          "slotId": "page.framework-dashboard.custom",
+          "componentName": "CustomFrameworkDashboard",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "data-governance"
+          }
+        },
+        {
+          "slotId": "page.org-framework.management",
+          "componentName": "CustomFrameworkCards",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "data-governance"
+          }
+        },
+        {
+          "slotId": "page.project-overview.custom-framework",
+          "componentName": "CustomFrameworkOverview",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "data-governance"
+          }
+        }
+      ]
+    },
+    "entryPoint": "dist/index.js",
+    "pluginPath": "plugins/data-governance",
+    "kind": "framework"
+  },
+  {
+    "key": "uae-pdpl",
+    "name": "UAE Data Protection",
+    "displayName": "UAE PDPL",
+    "description": "UAE Personal Data Protection Law (PDPL 45/2021) and AI governance framework.",
+    "longDescription": "UAE Data Protection framework plugin provides comprehensive coverage of Federal Decree-Law No. 45/2021 on Personal Data Protection, DIFC Regulation 10 for financial services, and the UAE AI Ethics Charter (2024). Includes data subject rights, lawful processing bases, cross-border transfer requirements, and AI governance principles.",
+    "version": "1.0.0",
+    "author": "VerifyWise",
+    "category": "compliance",
+    "region": "United Arab Emirates",
+    "frameworkType": "organizational",
+    "iconUrl": "plugins/uae-pdpl/icon.svg",
+    "documentationUrl": "https://docs.verifywise.com/frameworks/uae-pdpl",
+    "supportUrl": "https://support.verifywise.com",
+    "isOfficial": true,
+    "isPublished": true,
+    "requiresConfiguration": false,
+    "installationType": "tenant_scoped",
+    "features": [
+      {
+        "name": "PDPL 45/2021",
+        "description": "Federal Personal Data Protection Law requirements",
+        "displayOrder": 1
+      },
+      {
+        "name": "DIFC Regulation 10",
+        "description": "Financial services data protection requirements",
+        "displayOrder": 2
+      },
+      {
+        "name": "AI Ethics Charter",
+        "description": "UAE AI Ethics Charter (2024) compliance",
+        "displayOrder": 3
+      },
+      {
+        "name": "Auto-Import",
+        "description": "Framework automatically imported on plugin installation",
+        "displayOrder": 4
+      }
+    ],
+    "tags": ["uae", "pdpl", "difc", "ai-ethics", "data-protection", "compliance", "gulf"],
+    "dependencies": {},
+    "ui": {
+      "bundleUrl": "/api/plugins/uae-pdpl/ui/dist/index.esm.js",
+      "globalName": "PluginCustomFrameworkImport",
+      "slots": [
+        {
+          "slotId": "page.settings.tabs",
+          "componentName": "CustomFrameworkConfig",
+          "renderType": "tab",
+          "props": {
+            "label": "Custom Frameworks",
+            "icon": "FileJson",
+            "value": "custom-frameworks",
+            "pluginKey": "uae-pdpl"
+          }
+        },
+        {
+          "slotId": "modal.framework.selection",
+          "componentName": "CustomFrameworkCards",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "uae-pdpl"
+          }
+        },
+        {
+          "slotId": "page.controls.custom-framework",
+          "componentName": "CustomFrameworkControls",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "uae-pdpl"
+          }
+        },
+        {
+          "slotId": "page.project-controls.custom-framework",
+          "componentName": "CustomFrameworkControls",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "uae-pdpl"
+          }
+        },
+        {
+          "slotId": "page.framework-dashboard.custom",
+          "componentName": "CustomFrameworkDashboard",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "uae-pdpl"
+          }
+        },
+        {
+          "slotId": "page.org-framework.management",
+          "componentName": "CustomFrameworkCards",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "uae-pdpl"
+          }
+        },
+        {
+          "slotId": "page.project-overview.custom-framework",
+          "componentName": "CustomFrameworkOverview",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "uae-pdpl"
+          }
+        }
+      ]
+    },
+    "entryPoint": "dist/index.js",
+    "pluginPath": "plugins/uae-pdpl",
+    "kind": "framework"
+  },
+  {
+    "key": "saudi-pdpl",
+    "name": "Saudi Arabia Data Protection",
+    "displayName": "Saudi PDPL",
+    "description": "Saudi Arabia Personal Data Protection Law and SDAIA AI governance guidelines.",
+    "longDescription": "Saudi Arabia Data Protection framework plugin provides comprehensive coverage of the Personal Data Protection Law (PDPL, in force since September 2023), SDAIA Ethics Principles (2023), and Generative AI Guidelines (2024). Includes data subject rights, consent requirements, cross-border transfer restrictions, and AI ethics compliance with SDAIA accreditation requirements.",
+    "version": "1.0.0",
+    "author": "VerifyWise",
+    "category": "compliance",
+    "region": "Saudi Arabia",
+    "frameworkType": "organizational",
+    "iconUrl": "plugins/saudi-pdpl/icon.svg",
+    "documentationUrl": "https://docs.verifywise.com/frameworks/saudi-pdpl",
+    "supportUrl": "https://support.verifywise.com",
+    "isOfficial": true,
+    "isPublished": true,
+    "requiresConfiguration": false,
+    "installationType": "tenant_scoped",
+    "features": [
+      {
+        "name": "PDPL Compliance",
+        "description": "Personal Data Protection Law (since Sep 2023)",
+        "displayOrder": 1
+      },
+      {
+        "name": "SDAIA Ethics",
+        "description": "SDAIA Ethics Principles (2023) requirements",
+        "displayOrder": 2
+      },
+      {
+        "name": "Generative AI",
+        "description": "SDAIA Generative AI Guidelines (2024)",
+        "displayOrder": 3
+      },
+      {
+        "name": "Auto-Import",
+        "description": "Framework automatically imported on plugin installation",
+        "displayOrder": 4
+      }
+    ],
+    "tags": [
+      "saudi-arabia",
+      "pdpl",
+      "sdaia",
+      "generative-ai",
+      "data-protection",
+      "compliance",
+      "gulf"
+    ],
+    "dependencies": {},
+    "ui": {
+      "bundleUrl": "/api/plugins/saudi-pdpl/ui/dist/index.esm.js",
+      "globalName": "PluginCustomFrameworkImport",
+      "slots": [
+        {
+          "slotId": "page.settings.tabs",
+          "componentName": "CustomFrameworkConfig",
+          "renderType": "tab",
+          "props": {
+            "label": "Custom Frameworks",
+            "icon": "FileJson",
+            "value": "custom-frameworks",
+            "pluginKey": "saudi-pdpl"
+          }
+        },
+        {
+          "slotId": "modal.framework.selection",
+          "componentName": "CustomFrameworkCards",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "saudi-pdpl"
+          }
+        },
+        {
+          "slotId": "page.controls.custom-framework",
+          "componentName": "CustomFrameworkControls",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "saudi-pdpl"
+          }
+        },
+        {
+          "slotId": "page.project-controls.custom-framework",
+          "componentName": "CustomFrameworkControls",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "saudi-pdpl"
+          }
+        },
+        {
+          "slotId": "page.framework-dashboard.custom",
+          "componentName": "CustomFrameworkDashboard",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "saudi-pdpl"
+          }
+        },
+        {
+          "slotId": "page.org-framework.management",
+          "componentName": "CustomFrameworkCards",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "saudi-pdpl"
+          }
+        },
+        {
+          "slotId": "page.project-overview.custom-framework",
+          "componentName": "CustomFrameworkOverview",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "saudi-pdpl"
+          }
+        }
+      ]
+    },
+    "entryPoint": "dist/index.js",
+    "pluginPath": "plugins/saudi-pdpl",
+    "kind": "framework"
+  },
+  {
+    "key": "qatar-pdpl",
+    "name": "Qatar Data Privacy Law",
+    "displayName": "Qatar PDPL",
+    "description": "Qatar Personal Data Privacy Law 13/2016 and national AI policy framework.",
+    "longDescription": "Qatar Data Privacy framework plugin provides comprehensive coverage of Personal Data Privacy Law 13/2016 and the draft national AI policy (2024). Includes data subject rights, consent requirements, cross-border transfer restrictions with regulator approval, and QCB FinTech sandbox guidelines for AI in financial services.",
+    "version": "1.0.0",
+    "author": "VerifyWise",
+    "category": "compliance",
+    "region": "Qatar",
+    "frameworkType": "organizational",
+    "iconUrl": "plugins/qatar-pdpl/icon.svg",
+    "documentationUrl": "https://docs.verifywise.com/frameworks/qatar-pdpl",
+    "supportUrl": "https://support.verifywise.com",
+    "isOfficial": true,
+    "isPublished": true,
+    "requiresConfiguration": false,
+    "installationType": "tenant_scoped",
+    "features": [
+      {
+        "name": "Law 13/2016",
+        "description": "Personal Data Privacy Law requirements",
+        "displayOrder": 1
+      },
+      {
+        "name": "AI Policy",
+        "description": "Draft national AI policy (2024) compliance",
+        "displayOrder": 2
+      },
+      {
+        "name": "QCB FinTech",
+        "description": "QCB FinTech sandbox AI guidelines",
+        "displayOrder": 3
+      },
+      {
+        "name": "Auto-Import",
+        "description": "Framework automatically imported on plugin installation",
+        "displayOrder": 4
+      }
+    ],
+    "tags": ["qatar", "pdpl", "data-privacy", "fintech", "ai-policy", "compliance", "gulf"],
+    "dependencies": {},
+    "ui": {
+      "bundleUrl": "/api/plugins/qatar-pdpl/ui/dist/index.esm.js",
+      "globalName": "PluginCustomFrameworkImport",
+      "slots": [
+        {
+          "slotId": "page.settings.tabs",
+          "componentName": "CustomFrameworkConfig",
+          "renderType": "tab",
+          "props": {
+            "label": "Custom Frameworks",
+            "icon": "FileJson",
+            "value": "custom-frameworks",
+            "pluginKey": "qatar-pdpl"
+          }
+        },
+        {
+          "slotId": "modal.framework.selection",
+          "componentName": "CustomFrameworkCards",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "qatar-pdpl"
+          }
+        },
+        {
+          "slotId": "page.controls.custom-framework",
+          "componentName": "CustomFrameworkControls",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "qatar-pdpl"
+          }
+        },
+        {
+          "slotId": "page.project-controls.custom-framework",
+          "componentName": "CustomFrameworkControls",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "qatar-pdpl"
+          }
+        },
+        {
+          "slotId": "page.framework-dashboard.custom",
+          "componentName": "CustomFrameworkDashboard",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "qatar-pdpl"
+          }
+        },
+        {
+          "slotId": "page.org-framework.management",
+          "componentName": "CustomFrameworkCards",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "qatar-pdpl"
+          }
+        },
+        {
+          "slotId": "page.project-overview.custom-framework",
+          "componentName": "CustomFrameworkOverview",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "qatar-pdpl"
+          }
+        }
+      ]
+    },
+    "entryPoint": "dist/index.js",
+    "pluginPath": "plugins/qatar-pdpl",
+    "kind": "framework"
+  },
+  {
+    "key": "bahrain-pdpl",
+    "name": "Bahrain Data Protection",
+    "displayName": "Bahrain PDPL",
+    "description": "Bahrain Personal Data Protection Law 30/2018 and AI governance in open banking.",
+    "longDescription": "Bahrain Data Protection framework plugin provides comprehensive coverage of Personal Data Protection Law 30/2018 (PDPL), CBB notice on AI use in Open Banking (2023), and the EDB AI Ethics Pledge. Includes data subject rights, Central Bank sandbox requirements, and ongoing supervisory review compliance for AI systems in financial services.",
+    "version": "1.0.0",
+    "author": "VerifyWise",
+    "category": "compliance",
+    "region": "Bahrain",
+    "frameworkType": "organizational",
+    "iconUrl": "plugins/bahrain-pdpl/icon.svg",
+    "documentationUrl": "https://docs.verifywise.com/frameworks/bahrain-pdpl",
+    "supportUrl": "https://support.verifywise.com",
+    "isOfficial": true,
+    "isPublished": true,
+    "requiresConfiguration": false,
+    "installationType": "tenant_scoped",
+    "features": [
+      {
+        "name": "PDPL 30/2018",
+        "description": "Personal Data Protection Law requirements",
+        "displayOrder": 1
+      },
+      {
+        "name": "CBB AI Notice",
+        "description": "Central Bank AI in Open Banking (2023)",
+        "displayOrder": 2
+      },
+      {
+        "name": "EDB AI Ethics",
+        "description": "Economic Development Board AI Ethics Pledge",
+        "displayOrder": 3
+      },
+      {
+        "name": "Auto-Import",
+        "description": "Framework automatically imported on plugin installation",
+        "displayOrder": 4
+      }
+    ],
+    "tags": ["bahrain", "pdpl", "cbb", "open-banking", "ai-ethics", "compliance", "gulf"],
+    "dependencies": {},
+    "ui": {
+      "bundleUrl": "/api/plugins/bahrain-pdpl/ui/dist/index.esm.js",
+      "globalName": "PluginCustomFrameworkImport",
+      "slots": [
+        {
+          "slotId": "page.settings.tabs",
+          "componentName": "CustomFrameworkConfig",
+          "renderType": "tab",
+          "props": {
+            "label": "Custom Frameworks",
+            "icon": "FileJson",
+            "value": "custom-frameworks",
+            "pluginKey": "bahrain-pdpl"
+          }
+        },
+        {
+          "slotId": "modal.framework.selection",
+          "componentName": "CustomFrameworkCards",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "bahrain-pdpl"
+          }
+        },
+        {
+          "slotId": "page.controls.custom-framework",
+          "componentName": "CustomFrameworkControls",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "bahrain-pdpl"
+          }
+        },
+        {
+          "slotId": "page.project-controls.custom-framework",
+          "componentName": "CustomFrameworkControls",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "bahrain-pdpl"
+          }
+        },
+        {
+          "slotId": "page.framework-dashboard.custom",
+          "componentName": "CustomFrameworkDashboard",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "bahrain-pdpl"
+          }
+        },
+        {
+          "slotId": "page.org-framework.management",
+          "componentName": "CustomFrameworkCards",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "bahrain-pdpl"
+          }
+        },
+        {
+          "slotId": "page.project-overview.custom-framework",
+          "componentName": "CustomFrameworkOverview",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "bahrain-pdpl"
+          }
+        }
+      ]
+    },
+    "entryPoint": "dist/index.js",
+    "pluginPath": "plugins/bahrain-pdpl",
+    "kind": "framework"
+  },
+  {
+    "key": "quebec-law25",
+    "name": "Quebec Law 25 (Bill 64)",
+    "displayName": "Quebec Law 25",
+    "description": "Quebec's modernized privacy law (Bill 64) for protection of personal information in the private sector.",
+    "longDescription": "Quebec Law 25 (Bill 64) framework plugin provides comprehensive coverage of Quebec's Act respecting the protection of personal information in the private sector, as modernized in 2021. Includes privacy officer requirements, consent obligations, individual rights (access, rectification, portability, de-indexation), data breach notification (15-day requirement), cross-border transfer assessments, and automated decision-making transparency. Phased implementation from 2022-2024.",
+    "version": "1.0.0",
+    "author": "VerifyWise",
+    "category": "compliance",
+    "region": "Canada",
+    "frameworkType": "organizational",
+    "iconUrl": "plugins/quebec-law25/icon.svg",
+    "documentationUrl": "https://docs.verifywise.com/frameworks/quebec-law25",
+    "supportUrl": "https://support.verifywise.com",
+    "isOfficial": true,
+    "isPublished": true,
+    "requiresConfiguration": false,
+    "installationType": "tenant_scoped",
+    "features": [
+      {
+        "name": "Privacy Officer",
+        "description": "Privacy officer designation and governance requirements",
+        "displayOrder": 1
+      },
+      {
+        "name": "Individual Rights",
+        "description": "Access, rectification, portability, and de-indexation rights",
+        "displayOrder": 2
+      },
+      {
+        "name": "Breach Notification",
+        "description": "Privacy incident reporting and 15-day notification requirements",
+        "displayOrder": 3
+      },
+      {
+        "name": "Auto-Import",
+        "description": "Framework automatically imported on plugin installation",
+        "displayOrder": 4
+      }
+    ],
+    "tags": ["quebec", "law-25", "bill-64", "privacy", "canada", "data-protection", "compliance"],
+    "dependencies": {},
+    "ui": {
+      "bundleUrl": "/api/plugins/quebec-law25/ui/dist/index.esm.js",
+      "globalName": "PluginCustomFrameworkImport",
+      "slots": [
+        {
+          "slotId": "page.settings.tabs",
+          "componentName": "CustomFrameworkConfig",
+          "renderType": "tab",
+          "props": {
+            "label": "Custom Frameworks",
+            "icon": "FileJson",
+            "value": "custom-frameworks",
+            "pluginKey": "quebec-law25"
+          }
+        },
+        {
+          "slotId": "modal.framework.selection",
+          "componentName": "CustomFrameworkCards",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "quebec-law25"
+          }
+        },
+        {
+          "slotId": "page.controls.custom-framework",
+          "componentName": "CustomFrameworkControls",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "quebec-law25"
+          }
+        },
+        {
+          "slotId": "page.project-controls.custom-framework",
+          "componentName": "CustomFrameworkControls",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "quebec-law25"
+          }
+        },
+        {
+          "slotId": "page.framework-dashboard.custom",
+          "componentName": "CustomFrameworkDashboard",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "quebec-law25"
+          }
+        },
+        {
+          "slotId": "page.org-framework.management",
+          "componentName": "CustomFrameworkCards",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "quebec-law25"
+          }
+        },
+        {
+          "slotId": "page.project-overview.custom-framework",
+          "componentName": "CustomFrameworkOverview",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "quebec-law25"
+          }
+        }
+      ]
+    },
+    "entryPoint": "dist/index.js",
+    "pluginPath": "plugins/quebec-law25",
+    "kind": "framework"
+  },
+  {
+    "key": "texas-ai-act",
+    "name": "Texas Responsible AI Governance Act",
+    "displayName": "Texas AI Act",
+    "description": "Texas TRAIGA compliance framework for high-risk AI systems deployment and governance.",
+    "longDescription": "Texas Responsible AI Governance Act (TRAIGA) framework plugin provides comprehensive coverage of Texas AI governance requirements for organizations deploying high-risk AI systems. Includes algorithmic impact assessments, bias testing, consumer disclosure requirements, human oversight obligations, appeal rights, risk management, and documentation requirements. Applicable to AI systems making consequential decisions in employment, education, financial services, healthcare, housing, and essential services.",
+    "version": "1.0.0",
+    "author": "VerifyWise",
+    "category": "compliance",
+    "region": "United States",
+    "frameworkType": "project",
+    "iconUrl": "plugins/texas-ai-act/icon.svg",
+    "documentationUrl": "https://docs.verifywise.com/frameworks/texas-ai-act",
+    "supportUrl": "https://support.verifywise.com",
+    "isOfficial": true,
+    "isPublished": true,
+    "requiresConfiguration": false,
+    "installationType": "tenant_scoped",
+    "features": [
+      {
+        "name": "Impact Assessments",
+        "description": "Algorithmic impact assessments and bias testing",
+        "displayOrder": 1
+      },
+      {
+        "name": "Consumer Rights",
+        "description": "Disclosure, appeal, and opt-out requirements",
+        "displayOrder": 2
+      },
+      {
+        "name": "Human Oversight",
+        "description": "Human review and override requirements",
+        "displayOrder": 3
+      },
+      {
+        "name": "Auto-Import",
+        "description": "Framework automatically imported on plugin installation",
+        "displayOrder": 4
+      }
+    ],
+    "tags": [
+      "texas",
+      "ai-act",
+      "traiga",
+      "ai-governance",
+      "high-risk-ai",
+      "compliance",
+      "united-states"
+    ],
+    "dependencies": {},
+    "ui": {
+      "bundleUrl": "/api/plugins/texas-ai-act/ui/dist/index.esm.js",
+      "globalName": "PluginCustomFrameworkImport",
+      "slots": [
+        {
+          "slotId": "page.settings.tabs",
+          "componentName": "CustomFrameworkConfig",
+          "renderType": "tab",
+          "props": {
+            "label": "Custom Frameworks",
+            "icon": "FileJson",
+            "value": "custom-frameworks",
+            "pluginKey": "texas-ai-act"
+          }
+        },
+        {
+          "slotId": "modal.framework.selection",
+          "componentName": "CustomFrameworkCards",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "texas-ai-act"
+          }
+        },
+        {
+          "slotId": "page.controls.custom-framework",
+          "componentName": "CustomFrameworkControls",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "texas-ai-act"
+          }
+        },
+        {
+          "slotId": "page.project-controls.custom-framework",
+          "componentName": "CustomFrameworkControls",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "texas-ai-act"
+          }
+        },
+        {
+          "slotId": "page.framework-dashboard.custom",
+          "componentName": "CustomFrameworkDashboard",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "texas-ai-act"
+          }
+        },
+        {
+          "slotId": "page.org-framework.management",
+          "componentName": "CustomFrameworkCards",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "texas-ai-act"
+          }
+        },
+        {
+          "slotId": "page.project-overview.custom-framework",
+          "componentName": "CustomFrameworkOverview",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "texas-ai-act"
+          }
+        }
+      ]
+    },
+    "entryPoint": "dist/index.js",
+    "pluginPath": "plugins/texas-ai-act",
+    "kind": "framework"
+  },
+  {
+    "key": "colorado-ai-act",
+    "name": "Colorado Artificial Intelligence Act",
+    "displayName": "Colorado AI Act",
+    "description": "Colorado AI Act compliance framework for preventing algorithmic discrimination in high-risk AI systems.",
+    "longDescription": "Colorado Artificial Intelligence Act framework plugin provides comprehensive coverage of Colorado's AI governance requirements aimed at protecting consumers from algorithmic discrimination. Includes developer and deployer duties, algorithmic impact assessments, consumer notification and explanation rights, appeal processes, bias testing requirements, and risk management obligations. Applicable to AI systems making consequential decisions in education, employment, financial services, government, healthcare, housing, insurance, and legal services.",
+    "version": "1.0.0",
+    "author": "VerifyWise",
+    "category": "compliance",
+    "region": "United States",
+    "frameworkType": "project",
+    "iconUrl": "plugins/colorado-ai-act/icon.svg",
+    "documentationUrl": "https://docs.verifywise.com/frameworks/colorado-ai-act",
+    "supportUrl": "https://support.verifywise.com",
+    "isOfficial": true,
+    "isPublished": true,
+    "requiresConfiguration": false,
+    "installationType": "tenant_scoped",
+    "features": [
+      {
+        "name": "Discrimination Prevention",
+        "description": "Algorithmic discrimination testing and prevention",
+        "displayOrder": 1
+      },
+      {
+        "name": "Consumer Rights",
+        "description": "Disclosure, explanation, and appeal rights",
+        "displayOrder": 2
+      },
+      {
+        "name": "Impact Assessments",
+        "description": "Annual algorithmic impact assessment requirements",
+        "displayOrder": 3
+      },
+      {
+        "name": "Auto-Import",
+        "description": "Framework automatically imported on plugin installation",
+        "displayOrder": 4
+      }
+    ],
+    "tags": [
+      "colorado",
+      "ai-act",
+      "algorithmic-discrimination",
+      "ai-governance",
+      "high-risk-ai",
+      "compliance",
+      "united-states"
+    ],
+    "dependencies": {},
+    "ui": {
+      "bundleUrl": "/api/plugins/colorado-ai-act/ui/dist/index.esm.js",
+      "globalName": "PluginCustomFrameworkImport",
+      "slots": [
+        {
+          "slotId": "page.settings.tabs",
+          "componentName": "CustomFrameworkConfig",
+          "renderType": "tab",
+          "props": {
+            "label": "Custom Frameworks",
+            "icon": "FileJson",
+            "value": "custom-frameworks",
+            "pluginKey": "colorado-ai-act"
+          }
+        },
+        {
+          "slotId": "modal.framework.selection",
+          "componentName": "CustomFrameworkCards",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "colorado-ai-act"
+          }
+        },
+        {
+          "slotId": "page.controls.custom-framework",
+          "componentName": "CustomFrameworkControls",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "colorado-ai-act"
+          }
+        },
+        {
+          "slotId": "page.project-controls.custom-framework",
+          "componentName": "CustomFrameworkControls",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "colorado-ai-act"
+          }
+        },
+        {
+          "slotId": "page.framework-dashboard.custom",
+          "componentName": "CustomFrameworkDashboard",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "colorado-ai-act"
+          }
+        },
+        {
+          "slotId": "page.org-framework.management",
+          "componentName": "CustomFrameworkCards",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "colorado-ai-act"
+          }
+        },
+        {
+          "slotId": "page.project-overview.custom-framework",
+          "componentName": "CustomFrameworkOverview",
+          "renderType": "raw",
+          "props": {
+            "pluginKey": "colorado-ai-act"
+          }
+        }
+      ]
+    },
+    "entryPoint": "dist/index.js",
+    "pluginPath": "plugins/colorado-ai-act",
+    "kind": "framework"
+  },
+  {
+    "key": "dataset-bulk-upload",
+    "name": "Dataset Bulk Upload",
+    "displayName": "Dataset Bulk Upload",
+    "description": "Upload multiple CSV/XLSX datasets with metadata, PII detection, and batch processing",
+    "longDescription": "Dataset Bulk Upload enables data teams to import multiple datasets at once with automatic PII detection, metadata annotation, and batch processing. Each file is analyzed client-side for column structure, row count, and potential PII before upload. Supports CSV, XLSX, and XLS formats with per-file metadata customization.",
+    "version": "1.0.0",
+    "author": "VerifyWise",
+    "category": "data_management",
+    "region": null,
+    "frameworkType": null,
+    "iconUrl": "plugins/dataset-bulk-upload/icon.svg",
+    "documentationUrl": null,
+    "supportUrl": null,
+    "isOfficial": true,
+    "isPublished": true,
+    "requiresConfiguration": false,
+    "installationType": "tenant_scoped",
+    "features": [
+      {
+        "name": "Bulk File Upload",
+        "description": "Upload up to 20 CSV/XLSX files at once with drag & drop support"
+      },
+      {
+        "name": "PII Detection",
+        "description": "Automatic detection of personally identifiable information in column headers"
+      },
+      {
+        "name": "Metadata Annotation",
+        "description": "Per-file metadata customization with batch defaults support"
+      },
+      {
+        "name": "Data Preview",
+        "description": "Preview file contents and column structure before uploading"
+      }
+    ],
+    "tags": [],
+    "dependencies": {},
+    "ui": {
+      "bundleUrl": "/api/plugins/dataset-bulk-upload/ui/dist/index.esm.js",
+      "globalName": "PluginDatasetBulkUpload",
+      "slots": [
+        {
+          "slotId": "page.datasets.actions",
+          "componentName": "BulkUploadButton",
+          "renderType": "button"
+        },
+        {
+          "slotId": "page.datasets.actions",
+          "componentName": "BulkUploadModal",
+          "renderType": "modal",
+          "trigger": "BulkUploadButton"
+        }
+      ]
+    },
+    "entryPoint": "index.ts",
+    "pluginPath": "plugins/dataset-bulk-upload",
+    "kind": "integration"
+  },
+  {
+    "key": "model-lifecycle",
+    "name": "Model Lifecycle",
+    "displayName": "Model Lifecycle",
+    "description": "Track AI model lifecycle phases from registration through monitoring with configurable phases, approval workflows, and compliance documentation",
+    "longDescription": "Model Lifecycle provides comprehensive tracking of AI model lifecycle phases including registration, design, validation, deployment, monitoring, and human oversight. Features configurable phases with 7 field types (text, textarea, documents, people, classification, checklist, approval), per-model progress tracking, and an admin configuration editor for customizing phases and items.",
+    "version": "1.0.0",
+    "author": "VerifyWise",
+    "category": "ml_ops",
+    "region": null,
+    "frameworkType": null,
+    "iconUrl": "plugins/model-lifecycle/icon.svg",
+    "documentationUrl": null,
+    "supportUrl": null,
+    "isOfficial": true,
+    "isPublished": true,
+    "requiresConfiguration": true,
+    "installationType": "tenant_scoped",
+    "features": [
+      {
+        "name": "Lifecycle Phase Tracking",
+        "description": "Track models through configurable lifecycle phases from registration to monitoring"
+      },
+      {
+        "name": "Multiple Field Types",
+        "description": "7 field types: text, textarea, documents, people, classification, checklist, approval"
+      },
+      {
+        "name": "Approval Workflows",
+        "description": "Built-in approval workflow support with multi-approver tracking"
+      },
+      {
+        "name": "Progress Tracking",
+        "description": "Visual progress tracking with per-phase and overall completion metrics"
+      },
+      {
+        "name": "Admin Configuration",
+        "description": "Full admin UI for adding, removing, and reordering phases and items"
+      }
+    ],
+    "tags": [],
+    "dependencies": {},
+    "ui": {
+      "bundleUrl": "/api/plugins/model-lifecycle/ui/dist/index.esm.js",
+      "globalName": "PluginModelLifecycle",
+      "slots": [
+        {
+          "slotId": "page.plugin.config",
+          "componentName": "ModelLifecycleConfig",
+          "renderType": "card"
+        },
+        {
+          "slotId": "table.model.row-icon-actions",
+          "componentName": "ViewLifecycleButton",
+          "renderType": "button"
+        },
+        {
+          "slotId": "page.model-detail.lifecycle",
+          "componentName": "ModelLifecycleDetail",
+          "renderType": "raw"
+        }
+      ]
+    },
+    "entryPoint": "index.ts",
+    "pluginPath": "plugins/model-lifecycle",
+    "kind": "integration"
+  }
+]

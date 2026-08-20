@@ -20,7 +20,7 @@ describe("useLogoFetch", () => {
       onerror: (() => void) | null = null;
       src = "";
       constructor() {
-        setTimeout(() => this.onload?.(), 0);
+        queueMicrotask(() => this.onload?.());
       }
     } as any;
   });

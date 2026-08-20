@@ -41,34 +41,37 @@ async def get_audit_logs(
 
     where_sql = " AND ".join(where_clauses)
 
-    count_sql = f"""
-        SELECT COUNT(*) AS total
-        FROM ai_gateway_mcp_audit_logs al
-        WHERE {where_sql}
-    """
+    # Build SQL by concatenating static fragments. The dynamic portion
+    # (where_sql) is composed only from the allow-listed clauses above and
+    # uses bind parameters for all variable values.
+    count_sql = (
+        "SELECT COUNT(*) AS total\n"
+        "FROM ai_gateway_mcp_audit_logs al\n"
+        "WHERE " + where_sql
+    )
 
-    data_sql = f"""
-        SELECT
-            al.id,
-            al.organization_id,
-            al.agent_key_id,
-            al.server_id,
-            al.tool_name,
-            al.arguments,
-            al.result_status,
-            al.result_summary,
-            al.is_error,
-            al.latency_ms,
-            al.session_id,
-            al.metadata,
-            al.created_at,
-            ak.name AS agent_key_name
-        FROM ai_gateway_mcp_audit_logs al
-        LEFT JOIN ai_gateway_mcp_agent_keys ak ON ak.id = al.agent_key_id
-        WHERE {where_sql}
-        ORDER BY al.created_at DESC
-        LIMIT :limit OFFSET :offset
-    """
+    data_sql = (
+        "SELECT\n"
+        "    al.id,\n"
+        "    al.organization_id,\n"
+        "    al.agent_key_id,\n"
+        "    al.server_id,\n"
+        "    al.tool_name,\n"
+        "    al.arguments,\n"
+        "    al.result_status,\n"
+        "    al.result_summary,\n"
+        "    al.is_error,\n"
+        "    al.latency_ms,\n"
+        "    al.session_id,\n"
+        "    al.metadata,\n"
+        "    al.created_at,\n"
+        "    ak.name AS agent_key_name\n"
+        "FROM ai_gateway_mcp_audit_logs al\n"
+        "LEFT JOIN ai_gateway_mcp_agent_keys ak ON ak.id = al.agent_key_id\n"
+        "WHERE " + where_sql + "\n"
+        "ORDER BY al.created_at DESC\n"
+        "LIMIT :limit OFFSET :offset"
+    )
 
     async with get_db() as db:
         count_result = await db.execute(text(count_sql), params)
@@ -83,10 +86,7 @@ async def get_audit_logs(
 
 async def get_audit_stats(org_id: int, days: int = 7) -> dict:
     """Aggregate audit stats for the given org over the last N days."""
-    # Validate days as int to safely interpolate into INTERVAL
-    days = int(days)
-
-    sql = f"""
+    sql = """
         SELECT
             COUNT(*) AS total_calls,
             COUNT(*) FILTER (WHERE is_error) AS error_count,
@@ -95,11 +95,11 @@ async def get_audit_stats(org_id: int, days: int = 7) -> dict:
             COUNT(DISTINCT agent_key_id) AS unique_agents
         FROM ai_gateway_mcp_audit_logs
         WHERE organization_id = :org_id
-          AND created_at >= NOW() - INTERVAL '{days} days'
+          AND created_at >= NOW() - INTERVAL '1 day' * :days
     """
 
     async with get_db() as db:
-        result = await db.execute(text(sql), {"org_id": org_id})
+        result = await db.execute(text(sql), {"org_id": org_id, "days": int(days)})
         row = result.mappings().first()
         if row is None:
             return {
@@ -120,9 +120,7 @@ async def get_audit_stats(org_id: int, days: int = 7) -> dict:
 
 async def get_audit_stats_by_tool(org_id: int, days: int = 7) -> list[dict]:
     """Audit stats grouped by tool_name over the last N days."""
-    days = int(days)
-
-    sql = f"""
+    sql = """
         SELECT
             tool_name,
             COUNT(*) AS count,
@@ -130,13 +128,13 @@ async def get_audit_stats_by_tool(org_id: int, days: int = 7) -> list[dict]:
             COALESCE(AVG(latency_ms), 0) AS avg_latency_ms
         FROM ai_gateway_mcp_audit_logs
         WHERE organization_id = :org_id
-          AND created_at >= NOW() - INTERVAL '{days} days'
+          AND created_at >= NOW() - INTERVAL '1 day' * :days
         GROUP BY tool_name
         ORDER BY count DESC
     """
 
     async with get_db() as db:
-        result = await db.execute(text(sql), {"org_id": org_id})
+        result = await db.execute(text(sql), {"org_id": org_id, "days": int(days)})
         rows = result.mappings().all()
         return [
             {
@@ -151,9 +149,7 @@ async def get_audit_stats_by_tool(org_id: int, days: int = 7) -> list[dict]:
 
 async def get_audit_stats_by_agent(org_id: int, days: int = 7) -> list[dict]:
     """Audit stats grouped by agent key over the last N days."""
-    days = int(days)
-
-    sql = f"""
+    sql = """
         SELECT
             al.agent_key_id,
             ak.name AS agent_key_name,
@@ -163,13 +159,13 @@ async def get_audit_stats_by_agent(org_id: int, days: int = 7) -> list[dict]:
         FROM ai_gateway_mcp_audit_logs al
         LEFT JOIN ai_gateway_mcp_agent_keys ak ON ak.id = al.agent_key_id
         WHERE al.organization_id = :org_id
-          AND al.created_at >= NOW() - INTERVAL '{days} days'
+          AND al.created_at >= NOW() - INTERVAL '1 day' * :days
         GROUP BY al.agent_key_id, ak.name
         ORDER BY count DESC
     """
 
     async with get_db() as db:
-        result = await db.execute(text(sql), {"org_id": org_id})
+        result = await db.execute(text(sql), {"org_id": org_id, "days": int(days)})
         rows = result.mappings().all()
         return [
             {

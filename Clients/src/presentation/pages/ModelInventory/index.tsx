@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Box, Stack, Fade, Modal, Typography, useTheme, IconButton } from "@mui/material";
 import { CirclePlus as AddCircleOutlineIcon, BarChart3 } from "lucide-react";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router";
 
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { logEngine } from "../../../application/tools/log.engine";
@@ -18,10 +18,9 @@ import { createModelInventory } from "../../../application/repository/modelInven
 import { onAiActionCompleted } from "../../../application/events/aiActionEvents";
 import { getShareLinksForResource } from "../../../application/repository/share.repository";
 import { useAuth } from "../../../application/hooks/useAuth";
-import { usePluginRegistry } from "../../../application/contexts/PluginRegistry.context";
-import { PLUGIN_SLOTS } from "../../../domain/constants/pluginSlots";
-import { PluginSlot } from "../../components/PluginSlot";
-import { apiServices } from "../../../infrastructure/api/networkServices";
+import { useExtensions } from "../../../application/contexts/Extensions.context";
+import MLFlowTab from "../Extensions/mlflow/MLFlowTab";
+import AzureAIFoundryTab from "../Extensions/azure-ai-foundry/AzureAIFoundryTab";
 // Import the table and modal components specific to ModelInventory
 import ModelInventoryTable from "./modelInventoryTable";
 // Note: LifecycleConfigEditor is now provided by the model-lifecycle plugin via plugin slots
@@ -152,7 +151,6 @@ const ModelInventory: React.FC = () => {
   const hasProcessedUrlParam = useRef(false);
   const [modelInventoryData, setModelInventoryData] = useState<IModelInventory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [modelInventoryError, setModelInventoryError] = useState<Error | string | unknown>(null);
   const [isNewModelInventoryModalOpen, setIsNewModelInventoryModalOpen] = useState(false);
   // Note: Lifecycle config is now provided by the model-lifecycle plugin via plugin slots
 
@@ -178,9 +176,24 @@ const ModelInventory: React.FC = () => {
   const isCreatingDisabled = !userRoleName || !["Admin", "Editor"].includes(userRoleName);
   const theme = useTheme();
 
-  // Get plugin tabs dynamically from the plugin registry
-  const { getPluginTabs } = usePluginRegistry();
-  const pluginTabs = useMemo(() => getPluginTabs(PLUGIN_SLOTS.MODELS_TABS), [getPluginTabs]);
+  const { isEnabled } = useExtensions();
+  const extensionTabs = useMemo(
+    () => [
+      ...(isEnabled("mlflow")
+        ? [{ label: "MLFlow", value: "mlflow", icon: "Database" as const }]
+        : []),
+      ...(isEnabled("azure-ai-foundry")
+        ? [
+            {
+              label: "Azure AI Foundry",
+              value: "azure-ai-foundry",
+              icon: "Database" as const,
+            },
+          ]
+        : []),
+    ],
+    [isEnabled],
+  );
 
   // Share link mutations
   const createShareMutation = useCreateShareLink();
@@ -640,27 +653,25 @@ const ModelInventory: React.FC = () => {
   const [showReplaceConfirmation, setShowReplaceConfirmation] = useState(false);
   const [isCreatingLink, setIsCreatingLink] = useState(false);
 
-  // Determine the active tab based on the URL
-  const getTabFromPath = useCallback((pathname: string, tabs: typeof pluginTabs) => {
+  const getTabFromPath = useCallback((pathname: string, tabs: typeof extensionTabs) => {
     if (pathname.includes("model-risk-management")) return "model-risk-management";
     if (pathname.includes("model-risks")) return "model-risks";
     if (pathname.includes("evidence-hub")) return "evidence-hub";
     if (pathname.includes("evaluations")) return "evaluations";
-    // Check for plugin tabs dynamically
     for (const tab of tabs) {
       if (pathname.includes(tab.value)) return tab.value;
     }
     return "models";
   }, []);
 
-  const [activeTab, setActiveTab] = useState(() => getTabFromPath(location.pathname, pluginTabs));
+  const [activeTab, setActiveTab] = useState(() =>
+    getTabFromPath(location.pathname, extensionTabs),
+  );
 
-  // Sync activeTab with URL changes (for browser back/forward navigation)
   useEffect(() => {
-    const newTab = getTabFromPath(location.pathname, pluginTabs);
+    const newTab = getTabFromPath(location.pathname, extensionTabs);
 
-    // If trying to access a plugin tab but plugin is not installed, redirect to models
-    const isPluginTab = pluginTabs.some((t) => t.value === newTab);
+    const isExtensionTab = extensionTabs.some((t) => t.value === newTab);
     const isBuiltInTab = [
       "models",
       "model-risks",
@@ -669,12 +680,12 @@ const ModelInventory: React.FC = () => {
       "model-risk-management",
     ].includes(newTab);
 
-    if (!isBuiltInTab && !isPluginTab) {
+    if (!isBuiltInTab && !isExtensionTab) {
       setActiveTab("models");
     } else {
       setActiveTab(newTab);
     }
-  }, [location.pathname, pluginTabs, getTabFromPath]);
+  }, [location.pathname, extensionTabs, getTabFromPath]);
 
   // Calculate summary from data
   const summary: Summary = {
@@ -821,7 +832,6 @@ const ModelInventory: React.FC = () => {
     if (showLoading) {
       setIsLoading(true);
     }
-    setModelInventoryError(null);
     try {
       const response = await getAllEntities({ routeUrl: "/modelInventory" });
       if (response?.data) {
@@ -837,7 +847,11 @@ const ModelInventory: React.FC = () => {
         type: "error",
         message: `Failed to fetch model inventory data: ${error}`,
       });
-      setModelInventoryError(error);
+      setAlert({
+        variant: "error",
+        body: "Failed to load model inventory data. Please try again later.",
+      });
+      setShowAlert(true);
     } finally {
       if (showLoading) {
         setIsLoading(false);
@@ -2159,11 +2173,10 @@ const ModelInventory: React.FC = () => {
                   icon: "Database" as const,
                   tooltip: "LLM evaluations and bias audits linked to models in your inventory",
                 },
-                // Dynamically add plugin tabs
-                ...pluginTabs.map((tab) => ({
+                ...extensionTabs.map((tab) => ({
                   label: tab.label,
                   value: tab.value,
-                  icon: (tab.icon || "Database") as "Database" | "Box" | "AlertTriangle",
+                  icon: tab.icon as "Database" | "Box" | "AlertTriangle",
                 })),
                 {
                   label: "Evidence hub",
@@ -2281,8 +2294,6 @@ const ModelInventory: React.FC = () => {
                   key={tableKey}
                   data={data}
                   isLoading={isLoading}
-                  error={modelInventoryError}
-                  onRetry={() => fetchModelInventoryData()}
                   onEdit={handleEditModelInventory}
                   onDelete={handleDeleteModelInventory}
                   onCheckModelHasRisks={handleCheckModelHasRisks}
@@ -2387,15 +2398,8 @@ const ModelInventory: React.FC = () => {
           </>
         )}
 
-        {/* Render plugin tab content dynamically */}
-        {pluginTabs.some((tab) => tab.value === activeTab) && (
-          <PluginSlot
-            id={PLUGIN_SLOTS.MODELS_TABS}
-            renderType="tab"
-            activeTab={activeTab}
-            slotProps={{ apiServices }}
-          />
-        )}
+        {activeTab === "mlflow" && isEnabled("mlflow") && <MLFlowTab />}
+        {activeTab === "azure-ai-foundry" && isEnabled("azure-ai-foundry") && <AzureAIFoundryTab />}
 
         {activeTab === "evidence-hub" && (
           <>

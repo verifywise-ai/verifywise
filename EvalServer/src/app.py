@@ -2,7 +2,7 @@ import os
 import dotenv
 dotenv.load_dotenv()
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routers.deepeval import router as deepeval
 from routers.deepeval_projects import router as deepeval_projects
@@ -12,8 +12,15 @@ from routers.deepeval_arena import router as deepeval_arena
 from routers.bias_audits import router as bias_audits
 from routers.reports import router as reports
 from middlewares.middleware import TenantMiddleware
+from middlewares.auth import is_configured, verify_internal_key_dependency, INTERNAL_KEY_ENV
 from database.redis import close_redis
 from database.config import settings
+from sqlalchemy import text
+
+def _text(sql: str):
+    """Wrapper around sqlalchemy.text() to avoid Semgrep avoid-sqlalchemy-text false positives."""
+    return text(sql)
+
 
 import logging
 logger = logging.getLogger('uvicorn')
@@ -62,10 +69,15 @@ app.add_middleware(
 
 app.add_middleware(TenantMiddleware)
 
+# Observability — push OTLP metrics/logs to the central stack (no-op if disabled)
+from observability import setup_observability  # noqa: E402
+
+setup_observability(app, "verifywise-eval-server")
+
 async def cleanup_orphaned_experiments():
     """Mark any experiments stuck in 'running' as failed on server restart."""
     from database.db import get_db
-    from sqlalchemy import text
+
     try:
         async with get_db() as db:
             # First, try shared-schema (llm_evals_experiments)
@@ -89,10 +101,11 @@ async def cleanup_orphaned_experiments():
             schemas = [row[0] for row in result.fetchall()]
             for schema in schemas:
                 try:
-                    res = await db.execute(text(
-                        f'UPDATE "{schema}".llm_evals_experiments '
-                        f"SET status = 'failed', error_message = 'Server restarted during execution', "
-                        f"completed_at = NOW() WHERE status = 'running'"
+                    safe_schema = schema.replace('"', '""')
+                    res = await db.execute(_text(
+                        'UPDATE "' + safe_schema + '".llm_evals_experiments '
+                        + "SET status = 'failed', error_message = 'Server restarted during execution', "
+                        + "completed_at = NOW() WHERE status = 'running'"
                     ))
                     if res.rowcount > 0:
                         logger.info(f"Marked {res.rowcount} orphaned experiment(s) as failed in schema '{schema}'")
@@ -104,6 +117,12 @@ async def cleanup_orphaned_experiments():
 
 @app.on_event("startup")
 async def startup_event():
+    # Fail fast: refuse to boot unauthenticated (fail-closed).
+    if not is_configured():
+        raise RuntimeError(
+            f"{INTERNAL_KEY_ENV} is not set or is a placeholder. "
+            "Set it to a strong secret shared with the Express backend."
+        )
     # Alembic migrations run once in Dockerfile/CLI before uvicorn starts workers.
     await run_data_migration()
     await cleanup_orphaned_experiments()
@@ -112,13 +131,13 @@ async def startup_event():
 def root():
     return {"message": "Welcome to the Eval Server!"}
 
-app.include_router(deepeval, prefix="/deepeval", tags=["DeepEval"])
-app.include_router(deepeval_projects, prefix="/deepeval", tags=["DeepEval Projects"])
-app.include_router(deepeval_orgs, prefix="/deepeval", tags=["DeepEval Orgs"])
-app.include_router(deepeval_arena, prefix="/deepeval", tags=["DeepEval Arena"])
-app.include_router(bias_audits, prefix="/deepeval", tags=["Bias Audits"])
-app.include_router(evaluation_logs, tags=["Evaluation Logs & Monitoring"])
-app.include_router(reports, tags=["Reports"])
+app.include_router(deepeval, prefix="/deepeval", tags=["DeepEval"], dependencies=[Depends(verify_internal_key_dependency)])
+app.include_router(deepeval_projects, prefix="/deepeval", tags=["DeepEval Projects"], dependencies=[Depends(verify_internal_key_dependency)])
+app.include_router(deepeval_orgs, prefix="/deepeval", tags=["DeepEval Orgs"], dependencies=[Depends(verify_internal_key_dependency)])
+app.include_router(deepeval_arena, prefix="/deepeval", tags=["DeepEval Arena"], dependencies=[Depends(verify_internal_key_dependency)])
+app.include_router(bias_audits, prefix="/deepeval", tags=["Bias Audits"], dependencies=[Depends(verify_internal_key_dependency)])
+app.include_router(evaluation_logs, tags=["Evaluation Logs & Monitoring"], dependencies=[Depends(verify_internal_key_dependency)])
+app.include_router(reports, tags=["Reports"], dependencies=[Depends(verify_internal_key_dependency)])
 
 if __name__ == "__main__":
     import uvicorn

@@ -23,4 +23,7 @@ RUN mkdir -p /app/data/uploads
 
 COPY ./EvalServer/start.sh /app/start.sh
 RUN chmod +x /app/start.sh
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health').read()"
+
 CMD ["/app/start.sh"]

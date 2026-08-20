@@ -1,4 +1,5 @@
 import "express";
+import type { Transaction } from "sequelize";
 import type { SupportedLang, Translator } from "../utils/i18n.utils";
 
 declare module "express" {
@@ -27,6 +28,14 @@ declare module "express" {
     isSuperAdmin?: boolean;
     /** Test bypass flag set by createTestApp({ bypassAuth: true }) for integration tests */
     testBypassAuth?: boolean;
+    /** Per-request correlation id. Set by requestMetricsMiddleware. */
+    requestId?: string;
+    /**
+     * RLS Phase 2 (flag-gated): per-request transaction scoped by
+     * `SET LOCAL app.current_org`. Set by rlsEnforcement (invoked from
+     * authenticateJWT) only when RLS_ENFORCEMENT_ENABLED=true.
+     */
+    rlsTransaction?: Transaction;
     /** Virtual key context, set by virtualKeyAuth middleware for /v1/* proxy routes */
     virtualKey?: {
       id: number;

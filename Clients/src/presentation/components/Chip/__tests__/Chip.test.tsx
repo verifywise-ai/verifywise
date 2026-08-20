@@ -8,6 +8,13 @@ describe("Chip", () => {
     expect(screen.getByText("Active")).toBeInTheDocument();
   });
 
+  it("renders without throwing when the label is null", () => {
+    // Nullable columns reach callers as null despite the string prop type. A
+    // throw in here escapes to the app's error boundary and blanks the page,
+    // so the chip has to survive a label it cannot derive a variant from.
+    expect(() => renderWithProviders(<Chip label={null as unknown as string} />)).not.toThrow();
+  });
+
   it("applies uppercase text-transform by default", () => {
     renderWithProviders(<Chip label="Active" />);
     const chip = screen.getByText("Active");

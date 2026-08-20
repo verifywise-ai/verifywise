@@ -484,7 +484,7 @@ export const deleteVendorByIdQuery = async (
   id: number,
   organizationId: number,
   transaction: Transaction,
-): Promise<Boolean> => {
+): Promise<boolean> => {
   await deleteVendorRisksForVendorQuery(id, organizationId, transaction);
   await deleteAllCustomFieldValuesForEntityQuery("vendor", id, organizationId, transaction);
   await updateProjectUpdatedByIdQuery(id, "vendors", organizationId, transaction);

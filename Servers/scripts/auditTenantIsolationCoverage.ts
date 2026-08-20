@@ -112,6 +112,61 @@ const deferredScopedTables: SharedTableEntry[] = [
       "Deferred to a future isolation wave; not covered by the first-pass matrix. See runbook section 2.4.",
   },
   {
+    name: "azure_ai_model_records",
+    justification:
+      "Extension-owned table (azure-ai-foundry). Every SELECT/INSERT/UPDATE/DELETE in Servers/extensions/azure-ai-foundry/azureAiFoundry.service.ts filters by organization_id. Access is additionally gated by requireExtensionEnabled('azure-ai-foundry'). Deferred pending matrix coverage.",
+  },
+  {
+    name: "jira_assets_config",
+    justification:
+      "Extension-owned table (jira-assets). Every query in Servers/extensions/jira-assets/jiraAssets.service.ts filters by organization_id. UNIQUE(organization_id) on the table enforces one config per org. Deferred pending matrix coverage.",
+  },
+  {
+    name: "jira_assets_sync_history",
+    justification:
+      "Extension-owned table (jira-assets). Every query in Servers/extensions/jira-assets/jiraAssets.service.ts filters by organization_id. Deferred pending matrix coverage.",
+  },
+  {
+    name: "jira_assets_use_cases",
+    justification:
+      "Extension-owned table (jira-assets). Every query in Servers/extensions/jira-assets/jiraAssets.service.ts filters by organization_id. UNIQUE(organization_id, jira_object_id). Deferred pending matrix coverage.",
+  },
+  {
+    name: "model_lifecycle_change_history",
+    justification:
+      "Extension-owned table (model-lifecycle). Every INSERT/SELECT in Servers/extensions/model-lifecycle/modelLifecycle.service.ts filters by organization_id. Deferred pending matrix coverage.",
+  },
+  {
+    name: "model_lifecycle_item_approvals",
+    justification:
+      "Extension-owned table (model-lifecycle). Access is org-scoped via the parent lifecycle_values row and enforced in Servers/extensions/model-lifecycle/modelLifecycle.service.ts. Deferred pending matrix coverage.",
+  },
+  {
+    name: "model_lifecycle_item_files",
+    justification:
+      "Extension-owned table (model-lifecycle). Access is org-scoped via the parent lifecycle_values row and enforced in Servers/extensions/model-lifecycle/modelLifecycle.service.ts. Deferred pending matrix coverage.",
+  },
+  {
+    name: "model_lifecycle_item_people",
+    justification:
+      "Extension-owned table (model-lifecycle). Access is org-scoped via the parent lifecycle_values row and enforced in Servers/extensions/model-lifecycle/modelLifecycle.service.ts. Deferred pending matrix coverage.",
+  },
+  {
+    name: "model_lifecycle_items",
+    justification:
+      "Extension-owned table (model-lifecycle). Every query in Servers/extensions/model-lifecycle/modelLifecycle.service.ts filters by organization_id. Deferred pending matrix coverage.",
+  },
+  {
+    name: "model_lifecycle_phases",
+    justification:
+      "Extension-owned table (model-lifecycle). Every query in Servers/extensions/model-lifecycle/modelLifecycle.service.ts filters by organization_id. Deferred pending matrix coverage.",
+  },
+  {
+    name: "model_lifecycle_values",
+    justification:
+      "Extension-owned table (model-lifecycle). Every query in Servers/extensions/model-lifecycle/modelLifecycle.service.ts filters by organization_id. UNIQUE(organization_id, model_inventory_id, item_id). Deferred pending matrix coverage.",
+  },
+  {
     name: "ai_action_audit_log",
     justification:
       "Deferred to a future isolation wave; not covered by the first-pass matrix. See runbook section 2.4.",
@@ -215,6 +270,11 @@ const deferredScopedTables: SharedTableEntry[] = [
     name: "ai_trust_index_tracked_apps",
     justification:
       "Deferred to a future isolation wave; not covered by the first-pass matrix. See runbook section 2.4.",
+  },
+  {
+    name: "ai_workflow_runs",
+    justification:
+      "Written only by the workflow engine (services/workflows/engine.ts); no controller and no route, so the route-driven matrix has no surface to exercise. Every read and write already filters on organization_id. Deferred until the engine gets an HTTP surface, at which point it needs a registry entry rather than this waiver. See runbook section 2.4.",
   },
   {
     name: "annexcategories_iso",
@@ -370,6 +430,237 @@ const deferredScopedTables: SharedTableEntry[] = [
     name: "custom_framework_level3_risks",
     justification:
       "Deferred to a future isolation wave; not covered by the first-pass matrix. See runbook section 2.4.",
+  },
+  // --- Custom-framework plugin migration (#4443): per-framework impl + __risks tables ---
+  {
+    name: "ai_ethics_requirements",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "ai_ethics_requirements__risks",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "altai_assessment_areas",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "altai_assessment_areas__risks",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "bahrain_pdpl_articles",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "bahrain_pdpl_articles__risks",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "ccpa_requirements",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "ccpa_requirements__risks",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "cis_safeguards",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "cis_safeguards__risks",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "colorado_ai_act_sections",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "colorado_ai_act_sections__risks",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "data_governance_practices",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "data_governance_practices__risks",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "dora_requirements",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "dora_requirements__risks",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "ftc_ai_guidelines_requirements",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "ftc_ai_guidelines_requirements__risks",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "gdpr_articles",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "gdpr_articles__risks",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "hipaa_implementation_specifications",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "hipaa_implementation_specifications__risks",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "hipaa_standards",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "hipaa_standards__risks",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "nist_csf_categories",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "nist_csf_categories__risks",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "nist_csf_subcategories",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "nist_csf_subcategories__risks",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "nyc_local_law_144_requirements",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "nyc_local_law_144_requirements__risks",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "oecd_requirements",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "oecd_requirements__risks",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "pci_dss_requirements",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "pci_dss_requirements__risks",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "qatar_pdpl_articles",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "qatar_pdpl_articles__risks",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "quebec_law25_articles",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "quebec_law25_articles__risks",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "saudi_pdpl_articles",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "saudi_pdpl_articles__risks",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "soc2_controls",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "soc2_controls__risks",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "texas_ai_act_sections",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "texas_ai_act_sections__risks",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "uae_pdpl_articles",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
+  },
+  {
+    name: "uae_pdpl_articles__risks",
+    justification:
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. Per-framework impl/risks table added by the custom-framework plugin migration (carries organization_id). See runbook section 2.4.",
   },
   {
     name: "custom_framework_projects",
@@ -597,9 +888,9 @@ const deferredScopedTables: SharedTableEntry[] = [
       "Deferred to a future isolation wave; not covered by the first-pass matrix. See runbook section 2.4.",
   },
   {
-    name: "plugin_installations",
+    name: "extension_enablements",
     justification:
-      "Deferred to a future isolation wave; not covered by the first-pass matrix. See runbook section 2.4.",
+      "Deferred to a future isolation wave; not covered by the first-pass matrix. See runbook section 2.4. Replaces the legacy plugin_installations entry (extensions migration 20260811102307).",
   },
   {
     name: "policy_change_history",
@@ -670,6 +961,11 @@ const deferredScopedTables: SharedTableEntry[] = [
     name: "readiness_history",
     justification:
       "Deferred to a future isolation wave; not covered by the first-pass matrix. See runbook section 2.4.",
+  },
+  {
+    name: "refresh_tokens",
+    justification:
+      "Auth session store carrying organization_id; isolation coverage deferred to a future wave with the RLS Phase 2 rollout. See runbook section 2.4.",
   },
   {
     name: "risk_history",

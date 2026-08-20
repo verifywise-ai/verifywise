@@ -2,11 +2,16 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: verifywise
+  namespace: verifywise
 spec:
   replicas: 1
   template:
     spec:
       automountServiceAccountToken: false
+      # Pod-level security context (KSV-0118): runtime-default seccomp profile.
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       volumes:
         - name: postgres-volume
           persistentVolumeClaim:
@@ -20,6 +25,11 @@ spec:
             limits:
               cpu: "200m"
               memory: "768Mi"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
         - name: verifywise-backend
           resources:
             requests:
@@ -28,6 +38,11 @@ spec:
             limits:
               cpu: "200m"
               memory: "768Mi"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
         - name: verifywise-worker
           resources:
             requests:
@@ -36,6 +51,11 @@ spec:
             limits:
               cpu: "200m"
               memory: "768Mi"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
         - name: verifywise-eval-server
           resources:
             requests:
@@ -44,6 +64,11 @@ spec:
             limits:
               cpu: "200m"
               memory: "768Mi"
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
         - name: verifywise-redis
           resources:
             requests:
@@ -52,9 +77,21 @@ spec:
             limits:
               cpu: "200m"
               memory: "768Mi"
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 999
+            capabilities:
+              drop:
+                - ALL
         - name: verifywise-postgres-temp
           securityContext:
+            runAsNonRoot: true
             runAsUser: 999
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
           resources:
             requests:
               cpu: "100m"

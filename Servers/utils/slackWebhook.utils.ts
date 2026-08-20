@@ -3,7 +3,9 @@ import { QueryTypes, Transaction } from "sequelize";
 import { ISlackWebhook } from "../domain.layer/interfaces/i.slackWebhook";
 import { SlackWebhookModel } from "../domain.layer/models/slackNotification/slackWebhook.model";
 
-export const getAllSlackWebhooksQuery = async (userId: string): Promise<ISlackWebhook[]> => {
+export const getAllSlackWebhooksQuery = async (
+  userId: string | number,
+): Promise<ISlackWebhook[]> => {
   const slackWebhooks = await sequelize.query(
     `SELECT * FROM slack_webhooks WHERE user_id = :userId ORDER BY created_at DESC, id ASC`,
     {
@@ -126,7 +128,7 @@ export const updateSlackWebhookByIdQuery = async (
 export const deleteSlackWebhookByIdQuery = async (
   id: number,
   transaction: Transaction,
-): Promise<Boolean> => {
+): Promise<boolean> => {
   const result = await sequelize.query(`DELETE FROM slack_webhooks WHERE id = :id RETURNING *`, {
     replacements: { id },
     mapToModel: true,

@@ -84,7 +84,7 @@ export const getUserByEmailQuery = async (
       SELECT users.*, roles.name AS role_name
       FROM users
       LEFT JOIN roles ON users.role_id = roles.id
-      WHERE LOWER(users.email) = LOWER(:email)
+      WHERE LOWER(TRIM(users.email)) = LOWER(TRIM(:email))
       LIMIT 1
       `,
       {
@@ -347,7 +347,7 @@ export const deleteUserByIdQuery = async (
   id: number,
   organizationId: number,
   transaction: Transaction,
-): Promise<Boolean> => {
+): Promise<boolean> => {
   const usersFK = [
     {
       table: "projects",

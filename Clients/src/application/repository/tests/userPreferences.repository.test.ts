@@ -2,8 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { apiServices } from "../../../infrastructure/api/networkServices";
 import {
   getUserPreferencesByUserId,
+  getCurrentUserPreferences,
   createNewUserPreferences,
   updateUserPreferencesById,
+  updateCurrentUserPreferences,
 } from "../userPreferences.repository";
 import { UserDateFormat } from "../../../domain/enums/userDateFormat.enum";
 
@@ -22,6 +24,61 @@ vi.mock("../../../infrastructure/api/networkServices", () => {
 describe("userPreferences.repository", () => {
   beforeEach(vi.clearAllMocks);
   afterEach(vi.clearAllMocks);
+
+  describe("getCurrentUserPreferences", () => {
+    it("should make GET request to /users/me/preferences", async () => {
+      const mockResponse = {
+        data: {
+          date_format: UserDateFormat.DD_MM_YYYY_DASH,
+          language: "en",
+        },
+        status: 200,
+        statusText: "OK",
+      };
+
+      vi.mocked(apiServices.get).mockResolvedValue(mockResponse);
+
+      const result = await getCurrentUserPreferences();
+
+      expect(apiServices.get).toHaveBeenCalledTimes(1);
+      expect(apiServices.get).toHaveBeenCalledWith("/users/me/preferences");
+      expect(result).toEqual(mockResponse.data);
+    });
+  });
+
+  describe("updateCurrentUserPreferences", () => {
+    it("should make PATCH request to /users/me/preferences with data", async () => {
+      const mockResponse = {
+        data: {
+          date_format: UserDateFormat.MM_DD_YYYY_DASH,
+          language: "de",
+        },
+        status: 200,
+        statusText: "OK",
+      };
+
+      const data = {
+        date_format: UserDateFormat.MM_DD_YYYY_DASH,
+        language: "de" as const,
+      };
+
+      vi.mocked(apiServices.patch).mockResolvedValue(mockResponse);
+
+      const result = await updateCurrentUserPreferences(data);
+
+      expect(apiServices.patch).toHaveBeenCalledTimes(1);
+      expect(apiServices.patch).toHaveBeenCalledWith("/users/me/preferences", data);
+      expect(result).toEqual(mockResponse.data);
+    });
+
+    it("should throw when the API call fails", async () => {
+      vi.mocked(apiServices.patch).mockRejectedValue(new Error("Connection refused"));
+
+      await expect(
+        updateCurrentUserPreferences({ date_format: UserDateFormat.DD_MM_YYYY_DASH }),
+      ).rejects.toThrow("Connection refused");
+    });
+  });
 
   describe("getUserPreferencesByUserId", () => {
     it("should make GET request to /user-preferences/:userId", async () => {

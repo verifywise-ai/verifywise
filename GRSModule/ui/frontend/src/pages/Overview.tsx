@@ -34,7 +34,11 @@ export default function Overview() {
   const toggleExpanded = (stage: string) =>
     setExpandedStages((prev) => {
       const next = new Set(prev);
-      next.has(stage) ? next.delete(stage) : next.add(stage);
+      if (next.has(stage)) {
+        next.delete(stage);
+      } else {
+        next.add(stage);
+      }
       return next;
     });
 
@@ -44,6 +48,7 @@ export default function Overview() {
     if (!runConfigYaml) return;
     try {
       const cfg = yaml.load(runConfigYaml) as Record<string, unknown>;
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (typeof cfg?.version === "string") setVersion(cfg.version);
       const stages = cfg?.stages as Record<string, Record<string, unknown>> | undefined;
       if (stages) {
@@ -68,7 +73,9 @@ export default function Overview() {
 
   // Default version to most recent
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!version && versions.length > 0) setVersion(versions[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [versions]);
 
   const { data: summary } = useSummary(version);

@@ -59,6 +59,25 @@ export async function getOrgUsers(orgId: number) {
   return apiServices.get<ServerResponse<OrgUser[]>>(`/super-admin/organizations/${orgId}/users`);
 }
 
+export interface OrgInvitation {
+  id: number;
+  email: string;
+  name: string;
+  surname: string;
+  role_id: number;
+  role_name: string | null;
+  status: string;
+  invited_by: number;
+  created_at: string;
+  expires_at: string;
+}
+
+export async function getOrgInvitations(orgId: number) {
+  return apiServices.get<ServerResponse<OrgInvitation[]>>(
+    `/super-admin/organizations/${orgId}/invitations`,
+  );
+}
+
 export async function inviteUserToOrg(
   orgId: number,
   data: { email: string; name: string; surname?: string; roleId: number },
@@ -75,4 +94,61 @@ export async function updateUser(
 
 export async function removeUser(userId: number) {
   return apiServices.delete(`/super-admin/users/${userId}`);
+}
+
+export interface MonitoringConfig {
+  enabled: boolean;
+  otlp_endpoint: string | null;
+  deployment_name: string | null;
+  auth_header_set: boolean;
+  updated_by: number | null;
+  updated_at: string | null;
+}
+
+export interface MonitoringConfigInput {
+  enabled: boolean;
+  otlp_endpoint: string;
+  deployment_name: string;
+}
+
+export async function getMonitoringConfig() {
+  return apiServices.get<ServerResponse<MonitoringConfig>>("/super-admin/monitoring");
+}
+
+export async function updateMonitoringConfig(data: MonitoringConfigInput) {
+  return apiServices.put<ServerResponse<MonitoringConfig>>("/super-admin/monitoring", data);
+}
+
+/**
+ * Ask the backend to mint a signed (RS256) push token for this deployment. The
+ * backend signs it with its private key; the response only reports
+ * `auth_header_set` — the raw token is never returned to the browser.
+ */
+export async function generateMonitoringToken() {
+  return apiServices.post<ServerResponse<MonitoringConfig>>("/super-admin/monitoring/token", {});
+}
+
+export interface SuperAdminEntry {
+  user_id: number;
+  name: string;
+  surname: string;
+  email: string;
+  role_id: number | null;
+  role_name: string | null;
+  organization_id: number | null;
+  organization_name: string | null;
+}
+
+export async function listSuperAdmins() {
+  return apiServices.get<ServerResponse<SuperAdminEntry[]>>("/super-admin/super-admins");
+}
+
+export async function grantSuperAdmin(userId: number) {
+  return apiServices.post<ServerResponse<{ user_id: number }>>("/super-admin/super-admins", {
+    user_id: userId,
+  });
+}
+
+export async function revokeSuperAdmin(userId: number) {
+  return apiServices.delete(`/super-admin/super-admins/${userId}`);
 }

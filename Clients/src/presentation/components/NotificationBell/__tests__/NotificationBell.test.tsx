@@ -39,8 +39,8 @@ vi.mock("../../VWTooltip", () => ({
 vi.mock("../../Layout/icon-shake.css", () => ({}));
 
 const mockNavigate = vi.fn();
-vi.mock("react-router-dom", async () => {
-  const actual = await vi.importActual("react-router-dom");
+vi.mock("react-router", async () => {
+  const actual = await vi.importActual("react-router");
   return {
     ...actual,
     useNavigate: () => mockNavigate,
@@ -73,6 +73,11 @@ describe("NotificationBell", () => {
     mockHasMore = false;
     mockIsConnected = true;
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
   const openPopover = async () => {

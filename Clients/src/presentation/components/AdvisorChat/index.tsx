@@ -1,14 +1,21 @@
-import { Box, useTheme, Typography, Paper, CircularProgress, SxProps, Theme } from "@mui/material";
+import {
+  Box,
+  Stack,
+  useTheme,
+  Typography,
+  Paper,
+  CircularProgress,
+  SxProps,
+  Theme,
+} from "@mui/material";
 import { AssistantRuntimeProvider } from "@assistant-ui/react";
 import { useAdvisorRuntime } from "./useAdvisorRuntime";
 import { CustomThread } from "./CustomThread";
 import { AdvisorHeader } from "./AdvisorHeader";
 import { AdvisorDomain } from "./advisorConfig";
+import Toggle from "../Inputs/Toggle";
 import { useAdvisorConversationSafe } from "../../../application/contexts/AdvisorConversation.context";
-import { useEffect, useRef, useMemo, memo } from "react";
-import { useAuth } from "../../../application/hooks/useAuth";
-import { Settings } from "lucide-react";
-import { useNavigate } from "react-router";
+import { useEffect, useRef, useMemo, useState, memo } from "react";
 
 // Extracted style functions for performance (created once per theme)
 const createPaperStyles = (theme: Theme): SxProps<Theme> => ({
@@ -43,24 +50,54 @@ interface AdvisorChatProps {
 const AdvisorChatInner = ({
   selectedLLMKeyId,
   pageContext,
+  hasLLMKeys,
+  isLoadingLLMKeys,
 }: {
   selectedLLMKeyId?: number;
   pageContext?: AdvisorDomain;
+  hasLLMKeys?: boolean | null;
+  isLoadingLLMKeys?: boolean;
 }) => {
   const theme = useTheme();
-  const runtime = useAdvisorRuntime(selectedLLMKeyId, pageContext);
+  // When enabled, one prompt is decomposed into independent subtasks and run
+  // by parallel advisor workers server-side (see advisor/orchestrator). Sent
+  // to the backend via the transport body flag inside useAdvisorRuntime.
+  const [parallelAgents, setParallelAgents] = useState(false);
+  const runtime = useAdvisorRuntime(selectedLLMKeyId, pageContext, parallelAgents);
 
   return (
     <Box
       sx={{
         flex: 1,
         overflow: "hidden",
+        display: "flex",
+        flexDirection: "column",
         bgcolor: theme.palette.background.alt ?? theme.palette.background.paper,
       }}
     >
       {runtime ? (
         <AssistantRuntimeProvider runtime={runtime}>
-          <CustomThread pageContext={pageContext} />
+          <Stack
+            direction="row"
+            alignItems="center"
+            justifyContent="flex-end"
+            spacing="4px"
+            sx={{ px: "12px", py: "4px" }}
+          >
+            <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
+              Parallel agents
+            </Typography>
+            <Toggle
+              checked={parallelAgents}
+              onChange={(e) => setParallelAgents(e.target.checked)}
+              inputProps={{ "aria-label": "parallel-agents-toggle" }}
+            />
+          </Stack>
+          <CustomThread
+            pageContext={pageContext}
+            hasLLMKeys={hasLLMKeys}
+            isLoadingLLMKeys={isLoadingLLMKeys}
+          />
         </AssistantRuntimeProvider>
       ) : (
         <Box
@@ -86,12 +123,8 @@ const AdvisorChat = ({
   isLoadingLLMKeys,
 }: AdvisorChatProps) => {
   const theme = useTheme();
-  const navigate = useNavigate();
-  const { userRoleName } = useAuth();
   const conversationContext = useAdvisorConversationSafe();
   const loadAttemptedRef = useRef<Set<string>>(new Set());
-
-  const isAdmin = userRoleName?.toLowerCase() === "admin";
 
   // Memoize styles to prevent recreation on each render
   const paperStyles = useMemo(() => createPaperStyles(theme), [theme]);
@@ -117,73 +150,6 @@ const AdvisorChat = ({
   // of the assistant-ui runtime with fresh initial messages.
   const activeId =
     conversationContext && pageContext ? conversationContext.getActiveId(pageContext) : null;
-
-  // Show message when no LLM keys are configured (only after loading completes)
-  if (!isLoadingLLMKeys && hasLLMKeys === false) {
-    return (
-      <Paper elevation={0} sx={paperStyles}>
-        <Box sx={centeredBoxStyles}>
-          <Box sx={{ textAlign: "center", maxWidth: 320, px: 3 }}>
-            <Box
-              sx={{
-                width: 48,
-                height: 48,
-                borderRadius: "50%",
-                bgcolor: theme.palette.background.fill ?? theme.palette.grey[100],
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                margin: "0 auto 16px",
-              }}
-            >
-              <Settings size={24} color={theme.palette.text.secondary} />
-            </Box>
-            <Typography
-              variant="subtitle1"
-              sx={{
-                fontWeight: 600,
-                color: "text.primary",
-                mb: 1,
-              }}
-            >
-              AI advisor not configured
-            </Typography>
-            <Typography
-              variant="body2"
-              sx={{
-                fontSize: theme.typography.body2.fontSize,
-                color: "text.secondary",
-                lineHeight: 1.5,
-              }}
-            >
-              {isAdmin ? (
-                <>
-                  To use the AI advisor, you need to configure an LLM API key.{" "}
-                  <Box
-                    component="span"
-                    onClick={() => navigate("/settings/apikeys")}
-                    sx={{
-                      "color": "primary.main",
-                      "cursor": "pointer",
-                      "textDecoration": "underline",
-                      "&:hover": {
-                        textDecoration: "none",
-                      },
-                    }}
-                  >
-                    Go to settings
-                  </Box>{" "}
-                  to add your API key.
-                </>
-              ) : (
-                "The AI advisor requires an LLM API key to be configured. Please contact your administrator to set this up."
-              )}
-            </Typography>
-          </Box>
-        </Box>
-      </Paper>
-    );
-  }
 
   const isLoading = !isConversationReady || conversationContext?.isLoading(pageContext);
 
@@ -217,6 +183,8 @@ const AdvisorChat = ({
         key={innerKey}
         selectedLLMKeyId={selectedLLMKeyId}
         pageContext={pageContext}
+        hasLLMKeys={hasLLMKeys}
+        isLoadingLLMKeys={isLoadingLLMKeys}
       />
     </Paper>
   );

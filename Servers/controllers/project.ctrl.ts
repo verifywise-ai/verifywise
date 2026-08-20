@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 
 import { STATUS_CODE } from "../utils/statusCode.utils";
-import { PluginService } from "../services/plugin/pluginService";
 import {
   calculateProjectRisks,
   calculateVendirRisks,
@@ -103,22 +102,6 @@ export async function getAllProjects(req: Request, res: Response): Promise<any> 
       }),
     );
 
-    // Fetch additional use-cases from plugins (e.g., JIRA Assets)
-    let allProjects = [...projects];
-    try {
-      const pluginUseCases = await PluginService.getDataFromProviders(
-        "use-cases",
-        req.organizationId!,
-        sequelize,
-      );
-      if (pluginUseCases.length > 0) {
-        allProjects = [...projects, ...pluginUseCases];
-      }
-    } catch (pluginError) {
-      console.error("[getAllProjects] Error fetching plugin use-cases:", pluginError);
-      // Continue with native projects even if plugin fetch fails
-    }
-
     await logSuccess({
       eventType: "Read",
       description: "Retrieved all projects",
@@ -128,7 +111,7 @@ export async function getAllProjects(req: Request, res: Response): Promise<any> 
       organizationId: req.organizationId!,
     });
 
-    return res.status(200).json(STATUS_CODE[200](allProjects));
+    return res.status(200).json(STATUS_CODE[200](projects));
   } catch (error) {
     await logFailure({
       eventType: "Read",
@@ -145,7 +128,7 @@ export async function getAllProjects(req: Request, res: Response): Promise<any> 
 }
 
 export async function getProjectById(req: Request, res: Response): Promise<any> {
-  const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+  const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
 
   logProcessing({
     description: `starting getProjectById for ID ${projectId}`,
@@ -249,7 +232,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
 
     // Only create frameworks immediately if NO approval workflow is assigned
     // Otherwise, store frameworks for creation after approval
-    const frameworks: { [key: string]: Object } = {};
+    const frameworks: { [key: string]: object } = {};
     if (!createdProject.approval_workflow_id) {
       // No approval workflow - create frameworks immediately
       for (const framework of newProject.framework || []) {
@@ -477,7 +460,7 @@ export async function createProject(req: Request, res: Response): Promise<any> {
 
 export async function updateProjectById(req: Request, res: Response): Promise<any> {
   const transaction = await sequelize.transaction();
-  const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+  const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
   const updateData = req.body;
 
   logProcessing({
@@ -736,7 +719,7 @@ export async function updateProjectById(req: Request, res: Response): Promise<an
 
 export async function deleteProjectById(req: Request, res: Response): Promise<any> {
   const transaction = await sequelize.transaction();
-  const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+  const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
 
   logProcessing({
     description: `starting deleteProjectById for ID ${projectId}`,
@@ -834,7 +817,7 @@ export async function deleteProjectById(req: Request, res: Response): Promise<an
 }
 
 export async function getProjectStatsById(req: Request, res: Response): Promise<any> {
-  const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+  const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
 
   logProcessing({
     description: `starting getProjectStatsById for project ID ${projectId}`,
@@ -888,7 +871,7 @@ export async function getProjectStatsById(req: Request, res: Response): Promise<
 }
 
 export async function getProjectRisksCalculations(req: Request, res: Response): Promise<any> {
-  const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+  const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
 
   logProcessing({
     description: `starting getProjectRisksCalculations for project ID ${projectId}`,
@@ -929,7 +912,7 @@ export async function getProjectRisksCalculations(req: Request, res: Response): 
 }
 
 export async function getVendorRisksCalculations(req: Request, res: Response): Promise<any> {
-  const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+  const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
 
   logProcessing({
     description: `starting getVendorRisksCalculations for project ID ${projectId}`,
@@ -972,6 +955,7 @@ export async function getVendorRisksCalculations(req: Request, res: Response): P
 export async function getCompliances(req: Request, res: Response) {
   const projectId = parseInt(
     Array.isArray(req.params.projid) ? req.params.projid[0] : req.params.projid,
+    10,
   );
 
   logProcessing({
@@ -1050,7 +1034,7 @@ export async function getCompliances(req: Request, res: Response) {
 }
 
 export async function projectComplianceProgress(req: Request, res: Response) {
-  const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+  const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
 
   logProcessing({
     description: `starting projectComplianceProgress for ID ${projectId}`,
@@ -1111,7 +1095,7 @@ export async function projectComplianceProgress(req: Request, res: Response) {
 }
 
 export async function projectAssessmentProgress(req: Request, res: Response) {
-  const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+  const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
 
   logProcessing({
     description: `starting projectAssessmentProgress for ID ${projectId}`,
@@ -1196,8 +1180,8 @@ export async function allProjectsComplianceProgress(req: Request, res: Response)
             project.id!,
             req.organizationId!,
           );
-          totalNumberOfSubcontrols += parseInt(totalSubcontrols);
-          totalNumberOfDoneSubcontrols += parseInt(doneSubcontrols);
+          totalNumberOfSubcontrols += parseInt(totalSubcontrols, 10);
+          totalNumberOfDoneSubcontrols += parseInt(doneSubcontrols, 10);
         }),
       );
 
@@ -1268,8 +1252,8 @@ export async function allProjectsAssessmentProgress(req: Request, res: Response)
             project.id!,
             req.organizationId!,
           );
-          totalNumberOfQuestions += parseInt(totalAssessments);
-          totalNumberOfAnsweredQuestions += parseInt(answeredAssessments);
+          totalNumberOfQuestions += parseInt(totalAssessments, 10);
+          totalNumberOfAnsweredQuestions += parseInt(answeredAssessments, 10);
         }),
       );
 
@@ -1317,7 +1301,7 @@ export async function allProjectsAssessmentProgress(req: Request, res: Response)
 
 export async function updateProjectStatus(req: Request, res: Response): Promise<any> {
   const transaction = await sequelize.transaction();
-  const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+  const projectId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
   const { status } = req.body;
 
   logProcessing({

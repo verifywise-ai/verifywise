@@ -17,13 +17,21 @@ import {
   MenuItem,
   ListSubheader,
   Divider,
+  IconButton as MUIIconButton,
 } from "@mui/material";
 import VWSelect from "../../Inputs/Select";
 import CustomizableMultiSelect from "../../Inputs/Select/Multi";
 import TablePaginationActions from "../../TablePagination";
 import singleTheme from "../../../themes/v1SingleTheme";
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { ChevronsUpDown, ChevronUp, ChevronDown, FolderInput, Tag as TagIcon } from "lucide-react";
+import {
+  ChevronsUpDown,
+  ChevronUp,
+  ChevronDown,
+  FolderInput,
+  Tag as TagIcon,
+  Sparkles,
+} from "lucide-react";
 import IconButton from "../../IconButton";
 import { FileIcon } from "../../FileIcon";
 import Chip from "../../Chip";
@@ -43,6 +51,11 @@ import { deleteEntityById } from "../../../../application/repository/entity.repo
 import ProjectRiskLinkedPolicies from "../../ProjectRiskMitigation/ProjectRiskLinkedPolicies";
 import { useBulkSelection } from "../../../../application/hooks/useBulkSelection";
 import { useBulkUpdateFiles } from "../../../../application/hooks/useBulkUpdateFiles";
+import { useTriggerAnalysis, useQualityScores } from "../../../../application/hooks/useEvidenceAi";
+import { useLLMKeyStatus } from "../../../../application/hooks/useLLMKeyStatus";
+import EvidenceAnalysisPanel from "../../EvidenceAnalysisPanel";
+import EvidenceQualityBadge, { type QualityGrade } from "../../EvidenceQualityBadge";
+import StandardModal from "../../Modals/StandardModal";
 import { getAllFolders } from "../../../../application/repository/virtualFolder.repository";
 import type { IFolderWithCount } from "../../../../domain/interfaces/i.virtualFolder";
 
@@ -53,6 +66,21 @@ type SortDirection = "asc" | "desc" | null;
 type SortConfig = {
   key: string;
   direction: SortDirection;
+};
+
+/**
+ * Rewrite built-in framework source labels to their user-facing display form.
+ * The DB writes "Compliance tracker group" / "Assessment tracker group" for
+ * EU AI Act uploads; per-framework generics already write display-ready
+ * labels ("SOC 2 controls", "GDPR articles", ...) so they pass through.
+ * Used by the Source column, the tooltip, and the popover header so all
+ * three places show the same string.
+ */
+const displaySourceLabel = (raw: string | undefined | null): string => {
+  if (!raw) return "";
+  if (raw === "Compliance tracker group") return "Requirements tracker group";
+  if (raw === "Assessment tracker group") return "Controls tracker group";
+  return raw;
 };
 
 /**
@@ -220,6 +248,7 @@ const ALL_COLUMN_KEYS = [
   "source",
   "version",
   "status",
+  "quality",
   "action",
 ] as const;
 
@@ -381,6 +410,22 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
     [sortedBodyData],
   );
 
+  // Evidence AI analysis (relocated here from the Model Inventory evidence hub).
+  // Keyed by files.id, which is exactly what FileManager rows carry.
+  const triggerAnalysis = useTriggerAnalysis();
+  const { data: qualityScores } = useQualityScores();
+  const { hasKeys: hasLLMKey } = useLLMKeyStatus();
+  const analysisByFileId = useMemo(() => {
+    const m = new Map<number, { grade: QualityGrade | null; analysis: unknown }>();
+    (qualityScores ?? []).forEach((q: any) => {
+      if (q?.file_id != null) {
+        m.set(Number(q.file_id), { grade: q.overall_quality_grade ?? null, analysis: q });
+      }
+    });
+    return m;
+  }, [qualityScores]);
+  const [selectedAnalysis, setSelectedAnalysis] = useState<any | null>(null);
+
   const [folderDialogOpen, setFolderDialogOpen] = useState(false);
   const [tagsDialogOpen, setTagsDialogOpen] = useState(false);
   const [selectedFolderId, setSelectedFolderId] = useState<string>("");
@@ -504,8 +549,24 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
         onClick: handleOpenTagsDialog,
         disabled: bulkMutation.isPending,
       },
+      {
+        id: "analyze_ai",
+        label: "Analyze with AI",
+        icon: <Sparkles size={16} />,
+        disabled: triggerAnalysis.isPending || !hasLLMKey,
+        onClick: async () => {
+          await Promise.all(selectedIds.map((id) => triggerAnalysis.mutateAsync(id)));
+        },
+      },
     ],
-    [handleOpenFolderDialog, handleOpenTagsDialog, bulkMutation.isPending],
+    [
+      handleOpenFolderDialog,
+      handleOpenTagsDialog,
+      bulkMutation.isPending,
+      triggerAnalysis,
+      selectedIds,
+      hasLLMKey,
+    ],
   );
 
   // Anchor for the source-details dropdown. Tracks which row opened it so
@@ -709,31 +770,32 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
                   {/* Source column */}
                   {visibleColumnKeys.includes("source") &&
                     (() => {
-                      const KNOWN_GROUP_SOURCES = [
+                      // Static list covers built-in framework labels and the
+                      // evidence-hub labels (Model inventory / Training /
+                      // Evidence) written by the report/upload paths that
+                      // don't populate file_entity_links themselves.
+                      // Per-framework generic labels (e.g. "SOC 2 controls")
+                      // are always accompanied by file_entity_links rows,
+                      // so `hasLinks` covers them without an explicit list.
+                      const STATIC_KNOWN_SOURCES = [
                         "Assessment tracker group",
                         "Compliance tracker group",
                         "Management system clauses group",
                         "Main clauses group",
                         "Reference controls group",
                         "Annex controls group",
-                        // Evidence-hub records resolve to one of these three
-                        // labels (derived from mapped_*_ids in evidence_hub).
                         "Model inventory",
                         "Training",
                         "Evidence",
                       ];
+                      const hasLinks = (row.entityLinks?.length ?? 0) > 0;
                       // Backend aggregates multi-entity attachments as "N groups"
                       // (see getOrganizationFilesWithMetadata).
                       const isKnownSource =
-                        KNOWN_GROUP_SOURCES.includes(row.source || "") ||
+                        hasLinks ||
+                        STATIC_KNOWN_SOURCES.includes(row.source || "") ||
                         /^\d+ groups$/.test(row.source || "");
-                      const displayLabel =
-                        row.source === "Compliance tracker group"
-                          ? "Requirements tracker group"
-                          : row.source === "Assessment tracker group"
-                            ? "Controls tracker group"
-                            : row.source;
-                      const hasLinks = (row.entityLinks?.length ?? 0) > 0;
+                      const displayLabel = displaySourceLabel(row.source);
                       return (
                         <TableCell
                           sx={{
@@ -750,7 +812,9 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
                             <Tooltip
                               title={
                                 (row.linkGroups?.length ?? 0) > 1
-                                  ? `Linked to: ${row.linkGroups!.join(", ")}`
+                                  ? `Linked to: ${row
+                                      .linkGroups!.map(displaySourceLabel)
+                                      .join(", ")}`
                                   : ""
                               }
                               arrow
@@ -823,8 +887,62 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
                         label={((row as any).reviewStatus || "draft")
                           .replace(/_/g, " ")
                           .replace(/^\w/, (c: string) => c.toUpperCase())}
-                        uppercase={false}
                       />
+                    </TableCell>
+                  )}
+                  {/* Quality column — AI analyze trigger + grade badge */}
+                  {visibleColumnKeys.includes("quality") && (
+                    <TableCell
+                      sx={{ ...singleTheme.tableStyles.primary.body.cell, minWidth: "80px" }}
+                    >
+                      <Stack direction="row" alignItems="center" spacing="4px">
+                        {(() => {
+                          const fid = Number(row.id);
+                          const entry = analysisByFileId.get(fid);
+                          return (
+                            <>
+                              {entry?.grade && (
+                                <Box
+                                  component="span"
+                                  sx={{ cursor: "pointer", display: "inline-flex" }}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedAnalysis(entry.analysis);
+                                  }}
+                                >
+                                  <EvidenceQualityBadge grade={entry.grade} />
+                                </Box>
+                              )}
+                              <Tooltip
+                                title={
+                                  !hasLLMKey
+                                    ? "Configure an LLM key to enable AI analysis"
+                                    : entry?.grade
+                                      ? "Re-analyze with AI"
+                                      : "Analyze with AI"
+                                }
+                                arrow
+                              >
+                                <span>
+                                  <MUIIconButton
+                                    aria-label={
+                                      entry?.grade ? "Re-analyze with AI" : "Analyze with AI"
+                                    }
+                                    size="small"
+                                    disabled={triggerAnalysis.isPending || !hasLLMKey}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      if (fid) triggerAnalysis.mutate(fid);
+                                    }}
+                                  >
+                                    <Sparkles size={14} />
+                                  </MUIIconButton>
+                                </span>
+                              </Tooltip>
+                            </>
+                          );
+                        })()}
+                      </Stack>
                     </TableCell>
                   )}
                   {/* Action column */}
@@ -1078,7 +1196,7 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
                   bgcolor: "background.paper",
                 }}
               >
-                {groupLabel}
+                {displaySourceLabel(groupLabel)}
               </ListSubheader>,
             );
             groupLinks.forEach((link, li) => {
@@ -1102,6 +1220,17 @@ const FileBasicTable: React.FC<IFileBasicTableProps> = ({
           return nodes;
         })()}
       </Menu>
+
+      <StandardModal
+        isOpen={selectedAnalysis !== null}
+        onClose={() => setSelectedAnalysis(null)}
+        title="Evidence analysis"
+        description=""
+        hideFooter
+        maxWidth="800px"
+      >
+        {selectedAnalysis && <EvidenceAnalysisPanel analysis={selectedAnalysis} />}
+      </StandardModal>
     </>
   );
 };

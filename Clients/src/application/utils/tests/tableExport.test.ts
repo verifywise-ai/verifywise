@@ -68,6 +68,7 @@ describe("tableExport", () => {
 
   afterEach(() => {
     globalThis.alert = originalAlert;
+    vi.useRealTimers();
   });
 
   const columns = [

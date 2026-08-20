@@ -34,10 +34,11 @@ data:
             log_not_found off;
         }
 
-        # Security headers
+        # Security headers (HSTS is honored once the ingress terminates TLS)
+        add_header Strict-Transport-Security "max-age=63072000; includeSubDomains" always;
         add_header X-Frame-Options "SAMEORIGIN" always;
         add_header X-Content-Type-Options "nosniff" always;
-        add_header X-XSS-Protection "1; mode=block" always;
+        add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 
         # Gzip compression
         gzip on;

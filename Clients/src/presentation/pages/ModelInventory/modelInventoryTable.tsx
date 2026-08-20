@@ -13,15 +13,14 @@ import "../../components/Table/index.css";
 import singleTheme from "../../themes/v1SingleTheme";
 import CustomIconButton from "../../components/IconButton";
 import ViewRelationshipsButton from "../../components/ViewRelationshipsButton";
-import PluginSlot from "../../components/PluginSlot";
-import { PLUGIN_SLOTS } from "../../../domain/constants/pluginSlots";
+import { useExtensions } from "../../../application/contexts/Extensions.context";
+import ViewLifecycleButton from "../Extensions/model-lifecycle/ViewLifecycleButton";
 import allowedRoles from "../../../application/constants/permissions";
 import { useAuth } from "../../../application/hooks/useAuth";
 import { Cpu, Layers, BarChart3, Link2 } from "lucide-react";
 import { EmptyState } from "../../components/EmptyState";
 import CustomizableSkeleton from "../../components/Skeletons";
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
-import AsyncBoundary from "../../components/AsyncBoundary";
 import {
   ModelInventoryTableProps,
   IModelInventory,
@@ -84,8 +83,6 @@ const SecurityAssessmentBadge: React.FC<{ assessment: boolean }> = ({ assessment
 const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
   data,
   isLoading,
-  error,
-  onRetry,
   onEdit,
   onDelete,
   onCheckModelHasRisks,
@@ -98,6 +95,7 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
   visibleColumns,
 }) => {
   const { userRoleName } = useAuth();
+  const { isEnabled } = useExtensions();
   const [users, setUsers] = useState<User[]>([]);
 
   // Model risks dialog state
@@ -467,14 +465,12 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
                       entityType="model"
                       entityLabel={modelInventory.model || undefined}
                     />
-                    {/* Plugin-injected icon buttons for model rows */}
-                    <PluginSlot
-                      id={PLUGIN_SLOTS.MODEL_ROW_ICON_ACTIONS}
-                      slotProps={{
-                        modelId: modelInventory.id,
-                        modelName: modelInventory.model,
-                      }}
-                    />
+                    {isEnabled("model-lifecycle") && modelInventory.id != null && (
+                      <ViewLifecycleButton
+                        modelId={modelInventory.id}
+                        modelName={modelInventory.model || undefined}
+                      />
+                    )}
                     {isDeletingAllowed && (
                       <CustomIconButton
                         id={modelInventory.id || 0}
@@ -533,50 +529,51 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
     ],
   );
 
-  return (
-    <AsyncBoundary
-      isLoading={!!isLoading}
-      error={error}
-      isEmpty={!data || data.length === 0}
-      onRetry={onRetry}
-      loadingFallback={
-        <Stack spacing={2}>
-          <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
-        </Stack>
-      }
-      emptyFallback={
-        <TableEmptyStateLayout
-          header={
-            <StandardTableHead
-              columns={visibleTableColumns}
-              sortConfig={sortConfig}
-              onSort={handleSort}
-            />
-          }
+  if (isLoading) {
+    return (
+      <Stack spacing={2}>
+        <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
+      </Stack>
+    );
+  }
+
+  if (!data || data.length === 0) {
+    return (
+      <TableEmptyStateLayout
+        header={
+          <StandardTableHead
+            columns={visibleTableColumns}
+            sortConfig={sortConfig}
+            onSort={handleSort}
+          />
+        }
+      >
+        <EmptyState
+          icon={Cpu}
+          message="No models registered yet. Maintain a complete inventory of all AI models your organization uses."
         >
-          <EmptyState
-            icon={Cpu}
-            message="No models registered yet. Maintain a complete inventory of all AI models your organization uses."
-          >
-            <EmptyStateTip
-              icon={Layers}
-              title="What counts as a model?"
-              description="Any machine learning model, large language model, computer vision system, or automated decision-making tool. Include both internal and third-party models."
-            />
-            <EmptyStateTip
-              icon={BarChart3}
-              title="Track model status"
-              description="Record each model's status: approved, restricted, pending, blocked, or rejected. This gives auditors visibility into your governance coverage."
-            />
-            <EmptyStateTip
-              icon={Link2}
-              title="Link to vendors and risks"
-              description="Connect each model to its provider and associated risks. This creates a full traceability map for your audit."
-            />
-          </EmptyState>
-        </TableEmptyStateLayout>
-      }
-    >
+          <EmptyStateTip
+            icon={Layers}
+            title="What counts as a model?"
+            description="Any machine learning model, large language model, computer vision system, or automated decision-making tool. Include both internal and third-party models."
+          />
+          <EmptyStateTip
+            icon={BarChart3}
+            title="Track model status"
+            description="Record each model's status: approved, restricted, pending, blocked, or rejected. This gives auditors visibility into your governance coverage."
+          />
+          <EmptyStateTip
+            icon={Link2}
+            title="Link to vendors and risks"
+            description="Connect each model to its provider and associated risks. This creates a full traceability map for your audit."
+          />
+        </EmptyState>
+      </TableEmptyStateLayout>
+    );
+  }
+
+  return (
+    <>
       <TableContainer sx={{ overflowX: "auto" }}>
         <Table sx={singleTheme.tableStyles.primary.frame}>
           <StandardTableHead
@@ -609,7 +606,7 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
           modelName={selectedModel.name}
         />
       )}
-    </AsyncBoundary>
+    </>
   );
 };
 

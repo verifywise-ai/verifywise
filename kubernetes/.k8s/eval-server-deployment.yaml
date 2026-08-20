@@ -18,10 +18,14 @@ spec:
         app: verifywise
         component: eval-server
     spec:
+      # Pod-level security context (KSV-0118): runtime-default seccomp profile.
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
       containers:
       - name: eval-server
-        image: ghcr.io/verifywise-ai/verifywise-eval-server:latest
-        imagePullPolicy: Always
+        image: ghcr.io/verifywise-ai/verifywise-eval-server:1.7.0
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8000
           name: http
@@ -84,6 +88,11 @@ spec:
           periodSeconds: 5
           timeoutSeconds: 3
           failureThreshold: 3
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
         resources:
           requests:
             memory: "512Mi"

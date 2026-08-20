@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import {
   Chip,
   Stack,
@@ -78,10 +78,10 @@ export default function ProjectsList() {
   } | null>(null);
 
   // RBAC permissions
-  const { userRoleName, isSuperAdmin } = useAuth();
-  const canCreateProject = allowedRoles.evals.createProject.includes(userRoleName) && !isSuperAdmin;
-  const canEditProject = allowedRoles.evals.editProject.includes(userRoleName) && !isSuperAdmin;
-  const canDeleteProject = allowedRoles.evals.deleteProject.includes(userRoleName) && !isSuperAdmin;
+  const { userRoleName } = useAuth();
+  const canCreateProject = allowedRoles.evals.createProject.includes(userRoleName);
+  const canEditProject = allowedRoles.evals.editProject.includes(userRoleName);
+  const canDeleteProject = allowedRoles.evals.deleteProject.includes(userRoleName);
 
   // Search and filter state
   const [searchTerm, setSearchTerm] = useState("");

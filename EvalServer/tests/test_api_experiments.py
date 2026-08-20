@@ -115,6 +115,7 @@ def client(patched_controllers, no_background_task, fake_get_db):
 
 def _headers(org_id: int = 7) -> Dict[str, str]:
     return {
+        "x-internal-key": "test-internal-key",
         "x-organization-id": str(org_id),
         "x-user-id": "42",
         "x-role": "Editor",
@@ -132,7 +133,10 @@ def test_legacy_tenant_id_header_is_accepted_by_middleware(client) -> None:
     `_get_organization_id` raises 400 from inside the route. Confirms middleware
     accepts the legacy tenant header without raising.
     """
-    res = client.get("/deepeval/experiments", headers={"x-tenant-id": "legacy-tenant-hash"})
+    res = client.get(
+        "/deepeval/experiments",
+        headers={"x-internal-key": "test-internal-key", "x-tenant-id": "legacy-tenant-hash"},
+    )
     assert res.status_code == 400
 
 
@@ -220,6 +224,45 @@ def test_get_experiment_by_id(client, patched_controllers) -> None:
 
 
 # --------------------------------------------------------------------------- #
+# PATCH /deepeval/experiments/{id}                                             #
+# --------------------------------------------------------------------------- #
+
+
+def test_update_experiment_with_name(client, patched_controllers) -> None:
+    res = client.patch(
+        "/deepeval/experiments/exp-1", headers=_headers(), json={"name": "renamed"}
+    )
+    assert res.status_code == 200
+    assert res.json()["experiment"]["name"] == "renamed"
+    call_kwargs = patched_controllers["update"].await_args.kwargs
+    assert call_kwargs["experiment_id"] == "exp-1"
+    assert call_kwargs["name"] == "renamed"
+    assert call_kwargs["description"] is None
+
+
+def test_update_experiment_with_description(client, patched_controllers) -> None:
+    res = client.patch(
+        "/deepeval/experiments/exp-1", headers=_headers(), json={"description": "new desc"}
+    )
+    assert res.status_code == 200
+    call_kwargs = patched_controllers["update"].await_args.kwargs
+    assert call_kwargs["name"] is None
+    assert call_kwargs["description"] == "new desc"
+
+
+def test_update_experiment_empty_body_422(client, patched_controllers) -> None:
+    res = client.patch("/deepeval/experiments/exp-1", headers=_headers(), json={})
+    assert res.status_code == 422  # at least one of name/description is required
+    patched_controllers["update"].assert_not_called()
+
+
+def test_update_experiment_wrong_type_422(client, patched_controllers) -> None:
+    res = client.patch("/deepeval/experiments/exp-1", headers=_headers(), json={"name": 123})
+    assert res.status_code == 422
+    patched_controllers["update"].assert_not_called()
+
+
+# --------------------------------------------------------------------------- #
 # Model API key validation endpoint                                            #
 # --------------------------------------------------------------------------- #
 
@@ -291,3 +334,23 @@ def test_validate_model_returns_error_when_no_key(
     body = res.json()
     assert body["valid"] is False
     assert "ANTHROPIC_API_KEY" in (body["error_message"] or "")
+
+
+
+# --------------------------------------------------------------------------- #
+# Middleware: internal-key authentication                                      #
+# --------------------------------------------------------------------------- #
+
+
+def test_missing_internal_key_is_rejected(client) -> None:
+    """Requests without the shared secret must not be able to set tenant context."""
+    res = client.get("/deepeval/experiments", headers={"x-organization-id": "7"})
+    assert res.status_code == 401
+
+
+def test_invalid_internal_key_is_rejected(client) -> None:
+    res = client.get(
+        "/deepeval/experiments",
+        headers={"x-internal-key": "wrong-key", "x-organization-id": "7"},
+    )
+    assert res.status_code == 401

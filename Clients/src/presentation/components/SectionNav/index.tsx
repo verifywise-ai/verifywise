@@ -1,7 +1,7 @@
 import { FC, ReactNode } from "react";
 import { List, ListItemButton, ListItemIcon, ListItemText } from "@mui/material";
 import { useTheme } from "@mui/material";
-import { Link as RouterLink } from "react-router-dom";
+import { Link as RouterLink } from "react-router";
 import { brand } from "../../themes/palette";
 
 /**

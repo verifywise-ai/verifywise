@@ -1,6 +1,6 @@
 // React imports
 import { FC, useState, useContext, useEffect, useCallback, useMemo, useRef } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 
 // MUI imports
 import {

@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { Box, Typography, Stack, Button } from "@mui/material";
-import { Check as CheckGreenIcon } from "lucide-react";
+import { Check as CheckGreenIcon, Shield as ShieldIcon } from "lucide-react";
+import { getFrameworkBadgePath } from "../../../tools/frameworkBadge";
 import StandardModal from "../../../components/Modals/StandardModal";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import { Project } from "../../../../domain/types/Project";
@@ -22,8 +23,6 @@ import { AlertProps } from "../../../types/alert.types";
 import CustomizableToast from "../../../components/Toast";
 import ConfirmationModal from "../../../components/Dialogs/ConfirmationModal";
 import { useModalKeyHandling } from "../../../../application/hooks/useModalKeyHandling";
-import { PluginSlot } from "../../../components/PluginSlot";
-import { PLUGIN_SLOTS } from "../../../../domain/constants/pluginSlots";
 // Governance OS prompt imports removed while the module is not broadly released.
 // The module remains reachable by direct URL for authorized users.
 
@@ -46,28 +45,6 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
   const [alert, setAlert] = useState<AlertProps | null>(null);
   const [frameworkToRemove, setFrameworkToRemove] = useState<Framework | null>(null);
   const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
-  const [customFrameworkCount, setCustomFrameworkCount] = useState(0);
-
-  // Listen for custom framework count changes from plugins (event-based communication)
-  useEffect(() => {
-    const handleCustomFrameworkCount = (event: CustomEvent) => {
-      if (event.detail?.projectId === project.id) {
-        setCustomFrameworkCount(event.detail.count || 0);
-      }
-    };
-
-    window.addEventListener(
-      "customFrameworkCountChanged" as any,
-      handleCustomFrameworkCount as EventListener,
-    );
-
-    return () => {
-      window.removeEventListener(
-        "customFrameworkCountChanged" as any,
-        handleCustomFrameworkCount as EventListener,
-      );
-    };
-  }, [project.id]);
 
   const showToast = (variant: AlertProps["variant"], body: string) => {
     handleAlert({ variant, body, setAlert, alertTimeout: 3000 });
@@ -181,13 +158,41 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
         >
           {frameworks.map((fw) => {
             const isAdded = isFrameworkAdded(fw);
-            // Total frameworks = system frameworks + custom frameworks (from plugin events)
-            const totalFrameworkCount = (project.framework?.length || 0) + customFrameworkCount;
-            const onlyOneFramework = totalFrameworkCount === 1 && isAdded;
+            const badgePath = getFrameworkBadgePath(fw.name);
             return (
               <Box key={fw.id} sx={frameworkCardStyle}>
                 <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
-                  <Typography sx={frameworkCardTitleStyle}>{fw.name}</Typography>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, minWidth: 0 }}>
+                    {badgePath ? (
+                      <Box
+                        component="img"
+                        src={badgePath}
+                        alt=""
+                        sx={{
+                          width: 32,
+                          height: 32,
+                          objectFit: "contain",
+                          flexShrink: 0,
+                        }}
+                      />
+                    ) : (
+                      <Box
+                        sx={{
+                          width: 32,
+                          height: 32,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          backgroundColor: "#F1F3F4",
+                          borderRadius: "4px",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <ShieldIcon size={18} color="#666666" />
+                      </Box>
+                    )}
+                    <Typography sx={frameworkCardTitleStyle}>{fw.name}</Typography>
+                  </Box>
                   {isAdded && (
                     <Box sx={frameworkAddedBadgeStyle}>
                       <CheckGreenIcon size={16} />
@@ -201,7 +206,7 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
                     <Button
                       variant="outlined"
                       size="small"
-                      disabled={isLoading || onlyOneFramework}
+                      disabled={isLoading}
                       onClick={() => {
                         setFrameworkToRemove(fw);
                         setIsRemoveModalOpen(true);
@@ -243,19 +248,6 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
             );
           })}
         </Box>
-        {/* Plugin slot for custom frameworks */}
-        <PluginSlot
-          id={PLUGIN_SLOTS.FRAMEWORK_SELECTION}
-          slotProps={{
-            project,
-            isLoading,
-            onFrameworkAdded: () => onFrameworksChanged?.("add"),
-            onFrameworkRemoved: (frameworkId: number) =>
-              onFrameworksChanged?.("remove", frameworkId),
-            setAlert,
-            setIsLoading,
-          }}
-        />
         {isRemoveModalOpen && frameworkToRemove && (
           <ConfirmationModal
             title="Confirm framework removal"

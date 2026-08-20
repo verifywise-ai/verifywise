@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useCallback, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import {
   Table,
   TableBody,
@@ -31,7 +31,7 @@ import { EmptyState } from "../../components/EmptyState";
 import CustomizableSkeleton from "../../components/Skeletons";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
-import { getInstalledPlugins } from "../../../application/repository/plugin.repository";
+import { useExtensions } from "../../../application/contexts/Extensions.context";
 import Chip from "../../components/Chip";
 import TablePaginationActions from "../../components/TablePagination";
 import { singleTheme } from "../../themes";
@@ -74,16 +74,9 @@ const AgentTable: React.FC<AgentTableProps> = ({
 }) => {
   const theme = useTheme();
   const navigate = useNavigate();
+  const { isEnabled } = useExtensions();
+  const azureInstalled = isEnabled("azure-ai-foundry");
   const [page, setPage] = useState(0);
-  const [azureInstalled, setAzureInstalled] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    getInstalledPlugins()
-      .then((plugins) => {
-        setAzureInstalled(plugins.some((p) => p.pluginKey === "azure-ai-foundry"));
-      })
-      .catch(() => setAzureInstalled(false));
-  }, []);
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [sortConfig, setSortConfig] = useState<SortConfig>({
     key: "",
@@ -190,12 +183,12 @@ const AgentTable: React.FC<AgentTableProps> = ({
         <EmptyStateTip
           icon={Plug}
           title="Connect a source"
-          description="Agent discovery pulls AI agents from your cloud platforms. Install the Azure AI Foundry plugin to discover agents deployed in your Azure subscription, or browse the marketplace for other integrations."
+          description="Agent discovery pulls AI agents from your cloud platforms. Enable the Azure AI Foundry extension to discover agents deployed in your Azure subscription."
         />
         <EmptyStateTip
           icon={RefreshCw}
           title="Configure and sync"
-          description="After installing a plugin, add your project endpoint and API key in the plugin settings. Then click Sync on this page to pull in your agents."
+          description="After enabling the extension, add your project endpoint and API key in its settings. Then click Sync on this page to pull in your agents."
         />
         <EmptyStateTip
           icon={ShieldCheck}
@@ -221,16 +214,16 @@ const AgentTable: React.FC<AgentTableProps> = ({
               <CustomizableButton
                 text="Configure"
                 variant="outlined"
-                onClick={() => navigate("/plugins/azure-ai-foundry/manage")}
+                onClick={() => navigate("/extensions/azure-ai-foundry/settings")}
                 startIcon={<Settings size={14} />}
                 sx={{ height: 34 }}
               />
             </>
           ) : (
             <CustomizableButton
-              text="Install Azure AI Foundry"
+              text="Enable Azure AI Foundry"
               variant="contained"
-              onClick={() => navigate("/plugins/azure-ai-foundry/manage")}
+              onClick={() => navigate("/extensions/azure-ai-foundry/settings")}
               startIcon={<Plug size={14} />}
               sx={{ height: 34 }}
             />

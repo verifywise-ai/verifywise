@@ -5179,6 +5179,13 @@ components:
           type: integer
         date_format:
           type: string
+          example: DD-MM-YYYY
+        language:
+          type: string
+          example: en
+        theme:
+          type: string
+          example: light
         created_at:
           type: string
           format: date-time
@@ -7675,6 +7682,8 @@ tags:
   -
     name: 'Evidence AI'
   -
+    name: Extensions
+  -
     name: FRIA
   -
     name: Files
@@ -7715,9 +7724,9 @@ tags:
   -
     name: Notifications
   -
-    name: Organizations
+    name: Observability
   -
-    name: Plugins
+    name: Organizations
   -
     name: Policies
   -
@@ -7732,6 +7741,12 @@ tags:
     name: Readiness
   -
     name: Reporting
+  -
+    name: Reporting/Runs
+  -
+    name: 'Reporting/Scheduled Reports'
+  -
+    name: Reporting/Templates
   -
     name: 'Risk Benchmarks'
   -
@@ -7757,6 +7772,8 @@ tags:
   -
     name: Tasks
   -
+    name: Telemetry
+  -
     name: Training
   -
     name: Users
@@ -7767,6 +7784,22 @@ tags:
   -
     name: Webhooks
 paths:
+  /webhooks/github:
+    post:
+      tags:
+        - Webhooks
+      summary: 'Github Webhook Controller'
+      operationId: githubWebhookController
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: 'Created successfully'
+        '500':
+          description: 'Internal server error'
   /users:
     get:
       summary: 'List all users in organization'
@@ -7791,6 +7824,98 @@ paths:
         '500':
           description: 'Internal server error'
       operationId: getAllUsers
+  /users/preferences:
+    get:
+      summary: 'Get current user preferences'
+      description: "Returns the authenticated user's persisted preferences (date_format,\nlanguage) from user_preferences. If no row exists, returns safe\ndefaults including a transient theme default.\n"
+      tags:
+        - Users
+      security:
+        -
+          bearerAuth: []
+      responses:
+        '200':
+          description: 'Preferences found or defaults returned'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string, example: OK}
+                  data: {$ref: '#/components/schemas/UserPreference'}
+        '401':
+          description: Unauthorized
+        '500':
+          description: 'Internal server error'
+      operationId: getPreferencesForCurrentUser
+  /users/me/preferences:
+    get:
+      summary: 'Get current user preferences'
+      description: "Returns the authenticated user's persisted preferences (date_format,\nlanguage) from user_preferences. If no row exists, returns safe\ndefaults including a transient theme default. Preferred alias of\nGET /users/preferences.\n"
+      tags:
+        - Users
+      security:
+        -
+          bearerAuth: []
+      responses:
+        '200':
+          description: 'Preferences found or defaults returned'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string, example: OK}
+                  data: {$ref: '#/components/schemas/UserPreference'}
+        '401':
+          description: Unauthorized
+        '404':
+          description: 'User not found'
+        '500':
+          description: 'Internal server error'
+      operationId: users_getPreferencesForCurrentUser
+    patch:
+      summary: 'Update current user preferences'
+      description: "Upserts the authenticated user's date_format and/or language. At least\none field is required. Unknown format strings and languages are rejected.\nAny user_id in the body is ignored; the JWT user is always the target.\n"
+      tags:
+        - Users
+      security:
+        -
+          bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                date_format:
+                  type: string
+                  enum: [DD-MM-YYYY, MM-DD-YYYY, DD/MM/YY, MM/DD/YY]
+                  example: MM-DD-YYYY
+                language:
+                  type: string
+                  enum: [en, de, fr, es]
+                  example: en
+      responses:
+        '200':
+          description: 'Preferences saved'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string, example: OK}
+                  data: {$ref: '#/components/schemas/UserPreference'}
+        '400':
+          description: 'Validation error (missing fields or unknown format/language)'
+        '401':
+          description: Unauthorized
+        '404':
+          description: 'User not found'
+        '500':
+          description: 'Internal server error'
+      operationId: patchPreferencesForCurrentUser
   '/users/{id}':
     get:
       summary: 'Get user by ID'
@@ -7890,7 +8015,7 @@ paths:
       operationId: updateUserById
     delete:
       summary: 'Delete user by ID'
-      description: "Deletes a user and nullifies all their foreign key references across\nprojects, vendors, risks, vendor risks, files, automations, and invitations.\nAlso removes the user from projects_members. Demo users and super-admins\ncannot be deleted.\n"
+      description: 'Requires role: Admin or SuperAdmin'
       tags:
         - Users
       security:
@@ -8098,6 +8223,26 @@ paths:
         '500':
           description: 'Internal server error'
       operationId: refreshAccessToken
+  /users/logout:
+    post:
+      summary: 'Log out current session'
+      description: "Revokes the presented refresh token server-side and clears the\nrefresh_token cookie. No bearer token required: only the token presented\nin the cookie is revoked.\n"
+      tags:
+        - Users
+      parameters:
+        -
+          in: cookie
+          name: refresh_token
+          required: false
+          schema:
+            type: string
+          description: 'JWT refresh token set during login'
+      responses:
+        '200':
+          description: 'Logged out; refresh token revoked and cookie cleared'
+        '500':
+          description: 'Internal server error'
+      operationId: logoutUser
   /users/reset-password:
     post:
       summary: 'Reset user password'
@@ -10499,6 +10644,75 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
+  '/frameworks/{frameworkId}/tree/{projectId}':
+    get:
+      summary: 'Get Framework Tree'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Frameworks
+      operationId: getFrameworkTree
+      security:
+        -
+          bearerAuth: []
+  '/frameworks/{frameworkId}/dashboard/{projectFrameworkId}':
+    get:
+      summary: 'Get Framework Dashboard'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Frameworks
+      operationId: getFrameworkDashboard
+      security:
+        -
+          bearerAuth: []
+  '/frameworks/{frameworkId}/impl/{level}/{id}':
+    get:
+      summary: 'Get Impl By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Frameworks
+      operationId: getImplById
+      security:
+        -
+          bearerAuth: []
+    patch:
+      summary: 'Update Impl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Frameworks
+      operationId: updateImpl
+      security:
+        -
+          bearerAuth: []
+  '/frameworks/{frameworkId}/impl/{level}/{id}/risks':
+    get:
+      summary: 'Get Impl Risks'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Frameworks
+      operationId: getImplRisks
+      security:
+        -
+          bearerAuth: []
   /eu-ai-act/controlCategories:
     get:
       tags:
@@ -10871,6 +11085,7 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
+      description: 'Requires role: Admin'
   /organizations:
     post:
       tags:
@@ -10921,6 +11136,7 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
+      description: 'Requires role: Admin'
   /iso-42001/clauses:
     get:
       tags:
@@ -12667,30 +12883,789 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
-  /dataset-bulk-upload/upload:
+  /extensions:
+    get:
+      summary: 'List Extensions'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: listExtensions
+      security:
+        -
+          bearerAuth: []
+  '/extensions/{key}':
+    get:
+      summary: 'Get Extension'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: getExtension
+      security:
+        -
+          bearerAuth: []
+  '/extensions/{key}/enable':
     post:
+      summary: 'Enable Extension'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: enableExtension
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin'
+  '/extensions/{key}/disable':
+    post:
+      summary: 'Disable Extension'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: disableExtension
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin'
+  '/extensions/{key}/configuration':
+    patch:
+      summary: 'Update Extension Configuration'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: updateExtensionConfiguration
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin'
+  '/extensions/{key}/test-connection':
+    post:
+      summary: 'Test Extension Connection'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: testExtensionConnection
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin'
+  /extensions/dataset-bulk-upload/upload:
+    post:
+      summary: 'Upload Dataset File'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
       tags:
         - Datasets
-      summary: 'Handle Multer Error'
       operationId: uploadDatasetFile
       security:
         -
           bearerAuth: []
       description: 'Requires role: Admin or Editor'
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
+  /extensions/risk-import/template:
+    get:
+      summary: 'Download Excel Template'
       responses:
-        '201':
-          description: 'Created successfully'
-        '401':
-          description: Unauthorized
-        '403':
-          description: 'Forbidden - insufficient role'
+        '200':
+          description: Success
         '500':
           description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: downloadExcelTemplate
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or Editor'
+  /extensions/risk-import/import:
+    post:
+      summary: 'Bulk Import Risks'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: bulkImportRisks
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or Editor'
+  /extensions/slack/oauth/workspaces:
+    get:
+      summary: 'Get All Slack Webhooks'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: getAllSlackWebhooks
+      security:
+        -
+          bearerAuth: []
+    post:
+      summary: 'Create New Slack Webhook'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: createNewSlackWebhook
+      security:
+        -
+          bearerAuth: []
+  '/extensions/slack/oauth/workspaces/{id}':
+    get:
+      summary: 'Get Slack Webhook By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: getSlackWebhookById
+      security:
+        -
+          bearerAuth: []
+    patch:
+      summary: 'Update Slack Webhook By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: updateSlackWebhookById
+      security:
+        -
+          bearerAuth: []
+    delete:
+      summary: 'Delete Slack Webhook By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: deleteSlackWebhookById
+      security:
+        -
+          bearerAuth: []
+  '/extensions/slack/oauth/workspaces/{id}/send':
+    post:
+      summary: 'Send Slack Message'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: sendSlackMessage
+      security:
+        -
+          bearerAuth: []
+  /extensions/mlflow/models:
+    get:
+      summary: 'List Models'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: listModels
+      security:
+        -
+          bearerAuth: []
+  /extensions/mlflow/sync:
+    post:
+      summary: 'Sync From Mlflow'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: syncFromMlflow
+      security:
+        -
+          bearerAuth: []
+  '/extensions/mlflow/models/{modelId}':
+    get:
+      summary: 'Get Model By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: getModelById
+      security:
+        -
+          bearerAuth: []
+  /extensions/azure-ai-foundry/models:
+    get:
+      summary: 'List Deployments'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: listDeployments
+      security:
+        -
+          bearerAuth: []
+  /extensions/azure-ai-foundry/sync:
+    post:
+      summary: 'Sync From Azure'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: syncFromAzure
+      security:
+        -
+          bearerAuth: []
+  '/extensions/azure-ai-foundry/models/{deploymentId}':
+    get:
+      summary: 'Get Deployment By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: getDeploymentById
+      security:
+        -
+          bearerAuth: []
+  /extensions/azure-ai-foundry/discover:
+    get:
+      summary: 'Discover Ai Agents'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: discoverAiAgents
+      security:
+        -
+          bearerAuth: []
+  /extensions/jira-assets/config:
+    get:
+      summary: 'Get Config'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: getConfig
+      security:
+        -
+          bearerAuth: []
+    post:
+      summary: 'Post Config'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: postConfig
+      security:
+        -
+          bearerAuth: []
+  /extensions/jira-assets/vw-attributes:
+    get:
+      summary: 'Get Vw Attributes'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: getVwAttributes
+      security:
+        -
+          bearerAuth: []
+  /extensions/jira-assets/schemas:
+    get:
+      summary: 'Get Schemas'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: getSchemas
+      security:
+        -
+          bearerAuth: []
+  '/extensions/jira-assets/schemas/{schemaId}/object-types':
+    get:
+      summary: 'Get Object Types'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: getObjectTypes
+      security:
+        -
+          bearerAuth: []
+  '/extensions/jira-assets/object-types/{objectTypeId}/attributes':
+    get:
+      summary: 'Get Attributes'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: getAttributes
+      security:
+        -
+          bearerAuth: []
+  '/extensions/jira-assets/object-types/{objectTypeId}/objects':
+    get:
+      summary: 'Get Objects'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: getObjects
+      security:
+        -
+          bearerAuth: []
+  /extensions/jira-assets/import:
+    post:
+      summary: 'Post Import'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: postImport
+      security:
+        -
+          bearerAuth: []
+  /extensions/jira-assets/sync:
+    post:
+      summary: 'Post Sync'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: postSync
+      security:
+        -
+          bearerAuth: []
+  /extensions/jira-assets/sync/status:
+    get:
+      summary: 'Get Sync Status Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: getSyncStatusCtrl
+      security:
+        -
+          bearerAuth: []
+  /extensions/jira-assets/sync/history:
+    get:
+      summary: 'Get Sync History Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: getSyncHistoryCtrl
+      security:
+        -
+          bearerAuth: []
+  /extensions/jira-assets/use-cases:
+    get:
+      summary: 'List Use Cases Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: listUseCasesCtrl
+      security:
+        -
+          bearerAuth: []
+  '/extensions/jira-assets/use-cases/{id}':
+    get:
+      summary: 'Get Use Case Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: getUseCaseCtrl
+      security:
+        -
+          bearerAuth: []
+    delete:
+      summary: 'Delete Use Case Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: deleteUseCaseCtrl
+      security:
+        -
+          bearerAuth: []
+  '/extensions/jira-assets/projects/{projectId}/custom-frameworks-progress':
+    get:
+      summary: 'Get Custom Frameworks Progress Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: getCustomFrameworksProgressCtrl
+      security:
+        -
+          bearerAuth: []
+  /extensions/model-lifecycle/config:
+    get:
+      summary: 'List Config'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: listConfig
+      security:
+        -
+          bearerAuth: []
+  /extensions/model-lifecycle/phases:
+    post:
+      summary: 'Create Phase Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: createPhaseCtrl
+      security:
+        -
+          bearerAuth: []
+  /extensions/model-lifecycle/phases/reorder:
+    put:
+      summary: 'Reorder Phases Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: reorderPhasesCtrl
+      security:
+        -
+          bearerAuth: []
+  '/extensions/model-lifecycle/phases/{id}':
+    put:
+      summary: 'Update Phase Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: updatePhaseCtrl
+      security:
+        -
+          bearerAuth: []
+    delete:
+      summary: 'Delete Phase Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: deletePhaseCtrl
+      security:
+        -
+          bearerAuth: []
+  '/extensions/model-lifecycle/phases/{phaseId}/items':
+    post:
+      summary: 'Create Item Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: createItemCtrl
+      security:
+        -
+          bearerAuth: []
+  '/extensions/model-lifecycle/phases/{phaseId}/items/reorder':
+    put:
+      summary: 'Reorder Items Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: reorderItemsCtrl
+      security:
+        -
+          bearerAuth: []
+  '/extensions/model-lifecycle/items/{id}':
+    put:
+      summary: 'Update Item Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: updateItemCtrl
+      security:
+        -
+          bearerAuth: []
+    delete:
+      summary: 'Delete Item Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: deleteItemCtrl
+      security:
+        -
+          bearerAuth: []
+  '/extensions/model-lifecycle/models/{id}/lifecycle':
+    get:
+      summary: 'Get Lifecycle Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: getLifecycleCtrl
+      security:
+        -
+          bearerAuth: []
+  '/extensions/model-lifecycle/models/{id}/lifecycle/progress':
+    get:
+      summary: 'Get Progress Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: getProgressCtrl
+      security:
+        -
+          bearerAuth: []
+  '/extensions/model-lifecycle/models/{id}/lifecycle/items/{itemId}':
+    put:
+      summary: 'Upsert Value Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: upsertValueCtrl
+      security:
+        -
+          bearerAuth: []
+  '/extensions/model-lifecycle/models/{id}/lifecycle/items/{itemId}/files':
+    post:
+      summary: 'Attach File Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: attachFileCtrl
+      security:
+        -
+          bearerAuth: []
+  '/extensions/model-lifecycle/models/{id}/lifecycle/items/{itemId}/files/{fileId}':
+    delete:
+      summary: 'Detach File Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: detachFileCtrl
+      security:
+        -
+          bearerAuth: []
+  '/extensions/model-lifecycle/models/{id}/lifecycle/items/{itemId}/people':
+    post:
+      summary: 'Add Person Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: addPersonCtrl
+      security:
+        -
+          bearerAuth: []
+  '/extensions/model-lifecycle/models/{id}/lifecycle/items/{itemId}/people/{userId}':
+    delete:
+      summary: 'Remove Person Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: removePersonCtrl
+      security:
+        -
+          bearerAuth: []
+  '/extensions/model-lifecycle/models/{id}/lifecycle/items/{itemId}/approvals':
+    post:
+      summary: 'Add Approver Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: addApproverCtrl
+      security:
+        -
+          bearerAuth: []
+  '/extensions/model-lifecycle/models/{id}/lifecycle/items/{itemId}/approvals/{userId}':
+    put:
+      summary: 'Update Approval Status Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: updateApprovalStatusCtrl
+      security:
+        -
+          bearerAuth: []
+    delete:
+      summary: 'Remove Approver Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: removeApproverCtrl
+      security:
+        -
+          bearerAuth: []
   '/model-inventory-change-history/{id}':
     get:
       tags:
@@ -13569,6 +14544,293 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
+  /reporting/templates:
+    get:
+      summary: 'List Templates'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Reporting/Templates
+      operationId: listTemplates
+      security:
+        -
+          bearerAuth: []
+    post:
+      summary: 'Create Template'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Reporting/Templates
+      operationId: createTemplate
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or Editor'
+  '/reporting/templates/{id}':
+    get:
+      summary: 'Get Template'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Reporting/Templates
+      operationId: getTemplate
+      security:
+        -
+          bearerAuth: []
+    patch:
+      summary: 'Update Template'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Reporting/Templates
+      operationId: updateTemplate
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or Editor'
+    delete:
+      summary: 'Archive Template'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Reporting/Templates
+      operationId: archiveTemplate
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or Editor'
+  '/reporting/templates/{id}/run':
+    post:
+      summary: 'Run Template Now'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Reporting/Templates
+      operationId: runTemplateNow
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or Editor'
+  /reporting/scheduled-reports:
+    get:
+      summary: 'List Scheduled Reports'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Reporting/Scheduled Reports'
+      operationId: listScheduledReports
+      security:
+        -
+          bearerAuth: []
+    post:
+      summary: 'Create Scheduled Report'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Reporting/Scheduled Reports'
+      operationId: createScheduledReport
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or Editor'
+  '/reporting/scheduled-reports/{id}':
+    patch:
+      summary: 'Update Scheduled Report'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Reporting/Scheduled Reports'
+      operationId: updateScheduledReport
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or Editor'
+    delete:
+      summary: 'Delete Scheduled Report'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Reporting/Scheduled Reports'
+      operationId: deleteScheduledReport
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or Editor'
+  '/reporting/scheduled-reports/{id}/pause':
+    post:
+      summary: 'Pause Scheduled Report'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Reporting/Scheduled Reports'
+      operationId: pauseScheduledReport
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or Editor'
+  '/reporting/scheduled-reports/{id}/resume':
+    post:
+      summary: 'Resume Scheduled Report'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Reporting/Scheduled Reports'
+      operationId: resumeScheduledReport
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or Editor'
+  '/reporting/scheduled-reports/{id}/run-now':
+    post:
+      summary: 'Run Scheduled Report Now'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Reporting/Scheduled Reports'
+      operationId: runScheduledReportNow
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or Editor'
+  /reporting/runs:
+    get:
+      summary: 'List Runs'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Reporting/Runs
+      operationId: listRuns
+      security:
+        -
+          bearerAuth: []
+  '/reporting/runs/{id}':
+    get:
+      summary: 'Get Run'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Reporting/Runs
+      operationId: getRun
+      security:
+        -
+          bearerAuth: []
+    delete:
+      summary: 'Delete Run'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Reporting/Runs
+      operationId: deleteRun
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or Editor'
+  '/reporting/runs/{id}/download':
+    get:
+      summary: 'Download Run'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Reporting/Runs
+      operationId: downloadRun
+      security:
+        -
+          bearerAuth: []
+  '/reporting/runs/{id}/analyses':
+    get:
+      summary: 'Get Run Analyses'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Reporting/Runs
+      operationId: getRunAnalyses
+      security:
+        -
+          bearerAuth: []
+  '/reporting/runs/{id}/archive':
+    patch:
+      summary: 'Archive Run'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Reporting/Runs
+      operationId: archiveRun
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or Editor'
+  '/reporting/runs/{id}/restore':
+    patch:
+      summary: 'Restore Run'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Reporting/Runs
+      operationId: restoreRun
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or Editor'
   /reporting/generate-report:
     post:
       tags:
@@ -13632,6 +14894,20 @@ paths:
           description: 'Forbidden - insufficient role'
         '500':
           description: 'Internal server error'
+  /reporting/sections:
+    get:
+      summary: 'List Sections'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Reporting
+      operationId: listSections
+      security:
+        -
+          bearerAuth: []
   '/reporting/{id}':
     delete:
       tags:
@@ -14540,7 +15816,7 @@ paths:
       tags:
         - Integrations
       summary: 'Get All Slack Webhooks'
-      operationId: getAllSlackWebhooks
+      operationId: slackWebhooks_getAllSlackWebhooks
       security:
         -
           bearerAuth: []
@@ -14555,7 +15831,7 @@ paths:
       tags:
         - Integrations
       summary: 'Create New Slack Webhook'
-      operationId: createNewSlackWebhook
+      operationId: slackWebhooks_createNewSlackWebhook
       security:
         -
           bearerAuth: []
@@ -14576,7 +15852,7 @@ paths:
       tags:
         - Integrations
       summary: 'Get Slack Webhook By Id'
-      operationId: getSlackWebhookById
+      operationId: slackWebhooks_getSlackWebhookById
       security:
         -
           bearerAuth: []
@@ -14598,7 +15874,7 @@ paths:
       tags:
         - Integrations
       summary: 'Update Slack Webhook By Id'
-      operationId: updateSlackWebhookById
+      operationId: slackWebhooks_updateSlackWebhookById
       security:
         -
           bearerAuth: []
@@ -14625,7 +15901,7 @@ paths:
       tags:
         - Integrations
       summary: 'Delete Slack Webhook By Id'
-      operationId: deleteSlackWebhookById
+      operationId: slackWebhooks_deleteSlackWebhookById
       security:
         -
           bearerAuth: []
@@ -14648,7 +15924,7 @@ paths:
       tags:
         - Integrations
       summary: 'Send Slack Message'
-      operationId: sendSlackMessage
+      operationId: slackWebhooks_sendSlackMessage
       security:
         -
           bearerAuth: []
@@ -14667,222 +15943,6 @@ paths:
       responses:
         '201':
           description: 'Created successfully'
-        '401':
-          description: Unauthorized
-        '500':
-          description: 'Internal server error'
-  /plugins/marketplace:
-    get:
-      tags:
-        - Plugins
-      summary: 'Get All Plugins'
-      operationId: getAllPlugins
-      security:
-        -
-          bearerAuth: []
-      responses:
-        '200':
-          description: Success
-        '401':
-          description: Unauthorized
-        '500':
-          description: 'Internal server error'
-  '/plugins/marketplace/{key}':
-    get:
-      tags:
-        - Plugins
-      summary: 'Get Plugin By Key'
-      operationId: getPluginByKey
-      security:
-        -
-          bearerAuth: []
-      parameters:
-        -
-          name: key
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Success
-        '401':
-          description: Unauthorized
-        '500':
-          description: 'Internal server error'
-  /plugins/marketplace/search:
-    get:
-      tags:
-        - Plugins
-      summary: 'Search Plugins'
-      operationId: searchPlugins
-      security:
-        -
-          bearerAuth: []
-      responses:
-        '200':
-          description: Success
-        '401':
-          description: Unauthorized
-        '500':
-          description: 'Internal server error'
-  /plugins/categories:
-    get:
-      tags:
-        - Plugins
-      summary: 'Get Categories'
-      operationId: getCategories
-      security:
-        -
-          bearerAuth: []
-      responses:
-        '200':
-          description: Success
-        '401':
-          description: Unauthorized
-        '500':
-          description: 'Internal server error'
-  /plugins/install:
-    post:
-      tags:
-        - Plugins
-      summary: 'Install Plugin'
-      operationId: installPlugin
-      security:
-        -
-          bearerAuth: []
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        '201':
-          description: 'Created successfully'
-        '401':
-          description: Unauthorized
-        '500':
-          description: 'Internal server error'
-  '/plugins/installations/{id}':
-    delete:
-      tags:
-        - Plugins
-      summary: 'Uninstall Plugin'
-      operationId: uninstallPlugin
-      security:
-        -
-          bearerAuth: []
-      parameters:
-        -
-          name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: 'Deleted successfully'
-        '401':
-          description: Unauthorized
-        '500':
-          description: 'Internal server error'
-  /plugins/installations:
-    get:
-      tags:
-        - Plugins
-      summary: 'Get Installed Plugins'
-      operationId: getInstalledPlugins
-      security:
-        -
-          bearerAuth: []
-      responses:
-        '200':
-          description: Success
-        '401':
-          description: Unauthorized
-        '500':
-          description: 'Internal server error'
-  '/plugins/installations/{id}/configuration':
-    put:
-      tags:
-        - Plugins
-      summary: 'Update Plugin Configuration'
-      operationId: updatePluginConfiguration
-      security:
-        -
-          bearerAuth: []
-      parameters:
-        -
-          name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        '200':
-          description: Success
-        '401':
-          description: Unauthorized
-        '500':
-          description: 'Internal server error'
-  '/plugins/{key}/test-connection':
-    post:
-      tags:
-        - Plugins
-      summary: 'Test Plugin Connection'
-      operationId: testPluginConnection
-      security:
-        -
-          bearerAuth: []
-      parameters:
-        -
-          name: key
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        '201':
-          description: 'Created successfully'
-        '401':
-          description: Unauthorized
-        '500':
-          description: 'Internal server error'
-  '/plugins/{key}/ui/dist/{filename}':
-    get:
-      tags:
-        - Plugins
-      summary: 'Serve plugin UI assets'
-      operationId: plugins_anonymous
-      security:
-        -
-          bearerAuth: []
-      parameters:
-        -
-          name: key
-          in: path
-          required: true
-          schema:
-            type: string
-        -
-          name: filename
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Success
         '401':
           description: Unauthorized
         '500':
@@ -16355,6 +17415,7 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires role: Admin or Editor'
   '/ai-confirmation/approve/{id}':
     post:
       summary: 'Approve Confirmation'
@@ -16369,6 +17430,7 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires role: Admin'
   '/ai-confirmation/reject/{id}':
     post:
       summary: 'Reject Confirmation'
@@ -16383,6 +17445,7 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires role: Admin'
   /ai-confirmation/pending:
     get:
       summary: 'Get Pending Confirmations'
@@ -16453,6 +17516,7 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires role: Admin'
   '/ai-approvals/{id}/reject':
     post:
       summary: 'Reject Approval Ctrl'
@@ -16467,6 +17531,7 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires role: Admin'
   /ai-approval-rules/test:
     post:
       summary: 'Test Rule Ctrl'
@@ -16562,6 +17627,7 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires role: Admin or Editor'
   /ai-apps/policy-suggestions:
     get:
       summary: 'Get Policy Suggestions'
@@ -16603,6 +17669,7 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires role: Admin or Editor'
     delete:
       summary: 'Delete Ai App By Id'
       responses:
@@ -16616,6 +17683,7 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires role: Admin'
   '/ai-apps/{id}/models':
     post:
       summary: 'Link Models To Ai App'
@@ -16630,6 +17698,7 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires role: Admin or Editor'
   '/ai-apps/{id}/policies':
     post:
       summary: 'Set Policies For Ai App'
@@ -16644,6 +17713,7 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires role: Admin or Editor'
   '/ai-apps/{id}/data-exposure':
     post:
       summary: 'Set Data Exposure For Ai App'
@@ -16658,6 +17728,7 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires role: Admin or Editor'
   '/ai-apps/from-shadow-ai/{shadowAiToolId}':
     post:
       summary: 'Promote From Shadow Ai'
@@ -16672,6 +17743,7 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires role: Admin or Editor'
   '/ai-apps/{id}/status':
     patch:
       summary: 'Update Ai App Status'
@@ -16686,6 +17758,7 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires role: Admin or Editor'
   /ai-audit/analytics:
     get:
       summary: 'Get Analytics'
@@ -16714,6 +17787,7 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires role: Admin'
   '/ai-audit/log/{actionId}':
     get:
       summary: 'Get Action Audit Trail'
@@ -16739,6 +17813,76 @@ paths:
       tags:
         - 'AI Audit'
       operationId: getAuditLog
+      security:
+        -
+          bearerAuth: []
+  /observability/metrics:
+    get:
+      summary: 'Get Metrics'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Observability
+      operationId: getMetrics
+      security:
+        -
+          bearerAuth: []
+  /observability/traces:
+    get:
+      summary: 'Get Traces'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Observability
+      operationId: getTraces
+      security:
+        -
+          bearerAuth: []
+  '/observability/traces/{id}':
+    get:
+      summary: 'Get Trace Detail'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Observability
+      operationId: getTraceDetail
+      security:
+        -
+          bearerAuth: []
+  /observability/costs:
+    get:
+      summary: 'Get Costs'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Observability
+      operationId: getCosts
+      security:
+        -
+          bearerAuth: []
+  /observability/performance:
+    get:
+      summary: 'Get Performance'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Observability
+      operationId: getPerformance
       security:
         -
           bearerAuth: []
@@ -18387,22 +19531,6 @@ paths:
           description: 'Created successfully'
         '401':
           description: Unauthorized
-        '500':
-          description: 'Internal server error'
-  /webhooks/github:
-    post:
-      tags:
-        - Webhooks
-      summary: 'Github Webhook Controller'
-      operationId: githubWebhookController
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        '201':
-          description: 'Created successfully'
         '500':
           description: 'Internal server error'
   /ai-detection/scans:
@@ -20791,6 +21919,7 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
+      description: 'Requires role: Admin'
   /agent-primitives/stats:
     get:
       tags:
@@ -20889,6 +22018,7 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
+      description: 'Requires role: Admin'
     delete:
       tags:
         - 'Agent Discovery'
@@ -20911,6 +22041,7 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
+      description: 'Requires role: Admin'
   /agent-primitives/sync:
     post:
       tags:
@@ -20932,6 +22063,7 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
+      description: 'Requires role: Admin'
   '/agent-primitives/{id}/review':
     patch:
       tags:
@@ -20960,6 +22092,7 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
+      description: 'Requires role: Admin'
   '/agent-primitives/{id}/link-model':
     patch:
       tags:
@@ -20988,6 +22121,7 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
+      description: 'Requires role: Admin'
   '/agent-primitives/{id}/unlink-model':
     patch:
       tags:
@@ -21016,6 +22150,7 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
+      description: 'Requires role: Admin'
   '/agent-primitives/{id}/audit-logs':
     get:
       tags:
@@ -22917,6 +24052,21 @@ paths:
           description: 'Forbidden - insufficient role'
         '500':
           description: 'Internal server error'
+  '/super-admin/organizations/{id}/invitations':
+    get:
+      summary: 'List Org Invitations'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Super Admin'
+      operationId: listOrgInvitations
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Super Admin'
   '/super-admin/organizations/{id}/invite':
     post:
       tags:
@@ -22988,6 +24138,94 @@ paths:
           description: 'Forbidden - insufficient role'
         '500':
           description: 'Internal server error'
+  /super-admin/monitoring:
+    get:
+      summary: 'Get Monitoring'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Super Admin'
+      operationId: getMonitoring
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Super Admin'
+    put:
+      summary: 'Update Monitoring'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Super Admin'
+      operationId: updateMonitoring
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Super Admin'
+  /super-admin/monitoring/token:
+    post:
+      summary: 'Generate Monitoring Token'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Super Admin'
+      operationId: generateMonitoringToken
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Super Admin'
+  /super-admin/super-admins:
+    get:
+      summary: 'List Super Admins'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Super Admin'
+      operationId: listSuperAdmins
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Super Admin'
+    post:
+      summary: 'Grant Super Admin'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Super Admin'
+      operationId: grantSuperAdmin
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Super Admin'
+  '/super-admin/super-admins/{user_id}':
+    delete:
+      summary: 'Revoke Super Admin'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Super Admin'
+      operationId: revokeSuperAdmin
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Super Admin'
   /internal/ai-gateway/notify:
     post:
       tags:
@@ -23004,6 +24242,28 @@ paths:
           description: 'Created successfully'
         '500':
           description: 'Internal server error'
+  /internal/observability-config:
+    get:
+      summary: Anonymous
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Internal
+      operationId: internal_anonymous
+  /telemetry:
+    post:
+      summary: Type
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Telemetry
+      operationId: type
   /ssoConfig/feature:
     get:
       summary: 'Get S S O Feature Status'
@@ -23051,6 +24311,7 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires role: Admin'
     put:
       summary: 'Save S S O Config'
       responses:
@@ -23064,6 +24325,7 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires role: Admin'
   /ssoConfig/enable:
     put:
       summary: 'Enable S S O'
@@ -23078,6 +24340,7 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires role: Admin'
   /ssoConfig/disable:
     put:
       summary: 'Disable S S O'
@@ -23092,6 +24355,7 @@ paths:
       security:
         -
           bearerAuth: []
+      description: 'Requires role: Admin'
   /ai-trust-index/apps:
     get:
       summary: 'Get Apps'
@@ -23202,14 +24466,3 @@ paths:
       security:
         -
           bearerAuth: []
-  /health:
-    get:
-      tags:
-        - System
-      summary: 'Health Check'
-      operationId: healthCheck
-      responses:
-        '200':
-          description: Success
-        '500':
-          description: 'Internal server error'

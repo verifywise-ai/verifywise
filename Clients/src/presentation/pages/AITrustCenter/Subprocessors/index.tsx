@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import React, { useState, Suspense, useCallback, useEffect, useRef, useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router";
 import { Box, Typography, TableCell, Stack, Alert as MuiAlert } from "@mui/material";
 import Toggle from "../../../components/Inputs/Toggle";
 import IconButtonComponent from "../../../components/IconButton";

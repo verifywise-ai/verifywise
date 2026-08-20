@@ -1,12 +1,10 @@
-import { Stack, Box, Typography } from "@mui/material";
+import { Stack, Box } from "@mui/material";
 import { PageBreadcrumbs } from "../breadcrumbs/PageBreadcrumbs";
 import HelperIcon from "../HelperIcon";
 import { PageHeader } from "./PageHeader";
 import TipBox from "../TipBox";
 import { pageHeaderSummaryCardsStyle } from "./style";
 import { PageHeaderExtendedProps } from "src/presentation/types/interfaces/i.header";
-import { useAuth } from "../../../application/hooks/useAuth";
-import { useLocation } from "react-router-dom";
 
 export function PageHeaderExtended({
   title,
@@ -23,11 +21,6 @@ export function PageHeaderExtended({
   breadcrumbItems,
   actionButton = null,
 }: PageHeaderExtendedProps) {
-  const { isSuperAdmin, activeOrganizationId } = useAuth();
-  const location = useLocation();
-  const isSuperAdminRoute = location.pathname.startsWith("/super-admin");
-  const showNoOrgMessage = isSuperAdmin && !activeOrganizationId && !isSuperAdminRoute;
-
   return (
     <Stack className="vwhome" gap={0}>
       <PageBreadcrumbs items={breadcrumbItems} sx={{ "mb": 0, "& > hr": { mb: 0 } }} />
@@ -44,46 +37,29 @@ export function PageHeaderExtended({
               ) : undefined
             }
           />
-          {!showNoOrgMessage && actionButton && <Box sx={{ flexShrink: 0 }}>{actionButton}</Box>}
+          {actionButton && <Box sx={{ flexShrink: 0 }}>{actionButton}</Box>}
         </Stack>
       </Box>
 
-      {showNoOrgMessage ? (
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            py: 16,
-          }}
-        >
-          <Typography variant="body1" sx={{ color: "text.secondary" }}>
-            No organizations exist yet. Switch to the Super Admin tab to create one.
-          </Typography>
-        </Box>
-      ) : (
-        <>
-          {/* Alerts/toasts rendered outside the gap Stack so they don't affect layout */}
-          {alert}
-          {loadingToast}
+      {/* Alerts/toasts rendered outside the gap Stack so they don't affect layout */}
+      {alert}
+      {loadingToast}
 
-          {warningBanner && <Box sx={{ mt: "18px" }}>{warningBanner}</Box>}
+      {warningBanner && <Box sx={{ mt: "18px" }}>{warningBanner}</Box>}
 
-          {(tipBoxEntity || summaryCards) && (
-            <Stack gap="18px" sx={{ mt: "18px" }}>
-              {tipBoxEntity && <TipBox entityName={tipBoxEntity} />}
-              {summaryCards && (
-                <Box data-joyride-id={summaryCardsJoyrideId} sx={pageHeaderSummaryCardsStyle}>
-                  {summaryCards}
-                </Box>
-              )}
-            </Stack>
+      {(tipBoxEntity || summaryCards) && (
+        <Stack gap="18px" sx={{ mt: "18px" }}>
+          {tipBoxEntity && <TipBox entityName={tipBoxEntity} />}
+          {summaryCards && (
+            <Box data-joyride-id={summaryCardsJoyrideId} sx={pageHeaderSummaryCardsStyle}>
+              {summaryCards}
+            </Box>
           )}
-          <Stack gap="16px" sx={{ mt: "16px" }}>
-            {children}
-          </Stack>
-        </>
+        </Stack>
       )}
+      <Stack gap="16px" sx={{ mt: "16px" }}>
+        {children}
+      </Stack>
     </Stack>
   );
 }
