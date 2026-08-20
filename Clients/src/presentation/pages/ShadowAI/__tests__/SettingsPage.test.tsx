@@ -306,10 +306,21 @@ describe("ShadowAI - SettingsPage", () => {
       expect(screen.getByText("Currently limited to 500 events/hour")).toBeInTheDocument();
     });
 
-    fireEvent.change(screen.getByLabelText("Max events per hour"), {
-      target: { value: "1000" },
+    // Wait for the field to reflect the loaded settings before editing it:
+    // the settings-sync effect resets the input, so an edit that lands first is
+    // overwritten, leaving Save disabled (it keys off `hasChanged`).
+    const maxEventsField = screen.getByLabelText("Max events per hour") as HTMLInputElement;
+    await waitFor(() => {
+      expect(maxEventsField.value).toBe("500");
     });
-    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    fireEvent.change(maxEventsField, { target: { value: "1000" } });
+
+    const saveButton = screen.getByRole("button", { name: "Save" });
+    await waitFor(() => {
+      expect(saveButton).not.toBeDisabled();
+    });
+    fireEvent.click(saveButton);
 
     await waitFor(() => {
       expect(mockUpdateSettingsConfig).toHaveBeenCalledWith({
@@ -337,10 +348,20 @@ describe("ShadowAI - SettingsPage", () => {
       expect(screen.getByText("Raw events (days)")).toBeInTheDocument();
     });
 
-    fireEvent.change(screen.getByLabelText("Raw events (days)"), {
-      target: { value: "60" },
+    // Same settings-sync race as the rate-limit test: edit only once the field
+    // holds the loaded value, and click only once Save has become enabled.
+    const rawEventsField = screen.getByLabelText("Raw events (days)") as HTMLInputElement;
+    await waitFor(() => {
+      expect(rawEventsField.value).toBe("30");
     });
-    fireEvent.click(screen.getByRole("button", { name: "Save retention settings" }));
+
+    fireEvent.change(rawEventsField, { target: { value: "60" } });
+
+    const saveButton = screen.getByRole("button", { name: "Save retention settings" });
+    await waitFor(() => {
+      expect(saveButton).not.toBeDisabled();
+    });
+    fireEvent.click(saveButton);
 
     await waitFor(() => {
       expect(mockUpdateSettingsConfig).toHaveBeenCalledWith({

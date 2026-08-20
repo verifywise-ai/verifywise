@@ -14,6 +14,28 @@ const baseProps = {
 const getForm = (container: HTMLElement) =>
   container.ownerDocument.body.querySelector("form") as HTMLFormElement;
 
+/**
+ * The authored emotion declarations for an element.
+ *
+ * Asserting these instead of `toHaveStyle` keeps the length-valued layout props
+ * testable across jsdom versions: jsdom 30 resolves `calc()` against the
+ * viewport (so `calc(100vh - 240px)` computes to `528px`), and cssstyle does not
+ * parse `min()` at all, which makes a `toHaveStyle` comparison either wrong or
+ * vacuous. The generated rule text is exactly what the component asked for.
+ */
+function emotionRuleFor(element: Element): string {
+  const sheetText = Array.from(element.ownerDocument.querySelectorAll("style[data-emotion]"))
+    .map((tag) => tag.textContent ?? "")
+    .join("");
+  const emotionClass = Array.from(element.classList).find((name) => name.startsWith("css-"));
+  if (!emotionClass) return "";
+
+  const start = sheetText.indexOf(`.${emotionClass}{`);
+  if (start === -1) return "";
+  const end = sheetText.indexOf("}", start);
+  return sheetText.slice(start, end === -1 ? undefined : end);
+}
+
 describe("StandardModal", () => {
   describe("open/close behaviour", () => {
     it("renders title, description and children when open", () => {
@@ -336,7 +358,7 @@ describe("StandardModal", () => {
         </StandardModal>,
       );
 
-      expect(getForm(container)).toHaveStyle({ maxHeight: "calc(100vh - 240px)" });
+      expect(emotionRuleFor(getForm(container))).toContain("max-height:calc(100vh - 240px)");
     });
 
     it("applies the expanded content max height", () => {
@@ -346,7 +368,9 @@ describe("StandardModal", () => {
         </StandardModal>,
       );
 
-      expect(getForm(container)).toHaveStyle({ maxHeight: "min(740px, calc(90vh - 180px))" });
+      expect(emotionRuleFor(getForm(container))).toContain(
+        "max-height:min(740px, calc(90vh - 180px))",
+      );
     });
 
     it("applies the fitContent max height, taking precedence over expandedHeight", () => {
@@ -356,7 +380,7 @@ describe("StandardModal", () => {
         </StandardModal>,
       );
 
-      expect(getForm(container)).toHaveStyle({ maxHeight: "calc(90vh - 180px)" });
+      expect(emotionRuleFor(getForm(container))).toContain("max-height:calc(90vh - 180px)");
     });
   });
 
