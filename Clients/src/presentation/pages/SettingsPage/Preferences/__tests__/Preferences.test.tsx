@@ -17,6 +17,10 @@ vi.mock("../../../../../application/hooks/useAuth", () => ({
   useAuth: () => ({ userId: 1 }),
 }));
 
+// The page now consolidates create + update into a single
+// updateCurrentUserPreferences({date_format, language}) call that hits
+// PATCH /users/me/preferences on the server. The old
+// createNewUserPreferences / updateUserPreferencesById split is gone.
 const mockUpdateCurrentUserPreferences = vi.fn();
 vi.mock("../../../../../application/repository/userPreferences.repository", () => ({
   updateCurrentUserPreferences: (...args: any[]) => mockUpdateCurrentUserPreferences(...args),
@@ -76,7 +80,7 @@ describe("Preferences", () => {
     expect(screen.getByText("Save").closest("button")).not.toBeDisabled();
   });
 
-  it("creates new preferences and shows success when isDefault is true", async () => {
+  it("saves preferences and shows the 'set' success when isDefault is true", async () => {
     mockHookState = { ...mockHookState, isDefault: true };
     mockUpdateCurrentUserPreferences.mockResolvedValue({ id: 1 });
     const user = userEvent.setup();

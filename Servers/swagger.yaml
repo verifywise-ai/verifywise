@@ -7682,6 +7682,8 @@ tags:
   -
     name: 'Evidence AI'
   -
+    name: Extensions
+  -
     name: FRIA
   -
     name: Files
@@ -7725,8 +7727,6 @@ tags:
     name: Observability
   -
     name: Organizations
-  -
-    name: Plugins
   -
     name: Policies
   -
@@ -12883,30 +12883,789 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
-  /dataset-bulk-upload/upload:
+  /extensions:
+    get:
+      summary: 'List Extensions'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: listExtensions
+      security:
+        -
+          bearerAuth: []
+  '/extensions/{key}':
+    get:
+      summary: 'Get Extension'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: getExtension
+      security:
+        -
+          bearerAuth: []
+  '/extensions/{key}/enable':
     post:
+      summary: 'Enable Extension'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: enableExtension
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin'
+  '/extensions/{key}/disable':
+    post:
+      summary: 'Disable Extension'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: disableExtension
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin'
+  '/extensions/{key}/configuration':
+    patch:
+      summary: 'Update Extension Configuration'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: updateExtensionConfiguration
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin'
+  '/extensions/{key}/test-connection':
+    post:
+      summary: 'Test Extension Connection'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: testExtensionConnection
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin'
+  /extensions/dataset-bulk-upload/upload:
+    post:
+      summary: 'Upload Dataset File'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
       tags:
         - Datasets
-      summary: 'Handle Multer Error'
       operationId: uploadDatasetFile
       security:
         -
           bearerAuth: []
       description: 'Requires role: Admin or Editor'
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
+  /extensions/risk-import/template:
+    get:
+      summary: 'Download Excel Template'
       responses:
-        '201':
-          description: 'Created successfully'
-        '401':
-          description: Unauthorized
-        '403':
-          description: 'Forbidden - insufficient role'
+        '200':
+          description: Success
         '500':
           description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: downloadExcelTemplate
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or Editor'
+  /extensions/risk-import/import:
+    post:
+      summary: 'Bulk Import Risks'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: bulkImportRisks
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin or Editor'
+  /extensions/slack/oauth/workspaces:
+    get:
+      summary: 'Get All Slack Webhooks'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: getAllSlackWebhooks
+      security:
+        -
+          bearerAuth: []
+    post:
+      summary: 'Create New Slack Webhook'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: createNewSlackWebhook
+      security:
+        -
+          bearerAuth: []
+  '/extensions/slack/oauth/workspaces/{id}':
+    get:
+      summary: 'Get Slack Webhook By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: getSlackWebhookById
+      security:
+        -
+          bearerAuth: []
+    patch:
+      summary: 'Update Slack Webhook By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: updateSlackWebhookById
+      security:
+        -
+          bearerAuth: []
+    delete:
+      summary: 'Delete Slack Webhook By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: deleteSlackWebhookById
+      security:
+        -
+          bearerAuth: []
+  '/extensions/slack/oauth/workspaces/{id}/send':
+    post:
+      summary: 'Send Slack Message'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: sendSlackMessage
+      security:
+        -
+          bearerAuth: []
+  /extensions/mlflow/models:
+    get:
+      summary: 'List Models'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: listModels
+      security:
+        -
+          bearerAuth: []
+  /extensions/mlflow/sync:
+    post:
+      summary: 'Sync From Mlflow'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: syncFromMlflow
+      security:
+        -
+          bearerAuth: []
+  '/extensions/mlflow/models/{modelId}':
+    get:
+      summary: 'Get Model By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: getModelById
+      security:
+        -
+          bearerAuth: []
+  /extensions/azure-ai-foundry/models:
+    get:
+      summary: 'List Deployments'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: listDeployments
+      security:
+        -
+          bearerAuth: []
+  /extensions/azure-ai-foundry/sync:
+    post:
+      summary: 'Sync From Azure'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: syncFromAzure
+      security:
+        -
+          bearerAuth: []
+  '/extensions/azure-ai-foundry/models/{deploymentId}':
+    get:
+      summary: 'Get Deployment By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: getDeploymentById
+      security:
+        -
+          bearerAuth: []
+  /extensions/azure-ai-foundry/discover:
+    get:
+      summary: 'Discover Ai Agents'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: discoverAiAgents
+      security:
+        -
+          bearerAuth: []
+  /extensions/jira-assets/config:
+    get:
+      summary: 'Get Config'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: getConfig
+      security:
+        -
+          bearerAuth: []
+    post:
+      summary: 'Post Config'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: postConfig
+      security:
+        -
+          bearerAuth: []
+  /extensions/jira-assets/vw-attributes:
+    get:
+      summary: 'Get Vw Attributes'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: getVwAttributes
+      security:
+        -
+          bearerAuth: []
+  /extensions/jira-assets/schemas:
+    get:
+      summary: 'Get Schemas'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: getSchemas
+      security:
+        -
+          bearerAuth: []
+  '/extensions/jira-assets/schemas/{schemaId}/object-types':
+    get:
+      summary: 'Get Object Types'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: getObjectTypes
+      security:
+        -
+          bearerAuth: []
+  '/extensions/jira-assets/object-types/{objectTypeId}/attributes':
+    get:
+      summary: 'Get Attributes'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: getAttributes
+      security:
+        -
+          bearerAuth: []
+  '/extensions/jira-assets/object-types/{objectTypeId}/objects':
+    get:
+      summary: 'Get Objects'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: getObjects
+      security:
+        -
+          bearerAuth: []
+  /extensions/jira-assets/import:
+    post:
+      summary: 'Post Import'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: postImport
+      security:
+        -
+          bearerAuth: []
+  /extensions/jira-assets/sync:
+    post:
+      summary: 'Post Sync'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: postSync
+      security:
+        -
+          bearerAuth: []
+  /extensions/jira-assets/sync/status:
+    get:
+      summary: 'Get Sync Status Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: getSyncStatusCtrl
+      security:
+        -
+          bearerAuth: []
+  /extensions/jira-assets/sync/history:
+    get:
+      summary: 'Get Sync History Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: getSyncHistoryCtrl
+      security:
+        -
+          bearerAuth: []
+  /extensions/jira-assets/use-cases:
+    get:
+      summary: 'List Use Cases Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: listUseCasesCtrl
+      security:
+        -
+          bearerAuth: []
+  '/extensions/jira-assets/use-cases/{id}':
+    get:
+      summary: 'Get Use Case Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: getUseCaseCtrl
+      security:
+        -
+          bearerAuth: []
+    delete:
+      summary: 'Delete Use Case Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: deleteUseCaseCtrl
+      security:
+        -
+          bearerAuth: []
+  '/extensions/jira-assets/projects/{projectId}/custom-frameworks-progress':
+    get:
+      summary: 'Get Custom Frameworks Progress Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: getCustomFrameworksProgressCtrl
+      security:
+        -
+          bearerAuth: []
+  /extensions/model-lifecycle/config:
+    get:
+      summary: 'List Config'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: listConfig
+      security:
+        -
+          bearerAuth: []
+  /extensions/model-lifecycle/phases:
+    post:
+      summary: 'Create Phase Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: createPhaseCtrl
+      security:
+        -
+          bearerAuth: []
+  /extensions/model-lifecycle/phases/reorder:
+    put:
+      summary: 'Reorder Phases Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: reorderPhasesCtrl
+      security:
+        -
+          bearerAuth: []
+  '/extensions/model-lifecycle/phases/{id}':
+    put:
+      summary: 'Update Phase Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: updatePhaseCtrl
+      security:
+        -
+          bearerAuth: []
+    delete:
+      summary: 'Delete Phase Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: deletePhaseCtrl
+      security:
+        -
+          bearerAuth: []
+  '/extensions/model-lifecycle/phases/{phaseId}/items':
+    post:
+      summary: 'Create Item Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: createItemCtrl
+      security:
+        -
+          bearerAuth: []
+  '/extensions/model-lifecycle/phases/{phaseId}/items/reorder':
+    put:
+      summary: 'Reorder Items Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: reorderItemsCtrl
+      security:
+        -
+          bearerAuth: []
+  '/extensions/model-lifecycle/items/{id}':
+    put:
+      summary: 'Update Item Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: updateItemCtrl
+      security:
+        -
+          bearerAuth: []
+    delete:
+      summary: 'Delete Item Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: deleteItemCtrl
+      security:
+        -
+          bearerAuth: []
+  '/extensions/model-lifecycle/models/{id}/lifecycle':
+    get:
+      summary: 'Get Lifecycle Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: getLifecycleCtrl
+      security:
+        -
+          bearerAuth: []
+  '/extensions/model-lifecycle/models/{id}/lifecycle/progress':
+    get:
+      summary: 'Get Progress Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: getProgressCtrl
+      security:
+        -
+          bearerAuth: []
+  '/extensions/model-lifecycle/models/{id}/lifecycle/items/{itemId}':
+    put:
+      summary: 'Upsert Value Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: upsertValueCtrl
+      security:
+        -
+          bearerAuth: []
+  '/extensions/model-lifecycle/models/{id}/lifecycle/items/{itemId}/files':
+    post:
+      summary: 'Attach File Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: attachFileCtrl
+      security:
+        -
+          bearerAuth: []
+  '/extensions/model-lifecycle/models/{id}/lifecycle/items/{itemId}/files/{fileId}':
+    delete:
+      summary: 'Detach File Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: detachFileCtrl
+      security:
+        -
+          bearerAuth: []
+  '/extensions/model-lifecycle/models/{id}/lifecycle/items/{itemId}/people':
+    post:
+      summary: 'Add Person Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: addPersonCtrl
+      security:
+        -
+          bearerAuth: []
+  '/extensions/model-lifecycle/models/{id}/lifecycle/items/{itemId}/people/{userId}':
+    delete:
+      summary: 'Remove Person Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: removePersonCtrl
+      security:
+        -
+          bearerAuth: []
+  '/extensions/model-lifecycle/models/{id}/lifecycle/items/{itemId}/approvals':
+    post:
+      summary: 'Add Approver Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: addApproverCtrl
+      security:
+        -
+          bearerAuth: []
+  '/extensions/model-lifecycle/models/{id}/lifecycle/items/{itemId}/approvals/{userId}':
+    put:
+      summary: 'Update Approval Status Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: updateApprovalStatusCtrl
+      security:
+        -
+          bearerAuth: []
+    delete:
+      summary: 'Remove Approver Ctrl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Extensions
+      operationId: removeApproverCtrl
+      security:
+        -
+          bearerAuth: []
   '/model-inventory-change-history/{id}':
     get:
       tags:
@@ -15057,7 +15816,7 @@ paths:
       tags:
         - Integrations
       summary: 'Get All Slack Webhooks'
-      operationId: getAllSlackWebhooks
+      operationId: slackWebhooks_getAllSlackWebhooks
       security:
         -
           bearerAuth: []
@@ -15072,7 +15831,7 @@ paths:
       tags:
         - Integrations
       summary: 'Create New Slack Webhook'
-      operationId: createNewSlackWebhook
+      operationId: slackWebhooks_createNewSlackWebhook
       security:
         -
           bearerAuth: []
@@ -15093,7 +15852,7 @@ paths:
       tags:
         - Integrations
       summary: 'Get Slack Webhook By Id'
-      operationId: getSlackWebhookById
+      operationId: slackWebhooks_getSlackWebhookById
       security:
         -
           bearerAuth: []
@@ -15115,7 +15874,7 @@ paths:
       tags:
         - Integrations
       summary: 'Update Slack Webhook By Id'
-      operationId: updateSlackWebhookById
+      operationId: slackWebhooks_updateSlackWebhookById
       security:
         -
           bearerAuth: []
@@ -15142,7 +15901,7 @@ paths:
       tags:
         - Integrations
       summary: 'Delete Slack Webhook By Id'
-      operationId: deleteSlackWebhookById
+      operationId: slackWebhooks_deleteSlackWebhookById
       security:
         -
           bearerAuth: []
@@ -15165,7 +15924,7 @@ paths:
       tags:
         - Integrations
       summary: 'Send Slack Message'
-      operationId: sendSlackMessage
+      operationId: slackWebhooks_sendSlackMessage
       security:
         -
           bearerAuth: []
@@ -15184,222 +15943,6 @@ paths:
       responses:
         '201':
           description: 'Created successfully'
-        '401':
-          description: Unauthorized
-        '500':
-          description: 'Internal server error'
-  /plugins/marketplace:
-    get:
-      tags:
-        - Plugins
-      summary: 'Get All Plugins'
-      operationId: getAllPlugins
-      security:
-        -
-          bearerAuth: []
-      responses:
-        '200':
-          description: Success
-        '401':
-          description: Unauthorized
-        '500':
-          description: 'Internal server error'
-  '/plugins/marketplace/{key}':
-    get:
-      tags:
-        - Plugins
-      summary: 'Get Plugin By Key'
-      operationId: getPluginByKey
-      security:
-        -
-          bearerAuth: []
-      parameters:
-        -
-          name: key
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Success
-        '401':
-          description: Unauthorized
-        '500':
-          description: 'Internal server error'
-  /plugins/marketplace/search:
-    get:
-      tags:
-        - Plugins
-      summary: 'Search Plugins'
-      operationId: searchPlugins
-      security:
-        -
-          bearerAuth: []
-      responses:
-        '200':
-          description: Success
-        '401':
-          description: Unauthorized
-        '500':
-          description: 'Internal server error'
-  /plugins/categories:
-    get:
-      tags:
-        - Plugins
-      summary: 'Get Categories'
-      operationId: getCategories
-      security:
-        -
-          bearerAuth: []
-      responses:
-        '200':
-          description: Success
-        '401':
-          description: Unauthorized
-        '500':
-          description: 'Internal server error'
-  /plugins/install:
-    post:
-      tags:
-        - Plugins
-      summary: 'Install Plugin'
-      operationId: installPlugin
-      security:
-        -
-          bearerAuth: []
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        '201':
-          description: 'Created successfully'
-        '401':
-          description: Unauthorized
-        '500':
-          description: 'Internal server error'
-  '/plugins/installations/{id}':
-    delete:
-      tags:
-        - Plugins
-      summary: 'Uninstall Plugin'
-      operationId: uninstallPlugin
-      security:
-        -
-          bearerAuth: []
-      parameters:
-        -
-          name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: 'Deleted successfully'
-        '401':
-          description: Unauthorized
-        '500':
-          description: 'Internal server error'
-  /plugins/installations:
-    get:
-      tags:
-        - Plugins
-      summary: 'Get Installed Plugins'
-      operationId: getInstalledPlugins
-      security:
-        -
-          bearerAuth: []
-      responses:
-        '200':
-          description: Success
-        '401':
-          description: Unauthorized
-        '500':
-          description: 'Internal server error'
-  '/plugins/installations/{id}/configuration':
-    put:
-      tags:
-        - Plugins
-      summary: 'Update Plugin Configuration'
-      operationId: updatePluginConfiguration
-      security:
-        -
-          bearerAuth: []
-      parameters:
-        -
-          name: id
-          in: path
-          required: true
-          schema:
-            type: integer
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        '200':
-          description: Success
-        '401':
-          description: Unauthorized
-        '500':
-          description: 'Internal server error'
-  '/plugins/{key}/test-connection':
-    post:
-      tags:
-        - Plugins
-      summary: 'Test Plugin Connection'
-      operationId: testPluginConnection
-      security:
-        -
-          bearerAuth: []
-      parameters:
-        -
-          name: key
-          in: path
-          required: true
-          schema:
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        '201':
-          description: 'Created successfully'
-        '401':
-          description: Unauthorized
-        '500':
-          description: 'Internal server error'
-  '/plugins/{key}/ui/dist/{filename}':
-    get:
-      tags:
-        - Plugins
-      summary: 'Serve plugin UI assets'
-      operationId: plugins_anonymous
-      security:
-        -
-          bearerAuth: []
-      parameters:
-        -
-          name: key
-          in: path
-          required: true
-          schema:
-            type: string
-        -
-          name: filename
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Success
         '401':
           description: Unauthorized
         '500':

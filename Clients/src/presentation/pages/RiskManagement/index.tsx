@@ -36,9 +36,9 @@ import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import { GroupedTableView } from "../../components/Table/GroupedTableView";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
 import { useEntityChangeHistory } from "../../../application/hooks/useEntityChangeHistory";
-import { PluginSlot } from "../../components/PluginSlot";
-import { PLUGIN_SLOTS } from "../../../domain/constants/pluginSlots";
-import { apiServices } from "../../../infrastructure/api/networkServices";
+import { useExtensions } from "../../../application/contexts/Extensions.context";
+import RiskImportMenuItem from "../Extensions/risk-import/RiskImportMenuItem";
+import RiskImportModal from "../Extensions/risk-import/RiskImportModal";
 import {
   riskMainStackStyle,
   riskFilterRowStyle,
@@ -76,6 +76,7 @@ const RiskManagement = () => {
   const hasProcessedUrlParam = useRef(false);
   const { userRoleName } = useAuth();
   const { users, loading: usersLoading } = useUsers();
+  const { isEnabled } = useExtensions();
   const [refreshKey, setRefreshKey] = useState(0); // Add refreshKey state
   const [projectRisks, setProjectRisks] = useState<RiskModel[]>([]);
   const [selectedRow, setSelectedRow] = useState<RiskModel[]>([]);
@@ -956,37 +957,27 @@ const RiskManagement = () => {
                     <img src={mitLogo} alt="" style={riskMenuItemLogoStyle} />
                   </Box>
 
-                  {/* Plugin Slot for Risk Import menu items */}
-                  <PluginSlot
-                    id={PLUGIN_SLOTS.RISKS_ACTIONS}
-                    renderType="menuitem"
-                    slotProps={{
-                      onMenuClose: handleInsertFromMenuClose,
-                      onImportComplete: () => setRefreshKey((prev) => prev + 1),
-                      onTriggerModal: (modalName: string) => {
-                        if (modalName === "RiskImportModal") {
-                          setIsImportModalOpen(true);
-                        }
-                      },
-                    }}
-                  />
+                  {isEnabled("risk-import") && (
+                    <RiskImportMenuItem
+                      onClick={() => {
+                        handleInsertFromMenuClose();
+                        setIsImportModalOpen(true);
+                      }}
+                    />
+                  )}
                 </Box>
               </Popover>
 
-              {/* Plugin modals rendered outside Popover so they persist when menu closes */}
-              <PluginSlot
-                id={PLUGIN_SLOTS.RISKS_ACTIONS}
-                renderType="modal"
-                slotProps={{
-                  open: isImportModalOpen,
-                  onClose: () => setIsImportModalOpen(false),
-                  onImportComplete: () => {
+              {isEnabled("risk-import") && (
+                <RiskImportModal
+                  open={isImportModalOpen}
+                  onClose={() => setIsImportModalOpen(false)}
+                  onImportComplete={() => {
                     setRefreshKey((prev) => prev + 1);
                     setIsImportModalOpen(false);
-                  },
-                  apiServices,
-                }}
-              />
+                  }}
+                />
+              )}
             </div>
           </Stack>
         </Stack>

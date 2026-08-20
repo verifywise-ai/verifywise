@@ -21,6 +21,7 @@ import YAML from "yamljs";
 const SERVERS_DIR = path.resolve(__dirname, "..");
 const APP_FILE = path.join(SERVERS_DIR, "app.ts");
 const ROUTES_DIR = path.join(SERVERS_DIR, "routes");
+const EXTENSIONS_DIR = path.join(SERVERS_DIR, "extensions");
 const SWAGGER_FILE = path.join(SERVERS_DIR, "swagger.yaml");
 
 interface RawEndpoint {
@@ -91,34 +92,58 @@ export function parseAppFile(): RouteRegistration[] {
 // ---------------------------------------------------------------------------
 export function findRouteFile(importName: string): string | null {
   const content = fs.readFileSync(APP_FILE, "utf-8");
-  const importPathRegex = /from\s+"\.\/routes\/([^"]+)";/g;
+  // Match imports from either the legacy `./routes/` folder or the newer
+  // `./extensions/<key>/` layout — both register Express routers.
+  const importPathRegex = /from\s+"\.\/(routes|extensions)\/([^"]+)";/g;
 
   const allImportLines = content
     .split("\n")
-    .filter((line) => line.includes("import") && line.includes("./routes/"));
+    .filter(
+      (line) =>
+        line.includes("import") && (line.includes("./routes/") || line.includes("./extensions/")),
+    );
 
   for (const line of allImportLines) {
     if (line.includes(importName)) {
+      let subdir: string | undefined;
       let fileRef: string | undefined;
       let match: RegExpExecArray | null;
+      importPathRegex.lastIndex = 0;
       while ((match = importPathRegex.exec(line)) !== null) {
-        fileRef = match[1];
+        subdir = match[1];
+        fileRef = match[2];
       }
-      if (!fileRef) continue;
+      if (!subdir || !fileRef) continue;
       if (fileRef.endsWith(".js")) fileRef = fileRef.slice(0, -3);
-      const candidate = path.join(ROUTES_DIR, fileRef + ".ts");
+      const candidate = path.join(SERVERS_DIR, subdir, fileRef + ".ts");
       if (fs.existsSync(candidate)) return candidate;
     }
   }
 
-  // Fallback: match import name against route file names
-  const possibleFiles = fs.readdirSync(ROUTES_DIR).filter((f) => f.endsWith(".route.ts"));
+  // Fallback: match import name against .route.ts filenames under both
+  // ./routes and ./extensions/*/.
+  const routeCandidates = fs.readdirSync(ROUTES_DIR).filter((f) => f.endsWith(".route.ts"));
+  const extensionCandidates: string[] = [];
+  if (fs.existsSync(EXTENSIONS_DIR)) {
+    for (const dir of fs.readdirSync(EXTENSIONS_DIR)) {
+      const extDir = path.join(EXTENSIONS_DIR, dir);
+      if (!fs.statSync(extDir).isDirectory()) continue;
+      for (const f of fs.readdirSync(extDir)) {
+        if (f.endsWith(".route.ts")) extensionCandidates.push(path.join(dir, f));
+      }
+    }
+  }
   const normalizedImport = importName.toLowerCase().replace("routes", "");
-
-  for (const f of possibleFiles) {
+  for (const f of routeCandidates) {
     const baseName = f.replace(".route.ts", "").toLowerCase();
     if (normalizedImport.includes(baseName) || baseName.includes(normalizedImport)) {
       return path.join(ROUTES_DIR, f);
+    }
+  }
+  for (const relPath of extensionCandidates) {
+    const baseName = path.basename(relPath).replace(".route.ts", "").toLowerCase();
+    if (normalizedImport.includes(baseName) || baseName.includes(normalizedImport)) {
+      return path.join(EXTENSIONS_DIR, relPath);
     }
   }
 
@@ -347,7 +372,7 @@ export function deriveTag(basePath: string): string {
     "/api/modelInventory": "Model Inventory",
     "/api/modelInventoryHistory": "Model Inventory",
     "/api/datasets": "Datasets",
-    "/api/dataset-bulk-upload": "Datasets",
+    "/api/extensions/dataset-bulk-upload": "Datasets",
     "/api/dataset-change-history": "Datasets",
     "/api/policies": "Policies",
     "/api/tasks": "Tasks",
@@ -377,7 +402,13 @@ export function deriveTag(basePath: string): string {
     "/api/approval-workflows": "Approval Workflows",
     "/api/approval-requests": "Approval Workflows",
     "/api/automations": "Automations",
-    "/api/plugins": "Plugins",
+    "/api/extensions": "Extensions",
+    "/api/extensions/slack": "Extensions",
+    "/api/extensions/mlflow": "Extensions",
+    "/api/extensions/azure-ai-foundry": "Extensions",
+    "/api/extensions/jira-assets": "Extensions",
+    "/api/extensions/model-lifecycle": "Extensions",
+    "/api/extensions/risk-import": "Extensions",
     "/api/notifications": "Notifications",
     "/api/entity-graph": "Entity Graph",
     "/api/evidenceHub": "Evidence",

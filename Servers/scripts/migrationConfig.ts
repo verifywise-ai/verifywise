@@ -29,7 +29,11 @@ export const MIGRATION_TABLE_ORDER = {
     "invitations",
     "notes",
     "share_links",
-    "plugin_installations",
+    // Extensions system (replaced plugin_installations, dropped in the
+    // extensions migration 20260811102307).
+    "extensions",
+    "extension_config_fields",
+    "extension_enablements",
     "automations",
     "event_logs",
     "slack_webhooks",

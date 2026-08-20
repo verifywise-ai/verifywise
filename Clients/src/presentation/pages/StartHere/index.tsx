@@ -154,10 +154,10 @@ const EXPLORE_CARDS = [
     path: "/training",
   },
   {
-    title: "Plugins",
-    desc: "Extend with SOC 2, GDPR, HIPAA, Jira, Slack, and more.",
+    title: "Extensions",
+    desc: "Enable Slack, MLflow, Azure AI Foundry, Jira Assets, and more.",
     color: "#1565C0",
-    path: "/plugins",
+    path: "/extensions",
   },
 ] as const;
 

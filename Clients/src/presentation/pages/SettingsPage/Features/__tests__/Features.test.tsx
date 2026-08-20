@@ -34,11 +34,13 @@ describe("Features", () => {
     mockModeLoading = false;
   });
 
-  it("renders the Features heading and cards", () => {
+  it("renders the Features heading and the Quantitative Risk Assessment card", () => {
+    // Model Lifecycle and Manage-plugins entries were removed from this
+    // page in the extensions refactor — Model Lifecycle now lives in the
+    // extensions catalog and plugin management is gone entirely.
     renderWithProviders(<Features />);
     expect(screen.getByText("Features")).toBeInTheDocument();
     expect(screen.getByText("Quantitative Risk Assessment")).toBeInTheDocument();
-    expect(screen.getByText("Model Lifecycle")).toBeInTheDocument();
   });
 
   it("shows the qualitative description when the mode is disabled", () => {
@@ -83,9 +85,7 @@ describe("Features", () => {
     });
   });
 
-  it("navigates to /plugins when Manage plugins is clicked", () => {
-    renderWithProviders(<Features />);
-    fireEvent.click(screen.getByText("Manage plugins"));
-    expect(mockNavigate).toHaveBeenCalledWith("/plugins");
-  });
+  // The "Manage plugins" navigation entry was removed with the plugin
+  // system. Extensions are managed at /extensions via the header
+  // AppSwitcher, not from this Features page.
 });

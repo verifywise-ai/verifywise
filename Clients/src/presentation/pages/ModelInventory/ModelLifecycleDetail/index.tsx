@@ -1,24 +1,16 @@
-/**
- * ModelLifecycleDetail - Renders the model lifecycle plugin content
- * Route: /model-inventory/models/:id
- *
- * This component serves as a container for the model-lifecycle plugin.
- * It renders the plugin's UI via PluginSlot.
- */
-
 import { useParams } from "react-router";
-import { PluginSlot } from "../../../components/PluginSlot";
-import { PLUGIN_SLOTS } from "../../../../domain/constants/pluginSlots";
+import { useExtensions } from "../../../../application/contexts/Extensions.context";
+import ModelLifecycleDetail from "../../Extensions/model-lifecycle/ModelLifecycleDetail";
 
-function ModelLifecycleDetail() {
+function ModelLifecycleDetailPage() {
   const { id } = useParams<{ id: string }>();
   const modelId = id ? parseInt(id) : null;
+  const { isEnabled } = useExtensions();
 
-  if (!modelId) {
-    return null;
-  }
+  if (!modelId) return null;
+  if (!isEnabled("model-lifecycle")) return null;
 
-  return <PluginSlot id={PLUGIN_SLOTS.MODEL_DETAIL_LIFECYCLE} slotProps={{ modelId }} />;
+  return <ModelLifecycleDetail modelId={modelId} />;
 }
 
-export default ModelLifecycleDetail;
+export default ModelLifecycleDetailPage;

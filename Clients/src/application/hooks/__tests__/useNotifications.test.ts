@@ -23,6 +23,23 @@ vi.mock("../../../infrastructure/api/customAxios", () => ({
   showAlert: vi.fn(),
 }));
 
+// The hook now gates every fetch on `organizationId` from useAuth (added
+// so bootstrap SuperAdmin — org=null — doesn't spam org-scoped endpoints).
+// The test store uses "mock-token" as the JWT string, which decodes to
+// null. Stub useAuth so tests see a fully-authenticated org user; the
+// gate itself has its own coverage in the extension test suite.
+vi.mock("../useAuth", () => ({
+  useAuth: () => ({
+    token: "mock-token",
+    userToken: { organizationId: "1", id: "1", roleName: "Admin" },
+    userRoleName: "Admin",
+    userId: 1,
+    organizationId: 1,
+    isAuthenticated: true,
+    isSuperAdmin: false,
+  }),
+}));
+
 import { useNotifications } from "../useNotifications";
 import authReducer from "../../redux/auth/authSlice";
 import uiSlice from "../../redux/ui/uiSlice";

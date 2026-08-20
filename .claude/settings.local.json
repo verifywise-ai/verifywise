@@ -129,7 +129,25 @@
       "Bash(pkill -9 -f 'node dist/index.js')",
       "Bash(cat)",
       "Bash(git check-ignore *)",
-      "Bash(docker manifest *)"
+      "Bash(docker manifest *)",
+      "Bash(/usr/bin/tail *)",
+      "Bash(/usr/bin/grep -E \"^FAIL|Cannot find module|from '\\\\.\\\\./services/plugin|plugin\\\\.route\\\\|plugin\\\\.ctrl\\\\|plugin\\\\.utils\\\\|pluginInstallation\" /private/tmp/claude-501/-Users-harsh-Data-vw-verifywise/3c8da6ed-9f2d-4f6d-a488-f43adf7e3f1f/tasks/bmv7b976q.output)",
+      "Bash(/usr/bin/head -30)",
+      "Bash(/usr/bin/grep -E \"^FAIL \" /private/tmp/claude-501/-Users-harsh-Data-vw-verifywise/3c8da6ed-9f2d-4f6d-a488-f43adf7e3f1f/tasks/bmv7b976q.output)",
+      "Bash(/usr/bin/head -50)",
+      "Bash(/usr/bin/grep -E \"FAIL \" /private/tmp/claude-501/-Users-harsh-Data-vw-verifywise/3c8da6ed-9f2d-4f6d-a488-f43adf7e3f1f/tasks/bmv7b976q.output)",
+      "Bash(/usr/bin/grep -iE \"fail|error\" /private/tmp/claude-501/-Users-harsh-Data-vw-verifywise/3c8da6ed-9f2d-4f6d-a488-f43adf7e3f1f/tasks/bmv7b976q.output)",
+      "Bash(/usr/bin/head *)",
+      "Bash(/usr/bin/grep \"^ *● \")",
+      "Bash(npx --prefix Servers tsc -p Servers --noEmit)",
+      "Bash(tee /tmp/tsc-servers.log)",
+      "Bash(fc -l -200)",
+      "Bash(docker volume *)",
+      "Bash(brew services *)",
+      "Read(//Users/harsh/.ssh/**)",
+      "Bash(zcat ~/.ssh/dump.sql.gz)",
+      "Bash(xattr Servers/temp/handoff/)",
+      "Bash(chmod +w Servers/temp/handoff/)"
     ]
   }
 }

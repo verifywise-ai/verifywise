@@ -54,11 +54,6 @@ jest.mock("../../utils/useCaseChangeHistory.utils", () => ({
   recordMultipleFieldChanges: jest.fn().mockResolvedValue(undefined),
   recordUseCaseDeletion: jest.fn().mockResolvedValue(undefined),
 }));
-jest.mock("../../services/plugin/pluginService", () => ({
-  PluginService: {
-    getDataFromProviders: jest.fn().mockResolvedValue([]),
-  },
-}));
 jest.mock("../../services/userNotification/projectNotifications", () => ({
   sendProjectCreatedNotification: jest.fn().mockResolvedValue(undefined),
   sendUserAddedToProjectNotification: jest.fn().mockResolvedValue(undefined),

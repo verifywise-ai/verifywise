@@ -43,12 +43,6 @@ vi.mock("react", async () => {
   };
 });
 
-vi.mock("../../../../application/contexts/PluginRegistry.context", () => ({
-  usePluginRegistry: () => ({
-    getComponentsForSlot: () => [],
-  }),
-}));
-
 // Mock repositories
 const mockGetAllEntities = vi.fn();
 vi.mock("../../../../application/repository/entity.repository", () => ({
@@ -142,9 +136,6 @@ vi.mock("../../../components/PageTour", () => ({
 vi.mock("../../../components/TabBar", () => ({
   default: () => <div data-testid="tab-bar" />,
 }));
-vi.mock("../../../components/PluginSlot", () => ({
-  PluginSlot: () => <div data-testid="plugin-slot" />,
-}));
 vi.mock("../../../components/button/customizable-button", () => ({
   CustomizableButton: ({ text, onClick, isDisabled }: any) => (
     <button onClick={onClick} disabled={isDisabled}>
@@ -177,10 +168,6 @@ vi.mock("../../../../application/constants/permissions", () => ({
     frameworks: { manage: ["Admin"] },
     projects: { create: ["Admin"], edit: ["Admin"], delete: ["Admin"] },
   },
-}));
-
-vi.mock("../../../../domain/constants/pluginSlots", () => ({
-  PLUGIN_SLOTS: { CONTROLS_CUSTOM_FRAMEWORK: "controls-custom-framework" },
 }));
 
 vi.mock("../../../components/Forms/ProjectForm/constants", () => ({

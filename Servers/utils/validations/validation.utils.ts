@@ -521,8 +521,10 @@ export const VENDOR_RISK_ENUMS = {
   RISK_SEVERITY: ["Negligible", "Minor", "Moderate", "Major", "Catastrophic"] as const,
 } as const;
 
-/** Matches valid plugin keys: lowercase alphanumeric + hyphens, 1-64 chars */
-export const PLUGIN_KEY_PATTERN = /^[a-z0-9][a-z0-9\-]{0,63}$/;
+/** Matches valid extension keys: lowercase alphanumeric + hyphens, 1-64 chars.
+ * Must stay in sync with the CHECK constraint on verifywise.extensions.key
+ * (see migration 20260811102307-extensions-migration.js). */
+export const EXTENSION_KEY_PATTERN = /^[a-z0-9][a-z0-9\-]{0,63}$/;
 
 /**
  * Strips characters that could corrupt structured logs (CSV, JSON).
