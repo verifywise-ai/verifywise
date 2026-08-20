@@ -20,7 +20,13 @@ const baseGroups: GroupedSelectGroup[] = [
 describe("GroupedSelect", () => {
   it("renders the label", () => {
     renderWithProviders(
-      <GroupedSelect id="test" label="Choose dataset" value="" groups={baseGroups} onChange={vi.fn()} />,
+      <GroupedSelect
+        id="test"
+        label="Choose dataset"
+        value=""
+        groups={baseGroups}
+        onChange={vi.fn()}
+      />,
     );
 
     expect(screen.getByText("Choose dataset")).toBeInTheDocument();
@@ -117,7 +123,13 @@ describe("GroupedSelect", () => {
   it("shows a custom empty-state message", async () => {
     const user = userEvent.setup();
     renderWithProviders(
-      <GroupedSelect id="test" value="" groups={[]} emptyText="Nothing here yet" onChange={vi.fn()} />,
+      <GroupedSelect
+        id="test"
+        value=""
+        groups={[]}
+        emptyText="Nothing here yet"
+        onChange={vi.fn()}
+      />,
     );
 
     await user.click(screen.getByRole("combobox"));

@@ -75,7 +75,11 @@ describe("ReviewerMultiSelect", () => {
 
   it("renders the error message", () => {
     renderWithProviders(
-      <ReviewerMultiSelect selected={[]} setSelected={vi.fn()} error="Select at least one reviewer" />,
+      <ReviewerMultiSelect
+        selected={[]}
+        setSelected={vi.fn()}
+        error="Select at least one reviewer"
+      />,
     );
 
     expect(screen.getByText("Select at least one reviewer")).toBeInTheDocument();

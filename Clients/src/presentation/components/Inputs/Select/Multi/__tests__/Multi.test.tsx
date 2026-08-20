@@ -34,7 +34,12 @@ describe("CustomizableMultiSelect", () => {
 
   it("renders selected items as chips", () => {
     renderWithProviders(
-      <CustomizableMultiSelect label="Reviewers" value={[1, 2]} items={baseItems} onChange={vi.fn()} />,
+      <CustomizableMultiSelect
+        label="Reviewers"
+        value={[1, 2]}
+        items={baseItems}
+        onChange={vi.fn()}
+      />,
     );
 
     expect(screen.getByText("Alice Smith")).toBeInTheDocument();
@@ -66,7 +71,12 @@ describe("CustomizableMultiSelect", () => {
   it("filters already-selected items out of the dropdown options", async () => {
     const user = userEvent.setup();
     renderWithProviders(
-      <CustomizableMultiSelect label="Reviewers" value={[1]} items={baseItems} onChange={vi.fn()} />,
+      <CustomizableMultiSelect
+        label="Reviewers"
+        value={[1]}
+        items={baseItems}
+        onChange={vi.fn()}
+      />,
     );
 
     await user.click(screen.getByRole("combobox"));
@@ -79,7 +89,12 @@ describe("CustomizableMultiSelect", () => {
     const handleChange = vi.fn();
     const user = userEvent.setup();
     renderWithProviders(
-      <CustomizableMultiSelect label="Reviewers" value={[]} items={baseItems} onChange={handleChange} />,
+      <CustomizableMultiSelect
+        label="Reviewers"
+        value={[]}
+        items={baseItems}
+        onChange={handleChange}
+      />,
     );
 
     await user.click(screen.getByRole("combobox"));

@@ -16,7 +16,15 @@ vi.mock("../../../AddNewRiskForm", () => ({
 }));
 
 vi.mock("../../../Modals/StandardModal", () => ({
-  default: ({ children, isOpen, title }: { children: React.ReactNode; isOpen: boolean; title: string }) =>
+  default: ({
+    children,
+    isOpen,
+    title,
+  }: {
+    children: React.ReactNode;
+    isOpen: boolean;
+    title: string;
+  }) =>
     isOpen ? (
       <div data-testid="standard-modal">
         <div>{title}</div>

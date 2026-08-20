@@ -150,7 +150,10 @@ describe("useLinkedRisks", () => {
 
       expect(result.current.deletedRisks).toEqual([5]);
       expect(onAlert).toHaveBeenCalledWith(
-        expect.objectContaining({ variant: "info", body: expect.stringContaining("marked for removal") }),
+        expect.objectContaining({
+          variant: "info",
+          body: expect.stringContaining("marked for removal"),
+        }),
       );
     });
   });

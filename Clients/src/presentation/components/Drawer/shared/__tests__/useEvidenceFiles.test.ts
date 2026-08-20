@@ -152,7 +152,10 @@ describe("useEvidenceFiles", () => {
       expect(result.current.evidenceFiles).toHaveLength(0);
       expect(result.current.deletedFileIds).toEqual([3]);
       expect(onAlert).toHaveBeenLastCalledWith(
-        expect.objectContaining({ variant: "info", body: expect.stringContaining("marked for deletion") }),
+        expect.objectContaining({
+          variant: "info",
+          body: expect.stringContaining("marked for deletion"),
+        }),
       );
     });
 
@@ -231,7 +234,10 @@ describe("useEvidenceFiles", () => {
       });
 
       expect(onAlert).toHaveBeenCalledWith(
-        expect.objectContaining({ variant: "error", body: expect.stringContaining("Failed to download") }),
+        expect.objectContaining({
+          variant: "error",
+          body: expect.stringContaining("Failed to download"),
+        }),
       );
     });
   });

@@ -57,14 +57,20 @@ function baseProps(overrides: Partial<React.ComponentProps<typeof WorkflowFields
 describe("WorkflowFields", () => {
   it("renders the rich text editor with the implementation description content", () => {
     renderWithProviders(
-      <WorkflowFields {...baseProps({ formData: { ...baseFormData, implementation_description: "Existing desc" } })} />,
+      <WorkflowFields
+        {...baseProps({
+          formData: { ...baseFormData, implementation_description: "Existing desc" },
+        })}
+      />,
     );
 
     expect(screen.getByTestId("editor-initial")).toHaveTextContent("Existing desc");
   });
 
   it("hides the implementation description block when showImplementationDescription is false", () => {
-    renderWithProviders(<WorkflowFields {...baseProps({ showImplementationDescription: false })} />);
+    renderWithProviders(
+      <WorkflowFields {...baseProps({ showImplementationDescription: false })} />,
+    );
 
     expect(screen.queryByTestId("rich-text-editor")).not.toBeInTheDocument();
   });
