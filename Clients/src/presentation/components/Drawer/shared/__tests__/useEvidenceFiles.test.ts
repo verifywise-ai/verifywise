@@ -199,8 +199,8 @@ describe("useEvidenceFiles", () => {
     beforeEach(() => {
       createObjectURL = vi.fn().mockReturnValue("blob:mock-url");
       revokeObjectURL = vi.fn();
-      window.URL.createObjectURL = createObjectURL;
-      window.URL.revokeObjectURL = revokeObjectURL;
+      window.URL.createObjectURL = createObjectURL as unknown as typeof window.URL.createObjectURL;
+      window.URL.revokeObjectURL = revokeObjectURL as unknown as typeof window.URL.revokeObjectURL;
       clickSpy = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
     });
 

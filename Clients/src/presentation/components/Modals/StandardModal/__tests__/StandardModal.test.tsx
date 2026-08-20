@@ -108,7 +108,9 @@ describe("StandardModal", () => {
 
     it("disables the submit button while isSubmitting is true", async () => {
       const onSubmit = vi.fn();
-      const user = userEvent.setup();
+      // The disabled button has pointer-events: none, which user-event rejects
+      // by default; the point of this test is that the click does nothing.
+      const user = userEvent.setup({ pointerEventsCheck: 0 });
 
       renderWithProviders(
         <StandardModal {...baseProps} onClose={vi.fn()} onSubmit={onSubmit} isSubmitting>
@@ -119,7 +121,7 @@ describe("StandardModal", () => {
       const submitButton = screen.getByRole("button", { name: "Save" });
       expect(submitButton).toBeDisabled();
 
-      await user.click(submitButton, { pointerEventsCheck: 0 });
+      await user.click(submitButton);
       expect(onSubmit).not.toHaveBeenCalled();
     });
 
