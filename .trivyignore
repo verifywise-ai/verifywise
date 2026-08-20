@@ -34,6 +34,16 @@ AVD-KSV-0020
 # the frontend bind an unprivileged port and drop this last capability.
 AVD-KSV-0021
 
+# AVD-KSV-0022 (MEDIUM) — container should not add specific capabilities.
+# Accepted for the nginx frontend container: it keeps NET_BIND_SERVICE so it
+# can bind privileged port 80 as root. All other containers drop ALL
+# capabilities. The non-root migration (AVD-DS-0002 / AVD-KSV-0012) will let
+# the frontend bind an unprivileged port and remove this last added
+# capability. Compensating controls already in place:
+# allowPrivilegeEscalation: false, capabilities drop ALL for non-frontend
+# containers, RuntimeDefault seccomp, automountServiceAccountToken: false.
+AVD-KSV-0022
+
 # AVD-KSV-0014 (HIGH) — container should set readOnlyRootFilesystem: true.
 # Accepted for now: several containers in these manifests genuinely require a
 # writable root filesystem and enabling this would break them at runtime —
