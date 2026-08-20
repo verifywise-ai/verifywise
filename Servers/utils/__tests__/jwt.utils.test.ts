@@ -113,8 +113,9 @@ describe("jwt.utils", () => {
     });
 
     it("should return null for token signed with wrong secret", () => {
-      // Manually create a token with different secret
+      // Manually create a token with a different secret to verify rejection.
       const Jwt = require("jsonwebtoken");
+      // nosemgrep: javascript.jsonwebtoken.security.jwt-hardcode.hardcoded-jwt-secret
       const wrongToken = Jwt.sign(testPayload, "wrong-secret");
       expect(getTokenPayload(wrongToken)).toBeNull();
     });

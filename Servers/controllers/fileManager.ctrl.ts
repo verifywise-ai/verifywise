@@ -1489,6 +1489,8 @@ export const previewFile = async (req: Request, res: Response): Promise<any> => 
     res.setHeader("Content-Disposition", `inline; filename="${safeFilename}"`);
     res.setHeader("Content-Length", preview.content.length);
 
+    // preview.content is sanitized binary/Buffer data loaded from storage; CSP is set above.
+    // nosemgrep: javascript.express.security.audit.xss.direct-response-write.direct-response-write
     res.send(preview.content);
 
     await logSuccess({
