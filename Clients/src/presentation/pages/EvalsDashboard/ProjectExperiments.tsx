@@ -86,6 +86,7 @@ export default function ProjectExperiments({
   const [, setLoading] = useState(true);
   const [newEvalModalOpen, setNewEvalModalOpen] = useState(false);
   const [alert, setAlert] = useState<AlertState | null>(null);
+  const alertTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [apiKeyWarning, setApiKeyWarning] = useState<{
     message: string;
     pendingExperiment: ExperimentWithMetrics;
@@ -120,6 +121,29 @@ export default function ProjectExperiments({
     if (promptCount <= 50) return "~18-30 minutes";
     return "~30+ minutes";
   };
+
+  // Show an alert and auto-dismiss it after the given delay. The pending timer
+  // is tracked in a ref so it can be cleared before scheduling a new one and on
+  // unmount, preventing state updates after the component (and jsdom in tests)
+  // has been torn down.
+  const showAlert = useCallback((next: AlertState, dismissAfterMs: number) => {
+    if (alertTimeoutRef.current) {
+      clearTimeout(alertTimeoutRef.current);
+    }
+    setAlert(next);
+    alertTimeoutRef.current = setTimeout(() => {
+      setAlert(null);
+      alertTimeoutRef.current = null;
+    }, dismissAfterMs);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (alertTimeoutRef.current) {
+        clearTimeout(alertTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     loadExperiments();
@@ -190,15 +214,19 @@ export default function ProjectExperiments({
       // Show notification for each completed/failed experiment
       completedExps.forEach((exp) => {
         if (exp.status === "completed") {
-          setAlert({ variant: "success", body: `Experiment "${exp.name}" completed successfully` });
           // Auto-dismiss success alerts after 5 seconds
-          setTimeout(() => setAlert(null), 5000);
+          showAlert(
+            { variant: "success", body: `Experiment "${exp.name}" completed successfully` },
+            5000,
+          );
         } else {
-          setAlert({
-            variant: "error",
-            body: `Experiment "${exp.name}" failed. Check logs for details.`,
-          });
-          setTimeout(() => setAlert(null), 20000);
+          showAlert(
+            {
+              variant: "error",
+              body: `Experiment "${exp.name}" failed. Check logs for details.`,
+            },
+            20000,
+          );
         }
       });
     }
@@ -280,13 +308,11 @@ export default function ProjectExperiments({
           created_at: new Date().toISOString(),
         });
 
-        setAlert({ variant: "success", body: `Rerun started: ${nextName}` });
-        setTimeout(() => setAlert(null), 3000);
+        showAlert({ variant: "success", body: `Rerun started: ${nextName}` }, 3000);
       }
     } catch (err) {
       console.error("Failed to rerun experiment:", err);
-      setAlert({ variant: "error", body: "Failed to start rerun" });
-      setTimeout(() => setAlert(null), 20000);
+      showAlert({ variant: "error", body: "Failed to start rerun" }, 20000);
     }
   };
 
@@ -294,8 +320,7 @@ export default function ProjectExperiments({
     // Find the original experiment to get its config
     const originalExp = experiments.find((e) => e.id === row.id);
     if (!originalExp) {
-      setAlert({ variant: "error", body: "Could not find experiment to rerun" });
-      setTimeout(() => setAlert(null), 20000);
+      showAlert({ variant: "error", body: "Could not find experiment to rerun" }, 20000);
       return;
     }
 
@@ -341,12 +366,10 @@ export default function ProjectExperiments({
   const handleDeleteExperiment = async (experimentId: string) => {
     try {
       await deleteExperiment(experimentId);
-      setAlert({ variant: "success", body: "Experiment deleted" });
-      setTimeout(() => setAlert(null), 3000);
+      showAlert({ variant: "success", body: "Experiment deleted" }, 3000);
       loadExperiments();
     } catch {
-      setAlert({ variant: "error", body: "Failed to delete" });
-      setTimeout(() => setAlert(null), 20000);
+      showAlert({ variant: "error", body: "Failed to delete" }, 20000);
     }
   };
 
@@ -364,11 +387,9 @@ export default function ProjectExperiments({
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      setAlert({ variant: "success", body: "Experiment results downloaded" });
-      setTimeout(() => setAlert(null), 3000);
+      showAlert({ variant: "success", body: "Experiment results downloaded" }, 3000);
     } catch {
-      setAlert({ variant: "error", body: "Failed to download results" });
-      setTimeout(() => setAlert(null), 20000);
+      showAlert({ variant: "error", body: "Failed to download results" }, 20000);
     }
   };
 
@@ -376,11 +397,9 @@ export default function ProjectExperiments({
     try {
       const experimentData = await getExperiment(row.id);
       await navigator.clipboard.writeText(JSON.stringify(experimentData, null, 2));
-      setAlert({ variant: "success", body: "Results copied to clipboard" });
-      setTimeout(() => setAlert(null), 3000);
+      showAlert({ variant: "success", body: "Results copied to clipboard" }, 3000);
     } catch {
-      setAlert({ variant: "error", body: "Failed to copy results" });
-      setTimeout(() => setAlert(null), 20000);
+      showAlert({ variant: "error", body: "Failed to copy results" }, 20000);
     }
   };
 
