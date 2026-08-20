@@ -13,15 +13,9 @@ function openCustomSelect(hiddenInputId: string) {
   fireEvent.mouseDown(combobox);
 }
 
-vi.mock("../../../../../application/hooks/useAuth", () => ({
-  useAuth: () => ({ userId: 1 }),
-}));
-
-const mockCreateNewUserPreferences = vi.fn();
-const mockUpdateUserPreferencesById = vi.fn();
+const mockUpdateCurrentUserPreferences = vi.fn();
 vi.mock("../../../../../application/repository/userPreferences.repository", () => ({
-  createNewUserPreferences: (...args: any[]) => mockCreateNewUserPreferences(...args),
-  updateUserPreferencesById: (...args: any[]) => mockUpdateUserPreferencesById(...args),
+  updateCurrentUserPreferences: (...args: any[]) => mockUpdateCurrentUserPreferences(...args),
 }));
 
 let mockGetLanguage = vi.fn(() => "en");
@@ -78,17 +72,16 @@ describe("Preferences", () => {
     expect(screen.getByText("Save").closest("button")).not.toBeDisabled();
   });
 
-  it("creates new preferences and shows success when isDefault is true", async () => {
+  it("saves preferences and reports them as set when isDefault is true", async () => {
     mockHookState = { ...mockHookState, isDefault: true };
-    mockCreateNewUserPreferences.mockResolvedValue({ id: 1 });
+    mockUpdateCurrentUserPreferences.mockResolvedValue({ id: 1 });
     const user = userEvent.setup();
     renderWithProviders(<Preferences />);
 
     await user.click(screen.getByText("Save").closest("button")!);
 
     await waitFor(() => {
-      expect(mockCreateNewUserPreferences).toHaveBeenCalledWith({
-        user_id: 1,
+      expect(mockUpdateCurrentUserPreferences).toHaveBeenCalledWith({
         date_format: UserDateFormat.DD_MM_YYYY_DASH,
         language: "en",
       });
@@ -100,7 +93,7 @@ describe("Preferences", () => {
   });
 
   it("updates preferences when a date format change is made", async () => {
-    mockUpdateUserPreferencesById.mockResolvedValue({ id: 1 });
+    mockUpdateCurrentUserPreferences.mockResolvedValue({ id: 1 });
     const user = userEvent.setup();
     renderWithProviders(<Preferences />);
 
@@ -116,9 +109,9 @@ describe("Preferences", () => {
     await user.click(saveButton);
 
     await waitFor(() => {
-      expect(mockUpdateUserPreferencesById).toHaveBeenCalledWith({
-        userId: 1,
-        data: { user_id: 1, date_format: UserDateFormat.MM_DD_YYYY_DASH, language: "en" },
+      expect(mockUpdateCurrentUserPreferences).toHaveBeenCalledWith({
+        date_format: UserDateFormat.MM_DD_YYYY_DASH,
+        language: "en",
       });
     });
     await waitFor(() => {
@@ -127,7 +120,7 @@ describe("Preferences", () => {
   });
 
   it("updates the language selection and applies it via setLanguage", async () => {
-    mockUpdateUserPreferencesById.mockResolvedValue({ id: 1 });
+    mockUpdateCurrentUserPreferences.mockResolvedValue({ id: 1 });
     const user = userEvent.setup();
     renderWithProviders(<Preferences />);
 
@@ -149,7 +142,7 @@ describe("Preferences", () => {
 
   it("shows an error alert when saving fails", async () => {
     mockHookState = { ...mockHookState, isDefault: true };
-    mockCreateNewUserPreferences.mockRejectedValue(new Error("Server down"));
+    mockUpdateCurrentUserPreferences.mockRejectedValue(new Error("Server down"));
     const user = userEvent.setup();
     renderWithProviders(<Preferences />);
 
