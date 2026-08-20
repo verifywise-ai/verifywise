@@ -7,7 +7,14 @@ export async function getUserPreferencesByUserId(userId: number): Promise<any> {
 }
 
 export async function getCurrentUserPreferences(): Promise<any> {
-  const response = await apiServices.get("/users/preferences");
+  const response = await apiServices.get("/users/me/preferences");
+  return response.data;
+}
+
+export async function updateCurrentUserPreferences(
+  data: Partial<Pick<UserPreferencesModel, "date_format" | "language">>,
+): Promise<any> {
+  const response = await apiServices.patch("/users/me/preferences", data);
   return response.data;
 }
 

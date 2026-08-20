@@ -7848,6 +7848,74 @@ paths:
         '500':
           description: 'Internal server error'
       operationId: getPreferencesForCurrentUser
+  /users/me/preferences:
+    get:
+      summary: 'Get current user preferences'
+      description: "Returns the authenticated user's persisted preferences (date_format,\nlanguage) from user_preferences. If no row exists, returns safe\ndefaults including a transient theme default. Preferred alias of\nGET /users/preferences.\n"
+      tags:
+        - Users
+      security:
+        -
+          bearerAuth: []
+      responses:
+        '200':
+          description: 'Preferences found or defaults returned'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string, example: OK}
+                  data: {$ref: '#/components/schemas/UserPreference'}
+        '401':
+          description: Unauthorized
+        '404':
+          description: 'User not found'
+        '500':
+          description: 'Internal server error'
+      operationId: users_getPreferencesForCurrentUser
+    patch:
+      summary: 'Update current user preferences'
+      description: "Upserts the authenticated user's date_format and/or language. At least\none field is required. Unknown format strings and languages are rejected.\nAny user_id in the body is ignored; the JWT user is always the target.\n"
+      tags:
+        - Users
+      security:
+        -
+          bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                date_format:
+                  type: string
+                  enum: [DD-MM-YYYY, MM-DD-YYYY, DD/MM/YY, MM/DD/YY]
+                  example: MM-DD-YYYY
+                language:
+                  type: string
+                  enum: [en, de, fr, es]
+                  example: en
+      responses:
+        '200':
+          description: 'Preferences saved'
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string, example: OK}
+                  data: {$ref: '#/components/schemas/UserPreference'}
+        '400':
+          description: 'Validation error (missing fields or unknown format/language)'
+        '401':
+          description: Unauthorized
+        '404':
+          description: 'User not found'
+        '500':
+          description: 'Internal server error'
+      operationId: patchPreferencesForCurrentUser
   '/users/{id}':
     get:
       summary: 'Get user by ID'

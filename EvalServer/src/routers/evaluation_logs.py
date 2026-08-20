@@ -8,7 +8,7 @@ from fastapi import APIRouter, Query, Path, Request, HTTPException
 from fastapi.responses import JSONResponse
 import os
 from typing import Optional, Dict, Any, List
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from sqlalchemy import text
 
 from controllers import evaluation_logs as controller
@@ -162,6 +162,17 @@ class UpdateExperimentStatusRequest(BaseModel):
     status: str  # pending, running, completed, failed
     results: Optional[Dict[str, Any]] = None
     error_message: Optional[str] = None
+
+
+class UpdateExperimentRequest(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+
+    @model_validator(mode="after")
+    def _at_least_one_field(self):
+        if self.name is None and self.description is None:
+            raise ValueError("Must provide at least one field to update (name or description)")
+        return self
 
 
 # ==================== ROUTER SETUP ====================
@@ -522,9 +533,8 @@ async def get_experiment(
 @router.patch("/experiments/{experiment_id}")
 async def update_experiment(
     request: Request,
+    payload: UpdateExperimentRequest,
     experiment_id: str = Path(...),
-    name: Optional[str] = None,
-    description: Optional[str] = None,
 ):
     """Update experiment name and/or description"""
     from database.db import get_db
@@ -532,21 +542,13 @@ async def update_experiment(
 
     organization_id = _get_organization_id(request)
 
-    # Parse request body
-    body = await request.json()
-    name = body.get("name")
-    description = body.get("description")
-
-    if name is None and description is None:
-        raise HTTPException(status_code=400, detail="Must provide at least one field to update (name or description)")
-
     async with get_db() as db:
         return await controller.update_experiment_controller(
             db=db,
             experiment_id=experiment_id,
             organization_id=organization_id,
-            name=name,
-            description=description,
+            name=payload.name,
+            description=payload.description,
         )
 
 
