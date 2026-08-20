@@ -1,7 +1,7 @@
 import { QueryTypes } from "sequelize";
 import { sequelize } from "../../database/db";
 import { ExtensionService } from "../../services/extension/extensionService";
-import { composeSafeOutboundUrl, UnsafeOutboundUrlError } from "../../utils/safeOutboundUrl";
+import { safeFetchWithBase } from "../../utils/safeOutboundUrl";
 
 /**
  * azure-ai-foundry extension — pulls deployments from an Azure AI Foundry
@@ -71,21 +71,18 @@ export async function testConnection(
       testedAt: new Date().toISOString(),
     };
   }
-  let url: string;
   try {
-    url = composeSafeOutboundUrl(config.project_endpoint, "/deployments?api-version=v1&limit=1");
-  } catch (err) {
-    return {
-      success: false,
-      message: err instanceof UnsafeOutboundUrlError ? err.message : String(err),
-      testedAt: new Date().toISOString(),
-    };
-  }
-  try {
-    const response = await fetch(url, {
-      method: "GET",
-      headers: { "api-key": config.api_key, "Content-Type": "application/json" },
-    });
+    // Outbound URL validation happens inside safeFetchWithBase — any
+    // UnsafeOutboundUrlError falls into the generic catch below and
+    // surfaces as `Connection failed: <reason>`.
+    const response = await safeFetchWithBase(
+      config.project_endpoint,
+      "/deployments?api-version=v1&limit=1",
+      {
+        method: "GET",
+        headers: { "api-key": config.api_key, "Content-Type": "application/json" },
+      },
+    );
     if (!response.ok) {
       const text = await response.text();
       return {
@@ -184,11 +181,14 @@ export async function syncModels(
     };
   }
   try {
-    const url = composeSafeOutboundUrl(config.project_endpoint, "/deployments?api-version=v1");
-    const response = await fetch(url, {
-      method: "GET",
-      headers: { "api-key": config.api_key, "Content-Type": "application/json" },
-    });
+    const response = await safeFetchWithBase(
+      config.project_endpoint,
+      "/deployments?api-version=v1",
+      {
+        method: "GET",
+        headers: { "api-key": config.api_key, "Content-Type": "application/json" },
+      },
+    );
     if (!response.ok) {
       throw new Error(`Failed to fetch deployments: ${response.status}`);
     }
@@ -228,14 +228,14 @@ export async function discoverAgents(
 ): Promise<Array<Record<string, unknown>>> {
   if (!config.project_endpoint || !config.api_key) return [];
   try {
-    const url = composeSafeOutboundUrl(
+    const response = await safeFetchWithBase(
       config.project_endpoint,
       "/assistants?api-version=v1&limit=100",
+      {
+        method: "GET",
+        headers: { "api-key": config.api_key, "Content-Type": "application/json" },
+      },
     );
-    const response = await fetch(url, {
-      method: "GET",
-      headers: { "api-key": config.api_key, "Content-Type": "application/json" },
-    });
     if (!response.ok) {
       const text = await response.text();
       throw new Error(`Azure AI Foundry returned ${response.status}: ${text}`);

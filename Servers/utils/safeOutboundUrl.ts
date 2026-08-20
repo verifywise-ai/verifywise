@@ -104,3 +104,41 @@ export function composeSafeOutboundUrl(base: string, path: string): string {
   const safePath = path.startsWith("/") ? path : `/${path}`;
   return `${safeBase}${safePath}`;
 }
+
+/**
+ * Validated `fetch` wrapper for user-configured outbound URLs.
+ *
+ * All outbound HTTP calls from an extension to a user-configured endpoint
+ * (mlflow tracking server, azure project endpoint, jira base URL, etc.)
+ * MUST go through this helper. It:
+ *
+ *   1. Runs the URL through `assertSafeOutboundUrl` so protocol / host /
+ *      credential-embedding checks run before the request leaves the
+ *      process.
+ *   2. Calls `fetch()` here, in the sanitizer module, rather than in the
+ *      extension file. That collapses every extension's outbound call
+ *      site to a single fetch inside the validator — the SSRF-shaped
+ *      taint edge (`config.<user-url>` → `fetch`) no longer appears in
+ *      the extension files.
+ *
+ * Throws `UnsafeOutboundUrlError` on policy violation. Callers should
+ * catch and surface it as a 400 to the user; anything else is left for
+ * the caller's own error handling.
+ */
+export async function safeFetch(rawUrl: string, init?: RequestInit): Promise<Response> {
+  const safeUrl = assertSafeOutboundUrl(rawUrl);
+  return fetch(safeUrl, init);
+}
+
+/**
+ * `safeFetch` variant that takes a validated base + path (mirrors
+ * `composeSafeOutboundUrl`). Use when the caller already knows the API
+ * path suffix separately from the user-supplied base.
+ */
+export async function safeFetchWithBase(
+  base: string,
+  path: string,
+  init?: RequestInit,
+): Promise<Response> {
+  return safeFetch(composeSafeOutboundUrl(base, path), init);
+}

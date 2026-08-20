@@ -1,11 +1,7 @@
 import { QueryTypes } from "sequelize";
 import { sequelize } from "../../database/db";
 import { ExtensionService } from "../../services/extension/extensionService";
-import {
-  assertSafeOutboundUrl,
-  composeSafeOutboundUrl,
-  UnsafeOutboundUrlError,
-} from "../../utils/safeOutboundUrl";
+import { safeFetchWithBase } from "../../utils/safeOutboundUrl";
 
 /**
  * mlflow extension — talks to a user-configured MLflow tracking server and
@@ -79,22 +75,16 @@ export async function testConnection(config: MLflowConfig): Promise<MLflowTestCo
       testedAt: new Date().toISOString(),
     };
   }
-  let url: string;
   try {
-    url = composeSafeOutboundUrl(config.tracking_server_url, "/api/2.0/mlflow/experiments/search");
-  } catch (err) {
-    return {
-      success: false,
-      message: err instanceof UnsafeOutboundUrlError ? err.message : String(err),
-      testedAt: new Date().toISOString(),
-    };
-  }
-  try {
-    const response = await fetch(url, {
-      method: "POST",
-      headers: buildHeaders(config),
-      body: JSON.stringify({ max_results: 1 }),
-    });
+    const response = await safeFetchWithBase(
+      config.tracking_server_url,
+      "/api/2.0/mlflow/experiments/search",
+      {
+        method: "POST",
+        headers: buildHeaders(config),
+        body: JSON.stringify({ max_results: 1 }),
+      },
+    );
     if (!response.ok) {
       const text = await response.text();
       return {
@@ -266,25 +256,19 @@ export async function syncModels(
   }
 
   const headers = buildHeaders(config);
-  let baseUrl: string;
-  try {
-    baseUrl = assertSafeOutboundUrl(config.tracking_server_url);
-  } catch (err) {
-    return {
-      success: false,
-      modelCount: 0,
-      syncedAt: new Date().toISOString(),
-      status: `failed: ${err instanceof UnsafeOutboundUrlError ? err.message : String(err)}`,
-    };
-  }
+  const trackingUrl = config.tracking_server_url;
 
   try {
-    // 1. Experiments
-    const experimentsResponse = await fetch(`${baseUrl}/api/2.0/mlflow/experiments/search`, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ max_results: 1000 }),
-    });
+    // 1. Experiments — outbound URL validation happens inside safeFetchWithBase.
+    const experimentsResponse = await safeFetchWithBase(
+      trackingUrl,
+      "/api/2.0/mlflow/experiments/search",
+      {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ max_results: 1000 }),
+      },
+    );
     if (!experimentsResponse.ok) {
       throw new Error(`Failed to fetch experiments: ${experimentsResponse.status}`);
     }
@@ -306,7 +290,7 @@ export async function syncModels(
     const allRuns: any[] = [];
     for (let i = 0; i < experimentIds.length; i += chunkSize) {
       const chunk = experimentIds.slice(i, i + chunkSize);
-      const runsResponse = await fetch(`${baseUrl}/api/2.0/mlflow/runs/search`, {
+      const runsResponse = await safeFetchWithBase(trackingUrl, "/api/2.0/mlflow/runs/search", {
         method: "POST",
         headers,
         body: JSON.stringify({ experiment_ids: chunk, max_results: 1000 }),

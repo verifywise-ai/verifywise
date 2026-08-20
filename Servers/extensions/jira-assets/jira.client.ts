@@ -11,7 +11,7 @@
  * check, cloud-metadata block, ReDoS-safe trailing-slash trim.
  */
 
-import { assertSafeOutboundUrl } from "../../utils/safeOutboundUrl";
+import { assertSafeOutboundUrl, safeFetch } from "../../utils/safeOutboundUrl";
 
 export type JiraDeploymentType = "cloud" | "datacenter";
 
@@ -88,16 +88,15 @@ export class JiraAssetsClient {
   }
 
   private async request<T>(endpoint: string, method: string = "GET", body?: any): Promise<T> {
-    // Both branches feed the composed URL through assertSafeOutboundUrl so
-    // CodeQL's SSRF taint stops here. The cloud host is fixed
-    // (api.atlassian.com); assertSafeOutboundUrl on it is defence-in-depth
-    // in case someone later parameterises it.
+    // Both branches feed the composed URL through safeFetch so the
+    // outbound call site lives in utils/safeOutboundUrl.ts, not here.
+    // The cloud host is fixed (api.atlassian.com); the validation is
+    // defence-in-depth in case someone later parameterises it.
     const rawUrl =
       this.deploymentType === "cloud"
         ? `https://api.atlassian.com/jsm/assets/workspace/${this.workspaceId}/v1/${endpoint}`
         : `${this.baseUrl}/rest/insight/1.0/${endpoint}`;
-    const url = assertSafeOutboundUrl(rawUrl);
-    const response = await fetch(url, {
+    const response = await safeFetch(rawUrl, {
       method,
       headers: {
         Authorization: this.authHeader,
