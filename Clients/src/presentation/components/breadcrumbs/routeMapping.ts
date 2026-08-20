@@ -82,9 +82,8 @@ export const routeMapping: Record<string, string> = {
   // File management
   "/file-manager": "Evidence",
 
-  // Plugins
-  "/plugins/marketplace": "Plugins",
-  "/plugins/my-plugins": "Plugins",
+  // Extensions
+  "/extensions": "Extensions",
 
   // Reporting
   "/reporting": "Reporting dashboard",
@@ -107,7 +106,7 @@ export const routeMapping: Record<string, string> = {
   "/model-inventory": "Model inventory",
   "/model-inventory/model-risks": "Model risks",
   "/model-inventory/evidence-hub": "Evidence hub",
-  // Plugin tabs are handled dynamically by the breadcrumb component
+  // Extension-contributed tabs are handled dynamically by the breadcrumb component
 
   // Datasets
   "/datasets": "Datasets",
@@ -233,7 +232,7 @@ export const routeIconMapping: Record<string, () => React.ReactNode> = {
     React.createElement(AlertTriangle, { size: 14, strokeWidth: 1.5 }),
   "/model-inventory/evidence-hub": () =>
     React.createElement(FileText, { size: 14, strokeWidth: 1.5 }),
-  // Plugin tabs use default icon (or could be made dynamic via plugin registry)
+  // Extension tabs use default icon
 
   // Risk management
   "/risk-management": () => React.createElement(AlertTriangle, { size: 14, strokeWidth: 1.5 }),
@@ -251,9 +250,8 @@ export const routeIconMapping: Record<string, () => React.ReactNode> = {
   // File management
   "/file-manager": () => React.createElement(FileText, { size: 14, strokeWidth: 1.5 }),
 
-  // Plugins
-  "/plugins/marketplace": () => React.createElement(Puzzle, { size: 14, strokeWidth: 1.5 }),
-  "/plugins/my-plugins": () => React.createElement(Puzzle, { size: 14, strokeWidth: 1.5 }),
+  // Extensions
+  "/extensions": () => React.createElement(Puzzle, { size: 14, strokeWidth: 1.5 }),
 
   // Reporting
   "/reporting": () => React.createElement(BarChart3, { size: 14, strokeWidth: 1.5 }),
@@ -404,9 +402,9 @@ export const dynamicRoutePatterns = [
     description: "Specific incident management information",
   },
   {
-    pattern: /\/plugins\/[a-zA-Z0-9-]+\/manage/,
-    label: "Plugin details",
-    description: "Specific plugin management page",
+    pattern: /\/extensions\/[a-zA-Z0-9-]+\/settings/,
+    label: "Extension settings",
+    description: "Specific extension settings page",
   },
   {
     pattern: /\/ai-detection\/scans\/\d+/,

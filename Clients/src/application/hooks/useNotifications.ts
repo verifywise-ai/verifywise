@@ -34,6 +34,7 @@ import { RootState } from "../redux/store";
 import { ENV_VARs } from "../../../env.vars";
 import { showAlert } from "../../infrastructure/api/customAxios";
 import { apiServices } from "../../infrastructure/api/networkServices";
+import { useAuth } from "./useAuth";
 
 /**
  * Notification types - matches backend enum
@@ -174,6 +175,9 @@ export const useNotifications = (options: UseNotificationsOptions = {}): UseNoti
   const [isConnected, setIsConnected] = useState(false);
 
   const authToken = useSelector((state: RootState) => state.auth.authToken);
+  // Notifications are org-scoped. Bootstrap SuperAdmin (organizationId=null)
+  // has no org context and every /notifications/* endpoint 401s. Skip.
+  const { organizationId } = useAuth();
   const abortControllerRef = useRef<AbortController | null>(null);
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const isManuallyDisconnectedRef = useRef(false);
@@ -182,7 +186,7 @@ export const useNotifications = (options: UseNotificationsOptions = {}): UseNoti
    * Fetch notification summary from server
    */
   const fetchNotifications = useCallback(async () => {
-    if (!authToken) return;
+    if (!authToken || !organizationId) return;
 
     setIsLoading(true);
     try {
@@ -198,13 +202,13 @@ export const useNotifications = (options: UseNotificationsOptions = {}): UseNoti
     } finally {
       setIsLoading(false);
     }
-  }, [authToken]);
+  }, [authToken, organizationId]);
 
   /**
    * Load more notifications (pagination)
    */
   const loadMore = useCallback(async () => {
-    if (!authToken || isLoadingMore) return;
+    if (!authToken || !organizationId || isLoadingMore) return;
 
     const currentOffset = notifications.length;
 
@@ -358,8 +362,9 @@ export const useNotifications = (options: UseNotificationsOptions = {}): UseNoti
    * Connect to SSE endpoint using fetch() with Authorization header
    */
   const connect = useCallback(async () => {
-    // Don't connect if disabled or no auth token
-    if (!enabled || !authToken) {
+    // Don't connect if disabled, no auth token, or no org (bootstrap
+    // SuperAdmin has no org — the SSE endpoint 401s without organizationId).
+    if (!enabled || !authToken || !organizationId) {
       return;
     }
 
@@ -472,7 +477,7 @@ export const useNotifications = (options: UseNotificationsOptions = {}): UseNoti
         }, reconnectDelay);
       }
     }
-  }, [enabled, authToken, autoReconnect, reconnectDelay, displayNotification]);
+  }, [enabled, authToken, organizationId, autoReconnect, reconnectDelay, displayNotification]);
 
   /**
    * Disconnect from SSE endpoint
@@ -544,10 +549,10 @@ export const useNotifications = (options: UseNotificationsOptions = {}): UseNoti
 
   // Fetch stored notifications on mount
   useEffect(() => {
-    if (fetchOnMount && authToken) {
+    if (fetchOnMount && authToken && organizationId) {
       fetchNotifications();
     }
-  }, [fetchOnMount, authToken, fetchNotifications]);
+  }, [fetchOnMount, authToken, organizationId, fetchNotifications]);
 
   // Calculate if there are more notifications to load
   const hasMore = notifications.length < totalCount;

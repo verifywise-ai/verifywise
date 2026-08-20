@@ -17,6 +17,7 @@ import { light } from "../presentation/themes";
 import authReducer from "../application/redux/auth/authSlice";
 import uiSlice from "../application/redux/ui/uiSlice";
 import fileReducer from "../application/redux/file/fileSlice";
+import { ExtensionsProvider } from "../application/contexts/Extensions.context";
 
 // ---- Types ----
 
@@ -92,7 +93,16 @@ export function renderWithProviders(
       <Provider store={store}>
         <QueryClientProvider client={queryClient}>
           <ThemeProvider theme={light}>
-            <MemoryRouter initialEntries={[route]}>{children}</MemoryRouter>
+            {/* ExtensionsProvider is safe with no auth — its effect guards
+                on `isAuthenticated && organizationId` and skips the fetch
+                when either is missing. Components under test that call
+                `useExtensions()` (e.g. ModelInventoryTable's
+                ViewLifecycleButton gate) get an empty extensions list,
+                which is the correct render for the default no-auth
+                test store. */}
+            <ExtensionsProvider>
+              <MemoryRouter initialEntries={[route]}>{children}</MemoryRouter>
+            </ExtensionsProvider>
           </ThemeProvider>
         </QueryClientProvider>
       </Provider>

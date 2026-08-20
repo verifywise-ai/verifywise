@@ -47,7 +47,11 @@ jobs:
             aigateway-venv-${{ runner.os }}-3.12-
 
       - name: Create virtualenv
-        run: test -d .venv || python -m venv .venv
+        run: |
+          if [ ! -x .venv/bin/python ]; then
+            rm -rf .venv
+            python -m venv .venv
+          fi
 
       - name: Install AIGateway dependencies
         run: |

@@ -18,9 +18,6 @@ import CustomFieldsTab from "./CustomFields";
 import AIApprovalRules from "./AIApprovalRules";
 import TabBar, { TabItem } from "../../components/TabBar";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
-import { usePluginRegistry } from "../../../application/contexts/PluginRegistry.context";
-import { PluginSlot } from "../../components/PluginSlot";
-import { PLUGIN_SLOTS } from "../../../domain/constants/pluginSlots";
 
 // Built-in tabs (defined outside component to avoid recreation on each render)
 // Feature flag: the AI Approval Rules tab governs the in-platform AI agent /
@@ -55,10 +52,6 @@ export default function ProfilePage() {
   const isAuditLedgerDisabled = userRoleName !== "Admin";
   const isCustomFieldsDisabled = userRoleName !== "Admin";
 
-  // Get plugin tabs dynamically from the plugin registry
-  const { getPluginTabs, installedPlugins, isLoading: pluginsLoading } = usePluginRegistry();
-  const pluginTabs = useMemo(() => getPluginTabs(PLUGIN_SLOTS.SETTINGS_TABS), [getPluginTabs]);
-
   const { tab } = useParams<{ tab?: string }>();
 
   const defaultTab = "profile";
@@ -69,36 +62,20 @@ export default function ProfilePage() {
     if (!ssoFeatureEnabled) {
       tabs = tabs.filter((t) => t !== "sso");
     }
-    return [...tabs, ...pluginTabs.map((t) => t.value)];
-  }, [pluginTabs, ssoFeatureEnabled]);
+    return tabs;
+  }, [ssoFeatureEnabled]);
 
   // keep state synced with URL
   useEffect(() => {
     if (tab && validTabs.includes(tab)) {
       setActiveTab(tab);
-    } else if (tab && !BUILT_IN_TABS.includes(tab)) {
-      // Tab is not a built-in tab - it might be a plugin tab
-      // Don't redirect if plugins are still loading or if plugin tabs haven't loaded yet
-      if (!pluginsLoading && installedPlugins.length > 0 && pluginTabs.length === 0) {
-        // Plugins are installed but tabs haven't loaded yet - wait
-        return;
-      }
-      if (pluginsLoading) {
-        // Plugins still loading - wait
-        return;
-      }
-      // Plugins finished loading and tab is not valid - redirect
-      navigate("/settings", { replace: true });
-      setActiveTab(defaultTab);
     } else if (!tab) {
-      // No tab specified - stay on profile
       setActiveTab(defaultTab);
     } else {
-      // Invalid built-in tab - redirect
       navigate("/settings", { replace: true });
       setActiveTab(defaultTab);
     }
-  }, [tab, validTabs, navigate, pluginsLoading, installedPlugins.length, pluginTabs.length]);
+  }, [tab, validTabs, navigate]);
 
   // Handle navigation state from command palette
   useEffect(() => {
@@ -224,12 +201,6 @@ export default function ProfilePage() {
                   },
                 ]
               : []),
-            // Dynamically add plugin tabs
-            ...pluginTabs.map((tab) => ({
-              label: tab.label,
-              value: tab.value,
-              icon: (tab.icon || "Settings") as TabItem["icon"],
-            })),
           ]}
           activeTab={activeTab}
           onChange={handleTabChange}
@@ -284,11 +255,6 @@ export default function ProfilePage() {
           <TabPanel sx={{ p: 0 }} value="ai-approval-rules">
             <AIApprovalRules />
           </TabPanel>
-        )}
-
-        {/* Render plugin tab content dynamically */}
-        {pluginTabs.some((tab) => tab.value === activeTab) && (
-          <PluginSlot id={PLUGIN_SLOTS.SETTINGS_TABS} renderType="tab" activeTab={activeTab} />
         )}
       </TabContext>
     </PageHeaderExtended>

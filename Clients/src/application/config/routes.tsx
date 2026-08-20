@@ -183,10 +183,8 @@ Governance OS routes are disabled while the module is not broadly released.
 */
 
 // ── Remaining routes ──────────────────────────────────────────────────
-const Plugins = lazyRoute(() => import("../../presentation/pages/Plugins"));
-const PluginManagement = lazyRoute(
-  () => import("../../presentation/pages/Plugins/PluginManagement"),
-);
+const Extensions = lazyRoute(() => import("../../presentation/pages/Extensions"));
+const ExtensionSettings = lazyRoute(() => import("../../presentation/pages/Extensions/Settings"));
 const SuperAdminOrganizations = lazyRoute(
   () => import("../../presentation/pages/SuperAdmin/Organizations"),
 );
@@ -301,34 +299,18 @@ export const createRoutes = (
       }
     />
     <Route
-      path="/plugins"
+      path="/extensions"
       element={
         <Suspense fallback={<LazyFallback />}>
-          <Plugins />
+          <Extensions />
         </Suspense>
       }
     />
     <Route
-      path="/plugins/marketplace"
+      path="/extensions/:key/settings"
       element={
         <Suspense fallback={<LazyFallback />}>
-          <Plugins />
-        </Suspense>
-      }
-    />
-    <Route
-      path="/plugins/my-plugins"
-      element={
-        <Suspense fallback={<LazyFallback />}>
-          <Plugins />
-        </Suspense>
-      }
-    />
-    <Route
-      path="/plugins/:pluginKey/manage"
-      element={
-        <Suspense fallback={<LazyFallback />}>
-          <PluginManagement />
+          <ExtensionSettings />
         </Suspense>
       }
     />
@@ -680,7 +662,7 @@ export const createRoutes = (
         </Suspense>
       }
     />
-    {/* Dynamic route for plugin tabs (e.g., mlflow, other future plugins) */}
+    {/* Dynamic route for extension-contributed tabs (mlflow, azure-ai-foundry, etc.) */}
     <Route
       path="/model-inventory/:pluginTab"
       element={

@@ -40,12 +40,17 @@ vi.mock("../../../../application/hooks/useColumnVisibility", () => ({
   ColumnConfig: {},
 }));
 
-vi.mock("../../../../application/contexts/PluginRegistry.context", () => ({
-  usePluginRegistry: () => ({
-    plugins: [],
-    getSlotContributions: () => [],
-    getPluginTabs: () => [],
-  }),
+vi.mock("../../../../application/contexts/Extensions.context", () => ({
+  useExtensions: () => ({ isEnabled: () => false }),
+  ExtensionsProvider: ({ children }: { children: any }) => children,
+}));
+
+vi.mock("../../Extensions/mlflow/MLFlowTab", () => ({
+  default: () => null,
+}));
+
+vi.mock("../../Extensions/azure-ai-foundry/AzureAIFoundryTab", () => ({
+  default: () => null,
 }));
 
 // Mock repositories
@@ -131,10 +136,6 @@ vi.mock("../../../components/ShareViewDropdown/ShareButton", () => ({
 vi.mock("../../../components/ShareViewDropdown", () => ({
   default: () => <div data-testid="share-view-dropdown" />,
   ShareViewSettings: {},
-}));
-
-vi.mock("../../../components/PluginSlot", () => ({
-  PluginSlot: () => null,
 }));
 
 vi.mock("../../../components/Table/GroupedTableView", () => ({

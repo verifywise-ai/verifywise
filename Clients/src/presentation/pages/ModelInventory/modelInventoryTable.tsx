@@ -13,8 +13,8 @@ import "../../components/Table/index.css";
 import singleTheme from "../../themes/v1SingleTheme";
 import CustomIconButton from "../../components/IconButton";
 import ViewRelationshipsButton from "../../components/ViewRelationshipsButton";
-import PluginSlot from "../../components/PluginSlot";
-import { PLUGIN_SLOTS } from "../../../domain/constants/pluginSlots";
+import { useExtensions } from "../../../application/contexts/Extensions.context";
+import ViewLifecycleButton from "../Extensions/model-lifecycle/ViewLifecycleButton";
 import allowedRoles from "../../../application/constants/permissions";
 import { useAuth } from "../../../application/hooks/useAuth";
 import { Cpu, Layers, BarChart3, Link2 } from "lucide-react";
@@ -95,6 +95,7 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
   visibleColumns,
 }) => {
   const { userRoleName } = useAuth();
+  const { isEnabled } = useExtensions();
   const [users, setUsers] = useState<User[]>([]);
 
   // Model risks dialog state
@@ -464,14 +465,12 @@ const ModelInventoryTable: React.FC<ModelInventoryTableProps> = ({
                       entityType="model"
                       entityLabel={modelInventory.model || undefined}
                     />
-                    {/* Plugin-injected icon buttons for model rows */}
-                    <PluginSlot
-                      id={PLUGIN_SLOTS.MODEL_ROW_ICON_ACTIONS}
-                      slotProps={{
-                        modelId: modelInventory.id,
-                        modelName: modelInventory.model,
-                      }}
-                    />
+                    {isEnabled("model-lifecycle") && modelInventory.id != null && (
+                      <ViewLifecycleButton
+                        modelId={modelInventory.id}
+                        modelName={modelInventory.model || undefined}
+                      />
+                    )}
                     {isDeletingAllowed && (
                       <CustomIconButton
                         id={modelInventory.id || 0}

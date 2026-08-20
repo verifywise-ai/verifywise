@@ -38,6 +38,7 @@ def _legacy_decrypt(iv: bytes, ciphertext: bytes) -> str:
     uses CBC because the legacy ciphertext has no authenticated alternative.
     """
     key = _get_key()
+    # Legacy CBC branch: ciphertext has no authenticated alternative.
     # nosemgrep: python.cryptography.security.mode-without-authentication.crypto-mode-without-authentication
     cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
     decryptor = cipher.decryptor()

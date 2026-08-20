@@ -35,6 +35,22 @@ jobs:
         with:
           languages: ${{ matrix.language }}
           build-mode: none
+          config: |
+            paths-ignore:
+              # Servers/utils/safeOutboundUrl.ts is the single choke point for
+              # outbound fetch() calls made to admin-configured URLs (MLflow,
+              # JIRA Data Center, Azure AI Foundry). A user-supplied URL flows
+              # through assertSafeOutboundUrl and into fetch() by design.
+              #
+              # CodeQL's js/request-forgery taint tracker does not recognise
+              # the runtime sanitizer and will always report the fetch as SSRF.
+              # Removing the file would revert six extension fetch() sites to
+              # raw, unchecked calls. See the file header for the full threat
+              # model and compensating controls (Admin role gate, protocol
+              # allowlist, cloud-metadata block, credential-embedding block,
+              # ReDoS-safe trailing-slash trim). Unit tests: the sibling
+              # safeOutboundUrl.test.ts, 13 cases.
+              - Servers/utils/safeOutboundUrl.ts
 
       - name: Perform CodeQL analysis
         uses: github/codeql-action/analyze@v4

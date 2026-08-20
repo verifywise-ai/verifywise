@@ -90,8 +90,20 @@ const ProtectedRoute = ({
   // Sends them to `/` (tenant dashboard) so they don't see a broken shell.
   const superAdminOk = !requireSuperAdmin || authState.isSuperAdmin === true;
 
+  // Bootstrap SuperAdmin (isSuperAdmin=true AND no org in token) cannot use
+  // org-scoped screens — every org-scoped hook 401s without an organizationId.
+  // Pin them to /super-admin so Dashboard never mounts. Elected SuperAdmins
+  // (isSuperAdmin=true WITH an org) are unaffected — their token has an
+  // organizationId and this check is false.
+  const tokenPayload = authState.authToken ? extractUserToken(authState.authToken) : null;
+  const isBootstrapSuperAdmin = authState.isSuperAdmin === true && !tokenPayload?.organizationId;
+  const isSuperAdminRoute = location.pathname.startsWith("/super-admin");
+  const needsSuperAdminRedirect =
+    Boolean(authState.authToken) && isBootstrapSuperAdmin && !isSuperAdminRoute && !isPublicRoute;
+
   if (loading) {
     if (authState.authToken) {
+      if (needsSuperAdminRedirect) return <Navigate to="/super-admin" replace />;
       return superAdminOk ? <Component {...rest} /> : <Navigate to="/" replace />;
     }
     return null;
@@ -104,6 +116,7 @@ const ProtectedRoute = ({
 
   // If users exist and we have an auth token, allow access to protected routes
   if (authState.authToken) {
+    if (needsSuperAdminRedirect) return <Navigate to="/super-admin" replace />;
     return superAdminOk ? <Component {...rest} /> : <Navigate to="/" replace />;
   }
 
