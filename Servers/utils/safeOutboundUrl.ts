@@ -21,6 +21,30 @@
  * The returned string has any trailing slashes removed via a bounded
  * quantifier to sidestep the ReDoS finding on the previous
  * `/\/+$/` regex.
+ *
+ * -----------------------------------------------------------------------
+ * On the CodeQL `js/request-forgery` alert on `safeFetch`'s fetch call:
+ * -----------------------------------------------------------------------
+ * CodeQL's taint tracker does not recognise custom runtime sanitizers.
+ * The user-configured URL flows through `assertSafeOutboundUrl` and out
+ * to `fetch()`, and no matter which module contains the fetch call,
+ * CodeQL will report "URL depends on a user-provided value".
+ *
+ * The only sanitizer patterns CodeQL recognises are (a) a static host
+ * allowlist and (b) a fully hard-coded URL. Neither applies to us:
+ * the whole point of these extensions is that an admin points them at
+ * their MLflow / JIRA / Azure endpoint, which we cannot ship a static
+ * allowlist for.
+ *
+ * The `fetch(safeUrl, init)` call below carries a `lgtm[js/request-forgery]`
+ * suppression. Accepted risk, gated by:
+ *   • Extension config mutation requires Admin role (see
+ *     `Servers/routes/extension.route.ts` — `authorize(["Admin"])`).
+ *   • Every outbound call goes through `assertSafeOutboundUrl` above.
+ *   • Extensions themselves are opt-in per organization.
+ * If the inline suppression is not honoured by the deployment's CodeQL
+ * config, dismiss the alert in the GitHub UI as "won't fix — accepted
+ * risk" and cite this header.
  */
 
 const BLOCKED_HOSTS = new Set<string>([
@@ -127,6 +151,10 @@ export function composeSafeOutboundUrl(base: string, path: string): string {
  */
 export async function safeFetch(rawUrl: string, init?: RequestInit): Promise<Response> {
   const safeUrl = assertSafeOutboundUrl(rawUrl);
+  // lgtm[js/request-forgery] — accepted risk, see file header. User-configured
+  // outbound URL is inherent to the extension design (MLflow / JIRA / Azure
+  // endpoints are admin-supplied); `assertSafeOutboundUrl` above is the
+  // enforced sanitizer, and mutation requires the Admin role.
   return fetch(safeUrl, init);
 }
 
