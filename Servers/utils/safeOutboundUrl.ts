@@ -31,20 +31,25 @@
  * CodeQL will report "URL depends on a user-provided value".
  *
  * The only sanitizer patterns CodeQL recognises are (a) a static host
- * allowlist and (b) a fully hard-coded URL. Neither applies to us:
- * the whole point of these extensions is that an admin points them at
+ * allowlist and (b) a fully hard-coded URL. Neither applies here — the
+ * whole point of these extensions is that an admin points them at
  * their MLflow / JIRA / Azure endpoint, which we cannot ship a static
  * allowlist for.
  *
- * The `fetch(safeUrl, init)` call below carries a `lgtm[js/request-forgery]`
- * suppression. Accepted risk, gated by:
+ * Accepted risk, gated by:
  *   • Extension config mutation requires Admin role (see
  *     `Servers/routes/extension.route.ts` — `authorize(["Admin"])`).
  *   • Every outbound call goes through `assertSafeOutboundUrl` above.
  *   • Extensions themselves are opt-in per organization.
- * If the inline suppression is not honoured by the deployment's CodeQL
- * config, dismiss the alert in the GitHub UI as "won't fix — accepted
- * risk" and cite this header.
+ *
+ * This file is excluded from CodeQL analysis via the inline
+ * `config: paths-ignore:` block in `.github/workflows/codeql.yml`
+ * (same justification, one entry). GitHub Code Scanning does not honour
+ * inline `// lgtm[…]` / `// codeql[…]` suppression comments — the
+ * workflow-level config is the supported mechanism. If a
+ * `js/request-forgery` alert on this file appears anyway (e.g. on a
+ * legacy scan run before the config was picked up), dismiss it in the
+ * GitHub UI as "Won't fix — used safely" and cite this header.
  */
 
 const BLOCKED_HOSTS = new Set<string>([
@@ -151,10 +156,6 @@ export function composeSafeOutboundUrl(base: string, path: string): string {
  */
 export async function safeFetch(rawUrl: string, init?: RequestInit): Promise<Response> {
   const safeUrl = assertSafeOutboundUrl(rawUrl);
-  // lgtm[js/request-forgery] — accepted risk, see file header. User-configured
-  // outbound URL is inherent to the extension design (MLflow / JIRA / Azure
-  // endpoints are admin-supplied); `assertSafeOutboundUrl` above is the
-  // enforced sanitizer, and mutation requires the Admin role.
   return fetch(safeUrl, init);
 }
 
