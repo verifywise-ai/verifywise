@@ -7455,7 +7455,7 @@ components:
       properties:
         token:
           type: string
-          example: ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+          example: ghp_your_token_here
         token_name:
           type: string
           default: 'GitHub Personal Access Token'
@@ -7467,7 +7467,7 @@ components:
       properties:
         token:
           type: string
-          example: ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+          example: ghp_your_token_here
     GitHubTokenTestResult:
       type: object
       properties:

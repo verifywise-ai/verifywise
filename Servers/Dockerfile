@@ -42,6 +42,20 @@ COPY ./SQL_Commands.sql ./SQL_Commands.sql
 
 RUN npm run build
 
+# Strip the package managers from the runtime image. npm/npx/corepack are only
+# needed at build time (npm ci + npm run build, both done above). Their bundled
+# transitive deps (tar, undici, brace-expansion, ip-address, sigstore, ...)
+# carry a steady stream of fixable CRITICAL/HIGH CVEs that Trivy flags on the
+# release scan even though they never run in production. Runtime startup and DB
+# migrations use `node` and the local sequelize CLI directly (see start.sh).
+RUN rm -rf \
+      /usr/local/lib/node_modules/npm \
+      /usr/local/lib/node_modules/corepack \
+      /usr/local/bin/npm \
+      /usr/local/bin/npx \
+      /usr/local/bin/corepack \
+      /root/.npm
+
 COPY ./templates ./dist/templates
 
 # Install dcron with error handling for ARM64 QEMU issues
