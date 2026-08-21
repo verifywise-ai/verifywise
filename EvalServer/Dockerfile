@@ -1,5 +1,10 @@
 FROM python:3.12-slim
 
+# Pull the latest Debian security patches so Trivy release scans don't fail on
+# fixable base-image CVEs (e.g. util-linux CVE-2026-53612..53615, fixed in
+# 2.41.5-0+deb13u1). The slim base lags behind the Debian security repo.
+RUN apt-get update && apt-get -y upgrade && rm -rf /var/lib/apt/lists/*
+
 # Set the working directory inside the container
 WORKDIR /app
 
