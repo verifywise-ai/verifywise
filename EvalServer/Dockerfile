@@ -6,6 +6,10 @@ FROM python:3.12-slim
 # Use dist-upgrade (not upgrade): a plain `apt-get upgrade` holds back any
 # security update that pulls in a new dependency, which can silently leave the
 # CVE unpatched — dist-upgrade applies it.
+# DS-0017 expects `apt-get update` to be paired with `apt-get install` in the
+# same layer. Here the pairing is an intentional `dist-upgrade` (apply security
+# patches, install no new packages), so the rule is a false positive here.
+# trivy:ignore:AVD-DS-0017
 RUN apt-get update && apt-get -y dist-upgrade && rm -rf /var/lib/apt/lists/*
 
 # Set the working directory inside the container
