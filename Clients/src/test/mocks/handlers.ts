@@ -7,6 +7,42 @@ import { mockLoginResponse } from "./data/auth";
 import { mockTasks, createMockTask } from "./data/tasks";
 import { mockUsers, createMockUser } from "./data/users";
 import { mockFiles, mockFilePagination } from "./data/files";
+import {
+  mockShadowAiApiKeys,
+  mockShadowAiApiKeyCreated,
+  mockShadowAiTools,
+  mockToolsResponse,
+  mockInsightsSummary,
+  mockToolsByEvents,
+  mockToolsByUsers,
+  mockUsersByDepartment,
+  mockUsersResponse,
+  mockDepartmentActivity,
+  mockSyslogConfigs,
+  mockShadowAiSettings,
+  mockShadowAiRules,
+  mockAlertHistory,
+} from "./data/shadowAi";
+import {
+  mockScans,
+  mockActiveScan,
+  mockScansResponse,
+  mockScanStatus,
+  mockFindingsResponse,
+  mockSecuritySummary,
+  mockAiDetectionStats,
+  mockRiskScore,
+  mockDependencyGraph,
+  mockComplianceMapping,
+  mockRiskScoringConfig,
+  mockSuppressions,
+  mockAiDetectionRepositories,
+  mockRepositoriesResponse,
+  createMockAiDetectionRepository,
+} from "./data/aiDetection";
+import { mockFrameworks } from "./data/frameworks";
+import { mockInvitations } from "./data/invitations";
+import { mockSsoConfig, mockSsoStatus, mockSsoOrgs, mockUserPreferences } from "./data/settings";
 
 export const handlers = [
   // Health check
@@ -638,6 +674,313 @@ export const handlers = [
   // Project-scoped files, a separate module from file-manager. Included so tests
   // touching the /files endpoints do not fall through to an unhandled request.
   http.get("/api/files", () => HttpResponse.json({ data: [] })),
+
+  // ==================== Shadow AI ====================
+  // Ordering: literal segments before parameterised ones, or "/rules/:id"
+  // swallows "/rules/alert-history" and "/insights/*" is shadowed by any
+  // "/shadow-ai/:param" route added later.
+  //
+  // Envelope: shadowAi.repository unwraps response.data.data throughout, so
+  // every handler here wraps its payload in { data: ... }.
+
+  http.get("/api/shadow-ai/insights/summary", () =>
+    HttpResponse.json({ data: mockInsightsSummary }),
+  ),
+  http.get("/api/shadow-ai/insights/tools-by-events", () =>
+    HttpResponse.json({ data: mockToolsByEvents }),
+  ),
+  http.get("/api/shadow-ai/insights/tools-by-users", () =>
+    HttpResponse.json({ data: mockToolsByUsers }),
+  ),
+  http.get("/api/shadow-ai/insights/users-by-department", () =>
+    HttpResponse.json({ data: mockUsersByDepartment }),
+  ),
+
+  http.get("/api/shadow-ai/api-keys", () => HttpResponse.json({ data: mockShadowAiApiKeys })),
+  http.post("/api/shadow-ai/api-keys", () =>
+    HttpResponse.json({ data: mockShadowAiApiKeyCreated }, { status: 201 }),
+  ),
+  http.delete("/api/shadow-ai/api-keys/:id/permanent", ({ params }) =>
+    HttpResponse.json({ data: { id: Number(params.id), deleted: true } }),
+  ),
+  http.delete("/api/shadow-ai/api-keys/:id", ({ params }) =>
+    HttpResponse.json({ data: { id: Number(params.id), revoked: true } }),
+  ),
+
+  // "/rules/alert-history" must precede "/rules/:id".
+  http.get("/api/shadow-ai/rules/alert-history", () =>
+    HttpResponse.json({ data: mockAlertHistory }),
+  ),
+  http.get("/api/shadow-ai/rules", () => HttpResponse.json({ data: mockShadowAiRules })),
+  http.post("/api/shadow-ai/rules", async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({ data: { id: 3, ...body } }, { status: 201 });
+  }),
+  http.patch("/api/shadow-ai/rules/:id", async ({ params, request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({ data: { id: Number(params.id), ...body } });
+  }),
+  http.delete("/api/shadow-ai/rules/:id", ({ params }) =>
+    HttpResponse.json({ data: { id: Number(params.id), deleted: true } }),
+  ),
+
+  http.get("/api/shadow-ai/users/:email/activity", ({ params }) =>
+    HttpResponse.json({
+      data: { user_email: decodeURIComponent(String(params.email)), events: [] },
+    }),
+  ),
+  http.get("/api/shadow-ai/users", () => HttpResponse.json({ data: mockUsersResponse() })),
+  http.get("/api/shadow-ai/departments", () => HttpResponse.json({ data: mockDepartmentActivity })),
+
+  http.patch("/api/shadow-ai/tools/:id/status", async ({ params, request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({ data: { ...mockShadowAiTools[0], id: Number(params.id), ...body } });
+  }),
+  http.post("/api/shadow-ai/tools/:toolId/start-governance", ({ params }) =>
+    HttpResponse.json({ data: { tool_id: Number(params.toolId), model_inventory_id: 10 } }),
+  ),
+  http.get("/api/shadow-ai/tools/:id", ({ params }) => {
+    const tool = mockShadowAiTools.find((t) => String(t.id) === String(params.id));
+    if (!tool) return HttpResponse.json({ message: "Not found", data: null }, { status: 404 });
+    return HttpResponse.json({ data: tool });
+  }),
+  http.get("/api/shadow-ai/tools", () => HttpResponse.json({ data: mockToolsResponse() })),
+
+  // ==================== AI Detection: scans ====================
+  // Ordering is the sharpest trap in this file: "/scans/:scanId" must come
+  // after "/scans/active" and after every "/scans/:scanId/*" sub-resource,
+  // or it swallows all of them.
+
+  http.get("/api/ai-detection/stats", () => HttpResponse.json({ data: mockAiDetectionStats })),
+
+  http.get("/api/ai-detection/risk-scoring/config", () =>
+    HttpResponse.json({ data: mockRiskScoringConfig }),
+  ),
+  http.patch("/api/ai-detection/risk-scoring/config", async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({ data: { ...mockRiskScoringConfig, ...body } });
+  }),
+
+  http.get("/api/ai-detection/suppressions", () => HttpResponse.json({ data: mockSuppressions })),
+  http.post("/api/ai-detection/suppressions", async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({ data: { id: 2, ...body } }, { status: 201 });
+  }),
+  http.delete("/api/ai-detection/suppressions/:id", ({ params }) =>
+    HttpResponse.json({ data: { id: Number(params.id), deleted: true } }),
+  ),
+
+  http.get("/api/ai-detection/scans/active", () => HttpResponse.json({ data: mockActiveScan })),
+
+  http.get("/api/ai-detection/scans/:scanId/status", ({ params }) =>
+    HttpResponse.json({ data: { ...mockScanStatus, id: Number(params.scanId) } }),
+  ),
+  http.get("/api/ai-detection/scans/:scanId/security-findings", () =>
+    HttpResponse.json({ data: mockFindingsResponse() }),
+  ),
+  http.get("/api/ai-detection/scans/:scanId/security-summary", () =>
+    HttpResponse.json({ data: mockSecuritySummary }),
+  ),
+  http.get("/api/ai-detection/scans/:scanId/governance-summary", () =>
+    HttpResponse.json({ data: { governed: 3, ungoverned: 4, total: 7 } }),
+  ),
+  http.patch(
+    "/api/ai-detection/scans/:scanId/findings/:findingId/governance",
+    async ({ params, request }) => {
+      const body = (await request.json()) as Record<string, unknown>;
+      return HttpResponse.json({ data: { id: Number(params.findingId), ...body } });
+    },
+  ),
+  http.get("/api/ai-detection/scans/:scanId/findings", () =>
+    HttpResponse.json({ data: mockFindingsResponse() }),
+  ),
+  http.get("/api/ai-detection/scans/:scanId/dependency-graph", () =>
+    HttpResponse.json({ data: mockDependencyGraph }),
+  ),
+  http.get("/api/ai-detection/scans/:scanId/compliance", () =>
+    HttpResponse.json({ data: mockComplianceMapping }),
+  ),
+  http.post("/api/ai-detection/scans/:scanId/risk-score/recalculate", () =>
+    HttpResponse.json({ data: mockRiskScore }),
+  ),
+  http.get("/api/ai-detection/scans/:scanId/risk-score", () =>
+    HttpResponse.json({ data: mockRiskScore }),
+  ),
+  http.get("/api/ai-detection/scans/:scanId/export/ai-bom", () =>
+    HttpResponse.json({ data: { format: "cyclonedx", components: [] } }),
+  ),
+  http.post("/api/ai-detection/scans/:scanId/cancel", ({ params }) =>
+    HttpResponse.json({
+      data: { ...mockScans[1], id: Number(params.scanId), status: "cancelled" },
+    }),
+  ),
+
+  // Generic /scans/:scanId last, after every sub-resource above.
+  http.get("/api/ai-detection/scans/:scanId", ({ params }) => {
+    const scan = mockScans.find((sc) => String(sc.id) === String(params.scanId));
+    if (!scan) return HttpResponse.json({ message: "Not found", data: null }, { status: 404 });
+    return HttpResponse.json({ data: scan });
+  }),
+  http.delete("/api/ai-detection/scans/:scanId", ({ params }) =>
+    HttpResponse.json({ data: { id: Number(params.scanId), deleted: true } }),
+  ),
+  http.post("/api/ai-detection/scans", async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({ data: { ...mockScans[1], ...body } }, { status: 201 });
+  }),
+  http.get("/api/ai-detection/scans", () => HttpResponse.json({ data: mockScansResponse() })),
+
+  // ==================== AI Detection: repositories ====================
+  // Registered before the /ai-detection/scans block would not matter, but the
+  // literal "/repositories" must precede any "/ai-detection/:param" route.
+
+  http.post("/api/ai-detection/repositories/:id/webhook-secret", () =>
+    HttpResponse.json({ data: { webhook_secret: "whsec_test_value" } }),
+  ),
+  http.post("/api/ai-detection/repositories/:id/scan", ({ params }) =>
+    HttpResponse.json(
+      { data: { ...mockScans[1], repository_id: Number(params.id) } },
+      { status: 201 },
+    ),
+  ),
+  http.get("/api/ai-detection/repositories/:id/scans", () =>
+    HttpResponse.json({ data: mockScansResponse() }),
+  ),
+  http.get("/api/ai-detection/repositories/:id", ({ params }) => {
+    const repo = mockAiDetectionRepositories.find((r) => String(r.id) === String(params.id));
+    if (!repo) return HttpResponse.json({ message: "Not found", data: null }, { status: 404 });
+    return HttpResponse.json({ data: repo });
+  }),
+  http.patch("/api/ai-detection/repositories/:id", async ({ params, request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({
+      data: createMockAiDetectionRepository({ id: Number(params.id), ...body }),
+    });
+  }),
+  http.delete("/api/ai-detection/repositories/:id", ({ params }) =>
+    HttpResponse.json({ data: { id: Number(params.id), deleted: true } }),
+  ),
+  http.post("/api/ai-detection/repositories", async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json(
+      { data: createMockAiDetectionRepository({ id: 3, ...body }) },
+      { status: 201 },
+    );
+  }),
+  // Serves getRepositories and getRepositoryCount (same path, different query).
+  http.get("/api/ai-detection/repositories", () =>
+    HttpResponse.json({ data: mockRepositoriesResponse() }),
+  ),
+
+  // ==================== Compliance frameworks ====================
+  // The frontend calls only these two of the nine registered framework routes.
+  // useFrameworks reads response.data off the whole body, and the controller
+  // returns STATUS_CODE[200](frameworks) — so wrap.
+
+  http.get("/api/frameworks", () => HttpResponse.json({ message: "OK", data: mockFrameworks })),
+  http.post("/api/frameworks/toProject", ({ request }) => {
+    const url = new URL(request.url);
+    return HttpResponse.json({
+      message: "OK",
+      data: {
+        frameworkId: Number(url.searchParams.get("frameworkId")),
+        projectId: Number(url.searchParams.get("projectId")),
+      },
+    });
+  }),
+
+  // ==================== Settings ====================
+  // Scope: Shadow AI settings + syslog, SSO/org config, user preferences.
+  // /feature-settings is deliberately out of scope.
+
+  http.get("/api/shadow-ai/settings", () => HttpResponse.json({ data: mockShadowAiSettings })),
+  http.patch("/api/shadow-ai/settings", async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({ data: { ...mockShadowAiSettings, ...body } });
+  }),
+
+  http.get("/api/shadow-ai/config/syslog", () => HttpResponse.json({ data: mockSyslogConfigs })),
+  http.post("/api/shadow-ai/config/syslog", async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({ data: { id: 3, ...body } }, { status: 201 });
+  }),
+  http.patch("/api/shadow-ai/config/syslog/:id", async ({ params, request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({ data: { ...mockSyslogConfigs[0], id: Number(params.id), ...body } });
+  }),
+  http.delete("/api/shadow-ai/config/syslog/:id", ({ params }) =>
+    HttpResponse.json({ data: { id: Number(params.id), deleted: true } }),
+  ),
+
+  // ssoConfig paths are written WITHOUT a leading slash in the repository and
+  // in SsoConfigTab (e.g. `ssoConfig?provider=AzureAD`), so they resolve
+  // relative to the axios baseURL. Both spellings are registered so the
+  // handlers match however the URL resolves.
+  http.get("/api/ssoConfig/check-status", () => HttpResponse.json({ data: mockSsoStatus })),
+  http.get("/api/ssoConfig/orgs", () => HttpResponse.json({ data: mockSsoOrgs })),
+  http.put("/api/ssoConfig/:action", ({ params }) =>
+    HttpResponse.json({ data: { ...mockSsoConfig, is_enabled: params.action === "enable" } }),
+  ),
+  http.get("/api/ssoConfig", () => HttpResponse.json({ data: mockSsoConfig })),
+  http.put("/api/ssoConfig", async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({ data: { ...mockSsoConfig, ...body } });
+  }),
+
+  http.get("/api/users/me/preferences", () =>
+    HttpResponse.json({ message: "OK", data: mockUserPreferences }),
+  ),
+  http.patch("/api/users/me/preferences", async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({ message: "OK", data: { ...mockUserPreferences, ...body } });
+  }),
+
+  // ==================== Invitations ====================
+  // Envelope note: invitation.ctrl returns a BARE { invitations } on success
+  // (not the STATUS_CODE wrapper), and useInvitations reads
+  // response.invitations directly. Errors do use the wrapper.
+
+  http.get("/api/invitations", () => HttpResponse.json({ invitations: mockInvitations })),
+  http.post("/api/invitations/:id/resend", ({ params }) =>
+    HttpResponse.json({ message: "Invitation resent", id: Number(params.id) }),
+  ),
+  http.delete("/api/invitations/:id", ({ params }) =>
+    HttpResponse.json({ message: "Invitation revoked", id: Number(params.id) }),
+  ),
+
+  // ==================== Bulk update ====================
+  // Cross-cutting rather than a single domain: seven bulk routes across six
+  // repositories. Each echoes the ids it was given so tests can assert the
+  // payload actually reached the wire.
+
+  http.post("/api/projectRisks/bulk", async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({ data: { updated: 0, ...body } });
+  }),
+  http.post("/api/tasks/bulk", async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({ data: { updated: 0, ...body } });
+  }),
+  http.post("/api/policies/bulk", async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({ data: { updated: 0, ...body } });
+  }),
+  http.patch("/api/files/bulk-tags", async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({ data: { updated: 0, ...body } });
+  }),
+  http.post("/api/files/attach-bulk", async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({ data: { attached: 0, ...body } });
+  }),
+  http.post("/api/ai-trust-index/tracked/bulk", async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({ data: { updated: 0, ...body } });
+  }),
+  http.post("/api/governance-os/mappings/bulk", async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({ data: { updated: 0, ...body } });
+  }),
 
   // ==================== Search ====================
   http.get("/api/search", ({ request }) => {
