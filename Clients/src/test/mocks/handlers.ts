@@ -918,8 +918,14 @@ export const handlers = [
   // handlers match however the URL resolves.
   http.get("/api/ssoConfig/check-status", () => HttpResponse.json({ data: mockSsoStatus })),
   http.get("/api/ssoConfig/orgs", () => HttpResponse.json({ data: mockSsoOrgs })),
-  http.put("/api/ssoConfig/:action", ({ params }) =>
-    HttpResponse.json({ data: { ...mockSsoConfig, is_enabled: params.action === "enable" } }),
+  // The backend registers /ssoConfig/enable and /ssoConfig/disable as literal
+  // routes, so mirror them rather than using a ":action" catch-all that would
+  // also answer paths the API does not serve.
+  http.put("/api/ssoConfig/enable", () =>
+    HttpResponse.json({ data: { ...mockSsoConfig, is_enabled: true } }),
+  ),
+  http.put("/api/ssoConfig/disable", () =>
+    HttpResponse.json({ data: { ...mockSsoConfig, is_enabled: false } }),
   ),
   http.get("/api/ssoConfig", () => HttpResponse.json({ data: mockSsoConfig })),
   http.put("/api/ssoConfig", async ({ request }) => {
