@@ -1,11 +1,8 @@
 name: Build and Push Images to GitHub Container Registry
 
 on:
-  push:
-    branches:
-      - hp-aug-22-fix-trivy-scan-evalserver
-  # release:
-  #   types: [published]
+  release:
+    types: [published]
 
 jobs:
   build-and-push:
@@ -61,25 +58,25 @@ jobs:
           ignore-unfixed: true
           limit-severities-for-sarif: 'true'
 
-      # - name: Upload Frontend Trivy scan results to GitHub Security
-      #   uses: github/codeql-action/upload-sarif@v4
-      #   with:
-      #     sarif_file: 'frontend-trivy-results.sarif'
-      #     category: 'container-frontend'
+      - name: Upload Frontend Trivy scan results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: 'frontend-trivy-results.sarif'
+          category: 'container-frontend'
 
-      # - name: Build and push Clients image
-      #   uses: docker/build-push-action@v7
-      #   with:
-      #     context: .
-      #     file: ./Clients/Dockerfile
-      #     platforms: linux/amd64,linux/arm64
-      #     push: true
-      #     tags: |
-      #       ghcr.io/${{ github.repository_owner }}/verifywise-frontend:${{ env.TAG }}
-      #       ghcr.io/${{ github.repository_owner }}/verifywise-frontend:latest
-      #     build-args: |
-      #       VITE_SLACK_CLIENT_ID=${{ secrets.SLACK_CLIENT_ID }}
-      #       VITE_APP_VERSION=${{ env.TAG }}
+      - name: Build and push Clients image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./Clients/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/verifywise-frontend:${{ env.TAG }}
+            ghcr.io/${{ github.repository_owner }}/verifywise-frontend:latest
+          build-args: |
+            VITE_SLACK_CLIENT_ID=${{ secrets.SLACK_CLIENT_ID }}
+            VITE_APP_VERSION=${{ env.TAG }}
 
       # Build Backend image
       - name: Copy version.json into Servers context
@@ -106,21 +103,21 @@ jobs:
           ignore-unfixed: true
           limit-severities-for-sarif: 'true'
 
-      # - name: Upload Backend Trivy scan results to GitHub Security
-      #   uses: github/codeql-action/upload-sarif@v4
-      #   with:
-      #     sarif_file: 'backend-trivy-results.sarif'
-      #     category: 'container-backend'
+      - name: Upload Backend Trivy scan results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: 'backend-trivy-results.sarif'
+          category: 'container-backend'
 
-      # - name: Build and push Servers image
-      #   uses: docker/build-push-action@v7
-      #   with:
-      #     context: ./Servers
-      #     platforms: linux/amd64,linux/arm64
-      #     push: true
-      #     tags: |
-      #       ghcr.io/${{ github.repository_owner }}/verifywise-backend:${{ env.TAG }}
-      #       ghcr.io/${{ github.repository_owner }}/verifywise-backend:latest
+      - name: Build and push Servers image
+        uses: docker/build-push-action@v7
+        with:
+          context: ./Servers
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/verifywise-backend:${{ env.TAG }}
+            ghcr.io/${{ github.repository_owner }}/verifywise-backend:latest
 
       - name: Clean up after Servers build
         run: |
@@ -158,22 +155,22 @@ jobs:
           ignore-unfixed: true
           limit-severities-for-sarif: 'true'
 
-      # - name: Upload EvalServer Trivy scan results to GitHub Security
-      #   uses: github/codeql-action/upload-sarif@v4
-      #   with:
-      #     sarif_file: 'evalserver-trivy-results.sarif'
-      #     category: 'container-evalserver'
+      - name: Upload EvalServer Trivy scan results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: 'evalserver-trivy-results.sarif'
+          category: 'container-evalserver'
 
-      # - name: Build and push EvalServer image
-      #   uses: docker/build-push-action@v7
-      #   with:
-      #     context: .
-      #     file: ./EvalServer/Dockerfile
-      #     platforms: linux/amd64,linux/arm64
-      #     push: true
-      #     tags: |
-      #       ghcr.io/${{ github.repository_owner }}/verifywise-eval-server:${{ env.TAG }}
-      #       ghcr.io/${{ github.repository_owner }}/verifywise-eval-server:latest
+      - name: Build and push EvalServer image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./EvalServer/Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/verifywise-eval-server:${{ env.TAG }}
+            ghcr.io/${{ github.repository_owner }}/verifywise-eval-server:latest
 
       - name: Clean up after EvalServer build
         run: |
@@ -202,18 +199,18 @@ jobs:
           ignore-unfixed: true
           limit-severities-for-sarif: 'true'
 
-      # - name: Upload AIGateway Trivy scan results to GitHub Security
-      #   uses: github/codeql-action/upload-sarif@v4
-      #   with:
-      #     sarif_file: 'aigateway-trivy-results.sarif'
-      #     category: 'container-aigateway'
+      - name: Upload AIGateway Trivy scan results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: 'aigateway-trivy-results.sarif'
+          category: 'container-aigateway'
 
-      # - name: Build and push AIGateway image
-      #   uses: docker/build-push-action@v7
-      #   with:
-      #     context: ./AIGateway
-      #     platforms: linux/amd64,linux/arm64
-      #     push: true
-      #     tags: |
-      #       ghcr.io/${{ github.repository_owner }}/verifywise-ai-gateway:${{ env.TAG }}
-      #       ghcr.io/${{ github.repository_owner }}/verifywise-ai-gateway:latest
+      - name: Build and push AIGateway image
+        uses: docker/build-push-action@v7
+        with:
+          context: ./AIGateway
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/verifywise-ai-gateway:${{ env.TAG }}
+            ghcr.io/${{ github.repository_owner }}/verifywise-ai-gateway:latest
