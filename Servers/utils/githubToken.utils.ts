@@ -303,8 +303,8 @@ export async function testGitHubToken(token: string): Promise<IGitHubTokenTestRe
  * Validate GitHub token format (basic pattern check)
  *
  * GitHub PAT formats:
- * - Classic tokens: ghp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx (40 chars)
- * - Fine-grained tokens: github_pat_xxxxxxxxxx (longer)
+ * - Classic tokens: "ghp_" followed by 36 alphanumeric characters (40 chars total)
+ * - Fine-grained tokens: "github_pat_" followed by a longer alphanumeric string
  *
  * @param token - The token to validate
  * @returns null if valid, error message if invalid

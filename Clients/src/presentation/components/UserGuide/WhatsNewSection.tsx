@@ -11,6 +11,24 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "v2.5",
+    date: "August 20, 2026",
+    title: "Custom frameworks, Model Risk Management, and Extensions",
+    summary:
+      "Major release that lets you shape the platform around your organization. Build your own compliance frameworks, turn framework features on and off, and manage the tools you connect through the renamed Extensions area. Model Risk Management gains a revalidation and simulation workflow, threshold breach alerts, and retention controls. This release also adds support for more than one super admin, plus broad accessibility, reliability, and security work.",
+    items: [
+      "Custom frameworks — build and manage your own compliance frameworks alongside the built-in ones, with their own requirements, controls, and risk tracking",
+      "Optional framework features — turn individual framework capabilities on or off to match how your organization works",
+      "Model Risk Management — adds a revalidation workflow, a model simulator and dashboard for what-if analysis, threshold breach and overdue-validation alerts with email delivery and auto-generated findings, configurable alert recipients, and record retention controls",
+      "Extensions — the plugin area is now Extensions, with a clearer marketplace, per-extension settings, and configuration for dataset bulk upload and model lifecycle",
+      "Multiple super admins — more than one super admin can now manage the platform",
+      "Accessibility — keyboard navigation with focus traps, accessible custom overlays, and automated accessibility checks across the app",
+      "Observability — OpenTelemetry metrics and logs for monitoring the platform in production",
+      "Reliability and polish — standardized API error handling with clearer toasts, optimistic updates that keep tables in sync, server-side rich text sanitization, dashboard metric accuracy fixes, improved email templates, and table empty states across more pages",
+      "Security and quality hardening — expanded code, dependency, and container scanning, cross-tenant isolation test coverage, and raised automated test coverage across the codebase",
+    ],
+  },
+  {
     version: "v2.4",
     date: "June 22, 2026",
     title: "AI Trust Index, AI Apps inventory, and Agent Control",

@@ -5540,6 +5540,8 @@ export const translations: Record<string, Record<string, string>> = {
     "AI Chatbot for Customer Support": "KI-Chatbot für den Kundensupport",
     "AI Gateway": "AI Gateway",
     "AI Gateway, Policy Radar, and CI/CD scanning": "AI Gateway, Policy Radar und CI/CD-Scanning",
+    "Custom frameworks, Model Risk Management, and Extensions":
+      "Custom Frameworks, Model Risk Management und Extensions",
     "AI Trust Index, AI Apps inventory, and Agent Control":
       "AI Trust Index, AI Apps inventory und Agent Control",
     "EU AI Act control workflow, clearable selects, and AI advisor fix":
@@ -14718,6 +14720,8 @@ export const translations: Record<string, Record<string, string>> = {
     "AI Chatbot for Customer Support": "Chatbot IA pour le support client",
     "AI Gateway": "AI Gateway",
     "AI Gateway, Policy Radar, and CI/CD scanning": "AI Gateway, Policy Radar et analyse CI/CD",
+    "Custom frameworks, Model Risk Management, and Extensions":
+      "Custom Frameworks, Model Risk Management et Extensions",
     "AI Trust Index, AI Apps inventory, and Agent Control":
       "AI Trust Index, AI Apps inventory et Agent Control",
     "EU AI Act control workflow, clearable selects, and AI advisor fix":
@@ -21885,6 +21889,8 @@ export const translations: Record<string, Record<string, string>> = {
     "AI Chatbot for Customer Support": "Chatbot de IA para atención al cliente",
     "AI Gateway": "AI Gateway",
     "AI Gateway, Policy Radar, and CI/CD scanning": "AI Gateway, Policy Radar y análisis de CI/CD",
+    "Custom frameworks, Model Risk Management, and Extensions":
+      "Custom Frameworks, Model Risk Management y Extensions",
     "AI Trust Index, AI Apps inventory, and Agent Control":
       "AI Trust Index, AI Apps inventory y Agent Control",
     "AI Lifecycle Risk Management": "Gestión de riesgos del ciclo de vida de la IA",
