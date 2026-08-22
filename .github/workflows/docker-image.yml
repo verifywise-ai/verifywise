@@ -59,7 +59,6 @@ jobs:
           # Fail the release on fixable CRITICAL/HIGH vulnerabilities.
           exit-code: '1'
           ignore-unfixed: true
-          limit-severities-for-sarif: 'true'
 
       # - name: Upload Frontend Trivy scan results to GitHub Security
       #   uses: github/codeql-action/upload-sarif@v4
@@ -104,7 +103,6 @@ jobs:
           # Fail the release on fixable CRITICAL/HIGH vulnerabilities.
           exit-code: '1'
           ignore-unfixed: true
-          limit-severities-for-sarif: 'true'
 
       # - name: Upload Backend Trivy scan results to GitHub Security
       #   uses: github/codeql-action/upload-sarif@v4
@@ -148,7 +146,6 @@ jobs:
 
       - name: Scan EvalServer image with Trivy
         uses: aquasecurity/trivy-action@v0.36.0
-        continue-on-error: true
         with:
           image-ref: 'verifywise-eval-server:scan'
           format: 'sarif'
@@ -157,12 +154,6 @@ jobs:
           # Fail the release on fixable CRITICAL/HIGH vulnerabilities.
           exit-code: '1'
           ignore-unfixed: true
-          limit-severities-for-sarif: 'true'
-
-      - name: Debug — dump EvalServer SARIF findings
-        if: always()
-        run: |
-          jq '.runs[].results[] | {ruleId, level, message: .message.text, locations}' evalserver-trivy-results.sarif || cat evalserver-trivy-results.sarif
 
       # - name: Upload EvalServer Trivy scan results to GitHub Security
       #   uses: github/codeql-action/upload-sarif@v4
@@ -198,7 +189,6 @@ jobs:
 
       - name: Scan AIGateway image with Trivy
         uses: aquasecurity/trivy-action@v0.36.0
-        continue-on-error: true
         with:
           image-ref: 'verifywise-ai-gateway:scan'
           format: 'sarif'
@@ -207,12 +197,6 @@ jobs:
           # Fail the release on fixable CRITICAL/HIGH vulnerabilities.
           exit-code: '1'
           ignore-unfixed: true
-          limit-severities-for-sarif: 'true'
-
-      - name: Debug — dump AIGateway SARIF findings
-        if: always()
-        run: |
-          jq '.runs[].results[] | {ruleId, level, message: .message.text, locations}' aigateway-trivy-results.sarif || cat aigateway-trivy-results.sarif
 
       # - name: Upload AIGateway Trivy scan results to GitHub Security
       #   uses: github/codeql-action/upload-sarif@v4
