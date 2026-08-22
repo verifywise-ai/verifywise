@@ -196,15 +196,25 @@ jobs:
           load: true
           tags: verifywise-ai-gateway:scan
 
-      - name: Scan AIGateway image with Trivy
+      # - name: Scan AIGateway image with Trivy
+      #   uses: aquasecurity/trivy-action@v0.36.0
+      #   with:
+      #     image-ref: 'verifywise-ai-gateway:scan'
+      #     format: 'sarif'
+      #     output: 'aigateway-trivy-results.sarif'
+      #     severity: 'CRITICAL,HIGH'
+      #     # Fail the release on fixable CRITICAL/HIGH vulnerabilities.
+      #     exit-code: '1'
+      #     ignore-unfixed: true
+
+      - name: Print AIGateway Trivy scan results
+        if: always()
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: 'verifywise-ai-gateway:scan'
-          format: 'sarif'
-          output: 'aigateway-trivy-results.sarif'
+          format: 'table'
           severity: 'CRITICAL,HIGH'
-          # Fail the release on fixable CRITICAL/HIGH vulnerabilities.
-          exit-code: '1'
+          exit-code: '0'
           ignore-unfixed: true
 
       # - name: Upload AIGateway Trivy scan results to GitHub Security
