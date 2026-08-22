@@ -952,16 +952,17 @@ export const handlers = [
   // Cross-cutting rather than a single domain: seven bulk routes across six
   // repositories. Each echoes the ids it was given so tests can assert the
   // payload actually reached the wire.
+  //
+  // Methods were verified against the repositories, not assumed: projectRisks,
+  // tasks, policies and file tags are PATCH; attach-bulk, ai-trust-index and
+  // governance-os are POST. /api/tasks/bulk already had a PATCH handler further
+  // up this file, so it is not repeated here.
 
-  http.post("/api/projectRisks/bulk", async ({ request }) => {
+  http.patch("/api/projectRisks/bulk", async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>;
     return HttpResponse.json({ data: { updated: 0, ...body } });
   }),
-  http.post("/api/tasks/bulk", async ({ request }) => {
-    const body = (await request.json()) as Record<string, unknown>;
-    return HttpResponse.json({ data: { updated: 0, ...body } });
-  }),
-  http.post("/api/policies/bulk", async ({ request }) => {
+  http.patch("/api/policies/bulk", async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>;
     return HttpResponse.json({ data: { updated: 0, ...body } });
   }),
