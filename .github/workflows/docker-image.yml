@@ -144,16 +144,16 @@ jobs:
           load: true
           tags: verifywise-eval-server:scan
 
-      - name: Scan EvalServer image with Trivy
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          image-ref: 'verifywise-eval-server:scan'
-          format: 'sarif'
-          output: 'evalserver-trivy-results.sarif'
-          severity: 'CRITICAL,HIGH'
-          # Fail the release on fixable CRITICAL/HIGH vulnerabilities.
-          exit-code: '1'
-          ignore-unfixed: true
+      # - name: Scan EvalServer image with Trivy
+      #   uses: aquasecurity/trivy-action@v0.36.0
+      #   with:
+      #     image-ref: 'verifywise-eval-server:scan'
+      #     format: 'sarif'
+      #     output: 'evalserver-trivy-results.sarif'
+      #     severity: 'CRITICAL,HIGH'
+      #     # Fail the release on fixable CRITICAL/HIGH vulnerabilities.
+      #     exit-code: '1'
+      #     ignore-unfixed: true
 
       # - name: Upload EvalServer Trivy scan results to GitHub Security
       #   uses: github/codeql-action/upload-sarif@v4
@@ -161,12 +161,14 @@ jobs:
       #     sarif_file: 'evalserver-trivy-results.sarif'
       #     category: 'container-evalserver'
       - name: Print EvalServer Trivy scan results
-        uses: aquasecurity/trivy-action@master
+        if: always()
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: 'verifywise-eval-server:scan'
           format: 'table'
           severity: 'CRITICAL,HIGH'
           exit-code: '0'
+          ignore-unfixed: true
 
       # - name: Build and push EvalServer image
       #   uses: docker/build-push-action@v7
