@@ -63,7 +63,7 @@ portalocker==3.2.0
 posthog==7.35.0
 prompt-toolkit==3.0.52
 propcache==0.4.1
-proto-plus==1.26.1
+proto-plus==1.28.3
 protobuf==6.33.5
 psycopg2-binary==2.9.11
 pyasn1==0.6.4
