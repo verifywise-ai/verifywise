@@ -5,6 +5,7 @@ import {
   createVendor,
   deleteVendorById,
   getAllVendors,
+  getDoraRegister,
   getVendorById,
   getVendorByProjectId,
   updateVendorById,
@@ -14,6 +15,7 @@ import authenticateJWT from "../middleware/auth.middleware";
 
 // GET requests
 router.get("/", authenticateJWT, getAllVendors);
+router.get("/dora-register", authenticateJWT, getDoraRegister);
 router.get("/project-id/:id", authenticateJWT, getVendorByProjectId);
 router.get("/:id", authenticateJWT, getVendorById);
 

@@ -5,6 +5,7 @@ import {
   createNewVendorQuery,
   deleteVendorByIdQuery,
   getAllVendorsQuery,
+  getDoraRegisterQuery,
   getVendorByIdQuery,
   getVendorByProjectIdQuery,
   updateVendorByIdQuery,
@@ -76,6 +77,53 @@ export async function getAllVendors(req: Request, res: Response): Promise<any> {
       eventType: "Read",
       description: "Failed to retrieve vendors",
       functionName: "getAllVendors",
+      fileName: "vendor.ctrl.ts",
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+export async function getDoraRegister(req: Request, res: Response): Promise<any> {
+  logProcessing({
+    description: "starting getDoraRegister",
+    functionName: "getDoraRegister",
+    fileName: "vendor.ctrl.ts",
+    userId: req.userId!,
+    organizationId: req.organizationId!,
+  });
+
+  try {
+    const vendors = await getDoraRegisterQuery(req.organizationId!);
+
+    if (vendors) {
+      await logSuccess({
+        eventType: "Read",
+        description: `Retrieved ${vendors.length} DORA register vendors`,
+        functionName: "getDoraRegister",
+        fileName: "vendor.ctrl.ts",
+        userId: req.userId!,
+        organizationId: req.organizationId!,
+      });
+      return res.status(200).json(STATUS_CODE[200](vendors));
+    }
+
+    await logSuccess({
+      eventType: "Read",
+      description: "No DORA register vendors found",
+      functionName: "getDoraRegister",
+      fileName: "vendor.ctrl.ts",
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(204).json(STATUS_CODE[204](vendors));
+  } catch (error) {
+    await logFailure({
+      eventType: "Read",
+      description: "Failed to retrieve DORA register vendors",
+      functionName: "getDoraRegister",
       fileName: "vendor.ctrl.ts",
       error: error as Error,
       userId: req.userId!,

@@ -22,7 +22,11 @@ jest.mock("../../services/automations/automationProducer", () => ({
   enqueueAutomationAction: jest.fn().mockResolvedValue(undefined),
 }));
 
-import { createNewVendorQuery, updateVendorByIdQuery } from "../../utils/vendor.utils";
+import {
+  createNewVendorQuery,
+  updateVendorByIdQuery,
+  getDoraRegisterQuery,
+} from "../../utils/vendor.utils";
 
 describe("vendor.utils DORA fields", () => {
   const baseVendor: IVendor = {
@@ -238,5 +242,60 @@ describe("vendor.utils DORA fields", () => {
     expect(options.replacements.ict_service_type).toBeNull();
     expect(options.replacements.function_criticality).toBeNull();
     expect(options.replacements.substitutability).toBeNull();
+  });
+});
+
+describe("getDoraRegisterQuery", () => {
+  beforeEach(() => {
+    queryMock.mockReset();
+  });
+
+  it("filters by org and is_ict_provider", async () => {
+    const ictVendor = {
+      id: 1,
+      vendor_name: "ACME Cloud",
+      organization_id: 7,
+      is_ict_provider: true,
+    };
+    // Simulate the DB doing the actual filtering: only the ICT vendor for
+    // org 7 comes back. A non-ICT vendor or a vendor from another org must
+    // never appear here — if the implementation forgot the WHERE clause,
+    // this mock has no way of knowing to exclude them, so the SQL/replacements
+    // assertions below are what actually prove the filter was issued.
+    queryMock.mockResolvedValue([ictVendor]);
+
+    const result = await getDoraRegisterQuery(7);
+
+    expect(queryMock).toHaveBeenCalledTimes(1);
+    const [sql, options] = queryMock.mock.calls[0] as [
+      string,
+      { replacements: Record<string, any> },
+    ];
+
+    expect(sql).toContain("is_ict_provider");
+    expect(sql).toContain("organization_id = :organization_id");
+    expect(options.replacements).toMatchObject({ organization_id: 7 });
+    expect(result).toEqual([ictVendor]);
+  });
+
+  it("does not return non-ICT vendors (query is scoped, not filtered client-side)", async () => {
+    // Only a non-ICT vendor happens to be "in the DB" for this test — proves
+    // the function returns exactly what sequelize.query gives it (i.e. the
+    // filtering is the SQL's job, not a client-side re-filter that could mask
+    // a broken WHERE clause).
+    const nonIctVendor = {
+      id: 2,
+      vendor_name: "Office Supplies Co",
+      organization_id: 7,
+      is_ict_provider: false,
+    };
+    queryMock.mockResolvedValue([]);
+
+    const result = await getDoraRegisterQuery(7);
+
+    expect(result).toEqual([]);
+    expect(result).not.toContainEqual(nonIctVendor);
+    const [sql] = queryMock.mock.calls[0] as [string, any];
+    expect(sql).toContain("is_ict_provider = true");
   });
 });

@@ -17,6 +17,19 @@ import {
   fetchCustomFieldsForEntities,
 } from "./customField.utils";
 
+export const getDoraRegisterQuery = async (organizationId: number): Promise<IVendor[]> => {
+  const result = await sequelize.query(
+    `SELECT * FROM vendors
+     WHERE organization_id = :organization_id AND is_ict_provider = true
+     ORDER BY vendor_name ASC`,
+    {
+      replacements: { organization_id: organizationId },
+      type: QueryTypes.SELECT,
+    },
+  );
+  return result as IVendor[];
+};
+
 export const getAllVendorsQuery = async (organizationId: number): Promise<IVendor[]> => {
   const vendors = await sequelize.query(
     `SELECT * FROM vendors WHERE organization_id = :organizationId ORDER BY created_at DESC, id ASC`,
