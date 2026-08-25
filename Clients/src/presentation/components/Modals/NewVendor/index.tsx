@@ -14,9 +14,10 @@
  */
 
 import TabContext from "@mui/lab/TabContext";
-import { Box, Stack, Typography, useTheme } from "@mui/material";
+import { Box, FormControlLabel, Stack, Typography, useTheme } from "@mui/material";
 import Field from "../../Inputs/Field";
 import Select from "../../Inputs/Select";
+import Toggle from "../../Inputs/Toggle";
 import DatePicker from "../../Inputs/Datepicker";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { HistorySidebar } from "../../Common/HistorySidebar";
@@ -30,6 +31,7 @@ import { checkStringValidation } from "../../../../application/validations/strin
 import { useAuth } from "../../../../application/hooks/useAuth";
 import { useProjects } from "../../../../application/hooks/useProjects";
 import useUsers from "../../../../application/hooks/useUsers";
+import useDoraActive from "../../../../application/hooks/useDoraActive";
 import CustomizableToast from "../../Toast";
 import { logEngine } from "../../../../application/tools/log.engine";
 import StandardModal from "../StandardModal";
@@ -70,6 +72,14 @@ const initialState = {
   businessCriticality: "",
   pastIssues: "",
   regulatoryExposure: "",
+  // DORA Register of Information fields
+  isIctProvider: false,
+  ictServiceType: "",
+  functionCriticality: "",
+  substitutability: "",
+  hasExitPlan: false,
+  countryOfProvision: "",
+  providerLei: "",
 };
 
 const REVIEW_STATUS_OPTIONS = [
@@ -110,6 +120,28 @@ const REGULATORY_EXPOSURE_OPTIONS = [
   { _id: RegulatoryExposure.EUAIAct, name: "EU AI act" },
   { _id: RegulatoryExposure.CCPA, name: "CCPA (california)" },
   { _id: RegulatoryExposure.Other, name: "Other" },
+];
+
+const ICT_SERVICE_TYPE_OPTIONS = [
+  { _id: "Cloud services", name: "Cloud services" },
+  { _id: "Data analysis", name: "Data analysis" },
+  { _id: "Security services", name: "Security services" },
+  { _id: "Network infrastructure", name: "Network infrastructure" },
+  { _id: "Software or applications", name: "Software or applications" },
+  { _id: "IT project management", name: "IT project management" },
+  { _id: "Other ICT services", name: "Other ICT services" },
+];
+
+const FUNCTION_CRITICALITY_OPTIONS = [
+  { _id: "Critical", name: "Critical" },
+  { _id: "Important", name: "Important" },
+  { _id: "Not critical", name: "Not critical" },
+];
+
+const SUBSTITUTABILITY_OPTIONS = [
+  { _id: "Easily substitutable", name: "Easily substitutable" },
+  { _id: "Difficult to substitute", name: "Difficult to substitute" },
+  { _id: "Not substitutable", name: "Not substitutable" },
 ];
 
 const AddNewVendor: React.FC<AddNewVendorProps> = ({
@@ -179,6 +211,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
   const { userRoleName } = useAuth();
   const { users } = useUsers();
   const { approvedProjects } = useProjects();
+  const { doraActive } = useDoraActive();
   const queryClient = useQueryClient();
 
   // TanStack Query hooks
@@ -248,6 +281,13 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
         businessCriticality: existingVendor.business_criticality || "",
         pastIssues: existingVendor.past_issues || "",
         regulatoryExposure: existingVendor.regulatory_exposure || "",
+        isIctProvider: existingVendor.is_ict_provider || false,
+        ictServiceType: existingVendor.ict_service_type || "",
+        functionCriticality: existingVendor.function_criticality || "",
+        substitutability: existingVendor.substitutability || "",
+        hasExitPlan: existingVendor.has_exit_plan || false,
+        countryOfProvision: existingVendor.country_of_provision || "",
+        providerLei: existingVendor.provider_lei || "",
       }));
       // Expand scorecard if any scorecard fields have values
       if (
@@ -299,7 +339,10 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
    * @param field - The field name to update
    * @param value - The new value
    */
-  const handleOnChange = (field: keyof typeof initialState, value: string | number | number[]) => {
+  const handleOnChange = (
+    field: keyof typeof initialState,
+    value: string | number | number[] | boolean,
+  ) => {
     setValues((prevValues) => ({
       ...prevValues,
       [field]: value,
@@ -348,6 +391,18 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
       past_issues: values.pastIssues || undefined,
       regulatory_exposure: values.regulatoryExposure || undefined,
       risk_score: riskScore,
+      // DORA Register of Information fields
+      is_ict_provider: values.isIctProvider || undefined,
+      ict_service_type: values.isIctProvider ? values.ictServiceType || undefined : undefined,
+      function_criticality: values.isIctProvider
+        ? values.functionCriticality || undefined
+        : undefined,
+      substitutability: values.isIctProvider ? values.substitutability || undefined : undefined,
+      has_exit_plan: values.isIctProvider ? values.hasExitPlan || undefined : undefined,
+      country_of_provision: values.isIctProvider
+        ? values.countryOfProvision || undefined
+        : undefined,
+      provider_lei: values.isIctProvider ? values.providerLei || undefined : undefined,
     };
     if (existingVendor) {
       await updateVendor(existingVendor.id!, _vendorDetails);
@@ -859,6 +914,126 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
           </Stack>
         )}
       </Stack>
+
+      {doraActive && (
+        <Stack spacing={2} sx={{ width: 686 }}>
+          <Box
+            sx={{
+              padding: theme.spacing(2),
+              border: `1px solid ${theme.palette.divider}`,
+              borderRadius: "4px",
+              backgroundColor: theme.palette.grey[50],
+            }}
+          >
+            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
+              ICT provider (DORA)
+            </Typography>
+            <FormControlLabel
+              control={
+                <Toggle
+                  checked={values.isIctProvider}
+                  onChange={(e) => handleOnChange("isIctProvider", e.target.checked)}
+                  disabled={isEditingDisabled}
+                />
+              }
+              label="This vendor is an ICT third-party provider"
+              sx={{
+                "& .MuiFormControlLabel-label": {
+                  fontSize: 13,
+                },
+              }}
+            />
+
+            {values.isIctProvider && (
+              <Stack spacing={6} sx={{ mt: 4 }}>
+                <Stack direction="row" spacing={6}>
+                  <Box sx={{ flex: 1 }}>
+                    <Select
+                      items={ICT_SERVICE_TYPE_OPTIONS}
+                      label="ICT service type"
+                      placeholder="Select ICT service type"
+                      isHidden={false}
+                      id="ictServiceType"
+                      onChange={(e) => handleOnChange("ictServiceType", e.target.value)}
+                      value={values.ictServiceType}
+                      sx={{ width: "100%" }}
+                      error={errors.ictServiceType}
+                      disabled={isEditingDisabled}
+                    />
+                  </Box>
+                  <Box sx={{ flex: 1 }}>
+                    <Select
+                      items={FUNCTION_CRITICALITY_OPTIONS}
+                      label="Function criticality"
+                      placeholder="Select function criticality"
+                      isHidden={false}
+                      id="functionCriticality"
+                      onChange={(e) => handleOnChange("functionCriticality", e.target.value)}
+                      value={values.functionCriticality}
+                      sx={{ width: "100%" }}
+                      error={errors.functionCriticality}
+                      disabled={isEditingDisabled}
+                    />
+                  </Box>
+                </Stack>
+                <Stack direction="row" spacing={6}>
+                  <Box sx={{ flex: 1 }}>
+                    <Select
+                      items={SUBSTITUTABILITY_OPTIONS}
+                      label="Substitutability"
+                      placeholder="Select substitutability"
+                      isHidden={false}
+                      id="substitutability"
+                      onChange={(e) => handleOnChange("substitutability", e.target.value)}
+                      value={values.substitutability}
+                      sx={{ width: "100%" }}
+                      error={errors.substitutability}
+                      disabled={isEditingDisabled}
+                    />
+                  </Box>
+                  <Box sx={{ flex: 1, display: "flex", alignItems: "center" }}>
+                    <FormControlLabel
+                      control={
+                        <Toggle
+                          checked={values.hasExitPlan}
+                          onChange={(e) => handleOnChange("hasExitPlan", e.target.checked)}
+                          disabled={isEditingDisabled}
+                        />
+                      }
+                      label="Exit plan in place"
+                      sx={{
+                        "& .MuiFormControlLabel-label": {
+                          fontSize: 13,
+                        },
+                      }}
+                    />
+                  </Box>
+                </Stack>
+                <Stack direction="row" spacing={6}>
+                  <Field
+                    label="Country of provision"
+                    width={220}
+                    value={values.countryOfProvision}
+                    onChange={(e) => handleOnChange("countryOfProvision", e.target.value)}
+                    error={errors.countryOfProvision}
+                    disabled={isEditingDisabled}
+                    placeholder="Enter country of provision"
+                  />
+                  <Field
+                    label="Provider LEI"
+                    width={220}
+                    value={values.providerLei}
+                    onChange={(e) => handleOnChange("providerLei", e.target.value)}
+                    error={errors.providerLei}
+                    disabled={isEditingDisabled}
+                    placeholder="Enter legal entity identifier"
+                  />
+                </Stack>
+              </Stack>
+            )}
+          </Box>
+        </Stack>
+      )}
     </Stack>
   );
 
