@@ -193,6 +193,16 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
         return r.accepted ? "" : r.message;
       },
       assignee: (v: unknown) => (v === null ? "Please select an assignee from the dropdown" : ""),
+      // A Legal Entity Identifier is always exactly 20 alphanumeric
+      // characters (ISO 17442). The field is optional, so only validate
+      // format when a value is present and the ICT provider section is on.
+      providerLei: (v: unknown, values: typeof initialState) => {
+        const lei = (v as string) || "";
+        if (!values.isIctProvider || !lei.trim()) return "";
+        return /^[A-Za-z0-9]{20}$/.test(lei.trim())
+          ? ""
+          : "Provider LEI must be exactly 20 alphanumeric characters.";
+      },
     }),
     [],
   );
@@ -392,13 +402,19 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
       regulatory_exposure: values.regulatoryExposure || undefined,
       risk_score: riskScore,
       // DORA Register of Information fields
-      is_ict_provider: values.isIctProvider || undefined,
+      // is_ict_provider and has_exit_plan are booleans: `false` is a real,
+      // meaningful value (un-flag a provider / no exit plan in place) that
+      // must reach the backend, so they must NOT be coerced with `|| undefined`
+      // — `false || undefined` evaluates to `undefined`, which the backend's
+      // update query treats as "field not supplied" and silently skips,
+      // making it impossible to ever clear these flags once set.
+      is_ict_provider: values.isIctProvider,
       ict_service_type: values.isIctProvider ? values.ictServiceType || undefined : undefined,
       function_criticality: values.isIctProvider
         ? values.functionCriticality || undefined
         : undefined,
       substitutability: values.isIctProvider ? values.substitutability || undefined : undefined,
-      has_exit_plan: values.isIctProvider ? values.hasExitPlan || undefined : undefined,
+      has_exit_plan: values.isIctProvider ? values.hasExitPlan : undefined,
       country_of_provision: values.isIctProvider
         ? values.countryOfProvision || undefined
         : undefined,
