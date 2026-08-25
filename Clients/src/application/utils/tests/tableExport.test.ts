@@ -153,6 +153,62 @@ describe("tableExport", () => {
       const csvText = await readBlobAsText(blobArg);
       expect(csvText).toBe("Name,Note");
     });
+
+    // Security: CSV formula injection (CWE-1236). A cell value starting with
+    // =, +, -, @, tab, or carriage return is interpreted as a live formula
+    // by Excel/Google Sheets on open (e.g. "=cmd|'/c calc'!A1" or
+    // "=HYPERLINK(...)" for data exfiltration). User-controlled fields
+    // (vendor name, LEI, country, etc.) must be neutralized before export.
+    describe("formula injection sanitization", () => {
+      const readBlobAsText = (blob: Blob): Promise<string> =>
+        new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result ?? ""));
+          reader.onerror = () => reject(reader.error);
+          reader.readAsText(blob);
+        });
+
+      it.each([
+        ["=1+2", "'=1+2"],
+        ["=cmd|'/c calc'!A1", "'=cmd|'/c calc'!A1"],
+        ["+1+2", "'+1+2"],
+        ["-1+2", "'-1+2"],
+        ["@SUM(A1:A2)", "'@SUM(A1:A2)"],
+        ["\tvalue", "'\tvalue"],
+        ["\rvalue", "'\rvalue"],
+      ])("neutralizes a leading-formula-trigger value %j -> %j", async (dangerous, expected) => {
+        exportToCSV([{ name: dangerous, note: "x" }] as any, columns as any, "injection");
+
+        const [blobArg] = (saveAs as any).mock.calls[0];
+        const csvText = await readBlobAsText(blobArg);
+        const dataLine = csvText.split("\n")[1];
+
+        // Escaped-and-quoted form contains the sanitized value with a
+        // leading single quote prefixed before the dangerous character.
+        expect(dataLine).toContain(expected.replace(/"/g, '""'));
+        expect(dataLine.startsWith('"=') || dataLine.startsWith("=")).toBe(false);
+      });
+
+      it("leaves a normal value unchanged", async () => {
+        exportToCSV([{ name: "Acme Corp", note: "x" }] as any, columns as any, "normal");
+
+        const [blobArg] = (saveAs as any).mock.calls[0];
+        const csvText = await readBlobAsText(blobArg);
+        const dataLine = csvText.split("\n")[1];
+
+        expect(dataLine).toBe("Acme Corp,x");
+      });
+
+      it("does not sanitize a value with = in the middle (not a formula trigger)", async () => {
+        exportToCSV([{ name: "A=B Corp", note: "x" }] as any, columns as any, "middle-equals");
+
+        const [blobArg] = (saveAs as any).mock.calls[0];
+        const csvText = await readBlobAsText(blobArg);
+        const dataLine = csvText.split("\n")[1];
+
+        expect(dataLine).toBe("A=B Corp,x");
+      });
+    });
   });
 
   describe("exportToExcel", () => {
@@ -251,6 +307,27 @@ describe("tableExport", () => {
 
       // Row 2: null -> '' ; note preserved
       expect(wsData[2]).toEqual(["", "Hello", 5]);
+    });
+
+    it("neutralizes leading formula-trigger characters in string cells (defense-in-depth)", () => {
+      const aoaSpy = vi.spyOn(XLSX.utils, "aoa_to_sheet").mockReturnValue({} as any);
+
+      const columns = [
+        { id: "name", label: "Name" },
+        { id: "count", label: "Count" },
+      ];
+
+      const data = [
+        { name: "=cmd|'/c calc'!A1", count: 0 }, // string trigger -> prefixed; numeric 0 untouched
+        { name: "Acme Corp", count: false }, // normal string unchanged; boolean untouched
+      ];
+
+      exportToExcel(data as any, columns as any, "test-export");
+
+      const wsData = aoaSpy.mock.calls[0][0] as any[];
+
+      expect(wsData[1]).toEqual(["'=cmd|'/c calc'!A1", 0]);
+      expect(wsData[2]).toEqual(["Acme Corp", false]);
     });
   });
 
