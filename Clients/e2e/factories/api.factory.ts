@@ -241,6 +241,8 @@ export interface CreateProjectRiskPayload {
   risk_category?: string[];
   impact?: string;
   projects?: number[];
+  risk_level_autocalculated?: string;
+  current_risk_level?: string;
 }
 
 export const projectRisks = {
