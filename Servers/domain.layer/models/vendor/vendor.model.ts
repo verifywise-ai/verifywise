@@ -176,16 +176,24 @@ export class VendorModel extends Model<VendorModel> implements IVendor {
 
   @Column({
     type: DataType.ENUM(
-      "Cloud services", "Data analysis", "Security services",
-      "Network infrastructure", "Software or applications",
-      "IT project management", "Other ICT services",
+      "Cloud services",
+      "Data analysis",
+      "Security services",
+      "Network infrastructure",
+      "Software or applications",
+      "IT project management",
+      "Other ICT services",
     ),
     allowNull: true,
   })
   ict_service_type?:
-    | "Cloud services" | "Data analysis" | "Security services"
-    | "Network infrastructure" | "Software or applications"
-    | "IT project management" | "Other ICT services";
+    | "Cloud services"
+    | "Data analysis"
+    | "Security services"
+    | "Network infrastructure"
+    | "Software or applications"
+    | "IT project management"
+    | "Other ICT services";
 
   @Column({
     type: DataType.ENUM("Critical", "Important", "Not critical"),
@@ -194,13 +202,10 @@ export class VendorModel extends Model<VendorModel> implements IVendor {
   function_criticality?: "Critical" | "Important" | "Not critical";
 
   @Column({
-    type: DataType.ENUM(
-      "Easily substitutable", "Difficult to substitute", "Not substitutable",
-    ),
+    type: DataType.ENUM("Easily substitutable", "Difficult to substitute", "Not substitutable"),
     allowNull: true,
   })
-  substitutability?:
-    | "Easily substitutable" | "Difficult to substitute" | "Not substitutable";
+  substitutability?: "Easily substitutable" | "Difficult to substitute" | "Not substitutable";
 
   @Column({ type: DataType.BOOLEAN, allowNull: false, defaultValue: false })
   has_exit_plan?: boolean;

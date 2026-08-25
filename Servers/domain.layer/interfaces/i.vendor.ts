@@ -51,10 +51,7 @@ export interface IVendor {
     | "IT project management"
     | "Other ICT services";
   function_criticality?: "Critical" | "Important" | "Not critical";
-  substitutability?:
-    | "Easily substitutable"
-    | "Difficult to substitute"
-    | "Not substitutable";
+  substitutability?: "Easily substitutable" | "Difficult to substitute" | "Not substitutable";
   has_exit_plan?: boolean;
   country_of_provision?: string;
   provider_lei?: string;
