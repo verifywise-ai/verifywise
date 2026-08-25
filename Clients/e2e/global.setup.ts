@@ -6,6 +6,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { tmpdir } from "os";
 import { loginAs } from "./helpers/auth.helper";
+import { createApiContext, projects, projectRisks } from "./factories/api.factory";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -133,7 +134,30 @@ setup("authenticate", async ({ page }) => {
   // 3. Seed a real Admin user inside that organization.
   const admin = seedAdminInOrg(orgId);
 
-  // 4. Login as the seeded admin and save state.
+  // 4. Seed a baseline project + risk for the admin org so auth-state tests
+  //    have real data to exercise (activity log, task linking, risk cards).
+  const adminCtx = await createApiContext({
+    email: admin.email,
+    password: admin.password,
+  });
+  const baselineProject = await projects.create(adminCtx, {
+    project_title: "E2E Baseline Project",
+    owner: admin.userId,
+    start_date: new Date().toISOString(),
+    goal: "Global setup baseline project",
+    ai_risk_classification: "Minimal risk",
+    type_of_high_risk_role: "Deployer",
+    members: [admin.userId],
+  });
+  await projectRisks.create(adminCtx, {
+    risk_name: "E2E Baseline Risk",
+    risk_owner: admin.userId,
+    projects: [baselineProject.id],
+    risk_level_autocalculated: "High risk",
+  });
+  await adminCtx.request.dispose();
+
+  // 5. Login as the seeded admin and save state.
   await loginAs(
     page,
     admin.email,
