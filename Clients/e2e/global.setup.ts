@@ -100,6 +100,7 @@ function seedAdminInOrg(orgId: number): SeedOutput {
       cwd: SERVERS_DIR,
       encoding: "utf-8",
       env,
+      shell: true,
     },
   );
   const lastLine = stdout.trim().split("\n").pop() || "";
