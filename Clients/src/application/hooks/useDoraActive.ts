@@ -1,5 +1,5 @@
-import { useContext, useMemo } from "react";
-import { VerifyWiseContext } from "../contexts/VerifyWise.context";
+import { useMemo } from "react";
+import { useProjects } from "./useProjects";
 import { Project } from "../../domain/types/Project";
 
 interface UseDoraActiveResult {
@@ -40,9 +40,22 @@ const isDoraFrameworkLink = (link: ProjectFrameworkLink): boolean => {
  * Any UI gated by DORA (vendor-form sections, the ICT register tab, etc.)
  * MUST use this hook rather than the frameworks catalog, or DORA UI will
  * leak to organizations that do not have DORA active.
+ *
+ * Deliberately reads from `useProjects()` (a React Query hook with its own
+ * cache keyed on `["projects", "list"]`) rather than `VerifyWiseContext.projects`.
+ * The context array is shared, mutable app-wide state written by several
+ * unrelated components (project create/edit/delete flows, the dashboard
+ * bootstrap fetch, etc.) — some of those legitimately hold filtered or
+ * stale snapshots for their own purposes. Coupling this gate to that shared
+ * array made it vulnerable to any future writer transiently narrowing it
+ * (e.g. to non-organizational projects only), which would flip DORA UI off
+ * mid-session even though DORA is installed. `useProjects()` is fetched and
+ * cached independently, is not written to by any other component, and is
+ * already the source `Vendors/index.tsx` and `NewVendor` use for their own
+ * project data — so this hook now shares that same, uncontaminated source.
  */
 const useDoraActive = (): UseDoraActiveResult => {
-  const { projects } = useContext(VerifyWiseContext);
+  const { data: projects, isLoading } = useProjects();
 
   const doraActive = useMemo(() => {
     if (!projects || projects.length === 0) {
@@ -56,11 +69,12 @@ const useDoraActive = (): UseDoraActiveResult => {
     );
   }, [projects]);
 
-  // `projects` comes from VerifyWiseContext, which is populated once on app
-  // bootstrap/login. There is no separate loading state exposed by the
-  // context today, so we treat the gate as immediately resolved (false
-  // until proven true) rather than introducing a new async fetch.
-  return { doraActive, loading: false };
+  // Fail-closed: while the query is still loading (or projects is
+  // undefined/empty for any other reason) doraActive resolves to false, the
+  // same as "DORA not installed" — this hook never latches or infers `true`
+  // from a prior render, so it cannot leak DORA UI to an org that doesn't
+  // have it active.
+  return { doraActive, loading: isLoading };
 };
 
 export default useDoraActive;

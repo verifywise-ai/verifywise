@@ -1,18 +1,27 @@
-import { describe, it, expect } from "vitest";
-import { renderHook } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { renderHook, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
-import { VerifyWiseContext } from "../../contexts/VerifyWise.context";
 import { Project } from "../../../domain/types/Project";
-import useDoraActive from "../useDoraActive";
 
-// Minimal helper to build a context value with only the fields useDoraActive cares about.
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function createWrapper(projects: Project[]) {
-  const contextValue: any = {
-    projects,
-  };
+vi.mock("../../repository/project.repository", () => ({
+  getAllProjects: vi.fn(),
+}));
+
+import useDoraActive from "../useDoraActive";
+import { getAllProjects } from "../../repository/project.repository";
+
+const mockGetAllProjects = vi.mocked(getAllProjects);
+
+// Renders useDoraActive under a real QueryClientProvider — useDoraActive
+// now sources its data from useProjects() (React Query), NOT from
+// VerifyWiseContext, so the wrapper only needs to satisfy React Query.
+function createWrapper() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   return ({ children }: { children: React.ReactNode }) =>
-    React.createElement(VerifyWiseContext.Provider, { value: contextValue }, children);
+    React.createElement(QueryClientProvider, { client: queryClient }, children);
 }
 
 const organizationalProjectWithDora: Project = {
@@ -37,41 +46,86 @@ const organizationalProjectWithoutDora: Project = {
 };
 
 describe("useDoraActive", () => {
-  it("doraActive is true when the DORA framework is installed for the org", () => {
-    const { result } = renderHook(() => useDoraActive(), {
-      wrapper: createWrapper([organizationalProjectWithDora]),
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("doraActive is true when the DORA framework is installed for the org", async () => {
+    mockGetAllProjects.mockResolvedValue({ data: [organizationalProjectWithDora] });
+
+    const { result } = renderHook(() => useDoraActive(), { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
     });
 
     expect(result.current.doraActive).toBe(true);
-    expect(result.current.loading).toBe(false);
   });
 
-  it("doraActive is false when DORA is not installed (empty projects)", () => {
-    const { result } = renderHook(() => useDoraActive(), {
-      wrapper: createWrapper([]),
+  it("doraActive is false when DORA is not installed (empty projects)", async () => {
+    mockGetAllProjects.mockResolvedValue({ data: [] });
+
+    const { result } = renderHook(() => useDoraActive(), { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
     });
 
     expect(result.current.doraActive).toBe(false);
   });
 
-  it("doraActive is false when only non-DORA frameworks are installed", () => {
-    const { result } = renderHook(() => useDoraActive(), {
-      wrapper: createWrapper([organizationalProjectWithoutDora]),
+  it("doraActive is false when only non-DORA frameworks are installed", async () => {
+    mockGetAllProjects.mockResolvedValue({ data: [organizationalProjectWithoutDora] });
+
+    const { result } = renderHook(() => useDoraActive(), { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
     });
 
     expect(result.current.doraActive).toBe(false);
   });
 
-  it("doraActive is false when there is no organizational project at all", () => {
+  it("doraActive is false when there is no organizational project at all", async () => {
     const nonOrgProject: Project = {
       ...organizationalProjectWithDora,
       is_organizational: false,
     };
+    mockGetAllProjects.mockResolvedValue({ data: [nonOrgProject] });
 
-    const { result } = renderHook(() => useDoraActive(), {
-      wrapper: createWrapper([nonOrgProject]),
+    const { result } = renderHook(() => useDoraActive(), { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
     });
 
     expect(result.current.doraActive).toBe(false);
+  });
+
+  it("fails closed (doraActive: false) while the projects query is still loading", () => {
+    // Never resolves within this test — simulates the in-flight window.
+    mockGetAllProjects.mockReturnValue(new Promise(() => {}));
+
+    const { result } = renderHook(() => useDoraActive(), { wrapper: createWrapper() });
+
+    expect(result.current.loading).toBe(true);
+    expect(result.current.doraActive).toBe(false);
+  });
+
+  it("is unaffected by a filtered projects array held by another component's local state", async () => {
+    // Regression guard for the original bug report: useDoraActive must not
+    // be coupled to any other component's mutable projects state (e.g. one
+    // filtered down to non-organizational projects only). Since it now
+    // reads exclusively from its own useProjects() query, the full,
+    // unfiltered response is all that can ever reach it.
+    mockGetAllProjects.mockResolvedValue({ data: [organizationalProjectWithDora] });
+
+    const { result } = renderHook(() => useDoraActive(), { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(result.current.loading).toBe(false);
+    });
+
+    expect(result.current.doraActive).toBe(true);
   });
 });
