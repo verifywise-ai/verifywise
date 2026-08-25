@@ -24,10 +24,16 @@ const DORA_REGISTER_EXPORT_COLUMNS = [
   { id: "country_of_provision", label: "Country of provision" },
 ];
 
+// On-screen placeholder for missing values. Intentionally NOT used for the
+// CSV export: a DORA register-of-information submission must have blank
+// cells for missing data, not a literal '—' character.
 const NOT_SET = "—";
 
 const formatExitPlan = (hasExitPlan?: boolean): string =>
   hasExitPlan === true ? "Yes" : hasExitPlan === false ? "No" : NOT_SET;
+
+const formatExitPlanForExport = (hasExitPlan?: boolean): string =>
+  hasExitPlan === true ? "Yes" : hasExitPlan === false ? "No" : "";
 
 const DoraRegister = () => {
   const { data: doraVendors = [], isLoading } = useDoraRegister();
@@ -44,13 +50,13 @@ const DoraRegister = () => {
   const exportRows = useMemo(
     () =>
       filteredVendors.map((vendor: VendorModel) => ({
-        vendor_name: vendor.vendor_name || NOT_SET,
-        provider_lei: vendor.provider_lei || NOT_SET,
-        ict_service_type: vendor.ict_service_type || NOT_SET,
-        function_criticality: vendor.function_criticality || NOT_SET,
-        substitutability: vendor.substitutability || NOT_SET,
-        has_exit_plan: formatExitPlan(vendor.has_exit_plan),
-        country_of_provision: vendor.country_of_provision || NOT_SET,
+        vendor_name: vendor.vendor_name || "",
+        provider_lei: vendor.provider_lei || "",
+        ict_service_type: vendor.ict_service_type || "",
+        function_criticality: vendor.function_criticality || "",
+        substitutability: vendor.substitutability || "",
+        has_exit_plan: formatExitPlanForExport(vendor.has_exit_plan),
+        country_of_provision: vendor.country_of_provision || "",
       })),
     [filteredVendors],
   );
@@ -109,7 +115,14 @@ const DoraRegister = () => {
               { label: "LEI" },
             ]}
             rows={filteredVendors}
-            rowKey={(vendor) => vendor.id ?? vendor.vendor_name}
+            // vendor.id and vendor.vendor_name are both optional on
+            // VendorModel, so either can be undefined; fall back to the
+            // row's position in the (already-filtered) array — stable
+            // across re-renders and guaranteed unique within it — rather
+            // than risk two undefined keys colliding.
+            rowKey={(vendor) =>
+              vendor.id ?? vendor.vendor_name ?? `row-${filteredVendors.indexOf(vendor)}`
+            }
             renderRow={(vendor) => [
               <Typography sx={{ fontSize: 13, fontWeight: 500 }}>{vendor.vendor_name}</Typography>,
               <Typography sx={{ fontSize: 13 }}>{vendor.ict_service_type || NOT_SET}</Typography>,
