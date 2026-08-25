@@ -56,7 +56,7 @@ interface ParsedArgs {
 
 async function findExistingUser(email: string): Promise<number | null> {
   const [rows] = await sequelize.query(
-    `SELECT id, organization_id FROM users WHERE email = :email`,
+    `SELECT id, organization_id FROM verifywise.users WHERE email = :email`,
     { replacements: { email } },
   );
   const row = (rows as any[])[0];
@@ -65,7 +65,7 @@ async function findExistingUser(email: string): Promise<number | null> {
 
 async function createOrganization(name: string): Promise<number> {
   const [result] = await sequelize.query(
-    `INSERT INTO organizations (name, created_at, updated_at)
+    `INSERT INTO verifywise.organizations (name, created_at, updated_at)
      VALUES (:name, NOW(), NOW()) RETURNING id`,
     { replacements: { name } },
   );
@@ -75,7 +75,7 @@ async function createOrganization(name: string): Promise<number> {
 async function createAdminUser(orgId: number, args: ParsedArgs): Promise<number> {
   const hash = await bcrypt.hash(args.password, 10);
   const [result] = await sequelize.query(
-    `INSERT INTO users (
+    `INSERT INTO verifywise.users (
        name, surname, email, password_hash, role_id, organization_id,
        created_at, updated_at
      )
@@ -132,7 +132,7 @@ async function main(): Promise<void> {
   if (existingUserId !== null) {
     // Re-seed the same user so credentials stay stable across runs.
     const [rows] = await sequelize.query(
-      `SELECT organization_id FROM users WHERE id = :id`,
+      `SELECT organization_id FROM verifywise.users WHERE id = :id`,
       { replacements: { id: existingUserId } },
     );
     const existingOrgId = (rows as any[])[0]?.organization_id ?? null;
