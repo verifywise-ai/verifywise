@@ -28,6 +28,16 @@ The two workstreams sit on **opposite sides** of the plugin boundary, and this i
 
 Making the Register a plugin would force it into a self-contained, hand-entered inventory in the plugin's own tables — i.e. the disconnected "spreadsheet you fill in once" point-tool the blog post explicitly attacks. The embedded approach is the one consistent with the blog's thesis. This is why B extends Vendors in the main app and the "inside the DORA plugin" option was rejected as a dead end.
 
+### Visibility gating — no DORA UI unless DORA is active (HARD REQUIREMENT)
+
+Because B's code lives in verifywise core, its UI must NOT appear for orgs that do not have DORA. This is a hard requirement: an org without DORA must see zero DORA UI anywhere (no ICT register tab, no DORA section in the vendor form).
+
+**Verified mechanism (as of this branch):** the plugin UI-slot system (`PluginSlot` / `usePlugins` / `ui.slots`) **does not exist on `develop` or `feat/dora-support-design`** — it lives only on the unmerged `hp-aug-7-migrate-plugins-custom-frameworks` branch, and the DORA plugin on disk has no `plugins.json`/`ui.slots` config. Nothing in the main app loads plugin UI bundles at runtime. Building against slots is therefore NOT an option here.
+
+**Gate used instead — runtime "is the DORA framework installed for this org?" check.** DORA ships today as an `is_organizational` framework (id `9`, key `dora`) registered via `Servers/utils/frameworkRegistry.utils.ts` and the `frameworks` table. The UI is gated on whether the org has the DORA framework installed/assigned (mirroring how `Framework/Settings` already inspects the org's frameworks list). DORA not installed → the gate boolean is false → the ICT register tab and the vendor-form DORA section do not render. This is a plain runtime boolean, no slots, no bundle loading.
+
+The 7 DB columns on the shared `vendors` table are always present once migrated (a shared table cannot be per-plugin) but are inert and invisible unless DORA is active — accepted. Only the UI is gated; the `GET /api/vendors/dora-register` endpoint stays available but nothing surfaces it without the gate.
+
 ### Alignment with the DORA blog post
 
 The unpublished blog draft (`docs/research/drafts/stop-shopping-for-dora-compliance-software.mdx`) argues: DORA is not a point tool you buy; the Register of Information is "a view you run over your vendor estate, not a spreadsheet you produce"; DORA is one framework mapped onto a control environment you already run. This design delivers exactly that thesis — the seeded catalog is "DORA on the spine," and the Register is a live view over Vendors. **No contradiction.** The one copy risk is the blog's "not a pre-built checklist" line vs. shipping a seeded catalog; that is a wording fix in the blog, not a design conflict.
@@ -92,6 +102,8 @@ Submission-shaped export (CSV/XLSX) of the register — "the report you run." Co
 ### B4 — Frontend
 
 New **"ICT register"** tab inside the existing Vendors module (decided: Vendors tab, not the framework page). DORA framework page may deep-link to it later (out of scope for v1).
+
+**Both the tab and the vendor-form DORA section are gated on the DORA-framework-installed check** (see "Visibility gating" above). Org without DORA → neither renders.
 
 - Reuse `CustomizableBasicTable` (register rows), `SearchBox`, `CustomizableButton` (export).
 - Extend the existing vendor drawer with a DORA section (the new fields), gated/shown when `is_ict_provider`.
