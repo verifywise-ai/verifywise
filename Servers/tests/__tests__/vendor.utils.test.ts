@@ -96,6 +96,33 @@ describe("vendor.utils DORA fields", () => {
     expect(options.replacements.has_exit_plan).toBe(false);
   });
 
+  it("coerces empty-string DORA enum fields to null on create (avoids Postgres enum error)", async () => {
+    queryMock.mockImplementation((sql: string) => {
+      if (typeof sql === "string" && sql.startsWith("INSERT INTO vendors")) {
+        return Promise.resolve([{ id: 1, dataValues: { id: 1 } }]);
+      }
+      return Promise.resolve([[], 0]);
+    });
+
+    const transaction = {} as any;
+    const vendorWithEmptyEnums: IVendor = {
+      ...baseVendor,
+      ict_service_type: "" as any,
+      function_criticality: "" as any,
+      substitutability: "" as any,
+    };
+    await createNewVendorQuery(vendorWithEmptyEnums, 1, transaction);
+
+    const insertCall = queryMock.mock.calls.find(([sql]) =>
+      typeof sql === "string" ? sql.startsWith("INSERT INTO vendors") : false,
+    );
+    const [, options] = insertCall as [string, { replacements: Record<string, any> }];
+
+    expect(options.replacements.ict_service_type).toBeNull();
+    expect(options.replacements.function_criticality).toBeNull();
+    expect(options.replacements.substitutability).toBeNull();
+  });
+
   it("includes DORA fields in the update set clause and replacements when provided", async () => {
     queryMock.mockImplementation((sql: string) => {
       if (typeof sql === "string" && sql.startsWith("SELECT * FROM vendors")) {
@@ -164,5 +191,52 @@ describe("vendor.utils DORA fields", () => {
       country_of_provision: "DE",
       provider_lei: "LEI456",
     });
+  });
+
+  it("coerces empty-string DORA enum fields to null on update (avoids Postgres enum error)", async () => {
+    queryMock.mockImplementation((sql: string) => {
+      if (typeof sql === "string" && sql.startsWith("SELECT * FROM vendors")) {
+        return Promise.resolve([
+          {
+            dataValues: { id: 1, vendor_name: "ACME Cloud" },
+            createdAt: new Date(),
+            updatedAt: new Date(),
+          },
+        ]);
+      }
+      if (typeof sql === "string" && sql.startsWith("UPDATE vendors")) {
+        return Promise.resolve([{ id: 1, dataValues: { id: 1 } }]);
+      }
+      if (typeof sql === "string" && sql.startsWith("SELECT project_id FROM vendors_projects")) {
+        return Promise.resolve([]);
+      }
+      return Promise.resolve([[], 0]);
+    });
+
+    const transaction = {} as any;
+    await updateVendorByIdQuery(
+      {
+        id: 1,
+        vendor: {
+          // Simulates an unselected dropdown submitting "" instead of omitting the field
+          ict_service_type: "" as any,
+          function_criticality: "" as any,
+          substitutability: "" as any,
+        },
+        userId: 1,
+        role: "Admin",
+        transaction,
+      },
+      1,
+    );
+
+    const updateCall = queryMock.mock.calls.find(([sql]) =>
+      typeof sql === "string" ? sql.startsWith("UPDATE vendors") : false,
+    );
+    const [, options] = updateCall as [string, { replacements: Record<string, any> }];
+
+    expect(options.replacements.ict_service_type).toBeNull();
+    expect(options.replacements.function_criticality).toBeNull();
+    expect(options.replacements.substitutability).toBeNull();
   });
 });

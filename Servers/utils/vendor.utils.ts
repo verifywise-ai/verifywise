@@ -271,9 +271,9 @@ export const createNewVendorQuery = async (
     "provider_lei",
   );
   replacements.is_ict_provider = vendor.is_ict_provider ?? false;
-  replacements.ict_service_type = vendor.ict_service_type ?? null;
-  replacements.function_criticality = vendor.function_criticality ?? null;
-  replacements.substitutability = vendor.substitutability ?? null;
+  replacements.ict_service_type = vendor.ict_service_type || null;
+  replacements.function_criticality = vendor.function_criticality || null;
+  replacements.substitutability = vendor.substitutability || null;
   replacements.has_exit_plan = vendor.has_exit_plan ?? false;
   replacements.country_of_provision = vendor.country_of_provision ?? null;
   replacements.provider_lei = vendor.provider_lei ?? null;
@@ -414,11 +414,24 @@ export const updateVendorByIdQuery = async (
       const value = vendor[f as keyof IVendor];
 
       if (isDoraField) {
-        // DORA fields: include only if explicitly provided, defaulting the
-        // two booleans to false and the rest to null (mirrors create).
+        // DORA fields: include only if explicitly provided. Booleans default
+        // to false, enum fields coerce an empty string (e.g. an unselected
+        // dropdown) to null to avoid a Postgres "invalid input value for
+        // enum" error, and the two plain strings pass through as-is.
         if (value !== undefined) {
           const isDoraBoolean = f === "is_ict_provider" || f === "has_exit_plan";
-          updateVendor[f as keyof IVendor] = isDoraBoolean ? (value ?? false) : (value ?? null);
+          const isDoraEnum = [
+            "ict_service_type",
+            "function_criticality",
+            "substitutability",
+          ].includes(f);
+          if (isDoraBoolean) {
+            updateVendor[f as keyof IVendor] = value ?? false;
+          } else if (isDoraEnum) {
+            updateVendor[f as keyof IVendor] = value || null;
+          } else {
+            updateVendor[f as keyof IVendor] = value ?? null;
+          }
           return true;
         }
         return false;

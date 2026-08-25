@@ -215,6 +215,13 @@ export async function createVendor(req: Request, res: Response): Promise<any> {
       vendorData.past_issues,
       vendorData.regulatory_exposure,
       vendorData.risk_score,
+      vendorData.is_ict_provider,
+      vendorData.ict_service_type,
+      vendorData.function_criticality,
+      vendorData.substitutability,
+      vendorData.has_exit_plan,
+      vendorData.country_of_provision,
+      vendorData.provider_lei,
     );
 
     // Validate vendor data before saving
@@ -422,6 +429,13 @@ export async function updateVendorById(req: Request, res: Response): Promise<any
       past_issues: updateData.past_issues,
       regulatory_exposure: updateData.regulatory_exposure,
       risk_score: updateData.risk_score,
+      is_ict_provider: updateData.is_ict_provider,
+      ict_service_type: updateData.ict_service_type,
+      function_criticality: updateData.function_criticality,
+      substitutability: updateData.substitutability,
+      has_exit_plan: updateData.has_exit_plan,
+      country_of_provision: updateData.country_of_provision,
+      provider_lei: updateData.provider_lei,
     });
 
     // Validate updated data
