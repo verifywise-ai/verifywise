@@ -19,6 +19,15 @@ So the compliance-requirements side of DORA is **already shipped**. This build d
 1. **Deepen the DORA plugin catalog** to the richer three-level shape (content work).
 2. **Register of Information** — a live ICT third-party inventory over the Vendors module (greenfield engineering). This does not exist anywhere (`grep` for register-of-information / third-party-risk-register returned nothing across both repos).
 
+### Plugin vs. embedded — the architecture split (read this first)
+
+The two workstreams sit on **opposite sides** of the plugin boundary, and this is a hard structural constraint, not a preference:
+
+- **Workstream A (catalog) is a pure plugin.** It lives entirely in `plugin-marketplace/plugins/dora/`. Nothing touches verifywise core.
+- **Workstream B (Register) is embedded in verifywise core — it cannot be a plugin.** The plugin framework engine (`createFrameworkPlugin` / `custom-framework-base`) only renders a requirements→controls→evidence tree over its own isolated struct/impl tables. It has **no access to the core `vendors` tables.** The Register of Information is by definition a live view over the vendor estate, so it must read/write `verifywise.vendors` — which only core code can do.
+
+Making the Register a plugin would force it into a self-contained, hand-entered inventory in the plugin's own tables — i.e. the disconnected "spreadsheet you fill in once" point-tool the blog post explicitly attacks. The embedded approach is the one consistent with the blog's thesis. This is why B extends Vendors in the main app and the "inside the DORA plugin" option was rejected as a dead end.
+
 ### Alignment with the DORA blog post
 
 The unpublished blog draft (`docs/research/drafts/stop-shopping-for-dora-compliance-software.mdx`) argues: DORA is not a point tool you buy; the Register of Information is "a view you run over your vendor estate, not a spreadsheet you produce"; DORA is one framework mapped onto a control environment you already run. This design delivers exactly that thesis — the seeded catalog is "DORA on the spine," and the Register is a live view over Vendors. **No contradiction.** The one copy risk is the blog's "not a pre-built checklist" line vs. shipping a seeded catalog; that is a wording fix in the blog, not a design conflict.
