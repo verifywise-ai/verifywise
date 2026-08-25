@@ -15,6 +15,7 @@ import StandardModal from "../../../components/Modals/StandardModal";
 import AiOrNotScreening from "../../../components/Modals/AiOrNotScreening";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
 import { brand } from "../../../themes/palette";
+import { testIds } from "../../../test-ids";
 
 const Home = () => {
   const location = useLocation();
@@ -94,6 +95,7 @@ const Home = () => {
                 gap: 2,
               }}
               icon={<AddCircleOutlineIcon size={16} />}
+              testId={testIds.overview.newUseCaseButton}
               onClick={() => setIsScreeningOpen(true)}
               isDisabled={!allowedRoles.projects.create.includes(userRoleName)}
             />

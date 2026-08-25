@@ -1,10 +1,11 @@
-import { test as setup, expect } from "@playwright/test";
+import { test as setup } from "@playwright/test";
 import { execFileSync } from "child_process";
 import dotenv from "dotenv";
 import { existsSync, mkdtempSync, readFileSync, unlinkSync } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { tmpdir } from "os";
+import { loginAs } from "./helpers/auth.helper";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -38,20 +39,6 @@ interface SeedOutput {
   email: string;
   password: string;
   credentialsFile: string | null;
-}
-
-async function loginAs(
-  page: any,
-  email: string,
-  password: string,
-  expectedPath: RegExp,
-): Promise<void> {
-  await page.goto("/login");
-  await page.waitForLoadState("networkidle");
-  await page.getByPlaceholder("name.surname@companyname.com").fill(email);
-  await page.getByPlaceholder("Enter your password").fill(password);
-  await page.getByRole("button", { name: /sign in/i }).click();
-  await expect(page).toHaveURL(expectedPath, { timeout: 15_000 });
 }
 
 async function getAuthToken(page: any): Promise<string> {
