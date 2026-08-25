@@ -9278,6 +9278,18 @@ export const translations: Record<string, Record<string, string>> = {
     "Enter country of provision": "Land der Leistungserbringung eingeben",
     "Provider LEI": "LEI des Anbieters",
     "Enter legal entity identifier": "Rechtsträgerkennung eingeben",
+
+    // DORA Register of Information — ICT register tab (Vendors page)
+    "ICT register": "IKT-Register",
+    "Register of information for ICT third-party providers (DORA)":
+      "Informationsregister für IKT-Drittanbieter (DORA)",
+    "Search ICT providers...": "IKT-Anbieter suchen...",
+    "Export register": "Register exportieren",
+    "No ICT providers yet. Mark a vendor as an ICT provider to add it to the register.":
+      "Noch keine IKT-Anbieter. Markieren Sie einen Anbieter als IKT-Anbieter, um ihn zum Register hinzuzufügen.",
+    "No ICT providers match your search.": "Keine IKT-Anbieter entsprechen Ihrer Suche.",
+    "Exit plan": "Ausstiegsplan",
+    "Country": "Land",
   },
 
   fr: {
@@ -18486,6 +18498,18 @@ export const translations: Record<string, Record<string, string>> = {
     "Enter country of provision": "Saisir le pays de fourniture",
     "Provider LEI": "LEI du fournisseur",
     "Enter legal entity identifier": "Saisir l'identifiant d'entité juridique",
+
+    // DORA Register of Information — ICT register tab (Vendors page)
+    "ICT register": "Registre TIC",
+    "Register of information for ICT third-party providers (DORA)":
+      "Registre d'informations pour les prestataires tiers TIC (DORA)",
+    "Search ICT providers...": "Rechercher des prestataires TIC...",
+    "Export register": "Exporter le registre",
+    "No ICT providers yet. Mark a vendor as an ICT provider to add it to the register.":
+      "Aucun prestataire TIC pour le moment. Marquez un fournisseur comme prestataire TIC pour l'ajouter au registre.",
+    "No ICT providers match your search.": "Aucun prestataire TIC ne correspond à votre recherche.",
+    "Exit plan": "Plan de sortie",
+    "Country": "Pays",
   },
   es: {
     "Deployment name": "Nombre del despliegue",
@@ -27613,5 +27637,17 @@ export const translations: Record<string, Record<string, string>> = {
     "Enter country of provision": "Introducir país de prestación",
     "Provider LEI": "LEI del proveedor",
     "Enter legal entity identifier": "Introducir identificador de entidad jurídica",
+
+    // DORA Register of Information — ICT register tab (Vendors page)
+    "ICT register": "Registro TIC",
+    "Register of information for ICT third-party providers (DORA)":
+      "Registro de información para proveedores terceros TIC (DORA)",
+    "Search ICT providers...": "Buscar proveedores TIC...",
+    "Export register": "Exportar registro",
+    "No ICT providers yet. Mark a vendor as an ICT provider to add it to the register.":
+      "Todavía no hay proveedores TIC. Marque un proveedor como proveedor TIC para añadirlo al registro.",
+    "No ICT providers match your search.": "Ningún proveedor TIC coincide con su búsqueda.",
+    "Exit plan": "Plan de salida",
+    "Country": "País",
   },
 };

@@ -48,6 +48,8 @@ import { FilterBy, FilterColumn, FilterCondition } from "../../components/Table/
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
 import { Project } from "../../../domain/types/Project";
+import useDoraActive from "../../../application/hooks/useDoraActive";
+import DoraRegister from "./DoraRegister";
 
 // Constants
 const REDIRECT_DELAY_MS = 2000;
@@ -143,9 +145,15 @@ const Vendors = () => {
   // Selected risk level for card filtering
   const [selectedRiskLevel, setSelectedRiskLevel] = useState<string | null>(null);
 
+  const { doraActive } = useDoraActive();
+
   const currentPath = location.pathname;
   const isRisksTab = currentPath.includes("/vendors/risks");
-  const value = isRisksTab ? "2" : "1";
+  const isDoraRegisterTab = doraActive && currentPath.includes("/vendors/dora-register");
+  // Stable string tab values: "1" Vendors, "2" Risks, "3" ICT register.
+  // These never shift even when the ICT register tab is conditionally
+  // absent for orgs without DORA active.
+  const value = isDoraRegisterTab ? "3" : isRisksTab ? "2" : "1";
 
   // TanStack Query hooks
   const { data: projects = [] } = useProjects();
@@ -518,6 +526,8 @@ const Vendors = () => {
       navigate("/vendors");
     } else if (newValue === "2") {
       navigate("/vendors/risks");
+    } else if (newValue === "3") {
+      navigate("/vendors/dora-register");
     }
   };
 
@@ -989,16 +999,18 @@ const Vendors = () => {
 
   return (
     <PageHeaderExtended
-      title={value === "1" ? "Vendor list" : "Vendor risks list"}
+      title={value === "1" ? "Vendor list" : value === "2" ? "Vendor risks list" : "ICT register"}
       description={
         value === "1"
           ? "This table includes a list of external entities that provide AI-related products, services, or components. You can create and manage all vendors here."
-          : "This table includes a list of risks related to a vendor. You can create and manage all vendor risks here."
+          : value === "2"
+            ? "This table includes a list of risks related to a vendor. You can create and manage all vendor risks here."
+            : "The register of information for vendors marked as ICT third-party providers under DORA."
       }
       helpArticlePath={value === "1" ? "risk-management/vendor-management" : undefined}
       tipBoxEntity="vendors"
       summaryCards={
-        value !== "1" && !loadingVendorRisks && !isVendorsLoading ? (
+        value === "2" && !loadingVendorRisks && !isVendorsLoading ? (
           <StatusTileCards
             items={
               [
@@ -1084,6 +1096,18 @@ const Vendors = () => {
                 isLoading: loadingVendorRisks,
                 tooltip: "Security and compliance risks from vendor relationships",
               },
+              // Gated via useDoraActive only — must be entirely absent (not
+              // just disabled) for organizations without DORA active.
+              ...(doraActive
+                ? [
+                    {
+                      label: "ICT register",
+                      value: "3",
+                      icon: "ShieldCheck" as const,
+                      tooltip: "Register of information for ICT third-party providers (DORA)",
+                    },
+                  ]
+                : []),
             ]}
             activeTab={value}
             onChange={handleChange}
@@ -1150,7 +1174,7 @@ const Vendors = () => {
           </Stack>
         )}
 
-        {value !== "1" && (
+        {value === "2" && (
           <Stack spacing={2}>
             <Stack direction="row" justifyContent="space-between" alignItems="center">
               <Stack direction="row" gap={2} alignItems="center">
@@ -1268,6 +1292,11 @@ const Vendors = () => {
             />
           )}
         </TabPanel>
+        {doraActive && (
+          <TabPanel value="3" sx={tabPanelStyle}>
+            <DoraRegister />
+          </TabPanel>
+        )}
       </TabContext>
 
       <AddNewVendor

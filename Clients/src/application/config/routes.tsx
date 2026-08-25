@@ -280,6 +280,15 @@ export const createRoutes = (
         }
       />{" "}
       {/* Risks tab */}
+      <Route
+        path="dora-register"
+        element={
+          <Suspense fallback={<LazyFallback />}>
+            <Vendors />
+          </Suspense>
+        }
+      />{" "}
+      {/* ICT register tab (DORA) */}
     </Route>
 
     <Route
