@@ -251,6 +251,33 @@ export const createNewVendorQuery = async (
     replacements.risk_score = vendor.risk_score;
   }
 
+  // Add DORA Register of Information fields (descriptive-only, always included)
+  fields.push(
+    "is_ict_provider",
+    "ict_service_type",
+    "function_criticality",
+    "substitutability",
+    "has_exit_plan",
+    "country_of_provision",
+    "provider_lei",
+  );
+  values.push(
+    "is_ict_provider",
+    "ict_service_type",
+    "function_criticality",
+    "substitutability",
+    "has_exit_plan",
+    "country_of_provision",
+    "provider_lei",
+  );
+  replacements.is_ict_provider = vendor.is_ict_provider ?? false;
+  replacements.ict_service_type = vendor.ict_service_type ?? null;
+  replacements.function_criticality = vendor.function_criticality ?? null;
+  replacements.substitutability = vendor.substitutability ?? null;
+  replacements.has_exit_plan = vendor.has_exit_plan ?? false;
+  replacements.country_of_provision = vendor.country_of_provision ?? null;
+  replacements.provider_lei = vendor.provider_lei ?? null;
+
   const fieldsList = fields.join(", ");
   const valuesList = values.map((v) => `:${v}`).join(", ");
 
@@ -354,6 +381,13 @@ export const updateVendorByIdQuery = async (
     "past_issues",
     "regulatory_exposure",
     "risk_score",
+    "is_ict_provider",
+    "ict_service_type",
+    "function_criticality",
+    "substitutability",
+    "has_exit_plan",
+    "country_of_provision",
+    "provider_lei",
   ]
     .filter((f) => {
       // For review and scorecard fields, allow undefined or null to be updated (to clear the field)
@@ -368,7 +402,27 @@ export const updateVendorByIdQuery = async (
         "regulatory_exposure",
         "risk_score",
       ].includes(f);
+      const isDoraField = [
+        "is_ict_provider",
+        "ict_service_type",
+        "function_criticality",
+        "substitutability",
+        "has_exit_plan",
+        "country_of_provision",
+        "provider_lei",
+      ].includes(f);
       const value = vendor[f as keyof IVendor];
+
+      if (isDoraField) {
+        // DORA fields: include only if explicitly provided, defaulting the
+        // two booleans to false and the rest to null (mirrors create).
+        if (value !== undefined) {
+          const isDoraBoolean = f === "is_ict_provider" || f === "has_exit_plan";
+          updateVendor[f as keyof IVendor] = isDoraBoolean ? (value ?? false) : (value ?? null);
+          return true;
+        }
+        return false;
+      }
 
       if (isReviewField || isScorecardField) {
         // Review and scorecard fields: include if explicitly provided (even if null/empty)
