@@ -172,6 +172,7 @@ export const users = {
         cwd: SERVERS_DIR,
         encoding: "utf-8",
         env: buildTestEnv(),
+        shell: true,
       },
     );
 
