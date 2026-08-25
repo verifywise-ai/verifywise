@@ -58,3 +58,14 @@ export async function deleteVendor({ id }: { id: number }): Promise<any> {
   const response = await apiServices.delete(`/vendors/${id}`);
   return response;
 }
+
+export async function getDoraRegister({
+  signal,
+}: {
+  signal?: AbortSignal;
+} = {}): Promise<any> {
+  const response = await apiServices.get("/vendors/dora-register", {
+    signal,
+  });
+  return response.data;
+}
