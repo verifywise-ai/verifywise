@@ -171,6 +171,46 @@ export class VendorModel extends Model<VendorModel> implements IVendor {
   })
   risk_score?: number;
 
+  @Column({ type: DataType.BOOLEAN, allowNull: false, defaultValue: false })
+  is_ict_provider?: boolean;
+
+  @Column({
+    type: DataType.ENUM(
+      "Cloud services", "Data analysis", "Security services",
+      "Network infrastructure", "Software or applications",
+      "IT project management", "Other ICT services",
+    ),
+    allowNull: true,
+  })
+  ict_service_type?:
+    | "Cloud services" | "Data analysis" | "Security services"
+    | "Network infrastructure" | "Software or applications"
+    | "IT project management" | "Other ICT services";
+
+  @Column({
+    type: DataType.ENUM("Critical", "Important", "Not critical"),
+    allowNull: true,
+  })
+  function_criticality?: "Critical" | "Important" | "Not critical";
+
+  @Column({
+    type: DataType.ENUM(
+      "Easily substitutable", "Difficult to substitute", "Not substitutable",
+    ),
+    allowNull: true,
+  })
+  substitutability?:
+    | "Easily substitutable" | "Difficult to substitute" | "Not substitutable";
+
+  @Column({ type: DataType.BOOLEAN, allowNull: false, defaultValue: false })
+  has_exit_plan?: boolean;
+
+  @Column({ type: DataType.STRING, allowNull: true })
+  country_of_provision?: string;
+
+  @Column({ type: DataType.STRING, allowNull: true })
+  provider_lei?: string;
+
   // Projects field (not a database column, used for API)
   projects?: number[];
 
