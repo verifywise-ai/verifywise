@@ -250,42 +250,21 @@ test.describe("Tasks", () => {
     await page.goto("/tasks");
 
     const addBtn = page.getByRole("button", { name: /add new task/i });
-    if (!(await addBtn.isVisible().catch(() => false))) {
-      test.skip();
-      return;
-    }
+    await expect(addBtn).toBeVisible({ timeout: 15_000 });
     await addBtn.click();
     await page.waitForTimeout(500);
 
-    // Look for entity linking fields (project, vendor, risk, etc.)
-    const entityField = page
-      .getByRole("combobox", { name: /project/i })
-      .or(page.getByRole("combobox", { name: /link/i }))
-      .or(page.getByRole("combobox", { name: /entity/i }))
-      .or(page.getByText(/link.*to/i))
-      .or(page.getByText(/related/i))
-      .or(page.getByRole("combobox", { name: /assign/i }));
+    // The task form exposes an "Linked Items" entity-linking section with a
+    // type selector. With a baseline project seeded in global setup, the
+    // selector should be present.
+    const linkedItemsLabel = page.getByText(/Linked Items/i);
+    await expect(linkedItemsLabel.first()).toBeVisible({ timeout: 10_000 });
 
-    if (
-      await entityField
-        .first()
-        .isVisible()
-        .catch(() => false)
-    ) {
-      await entityField.first().click();
-      await page.waitForTimeout(300);
-      // Check that options appear
-      const option = page.getByRole("option");
-      if (
-        await option
-          .first()
-          .isVisible()
-          .catch(() => false)
-      ) {
-        await expect(option.first()).toBeVisible();
-      }
-      await page.keyboard.press("Escape");
-    }
+    const entityTypeSelect = page
+      .locator('[id="entity-type-select"]')
+      .or(page.getByPlaceholder(/Select type/i));
+    await expect(entityTypeSelect.first()).toBeVisible({ timeout: 10_000 });
+
     await page.keyboard.press("Escape");
   });
 
