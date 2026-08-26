@@ -7,6 +7,8 @@
     "test:coverage": "jest --coverage --testPathIgnorePatterns=/tests/integration/ --testPathIgnorePatterns=/helpers/ --detectOpenHandles --forceExit",
     "test:smoke": "jest --config jest.config.js --globalSetup=\"<rootDir>/tests/integration/globalSetup.js\" --testPathPatterns=deadline-summary --runInBand",
     "smoke:api-contract": "ts-node --transpile-only scripts/apiContractSmoke.ts",
+    "generate:enum-manifest": "ts-node --transpile-only scripts/generateEnumManifest.ts",
+    "check:enum-drift": "npm run generate:enum-manifest && ts-node --transpile-only scripts/checkEnumLabelDrift.ts",
     "test": "npm run test:unit",
     "test:watch": "jest --watch",
     "test:integration": "node --max-old-space-size=4096 node_modules/jest/bin/jest.js --config jest.config.js --globalSetup=\"<rootDir>/tests/integration/globalSetup.js\" --testMatch=\"**/tests/integration/**/*.test.ts\" --runInBand",
