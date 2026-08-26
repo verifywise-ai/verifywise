@@ -285,12 +285,16 @@ The table below scores tools across dimensions that matter for VerifyWise: cost,
 2. **Add an API contract smoke gate.** ✅
    - Top 10 endpoints selected: `POST /users/login`, `GET /users`, `GET /roles`, `GET /projects`, `GET /projectRisks`, `GET /tasks`, `GET /vendors`, `GET /frameworks`, `GET /dashboard`, `GET /notifications/summary`.
    - Implemented `Servers/scripts/apiContractSmoke.ts` using AJV against `Servers/swagger.yaml`.
+   - Fixed `swagger.yaml` response drift for `/users` (camelCase `createdAt`/`updatedAt`, nullable `last_login`/`sso_provider`), `/projects` (nullable `ai_risk_classification`/`type_of_high_risk_role`), and `/projectRisks` (dozens of nullable enum/string fields).
+   - The gate is strict by default: it fails on structural mismatches **and** schema violations. Run with `CONTRACT_STRICT=0` to downgrade schema drift to a warning.
    - Run it locally with `cd Servers && npm run smoke:api-contract`.
-   - The gate always fails on structural mismatches (wrong status code or non-JSON response). Schema-level drift is reported as a warning by default; set `CONTRACT_STRICT=1` to fail on schema violations as well. This lets the gate stay green while the documented swagger drift (snake_case vs. camelCase on `/users`, nullable enum fields on `/projects` and `/projectRisks`) is queued for correction.
 
-3. **Create an enum/label drift sentinel.**
-   - Export a manifest of key enums (`risk_category`, `task_status`, `approval_status`, `data_classification`, etc.).
-   - Compare the manifest to UI label constants in `Clients/src` on every backend/frontend PR.
+3. **Create an enum/label drift sentinel.** ✅
+   - Added `Servers/scripts/generateEnumManifest.ts` which exports the backend enums/const arrays to `Servers/enum-manifest.json`.
+   - Added `Servers/scripts/checkEnumLabelDrift.ts` which compares the manifest to frontend domain enums in `Clients/src/domain/enums` and to swagger enum schemas.
+   - Fixed two small frontend drifts: added `Rejected` to `ModelInventoryStatus` and aligned `MitigationStatus` casing with the backend.
+   - One known drift remains: `CurrentRiskLevel` uses title-case `"Very Low risk"` in the frontend while the backend risk calculator uses `"Very low risk"`. The sentinel reports this but exits 0 by default; set `ENUM_DRIFT_STRICT=1` to fail on drift.
+   - Run it locally with `cd Servers && npm run check:enum-drift`.
 
 4. **Enable session replay on staging.**
    - Deploy OpenReplay or PostHog on the staging environment only.
