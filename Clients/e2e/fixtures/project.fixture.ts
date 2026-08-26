@@ -34,12 +34,7 @@ export const test = base.extend<{
       await superCtx.request.dispose();
 
       // 2. Log the browser in as the isolated admin.
-      await loginAs(
-        page,
-        admin.email,
-        admin.password,
-        /\/(overview|super-admin)?$/,
-      );
+      await loginAs(page, admin.email, admin.password, /\/(overview|super-admin)?$/);
       await dismissOnboardingModals(page);
 
       // 3. Create the project through the API (fast and stable).
