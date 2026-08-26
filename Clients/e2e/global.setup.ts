@@ -148,6 +148,8 @@ setup("authenticate", async ({ page }) => {
     ai_risk_classification: "Minimal risk",
     type_of_high_risk_role: "Deployer",
     members: [admin.userId],
+    framework: [1],
+    enable_ai_data_insertion: false,
   });
   await projectRisks.create(adminCtx, {
     risk_name: "E2E Baseline Risk",
