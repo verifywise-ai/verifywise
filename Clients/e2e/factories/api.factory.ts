@@ -120,6 +120,11 @@ function unwrapData<T>(body: any): T {
   throw new Error(`Unexpected API response shape: ${JSON.stringify(body)}`);
 }
 
+export interface OrganizationSummary {
+  id: number;
+  name: string;
+}
+
 export const orgs = {
   /**
    * Create an organization. Requires a super-admin context.
@@ -127,6 +132,21 @@ export const orgs = {
   async create(ctx: ApiContext, name: string): Promise<number> {
     const body = await apiPost<{ data: { id: number } }>(ctx, "/api/super-admin/organizations", { name });
     return unwrapData<{ id: number }>(body).id;
+  },
+
+  /**
+   * List organizations. Requires a super-admin context.
+   */
+  async getAll(ctx: ApiContext): Promise<OrganizationSummary[]> {
+    const response = await ctx.request.get("/api/super-admin/organizations", {
+      headers: { Authorization: `Bearer ${ctx.token}` },
+    });
+    if (!response.ok()) {
+      const text = await response.text();
+      throw new Error(`GET /api/super-admin/organizations failed: ${response.status()} ${text}`);
+    }
+    const body = (await response.json()) as { data: OrganizationSummary[] };
+    return unwrapData<OrganizationSummary[]>(body);
   },
 
   /**
