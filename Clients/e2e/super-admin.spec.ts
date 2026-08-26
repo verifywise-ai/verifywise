@@ -53,15 +53,7 @@ test.describe("Super Admin", () => {
         .getByPlaceholder(/search/i)
         .or(page.locator('[data-testid="search-input"]'));
 
-      if (
-        !(await searchInput
-          .first()
-          .isVisible({ timeout: 10_000 })
-          .catch(() => false))
-      ) {
-        test.skip();
-        return;
-      }
+      await expect(searchInput.first()).toBeVisible({ timeout: 15_000 });
 
       await searchInput.first().fill("nonexistent-org-xyz");
       await page.waitForTimeout(500);
@@ -180,17 +172,7 @@ test.describe("Super Admin", () => {
         .or(page.getByText(/user/i))
         .or(page.getByRole("heading"));
 
-      if (
-        !(await table
-          .first()
-          .isVisible({ timeout: 10_000 })
-          .catch(() => false))
-      ) {
-        test.skip();
-        return;
-      }
-
-      await expect(table.first()).toBeVisible();
+      await expect(table.first()).toBeVisible({ timeout: 15_000 });
     });
 
     test("search filters users", async ({ authedPage: page }) => {
@@ -205,15 +187,7 @@ test.describe("Super Admin", () => {
         .getByPlaceholder(/search/i)
         .or(page.locator('[data-testid="search-input"]'));
 
-      if (
-        !(await searchInput
-          .first()
-          .isVisible({ timeout: 10_000 })
-          .catch(() => false))
-      ) {
-        test.skip();
-        return;
-      }
+      await expect(searchInput.first()).toBeVisible({ timeout: 15_000 });
 
       await searchInput.first().fill("nonexistent-user-xyz");
       await page.waitForTimeout(500);
@@ -302,23 +276,8 @@ test.describe("Super Admin", () => {
         .getByRole("tab", { name: /password/i })
         .or(page.getByText(/password/i));
 
-      if (
-        await profileTab
-          .first()
-          .isVisible({ timeout: 10_000 })
-          .catch(() => false)
-      ) {
-        await expect(profileTab.first()).toBeVisible();
-      }
-
-      if (
-        await passwordTab
-          .first()
-          .isVisible()
-          .catch(() => false)
-      ) {
-        await expect(passwordTab.first()).toBeVisible();
-      }
+      await expect(profileTab.first()).toBeVisible({ timeout: 15_000 });
+      await expect(passwordTab.first()).toBeVisible({ timeout: 15_000 });
     });
 
     test("clicking Password tab shows password form", async ({ authedPage: page }) => {
@@ -333,16 +292,7 @@ test.describe("Super Admin", () => {
         .getByRole("tab", { name: /password/i })
         .or(page.getByText(/password/i));
 
-      if (
-        !(await passwordTab
-          .first()
-          .isVisible({ timeout: 10_000 })
-          .catch(() => false))
-      ) {
-        test.skip();
-        return;
-      }
-
+      await expect(passwordTab.first()).toBeVisible({ timeout: 15_000 });
       await passwordTab.first().click();
       await page.waitForTimeout(500);
 
@@ -350,15 +300,7 @@ test.describe("Super Admin", () => {
       const passwordField = page
         .locator('input[type="password"]')
         .or(page.getByPlaceholder(/password/i));
-
-      if (
-        await passwordField
-          .first()
-          .isVisible()
-          .catch(() => false)
-      ) {
-        await expect(passwordField.first()).toBeVisible();
-      }
+      await expect(passwordField.first()).toBeVisible({ timeout: 10_000 });
     });
   });
 
