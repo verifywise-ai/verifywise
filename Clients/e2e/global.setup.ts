@@ -6,7 +6,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { tmpdir } from "os";
 import { loginAs } from "./helpers/auth.helper";
-import { createApiContext, orgs, projects, projectRisks } from "./factories/api.factory";
+import { createApiContext, orgs, projects, projectRisks, tasks } from "./factories/api.factory";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -133,6 +133,23 @@ setup("authenticate", async ({ page }) => {
     projects: [baselineProject.id],
     risk_level_autocalculated: "High risk",
   });
+
+  // Seed enough tasks to exercise pagination in the tasks spec.
+  const dueDate = new Date();
+  dueDate.setDate(dueDate.getDate() + 7);
+  await Promise.all(
+    Array.from({ length: 12 }, (_, i) =>
+      tasks.create(adminCtx, {
+        title: `E2E Baseline Task ${i + 1}`,
+        description: "Global setup baseline task",
+        due_date: dueDate.toISOString(),
+        priority: "Medium",
+        status: "Open",
+        assignees: [admin.userId],
+      }),
+    ),
+  );
+
   await adminCtx.request.dispose();
 
   // 5. Login as the seeded admin and save state.
