@@ -227,9 +227,7 @@ test.describe("Use Cases / Projects", () => {
       const projectRow = page.locator("table tbody tr").first();
       const projectCard = page.locator('[class*="project-card" i]').first();
       const target = projectRow.or(projectCard);
-      await target
-        .waitFor({ state: "visible", timeout: 15_000 })
-        .catch(() => {});
+      await target.waitFor({ state: "visible", timeout: 15_000 }).catch(() => {});
       const visible = await target.isVisible().catch(() => false);
       if (!visible) return false;
       await target.click();
