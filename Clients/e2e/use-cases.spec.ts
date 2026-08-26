@@ -220,97 +220,51 @@ test.describe("Use Cases / Projects", () => {
   // --- Tier 5: Change history / Activity log ---
 
   test.describe("Activity Log", () => {
-    test("project view shows activity tab", async ({ authedPage: page }) => {
+    // Open the first project from the overview. The overview may render cards
+    // or a table, so we handle either layout.
+    async function openFirstProjectView(page: any): Promise<boolean> {
       await page.goto("/overview");
+      const projectRow = page.locator("table tbody tr").first();
+      const projectCard = page.locator('[class*="project-card" i]').first();
+      const target = projectRow.or(projectCard);
+      await target.waitFor({ state: "visible", timeout: 15_000 }).catch(() => {});
+      const visible = await target.isVisible().catch(() => false);
+      if (!visible) return false;
+      await target.click();
+      await expect(page).toHaveURL(/\/project-view/, { timeout: 15_000 });
+      return true;
+    }
 
-      // Click on any existing project card to navigate to project view
-      const projectCard = page
-        .locator('[class*="project-card" i]')
-        .or(page.locator('[data-testid*="project"]'))
-        .or(page.getByRole("link", { name: /project|use case/i }))
-        .or(page.locator(".MuiCard-root"));
-
-      if (
-        !(await projectCard
-          .first()
-          .isVisible()
-          .catch(() => false))
-      ) {
-        test.skip();
-        return;
+    test("project view shows activity tab", async ({ authedPage: page }) => {
+      const hasProject = await openFirstProjectView(page);
+      if (!hasProject) {
+        throw new Error("Expected at least one project in overview for activity tab test");
       }
-      await projectCard.first().click();
-      await page.waitForTimeout(1000);
 
-      // Look for Activity tab or section
-      const activityTab = page
-        .getByRole("tab", { name: /activity/i })
-        .or(page.getByText(/activity/i))
-        .or(page.getByText(/history/i))
-        .or(page.getByText(/timeline/i));
-
-      if (
-        await activityTab
-          .first()
-          .isVisible({ timeout: 10_000 })
-          .catch(() => false)
-      ) {
-        await expect(activityTab.first()).toBeVisible();
-      }
+      const activityTab = page.getByRole("tab", { name: /activity/i });
+      await expect(activityTab.first()).toBeVisible({ timeout: 10_000 });
     });
 
     test("activity log shows entries after project creation", async ({ authedPage: page }) => {
-      await page.goto("/overview");
-
-      const projectCard = page
-        .locator('[class*="project-card" i]')
-        .or(page.locator('[data-testid*="project"]'))
-        .or(page.getByRole("link", { name: /project|use case/i }))
-        .or(page.locator(".MuiCard-root"));
-
-      if (
-        !(await projectCard
-          .first()
-          .isVisible()
-          .catch(() => false))
-      ) {
-        test.skip();
-        return;
+      const hasProject = await openFirstProjectView(page);
+      if (!hasProject) {
+        throw new Error("Expected at least one project in overview for activity log test");
       }
-      await projectCard.first().click();
-      await page.waitForTimeout(1000);
 
-      // Navigate to Activity tab
-      const activityTab = page
-        .getByRole("tab", { name: /activity/i })
-        .or(page.getByText(/activity/i));
+      const activityTab = page.getByRole("tab", { name: /activity/i });
+      await expect(activityTab.first()).toBeVisible({ timeout: 10_000 });
+      await activityTab.first().click();
+      await page.waitForTimeout(500);
 
-      if (
-        await activityTab
-          .first()
-          .isVisible()
-          .catch(() => false)
-      ) {
-        await activityTab.first().click();
-        await page.waitForTimeout(1000);
-
-        // Verify at least one activity entry exists
-        const activityEntry = page
-          .getByText(/created/i)
-          .or(page.getByText(/updated/i))
-          .or(page.getByText(/changed/i))
-          .or(page.locator('[class*="activity" i]'))
-          .or(page.locator('[class*="timeline" i]'));
-
-        if (
-          await activityEntry
-            .first()
-            .isVisible()
-            .catch(() => false)
-        ) {
-          await expect(activityEntry.first()).toBeVisible();
-        }
-      }
+      // The global-setup project was created via the API, which records a
+      // use-case creation event in the activity log.
+      const activityEntry = page
+        .getByText(/created/i)
+        .or(page.getByText(/updated/i))
+        .or(page.getByText(/changed/i))
+        .or(page.locator('[class*="activity" i]'))
+        .or(page.locator('[class*="timeline" i]'));
+      await expect(activityEntry.first()).toBeVisible({ timeout: 10_000 });
     });
   });
 });

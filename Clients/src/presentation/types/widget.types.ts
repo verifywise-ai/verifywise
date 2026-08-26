@@ -124,6 +124,7 @@ export interface FieldProps {
   helperText?: string;
   InputProps?: TextFieldProps["InputProps"];
   formHelperTextProps?: TextFieldProps["FormHelperTextProps"];
+  dataTestId?: string;
   min?: number;
   max?: number;
   multiline?: boolean;
