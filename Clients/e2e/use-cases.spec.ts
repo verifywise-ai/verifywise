@@ -238,9 +238,9 @@ test.describe("Use Cases / Projects", () => {
     }
 
     test("project view shows activity tab", async ({ authedPage: page }) => {
-      if (!(await openFirstProjectView(page))) {
-        test.skip();
-        return;
+      const hasProject = await openFirstProjectView(page);
+      if (!hasProject) {
+        throw new Error("Expected at least one project in overview for activity tab test");
       }
 
       const activityTab = page.getByRole("tab", { name: /activity/i });
@@ -248,9 +248,9 @@ test.describe("Use Cases / Projects", () => {
     });
 
     test("activity log shows entries after project creation", async ({ authedPage: page }) => {
-      if (!(await openFirstProjectView(page))) {
-        test.skip();
-        return;
+      const hasProject = await openFirstProjectView(page);
+      if (!hasProject) {
+        throw new Error("Expected at least one project in overview for activity log test");
       }
 
       const activityTab = page.getByRole("tab", { name: /activity/i });
