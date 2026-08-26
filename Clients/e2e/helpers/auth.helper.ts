@@ -17,9 +17,11 @@ export async function loginAs(
 export async function dismissOnboardingModals(page: Page): Promise<void> {
   // Welcome / onboarding dialog
   const welcomeSkip = page.getByRole("button", { name: /skip for now/i });
-  await expect(welcomeSkip).toBeVisible({ timeout: 3_000 }).catch(() => {
-    // Modal may not appear; that's fine.
-  });
+  await expect(welcomeSkip)
+    .toBeVisible({ timeout: 3_000 })
+    .catch(() => {
+      // Modal may not appear; that's fine.
+    });
   if (await welcomeSkip.isVisible().catch(() => false)) {
     await welcomeSkip.click();
     await page.waitForTimeout(500);
