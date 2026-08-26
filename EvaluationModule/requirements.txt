@@ -13,7 +13,7 @@ fairlearn>=0.14.0
 # Deep learning and transformers
 torch>=2.13.0,<3.0.0
 transformers>=5.15.1
-sentence-transformers>=5.7.0
+sentence-transformers>=6.0.0
 # huggingface-hub 1.16.3+ requires click>=8.4.0, which conflicts with deepeval<4.2.0
 huggingface-hub>=1.16.1,<1.16.3
 
