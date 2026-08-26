@@ -54,9 +54,7 @@ function buildTestEnv(): NodeJS.ProcessEnv {
  * Create a backend API request context authenticated as the given user.
  * If no credentials are supplied, the default super-admin is used.
  */
-export async function createApiContext(
-  credentials?: Credentials,
-): Promise<ApiContext> {
+export async function createApiContext(credentials?: Credentials): Promise<ApiContext> {
   const ctx = await request.newContext({ baseURL: BACKEND_URL });
   const creds = credentials ?? {
     email: SUPER_ADMIN_EMAIL,
@@ -66,9 +64,7 @@ export async function createApiContext(
   const response = await ctx.post("/api/users/login", { data: creds });
   if (!response.ok()) {
     const body = await response.text();
-    throw new Error(
-      `API login failed for ${creds.email}: ${response.status()} ${body}`,
-    );
+    throw new Error(`API login failed for ${creds.email}: ${response.status()} ${body}`);
   }
   const json = (await response.json()) as { data: { token: string } };
   const token = json?.data?.token;
@@ -86,11 +82,7 @@ export async function createApiContext(
   };
 }
 
-async function apiPost<T = any>(
-  ctx: ApiContext,
-  path: string,
-  data: unknown,
-): Promise<T> {
+async function apiPost<T = any>(ctx: ApiContext, path: string, data: unknown): Promise<T> {
   const response = await ctx.request.post(path, {
     data,
     headers: { Authorization: `Bearer ${ctx.token}` },
@@ -130,7 +122,9 @@ export const orgs = {
    * Create an organization. Requires a super-admin context.
    */
   async create(ctx: ApiContext, name: string): Promise<number> {
-    const body = await apiPost<{ data: { id: number } }>(ctx, "/api/super-admin/organizations", { name });
+    const body = await apiPost<{ data: { id: number } }>(ctx, "/api/super-admin/organizations", {
+      name,
+    });
     return unwrapData<{ id: number }>(body).id;
   },
 
@@ -309,11 +303,10 @@ export const vendors = {
     ctx: ApiContext,
     payload: CreateVendorPayload,
   ): Promise<{ id: number; vendor_name: string }> {
-    const body = await apiPost<{ data: { id: number; vendor_name: string } }>(
-      ctx,
-      "/api/vendors",
-      { ...payload, is_demo: false },
-    );
+    const body = await apiPost<{ data: { id: number; vendor_name: string } }>(ctx, "/api/vendors", {
+      ...payload,
+      is_demo: false,
+    });
     return unwrapData<{ id: number; vendor_name: string }>(body);
   },
 
@@ -338,11 +331,7 @@ export const tasks = {
     ctx: ApiContext,
     payload: CreateTaskPayload,
   ): Promise<{ id: number; title: string }> {
-    const body = await apiPost<{ data: { id: number; title: string } }>(
-      ctx,
-      "/api/tasks",
-      payload,
-    );
+    const body = await apiPost<{ data: { id: number; title: string } }>(ctx, "/api/tasks", payload);
     return unwrapData<{ id: number; title: string }>(body);
   },
 
