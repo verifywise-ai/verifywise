@@ -6,7 +6,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { tmpdir } from "os";
 import { loginAs } from "./helpers/auth.helper";
-import { createApiContext, projects, projectRisks } from "./factories/api.factory";
+import { createApiContext, orgs, projects, projectRisks } from "./factories/api.factory";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -28,7 +28,6 @@ const __dirname = path.dirname(__filename);
 
 const TEST_EMAIL = process.env.E2E_EMAIL || "verifywise@email.com";
 const TEST_PASSWORD = process.env.E2E_PASSWORD || "Verifywise#1";
-const BACKEND_URL = process.env.E2E_BACKEND_URL || "http://localhost:3000";
 const SERVERS_DIR = path.resolve(__dirname, "../../Servers");
 
 const USER_AUTH_STATE_PATH = "e2e/.auth/user.json";
@@ -42,41 +41,8 @@ interface SeedOutput {
   credentialsFile: string | null;
 }
 
-async function getAuthToken(page: any): Promise<string> {
-  const token = await page.evaluate(() => {
-    const persistRoot = localStorage.getItem("persist:root");
-    if (!persistRoot) return "";
-    try {
-      const parsed = JSON.parse(persistRoot);
-      const auth = parsed.auth ? JSON.parse(parsed.auth) : null;
-      return auth?.authToken || "";
-    } catch {
-      return "";
-    }
-  });
-  if (!token) {
-    throw new Error("Could not extract auth token from localStorage after login");
-  }
-  return token;
-}
-
-async function createOrganization(page: any): Promise<number> {
-  const token = await getAuthToken(page);
-  const orgName = `E2E Org ${Date.now()}`;
-  const response = await page.request.post(`${BACKEND_URL}/api/super-admin/organizations`, {
-    data: { name: orgName },
-    headers: { Authorization: `Bearer ${token}` },
-    failOnStatusCode: true,
-  });
-  const body = await response.json();
-  const orgId = body?.data?.id;
-  if (typeof orgId !== "number") {
-    throw new Error(`Failed to create E2E organization. Response: ${JSON.stringify(body)}`);
-  }
-  return orgId;
-}
-
 const E2E_NODE_ENV = process.env.E2E_NODE_ENV || "test";
+const SETUP_ORG_NAME = "E2E Global Setup Org";
 
 function seedAdminInOrg(orgId: number): SeedOutput {
   const env: NodeJS.ProcessEnv = { ...process.env, NODE_ENV: E2E_NODE_ENV };
@@ -128,10 +94,20 @@ setup("authenticate", async ({ page }) => {
   await loginAs(page, TEST_EMAIL, TEST_PASSWORD, /\/(super-admin)?$/);
   await page.context().storageState({ path: USER_AUTH_STATE_PATH });
 
-  // 2. Create an organization using the super-admin's authenticated context.
-  const orgId = await createOrganization(page);
+  // 2. Use the super-admin API context to manage the setup organization.
+  const superCtx = await createApiContext();
 
-  // 3. Seed a real Admin user inside that organization.
+  //    Clean up any stale organization left by previous runs so the test DB
+  //    does not accumulate baseline projects over repeated local executions.
+  const existingOrgs = await orgs.getAll(superCtx);
+  const staleOrg = existingOrgs.find((o) => o.name === SETUP_ORG_NAME);
+  if (staleOrg) {
+    await orgs.delete(superCtx, staleOrg.id);
+  }
+
+  // 3. Create a deterministic setup organization and seed an Admin inside it.
+  const orgId = await orgs.create(superCtx, SETUP_ORG_NAME);
+  await superCtx.request.dispose();
   const admin = seedAdminInOrg(orgId);
 
   // 4. Seed a baseline project + risk for the admin org so auth-state tests
