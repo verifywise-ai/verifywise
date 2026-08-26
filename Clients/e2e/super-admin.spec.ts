@@ -8,14 +8,7 @@ test.describe("Super Admin", () => {
     test("renders the organizations page", async ({ authedPage: page }) => {
       await page.goto("/super-admin");
 
-      // May redirect if user is not a super admin — skip in that case
-      if (page.url().includes("/login") || page.url() === page.context().pages()[0]?.url()) {
-        const isOnSuperAdmin = page.url().includes("/super-admin");
-        if (!isOnSuperAdmin) {
-          test.skip();
-          return;
-        }
-      }
+      await expect(page).toHaveURL(/\/super-admin/, { timeout: 15_000 });
 
       await expect(
         page
@@ -28,10 +21,7 @@ test.describe("Super Admin", () => {
     test("displays organizations table or empty state", async ({ authedPage: page }) => {
       await page.goto("/super-admin");
 
-      if (!page.url().includes("/super-admin")) {
-        test.skip();
-        return;
-      }
+      await expect(page).toHaveURL(/\/super-admin/, { timeout: 15_000 });
 
       const content = page
         .getByRole("table")
@@ -44,10 +34,7 @@ test.describe("Super Admin", () => {
     test("search box filters organizations", async ({ authedPage: page }) => {
       await page.goto("/super-admin");
 
-      if (!page.url().includes("/super-admin")) {
-        test.skip();
-        return;
-      }
+      await expect(page).toHaveURL(/\/super-admin/, { timeout: 15_000 });
 
       const searchInput = page
         .getByPlaceholder(/search/i)
@@ -87,10 +74,7 @@ test.describe("Super Admin", () => {
     test("table columns are sortable", async ({ authedPage: page }) => {
       await page.goto("/super-admin");
 
-      if (!page.url().includes("/super-admin")) {
-        test.skip();
-        return;
-      }
+      await expect(page).toHaveURL(/\/super-admin/, { timeout: 15_000 });
 
       // Look for sortable column headers (Name, Users, Created)
       const nameHeader = page
@@ -115,10 +99,7 @@ test.describe("Super Admin", () => {
     test("page has no accessibility violations", async ({ authedPage: page }) => {
       await page.goto("/super-admin");
 
-      if (!page.url().includes("/super-admin")) {
-        test.skip();
-        return;
-      }
+      await expect(page).toHaveURL(/\/super-admin/, { timeout: 15_000 });
 
       await page.waitForLoadState("domcontentloaded");
 
@@ -148,10 +129,7 @@ test.describe("Super Admin", () => {
     test("renders the all users page", async ({ authedPage: page }) => {
       await page.goto("/super-admin/users");
 
-      if (!page.url().includes("/super-admin")) {
-        test.skip();
-        return;
-      }
+      await expect(page).toHaveURL(/\/super-admin/, { timeout: 15_000 });
 
       await expect(page.getByText(/user/i).or(page.getByRole("heading")).first()).toBeVisible({
         timeout: 15_000,
@@ -161,10 +139,7 @@ test.describe("Super Admin", () => {
     test("displays users table with columns", async ({ authedPage: page }) => {
       await page.goto("/super-admin/users");
 
-      if (!page.url().includes("/super-admin")) {
-        test.skip();
-        return;
-      }
+      await expect(page).toHaveURL(/\/super-admin/, { timeout: 15_000 });
 
       const table = page
         .getByRole("table")
@@ -178,10 +153,7 @@ test.describe("Super Admin", () => {
     test("search filters users", async ({ authedPage: page }) => {
       await page.goto("/super-admin/users");
 
-      if (!page.url().includes("/super-admin")) {
-        test.skip();
-        return;
-      }
+      await expect(page).toHaveURL(/\/super-admin/, { timeout: 15_000 });
 
       const searchInput = page
         .getByPlaceholder(/search/i)
@@ -197,10 +169,7 @@ test.describe("Super Admin", () => {
     test("organization filter dropdown is available", async ({ authedPage: page }) => {
       await page.goto("/super-admin/users");
 
-      if (!page.url().includes("/super-admin")) {
-        test.skip();
-        return;
-      }
+      await expect(page).toHaveURL(/\/super-admin/, { timeout: 15_000 });
 
       // Look for organization filter (Autocomplete)
       const orgFilter = page
@@ -221,10 +190,7 @@ test.describe("Super Admin", () => {
     test("role filter dropdown is available", async ({ authedPage: page }) => {
       await page.goto("/super-admin/users");
 
-      if (!page.url().includes("/super-admin")) {
-        test.skip();
-        return;
-      }
+      await expect(page).toHaveURL(/\/super-admin/, { timeout: 15_000 });
 
       // Look for role filter (Select)
       const roleFilter = page
@@ -249,10 +215,7 @@ test.describe("Super Admin", () => {
     test("renders the super admin settings page", async ({ authedPage: page }) => {
       await page.goto("/super-admin/settings");
 
-      if (!page.url().includes("/super-admin")) {
-        test.skip();
-        return;
-      }
+      await expect(page).toHaveURL(/\/super-admin/, { timeout: 15_000 });
 
       await expect(
         page
@@ -266,10 +229,7 @@ test.describe("Super Admin", () => {
     test("has Profile and Password tabs", async ({ authedPage: page }) => {
       await page.goto("/super-admin/settings");
 
-      if (!page.url().includes("/super-admin")) {
-        test.skip();
-        return;
-      }
+      await expect(page).toHaveURL(/\/super-admin/, { timeout: 15_000 });
 
       const profileTab = page.getByRole("tab", { name: /profile/i }).or(page.getByText(/profile/i));
       const passwordTab = page
@@ -283,10 +243,7 @@ test.describe("Super Admin", () => {
     test("clicking Password tab shows password form", async ({ authedPage: page }) => {
       await page.goto("/super-admin/settings");
 
-      if (!page.url().includes("/super-admin")) {
-        test.skip();
-        return;
-      }
+      await expect(page).toHaveURL(/\/super-admin/, { timeout: 15_000 });
 
       const passwordTab = page
         .getByRole("tab", { name: /password/i })
@@ -309,10 +266,7 @@ test.describe("Super Admin", () => {
   test("can navigate from organizations to users page", async ({ authedPage: page }) => {
     await page.goto("/super-admin");
 
-    if (!page.url().includes("/super-admin")) {
-      test.skip();
-      return;
-    }
+    await expect(page).toHaveURL(/\/super-admin/, { timeout: 15_000 });
 
     // Look for a "Users" button in the table rows
     const usersBtn = page
