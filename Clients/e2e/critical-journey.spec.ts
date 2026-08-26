@@ -25,9 +25,7 @@ test.describe("Critical end-to-end journey", () => {
       });
       const body = await res.json();
       const projects = body?.data?.projects ?? body?.data ?? [];
-      const project = projects.find(
-        (p: { project_title: string }) => p.project_title === name,
-      );
+      const project = projects.find((p: { project_title: string }) => p.project_title === name);
       if (!project) throw new Error(`Project "${name}" not found via API`);
       return { token, userId, projectId: project.id as number };
     }, projectName);
@@ -75,9 +73,9 @@ test.describe("Critical end-to-end journey", () => {
     await expect(addTaskBtn).toBeVisible({ timeout: 15_000 });
     await addTaskBtn.click();
 
-    await expect(
-      page.getByRole("heading", { name: /create new task/i }),
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole("heading", { name: /create new task/i })).toBeVisible({
+      timeout: 10_000,
+    });
 
     // Title
     const titleInput = page.locator("#title");
@@ -103,9 +101,7 @@ test.describe("Critical end-to-end journey", () => {
       .getByRole("button", { name: /choose date/i });
     await calendarIcon.click();
 
-    const calendarPopup = page.locator(
-      ".MuiPickerPopper-root, .MuiPickersPopper-root",
-    );
+    const calendarPopup = page.locator(".MuiPickerPopper-root, .MuiPickersPopper-root");
     await expect(calendarPopup.first()).toBeVisible({ timeout: 5_000 });
 
     const dayCell = page
@@ -128,16 +124,13 @@ test.describe("Critical end-to-end journey", () => {
     });
 
     const deadlineResponse = page.waitForResponse(
-      (resp) =>
-        resp.url().includes("/api/deadlines/summary") && resp.status() === 200,
+      (resp) => resp.url().includes("/api/deadlines/summary") && resp.status() === 200,
       { timeout: 15_000 },
     );
     await page.reload();
     await deadlineResponse;
 
-    const banner = page.locator(
-      `[data-testid="${testIds.deadlineBanner.warningBanner}"]`,
-    );
+    const banner = page.locator(`[data-testid="${testIds.deadlineBanner.warningBanner}"]`);
     await expect(banner).toBeVisible({ timeout: 15_000 });
     await expect(banner).toContainText(/due in the next \d+ days/i);
   });
