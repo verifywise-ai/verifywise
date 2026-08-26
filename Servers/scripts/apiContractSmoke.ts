@@ -8,20 +8,21 @@
  *   2. The response body is valid JSON when a schema is declared.
  *   3. The body matches the OpenAPI schema declared in swagger.yaml
  *      (schema mismatches are reported as drift warnings unless the gate is
- *      run with CONTRACT_STRICT=1).
+ *      run with CONTRACT_STRICT=0).
  *
  * Environment variables:
  *   - API_BASE_URL          target backend (default: http://localhost:3000)
  *   - E2E_ADMIN_EMAIL       tenant admin email
  *   - E2E_ADMIN_PASSWORD    tenant admin password
- *   - CONTRACT_STRICT=1     fail the gate on schema drift as well as
- *                           structural failures
+ *   - CONTRACT_STRICT=0     report schema drift as warnings instead of
+ *                           failing the gate (default: strict)
  *
  * Exit codes:
- *   0 - all top-10 endpoints returned the expected status and valid JSON;
- *       schema drift may have been reported as warnings
- *   1 - one or more endpoints failed structurally, or schema drift was
- *       treated as a failure because CONTRACT_STRICT was enabled
+ *   0 - all top-10 endpoints returned the expected status and valid JSON and
+ *       matched swagger.yaml (or schema drift was warned because
+ *       CONTRACT_STRICT=0 was set)
+ *   1 - one or more endpoints failed structural checks, or schema drift was
+ *       treated as a failure in strict mode
  */
 
 import "dotenv/config";
@@ -35,7 +36,7 @@ const BASE_URL = process.env.API_BASE_URL || "http://localhost:3000";
 // Use the E2E admin account seeded by global setup / seedE2EAdmin.ts.
 const EMAIL = process.env.E2E_ADMIN_EMAIL || process.env.E2E_EMAIL || "e2e-admin@verifywise.local";
 const PASSWORD = process.env.E2E_ADMIN_PASSWORD || process.env.E2E_PASSWORD || "E2EAdmin#1";
-const STRICT = process.env.CONTRACT_STRICT === "1" || process.env.CONTRACT_STRICT === "true";
+const STRICT = process.env.CONTRACT_STRICT !== "0" && process.env.CONTRACT_STRICT !== "false";
 
 const SWAGGER_PATH = path.resolve(__dirname, "../swagger.yaml");
 
@@ -189,7 +190,7 @@ async function main(): Promise<number> {
   if (schemaDrifts > 0) {
     console.log(
       `Schema drift detected on ${schemaDrifts} endpoint(s). ` +
-        `Run with CONTRACT_STRICT=1 to treat drift as a failure.`,
+        `Run with CONTRACT_STRICT=0 to report drift as a warning only.`,
     );
   }
 
