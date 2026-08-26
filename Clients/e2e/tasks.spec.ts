@@ -310,20 +310,12 @@ test.describe("Tasks", () => {
     await page.goto("/tasks");
     await page.waitForTimeout(2000);
 
-    // Find rows-per-page selector
+    // Find rows-per-page selector (MUI labels it "Tasks per page").
     const rowsPerPage = page
       .locator(".MuiTablePagination-select")
-      .or(page.getByRole("combobox", { name: /rows per page/i }));
+      .or(page.getByRole("combobox", { name: /per page/i }));
 
-    if (
-      !(await rowsPerPage
-        .first()
-        .isVisible()
-        .catch(() => false))
-    ) {
-      test.skip();
-      return;
-    }
+    await expect(rowsPerPage.first()).toBeVisible({ timeout: 15_000 });
 
     // Get initial row count
     const initialRows = await page.getByRole("row").count();
