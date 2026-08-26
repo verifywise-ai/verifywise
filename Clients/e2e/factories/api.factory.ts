@@ -210,6 +210,8 @@ export interface CreateProjectPayload {
   ai_risk_classification?: string;
   type_of_high_risk_role?: string;
   members?: number[];
+  framework?: number[];
+  enable_ai_data_insertion?: boolean;
 }
 
 export const projects = {
