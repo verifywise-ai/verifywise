@@ -1,4 +1,4 @@
-FROM node:24-alpine3.22
+FROM node:26-alpine3.22
 
 # Security: guarantee production mode in the published image.
 # Without this, cookies lose the Secure flag, Swagger docs are exposed,
