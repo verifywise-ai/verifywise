@@ -9254,6 +9254,8 @@ export const translations: Record<string, Record<string, string>> = {
 
     // DORA Register of Information — vendor form ICT provider section
     "ICT provider (DORA)": "ICT-Anbieter (DORA)",
+    "Mark this vendor as an ICT third-party provider to add it to your DORA Register of Information. Record how critical the service is and whether it can be substituted, so the register reflects your live ICT dependencies.":
+      "Markieren Sie diesen Anbieter als IKT-Drittdienstleister, um ihn in Ihr DORA-Informationsregister aufzunehmen. Erfassen Sie, wie kritisch die Dienstleistung ist und ob sie ersetzbar ist, damit das Register Ihre aktuellen IKT-Abhängigkeiten widerspiegelt.",
     "This vendor is an ICT third-party provider": "Dieser Anbieter ist ein IKT-Drittanbieter",
     "ICT service type": "Art der IKT-Dienstleistung",
     "Select ICT service type": "Art der IKT-Dienstleistung auswählen",
@@ -18474,6 +18476,8 @@ export const translations: Record<string, Record<string, string>> = {
 
     // DORA Register of Information — vendor form ICT provider section
     "ICT provider (DORA)": "Fournisseur TIC (DORA)",
+    "Mark this vendor as an ICT third-party provider to add it to your DORA Register of Information. Record how critical the service is and whether it can be substituted, so the register reflects your live ICT dependencies.":
+      "Marquez ce fournisseur comme prestataire tiers de TIC pour l'ajouter à votre registre d'informations DORA. Indiquez le caractère critique du service et s'il est substituable, afin que le registre reflète vos dépendances TIC actuelles.",
     "This vendor is an ICT third-party provider": "Ce fournisseur est un prestataire tiers TIC",
     "ICT service type": "Type de service TIC",
     "Select ICT service type": "Sélectionner le type de service TIC",
@@ -27613,6 +27617,8 @@ export const translations: Record<string, Record<string, string>> = {
 
     // DORA Register of Information — vendor form ICT provider section
     "ICT provider (DORA)": "Proveedor TIC (DORA)",
+    "Mark this vendor as an ICT third-party provider to add it to your DORA Register of Information. Record how critical the service is and whether it can be substituted, so the register reflects your live ICT dependencies.":
+      "Marque este proveedor como tercero proveedor de TIC para añadirlo a su Registro de Información DORA. Registre la criticidad del servicio y si es sustituible, para que el registro refleje sus dependencias de TIC actuales.",
     "This vendor is an ICT third-party provider": "Este proveedor es un tercero TIC",
     "ICT service type": "Tipo de servicio TIC",
     "Select ICT service type": "Seleccionar tipo de servicio TIC",
