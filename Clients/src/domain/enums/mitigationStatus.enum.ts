@@ -5,5 +5,5 @@ export enum MitigationStatus {
   OnHold = "On Hold",
   Deferred = "Deferred",
   Canceled = "Canceled",
-  RequiresReview = "Requires Review",
+  RequiresReview = "Requires review",
 }

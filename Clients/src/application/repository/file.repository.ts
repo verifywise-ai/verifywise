@@ -3,12 +3,7 @@ import { apiServices } from "../../infrastructure/api/networkServices";
 
 // Review status type
 export type ReviewStatus =
-  | "draft"
-  | "pending_review"
-  | "approved"
-  | "rejected"
-  | "expired"
-  | "superseded";
+  "draft" | "pending_review" | "approved" | "rejected" | "expired" | "superseded";
 
 // Type definitions for API responses
 export interface FileMetadata {
@@ -556,12 +551,7 @@ export async function getFileVersionHistory({
 
 export type FrameworkType = "eu_ai_act" | "nist_ai" | "iso_27001" | "iso_42001" | string;
 export type EntityType =
-  | "assessment"
-  | "subcontrol"
-  | "subclause"
-  | "annex_control"
-  | "annex_category"
-  | string;
+  "assessment" | "subcontrol" | "subclause" | "annex_control" | "annex_category" | string;
 export type LinkType = "evidence" | "feedback" | "attachment" | "reference";
 
 export interface FileEntityLink {

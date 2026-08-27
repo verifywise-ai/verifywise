@@ -1,15 +1,6 @@
 // Question identifiers
 export type QuestionId =
-  | "Q1"
-  | "Q1a"
-  | "Q1b"
-  | "Q1c"
-  | "Q1c_followup"
-  | "Q1d"
-  | "Q2"
-  | "Q3"
-  | "Q4"
-  | "Q5";
+  "Q1" | "Q1a" | "Q1b" | "Q1c" | "Q1c_followup" | "Q1d" | "Q2" | "Q3" | "Q4" | "Q5";
 
 // User's answers to the questionnaire
 export interface IQuestionnaireAnswers {
@@ -46,11 +37,7 @@ export interface IQuestion {
 }
 
 export type RiskClassification =
-  | "PROHIBITED"
-  | "HIGH_RISK"
-  | "LIMITED_RISK"
-  | "MINIMAL_RISK"
-  | "PENDING";
+  "PROHIBITED" | "HIGH_RISK" | "LIMITED_RISK" | "MINIMAL_RISK" | "PENDING";
 
 export interface ClassificationResult {
   level: RiskClassification;

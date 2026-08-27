@@ -19,6 +19,10 @@ module.exports = {
 
     await sql.query(`UPDATE verifywise.users SET role_id = NULL WHERE role_id = 5;`);
 
+    // Stale pending invites for the retired SuperAdmin role can't be redeemed
+    // under the elected-overlay model, and their FK blocks the role delete.
+    await sql.query(`DELETE FROM verifywise.invitations WHERE role_id = 5;`);
+
     await sql.query(`DELETE FROM verifywise.roles WHERE id = 5;`);
 
     await sql.query(`

@@ -415,21 +415,10 @@ export interface AIDetectionStats {
 // ============================================================================
 
 export type DependencyNodeType =
-  | "library"
-  | "model"
-  | "api"
-  | "secret"
-  | "rag"
-  | "agent"
-  | "repository";
+  "library" | "model" | "api" | "secret" | "rag" | "agent" | "repository";
 
 export type EdgeRelationship =
-  | "uses"
-  | "calls"
-  | "requires"
-  | "exposes"
-  | "orchestrates"
-  | "contains";
+  "uses" | "calls" | "requires" | "exposes" | "orchestrates" | "contains";
 
 export interface DependencyGraphNode {
   id: string;

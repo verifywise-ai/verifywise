@@ -29,15 +29,13 @@ const useUsers = () => {
     queryFn: async () => {
       const response = await getAllUsers();
       // Convert role_id to roleId
-      const formattedUsers: User[] = (response as ApiResponse).data.map(
-        (user: ApiUser): User => ({
-          id: user.id,
-          name: user.name,
-          surname: user.surname,
-          email: user.email,
-          roleId: user.role_id,
-        }),
-      );
+      const formattedUsers: User[] = (response as ApiResponse).data.map((user: ApiUser): User => ({
+        id: user.id,
+        name: user.name,
+        surname: user.surname,
+        email: user.email,
+        roleId: user.role_id,
+      }));
       return formattedUsers;
     },
     // Skip when the caller has no org context (pure SuperAdmin). Elected

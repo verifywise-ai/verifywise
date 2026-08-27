@@ -70,12 +70,7 @@ const Reports: React.FC<ReportsProps> = ({
 
   // Column visibility management
   type ReportColumn =
-    | "reportName"
-    | "typeOfReport"
-    | "project"
-    | "dateGenerated"
-    | "generatedBy"
-    | "action";
+    "reportName" | "typeOfReport" | "project" | "dateGenerated" | "generatedBy" | "action";
 
   const REPORT_COLUMNS: ColumnConfig<ReportColumn>[] = useMemo(
     () => [

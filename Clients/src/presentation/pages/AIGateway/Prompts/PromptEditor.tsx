@@ -631,7 +631,11 @@ export default function PromptEditorPage() {
             isDisabled={isPublishing || !currentVersion}
             sx={{ height: 34 }}
           />
-          <IconButton size="small" onClick={() => setIsHistoryOpen(true)}>
+          <IconButton
+            size="small"
+            aria-label="Version history"
+            onClick={() => setIsHistoryOpen(true)}
+          >
             <History size={16} strokeWidth={1.5} />
           </IconButton>
         </Stack>

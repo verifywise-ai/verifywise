@@ -27,6 +27,7 @@ import { AiRiskClassification } from "../../../domain/enums/aiRiskClassification
 import { HighRiskRole } from "../../../domain/enums/highRiskRole.enum";
 import { getAutocompleteStyles } from "../../utils/inputStyles";
 import { CreateProjectFormUserModel } from "../../../domain/models/Common/user/user.model";
+import { testIds } from "../../test-ids";
 import Select from "../Inputs/Select";
 import DatePicker from "../Inputs/Datepicker";
 import Field from "../Inputs/Field";
@@ -231,6 +232,7 @@ export function CreateProjectForm({ closePopup, onNewProject }: CreateProjectFor
           <Stack sx={createProjectFormStyles.leftColumn}>
             <Field
               id="project-title-input"
+              dataTestId={testIds.createProject.titleInput}
               label="Use case title"
               width="350px"
               value={values.project_title}
@@ -241,6 +243,7 @@ export function CreateProjectForm({ closePopup, onNewProject }: CreateProjectFor
             />
             <Select
               id="owner-input"
+              dataTestId={testIds.createProject.ownerSelect}
               label="Owner"
               placeholder="Select owner"
               value={values.owner === 0 ? "" : values.owner}
@@ -258,6 +261,7 @@ export function CreateProjectForm({ closePopup, onNewProject }: CreateProjectFor
             />
             <Select
               id="risk-classification-input"
+              dataTestId={testIds.createProject.riskClassificationSelect}
               label="AI risk classification"
               placeholder="Select an option"
               value={values.ai_risk_classification === 0 ? "" : values.ai_risk_classification}
@@ -269,6 +273,7 @@ export function CreateProjectForm({ closePopup, onNewProject }: CreateProjectFor
             />
             <Select
               id="type-of-high-risk-role-input"
+              dataTestId={testIds.createProject.highRiskRoleSelect}
               label="Type of high risk role"
               placeholder="Select an option"
               value={values.type_of_high_risk_role === 0 ? "" : values.type_of_high_risk_role}
@@ -331,6 +336,10 @@ export function CreateProjectForm({ closePopup, onNewProject }: CreateProjectFor
                   placeholder="Select users"
                   error={memberRequired}
                   sx={createProjectFormStyles.autocompleteTextField}
+                  inputProps={{
+                    ...params.inputProps,
+                    "data-testid": testIds.createProject.membersAutocomplete,
+                  }}
                 />
               )}
               sx={{
@@ -355,6 +364,7 @@ export function CreateProjectForm({ closePopup, onNewProject }: CreateProjectFor
               />
               <Field
                 id="goal-input"
+                dataTestId={testIds.createProject.goalInput}
                 label="Goal"
                 type="description"
                 value={values.goal}
@@ -369,6 +379,7 @@ export function CreateProjectForm({ closePopup, onNewProject }: CreateProjectFor
         <Button
           type="submit"
           variant="contained"
+          data-testid={testIds.createProject.submitButton}
           disableRipple={theme.components?.MuiButton?.defaultProps?.disableRipple}
           sx={createProjectFormStyles.submitButton}
         >

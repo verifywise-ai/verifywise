@@ -5,8 +5,7 @@
  */
 
 export type DatasetValidationResult =
-  | { ok: true; validPromptCount: number }
-  | { ok: false; title: string; body: string };
+  { ok: true; validPromptCount: number } | { ok: false; title: string; body: string };
 
 /**
  * Count prompts that have actual content — either a non-empty `prompt` field

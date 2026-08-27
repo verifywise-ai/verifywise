@@ -15,13 +15,7 @@ import VWTooltip from "../../components/VWTooltip";
 import { text } from "../../themes/palette";
 
 export type EntityType =
-  | "useCase"
-  | "model"
-  | "risk"
-  | "vendor"
-  | "evidence"
-  | "framework"
-  | "user";
+  "useCase" | "model" | "risk" | "vendor" | "evidence" | "framework" | "user";
 
 interface EntityNodeData {
   label: string;
