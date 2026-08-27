@@ -1,4 +1,4 @@
-FROM python:3.14-slim
+FROM python:3.12-slim
 
 # Pull the latest Debian security patches so Trivy release scans don't fail on
 # fixable base-image CVEs (e.g. util-linux CVE-2026-53612..53615, fixed in
