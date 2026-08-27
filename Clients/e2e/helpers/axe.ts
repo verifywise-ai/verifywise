@@ -1,5 +1,7 @@
-import type { Page } from "@playwright/test";
+import { test, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
+import { mkdirSync, writeFileSync } from "fs";
+import path from "path";
 
 /**
  * A rule that axe is told not to run, together with the reason it is deferred
@@ -112,6 +114,73 @@ export interface AnalyzeOptions {
    * spec will see it.
    */
   alsoDisable?: Record<string, DeferredRule>;
+  /**
+   * Basename for this scan's report file. Defaults to the spec file name, which
+   * is unambiguous while a spec scans a single page; pass it explicitly if one
+   * spec scans several.
+   */
+  reportName?: string;
+}
+
+/**
+ * Where the per-page JSON reports are written. CI uploads this directory, so
+ * the path here and the path in .github/workflows/e2e-tests.yml must agree.
+ */
+const REPORT_DIR = process.env.A11Y_REPORT_DIR || path.join(process.cwd(), "accessibility-report");
+
+/**
+ * Writes one JSON report per scanned page.
+ *
+ * The disabled rules are recorded alongside the results, with their reasons. A
+ * report claiming zero violations while silently suppressing rules is the
+ * situation this whole task exists to correct, so the artifact has to state
+ * what was not checked as plainly as what was.
+ *
+ * Written before the caller asserts, so a failing scan still leaves evidence.
+ */
+function writeReport(
+  reportName: string | undefined,
+  results: Awaited<ReturnType<AxeBuilder["analyze"]>>,
+  disabled: Record<string, DeferredRule>,
+  pageUrl: string,
+) {
+  const info = test.info();
+  const specName = path.basename(info.file).replace(/\.spec\.ts$/, "");
+  const name = reportName ?? specName;
+
+  const report = {
+    page: name,
+    spec: specName,
+    test: info.titlePath.join(" > "),
+    project: info.project.name,
+    url: pageUrl,
+    scannedAt: new Date().toISOString(),
+    tags: WCAG_TAGS,
+    disabledRules: disabled,
+    summary: {
+      violations: results.violations.length,
+      criticalOrSerious: results.violations.filter(
+        (v) => v.impact === "critical" || v.impact === "serious",
+      ).length,
+      passes: results.passes.length,
+      incomplete: results.incomplete.length,
+    },
+    violations: results.violations.map((violation) => ({
+      id: violation.id,
+      impact: violation.impact,
+      help: violation.help,
+      helpUrl: violation.helpUrl,
+      nodeCount: violation.nodes.length,
+      nodes: violation.nodes.map((node) => ({
+        target: node.target,
+        html: node.html,
+        failureSummary: node.failureSummary,
+      })),
+    })),
+  };
+
+  mkdirSync(REPORT_DIR, { recursive: true });
+  writeFileSync(path.join(REPORT_DIR, `${name}.json`), JSON.stringify(report, null, 2));
 }
 
 /**
@@ -131,6 +200,8 @@ export async function analyzeCriticalAndSeriousViolations(
     .withTags([...WCAG_TAGS])
     .disableRules(Object.keys(disabled))
     .analyze();
+
+  writeReport(options.reportName, results, disabled, page.url());
 
   return results.violations.filter(
     (violation) => violation.impact === "critical" || violation.impact === "serious",
