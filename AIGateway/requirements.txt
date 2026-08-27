@@ -34,5 +34,5 @@ mcp>=2.0.0
 
 # Observability — OpenTelemetry metrics + logs (pushed to central OTLP collector)
 opentelemetry-api>=1.44.0
-opentelemetry-sdk>=1.27.0
+opentelemetry-sdk>=1.44.0
 opentelemetry-exporter-otlp-proto-http>=1.44.0
