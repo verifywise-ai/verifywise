@@ -22,7 +22,7 @@ datasets>=5.0.1
 pyarrow>=25.0.0
 
 # Utilities
-tqdm>=4.68.2
+tqdm>=4.70.0
 textblob>=0.20.1
 python-dotenv>=1.2.2
 
