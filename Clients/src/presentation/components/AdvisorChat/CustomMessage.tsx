@@ -209,8 +209,7 @@ const DefaultToolFallback: FC<{ result?: unknown }> = ({ result }) => {
 const useAssistantTurnHasVisibleOutput = (): boolean => {
   return useAuiState(({ message }) => {
     const content = message.content as unknown as
-      | ReadonlyArray<Record<string, unknown>>
-      | undefined;
+      ReadonlyArray<Record<string, unknown>> | undefined;
     if (!content || content.length === 0) return false;
     for (const part of content) {
       if (part.type === "text" || part.type === "reasoning") {

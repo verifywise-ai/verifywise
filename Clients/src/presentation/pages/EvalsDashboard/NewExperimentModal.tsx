@@ -479,8 +479,7 @@ export default function NewExperimentModal({
         ...(savedPreferences
           ? {
               provider: (savedPreferences.judgeLlm.provider || prev.judgeLlm.provider) as
-                | ProviderType
-                | "",
+                ProviderType | "",
               model: savedPreferences.judgeLlm.model || prev.judgeLlm.model,
               endpointUrl: savedPreferences.judgeLlm.endpointUrl || prev.judgeLlm.endpointUrl,
             }
