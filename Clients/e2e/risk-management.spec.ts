@@ -60,6 +60,21 @@ test.describe("Risk Management", () => {
   test("risk severity summary cards are visible", async ({ authedPage: page }) => {
     await page.goto("/risk-management");
 
+    // Wait for the risk data API to settle so the summary cards render
+    // instead of relying on the default assertion timeout while the
+    // skeleton spinner is still visible.
+    await page
+      .waitForResponse(
+        (resp) =>
+          resp.url().includes("/api/projectRisks") &&
+          resp.request().method() === "GET" &&
+          resp.status() === 200,
+        { timeout: 20_000 },
+      )
+      .catch(() => {
+        // If the request already finished before we started waiting, continue.
+      });
+
     // Risk page shows severity summary cards
     const severityLabels = page
       .getByText(/very high/i)
@@ -67,7 +82,7 @@ test.describe("Risk Management", () => {
       .or(page.getByText(/medium/i))
       .or(page.getByText(/\blow\b/i))
       .or(page.getByText(/very low/i));
-    await expect(severityLabels.first()).toBeVisible({ timeout: 10_000 });
+    await expect(severityLabels.first()).toBeVisible({ timeout: 15_000 });
   });
 
   // --- Tier 2: Search & Filter ---

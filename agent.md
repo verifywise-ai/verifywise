@@ -1,59 +1,87 @@
-# VerifyWise — Code-Scanning Remediation Report
+# VerifyWise — Test-Automation Phase 1 Report
 
-**Date:** 2026-08-13  
-**Branch:** `mo-384-aug-13-vulnerability-issues`  
-**Scope:** All 136 open GitHub code-scanning alerts in `verifywise-ai/verifywise`.
+**Date:** 2026-08-26  
+**Branch:** `mo-388-aug-24-testing-scenarios`  
+**Scope:** Complete Phase 1 "Quick Wins" of the VerifyWise test-automation strategy.
 
 ---
 
 ## Summary
 
-All open code-scanning alerts were remediated in focused batches using the VerifyWise agent roster. Each fix was committed and pushed individually to preserve progress.
+Resumed Phase 1 with the API contract smoke gate failing on swagger/response drift. Fixed the swagger schemas, hardened the gate to strict-by-default, built an enum/label drift sentinel, and updated the strategy doc. Every modified file was committed and pushed individually.
 
-| Batch | Theme | Alerts | Status |
-|-------|-------|--------|--------|
-| 4 | Mock bcrypt hashes | 3 | ✅ Fixed |
-| 3a | K8s capabilities / privilege escalation | 47 | ✅ Fixed |
-| 2 | CodeQL path injection | 16 | ✅ Fixed |
-| 5 | CodeQL JS/TS + stack trace | 18 | ✅ Fixed |
-| 6 | Semgrep miscellany | ~10 | ✅ Fixed |
-| 1 | SQLAlchemy `text()` injection | 58 | ✅ Fixed |
-| 3b | K8s namespace/resources + accepted-risk docs | 47 | ✅ Addressed |
-| 7 | Validation, docs, summary | — | ✅ Done |
-| 8 | CI failure remediation (CodeQL path-injection + Semgrep baseline) | — | 🟡 In Progress |
+| Phase 1 Item | Status |
+|---|---|
+| Stabilize critical-journey Playwright specs | ✅ Already green (58/58) |
+| API contract smoke gate for top 10 endpoints | ✅ Fixed + strict |
+| Enum/label drift sentinel | ✅ Built + warning mode |
+| Session replay on staging | ⬜ Not started |
 
 ---
 
 ## Key Changes
 
-- **SQLAlchemy:** Replaced `text(f"...")` with parameterized queries or static string concatenation across 30+ Python files. Wrapped arguments in an extra pair of parentheses and placed `# nosemgrep` on the `text(` line so GitHub's Semgrep OSS integration recognizes the suppression.
-- **Path injection:** Added `assert_within()` sink guard in `GRSModule/ui/backend/services/path_utils.py` and applied it to all file operations. Reworked the helper to the canonical `os.path.normpath(os.path.join(base, target)).startswith(os.path.normpath(base))` pattern so CodeQL recognizes it as a sanitizer.
-- **Kubernetes:** Added `allowPrivilegeEscalation: false`, `capabilities.drop: [ALL]`, namespaces, and resource requests/limits. Documented accepted risks in `.trivyignore`.
-- **Rate limiting:** Added `webhookLimiter` to the GitHub webhook route.
-- **Stack traces:** Return generic JSON-RPC error in `AIGateway/src/routers/mcp_proxy.py`.
-- **Misc Semgrep:** Added rule-specific `nosemgrep` justifications for safe legacy crypto, validated subprocess/urllib, static Sequelize queries, intentional test payloads, and safe SQLAlchemy `text()` calls composed from static allowlists with bind parameters.
+### API contract smoke gate
+- **`Servers/scripts/apiContractSmoke.ts`** — switched to strict-by-default; `CONTRACT_STRICT=0` downgrades schema drift to a warning.
+- **`Servers/swagger.yaml`** — fixed response drift for the top-10 endpoints:
+  - `/users`: camelCase `createdAt`/`updatedAt`, nullable `last_login`/`sso_provider`.
+  - `/projects`: nullable `ai_risk_classification`/`type_of_high_risk_role`, added `use_case_*` fields, removed non-emitted fields.
+  - `/projectRisks`: allowed `null` on all nullable enum/string fields and added `null` to inline enums; corrected `current_risk_level` casing.
+  - Shared enums: `AiRiskClassification` now includes `GPAI`/`General Risk`; `HighRiskRole` reduced to `Deployer`/`Provider`.
+- **`Servers/scripts/patchSwaggerForDrift.ts`** — reproducible helper used to apply the ProjectRisk fixes.
+
+### Enum/label drift sentinel
+- **`Servers/scripts/generateEnumManifest.ts`** — exports backend enums/const arrays to `Servers/enum-manifest.json`.
+- **`Servers/scripts/checkEnumLabelDrift.ts`** — compares the manifest to frontend domain enums in `Clients/src/domain/enums` and to swagger enum schemas. Default warning mode; `ENUM_DRIFT_STRICT=1` fails on drift.
+- **`Servers/package.json`** — added `generate:enum-manifest` and `check:enum-drift` scripts.
+- **`Clients/src/domain/enums/modelInventory.enum.ts`** — added missing `Rejected` value.
+- **`Clients/src/domain/enums/mitigationStatus.enum.ts`** — aligned `Requires review` casing with the backend.
+
+### Documentation
+- **`docs/feature-inventory/automation-strategy.md`** — marked Phase 1 items 1, 2, and 3 complete with run commands and strict-mode notes.
 
 ---
 
 ## Validation
 
-- No remaining `text(f"...")` SQLAlchemy patterns in Python source.
-- All 29 Kubernetes YAML files parse successfully.
-- Pre-commit hooks passed for TypeScript/Markdown changes.
-- Local Semgrep scan reports **0 findings** on the changed files.
-- All modified Python files pass `py_compile`.
-- GRSModule test suite: **147 passed**.
+```bash
+cd Servers
+npm run smoke:api-contract
+# → API contract smoke gate passed for all top-10 endpoints.
+
+npm run check:enum-drift
+# → 1 drift detected (CurrentRiskLevel casing) but exits 0 in warning mode.
+```
+
+- `npm run generate:swagger` preserves the manually corrected `components.schemas`.
+- Backend test DB is running; the strict contract gate passes end-to-end.
+
+---
+
+## Known Drift Catalogued
+
+`CurrentRiskLevel` uses title-case `"Very Low risk"` in the frontend while the backend risk calculator uses `"Very low risk"`. The sentinel reports this; flipping `ENUM_DRIFT_STRICT=1` will make it a blocking failure once the UI constants are reconciled.
+
+---
+
+## Commits Pushed (file-by-file)
+
+1. `fix(Servers): align swagger schemas with actual API responses`
+2. `feat(Servers): make API contract smoke gate strict by default`
+3. `chore(Servers): add swagger drift patch helper`
+4. `feat(Servers): generate enum manifest from backend source of truth`
+5. `feat(Servers): enum/label drift sentinel`
+6. `chore(Servers): seed enum manifest JSON`
+7. `chore(Servers): add enum drift npm scripts`
+8. `fix(Clients): add Rejected to ModelInventoryStatus enum`
+9. `fix(Clients): align MitigationStatus casing with backend`
+10. `docs(automation): mark API contract gate and enum drift sentinel complete`
 
 ---
 
 ## Next Step
 
-Trigger a CI re-run on the existing PR to confirm Semgrep reports no net-new findings and CodeQL `py/path-injection` alerts close. If CodeQL still flags the GRSModule paths, consider adding `# codeql[py/path-injection]` suppression comments on the validated sink lines.
-
----
-
-## Artifacts
-
-- `MULTI_AGENT_PLAN.md` — full tracking board.
-- `docs/security/code-scanning-remediation-2026-08-13.md` — detailed remediation summary.
-- `fetch_code_scanning.py`, `analyze_code_scanning.py` — reusable scanner scripts.
+Pick one of:
+- **Finish Phase 1** — add the staging session-replay configuration (OpenReplay/PostHog snippet + docs).
+- **Start Phase 2** — split Playwright into smoke/full suites and add a `playwright-smoke` project.
+- **Extend sentinel coverage** — add more enums/labels (incidents, datasets, vendors, framework statuses) and fix remaining drifts so `ENUM_DRIFT_STRICT=1` passes.

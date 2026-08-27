@@ -1,32 +1,25 @@
-import { test, expect } from "./fixtures/project.fixture";
+import { expect } from "@playwright/test";
+import { test } from "./fixtures/project.fixture";
+import { testIds } from "./test-ids";
 
 test.describe("Critical end-to-end journey", () => {
-  test("login as super-admin → create organization → create project → add risk → open Tasks → verify Deadline Warning banner", async ({
+  test("login as isolated admin → create project → add risk → open Tasks → verify Deadline Warning banner", async ({
     projectPage: page,
     projectName,
   }) => {
-    // The setup has already logged in as super-admin, created an organization,
-    // seeded an admin user, and logged in as that admin. The project fixture
-    // has created a project, so we continue by adding a risk.
-
     const riskTitle = `E2E Critical Risk ${Date.now()}`;
     const taskTitle = `E2E Critical Task ${Date.now()}`;
 
-    // --- Look up project ID and create risk via API ---
-    // Extract auth token + user ID from localStorage, query the project list
-    // to find the project created by the fixture, then create the risk
-    // directly through the API. This avoids fragile combobox interactions.
+    // --- Create the project risk via the authenticated browser context ---
     const setupData = await page.evaluate(async (name) => {
       const raw = localStorage.getItem("persist:root");
       if (!raw) throw new Error("No persist:root in localStorage");
       const auth = JSON.parse(JSON.parse(raw).auth);
       const token: string = auth.authToken;
 
-      // Decode JWT to get user ID (no verification needed — we trust our own token)
       const payload = JSON.parse(atob(token.split(".")[1]));
       const userId: number = payload.id;
 
-      // Fetch projects and find the one created by the fixture
       const res = await fetch("/api/projects", {
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -37,7 +30,7 @@ test.describe("Critical end-to-end journey", () => {
       return { token, userId, projectId: project.id as number };
     }, projectName);
 
-    await page.evaluate(
+    const riskResponse = await page.evaluate(
       ({ riskName, token, userId, projectId: pid }) =>
         fetch("/api/projectRisks", {
           method: "POST",
@@ -66,6 +59,8 @@ test.describe("Critical end-to-end journey", () => {
       },
     );
 
+    expect(riskResponse).toHaveProperty("data.id");
+
     // --- Open Tasks and create a task due soon ---
     await page.goto("/tasks");
     await expect(page).toHaveURL(/\/tasks/);
@@ -78,32 +73,22 @@ test.describe("Critical end-to-end journey", () => {
     await expect(addTaskBtn).toBeVisible({ timeout: 15_000 });
     await addTaskBtn.click();
 
-    await expect(
-      page
-        .getByText(/create new task/i)
-        .or(page.getByText(/add new task/i))
-        .first(),
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole("heading", { name: /create new task/i })).toBeVisible({
+      timeout: 10_000,
+    });
 
     // Title
-    const titleInput = page
-      .getByRole("textbox", { name: /task title/i })
-      .or(page.locator('input[name="title"]'))
-      .or(page.locator("#title"))
-      .or(page.getByPlaceholder(/enter task title/i));
-    await expect(titleInput.first()).toBeVisible({ timeout: 10_000 });
-    await titleInput.first().fill(taskTitle);
+    const titleInput = page.locator("#title");
+    await expect(titleInput).toBeVisible({ timeout: 10_000 });
+    await titleInput.fill(taskTitle);
 
     // Assignees
-    const assigneeInput = page
-      .locator("#assignees-input")
-      .or(page.getByPlaceholder(/select assignees/i));
-    await assigneeInput.first().click();
-    await page.waitForTimeout(500);
+    const assigneeInput = page.locator("#assignees-input");
+    await expect(assigneeInput).toBeVisible({ timeout: 10_000 });
+    await assigneeInput.click();
     const assigneeOption = page.getByRole("option").first();
-    if (await assigneeOption.isVisible({ timeout: 3_000 }).catch(() => false)) {
-      await assigneeOption.click();
-    }
+    await expect(assigneeOption).toBeVisible({ timeout: 5_000 });
+    await assigneeOption.click();
 
     // Due date (3 days from today -> triggers the "due soon" banner)
     const today = new Date();
@@ -111,32 +96,27 @@ test.describe("Critical end-to-end journey", () => {
     dueSoonDate.setDate(today.getDate() + 3);
     const dayOfMonth = dueSoonDate.getDate();
 
-    // Click the calendar icon button inside the DatePicker to open the popup
     const calendarIcon = page
       .locator(".mui-date-picker")
       .getByRole("button", { name: /choose date/i });
     await calendarIcon.click();
 
-    // Wait for the calendar popover to appear
     const calendarPopup = page.locator(".MuiPickerPopper-root, .MuiPickersPopper-root");
-    await calendarPopup.first().waitFor({ state: "visible", timeout: 5_000 });
+    await expect(calendarPopup.first()).toBeVisible({ timeout: 5_000 });
 
-    // MUI x-date-pickers renders day cells as td[role="gridcell"] > button.
-    // Click the gridcell for the target day.
     const dayCell = page
       .locator('[role="gridcell"]')
       .filter({ hasText: new RegExp(`^${dayOfMonth}$`) })
       .first();
+    await expect(dayCell).toBeVisible({ timeout: 5_000 });
     await dayCell.click();
-    await page.waitForTimeout(500);
 
     // Submit the task
     const submitTaskBtn = page.getByRole("button", { name: /create task/i });
+    await expect(submitTaskBtn).toBeVisible({ timeout: 10_000 });
     await submitTaskBtn.click();
 
-    // The deadline-warning query may be cached from before the task was
-    // created. Clear snooze before reloading so the banner can appear,
-    // then reload to force a fresh fetch of the deadline summary API.
+    // Clear any stale deadline snooze and reload to force a fresh summary fetch.
     await page.evaluate(() => {
       Object.keys(localStorage)
         .filter((key) => key.includes("deadline_snooze"))
@@ -150,11 +130,8 @@ test.describe("Critical end-to-end journey", () => {
     await page.reload();
     await deadlineResponse;
 
-    await expect(page.locator('[data-testid="deadline-warning-banner"]')).toBeVisible({
-      timeout: 15_000,
-    });
-    await expect(page.locator('[data-testid="deadline-warning-banner"]')).toContainText(
-      /due in the next \d+ days/i,
-    );
+    const banner = page.locator(`[data-testid="${testIds.deadlineBanner.warningBanner}"]`);
+    await expect(banner).toBeVisible({ timeout: 15_000 });
+    await expect(banner).toContainText(/due in the next \d+ days/i);
   });
 });

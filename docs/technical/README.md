@@ -6,6 +6,7 @@ Welcome to the VerifyWise technical documentation. This guide helps developers u
 
 - [Development Setup](../../CONTRIBUTING.md)
 - [Architecture Overview](./architecture/overview.md) - Start here for system understanding
+- [Feature Inventory](../feature-inventory/README.md) - Complete end-to-end map of every feature, route, API, model, test, and user guide
 
 ## Documentation Map
 
@@ -101,6 +102,7 @@ Coding conventions and architectural patterns.
 
 | I want to... | Go to... |
 |--------------|----------|
+| Find any feature, its code location, and how to test it | [Feature Inventory](../feature-inventory/README.md) |
 | Understand the overall system | [Architecture Overview](./architecture/overview.md) |
 | Learn how auth works | [Authentication](./architecture/authentication.md) |
 | Build a new feature | [Adding a New Feature](./guides/adding-new-feature.md) |
@@ -149,9 +151,10 @@ verifywise/
 
 When adding or modifying features, please update the relevant documentation:
 
-1. **New feature?** Update the domain doc or create a new one
-2. **New API endpoint?** Add to `api/endpoints.md`
-3. **New shared component?** Add to `frontend/components.md`
-4. **Changed auth/permissions?** Update `architecture/authentication.md`
+1. **New feature?** Update the domain doc or create a new one, and add or update the entry in [`docs/feature-inventory/`](../feature-inventory/README.md)
+2. **New API endpoint?** Add to `api/endpoints.md` and `docs/feature-inventory/backend-features.md`
+3. **New page or route?** Add to `docs/feature-inventory/frontend-features.md` and `docs/feature-inventory/feature-matrix.md`
+4. **New shared component?** Add to `frontend/components.md`
+5. **Changed auth/permissions?** Update `architecture/authentication.md` and `docs/feature-inventory/backend-features.md`
 
 Documentation should be updated in the same PR as code changes.

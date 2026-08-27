@@ -57,6 +57,7 @@ function Select({
   dividerAfterIndex,
   dividerLabel,
   dividers,
+  dataTestId,
 }: SelectProps) {
   const theme = useTheme();
   const generatedId = useId();
@@ -133,7 +134,12 @@ function Select({
   };
 
   return (
-    <Stack gap={theme.spacing(2)} className="select-wrapper" sx={extractedLayoutProps}>
+    <Stack
+      data-testid={dataTestId}
+      gap={theme.spacing(2)}
+      className="select-wrapper"
+      sx={extractedLayoutProps}
+    >
       {label && (
         <Typography
           component="label"

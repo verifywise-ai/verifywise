@@ -1,0 +1,61 @@
+{
+  "aiRiskClassification": [
+    "Prohibited",
+    "High risk",
+    "Limited risk",
+    "Minimal risk",
+    "GPAI",
+    "General Risk"
+  ],
+  "highRiskRole": ["Deployer", "Provider"],
+  "projectStatus": [
+    "Not started",
+    "In progress",
+    "Under review",
+    "Completed",
+    "Closed",
+    "On hold",
+    "Rejected"
+  ],
+  "taskStatus": ["Open", "In Progress", "Completed", "Overdue", "Deleted"],
+  "taskPriority": ["Low", "Medium", "High"],
+  "dataClassification": ["Public", "Internal", "Confidential", "Restricted"],
+  "modelInventoryStatus": ["Approved", "Restricted", "Pending", "Blocked", "Rejected"],
+  "aiLifecyclePhase": [
+    "Problem definition & planning",
+    "Data collection & processing",
+    "Model development & training",
+    "Model validation & testing",
+    "Deployment & integration",
+    "Monitoring & maintenance",
+    "Decommissioning & retirement"
+  ],
+  "riskLikelihood": ["Rare", "Unlikely", "Possible", "Likely", "Almost Certain"],
+  "riskSeverity": ["Negligible", "Minor", "Moderate", "Major", "Catastrophic"],
+  "riskSeverityAlt": ["Negligible", "Minor", "Moderate", "Major", "Critical"],
+  "mitigationStatus": [
+    "Not Started",
+    "In Progress",
+    "Completed",
+    "On Hold",
+    "Deferred",
+    "Canceled",
+    "Requires review"
+  ],
+  "currentRiskLevel": [
+    "No risk",
+    "Very low risk",
+    "Low risk",
+    "Medium risk",
+    "High risk",
+    "Very high risk"
+  ],
+  "riskLevelAutocalculated": [
+    "No risk",
+    "Very low risk",
+    "Low risk",
+    "Medium risk",
+    "High risk",
+    "Very high risk"
+  ]
+}
