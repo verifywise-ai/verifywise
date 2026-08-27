@@ -318,9 +318,7 @@ describe("AIGateway - PromptEditor", () => {
       expect(screen.getByDisplayValue("You are a {{role}} assistant.")).toBeInTheDocument();
     });
 
-    const historyButtons = screen.getAllByRole("button");
-    const historyButton = historyButtons.find((b) => b.querySelector("svg.lucide-history"));
-    fireEvent.click(historyButton!);
+    fireEvent.click(screen.getByRole("button", { name: "Version history" }));
 
     expect(screen.getByText("Version history")).toBeInTheDocument();
     expect(screen.getByText(/John Smith/)).toBeInTheDocument();
@@ -345,8 +343,7 @@ describe("AIGateway - PromptEditor", () => {
       expect(screen.getByDisplayValue("You are a {{role}} assistant.")).toBeInTheDocument();
     });
 
-    const historyButtons = screen.getAllByRole("button");
-    fireEvent.click(historyButtons.find((b) => b.querySelector("svg.lucide-history"))!);
+    fireEvent.click(screen.getByRole("button", { name: "Version history" }));
 
     fireEvent.click(screen.getByRole("button", { name: "Publish" }));
 
@@ -361,8 +358,7 @@ describe("AIGateway - PromptEditor", () => {
       expect(screen.getByDisplayValue("You are a {{role}} assistant.")).toBeInTheDocument();
     });
 
-    const historyButtons = screen.getAllByRole("button");
-    fireEvent.click(historyButtons.find((b) => b.querySelector("svg.lucide-history"))!);
+    fireEvent.click(screen.getByRole("button", { name: "Version history" }));
 
     fireEvent.click(screen.getByRole("button", { name: "Compare" }));
 
@@ -375,8 +371,7 @@ describe("AIGateway - PromptEditor", () => {
       expect(screen.getByDisplayValue("You are a {{role}} assistant.")).toBeInTheDocument();
     });
 
-    const historyButtons = screen.getAllByRole("button");
-    fireEvent.click(historyButtons.find((b) => b.querySelector("svg.lucide-history"))!);
+    fireEvent.click(screen.getByRole("button", { name: "Version history" }));
 
     const labelButtons = screen.getAllByRole("button", { name: "Label" });
     fireEvent.click(labelButtons[0]);
@@ -400,8 +395,7 @@ describe("AIGateway - PromptEditor", () => {
       expect(screen.getByDisplayValue("You are a {{role}} assistant.")).toBeInTheDocument();
     });
 
-    const historyButtons = screen.getAllByRole("button");
-    fireEvent.click(historyButtons.find((b) => b.querySelector("svg.lucide-history"))!);
+    fireEvent.click(screen.getByRole("button", { name: "Version history" }));
 
     // "staging" also appears as a chip in the page header (currentLabels for
     // the loaded version) — the drawer's copy is the last match, and its
@@ -495,8 +489,7 @@ describe("AIGateway - PromptEditor", () => {
       expect(screen.getByTestId("header-title")).toHaveTextContent("Support agent");
     });
 
-    const historyButtons = screen.getAllByRole("button");
-    fireEvent.click(historyButtons.find((b) => b.querySelector("svg.lucide-history"))!);
+    fireEvent.click(screen.getByRole("button", { name: "Version history" }));
 
     expect(screen.getByText("No versions yet")).toBeInTheDocument();
   });
