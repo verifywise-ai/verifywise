@@ -941,8 +941,16 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
               backgroundColor: theme.palette.grey[50],
             }}
           >
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
               ICT provider (DORA)
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{ fontSize: 13, color: theme.palette.text.secondary, mb: 2 }}
+            >
+              Mark this vendor as an ICT third-party provider to add it to your DORA Register of
+              Information. Record how critical the service is and whether it can be substituted, so
+              the register reflects your live ICT dependencies.
             </Typography>
             <FormControlLabel
               control={
