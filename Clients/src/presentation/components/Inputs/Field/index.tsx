@@ -85,6 +85,7 @@ const Field = forwardRef(
       minRows,
       maxRows,
       borderless,
+      dataTestId,
     }: FieldProps,
     ref: ForwardedRef<HTMLInputElement>,
   ) => {
@@ -107,6 +108,7 @@ const Field = forwardRef(
 
     return (
       <Stack
+        data-testid={dataTestId}
         gap={theme.spacing(2)}
         className={`field field-${type}${borderless ? " field-borderless" : ""}`}
         sx={{

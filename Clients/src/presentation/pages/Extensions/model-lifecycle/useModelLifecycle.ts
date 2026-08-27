@@ -10,13 +10,7 @@ import { apiServices } from "../../../../infrastructure/api/networkServices";
 // ========== TYPE DEFINITIONS ==========
 
 export type LifecycleItemType =
-  | "text"
-  | "textarea"
-  | "documents"
-  | "people"
-  | "classification"
-  | "checklist"
-  | "approval";
+  "text" | "textarea" | "documents" | "people" | "classification" | "checklist" | "approval";
 
 export interface LifecyclePhase {
   id: number;

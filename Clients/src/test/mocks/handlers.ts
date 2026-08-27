@@ -6,6 +6,7 @@ import { mockAssessments, createMockAssessment } from "./data/assessments";
 import { mockLoginResponse } from "./data/auth";
 import { mockTasks, createMockTask } from "./data/tasks";
 import { mockUsers, createMockUser } from "./data/users";
+import { mockFiles, mockFilePagination } from "./data/files";
 
 export const handlers = [
   // Health check
@@ -571,6 +572,72 @@ export const handlers = [
       data: { total_executions: 50, successful_executions: 45, failed_executions: 5 },
     }),
   ),
+
+  // ==================== File manager ====================
+  // Order matters: MSW matches in declaration order, so the literal paths must
+  // precede "/api/file-manager/:id" or they are swallowed by the param route.
+
+  // What the FileManager page actually calls (via useFiles -> getFilesWithMetadata).
+  http.get("/api/file-manager/with-metadata", () =>
+    HttpResponse.json({
+      data: { files: mockFiles, pagination: mockFilePagination() },
+    }),
+  ),
+
+  http.get("/api/file-manager/search", ({ request }) => {
+    const q = new URL(request.url).searchParams.get("q") ?? "";
+    const files = mockFiles.filter((f) => f.filename.toLowerCase().includes(q.toLowerCase()));
+    return HttpResponse.json({
+      data: { files, pagination: mockFilePagination(files.length) },
+    });
+  }),
+
+  http.get("/api/file-manager", () =>
+    HttpResponse.json({
+      data: { files: mockFiles, pagination: mockFilePagination() },
+    }),
+  ),
+
+  http.post("/api/file-manager", () =>
+    HttpResponse.json(
+      {
+        data: {
+          id: 3,
+          filename: "uploaded.csv",
+          size: 32,
+          mimetype: "text/csv",
+          uploaded_by: 1,
+          review_status: "draft",
+        },
+      },
+      { status: 201 },
+    ),
+  ),
+
+  http.get("/api/file-manager/:id/metadata", ({ params }) => {
+    const file = mockFiles.find((f) => String(f.id) === String(params.id));
+    if (!file) {
+      return HttpResponse.json({ message: "File not found" }, { status: 404 });
+    }
+    return HttpResponse.json({ data: file });
+  }),
+
+  http.patch("/api/file-manager/:id/metadata", async ({ params, request }) => {
+    const file = mockFiles.find((f) => String(f.id) === String(params.id));
+    if (!file) {
+      return HttpResponse.json({ message: "File not found" }, { status: 404 });
+    }
+    const updates = (await request.json()) as Record<string, unknown>;
+    return HttpResponse.json({ data: { ...file, ...updates } });
+  }),
+
+  http.delete("/api/file-manager/:id", ({ params }) =>
+    HttpResponse.json({ data: { id: Number(params.id), deleted: true } }),
+  ),
+
+  // Project-scoped files, a separate module from file-manager. Included so tests
+  // touching the /files endpoints do not fall through to an unhandled request.
+  http.get("/api/files", () => HttpResponse.json({ data: [] })),
 
   // ==================== Search ====================
   http.get("/api/search", ({ request }) => {

@@ -255,7 +255,7 @@ jobs:
           fi
 
       - name: Restore last-run metadata
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: Clients/test-results/.last-run.json
           key: playwright-last-run-${{ github.ref }}-${{ github.run_id }}-${{ github.run_attempt }}
@@ -275,7 +275,13 @@ jobs:
           DB_PASSWORD: postgres
         run: |
           if [ -f test-results/.last-run.json ]; then
-            npx playwright test --last-failed
+            FAILED_COUNT=$(jq '.failedTestIds | length' test-results/.last-run.json)
+            if [ "$FAILED_COUNT" -gt 0 ]; then
+              echo "Re-running $FAILED_COUNT previously failed test(s)"
+              npx playwright test --last-failed
+            else
+              echo "No previously failed tests; skipping last-failed step."
+            fi
           else
             echo "No previous run metadata found; skipping last-failed step."
           fi
@@ -300,7 +306,7 @@ jobs:
 
       - name: Save last-run metadata
         if: always()
-        uses: actions/cache/save@v4
+        uses: actions/cache/save@v6
         with:
           path: Clients/test-results/.last-run.json
           key: playwright-last-run-${{ github.ref }}-${{ github.run_id }}-${{ github.run_attempt }}

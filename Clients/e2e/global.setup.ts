@@ -1,10 +1,12 @@
-import { test as setup, expect } from "@playwright/test";
+import { test as setup } from "@playwright/test";
 import { execFileSync } from "child_process";
 import dotenv from "dotenv";
 import { existsSync, mkdtempSync, readFileSync, unlinkSync } from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { tmpdir } from "os";
+import { loginAs } from "./helpers/auth.helper";
+import { createApiContext, orgs, projects, projectRisks, tasks } from "./factories/api.factory";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -26,7 +28,6 @@ const __dirname = path.dirname(__filename);
 
 const TEST_EMAIL = process.env.E2E_EMAIL || "verifywise@email.com";
 const TEST_PASSWORD = process.env.E2E_PASSWORD || "Verifywise#1";
-const BACKEND_URL = process.env.E2E_BACKEND_URL || "http://localhost:3000";
 const SERVERS_DIR = path.resolve(__dirname, "../../Servers");
 
 const USER_AUTH_STATE_PATH = "e2e/.auth/user.json";
@@ -40,55 +41,8 @@ interface SeedOutput {
   credentialsFile: string | null;
 }
 
-async function loginAs(
-  page: any,
-  email: string,
-  password: string,
-  expectedPath: RegExp,
-): Promise<void> {
-  await page.goto("/login");
-  await page.waitForLoadState("networkidle");
-  await page.getByPlaceholder("name.surname@companyname.com").fill(email);
-  await page.getByPlaceholder("Enter your password").fill(password);
-  await page.getByRole("button", { name: /sign in/i }).click();
-  await expect(page).toHaveURL(expectedPath, { timeout: 15_000 });
-}
-
-async function getAuthToken(page: any): Promise<string> {
-  const token = await page.evaluate(() => {
-    const persistRoot = localStorage.getItem("persist:root");
-    if (!persistRoot) return "";
-    try {
-      const parsed = JSON.parse(persistRoot);
-      const auth = parsed.auth ? JSON.parse(parsed.auth) : null;
-      return auth?.authToken || "";
-    } catch {
-      return "";
-    }
-  });
-  if (!token) {
-    throw new Error("Could not extract auth token from localStorage after login");
-  }
-  return token;
-}
-
-async function createOrganization(page: any): Promise<number> {
-  const token = await getAuthToken(page);
-  const orgName = `E2E Org ${Date.now()}`;
-  const response = await page.request.post(`${BACKEND_URL}/api/super-admin/organizations`, {
-    data: { name: orgName },
-    headers: { Authorization: `Bearer ${token}` },
-    failOnStatusCode: true,
-  });
-  const body = await response.json();
-  const orgId = body?.data?.id;
-  if (typeof orgId !== "number") {
-    throw new Error(`Failed to create E2E organization. Response: ${JSON.stringify(body)}`);
-  }
-  return orgId;
-}
-
 const E2E_NODE_ENV = process.env.E2E_NODE_ENV || "test";
+const SETUP_ORG_NAME = "E2E Global Setup Org";
 
 function seedAdminInOrg(orgId: number): SeedOutput {
   const env: NodeJS.ProcessEnv = { ...process.env, NODE_ENV: E2E_NODE_ENV };
@@ -113,6 +67,7 @@ function seedAdminInOrg(orgId: number): SeedOutput {
       cwd: SERVERS_DIR,
       encoding: "utf-8",
       env,
+      shell: true,
     },
   );
   const lastLine = stdout.trim().split("\n").pop() || "";
@@ -139,13 +94,65 @@ setup("authenticate", async ({ page }) => {
   await loginAs(page, TEST_EMAIL, TEST_PASSWORD, /\/(super-admin)?$/);
   await page.context().storageState({ path: USER_AUTH_STATE_PATH });
 
-  // 2. Create an organization using the super-admin's authenticated context.
-  const orgId = await createOrganization(page);
+  // 2. Use the super-admin API context to manage the setup organization.
+  const superCtx = await createApiContext();
 
-  // 3. Seed a real Admin user inside that organization.
+  //    Clean up any stale organization left by previous runs so the test DB
+  //    does not accumulate baseline projects over repeated local executions.
+  const existingOrgs = await orgs.getAll(superCtx);
+  const staleOrg = existingOrgs.find((o) => o.name === SETUP_ORG_NAME);
+  if (staleOrg) {
+    await orgs.delete(superCtx, staleOrg.id);
+  }
+
+  // 3. Create a deterministic setup organization and seed an Admin inside it.
+  const orgId = await orgs.create(superCtx, SETUP_ORG_NAME);
+  await superCtx.request.dispose();
   const admin = seedAdminInOrg(orgId);
 
-  // 4. Login as the seeded admin and save state.
+  // 4. Seed a baseline project + risk for the admin org so auth-state tests
+  //    have real data to exercise (activity log, task linking, risk cards).
+  const adminCtx = await createApiContext({
+    email: admin.email,
+    password: admin.password,
+  });
+  const baselineProject = await projects.create(adminCtx, {
+    project_title: "E2E Baseline Project",
+    owner: admin.userId,
+    start_date: new Date().toISOString(),
+    goal: "Global setup baseline project",
+    ai_risk_classification: "Minimal risk",
+    type_of_high_risk_role: "Deployer",
+    members: [admin.userId],
+    framework: [1],
+    enable_ai_data_insertion: false,
+  });
+  await projectRisks.create(adminCtx, {
+    risk_name: "E2E Baseline Risk",
+    risk_owner: admin.userId,
+    projects: [baselineProject.id],
+    risk_level_autocalculated: "High risk",
+  });
+
+  // Seed enough tasks to exercise pagination in the tasks spec.
+  const dueDate = new Date();
+  dueDate.setDate(dueDate.getDate() + 7);
+  await Promise.all(
+    Array.from({ length: 12 }, (_, i) =>
+      tasks.create(adminCtx, {
+        title: `E2E Baseline Task ${i + 1}`,
+        description: "Global setup baseline task",
+        due_date: dueDate.toISOString(),
+        priority: "Medium",
+        status: "Open",
+        assignees: [admin.userId],
+      }),
+    ),
+  );
+
+  await adminCtx.request.dispose();
+
+  // 5. Login as the seeded admin and save state.
   await loginAs(
     page,
     admin.email,

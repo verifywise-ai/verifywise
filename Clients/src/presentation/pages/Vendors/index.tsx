@@ -55,13 +55,7 @@ import DoraRegister from "./DoraRegister";
 const REDIRECT_DELAY_MS = 2000;
 
 type VendorColumnKey =
-  | "vendor_name"
-  | "assignee"
-  | "review_status"
-  | "risk"
-  | "scorecard"
-  | "review_date"
-  | "actions";
+  "vendor_name" | "assignee" | "review_status" | "risk" | "scorecard" | "review_date" | "actions";
 type VendorRiskColumnKey =
   | "risk_description"
   | "vendor_name"

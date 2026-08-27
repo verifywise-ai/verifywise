@@ -263,14 +263,15 @@ export default YourPage;
 ```
 
 **Available operators:**
-| Operator | Description |
-|----------|-------------|
-| `is` | Exact match (case-insensitive) |
-| `is_not` | Does not match exactly |
-| `contains` | Contains substring |
-| `does_not_contain` | Does not contain substring |
-| `is_empty` | Field is null, undefined, or empty string |
-| `is_not_empty` | Field has a value |
+
+| Operator           | Description                               |
+| ------------------ | ----------------------------------------- |
+| `is`               | Exact match (case-insensitive)            |
+| `is_not`           | Does not match exactly                    |
+| `contains`         | Contains substring                        |
+| `does_not_contain` | Does not contain substring                |
+| `is_empty`         | Field is null, undefined, or empty string |
+| `is_not_empty`     | Field has a value                         |
 
 ### Select Columns
 
@@ -287,12 +288,13 @@ export default YourPage;
 ```
 
 **Available operators:**
-| Operator | Description |
-|----------|-------------|
-| `is` | Equals selected value |
-| `is_not` | Does not equal selected value |
-| `is_empty` | Field is null, undefined, or empty |
-| `is_not_empty` | Field has a value |
+
+| Operator       | Description                        |
+| -------------- | ---------------------------------- |
+| `is`           | Equals selected value              |
+| `is_not`       | Does not equal selected value      |
+| `is_empty`     | Field is null, undefined, or empty |
+| `is_not_empty` | Field has a value                  |
 
 ### Date Columns
 
@@ -305,16 +307,17 @@ export default YourPage;
 ```
 
 **Available operators:**
-| Operator | Description |
-|----------|-------------|
-| `in_1_day` | Within next 24 hours |
-| `in_7_days` | Within next 7 days |
-| `in_2_weeks` | Within next 14 days |
-| `in_30_days` | Within next 30 days |
-| `is_today` | Is today's date |
-| `is_past` | Date is in the past |
-| `is_empty` | No date set |
-| `is_not_empty` | Has a date |
+
+| Operator       | Description          |
+| -------------- | -------------------- |
+| `in_1_day`     | Within next 24 hours |
+| `in_7_days`    | Within next 7 days   |
+| `in_2_weeks`   | Within next 14 days  |
+| `in_30_days`   | Within next 30 days  |
+| `is_today`     | Is today's date      |
+| `is_past`      | Date is in the past  |
+| `is_empty`     | No date set          |
+| `is_not_empty` | Has a date           |
 
 ## Dynamic Options
 

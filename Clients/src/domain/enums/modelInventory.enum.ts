@@ -3,4 +3,5 @@ export enum ModelInventoryStatus {
   RESTRICTED = "Restricted",
   PENDING = "Pending",
   BLOCKED = "Blocked",
+  REJECTED = "Rejected",
 }
