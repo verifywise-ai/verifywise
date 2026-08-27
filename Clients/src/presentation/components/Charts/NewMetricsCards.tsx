@@ -163,6 +163,7 @@ export function EvidenceCoverageCard({
       <LinearProgress
         variant="determinate"
         value={coveragePercentage}
+        aria-label="Model coverage"
         sx={{
           "height": 8,
           "borderRadius": 4,

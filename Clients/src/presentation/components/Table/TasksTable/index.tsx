@@ -363,6 +363,7 @@ const TasksTable: React.FC<ITasksTableProps> = ({
                     <Typography sx={taskTableStyles(theme).archivedText}>Archived</Typography>
                   ) : (
                     <CustomSelect
+                      ariaLabel={`Priority for ${task.title}`}
                       currentValue={PRIORITY_DISPLAY_MAP[task.priority] || task.priority}
                       onValueChange={async (displayValue: string) => {
                         const apiValue = DISPLAY_TO_PRIORITY_MAP[displayValue] || displayValue;
@@ -392,6 +393,7 @@ const TasksTable: React.FC<ITasksTableProps> = ({
                     <Typography sx={taskTableStyles(theme).archivedText}>Archived</Typography>
                   ) : (
                     <CustomSelect
+                      ariaLabel={`Status for ${task.title}`}
                       currentValue={STATUS_DISPLAY_MAP[task.status] || task.status}
                       onValueChange={async (displayValue: string) => {
                         const apiValue = DISPLAY_TO_STATUS_MAP[displayValue] || displayValue;

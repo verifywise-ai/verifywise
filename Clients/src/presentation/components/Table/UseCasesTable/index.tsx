@@ -92,6 +92,7 @@ const UseCasesTable: React.FC<UseCasesTableProps> = ({
                   <LinearProgress
                     variant="determinate"
                     value={useCase.progress}
+                    aria-label={`${useCase.name} progress`}
                     sx={{
                       "width": 60,
                       "height": 4,

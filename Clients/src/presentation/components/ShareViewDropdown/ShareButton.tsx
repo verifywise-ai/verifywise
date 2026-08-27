@@ -29,36 +29,45 @@ const ShareButton: React.FC<ShareButtonProps> = ({
 }) => {
   const iconSize = size === "small" ? 14 : size === "large" ? 20 : 16;
 
+  const button = (
+    <IconButton
+      onClick={onClick}
+      disabled={disabled}
+      size={size}
+      aria-label={tooltip}
+      sx={{
+        "color": `${brand.primary}`,
+        "backgroundColor": "transparent",
+        "border": `1px solid ${borderPalette.dark}`,
+        "borderRadius": "4px",
+        "padding": size === "small" ? "6px" : size === "large" ? "10px" : "6px",
+        "width": size === "small" ? "32px" : size === "large" ? "44px" : "34px",
+        "height": size === "small" ? "32px" : size === "large" ? "44px" : "34px",
+        "&:hover": {
+          backgroundColor: "rgba(19, 113, 91, 0.08)",
+          borderColor: `${brand.primary}`,
+        },
+        "&:disabled": {
+          color: "#d1d5db",
+          borderColor: `${status.default.border}`,
+          backgroundColor: `${background.accent}`,
+        },
+        "transition": "all 0.2s ease",
+      }}
+    >
+      <Share2 size={iconSize} strokeWidth={1.5} />
+    </IconButton>
+  );
+
+  // Tooltip copies its text onto its child as aria-label, which is not a valid
+  // attribute on a generic <span> — and the button underneath was left with no
+  // accessible name at all. The wrapper only exists so the tooltip still fires
+  // for a disabled button, which cannot receive events itself, so it is used
+  // only in that case. The button's own aria-label survives either way:
+  // Tooltip spreads the child's props last.
   return (
     <Tooltip title={tooltip} arrow>
-      <span>
-        <IconButton
-          onClick={onClick}
-          disabled={disabled}
-          size={size}
-          sx={{
-            "color": `${brand.primary}`,
-            "backgroundColor": "transparent",
-            "border": `1px solid ${borderPalette.dark}`,
-            "borderRadius": "4px",
-            "padding": size === "small" ? "6px" : size === "large" ? "10px" : "6px",
-            "width": size === "small" ? "32px" : size === "large" ? "44px" : "34px",
-            "height": size === "small" ? "32px" : size === "large" ? "44px" : "34px",
-            "&:hover": {
-              backgroundColor: "rgba(19, 113, 91, 0.08)",
-              borderColor: `${brand.primary}`,
-            },
-            "&:disabled": {
-              color: "#d1d5db",
-              borderColor: `${status.default.border}`,
-              backgroundColor: `${background.accent}`,
-            },
-            "transition": "all 0.2s ease",
-          }}
-        >
-          <Share2 size={iconSize} strokeWidth={1.5} />
-        </IconButton>
-      </span>
+      {disabled ? <span>{button}</span> : button}
     </Tooltip>
   );
 };
