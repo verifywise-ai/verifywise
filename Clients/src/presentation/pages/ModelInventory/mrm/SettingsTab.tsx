@@ -43,12 +43,7 @@ interface SettingsTabProps {
 }
 
 type SettingsSection =
-  | "metrics-feed"
-  | "tiering-rules"
-  | "default-thresholds"
-  | "alerts"
-  | "roles"
-  | "retention";
+  "metrics-feed" | "tiering-rules" | "default-thresholds" | "alerts" | "roles" | "retention";
 
 const MRM_SETTINGS_BASE_PATH = "/model-inventory/model-risk-management/settings";
 

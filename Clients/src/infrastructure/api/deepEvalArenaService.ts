@@ -26,11 +26,7 @@ export interface ArenaMetricConfig {
   name: string;
   criteria: string;
   evaluationParams: (
-    | "input"
-    | "actual_output"
-    | "expected_output"
-    | "context"
-    | "retrieval_context"
+    "input" | "actual_output" | "expected_output" | "context" | "retrieval_context"
   )[];
 }
 
