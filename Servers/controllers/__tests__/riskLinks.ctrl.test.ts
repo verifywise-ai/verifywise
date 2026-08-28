@@ -120,6 +120,104 @@ describe("updateRiskLinkStatus", () => {
     decided_at: null, last_computed_at: null,
   };
 
+  const suggestedInheritance = {
+    ...suggested,
+    relation_type: "inherits_from" as const,
+    source_risk_id: 3,
+    target_risk_id: 42,
+  };
+
+  it("409s when confirming a suggestion whose child already has a parent", async () => {
+    mockUtils.getRiskLinkByIdQuery.mockResolvedValue(suggestedInheritance);
+    mockUtils.getConfirmedHierarchyEdgesQuery.mockResolvedValue([
+      { childRiskId: 3, parentRiskId: 99 },
+    ]);
+    const r = res();
+    await updateRiskLinkStatus(
+      req({ params: { id: "100" }, body: { status: "confirmed" } }) as any,
+      r as any,
+    );
+    expect(mockUtils.getConfirmedHierarchyEdgesQuery).toHaveBeenCalledWith(7, 3, 42);
+    expect(r.status).toHaveBeenCalledWith(409);
+    expect(r.json).toHaveBeenCalledWith(
+      expect.objectContaining({ data: "This risk already has a parent. Remove it first." }),
+    );
+    expect(mockUtils.updateRiskLinkStatusQuery).not.toHaveBeenCalled();
+  });
+
+  it("runs the rule when restoring a dismissed inheritance link", async () => {
+    // dismissed -> confirmed reaches the same end state as a fresh POST, so it
+    // must be refusable the same way.
+    mockUtils.getRiskLinkByIdQuery.mockResolvedValue({
+      ...suggestedInheritance,
+      status: "dismissed" as const,
+    });
+    mockUtils.getConfirmedHierarchyEdgesQuery.mockResolvedValue([
+      { childRiskId: 42, parentRiskId: 99 },
+    ]);
+    const r = res();
+    await updateRiskLinkStatus(
+      req({ params: { id: "100" }, body: { status: "confirmed" } }) as any,
+      r as any,
+    );
+    expect(r.status).toHaveBeenCalledWith(409);
+    expect(r.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: "That risk is already a child of another risk, so it cannot be a parent.",
+      }),
+    );
+  });
+
+  it("confirms an inheritance link when the grouping stays two levels deep", async () => {
+    mockUtils.getRiskLinkByIdQuery.mockResolvedValue(suggestedInheritance);
+    mockUtils.getConfirmedHierarchyEdgesQuery.mockResolvedValue([]);
+    const r = res();
+    await updateRiskLinkStatus(
+      req({ params: { id: "100" }, body: { status: "confirmed" } }) as any,
+      r as any,
+    );
+    expect(mockUtils.updateRiskLinkStatusQuery).toHaveBeenCalledWith(100, 7, "confirmed", 5);
+    expect(r.status).toHaveBeenCalledWith(200);
+  });
+
+  it("does not run the rule on a related_to row", async () => {
+    mockUtils.getRiskLinkByIdQuery.mockResolvedValue(suggested);
+    await updateRiskLinkStatus(
+      req({ params: { id: "100" }, body: { status: "confirmed" } }) as any,
+      res() as any,
+    );
+    expect(mockUtils.getConfirmedHierarchyEdgesQuery).not.toHaveBeenCalled();
+  });
+
+  it("does not run the rule when dismissing an inheritance link", async () => {
+    mockUtils.getRiskLinkByIdQuery.mockResolvedValue({
+      ...suggestedInheritance,
+      status: "confirmed" as const,
+    });
+    await updateRiskLinkStatus(
+      req({ params: { id: "100" }, body: { status: "dismissed" } }) as any,
+      res() as any,
+    );
+    expect(mockUtils.getConfirmedHierarchyEdgesQuery).not.toHaveBeenCalled();
+  });
+
+  it("turns a lost single-parent race into 409, not 500", async () => {
+    mockUtils.getRiskLinkByIdQuery.mockResolvedValue(suggestedInheritance);
+    mockUtils.getConfirmedHierarchyEdgesQuery.mockResolvedValue([]);
+    mockUtils.updateRiskLinkStatusQuery.mockRejectedValue({
+      original: { code: "23505", constraint: "risk_links_single_parent_idx" },
+    });
+    const r = res();
+    await updateRiskLinkStatus(
+      req({ params: { id: "100" }, body: { status: "confirmed" } }) as any,
+      r as any,
+    );
+    expect(r.status).toHaveBeenCalledWith(409);
+    expect(r.json).toHaveBeenCalledWith(
+      expect.objectContaining({ data: "This risk already has a parent. Remove it first." }),
+    );
+  });
+
   it("confirms a suggestion and records who decided", async () => {
     mockUtils.getRiskLinkByIdQuery.mockResolvedValue(suggested);
     const r = res();

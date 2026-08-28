@@ -176,6 +176,24 @@ export async function updateRiskLinkStatus(req: Request, res: Response): Promise
         .json(STATUS_CODE[400](`Cannot change status from ${link.status} to ${next}`));
     }
 
+    // Confirming a suggestion, or restoring a dismissed link, reaches the same
+    // end state as a fresh POST — so it runs the same rule. Placed after the
+    // transition guard: confirmed -> confirmed is already a 400, so this row is
+    // never itself in the confirmed set it is checked against.
+    if (next === "confirmed" && link.relation_type === "inherits_from") {
+      const violation = validateTwoLevel(
+        { childRiskId: link.source_risk_id, parentRiskId: link.target_risk_id },
+        await getConfirmedHierarchyEdgesQuery(
+          req.organizationId!,
+          link.source_risk_id,
+          link.target_risk_id,
+        ),
+      );
+      if (violation) {
+        return res.status(409).json(STATUS_CODE[409](HIERARCHY_MESSAGES[violation]));
+      }
+    }
+
     // The undo back to `suggested` erases the decision so a later recompute may
     // prune the edge normally again.
     const decidedByUserId = next === "suggested" ? null : req.userId!;
@@ -192,6 +210,11 @@ export async function updateRiskLinkStatus(req: Request, res: Response): Promise
 
     return res.status(200).json(STATUS_CODE[200]({ id, status: next }));
   } catch (error) {
+    if (isSingleParentViolation(error)) {
+      return res
+        .status(409)
+        .json(STATUS_CODE[409](HIERARCHY_MESSAGES.child_already_has_parent));
+    }
     logFailure({
       eventType: "Update",
       description: "failed to update risk link status",
