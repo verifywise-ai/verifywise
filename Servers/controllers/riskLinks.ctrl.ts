@@ -5,13 +5,14 @@ import { enqueueRiskLinkRecompute } from "../services/automations/automationProd
 import {
   createUserRiskLinkQuery,
   getActiveRiskIdsQuery,
+  getConfirmedHierarchyEdgesQuery,
   getLiveRiskIdsQuery,
   getRiskLinkByIdQuery,
   getRiskLinksForRiskQuery,
-  riskLinkPairExistsQuery,
   RiskLinkWithRelated,
   updateRiskLinkStatusQuery,
 } from "../utils/riskLink.utils";
+import { HierarchyViolation, validateTwoLevel } from "../services/riskLinks/hierarchy";
 import {
   canonicalPair,
   RISK_LINK_STATUSES,
@@ -69,6 +70,33 @@ const toResponse = (link: RiskLinkWithRelated, riskId: number) => ({
     ownerId: link.related_risk_owner,
   },
 });
+
+const HIERARCHY_MESSAGES: Record<HierarchyViolation, string> = {
+  child_already_has_parent: "This risk already has a parent. Remove it first.",
+  parent_is_a_child: "That risk is already a child of another risk, so it cannot be a parent.",
+  child_has_children: "This risk has child risks, so it cannot become a child.",
+};
+
+const SINGLE_PARENT_INDEX = "risk_links_single_parent_idx";
+
+type PgError = { code?: string; constraint?: string };
+
+/**
+ * `createUserRiskLinkQuery`'s ON CONFLICT names the PAIR constraint, so a
+ * single-parent violation raises instead of returning null — and the PATCH path
+ * has no ON CONFLICT at all. The index is on `source_risk_id`, and source is the
+ * child, so this violation means exactly one thing: that child already has a
+ * confirmed parent. Losing the race is a 409, not a 500.
+ *
+ * Matching the constraint name rather than a bare 23505 keeps the check honest
+ * if a third unique constraint is ever added to the table.
+ */
+const isSingleParentViolation = (error: unknown): boolean => {
+  const pg =
+    (error as { parent?: PgError; original?: PgError })?.parent ??
+    (error as { original?: PgError })?.original;
+  return pg?.code === "23505" && pg?.constraint === SINGLE_PARENT_INDEX;
+};
 
 export async function getRiskLinks(req: Request, res: Response): Promise<any> {
   logProcessing({
@@ -208,21 +236,21 @@ export async function createRiskLink(req: Request, res: Response): Promise<any> 
       return res.status(404).json(STATUS_CODE[404]("Risk not found"));
     }
 
-    // ponytail: application-level cycle check. Two admins asserting opposite
-    // inheritance in the same instant both pass here and both rows land. Closing
-    // it needs a database constraint, i.e. another migration; the result is
+    // Two-level grouping (C1): a risk is either a parent, or a child, or
+    // unattached. Subsumes the old reciprocal-pair check — if no risk is both,
+    // no cycle of any length can exist.
+    //
+    // ponytail: application-level, so two admins confirming opposite ends of a
+    // chain in the same instant can both pass. The single-parent half is closed
+    // by risk_links_single_parent_idx, which is atomic; the two-level outcome is
     // displayable rather than corrupting and either row can be dismissed.
     if (relationType === "inherits_from") {
-      const reverseExists = await riskLinkPairExistsQuery(
-        req.organizationId!,
-        targetRiskId,
-        sourceRiskId,
-        "inherits_from",
+      const violation = validateTwoLevel(
+        { childRiskId: sourceRiskId, parentRiskId: targetRiskId },
+        await getConfirmedHierarchyEdgesQuery(req.organizationId!, sourceRiskId, targetRiskId),
       );
-      if (reverseExists) {
-        return res
-          .status(409)
-          .json(STATUS_CODE[409]("These risks would inherit from each other"));
+      if (violation) {
+        return res.status(409).json(STATUS_CODE[409](HIERARCHY_MESSAGES[violation]));
       }
     }
 
@@ -262,6 +290,13 @@ export async function createRiskLink(req: Request, res: Response): Promise<any> 
 
     return res.status(201).json(STATUS_CODE[201]({ id }));
   } catch (error) {
+    // A lost race is a user-facing conflict, not a system failure — and the
+    // endpoint's other 409s do not log either.
+    if (isSingleParentViolation(error)) {
+      return res
+        .status(409)
+        .json(STATUS_CODE[409](HIERARCHY_MESSAGES.child_already_has_parent));
+    }
     logFailure({
       eventType: "Create",
       description: "failed to create risk link",

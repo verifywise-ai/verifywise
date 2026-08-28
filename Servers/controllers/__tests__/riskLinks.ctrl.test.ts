@@ -240,28 +240,109 @@ describe("createRiskLink", () => {
     expect(mockUtils.createUserRiskLinkQuery).not.toHaveBeenCalled();
   });
 
-  it("409s when the reverse inherits_from already exists", async () => {
+  it("409s with the parent message when the child already has a parent", async () => {
     mockUtils.getLiveRiskIdsQuery.mockResolvedValue([4, 9]);
-    mockUtils.riskLinkPairExistsQuery.mockResolvedValue(true);
+    mockUtils.getConfirmedHierarchyEdgesQuery.mockResolvedValue([
+      { childRiskId: 4, parentRiskId: 12 },
+    ]);
     const r = res();
-    await createRiskLink(
-      req({ body: body({ relationType: "inherits_from" }) }) as any,
-      r as any,
-    );
-    // reverse of {source: 4, target: 9} is {source: 9, target: 4}
-    expect(mockUtils.riskLinkPairExistsQuery).toHaveBeenCalledWith(7, 9, 4, "inherits_from");
+    await createRiskLink(req({ body: body({ relationType: "inherits_from" }) }) as any, r as any);
+    // source is the child, target is the parent — {source: 4, target: 9}
+    expect(mockUtils.getConfirmedHierarchyEdgesQuery).toHaveBeenCalledWith(7, 4, 9);
     expect(r.status).toHaveBeenCalledWith(409);
     expect(r.json).toHaveBeenCalledWith(
-      expect.objectContaining({ data: "These risks would inherit from each other" }),
+      expect.objectContaining({ data: "This risk already has a parent. Remove it first." }),
     );
     expect(mockUtils.createUserRiskLinkQuery).not.toHaveBeenCalled();
   });
 
-  it("does not look for a reverse row on related_to", async () => {
+  it("409s when the proposed parent is already someone else's child", async () => {
+    mockUtils.getLiveRiskIdsQuery.mockResolvedValue([4, 9]);
+    mockUtils.getConfirmedHierarchyEdgesQuery.mockResolvedValue([
+      { childRiskId: 9, parentRiskId: 12 },
+    ]);
+    const r = res();
+    await createRiskLink(req({ body: body({ relationType: "inherits_from" }) }) as any, r as any);
+    expect(r.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: "That risk is already a child of another risk, so it cannot be a parent.",
+      }),
+    );
+  });
+
+  it("409s when the proposed child already has children", async () => {
+    mockUtils.getLiveRiskIdsQuery.mockResolvedValue([4, 9]);
+    mockUtils.getConfirmedHierarchyEdgesQuery.mockResolvedValue([
+      { childRiskId: 12, parentRiskId: 4 },
+    ]);
+    const r = res();
+    await createRiskLink(req({ body: body({ relationType: "inherits_from" }) }) as any, r as any);
+    expect(r.json).toHaveBeenCalledWith(
+      expect.objectContaining({ data: "This risk has child risks, so it cannot become a child." }),
+    );
+  });
+
+  it("refuses the reciprocal edge that the old two-cycle check caught", async () => {
+    mockUtils.getLiveRiskIdsQuery.mockResolvedValue([4, 9]);
+    // 4 -> 9 already confirmed; the caller proposes 9 -> 4.
+    mockUtils.getConfirmedHierarchyEdgesQuery.mockResolvedValue([
+      { childRiskId: 4, parentRiskId: 9 },
+    ]);
+    const r = res();
+    await createRiskLink(
+      req({ body: { sourceRiskId: 9, targetRiskId: 4, relationType: "inherits_from" } }) as any,
+      r as any,
+    );
+    expect(r.status).toHaveBeenCalledWith(409);
+  });
+
+  it("does not load hierarchy edges for related_to", async () => {
     mockUtils.getLiveRiskIdsQuery.mockResolvedValue([4, 9]);
     mockUtils.createUserRiskLinkQuery.mockResolvedValue(77);
     await createRiskLink(req({ body: body() }) as any, res() as any);
-    expect(mockUtils.riskLinkPairExistsQuery).not.toHaveBeenCalled();
+    expect(mockUtils.getConfirmedHierarchyEdgesQuery).not.toHaveBeenCalled();
+  });
+
+  it("lets a duplicate inherits_from pair reach the store for its own message", async () => {
+    mockUtils.getLiveRiskIdsQuery.mockResolvedValue([4, 9]);
+    // The identical edge must not be reported as child_already_has_parent — it
+    // would name the very parent the user just tried to add.
+    mockUtils.getConfirmedHierarchyEdgesQuery.mockResolvedValue([
+      { childRiskId: 4, parentRiskId: 9 },
+    ]);
+    mockUtils.createUserRiskLinkQuery.mockResolvedValue(null);
+    const r = res();
+    await createRiskLink(req({ body: body({ relationType: "inherits_from" }) }) as any, r as any);
+    expect(r.status).toHaveBeenCalledWith(409);
+    expect(r.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: 'These risks are already linked. If the link was dismissed, use "Show dismissed" to restore it.',
+      }),
+    );
+  });
+
+  it("turns a lost single-parent race into 409, not 500", async () => {
+    mockUtils.getLiveRiskIdsQuery.mockResolvedValue([4, 9]);
+    mockUtils.getConfirmedHierarchyEdgesQuery.mockResolvedValue([]);
+    // What node-postgres raises when the partial unique index fires, as
+    // Sequelize wraps it for a raw query.
+    mockUtils.createUserRiskLinkQuery.mockRejectedValue({
+      original: { code: "23505", constraint: "risk_links_single_parent_idx" },
+    });
+    const r = res();
+    await createRiskLink(req({ body: body({ relationType: "inherits_from" }) }) as any, r as any);
+    expect(r.status).toHaveBeenCalledWith(409);
+    expect(r.json).toHaveBeenCalledWith(
+      expect.objectContaining({ data: "This risk already has a parent. Remove it first." }),
+    );
+  });
+
+  it("still 500s on an unrelated store failure", async () => {
+    mockUtils.getLiveRiskIdsQuery.mockResolvedValue([4, 9]);
+    mockUtils.createUserRiskLinkQuery.mockRejectedValue(new Error("connection lost"));
+    const r = res();
+    await createRiskLink(req({ body: body() }) as any, r as any);
+    expect(r.status).toHaveBeenCalledWith(500);
   });
 
   it("409s with the dismissed hint when the pair already exists", async () => {
@@ -302,7 +383,7 @@ describe("createRiskLink", () => {
 
   it("leaves inherits_from in the order the caller sent", async () => {
     mockUtils.getLiveRiskIdsQuery.mockResolvedValue([9, 4]);
-    mockUtils.riskLinkPairExistsQuery.mockResolvedValue(false);
+    mockUtils.getConfirmedHierarchyEdgesQuery.mockResolvedValue([]);
     mockUtils.createUserRiskLinkQuery.mockResolvedValue(78);
     const r = res();
     await createRiskLink(
