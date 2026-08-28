@@ -8,6 +8,7 @@ import {
   RiskScoringRow,
   StructuralNeighbourRow,
 } from "../services/riskLinks/types";
+import { HierarchyEdge } from "../services/riskLinks/hierarchy";
 
 /**
  * pg hands NUMERIC back as a string and can hand JSONB / JSON_AGG output back
@@ -270,6 +271,45 @@ export async function riskLinkPairExistsQuery(
   return (rows as unknown[]).length > 0;
 }
 
+/**
+ * Every CONFIRMED `inherits_from` edge touching either endpoint of a proposed
+ * edge — the input to `validateTwoLevel`.
+ *
+ * A superset of what the three rules need. Narrowing it would mean three
+ * queries or a UNION; both existing indexes
+ * (`risk_links_org_source_status_idx`, `risk_links_org_target_status_idx`)
+ * serve this one, and the surplus keeps the SQL and the rule simple.
+ *
+ * `status = 'confirmed'` is load-bearing, not a filter for tidiness: competing
+ * SUGGESTED parents are legal by design, so including them would reject
+ * proposals the product is supposed to offer.
+ */
+export async function getConfirmedHierarchyEdgesQuery(
+  organizationId: number,
+  childRiskId: number,
+  parentRiskId: number,
+): Promise<HierarchyEdge[]> {
+  const rows = await sequelize.query(
+    `SELECT source_risk_id, target_risk_id
+       FROM risk_links
+      WHERE organization_id = :organizationId
+        AND relation_type = 'inherits_from'
+        AND status = 'confirmed'
+        AND (source_risk_id IN (:childRiskId, :parentRiskId)
+             OR target_risk_id IN (:childRiskId, :parentRiskId))`,
+    {
+      replacements: { organizationId, childRiskId, parentRiskId },
+      type: QueryTypes.SELECT,
+    },
+  );
+  // source is the child, target is the parent — see risk_links_canonical, which
+  // exempts inherits_from from id reordering precisely so this holds.
+  return (rows as { source_risk_id: number; target_risk_id: number }[]).map((row) => ({
+    childRiskId: row.source_risk_id,
+    parentRiskId: row.target_risk_id,
+  }));
+}
+
 export interface CreateUserRiskLinkInput {
   organizationId: number;
   sourceRiskId: number;
@@ -283,8 +323,12 @@ export interface CreateUserRiskLinkInput {
  * recompute prune on both of that prune's two conditions. `score` and `reasons`
  * are left to their column defaults (0, []) — a human link has no score.
  *
- * Returns null when the pair already exists: ON CONFLICT DO NOTHING rather than
- * catching a driver error code, so the controller never sniffs SQLSTATE.
+ * Returns null when the pair already exists: the ON CONFLICT names
+ * `risk_links_unique`, so a duplicate pair is absorbed here rather than raised.
+ *
+ * It does NOT absorb `risk_links_single_parent_idx` — a different constraint,
+ * which raises. The controller catches that one by name; see
+ * `isSingleParentViolation` in riskLinks.ctrl.ts.
  */
 export async function createUserRiskLinkQuery(
   input: CreateUserRiskLinkInput,
