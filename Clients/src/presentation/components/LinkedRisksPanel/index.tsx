@@ -15,11 +15,13 @@ interface LinkedRisksPanelProps {
 
 const GROUPS: { title: string; match: (link: RiskLink) => boolean }[] = [
   {
-    title: "Inherits from",
+    // Position in the grouping, not a relation — and singular, because the rule
+    // permits at most one confirmed parent. See the C1 design doc.
+    title: "Parent risk",
     match: (l) => l.relationType === "inherits_from" && l.direction === "outgoing",
   },
   {
-    title: "Inherited by",
+    title: "Child risks",
     match: (l) => l.relationType === "inherits_from" && l.direction === "incoming",
   },
   { title: "Relates to", match: (l) => l.relationType === "related_to" },

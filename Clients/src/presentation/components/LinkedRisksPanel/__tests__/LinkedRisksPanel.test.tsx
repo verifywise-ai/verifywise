@@ -68,19 +68,24 @@ describe("LinkedRisksPanel grouping", () => {
     mockUseRiskLinks.mockReturnValue(
       queryResult([
         link({ id: 1, relationType: "inherits_from", direction: "outgoing",
-               relatedRisk: { id: 9, name: "Parent risk", riskLevel: null, ownerId: null } }),
+               relatedRisk: { id: 9, name: "Upstream risk", riskLevel: null, ownerId: null } }),
         link({ id: 2, relationType: "inherits_from", direction: "incoming",
-               relatedRisk: { id: 10, name: "Child risk", riskLevel: null, ownerId: null } }),
+               relatedRisk: { id: 10, name: "Downstream risk", riskLevel: null, ownerId: null } }),
         link({ id: 3, relationType: "related_to", direction: "undirected",
                relatedRisk: { id: 11, name: "Sibling risk", riskLevel: null, ownerId: null } }),
       ]),
     );
     render(<LinkedRisksPanel riskId={42} />);
 
-    expect(screen.getByText("Inherits from")).toBeInTheDocument();
-    expect(screen.getByText("Inherited by")).toBeInTheDocument();
-    expect(screen.getByText("Relates to")).toBeInTheDocument();
+    // Headings name a position in the grouping, not a relation. The fixtures are
+    // named Upstream/Downstream on purpose: a risk called "Parent risk" would
+    // collide with the heading and make getByText ambiguous.
     expect(screen.getByText("Parent risk")).toBeInTheDocument();
+    expect(screen.getByText("Child risks")).toBeInTheDocument();
+    expect(screen.getByText("Relates to")).toBeInTheDocument();
+    expect(screen.queryByText("Inherits from")).not.toBeInTheDocument();
+    expect(screen.queryByText("Inherited by")).not.toBeInTheDocument();
+    expect(screen.getByText("Upstream risk")).toBeInTheDocument();
   });
 
   it("hides a group with no links", () => {
@@ -88,8 +93,8 @@ describe("LinkedRisksPanel grouping", () => {
     render(<LinkedRisksPanel riskId={42} />);
 
     expect(screen.getByText("Relates to")).toBeInTheDocument();
-    expect(screen.queryByText("Inherits from")).not.toBeInTheDocument();
-    expect(screen.queryByText("Inherited by")).not.toBeInTheDocument();
+    expect(screen.queryByText("Parent risk")).not.toBeInTheDocument();
+    expect(screen.queryByText("Child risks")).not.toBeInTheDocument();
   });
 
   it("hides the score on a user-created link but shows it on a derived one", () => {
