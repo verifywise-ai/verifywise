@@ -79,7 +79,7 @@ describe("LinkedRisksPanel grouping", () => {
 
     expect(screen.getByText("Inherits from")).toBeInTheDocument();
     expect(screen.getByText("Inherited by")).toBeInTheDocument();
-    expect(screen.getByText("Related risks")).toBeInTheDocument();
+    expect(screen.getByText("Relates to")).toBeInTheDocument();
     expect(screen.getByText("Parent risk")).toBeInTheDocument();
   });
 
@@ -87,7 +87,7 @@ describe("LinkedRisksPanel grouping", () => {
     mockUseRiskLinks.mockReturnValue(queryResult([link()]));
     render(<LinkedRisksPanel riskId={42} />);
 
-    expect(screen.getByText("Related risks")).toBeInTheDocument();
+    expect(screen.getByText("Relates to")).toBeInTheDocument();
     expect(screen.queryByText("Inherits from")).not.toBeInTheDocument();
     expect(screen.queryByText("Inherited by")).not.toBeInTheDocument();
   });
@@ -212,7 +212,7 @@ describe("LinkedRisksPanel link form", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Link a risk" }));
 
-    expect(screen.getByRole("radio", { name: "Related to" })).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: "Relates to" })).toBeInTheDocument();
   });
 
   // The form's exclusions are defined over suggested + confirmed. With the

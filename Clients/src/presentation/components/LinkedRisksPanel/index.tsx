@@ -22,7 +22,7 @@ const GROUPS: { title: string; match: (link: RiskLink) => boolean }[] = [
     title: "Inherited by",
     match: (l) => l.relationType === "inherits_from" && l.direction === "incoming",
   },
-  { title: "Related risks", match: (l) => l.relationType === "related_to" },
+  { title: "Relates to", match: (l) => l.relationType === "related_to" },
 ];
 
 /**

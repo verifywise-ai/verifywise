@@ -29,7 +29,7 @@ interface Candidate {
 type Choice = "related_to" | "inherits_from" | "inherited_by";
 
 const CHOICES: { value: Choice; label: string }[] = [
-  { value: "related_to", label: "Related to" },
+  { value: "related_to", label: "Relates to" },
   { value: "inherits_from", label: "Inherits from" },
   { value: "inherited_by", label: "Is inherited by" },
 ];
