@@ -35,10 +35,50 @@ const CHOICES: { value: Choice; label: string }[] = [
 ];
 
 export default function LinkRiskForm({ riskId, existingLinks, onClose }: LinkRiskFormProps) {
-  const [choice, setChoice] = useState<Choice>("related_to");
+  const [rawChoice, setRawChoice] = useState<Choice>("related_to");
   const [partner, setPartner] = useState<Candidate | null>(null);
   const [error, setError] = useState<string | null>(null);
   const createLink = useCreateRiskLink(riskId);
+
+  /**
+   * `direction: "outgoing"` means this risk is the source of the edge, and the
+   * source is the child — so it has a parent. `"incoming"` means it is the
+   * target, i.e. the parent, so it has children. Confirmed rows only: competing
+   * SUGGESTED parents are legal, which is what lets a future agent offer a
+   * choice between candidates.
+   */
+  const { hasParent, hasChildren } = useMemo(() => {
+    const inheritance = existingLinks.filter(
+      (l) => l.status === "confirmed" && l.relationType === "inherits_from",
+    );
+    return {
+      hasParent: inheritance.some((l) => l.direction === "outgoing"),
+      hasChildren: inheritance.some((l) => l.direction === "incoming"),
+    };
+  }, [existingLinks]);
+
+  const disabled: Record<Choice, boolean> = {
+    related_to: false,
+    inherits_from: hasParent || hasChildren,
+    inherited_by: hasParent,
+  };
+
+  /**
+   * The third server rule — the chosen partner is already someone else's child
+   * — cannot be evaluated here: the candidate list is getAllProjectRisks, which
+   * carries no link data. The server's 409 explains that case, matching the
+   * exclusion policy documented above.
+   */
+  const restriction = hasParent
+    ? "This risk already has a parent, so it can only relate to other risks."
+    : hasChildren
+      ? "This risk has child risks, so it cannot become a child of another risk."
+      : null;
+
+  // Derived rather than reset in an effect: existingLinks can change under an
+  // open form when the panel refetches, and deriving removes the stale-state
+  // class of bug instead of patching one instance of it.
+  const choice = disabled[rawChoice] ? "related_to" : rawChoice;
 
   // Org-wide, not per-project: useProjectRisks calls
   // getAllProjectRisksByProjectId and is scoped to one project.
@@ -74,7 +114,7 @@ export default function LinkRiskForm({ riskId, existingLinks, onClose }: LinkRis
   );
 
   const handleChoice = (next: Choice) => {
-    setChoice(next);
+    setRawChoice(next);
     setError(null);
     // The chosen partner may be excluded under the new relation type.
     setPartner(null);
@@ -103,10 +143,17 @@ export default function LinkRiskForm({ riskId, existingLinks, onClose }: LinkRis
     <Stack spacing={2} sx={{ py: 1 }}>
       <RadioGroup row value={choice} onChange={(event) => handleChoice(event.target.value as Choice)}>
         {CHOICES.map(({ value, label }) => (
-          <FormControlLabel key={value} value={value} control={<Radio />} label={label} />
+          <FormControlLabel
+            key={value}
+            value={value}
+            control={<Radio disabled={disabled[value]} />}
+            label={label}
+            disabled={disabled[value]}
+          />
         ))}
       </RadioGroup>
 
+      {restriction && <Alert severity="info">{restriction}</Alert>}
       <AutoCompleteField<Candidate>
         label="Risk"
         placeholder="Search risks"

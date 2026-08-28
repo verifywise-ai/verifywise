@@ -141,11 +141,15 @@ describe("LinkRiskForm candidates", () => {
     expect(await screen.findByText("Model drift")).toBeInTheDocument();
   });
 
-  // An incoming inherits_from blocks both inheritance choices: one would be the
-  // duplicate the server refuses at step 5, the other the two-cycle at step 4.
+  // A SUGGESTED incoming inherits_from blocks both inheritance choices: one would
+  // be the duplicate the server refuses, the other a rule violation. Suggested,
+  // not confirmed — a confirmed row now disables both radios outright (the
+  // grouping rule), so the exclusion this test is about could never be reached
+  // through a confirmed fixture.
   it("excludes a risk holding the reverse inheritance from both inheritance choices", async () => {
     const existing = [
       link({
+        status: "suggested",
         relationType: "inherits_from",
         direction: "incoming",
         relatedRisk: { id: 11, name: "Vendor outage", riskLevel: null, ownerId: null },
@@ -249,5 +253,70 @@ describe("LinkRiskForm errors", () => {
     await waitFor(() => expect(mockGetAllProjectRisks).toHaveBeenCalled());
 
     expect(screen.getByRole("button", { name: "Link" })).toBeDisabled();
+  });
+
+  const parentLink = link({ relationType: "inherits_from", direction: "outgoing" });
+  const childLink = link({ relationType: "inherits_from", direction: "incoming" });
+
+  it("disables both hierarchy choices when the risk already has a parent", async () => {
+    mockGetAllProjectRisks.mockResolvedValue(risksResponse([{ id: 9, risk_name: "Model drift" }]));
+    wrap(<LinkRiskForm riskId={1} existingLinks={[parentLink]} onClose={vi.fn()} />);
+    expect(screen.getByRole("radio", { name: "Inherits from" })).toBeDisabled();
+    expect(screen.getByRole("radio", { name: "Is inherited by" })).toBeDisabled();
+    expect(screen.getByRole("radio", { name: "Relates to" })).toBeEnabled();
+  });
+
+  it("disables only 'Inherits from' when the risk has children", async () => {
+    // A parent may still gain more children, so "Is inherited by" stays open.
+    mockGetAllProjectRisks.mockResolvedValue(risksResponse([{ id: 9, risk_name: "Model drift" }]));
+    wrap(<LinkRiskForm riskId={1} existingLinks={[childLink]} onClose={vi.fn()} />);
+    expect(screen.getByRole("radio", { name: "Inherits from" })).toBeDisabled();
+    expect(screen.getByRole("radio", { name: "Is inherited by" })).toBeEnabled();
+  });
+
+  it("explains why a choice is unavailable", async () => {
+    mockGetAllProjectRisks.mockResolvedValue(risksResponse([{ id: 9, risk_name: "Model drift" }]));
+    wrap(<LinkRiskForm riskId={1} existingLinks={[parentLink]} onClose={vi.fn()} />);
+    expect(
+      screen.getByText("This risk already has a parent, so it can only relate to other risks."),
+    ).toBeInTheDocument();
+  });
+
+  it("disables nothing when the only inheritance link is a suggestion", async () => {
+    // Suggestions are allowed to conflict — that is what lets a future agent
+    // offer a choice between candidate parents.
+    mockGetAllProjectRisks.mockResolvedValue(risksResponse([{ id: 9, risk_name: "Model drift" }]));
+    wrap(
+      <LinkRiskForm
+        riskId={1}
+        existingLinks={[{ ...parentLink, status: "suggested" }]}
+        onClose={vi.fn()}
+      />,
+    );
+    expect(screen.getByRole("radio", { name: "Inherits from" })).toBeEnabled();
+    expect(screen.getByRole("radio", { name: "Is inherited by" })).toBeEnabled();
+  });
+
+  it("falls back to 'Relates to' when the selected choice becomes disabled", async () => {
+    mockGetAllProjectRisks.mockResolvedValue(risksResponse([{ id: 9, risk_name: "Model drift" }]));
+    // Not using `wrap` here: it builds its QueryClient internally, and rerendering
+    // with a fresh client remounts the provider and refetches. Hold one client so
+    // the rerender is a prop change and nothing else.
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const tree = (links: RiskLink[]) => (
+      <ThemeProvider theme={light}>
+        <QueryClientProvider client={client}>
+          <LinkRiskForm riskId={1} existingLinks={links} onClose={vi.fn()} />
+        </QueryClientProvider>
+      </ThemeProvider>
+    );
+
+    const { rerender } = render(tree([]));
+    await userEvent.click(screen.getByRole("radio", { name: "Inherits from" }));
+    expect(screen.getByRole("radio", { name: "Inherits from" })).toBeChecked();
+
+    // The panel refetched while the form was open and a parent appeared.
+    rerender(tree([parentLink]));
+    expect(screen.getByRole("radio", { name: "Relates to" })).toBeChecked();
   });
 });
