@@ -6,6 +6,7 @@ import {
   createNewVendor,
   update as updateVendor,
   deleteVendor,
+  getDoraRegister,
 } from "../repository/vendor.repository";
 import { VendorModel } from "../../domain/models/Common/vendor/vendor.model";
 
@@ -18,6 +19,9 @@ export const vendorQueryKeys = {
   details: () => [...vendorQueryKeys.all, "detail"] as const,
   detail: (id: number) => [...vendorQueryKeys.details(), id] as const,
 };
+
+// Query key for the DORA register of information
+export const doraRegisterQueryKey = ["dora-register"] as const;
 
 // Hook to fetch all vendors
 export const useVendors = (
@@ -85,6 +89,19 @@ export const useUpdateVendor = () => {
       queryClient.invalidateQueries({ queryKey: vendorQueryKeys.detail(id) });
       queryClient.invalidateQueries({ queryKey: vendorQueryKeys.lists() });
     },
+  });
+};
+
+// Hook to fetch the DORA register of information (vendors with DORA ICT fields)
+export const useDoraRegister = (): UseQueryResult<VendorModel[], Error> => {
+  return useQuery({
+    queryKey: doraRegisterQueryKey,
+    queryFn: async () => {
+      const response = await getDoraRegister();
+      return response?.data || [];
+    },
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
   });
 };
 

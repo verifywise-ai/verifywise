@@ -29,6 +29,22 @@ export class VendorModel {
   regulatory_exposure?: RegulatoryExposure;
   risk_score?: number;
 
+  // DORA Register of Information fields (descriptive)
+  is_ict_provider?: boolean;
+  ict_service_type?:
+    | "Cloud services"
+    | "Data analysis"
+    | "Security services"
+    | "Network infrastructure"
+    | "Software or applications"
+    | "IT project management"
+    | "Other ICT services";
+  function_criticality?: "Critical" | "Important" | "Not critical";
+  substitutability?: "Easily substitutable" | "Difficult to substitute" | "Not substitutable";
+  has_exit_plan?: boolean;
+  country_of_provision?: string;
+  provider_lei?: string;
+
   custom_fields?: Array<{
     definition_id: number;
     field_key: string;
@@ -57,6 +73,13 @@ export class VendorModel {
     this.past_issues = data.past_issues;
     this.regulatory_exposure = data.regulatory_exposure;
     this.risk_score = data.risk_score;
+    this.is_ict_provider = data.is_ict_provider;
+    this.ict_service_type = data.ict_service_type;
+    this.function_criticality = data.function_criticality;
+    this.substitutability = data.substitutability;
+    this.has_exit_plan = data.has_exit_plan;
+    this.country_of_provision = data.country_of_provision;
+    this.provider_lei = data.provider_lei;
     this.custom_fields = data.custom_fields;
   }
 

@@ -40,6 +40,21 @@ export interface IVendor {
     | "CCPA (california)"
     | "Other";
   risk_score?: number;
+  // DORA Register of Information fields (descriptive)
+  is_ict_provider?: boolean;
+  ict_service_type?:
+    | "Cloud services"
+    | "Data analysis"
+    | "Security services"
+    | "Network infrastructure"
+    | "Software or applications"
+    | "IT project management"
+    | "Other ICT services";
+  function_criticality?: "Critical" | "Important" | "Not critical";
+  substitutability?: "Easily substitutable" | "Difficult to substitute" | "Not substitutable";
+  has_exit_plan?: boolean;
+  country_of_provision?: string;
+  provider_lei?: string;
   custom_fields?: Array<{
     definition_id: number;
     field_key: string;

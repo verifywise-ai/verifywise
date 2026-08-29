@@ -171,6 +171,51 @@ export class VendorModel extends Model<VendorModel> implements IVendor {
   })
   risk_score?: number;
 
+  @Column({ type: DataType.BOOLEAN, allowNull: false, defaultValue: false })
+  is_ict_provider?: boolean;
+
+  @Column({
+    type: DataType.ENUM(
+      "Cloud services",
+      "Data analysis",
+      "Security services",
+      "Network infrastructure",
+      "Software or applications",
+      "IT project management",
+      "Other ICT services",
+    ),
+    allowNull: true,
+  })
+  ict_service_type?:
+    | "Cloud services"
+    | "Data analysis"
+    | "Security services"
+    | "Network infrastructure"
+    | "Software or applications"
+    | "IT project management"
+    | "Other ICT services";
+
+  @Column({
+    type: DataType.ENUM("Critical", "Important", "Not critical"),
+    allowNull: true,
+  })
+  function_criticality?: "Critical" | "Important" | "Not critical";
+
+  @Column({
+    type: DataType.ENUM("Easily substitutable", "Difficult to substitute", "Not substitutable"),
+    allowNull: true,
+  })
+  substitutability?: "Easily substitutable" | "Difficult to substitute" | "Not substitutable";
+
+  @Column({ type: DataType.BOOLEAN, allowNull: false, defaultValue: false })
+  has_exit_plan?: boolean;
+
+  @Column({ type: DataType.STRING, allowNull: true })
+  country_of_provision?: string;
+
+  @Column({ type: DataType.STRING, allowNull: true })
+  provider_lei?: string;
+
   // Projects field (not a database column, used for API)
   projects?: number[];
 
@@ -216,6 +261,20 @@ export class VendorModel extends Model<VendorModel> implements IVendor {
       | "CCPA (california)"
       | "Other",
     risk_score?: number,
+    is_ict_provider?: boolean,
+    ict_service_type?:
+      | "Cloud services"
+      | "Data analysis"
+      | "Security services"
+      | "Network infrastructure"
+      | "Software or applications"
+      | "IT project management"
+      | "Other ICT services",
+    function_criticality?: "Critical" | "Important" | "Not critical",
+    substitutability?: "Easily substitutable" | "Difficult to substitute" | "Not substitutable",
+    has_exit_plan?: boolean,
+    country_of_provision?: string,
+    provider_lei?: string,
   ): Promise<VendorModel> {
     // Validate required fields
     if (!vendor_name || vendor_name.trim().length === 0) {
@@ -292,6 +351,15 @@ export class VendorModel extends Model<VendorModel> implements IVendor {
     vendor.regulatory_exposure = regulatory_exposure;
     vendor.risk_score = risk_score;
 
+    // Set DORA Register of Information fields
+    vendor.is_ict_provider = is_ict_provider ?? false;
+    vendor.ict_service_type = ict_service_type;
+    vendor.function_criticality = function_criticality;
+    vendor.substitutability = substitutability;
+    vendor.has_exit_plan = has_exit_plan ?? false;
+    vendor.country_of_provision = country_of_provision;
+    vendor.provider_lei = provider_lei;
+
     return vendor;
   }
 
@@ -336,6 +404,20 @@ export class VendorModel extends Model<VendorModel> implements IVendor {
       | "CCPA (california)"
       | "Other";
     risk_score?: number;
+    is_ict_provider?: boolean;
+    ict_service_type?:
+      | "Cloud services"
+      | "Data analysis"
+      | "Security services"
+      | "Network infrastructure"
+      | "Software or applications"
+      | "IT project management"
+      | "Other ICT services";
+    function_criticality?: "Critical" | "Important" | "Not critical";
+    substitutability?: "Easily substitutable" | "Difficult to substitute" | "Not substitutable";
+    has_exit_plan?: boolean;
+    country_of_provision?: string;
+    provider_lei?: string;
   }): Promise<void> {
     // Validate vendor_name if provided
     if (updateData.vendor_name !== undefined) {
@@ -455,6 +537,35 @@ export class VendorModel extends Model<VendorModel> implements IVendor {
 
     if (updateData.risk_score !== undefined) {
       this.risk_score = updateData.risk_score;
+    }
+
+    // Update DORA Register of Information fields if provided
+    if (updateData.is_ict_provider !== undefined) {
+      this.is_ict_provider = updateData.is_ict_provider;
+    }
+
+    if (updateData.ict_service_type !== undefined) {
+      this.ict_service_type = updateData.ict_service_type;
+    }
+
+    if (updateData.function_criticality !== undefined) {
+      this.function_criticality = updateData.function_criticality;
+    }
+
+    if (updateData.substitutability !== undefined) {
+      this.substitutability = updateData.substitutability;
+    }
+
+    if (updateData.has_exit_plan !== undefined) {
+      this.has_exit_plan = updateData.has_exit_plan;
+    }
+
+    if (updateData.country_of_provision !== undefined) {
+      this.country_of_provision = updateData.country_of_provision;
+    }
+
+    if (updateData.provider_lei !== undefined) {
+      this.provider_lei = updateData.provider_lei;
     }
   }
 

@@ -5,6 +5,7 @@ import {
   createNewVendorQuery,
   deleteVendorByIdQuery,
   getAllVendorsQuery,
+  getDoraRegisterQuery,
   getVendorByIdQuery,
   getVendorByProjectIdQuery,
   updateVendorByIdQuery,
@@ -76,6 +77,53 @@ export async function getAllVendors(req: Request, res: Response): Promise<any> {
       eventType: "Read",
       description: "Failed to retrieve vendors",
       functionName: "getAllVendors",
+      fileName: "vendor.ctrl.ts",
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+export async function getDoraRegister(req: Request, res: Response): Promise<any> {
+  logProcessing({
+    description: "starting getDoraRegister",
+    functionName: "getDoraRegister",
+    fileName: "vendor.ctrl.ts",
+    userId: req.userId!,
+    organizationId: req.organizationId!,
+  });
+
+  try {
+    const vendors = await getDoraRegisterQuery(req.organizationId!);
+
+    if (vendors) {
+      await logSuccess({
+        eventType: "Read",
+        description: `Retrieved ${vendors.length} DORA register vendors`,
+        functionName: "getDoraRegister",
+        fileName: "vendor.ctrl.ts",
+        userId: req.userId!,
+        organizationId: req.organizationId!,
+      });
+      return res.status(200).json(STATUS_CODE[200](vendors));
+    }
+
+    await logSuccess({
+      eventType: "Read",
+      description: "No DORA register vendors found",
+      functionName: "getDoraRegister",
+      fileName: "vendor.ctrl.ts",
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(204).json(STATUS_CODE[204](vendors));
+  } catch (error) {
+    await logFailure({
+      eventType: "Read",
+      description: "Failed to retrieve DORA register vendors",
+      functionName: "getDoraRegister",
       fileName: "vendor.ctrl.ts",
       error: error as Error,
       userId: req.userId!,
@@ -215,6 +263,13 @@ export async function createVendor(req: Request, res: Response): Promise<any> {
       vendorData.past_issues,
       vendorData.regulatory_exposure,
       vendorData.risk_score,
+      vendorData.is_ict_provider,
+      vendorData.ict_service_type,
+      vendorData.function_criticality,
+      vendorData.substitutability,
+      vendorData.has_exit_plan,
+      vendorData.country_of_provision,
+      vendorData.provider_lei,
     );
 
     // Validate vendor data before saving
@@ -422,6 +477,13 @@ export async function updateVendorById(req: Request, res: Response): Promise<any
       past_issues: updateData.past_issues,
       regulatory_exposure: updateData.regulatory_exposure,
       risk_score: updateData.risk_score,
+      is_ict_provider: updateData.is_ict_provider,
+      ict_service_type: updateData.ict_service_type,
+      function_criticality: updateData.function_criticality,
+      substitutability: updateData.substitutability,
+      has_exit_plan: updateData.has_exit_plan,
+      country_of_provision: updateData.country_of_provision,
+      provider_lei: updateData.provider_lei,
     });
 
     // Validate updated data

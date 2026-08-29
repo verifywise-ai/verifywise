@@ -8954,6 +8954,20 @@ paths:
                   message: {type: string, example: 'Service Unavailable'}
                   error: {type: object}
       operationId: createVendor
+  /vendors/dora-register:
+    get:
+      summary: 'Get Dora Register'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Vendors
+      operationId: getDoraRegister
+      security:
+        -
+          bearerAuth: []
   '/vendors/project-id/{id}':
     get:
       tags:

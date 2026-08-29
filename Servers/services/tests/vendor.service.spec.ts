@@ -137,6 +137,13 @@ describe("vendor.service", () => {
         undefined, // past_issues
         undefined, // regulatory_exposure
         undefined, // risk_score
+        undefined, // is_ict_provider
+        undefined, // ict_service_type
+        undefined, // function_criticality
+        undefined, // substitutability
+        undefined, // has_exit_plan
+        undefined, // country_of_provision
+        undefined, // provider_lei
       );
     });
   });

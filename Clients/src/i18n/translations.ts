@@ -9251,6 +9251,47 @@ export const translations: Record<string, Record<string, string>> = {
     "View lifecycle": "Lebenszyklus anzeigen",
     "Workspace disconnected successfully!": "Workspace erfolgreich getrennt!",
     "Workspace status updated successfully!": "Workspace-Status erfolgreich aktualisiert!",
+
+    // DORA Register of Information — vendor form ICT provider section
+    "ICT provider (DORA)": "ICT-Anbieter (DORA)",
+    "Mark this vendor as an ICT third-party provider to add it to your DORA Register of Information. Record how critical the service is and whether it can be substituted, so the register reflects your live ICT dependencies.":
+      "Markieren Sie diesen Anbieter als IKT-Drittdienstleister, um ihn in Ihr DORA-Informationsregister aufzunehmen. Erfassen Sie, wie kritisch die Dienstleistung ist und ob sie ersetzbar ist, damit das Register Ihre aktuellen IKT-Abhängigkeiten widerspiegelt.",
+    "This vendor is an ICT third-party provider": "Dieser Anbieter ist ein IKT-Drittanbieter",
+    "ICT service type": "Art der IKT-Dienstleistung",
+    "Select ICT service type": "Art der IKT-Dienstleistung auswählen",
+    "Cloud services": "Cloud-Dienste",
+    "Data analysis": "Datenanalyse",
+    "Security services": "Sicherheitsdienste",
+    "Network infrastructure": "Netzwerkinfrastruktur",
+    "Software or applications": "Software oder Anwendungen",
+    "IT project management": "IT-Projektmanagement",
+    "Other ICT services": "Andere IKT-Dienstleistungen",
+    "Function criticality": "Kritikalität der Funktion",
+    "Select function criticality": "Kritikalität der Funktion auswählen",
+    "Important": "Wichtig",
+    "Not critical": "Nicht kritisch",
+    "Substitutability": "Substituierbarkeit",
+    "Select substitutability": "Substituierbarkeit auswählen",
+    "Easily substitutable": "Leicht ersetzbar",
+    "Difficult to substitute": "Schwer zu ersetzen",
+    "Not substitutable": "Nicht ersetzbar",
+    "Exit plan in place": "Ausstiegsplan vorhanden",
+    "Country of provision": "Land der Leistungserbringung",
+    "Enter country of provision": "Land der Leistungserbringung eingeben",
+    "Provider LEI": "LEI des Anbieters",
+    "Enter legal entity identifier": "Rechtsträgerkennung eingeben",
+
+    // DORA Register of Information — ICT register tab (Vendors page)
+    "ICT register": "IKT-Register",
+    "Register of information for ICT third-party providers (DORA)":
+      "Informationsregister für IKT-Drittanbieter (DORA)",
+    "Search ICT providers...": "IKT-Anbieter suchen...",
+    "Export register": "Register exportieren",
+    "No ICT providers yet. Mark a vendor as an ICT provider to add it to the register.":
+      "Noch keine IKT-Anbieter. Markieren Sie einen Anbieter als IKT-Anbieter, um ihn zum Register hinzuzufügen.",
+    "No ICT providers match your search.": "Keine IKT-Anbieter entsprechen Ihrer Suche.",
+    "Exit plan": "Ausstiegsplan",
+    "Country": "Land",
   },
 
   fr: {
@@ -18432,6 +18473,47 @@ export const translations: Record<string, Record<string, string>> = {
     "Workspace disconnected successfully!": "Espace de travail déconnecté avec succès !",
     "Workspace status updated successfully!":
       "Statut de l'espace de travail mis à jour avec succès !",
+
+    // DORA Register of Information — vendor form ICT provider section
+    "ICT provider (DORA)": "Fournisseur TIC (DORA)",
+    "Mark this vendor as an ICT third-party provider to add it to your DORA Register of Information. Record how critical the service is and whether it can be substituted, so the register reflects your live ICT dependencies.":
+      "Marquez ce fournisseur comme prestataire tiers de TIC pour l'ajouter à votre registre d'informations DORA. Indiquez le caractère critique du service et s'il est substituable, afin que le registre reflète vos dépendances TIC actuelles.",
+    "This vendor is an ICT third-party provider": "Ce fournisseur est un prestataire tiers TIC",
+    "ICT service type": "Type de service TIC",
+    "Select ICT service type": "Sélectionner le type de service TIC",
+    "Cloud services": "Services cloud",
+    "Data analysis": "Analyse de données",
+    "Security services": "Services de sécurité",
+    "Network infrastructure": "Infrastructure réseau",
+    "Software or applications": "Logiciels ou applications",
+    "IT project management": "Gestion de projets informatiques",
+    "Other ICT services": "Autres services TIC",
+    "Function criticality": "Criticité de la fonction",
+    "Select function criticality": "Sélectionner la criticité de la fonction",
+    "Important": "Importante",
+    "Not critical": "Non critique",
+    "Substitutability": "Substituabilité",
+    "Select substitutability": "Sélectionner la substituabilité",
+    "Easily substitutable": "Facilement substituable",
+    "Difficult to substitute": "Difficile à substituer",
+    "Not substitutable": "Non substituable",
+    "Exit plan in place": "Plan de sortie en place",
+    "Country of provision": "Pays de fourniture",
+    "Enter country of provision": "Saisir le pays de fourniture",
+    "Provider LEI": "LEI du fournisseur",
+    "Enter legal entity identifier": "Saisir l'identifiant d'entité juridique",
+
+    // DORA Register of Information — ICT register tab (Vendors page)
+    "ICT register": "Registre TIC",
+    "Register of information for ICT third-party providers (DORA)":
+      "Registre d'informations pour les prestataires tiers TIC (DORA)",
+    "Search ICT providers...": "Rechercher des prestataires TIC...",
+    "Export register": "Exporter le registre",
+    "No ICT providers yet. Mark a vendor as an ICT provider to add it to the register.":
+      "Aucun prestataire TIC pour le moment. Marquez un fournisseur comme prestataire TIC pour l'ajouter au registre.",
+    "No ICT providers match your search.": "Aucun prestataire TIC ne correspond à votre recherche.",
+    "Exit plan": "Plan de sortie",
+    "Country": "Pays",
   },
   es: {
     "Deployment name": "Nombre del despliegue",
@@ -27532,5 +27614,46 @@ export const translations: Record<string, Record<string, string>> = {
     "Workspace disconnected successfully!": "¡Espacio de trabajo desconectado correctamente!",
     "Workspace status updated successfully!":
       "¡Estado del espacio de trabajo actualizado correctamente!",
+
+    // DORA Register of Information — vendor form ICT provider section
+    "ICT provider (DORA)": "Proveedor TIC (DORA)",
+    "Mark this vendor as an ICT third-party provider to add it to your DORA Register of Information. Record how critical the service is and whether it can be substituted, so the register reflects your live ICT dependencies.":
+      "Marque este proveedor como tercero proveedor de TIC para añadirlo a su Registro de Información DORA. Registre la criticidad del servicio y si es sustituible, para que el registro refleje sus dependencias de TIC actuales.",
+    "This vendor is an ICT third-party provider": "Este proveedor es un tercero TIC",
+    "ICT service type": "Tipo de servicio TIC",
+    "Select ICT service type": "Seleccionar tipo de servicio TIC",
+    "Cloud services": "Servicios en la nube",
+    "Data analysis": "Análisis de datos",
+    "Security services": "Servicios de seguridad",
+    "Network infrastructure": "Infraestructura de red",
+    "Software or applications": "Software o aplicaciones",
+    "IT project management": "Gestión de proyectos de TI",
+    "Other ICT services": "Otros servicios TIC",
+    "Function criticality": "Criticidad de la función",
+    "Select function criticality": "Seleccionar criticidad de la función",
+    "Important": "Importante",
+    "Not critical": "No crítica",
+    "Substitutability": "Sustituibilidad",
+    "Select substitutability": "Seleccionar sustituibilidad",
+    "Easily substitutable": "Fácilmente sustituible",
+    "Difficult to substitute": "Difícil de sustituir",
+    "Not substitutable": "No sustituible",
+    "Exit plan in place": "Plan de salida implementado",
+    "Country of provision": "País de prestación",
+    "Enter country of provision": "Introducir país de prestación",
+    "Provider LEI": "LEI del proveedor",
+    "Enter legal entity identifier": "Introducir identificador de entidad jurídica",
+
+    // DORA Register of Information — ICT register tab (Vendors page)
+    "ICT register": "Registro TIC",
+    "Register of information for ICT third-party providers (DORA)":
+      "Registro de información para proveedores terceros TIC (DORA)",
+    "Search ICT providers...": "Buscar proveedores TIC...",
+    "Export register": "Exportar registro",
+    "No ICT providers yet. Mark a vendor as an ICT provider to add it to the register.":
+      "Todavía no hay proveedores TIC. Marque un proveedor como proveedor TIC para añadirlo al registro.",
+    "No ICT providers match your search.": "Ningún proveedor TIC coincide con su búsqueda.",
+    "Exit plan": "Plan de salida",
+    "Country": "País",
   },
 };

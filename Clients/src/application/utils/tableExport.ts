@@ -19,6 +19,20 @@ const sanitizeFilename = (filename: string): string => {
     .slice(0, 200);
 };
 
+// CSV/spreadsheet formula injection (CWE-1236): a cell value starting with
+// =, +, -, @, a tab, or a carriage return is interpreted as a live formula
+// by Excel/Google Sheets/LibreOffice when the file is opened — e.g.
+// `=cmd|'/c calc'!A1` or `=HYPERLINK("http://evil","x")` can exfiltrate data
+// or run commands on the opening machine. Exported data is frequently
+// user-controlled (vendor names, free-text fields, etc.), so every cell must
+// be neutralized before the existing comma/quote/newline CSV escaping runs.
+// Standard mitigation: prefix a leading single quote so spreadsheet apps
+// treat the cell as literal text instead of a formula.
+const FORMULA_TRIGGER_RE = /^[=+\-@\t\r]/;
+
+const sanitizeCellForFormulaInjection = (value: string): string =>
+  FORMULA_TRIGGER_RE.test(value) ? `'${value}` : value;
+
 /**
  * Export table data to CSV
  */
@@ -27,14 +41,18 @@ export const exportToCSV = (
   columns: ExportColumn[],
   filename: string = "export",
 ) => {
-  const headers = columns.map((col) => col.label).join(",");
+  const escapeCell = (strValue: string): string => {
+    const sanitized = sanitizeCellForFormulaInjection(strValue);
+    // Escape quotes and wrap in quotes if contains comma, quote, or newline
+    return sanitized.match(/[,"\n]/) ? `"${sanitized.replace(/"/g, '""')}"` : sanitized;
+  };
+
+  const headers = columns.map((col) => escapeCell(col.label)).join(",");
   const rows = data.map((row) =>
     columns
       .map((col) => {
         const value = row[col.id] ?? "";
-        const strValue = String(value);
-        // Escape quotes and wrap in quotes if contains comma, quote, or newline
-        return strValue.match(/[,"\n]/) ? `"${strValue.replace(/"/g, '""')}"` : strValue;
+        return escapeCell(String(value));
       })
       .join(","),
   );
@@ -43,6 +61,17 @@ export const exportToCSV = (
   const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
   saveAs(blob, `${sanitizeFilename(filename)}.csv`);
 };
+
+// aoa_to_sheet stores a string cell with its literal text (SheetJS marks
+// it t:"s" — a plain string, never auto-promoted to a formula t:"f" cell),
+// so genuine .xlsx binaries are not vulnerable to CSV-style formula
+// injection the way plain-text CSV is. Sanitizing here anyway is
+// defense-in-depth: harmless for normal values, and it protects any
+// downstream flow that later round-trips this data back through a CSV
+// export or a raw-text viewer. Only string cells are touched — numbers and
+// booleans (e.g. 0, false) must stay as their native types.
+const sanitizeExcelCell = (value: unknown): unknown =>
+  typeof value === "string" ? sanitizeCellForFormulaInjection(value) : value;
 
 /**
  * Export table data to Excel (.xlsx)
@@ -54,8 +83,8 @@ export const exportToExcel = (
 ) => {
   // Create worksheet data with headers
   const wsData = [
-    columns.map((col) => col.label),
-    ...data.map((row) => columns.map((col) => row[col.id] ?? "")),
+    columns.map((col) => sanitizeExcelCell(col.label)),
+    ...data.map((row) => columns.map((col) => sanitizeExcelCell(row[col.id] ?? ""))),
   ];
 
   const ws = XLSX.utils.aoa_to_sheet(wsData);

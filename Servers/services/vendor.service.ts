@@ -43,6 +43,13 @@ export interface CreateVendorInput {
   past_issues?: string;
   regulatory_exposure?: string;
   risk_score?: number;
+  is_ict_provider?: boolean;
+  ict_service_type?: string;
+  function_criticality?: string;
+  substitutability?: string;
+  has_exit_plan?: boolean;
+  country_of_provision?: string;
+  provider_lei?: string;
 }
 
 export interface UpdateVendorInput extends Partial<CreateVendorInput> {}
@@ -90,6 +97,13 @@ export async function createVendor(
     input.past_issues,
     input.regulatory_exposure,
     input.risk_score,
+    input.is_ict_provider,
+    input.ict_service_type,
+    input.function_criticality,
+    input.substitutability,
+    input.has_exit_plan,
+    input.country_of_provision,
+    input.provider_lei,
   );
 
   // Validate vendor data
@@ -161,6 +175,13 @@ export async function updateVendor(
     past_issues: input.past_issues,
     regulatory_exposure: input.regulatory_exposure,
     risk_score: input.risk_score,
+    is_ict_provider: input.is_ict_provider,
+    ict_service_type: input.ict_service_type,
+    function_criticality: input.function_criticality,
+    substitutability: input.substitutability,
+    has_exit_plan: input.has_exit_plan,
+    country_of_provision: input.country_of_provision,
+    provider_lei: input.provider_lei,
   });
 
   // Validate updated data

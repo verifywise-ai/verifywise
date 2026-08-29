@@ -10666,6 +10666,17 @@ export const vendorEndpoints: Endpoint[] = [
   },
   {
     method: 'GET',
+    path: '/vendors/dora-register',
+    summary: "Get Dora Register",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Vendors",
+  },
+  {
+    method: 'GET',
     path: '/vendors/project-id/{id}',
     summary: "Get vendors by project ID",
     description: "Retrieves all vendors associated with a specific project. Returns 404 if the project does not exist.",
