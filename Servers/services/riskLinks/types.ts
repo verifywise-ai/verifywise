@@ -79,3 +79,14 @@ export interface RiskLinkRow {
  */
 export const canonicalPair = (a: number, b: number): [number, number] =>
   a < b ? [a, b] : [b, a];
+
+/**
+ * One undirected `related_to` edge. Lives here rather than beside
+ * `connectedComponents` because `utils/riskLink.utils.ts` produces it and the
+ * service consumes it, and a util importing from a service inverts the
+ * dependency direction the rest of that file keeps.
+ */
+export interface RelatedPair {
+  a: number;
+  b: number;
+}
