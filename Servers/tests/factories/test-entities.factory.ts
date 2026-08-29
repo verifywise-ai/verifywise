@@ -56,6 +56,7 @@ export async function createTestFile(
 
 export interface CreateTestRiskOptions {
   risk_name?: string;
+  risk_description?: string;
   risk_owner?: number;
   /** Scoring signals. Omitted columns stay NULL, which never matches. */
   risk_category?: string[];
@@ -70,10 +71,10 @@ export async function createTestRisk(
 ): Promise<number> {
   const name = options.risk_name ?? `Risk ${Date.now()}`;
   const [result] = await sequelize.query(
-    `INSERT INTO risks (organization_id, risk_name, risk_owner, risk_category,
+    `INSERT INTO risks (organization_id, risk_name, risk_description, risk_owner, risk_category,
                         controls_mapping, assessment_mapping, ai_lifecycle_phase,
                         created_at, updated_at)
-     VALUES (:orgId, :name, :riskOwner,
+     VALUES (:orgId, :name, :description, :riskOwner,
              CAST(:riskCategory AS enum_projectrisks_risk_category[]),
              :controlsMapping, :assessmentMapping,
              CAST(:aiLifecyclePhase AS enum_projectrisks_ai_lifecycle_phase),
@@ -83,6 +84,7 @@ export async function createTestRisk(
       replacements: {
         orgId,
         name,
+        description: options.risk_description ?? null,
         riskOwner: options.risk_owner ?? null,
         riskCategory: options.risk_category
           ? `{${options.risk_category.map((value) => `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`).join(",")}}`

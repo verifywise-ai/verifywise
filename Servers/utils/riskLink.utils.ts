@@ -349,6 +349,146 @@ export async function getRelatedPairsQuery(
   }));
 }
 
+/** The four columns the direction prompt shows the model about one risk. */
+export interface RiskPromptRow {
+  id: number;
+  risk_name: string | null;
+  risk_description: string | null;
+  risk_category: string[] | null;
+  ai_lifecycle_phase: string | null;
+}
+
+/**
+ * The prompt payload for one component.
+ *
+ * `risk_description` is the column that actually carries the signal a grouping
+ * decision needs — the name alone rarely says whether a risk is the umbrella or
+ * one instance under it. The two enum columns are cast to text for the same
+ * reason `getRiskScoringRowsQuery` casts them: the driver returns a Postgres
+ * enum as an opaque value otherwise.
+ */
+export async function getRiskPromptRowsQuery(
+  organizationId: number,
+  riskIds: number[],
+): Promise<RiskPromptRow[]> {
+  if (riskIds.length === 0) return [];
+  const rows = await sequelize.query(
+    `SELECT id,
+            risk_name,
+            risk_description,
+            risk_category::text[] AS risk_category,
+            ai_lifecycle_phase::text AS ai_lifecycle_phase
+       FROM risks
+      WHERE id IN (:riskIds)
+        AND organization_id = :organizationId
+        AND is_deleted = false
+      ORDER BY id`,
+    { replacements: { riskIds, organizationId }, type: QueryTypes.SELECT },
+  );
+
+  return (rows as any[]).map((row) => ({
+    id: toNumber(row.id),
+    risk_name: row.risk_name ?? null,
+    risk_description: row.risk_description ?? null,
+    risk_category: Array.isArray(row.risk_category) ? row.risk_category : null,
+    ai_lifecycle_phase: row.ai_lifecycle_phase ?? null,
+  }));
+}
+
+/** One stored `inherits_from` edge, in the child/parent terms the rules use. */
+export interface HierarchyPairRow {
+  childRiskId: number;
+  parentRiskId: number;
+  status: RiskLinkStatus;
+}
+
+/**
+ * Every `inherits_from` row touching any of these risks, in every status.
+ *
+ * One round trip serving two different needs. Rule 4 of the filter needs all
+ * three statuses, because a `dismissed` pair must never be proposed again;
+ * rule 5 needs the `confirmed` and `suggested` subset, because those are the
+ * edges a new proposal could contradict. Splitting it would be two queries for
+ * one index scan.
+ *
+ * Note the direction mapping: `source_risk_id` is the child.
+ */
+export async function getHierarchyPairsQuery(
+  organizationId: number,
+  riskIds: number[],
+): Promise<HierarchyPairRow[]> {
+  if (riskIds.length === 0) return [];
+  const rows = await sequelize.query(
+    `SELECT source_risk_id, target_risk_id, status
+       FROM risk_links
+      WHERE organization_id = :organizationId
+        AND relation_type = 'inherits_from'
+        AND (source_risk_id IN (:riskIds) OR target_risk_id IN (:riskIds))`,
+    { replacements: { organizationId, riskIds }, type: QueryTypes.SELECT },
+  );
+
+  return (rows as any[]).map((row) => ({
+    childRiskId: toNumber(row.source_risk_id),
+    parentRiskId: toNumber(row.target_risk_id),
+    status: row.status as RiskLinkStatus,
+  }));
+}
+
+export interface CreateAgentHierarchyLinkInput {
+  organizationId: number;
+  childRiskId: number;
+  parentRiskId: number;
+  /** The model's own one-line justification, 15-120 chars by schema. */
+  reason: string;
+}
+
+/**
+ * Writes one agent proposal as a `suggested` / `agent` row.
+ *
+ * A fourth query rather than a flag on `upsertRiskLinkQuery` or
+ * `createUserRiskLinkQuery`: the first hardcodes `related_to`/`derived` and
+ * exists to be re-run by the scoring engine, the second hardcodes
+ * `confirmed`/`user` and stamps `decided_at`. An agent row is neither — it is
+ * an undecided proposal, so `decided_at` stays NULL and `score` stays at its
+ * column default of 0. §9 of the design stops the frontend showing that 0.
+ *
+ * The reason travels in the existing `reasons` column as a single signal with
+ * `weight: 0`, which is what the panel's `reasonLabel` already knows how to
+ * render.
+ *
+ * `ON CONFLICT DO NOTHING` returns null on a pair that already has a row of
+ * this relation type. That should not happen — rule 4 of the filter drops those
+ * before they get here — but two components can only be processed concurrently,
+ * so the constraint stays the last word.
+ */
+export async function createAgentHierarchyLinkQuery(
+  input: CreateAgentHierarchyLinkInput,
+): Promise<number | null> {
+  const reasons: LinkSignal[] = [
+    { signal: "hierarchy", weight: 0, detail: input.reason },
+  ];
+  const rows = await sequelize.query(
+    `INSERT INTO risk_links (organization_id, source_risk_id, target_risk_id,
+                             relation_type, status, source, reasons, created_at)
+     VALUES (:organizationId, :childRiskId, :parentRiskId,
+             'inherits_from', 'suggested', 'agent', CAST(:reasons AS JSONB), NOW())
+     ON CONFLICT (source_risk_id, target_risk_id, relation_type) DO NOTHING
+     RETURNING id`,
+    {
+      replacements: {
+        organizationId: input.organizationId,
+        childRiskId: input.childRiskId,
+        parentRiskId: input.parentRiskId,
+        reasons: JSON.stringify(reasons),
+      },
+      type: QueryTypes.SELECT,
+    },
+  );
+
+  const row = (rows as { id: number }[])[0];
+  return row ? toNumber(row.id) : null;
+}
+
 export interface CreateUserRiskLinkInput {
   organizationId: number;
   sourceRiskId: number;
