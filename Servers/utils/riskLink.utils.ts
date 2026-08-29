@@ -7,6 +7,7 @@ import {
   RiskLinkStatus,
   RiskScoringRow,
   StructuralNeighbourRow,
+  RelatedPair,
 } from "../services/riskLinks/types";
 import { HierarchyEdge } from "../services/riskLinks/hierarchy";
 
@@ -307,6 +308,44 @@ export async function getConfirmedHierarchyEdgesQuery(
   return (rows as { source_risk_id: number; target_risk_id: number }[]).map((row) => ({
     childRiskId: row.source_risk_id,
     parentRiskId: row.target_risk_id,
+  }));
+}
+
+/**
+ * Every `related_to` pair in the org that still has two live risks behind it —
+ * the edge list `connectedComponents` partitions.
+ *
+ * `dismissed` is excluded deliberately. A dismissed relation is a statement
+ * that these two risks are not related; letting it through would merge two
+ * clusters the user has already told us to keep apart, and then hand the merged
+ * cluster to the model as one grouping problem.
+ *
+ * The joins to `risks` are what keep a soft-deleted partner out. Without them a
+ * dead id reaches the prompt with no risk row behind it: harmless in the sense
+ * that the model cannot name what it cannot see, but it inflates the size check
+ * and can spend a whole call on a component with one real member.
+ */
+export async function getRelatedPairsQuery(
+  organizationId: number,
+): Promise<RelatedPair[]> {
+  const rows = await sequelize.query(
+    `SELECT l.source_risk_id, l.target_risk_id
+       FROM risk_links l
+       JOIN risks s ON s.id = l.source_risk_id
+                   AND s.organization_id = :organizationId
+                   AND s.is_deleted = false
+       JOIN risks t ON t.id = l.target_risk_id
+                   AND t.organization_id = :organizationId
+                   AND t.is_deleted = false
+      WHERE l.organization_id = :organizationId
+        AND l.relation_type = 'related_to'
+        AND l.status IN ('suggested', 'confirmed')`,
+    { replacements: { organizationId }, type: QueryTypes.SELECT },
+  );
+
+  return (rows as { source_risk_id: number; target_risk_id: number }[]).map((row) => ({
+    a: toNumber(row.source_risk_id),
+    b: toNumber(row.target_risk_id),
   }));
 }
 

@@ -12,6 +12,7 @@ import {
   getLiveRiskIdsQuery,
   createUserRiskLinkQuery,
   riskLinkPairExistsQuery,
+  getRelatedPairsQuery,
 } from "../../../utils/riskLink.utils";
 
 afterEach(async () => {
@@ -171,6 +172,57 @@ describe("risk_links tenant isolation", () => {
       target_risk_id: Math.max(subject, partner),
       score: 3.79,
     });
+  });
+
+  it("reads related_to pairs only from the caller's own org, and only live ones", async () => {
+    const { owner, attacker } = await seedTwoTenantContexts();
+    const riskA = await createTestRisk(owner.orgId, { risk_category: CATEGORY });
+    const riskB = await createTestRisk(owner.orgId, { risk_category: CATEGORY });
+    const riskC = await createTestRisk(owner.orgId, { risk_category: CATEGORY });
+    const deleted = await createTestRisk(owner.orgId, { risk_category: CATEGORY });
+    const attackerA = await createTestRisk(attacker.orgId, { risk_category: CATEGORY });
+    const attackerB = await createTestRisk(attacker.orgId, { risk_category: CATEGORY });
+
+    const insert = async (
+      orgId: number,
+      source: number,
+      target: number,
+      status: string,
+    ) => {
+      await sequelize.query(
+        `INSERT INTO risk_links (organization_id, source_risk_id, target_risk_id,
+                                 relation_type, status, source, created_at)
+         VALUES (:orgId, :source, :target, 'related_to', :status, 'derived', NOW())`,
+        { replacements: { orgId, source, target, status } },
+      );
+    };
+
+    await insert(owner.orgId, Math.min(riskA, riskB), Math.max(riskA, riskB), "suggested");
+    await insert(owner.orgId, Math.min(riskB, riskC), Math.max(riskB, riskC), "confirmed");
+    // Dismissed says these two are NOT related; letting it through would pull
+    // two clusters into one and hand the model a group the user rejected.
+    await insert(owner.orgId, Math.min(riskA, riskC), Math.max(riskA, riskC), "dismissed");
+    // A live edge whose partner is gone. The pair would otherwise reach the
+    // prompt as an id with no risk row behind it.
+    await insert(owner.orgId, Math.min(riskA, deleted), Math.max(riskA, deleted), "suggested");
+    await sequelize.query(`UPDATE risks SET is_deleted = true WHERE id = :id`, {
+      replacements: { id: deleted },
+    });
+    await insert(
+      attacker.orgId,
+      Math.min(attackerA, attackerB),
+      Math.max(attackerA, attackerB),
+      "confirmed",
+    );
+
+    const pairs = await getRelatedPairsQuery(owner.orgId);
+
+    expect(pairs).toHaveLength(2);
+    const flat = pairs.flatMap((pair: { a: number; b: number }) => [pair.a, pair.b]);
+    expect(flat).not.toContain(attackerA);
+    expect(flat).not.toContain(attackerB);
+    expect(flat).not.toContain(deleted);
+    expect(new Set(flat)).toEqual(new Set([riskA, riskB, riskC]));
   });
 });
 
