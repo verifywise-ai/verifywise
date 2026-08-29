@@ -50,6 +50,35 @@ export async function enqueueRiskLinkRecompute(organizationId: number, riskId: n
   );
 }
 
+/**
+ * One direction pass over one connected component.
+ *
+ * The jobId is derived from the component's smallest id, which is stable
+ * because `connectedComponents` sorts. An admin double-clicking the button, or
+ * two admins clicking it at once, therefore costs one LLM call rather than two.
+ *
+ * `attempts: 3` matches the recompute job, but the failure it covers is
+ * different: the service swallows model errors and returns 0, so a retry here
+ * only ever re-runs a job that failed on Redis or on a database error, never
+ * one that failed on the model's answer.
+ */
+export async function enqueueRiskLinkDirection(organizationId: number, riskIds: number[]) {
+  if (riskIds.length === 0) {
+    throw new Error("enqueueRiskLinkDirection requires at least one risk id");
+  }
+  return automationQueue.add(
+    "risk_link_direction",
+    { organizationId, riskIds },
+    {
+      jobId: `risk-link-direction:${organizationId}:${Math.min(...riskIds)}`,
+      removeOnComplete: true,
+      removeOnFail: true,
+      attempts: 3,
+      backoff: { type: "exponential", delay: 1000 },
+    },
+  );
+}
+
 export async function scheduleVendorReviewDateNotification() {
   await automationQueue.obliterate({ force: true });
   logger.info("Adding Vendor Review Date Notification jobs to the queue...");

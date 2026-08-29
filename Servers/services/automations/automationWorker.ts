@@ -26,6 +26,7 @@ import { syncAiTrustIndex } from "./actions/syncAiTrustIndex";
 import { runRevalidationSweepAllOrgs } from "./actions/mrmRevalidationSweep";
 import { runRetentionPruneAllOrgs } from "./actions/mrmRetentionPrune";
 import { recomputeRiskLinks } from "../riskLinks/recompute";
+import { suggestDirectionForComponent } from "../riskLinks/direction/direction.service";
 // AI Gateway budget/risk jobs — call AIGateway HTTP endpoints via internal API
 const AI_GATEWAY_URL = process.env.AI_GATEWAY_URL || "http://127.0.0.1:8100";
 const AI_GATEWAY_KEY = process.env.AI_GATEWAY_INTERNAL_KEY || "";
@@ -533,6 +534,12 @@ export const createAutomationWorker = () => {
             riskId: number;
           };
           await recomputeRiskLinks(organizationId, riskId);
+        } else if (name === "risk_link_direction") {
+          const { organizationId, riskIds } = job.data as {
+            organizationId: number;
+            riskIds: number[];
+          };
+          await suggestDirectionForComponent(organizationId, riskIds);
         } else if (name === "mcp_audit_cleanup") {
           try {
             const [auditResult, approvalResult] = await Promise.all([
