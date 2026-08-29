@@ -3,6 +3,7 @@ import {
   createRiskLink,
   getRiskLinks,
   recomputeRiskLinks,
+  suggestRiskHierarchy,
   updateRiskLinkStatus,
 } from "../repository/riskLink.repository";
 import {
@@ -53,6 +54,19 @@ export function useRecomputeRiskLinks(riskId: number) {
   const invalidate = useInvalidateLinks(riskId);
   return useMutation({
     mutationFn: () => recomputeRiskLinks(),
+    onSettled: invalidate,
+  });
+}
+
+/**
+ * The pass writes `inherits_from` suggestions across the org, so this risk's
+ * own list can change even though the request names no risk. Invalidate on
+ * settle for the same reason `useRecomputeRiskLinks` does.
+ */
+export function useSuggestRiskHierarchy(riskId: number) {
+  const invalidate = useInvalidateLinks(riskId);
+  return useMutation({
+    mutationFn: () => suggestRiskHierarchy(),
     onSettled: invalidate,
   });
 }

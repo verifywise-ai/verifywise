@@ -75,3 +75,22 @@ export async function recomputeRiskLinks(): Promise<{ enqueued: number }> {
     throw toAPIError(error, "Failed to start the scan");
   }
 }
+
+/**
+ * Starts a direction pass over every cluster of related risks in the org.
+ * `skipped` counts clusters too large for one model call.
+ */
+export async function suggestRiskHierarchy(): Promise<{
+  enqueued: number;
+  skipped: number;
+}> {
+  try {
+    const response = await apiServices.post<{
+      message: string;
+      data: { enqueued: number; skipped: number };
+    }>("/riskLinks/suggest-hierarchy", {});
+    return extractData<{ enqueued: number; skipped: number }>(response);
+  } catch (error: any) {
+    throw toAPIError(error, "Failed to start the hierarchy suggestions");
+  }
+}

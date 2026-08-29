@@ -9,6 +9,7 @@ import { RiskLink } from "../../../../domain/interfaces/i.riskLink";
 const mockUseRiskLinks = vi.fn();
 const mockMutateStatus = vi.fn();
 const mockMutateRecompute = vi.fn();
+const mockMutateSuggest = vi.fn();
 const mockIsAdmin = vi.fn();
 
 vi.mock("../../../../application/hooks/useRiskLinks", () => ({
@@ -16,6 +17,7 @@ vi.mock("../../../../application/hooks/useRiskLinks", () => ({
   useUpdateRiskLinkStatus: () => ({ mutate: mockMutateStatus, isPending: false }),
   useRecomputeRiskLinks: () => ({ mutate: mockMutateRecompute, isPending: false }),
   useCreateRiskLink: () => ({ mutate: vi.fn(), isPending: false, error: null, reset: vi.fn() }),
+  useSuggestRiskHierarchy: () => ({ mutate: mockMutateSuggest, isPending: false }),
 }));
 
 vi.mock("../../../../application/hooks/useIsAdmin", () => ({
@@ -109,6 +111,54 @@ describe("LinkedRisksPanel grouping", () => {
 
     expect(screen.getByText("4.2")).toBeInTheDocument();
     expect(screen.queryByText("0")).not.toBeInTheDocument();
+  });
+
+  it("offers an admin the hierarchy pass even when links already exist", async () => {
+    mockIsAdmin.mockReturnValue(true);
+    mockUseRiskLinks.mockReturnValue(
+      queryResult([link()]),
+    );
+
+    render(<LinkedRisksPanel riskId={42} />);
+
+    // Not in the empty state: hierarchy needs existing related_to links, so a
+    // button that only appears when there are none would be unreachable exactly
+    // when it is useful.
+    await userEvent.click(screen.getByRole("button", { name: /suggest hierarchy/i }));
+    expect(mockMutateSuggest).toHaveBeenCalled();
+  });
+
+  it("hides the hierarchy pass from a non-admin", () => {
+    mockIsAdmin.mockReturnValue(false);
+    mockUseRiskLinks.mockReturnValue(
+      queryResult([link()]),
+    );
+
+    render(<LinkedRisksPanel riskId={42} />);
+
+    expect(screen.queryByRole("button", { name: /suggest hierarchy/i })).toBeNull();
+  });
+
+  // score is 0 by column default on an agent row and means nothing there, the
+  // same way it means nothing on a user row.
+  it("does not show a score on an agent suggestion", () => {
+    mockIsAdmin.mockReturnValue(false);
+    mockUseRiskLinks.mockReturnValue(
+      queryResult([
+        link({
+          source: "agent",
+          relationType: "inherits_from",
+          direction: "outgoing",
+          score: 0,
+          reasons: [{ signal: "hierarchy", weight: 0, detail: "Same deployed model." }],
+        }),
+      ]),
+    );
+
+    render(<LinkedRisksPanel riskId={42} />);
+
+    expect(screen.getByText(/same deployed model/i)).toBeInTheDocument();
+    expect(screen.queryByText("0")).toBeNull();
   });
 });
 

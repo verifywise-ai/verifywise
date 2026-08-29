@@ -3,6 +3,7 @@ import { Alert, Box, Button, Chip, CircularProgress, Stack, Typography } from "@
 import {
   useRecomputeRiskLinks,
   useRiskLinks,
+  useSuggestRiskHierarchy,
   useUpdateRiskLinkStatus,
 } from "../../../application/hooks/useRiskLinks";
 import { useIsAdmin } from "../../../application/hooks/useIsAdmin";
@@ -66,6 +67,7 @@ export default function LinkedRisksPanel({ riskId }: LinkedRisksPanelProps) {
   );
   const updateStatus = useUpdateRiskLinkStatus(riskId);
   const recompute = useRecomputeRiskLinks(riskId);
+  const suggestHierarchy = useSuggestRiskHierarchy(riskId);
 
   const handleAction = (link: RiskLink, next: RiskLinkStatus) => {
     setNotice(null);
@@ -91,6 +93,23 @@ export default function LinkedRisksPanel({ riskId }: LinkedRisksPanelProps) {
     });
   };
 
+  const handleSuggestHierarchy = () => {
+    setNotice(null);
+    suggestHierarchy.mutate(undefined, {
+      onSuccess: (result) =>
+        setNotice(
+          result.enqueued === 0
+            ? "No clusters of related risks to group yet. Run a scan for related risks first."
+            : `Grouping ${result.enqueued} clusters of related risks. Suggestions appear here as they finish.` +
+              (result.skipped > 0
+                ? ` ${result.skipped} clusters were too large to group in one pass.`
+                : ""),
+        ),
+      onError: (error: any) =>
+        setNotice(error?.message || "Failed to start the hierarchy suggestions"),
+    });
+  };
+
   if (isError) {
     return (
       <Alert
@@ -109,9 +128,25 @@ export default function LinkedRisksPanel({ riskId }: LinkedRisksPanelProps) {
   return (
     <Stack spacing={2} sx={{ py: 2 }}>
       <Stack direction="row" justifyContent="space-between">
-        <Button size="small" onClick={() => setShowForm((open) => !open)}>
-          {showForm ? "Cancel" : "Link a risk"}
-        </Button>
+        <Stack direction="row" spacing={1}>
+          <Button size="small" onClick={() => setShowForm((open) => !open)}>
+            {showForm ? "Cancel" : "Link a risk"}
+          </Button>
+          {/*
+            Here rather than in the empty state below: a hierarchy pass groups
+            risks that are ALREADY related, so a button that only appeared when
+            there were no links would be unreachable exactly when it is useful.
+          */}
+          {isAdmin && (
+            <Button
+              size="small"
+              onClick={handleSuggestHierarchy}
+              disabled={suggestHierarchy.isPending}
+            >
+              Suggest hierarchy
+            </Button>
+          )}
+        </Stack>
         <Button size="small" onClick={() => setShowDismissed((shown) => !shown)}>
           {showDismissed ? "Hide dismissed" : "Show dismissed"}
         </Button>
@@ -177,8 +212,12 @@ export default function LinkedRisksPanel({ riskId }: LinkedRisksPanelProps) {
                   {link.reasons.map((reason, index) => (
                     <Chip key={index} size="small" variant="outlined" label={reasonLabel(reason)} />
                   ))}
-                  {/* score is 0 by column default on a user link and means nothing there */}
-                  {link.source !== "user" && (
+                  {/*
+                    score is 0 by column default on a user link and on an agent
+                    link, and means nothing on either. Only the scoring engine
+                    produces a number worth showing.
+                  */}
+                  {link.source === "derived" && (
                     <Typography variant="caption">{link.score}</Typography>
                   )}
                   {actionsFor(link).map(({ label, next }) => (
