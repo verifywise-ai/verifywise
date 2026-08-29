@@ -1,12 +1,21 @@
 import { Request, Response } from "express";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { logFailure, logProcessing, logSuccess } from "../utils/logger/logHelper";
-import { enqueueRiskLinkRecompute } from "../services/automations/automationProducer";
+import {
+  enqueueRiskLinkDirection,
+  enqueueRiskLinkRecompute,
+} from "../services/automations/automationProducer";
+import { getLLMKeysQuery } from "../utils/llmKey.utils";
+import {
+  connectedComponents,
+  MAX_COMPONENT_SIZE,
+} from "../services/riskLinks/direction/components";
 import {
   createUserRiskLinkQuery,
   getActiveRiskIdsQuery,
   getConfirmedHierarchyEdgesQuery,
   getLiveRiskIdsQuery,
+  getRelatedPairsQuery,
   getRiskLinkByIdQuery,
   getRiskLinksForRiskQuery,
   RiskLinkWithRelated,
@@ -136,6 +145,77 @@ export async function getRiskLinks(req: Request, res: Response): Promise<any> {
       eventType: "Read",
       description: "failed to fetch risk links",
       functionName: "getRiskLinks",
+      fileName: FILE_NAME,
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+  }
+}
+
+/**
+ * Asks the direction agent to propose parent/child groupings across the org.
+ *
+ * The unit of work is a connected component of the `related_to` graph, not a
+ * risk: a grouping decision needs every risk it could involve in front of it at
+ * once. See §3 of the C2 design.
+ *
+ * There is no filter here for components of fewer than two risks, and there
+ * cannot usefully be one: `connectedComponents` only emits ids that appeared in
+ * a pair, and the `risk_links` CHECK forbids `source_risk_id = target_risk_id`,
+ * so every component already has at least two members.
+ */
+export async function suggestRiskHierarchy(req: Request, res: Response): Promise<any> {
+  logProcessing({
+    description: "starting suggestRiskHierarchy",
+    functionName: "suggestRiskHierarchy",
+    fileName: FILE_NAME,
+    userId: req.userId!,
+    organizationId: req.organizationId!,
+  });
+
+  try {
+    // Checked here rather than left to each job. Without a key every job would
+    // log a warning and write nothing, and the admin would see "grouping 4
+    // clusters" followed by silence. `getLLMKeysQuery` is the redacted variant —
+    // no secret needs to reach the controller to answer "is one configured".
+    const keys = await getLLMKeysQuery(req.organizationId!);
+    if (keys.length === 0) {
+      return res
+        .status(400)
+        .json(
+          STATUS_CODE[400](
+            "No LLM key is configured for this organization. Add one under Settings before suggesting a hierarchy.",
+          ),
+        );
+    }
+
+    const components = connectedComponents(await getRelatedPairsQuery(req.organizationId!));
+    const groupable = components.filter((ids) => ids.length <= MAX_COMPONENT_SIZE);
+    const skipped = components.length - groupable.length;
+
+    await Promise.all(
+      groupable.map((ids) => enqueueRiskLinkDirection(req.organizationId!, ids)),
+    );
+
+    logSuccess({
+      eventType: "Create",
+      description: `enqueued ${groupable.length} risk link direction jobs, skipped ${skipped} oversized components`,
+      functionName: "suggestRiskHierarchy",
+      fileName: FILE_NAME,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+
+    return res
+      .status(202)
+      .json(STATUS_CODE[202]({ enqueued: groupable.length, skipped }));
+  } catch (error) {
+    logFailure({
+      eventType: "Create",
+      description: "failed to enqueue risk link direction jobs",
+      functionName: "suggestRiskHierarchy",
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,

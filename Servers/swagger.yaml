@@ -10077,6 +10077,21 @@ paths:
         -
           bearerAuth: []
       description: 'Requires role: Admin'
+  /riskLinks/suggest-hierarchy:
+    post:
+      summary: 'Suggest Risk Hierarchy'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - RiskLinks
+      operationId: suggestRiskHierarchy
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Admin'
   /riskLinks:
     post:
       summary: 'Create Risk Link'

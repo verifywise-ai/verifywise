@@ -8199,6 +8199,18 @@ export const risklinksEndpoints: Endpoint[] = [
   },
   {
     method: 'POST',
+    path: '/riskLinks/suggest-hierarchy',
+    summary: "Suggest Risk Hierarchy",
+    description: "Requires role: Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "RiskLinks",
+  },
+  {
+    method: 'POST',
     path: '/riskLinks',
     summary: "Create Risk Link",
     requiresAuth: true,
