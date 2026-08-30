@@ -12,6 +12,10 @@
 
 ## Global Constraints
 
+- **No red step in this plan is a type error, and no green step proves types.** `Servers/jest.config.js` builds its ts-jest transform with `diagnostics: false`, and `Clients` runs vitest over esbuild — both strip TypeScript without checking it. A test file may reference a property that does not exist and still run. Types are checked in exactly two places: `cd Servers && npm run build` (which is bare `tsc`) and `cd Clients && npm run typecheck`. If a step here predicts a compile error, that step is wrong — report it.
+- **Integration tests reach HTTP through the tenant harness, not a token.** `seedTwoTenantContexts()` returns `{ owner, attacker }`, each carrying a ready supertest agent on an app with auth bypassed: `await owner.request.post("/api/risk-links").send({...})`. There is no bearer token to set, and no second key called `other`.
+- **Error text lands in `res.body.data`, not `res.body.message`.** `STATUS_CODE[400](text)` returns `{ message: "Bad Request", data: text }` — `message` is the generic status phrase on every response.
+
 - **Migrations qualify the schema** (`verifywise.risk_links`). **Application and test SQL must NOT** — `search_path` is already `verifywise`.
 - **Direction convention:** on every `inherits_from` row, `source_risk_id` is the **child** and the target is the **parent**. Never reversed.
 - **Cross-entity links are `inherits_from` only.** `related_to` across tables is rejected at the API and by a CHECK.
@@ -443,7 +447,14 @@ describe("cross-entity parents (C4)", () => {
 
 Run: `cd Servers && npm run test -- --testPathPatterns=hierarchy`
 
-Expected: a TypeScript compile failure — `Object literal may only specify known properties, and 'parentEntityType' does not exist in type 'HierarchyEdge'`. That is the red step. Do not add the field and re-run before writing the logic in Step 3; add both together.
+Expected: **two** of the four fail, with plain assertion errors. Not a type error — see the Global Constraints note; `parentEntityType` is an unknown property here and jest will not say a word about it.
+
+| Test | Received | Expected | Why it is red |
+|------|----------|----------|---------------|
+| `does not mistake a model risk for the project risk of the same id` | `"parent_is_a_child"` | `null` | `risks(7)` is a child in `confirmed`, and the bare-integer check cannot tell it apart from the proposed `model_risks(7)`. |
+| `does not confuse a vendor-risk parent with a model-risk parent of the same id` | `null` | `"child_already_has_parent"` | The opposite error: the duplicate-filter treats `vendor_risk 3` and `model_risk 3` as the same edge and drops it, leaving nothing to violate. |
+
+The other two — `still refuses a second parent when one is cross-entity` and `treats the same cross-entity parent as a duplicate` — pass before and after. They are regression guards for the behaviour Task 2 must not break; their being green now is correct, not a sign you wrote them wrong.
 
 - [ ] **Step 3: Implement**
 
@@ -583,7 +594,7 @@ describe("getConfirmedHierarchyEdgesQuery with a cross-entity parent", () => {
 
 Run: `cd Servers && npm run test:integration -- --testPathPatterns=riskLinks.crossEntity`
 
-Expected: a TypeScript compile failure on the third argument — the current signature takes `parentRiskId: number`.
+Expected: both new tests throw `Error: Invalid value { id: <n>, entityType: '<type>' }` — Sequelize refuses to bind an object where the query interpolates `:parentRiskId`. Again not a type error: the current signature takes `parentRiskId: number`, but nothing checks that at test time, so the mismatch surfaces at the database layer instead of at the compiler.
 
 - [ ] **Step 3: Implement the query**
 
@@ -713,7 +724,7 @@ describe("getRiskLinksForRiskQuery with cross-entity parents", () => {
       { replacements: { orgId: owner.orgId, child, vendorRisk } },
     );
 
-    const [row] = await getRiskLinksForRiskQuery(child, owner.orgId, ["confirmed"]);
+    const [row] = await getRiskLinksForRiskQuery(owner.orgId, child, ["confirmed"]);
 
     expect(row.related_entity_type).toBe("vendor_risk");
     expect(row.related_id).toBe(vendorRisk);
@@ -722,9 +733,9 @@ describe("getRiskLinksForRiskQuery with cross-entity parents", () => {
   });
 
   it("hides a parent that belongs to another tenant", async () => {
-    const { owner, other } = await seedTwoTenantContexts();
+    const { owner, attacker } = await seedTwoTenantContexts();
     const child = await createTestRisk(owner.orgId, {});
-    const foreignModelRisk = await createTestModelRisk(other.orgId, {});
+    const foreignModelRisk = await createTestModelRisk(attacker.orgId, {});
 
     // The link row itself is in the owner's org; only the parent is foreign.
     // Without the per-table tenant guard this renders as a blank panel row.
@@ -734,7 +745,7 @@ describe("getRiskLinksForRiskQuery with cross-entity parents", () => {
       { replacements: { orgId: owner.orgId, child, foreignModelRisk } },
     );
 
-    expect(await getRiskLinksForRiskQuery(child, owner.orgId, ["confirmed"])).toEqual([]);
+    expect(await getRiskLinksForRiskQuery(owner.orgId, child, ["confirmed"])).toEqual([]);
   });
 
   it("hides a soft-deleted parent", async () => {
@@ -751,7 +762,7 @@ describe("getRiskLinksForRiskQuery with cross-entity parents", () => {
       replacements: { modelRisk },
     });
 
-    expect(await getRiskLinksForRiskQuery(child, owner.orgId, ["confirmed"])).toEqual([]);
+    expect(await getRiskLinksForRiskQuery(owner.orgId, child, ["confirmed"])).toEqual([]);
   });
 
   it("still returns plain project-risk parents", async () => {
@@ -765,7 +776,7 @@ describe("getRiskLinksForRiskQuery with cross-entity parents", () => {
       { replacements: { orgId: owner.orgId, child, parent } },
     );
 
-    const [row] = await getRiskLinksForRiskQuery(child, owner.orgId, ["confirmed"]);
+    const [row] = await getRiskLinksForRiskQuery(owner.orgId, child, ["confirmed"]);
     expect(row.related_entity_type).toBe("risk");
     expect(row.related_id).toBe(parent);
   });
@@ -904,10 +915,7 @@ describe("POST /api/risk-links with a cross-entity parent", () => {
     const child = await createTestRisk(owner.orgId, {});
     const vendorRisk = await createTestVendorRisk(owner.orgId, {});
 
-    const res = await request(app)
-      .post("/api/risk-links")
-      .set("Authorization", `Bearer ${owner.token}`)
-      .send({ sourceRiskId: child, targetVendorRiskId: vendorRisk, relationType: "inherits_from" });
+    const res = await owner.request.post("/api/risk-links").send({ sourceRiskId: child, targetVendorRiskId: vendorRisk, relationType: "inherits_from" });
 
     expect(res.status).toBe(201);
     expect(res.body.data.relatedRisk.entityType).toBe("vendor_risk");
@@ -920,10 +928,7 @@ describe("POST /api/risk-links with a cross-entity parent", () => {
     const parent = await createTestRisk(owner.orgId, {});
     const vendorRisk = await createTestVendorRisk(owner.orgId, {});
 
-    const res = await request(app)
-      .post("/api/risk-links")
-      .set("Authorization", `Bearer ${owner.token}`)
-      .send({
+    const res = await owner.request.post("/api/risk-links").send({
         sourceRiskId: child,
         targetRiskId: parent,
         targetVendorRiskId: vendorRisk,
@@ -931,7 +936,7 @@ describe("POST /api/risk-links with a cross-entity parent", () => {
       });
 
     expect(res.status).toBe(400);
-    expect(res.body.message).toMatch(/exactly one parent/i);
+    expect(res.body.data).toMatch(/exactly one parent/i);
   });
 
   it("rejects related_to across entity types", async () => {
@@ -939,24 +944,18 @@ describe("POST /api/risk-links with a cross-entity parent", () => {
     const child = await createTestRisk(owner.orgId, {});
     const modelRisk = await createTestModelRisk(owner.orgId, {});
 
-    const res = await request(app)
-      .post("/api/risk-links")
-      .set("Authorization", `Bearer ${owner.token}`)
-      .send({ sourceRiskId: child, targetModelRiskId: modelRisk, relationType: "related_to" });
+    const res = await owner.request.post("/api/risk-links").send({ sourceRiskId: child, targetModelRiskId: modelRisk, relationType: "related_to" });
 
     expect(res.status).toBe(400);
-    expect(res.body.message).toMatch(/only inheritance links/i);
+    expect(res.body.data).toMatch(/only inheritance links/i);
   });
 
   it("404s on another tenant's model risk", async () => {
-    const { owner, other } = await seedTwoTenantContexts();
+    const { owner, attacker } = await seedTwoTenantContexts();
     const child = await createTestRisk(owner.orgId, {});
-    const foreign = await createTestModelRisk(other.orgId, {});
+    const foreign = await createTestModelRisk(attacker.orgId, {});
 
-    const res = await request(app)
-      .post("/api/risk-links")
-      .set("Authorization", `Bearer ${owner.token}`)
-      .send({ sourceRiskId: child, targetModelRiskId: foreign, relationType: "inherits_from" });
+    const res = await owner.request.post("/api/risk-links").send({ sourceRiskId: child, targetModelRiskId: foreign, relationType: "inherits_from" });
 
     expect(res.status).toBe(404);
   });
@@ -973,10 +972,7 @@ describe("POST /api/risk-links with a cross-entity parent", () => {
       { replacements: { orgId: owner.orgId, child, parent } },
     );
 
-    const res = await request(app)
-      .post("/api/risk-links")
-      .set("Authorization", `Bearer ${owner.token}`)
-      .send({ sourceRiskId: child, targetVendorRiskId: vendorRisk, relationType: "inherits_from" });
+    const res = await owner.request.post("/api/risk-links").send({ sourceRiskId: child, targetVendorRiskId: vendorRisk, relationType: "inherits_from" });
 
     expect(res.status).toBe(409);
   });
@@ -987,7 +983,13 @@ describe("POST /api/risk-links with a cross-entity parent", () => {
 
 Run: `cd Servers && npm run test:integration -- --testPathPatterns=riskLinks.crossEntity`
 
-Expected: 400 "Invalid link payload" on every one of them — `parseInt(String(undefined))` is `NaN` and the existing guard rejects it.
+Expected: all five red, four of them the same way and one differently.
+
+Four send only a cross-entity target, so `parseInt(String(req.body.targetRiskId), 10)` is `NaN` and the existing guard short-circuits: **400**, with `res.body.data === "Invalid request"`. That is the red for `creates an inheritance link to a vendor risk` (wanted 201), `404s on another tenant's model risk` (wanted 404), `409s when the child already has a confirmed project-risk parent` (wanted 409), and `rejects related_to across entity types`.
+
+Watch that last one: it *wants* 400, so `expect(res.status).toBe(400)` passes today for entirely the wrong reason. Its red is the line below it — `res.body.data` is `"Invalid request"`, not the `/only inheritance links/i` the rule is supposed to produce. Do not delete that message assertion; it is the only thing making the test mean anything.
+
+The fifth, `rejects two target fields`, sends a valid `targetRiskId` **and** a `targetVendorRiskId`. Today the second field is simply ignored, so the request succeeds: **201**, where the test wants 400. That test is the reason `resolveTarget` counts the fields instead of taking the first one it finds.
 
 - [ ] **Step 3: Resolve the target in the controller**
 
@@ -1198,7 +1200,7 @@ it("does not label a plain project risk parent", async () => {
 
 Run: `cd Clients && npx vitest run LinkedRisksPanel`
 
-Expected: a TypeScript error on `entityType`, then `Unable to find an element with the text: Vendor risk`.
+Expected: `Unable to find an element with the text: Vendor risk`. No type error appears — vitest transforms through esbuild, which strips types without checking them. The `entityType` property genuinely does not exist on the interface yet, and `npm run typecheck` in Step 6 is where that gets caught.
 
 - [ ] **Step 3: Extend the interface**
 
