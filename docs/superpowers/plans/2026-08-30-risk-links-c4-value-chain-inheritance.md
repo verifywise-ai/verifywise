@@ -536,7 +536,9 @@ git commit -m "fix(risk-links): stop a model risk id colliding with a project ri
 
 **Files:**
 - Modify: `Servers/utils/riskLink.utils.ts:291-315`
-- Modify: `Servers/controllers/riskLinks.ctrl.ts` (the one call site, ~line 393)
+- Modify: `Servers/controllers/riskLinks.ctrl.ts` — **two** call sites: the status-confirmation flow (~line 301) and the POST flow (~line 393)
+- Modify: `Servers/utils/__tests__/riskLink.utils.test.ts` (~lines 108, 123) — **typechecked**, see Step 1a
+- Modify: `Servers/controllers/__tests__/riskLinks.ctrl.test.ts` (~lines 165, 481) — not typechecked; fails at runtime instead
 - Test: `Servers/tests/integration/riskLinks.crossEntity.test.ts`
 
 **Interfaces:**
@@ -575,7 +577,18 @@ export async function getConfirmedHierarchyEdgesQuery(
   );
 ```
 
-Import `ParentEntityType` from `../services/riskLinks/hierarchy` alongside the existing `HierarchyEdge` import. Update the one call site in `Servers/controllers/riskLinks.ctrl.ts` (~line 393) so the build passes:
+Import `ParentEntityType` from `../services/riskLinks/hierarchy` alongside the existing `HierarchyEdge` import.
+
+Now update every caller. `grep -rn "getConfirmedHierarchyEdgesQuery" Servers --include="*.ts"` finds **five**, and they fail in three different ways — which is why a green build does not mean you are done:
+
+| Site | In the `tsc` program? | What breaks if you skip it |
+|------|----------------------|----------------------------|
+| `controllers/riskLinks.ctrl.ts` ~301, status confirmation | yes | `npm run build` fails |
+| `controllers/riskLinks.ctrl.ts` ~393, POST | yes | `npm run build` fails |
+| `utils/__tests__/riskLink.utils.test.ts` ~108, ~123 | **yes** — `include` has `./utils/**/*.ts` | `npm run build` fails, so `globalSetup` aborts and **no integration test runs at all** |
+| `controllers/__tests__/riskLinks.ctrl.test.ts` ~165, ~481 | no — `exclude` lists `controllers/__tests__` | build stays green; `toHaveBeenCalledWith` fails at runtime under `npm run test:unit` |
+
+Both controller sites take the same shape. The POST flow (~line 393):
 
 ```ts
 await getConfirmedHierarchyEdgesQuery(req.organizationId!, sourceRiskId, {
@@ -583,6 +596,24 @@ await getConfirmedHierarchyEdgesQuery(req.organizationId!, sourceRiskId, {
   entityType: "risk",
 }),
 ```
+
+The status-confirmation flow (~line 301) reads its ids off the stored row instead:
+
+```ts
+const violation = validateTwoLevel(
+  { childRiskId: link.source_risk_id, parentRiskId: link.target_risk_id },
+  await getConfirmedHierarchyEdgesQuery(req.organizationId!, link.source_risk_id, {
+    id: link.target_risk_id,
+    entityType: "risk",
+  }),
+);
+```
+
+`"risk"` is correct at both sites *for now* — nothing can create a cross-entity link until Task 5. Task 4 makes `target_risk_id` nullable, which turns the confirm site into a `tsc` error and forces it to read the row's real parent. That is where it gets its permanent shape, not here.
+
+In `Servers/utils/__tests__/riskLink.utils.test.ts`, both calls become `getConfirmedHierarchyEdgesQuery(7, 4, { id: 9, entityType: "risk" })`. Leave their `expect`s alone in this step: the replacements object is still `{ organizationId: 7, childRiskId: 4, parentRiskId: 9 }` and the mapper still emits no `parentEntityType`, so both assertions stay green. Step 3 is what breaks them.
+
+Leave `Servers/controllers/__tests__/riskLinks.ctrl.test.ts` untouched until Step 4 as well — it is invisible to `tsc`, so it cannot block the red.
 
 Do not commit yet — this half is not a deliverable on its own.
 
@@ -711,22 +742,66 @@ export async function getConfirmedHierarchyEdgesQuery(
 }
 ```
 
-- [ ] **Step 4: Confirm the call site**
+- [ ] **Step 4: Update the unit-test assertions Step 3 just broke**
 
-Already updated in Step 1a — `Servers/controllers/riskLinks.ctrl.ts` (~line 393) passes `{ id: targetRiskId, entityType: "risk" }`. Task 5 replaces `targetRiskId` with a resolved target; for now it stays a plain risk. Nothing to change here; just check it before running.
+Step 3 changed both the replacements object and the mapper's output, so four assertions that Step 1a deliberately left green are now wrong. Not one of them is visible to `npm run build`.
+
+In `Servers/utils/__tests__/riskLink.utils.test.ts`:
+
+```ts
+// ~line 108 — three bindings now, and the SQL gained two predicates
+expect(sql).toContain("target_model_risk_id = :parentModelRiskId");
+expect(sql).toContain("target_vendor_risk_id = :parentVendorRiskId");
+expect(options.replacements).toEqual({
+  organizationId: 7,
+  childRiskId: 4,
+  parentRiskId: 9,
+  parentModelRiskId: null,
+  parentVendorRiskId: null,
+});
+
+// ~line 123 — the mapper now labels every edge, same-table ones included
+expect(edges).toEqual([{ childRiskId: 4, parentRiskId: 9, parentEntityType: "risk" }]);
+```
+
+In `Servers/controllers/__tests__/riskLinks.ctrl.test.ts`, both call assertions take the object:
+
+```ts
+// ~line 165
+expect(mockUtils.getConfirmedHierarchyEdgesQuery).toHaveBeenCalledWith(7, 3, {
+  id: 42,
+  entityType: "risk",
+});
+// ~line 481
+expect(mockUtils.getConfirmedHierarchyEdgesQuery).toHaveBeenCalledWith(7, 4, {
+  id: 9,
+  entityType: "risk",
+});
+```
 
 - [ ] **Step 5: Run the tests**
+
+Both harnesses. The unit run is the only thing that sees `controllers/__tests__`, so integration alone would tell you nothing about two of the five call sites:
+
+```bash
+cd Servers && npm run test:unit -- --testPathPatterns=riskLink
+```
 
 ```bash
 cd Servers && npm run test:integration -- --testPathPatterns=riskLinks
 ```
 
-Expected: PASS, all suites — `riskLinks.hierarchy` included, since a plain-risk parent behaves exactly as before.
+Expected: PASS in both — `riskLinks.hierarchy` included, since a plain-risk parent behaves exactly as before.
+
+Use `test:unit`, not `test`. `npm run test` is itself `npm run test:unit`, so `npm run test -- --testPathPatterns=riskLink` hands the flag to *npm* rather than jest and silently runs all 243 suites instead of the handful you meant to check. It still exits 0, which makes it easy to misread as a targeted pass.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add Servers/utils/riskLink.utils.ts Servers/controllers/riskLinks.ctrl.ts Servers/tests/integration/riskLinks.crossEntity.test.ts
+git add Servers/utils/riskLink.utils.ts Servers/controllers/riskLinks.ctrl.ts \
+        Servers/utils/__tests__/riskLink.utils.test.ts \
+        Servers/controllers/__tests__/riskLinks.ctrl.test.ts \
+        Servers/tests/integration/riskLinks.crossEntity.test.ts
 git commit -m "fix(risk-links): scope the hierarchy fetch to the parent's own table"
 ```
 
@@ -958,10 +1033,20 @@ In `Servers/controllers/riskLinks.ctrl.ts`, `toResponse`'s `relatedRisk` object 
 - [ ] **Step 5: Run the tests**
 
 ```bash
-cd Servers && npm run test && npm run test:integration -- --testPathPatterns=riskLinks
+cd Servers && npm run test:unit -- --testPathPatterns=riskLink
 ```
 
-Expected: PASS everywhere. `npm run test` must stay green — `RiskLinkRow.target_risk_id` becoming nullable will surface anywhere a unit test or helper assumed it was not.
+```bash
+cd Servers && npm run test:integration -- --testPathPatterns=riskLinks
+```
+
+Expected: PASS in both. The unit run must stay green — `RiskLinkRow.target_risk_id` becoming nullable surfaces anywhere a helper assumed it was not. Two places in production code do: `toLinkRow` in `Servers/utils/riskLink.utils.ts` (an object literal that now needs the two new columns mapped) and `Servers/services/riskLinks/recompute.ts` (~line 99), where `otherId` becomes `number | null` and is handed to a `Set<number>`. Guard the latter by skipping the row — a cross-entity parent has no project risk on the other end, and recompute owns `related_to` suggestions only:
+
+```ts
+if (existing.target_risk_id == null) continue;
+```
+
+Separate commands, not `&&`: chaining them means a failure in the unit run stops integration from running at all.
 
 - [ ] **Step 6: Commit**
 
