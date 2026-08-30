@@ -15,7 +15,7 @@ Branch: `feature/risk-inheritance`. Work on it directly. Do not push, do not ope
 
 One test in Task 1 is different and the plan flags it: the fourth describe block, `risk_links_single_parent_idx across entity types`, asserts that the *existing* index already rejects a second parent when that parent lives in another table. It fails red before the migration (the column does not exist) and must pass immediately after. **If it still fails after the migration, stop and report it.** That single assertion is the load-bearing claim behind the whole storage shape — it is why the plan leaves `source_risk_id`, its foreign key, its cascade, and C1's one-parent guarantee untouched. Do not rescue it by adding a new constraint.
 
-## Eight traps
+## Nine traps
 
 1. **`npm run test` does not run integration tests.** It is `test:unit` and excludes `tests/integration/`. Integration tests need `npm run test:integration` — they have their own config with a `globalSetup`. `npx jest riskLinks` fails four suites for this reason and it is not a bug in your code.
 2. **Migrations qualify the schema (`verifywise.risk_links`); application and test SQL must not.** `search_path` is already `verifywise`. Getting this backwards fails in a way that looks like a missing table.
@@ -25,6 +25,9 @@ One test in Task 1 is different and the plan flags it: the fourth describe block
 6. **`model_risks.organization_id` is nullable.** Every new query still filters on it with equality, which makes a NULL row invisible. That is deliberate and fail-closed — do not "fix" it with an `OR organization_id IS NULL`.
 7. **Two layers share one id collision, and fixing one is worse than fixing neither.** Task 2 fixes `validateTwoLevel`; Task 3 fixes the query that feeds it. `model_risks.id = 7` and `risks.id = 7` are unrelated rows. Do them both.
 8. **`ON CONFLICT` against a partial index must repeat the index predicate.** Task 5 gives the exact clause. Omitting the `WHERE` produces a 500, not a duplicate-friendly no-op.
+9. **A type error never fails a test here.** `Servers` runs ts-jest with `diagnostics: false`; `Clients` runs vitest over esbuild. Both strip TypeScript without checking it, so a test can reference a property that does not exist and still run. Types are checked only by `cd Servers && npm run build` and `cd Clients && npm run typecheck`.
+
+Each red step names the failure **per test**, not in bulk, because they genuinely differ within a single run. If what you see is not in the step's table, that is a signal — stop and report it rather than adjusting the test to match.
 
 ## Before you report back
 
