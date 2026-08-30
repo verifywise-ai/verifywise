@@ -835,6 +835,7 @@ const IntegratedDashboard: React.FC = () => {
                     ) : (
                       <UseCasesTable
                         data={useCases}
+                        ariaLabel="Recent use cases"
                         onRowClick={(id) =>
                           navigateSearch("/project-view", { projectId: id.toString() })
                         }
@@ -1044,6 +1045,7 @@ const IntegratedDashboard: React.FC = () => {
                     ) : (
                       <UseCasesTable
                         data={useCases}
+                        ariaLabel="Recent use cases"
                         onRowClick={(id) =>
                           navigateSearch("/project-view", { projectId: id.toString() })
                         }

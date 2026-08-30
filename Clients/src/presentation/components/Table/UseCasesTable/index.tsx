@@ -26,6 +26,8 @@ interface UseCasesTableProps {
   data: UseCaseRow[];
   onRowClick?: (id: number) => void;
   formatDate?: (date: string) => string;
+  /** Names the scrollable region once it takes keyboard focus. */
+  ariaLabel?: string;
 }
 
 const defaultFormatDate = (dateString: string): string => {
@@ -59,9 +61,14 @@ const UseCasesTable: React.FC<UseCasesTableProps> = ({
   data,
   onRowClick,
   formatDate = defaultFormatDate,
+  ariaLabel = "Use cases",
 }) => {
   return (
-    <TableContainer>
+    // TableContainer scrolls once the table overflows its card, and a scrollable
+    // region that cannot be focused is unreachable by keyboard. tabIndex makes it
+    // focusable so the arrow keys can scroll it; the role and label say what it is
+    // once focused.
+    <TableContainer tabIndex={0} role="region" aria-label={ariaLabel}>
       <Table size="small">
         <TableHead>
           <TableRow>
