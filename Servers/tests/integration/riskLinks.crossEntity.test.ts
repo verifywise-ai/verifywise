@@ -4,6 +4,7 @@ import { cleanupDatabase } from "./helpers";
 import { sequelize } from "../../database/db";
 import { seedTwoTenantContexts } from "./tenant-isolation/tenantIsolation.harness";
 import { createTestRisk, createTestModelRisk, createTestVendorRisk } from "../factories";
+import { getConfirmedHierarchyEdgesQuery } from "../../utils/riskLink.utils";
 
 afterEach(async () => {
   await cleanupDatabase();
@@ -114,5 +115,52 @@ describe("risk_links_single_parent_idx across entity types", () => {
     ).rejects.toMatchObject({
       original: { code: "23505", constraint: "risk_links_single_parent_idx" },
     });
+  });
+});
+
+describe("getConfirmedHierarchyEdgesQuery with a cross-entity parent", () => {
+  it("ignores the project risk that happens to share the model risk's id", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const child = await createTestRisk(owner.orgId, {});
+    const decoyChild = await createTestRisk(owner.orgId, {});
+    const decoyParent = await createTestRisk(owner.orgId, {});
+
+    // decoyChild is a confirmed child of decoyParent. It is unrelated to
+    // anything we are about to propose.
+    await sequelize.query(
+      `INSERT INTO risk_links (organization_id, source_risk_id, target_risk_id, relation_type, status, source)
+       VALUES (:orgId, :decoyChild, :decoyParent, 'inherits_from', 'confirmed', 'user')`,
+      { replacements: { orgId: owner.orgId, decoyChild, decoyParent } },
+    );
+
+    // Ask about a MODEL risk whose id equals decoyChild's id. Nothing about
+    // decoyChild should come back.
+    const edges = await getConfirmedHierarchyEdgesQuery(owner.orgId, child, {
+      id: decoyChild,
+      entityType: "model_risk",
+    });
+
+    expect(edges).toEqual([]);
+  });
+
+  it("returns the child's existing cross-entity parent, labelled", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const child = await createTestRisk(owner.orgId, {});
+    const vendorRisk = await createTestVendorRisk(owner.orgId, {});
+
+    await sequelize.query(
+      `INSERT INTO risk_links (organization_id, source_risk_id, target_vendor_risk_id, relation_type, status, source)
+       VALUES (:orgId, :child, :vendorRisk, 'inherits_from', 'confirmed', 'user')`,
+      { replacements: { orgId: owner.orgId, child, vendorRisk } },
+    );
+
+    const edges = await getConfirmedHierarchyEdgesQuery(owner.orgId, child, {
+      id: vendorRisk,
+      entityType: "vendor_risk",
+    });
+
+    expect(edges).toEqual([
+      { childRiskId: child, parentRiskId: vendorRisk, parentEntityType: "vendor_risk" },
+    ]);
   });
 });

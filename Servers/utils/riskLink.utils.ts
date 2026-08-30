@@ -9,7 +9,7 @@ import {
   StructuralNeighbourRow,
   RelatedPair,
 } from "../services/riskLinks/types";
-import { HierarchyEdge } from "../services/riskLinks/hierarchy";
+import { HierarchyEdge, ParentEntityType } from "../services/riskLinks/hierarchy";
 import { DismissReason } from "../services/riskLinks/dismissReason";
 
 /**
@@ -32,6 +32,12 @@ const toJsonArray = <T>(value: unknown): T[] => {
   }
   return [];
 };
+
+/** Which parent the caller is proposing, and which table it lives in. */
+export interface HierarchyParent {
+  id: number;
+  entityType: ParentEntityType;
+}
 
 const toLinkRow = (row: any): RiskLinkRow => ({
   id: row.id,
@@ -291,26 +297,52 @@ export async function riskLinkPairExistsQuery(
 export async function getConfirmedHierarchyEdgesQuery(
   organizationId: number,
   childRiskId: number,
-  parentRiskId: number,
+  parent: HierarchyParent,
 ): Promise<HierarchyEdge[]> {
+  // Only one of the three parent bindings is ever non-null. `IN` and `=`
+  // against NULL yield NULL, so the unused branches match nothing rather than
+  // matching everything — the same fail-closed property the tenant filters use.
   const rows = await sequelize.query(
-    `SELECT source_risk_id, target_risk_id
+    `SELECT source_risk_id, target_risk_id, target_model_risk_id, target_vendor_risk_id
        FROM risk_links
       WHERE organization_id = :organizationId
         AND relation_type = 'inherits_from'
         AND status = 'confirmed'
         AND (source_risk_id IN (:childRiskId, :parentRiskId)
-             OR target_risk_id IN (:childRiskId, :parentRiskId))`,
+             OR target_risk_id IN (:childRiskId, :parentRiskId)
+             OR target_model_risk_id = :parentModelRiskId
+             OR target_vendor_risk_id = :parentVendorRiskId)`,
     {
-      replacements: { organizationId, childRiskId, parentRiskId },
+      replacements: {
+        organizationId,
+        childRiskId,
+        parentRiskId: parent.entityType === "risk" ? parent.id : null,
+        parentModelRiskId: parent.entityType === "model_risk" ? parent.id : null,
+        parentVendorRiskId: parent.entityType === "vendor_risk" ? parent.id : null,
+      },
       type: QueryTypes.SELECT,
     },
   );
   // source is the child, target is the parent — see risk_links_canonical, which
   // exempts inherits_from from id reordering precisely so this holds.
-  return (rows as { source_risk_id: number; target_risk_id: number }[]).map((row) => ({
+  return (
+    rows as {
+      source_risk_id: number;
+      target_risk_id: number | null;
+      target_model_risk_id: number | null;
+      target_vendor_risk_id: number | null;
+    }[]
+  ).map((row) => ({
     childRiskId: row.source_risk_id,
-    parentRiskId: row.target_risk_id,
+    parentRiskId: (row.target_model_risk_id ??
+      row.target_vendor_risk_id ??
+      row.target_risk_id) as number,
+    parentEntityType:
+      row.target_model_risk_id != null
+        ? ("model_risk" as const)
+        : row.target_vendor_risk_id != null
+          ? ("vendor_risk" as const)
+          : ("risk" as const),
   }));
 }
 

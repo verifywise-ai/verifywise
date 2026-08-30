@@ -105,14 +105,20 @@ describe("riskLink.utils", () => {
   });
 
   it("loads only confirmed inherits_from edges touching either endpoint", async () => {
-    await getConfirmedHierarchyEdgesQuery(7, 4, 9);
+    await getConfirmedHierarchyEdgesQuery(7, 4, { id: 9, entityType: "risk" });
     const [sql, options] = mockQuery.mock.calls[0];
     expect(sql).toContain("organization_id = :organizationId");
     expect(sql).toContain("relation_type = 'inherits_from'");
     expect(sql).toContain("status = 'confirmed'");
     expect(sql).toContain("source_risk_id IN (:childRiskId, :parentRiskId)");
     expect(sql).toContain("target_risk_id IN (:childRiskId, :parentRiskId)");
-    expect(options.replacements).toEqual({ organizationId: 7, childRiskId: 4, parentRiskId: 9 });
+    expect(options.replacements).toEqual({
+      organizationId: 7,
+      childRiskId: 4,
+      parentRiskId: 9,
+      parentModelRiskId: null,
+      parentVendorRiskId: null,
+    });
     expect(options.type).toBe(QueryTypes.SELECT);
   });
 
@@ -120,7 +126,7 @@ describe("riskLink.utils", () => {
     // Getting this backwards inverts every hierarchy check silently, so it is
     // asserted rather than left to the column names.
     mockQuery.mockResolvedValue([{ source_risk_id: 4, target_risk_id: 9 }]);
-    const edges = await getConfirmedHierarchyEdgesQuery(7, 4, 9);
-    expect(edges).toEqual([{ childRiskId: 4, parentRiskId: 9 }]);
+    const edges = await getConfirmedHierarchyEdgesQuery(7, 4, { id: 9, entityType: "risk" });
+    expect(edges).toEqual([{ childRiskId: 4, parentRiskId: 9, parentEntityType: "risk" }]);
   });
 });

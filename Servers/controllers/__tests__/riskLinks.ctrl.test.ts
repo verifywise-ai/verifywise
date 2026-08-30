@@ -162,7 +162,10 @@ describe("updateRiskLinkStatus", () => {
       req({ params: { id: "100" }, body: { status: "confirmed" } }) as any,
       r as any,
     );
-    expect(mockUtils.getConfirmedHierarchyEdgesQuery).toHaveBeenCalledWith(7, 3, 42);
+    expect(mockUtils.getConfirmedHierarchyEdgesQuery).toHaveBeenCalledWith(7, 3, {
+      id: 42,
+      entityType: "risk",
+    });
     expect(r.status).toHaveBeenCalledWith(409);
     expect(r.json).toHaveBeenCalledWith(
       expect.objectContaining({ data: "This risk already has a parent. Remove it first." }),
@@ -478,7 +481,10 @@ describe("createRiskLink", () => {
     const r = res();
     await createRiskLink(req({ body: body({ relationType: "inherits_from" }) }) as any, r as any);
     // source is the child, target is the parent — {source: 4, target: 9}
-    expect(mockUtils.getConfirmedHierarchyEdgesQuery).toHaveBeenCalledWith(7, 4, 9);
+    expect(mockUtils.getConfirmedHierarchyEdgesQuery).toHaveBeenCalledWith(7, 4, {
+      id: 9,
+      entityType: "risk",
+    });
     expect(r.status).toHaveBeenCalledWith(409);
     expect(r.json).toHaveBeenCalledWith(
       expect.objectContaining({ data: "This risk already has a parent. Remove it first." }),

@@ -301,7 +301,7 @@ export async function updateRiskLinkStatus(req: Request, res: Response): Promise
         await getConfirmedHierarchyEdgesQuery(
           req.organizationId!,
           link.source_risk_id,
-          link.target_risk_id,
+          { id: link.target_risk_id, entityType: "risk" },
         ),
       );
       if (violation) {
@@ -392,7 +392,10 @@ export async function createRiskLink(req: Request, res: Response): Promise<any> 
     if (relationType === "inherits_from") {
       const violation = validateTwoLevel(
         { childRiskId: sourceRiskId, parentRiskId: targetRiskId },
-        await getConfirmedHierarchyEdgesQuery(req.organizationId!, sourceRiskId, targetRiskId),
+        await getConfirmedHierarchyEdgesQuery(req.organizationId!, sourceRiskId, {
+          id: targetRiskId,
+          entityType: "risk",
+        }),
       );
       if (violation) {
         return res.status(409).json(STATUS_CODE[409](HIERARCHY_MESSAGES[violation]));
