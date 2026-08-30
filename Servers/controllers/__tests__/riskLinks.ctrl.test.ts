@@ -84,6 +84,30 @@ describe("getRiskLinks", () => {
     expect(r.status).toHaveBeenCalledWith(400);
   });
 
+  it("echoes a stored dismissal reason", async () => {
+    mockUtils.getRiskLinksForRiskQuery.mockResolvedValue([
+      {
+        id: 1, organization_id: 7, source_risk_id: 3, target_risk_id: 42,
+        relation_type: "related_to" as const, status: "dismissed" as const,
+        source: "derived" as const, score: 5, reasons: [],
+        decided_at: null, last_computed_at: null,
+        dismiss_reason: "not_related" as const, dismiss_note: null,
+        related_id: 3, related_risk_name: "Model drift",
+        related_risk_level: "High risk", related_risk_owner: 9,
+      },
+    ]);
+    const r = res();
+    await getRiskLinks(
+      req({ params: { riskId: "42" }, query: { status: "dismissed" } }) as any,
+      r as any,
+    );
+    expect(r.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: [expect.objectContaining({ dismissReason: "not_related", dismissNote: null })],
+      }),
+    );
+  });
+
   it("normalises an undirected edge to the caller's perspective", async () => {
     mockUtils.getRiskLinksForRiskQuery.mockResolvedValue([
       {
@@ -268,6 +292,113 @@ describe("updateRiskLinkStatus", () => {
       r as any,
     );
     expect(r.status).toHaveBeenCalledWith(400);
+  });
+
+  it("passes a dismissal reason through to the query", async () => {
+    mockUtils.getRiskLinkByIdQuery.mockResolvedValue(suggestedInheritance);
+    const r = res();
+    await updateRiskLinkStatus(
+      req({
+        params: { id: "100" },
+        body: { status: "dismissed", dismissReason: "wrong_direction" },
+      }) as any,
+      r as any,
+    );
+    expect(mockUtils.updateRiskLinkStatusQuery).toHaveBeenCalledWith(
+      100, 7, "dismissed", 5, "wrong_direction", null,
+    );
+    expect(r.status).toHaveBeenCalledWith(200);
+  });
+
+  it("trims and stores the note for `other`", async () => {
+    mockUtils.getRiskLinkByIdQuery.mockResolvedValue(suggested);
+    await updateRiskLinkStatus(
+      req({
+        params: { id: "100" },
+        body: { status: "dismissed", dismissReason: "other", dismissNote: "  see R-14  " },
+      }) as any,
+      res() as any,
+    );
+    expect(mockUtils.updateRiskLinkStatusQuery).toHaveBeenCalledWith(
+      100, 7, "dismissed", 5, "other", "see R-14",
+    );
+  });
+
+  it("400s on a reason offered for the wrong relation type", async () => {
+    mockUtils.getRiskLinkByIdQuery.mockResolvedValue(suggested); // related_to
+    const r = res();
+    await updateRiskLinkStatus(
+      req({
+        params: { id: "100" },
+        body: { status: "dismissed", dismissReason: "wrong_direction" },
+      }) as any,
+      r as any,
+    );
+    expect(r.status).toHaveBeenCalledWith(400);
+    expect(r.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: "That dismissal reason does not apply to this kind of link",
+      }),
+    );
+    expect(mockUtils.updateRiskLinkStatusQuery).not.toHaveBeenCalled();
+  });
+
+  it("400s on a reason sent for a confirmed row, and writes nothing (§3.1)", async () => {
+    // The panel does not offer the form here, but the panel is not a trust
+    // boundary. Letting this through is the corruption C3 exists to avoid.
+    mockUtils.getRiskLinkByIdQuery.mockResolvedValue({ ...suggested, status: "confirmed" as const });
+    const r = res();
+    await updateRiskLinkStatus(
+      req({
+        params: { id: "100" },
+        body: { status: "dismissed", dismissReason: "not_related" },
+      }) as any,
+      r as any,
+    );
+    expect(r.status).toHaveBeenCalledWith(400);
+    expect(r.json).toHaveBeenCalledWith(
+      expect.objectContaining({ data: "A dismissal reason only applies to a suggested link" }),
+    );
+    expect(mockUtils.updateRiskLinkStatusQuery).not.toHaveBeenCalled();
+  });
+
+  it("dismisses a confirmed row with no reason at all", async () => {
+    mockUtils.getRiskLinkByIdQuery.mockResolvedValue({ ...suggested, status: "confirmed" as const });
+    await updateRiskLinkStatus(
+      req({ params: { id: "100" }, body: { status: "dismissed" } }) as any,
+      res() as any,
+    );
+    expect(mockUtils.updateRiskLinkStatusQuery).toHaveBeenCalledWith(100, 7, "dismissed", 5, null, null);
+  });
+
+  it("400s when `other` arrives without a note", async () => {
+    mockUtils.getRiskLinkByIdQuery.mockResolvedValue(suggested);
+    const r = res();
+    await updateRiskLinkStatus(
+      req({ params: { id: "100" }, body: { status: "dismissed", dismissReason: "other" } }) as any,
+      r as any,
+    );
+    expect(r.status).toHaveBeenCalledWith(400);
+    expect(r.json).toHaveBeenCalledWith(
+      expect.objectContaining({ data: "A note is required when the dismissal reason is Other" }),
+    );
+  });
+
+  it("keeps the transition guard ahead of the reason check", async () => {
+    // confirmed -> suggested is already a 400 (R6). It must stay THAT 400,
+    // not a confusing one about dismissal reasons.
+    mockUtils.getRiskLinkByIdQuery.mockResolvedValue({ ...suggested, status: "confirmed" as const });
+    const r = res();
+    await updateRiskLinkStatus(
+      req({
+        params: { id: "100" },
+        body: { status: "suggested", dismissReason: "not_related" },
+      }) as any,
+      r as any,
+    );
+    expect(r.json).toHaveBeenCalledWith(
+      expect.objectContaining({ data: "Cannot change status from confirmed to suggested" }),
+    );
   });
 });
 

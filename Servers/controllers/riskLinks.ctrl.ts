@@ -23,6 +23,10 @@ import {
 } from "../utils/riskLink.utils";
 import { HierarchyViolation, validateTwoLevel } from "../services/riskLinks/hierarchy";
 import {
+  DismissReasonRejection,
+  validateDismissReason,
+} from "../services/riskLinks/dismissReason";
+import {
   canonicalPair,
   RISK_LINK_STATUSES,
   RiskLinkRelationType,
@@ -72,6 +76,11 @@ const toResponse = (link: RiskLinkWithRelated, riskId: number) => ({
       : "undirected",
   decidedAt: link.decided_at,
   lastComputedAt: link.last_computed_at,
+  // Null on every row the default view returns. Rendering it in the dismissed
+  // view is what keeps dismiss_reason from becoming a write-only column, and
+  // makes a stale reason on a confirmed row visible instead of silent.
+  dismissReason: link.dismiss_reason,
+  dismissNote: link.dismiss_note,
   relatedRisk: {
     id: link.related_id,
     name: link.related_risk_name,
@@ -84,6 +93,17 @@ const HIERARCHY_MESSAGES: Record<HierarchyViolation, string> = {
   child_already_has_parent: "This risk already has a parent. Remove it first.",
   parent_is_a_child: "That risk is already a child of another risk, so it cannot be a parent.",
   child_has_children: "This risk has child risks, so it cannot become a child.",
+};
+
+const DISMISS_REASON_MESSAGES: Record<DismissReasonRejection, string> = {
+  note_without_reason: "A note needs a dismissal reason",
+  note_not_text: "The note must be text",
+  not_a_dismissal: "A dismissal reason only applies when dismissing a link",
+  not_a_suggestion: "A dismissal reason only applies to a suggested link",
+  unknown_reason: "Invalid dismissal reason",
+  wrong_relation_type: "That dismissal reason does not apply to this kind of link",
+  note_required: "A note is required when the dismissal reason is Other",
+  note_too_long: "The note must be 500 characters or fewer",
 };
 
 const SINGLE_PARENT_INDEX = "risk_links_single_parent_idx";
@@ -256,6 +276,21 @@ export async function updateRiskLinkStatus(req: Request, res: Response): Promise
         .json(STATUS_CODE[400](`Cannot change status from ${link.status} to ${next}`));
     }
 
+    // Pure, and ahead of the hierarchy round trip. `dismissal.reason` and
+    // `dismissal.note` are both null for every transition that cannot legally
+    // carry a reason, which is what clears the columns on the way out of
+    // `dismissed` without a branch.
+    const dismissal = validateDismissReason(req.body?.dismissReason, req.body?.dismissNote, {
+      nextStatus: next,
+      currentStatus: link.status,
+      relationType: link.relation_type,
+    });
+    if (!dismissal.ok) {
+      return res
+        .status(400)
+        .json(STATUS_CODE[400](DISMISS_REASON_MESSAGES[dismissal.rejection]));
+    }
+
     // Confirming a suggestion, or restoring a dismissed link, reaches the same
     // end state as a fresh POST — so it runs the same rule. Placed after the
     // transition guard: confirmed -> confirmed is already a 400, so this row is
@@ -277,7 +312,14 @@ export async function updateRiskLinkStatus(req: Request, res: Response): Promise
     // The undo back to `suggested` erases the decision so a later recompute may
     // prune the edge normally again.
     const decidedByUserId = next === "suggested" ? null : req.userId!;
-    await updateRiskLinkStatusQuery(id, req.organizationId!, next, decidedByUserId, null, null);
+    await updateRiskLinkStatusQuery(
+      id,
+      req.organizationId!,
+      next,
+      decidedByUserId,
+      dismissal.reason,
+      dismissal.note,
+    );
 
     logSuccess({
       eventType: "Update",
