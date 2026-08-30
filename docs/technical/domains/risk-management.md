@@ -605,6 +605,11 @@ band, and per signal combination, plus how often the direction agent gets the
 arrow backwards. Read its header before the numbers: `suggested` rows are
 undecided, not rejected, and a row's verdict is credited to every signal on
 it, so a weak signal riding along with a strong one inherits its score.
+Dismissing a *suggested* link also captures an optional structured reason
+(`dismiss_reason`, plus a note for `other`), which query 6 breaks down by
+relation type. Dismissing a *confirmed* link records nothing on purpose: that
+is a human un-linking a pair they already accepted, not feedback about a
+suggestion, and mixing the two would skew every rate in the file.
 
 Design: `docs/superpowers/specs/2026-08-11-risk-inheritance-design.md`
 

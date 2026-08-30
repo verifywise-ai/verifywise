@@ -114,6 +114,10 @@ WHERE source = 'agent'
 --
 -- agent_reason is the model's own justification for the edge that got rejected,
 -- which is the text to read when rewriting the prompt.
+-- Query 6's `wrong_direction` now measures this directly. Keep both: this one
+-- finds backwards arrows the user silently fixed by hand without labelling the
+-- dismissal, which is every dismissal made before C3 shipped and every one
+-- since where the reason was skipped.
 
 SELECT
   d.organization_id,
@@ -136,3 +140,28 @@ WHERE d.relation_type = 'inherits_from'
   AND m.decided_at IS NOT NULL
   AND d.decided_at < m.decided_at
 ORDER BY m.decided_at DESC;
+
+
+-- 6. Why people throw suggestions away.
+--
+-- Reasons are OPTIONAL, so read the `(none given)` row FIRST: a breakdown
+-- sitting under 20% coverage is an anecdote, not a measurement. It is in the
+-- same result set for exactly that reason — a reader who sees the breakdown
+-- sees how much of it is silence.
+--
+-- Only a dismissal FROM `suggested` carries a reason. Un-linking a pair
+-- somebody previously confirmed is a content edit, not feedback about the
+-- engine, and deliberately records nothing. `source <> 'user'` is
+-- belt-and-braces: a hand-made link lands `confirmed`, so it can only ever be
+-- dismissed from `confirmed`.
+SELECT
+  l.relation_type,
+  coalesce(l.dismiss_reason, '(none given)')                       AS dismiss_reason,
+  count(*)                                                         AS dismissals,
+  round(100.0 * count(*)
+        / sum(count(*)) OVER (PARTITION BY l.relation_type), 1)    AS pct_of_type
+FROM risk_links l
+WHERE l.status = 'dismissed'
+  AND l.source <> 'user'
+GROUP BY l.relation_type, l.dismiss_reason
+ORDER BY l.relation_type, dismissals DESC;
