@@ -509,6 +509,27 @@ An edge carries a `score`, a structured `reasons` array, a `source`
 `dismissed`). Source and status are orthogonal: a derived suggestion can be
 confirmed, and a user-created link can be dismissed.
 
+### Value-chain inheritance
+
+Value-chain inheritance lets a project risk inherit from a risk owned by a
+different risk domain. The supported legs are `vendor risk → project risk` and
+`model risk → project risk`. A `vendor risk → model risk` leg is not supported:
+`model_inventories` has no `vendor_id`, so there is no persisted relationship on
+which to base that direction. Vendor and model risks are parents only; project
+risks remain the children.
+
+The existing `risk_links` row stores the project child in `source_risk_id`. The
+parent is stored in exactly one of the nullable typed target columns:
+`target_risk_id`, `target_model_risk_id`, or `target_vendor_risk_id`. The child
+column and its one-parent index are intentionally unchanged, so the same
+one-parent guarantee applies across all parent entity types.
+
+Cross-entity links use `inherits_from` only. A manual `POST /api/riskLinks`
+request must provide exactly one of `targetRiskId`, `targetModelRiskId`, or
+`targetVendorRiskId`; these fields are mutually exclusive. Cross-entity links
+are created as confirmed user links and appear in the project risk's Parent risk
+group with a label identifying the model or vendor parent.
+
 **Scoring.** `Servers/services/riskLinks/` holds a `LinkSignalProvider`
 interface and two providers: `field_overlap` (tier 0) and `structural_graph`
 (tier 1). Tier 0 scores shared category 3, shared control mapping 2, shared
