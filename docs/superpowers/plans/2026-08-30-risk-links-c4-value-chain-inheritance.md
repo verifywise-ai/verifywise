@@ -256,7 +256,29 @@ describe("risk_links_single_parent_idx across entity types", () => {
 
 Run: `cd Servers && npm run test:integration -- --testPathPatterns=riskLinks.crossEntity`
 
-Expected: every test fails with `column "target_model_risk_id" of relation "risk_links" does not exist`. If instead you get `relation "model_risks" does not exist`, your test database is behind on migrations generally — run `npm run migrate` against it first.
+Expected: all five red, but **not all for the same reason**. Four of them name a
+column that does not exist yet; the first one never mentions a new column at
+all, so it dies one step earlier, on the `NOT NULL` that is still on
+`target_risk_id`. Check your output against this table — a test that goes red
+for a reason that is not in this table is a signal, not noise:
+
+| Test | Pre-migration error | Why |
+|------|--------------------|-----|
+| `rejects a row with no parent at all` | `23502` not-null violation on `target_risk_id` | Its INSERT lists no target column at all, so the column that still exists and is still `NOT NULL` rejects it before any CHECK could. |
+| `rejects a row with two parents of different kinds` | `42703` undefined column `target_model_risk_id` | |
+| `rejects a related_to link to a vendor risk` | `42703` undefined column `target_vendor_risk_id` | |
+| `rejects the same model risk as parent twice` | `42703` undefined column `target_model_risk_id` | Fails on the **first** `add()`, before the duplicate is ever attempted. |
+| `refuses a confirmed vendor-risk parent…` | `42703` undefined column `target_vendor_risk_id` | Its first INSERT (a plain project-risk parent) succeeds today; the second one is the red. |
+
+That first row is worth understanding rather than working around. Both `23502`
+and `23514` are the database refusing a parentless row — but only `23514` proves
+what the test is for. Pre-migration the row is rejected by an accident of the
+old schema; post-migration `DROP NOT NULL` removes that accident and
+`risk_links_one_target` has to catch it instead. So that single assertion is
+also your proof that `DROP NOT NULL` actually ran. Do not soften it to accept
+either code.
+
+If instead you get `relation "model_risks" does not exist`, your test database is behind on migrations generally — run `npm run migrate` against it first.
 
 - [ ] **Step 4: Write the migration**
 
