@@ -18,16 +18,29 @@
  * index closes the race and this function produces the readable message.
  */
 
-/** In storage, `source_risk_id` is the child and `target_risk_id` is the parent. */
+/** Which table a parent id points at. C4: vendor and model risks are parents only. */
+export type ParentEntityType = "risk" | "model_risk" | "vendor_risk";
+
+/** In storage, `source_risk_id` is the child and the target column is the parent. */
 export interface HierarchyEdge {
   childRiskId: number;
   parentRiskId: number;
+  /**
+   * Which table `parentRiskId` points at. Absent means `risks`, so every C1–C3
+   * caller keeps working untouched. Without it, `model_risks.id = 7` and
+   * `risks.id = 7` compare equal and the validator reports a violation about a
+   * row the user never mentioned.
+   */
+  parentEntityType?: ParentEntityType;
 }
 
 export type HierarchyViolation =
   | "child_already_has_parent"
   | "parent_is_a_child"
   | "child_has_children";
+
+const parentKey = (e: HierarchyEdge): string =>
+  `${e.parentEntityType ?? "risk"}:${e.parentRiskId}`;
 
 /**
  * @param proposed the edge about to become confirmed
@@ -40,20 +53,28 @@ export function validateTwoLevel(
   proposed: HierarchyEdge,
   confirmed: HierarchyEdge[],
 ): HierarchyViolation | null {
-  const { childRiskId, parentRiskId } = proposed;
+  const { childRiskId } = proposed;
+  const proposedParent = parentKey(proposed);
 
   // An edge identical to the proposed one is not a violation. On POST it is a
   // duplicate, and createUserRiskLinkQuery's ON CONFLICT answers that with a
   // truer message ("These risks are already linked"); reporting
   // child_already_has_parent would name the very parent the user just added.
   const others = confirmed.filter(
-    (e) => !(e.childRiskId === childRiskId && e.parentRiskId === parentRiskId),
+    (e) => !(e.childRiskId === childRiskId && parentKey(e) === proposedParent),
   );
 
   // Order is load-bearing: first match wins, so the message is deterministic
   // when more than one rule applies.
   if (others.some((e) => e.childRiskId === childRiskId)) return "child_already_has_parent";
-  if (others.some((e) => e.childRiskId === parentRiskId)) return "parent_is_a_child";
-  if (others.some((e) => e.parentRiskId === childRiskId)) return "child_has_children";
+
+  // A cross-entity parent can never itself be a child (C4 §3.3), and childRiskId
+  // only ever holds a risks(id) — so this check is meaningful only for a plain
+  // risk parent. Guarding it is what stops the id collision.
+  if ((proposed.parentEntityType ?? "risk") === "risk") {
+    if (others.some((e) => e.childRiskId === proposed.parentRiskId)) return "parent_is_a_child";
+  }
+
+  if (others.some((e) => parentKey(e) === `risk:${childRiskId}`)) return "child_has_children";
   return null;
 }

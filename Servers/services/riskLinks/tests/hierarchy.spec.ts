@@ -61,3 +61,55 @@ describe("validateTwoLevel", () => {
     expect(validateTwoLevel(edge(1, 2), [edge(1, 2), edge(2, 9)])).toBe("parent_is_a_child");
   });
 });
+
+describe("cross-entity parents (C4)", () => {
+  it("does not mistake a model risk for the project risk of the same id", () => {
+    // risks(7) is already the child of risks(9). Proposing model_risks(7) as a
+    // parent must NOT report parent_is_a_child: the ids come from different
+    // sequences and refer to unrelated rows.
+    const confirmed = [{ childRiskId: 7, parentRiskId: 9 }];
+
+    expect(
+      validateTwoLevel(
+        { childRiskId: 41, parentRiskId: 7, parentEntityType: "model_risk" },
+        confirmed,
+      ),
+    ).toBeNull();
+  });
+
+  it("still refuses a second parent when one is cross-entity", () => {
+    const confirmed = [
+      { childRiskId: 41, parentRiskId: 3, parentEntityType: "vendor_risk" as const },
+    ];
+
+    expect(
+      validateTwoLevel({ childRiskId: 41, parentRiskId: 9 }, confirmed),
+    ).toBe("child_already_has_parent");
+  });
+
+  it("treats the same cross-entity parent as a duplicate, not a violation", () => {
+    const confirmed = [
+      { childRiskId: 41, parentRiskId: 3, parentEntityType: "vendor_risk" as const },
+    ];
+
+    expect(
+      validateTwoLevel(
+        { childRiskId: 41, parentRiskId: 3, parentEntityType: "vendor_risk" },
+        confirmed,
+      ),
+    ).toBeNull();
+  });
+
+  it("does not confuse a vendor-risk parent with a model-risk parent of the same id", () => {
+    const confirmed = [
+      { childRiskId: 41, parentRiskId: 3, parentEntityType: "vendor_risk" as const },
+    ];
+
+    expect(
+      validateTwoLevel(
+        { childRiskId: 41, parentRiskId: 3, parentEntityType: "model_risk" },
+        confirmed,
+      ),
+    ).toBe("child_already_has_parent");
+  });
+});
