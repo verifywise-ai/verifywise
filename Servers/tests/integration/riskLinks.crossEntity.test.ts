@@ -169,6 +169,40 @@ describe("getConfirmedHierarchyEdgesQuery with a cross-entity parent", () => {
 });
 
 describe("getRiskLinksForRiskQuery with cross-entity parents", () => {
+  it("uses the specified fallback for a blank model-risk name", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const child = await createTestRisk(owner.orgId, {});
+    const modelRisk = await createTestModelRisk(owner.orgId, { risk_name: "" });
+
+    await sequelize.query(
+      `INSERT INTO risk_links (organization_id, source_risk_id, target_model_risk_id, relation_type, status, source)
+       VALUES (:orgId, :child, :modelRisk, 'inherits_from', 'suggested', 'user')`,
+      { replacements: { orgId: owner.orgId, child, modelRisk } },
+    );
+
+    const rows = await getRiskLinksForRiskQuery(owner.orgId, child, ["suggested"]);
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].related_risk_name).toBe("Untitled model risk");
+  });
+
+  it("uses the specified fallback for a blank vendor-risk description", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const child = await createTestRisk(owner.orgId, {});
+    const vendorRisk = await createTestVendorRisk(owner.orgId, { risk_description: "" });
+
+    await sequelize.query(
+      `INSERT INTO risk_links (organization_id, source_risk_id, target_vendor_risk_id, relation_type, status, source)
+       VALUES (:orgId, :child, :vendorRisk, 'inherits_from', 'suggested', 'user')`,
+      { replacements: { orgId: owner.orgId, child, vendorRisk } },
+    );
+
+    const rows = await getRiskLinksForRiskQuery(owner.orgId, child, ["suggested"]);
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].related_risk_name).toBe("Untitled vendor risk");
+  });
+
   it("names a vendor risk from its truncated description", async () => {
     const { owner } = await seedTwoTenantContexts();
     const child = await createTestRisk(owner.orgId, {});

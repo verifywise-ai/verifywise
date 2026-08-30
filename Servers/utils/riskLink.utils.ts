@@ -680,7 +680,11 @@ export async function getRiskLinksForRiskQuery(
             COALESCE(
               related.risk_name,
               NULLIF(mr.risk_name, ''),
-              NULLIF(LEFT(vr.risk_description, 80), '')
+              NULLIF(LEFT(vr.risk_description, 80), ''),
+              CASE
+                WHEN l.target_model_risk_id IS NOT NULL THEN 'Untitled model risk'
+                WHEN l.target_vendor_risk_id IS NOT NULL THEN 'Untitled vendor risk'
+              END
             ) AS related_risk_name,
             COALESCE(
               related.risk_level_autocalculated::text,
