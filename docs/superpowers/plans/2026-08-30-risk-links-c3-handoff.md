@@ -7,11 +7,16 @@ in the VerifyWise repo, on the branch that is already checked out
 first — the plan argues from it, and §3.1 and §3.5 are the two decisions the
 whole feature turns on.
 
-Work task by task, in order. **Each task is TDD and the red step is
-mandatory:** write the test, run it, *see it fail for the reason the plan
-predicts*, then implement, then see it pass, then commit. A test that has
-never been red proves nothing. If a test passes before you implement, stop —
-the test is wrong, not the plan.
+Work task by task, in order. **Tasks 1, 2, 3, 5 and 6 are TDD and the red step
+is mandatory:** write the test, run it, *see it fail for the reason the plan
+predicts*, then implement, then see it pass, then commit. A test that has never
+been red proves nothing. If one of those tests passes before you implement,
+stop — the test is wrong, not the plan.
+
+**Task 4 is the exception and the plan says so at its heading.** It is a
+regression test over behaviour Task 2 already delivered, so it passes on the
+first run by design. Do not manufacture a red step for it by breaking Task 2.
+Task 7 is documentation and SQL; it has a fixture check instead of a red step.
 
 Seven tasks, seven commits.
 

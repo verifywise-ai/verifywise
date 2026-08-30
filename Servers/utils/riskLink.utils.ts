@@ -651,8 +651,7 @@ export async function getRiskLinkByIdQuery(
  * Record a human decision. `decidedByUserId` of null is the explicit undo
  * (dismissed -> suggested): it clears decided_at too, so the edge looks
  * untouched again and a later recompute may prune it normally.
- */
-/**
+ *
  * Both dismissal columns are written on EVERY call, and both parameters are
  * required rather than defaulted. That is the clearing rule (C3 §3.5) made
  * structural: leaving `dismissed` passes nulls, so a stale reason cannot

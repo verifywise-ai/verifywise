@@ -844,6 +844,16 @@ git commit -m "feat(risk-links): accept a dismissal reason on the status endpoin
 
 A clearing bug that only fails on the *second* dismissal is exactly what a single-transition test misses. This is the regression that matters and it is not optional.
 
+> **This is the one task with no red step, and that is correct.** Task 2 makes
+> the UPDATE write both columns unconditionally, so the behaviour under test
+> already exists by the time you get here — deliberately, because the clearing
+> rule is structural rather than a branch someone adds later. That leaves
+> nothing for a failing test to prove. Task 4 is a *regression* test: it pins
+> behaviour that Task 2 delivered, against a real Postgres rather than a mock,
+> so a future edit to `updateRiskLinkStatusQuery` cannot quietly resurrect a
+> stale reason. Write it, watch it pass, commit it. Do not manufacture a red
+> step by breaking Task 2 first.
+
 **Files:**
 - Create: `Servers/tests/integration/riskLinks.dismissReason.test.ts`
 
@@ -968,32 +978,25 @@ describe("dismissal reasons across the undo round-trip", () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [ ] **Step 2: Run the test — it should PASS on the first run**
 
 `globalSetup.js` migrates the integration-test database for you, so Task 2's
-columns are already there — you do **not** run `migrate-db` here. Expect a
-failure about the *assertions*, not about a missing column.
+columns are already there — you do **not** run `migrate-db` here.
 
 Run: `cd Servers && npm run test:integration -- --testPathPatterns=riskLinks.dismissReason`
-Expected: FAIL.
+Expected: PASS, 3 tests. See the note under the task heading: passing
+immediately is the correct outcome here, not a sign the test is wrong.
 
-If instead you get `column "dismiss_reason" does not exist`, that is not this
-task's red step — the migration file did not reach the test database. Confirm
-`20260830120000-risk-links-dismiss-reason.js` is committed (globalSetup reads
-the working tree, so an uncommitted-but-saved file is fine; a missing one is
-not) and re-run before writing any code.
+Two failures mean something real, and they mean different things:
 
-- [ ] **Step 3: Make it pass**
+- `column "dismiss_reason" does not exist` — the migration file did not reach
+  the test database. Confirm `20260830120000-risk-links-dismiss-reason.js` is
+  saved in `Servers/database/migrations/` and re-run.
+- An assertion failure — Task 2's UPDATE is not writing both columns on every
+  call. That is a real bug in Task 2, not in this test. Go back and fix it
+  there.
 
-No production code changes. Task 2 already shipped the columns and the write;
-this task only proves the round-trip against a real database.
-
-- [ ] **Step 4: Run the test to verify it passes**
-
-Run: `cd Servers && npm run test:integration -- --testPathPatterns=riskLinks.dismissReason`
-Expected: PASS, 3 tests.
-
-- [ ] **Step 5: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
 git add Servers/tests/integration/riskLinks.dismissReason.test.ts
