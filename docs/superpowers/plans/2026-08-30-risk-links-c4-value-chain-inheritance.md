@@ -12,7 +12,17 @@
 
 ## Global Constraints
 
-- **No red step in this plan is a type error, and no green step proves types.** `Servers/jest.config.js` builds its ts-jest transform with `diagnostics: false`, and `Clients` runs vitest over esbuild — both strip TypeScript without checking it. A test file may reference a property that does not exist and still run. Types are checked in exactly two places: `cd Servers && npm run build` (which is bare `tsc`) and `cd Clients && npm run typecheck`. If a step here predicts a compile error, that step is wrong — report it.
+- **Where a type error bites, and where it does not — this differs by test location, and getting it wrong is what broke two earlier drafts of this plan.**
+
+  | Test file | Typechecked? | Consequence of a type error |
+  |-----------|--------------|-----------------------------|
+  | `Servers/services/riskLinks/tests/*.spec.ts` (unit) | **No** | Invisible. Outside `tsconfig.json`'s `include`, and nothing imports a test file, so `tsc` never sees it. ts-jest also runs with `diagnostics: false`. The test runs and asserts normally. |
+  | `Servers/tests/integration/*.test.ts` | **Yes** | **Aborts the whole run before a single test executes.** `tsconfig.json` includes `./tests/**/*.ts`, and `tests/integration/globalSetup.js` runs `npm run build` first. |
+  | `Clients/**` (vitest) | **No** | Invisible — esbuild strips types without checking. Only `cd Clients && npm run typecheck` sees them. |
+
+  So: a backend **unit** test or a **frontend** test may reference a property that does not exist yet and still run — that is deliberate, and several red steps here depend on it. A backend **integration** test may not: the type must exist before the test can run at all, which is why Tasks 3 and 4 widen their types in Step 1, *before* the red, with the behaviour left untouched. **Widening a type is not implementing behaviour.**
+
+- **No red step in this plan is a compile error.** A build abort tells you nothing about behaviour, so every red here is a real assertion failure or a real runtime throw. If what you get is a `tsc` error, that step is wrong — stop and report it.
 - **Integration tests reach HTTP through the tenant harness, not a token.** `seedTwoTenantContexts()` returns `{ owner, attacker }`, each carrying a ready supertest agent on an app with auth bypassed: `await owner.request.post("/api/risk-links").send({...})`. There is no bearer token to set, and no second key called `other`.
 - **Error text lands in `res.body.data`, not `res.body.message`.** `STATUS_CODE[400](text)` returns `{ message: "Bad Request", data: text }` — `message` is the generic status phrase on every response.
 
@@ -282,7 +292,7 @@ old schema; post-migration `DROP NOT NULL` removes that accident and
 also your proof that `DROP NOT NULL` actually ran. Do not soften it to accept
 either code.
 
-If instead you get `relation "model_risks" does not exist`, your test database is behind on migrations generally — run `npm run migrate` against it first.
+If instead you get `relation "model_risks" does not exist`, your test database is behind on migrations generally. There is no `npm run migrate` script — you do not need one: `npm run test:integration` runs `tests/integration/globalSetup.js`, which does `npm run build` and `npx sequelize db:migrate` with `NODE_ENV=test` on every run. If the table is still missing after that, the migration itself did not apply — report it rather than migrating by hand.
 
 - [ ] **Step 4: Write the migration**
 
@@ -362,7 +372,7 @@ module.exports = {
 - [ ] **Step 5: Run the migration and the tests**
 
 ```bash
-cd Servers && npm run migrate && npm run test:integration -- --testPathPatterns=riskLinks.crossEntity
+cd Servers && npm run test:integration -- --testPathPatterns=riskLinks.crossEntity
 ```
 
 Expected: PASS. The single-parent test passing is the design's central claim confirmed — if it fails, **stop and report it** rather than adding a constraint.
@@ -380,14 +390,14 @@ git commit -m "feat(risk-links): let a link point at a vendor or model risk"
 
 **Files:**
 - Modify: `Servers/services/riskLinks/hierarchy.ts`
-- Test: `Servers/services/riskLinks/tests/hierarchy.test.ts`
+- Test: `Servers/services/riskLinks/tests/hierarchy.spec.ts`
 
 **Interfaces:**
 - Produces: `export type ParentEntityType = "risk" | "model_risk" | "vendor_risk"`; `HierarchyEdge` gains optional `parentEntityType?: ParentEntityType`. `validateTwoLevel`'s signature is otherwise unchanged.
 
 - [ ] **Step 1: Write the failing test**
 
-Append to `Servers/services/riskLinks/tests/hierarchy.test.ts`:
+Append to `Servers/services/riskLinks/tests/hierarchy.spec.ts`:
 
 ```ts
 describe("cross-entity parents (C4)", () => {
@@ -516,7 +526,7 @@ Expected: PASS, including every pre-existing test — none of them pass `parentE
 - [ ] **Step 5: Commit**
 
 ```bash
-git add Servers/services/riskLinks/hierarchy.ts Servers/services/riskLinks/tests/hierarchy.test.ts
+git add Servers/services/riskLinks/hierarchy.ts Servers/services/riskLinks/tests/hierarchy.spec.ts
 git commit -m "fix(risk-links): stop a model risk id colliding with a project risk id"
 ```
 
@@ -535,7 +545,48 @@ git commit -m "fix(risk-links): stop a model risk id colliding with a project ri
 
 Task 2 fixed the validator. This is the layer below it: the query that feeds the validator has the same id collision in its WHERE clause, so fixing only one leaves the validator receiving edges it should never have been handed.
 
-- [ ] **Step 1: Write the failing test**
+- [ ] **Step 1a: Widen the signature — types only, behaviour untouched**
+
+This test lives in `Servers/tests/integration/`, which **is** typechecked (see Global Constraints). Calling the current `parentRiskId: number` signature with an object would abort the whole integration run at `tsc` before any test ran, and a build abort is a useless red. So make the type accept the object first, and keep the body doing exactly what it does today.
+
+In `Servers/utils/riskLink.utils.ts`, add the interface and change the third parameter — **nothing else**:
+
+```ts
+/** Which parent the caller is proposing, and which table it lives in. */
+export interface HierarchyParent {
+  id: number;
+  entityType: ParentEntityType;
+}
+
+export async function getConfirmedHierarchyEdgesQuery(
+  organizationId: number,
+  childRiskId: number,
+  parent: HierarchyParent,
+): Promise<HierarchyEdge[]> {
+  const rows = await sequelize.query(
+    // ...query text unchanged...
+    {
+      // The only body edit: unwrap the id so the existing SQL still binds a
+      // number. This deliberately keeps the bug — the query still cannot tell
+      // model_risks(7) from risks(7). Step 3 is what fixes that.
+      replacements: { organizationId, childRiskId, parentRiskId: parent.id },
+      type: QueryTypes.SELECT,
+    },
+  );
+```
+
+Import `ParentEntityType` from `../services/riskLinks/hierarchy` alongside the existing `HierarchyEdge` import. Update the one call site in `Servers/controllers/riskLinks.ctrl.ts` (~line 393) so the build passes:
+
+```ts
+await getConfirmedHierarchyEdgesQuery(req.organizationId!, sourceRiskId, {
+  id: targetRiskId,
+  entityType: "risk",
+}),
+```
+
+Do not commit yet — this half is not a deliverable on its own.
+
+- [ ] **Step 1b: Write the failing test**
 
 Append to `Servers/tests/integration/riskLinks.crossEntity.test.ts`:
 
@@ -594,19 +645,18 @@ describe("getConfirmedHierarchyEdgesQuery with a cross-entity parent", () => {
 
 Run: `cd Servers && npm run test:integration -- --testPathPatterns=riskLinks.crossEntity`
 
-Expected: both new tests throw `Error: Invalid value { id: <n>, entityType: '<type>' }` — Sequelize refuses to bind an object where the query interpolates `:parentRiskId`. Again not a type error: the current signature takes `parentRiskId: number`, but nothing checks that at test time, so the mismatch surfaces at the database layer instead of at the compiler.
+Expected: both fail, with concrete assertion diffs against rows the query really returned. Not a type error and not a Sequelize binding error — Step 1a made the call legal, so what you are looking at is the actual defect.
+
+| Test | Received | Expected | Why it is red |
+|------|----------|----------|---------------|
+| `ignores the project risk that happens to share the model risk's id` | `[{ childRiskId: <decoyChild>, parentRiskId: <decoyParent> }]` | `[]` | The WHERE clause is `source_risk_id IN (:childRiskId, :parentRiskId)`. `parentRiskId` binds the *model risk's* id, which collides with `decoyChild`'s id in `risks`, so the decoy's unrelated edge matches. This is the collision the task exists to fix. |
+| `returns the child's existing cross-entity parent, labelled` | `[{ childRiskId: <child>, parentRiskId: null }]` | `[{ childRiskId: <child>, parentRiskId: <vendorRisk>, parentEntityType: "vendor_risk" }]` | The row *is* found — its `source_risk_id` is the child — but the SELECT list reads only `target_risk_id`, which is NULL on a cross-entity row, and there is no `parentEntityType` at all. |
 
 - [ ] **Step 3: Implement the query**
 
-Replace `getConfirmedHierarchyEdgesQuery` in `Servers/utils/riskLink.utils.ts`:
+Replace the body of `getConfirmedHierarchyEdgesQuery` in `Servers/utils/riskLink.utils.ts`. `HierarchyParent` and the signature already exist from Step 1a; this is the part that changes behaviour:
 
 ```ts
-/** Which parent the caller is proposing, and which table it lives in. */
-export interface HierarchyParent {
-  id: number;
-  entityType: ParentEntityType;
-}
-
 export async function getConfirmedHierarchyEdgesQuery(
   organizationId: number,
   childRiskId: number,
@@ -661,18 +711,9 @@ export async function getConfirmedHierarchyEdgesQuery(
 }
 ```
 
-Import `ParentEntityType` alongside the existing `HierarchyEdge` import.
+- [ ] **Step 4: Confirm the call site**
 
-- [ ] **Step 4: Update the one call site**
-
-In `Servers/controllers/riskLinks.ctrl.ts`, the `inherits_from` branch currently passes a bare number. Make it pass the pair (Task 5 replaces `targetRiskId` with a resolved target; for now keep it a plain risk):
-
-```ts
-await getConfirmedHierarchyEdgesQuery(req.organizationId!, sourceRiskId, {
-  id: targetRiskId,
-  entityType: "risk",
-}),
-```
+Already updated in Step 1a — `Servers/controllers/riskLinks.ctrl.ts` (~line 393) passes `{ id: targetRiskId, entityType: "risk" }`. Task 5 replaces `targetRiskId` with a resolved target; for now it stays a plain risk. Nothing to change here; just check it before running.
 
 - [ ] **Step 5: Run the tests**
 
@@ -702,7 +743,32 @@ git commit -m "fix(risk-links): scope the hierarchy fetch to the parent's own ta
 **Interfaces:**
 - Produces: `RiskLinkRow` gains `target_model_risk_id: number | null` and `target_vendor_risk_id: number | null`; `target_risk_id` becomes `number | null`. The query's row shape gains `related_entity_type: ParentEntityType`. `toResponse` emits `relatedRisk.entityType`.
 
-- [ ] **Step 1: Write the failing tests**
+- [ ] **Step 1a: Widen the row type — types only, behaviour untouched**
+
+Same reason as Task 3 Step 1a: this test is in `Servers/tests/integration/`, which is typechecked, so reading `row.related_entity_type` off a type that lacks it would abort the run at `tsc` instead of failing a test. Declare the field first; leave the SQL alone.
+
+In `Servers/utils/riskLink.utils.ts`:
+
+```ts
+export interface RiskLinkWithRelated extends RiskLinkRow {
+  related_id: number;
+  /** Which table the parent lives in. Populated by the query in Step 3. */
+  related_entity_type: ParentEntityType;
+  related_risk_name: string | null;
+  related_risk_level: string | null;
+  related_risk_owner: number | null;
+}
+```
+
+The `.map()` at the end of `getRiskLinksForRiskQuery` does not yet set it, so `tsc` will demand one line. Add exactly this and nothing more — it is deliberately wrong, and Step 3 replaces it:
+
+```ts
+    related_entity_type: row.related_entity_type,
+```
+
+Do not commit yet.
+
+- [ ] **Step 1b: Write the failing tests**
 
 Append to `Servers/tests/integration/riskLinks.crossEntity.test.ts`:
 
@@ -724,12 +790,15 @@ describe("getRiskLinksForRiskQuery with cross-entity parents", () => {
       { replacements: { orgId: owner.orgId, child, vendorRisk } },
     );
 
-    const [row] = await getRiskLinksForRiskQuery(owner.orgId, child, ["confirmed"]);
+    const rows = await getRiskLinksForRiskQuery(owner.orgId, child, ["confirmed"]);
 
-    expect(row.related_entity_type).toBe("vendor_risk");
-    expect(row.related_id).toBe(vendorRisk);
-    expect(row.related_risk_name).toBe("A".repeat(80));
-    expect(row.related_risk_level).toBe("High");
+    // Assert the row arrived before reading fields off it: today it does not,
+    // and `rows[0].related_entity_type` would crash instead of failing.
+    expect(rows).toHaveLength(1);
+    expect(rows[0].related_entity_type).toBe("vendor_risk");
+    expect(rows[0].related_id).toBe(vendorRisk);
+    expect(rows[0].related_risk_name).toBe("A".repeat(80));
+    expect(rows[0].related_risk_level).toBe("High");
   });
 
   it("hides a parent that belongs to another tenant", async () => {
@@ -776,9 +845,10 @@ describe("getRiskLinksForRiskQuery with cross-entity parents", () => {
       { replacements: { orgId: owner.orgId, child, parent } },
     );
 
-    const [row] = await getRiskLinksForRiskQuery(owner.orgId, child, ["confirmed"]);
-    expect(row.related_entity_type).toBe("risk");
-    expect(row.related_id).toBe(parent);
+    const rows = await getRiskLinksForRiskQuery(owner.orgId, child, ["confirmed"]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].related_entity_type).toBe("risk");
+    expect(rows[0].related_id).toBe(parent);
   });
 });
 ```
@@ -787,7 +857,16 @@ describe("getRiskLinksForRiskQuery with cross-entity parents", () => {
 
 Run: `cd Servers && npm run test:integration -- --testPathPatterns=riskLinks.crossEntity`
 
-Expected: the three cross-entity cases fail because the inner `JOIN risks related` drops any row with a NULL `target_risk_id` — you get `[]` where a row was expected, and a TypeScript error on `related_entity_type`. The fourth ("still returns plain project-risk parents") passes already; that is the regression guard, and it is meant to be green throughout.
+Expected: **two** of the four fail — and not the two you would guess. Verified against the current query on a seeded database:
+
+| Test | Received | Expected | Status |
+|------|----------|----------|--------|
+| `names a vendor risk from its truncated description` | `[]` (length 0) | length 1 | **RED.** The inner `JOIN risks related` resolves `related.id = l.target_risk_id`, which is NULL on a cross-entity row, so the row is dropped. |
+| `hides a parent that belongs to another tenant` | `[]` | `[]` | **Green — for the wrong reason.** The inner join drops it because the parent is cross-entity, not because of the tenant guard. It only starts testing what it claims once Step 3 makes the join `LEFT`. |
+| `hides a soft-deleted parent` | `[]` | `[]` | **Green — for the wrong reason.** Same cause. |
+| `still returns plain project-risk parents` | `[{ ..., related_entity_type: undefined }]` | `related_entity_type === "risk"` | **RED.** The row comes back fine, but the SELECT list never emits `related_entity_type` and the `.map()` copies an absent field. |
+
+The two green tests are the exception to the "if a test passes before you implement, stop" rule, and this is the whole of that exception: they are tenant and soft-delete guards whose subject does not exist yet. They must stay green after Step 3 — that is what proves the `LEFT JOIN` did not open a hole. Exactly like the two green tests in Task 2.
 
 Two things that look like they should also be dropping these rows, and do not — check them off rather than chasing them:
 
@@ -874,7 +953,7 @@ In `Servers/controllers/riskLinks.ctrl.ts`, `toResponse`'s `relatedRisk` object 
     },
 ```
 
-`direction` needs no change. It reads `link.source_risk_id === riskId ? "outgoing" : "incoming"`, and on a cross-entity row the subject is the child, i.e. `source_risk_id` — so it computes `"outgoing"`, which is what puts the row under the panel's **Inherits from** heading. Verify that in the test rather than trusting this note; if a cross-entity parent ever renders under "Is inherited by", this is the line to look at.
+`direction` needs no change. It reads `link.source_risk_id === riskId ? "outgoing" : "incoming"`, and on a cross-entity row the subject is the child, i.e. `source_risk_id` — so it computes `"outgoing"`, which is what puts the row under the panel's **Parent risk** heading. (The panel's three headings are "Parent risk", "Child risks" and "Relates to" — an existing test in `LinkedRisksPanel.test.tsx` asserts that "Inherits from" and "Inherited by" appear nowhere, so do not reintroduce that wording.) Verify the placement in the test rather than trusting this note; if a cross-entity parent ever renders under "Child risks", this is the line to look at.
 
 - [ ] **Step 5: Run the tests**
 
@@ -1131,7 +1210,7 @@ Without the `WHERE`, Postgres answers `there is no unique or exclusion constrain
 - [ ] **Step 5: Run everything**
 
 ```bash
-cd Servers && npm run test && npm run test:integration -- --testPathPatterns=riskLinks && npx tsx scripts/checkApiDrift.ts
+cd Servers && npm run test && npm run test:integration -- --testPathPatterns=riskLinks && npm run check:api-drift
 ```
 
 Expected: PASS. API drift reports **no drift** — it compares path, method and `security.bearerAuth` only, and a request-body change touches none of those. That is expected, not a miss.
@@ -1151,7 +1230,7 @@ git commit -m "feat(risk-links): link a project risk to a vendor or model risk p
 - Modify: `Clients/src/domain/interfaces/i.riskLink.ts`
 - Modify: `Clients/src/presentation/components/LinkedRisksPanel/index.tsx:224`
 - Modify: `Clients/src/presentation/components/LinkedRisksPanel/LinkRiskForm.tsx`
-- Test: `Clients/src/presentation/components/LinkedRisksPanel/__tests__/index.test.tsx`
+- Test: `Clients/src/presentation/components/LinkedRisksPanel/__tests__/LinkedRisksPanel.test.tsx`
 
 **Interfaces:**
 - Consumes: the API shape from Tasks 4 and 5.
@@ -1159,40 +1238,57 @@ git commit -m "feat(risk-links): link a project risk to a vendor or model risk p
 
 - [ ] **Step 1: Write the failing test**
 
-Append to the panel's test file, matching its existing render helper:
+Append a new `describe` to `LinkedRisksPanel.test.tsx`. The file's two helpers are `link(overrides)` — which builds a `RiskLink` on top of a `related_to` / `suggested` default — and `queryResult(links)`, which wraps them in the shape `useRiskLinks` returns. There is no render helper: each test sets the mock and calls `render` itself.
+
+Note the warning the file already carries at the top of its first test: fixture names must not collide with the group headings ("Parent risk", "Child risks", "Relates to"), or `getByText` becomes ambiguous. The names below are chosen accordingly.
 
 ```tsx
-it("labels a vendor risk parent", async () => {
-  renderPanel([
-    makeLink({
-      relationType: "inherits_from",
-      direction: "outgoing",
-      status: "confirmed",
-      relatedRisk: {
-        id: 3,
-        entityType: "vendor_risk",
-        name: "Subprocessor has no SOC 2 report",
-        riskLevel: "High",
-        ownerId: null,
-      },
-    }),
-  ]);
+describe("LinkedRisksPanel entity type labels", () => {
+  it("labels a vendor risk parent", () => {
+    mockUseRiskLinks.mockReturnValue(
+      queryResult([
+        link({
+          relationType: "inherits_from",
+          direction: "outgoing",
+          status: "confirmed",
+          relatedRisk: {
+            id: 3,
+            entityType: "vendor_risk",
+            name: "Subprocessor has no SOC 2 report",
+            riskLevel: "High",
+            ownerId: null,
+          },
+        }),
+      ]),
+    );
+    render(<LinkedRisksPanel riskId={42} />);
 
-  expect(await screen.findByText("Vendor risk")).toBeInTheDocument();
-});
+    expect(screen.getByText("Subprocessor has no SOC 2 report")).toBeInTheDocument();
+    expect(screen.getByText("Vendor risk")).toBeInTheDocument();
+  });
 
-it("does not label a plain project risk parent", async () => {
-  renderPanel([
-    makeLink({
-      relationType: "inherits_from",
-      direction: "outgoing",
-      status: "confirmed",
-      relatedRisk: { id: 3, entityType: "risk", name: "Model drift", riskLevel: "High", ownerId: null },
-    }),
-  ]);
+  it("does not label a plain project risk parent", () => {
+    mockUseRiskLinks.mockReturnValue(
+      queryResult([
+        link({
+          relationType: "inherits_from",
+          direction: "outgoing",
+          status: "confirmed",
+          relatedRisk: {
+            id: 3,
+            entityType: "risk",
+            name: "Training data gap",
+            riskLevel: "High",
+            ownerId: null,
+          },
+        }),
+      ]),
+    );
+    render(<LinkedRisksPanel riskId={42} />);
 
-  expect(await screen.findByText("Model drift")).toBeInTheDocument();
-  expect(screen.queryByText("Project risk")).not.toBeInTheDocument();
+    expect(screen.getByText("Training data gap")).toBeInTheDocument();
+    expect(screen.queryByText("Project risk")).not.toBeInTheDocument();
+  });
 });
 ```
 
@@ -1400,7 +1496,7 @@ Add a "Value-chain inheritance" section to `docs/technical/domains/risk-manageme
 - [ ] **Step 2: Full verification**
 
 ```bash
-cd Servers && npm run build && npm run test && npm run test:integration && npx tsx scripts/checkApiDrift.ts
+cd Servers && npm run build && npm run test && npm run test:integration && npm run check:api-drift
 ```
 
 ```bash
