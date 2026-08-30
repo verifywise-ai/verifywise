@@ -7,7 +7,12 @@ import {
   useUpdateRiskLinkStatus,
 } from "../../../application/hooks/useRiskLinks";
 import { useIsAdmin } from "../../../application/hooks/useIsAdmin";
-import { DismissReason, RiskLink, RiskLinkStatus } from "../../../domain/interfaces/i.riskLink";
+import {
+  DismissReason,
+  ENTITY_TYPE_LABELS,
+  RiskLink,
+  RiskLinkStatus,
+} from "../../../domain/interfaces/i.riskLink";
 import LinkRiskForm from "./LinkRiskForm";
 import DismissReasonForm, { DISMISS_REASON_LABELS } from "./DismissReasonForm";
 
@@ -220,6 +225,13 @@ export default function LinkedRisksPanel({ riskId }: LinkedRisksPanelProps) {
                     <Typography variant="body2" sx={{ flexGrow: 1 }}>
                       {link.relatedRisk.name ?? `Risk ${link.relatedRisk.id}`}
                     </Typography>
+                    {ENTITY_TYPE_LABELS[link.relatedRisk.entityType] && (
+                      <Chip
+                        size="small"
+                        variant="outlined"
+                        label={ENTITY_TYPE_LABELS[link.relatedRisk.entityType]}
+                      />
+                    )}
                     {link.relatedRisk.riskLevel && (
                       <Chip size="small" label={link.relatedRisk.riskLevel} />
                     )}

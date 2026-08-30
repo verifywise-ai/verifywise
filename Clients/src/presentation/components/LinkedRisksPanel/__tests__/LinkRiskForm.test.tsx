@@ -43,7 +43,7 @@ const link = (overrides: Partial<RiskLink>): RiskLink => ({
   lastComputedAt: null,
   dismissReason: null,
   dismissNote: null,
-  relatedRisk: { id: 9, name: "Model drift", riskLevel: null, ownerId: null },
+  relatedRisk: { id: 9, entityType: "risk", name: "Model drift", riskLevel: null, ownerId: null },
   ...overrides,
 });
 
@@ -129,7 +129,7 @@ describe("LinkRiskForm candidates", () => {
   });
 
   it("excludes a risk already related, for the Related to choice only", async () => {
-    const existing = [link({ relationType: "related_to", relatedRisk: { id: 9, name: "Model drift", riskLevel: null, ownerId: null } })];
+    const existing = [link({ relationType: "related_to", relatedRisk: { id: 9, entityType: "risk", name: "Model drift", riskLevel: null, ownerId: null } })];
     wrap(<LinkRiskForm riskId={42} existingLinks={existing} onClose={vi.fn()} />);
     await waitFor(() => expect(mockGetAllProjectRisks).toHaveBeenCalled());
 
@@ -154,7 +154,7 @@ describe("LinkRiskForm candidates", () => {
         status: "suggested",
         relationType: "inherits_from",
         direction: "incoming",
-        relatedRisk: { id: 11, name: "Vendor outage", riskLevel: null, ownerId: null },
+        relatedRisk: { id: 11, entityType: "risk", name: "Vendor outage", riskLevel: null, ownerId: null },
       }),
     ];
     wrap(<LinkRiskForm riskId={42} existingLinks={existing} onClose={vi.fn()} />);
@@ -175,7 +175,7 @@ describe("LinkRiskForm candidates", () => {
   it("keeps a risk selectable when its only link is dismissed", async () => {
     const existing = [
       link({ status: "dismissed", relationType: "related_to",
-             relatedRisk: { id: 9, name: "Model drift", riskLevel: null, ownerId: null } }),
+             relatedRisk: { id: 9, entityType: "risk", name: "Model drift", riskLevel: null, ownerId: null } }),
     ];
     // The panel does not pass dismissed links down; simulate that by passing none.
     wrap(<LinkRiskForm riskId={42} existingLinks={[]} onClose={vi.fn()} />);

@@ -3,6 +3,16 @@ export type RiskLinkSource = "derived" | "user" | "agent";
 export type RiskLinkRelationType = "related_to" | "inherits_from";
 export type RiskLinkDirection = "outgoing" | "incoming" | "undirected";
 
+/** Mirrors `ParentEntityType` in Servers/services/riskLinks/hierarchy.ts. */
+export type RiskLinkEntityType = "risk" | "model_risk" | "vendor_risk";
+
+/** Empty for "risk": a project risk in a panel of project risks needs no label. */
+export const ENTITY_TYPE_LABELS: Record<RiskLinkEntityType, string> = {
+  risk: "",
+  model_risk: "Model risk",
+  vendor_risk: "Vendor risk",
+};
+
 /** Mirrors `DismissReason` in Servers/services/riskLinks/dismissReason.ts. */
 export type DismissReason =
   | "not_related"
@@ -35,6 +45,7 @@ export interface RiskLink {
   dismissNote: string | null;
   relatedRisk: {
     id: number;
+    entityType: RiskLinkEntityType;
     name: string | null;
     riskLevel: string | null;
     ownerId: number | null;
@@ -45,8 +56,11 @@ export interface RiskLink {
  * For `inherits_from`, `sourceRiskId` is the risk that inherits. The client never
  * canonicalises — the server does, and only for `related_to`.
  */
-export interface CreateRiskLinkInput {
+export type CreateRiskLinkInput = {
   sourceRiskId: number;
-  targetRiskId: number;
   relationType: RiskLinkRelationType;
-}
+} & (
+  | { targetRiskId: number }
+  | { targetModelRiskId: number }
+  | { targetVendorRiskId: number }
+);

@@ -10,6 +10,8 @@ import {
 } from "@mui/material";
 import AutoCompleteField from "../Inputs/Autocomplete";
 import { getAllProjectRisks } from "../../../application/repository/projectRisk.repository";
+import { getAllVendorRisks } from "../../../application/repository/vendorRisk.repository";
+import { getAllEntities } from "../../../application/repository/entity.repository";
 import { useCreateRiskLink } from "../../../application/hooks/useRiskLinks";
 import { CreateRiskLinkInput, RiskLink } from "../../../domain/interfaces/i.riskLink";
 
@@ -34,8 +36,17 @@ const CHOICES: { value: Choice; label: string }[] = [
   { value: "inherited_by", label: "Is inherited by" },
 ];
 
+type ParentSource = "risk" | "model_risk" | "vendor_risk";
+
+const PARENT_SOURCES: { value: ParentSource; label: string }[] = [
+  { value: "risk", label: "Project risk" },
+  { value: "model_risk", label: "Model risk" },
+  { value: "vendor_risk", label: "Vendor risk" },
+];
+
 export default function LinkRiskForm({ riskId, existingLinks, onClose }: LinkRiskFormProps) {
   const [rawChoice, setRawChoice] = useState<Choice>("related_to");
+  const [rawSource, setRawSource] = useState<ParentSource>("risk");
   const [partner, setPartner] = useState<Candidate | null>(null);
   const [error, setError] = useState<string | null>(null);
   const createLink = useCreateRiskLink(riskId);
@@ -79,6 +90,7 @@ export default function LinkRiskForm({ riskId, existingLinks, onClose }: LinkRis
   // open form when the panel refetches, and deriving removes the stale-state
   // class of bug instead of patching one instance of it.
   const choice = disabled[rawChoice] ? "related_to" : rawChoice;
+  const source: ParentSource = choice === "inherits_from" ? rawSource : "risk";
 
   // Org-wide, not per-project: useProjectRisks calls
   // getAllProjectRisksByProjectId and is scoped to one project.
@@ -90,33 +102,58 @@ export default function LinkRiskForm({ riskId, existingLinks, onClose }: LinkRis
     },
   });
 
+  const { data: crossEntityCandidates = [] } = useQuery<Candidate[]>({
+    queryKey: ["riskLinkParents", source],
+    enabled: source !== "risk",
+    queryFn: async () => {
+      const response: any =
+        source === "vendor_risk"
+          ? await getAllVendorRisks({ filter: "active" })
+          : await getAllEntities({ routeUrl: "/modelRisks" });
+      const rows = (response?.data ?? []) as any[];
+      return rows.map((row) => ({
+        id: row.id,
+        risk_name:
+          source === "vendor_risk"
+            ? (row.risk_description ?? "").slice(0, 80) || "Untitled vendor risk"
+            : row.risk_name || "Untitled model risk",
+      }));
+    },
+  });
+
   /**
    * Deliberately incomplete: computed from the panel's suggested + confirmed
    * list, so a dismissed partner stays selectable and the server's 409 does the
    * explaining. Hiding it would leave the user hunting for a risk they know
    * exists with no explanation.
    */
-  const excludedIds = useMemo(() => {
-    const ids = new Set<number>([riskId]);
+  const excludedKeys = useMemo(() => {
+    const keys = new Set<string>([`risk:${riskId}`]);
     for (const link of existingLinks) {
       const blocks =
         choice === "related_to"
           ? link.relationType === "related_to"
           : link.relationType === "inherits_from";
-      if (blocks) ids.add(link.relatedRisk.id);
+      if (blocks) keys.add(`${link.relatedRisk.entityType}:${link.relatedRisk.id}`);
     }
-    return ids;
+    return keys;
   }, [existingLinks, choice, riskId]);
 
-  const options = useMemo(
-    () => candidates.filter((candidate) => !excludedIds.has(candidate.id)),
-    [candidates, excludedIds],
-  );
+  const options = useMemo(() => {
+    const pool = source === "risk" ? candidates : crossEntityCandidates;
+    return pool.filter((candidate) => !excludedKeys.has(`${source}:${candidate.id}`));
+  }, [candidates, crossEntityCandidates, source, excludedKeys]);
 
   const handleChoice = (next: Choice) => {
     setRawChoice(next);
     setError(null);
     // The chosen partner may be excluded under the new relation type.
+    setPartner(null);
+  };
+
+  const handleSource = (next: ParentSource) => {
+    setRawSource(next);
+    setError(null);
     setPartner(null);
   };
 
@@ -126,7 +163,11 @@ export default function LinkRiskForm({ riskId, existingLinks, onClose }: LinkRis
     const input: CreateRiskLinkInput =
       choice === "inherited_by"
         ? { sourceRiskId: partner.id, targetRiskId: riskId, relationType: "inherits_from" }
-        : { sourceRiskId: riskId, targetRiskId: partner.id, relationType: choice };
+        : source === "model_risk"
+          ? { sourceRiskId: riskId, targetModelRiskId: partner.id, relationType: "inherits_from" }
+          : source === "vendor_risk"
+            ? { sourceRiskId: riskId, targetVendorRiskId: partner.id, relationType: "inherits_from" }
+            : { sourceRiskId: riskId, targetRiskId: partner.id, relationType: choice };
 
     createLink.mutate(input, {
       onSuccess: () => onClose(),
@@ -153,9 +194,26 @@ export default function LinkRiskForm({ riskId, existingLinks, onClose }: LinkRis
         ))}
       </RadioGroup>
 
+      {choice === "inherits_from" && (
+        <RadioGroup
+          row
+          value={source}
+          onChange={(event) => handleSource(event.target.value as ParentSource)}
+        >
+          {PARENT_SOURCES.map(({ value, label }) => (
+            <FormControlLabel
+              key={value}
+              value={value}
+              control={<Radio />}
+              label={label}
+            />
+          ))}
+        </RadioGroup>
+      )}
+
       {restriction && <Alert severity="info">{restriction}</Alert>}
       <AutoCompleteField<Candidate>
-        label="Risk"
+        label={PARENT_SOURCES.find((s) => s.value === source)!.label}
         placeholder="Search risks"
         options={options}
         value={partner}

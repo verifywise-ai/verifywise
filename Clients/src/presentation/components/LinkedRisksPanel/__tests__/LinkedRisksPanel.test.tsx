@@ -44,7 +44,13 @@ const link = (overrides: Partial<RiskLink> = {}): RiskLink => ({
   lastComputedAt: null,
   dismissReason: null,
   dismissNote: null,
-  relatedRisk: { id: 9, name: "Model drift", riskLevel: "High risk", ownerId: 2 },
+  relatedRisk: {
+    id: 9,
+    entityType: "risk",
+    name: "Model drift",
+    riskLevel: "High risk",
+    ownerId: 2,
+  },
   ...overrides,
 });
 
@@ -72,11 +78,11 @@ describe("LinkedRisksPanel grouping", () => {
     mockUseRiskLinks.mockReturnValue(
       queryResult([
         link({ id: 1, relationType: "inherits_from", direction: "outgoing",
-               relatedRisk: { id: 9, name: "Upstream risk", riskLevel: null, ownerId: null } }),
+               relatedRisk: { id: 9, entityType: "risk", name: "Upstream risk", riskLevel: null, ownerId: null } }),
         link({ id: 2, relationType: "inherits_from", direction: "incoming",
-               relatedRisk: { id: 10, name: "Downstream risk", riskLevel: null, ownerId: null } }),
+               relatedRisk: { id: 10, entityType: "risk", name: "Downstream risk", riskLevel: null, ownerId: null } }),
         link({ id: 3, relationType: "related_to", direction: "undirected",
-               relatedRisk: { id: 11, name: "Sibling risk", riskLevel: null, ownerId: null } }),
+               relatedRisk: { id: 11, entityType: "risk", name: "Sibling risk", riskLevel: null, ownerId: null } }),
       ]),
     );
     render(<LinkedRisksPanel riskId={42} />);
@@ -106,7 +112,7 @@ describe("LinkedRisksPanel grouping", () => {
       queryResult([
         link({ id: 1, source: "derived", score: 4.2 }),
         link({ id: 2, source: "user", score: 0,
-               relatedRisk: { id: 10, name: "Hand-linked", riskLevel: null, ownerId: null } }),
+               relatedRisk: { id: 10, entityType: "risk", name: "Hand-linked", riskLevel: null, ownerId: null } }),
       ]),
     );
     render(<LinkedRisksPanel riskId={42} />);
@@ -283,7 +289,7 @@ describe("LinkedRisksPanel link form", () => {
         link({
           status: "dismissed",
           relationType: "related_to",
-          relatedRisk: { id: 9, name: "Model drift", riskLevel: null, ownerId: null },
+          relatedRisk: { id: 9, entityType: "risk", name: "Model drift", riskLevel: null, ownerId: null },
         }),
       ]),
     );
@@ -458,9 +464,9 @@ describe("LinkedRisksPanel dismissal reasons", () => {
     mockUseRiskLinks.mockReturnValue(
       queryResult([
         link({ id: 1, status: "dismissed", dismissReason: "not_related",
-               relatedRisk: { id: 9, name: "Model drift", riskLevel: null, ownerId: null } }),
+               relatedRisk: { id: 9, entityType: "risk", name: "Model drift", riskLevel: null, ownerId: null } }),
         link({ id: 2, status: "dismissed", dismissReason: null,
-               relatedRisk: { id: 10, name: "Data leak", riskLevel: null, ownerId: null } }),
+               relatedRisk: { id: 10, entityType: "risk", name: "Data leak", riskLevel: null, ownerId: null } }),
       ]),
     );
     render(
@@ -473,5 +479,53 @@ describe("LinkedRisksPanel dismissal reasons", () => {
 
     expect(screen.getByText("These aren't actually related")).toBeInTheDocument();
     expect(screen.getAllByText("These aren't actually related")).toHaveLength(1);
+  });
+});
+
+describe("LinkedRisksPanel entity type labels", () => {
+  it("labels a vendor risk parent", () => {
+    mockUseRiskLinks.mockReturnValue(
+      queryResult([
+        link({
+          relationType: "inherits_from",
+          direction: "outgoing",
+          status: "confirmed",
+          relatedRisk: {
+            id: 3,
+            entityType: "vendor_risk",
+            name: "Subprocessor has no SOC 2 report",
+            riskLevel: "High",
+            ownerId: null,
+          },
+        }),
+      ]),
+    );
+    render(<LinkedRisksPanel riskId={42} />);
+
+    expect(screen.getByText("Subprocessor has no SOC 2 report")).toBeInTheDocument();
+    expect(screen.getByText("Vendor risk")).toBeInTheDocument();
+  });
+
+  it("does not label a plain project risk parent", () => {
+    mockUseRiskLinks.mockReturnValue(
+      queryResult([
+        link({
+          relationType: "inherits_from",
+          direction: "outgoing",
+          status: "confirmed",
+          relatedRisk: {
+            id: 3,
+            entityType: "risk",
+            name: "Training data gap",
+            riskLevel: "High",
+            ownerId: null,
+          },
+        }),
+      ]),
+    );
+    render(<LinkedRisksPanel riskId={42} />);
+
+    expect(screen.getByText("Training data gap")).toBeInTheDocument();
+    expect(screen.queryByText("Project risk")).not.toBeInTheDocument();
   });
 });
