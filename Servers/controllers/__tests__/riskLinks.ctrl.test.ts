@@ -118,6 +118,7 @@ describe("updateRiskLinkStatus", () => {
     relation_type: "related_to" as const, status: "suggested" as const,
     source: "derived" as const, score: 5, reasons: [],
     decided_at: null, last_computed_at: null,
+    dismiss_reason: null, dismiss_note: null,
   };
 
   const suggestedInheritance = {
@@ -176,7 +177,7 @@ describe("updateRiskLinkStatus", () => {
       req({ params: { id: "100" }, body: { status: "confirmed" } }) as any,
       r as any,
     );
-    expect(mockUtils.updateRiskLinkStatusQuery).toHaveBeenCalledWith(100, 7, "confirmed", 5);
+    expect(mockUtils.updateRiskLinkStatusQuery).toHaveBeenCalledWith(100, 7, "confirmed", 5, null, null);
     expect(r.status).toHaveBeenCalledWith(200);
   });
 
@@ -225,7 +226,7 @@ describe("updateRiskLinkStatus", () => {
       req({ params: { id: "100" }, body: { status: "confirmed" } }) as any,
       r as any,
     );
-    expect(mockUtils.updateRiskLinkStatusQuery).toHaveBeenCalledWith(100, 7, "confirmed", 5);
+    expect(mockUtils.updateRiskLinkStatusQuery).toHaveBeenCalledWith(100, 7, "confirmed", 5, null, null);
     expect(r.status).toHaveBeenCalledWith(200);
   });
 
@@ -235,7 +236,7 @@ describe("updateRiskLinkStatus", () => {
       req({ params: { id: "100" }, body: { status: "suggested" } }) as any,
       res() as any,
     );
-    expect(mockUtils.updateRiskLinkStatusQuery).toHaveBeenCalledWith(100, 7, "suggested", null);
+    expect(mockUtils.updateRiskLinkStatusQuery).toHaveBeenCalledWith(100, 7, "suggested", null, null, null);
   });
 
   it("rejects confirmed -> suggested with 400 (R6)", async () => {

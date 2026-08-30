@@ -277,7 +277,7 @@ export async function updateRiskLinkStatus(req: Request, res: Response): Promise
     // The undo back to `suggested` erases the decision so a later recompute may
     // prune the edge normally again.
     const decidedByUserId = next === "suggested" ? null : req.userId!;
-    await updateRiskLinkStatusQuery(id, req.organizationId!, next, decidedByUserId);
+    await updateRiskLinkStatusQuery(id, req.organizationId!, next, decidedByUserId, null, null);
 
     logSuccess({
       eventType: "Update",

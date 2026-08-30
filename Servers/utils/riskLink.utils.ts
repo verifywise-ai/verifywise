@@ -10,6 +10,7 @@ import {
   RelatedPair,
 } from "../services/riskLinks/types";
 import { HierarchyEdge } from "../services/riskLinks/hierarchy";
+import { DismissReason } from "../services/riskLinks/dismissReason";
 
 /**
  * pg hands NUMERIC back as a string and can hand JSONB / JSON_AGG output back
@@ -44,6 +45,8 @@ const toLinkRow = (row: any): RiskLinkRow => ({
   reasons: toJsonArray<LinkSignal>(row.reasons),
   decided_at: row.decided_at ?? null,
   last_computed_at: row.last_computed_at ?? null,
+  dismiss_reason: row.dismiss_reason ?? null,
+  dismiss_note: row.dismiss_note ?? null,
 });
 
 /**
@@ -649,21 +652,38 @@ export async function getRiskLinkByIdQuery(
  * (dismissed -> suggested): it clears decided_at too, so the edge looks
  * untouched again and a later recompute may prune it normally.
  */
+/**
+ * Both dismissal columns are written on EVERY call, and both parameters are
+ * required rather than defaulted. That is the clearing rule (C3 §3.5) made
+ * structural: leaving `dismissed` passes nulls, so a stale reason cannot
+ * survive onto a confirmed row, and a future second caller cannot forget.
+ */
 export async function updateRiskLinkStatusQuery(
   id: number,
   organizationId: number,
   status: RiskLinkStatus,
   decidedByUserId: number | null,
+  dismissReason: DismissReason | null,
+  dismissNote: string | null,
 ): Promise<void> {
   await sequelize.query(
     `UPDATE risk_links
      SET status = :status,
          decided_by_user_id = :decidedByUserId,
          decided_at = CASE WHEN :decidedByUserId IS NULL THEN NULL ELSE NOW() END,
+         dismiss_reason = :dismissReason,
+         dismiss_note = :dismissNote,
          updated_at = NOW()
      WHERE id = :id AND organization_id = :organizationId`,
     {
-      replacements: { id, organizationId, status, decidedByUserId },
+      replacements: {
+        id,
+        organizationId,
+        status,
+        decidedByUserId,
+        dismissReason,
+        dismissNote,
+      },
       type: QueryTypes.UPDATE,
     },
   );

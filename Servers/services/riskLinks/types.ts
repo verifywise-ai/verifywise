@@ -1,3 +1,5 @@
+import { DismissReason } from "./dismissReason";
+
 /** One reason a pair of risks scored together. Structured, never prose. */
 export interface LinkSignal {
   /** Stable machine key, e.g. "shared_category". Safe to switch on. */
@@ -71,6 +73,9 @@ export interface RiskLinkRow {
   reasons: LinkSignal[];
   decided_at: string | null;
   last_computed_at: string | null;
+  /** Why a SUGGESTED link was thrown away. Null on every other status — see C3 §3.5. */
+  dismiss_reason: DismissReason | null;
+  dismiss_note: string | null;
 }
 
 /**
