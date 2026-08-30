@@ -1,6 +1,6 @@
 # Risk Management Domain
 
-**Last Updated:** 2026-08-12
+**Last Updated:** 2026-08-30
 
 ## Overview
 
@@ -586,7 +586,9 @@ risk from silently ending up with no links.
 |---|---|---|---|
 | GET | `/api/riskLinks/:riskId` | any authenticated | Links in either direction. Defaults to `suggested` + `confirmed`; `?status=dismissed` for the dismissed list. |
 | PATCH | `/api/riskLinks/:id` | any authenticated | `{ status }`. Allowed: `suggested→confirmed`, `suggested→dismissed`, `confirmed→dismissed`, `dismissed→confirmed`, and `dismissed→suggested` as an explicit undo that clears the decision fields. Anything else is a 400. |
+| POST | `/api/riskLinks` | any authenticated | Create a link by hand. Lands `confirmed`/`user` straight away. |
 | POST | `/api/riskLinks/recompute` | Admin | Backfill the whole org. |
+| POST | `/api/riskLinks/suggest-hierarchy` | Admin | Queue one direction-agent pass per connected component. |
 
 There is no delete endpoint: a hard delete would be recreated by the next
 recompute, so dismissal is the durable way to remove a link.
@@ -596,6 +598,13 @@ recompute, so dismissal is the durable way to remove a link.
 > saved. It computes the same signals in the browser and stores nothing; it is
 > superseded by the endpoints above and is removed when the linked-risks UI
 > lands.
+
+**Are the suggestions any good?** `docs/technical/domains/risk-link-precision.sql`
+is a hand-run psql script that reports confirm rates per signal, per score
+band, and per signal combination, plus how often the direction agent gets the
+arrow backwards. Read its header before the numbers: `suggested` rows are
+undecided, not rejected, and a row's verdict is credited to every signal on
+it, so a weak signal riding along with a strong one inherits its score.
 
 Design: `docs/superpowers/specs/2026-08-11-risk-inheritance-design.md`
 
