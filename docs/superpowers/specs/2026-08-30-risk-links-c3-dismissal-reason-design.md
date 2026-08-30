@@ -220,16 +220,18 @@ handler.
 | # | Rejection code | Condition | Message |
 |---|---|---|---|
 | V1 | `note_without_reason` | `dismissNote` present, `dismissReason` absent | `A note needs a dismissal reason` |
-| V2 | `not_a_dismissal` | reason present, `status !== "dismissed"` | `A dismissal reason only applies when dismissing a link` |
-| V3 | `not_a_suggestion` | reason present, row's **current** status is not `suggested` | `A dismissal reason only applies to a suggested link` |
-| V4 | `unknown_reason` | reason is not one of the seven values (or not a string) | `Invalid dismissal reason` |
-| V5 | `wrong_relation_type` | reason is valid but not offered for this row's `relation_type` | `That dismissal reason does not apply to this kind of link` |
-| V6 | `note_required` | reason is `other` and the note is absent, not a string, or empty after `trim()` | `A note is required when the dismissal reason is Other` |
-| V7 | `note_too_long` | note is longer than 500 characters after `trim()` | `The note must be 500 characters or fewer` |
+| V2 | `note_not_text` | `dismissNote` present and not a string | `The note must be text` |
+| V3 | `not_a_dismissal` | reason present, `status !== "dismissed"` | `A dismissal reason only applies when dismissing a link` |
+| V4 | `not_a_suggestion` | reason present, row's **current** status is not `suggested` | `A dismissal reason only applies to a suggested link` |
+| V5 | `unknown_reason` | reason is not one of the seven values, or not a string | `Invalid dismissal reason` |
+| V6 | `wrong_relation_type` | reason is valid but not offered for this row's `relation_type` | `That dismissal reason does not apply to this kind of link` |
+| V7 | `note_required` | reason is `other` and the note is absent or empty after `trim()` | `A note is required when the dismissal reason is Other` |
+| V8 | `note_too_long` | note is longer than 500 characters after `trim()` | `The note must be 500 characters or fewer` |
 
-The order is part of the contract so the tests are deterministic. V1 runs
-first because a note with no reason is a client bug worth naming precisely
-rather than swallowing.
+The order is part of the contract so the tests are deterministic. V1 and V2
+run first because a malformed note is a client bug worth naming precisely
+rather than swallowing — dropping a note the caller sent, because it arrived
+as a number, would be silent data loss at a trust boundary.
 
 A note alongside a non-`other` reason is **allowed** — extra detail on
 `wrong_parent` is welcome. It is stored trimmed.
@@ -383,6 +385,7 @@ mocks). One case per rejection code V1–V7, plus:
 - `not_related` on a `related_to` row -> accepted
 - `not_related` on an `inherits_from` row -> `wrong_relation_type`
 - `other` with `"   "` -> `note_required` (blank-after-trim, not just empty)
+- a note that is a number -> `note_not_text`, never a silent drop
 - `other` with a note -> accepted, note stored **trimmed**
 - a note exactly 500 characters -> accepted; 501 -> `note_too_long`
 - a 500-character note padded with spaces to 520 -> accepted (cap applies after
