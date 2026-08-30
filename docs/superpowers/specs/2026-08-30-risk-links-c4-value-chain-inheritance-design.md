@@ -205,6 +205,13 @@ CREATE UNIQUE INDEX IF NOT EXISTS risk_links_unique_vendor_target
   WHERE target_vendor_risk_id IS NOT NULL;
 ```
 
+That leaves `risk_links_unique` itself permitting unlimited rows whose
+`target_risk_id` is NULL, across every relation type — which sounds like a hole
+and is not one. The only rows with a NULL `target_risk_id` are cross-entity
+rows, `risk_links_one_target` forces exactly one of the three targets to be set,
+and the two indexes above cover both of the other two columns. A row with all
+three NULL cannot be inserted at all.
+
 ### 4.3 Constraints deliberately left alone
 
 | Constraint | Behaviour on a cross-entity row | Verdict |

@@ -143,18 +143,11 @@ afterEach(async () => {
   await cleanupDatabase();
 });
 
-/**
- * Straight INSERTs, bypassing the controller on purpose: these tests prove the
- * CONSTRAINTS do the work, not the application validation layered above them.
+/*
+ * Every test below writes a straight INSERT, bypassing the controller on
+ * purpose: they prove the CONSTRAINTS do the work, not the application
+ * validation layered above them.
  */
-const insertLink = (cols: Record<string, unknown>) => {
-  const keys = Object.keys(cols);
-  return sequelize.query(
-    `INSERT INTO risk_links (organization_id, source_risk_id, relation_type, status, source, ${keys.join(", ")})
-     VALUES (:orgId, :childId, :relationType, 'confirmed', 'user', ${keys.map((k) => `:${k}`).join(", ")})`,
-    { replacements: { ...cols } as any },
-  );
-};
 
 describe("risk_links_one_target", () => {
   it("rejects a row with no parent at all", async () => {
@@ -258,8 +251,6 @@ describe("risk_links_single_parent_idx across entity types", () => {
   });
 });
 ```
-
-Delete the unused `insertLink` helper before committing if you did not use it — it is scaffolding, not deliverable.
 
 - [ ] **Step 3: Run the tests and watch them fail**
 
@@ -765,6 +756,11 @@ Run: `cd Servers && npm run test:integration -- --testPathPatterns=riskLinks.cro
 
 Expected: the three cross-entity cases fail because the inner `JOIN risks related` drops any row with a NULL `target_risk_id` — you get `[]` where a row was expected, and a TypeScript error on `related_entity_type`. The fourth ("still returns plain project-risk parents") passes already; that is the regression guard, and it is meant to be green throughout.
 
+Two things that look like they should also be dropping these rows, and do not — check them off rather than chasing them:
+
+- `AND (l.source_risk_id = :riskId OR l.target_risk_id = :riskId)` survives untouched. `target_risk_id = :riskId` is NULL on a cross-entity row, but the subject of this query is always the **child**, and the child is always `source_risk_id`, so the first disjunct is TRUE. Leave this line exactly as it is.
+- `AND related.organization_id = :organizationId AND related.is_deleted = false` **would** re-drop every cross-entity row the moment the join goes `LEFT` — a NULL `related` fails both. That is why Step 3 moves them into the `ON` clause. This is the one place where turning an inner join into a `LEFT JOIN` is not sufficient on its own.
+
 - [ ] **Step 3: Rewrite the query**
 
 Replace the query body inside `getRiskLinksForRiskQuery`:
@@ -844,6 +840,8 @@ In `Servers/controllers/riskLinks.ctrl.ts`, `toResponse`'s `relatedRisk` object 
       ownerId: link.related_risk_owner,
     },
 ```
+
+`direction` needs no change. It reads `link.source_risk_id === riskId ? "outgoing" : "incoming"`, and on a cross-entity row the subject is the child, i.e. `source_risk_id` — so it computes `"outgoing"`, which is what puts the row under the panel's **Inherits from** heading. Verify that in the test rather than trusting this note; if a cross-entity parent ever renders under "Is inherited by", this is the line to look at.
 
 - [ ] **Step 5: Run the tests**
 
@@ -1104,6 +1102,8 @@ and use `${targetColumn}` in the INSERT's column list. The `ON CONFLICT` target 
 
 Without the `WHERE`, Postgres answers `there is no unique or exclusion constraint matching the ON CONFLICT specification` — a 500, not a duplicate-friendly no-op. Both `targetColumn` and `conflictTarget` come from the closed `ParentEntityType` union, never from request data.
 
+**Leave `createAgentHierarchyLinkQuery` alone.** It carries the same `ON CONFLICT (source_risk_id, target_risk_id, relation_type)` clause, and that stays correct: C4 is manual-only (spec §3.1), so the agent path only ever writes `target_risk_id`, and the plain `risk_links_unique` constraint still covers every row it produces. Widening it would be dead code for a suggester that does not exist.
+
 - [ ] **Step 5: Run everything**
 
 ```bash
@@ -1229,7 +1229,122 @@ In `LinkedRisksPanel/index.tsx`, beside the existing level chip at line 224:
 
 - [ ] **Step 5: Add the source selector to `LinkRiskForm`**
 
-The form currently picks a project risk. Add a three-way selector — `Project risk` / `Model risk` / `Vendor risk` — that swaps which list is fetched and which target field the submit sends. Vendor risks have a hook — `useVendorRisks` in `Clients/src/application/hooks/useVendorRisks.tsx`. **Model risks do not.** The only client fetch of them is `getAllEntities({ routeUrl: "/modelRisks" })`, at `Clients/src/application/hooks/useDashboardMetrics.ts:712`. Use that same call rather than inventing a repository module; a `useModelRisks` hook is worth adding only if a second caller appears. Disable the two cross-entity options when the relation type is `related_to`, with the reason in a tooltip: cross-entity links are inheritance only.
+The selector renders **only** under `inherits_from`. That is not a shortcut: a vendor or model risk can only ever be a parent (spec §3.3) and a cross-entity link can only ever be `inherits_from` (§3.4), so under the other two choices every cross-entity option would be disabled. Rendering nothing beats rendering two dead radios with a tooltip apologising for them.
+
+Add the imports:
+
+```tsx
+import { getAllVendorRisks } from "../../../application/repository/vendorRisk.repository";
+import { getAllEntities } from "../../../application/repository/entity.repository";
+```
+
+Add the source type above the component, next to `CHOICES`:
+
+```tsx
+type ParentSource = "risk" | "model_risk" | "vendor_risk";
+
+const PARENT_SOURCES: { value: ParentSource; label: string }[] = [
+  { value: "risk", label: "Project risk" },
+  { value: "model_risk", label: "Model risk" },
+  { value: "vendor_risk", label: "Vendor risk" },
+];
+```
+
+Add the state next to `rawChoice`, and derive `source` the same way `choice` is derived — for the same reason, so a relation-type change cannot leave a stale cross-entity source behind:
+
+```tsx
+  const [rawSource, setRawSource] = useState<ParentSource>("risk");
+  const source: ParentSource = choice === "inherits_from" ? rawSource : "risk";
+```
+
+Fetch the cross-entity candidates. Both branches project down to the same `Candidate` shape the autocomplete already renders, and the vendor-risk truncation matches the server's `LEFT(risk_description, 80)` from spec §5.2 — the same string, so the option the user picks reads identically to the chip they get back:
+
+```tsx
+  const { data: crossEntityCandidates = [] } = useQuery<Candidate[]>({
+    queryKey: ["riskLinkParents", source],
+    enabled: source !== "risk",
+    queryFn: async () => {
+      const response: any =
+        source === "vendor_risk"
+          ? await getAllVendorRisks({ filter: "active" })
+          : await getAllEntities({ routeUrl: "/modelRisks" });
+      const rows = (response?.data ?? []) as any[];
+      return rows.map((row) => ({
+        id: row.id,
+        risk_name:
+          source === "vendor_risk"
+            ? (row.risk_description ?? "").slice(0, 80) || "Untitled vendor risk"
+            : row.risk_name || "Untitled model risk",
+      }));
+    },
+  });
+```
+
+`excludedIds` must become key-based. A `model_risks` row and a `risks` row share id space — this is the same collision the backend hits in Tasks 2 and 3, and here it would silently hide an unrelated model risk because a project risk with that id is already linked:
+
+```tsx
+  const excludedKeys = useMemo(() => {
+    const keys = new Set<string>([`risk:${riskId}`]);
+    for (const link of existingLinks) {
+      const blocks =
+        choice === "related_to"
+          ? link.relationType === "related_to"
+          : link.relationType === "inherits_from";
+      if (blocks) keys.add(`${link.relatedRisk.entityType}:${link.relatedRisk.id}`);
+    }
+    return keys;
+  }, [existingLinks, choice, riskId]);
+
+  const options = useMemo(() => {
+    const pool = source === "risk" ? candidates : crossEntityCandidates;
+    return pool.filter((candidate) => !excludedKeys.has(`${source}:${candidate.id}`));
+  }, [candidates, crossEntityCandidates, source, excludedKeys]);
+```
+
+Reset the partner when the source changes, exactly as `handleChoice` already does:
+
+```tsx
+  const handleSource = (next: ParentSource) => {
+    setRawSource(next);
+    setError(null);
+    setPartner(null);
+  };
+```
+
+Send the right target field:
+
+```tsx
+    const input: CreateRiskLinkInput =
+      choice === "inherited_by"
+        ? { sourceRiskId: partner.id, targetRiskId: riskId, relationType: "inherits_from" }
+        : source === "model_risk"
+          ? { sourceRiskId: riskId, targetModelRiskId: partner.id, relationType: "inherits_from" }
+          : source === "vendor_risk"
+            ? { sourceRiskId: riskId, targetVendorRiskId: partner.id, relationType: "inherits_from" }
+            : { sourceRiskId: riskId, targetRiskId: partner.id, relationType: choice };
+```
+
+Render the selector directly under the existing `RadioGroup`, and label the autocomplete for what it is now listing:
+
+```tsx
+      {choice === "inherits_from" && (
+        <RadioGroup
+          row
+          value={source}
+          onChange={(event) => handleSource(event.target.value as ParentSource)}
+        >
+          {PARENT_SOURCES.map(({ value, label }) => (
+            <FormControlLabel key={value} value={value} control={<Radio />} label={label} />
+          ))}
+        </RadioGroup>
+      )}
+```
+
+and change the `AutoCompleteField` label from the hard-coded `"Risk"`:
+
+```tsx
+        label={PARENT_SOURCES.find((s) => s.value === source)!.label}
+```
 
 - [ ] **Step 6: Run the frontend checks**
 
