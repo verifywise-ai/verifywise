@@ -451,8 +451,11 @@ module.exports = {
 
 - [ ] **Step 2: Run the migration**
 
+This targets your **development** database — the one `Servers/.env` points at.
+Do not run it by hand against the integration-test database: `Servers/tests/integration/globalSetup.js` runs migrations itself before the suite, so Task 4 needs no manual migration step.
+
 Run: `cd Servers && npm run migrate-db`
-Then verify: `psql -d verifywise -c "\d verifywise.risk_links"` shows both columns as `character varying(20)` and `character varying(500)`, both nullable.
+Then verify (development database again): `psql -d verifywise -c "\d verifywise.risk_links"` shows both columns as `character varying(20)` and `character varying(500)`, both nullable.
 
 - [ ] **Step 3: Write the failing test**
 
@@ -937,19 +940,29 @@ describe("dismissal reasons across the undo round-trip", () => {
     });
   });
 
-  it("never writes a reason across an organization boundary", async () => {
+  it("never overwrites another organization's dismissal reason", async () => {
     const { owner, attacker } = await seedTwoTenantContexts();
     const a = await createTestRisk(owner.orgId, {});
     const b = await createTestRisk(owner.orgId, {});
     const id = await seedSuggestion(owner.orgId, a, b);
 
     await updateRiskLinkStatusQuery(
-      id, attacker.orgId, "dismissed", attacker.userId, "not_related", null,
+      id, owner.orgId, "dismissed", owner.userId, "not_related", null,
+    );
+
+    // Written to be discriminating on purpose. Asserting against a *pristine*
+    // suggested row would pass even if the organization_id clause were dropped,
+    // because `attacker.userId` might not satisfy the decided_by_user_id foreign
+    // key and the UPDATE would fail for the wrong reason. Here the attacker's
+    // user is real and the transition is legal, so the only thing standing
+    // between this call and a successful overwrite is the org guard.
+    await updateRiskLinkStatusQuery(
+      id, attacker.orgId, "confirmed", attacker.userId, null, null,
     );
 
     expect(await readDismissal(id)).toMatchObject({
-      status: "suggested",
-      dismiss_reason: null,
+      status: "dismissed",
+      dismiss_reason: "not_related",
     });
   });
 });
@@ -957,18 +970,23 @@ describe("dismissal reasons across the undo round-trip", () => {
 
 - [ ] **Step 2: Run the test to verify it fails**
 
-If Task 2's migration has not been applied to the test database, this fails on
-`column "dismiss_reason" does not exist` — which is itself the red step for the
-migration. Run it and see which failure you get.
+`globalSetup.js` migrates the integration-test database for you, so Task 2's
+columns are already there — you do **not** run `migrate-db` here. Expect a
+failure about the *assertions*, not about a missing column.
 
 Run: `cd Servers && npm run test:integration -- --testPathPatterns=riskLinks.dismissReason`
 Expected: FAIL.
 
+If instead you get `column "dismiss_reason" does not exist`, that is not this
+task's red step — the migration file did not reach the test database. Confirm
+`20260830120000-risk-links-dismiss-reason.js` is committed (globalSetup reads
+the working tree, so an uncommitted-but-saved file is fine; a missing one is
+not) and re-run before writing any code.
+
 - [ ] **Step 3: Make it pass**
 
-No production code changes. The integration global setup runs migrations; if the
-column is missing, confirm `20260830120000-risk-links-dismiss-reason.js` is
-committed and re-run.
+No production code changes. Task 2 already shipped the columns and the write;
+this task only proves the round-trip against a real database.
 
 - [ ] **Step 4: Run the test to verify it passes**
 
@@ -1160,9 +1178,17 @@ describe("LinkedRisksPanel dismissal reasons", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Dismiss" }));
 
+    // The exact set, not just a sample. This file is the only thing standing
+    // between a frontend typo and a radio button the server answers with 400 —
+    // the two REASONS_BY_RELATION maps live in different packages and cannot
+    // import each other, so a count plus the absent hierarchy labels is the
+    // cheapest available drift guard.
+    expect(screen.getAllByRole("radio")).toHaveLength(4);
     expect(screen.getByLabelText("These aren't actually related")).toBeInTheDocument();
     expect(screen.getByLabelText("Related, but not worth a link")).toBeInTheDocument();
     expect(screen.getByLabelText("Another link already covers this")).toBeInTheDocument();
+    expect(screen.getByLabelText("Other")).toBeInTheDocument();
+    expect(screen.queryByLabelText("The direction is backwards")).not.toBeInTheDocument();
     // Opening the form decides nothing.
     expect(mockMutateStatus).not.toHaveBeenCalled();
   });
@@ -1181,7 +1207,11 @@ describe("LinkedRisksPanel dismissal reasons", () => {
 
     await userEvent.click(screen.getByRole("button", { name: "Dismiss" }));
 
+    expect(screen.getAllByRole("radio")).toHaveLength(4);
     expect(screen.getByLabelText("The direction is backwards")).toBeInTheDocument();
+    expect(screen.getByLabelText("Right that it's a child, wrong parent")).toBeInTheDocument();
+    expect(screen.getByLabelText("Related, but not parent and child")).toBeInTheDocument();
+    expect(screen.getByLabelText("Other")).toBeInTheDocument();
     expect(screen.queryByLabelText("These aren't actually related")).not.toBeInTheDocument();
   });
 
@@ -1618,10 +1648,57 @@ suggestion, and mixing the two would skew every rate in the file.
 - [ ] **Step 4: Run the file against a database**
 
 Run: `psql -d verifywise -f docs/technical/domains/risk-link-precision.sql`
-Expected: six result sets, no errors. Zero rows is fine on an empty instance —
-this step proves the SQL parses and the new columns resolve.
+Expected: six result sets, no errors. Zero rows is fine on an empty instance.
 
-- [ ] **Step 5: Commit**
+- [ ] **Step 5: Prove query 6 actually computes the right percentages**
+
+Step 4 only proves the SQL parses. Query 6 is the one with real logic — a window
+function partitioned inside a `GROUP BY` — and on an empty instance a wrong
+`PARTITION BY` returns zero rows just as happily as a right one. Run it against
+a fixture instead. A `TEMP` table named `risk_links` shadows the real one for
+the duration of the transaction, so this touches no data:
+
+```sql
+BEGIN;
+CREATE TEMP TABLE risk_links (
+  relation_type  text,
+  status         text,
+  source         text,
+  dismiss_reason text
+) ON COMMIT DROP;
+
+INSERT INTO risk_links (relation_type, status, source, dismiss_reason) VALUES
+  ('related_to',    'dismissed', 'derived', 'not_related'),
+  ('related_to',    'dismissed', 'derived', 'not_related'),
+  ('related_to',    'dismissed', 'derived', 'too_weak'),
+  ('related_to',    'dismissed', 'derived', NULL),
+  ('related_to',    'confirmed', 'derived', NULL),          -- not a dismissal
+  ('related_to',    'dismissed', 'user',    'not_related'), -- hand-made, excluded
+  ('inherits_from', 'dismissed', 'agent',   'wrong_direction'),
+  ('inherits_from', 'dismissed', 'agent',   NULL);
+
+-- paste query 6 here, verbatim
+COMMIT;
+```
+
+Expected, exactly:
+
+```
+ relation_type | dismiss_reason  | dismissals | pct_of_type
+---------------+-----------------+------------+-------------
+ inherits_from | wrong_direction |          1 |        50.0
+ inherits_from | (none given)    |          1 |        50.0
+ related_to    | not_related     |          2 |        50.0
+ related_to    | too_weak        |          1 |        25.0
+ related_to    | (none given)    |          1 |        25.0
+```
+
+Three things this pins, each of which a plausible mistake breaks: `pct_of_type`
+sums to 100 *within* each relation type (a missing `PARTITION BY` gives 20/20/40/20/20
+across the whole result), `(none given)` appears as its own bucket rather than
+vanishing, and the `confirmed` row and the `source = 'user'` row are both absent.
+
+- [ ] **Step 6: Commit**
 
 ```bash
 git add docs/technical/domains/risk-link-precision.sql docs/technical/domains/risk-management.md

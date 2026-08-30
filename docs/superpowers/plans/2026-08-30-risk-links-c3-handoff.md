@@ -51,7 +51,7 @@ back.
   controllers.
 - **Commit format:** `type(scope): description`.
 
-## Six traps the plan flags, worth repeating
+## Eight traps the plan flags, worth repeating
 
 1. **Two test fixtures must gain the new fields or nothing typechecks.** The
    `suggested` object in `Servers/controllers/__tests__/riskLinks.ctrl.test.ts`
@@ -78,6 +78,15 @@ back.
    hidden while that form is open: two live buttons labelled `Dismiss` for one
    link is ambiguous on screen, and `getByRole("button", { name: "Dismiss" })`
    matches both and throws.
+7. **Two different databases.** `npm run migrate-db` in Task 2 targets your
+   development database. Task 4 needs no manual migration —
+   `Servers/tests/integration/globalSetup.js` migrates the test database itself.
+   If Task 4 fails on `column "dismiss_reason" does not exist`, that is not its
+   red step; the migration file did not reach the test database.
+8. **Query 6 must be run against the fixture, not just parsed.** On an empty
+   instance a wrong `PARTITION BY` returns zero rows exactly like a right one.
+   Task 7 Step 5 gives a `TEMP`-table fixture and the exact expected output —
+   percentages summing to 100 within each relation type. Do not skip it.
 
 ## Boundaries
 
@@ -96,6 +105,7 @@ local; the user decides what happens to it.
 - `cd Servers && npm run check:api-drift` — unchanged from before the branch.
 - `psql -d verifywise -f docs/technical/domains/risk-link-precision.sql` runs
   six result sets with no errors.
+- Query 6 reproduces Task 7 Step 5's expected output against the fixture.
 
 Report what you did per task, and anything in the plan that turned out to be
 wrong.
