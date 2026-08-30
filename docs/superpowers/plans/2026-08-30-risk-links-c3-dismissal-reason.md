@@ -31,6 +31,7 @@
 | `updateRiskLinkStatusQuery` takes the two new arguments as **required**, not defaulted | There is exactly one production caller. A required parameter is what stops a future second caller from silently skipping the clear. The cost is three existing test assertions gaining `, null, null` — Task 2 does that. |
 | Validation runs **after** the transition guard and **before** the hierarchy check | After the guard so `confirmed -> confirmed` stays the 400 it already is instead of a confusing reason error; before the hierarchy check because it is pure and the hierarchy check is a database round trip. |
 | The panel extracts a shared `onMutationError` | Three call sites would otherwise repeat the same six lines. Net smaller diff. |
+| A row's action buttons are hidden while its reason form is open | Otherwise two buttons labelled `Dismiss` are live for one link at once — ambiguous on screen, and `getByRole("button", { name: "Dismiss" })` matches both and throws. The form owns the decision until submitted or cancelled. |
 | The integration test drives `updateRiskLinkStatusQuery` directly, not HTTP | The rule under test is "the UPDATE always writes both columns". The controller path is already covered by Task 3's unit tests, and the direct call makes the round-trip assertion three lines instead of thirty. |
 
 ## File Structure
@@ -1508,16 +1509,23 @@ In the row renderer, the row must be able to carry a form beneath it, so the
                     {link.source === "derived" && (
                       <Typography variant="caption">{link.score}</Typography>
                     )}
-                    {actionsFor(link).map(({ label, next }) => (
-                      <Button
-                        key={label}
-                        size="small"
-                        disabled={updateStatus.isPending}
-                        onClick={() => handleAction(link, next)}
-                      >
-                        {label}
-                      </Button>
-                    ))}
+                    {/*
+                      Hidden while this row's reason form is open. Two live
+                      "Dismiss" buttons for one link is ambiguous on screen and
+                      ambiguous to a test — the form owns the decision until
+                      it is submitted or cancelled.
+                    */}
+                    {dismissing?.id !== link.id &&
+                      actionsFor(link).map(({ label, next }) => (
+                        <Button
+                          key={label}
+                          size="small"
+                          disabled={updateStatus.isPending}
+                          onClick={() => handleAction(link, next)}
+                        >
+                          {label}
+                        </Button>
+                      ))}
                   </Stack>
 
                   {dismissing?.id === link.id && (
