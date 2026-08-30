@@ -18,6 +18,7 @@ import {
   getRelatedPairsQuery,
   getRiskLinkByIdQuery,
   getRiskLinksForRiskQuery,
+  HierarchyParent,
   RiskLinkWithRelated,
   updateRiskLinkStatusQuery,
 } from "../utils/riskLink.utils";
@@ -57,6 +58,23 @@ const RELATION_TYPES: RiskLinkRelationType[] = ["related_to", "inherits_from"];
 const isRelationType = (value: unknown): value is RiskLinkRelationType =>
   typeof value === "string" && (RELATION_TYPES as string[]).includes(value);
 
+const hierarchyParentFromLink = (link: {
+  target_risk_id: number | null;
+  target_model_risk_id: number | null;
+  target_vendor_risk_id: number | null;
+}): HierarchyParent => {
+  if (link.target_model_risk_id != null) {
+    return { id: link.target_model_risk_id, entityType: "model_risk" };
+  }
+  if (link.target_vendor_risk_id != null) {
+    return { id: link.target_vendor_risk_id, entityType: "vendor_risk" };
+  }
+  if (link.target_risk_id != null) {
+    return { id: link.target_risk_id, entityType: "risk" };
+  }
+  throw new Error("Risk link has no parent target");
+};
+
 /**
  * Rewrite a stored edge from the caller's point of view. The store is canonical
  * (smaller id first); the caller only cares which risk is the *other* one.
@@ -83,6 +101,7 @@ const toResponse = (link: RiskLinkWithRelated, riskId: number) => ({
   dismissNote: link.dismiss_note,
   relatedRisk: {
     id: link.related_id,
+    entityType: link.related_entity_type,
     name: link.related_risk_name,
     riskLevel: link.related_risk_level,
     ownerId: link.related_risk_owner,
@@ -296,12 +315,17 @@ export async function updateRiskLinkStatus(req: Request, res: Response): Promise
     // transition guard: confirmed -> confirmed is already a 400, so this row is
     // never itself in the confirmed set it is checked against.
     if (next === "confirmed" && link.relation_type === "inherits_from") {
+      const parent = hierarchyParentFromLink(link);
       const violation = validateTwoLevel(
-        { childRiskId: link.source_risk_id, parentRiskId: link.target_risk_id },
+        {
+          childRiskId: link.source_risk_id,
+          parentRiskId: parent.id,
+          parentEntityType: parent.entityType,
+        },
         await getConfirmedHierarchyEdgesQuery(
           req.organizationId!,
           link.source_risk_id,
-          { id: link.target_risk_id, entityType: "risk" },
+          parent,
         ),
       );
       if (violation) {

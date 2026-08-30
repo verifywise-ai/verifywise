@@ -4,7 +4,10 @@ import { cleanupDatabase } from "./helpers";
 import { sequelize } from "../../database/db";
 import { seedTwoTenantContexts } from "./tenant-isolation/tenantIsolation.harness";
 import { createTestRisk, createTestModelRisk, createTestVendorRisk } from "../factories";
-import { getConfirmedHierarchyEdgesQuery } from "../../utils/riskLink.utils";
+import {
+  getConfirmedHierarchyEdgesQuery,
+  getRiskLinksForRiskQuery,
+} from "../../utils/riskLink.utils";
 
 afterEach(async () => {
   await cleanupDatabase();
@@ -162,5 +165,82 @@ describe("getConfirmedHierarchyEdgesQuery with a cross-entity parent", () => {
     expect(edges).toEqual([
       { childRiskId: child, parentRiskId: vendorRisk, parentEntityType: "vendor_risk" },
     ]);
+  });
+});
+
+describe("getRiskLinksForRiskQuery with cross-entity parents", () => {
+  it("names a vendor risk from its truncated description", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const child = await createTestRisk(owner.orgId, {});
+    const vendorRisk = await createTestVendorRisk(owner.orgId, {
+      risk_description: "A".repeat(120),
+      risk_level: "High",
+    });
+
+    await sequelize.query(
+      `INSERT INTO risk_links (organization_id, source_risk_id, target_vendor_risk_id, relation_type, status, source)
+       VALUES (:orgId, :child, :vendorRisk, 'inherits_from', 'confirmed', 'user')`,
+      { replacements: { orgId: owner.orgId, child, vendorRisk } },
+    );
+
+    const rows = await getRiskLinksForRiskQuery(owner.orgId, child, ["confirmed"]);
+
+    // Assert the row arrived before reading fields off it: today it does not,
+    // and `rows[0].related_entity_type` would crash instead of failing.
+    expect(rows).toHaveLength(1);
+    expect(rows[0].related_entity_type).toBe("vendor_risk");
+    expect(rows[0].related_id).toBe(vendorRisk);
+    expect(rows[0].related_risk_name).toBe("A".repeat(80));
+    expect(rows[0].related_risk_level).toBe("High");
+  });
+
+  it("hides a parent that belongs to another tenant", async () => {
+    const { owner, attacker } = await seedTwoTenantContexts();
+    const child = await createTestRisk(owner.orgId, {});
+    const foreignModelRisk = await createTestModelRisk(attacker.orgId, {});
+
+    // The link row itself is in the owner's org; only the parent is foreign.
+    // Without the per-table tenant guard this renders as a blank panel row.
+    await sequelize.query(
+      `INSERT INTO risk_links (organization_id, source_risk_id, target_model_risk_id, relation_type, status, source)
+       VALUES (:orgId, :child, :foreignModelRisk, 'inherits_from', 'confirmed', 'user')`,
+      { replacements: { orgId: owner.orgId, child, foreignModelRisk } },
+    );
+
+    expect(await getRiskLinksForRiskQuery(owner.orgId, child, ["confirmed"])).toEqual([]);
+  });
+
+  it("hides a soft-deleted parent", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const child = await createTestRisk(owner.orgId, {});
+    const modelRisk = await createTestModelRisk(owner.orgId, {});
+
+    await sequelize.query(
+      `INSERT INTO risk_links (organization_id, source_risk_id, target_model_risk_id, relation_type, status, source)
+       VALUES (:orgId, :child, :modelRisk, 'inherits_from', 'confirmed', 'user')`,
+      { replacements: { orgId: owner.orgId, child, modelRisk } },
+    );
+    await sequelize.query(`UPDATE model_risks SET is_deleted = true WHERE id = :modelRisk`, {
+      replacements: { modelRisk },
+    });
+
+    expect(await getRiskLinksForRiskQuery(owner.orgId, child, ["confirmed"])).toEqual([]);
+  });
+
+  it("still returns plain project-risk parents", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const child = await createTestRisk(owner.orgId, {});
+    const parent = await createTestRisk(owner.orgId, {});
+
+    await sequelize.query(
+      `INSERT INTO risk_links (organization_id, source_risk_id, target_risk_id, relation_type, status, source)
+       VALUES (:orgId, :child, :parent, 'inherits_from', 'confirmed', 'user')`,
+      { replacements: { orgId: owner.orgId, child, parent } },
+    );
+
+    const rows = await getRiskLinksForRiskQuery(owner.orgId, child, ["confirmed"]);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].related_entity_type).toBe("risk");
+    expect(rows[0].related_id).toBe(parent);
   });
 });

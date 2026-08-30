@@ -65,7 +65,10 @@ export interface RiskLinkRow {
   id: number;
   organization_id: number;
   source_risk_id: number;
-  target_risk_id: number;
+  /** Null when the parent lives in another table — see the two columns below. */
+  target_risk_id: number | null;
+  target_model_risk_id: number | null;
+  target_vendor_risk_id: number | null;
   relation_type: RiskLinkRelationType;
   status: RiskLinkStatus;
   source: RiskLinkSource;

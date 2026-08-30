@@ -43,7 +43,9 @@ const toLinkRow = (row: any): RiskLinkRow => ({
   id: row.id,
   organization_id: row.organization_id,
   source_risk_id: row.source_risk_id,
-  target_risk_id: row.target_risk_id,
+  target_risk_id: row.target_risk_id ?? null,
+  target_model_risk_id: row.target_model_risk_id ?? null,
+  target_vendor_risk_id: row.target_vendor_risk_id ?? null,
   relation_type: row.relation_type,
   status: row.status,
   source: row.source,
@@ -618,6 +620,8 @@ export async function deleteRiskLinksQuery(
 
 export interface RiskLinkWithRelated extends RiskLinkRow {
   related_id: number;
+  /** Which table the parent lives in. Populated by the query below. */
+  related_entity_type: ParentEntityType;
   related_risk_name: string | null;
   related_risk_level: string | null;
   related_risk_owner: number | null;
@@ -638,29 +642,52 @@ export async function getRiskLinksForRiskQuery(
 ): Promise<RiskLinkWithRelated[]> {
   const rows = await sequelize.query(
     `SELECT l.*,
-            related.id AS related_id,
-            related.risk_name AS related_risk_name,
-            related.risk_level_autocalculated::text AS related_risk_level,
-            related.risk_owner AS related_risk_owner
+            COALESCE(mr.id, vr.id, related.id) AS related_id,
+            CASE
+              WHEN l.target_model_risk_id  IS NOT NULL THEN 'model_risk'
+              WHEN l.target_vendor_risk_id IS NOT NULL THEN 'vendor_risk'
+              ELSE 'risk'
+            END AS related_entity_type,
+            COALESCE(
+              related.risk_name,
+              NULLIF(mr.risk_name, ''),
+              NULLIF(LEFT(vr.risk_description, 80), '')
+            ) AS related_risk_name,
+            COALESCE(
+              related.risk_level_autocalculated::text,
+              mr.risk_level::text,
+              vr.risk_level
+            ) AS related_risk_level,
+            COALESCE(related.risk_owner, mr.owner, vr.action_owner) AS related_risk_owner
      FROM risk_links l
-     JOIN risks related
-       ON related.id = CASE WHEN l.source_risk_id = :riskId
-                            THEN l.target_risk_id ELSE l.source_risk_id END
+     LEFT JOIN risks related
+            ON related.id = CASE WHEN l.source_risk_id = :riskId
+                                 THEN l.target_risk_id ELSE l.source_risk_id END
+           AND related.organization_id = :organizationId
+           AND related.is_deleted = false
+     LEFT JOIN model_risks mr
+            ON mr.id = l.target_model_risk_id
+           AND mr.organization_id = :organizationId
+           AND mr.is_deleted = false
+     LEFT JOIN vendorrisks vr
+            ON vr.id = l.target_vendor_risk_id
+           AND vr.organization_id = :organizationId
+           AND vr.is_deleted = false
      JOIN risks subject ON subject.id = :riskId
      WHERE l.organization_id = :organizationId
        AND (l.source_risk_id = :riskId OR l.target_risk_id = :riskId)
-       AND related.organization_id = :organizationId
-       AND related.is_deleted = false
        AND subject.organization_id = :organizationId
        AND subject.is_deleted = false
        AND l.status IN (:statuses)
-     ORDER BY l.score DESC, related.id ASC`,
+       AND COALESCE(related.id, mr.id, vr.id) IS NOT NULL
+     ORDER BY l.score DESC, COALESCE(mr.id, vr.id, related.id) ASC`,
     { replacements: { organizationId, riskId, statuses }, type: QueryTypes.SELECT },
   );
 
   return (rows as any[]).map((row) => ({
     ...toLinkRow(row),
     related_id: row.related_id,
+    related_entity_type: row.related_entity_type,
     related_risk_name: row.related_risk_name ?? null,
     related_risk_level: row.related_risk_level ?? null,
     related_risk_owner: row.related_risk_owner ?? null,
