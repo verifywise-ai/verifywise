@@ -429,7 +429,7 @@ describe("createRiskLink", () => {
     const r = res();
     await createRiskLink(req({ body: { sourceRiskId: "abc", targetRiskId: 9 } }) as any, r as any);
     expect(r.status).toHaveBeenCalledWith(400);
-    expect(r.json).toHaveBeenCalledWith(expect.objectContaining({ data: "Invalid request" }));
+    expect(r.json).toHaveBeenCalledWith(expect.objectContaining({ data: "Invalid link payload" }));
     expect(mockUtils.createUserRiskLinkQuery).not.toHaveBeenCalled();
   });
 
@@ -609,12 +609,14 @@ describe("createRiskLink", () => {
     expect(mockUtils.createUserRiskLinkQuery).toHaveBeenCalledWith({
       organizationId: 7,
       sourceRiskId: 4,
-      targetRiskId: 9,
+      target: { id: 9, entityType: "risk" },
       relationType: "related_to",
       userId: 5,
     });
     expect(r.status).toHaveBeenCalledWith(201);
-    expect(r.json).toHaveBeenCalledWith(expect.objectContaining({ data: { id: 77 } }));
+    expect(r.json).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ id: 77 }) }),
+    );
   });
 
   it("leaves inherits_from in the order the caller sent", async () => {
@@ -629,7 +631,7 @@ describe("createRiskLink", () => {
     expect(mockUtils.createUserRiskLinkQuery).toHaveBeenCalledWith({
       organizationId: 7,
       sourceRiskId: 9,
-      targetRiskId: 4,
+      target: { id: 4, entityType: "risk" },
       relationType: "inherits_from",
       userId: 5,
     });

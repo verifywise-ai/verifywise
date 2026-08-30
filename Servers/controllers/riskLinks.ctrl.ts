@@ -14,6 +14,7 @@ import {
   createUserRiskLinkQuery,
   getActiveRiskIdsQuery,
   getConfirmedHierarchyEdgesQuery,
+  getLiveCrossEntityParentQuery,
   getLiveRiskIdsQuery,
   getRelatedPairsQuery,
   getRiskLinkByIdQuery,
@@ -22,7 +23,7 @@ import {
   RiskLinkWithRelated,
   updateRiskLinkStatusQuery,
 } from "../utils/riskLink.utils";
-import { HierarchyViolation, validateTwoLevel } from "../services/riskLinks/hierarchy";
+import { HierarchyViolation, ParentEntityType, validateTwoLevel } from "../services/riskLinks/hierarchy";
 import {
   DismissReasonRejection,
   validateDismissReason,
@@ -126,6 +127,38 @@ const DISMISS_REASON_MESSAGES: Record<DismissReasonRejection, string> = {
 };
 
 const SINGLE_PARENT_INDEX = "risk_links_single_parent_idx";
+
+type TargetRejection = "not_exactly_one" | "cross_entity_related_to";
+
+const TARGET_MESSAGES: Record<TargetRejection, string> = {
+  not_exactly_one: "Provide exactly one parent risk.",
+  cross_entity_related_to: "Only inheritance links are supported across risk types.",
+};
+
+/**
+ * Exactly one of the three target fields must be present. The CHECK constraint
+ * `risk_links_one_target` says the same thing at the table; this is the layer
+ * that produces a readable message instead of a 500.
+ */
+function resolveTarget(
+  body: any,
+  relationType: RiskLinkRelationType,
+): { parent: HierarchyParent } | { rejection: TargetRejection } {
+  const candidates: [ParentEntityType, unknown][] = [
+    ["risk", body?.targetRiskId],
+    ["model_risk", body?.targetModelRiskId],
+    ["vendor_risk", body?.targetVendorRiskId],
+  ];
+  const given = candidates
+    .filter(([, value]) => value !== undefined && value !== null && value !== "")
+    .map(([entityType, value]) => ({ entityType, id: parseInt(String(value), 10) }));
+
+  if (given.length !== 1 || isNaN(given[0].id)) return { rejection: "not_exactly_one" };
+  if (given[0].entityType !== "risk" && relationType !== "inherits_from") {
+    return { rejection: "cross_entity_related_to" };
+  }
+  return { parent: given[0] };
+}
 
 type PgError = { code?: string; constraint?: string };
 
@@ -376,8 +409,8 @@ export async function updateRiskLinkStatus(req: Request, res: Response): Promise
 
 /**
  * A human asserting a link the engine did not find. For `inherits_from`,
- * `sourceRiskId` is the risk that inherits and `targetRiskId` is the risk
- * inherited from — matching how `toResponse` reads direction back out.
+ * `sourceRiskId` is the risk that inherits and exactly one target field is the
+ * risk inherited from — matching how `toResponse` reads direction back out.
  */
 export async function createRiskLink(req: Request, res: Response): Promise<any> {
   logProcessing({
@@ -390,19 +423,36 @@ export async function createRiskLink(req: Request, res: Response): Promise<any> 
 
   try {
     const sourceRiskId = parseInt(String(req.body?.sourceRiskId), 10);
-    const targetRiskId = parseInt(String(req.body?.targetRiskId), 10);
     const relationType = req.body?.relationType;
 
-    if (isNaN(sourceRiskId) || isNaN(targetRiskId) || !isRelationType(relationType)) {
-      return res.status(400).json(STATUS_CODE[400]("Invalid request"));
+    if (isNaN(sourceRiskId) || !isRelationType(relationType)) {
+      return res.status(400).json(STATUS_CODE[400]("Invalid link payload"));
     }
-    if (sourceRiskId === targetRiskId) {
+
+    const resolved = resolveTarget(req.body, relationType);
+    if ("rejection" in resolved) {
+      return res.status(400).json(STATUS_CODE[400](TARGET_MESSAGES[resolved.rejection]));
+    }
+    const { parent } = resolved;
+
+    // Self-linking is only expressible within one table.
+    if (parent.entityType === "risk" && sourceRiskId === parent.id) {
       return res.status(400).json(STATUS_CODE[400]("A risk cannot link to itself"));
     }
 
-    const live = await getLiveRiskIdsQuery([sourceRiskId, targetRiskId], req.organizationId!);
-    if (live.length !== 2) {
-      return res.status(404).json(STATUS_CODE[404]("Risk not found"));
+    if (parent.entityType === "risk") {
+      const live = await getLiveRiskIdsQuery([sourceRiskId, parent.id], req.organizationId!);
+      if (live.length !== 2) {
+        return res.status(404).json(STATUS_CODE[404]("Risk not found"));
+      }
+    } else {
+      const childLive = await getLiveRiskIdsQuery([sourceRiskId], req.organizationId!);
+      if (childLive.length !== 1) {
+        return res.status(404).json(STATUS_CODE[404]("Risk not found"));
+      }
+      if (!(await getLiveCrossEntityParentQuery(parent, req.organizationId!))) {
+        return res.status(404).json(STATUS_CODE[404]("Risk not found"));
+      }
     }
 
     // Two-level grouping (C1): a risk is either a parent, or a child, or
@@ -415,11 +465,8 @@ export async function createRiskLink(req: Request, res: Response): Promise<any> 
     // displayable rather than corrupting and either row can be dismissed.
     if (relationType === "inherits_from") {
       const violation = validateTwoLevel(
-        { childRiskId: sourceRiskId, parentRiskId: targetRiskId },
-        await getConfirmedHierarchyEdgesQuery(req.organizationId!, sourceRiskId, {
-          id: targetRiskId,
-          entityType: "risk",
-        }),
+        { childRiskId: sourceRiskId, parentRiskId: parent.id, parentEntityType: parent.entityType },
+        await getConfirmedHierarchyEdgesQuery(req.organizationId!, sourceRiskId, parent),
       );
       if (violation) {
         return res.status(409).json(STATUS_CODE[409](HIERARCHY_MESSAGES[violation]));
@@ -430,13 +477,17 @@ export async function createRiskLink(req: Request, res: Response): Promise<any> 
     // by which column an id sits in, so only related_to is reordered.
     const [storedSource, storedTarget] =
       relationType === "related_to"
-        ? canonicalPair(sourceRiskId, targetRiskId)
-        : [sourceRiskId, targetRiskId];
+        ? canonicalPair(sourceRiskId, parent.id)
+        : [sourceRiskId, parent.id];
+    const storedTargetParent: HierarchyParent =
+      relationType === "related_to"
+        ? { id: storedTarget, entityType: "risk" }
+        : parent;
 
     const id = await createUserRiskLinkQuery({
       organizationId: req.organizationId!,
       sourceRiskId: storedSource,
-      targetRiskId: storedTarget,
+      target: storedTargetParent,
       relationType,
       userId: req.userId!,
     });
@@ -460,7 +511,12 @@ export async function createRiskLink(req: Request, res: Response): Promise<any> 
       organizationId: req.organizationId!,
     });
 
-    return res.status(201).json(STATUS_CODE[201]({ id }));
+    return res.status(201).json(
+      STATUS_CODE[201]({
+        id,
+        relatedRisk: { id: parent.id, entityType: parent.entityType },
+      }),
+    );
   } catch (error) {
     // A lost race is a user-facing conflict, not a system failure — and the
     // endpoint's other 409s do not log either.

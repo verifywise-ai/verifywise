@@ -244,3 +244,88 @@ describe("getRiskLinksForRiskQuery with cross-entity parents", () => {
     expect(rows[0].related_id).toBe(parent);
   });
 });
+
+describe("POST /api/riskLinks with a cross-entity parent", () => {
+  it("creates an inheritance link to a vendor risk", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const child = await createTestRisk(owner.orgId, {});
+    const vendorRisk = await createTestVendorRisk(owner.orgId, {});
+
+    const res = await owner.request.post("/api/riskLinks").send({
+      sourceRiskId: child,
+      targetVendorRiskId: vendorRisk,
+      relationType: "inherits_from",
+    });
+
+    expect(res.status).toBe(201);
+    expect(res.body.data.relatedRisk.entityType).toBe("vendor_risk");
+    expect(res.body.data.relatedRisk.id).toBe(vendorRisk);
+  });
+
+  it("rejects two target fields", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const child = await createTestRisk(owner.orgId, {});
+    const parent = await createTestRisk(owner.orgId, {});
+    const vendorRisk = await createTestVendorRisk(owner.orgId, {});
+
+    const res = await owner.request.post("/api/riskLinks").send({
+      sourceRiskId: child,
+      targetRiskId: parent,
+      targetVendorRiskId: vendorRisk,
+      relationType: "inherits_from",
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body.data).toMatch(/exactly one parent/i);
+  });
+
+  it("rejects related_to across entity types", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const child = await createTestRisk(owner.orgId, {});
+    const modelRisk = await createTestModelRisk(owner.orgId, {});
+
+    const res = await owner.request.post("/api/riskLinks").send({
+      sourceRiskId: child,
+      targetModelRiskId: modelRisk,
+      relationType: "related_to",
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body.data).toMatch(/only inheritance links/i);
+  });
+
+  it("404s on another tenant's model risk", async () => {
+    const { owner, attacker } = await seedTwoTenantContexts();
+    const child = await createTestRisk(owner.orgId, {});
+    const foreign = await createTestModelRisk(attacker.orgId, {});
+
+    const res = await owner.request.post("/api/riskLinks").send({
+      sourceRiskId: child,
+      targetModelRiskId: foreign,
+      relationType: "inherits_from",
+    });
+
+    expect(res.status).toBe(404);
+  });
+
+  it("409s when the child already has a confirmed project-risk parent", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const child = await createTestRisk(owner.orgId, {});
+    const parent = await createTestRisk(owner.orgId, {});
+    const vendorRisk = await createTestVendorRisk(owner.orgId, {});
+
+    await sequelize.query(
+      `INSERT INTO risk_links (organization_id, source_risk_id, target_risk_id, relation_type, status, source)
+       VALUES (:orgId, :child, :parent, 'inherits_from', 'confirmed', 'user')`,
+      { replacements: { orgId: owner.orgId, child, parent } },
+    );
+
+    const res = await owner.request.post("/api/riskLinks").send({
+      sourceRiskId: child,
+      targetVendorRiskId: vendorRisk,
+      relationType: "inherits_from",
+    });
+
+    expect(res.status).toBe(409);
+  });
+});

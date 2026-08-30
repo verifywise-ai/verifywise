@@ -260,7 +260,7 @@ describe("manual risk links respect the tenant boundary", () => {
     const input = {
       organizationId: owner.orgId,
       sourceRiskId: Math.min(riskA, riskB),
-      targetRiskId: Math.max(riskA, riskB),
+      target: { id: Math.max(riskA, riskB), entityType: "risk" as const },
       relationType: "related_to" as const,
       userId: owner.userId,
     };
@@ -287,7 +287,7 @@ describe("manual risk links respect the tenant boundary", () => {
     await createUserRiskLinkQuery({
       organizationId: owner.orgId,
       sourceRiskId: Math.max(child, parent),
-      targetRiskId: Math.min(child, parent),
+      target: { id: Math.min(child, parent), entityType: "risk" as const },
       relationType: "inherits_from",
       userId: owner.userId,
     });

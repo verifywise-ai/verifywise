@@ -261,6 +261,24 @@ export async function getLiveRiskIdsQuery(
   return (rows as { id: number }[]).map((row) => row.id);
 }
 
+/**
+ * Whether a cross-entity parent exists, is not soft-deleted, and belongs to
+ * this org. `model_risks.organization_id` is nullable in the schema; matching on
+ * equality makes such a row invisible, which is the correct fail-closed answer.
+ */
+export async function getLiveCrossEntityParentQuery(
+  parent: HierarchyParent,
+  organizationId: number,
+): Promise<boolean> {
+  const table = parent.entityType === "model_risk" ? "model_risks" : "vendorrisks";
+  const rows = await sequelize.query(
+    `SELECT 1 FROM ${table}
+      WHERE id = :id AND organization_id = :organizationId AND is_deleted = false`,
+    { replacements: { id: parent.id, organizationId }, type: QueryTypes.SELECT },
+  );
+  return rows.length === 1;
+}
+
 /** Does this exact directed edge already exist? Used to refuse a two-cycle. */
 export async function riskLinkPairExistsQuery(
   organizationId: number,
@@ -529,7 +547,7 @@ export async function createAgentHierarchyLinkQuery(
 export interface CreateUserRiskLinkInput {
   organizationId: number;
   sourceRiskId: number;
-  targetRiskId: number;
+  target: HierarchyParent;
   relationType: RiskLinkRelationType;
   userId: number;
 }
@@ -549,19 +567,30 @@ export interface CreateUserRiskLinkInput {
 export async function createUserRiskLinkQuery(
   input: CreateUserRiskLinkInput,
 ): Promise<number | null> {
+  const targetColumn =
+    input.target.entityType === "model_risk"
+      ? "target_model_risk_id"
+      : input.target.entityType === "vendor_risk"
+        ? "target_vendor_risk_id"
+        : "target_risk_id";
+  const conflictTarget =
+    input.target.entityType === "risk"
+      ? "(source_risk_id, target_risk_id, relation_type)"
+      : `(source_risk_id, ${targetColumn}, relation_type) WHERE ${targetColumn} IS NOT NULL`;
+
   const [rows] = await sequelize.query(
     `INSERT INTO risk_links
-       (organization_id, source_risk_id, target_risk_id, relation_type,
+       (organization_id, source_risk_id, ${targetColumn}, relation_type,
         status, source, created_by_user_id, decided_by_user_id, decided_at)
-     VALUES (:organizationId, :sourceRiskId, :targetRiskId, :relationType,
+     VALUES (:organizationId, :sourceRiskId, :targetId, :relationType,
              'confirmed', 'user', :userId, :userId, NOW())
-     ON CONFLICT (source_risk_id, target_risk_id, relation_type) DO NOTHING
+     ON CONFLICT ${conflictTarget} DO NOTHING
      RETURNING id`,
     {
       replacements: {
         organizationId: input.organizationId,
         sourceRiskId: input.sourceRiskId,
-        targetRiskId: input.targetRiskId,
+        targetId: input.target.id,
         relationType: input.relationType,
         userId: input.userId,
       },
