@@ -24,6 +24,8 @@ export {
   linkVendorToProject,
   assignTaskToUser,
   createTestModelInventory,
+  createTestModelRisk,
+  createTestVendorRisk,
   createTestMrmValidation,
   createTestMrmFinding,
   createTestMrmModelRole,

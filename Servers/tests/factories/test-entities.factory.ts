@@ -441,6 +441,62 @@ export async function createTestModelInventory(
   return (result as any[])[0].id;
 }
 
+export interface CreateTestModelRiskOptions {
+  model_id?: number;
+  risk_name?: string | null;
+  risk_level?: "Low" | "Medium" | "High" | "Critical";
+  owner?: number | null;
+}
+
+export async function createTestModelRisk(
+  orgId: number,
+  options: CreateTestModelRiskOptions = {},
+): Promise<number> {
+  const suffix = Date.now();
+  const [result] = await sequelize.query(
+    `INSERT INTO model_risks (organization_id, model_id, risk_name, risk_level, owner, created_at, updated_at, is_deleted)
+     VALUES (:orgId, :modelId, :name, :level, :owner, NOW(), NOW(), false) RETURNING id`,
+    {
+      replacements: {
+        orgId,
+        modelId: options.model_id ?? null,
+        name: options.risk_name === undefined ? `Model risk ${suffix}` : options.risk_name,
+        level: options.risk_level ?? "High",
+        owner: options.owner ?? null,
+      },
+    },
+  );
+  return (result as any[])[0].id;
+}
+
+export interface CreateTestVendorRiskOptions {
+  vendor_id?: number;
+  risk_description?: string;
+  risk_level?: string;
+  action_owner?: number | null;
+}
+
+export async function createTestVendorRisk(
+  orgId: number,
+  options: CreateTestVendorRiskOptions = {},
+): Promise<number> {
+  const suffix = Date.now();
+  const [result] = await sequelize.query(
+    `INSERT INTO vendorrisks (organization_id, vendor_id, risk_description, risk_level, action_owner, is_demo, created_at, updated_at, is_deleted)
+     VALUES (:orgId, :vendorId, :description, :level, :owner, false, NOW(), NOW(), false) RETURNING id`,
+    {
+      replacements: {
+        orgId,
+        vendorId: options.vendor_id ?? null,
+        description: options.risk_description ?? `Vendor risk ${suffix}`,
+        level: options.risk_level ?? "High",
+        owner: options.action_owner ?? null,
+      },
+    },
+  );
+  return (result as any[])[0].id;
+}
+
 export interface CreateTestMrmValidationOptions {
   model_inventory_id?: number;
   validator_id?: number;

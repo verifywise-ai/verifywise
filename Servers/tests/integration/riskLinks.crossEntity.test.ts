@@ -1,0 +1,118 @@
+jest.setTimeout(60000);
+
+import { cleanupDatabase } from "./helpers";
+import { sequelize } from "../../database/db";
+import { seedTwoTenantContexts } from "./tenant-isolation/tenantIsolation.harness";
+import { createTestRisk, createTestModelRisk, createTestVendorRisk } from "../factories";
+
+afterEach(async () => {
+  await cleanupDatabase();
+});
+
+/*
+ * Every test below writes a straight INSERT, bypassing the controller on
+ * purpose: they prove the CONSTRAINTS do the work, not the application
+ * validation layered above them.
+ */
+
+describe("risk_links_one_target", () => {
+  it("rejects a row with no parent at all", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const child = await createTestRisk(owner.orgId, {});
+
+    await expect(
+      sequelize.query(
+        `INSERT INTO risk_links (organization_id, source_risk_id, relation_type, status, source)
+         VALUES (:orgId, :child, 'inherits_from', 'confirmed', 'user')`,
+        { replacements: { orgId: owner.orgId, child } },
+      ),
+    ).rejects.toMatchObject({
+      original: { code: "23514", constraint: "risk_links_one_target" },
+    });
+  });
+
+  it("rejects a row with two parents of different kinds", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const child = await createTestRisk(owner.orgId, {});
+    const parent = await createTestRisk(owner.orgId, {});
+    const modelRisk = await createTestModelRisk(owner.orgId, {});
+
+    await expect(
+      sequelize.query(
+        `INSERT INTO risk_links (organization_id, source_risk_id, target_risk_id, target_model_risk_id, relation_type, status, source)
+         VALUES (:orgId, :child, :parent, :modelRisk, 'inherits_from', 'confirmed', 'user')`,
+        { replacements: { orgId: owner.orgId, child, parent, modelRisk } },
+      ),
+    ).rejects.toMatchObject({
+      original: { code: "23514", constraint: "risk_links_one_target" },
+    });
+  });
+});
+
+describe("risk_links_cross_entity_inherits", () => {
+  it("rejects a related_to link to a vendor risk", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const child = await createTestRisk(owner.orgId, {});
+    const vendorRisk = await createTestVendorRisk(owner.orgId, {});
+
+    await expect(
+      sequelize.query(
+        `INSERT INTO risk_links (organization_id, source_risk_id, target_vendor_risk_id, relation_type, status, source)
+         VALUES (:orgId, :child, :vendorRisk, 'related_to', 'confirmed', 'user')`,
+        { replacements: { orgId: owner.orgId, child, vendorRisk } },
+      ),
+    ).rejects.toMatchObject({
+      original: { code: "23514", constraint: "risk_links_cross_entity_inherits" },
+    });
+  });
+});
+
+describe("cross-entity uniqueness", () => {
+  it("rejects the same model risk as parent twice", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const child = await createTestRisk(owner.orgId, {});
+    const modelRisk = await createTestModelRisk(owner.orgId, {});
+    const add = () =>
+      sequelize.query(
+        `INSERT INTO risk_links (organization_id, source_risk_id, target_model_risk_id, relation_type, status, source)
+         VALUES (:orgId, :child, :modelRisk, 'inherits_from', 'suggested', 'user')`,
+        { replacements: { orgId: owner.orgId, child, modelRisk } },
+      );
+
+    await add();
+    await expect(add()).rejects.toMatchObject({
+      original: { code: "23505", constraint: "risk_links_unique_model_target" },
+    });
+  });
+});
+
+/**
+ * The claim this whole design rests on (spec §2.4): risk_links_single_parent_idx
+ * is keyed on source_risk_id ALONE, so it already covers a parent that lives in
+ * another table. If this test fails, the storage shape was the wrong choice and
+ * the constraint needs a migration after all.
+ */
+describe("risk_links_single_parent_idx across entity types", () => {
+  it("refuses a confirmed vendor-risk parent when a project-risk parent is confirmed", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const child = await createTestRisk(owner.orgId, {});
+    const projectParent = await createTestRisk(owner.orgId, {});
+    const vendorRisk = await createTestVendorRisk(owner.orgId, {});
+
+    await sequelize.query(
+      `INSERT INTO risk_links (organization_id, source_risk_id, target_risk_id, relation_type, status, source)
+       VALUES (:orgId, :child, :projectParent, 'inherits_from', 'confirmed', 'user')`,
+      { replacements: { orgId: owner.orgId, child, projectParent } },
+    );
+
+    await expect(
+      sequelize.query(
+        `INSERT INTO risk_links (organization_id, source_risk_id, target_vendor_risk_id, relation_type, status, source)
+         VALUES (:orgId, :child, :vendorRisk, 'inherits_from', 'confirmed', 'user')`,
+        { replacements: { orgId: owner.orgId, child, vendorRisk } },
+      ),
+    ).rejects.toMatchObject({
+      original: { code: "23505", constraint: "risk_links_single_parent_idx" },
+    });
+  });
+});
