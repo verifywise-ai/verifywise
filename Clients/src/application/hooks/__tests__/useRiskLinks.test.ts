@@ -95,8 +95,36 @@ describe("risk link mutations", () => {
     result.current.mutate({ id: 7, status: "confirmed" });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(mockUpdate).toHaveBeenCalledWith(7, "confirmed");
+    expect(mockUpdate).toHaveBeenCalledWith(7, "confirmed", undefined);
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ["riskLinks", 42] });
+  });
+
+  it("forwards a dismissal reason to the repository", async () => {
+    mockUpdate.mockResolvedValue({ id: 1, status: "dismissed" });
+    const { wrapper } = createHarness();
+    const { result } = renderHook(() => useUpdateRiskLinkStatus(42), { wrapper });
+
+    result.current.mutate({
+      id: 1,
+      status: "dismissed",
+      dismissal: { dismissReason: "wrong_direction" },
+    });
+
+    await waitFor(() =>
+      expect(mockUpdate).toHaveBeenCalledWith(1, "dismissed", {
+        dismissReason: "wrong_direction",
+      }),
+    );
+  });
+
+  it("sends no dismissal when the user skipped the reason", async () => {
+    mockUpdate.mockResolvedValue({ id: 1, status: "dismissed" });
+    const { wrapper } = createHarness();
+    const { result } = renderHook(() => useUpdateRiskLinkStatus(42), { wrapper });
+
+    result.current.mutate({ id: 1, status: "dismissed" });
+
+    await waitFor(() => expect(mockUpdate).toHaveBeenCalledWith(1, "dismissed", undefined));
   });
 
   it("useRecomputeRiskLinks invalidates the risk's links", async () => {

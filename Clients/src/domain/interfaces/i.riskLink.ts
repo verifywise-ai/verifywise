@@ -3,6 +3,16 @@ export type RiskLinkSource = "derived" | "user" | "agent";
 export type RiskLinkRelationType = "related_to" | "inherits_from";
 export type RiskLinkDirection = "outgoing" | "incoming" | "undirected";
 
+/** Mirrors `DismissReason` in Servers/services/riskLinks/dismissReason.ts. */
+export type DismissReason =
+  | "not_related"
+  | "too_weak"
+  | "duplicate"
+  | "wrong_direction"
+  | "wrong_parent"
+  | "not_hierarchical"
+  | "other";
+
 export interface RiskLinkReason {
   signal: string;
   weight: number;
@@ -20,6 +30,9 @@ export interface RiskLink {
   direction: RiskLinkDirection;
   decidedAt: string | null;
   lastComputedAt: string | null;
+  /** Set only on a link dismissed from `suggested`, and only if the user said why. */
+  dismissReason: DismissReason | null;
+  dismissNote: string | null;
   relatedRisk: {
     id: number;
     name: string | null;

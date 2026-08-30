@@ -41,6 +41,8 @@ const link = (overrides: Partial<RiskLink>): RiskLink => ({
   direction: "undirected",
   decidedAt: null,
   lastComputedAt: null,
+  dismissReason: null,
+  dismissNote: null,
   relatedRisk: { id: 9, name: "Model drift", riskLevel: null, ownerId: null },
   ...overrides,
 });

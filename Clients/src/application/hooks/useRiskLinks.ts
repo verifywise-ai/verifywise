@@ -8,6 +8,7 @@ import {
 } from "../repository/riskLink.repository";
 import {
   CreateRiskLinkInput,
+  DismissReason,
   RiskLink,
   RiskLinkStatus,
 } from "../../domain/interfaces/i.riskLink";
@@ -44,8 +45,15 @@ export function useCreateRiskLink(riskId: number) {
 export function useUpdateRiskLinkStatus(riskId: number) {
   const invalidate = useInvalidateLinks(riskId);
   return useMutation({
-    mutationFn: ({ id, status }: { id: number; status: RiskLinkStatus }) =>
-      updateRiskLinkStatus(id, status),
+    mutationFn: ({
+      id,
+      status,
+      dismissal,
+    }: {
+      id: number;
+      status: RiskLinkStatus;
+      dismissal?: { dismissReason: DismissReason; dismissNote?: string };
+    }) => updateRiskLinkStatus(id, status, dismissal),
     onSettled: invalidate,
   });
 }

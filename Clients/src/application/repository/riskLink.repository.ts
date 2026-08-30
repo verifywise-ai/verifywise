@@ -2,6 +2,7 @@ import { apiServices } from "../../infrastructure/api/networkServices";
 import { APIError } from "../tools/error";
 import {
   CreateRiskLinkInput,
+  DismissReason,
   RiskLink,
   RiskLinkStatus,
 } from "../../domain/interfaces/i.riskLink";
@@ -49,15 +50,17 @@ export async function createRiskLink(input: CreateRiskLinkInput): Promise<{ id: 
   }
 }
 
+/** `dismissal` is only ever accepted on a link that is currently `suggested`. */
 export async function updateRiskLinkStatus(
   id: number,
   status: RiskLinkStatus,
+  dismissal?: { dismissReason: DismissReason; dismissNote?: string },
 ): Promise<{ id: number; status: RiskLinkStatus }> {
   try {
     const response = await apiServices.patch<{
       message: string;
       data: { id: number; status: RiskLinkStatus };
-    }>(`/riskLinks/${id}`, { status });
+    }>(`/riskLinks/${id}`, { status, ...dismissal });
     return extractData<{ id: number; status: RiskLinkStatus }>(response);
   } catch (error: any) {
     throw toAPIError(error, "Failed to update the link");
