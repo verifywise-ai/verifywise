@@ -7,8 +7,9 @@ import {
   useUpdateRiskLinkStatus,
 } from "../../../application/hooks/useRiskLinks";
 import { useIsAdmin } from "../../../application/hooks/useIsAdmin";
-import { RiskLink, RiskLinkStatus } from "../../../domain/interfaces/i.riskLink";
+import { DismissReason, RiskLink, RiskLinkStatus } from "../../../domain/interfaces/i.riskLink";
 import LinkRiskForm from "./LinkRiskForm";
+import DismissReasonForm, { DISMISS_REASON_LABELS } from "./DismissReasonForm";
 
 interface LinkedRisksPanelProps {
   riskId: number;
@@ -59,6 +60,7 @@ export default function LinkedRisksPanel({ riskId }: LinkedRisksPanelProps) {
   const [showDismissed, setShowDismissed] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [dismissing, setDismissing] = useState<RiskLink | null>(null);
   const isAdmin = useIsAdmin();
 
   const { data: links = [], isLoading, isError, refetch } = useRiskLinks(
@@ -69,18 +71,35 @@ export default function LinkedRisksPanel({ riskId }: LinkedRisksPanelProps) {
   const recompute = useRecomputeRiskLinks(riskId);
   const suggestHierarchy = useSuggestRiskHierarchy(riskId);
 
+  const onMutationError = (error: any) =>
+    setNotice(
+      error?.status === 404
+        ? "One of these risks no longer exists"
+        : error?.message || "Failed to update the link",
+    );
+
   const handleAction = (link: RiskLink, next: RiskLinkStatus) => {
     setNotice(null);
+    // Dismissing a SUGGESTION is feedback about the engine, so ask why first.
+    // Dismissing a CONFIRMED link is a human un-linking a pair they already
+    // accepted — a content edit, no reason, no form. See C3 §3.1.
+    if (next === "dismissed" && link.status === "suggested") {
+      setDismissing(link);
+      return;
+    }
+    setDismissing(null);
+    updateStatus.mutate({ id: link.id, status: next }, { onError: onMutationError });
+  };
+
+  const submitDismissal = (
+    link: RiskLink,
+    dismissal?: { dismissReason: DismissReason; dismissNote?: string },
+  ) => {
+    setNotice(null);
+    setDismissing(null);
     updateStatus.mutate(
-      { id: link.id, status: next },
-      {
-        onError: (error: any) =>
-          setNotice(
-            error?.status === 404
-              ? "One of these risks no longer exists"
-              : error?.message || "Failed to update the link",
-          ),
-      },
+      { id: link.id, status: "dismissed", dismissal },
+      { onError: onMutationError },
     );
   };
 
@@ -196,41 +215,66 @@ export default function LinkedRisksPanel({ riskId }: LinkedRisksPanelProps) {
             </Typography>
             <Stack spacing={1}>
               {group.map((link) => (
-                <Stack
-                  key={link.id}
-                  direction="row"
-                  alignItems="center"
-                  spacing={1}
-                  flexWrap="wrap"
-                >
-                  <Typography variant="body2" sx={{ flexGrow: 1 }}>
-                    {link.relatedRisk.name ?? `Risk ${link.relatedRisk.id}`}
-                  </Typography>
-                  {link.relatedRisk.riskLevel && (
-                    <Chip size="small" label={link.relatedRisk.riskLevel} />
+                <Box key={link.id}>
+                  <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap">
+                    <Typography variant="body2" sx={{ flexGrow: 1 }}>
+                      {link.relatedRisk.name ?? `Risk ${link.relatedRisk.id}`}
+                    </Typography>
+                    {link.relatedRisk.riskLevel && (
+                      <Chip size="small" label={link.relatedRisk.riskLevel} />
+                    )}
+                    {link.reasons.map((reason, index) => (
+                      <Chip key={index} size="small" variant="outlined" label={reasonLabel(reason)} />
+                    ))}
+                    {/*
+                      Only in the dismissed view, since it is null everywhere
+                      else. The note rides along as the tooltip rather than
+                      stretching the row.
+                    */}
+                    {link.dismissReason && (
+                      <Chip
+                        size="small"
+                        variant="outlined"
+                        label={DISMISS_REASON_LABELS[link.dismissReason]}
+                        title={link.dismissNote ?? undefined}
+                      />
+                    )}
+                    {/*
+                      score is 0 by column default on a user link and on an agent
+                      link, and means nothing on either. Only the scoring engine
+                      produces a number worth showing.
+                    */}
+                    {link.source === "derived" && (
+                      <Typography variant="caption">{link.score}</Typography>
+                    )}
+                    {/*
+                      Hidden while this row's reason form is open. Two live
+                      "Dismiss" buttons for one link is ambiguous on screen and
+                      ambiguous to a test — the form owns the decision until
+                      it is submitted or cancelled.
+                    */}
+                    {dismissing?.id !== link.id &&
+                      actionsFor(link).map(({ label, next }) => (
+                        <Button
+                          key={label}
+                          size="small"
+                          disabled={updateStatus.isPending}
+                          onClick={() => handleAction(link, next)}
+                        >
+                          {label}
+                        </Button>
+                      ))}
+                  </Stack>
+
+                  {dismissing?.id === link.id && (
+                    <DismissReasonForm
+                      link={link}
+                      pending={updateStatus.isPending}
+                      onSubmit={(dismissal) => submitDismissal(link, dismissal)}
+                      onCancel={() => setDismissing(null)}
+                    />
                   )}
-                  {link.reasons.map((reason, index) => (
-                    <Chip key={index} size="small" variant="outlined" label={reasonLabel(reason)} />
-                  ))}
-                  {/*
-                    score is 0 by column default on a user link and on an agent
-                    link, and means nothing on either. Only the scoring engine
-                    produces a number worth showing.
-                  */}
-                  {link.source === "derived" && (
-                    <Typography variant="caption">{link.score}</Typography>
-                  )}
-                  {actionsFor(link).map(({ label, next }) => (
-                    <Button
-                      key={label}
-                      size="small"
-                      disabled={updateStatus.isPending}
-                      onClick={() => handleAction(link, next)}
-                    >
-                      {label}
-                    </Button>
-                  ))}
-                </Stack>
+                </Box>
               ))}
             </Stack>
           </Box>

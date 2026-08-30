@@ -205,7 +205,7 @@ describe("LinkedRisksPanel actions", () => {
   });
 
   it("sends the target status to the mutation", async () => {
-    mockUseRiskLinks.mockReturnValue(queryResult([link({ id: 55, status: "suggested" })]));
+    mockUseRiskLinks.mockReturnValue(queryResult([link({ id: 55, status: "confirmed" })]));
     render(<LinkedRisksPanel riskId={42} />);
 
     await userEvent.click(screen.getByRole("button", { name: "Dismiss" }));
@@ -314,5 +314,164 @@ describe("LinkedRisksPanel failures", () => {
     await userEvent.click(screen.getByRole("button", { name: "Retry" }));
     expect(refetch).toHaveBeenCalled();
     expect(screen.queryByText("No linked risks yet.")).not.toBeInTheDocument();
+  });
+});
+describe("LinkedRisksPanel dismissal reasons", () => {
+  it("asks why before dismissing a suggestion", async () => {
+    mockUseRiskLinks.mockReturnValue(queryResult([link({ status: "suggested" })]));
+    render(
+      <ThemeProvider theme={light}>
+        <QueryClientProvider client={new QueryClient()}>
+          <LinkedRisksPanel riskId={42} />
+        </QueryClientProvider>
+      </ThemeProvider>,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+
+    // The exact set, not just a sample. This file is the only thing standing
+    // between a frontend typo and a radio button the server answers with 400 —
+    // the two REASONS_BY_RELATION maps live in different packages and cannot
+    // import each other, so a count plus the absent hierarchy labels is the
+    // cheapest available drift guard.
+    expect(screen.getAllByRole("radio")).toHaveLength(4);
+    expect(screen.getByLabelText("These aren't actually related")).toBeInTheDocument();
+    expect(screen.getByLabelText("Related, but not worth a link")).toBeInTheDocument();
+    expect(screen.getByLabelText("Another link already covers this")).toBeInTheDocument();
+    expect(screen.getByLabelText("Other")).toBeInTheDocument();
+    expect(screen.queryByLabelText("The direction is backwards")).not.toBeInTheDocument();
+    // Opening the form decides nothing.
+    expect(mockMutateStatus).not.toHaveBeenCalled();
+  });
+
+  it("offers the hierarchy vocabulary on an inherits_from row", async () => {
+    mockUseRiskLinks.mockReturnValue(
+      queryResult([link({ status: "suggested", relationType: "inherits_from", direction: "outgoing" })]),
+    );
+    render(
+      <ThemeProvider theme={light}>
+        <QueryClientProvider client={new QueryClient()}>
+          <LinkedRisksPanel riskId={42} />
+        </QueryClientProvider>
+      </ThemeProvider>,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+
+    expect(screen.getAllByRole("radio")).toHaveLength(4);
+    expect(screen.getByLabelText("The direction is backwards")).toBeInTheDocument();
+    expect(screen.getByLabelText("Right that it's a child, wrong parent")).toBeInTheDocument();
+    expect(screen.getByLabelText("Related, but not parent and child")).toBeInTheDocument();
+    expect(screen.getByLabelText("Other")).toBeInTheDocument();
+    expect(screen.queryByLabelText("These aren't actually related")).not.toBeInTheDocument();
+  });
+
+  it("sends the chosen reason", async () => {
+    mockUseRiskLinks.mockReturnValue(queryResult([link({ id: 7, status: "suggested" })]));
+    render(
+      <ThemeProvider theme={light}>
+        <QueryClientProvider client={new QueryClient()}>
+          <LinkedRisksPanel riskId={42} />
+        </QueryClientProvider>
+      </ThemeProvider>,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+    await userEvent.click(screen.getByLabelText("Related, but not worth a link"));
+    await userEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+
+    expect(mockMutateStatus).toHaveBeenCalledWith(
+      { id: 7, status: "dismissed", dismissal: { dismissReason: "too_weak" } },
+      expect.anything(),
+    );
+  });
+
+  it("lets the user skip the reason entirely", async () => {
+    // The reason is optional by design: a required one just gets the first
+    // radio clicked, and bad data is worse than no data.
+    mockUseRiskLinks.mockReturnValue(queryResult([link({ id: 7, status: "suggested" })]));
+    render(
+      <ThemeProvider theme={light}>
+        <QueryClientProvider client={new QueryClient()}>
+          <LinkedRisksPanel riskId={42} />
+        </QueryClientProvider>
+      </ThemeProvider>,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+    await userEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+
+    expect(mockMutateStatus).toHaveBeenCalledWith(
+      { id: 7, status: "dismissed", dismissal: undefined },
+      expect.anything(),
+    );
+  });
+
+  it("requires a note before submitting `Other`", async () => {
+    mockUseRiskLinks.mockReturnValue(queryResult([link({ id: 7, status: "suggested" })]));
+    render(
+      <ThemeProvider theme={light}>
+        <QueryClientProvider client={new QueryClient()}>
+          <LinkedRisksPanel riskId={42} />
+        </QueryClientProvider>
+      </ThemeProvider>,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+    await userEvent.click(screen.getByLabelText("Other"));
+
+    const submit = screen.getByRole("button", { name: "Dismiss" });
+    expect(submit).toBeDisabled();
+
+    await userEvent.type(screen.getByLabelText("What happened?"), "  covered by R-14  ");
+    expect(submit).toBeEnabled();
+    await userEvent.click(submit);
+
+    expect(mockMutateStatus).toHaveBeenCalledWith(
+      { id: 7, status: "dismissed", dismissal: { dismissReason: "other", dismissNote: "covered by R-14" } },
+      expect.anything(),
+    );
+  });
+
+  it("dismisses a confirmed link immediately, with no form (§3.1)", async () => {
+    // Un-linking a pair you previously accepted is a content edit, not
+    // feedback about a suggestion.
+    mockUseRiskLinks.mockReturnValue(queryResult([link({ id: 7, status: "confirmed" })]));
+    render(
+      <ThemeProvider theme={light}>
+        <QueryClientProvider client={new QueryClient()}>
+          <LinkedRisksPanel riskId={42} />
+        </QueryClientProvider>
+      </ThemeProvider>,
+    );
+
+    await userEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+
+    expect(screen.queryByLabelText("These aren't actually related")).not.toBeInTheDocument();
+    expect(mockMutateStatus).toHaveBeenCalledWith(
+      { id: 7, status: "dismissed" },
+      expect.anything(),
+    );
+  });
+
+  it("shows a stored reason in the dismissed view, and nothing when there is none", () => {
+    mockUseRiskLinks.mockReturnValue(
+      queryResult([
+        link({ id: 1, status: "dismissed", dismissReason: "not_related",
+               relatedRisk: { id: 9, name: "Model drift", riskLevel: null, ownerId: null } }),
+        link({ id: 2, status: "dismissed", dismissReason: null,
+               relatedRisk: { id: 10, name: "Data leak", riskLevel: null, ownerId: null } }),
+      ]),
+    );
+    render(
+      <ThemeProvider theme={light}>
+        <QueryClientProvider client={new QueryClient()}>
+          <LinkedRisksPanel riskId={42} />
+        </QueryClientProvider>
+      </ThemeProvider>,
+    );
+
+    expect(screen.getByText("These aren't actually related")).toBeInTheDocument();
+    expect(screen.getAllByText("These aren't actually related")).toHaveLength(1);
   });
 });
