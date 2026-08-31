@@ -1,5 +1,6 @@
 jest.setTimeout(60000);
 
+import request from "supertest";
 import { cleanupDatabase } from "./helpers";
 import { seedTwoTenantContexts } from "./tenant-isolation/tenantIsolation.harness";
 import {
@@ -157,5 +158,68 @@ describe("getSharedProjectCandidatesQuery", () => {
     );
 
     expect(await getSharedProjectCandidatesQuery(owner.orgId, subject)).toEqual([]);
+  });
+});
+
+describe("GET /api/riskLinks/:riskId/shared-projects", () => {
+  it("returns the shared candidate over HTTP", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const project = await createTestProject(owner.orgId, owner.userId, {
+      project_title: "Fraud Detection",
+    });
+    const subject = await createTestRisk(owner.orgId, {});
+    await linkRiskToProject(owner.orgId, subject, project);
+
+    const vendor = await createTestVendor(owner.orgId, {});
+    await linkVendorToProject(owner.orgId, vendor, project);
+    const vendorRisk = await createTestVendorRisk(owner.orgId, { vendor_id: vendor });
+
+    const response = await request(owner.app).get(
+      `/api/riskLinks/${subject}/shared-projects`,
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body.data).toEqual([
+      { entityType: "vendor_risk", id: vendorRisk, projects: ["Fraud Detection"] },
+    ]);
+  });
+
+  it("answers a risk with no shared projects with 200 and an empty list", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const subject = await createTestRisk(owner.orgId, {});
+
+    const response = await request(owner.app).get(
+      `/api/riskLinks/${subject}/shared-projects`,
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body.data).toEqual([]);
+  });
+
+  it("answers a risk belonging to another org with an empty list, not a leak", async () => {
+    const { owner, attacker } = await seedTwoTenantContexts();
+    const attackerProject = await createTestProject(attacker.orgId, attacker.userId, {
+      project_title: "Fraud Detection",
+    });
+    const attackerRisk = await createTestRisk(attacker.orgId, {});
+    await linkRiskToProject(attacker.orgId, attackerRisk, attackerProject);
+    const attackerVendor = await createTestVendor(attacker.orgId, {});
+    await linkVendorToProject(attacker.orgId, attackerVendor, attackerProject);
+    await createTestVendorRisk(attacker.orgId, { vendor_id: attackerVendor });
+
+    const response = await request(owner.app).get(
+      `/api/riskLinks/${attackerRisk}/shared-projects`,
+    );
+
+    expect(response.status).toBe(200);
+    expect(response.body.data).toEqual([]);
+  });
+
+  it("rejects a non-numeric risk id with 400", async () => {
+    const { owner } = await seedTwoTenantContexts();
+
+    const response = await request(owner.app).get("/api/riskLinks/abc/shared-projects");
+
+    expect(response.status).toBe(400);
   });
 });

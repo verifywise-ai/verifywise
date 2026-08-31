@@ -10134,6 +10134,20 @@ paths:
       security:
         -
           bearerAuth: []
+  '/riskLinks/{riskId}/shared-projects':
+    get:
+      summary: 'Get Shared Projects'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - RiskLinks
+      operationId: getSharedProjects
+      security:
+        -
+          bearerAuth: []
   /roles:
     get:
       tags:

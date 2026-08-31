@@ -19,6 +19,7 @@ import {
   getRelatedPairsQuery,
   getRiskLinkByIdQuery,
   getRiskLinksForRiskQuery,
+  getSharedProjectCandidatesQuery,
   HierarchyParent,
   RiskLinkWithRelated,
   updateRiskLinkStatusQuery,
@@ -217,6 +218,54 @@ export async function getRiskLinks(req: Request, res: Response): Promise<any> {
       eventType: "Read",
       description: "failed to fetch risk links",
       functionName: "getRiskLinks",
+      fileName: FILE_NAME,
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(500).json(STATUS_CODE[500]((error as Error).message));
+  }
+}
+
+/**
+ * Which vendor and model risks share a project with this risk. A ranking hint
+ * for the link picker — it writes nothing and asserts nothing beyond the shared
+ * project, so an empty list is a normal answer, not an error. A risk outside
+ * the caller's org yields an empty list for the same reason `getRiskLinks`
+ * yields an empty list rather than a 404.
+ */
+export async function getSharedProjects(req: Request, res: Response): Promise<any> {
+  logProcessing({
+    description: "starting getSharedProjects",
+    functionName: "getSharedProjects",
+    fileName: FILE_NAME,
+    userId: req.userId!,
+    organizationId: req.organizationId!,
+  });
+
+  try {
+    const riskId = parseInt(String(req.params.riskId), 10);
+    if (isNaN(riskId)) {
+      return res.status(400).json(STATUS_CODE[400]("Invalid risk ID"));
+    }
+
+    const candidates = await getSharedProjectCandidatesQuery(req.organizationId!, riskId);
+
+    logSuccess({
+      eventType: "Read",
+      description: `fetched ${candidates.length} shared-project candidates for risk ${riskId}`,
+      functionName: "getSharedProjects",
+      fileName: FILE_NAME,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+
+    return res.status(200).json(STATUS_CODE[200](candidates));
+  } catch (error) {
+    logFailure({
+      eventType: "Read",
+      description: "failed to fetch shared-project candidates",
+      functionName: "getSharedProjects",
       fileName: FILE_NAME,
       error: error as Error,
       userId: req.userId!,

@@ -6,6 +6,7 @@ import authorize from "../middleware/accessControl.middleware";
 import {
   createRiskLink,
   getRiskLinks,
+  getSharedProjects,
   recomputeAllRiskLinks,
   suggestRiskHierarchy,
   updateRiskLinkStatus,
@@ -23,6 +24,7 @@ router.post(
 
 router.post("/", authenticateJWT, createRiskLink);
 router.get("/:riskId", authenticateJWT, getRiskLinks);
+router.get("/:riskId/shared-projects", authenticateJWT, getSharedProjects);
 router.patch("/:id", authenticateJWT, updateRiskLinkStatus);
 
 export default router;
