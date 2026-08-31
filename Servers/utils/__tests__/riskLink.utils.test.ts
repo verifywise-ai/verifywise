@@ -11,6 +11,7 @@ import {
   getIncidentLinksQuery,
   getStructuralNeighboursQuery,
   getConfirmedHierarchyEdgesQuery,
+  getSharedProjectCandidatesQuery,
 } from "../riskLink.utils";
 
 const mockQuery = sequelize.query as jest.Mock;
@@ -128,5 +129,33 @@ describe("riskLink.utils", () => {
     mockQuery.mockResolvedValue([{ source_risk_id: 4, target_risk_id: 9 }]);
     const edges = await getConfirmedHierarchyEdgesQuery(7, 4, { id: 9, entityType: "risk" });
     expect(edges).toEqual([{ childRiskId: 4, parentRiskId: 9, parentEntityType: "risk" }]);
+  });
+
+  it("groups repeated rows for one candidate into a single entry", async () => {
+    mockQuery.mockResolvedValue([
+      { entity_type: "vendor_risk", id: 12, project_title: "Fraud Detection" },
+      { entity_type: "vendor_risk", id: 12, project_title: "KYC" },
+      { entity_type: "model_risk", id: 7, project_title: "Fraud Detection" },
+    ]);
+
+    expect(await getSharedProjectCandidatesQuery(3, 99)).toEqual([
+      { entityType: "vendor_risk", id: 12, projects: ["Fraud Detection", "KYC"] },
+      { entityType: "model_risk", id: 7, projects: ["Fraud Detection"] },
+    ]);
+  });
+
+  it("scopes both branches and the subject risk to the org", async () => {
+    await getSharedProjectCandidatesQuery(3, 99);
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(sql).toContain("vr.organization_id = :organizationId");
+    expect(sql).toContain("mr.organization_id = :organizationId");
+    expect(sql).toContain("subject.organization_id = :organizationId");
+    expect(options.replacements).toEqual({ organizationId: 3, riskId: 99 });
+    expect(options.type).toBe(QueryTypes.SELECT);
+  });
+
+  it("keeps DISTINCT on the model branch so one model is not repeated per framework", async () => {
+    await getSharedProjectCandidatesQuery(3, 99);
+    expect(mockQuery.mock.calls[0][0]).toContain("SELECT DISTINCT 'model_risk'");
   });
 });

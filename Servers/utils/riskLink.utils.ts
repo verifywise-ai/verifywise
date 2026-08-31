@@ -740,6 +740,97 @@ export async function getRiskLinkByIdQuery(
 }
 
 /**
+ * One vendor or model risk that shares at least one project with a given
+ * project risk. C5 is a ranking hint for the link picker: nothing here is
+ * written, scored, or thresholded — a candidate either shares a project or
+ * does not.
+ */
+export interface SharedProjectCandidate {
+  entityType: Exclude<ParentEntityType, "risk">;
+  id: number;
+  projects: string[];
+}
+
+/**
+ * Shared project is the only honest cross-entity signal: `vendorrisks` carries
+ * none of the fields the tier-0 scorer compares, and the two `risk_category`
+ * enums are disjoint vocabularies.
+ *
+ * `DISTINCT` is load-bearing on the model branch —
+ * `model_inventories_projects_frameworks` is keyed per framework, so one model
+ * in one project under three frameworks would otherwise appear three times.
+ *
+ * The org filters on the junction tables sit on nullable columns on purpose.
+ * A NULL there makes the row invisible, which is the correct direction for a
+ * tenant boundary and matches the rest of the codebase. The subject's own
+ * ownership is anchored to `risks.organization_id`, which is NOT NULL, so it
+ * does not depend on the nullable `projects_risks.organization_id`.
+ */
+export async function getSharedProjectCandidatesQuery(
+  organizationId: number,
+  riskId: number,
+): Promise<SharedProjectCandidate[]> {
+  const rows = await sequelize.query(
+    `WITH subject_projects AS (
+       SELECT pr.project_id
+         FROM projects_risks pr
+         JOIN risks subject
+           ON subject.id = pr.risk_id
+          AND subject.organization_id = :organizationId
+          AND subject.is_deleted = false
+        WHERE pr.risk_id = :riskId
+          AND pr.organization_id = :organizationId
+     )
+     SELECT DISTINCT 'vendor_risk' AS entity_type, vr.id AS id, p.project_title AS project_title
+       FROM vendorrisks vr
+       JOIN vendors_projects vp
+         ON vp.vendor_id = vr.vendor_id
+        AND vp.organization_id = :organizationId
+       JOIN subject_projects sp ON sp.project_id = vp.project_id
+       JOIN projects p          ON p.id          = vp.project_id
+      WHERE vr.organization_id = :organizationId
+        AND vr.is_deleted = false
+
+     UNION ALL
+
+     SELECT DISTINCT 'model_risk', mr.id, p.project_title
+       FROM model_risks mr
+       JOIN model_inventories_projects_frameworks mp
+         ON mp.model_inventory_id = mr.model_id
+        AND mp.organization_id = :organizationId
+       JOIN subject_projects sp ON sp.project_id = mp.project_id
+       JOIN projects p          ON p.id          = mp.project_id
+      WHERE mr.organization_id = :organizationId
+        AND mr.is_deleted = false
+
+     ORDER BY entity_type, id, project_title`,
+    { replacements: { organizationId, riskId }, type: QueryTypes.SELECT },
+  );
+
+  // DISTINCT already guarantees one row per (entity, id, title), so the titles
+  // can be pushed without a second de-duplication pass. The map preserves row
+  // order, so the returned array follows ORDER BY entity_type, which sorts
+  // "model_risk" BEFORE "vendor_risk". The vendor branch is written first in
+  // the SQL, but that is not the output order — callers join by id and must
+  // never assert a vendor-first array.
+  const grouped = new Map<string, SharedProjectCandidate>();
+  for (const row of rows as any[]) {
+    const key = `${row.entity_type}:${row.id}`;
+    const entry = grouped.get(key);
+    if (entry) {
+      entry.projects.push(row.project_title);
+    } else {
+      grouped.set(key, {
+        entityType: row.entity_type,
+        id: row.id,
+        projects: [row.project_title],
+      });
+    }
+  }
+  return [...grouped.values()];
+}
+
+/**
  * Record a human decision. `decidedByUserId` of null is the explicit undo
  * (dismissed -> suggested): it clears decided_at too, so the edge looks
  * untouched again and a later recompute may prune it normally.

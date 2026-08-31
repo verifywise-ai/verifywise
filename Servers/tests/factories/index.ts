@@ -22,6 +22,7 @@ export {
   createTestFileChangeHistory,
   linkRiskToProject,
   linkVendorToProject,
+  linkModelToProject,
   assignTaskToUser,
   createTestModelInventory,
   createTestModelRisk,

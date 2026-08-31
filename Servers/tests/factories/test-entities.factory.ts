@@ -258,6 +258,21 @@ export async function linkVendorToProject(
   );
 }
 
+export async function linkModelToProject(
+  orgId: number,
+  modelInventoryId: number,
+  projectId: number,
+  frameworkId: number,
+): Promise<void> {
+  await sequelize.query(
+    `INSERT INTO model_inventories_projects_frameworks
+       (organization_id, model_inventory_id, project_id, framework_id)
+     VALUES (:orgId, :modelInventoryId, :projectId, :frameworkId)
+     ON CONFLICT (model_inventory_id, project_id, framework_id) DO NOTHING`,
+    { replacements: { orgId, modelInventoryId, projectId, frameworkId } },
+  );
+}
+
 export async function assignTaskToUser(
   orgId: number,
   taskId: number,
