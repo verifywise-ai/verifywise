@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   createRiskLink,
   getRiskLinks,
+  getSharedProjects,
   recomputeRiskLinks,
   suggestRiskHierarchy,
   updateRiskLinkStatus,
@@ -11,6 +12,7 @@ import {
   DismissReason,
   RiskLink,
   RiskLinkStatus,
+  SharedProjectCandidate,
 } from "../../domain/interfaces/i.riskLink";
 
 const linksKey = (riskId: number) => ["riskLinks", riskId] as const;
@@ -78,3 +80,19 @@ export function useSuggestRiskHierarchy(riskId: number) {
     onSettled: invalidate,
   });
 }
+
+/**
+ * Ranking data for the link picker. `enabled` is the caller's, because the
+ * picker only needs it while a cross-entity parent source is selected. Its key
+ * is deliberately outside `linksKey`: creating a link does not change which
+ * projects a candidate belongs to, so this must not be invalidated with the
+ * link list.
+ */
+export function useSharedProjects(riskId: number, enabled: boolean) {
+  return useQuery<SharedProjectCandidate[]>({
+    queryKey: ["riskLinkSharedProjects", riskId],
+    queryFn: () => getSharedProjects(riskId),
+    enabled: enabled && Number.isFinite(riskId),
+  });
+}
+

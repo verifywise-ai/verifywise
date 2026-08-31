@@ -8,13 +8,26 @@ import { RiskLink } from "../../../../domain/interfaces/i.riskLink";
 
 const mockCreate = vi.fn();
 const mockGetAllProjectRisks = vi.fn();
+const mockUseSharedProjects = vi.fn();
 
 vi.mock("../../../../application/hooks/useRiskLinks", () => ({
   useCreateRiskLink: () => ({ mutate: mockCreate, isPending: false }),
+  useSharedProjects: (...args: unknown[]) => mockUseSharedProjects(...args),
 }));
 
 vi.mock("../../../../application/repository/projectRisk.repository", () => ({
   getAllProjectRisks: (...args: unknown[]) => mockGetAllProjectRisks(...args),
+}));
+
+const mockGetAllVendorRisks = vi.fn();
+const mockGetAllEntities = vi.fn();
+
+vi.mock("../../../../application/repository/vendorRisk.repository", () => ({
+  getAllVendorRisks: (...args: unknown[]) => mockGetAllVendorRisks(...args),
+}));
+
+vi.mock("../../../../application/repository/entity.repository", () => ({
+  getAllEntities: (...args: unknown[]) => mockGetAllEntities(...args),
 }));
 
 import LinkRiskForm from "../LinkRiskForm";
@@ -62,6 +75,7 @@ const pick = async (name: string) => {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mockUseSharedProjects.mockReturnValue({ data: [] });
   mockGetAllProjectRisks.mockResolvedValue(
     risksResponse([
       { id: 42, risk_name: "Subject risk" },
@@ -322,3 +336,83 @@ describe("LinkRiskForm errors", () => {
     expect(screen.getByRole("radio", { name: "Relates to" })).toBeChecked();
   });
 });
+
+describe("LinkRiskForm shared-project ranking", () => {
+  beforeEach(() => {
+    mockGetAllVendorRisks.mockResolvedValue({
+      data: [
+        { id: 1, risk_description: "Unshared vendor risk" },
+        { id: 2, risk_description: "Shared vendor risk" },
+      ],
+    });
+    mockGetAllEntities.mockResolvedValue({ data: [] });
+  });
+
+  /** Selects Inherits from -> Vendor risk and opens the candidate list. */
+  const openVendorPicker = async () => {
+    await waitFor(() => expect(mockGetAllProjectRisks).toHaveBeenCalled());
+    await userEvent.click(screen.getByRole("radio", { name: "Inherits from" }));
+    await userEvent.click(screen.getByRole("radio", { name: "Vendor risk" }));
+    await waitFor(() => expect(mockGetAllVendorRisks).toHaveBeenCalled());
+    await userEvent.click(screen.getByPlaceholderText("Search risks"));
+  };
+
+  it("sorts a shared candidate above an unshared one and keeps both selectable", async () => {
+    mockUseSharedProjects.mockReturnValue({
+      data: [{ entityType: "vendor_risk", id: 2, projects: ["Fraud Detection"] }],
+    });
+    wrap(<LinkRiskForm riskId={42} existingLinks={[]} onClose={vi.fn()} />);
+
+    await openVendorPicker();
+
+    const options = await screen.findAllByRole("option");
+    expect(options).toHaveLength(2);
+    expect(options[0]).toHaveTextContent("Shared vendor risk");
+    expect(options[1]).toHaveTextContent("Unshared vendor risk");
+  });
+
+  it("badges the shared candidate with its project name", async () => {
+    mockUseSharedProjects.mockReturnValue({
+      data: [{ entityType: "vendor_risk", id: 2, projects: ["Fraud Detection"] }],
+    });
+    wrap(<LinkRiskForm riskId={42} existingLinks={[]} onClose={vi.fn()} />);
+
+    await openVendorPicker();
+
+    const options = await screen.findAllByRole("option");
+    expect(options[0]).toHaveTextContent("Same project: Fraud Detection");
+    expect(options[1]).not.toHaveTextContent("Same project");
+  });
+
+  it("summarises two shared projects as the first title plus a count", async () => {
+    mockUseSharedProjects.mockReturnValue({
+      data: [{ entityType: "vendor_risk", id: 2, projects: ["Fraud Detection", "KYC"] }],
+    });
+    wrap(<LinkRiskForm riskId={42} existingLinks={[]} onClose={vi.fn()} />);
+
+    await openVendorPicker();
+
+    const options = await screen.findAllByRole("option");
+    expect(options[0]).toHaveTextContent("Same project: Fraud Detection +1");
+  });
+
+  // The map is keyed by id alone, so it must be filtered by entityType first:
+  // project risk 10 and model risk 10 are different rows that share a number.
+  it("leaves the project-risk picker unranked and unbadged", async () => {
+    mockUseSharedProjects.mockReturnValue({
+      data: [{ entityType: "model_risk", id: 10, projects: ["Fraud Detection"] }],
+    });
+    wrap(<LinkRiskForm riskId={42} existingLinks={[]} onClose={vi.fn()} />);
+
+    await waitFor(() => expect(mockGetAllProjectRisks).toHaveBeenCalled());
+    await userEvent.click(screen.getByPlaceholderText("Search risks"));
+
+    const options = await screen.findAllByRole("option");
+    // The global beforeEach seeds Model drift (9) then Data quality (10); risk
+    // 42 is the subject and is excluded. Order must be untouched.
+    expect(options[0]).toHaveTextContent("Model drift");
+    expect(options[1]).toHaveTextContent("Data quality");
+    expect(options[1]).not.toHaveTextContent("Same project");
+  });
+});
+

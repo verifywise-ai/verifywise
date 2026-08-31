@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   Alert,
   Button,
+  Chip,
   FormControlLabel,
   Radio,
   RadioGroup,
@@ -12,7 +13,7 @@ import AutoCompleteField from "../Inputs/Autocomplete";
 import { getAllProjectRisks } from "../../../application/repository/projectRisk.repository";
 import { getAllVendorRisks } from "../../../application/repository/vendorRisk.repository";
 import { getAllEntities } from "../../../application/repository/entity.repository";
-import { useCreateRiskLink } from "../../../application/hooks/useRiskLinks";
+import { useCreateRiskLink, useSharedProjects } from "../../../application/hooks/useRiskLinks";
 import { CreateRiskLinkInput, RiskLink } from "../../../domain/interfaces/i.riskLink";
 
 interface LinkRiskFormProps {
@@ -121,6 +122,21 @@ export default function LinkRiskForm({ riskId, existingLinks, onClose }: LinkRis
     },
   });
 
+  const { data: sharedProjects = [] } = useSharedProjects(riskId, source !== "risk");
+
+  /**
+   * Candidate id -> shared project titles, for the currently selected source
+   * only. Filtering by `entityType` is what keeps a model risk id from ranking a
+   * vendor risk that happens to share that id.
+   */
+  const sharedByCandidate = useMemo(() => {
+    const map = new Map<number, string[]>();
+    for (const candidate of sharedProjects) {
+      if (candidate.entityType === source) map.set(candidate.id, candidate.projects);
+    }
+    return map;
+  }, [sharedProjects, source]);
+
   /**
    * Deliberately incomplete: computed from the panel's suggested + confirmed
    * list, so a dismissed partner stays selectable and the server's 409 does the
@@ -141,8 +157,14 @@ export default function LinkRiskForm({ riskId, existingLinks, onClose }: LinkRis
 
   const options = useMemo(() => {
     const pool = source === "risk" ? candidates : crossEntityCandidates;
-    return pool.filter((candidate) => !excludedKeys.has(`${source}:${candidate.id}`));
-  }, [candidates, crossEntityCandidates, source, excludedKeys]);
+    const visible = pool.filter((candidate) => !excludedKeys.has(`${source}:${candidate.id}`));
+    // A stable partition, not a sort: each group keeps the server's order, and
+    // nothing is removed — a candidate sharing no project stays selectable.
+    return [
+      ...visible.filter((candidate) => sharedByCandidate.has(candidate.id)),
+      ...visible.filter((candidate) => !sharedByCandidate.has(candidate.id)),
+    ];
+  }, [candidates, crossEntityCandidates, source, excludedKeys, sharedByCandidate]);
 
   const handleChoice = (next: Choice) => {
     setRawChoice(next);
@@ -218,6 +240,31 @@ export default function LinkRiskForm({ riskId, existingLinks, onClose }: LinkRis
         options={options}
         value={partner}
         getOptionLabel={(option) => option.risk_name}
+        renderOption={(props, option) => {
+          const shared = sharedByCandidate.get(option.id);
+          return (
+            <li {...props} key={`${source}:${option.id}`}>
+              <Stack
+                direction="row"
+                spacing={1}
+                alignItems="center"
+                sx={{ width: "100%", justifyContent: "space-between" }}
+              >
+                <span>{option.risk_name}</span>
+                {shared && shared.length > 0 && (
+                  <Chip
+                    size="small"
+                    label={
+                      shared.length > 1
+                        ? `Same project: ${shared[0]} +${shared.length - 1}`
+                        : `Same project: ${shared[0]}`
+                    }
+                  />
+                )}
+              </Stack>
+            </li>
+          );
+        }}
         isOptionEqualToValue={(option, selected) => option.id === selected.id}
         onChange={(_event, selected) => {
           setPartner(selected);

@@ -18,6 +18,7 @@ vi.mock("../../../../application/hooks/useRiskLinks", () => ({
   useRecomputeRiskLinks: () => ({ mutate: mockMutateRecompute, isPending: false }),
   useCreateRiskLink: () => ({ mutate: vi.fn(), isPending: false, error: null, reset: vi.fn() }),
   useSuggestRiskHierarchy: () => ({ mutate: mockMutateSuggest, isPending: false }),
+  useSharedProjects: () => ({ data: [] }),
 }));
 
 vi.mock("../../../../application/hooks/useIsAdmin", () => ({

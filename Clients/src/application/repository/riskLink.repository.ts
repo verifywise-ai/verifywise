@@ -5,6 +5,7 @@ import {
   DismissReason,
   RiskLink,
   RiskLinkStatus,
+  SharedProjectCandidate,
 } from "../../domain/interfaces/i.riskLink";
 
 function extractData<T>(response: { data: { data: T } }): T {
@@ -95,5 +96,17 @@ export async function suggestRiskHierarchy(): Promise<{
     return extractData<{ enqueued: number; skipped: number }>(response);
   } catch (error: any) {
     throw toAPIError(error, "Failed to start the hierarchy suggestions");
+  }
+}
+
+export async function getSharedProjects(riskId: number): Promise<SharedProjectCandidate[]> {
+  try {
+    const response = await apiServices.get<{
+      message: string;
+      data: SharedProjectCandidate[];
+    }>(`/riskLinks/${riskId}/shared-projects`);
+    return extractData<SharedProjectCandidate[]>(response);
+  } catch (error: any) {
+    throw toAPIError(error, "Failed to fetch shared projects");
   }
 }

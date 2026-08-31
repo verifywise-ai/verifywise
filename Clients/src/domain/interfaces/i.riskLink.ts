@@ -64,3 +64,13 @@ export type CreateRiskLinkInput = {
   | { targetModelRiskId: number }
   | { targetVendorRiskId: number }
 );
+
+/**
+ * A cross-entity parent candidate that shares at least one project with the
+ * risk being linked. Ranking only — the picker still lists non-sharers.
+ */
+export interface SharedProjectCandidate {
+  entityType: Exclude<RiskLinkEntityType, "risk">;
+  id: number;
+  projects: string[];
+}
