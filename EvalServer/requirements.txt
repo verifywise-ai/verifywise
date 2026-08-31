@@ -5,7 +5,7 @@ alembic==1.17.1
 annotated-doc==0.0.3
 annotated-types==0.7.0
 anthropic==0.72.0
-anyio==4.11.0
+anyio==4.14.2
 asyncpg==0.30.0
 attrs==25.4.0
 backoff==2.2.1
