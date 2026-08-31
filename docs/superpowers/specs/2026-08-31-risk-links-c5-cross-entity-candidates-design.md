@@ -179,10 +179,14 @@ One query, one round trip:
 
 ```sql
 WITH subject_projects AS (
-  SELECT project_id
-    FROM projects_risks
-   WHERE risk_id = :riskId
-     AND organization_id = :organizationId
+  SELECT pr.project_id
+    FROM projects_risks pr
+    JOIN risks subject
+      ON subject.id = pr.risk_id
+     AND subject.organization_id = :organizationId
+     AND subject.is_deleted = false
+   WHERE pr.risk_id = :riskId
+     AND pr.organization_id = :organizationId
 )
 SELECT DISTINCT 'vendor_risk' AS entity_type, vr.id AS id, p.project_title
   FROM vendorrisks vr
@@ -207,8 +211,16 @@ SELECT DISTINCT 'model_risk', mr.id, p.project_title
    AND mr.is_deleted = false
 ```
 
+The `JOIN risks subject` mirrors `getRiskLinksForRiskQuery`
+(`riskLink.utils.ts:713`), and it is what anchors the tenant check to a
+`NOT NULL` column: `risks.organization_id` cannot be NULL, so the subject's
+ownership is verified without depending on the nullable
+`projects_risks.organization_id` alone.
+
 `DISTINCT` applies per branch and is load-bearing on the model side only (§2.4);
-it is written on both for symmetry and costs nothing on the vendor side.
+it is written on both for symmetry and costs nothing on the vendor side. The
+trailing `ORDER BY entity_type, id, project_title` makes the grouped output
+deterministic, which the tests depend on.
 
 Application SQL is unqualified — `search_path` is already `verifywise`. Only
 migrations qualify the schema, and C5 has no migration.
