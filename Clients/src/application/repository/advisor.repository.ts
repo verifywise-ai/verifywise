@@ -164,10 +164,12 @@ export const deleteConversationAPI = async (
  * tools from the AI Implementation Plan, with domain/phase rollups and
  * per-tool status. Available to Admin, Editor, Reviewer and Auditor roles.
  */
-export const getToolsRoadmapAPI = async (): Promise<ApiResponse<IAdvisorToolsRoadmap>> => {
+export const getToolsRoadmapAPI = async (): Promise<IAdvisorToolsRoadmap> => {
   try {
     const response = await apiServices.get(`/advisor/tools/roadmap`);
-    return response as ApiResponse<IAdvisorToolsRoadmap>;
+    // The backend wraps the payload in a { message, data } envelope and
+    // apiServices adds another layer, so the roadmap is at response.data.data.
+    return (response.data as { data: IAdvisorToolsRoadmap }).data;
   } catch (error) {
     rethrow(error);
   }

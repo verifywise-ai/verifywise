@@ -15,8 +15,7 @@ export const useAdvisorToolsRoadmap = (): UseQueryResult<IAdvisorToolsRoadmap, E
   return useQuery({
     queryKey: advisorRoadmapQueryKeys.all,
     queryFn: async () => {
-      const response = await getToolsRoadmapAPI();
-      return response.data;
+      return await getToolsRoadmapAPI();
     },
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,

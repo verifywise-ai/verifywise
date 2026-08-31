@@ -136,52 +136,6 @@ export default function AIAdvisorRoadmap() {
           />
         ) : (
           <>
-            <Stack sx={sectionStyle}>
-              <Typography sx={sectionTitleStyle}>Progress by domain</Typography>
-              {data.domains.map((domain) => (
-                <Box key={domain.key} sx={progressRowStyle}>
-                  <Typography sx={{ fontSize: 13 }}>{domain.label}</Typography>
-                  <LinearProgress
-                    variant="determinate"
-                    value={domain.percentComplete}
-                    sx={{ height: 8, borderRadius: 4 }}
-                  />
-                  <Typography sx={{ fontSize: 12, color: palette.text.secondary }}>
-                    {domain.implemented}/{domain.total} ({domain.percentComplete}%)
-                  </Typography>
-                </Box>
-              ))}
-            </Stack>
-
-            <Stack sx={sectionStyle}>
-              <Typography sx={sectionTitleStyle}>Progress by phase</Typography>
-              {data.phases.map((phase) => (
-                <Box key={phase.id} sx={progressRowStyle}>
-                  <Typography sx={{ fontSize: 13 }}>
-                    {phase.id > 0 ? `Phase ${phase.id} — ` : ""}
-                    {phase.title}
-                  </Typography>
-                  {phase.total > 0 ? (
-                    <LinearProgress
-                      variant="determinate"
-                      value={phase.percentComplete ?? 0}
-                      sx={{ height: 8, borderRadius: 4 }}
-                    />
-                  ) : (
-                    <Typography sx={{ fontSize: 12, color: palette.text.secondary }}>
-                      Capability phase — no catalogued tools (priority: {phase.priority}, depends
-                      on: {phase.dependencies})
-                    </Typography>
-                  )}
-                  <Typography sx={{ fontSize: 12, color: palette.text.secondary }}>
-                    {phase.total > 0
-                      ? `${phase.implemented}/${phase.total} (${phase.percentComplete}%)`
-                      : "—"}
-                  </Typography>
-                </Box>
-              ))}
-            </Stack>
-
             <Box sx={toolbarStyle}>
               <Box sx={filterRowStyle}>
                 <SearchBox
@@ -249,6 +203,52 @@ export default function AIAdvisorRoadmap() {
                 </Box>
               </Stack>
             )}
+
+            <Stack sx={sectionStyle}>
+              <Typography sx={sectionTitleStyle}>Progress by domain</Typography>
+              {data.domains.map((domain) => (
+                <Box key={domain.key} sx={progressRowStyle}>
+                  <Typography sx={{ fontSize: 13 }}>{domain.label}</Typography>
+                  <LinearProgress
+                    variant="determinate"
+                    value={domain.percentComplete}
+                    sx={{ height: 8, borderRadius: 4 }}
+                  />
+                  <Typography sx={{ fontSize: 12, color: palette.text.secondary }}>
+                    {domain.implemented}/{domain.total} ({domain.percentComplete}%)
+                  </Typography>
+                </Box>
+              ))}
+            </Stack>
+
+            <Stack sx={sectionStyle}>
+              <Typography sx={sectionTitleStyle}>Progress by phase</Typography>
+              {data.phases.map((phase) => (
+                <Box key={phase.id} sx={progressRowStyle}>
+                  <Typography sx={{ fontSize: 13 }}>
+                    {phase.id > 0 ? `Phase ${phase.id} — ` : ""}
+                    {phase.title}
+                  </Typography>
+                  {phase.total > 0 ? (
+                    <LinearProgress
+                      variant="determinate"
+                      value={phase.percentComplete ?? 0}
+                      sx={{ height: 8, borderRadius: 4 }}
+                    />
+                  ) : (
+                    <Typography sx={{ fontSize: 12, color: palette.text.secondary }}>
+                      Capability phase — no catalogued tools (priority: {phase.priority}, depends
+                      on: {phase.dependencies})
+                    </Typography>
+                  )}
+                  <Typography sx={{ fontSize: 12, color: palette.text.secondary }}>
+                    {phase.total > 0
+                      ? `${phase.implemented}/${phase.total} (${phase.percentComplete}%)`
+                      : "—"}
+                  </Typography>
+                </Box>
+              ))}
+            </Stack>
           </>
         )}
       </Stack>
