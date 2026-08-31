@@ -52,6 +52,7 @@ import {
   Gauge,
   Compass,
   Star,
+  Map,
 } from "lucide-react";
 
 /**
@@ -182,6 +183,9 @@ export const routeMapping: Record<string, string> = {
 
   // AI apps
   "/ai-apps": "AI apps",
+
+  // AI Advisor
+  "/advisor-roadmap": "AI Advisor roadmap",
 
   // Intake forms
   "/intake-forms": "Intake forms",
@@ -370,6 +374,9 @@ export const routeIconMapping: Record<string, () => React.ReactNode> = {
 
   // AI apps
   "/ai-apps": () => React.createElement(Bot, { size: 14, strokeWidth: 1.5 }),
+
+  // AI Advisor
+  "/advisor-roadmap": () => React.createElement(Map, { size: 14, strokeWidth: 1.5 }),
 };
 
 /**
