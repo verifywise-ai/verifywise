@@ -27,7 +27,7 @@ presidio-analyzer>=2.2.364
 # It is installed with --no-deps in CI/Docker since cryptography is the only required dep.
 presidio-anonymizer>=2.2.364
 # spaCy model: python -m spacy download en_core_web_md
-spacy>=3.8.15
+spacy>=3.8.16
 
 # MCP Gateway — Model Context Protocol SDK
 mcp>=2.0.0
