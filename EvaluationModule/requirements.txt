@@ -15,7 +15,7 @@ torch>=2.13.0,<3.0.0
 transformers>=5.15.1
 sentence-transformers>=6.0.0
 # huggingface-hub 1.16.3+ requires click>=8.4.0, which conflicts with deepeval<4.2.0
-huggingface-hub>=1.16.1,<1.16.3
+huggingface-hub>=1.29.0,<1.29.1
 
 # Data handling
 datasets>=5.0.1
