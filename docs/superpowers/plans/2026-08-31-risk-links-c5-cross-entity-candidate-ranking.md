@@ -348,7 +348,11 @@ export async function getSharedProjectCandidatesQuery(
   );
 
   // DISTINCT already guarantees one row per (entity, id, title), so the titles
-  // can be pushed without a second de-duplication pass.
+  // can be pushed without a second de-duplication pass. The map preserves row
+  // order, so the returned array follows ORDER BY entity_type, which sorts
+  // "model_risk" BEFORE "vendor_risk". The vendor branch is written first in
+  // the SQL, but that is not the output order — callers join by id and must
+  // never assert a vendor-first array.
   const grouped = new Map<string, SharedProjectCandidate>();
   for (const row of rows as any[]) {
     const key = `${row.entity_type}:${row.id}`;
