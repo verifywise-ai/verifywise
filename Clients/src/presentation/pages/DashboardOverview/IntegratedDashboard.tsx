@@ -813,7 +813,9 @@ const IntegratedDashboard: React.FC = () => {
                       }
 
                       return (
-                        <Stack gap={0}>
+                        // ActivityItem carries role="listitem", which is only
+                        // valid inside a list.
+                        <Stack gap={0} role="list">
                           {sortedActivities.map((activity, index) => (
                             <ActivityItem
                               key={activity.id}
@@ -833,6 +835,7 @@ const IntegratedDashboard: React.FC = () => {
                     ) : (
                       <UseCasesTable
                         data={useCases}
+                        ariaLabel="Recent use cases"
                         onRowClick={(id) =>
                           navigateSearch("/project-view", { projectId: id.toString() })
                         }
@@ -1042,6 +1045,7 @@ const IntegratedDashboard: React.FC = () => {
                     ) : (
                       <UseCasesTable
                         data={useCases}
+                        ariaLabel="Recent use cases"
                         onRowClick={(id) =>
                           navigateSearch("/project-view", { projectId: id.toString() })
                         }
@@ -1177,7 +1181,9 @@ const IntegratedDashboard: React.FC = () => {
                       }
 
                       return (
-                        <Stack gap={0}>
+                        // ActivityItem carries role="listitem", which is only
+                        // valid inside a list.
+                        <Stack gap={0} role="list">
                           {sortedActivities.map((activity, index) => (
                             <ActivityItem
                               key={activity.id}
