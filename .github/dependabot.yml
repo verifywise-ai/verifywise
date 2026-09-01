@@ -154,6 +154,11 @@ updates:
       - "docker"
     commit-message:
       prefix: "docker(aigateway):"
+    ignore:
+      - dependency-name: "python"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
 
   - package-ecosystem: "docker"
     directory: "/EvalServer"
@@ -164,3 +169,8 @@ updates:
       - "docker"
     commit-message:
       prefix: "docker(evalserver):"
+    ignore:
+      - dependency-name: "python"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
