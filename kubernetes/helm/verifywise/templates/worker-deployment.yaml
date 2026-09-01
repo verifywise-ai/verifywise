@@ -1,0 +1,94 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+  labels:
+    {{- include "verifywise.labels" . | nindent 4 }}
+    component: worker
+spec:
+  replicas: {{ .Values.replicas.worker }}
+  selector:
+    matchLabels:
+      {{- include "verifywise.selectorLabels" . | nindent 6 }}
+      component: worker
+  template:
+    metadata:
+      labels:
+        {{- include "verifywise.selectorLabels" . | nindent 8 }}
+        component: worker
+    spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: worker
+        image: "{{ .Values.images.backend }}:{{ include "verifywise.imageTag" . }}"
+        imagePullPolicy: {{ .Values.images.pullPolicy }}
+        command: ["node", "dist/jobs/worker.js"]
+        env:
+        - name: NODE_ENV
+          valueFrom:
+            configMapKeyRef: { name: verifywise-config, key: NODE_ENV }
+
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef: { name: verifywise-config, key: DB_HOST }
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef: { name: verifywise-config, key: DB_PORT }
+        - name: DB_SSL
+          valueFrom:
+            configMapKeyRef: { name: verifywise-config, key: DB_SSL }
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef: { name: {{ include "verifywise.secretName" . }}, key: DB_USER }
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef: { name: {{ include "verifywise.secretName" . }}, key: DB_PASSWORD }
+        - name: DB_NAME
+          valueFrom:
+            secretKeyRef: { name: {{ include "verifywise.secretName" . }}, key: DB_NAME }
+
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef: { name: {{ include "verifywise.secretName" . }}, key: JWT_SECRET }
+        - name: REFRESH_TOKEN_SECRET
+          valueFrom:
+            secretKeyRef: { name: {{ include "verifywise.secretName" . }}, key: REFRESH_TOKEN_SECRET }
+
+        - name: REDIS_URL
+          valueFrom:
+            configMapKeyRef: { name: verifywise-config, key: REDIS_URL }
+        - name: REDIS_HOST
+          valueFrom:
+            configMapKeyRef: { name: verifywise-config, key: REDIS_HOST }
+        - name: REDIS_PORT
+          valueFrom:
+            configMapKeyRef: { name: verifywise-config, key: REDIS_PORT }
+
+        - name: AI_GATEWAY_URL
+          valueFrom:
+            configMapKeyRef: { name: verifywise-config, key: AI_GATEWAY_URL }
+        - name: AI_GATEWAY_INTERNAL_KEY
+          valueFrom:
+            secretKeyRef: { name: {{ include "verifywise.secretName" . }}, key: AI_GATEWAY_INTERNAL_KEY }
+
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+        livenessProbe:
+          exec:
+            command: ["sh", "-c", "pgrep -f 'node dist/jobs/worker.js' || exit 1"]
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 5
+          failureThreshold: 3

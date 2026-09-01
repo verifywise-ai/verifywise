@@ -147,7 +147,27 @@
       "Read(//Users/harsh/.ssh/**)",
       "Bash(zcat ~/.ssh/dump.sql.gz)",
       "Bash(xattr Servers/temp/handoff/)",
-      "Bash(chmod +w Servers/temp/handoff/)"
+      "Bash(chmod +w Servers/temp/handoff/)",
+      "Bash(git rm *)",
+      "Bash(git mv *)",
+      "Bash(chmod -a# 0 /Users/harsh/Data/vw/verifywise/Servers/temp/handoff)",
+      "Bash(minikube start *)",
+      "Bash(kubectl get *)",
+      "Bash(minikube stop *)",
+      "Bash(minikube delete *)",
+      "Bash(pkill -f \"kubectl get nodes\")",
+      "Bash(pkill -f \"until kubectl\")",
+      "Bash(pkill -f \"minikube\")",
+      "Bash(gh run *)",
+      "Bash(helm version *)",
+      "Bash(helm lint *)",
+      "Bash(helm template *)",
+      "Bash(kubectl apply *)",
+      "Bash(command -v yq)",
+      "Bash(yq eval *)",
+      "Bash(/opt/homebrew/bin/pip3 install *)",
+      "Bash(brew list *)",
+      "Bash(brew install *)"
     ]
   }
 }

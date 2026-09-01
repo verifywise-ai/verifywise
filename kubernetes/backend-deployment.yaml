@@ -24,7 +24,7 @@ spec:
           type: RuntimeDefault
       containers:
       - name: backend
-        image: ghcr.io/verifywise-ai/verifywise-backend:1.7.0
+        image: ghcr.io/verifywise-ai/verifywise-backend:latest
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 3000
@@ -47,6 +47,11 @@ spec:
             configMapKeyRef:
               name: verifywise-config
               key: BACKEND_URL
+        - name: FRONTEND_URL
+          valueFrom:
+            configMapKeyRef:
+              name: verifywise-config
+              key: FRONTEND_URL
 
         # Database Configuration
         - name: DB_HOST
@@ -116,6 +121,20 @@ spec:
               name: verifywise-config
               key: LLM_EVALS_URL
 
+        # AI Gateway URL
+        - name: AI_GATEWAY_URL
+          valueFrom:
+            configMapKeyRef:
+              name: verifywise-config
+              key: AI_GATEWAY_URL
+
+        # Shared internal key with eval-server for authenticating calls
+        - name: EVAL_SERVER_INTERNAL_KEY
+          valueFrom:
+            secretKeyRef:
+              name: verifywise-secrets
+              key: EVAL_SERVER_INTERNAL_KEY
+
         # Feature Flags
         - name: MOCK_DATA_ON
           valueFrom:
@@ -134,11 +153,13 @@ spec:
             configMapKeyRef:
               name: verifywise-config
               key: EMAIL_PROVIDER
+              optional: true
         - name: EMAIL_ID
           valueFrom:
             configMapKeyRef:
               name: verifywise-config
               key: EMAIL_ID
+              optional: true
 
         # SMTP Configuration (when EMAIL_PROVIDER=smtp)
         - name: SMTP_HOST
@@ -146,21 +167,25 @@ spec:
             configMapKeyRef:
               name: verifywise-config
               key: SMTP_HOST
+              optional: true
         - name: SMTP_PORT
           valueFrom:
             configMapKeyRef:
               name: verifywise-config
               key: SMTP_PORT
+              optional: true
         - name: SMTP_USER
           valueFrom:
             configMapKeyRef:
               name: verifywise-config
               key: SMTP_USER
+              optional: true
         - name: SMTP_SECURE
           valueFrom:
             configMapKeyRef:
               name: verifywise-config
               key: SMTP_SECURE
+              optional: true
         - name: SMTP_PASS
           valueFrom:
             secretKeyRef:
@@ -196,16 +221,19 @@ spec:
             configMapKeyRef:
               name: verifywise-config
               key: SLACK_CLIENT_ID
+              optional: true
         - name: SLACK_URL
           valueFrom:
             configMapKeyRef:
               name: verifywise-config
               key: SLACK_URL
+              optional: true
         - name: SLACK_API_URL
           valueFrom:
             configMapKeyRef:
               name: verifywise-config
               key: SLACK_API_URL
+              optional: true
         - name: SLACK_CLIENT_SECRET
           valueFrom:
             secretKeyRef:
@@ -237,6 +265,11 @@ spec:
             secretKeyRef:
               name: verifywise-secrets
               key: ENCRYPTION_PASSWORD
+        - name: ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: verifywise-secrets
+              key: ENCRYPTION_KEY
         livenessProbe:
           httpGet:
             path: /health
@@ -249,7 +282,7 @@ spec:
           httpGet:
             path: /health
             port: 3000
-          initialDelaySeconds: 15
+          initialDelaySeconds: 10
           periodSeconds: 5
           timeoutSeconds: 3
           failureThreshold: 3

@@ -1,0 +1,50 @@
+# VerifyWise ingress
+#
+# Default: plain HTTP, no domain required.
+#   Access via the ingress controller's public IP:  http://<INGRESS-IP>/
+#
+# To enable HTTPS with a real domain:
+#   1. Uncomment the three lines marked "HTTPS:" below.
+#   2. Replace  verifywise.example.com  with your real domain (2 places).
+#   3. Make sure cert-manager is installed and a ClusterIssuer named
+#      "letsencrypt-prod" exists — the cert is issued automatically.
+#
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: verifywise-ingress
+  namespace: verifywise
+  # HTTPS: uncomment for automatic Let's Encrypt certificate
+  # annotations:
+  #   cert-manager.io/cluster-issuer: letsencrypt-prod
+  #   nginx.ingress.kubernetes.io/ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+
+  # HTTPS: uncomment to terminate TLS at the ingress
+  # tls:
+  #   - hosts:
+  #       - verifywise.example.com
+  #     secretName: verifywise-tls
+
+  rules:
+    # HTTPS: replace this whole block with:
+    #   - host: verifywise.example.com
+    #     http:
+    #       paths: ...
+    - http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 3000
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 80

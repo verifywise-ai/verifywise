@@ -9,16 +9,22 @@ data:
   # Application Settings
   NODE_ENV: "production"
   BACKEND_PORT: "3000"
-  FRONTEND_PORT: "8080"
-  BIAS_AND_FAIRNESS_PORT: "8000"
+  FRONTEND_PORT: "80"
 
-  # Backend URLs (update these for your cluster)
+  # In-cluster service URLs (Service names, not pod IPs)
   BACKEND_URL: "http://backend:3000"
-  FRONTEND_URL: "http://frontend:8080"
-  LLM_EVALS_URL: "http://eval_server:8000"
+  LLM_EVALS_URL: "http://eval-server:8000"
   AI_GATEWAY_URL: "http://ai-gateway:8100"
   AI_GATEWAY_PORT: "8100"
   EXPRESS_BACKEND_URL: "http://backend:3000"
+
+  # Public URL where the browser reaches the frontend (used in invite emails,
+  # notifications, etc.). Must be reachable from the user's browser — NOT a
+  # cluster-internal name like "http://frontend".
+  #   • minikube local: http://localhost   (with `minikube tunnel` running)
+  #   • cloud HTTP:     http://<ingress-external-ip>
+  #   • cloud HTTPS:    https://your-domain.com
+  FRONTEND_URL: "http://localhost"
 
   # Database Settings
   DB_HOST: "postgresdb"
@@ -36,7 +42,7 @@ data:
 
   # Email Configuration
   EMAIL_PROVIDER: "resend"  # Options: resend, smtp, exchange-online, exchange-onprem, amazon-ses
-  EMAIL_ID: "noreply@company.com"
+  EMAIL_ID: "no-reply@app.verifywise.ai"
 
   # SMTP Settings (when EMAIL_PROVIDER=smtp)
   SMTP_HOST: "smtp.gmail.com"

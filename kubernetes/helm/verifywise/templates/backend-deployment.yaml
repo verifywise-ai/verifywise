@@ -1,0 +1,202 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  labels:
+    {{- include "verifywise.labels" . | nindent 4 }}
+    component: backend
+spec:
+  replicas: {{ .Values.replicas.backend }}
+  selector:
+    matchLabels:
+      {{- include "verifywise.selectorLabels" . | nindent 6 }}
+      component: backend
+  template:
+    metadata:
+      labels:
+        {{- include "verifywise.selectorLabels" . | nindent 8 }}
+        component: backend
+    spec:
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: backend
+        image: "{{ .Values.images.backend }}:{{ include "verifywise.imageTag" . }}"
+        imagePullPolicy: {{ .Values.images.pullPolicy }}
+        ports:
+        - containerPort: 3000
+          name: http
+          protocol: TCP
+        env:
+        - name: PORT
+          valueFrom:
+            configMapKeyRef: { name: verifywise-config, key: BACKEND_PORT }
+        - name: NODE_ENV
+          valueFrom:
+            configMapKeyRef: { name: verifywise-config, key: NODE_ENV }
+        - name: BACKEND_URL
+          valueFrom:
+            configMapKeyRef: { name: verifywise-config, key: BACKEND_URL }
+        - name: FRONTEND_URL
+          valueFrom:
+            configMapKeyRef: { name: verifywise-config, key: FRONTEND_URL }
+
+        - name: DB_HOST
+          valueFrom:
+            configMapKeyRef: { name: verifywise-config, key: DB_HOST }
+        - name: DB_PORT
+          valueFrom:
+            configMapKeyRef: { name: verifywise-config, key: DB_PORT }
+        - name: DB_SSL
+          valueFrom:
+            configMapKeyRef: { name: verifywise-config, key: DB_SSL }
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef: { name: {{ include "verifywise.secretName" . }}, key: DB_USER }
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef: { name: {{ include "verifywise.secretName" . }}, key: DB_PASSWORD }
+        - name: DB_NAME
+          valueFrom:
+            secretKeyRef: { name: {{ include "verifywise.secretName" . }}, key: DB_NAME }
+
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef: { name: {{ include "verifywise.secretName" . }}, key: JWT_SECRET }
+        - name: REFRESH_TOKEN_SECRET
+          valueFrom:
+            secretKeyRef: { name: {{ include "verifywise.secretName" . }}, key: REFRESH_TOKEN_SECRET }
+
+        - name: REDIS_URL
+          valueFrom:
+            configMapKeyRef: { name: verifywise-config, key: REDIS_URL }
+        - name: REDIS_HOST
+          valueFrom:
+            configMapKeyRef: { name: verifywise-config, key: REDIS_HOST }
+        - name: REDIS_PORT
+          valueFrom:
+            configMapKeyRef: { name: verifywise-config, key: REDIS_PORT }
+
+        - name: LLM_EVALS_URL
+          valueFrom:
+            configMapKeyRef: { name: verifywise-config, key: LLM_EVALS_URL }
+        - name: AI_GATEWAY_URL
+          valueFrom:
+            configMapKeyRef: { name: verifywise-config, key: AI_GATEWAY_URL }
+        - name: EVAL_SERVER_INTERNAL_KEY
+          valueFrom:
+            secretKeyRef: { name: {{ include "verifywise.secretName" . }}, key: EVAL_SERVER_INTERNAL_KEY }
+
+        - name: MOCK_DATA_ON
+          valueFrom:
+            configMapKeyRef: { name: verifywise-config, key: MOCK_DATA_ON }
+        - name: MULTI_TENANCY_ENABLED
+          valueFrom:
+            configMapKeyRef: { name: verifywise-config, key: MULTI_TENANCY_ENABLED }
+
+        # Email (all optional — reads what's present)
+        - name: EMAIL_PROVIDER
+          valueFrom:
+            configMapKeyRef: { name: verifywise-config, key: EMAIL_PROVIDER, optional: true }
+        - name: EMAIL_ID
+          valueFrom:
+            configMapKeyRef: { name: verifywise-config, key: EMAIL_ID, optional: true }
+        - name: SMTP_HOST
+          valueFrom:
+            configMapKeyRef: { name: verifywise-config, key: SMTP_HOST, optional: true }
+        - name: SMTP_PORT
+          valueFrom:
+            configMapKeyRef: { name: verifywise-config, key: SMTP_PORT, optional: true }
+        - name: SMTP_USER
+          valueFrom:
+            configMapKeyRef: { name: verifywise-config, key: SMTP_USER, optional: true }
+        - name: SMTP_SECURE
+          valueFrom:
+            configMapKeyRef: { name: verifywise-config, key: SMTP_SECURE, optional: true }
+        - name: SMTP_PASS
+          valueFrom:
+            secretKeyRef: { name: {{ include "verifywise.secretName" . }}, key: SMTP_PASS, optional: true }
+        - name: RESEND_API_KEY
+          valueFrom:
+            secretKeyRef: { name: {{ include "verifywise.secretName" . }}, key: RESEND_API_KEY, optional: true }
+        - name: EXCHANGE_ONLINE_USER
+          valueFrom:
+            configMapKeyRef: { name: verifywise-config, key: EXCHANGE_ONLINE_USER, optional: true }
+        - name: EXCHANGE_ONLINE_PASS
+          valueFrom:
+            secretKeyRef: { name: {{ include "verifywise.secretName" . }}, key: EXCHANGE_ONLINE_PASS, optional: true }
+
+        # Slack (optional)
+        - name: SLACK_CLIENT_ID
+          valueFrom:
+            configMapKeyRef: { name: verifywise-config, key: SLACK_CLIENT_ID, optional: true }
+        - name: SLACK_URL
+          valueFrom:
+            configMapKeyRef: { name: verifywise-config, key: SLACK_URL, optional: true }
+        - name: SLACK_API_URL
+          valueFrom:
+            configMapKeyRef: { name: verifywise-config, key: SLACK_API_URL, optional: true }
+        - name: SLACK_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef: { name: {{ include "verifywise.secretName" . }}, key: SLACK_CLIENT_SECRET, optional: true }
+        - name: SLACK_BOT_TOKEN
+          valueFrom:
+            secretKeyRef: { name: {{ include "verifywise.secretName" . }}, key: SLACK_BOT_TOKEN, optional: true }
+
+        - name: SUPERADMIN_EMAIL
+          valueFrom:
+            secretKeyRef: { name: {{ include "verifywise.secretName" . }}, key: SUPERADMIN_EMAIL }
+        - name: SUPERADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef: { name: {{ include "verifywise.secretName" . }}, key: SUPERADMIN_PASSWORD }
+
+        - name: ENCRYPTION_PASSWORD
+          valueFrom:
+            secretKeyRef: { name: {{ include "verifywise.secretName" . }}, key: ENCRYPTION_PASSWORD }
+        - name: ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef: { name: {{ include "verifywise.secretName" . }}, key: ENCRYPTION_KEY }
+
+        livenessProbe:
+          httpGet: { path: /health, port: 3000 }
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet: { path: /health, port: 3000 }
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+              - ALL
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  labels:
+    {{- include "verifywise.labels" . | nindent 4 }}
+    component: backend
+spec:
+  type: ClusterIP
+  ports:
+  - port: 3000
+    targetPort: 3000
+    protocol: TCP
+    name: http
+  selector:
+    {{- include "verifywise.selectorLabels" . | nindent 4 }}
+    component: backend
