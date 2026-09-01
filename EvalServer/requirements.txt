@@ -24,7 +24,7 @@ frozenlist==1.8.0
 fsspec==2025.10.0
 google-api-core==2.34.0
 google-api-python-client==2.186.0
-google-auth==2.42.1
+google-auth==2.57.0
 google-auth-httplib2==0.2.1
 google-genai==1.48.0
 googleapis-common-protos==1.71.0
