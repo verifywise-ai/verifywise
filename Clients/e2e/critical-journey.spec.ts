@@ -101,15 +101,31 @@ test.describe("Critical end-to-end journey", () => {
       .getByRole("button", { name: /choose date/i });
     await calendarIcon.click();
 
-    const calendarPopup = page.locator(".MuiPickerPopper-root, .MuiPickersPopper-root");
-    await expect(calendarPopup.first()).toBeVisible({ timeout: 5_000 });
+    const calendarPopup = page.locator(".MuiPickerPopper-root, .MuiPickersPopper-root").first();
+    await expect(calendarPopup).toBeVisible({ timeout: 5_000 });
 
-    const dayCell = page
+    // The grid opens on the current month. Three days from now falls into the
+    // next month for any run near a month end, and clicking the day number
+    // without advancing the grid selects that day in the *current* month — a
+    // date in the past, which creates an overdue task and the wrong banner.
+    if (dueSoonDate.getMonth() !== today.getMonth()) {
+      await calendarPopup.getByRole("button", { name: /next month/i }).click();
+    }
+
+    const dayCell = calendarPopup
       .locator('[role="gridcell"]')
       .filter({ hasText: new RegExp(`^${dayOfMonth}$`) })
       .first();
     await expect(dayCell).toBeVisible({ timeout: 5_000 });
     await dayCell.click();
+
+    // Confirm the picker really holds the intended date before relying on it.
+    const expectedDate = [
+      String(dueSoonDate.getMonth() + 1).padStart(2, "0"),
+      String(dayOfMonth).padStart(2, "0"),
+      dueSoonDate.getFullYear(),
+    ].join("/");
+    await expect(page.locator(".mui-date-picker input")).toHaveValue(expectedDate);
 
     // Submit the task
     const submitTaskBtn = page.getByRole("button", { name: /create task/i });
