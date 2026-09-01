@@ -1,7 +1,7 @@
 # Core
 fastapi>=0.141.1
 uvicorn>=0.52.4
-python-dotenv>=1.2.2
+python-dotenv>=1.2.3
 pydantic>=2.13.4
 pydantic-settings>=2.15.0
 redis>=8.1.0
