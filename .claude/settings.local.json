@@ -167,7 +167,10 @@
       "Bash(yq eval *)",
       "Bash(/opt/homebrew/bin/pip3 install *)",
       "Bash(brew list *)",
-      "Bash(brew install *)"
+      "Bash(brew install *)",
+      "Bash(semgrep --config auto --error kubernetes/helm/)",
+      "Bash(semgrep --config auto --error kubernetes/ .github/workflows/docker-image.yml EvalServer/src/middlewares/middleware.py)",
+      "Bash(semgrep --config auto --error kubernetes/secrets-example.yaml)"
     ]
   }
 }

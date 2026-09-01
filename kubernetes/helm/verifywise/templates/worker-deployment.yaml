@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: worker
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "verifywise.labels" . | nindent 4 }}
     component: worker

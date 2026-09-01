@@ -46,6 +46,12 @@ spec:
           periodSeconds: 5
           timeoutSeconds: 3
           failureThreshold: 3
+        # trivy:ignore:AVD-KSV-0106 nginx-unprivileged entrypoint needs
+        # CHOWN/SETUID/SETGID/DAC_OVERRIDE to chown cache dirs and drop to
+        # uid 101 before binding port 80. Removing any of these makes the
+        # container fail on startup with `chown() failed (Operation not
+        # permitted)`. NET_BIND_SERVICE is the only one KSV-0106 allows;
+        # accepting the finding with justification.
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:

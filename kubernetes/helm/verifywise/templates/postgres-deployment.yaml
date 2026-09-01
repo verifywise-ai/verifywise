@@ -2,6 +2,7 @@ apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
   name: postgres-pvc
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "verifywise.labels" . | nindent 4 }}
     component: database
@@ -19,6 +20,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: postgresdb
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "verifywise.labels" . | nindent 4 }}
     component: database
@@ -104,6 +106,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: postgresdb
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "verifywise.labels" . | nindent 4 }}
     component: database

@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: ai-gateway
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "verifywise.labels" . | nindent 4 }}
     component: ai-gateway
@@ -91,6 +92,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: ai-gateway
+  namespace: {{ .Release.Namespace }}
   labels:
     {{- include "verifywise.labels" . | nindent 4 }}
     component: ai-gateway
