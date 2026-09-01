@@ -68,7 +68,7 @@ protobuf==6.33.5
 psycopg2-binary==2.9.11
 pyasn1==0.6.4
 pyasn1_modules==0.4.2
-pydantic==2.12.3
+pydantic==2.13.5
 pydantic-settings==2.11.0
 pydantic_core==2.41.4
 Pygments==2.20.0
