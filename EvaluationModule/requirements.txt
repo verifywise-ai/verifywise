@@ -33,7 +33,7 @@ anthropic>=0.122.0
 google-generativeai>=0.8.6
 ollama>=0.6.2
 xai-sdk>=1.19.0
-mistralai>=2.9.3
+mistralai>=2.9.4
 
 # DeepEval for comprehensive LLM evaluation
 deepeval>=4.1.9
