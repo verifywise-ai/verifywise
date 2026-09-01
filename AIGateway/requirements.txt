@@ -5,7 +5,7 @@ python-dotenv>=1.2.3
 pydantic>=2.13.4
 pydantic-settings>=2.15.0
 redis>=8.1.0
-cryptography>=50.0.0
+cryptography>=50.0.1
 httpx>=0.28.1
 
 # Database (async PostgreSQL)
