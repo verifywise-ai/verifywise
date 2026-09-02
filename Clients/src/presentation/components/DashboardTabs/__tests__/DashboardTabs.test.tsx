@@ -4,21 +4,18 @@ import { renderWithProviders } from "../../../../test/renderWithProviders";
 import DashboardTabs from "../index";
 import type { DashboardTabConfig } from "../index";
 
-vi.mock("@mui/lab/TabList", () => ({
-  default: ({ children, onChange, ...props }: any) => (
-    <div data-testid="tablist" {...props}>
-      {React.Children.map(children, (child: any) =>
-        React.cloneElement(child, {
-          onClick: (e: React.MouseEvent) => {
-            if (onChange && child.props.value !== "__add__") {
-              onChange(e, child.props.value);
-            }
-          },
-        }),
-      )}
-    </div>
-  ),
-}));
+// MUI v9: Tab requires RovingTabIndexContext, which only a real Tabs/TabList provides.
+// Delegate to the real @mui/material Tabs so tabs render and onChange(event, value) fires on click.
+vi.mock("@mui/lab/TabList", async () => {
+  const Tabs = (await import("@mui/material/Tabs")).default;
+  return {
+    default: ({ children, onChange, ...props }: any) => (
+      <Tabs data-testid="tablist" onChange={onChange} {...props}>
+        {children}
+      </Tabs>
+    ),
+  };
+});
 
 const availableTabs: DashboardTabConfig[] = [
   { id: "overview", label: "Overview", icon: "LayoutDashboard" },
