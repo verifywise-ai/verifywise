@@ -68,9 +68,9 @@ protobuf==6.33.5
 psycopg2-binary==2.9.11
 pyasn1==0.6.4
 pyasn1_modules==0.4.2
-pydantic==2.12.3
+pydantic==2.13.5
 pydantic-settings==2.11.0
-pydantic_core==2.41.4
+pydantic_core==2.46.5
 Pygments==2.20.0
 PyJWT==2.13.0
 pyparsing==3.3.2
@@ -100,7 +100,7 @@ threadpoolctl==3.6.0
 tokenizers==0.22.1
 torch>=2.13.0,<3.0.0
 tqdm==4.67.1
-transformers==5.5.0
+transformers==5.10.1
 typer==0.20.0
 typing-inspection==0.4.2
 typing_extensions==4.15.0
